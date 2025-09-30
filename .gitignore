@@ -1,0 +1,48 @@
+# OS / Editor junk
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.idea/
+.vscode/
+
+# Root-level common
+*.log
+*.tmp
+*.bak
+*.orig
+*.local
+.env
+.env.*
+!.env.example
+
+# Node / Vite (frontend)
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/.eslintcache
+frontend/.cache/
+
+# Python (backend)
+backend/.venv/
+backend/venv/
+backend/__pycache__/
+backend/**/*.pyc
+backend/.mypy_cache/
+backend/.pytest_cache/
+backend/htmlcov/
+backend/.coverage
+backend/coverage.xml
+backend/.ruff_cache/
+
+# Build artifacts (generic)
+build/
+dist/
+coverage/
+*.coverage
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+

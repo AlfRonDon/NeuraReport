@@ -1,0 +1,62 @@
+{
+  "mapping": {
+    "rows.sl": "records.sl_no",
+    "rows.name": "records.material_name",
+    "rows.set": "records.set_wt_kg",
+    "rows.ach": "records.ach_wt_kg",
+    "rows.err": "records.error_kg",
+    "rows.errp": "records.error_pct",
+    "tot_set": "records.set_wt_kg",
+    "tot_ach": "records.ach_wt_kg",
+    "tot_err": "records.error_kg",
+    "tot_errp": "records.error_pct"
+  },
+  "join": {
+    "parent_table": "records",
+    "parent_key": "report_date",
+    "child_table": "records",
+    "child_key": "report_date"
+  },
+  "date_columns": {
+    "records": "report_date"
+  },
+  "header_tokens": [
+    "report_title",
+    "plant_name",
+    "date_from",
+    "date_to",
+    "location",
+    "print_date",
+    "recipe_code"
+  ],
+  "row_tokens": [
+    "rows.sl",
+    "rows.name",
+    "rows.set",
+    "rows.ach",
+    "rows.err",
+    "rows.errp"
+  ],
+  "totals": {
+    "tot_set": "records.set_wt_kg",
+    "tot_ach": "records.ach_wt_kg",
+    "tot_err": "records.error_kg",
+    "tot_errp": "records.error_pct"
+  },
+  "row_order": [
+    "sl_no",
+    "ROWID"
+  ],
+  "literals": {
+    "report_title": "Consumption report",
+    "plant_name": "SSR AQUA",
+    "location": "Gudivada",
+    "date_from": "24/03/2024",
+    "date_to": "24/03/2024",
+    "print_date": "25/03/2024",
+    "recipe_code": "GANGADHAR-2024",
+    "company": "Indian Industrial Machines Pvt. Ltd.",
+    "page_no": "1",
+    "page_count": "1"
+  }
+}

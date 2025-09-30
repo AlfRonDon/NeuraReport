@@ -1,0 +1,18 @@
+{
+  "mapping": {
+    "Ach wt(Kg)": "batch_lines.ach_wt_kg",
+    "Error %": "batch_lines.error_pct",
+    "Error(Kg)": "batch_lines.error_kg",
+    "From Date": "UNRESOLVED",
+    "Location": "UNRESOLVED",
+    "Material name": "batch_lines.material_name",
+    "Page": "UNRESOLVED",
+    "Plant name": "UNRESOLVED",
+    "Print Date": "UNRESOLVED",
+    "Recipe code": "batches.recipe_code",
+    "Set wt(Kg)": "batch_lines.set_wt_kg",
+    "Sl No": "UNRESOLVED",
+    "To Date": "UNRESOLVED",
+    "Total": "UNRESOLVED"
+  }
+}

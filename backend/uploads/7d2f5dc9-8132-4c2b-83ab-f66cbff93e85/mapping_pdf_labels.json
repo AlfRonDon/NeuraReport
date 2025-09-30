@@ -1,0 +1,21 @@
+{
+  "mapping": {
+    "Batch No :": "batches.batch_no",
+    "Batch Date :": "batches.batch_date",
+    "Shift No :": "batches.shift_no",
+    "Recipe Name :": "batches.recipe_name",
+    "Recipe Code :": "batches.recipe_code",
+    "Recipe No :": "batches.recipe_no",
+    "Scale": "UNRESOLVED",
+    "Start time": "UNRESOLVED",
+    "Dur(sec)": "UNRESOLVED",
+    "Bin No": "batch_lines.bin_no",
+    "Material Name": "batch_lines.material_name",
+    "Set wt(Kg)": "batch_lines.set_wt_kg",
+    "Ach wt(Kg)": "batch_lines.ach_wt_kg",
+    "Error(Kg)": "batch_lines.error_kg",
+    "Error %": "batch_lines.error_pct",
+    "Dosine Dur (sec)": "batch_lines.dosing_dur_sec",
+    "Total :": "UNRESOLVED"
+  }
+}

@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>{report_title}</title>
+<style>
+  @page { size: A4; margin: 12mm 14mm; }
+  body {
+    font-family: "Times New Roman", serif;
+    font-size: 12pt;
+    color: #000;
+    margin: 0;
+  }
+
+  h1.title {
+    font-size: 22pt;
+    font-weight: 700;
+    text-align: center;
+    margin: 4mm 0 3mm 0;
+  }
+
+  .top-panel {
+    margin-top: 2mm;
+  }
+
+  /* Header info box */
+  .info-box {
+    width: 100%;
+    border: 1px solid #000;
+    border-collapse: separate; /* keep outer rectangle only */
+    border-spacing: 0;
+    table-layout: fixed;
+  }
+  .info-box td {
+    padding: 2mm 3mm;
+    vertical-align: middle;
+    /* no inner grid lines; only outer rectangle visible */
+  }
+  .label {
+    white-space: nowrap;
+    text-align: left;
+  }
+  .label .colon:after { content: " :"; }
+  .value {
+    font-weight: 600;
+  }
+
+  /* Main grid */
+  .grid {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    margin-top: 2mm;
+  }
+  .grid th, .grid td {
+    border: 1px solid #000;
+    padding: 2.2mm 2.4mm;
+  }
+  .grid thead th {
+    font-weight: 700;
+    text-align: center;
+    white-space: nowrap;
+  }
+  .text { text-align: left; }
+  .num { text-align: right; }
+  .sl { text-align: center; }
+
+  /* Column widths approximate the sample */
+  .col-sl { width: 9%; }
+  .col-name { width: 43%; }
+  .col-set, .col-ach, .col-err, .col-errp { width: 12%; }
+
+  tfoot td {
+    font-weight: 700;
+  }
+
+  /* Footer */
+  footer {
+    margin-top: 18mm;
+    font-size: 10pt;
+    color: #000;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  /* Repeatable block support */
+  .batch-block { break-inside: avoid; page-break-inside: avoid; margin: 6mm 0; }
+</style>
+</head>
+<body>
+
+<section class="top-panel">
+  <table class="info-box">
+    <tr>
+      <td class="label" style="width:16%"><span class="colon">Plant name</span></td>
+      <td class="value" style="width:34%">{plant}</td>
+      <td class="label" style="width:16%">From Date:</td>
+      <td class="value" style="width:14%">{date_from}</td>
+      <td class="label" style="width:6%; text-align:center">To</td>
+      <td class="value" style="width:14%">{date_to}</td>
+    </tr>
+    <tr>
+      <td class="label"><span class="colon">Location</span></td>
+      <td class="value">{location}</td>
+      <td></td><td></td><td></td><td></td>
+    </tr>
+    <tr>
+      <td class="label"><span class="colon">Print Date</span></td>
+      <td class="value">{print_date}</td>
+      <td class="label">Recipe code :</td>
+      <td class="value" colspan="3">{recipe_code}</td>
+    </tr>
+  </table>
+
+  <h1 class="title">{report_title}</h1>
+</section>
+
+<table class="grid">
+  <colgroup>
+    <col class="col-sl">
+    <col class="col-name">
+    <col class="col-set">
+    <col class="col-ach">
+    <col class="col-err">
+    <col class="col-errp">
+  </colgroup>
+  <thead>
+    <tr>
+      <th>Sl. No.</th>
+      <th>Material name</th>
+      <th>Set. wt(Kg)</th>
+      <th>Ach. wt(Kg)</th>
+      <th>Error(Kg)</th>
+      <th>Error %</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td class="sl">{rows.sl}</td>
+      <td class="text">{rows.name}</td>
+      <td class="num">{rows.set}</td>
+      <td class="num">{rows.ach}</td>
+      <td class="num">{rows.err}</td>
+      <td class="num">{rows.errp}</td>
+    </tr>
+  </tbody>
+  <tfoot>
+    <tr>
+      <td colspan="2" class="text">Total</td>
+      <td class="num">{total_set}</td>
+      <td class="num">{total_ach}</td>
+      <td class="num">{total_err}</td>
+      <td class="num">{total_errp}</td>
+    </tr>
+  </tfoot>
+</table>
+
+<footer>
+  <div>{company}</div>
+  <div>Page {page_no} of {page_count}</div>
+</footer>
+
+</body>
+</html>

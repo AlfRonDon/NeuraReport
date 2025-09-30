@@ -1,0 +1,18 @@
+{
+  "mapping": {
+    "Plant name": "UNRESOLVED",
+    "From Date": "UNRESOLVED",
+    "To": "UNRESOLVED",
+    "Location": "UNRESOLVED",
+    "Print Date": "UNRESOLVED",
+    "Recipe code": "UNRESOLVED",
+    "Sl No": "records.sl_no",
+    "Material name": "records.material_name",
+    "Set wt Kg": "records.set_wt_kg",
+    "Ach wt Kg": "records.ach_wt_kg",
+    "Error Kg": "records.error_kg",
+    "Error %": "records.error_pct",
+    "Total": "UNRESOLVED",
+    "Page": "UNRESOLVED"
+  }
+}

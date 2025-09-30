@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>{report_title}</title>
+<style>
+@page { size: A4; margin: 12mm 12mm 15mm 15mm; }
+html, body { font-family: "Times New Roman", serif; font-size: 12px; color: #000; }
+h1 { font-size: 22px; margin: 4mm 0 3mm; text-align: center; font-weight: bold; }
+.header { margin-bottom: 4mm; }
+.header .kv { width: 100%; border-collapse: separate; border-spacing: 0; }
+.header .kv td { padding: 2px 4px; vertical-align: top; }
+.header .left { width: 60%; }
+.header .right { width: 40%; text-align: left; }
+.header .kv .label { width: 28mm; }
+.header .kv .colon { width: 3mm; text-align: center; }
+.print-date { font-weight: bold; margin: 1mm 0 4mm; }
+.grid { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.grid th, .grid td { border: 1px solid #000; padding: 3px 4px; vertical-align: top; }
+.meta-wrap { width: 100%; }
+.meta-wrap td { vertical-align: top; }
+.meta-kv { width: 100%; border-collapse: separate; border-spacing: 0; }
+.meta-kv td { padding: 2px 4px; }
+.meta-kv .label { width: 28mm; }
+.meta-kv .colon { width: 3mm; text-align: center; }
+.scales { width: 100%; table-layout: fixed; border-collapse: collapse; }
+.scales th, .scales td { border: 1px solid #000; padding: 3px 4px; }
+.section-gap { height: 4mm; }
+.num { text-align: right; }
+.center { text-align: center; }
+strong { font-weight: bold; }
+.batch-block { break-inside: avoid; page-break-inside: avoid; margin: 6mm 0; }
+.footer { position: fixed; left: 0; right: 0; bottom: 8mm; font-size: 11px; }
+.footer .row { display: flex; justify-content: space-between; border-top: 1px solid #000; padding-top: 3px; margin-top: 6mm; }
+</style>
+</head>
+<body>
+<div class="header">
+  <table class="kv">
+    <tr>
+      <td class="left">
+        <table class="kv">
+          <tr><td class="label">Plant name</td><td class="colon">:</td><td>{plant_name}</td></tr>
+          <tr><td class="label">Location</td><td class="colon">:</td><td>{location}</td></tr>
+        </table>
+      </td>
+      <td class="right">
+        <table class="kv">
+          <tr><td class="label" style="width:18mm;">Date</td><td class="colon">:</td><td>{date}</td></tr>
+          <tr><td class="label">Recipe</td><td class="colon">:</td><td>{recipe}</td></tr>
+          <tr><td class="label">Shift No</td><td class="colon">:</td><td>{shift_no}</td></tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+  <h1>{report_title}</h1>
+  <div class="print-date">Print Date : {print_date}</div>
+</div>
+
+<!-- BEGIN:BLOCK_REPEAT batches -->
+<section class="batch-block">
+  <table class="grid meta-wrap">
+    <tr>
+      <td style="width:58%;">
+        <table class="meta-kv">
+          <tr><td class="label">Batch No</td><td class="colon">:</td><td>{batch_no}</td></tr>
+          <tr><td class="label">Batch Date</td><td class="colon">:</td><td>{batch_date}</td></tr>
+          <tr><td class="label">Shift No</td><td class="colon">:</td><td>{shift_no}</td></tr>
+          <tr><td class="label">Recipe Name</td><td class="colon">:</td><td>{recipe_name}</td></tr>
+          <tr><td class="label">Recipe Code</td><td class="colon">:</td><td>{recipe_code}</td></tr>
+          <tr><td class="label">Recipe No</td><td class="colon">:</td><td>{recipe_no}</td></tr>
+        </table>
+      </td>
+      <td style="width:42%;">
+        <table class="scales">
+          <thead>
+            <tr>
+              <th>Scale</th>
+              <th>Start time</th>
+              <th>Dur(sec)</th>
+              <th>Scale</th>
+              <th>Start time</th>
+              <th>Dur(sec)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>{scale}</td>
+              <td class="center">{start_time}</td>
+              <td class="num">{dur_sec}</td>
+              <td>{scale}</td>
+              <td class="center">{start_time}</td>
+              <td class="num">{dur_sec}</td>
+            </tr>
+          </tbody>
+        </table>
+      </td>
+    </tr>
+  </table>
+
+  <div class="section-gap"></div>
+
+  <table class="grid" style="width:100%;">
+    <colgroup>
+      <col style="width:8%;">
+      <col style="width:36%;">
+      <col style="width:12%;">
+      <col style="width:12%;">
+      <col style="width:12%;">
+      <col style="width:10%;">
+      <col style="width:10%;">
+    </colgroup>
+    <thead>
+      <tr>
+        <th>Bin No</th>
+        <th>Material Name</th>
+        <th>Set wt(Kg)</th>
+        <th>Ach wt(Kg)</th>
+        <th>Error(Kg)</th>
+        <th>Error %</th>
+        <th>Dosine Dur (sec)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="num">{sl}</td>
+        <td>{name}</td>
+        <td class="num">{set}</td>
+        <td class="num">{ach}</td>
+        <td class="num">{err}</td>
+        <td class="num">{errp}</td>
+        <td class="num"></td>
+      </tr>
+    </tbody>
+    <tfoot>
+      <tr>
+        <td colspan="2" style="font-weight:bold;">Total :</td>
+        <td class="num">{set}</td>
+        <td class="num">{ach}</td>
+        <td class="num">{err}</td>
+        <td class="num">{errp}</td>
+        <td class="num">{dose_dur}</td>
+      </tr>
+    </tfoot>
+  </table>
+</section>
+<!-- END:BLOCK_REPEAT -->
+
+<div class="footer">
+  <div class="row">
+    <div>Indian Industrial Machines Pvt. Ltd.</div>
+    <div>Page 1 of 29</div>
+  </div>
+</div>
+</body>
+</html>

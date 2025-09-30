@@ -1,0 +1,54 @@
+{
+  "mapping": {
+    "batch_no": "batches.batch_no",
+    "batch_date": "batches.batch_date",
+    "batch_shift_no": "batches.shift_no",
+    "recipe_name": "batches.recipe_name",
+    "recipe_code": "batches.recipe_code",
+    "recipe_no": "batches.recipe_no",
+    "sl": "batch_lines.bin_no",
+    "name": "batch_lines.material_name",
+    "set": "batch_lines.set_wt_kg",
+    "ach": "batch_lines.ach_wt_kg",
+    "err": "batch_lines.error_kg",
+    "errp": "batch_lines.error_pct"
+  },
+  "join": {
+    "parent_table": "batches",
+    "parent_key": "batch_no,batch_date,shift_no",
+    "child_table": "batch_lines",
+    "child_key": "batch_no,batch_date,shift_no"
+  },
+  "date_columns": {
+    "batches": "batch_date",
+    "batch_lines": "batch_date"
+  },
+  "header_tokens": [
+    "batch_no",
+    "batch_date",
+    "batch_shift_no",
+    "recipe_name",
+    "recipe_code",
+    "recipe_no"
+  ],
+  "row_tokens": [
+    "sl",
+    "name",
+    "set",
+    "ach",
+    "err",
+    "errp"
+  ],
+  "totals": {
+    "total_set_kg": "batch_lines.set_wt_kg",
+    "total_ach_kg": "batch_lines.ach_wt_kg",
+    "total_err_kg": "batch_lines.error_kg",
+    "total_err_pct": "batch_lines.error_pct",
+    "total_dose_dur_sec": "batch_lines.dosing_dur_sec"
+  },
+  "row_order": [
+    "bin_no",
+    "ROWID"
+  ],
+  "literals": {}
+}

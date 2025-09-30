@@ -1,0 +1,1695 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Batch report</title>
+<style>
+  @page { size: A4; margin: 12mm 14mm; }
+  html, body { height: 100%; }
+  body { font-family: "Times New Roman", serif; font-size: 12px; color: #000; margin: 0; }
+  h1.title { text-align: center; font-size: 22px; font-weight: 700; margin: 6mm 0 4mm; }
+
+  /* Generic tables */
+  table { border-collapse: collapse; table-layout: fixed; width: 100%; }
+  th, td { padding: 3px 6px; vertical-align: middle; }
+  .kv td.label { width: 38mm; }
+  .kv td.colon { width: 4mm; text-align: center; }
+  .right { text-align: right; }
+  .center { text-align: center; }
+
+  /* Header */
+  .page-header { margin-top: 6mm; }
+  .page-header .top-grid td { padding: 2px 0; }
+  .page-header .right-block { text-align: right; }
+  .print-date { margin: 4mm 0 2mm; }
+  .print-date table { width: auto; border: 1px solid #000; }
+  .print-date td { padding: 3px 8px; }
+  .print-date td.label { font-weight: 700; background: #fff; }
+
+  /* Batch block */
+  .batch-block { break-inside: avoid; page-break-inside: avoid; margin: 6mm 0; }
+  .batch-meta { border: 1px solid #000; }
+  .batch-meta .meta-grid { width: 100%; }
+  .batch-meta .meta-grid td { padding: 0; }
+  .batch-meta .left-meta { padding: 2px 0; }
+  .batch-meta .left-meta table { width: 100%; }
+  .batch-meta .left-meta tr:not(:last-child) td { border-bottom: 1px solid #000; }
+  .batch-meta .split { border-left: 1px solid #000; }
+  .scale-table { width: 100%; }
+  .scale-table th, .scale-table td { border-bottom: 1px solid #000; }
+  .scale-table tr:last-child td { border-bottom: 0; }
+  .scale-table th { font-weight: 700; text-align: center; }
+  .scale-table td { text-align: center; }
+
+  /* Materials table */
+  .mat-table { margin-top: 3mm; border: 1px solid #000; }
+  .mat-table th, .mat-table td { border: 1px solid #000; }
+  .mat-table thead th { font-weight: 700; text-align: center; }
+  .mat-table .num { text-align: right; }
+  .mat-table tfoot td { font-weight: 700; }
+  .mat-table tfoot td.label { text-align: right; }
+
+  /* Footer */
+  .page-footer {
+    position: fixed; left: 14mm; right: 14mm; bottom: 6mm;
+    font-size: 11px; color: #000;
+  }
+  .page-footer .grid { width: 100%; }
+  .page-footer td { padding: 0; }
+</style>
+</head>
+<body>
+
+<!-- PAGE HEADER -->
+<div class="page-header">
+  <table class="top-grid">
+    <colgroup>
+      <col style="width: 60%">
+      <col style="width: 40%">
+    </colgroup>
+    <tr>
+      <td>
+        <table class="kv">
+          <tr>
+            <td class="label">Plant name</td>
+            <td class="colon">:</td>
+            <td>{plant_name}</td>
+          </tr>
+          <tr>
+            <td class="label">Location</td>
+            <td class="colon">:</td>
+            <td>{location}</td>
+          </tr>
+        </table>
+      </td>
+      <td class="right-block">
+        <table class="kv" style="margin-left:auto;">
+          <tr>
+            <td class="label" style="width:auto;">Date</td>
+            <td class="colon">:</td>
+            <td>{report_date}</td>
+          </tr>
+          <tr>
+            <td class="label" style="width:auto;">Recipe</td>
+            <td class="colon">:</td>
+            <td>{header_recipe}</td>
+          </tr>
+          <tr>
+            <td class="label" style="width:auto;">Shift No</td>
+            <td class="colon">:</td>
+            <td>{header_shift_no}</td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+
+  <h1 class="title">Batch report</h1>
+
+  <div class="print-date">
+    <table>
+      <tr>
+        <td class="label">Print Date</td>
+        <td class="colon">:</td>
+        <td>{print_date}</td>
+      </tr>
+    </table>
+  </div>
+</div>
+
+<!-- BEGIN:BLOCK_REPEAT batches -->
+<!-- BEGIN:BATCH (auto) --><section class="batch-block">
+  <div class="batch-meta">
+    <table class="meta-grid">
+      <colgroup>
+        <col style="width: 55%">
+        <col style="width: 45%">
+      </colgroup>
+      <tr>
+        <td class="left-meta">
+          <table>
+            <tr>
+              <td class="label">Batch No</td>
+              <td class="colon">:</td>
+              <td>B202509-01</td>
+            </tr>
+            <tr>
+              <td class="label">Batch Date</td>
+              <td class="colon">:</td>
+              <td>2025-08-14</td>
+            </tr>
+            <tr>
+              <td class="label">Shift No</td>
+              <td class="colon">:</td>
+              <td>2</td>
+            </tr>
+            <tr>
+              <td class="label">Recipe Name</td>
+              <td class="colon">:</td>
+              <td>Premium-Mix</td>
+            </tr>
+            <tr>
+              <td class="label">Recipe Code</td>
+              <td class="colon">:</td>
+              <td>RC-994</td>
+            </tr>
+            <tr>
+              <td class="label">Recipe No</td>
+              <td class="colon">:</td>
+              <td>R-8198</td>
+            </tr>
+          </table>
+        </td>
+        <td class="split">
+          <table class="scale-table">
+            <colgroup>
+              <col style="width: 24%">
+              <col style="width: 38%">
+              <col style="width: 18%">
+              <col style="width: 20%">
+            </colgroup>
+            <thead>
+              <tr>
+                <th style="width: 24%;">Scale</th>
+                <th style="width: 38%;">Start time</th>
+                <th style="width: 18%;">Dur(sec)</th>
+                <th style="width: 20%;"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="center">{scale1_id}</td>
+                <td class="center">{scale1_start_time}</td>
+                <td class="center">{scale1_dur_sec}</td>
+                <td></td>
+              </tr>
+              <tr>
+                <td class="center">{scale2_id}</td>
+                <td class="center">{scale2_start_time}</td>
+                <td class="center">{scale2_dur_sec}</td>
+                <td></td>
+              </tr>
+            </tbody>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </div>
+
+  <table class="mat-table">
+    <colgroup>
+      <col style="width: 8%">
+      <col style="width: 38%">
+      <col style="width: 12%">
+      <col style="width: 12%">
+      <col style="width: 12%">
+      <col style="width: 10%">
+      <col style="width: 8%">
+    </colgroup>
+    <thead>
+      <tr>
+        <th>Bin No</th>
+        <th>Material Name</th>
+        <th>Set wt(Kg)</th>
+        <th>Ach wt(Kg)</th>
+        <th>Error(Kg)</th>
+        <th>Error %</th>
+        <th>Dosine Dur (sec)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="center">1</td>
+        <td>Fly Ash</td>
+        <td class="num">266.11</td>
+        <td class="num">257.88</td>
+        <td class="num">-8.23</td>
+        <td class="num">-3.09</td>
+        <td class="num"></td>
+      </tr>
+<tr>
+        <td class="center">3</td>
+        <td>Kaolin Clay</td>
+        <td class="num">367.56</td>
+        <td class="num">357.35</td>
+        <td class="num">-10.21</td>
+        <td class="num">-2.78</td>
+        <td class="num"></td>
+      </tr>
+<tr>
+        <td class="center">4</td>
+        <td>Feldspar</td>
+        <td class="num">211.23</td>
+        <td class="num">223.57</td>
+        <td class="num">12.34</td>
+        <td class="num">5.84</td>
+        <td class="num"></td>
+      </tr>
+<tr>
+        <td class="center">5</td>
+        <td>Limestone</td>
+        <td class="num">139.81</td>
+        <td class="num">143.27</td>
+        <td class="num">3.46</td>
+        <td class="num">2.47</td>
+        <td class="num"></td>
+      </tr>
+<tr>
+        <td class="center">8</td>
+        <td>Cement Clinker</td>
+        <td class="num">375.53</td>
+        <td class="num">365.68</td>
+        <td class="num">-9.85</td>
+        <td class="num">-2.62</td>
+        <td class="num"></td>
+      </tr>
+<tr>
+        <td class="center">9</td>
+        <td>Fly Ash</td>
+        <td class="num">205.66</td>
+        <td class="num">195.55</td>
+        <td class="num">-10.11</td>
+        <td class="num">-4.92</td>
+        <td class="num"></td>
+      </tr>
+<tr>
+        <td class="center">14</td>
+        <td>Bauxite</td>
+        <td class="num">223.83</td>
+        <td class="num">215.81</td>
+        <td class="num">-8.02</td>
+        <td class="num">-3.58</td>
+        <td class="num"></td>
+      </tr>
+<tr>
+        <td class="center">16</td>
+        <td>Magnesium Oxide</td>
+        <td class="num">127.44</td>
+        <td class="num">133.62</td>
+        <td class="num">6.18</td>
+        <td class="num">4.85</td>
+        <td class="num"></td>
+      </tr>
+<tr>
+        <td class="center">20</td>
+        <td>Feldspar</td>
+        <td class="num">165.58</td>
+        <td class="num">157.38</td>
+        <td class="num">-8.2</td>
+        <td class="num">-4.95</td>
+        <td class="num"></td>
+      </tr>
+<tr>
+        <td class="center">21</td>
+        <td>Calcite Powder</td>
+        <td class="num">106.94</td>
+        <td class="num">114.22</td>
+        <td class="num">7.28</td>
+        <td class="num">6.81</td>
+        <td class="num"></td>
+      </tr>
+    </tbody>
+    <tfoot>
+      <tr>
+        <td class="label" colspan="2">Total :</td>
+        <td class="num">2189.69</td>
+        <td class="num">2164.33</td>
+        <td class="num">-25.36</td>
+        <td class="num">-1.9700000000000006</td>
+        <td class="num">871</td>
+      </tr>
+    </tfoot>
+  </table>
+</section>
+<section class="batch-block">
+  <div class="batch-meta">
+    <table class="meta-grid">
+      <colgroup>
+        <col style="width: 55%">
+        <col style="width: 45%">
+      </colgroup>
+      <tr>
+        <td class="left-meta">
+          <table>
+            <tr>
+              <td class="label">Batch No</td>
+              <td class="colon">:</td>
+              <td>B202509-02</td>
+            </tr>
+            <tr>
+              <td class="label">Batch Date</td>
+              <td class="colon">:</td>
+              <td>2025-07-29</td>
+            </tr>
+            <tr>
+              <td class="label">Shift No</td>
+              <td class="colon">:</td>
+              <td>2</td>
+            </tr>
+            <tr>
+              <td class="label">Recipe Name</td>
+              <td class="colon">:</td>
+              <td>Blend-A</td>
+            </tr>
+            <tr>
+              <td class="label">Recipe Code</td>
+              <td class="colon">:</td>
+              <td>RC-559</td>
+            </tr>
+            <tr>
+              <td class="label">Recipe No</td>
+              <td class="colon">:</td>
+              <td>R-5491</td>
+            </tr>
+          </table>
+        </td>
+        <td class="split">
+          <table class="scale-table">
+            <colgroup>
+              <col style="width: 24%">
+              <col style="width: 38%">
+              <col style="width: 18%">
+              <col style="width: 20%">
+            </colgroup>
+            <thead>
+              <tr>
+                <th style="width: 24%;">Scale</th>
+                <th style="width: 38%;">Start time</th>
+                <th style="width: 18%;">Dur(sec)</th>
+                <th style="width: 20%;"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="center">{scale1_id}</td>
+                <td class="center">{scale1_start_time}</td>
+                <td class="center">{scale1_dur_sec}</td>
+                <td></td>
+              </tr>
+              <tr>
+                <td class="center">{scale2_id}</td>
+                <td class="center">{scale2_start_time}</td>
+                <td class="center">{scale2_dur_sec}</td>
+                <td></td>
+              </tr>
+            </tbody>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </div>
+
+  <table class="mat-table">
+    <colgroup>
+      <col style="width: 8%">
+      <col style="width: 38%">
+      <col style="width: 12%">
+      <col style="width: 12%">
+      <col style="width: 12%">
+      <col style="width: 10%">
+      <col style="width: 8%">
+    </colgroup>
+    <thead>
+      <tr>
+        <th>Bin No</th>
+        <th>Material Name</th>
+        <th>Set wt(Kg)</th>
+        <th>Ach wt(Kg)</th>
+        <th>Error(Kg)</th>
+        <th>Error %</th>
+        <th>Dosine Dur (sec)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="center">3</td>
+        <td>Fly Ash</td>
+        <td class="num">413.93</td>
+        <td class="num">412.27</td>
+        <td class="num">-1.66</td>
+        <td class="num">-0.4</td>
+        <td class="num"></td>
+      </tr>
+<tr>
+        <td class="center">5</td>
+        <td>Iron Oxide</td>
+        <td class="num">470.52</td>
+        <td class="num">461.1</td>
+        <td class="num">-9.42</td>
+        <td class="num">-2.0</td>
+        <td class="num"></td>
+      </tr>
+<tr>
+        <td class="center">7</td>
+        <td>Calcite Powder</td>
+        <td class="num">394.63</td>
+        <td class="num">399.57</td>
+        <td class="num">4.94</td>
+        <td class="num">1.25</td>
+        <td class="num"></td>
+      </tr>
+<tr>
+        <td class="center">8</td>
+        <td>Kaolin Clay</td>
+        <td class="num">388.29</td>
+        <td class="num">370.53</td>
+        <td class="num">-17.76</td>
+        <td class="num">-4.57</td>
+        <td class="num"></td>
+      </tr>
+<tr>
+        <td class="center">12</td>
+        <td>Iron Oxide</td>
+        <td class="num">409.05</td>
+        <td class="num">381.07</td>
+        <td class="num">-27.98</td>
+        <td class="num">-6.84</td>
+        <td class="num"></td>
+      </tr>
+<tr>
+        <td class="center">16</td>
+        <td>Sodium Carbonate</td>
+        <td class="num">369.65</td>
+        <td class="num">348.31</td>
+        <td class="num">-21.34</td>
+        <td class="num">-5.77</td>
+        <td class="num"></td>
+      </tr>
+<tr>
+        <td class="center">18</td>
+        <td>Fly Ash</td>
+        <td class="num">297.62</td>
+        <td class="num">292.97</td>
+        <td class="num">-4.65</td>
+        <td class="num">-1.56</td>
+        <td class="num"></td>
+      </tr>
+<tr>
+        <td class="center">19</td>
+        <td>Iron Oxide</td>
+        <td class="num">474.01</td>
+        <td class="num">468.04</td>
+        <td class="num">-5.97</td>
+        <td class="num">-1.26</td>
+        <td class="num"></td>
+      </tr>
+<tr>
+        <td class="center">20</td>
+        <td>Feldspar</td>
+        <td class="num">204.38</td>
+        <td class="num">200.68</td>
+        <td class="num">-3.7</td>
+        <td class="num">-1.81</td>
+        <td class="num"></td>
+      </tr>
+<tr>
+        <td class="center">23</td>
+        <td>Calcite Powder</td>
+        <td class="num">58.42</td>
+        <td class="num">61.72</td>
+        <td class="num">3.3</td>
+        <td class="num">5.65</td>
+        <td class="num"></td>
+      </tr>
+<tr>
+        <td class="center">24</td>
+        <td>Quartz Grit</td>
+        <td class="num">359.65</td>
+        <td class="num">361.28</td>
+        <td class="num">1.63</td>
+        <td class="num">0.45</td>
+        <td class="num"></td>
+      </tr>
+    </tbody>
+    <tfoot>
+      <tr>
+        <td class="label" colspan="2">Total :</td>
+        <td class="num">3840.15</td>
+        <td class="num">3757.54</td>
+        <td class="num">-82.61</td>
+        <td class="num">-16.86</td>
+        <td class="num">950</td>
+      </tr>
+    </tfoot>
+  </table>
+</section>
+<section class="batch-block">
+  <div class="batch-meta">
+    <table class="meta-grid">
+      <colgroup>
+        <col style="width: 55%">
+        <col style="width: 45%">
+      </colgroup>
+      <tr>
+        <td class="left-meta">
+          <table>
+            <tr>
+              <td class="label">Batch No</td>
+              <td class="colon">:</td>
+              <td>B202509-03</td>
+            </tr>
+            <tr>
+              <td class="label">Batch Date</td>
+              <td class="colon">:</td>
+              <td>2025-08-23</td>
+            </tr>
+            <tr>
+              <td class="label">Shift No</td>
+              <td class="colon">:</td>
+              <td>1</td>
+            </tr>
+            <tr>
+              <td class="label">Recipe Name</td>
+              <td class="colon">:</td>
+              <td>Economy-Mix</td>
+            </tr>
+            <tr>
+              <td class="label">Recipe Code</td>
+              <td class="colon">:</td>
+              <td>RC-166</td>
+            </tr>
+            <tr>
+              <td class="label">Recipe No</td>
+              <td class="colon">:</td>
+              <td>R-7997</td>
+            </tr>
+          </table>
+        </td>
+        <td class="split">
+          <table class="scale-table">
+            <colgroup>
+              <col style="width: 24%">
+              <col style="width: 38%">
+              <col style="width: 18%">
+              <col style="width: 20%">
+            </colgroup>
+            <thead>
+              <tr>
+                <th style="width: 24%;">Scale</th>
+                <th style="width: 38%;">Start time</th>
+                <th style="width: 18%;">Dur(sec)</th>
+                <th style="width: 20%;"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="center">{scale1_id}</td>
+                <td class="center">{scale1_start_time}</td>
+                <td class="center">{scale1_dur_sec}</td>
+                <td></td>
+              </tr>
+              <tr>
+                <td class="center">{scale2_id}</td>
+                <td class="center">{scale2_start_time}</td>
+                <td class="center">{scale2_dur_sec}</td>
+                <td></td>
+              </tr>
+            </tbody>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </div>
+
+  <table class="mat-table">
+    <colgroup>
+      <col style="width: 8%">
+      <col style="width: 38%">
+      <col style="width: 12%">
+      <col style="width: 12%">
+      <col style="width: 12%">
+      <col style="width: 10%">
+      <col style="width: 8%">
+    </colgroup>
+    <thead>
+      <tr>
+        <th>Bin No</th>
+        <th>Material Name</th>
+        <th>Set wt(Kg)</th>
+        <th>Ach wt(Kg)</th>
+        <th>Error(Kg)</th>
+        <th>Error %</th>
+        <th>Dosine Dur (sec)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="center">5</td>
+        <td>Quartz Grit</td>
+        <td class="num">456.74</td>
+        <td class="num">478.01</td>
+        <td class="num">21.27</td>
+        <td class="num">4.66</td>
+        <td class="num"></td>
+      </tr>
+<tr>
+        <td class="center">10</td>
+        <td>Kaolin Clay</td>
+        <td class="num">495.84</td>
+        <td class="num">477.79</td>
+        <td class="num">-18.05</td>
+        <td class="num">-3.64</td>
+        <td class="num"></td>
+      </tr>
+<tr>
+        <td class="center">12</td>
+        <td>Quartz Grit</td>
+        <td class="num">362.35</td>
+        <td class="num">354.68</td>
+        <td class="num">-7.67</td>
+        <td class="num">-2.12</td>
+        <td class="num"></td>
+      </tr>
+<tr>
+        <td class="center">15</td>
+        <td>Kaolin Clay</td>
+        <td class="num">334.79</td>
+        <td class="num">323.04</td>
+        <td class="num">-11.75</td>
+        <td class="num">-3.51</td>
+        <td class="num"></td>
+      </tr>
+<tr>
+        <td class="center">21</td>
+        <td>Fly Ash</td>
+        <td class="num">288.36</td>
+        <td class="num">283.8</td>
+        <td class="num">-4.56</td>
+        <td class="num">-1.58</td>
+        <td class="num"></td>
+      </tr>
+<tr>
+        <td class="center">24</td>
+        <td>Limestone</td>
+        <td class="num">323.03</td>
+        <td class="num">316.65</td>
+        <td class="num">-6.38</td>
+        <td class="num">-1.98</td>
+        <td class="num"></td>
+      </tr>
+    </tbody>
+    <tfoot>
+      <tr>
+        <td class="label" colspan="2">Total :</td>
+        <td class="num">2261.11</td>
+        <td class="num">2233.9700000000003</td>
+        <td class="num">-27.14</td>
+        <td class="num">-8.17</td>
+        <td class="num">462</td>
+      </tr>
+    </tfoot>
+  </table>
+</section>
+<section class="batch-block">
+  <div class="batch-meta">
+    <table class="meta-grid">
+      <colgroup>
+        <col style="width: 55%">
+        <col style="width: 45%">
+      </colgroup>
+      <tr>
+        <td class="left-meta">
+          <table>
+            <tr>
+              <td class="label">Batch No</td>
+              <td class="colon">:</td>
+              <td>B202509-04</td>
+            </tr>
+            <tr>
+              <td class="label">Batch Date</td>
+              <td class="colon">:</td>
+              <td>2025-08-29</td>
+            </tr>
+            <tr>
+              <td class="label">Shift No</td>
+              <td class="colon">:</td>
+              <td>1</td>
+            </tr>
+            <tr>
+              <td class="label">Recipe Name</td>
+              <td class="colon">:</td>
+              <td>Economy-Mix</td>
+            </tr>
+            <tr>
+              <td class="label">Recipe Code</td>
+              <td class="colon">:</td>
+              <td>RC-124</td>
+            </tr>
+            <tr>
+              <td class="label">Recipe No</td>
+              <td class="colon">:</td>
+              <td>R-7721</td>
+            </tr>
+          </table>
+        </td>
+        <td class="split">
+          <table class="scale-table">
+            <colgroup>
+              <col style="width: 24%">
+              <col style="width: 38%">
+              <col style="width: 18%">
+              <col style="width: 20%">
+            </colgroup>
+            <thead>
+              <tr>
+                <th style="width: 24%;">Scale</th>
+                <th style="width: 38%;">Start time</th>
+                <th style="width: 18%;">Dur(sec)</th>
+                <th style="width: 20%;"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="center">{scale1_id}</td>
+                <td class="center">{scale1_start_time}</td>
+                <td class="center">{scale1_dur_sec}</td>
+                <td></td>
+              </tr>
+              <tr>
+                <td class="center">{scale2_id}</td>
+                <td class="center">{scale2_start_time}</td>
+                <td class="center">{scale2_dur_sec}</td>
+                <td></td>
+              </tr>
+            </tbody>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </div>
+
+  <table class="mat-table">
+    <colgroup>
+      <col style="width: 8%">
+      <col style="width: 38%">
+      <col style="width: 12%">
+      <col style="width: 12%">
+      <col style="width: 12%">
+      <col style="width: 10%">
+      <col style="width: 8%">
+    </colgroup>
+    <thead>
+      <tr>
+        <th>Bin No</th>
+        <th>Material Name</th>
+        <th>Set wt(Kg)</th>
+        <th>Ach wt(Kg)</th>
+        <th>Error(Kg)</th>
+        <th>Error %</th>
+        <th>Dosine Dur (sec)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="center">2</td>
+        <td>Alumina</td>
+        <td class="num">440.12</td>
+        <td class="num">420.92</td>
+        <td class="num">-19.2</td>
+        <td class="num">-4.36</td>
+        <td class="num"></td>
+      </tr>
+<tr>
+        <td class="center">4</td>
+        <td>Gypsum</td>
+        <td class="num">457.48</td>
+        <td class="num">475.91</td>
+        <td class="num">18.43</td>
+        <td class="num">4.03</td>
+        <td class="num"></td>
+      </tr>
+<tr>
+        <td class="center">7</td>
+        <td>Gypsum</td>
+        <td class="num">492.75</td>
+        <td class="num">467.81</td>
+        <td class="num">-24.94</td>
+        <td class="num">-5.06</td>
+        <td class="num"></td>
+      </tr>
+<tr>
+        <td class="center">11</td>
+        <td>Silica Sand</td>
+        <td class="num">177.45</td>
+        <td class="num">188.49</td>
+        <td class="num">11.04</td>
+        <td class="num">6.22</td>
+        <td class="num"></td>
+      </tr>
+<tr>
+        <td class="center">12</td>
+        <td>Magnesium Oxide</td>
+        <td class="num">102.78</td>
+        <td class="num">97.72</td>
+        <td class="num">-5.06</td>
+        <td class="num">-4.92</td>
+        <td class="num"></td>
+      </tr>
+<tr>
+        <td class="center">15</td>
+        <td>Cement Clinker</td>
+        <td class="num">79.66</td>
+        <td class="num">82.19</td>
+        <td class="num">2.53</td>
+        <td class="num">3.18</td>
+        <td class="num"></td>
+      </tr>
+<tr>
+        <td class="center">20</td>
+        <td>Alumina</td>
+        <td class="num">128.62</td>
+        <td class="num">124.46</td>
+        <td class="num">-4.16</td>
+        <td class="num">-3.23</td>
+        <td class="num"></td>
+      </tr>
+<tr>
+        <td class="center">21</td>
+        <td>Silica Sand</td>
+        <td class="num">154.76</td>
+        <td class="num">148.88</td>
+        <td class="num">-5.88</td>
+        <td class="num">-3.8</td>
+        <td class="num"></td>
+      </tr>
+    </tbody>
+    <tfoot>
+      <tr>
+        <td class="label" colspan="2">Total :</td>
+        <td class="num">2033.62</td>
+        <td class="num">2006.38</td>
+        <td class="num">-27.240000000000002</td>
+        <td class="num">-7.9399999999999995</td>
+        <td class="num">536</td>
+      </tr>
+    </tfoot>
+  </table>
+</section>
+<section class="batch-block">
+  <div class="batch-meta">
+    <table class="meta-grid">
+      <colgroup>
+        <col style="width: 55%">
+        <col style="width: 45%">
+      </colgroup>
+      <tr>
+        <td class="left-meta">
+          <table>
+            <tr>
+              <td class="label">Batch No</td>
+              <td class="colon">:</td>
+              <td>B202509-05</td>
+            </tr>
+            <tr>
+              <td class="label">Batch Date</td>
+              <td class="colon">:</td>
+              <td>2025-08-13</td>
+            </tr>
+            <tr>
+              <td class="label">Shift No</td>
+              <td class="colon">:</td>
+              <td>3</td>
+            </tr>
+            <tr>
+              <td class="label">Recipe Name</td>
+              <td class="colon">:</td>
+              <td>Blend-A</td>
+            </tr>
+            <tr>
+              <td class="label">Recipe Code</td>
+              <td class="colon">:</td>
+              <td>RC-582</td>
+            </tr>
+            <tr>
+              <td class="label">Recipe No</td>
+              <td class="colon">:</td>
+              <td>R-3647</td>
+            </tr>
+          </table>
+        </td>
+        <td class="split">
+          <table class="scale-table">
+            <colgroup>
+              <col style="width: 24%">
+              <col style="width: 38%">
+              <col style="width: 18%">
+              <col style="width: 20%">
+            </colgroup>
+            <thead>
+              <tr>
+                <th style="width: 24%;">Scale</th>
+                <th style="width: 38%;">Start time</th>
+                <th style="width: 18%;">Dur(sec)</th>
+                <th style="width: 20%;"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="center">{scale1_id}</td>
+                <td class="center">{scale1_start_time}</td>
+                <td class="center">{scale1_dur_sec}</td>
+                <td></td>
+              </tr>
+              <tr>
+                <td class="center">{scale2_id}</td>
+                <td class="center">{scale2_start_time}</td>
+                <td class="center">{scale2_dur_sec}</td>
+                <td></td>
+              </tr>
+            </tbody>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </div>
+
+  <table class="mat-table">
+    <colgroup>
+      <col style="width: 8%">
+      <col style="width: 38%">
+      <col style="width: 12%">
+      <col style="width: 12%">
+      <col style="width: 12%">
+      <col style="width: 10%">
+      <col style="width: 8%">
+    </colgroup>
+    <thead>
+      <tr>
+        <th>Bin No</th>
+        <th>Material Name</th>
+        <th>Set wt(Kg)</th>
+        <th>Ach wt(Kg)</th>
+        <th>Error(Kg)</th>
+        <th>Error %</th>
+        <th>Dosine Dur (sec)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="center">4</td>
+        <td>Feldspar</td>
+        <td class="num">468.05</td>
+        <td class="num">441.46</td>
+        <td class="num">-26.59</td>
+        <td class="num">-5.68</td>
+        <td class="num"></td>
+      </tr>
+<tr>
+        <td class="center">10</td>
+        <td>Magnesium Oxide</td>
+        <td class="num">472.03</td>
+        <td class="num">493.67</td>
+        <td class="num">21.64</td>
+        <td class="num">4.58</td>
+        <td class="num"></td>
+      </tr>
+<tr>
+        <td class="center">12</td>
+        <td>Bauxite</td>
+        <td class="num">475.83</td>
+        <td class="num">448.77</td>
+        <td class="num">-27.06</td>
+        <td class="num">-5.69</td>
+        <td class="num"></td>
+      </tr>
+<tr>
+        <td class="center">14</td>
+        <td>Feldspar</td>
+        <td class="num">463.12</td>
+        <td class="num">442.84</td>
+        <td class="num">-20.28</td>
+        <td class="num">-4.38</td>
+        <td class="num"></td>
+      </tr>
+<tr>
+        <td class="center">15</td>
+        <td>Dolomite</td>
+        <td class="num">124.53</td>
+        <td class="num">118.6</td>
+        <td class="num">-5.93</td>
+        <td class="num">-4.76</td>
+        <td class="num"></td>
+      </tr>
+<tr>
+        <td class="center">16</td>
+        <td>Kaolin Clay</td>
+        <td class="num">401.81</td>
+        <td class="num">376.62</td>
+        <td class="num">-25.19</td>
+        <td class="num">-6.27</td>
+        <td class="num"></td>
+      </tr>
+<tr>
+        <td class="center">17</td>
+        <td>Quartz Grit</td>
+        <td class="num">225.85</td>
+        <td class="num">222.8</td>
+        <td class="num">-3.05</td>
+        <td class="num">-1.35</td>
+        <td class="num"></td>
+      </tr>
+<tr>
+        <td class="center">20</td>
+        <td>Bauxite</td>
+        <td class="num">88.36</td>
+        <td class="num">91.4</td>
+        <td class="num">3.04</td>
+        <td class="num">3.44</td>
+        <td class="num"></td>
+      </tr>
+<tr>
+        <td class="center">22</td>
+        <td>Feldspar</td>
+        <td class="num">136.15</td>
+        <td class="num">129.08</td>
+        <td class="num">-7.07</td>
+        <td class="num">-5.19</td>
+        <td class="num"></td>
+      </tr>
+<tr>
+        <td class="center">23</td>
+        <td>Limestone</td>
+        <td class="num">455.34</td>
+        <td class="num">427.56</td>
+        <td class="num">-27.78</td>
+        <td class="num">-6.1</td>
+        <td class="num"></td>
+      </tr>
+    </tbody>
+    <tfoot>
+      <tr>
+        <td class="label" colspan="2">Total :</td>
+        <td class="num">3311.07</td>
+        <td class="num">3192.8</td>
+        <td class="num">-118.27</td>
+        <td class="num">-31.4</td>
+        <td class="num">1000</td>
+      </tr>
+    </tfoot>
+  </table>
+</section>
+<section class="batch-block">
+  <div class="batch-meta">
+    <table class="meta-grid">
+      <colgroup>
+        <col style="width: 55%">
+        <col style="width: 45%">
+      </colgroup>
+      <tr>
+        <td class="left-meta">
+          <table>
+            <tr>
+              <td class="label">Batch No</td>
+              <td class="colon">:</td>
+              <td>B202509-06</td>
+            </tr>
+            <tr>
+              <td class="label">Batch Date</td>
+              <td class="colon">:</td>
+              <td>2025-08-02</td>
+            </tr>
+            <tr>
+              <td class="label">Shift No</td>
+              <td class="colon">:</td>
+              <td>1</td>
+            </tr>
+            <tr>
+              <td class="label">Recipe Name</td>
+              <td class="colon">:</td>
+              <td>Blend-B</td>
+            </tr>
+            <tr>
+              <td class="label">Recipe Code</td>
+              <td class="colon">:</td>
+              <td>RC-962</td>
+            </tr>
+            <tr>
+              <td class="label">Recipe No</td>
+              <td class="colon">:</td>
+              <td>R-3852</td>
+            </tr>
+          </table>
+        </td>
+        <td class="split">
+          <table class="scale-table">
+            <colgroup>
+              <col style="width: 24%">
+              <col style="width: 38%">
+              <col style="width: 18%">
+              <col style="width: 20%">
+            </colgroup>
+            <thead>
+              <tr>
+                <th style="width: 24%;">Scale</th>
+                <th style="width: 38%;">Start time</th>
+                <th style="width: 18%;">Dur(sec)</th>
+                <th style="width: 20%;"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="center">{scale1_id}</td>
+                <td class="center">{scale1_start_time}</td>
+                <td class="center">{scale1_dur_sec}</td>
+                <td></td>
+              </tr>
+              <tr>
+                <td class="center">{scale2_id}</td>
+                <td class="center">{scale2_start_time}</td>
+                <td class="center">{scale2_dur_sec}</td>
+                <td></td>
+              </tr>
+            </tbody>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </div>
+
+  <table class="mat-table">
+    <colgroup>
+      <col style="width: 8%">
+      <col style="width: 38%">
+      <col style="width: 12%">
+      <col style="width: 12%">
+      <col style="width: 12%">
+      <col style="width: 10%">
+      <col style="width: 8%">
+    </colgroup>
+    <thead>
+      <tr>
+        <th>Bin No</th>
+        <th>Material Name</th>
+        <th>Set wt(Kg)</th>
+        <th>Ach wt(Kg)</th>
+        <th>Error(Kg)</th>
+        <th>Error %</th>
+        <th>Dosine Dur (sec)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="center">2</td>
+        <td>Iron Oxide</td>
+        <td class="num">178.49</td>
+        <td class="num">179.86</td>
+        <td class="num">1.37</td>
+        <td class="num">0.77</td>
+        <td class="num"></td>
+      </tr>
+<tr>
+        <td class="center">4</td>
+        <td>Dolomite</td>
+        <td class="num">380.82</td>
+        <td class="num">366.38</td>
+        <td class="num">-14.44</td>
+        <td class="num">-3.79</td>
+        <td class="num"></td>
+      </tr>
+<tr>
+        <td class="center">5</td>
+        <td>Alumina</td>
+        <td class="num">213.18</td>
+        <td class="num">202.46</td>
+        <td class="num">-10.72</td>
+        <td class="num">-5.03</td>
+        <td class="num"></td>
+      </tr>
+<tr>
+        <td class="center">7</td>
+        <td>Silica Sand</td>
+        <td class="num">207.01</td>
+        <td class="num">213.51</td>
+        <td class="num">6.5</td>
+        <td class="num">3.14</td>
+        <td class="num"></td>
+      </tr>
+<tr>
+        <td class="center">8</td>
+        <td>Gypsum</td>
+        <td class="num">320.07</td>
+        <td class="num">306.92</td>
+        <td class="num">-13.15</td>
+        <td class="num">-4.11</td>
+        <td class="num"></td>
+      </tr>
+<tr>
+        <td class="center">10</td>
+        <td>Silica Sand</td>
+        <td class="num">66.85</td>
+        <td class="num">66.58</td>
+        <td class="num">-0.27</td>
+        <td class="num">-0.4</td>
+        <td class="num"></td>
+      </tr>
+<tr>
+        <td class="center">11</td>
+        <td>Quartz Grit</td>
+        <td class="num">460.94</td>
+        <td class="num">471.6</td>
+        <td class="num">10.66</td>
+        <td class="num">2.31</td>
+        <td class="num"></td>
+      </tr>
+<tr>
+        <td class="center">16</td>
+        <td>Magnesium Oxide</td>
+        <td class="num">241.34</td>
+        <td class="num">237.4</td>
+        <td class="num">-3.94</td>
+        <td class="num">-1.63</td>
+        <td class="num"></td>
+      </tr>
+<tr>
+        <td class="center">22</td>
+        <td>Calcite Powder</td>
+        <td class="num">463.98</td>
+        <td class="num">442.55</td>
+        <td class="num">-21.43</td>
+        <td class="num">-4.62</td>
+        <td class="num"></td>
+      </tr>
+    </tbody>
+    <tfoot>
+      <tr>
+        <td class="label" colspan="2">Total :</td>
+        <td class="num">2532.68</td>
+        <td class="num">2487.26</td>
+        <td class="num">-45.42</td>
+        <td class="num">-13.360000000000001</td>
+        <td class="num">885</td>
+      </tr>
+    </tfoot>
+  </table>
+</section>
+<section class="batch-block">
+  <div class="batch-meta">
+    <table class="meta-grid">
+      <colgroup>
+        <col style="width: 55%">
+        <col style="width: 45%">
+      </colgroup>
+      <tr>
+        <td class="left-meta">
+          <table>
+            <tr>
+              <td class="label">Batch No</td>
+              <td class="colon">:</td>
+              <td>B202509-07</td>
+            </tr>
+            <tr>
+              <td class="label">Batch Date</td>
+              <td class="colon">:</td>
+              <td>2025-08-12</td>
+            </tr>
+            <tr>
+              <td class="label">Shift No</td>
+              <td class="colon">:</td>
+              <td>2</td>
+            </tr>
+            <tr>
+              <td class="label">Recipe Name</td>
+              <td class="colon">:</td>
+              <td>Blend-A</td>
+            </tr>
+            <tr>
+              <td class="label">Recipe Code</td>
+              <td class="colon">:</td>
+              <td>RC-488</td>
+            </tr>
+            <tr>
+              <td class="label">Recipe No</td>
+              <td class="colon">:</td>
+              <td>R-9263</td>
+            </tr>
+          </table>
+        </td>
+        <td class="split">
+          <table class="scale-table">
+            <colgroup>
+              <col style="width: 24%">
+              <col style="width: 38%">
+              <col style="width: 18%">
+              <col style="width: 20%">
+            </colgroup>
+            <thead>
+              <tr>
+                <th style="width: 24%;">Scale</th>
+                <th style="width: 38%;">Start time</th>
+                <th style="width: 18%;">Dur(sec)</th>
+                <th style="width: 20%;"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="center">{scale1_id}</td>
+                <td class="center">{scale1_start_time}</td>
+                <td class="center">{scale1_dur_sec}</td>
+                <td></td>
+              </tr>
+              <tr>
+                <td class="center">{scale2_id}</td>
+                <td class="center">{scale2_start_time}</td>
+                <td class="center">{scale2_dur_sec}</td>
+                <td></td>
+              </tr>
+            </tbody>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </div>
+
+  <table class="mat-table">
+    <colgroup>
+      <col style="width: 8%">
+      <col style="width: 38%">
+      <col style="width: 12%">
+      <col style="width: 12%">
+      <col style="width: 12%">
+      <col style="width: 10%">
+      <col style="width: 8%">
+    </colgroup>
+    <thead>
+      <tr>
+        <th>Bin No</th>
+        <th>Material Name</th>
+        <th>Set wt(Kg)</th>
+        <th>Ach wt(Kg)</th>
+        <th>Error(Kg)</th>
+        <th>Error %</th>
+        <th>Dosine Dur (sec)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="center">1</td>
+        <td>Alumina</td>
+        <td class="num">447.58</td>
+        <td class="num">435.59</td>
+        <td class="num">-11.99</td>
+        <td class="num">-2.68</td>
+        <td class="num"></td>
+      </tr>
+<tr>
+        <td class="center">4</td>
+        <td>Kaolin Clay</td>
+        <td class="num">264.61</td>
+        <td class="num">258.45</td>
+        <td class="num">-6.16</td>
+        <td class="num">-2.33</td>
+        <td class="num"></td>
+      </tr>
+<tr>
+        <td class="center">9</td>
+        <td>Calcite Powder</td>
+        <td class="num">303.24</td>
+        <td class="num">317.58</td>
+        <td class="num">14.34</td>
+        <td class="num">4.73</td>
+        <td class="num"></td>
+      </tr>
+<tr>
+        <td class="center">13</td>
+        <td>Quartz Grit</td>
+        <td class="num">462.91</td>
+        <td class="num">471.15</td>
+        <td class="num">8.24</td>
+        <td class="num">1.78</td>
+        <td class="num"></td>
+      </tr>
+<tr>
+        <td class="center">16</td>
+        <td>Kaolin Clay</td>
+        <td class="num">324.08</td>
+        <td class="num">318.63</td>
+        <td class="num">-5.45</td>
+        <td class="num">-1.68</td>
+        <td class="num"></td>
+      </tr>
+<tr>
+        <td class="center">17</td>
+        <td>Limestone</td>
+        <td class="num">353.19</td>
+        <td class="num">330.57</td>
+        <td class="num">-22.62</td>
+        <td class="num">-6.4</td>
+        <td class="num"></td>
+      </tr>
+<tr>
+        <td class="center">20</td>
+        <td>Sodium Carbonate</td>
+        <td class="num">85.24</td>
+        <td class="num">89.66</td>
+        <td class="num">4.42</td>
+        <td class="num">5.19</td>
+        <td class="num"></td>
+      </tr>
+<tr>
+        <td class="center">21</td>
+        <td>Kaolin Clay</td>
+        <td class="num">254.85</td>
+        <td class="num">250.81</td>
+        <td class="num">-4.04</td>
+        <td class="num">-1.59</td>
+        <td class="num"></td>
+      </tr>
+<tr>
+        <td class="center">22</td>
+        <td>Iron Oxide</td>
+        <td class="num">241.7</td>
+        <td class="num">254.45</td>
+        <td class="num">12.75</td>
+        <td class="num">5.28</td>
+        <td class="num"></td>
+      </tr>
+    </tbody>
+    <tfoot>
+      <tr>
+        <td class="label" colspan="2">Total :</td>
+        <td class="num">2737.4</td>
+        <td class="num">2726.89</td>
+        <td class="num">-10.510000000000002</td>
+        <td class="num">2.3000000000000007</td>
+        <td class="num">706</td>
+      </tr>
+    </tfoot>
+  </table>
+</section>
+<section class="batch-block">
+  <div class="batch-meta">
+    <table class="meta-grid">
+      <colgroup>
+        <col style="width: 55%">
+        <col style="width: 45%">
+      </colgroup>
+      <tr>
+        <td class="left-meta">
+          <table>
+            <tr>
+              <td class="label">Batch No</td>
+              <td class="colon">:</td>
+              <td>B202509-08</td>
+            </tr>
+            <tr>
+              <td class="label">Batch Date</td>
+              <td class="colon">:</td>
+              <td>2025-08-19</td>
+            </tr>
+            <tr>
+              <td class="label">Shift No</td>
+              <td class="colon">:</td>
+              <td>1</td>
+            </tr>
+            <tr>
+              <td class="label">Recipe Name</td>
+              <td class="colon">:</td>
+              <td>Blend-A</td>
+            </tr>
+            <tr>
+              <td class="label">Recipe Code</td>
+              <td class="colon">:</td>
+              <td>RC-992</td>
+            </tr>
+            <tr>
+              <td class="label">Recipe No</td>
+              <td class="colon">:</td>
+              <td>R-1087</td>
+            </tr>
+          </table>
+        </td>
+        <td class="split">
+          <table class="scale-table">
+            <colgroup>
+              <col style="width: 24%">
+              <col style="width: 38%">
+              <col style="width: 18%">
+              <col style="width: 20%">
+            </colgroup>
+            <thead>
+              <tr>
+                <th style="width: 24%;">Scale</th>
+                <th style="width: 38%;">Start time</th>
+                <th style="width: 18%;">Dur(sec)</th>
+                <th style="width: 20%;"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="center">{scale1_id}</td>
+                <td class="center">{scale1_start_time}</td>
+                <td class="center">{scale1_dur_sec}</td>
+                <td></td>
+              </tr>
+              <tr>
+                <td class="center">{scale2_id}</td>
+                <td class="center">{scale2_start_time}</td>
+                <td class="center">{scale2_dur_sec}</td>
+                <td></td>
+              </tr>
+            </tbody>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </div>
+
+  <table class="mat-table">
+    <colgroup>
+      <col style="width: 8%">
+      <col style="width: 38%">
+      <col style="width: 12%">
+      <col style="width: 12%">
+      <col style="width: 12%">
+      <col style="width: 10%">
+      <col style="width: 8%">
+    </colgroup>
+    <thead>
+      <tr>
+        <th>Bin No</th>
+        <th>Material Name</th>
+        <th>Set wt(Kg)</th>
+        <th>Ach wt(Kg)</th>
+        <th>Error(Kg)</th>
+        <th>Error %</th>
+        <th>Dosine Dur (sec)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="center">2</td>
+        <td>Iron Oxide</td>
+        <td class="num">53.61</td>
+        <td class="num">55.62</td>
+        <td class="num">2.01</td>
+        <td class="num">3.75</td>
+        <td class="num"></td>
+      </tr>
+<tr>
+        <td class="center">3</td>
+        <td>Magnesium Oxide</td>
+        <td class="num">150.04</td>
+        <td class="num">151.52</td>
+        <td class="num">1.48</td>
+        <td class="num">0.99</td>
+        <td class="num"></td>
+      </tr>
+<tr>
+        <td class="center">5</td>
+        <td>Sodium Carbonate</td>
+        <td class="num">285.27</td>
+        <td class="num">281.3</td>
+        <td class="num">-3.97</td>
+        <td class="num">-1.39</td>
+        <td class="num"></td>
+      </tr>
+<tr>
+        <td class="center">6</td>
+        <td>Calcite Powder</td>
+        <td class="num">122.54</td>
+        <td class="num">124.28</td>
+        <td class="num">1.74</td>
+        <td class="num">1.42</td>
+        <td class="num"></td>
+      </tr>
+<tr>
+        <td class="center">7</td>
+        <td>Quartz Grit</td>
+        <td class="num">163.24</td>
+        <td class="num">173.38</td>
+        <td class="num">10.14</td>
+        <td class="num">6.21</td>
+        <td class="num"></td>
+      </tr>
+<tr>
+        <td class="center">10</td>
+        <td>Fly Ash</td>
+        <td class="num">137.75</td>
+        <td class="num">138.71</td>
+        <td class="num">0.96</td>
+        <td class="num">0.7</td>
+        <td class="num"></td>
+      </tr>
+<tr>
+        <td class="center">11</td>
+        <td>Fly Ash</td>
+        <td class="num">200.51</td>
+        <td class="num">191.51</td>
+        <td class="num">-9.0</td>
+        <td class="num">-4.49</td>
+        <td class="num"></td>
+      </tr>
+<tr>
+        <td class="center">16</td>
+        <td>Limestone</td>
+        <td class="num">456.27</td>
+        <td class="num">447.6</td>
+        <td class="num">-8.67</td>
+        <td class="num">-1.9</td>
+        <td class="num"></td>
+      </tr>
+<tr>
+        <td class="center">19</td>
+        <td>Dolomite</td>
+        <td class="num">305.61</td>
+        <td class="num">306.82</td>
+        <td class="num">1.21</td>
+        <td class="num">0.4</td>
+        <td class="num"></td>
+      </tr>
+<tr>
+        <td class="center">23</td>
+        <td>Limestone</td>
+        <td class="num">300.44</td>
+        <td class="num">316.19</td>
+        <td class="num">15.75</td>
+        <td class="num">5.24</td>
+        <td class="num"></td>
+      </tr>
+    </tbody>
+    <tfoot>
+      <tr>
+        <td class="label" colspan="2">Total :</td>
+        <td class="num">2175.2799999999997</td>
+        <td class="num">2186.93</td>
+        <td class="num">11.65</td>
+        <td class="num">10.93</td>
+        <td class="num">972</td>
+      </tr>
+    </tfoot>
+  </table>
+</section><!-- END:BATCH (auto) -->
+<!-- END:BLOCK_REPEAT -->
+
+<div class="page-footer">
+  <table class="grid">
+    <tr>
+      <td style="text-align:left;">{footer_org}</td>
+      <td style="text-align:center;">Page {page_no} of {page_count}</td>
+      <td style="text-align:right;"></td>
+    </tr>
+  </table>
+</div>
+
+</body>
+</html>

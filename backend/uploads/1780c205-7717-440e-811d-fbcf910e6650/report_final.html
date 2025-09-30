@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Batch report</title>
+<style>
+  @page { size: A4; margin: 12mm 14mm; }
+  html, body { height: 100%; }
+  body { font-family: "Times New Roman", serif; font-size: 12px; color: #000; margin: 0; }
+  h1.title { text-align: center; font-size: 22px; font-weight: 700; margin: 6mm 0 4mm; }
+
+  /* Generic tables */
+  table { border-collapse: collapse; table-layout: fixed; width: 100%; }
+  th, td { padding: 3px 6px; vertical-align: middle; }
+  .kv td.label { width: 38mm; }
+  .kv td.colon { width: 4mm; text-align: center; }
+  .right { text-align: right; }
+  .center { text-align: center; }
+
+  /* Header */
+  .page-header { margin-top: 6mm; }
+  .page-header .top-grid td { padding: 2px 0; }
+  .page-header .right-block { text-align: right; }
+  .print-date { margin: 4mm 0 2mm; }
+  .print-date table { width: auto; border: 1px solid #000; }
+  .print-date td { padding: 3px 8px; }
+  .print-date td.label { font-weight: 700; background: #fff; }
+
+  /* Batch block */
+  .batch-block { break-inside: avoid; page-break-inside: avoid; margin: 6mm 0; }
+  .batch-meta { border: 1px solid #000; }
+  .batch-meta .meta-grid { width: 100%; }
+  .batch-meta .meta-grid td { padding: 0; }
+  .batch-meta .left-meta { padding: 2px 0; }
+  .batch-meta .left-meta table { width: 100%; }
+  .batch-meta .left-meta tr:not(:last-child) td { border-bottom: 1px solid #000; }
+  .batch-meta .split { border-left: 1px solid #000; }
+  .scale-table { width: 100%; }
+  .scale-table th, .scale-table td { border-bottom: 1px solid #000; }
+  .scale-table tr:last-child td { border-bottom: 0; }
+  .scale-table th { font-weight: 700; text-align: center; }
+  .scale-table td { text-align: center; }
+
+  /* Materials table */
+  .mat-table { margin-top: 3mm; border: 1px solid #000; }
+  .mat-table th, .mat-table td { border: 1px solid #000; }
+  .mat-table thead th { font-weight: 700; text-align: center; }
+  .mat-table .num { text-align: right; }
+  .mat-table tfoot td { font-weight: 700; }
+  .mat-table tfoot td.label { text-align: right; }
+
+  /* Footer */
+  .page-footer {
+    position: fixed; left: 14mm; right: 14mm; bottom: 6mm;
+    font-size: 11px; color: #000;
+  }
+  .page-footer .grid { width: 100%; }
+  .page-footer td { padding: 0; }
+</style>
+</head>
+<body>
+
+<!-- PAGE HEADER -->
+<div class="page-header">
+  <table class="top-grid">
+    <colgroup>
+      <col style="width: 60%">
+      <col style="width: 40%">
+    </colgroup>
+    <tr>
+      <td>
+        <table class="kv">
+          <tr>
+            <td class="label">Plant name</td>
+            <td class="colon">:</td>
+            <td>UNRESOLVED</td>
+          </tr>
+          <tr>
+            <td class="label">Location</td>
+            <td class="colon">:</td>
+            <td>UNRESOLVED</td>
+          </tr>
+        </table>
+      </td>
+      <td class="right-block">
+        <table class="kv" style="margin-left:auto;">
+          <tr>
+            <td class="label" style="width:auto;">Date</td>
+            <td class="colon">:</td>
+            <td>UNRESOLVED</td>
+          </tr>
+          <tr>
+            <td class="label" style="width:auto;">Recipe</td>
+            <td class="colon">:</td>
+            <td>UNRESOLVED</td>
+          </tr>
+          <tr>
+            <td class="label" style="width:auto;">Shift No</td>
+            <td class="colon">:</td>
+            <td>UNRESOLVED</td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+
+  <h1 class="title">Batch report</h1>
+
+  <div class="print-date">
+    <table>
+      <tr>
+        <td class="label">Print Date</td>
+        <td class="colon">:</td>
+        <td>UNRESOLVED</td>
+      </tr>
+    </table>
+  </div>
+</div>
+
+<!-- BEGIN:BLOCK_REPEAT batches -->
+<section class="batch-block">
+  <div class="batch-meta">
+    <table class="meta-grid">
+      <colgroup>
+        <col style="width: 55%">
+        <col style="width: 45%">
+      </colgroup>
+      <tr>
+        <td class="left-meta">
+          <table>
+            <tr>
+              <td class="label">Batch No</td>
+              <td class="colon">:</td>
+              <td>{batch_no}</td>
+            </tr>
+            <tr>
+              <td class="label">Batch Date</td>
+              <td class="colon">:</td>
+              <td>{batch_date}</td>
+            </tr>
+            <tr>
+              <td class="label">Shift No</td>
+              <td class="colon">:</td>
+              <td>{batch_shift_no}</td>
+            </tr>
+            <tr>
+              <td class="label">Recipe Name</td>
+              <td class="colon">:</td>
+              <td>{recipe_name}</td>
+            </tr>
+            <tr>
+              <td class="label">Recipe Code</td>
+              <td class="colon">:</td>
+              <td>{recipe_code}</td>
+            </tr>
+            <tr>
+              <td class="label">Recipe No</td>
+              <td class="colon">:</td>
+              <td>{recipe_no}</td>
+            </tr>
+          </table>
+        </td>
+        <td class="split">
+          <table class="scale-table">
+            <colgroup>
+              <col style="width: 24%">
+              <col style="width: 38%">
+              <col style="width: 18%">
+              <col style="width: 20%">
+            </colgroup>
+            <thead>
+              <tr>
+                <th style="width: 24%;">Scale</th>
+                <th style="width: 38%;">Start time</th>
+                <th style="width: 18%;">Dur(sec)</th>
+                <th style="width: 20%;"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="center">{scale1_id}</td>
+                <td class="center">{scale1_start_time}</td>
+                <td class="center">{scale1_dur_sec}</td>
+                <td></td>
+              </tr>
+              <tr>
+                <td class="center">{scale2_id}</td>
+                <td class="center">{scale2_start_time}</td>
+                <td class="center">{scale2_dur_sec}</td>
+                <td></td>
+              </tr>
+            </tbody>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </div>
+
+  <table class="mat-table">
+    <colgroup>
+      <col style="width: 8%">
+      <col style="width: 38%">
+      <col style="width: 12%">
+      <col style="width: 12%">
+      <col style="width: 12%">
+      <col style="width: 10%">
+      <col style="width: 8%">
+    </colgroup>
+    <thead>
+      <tr>
+        <th>Bin No</th>
+        <th>Material Name</th>
+        <th>Set wt(Kg)</th>
+        <th>Ach wt(Kg)</th>
+        <th>Error(Kg)</th>
+        <th>Error %</th>
+        <th>Dosine Dur (sec)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="center">{sl}</td>
+        <td>{name}</td>
+        <td class="num">{set}</td>
+        <td class="num">{ach}</td>
+        <td class="num">{err}</td>
+        <td class="num">{errp}</td>
+        <td class="num"></td>
+      </tr>
+    </tbody>
+    <tfoot>
+      <tr>
+        <td class="label" colspan="2">Total :</td>
+        <td class="num">{total_set_kg}</td>
+        <td class="num">{total_ach_kg}</td>
+        <td class="num">{total_err_kg}</td>
+        <td class="num">{total_err_pct}</td>
+        <td class="num">{total_dose_dur_sec}</td>
+      </tr>
+    </tfoot>
+  </table>
+</section>
+<!-- END:BLOCK_REPEAT -->
+
+<div class="page-footer">
+  <table class="grid">
+    <tr>
+      <td style="text-align:left;">UNRESOLVED</td>
+      <td style="text-align:center;">Page {page_no} of {page_count}</td>
+      <td style="text-align:right;"></td>
+    </tr>
+  </table>
+</div>
+
+</body>
+</html>

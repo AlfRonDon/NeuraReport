@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>{report_title}</title>
+<style>
+  @page { size: A4; margin: 12mm; }
+  html, body { margin: 0; padding: 0; }
+  body { font-family: "Times New Roman", serif; color: #000; font-size: 12pt; }
+  .page-wrap { padding-bottom: 20mm; }
+
+  .topbox {
+    border: 1px solid #000;
+    padding: 6px 8px 4px 8px;
+    margin-bottom: 6px;
+  }
+  .meta { width: 100%; border-collapse: collapse; table-layout: fixed; }
+  .meta td { vertical-align: top; padding: 2px 4px; }
+  .meta .left { width: 60%; }
+  .meta .right { width: 40%; }
+  .kv { line-height: 1.2; }
+  .title {
+    text-align: center;
+    font-weight: bold;
+    font-size: 18px;
+    margin: 2px 0 4px 0;
+  }
+
+  table.grid { width: 100%; border-collapse: collapse; table-layout: fixed; }
+  table.grid th, table.grid td { border: 1px solid #000; padding: 4px 6px; }
+  table.grid thead th { font-weight: bold; }
+  .c { text-align: center; }
+  .l { text-align: left; }
+  .r { text-align: right; }
+  .num { font-variant-numeric: tabular-nums; }
+  tfoot td { font-weight: bold; }
+
+  /* Repeatable content support */
+  .batch-block { break-inside: avoid; page-break-inside: avoid; margin: 6mm 0; }
+
+  .footer {
+    position: fixed;
+    bottom: 8mm;
+    left: 12mm;
+    right: 12mm;
+    font-size: 10pt;
+    display: flex;
+    justify-content: space-between;
+  }
+</style>
+</head>
+<body>
+<div class="page-wrap">
+  <div class="topbox">
+    <table class="meta">
+      <tr>
+        <td class="left">
+          <div class="kv">Plant name : {plant}</div>
+          <div class="kv">Location : {location}</div>
+        </td>
+        <td class="right">
+          <div class="kv">From Date: {from_date} &nbsp;&nbsp; To {to_date}</div>
+        </td>
+      </tr>
+      <tr>
+        <td class="left">
+          <div class="kv">Print Date &nbsp;: {print_date}</div>
+        </td>
+        <td class="right">
+          <div class="kv">Recipe code : {recipe_code}</div>
+        </td>
+      </tr>
+    </table>
+    <div class="title">{report_title}</div>
+  </div>
+
+  <table class="grid">
+    <colgroup>
+      <col style="width:8%">
+      <col style="width:42%">
+      <col style="width:15%">
+      <col style="width:15%">
+      <col style="width:10%">
+      <col style="width:10%">
+    </colgroup>
+    <thead>
+      <tr>
+        <th class="c">Sl. No.</th>
+        <th class="l">Material name</th>
+        <th class="r">Set. wt(Kg)</th>
+        <th class="r">Ach. wt(Kg)</th>
+        <th class="r">Error(Kg)</th>
+        <th class="r">Error %</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="c">{rows.sl}</td>
+        <td class="l">{rows.name}</td>
+        <td class="r num">{rows.set}</td>
+        <td class="r num">{rows.ach}</td>
+        <td class="r num">{rows.err}</td>
+        <td class="r num">{rows.errp}</td>
+      </tr>
+    </tbody>
+    <tfoot>
+      <tr>
+        <td class="l" colspan="2">Total</td>
+        <td class="r num">{tot_set}</td>
+        <td class="r num">{tot_ach}</td>
+        <td class="r num">{tot_err}</td>
+        <td class="r num">{tot_errp}</td>
+      </tr>
+    </tfoot>
+  </table>
+</div>
+
+<div class="footer">
+  <div>{company}</div>
+  <div>Page {page_no} of {page_count}</div>
+</div>
+</body>
+</html>
