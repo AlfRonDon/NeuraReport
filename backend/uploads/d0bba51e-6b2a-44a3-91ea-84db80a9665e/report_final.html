@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Consumption report</title>
+<style>
+  @page { size: A4; margin: 14mm 14mm 18mm; }
+  html, body { height: 100%; }
+  body {
+    font-family: "Times New Roman", Times, serif;
+    color: #000;
+    font-size: 12pt;
+    line-height: 1.25;
+    margin: 0;
+  }
+
+  .page {
+    padding: 0;
+  }
+
+  .page-header {
+    border: 1px solid #000;
+    padding: 6mm 6mm 4mm;
+    margin-bottom: 5mm;
+  }
+
+  .kv {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+  }
+  .kv td {
+    padding: 1mm 0;
+    vertical-align: top;
+  }
+  .kv .label {
+    width: 28mm;
+    white-space: nowrap;
+  }
+  .kv .colon {
+    width: 3mm;
+    text-align: center;
+  }
+  .kv .value {
+    padding-left: 1mm;
+  }
+  .kv .right { text-align: right; white-space: nowrap; }
+
+  .title {
+    text-align: center;
+    font-size: 16pt;
+    font-weight: 700;
+    margin: 2mm 0 1mm;
+  }
+  .recipe-line {
+    text-align: right;
+    margin: 0 0 2mm;
+  }
+
+  .report-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    border: 1px solid #000;
+  }
+  .report-table th,
+  .report-table td {
+    border: 1px solid #000;
+    padding: 2.5mm 2mm;
+  }
+  .report-table thead th {
+    font-weight: 700;
+  }
+  .report-table .c { text-align: center; }
+  .report-table .l { text-align: left; }
+  .report-table .r { text-align: right; }
+
+  /* Column sizing to mirror the PDF */
+  .col-sl   { width: 8%; }
+  .col-name { width: 48%; }
+  .col-set  { width: 14%; }
+  .col-ach  { width: 14%; }
+  .col-err  { width: 8%; }
+  .col-errp { width: 8%; }
+
+  tfoot td {
+    font-weight: 700;
+  }
+
+  .batch-block { break-inside: avoid; page-break-inside: avoid; margin: 6mm 0; }
+
+  /* Footer */
+  .page-footer {
+    position: fixed;
+    bottom: 8mm;
+    left: 14mm;
+    right: 14mm;
+    font-size: 10pt;
+    color: #000;
+    display: flex;
+    justify-content: space-between;
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="page-header">
+    <table class="kv">
+      <tr>
+        <td class="label">Plant name</td>
+        <td class="colon">:</td>
+        <td class="value">{{plant_name}}</td>
+
+        <td></td>
+
+        <td class="right">From Date:&nbsp;{{from_date}}&nbsp;&nbsp;&nbsp;To&nbsp;{{to_date}}</td>
+      </tr>
+      <tr>
+        <td class="label">Location</td>
+        <td class="colon">:</td>
+        <td class="value">{{location}}</td>
+
+        <td></td>
+
+        <td class="right"></td>
+      </tr>
+      <tr>
+        <td class="label">Print Date</td>
+        <td class="colon">:</td>
+        <td class="value">{{print_date}}</td>
+
+        <td></td>
+
+        <td class="right"></td>
+      </tr>
+    </table>
+
+    <div class="title">Consumption report</div>
+    <div class="recipe-line">Recipe code : {{recipe_code}}</div>
+  </header>
+
+  <section class="batch-block">
+    <table class="report-table">
+      <colgroup>
+        <col class="col-sl">
+        <col class="col-name">
+        <col class="col-set">
+        <col class="col-ach">
+        <col class="col-err">
+        <col class="col-errp">
+      </colgroup>
+      <thead>
+        <tr>
+          <th class="c">Sl. No.</th>
+          <th class="l">Material name</th>
+          <th class="r">Set. wt(Kg)</th>
+          <th class="r">Ach. wt(Kg)</th>
+          <th class="r">Error(Kg)</th>
+          <th class="r">Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="c">{{sl}}</td>
+          <td class="l">{{name}}</td>
+          <td class="r">{{set}}</td>
+          <td class="r">{{ach}}</td>
+          <td class="r">{{err}}</td>
+          <td class="r">{{errp}}</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td class="l" colspan="2">Total</td>
+          <td class="r">{{total_set}}</td>
+          <td class="r">{{total_ach}}</td>
+          <td class="r">{{total_err}}</td>
+          <td class="r">{{total_errp}}</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+
+</div>
+
+<footer class="page-footer">
+  <div>{{company_footer}}</div>
+  <div>Page {{page}}</div>
+</footer>
+
+</body>
+</html>

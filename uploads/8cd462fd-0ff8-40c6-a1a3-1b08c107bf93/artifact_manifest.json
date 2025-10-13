@@ -1,0 +1,19 @@
+{
+  "correlation_id": "630f9891-9788-4d38-aec6-16d02daf5125",
+  "file_checksums": {
+    "filled_1760385557.html": "8736c0c67036de7bf79de36aae323de1ba84af90c45d5835c7e1833486edb421",
+    "filled_1760385557.pdf": "4a1a3fbb7a38be82f2577f25973b666415573f21bc01ae8645de907a9356e754"
+  },
+  "files": {
+    "filled_1760385557.html": "filled_1760385557.html",
+    "filled_1760385557.pdf": "filled_1760385557.pdf"
+  },
+  "input_refs": [
+    "C:\\Users\\alfre\\Downloads\\NeuraReport-main - Copy (2)\\uploads\\8cd462fd-0ff8-40c6-a1a3-1b08c107bf93\\contract.json",
+    "C:\\Users\\alfre\\Downloads\\consumption_report_with_date.db"
+  ],
+  "pid": 54620,
+  "produced_at": "2025-10-13T19:59:30.867185+00:00",
+  "schema_version": "1.0",
+  "step": "reports_run"
+}

@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Consumption report</title>
+<style>
+  @page { size: A4; margin: 14mm 14mm 18mm; }
+  body {
+    font-family: "Times New Roman", serif;
+    font-size: 12px;
+    color: #000;
+    margin: 0;
+  }
+
+  .page-wrap {
+    width: 100%;
+  }
+
+  .header-box {
+    border: 1px solid #000;
+    padding: 6mm 6mm 4mm;
+    margin-bottom: 4mm;
+  }
+  .header-grid {
+    width: 100%;
+    border-collapse: separate;
+    table-layout: fixed;
+  }
+  .header-grid td {
+    vertical-align: top;
+    padding: 1mm 0;
+  }
+  .left-meta {
+    width: 58%;
+  }
+  .right-meta {
+    width: 42%;
+    text-align: right;
+  }
+  .meta-line {
+    white-space: nowrap;
+  }
+  .meta-label { display: inline-block; min-width: 28mm; }
+  .title {
+    text-align: center;
+    font-size: 20px;
+    font-weight: bold;
+    padding: 2mm 0 0.5mm;
+  }
+
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+  }
+  .data-table th, .data-table td {
+    border: 1px solid #000;
+    padding: 3.5px 6px;
+  }
+  .data-table thead th {
+    font-weight: bold;
+    text-align: center;
+  }
+  .num { text-align: right; white-space: nowrap; }
+  .sl { text-align: center; }
+  .mat { text-align: left; }
+
+  col.col-sl { width: 8%; }
+  col.col-mat { width: 50%; }
+  col.col-set { width: 14%; }
+  col.col-ach { width: 14%; }
+  col.col-err { width: 8%; }
+  col.col-errp { width: 6%; }
+
+  tfoot td {
+    font-weight: bold;
+  }
+
+  .footer {
+    margin-top: 18mm;
+    font-size: 11px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .footer .center { margin: 0 auto; }
+  .batch-block { break-inside: avoid; page-break-inside: avoid; margin: 6mm 0; }
+</style>
+</head>
+<body>
+<div class="page-wrap">
+  <div class="header-box">
+    <table class="header-grid">
+      <tr>
+        <td class="left-meta">
+          <div class="meta-line"><span class="meta-label">Plant name</span>: SSR AQUA</div>
+          <div class="meta-line"><span class="meta-label">Location</span>: Gudivada</div>
+          <div class="meta-line"><span class="meta-label">Print Date</span>: 25/03/2024</div>
+        </td>
+        <td class="right-meta">
+          <div class="meta-line">From Date: 24/03/2024 &nbsp;&nbsp; To 24/03/2024</div>
+          <div class="meta-line">Recipe code : GANGADHAR-2024</div>
+        </td>
+      </tr>
+      <tr>
+        <td colspan="2" class="title">Consumption report</td>
+      </tr>
+    </table>
+  </div>
+
+  <table class="data-table">
+    <colgroup>
+      <col class="col-sl">
+      <col class="col-mat">
+      <col class="col-set">
+      <col class="col-ach">
+      <col class="col-err">
+      <col class="col-errp">
+    </colgroup>
+    <thead>
+      <tr>
+        <th>Sl. No.</th>
+        <th>Material name</th>
+        <th>Set. wt(Kg)</th>
+        <th>Ach. wt(Kg)</th>
+        <th>Error(Kg)</th>
+        <th>Error %</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="sl">{rows.sl}</td>
+        <td class="mat">{rows.name}</td>
+        <td class="num">{rows.set}</td>
+        <td class="num">{rows.ach}</td>
+        <td class="num">{rows.err}</td>
+        <td class="num">{rows.errp}</td>
+      </tr>
+    </tbody>
+    <tfoot>
+      <tr>
+        <td colspan="2">Total</td>
+        <td class="num">{total_set}</td>
+        <td class="num">{total_ach}</td>
+        <td class="num">{total_err}</td>
+        <td class="num">{total_errp}</td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <div class="footer">
+    <div>Indian Industrial Machines Pvt. Ltd.</div>
+    <div class="center">Page 1 of 1</div>
+    <div></div>
+  </div>
+</div>
+</body>
+</html>

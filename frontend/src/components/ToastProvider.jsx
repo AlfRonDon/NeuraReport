@@ -10,8 +10,13 @@ export function ToastProvider({ children }) {
   return (
     <ToastCtx.Provider value={{ show }}>
       {children}
-      <Snackbar open={state.open} autoHideDuration={2500} onClose={onClose} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
-        <Alert onClose={onClose} severity={state.severity} variant="filled" sx={{ width: '100%' }}>
+      <Snackbar
+        open={state.open}
+        autoHideDuration={2500}
+        onClose={onClose}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert onClose={onClose} severity={state.severity} variant="filled" role="alert" aria-live={state.severity === 'error' ? 'assertive' : 'polite'} sx={{ width: '100%' }}>
           {state.message}
         </Alert>
       </Snackbar>
@@ -20,4 +25,3 @@ export function ToastProvider({ children }) {
 }
 
 export function useToast() { return useContext(ToastCtx) }
-

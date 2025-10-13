@@ -1,0 +1,67 @@
+[
+  {
+    "header": "Ach wt",
+    "placeholder": "{Ach wt}",
+    "mapping": "records.ach_wt_kg"
+  },
+  {
+    "header": "Error",
+    "placeholder": "{Error}",
+    "mapping": "records.error_kg"
+  },
+  {
+    "header": "Error %",
+    "placeholder": "{Error %}",
+    "mapping": "records.error_pct"
+  },
+  {
+    "header": "From Date",
+    "placeholder": "{From Date}",
+    "mapping": "UNRESOLVED"
+  },
+  {
+    "header": "Location",
+    "placeholder": "{Location}",
+    "mapping": "UNRESOLVED"
+  },
+  {
+    "header": "Material name",
+    "placeholder": "{Material name}",
+    "mapping": "records.material_name"
+  },
+  {
+    "header": "Plant name",
+    "placeholder": "{Plant name}",
+    "mapping": "UNRESOLVED"
+  },
+  {
+    "header": "Print Date",
+    "placeholder": "{Print Date}",
+    "mapping": "records.report_date"
+  },
+  {
+    "header": "Recipe code",
+    "placeholder": "{Recipe code}",
+    "mapping": "UNRESOLVED"
+  },
+  {
+    "header": "Set wt",
+    "placeholder": "{Set wt}",
+    "mapping": "records.set_wt_kg"
+  },
+  {
+    "header": "Sl No",
+    "placeholder": "{Sl No}",
+    "mapping": "records.sl_no"
+  },
+  {
+    "header": "To",
+    "placeholder": "{To}",
+    "mapping": "UNRESOLVED"
+  },
+  {
+    "header": "Total",
+    "placeholder": "{Total}",
+    "mapping": "UNRESOLVED"
+  }
+]

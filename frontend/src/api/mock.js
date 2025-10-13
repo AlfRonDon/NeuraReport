@@ -32,3 +32,7 @@ export async function listRuns() {
   ]
 }
 
+export async function health() {
+  await sleep()
+  return { status: 'ok' }
+}

@@ -4,10 +4,10 @@ from collections import defaultdict
 from urllib.parse import urlparse
 import argparse
 
-import argparse
-
-OPENAI_API_KEY = "key"
-os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+if not OPENAI_API_KEY:
+    raise RuntimeError("OPENAI_API_KEY environment variable is required to run this script.")
+os.environ.setdefault("OPENAI_API_KEY", OPENAI_API_KEY)
 
 PDF_PATH = Path(os.getenv("PDF_PATH", r"C:\Users\alfre\OneDrive\Desktop\CrystalReportViewer1 (6).pdf"))
 

@@ -8,6 +8,8 @@ import sqlite3
 import time
 import uuid
 
+from ..state import state_store
+
 STORAGE = os.path.join(tempfile.gettempdir(), "neura_connections.jsonl")
 
 def _strip_quotes(s: str | None) -> str | None:
@@ -25,15 +27,30 @@ def _sqlite_path_from_url(db_url: str) -> str:
 
 def resolve_db_path(connection_id: str | None, db_url: str | None, db_path: str | None) -> Path:
     # a) connection_id -> lookup in STORAGE
-    if connection_id and os.path.exists(STORAGE):
-        with open(STORAGE, "r", encoding="utf-8") as f:
-            for line in f:
-                try:
-                    rec = json.loads(line)
-                    if rec.get("id") == connection_id:
-                        return Path(rec["cfg"]["database"])
-                except Exception:
-                    continue
+    if connection_id:
+        secrets = state_store.get_connection_secrets(connection_id)
+        if secrets and secrets.get("database_path"):
+            return Path(secrets["database_path"])
+        if os.path.exists(STORAGE):
+            with open(STORAGE, "r", encoding="utf-8") as f:
+                for line in f:
+                    try:
+                        rec = json.loads(line)
+                        if rec.get("id") == connection_id:
+                            cfg = rec.get("cfg") or {}
+                            db = cfg.get("database")
+                            if db:
+                                # migrate legacy record into new store
+                                state_store.upsert_connection(
+                                    conn_id=connection_id,
+                                    name=cfg.get("name") or f"{cfg.get('db_type') or 'sqlite'}@{Path(db).name}",
+                                    db_type=cfg.get("db_type") or "sqlite",
+                                    database_path=str(db),
+                                    secret_payload={"database": str(db), "db_url": cfg.get("db_url")},
+                                )
+                                return Path(db)
+                    except Exception:
+                        continue
         raise RuntimeError(f"connection_id {connection_id!r} not found in storage")
 
     # b) db_url (preferred)
@@ -68,10 +85,24 @@ def verify_sqlite(path: Path) -> None:
 
 def save_connection(cfg: dict) -> str:
     """Persist a minimal record and return a connection_id."""
-    cid = str(uuid.uuid4())
-    rec = {"id": cid, "cfg": cfg, "ts": time.time()}
-    with open(STORAGE, "a", encoding="utf-8") as f:
-        f.write(json.dumps(rec) + "\n")
+    cid = cfg.get("id") or str(uuid.uuid4())
+    db_type = cfg.get("db_type") or "sqlite"
+    database = cfg.get("database")
+    db_url = cfg.get("db_url")
+    if db_url and not database:
+        database = _sqlite_path_from_url(db_url)
+    database_path = str(database) if database else ""
+    name = cfg.get("name") or f"{db_type}@{Path(database_path).name if database_path else cid}"
+    state_store.upsert_connection(
+        conn_id=cid,
+        name=name,
+        db_type=db_type,
+        database_path=database_path,
+        secret_payload={"database": database_path, "db_url": db_url},
+        status=cfg.get("status"),
+        latency_ms=cfg.get("latency_ms"),
+        tags=cfg.get("tags"),
+    )
     return cid
 
 

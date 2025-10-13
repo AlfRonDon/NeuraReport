@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Consumption report</title>
+<style>
+  @page { size: A4; margin: 12mm 14mm; }
+  body {
+    font-family: "Times New Roman", Times, serif;
+    font-size: 12pt;
+    color: #000;
+    margin: 0;
+  }
+  .header-box {
+    border: 1px solid #000;
+    padding: 5mm 6mm 4mm;
+    margin-top: 2mm;
+    margin-bottom: 4mm;
+  }
+  .hdr-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 6mm;
+  }
+  .left-info p,
+  .right-info p {
+    margin: 0 0 2mm 0;
+    line-height: 1.15;
+  }
+  .right-info { text-align: right; }
+  .title {
+    text-align: center;
+    font-weight: 700;
+    font-size: 18pt;
+    margin: 1mm 0 0;
+  }
+
+  table.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    margin-top: 4mm;
+  }
+  .data-table colgroup col.sl { width: 6.5%; }
+  .data-table colgroup col.name { width: 48.5%; }
+  .data-table colgroup col.set { width: 14%; }
+  .data-table colgroup col.ach { width: 14%; }
+  .data-table colgroup col.err { width: 9%; }
+  .data-table colgroup col.errp { width: 8%; }
+
+  .data-table th,
+  .data-table td {
+    border: 1px solid #000;
+    padding: 4px 6px;
+    vertical-align: top;
+  }
+  .data-table th {
+    font-weight: 700;
+    text-align: left;
+  }
+  .num { text-align: right; white-space: nowrap; }
+  .mat { word-break: break-word; }
+  tfoot .total-row td {
+    font-weight: 700;
+  }
+
+  .footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 22mm;
+    font-size: 10.5pt;
+  }
+
+  /* repeat block support */
+  .batch-block { break-inside: avoid; page-break-inside: avoid; margin: 6mm 0; }
+</style>
+</head>
+<body>
+
+<div class="header-box">
+  <div class="hdr-row">
+    <div class="left-info">
+      <p>Plant name&nbsp;&nbsp;: SSR AQUA</p>
+      <p>Location&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: Gudivada</p>
+      <p>Print Date&nbsp;&nbsp;: 25/03/2024</p>
+    </div>
+    <div class="right-info">
+      <p>From&nbsp; Date:&nbsp; 24/03/2024&nbsp;&nbsp; To 24/03/2024</p>
+      <p>Recipe code&nbsp;:&nbsp; GANGADHAR-2024</p>
+    </div>
+  </div>
+  <div class="title">Consumption report</div>
+</div>
+
+<table class="data-table">
+  <colgroup>
+    <col class="sl"><col class="name"><col class="set"><col class="ach"><col class="err"><col class="errp">
+  </colgroup>
+  <thead>
+    <tr>
+      <th>Sl. No.</th>
+      <th>Material name</th>
+      <th class="num">Set. wt(Kg)</th>
+      <th class="num">Ach. wt(Kg)</th>
+      <th class="num">Error(Kg)</th>
+      <th class="num">Error %</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>{{rows.sl}}</td>
+      <td class="mat">{{rows.name}}</td>
+      <td class="num">{{rows.set}}</td>
+      <td class="num">{{rows.ach}}</td>
+      <td class="num">{{rows.err}}</td>
+      <td class="num">{{rows.errp}}</td>
+    </tr>
+  </tbody>
+  <tfoot>
+    <tr class="total-row">
+      <td colspan="2">Total</td>
+      <td class="num">{{total_set_kg}}</td>
+      <td class="num">{{total_ach_kg}}</td>
+      <td class="num">{{total_err_kg}}</td>
+      <td class="num">{{total_err_pct}}</td>
+    </tr>
+  </tfoot>
+</table>
+
+<div class="footer">
+  <div>Indian Industrial Machines Pvt. Ltd.</div>
+  <div>Page 1 of 1</div>
+</div>
+
+</body>
+</html>

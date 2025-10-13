@@ -2,6 +2,8 @@ import os
 import sys
 import re
 import json
+import math
+from datetime import datetime
 import base64
 import sqlite3
 from pathlib import Path
@@ -40,6 +42,12 @@ except ImportError:  # pragma: no cover
     async_playwright = None  # type: ignore
 
 
+try:
+    from ..templates.TemplateVerify import get_openai_client
+except ImportError:  # pragma: no cover
+    get_openai_client = None  # type: ignore
+
+
 # ------------------------------
 # Globals (paths / tunables)
 # ------------------------------
@@ -50,6 +58,18 @@ OUT_DIR.mkdir(parents=True, exist_ok=True)
 MODEL      = os.getenv("OPENAI_MODEL", "gpt-5")
 DPI        = int(os.getenv("PDF_DPI", "400"))
 ITERATIONS = int(os.getenv("REFINE_ITERS", "1"))
+
+
+def _init_openai_client():
+    if "get_openai_client" not in globals() or get_openai_client is None:
+        return None
+    try:
+        return get_openai_client()
+    except Exception:
+        return None
+
+
+client = _init_openai_client()
 
 OUT_PDF = OUT_DIR / "report_filled_new.pdf"
 
@@ -199,6 +219,9 @@ def fill_and_print(
     # ---- Load the final shell HTML (created during Approve) ----
     html = TEMPLATE_PATH.read_text(encoding="utf-8")
 
+    TOKEN_RE = re.compile(r"\{\{?\s*([A-Za-z0-9_\-\.]+)\s*\}\}?")
+    TEMPLATE_TOKENS = {m.group(1) for m in TOKEN_RE.finditer(html)}
+
     # ---- Find ONE prototype repeating block ----
     explicit_blocks = list(_BATCH_BLOCK_ANY_TAG.finditer(html))
     if explicit_blocks:
@@ -233,7 +256,7 @@ def fill_and_print(
     ROW_TOKENS         = OBJ.get("row_tokens", [])
     TOTALS             = OBJ.get("totals", {})
     ROW_ORDER          = OBJ.get("row_order", ["ROWID"])
-    LITERALS           = OBJ.get("literals", {})
+    LITERALS           = dict(OBJ.get("literals", {}))
 
     parent_table = JOIN.get("parent_table", "")
     parent_key   = JOIN.get("parent_key", "")
@@ -242,6 +265,86 @@ def fill_and_print(
     parent_date  = DATE_COLUMNS.get(parent_table, "")
     child_date   = DATE_COLUMNS.get(child_table, "")
     order_col    = ROW_ORDER[0] if ROW_ORDER else "ROWID"
+
+    def _normalize_token_name(name: str) -> str:
+        return re.sub(r'[^a-z0-9]', '', name.lower())
+
+    token_index: dict[str, set[str]] = defaultdict(set)
+    all_candidate_tokens = set(TEMPLATE_TOKENS) | set(HEADER_TOKENS) | set(ROW_TOKENS) | set(TOTALS.keys()) | set(LITERALS.keys())
+    for tok in all_candidate_tokens:
+        norm = _normalize_token_name(tok)
+        if norm:
+            token_index[norm].add(tok)
+
+    def _tokens_for_keys(keys: set[str]) -> set[str]:
+        found: set[str] = set()
+        for key in keys:
+            found.update(token_index.get(key, set()))
+        return found
+
+    def _parse_date_like(value) -> datetime | None:
+        if value is None:
+            return None
+        val = str(value).strip()
+        if not val:
+            return None
+        iso_try = val.replace('Z', '+00:00')
+        if ' ' in iso_try and 'T' not in iso_try:
+            iso_try = iso_try.replace(' ', 'T', 1)
+        try:
+            return datetime.fromisoformat(iso_try)
+        except ValueError:
+            pass
+        for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%m/%d/%Y"):
+            try:
+                return datetime.strptime(val, fmt)
+            except ValueError:
+                continue
+        return None
+
+    def _has_time_component(raw_value, dt_obj: datetime | None) -> bool:
+        if dt_obj and (dt_obj.hour or dt_obj.minute or dt_obj.second):
+            return True
+        if not raw_value:
+            return False
+        return bool(re.search(r'[ T]\d{2}:\d{2}', str(raw_value)))
+
+    def _format_for_token(token: str, dt_obj: datetime | None, include_time_default: bool = False) -> str:
+        if not dt_obj:
+            return ""
+        include_time = include_time_default or ('time' in token.lower())
+        return dt_obj.strftime("%d/%m/%Y %H:%M") if include_time else dt_obj.strftime("%d/%m/%Y")
+
+    start_dt = _parse_date_like(START_DATE)
+    end_dt = _parse_date_like(END_DATE)
+    print_dt = datetime.now()
+
+    start_has_time = _has_time_component(START_DATE, start_dt)
+    end_has_time = _has_time_component(END_DATE, end_dt)
+
+    START_DATE_KEYS = {"fromdate", "datefrom", "startdate", "periodstart", "rangefrom", "fromdt", "startdt"}
+    END_DATE_KEYS   = {"todate", "dateto", "enddate", "periodend", "rangeto", "todt", "enddt"}
+    PRINT_DATE_KEYS = {"printdate", "printedon", "printeddate", "generatedon", "generateddate", "rundate", "runon", "generatedat"}
+    PAGE_NO_KEYS    = {"pageno", "pagenumber", "pageindex", "pagecurrent"}
+    PAGE_COUNT_KEYS = {"pagecount", "totalpages", "pagestotal", "pages"}
+
+    special_values: dict[str, str] = {}
+
+    for tok in _tokens_for_keys(START_DATE_KEYS):
+        special_values[tok] = _format_for_token(tok, start_dt, include_time_default=start_has_time)
+    for tok in _tokens_for_keys(END_DATE_KEYS):
+        special_values[tok] = _format_for_token(tok, end_dt, include_time_default=end_has_time)
+    for tok in _tokens_for_keys(PRINT_DATE_KEYS):
+        special_values[tok] = _format_for_token(tok, print_dt, include_time_default=False)
+
+    page_number_tokens = _tokens_for_keys(PAGE_NO_KEYS)
+    page_count_tokens = _tokens_for_keys(PAGE_COUNT_KEYS)
+
+    for tok, val in list(special_values.items()):
+        if tok in LITERALS:
+            LITERALS[tok] = val
+
+    post_literal_specials = {tok: val for tok, val in special_values.items() if tok not in LITERALS}
 
     _ident_re = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
     def qident(name: str) -> str:
@@ -378,6 +481,27 @@ def fill_and_print(
     def sub_token(html_in: str, token: str, val: str) -> str:
         return _apply_outside_styles_scripts(html_in, lambda txt: _sub_token_text(txt, token, val))
 
+    def _inject_page_counter_spans(html_in: str, page_tokens: set[str], count_tokens: set[str]) -> str:
+        updated = html_in
+        for tok in page_tokens:
+            updated = sub_token(updated, tok, '<span class="nr-page-number"></span>')
+        for tok in count_tokens:
+            updated = sub_token(updated, tok, '<span class="nr-page-count"></span>')
+
+        if (page_tokens or count_tokens) and 'nr-page-counter-style' not in updated:
+            style_block = """
+<style id="nr-page-counter-style">
+  .nr-page-number::after { content: counter(page); }
+  .nr-page-count::after { content: counter(pages); }
+  .nr-page-number, .nr-page-count { white-space: nowrap; }
+</style>
+"""
+            if '</head>' in updated:
+                updated = updated.replace('</head>', style_block + '</head>', 1)
+            else:
+                updated = style_block + updated
+        return updated
+
     def _blank_known_tokens_text(text: str, tokens) -> str:
         for t in tokens:
             text = re.sub(r"\{\{\s*" + re.escape(t) + r"\s*\}\}", "", text)
@@ -430,9 +554,33 @@ def fill_and_print(
     # ---- Pre-compute minimal column sets ----
     header_cols = sorted({ PLACEHOLDER_TO_COL[t].split(".", 1)[1] for t in HEADER_TOKENS if t in PLACEHOLDER_TO_COL })
     row_cols    = sorted({ PLACEHOLDER_TO_COL[t].split(".", 1)[1] for t in ROW_TOKENS    if t in PLACEHOLDER_TO_COL })
-    tot_cols    = sorted({ (TOTALS.get(t) or PLACEHOLDER_TO_COL[t]).split(".", 1)[1]
-                           for t in TOTALS.keys() if (t in TOTALS or t in PLACEHOLDER_TO_COL) })
 
+    totals_by_table = defaultdict(lambda: defaultdict(list))
+    total_token_to_target = {}
+
+    for token, raw_target in TOTALS.items():
+        target = (raw_target or PLACEHOLDER_TO_COL.get(token, "")).strip()
+        if not target or "." not in target:
+            continue
+        table_name, col_name = [part.strip() for part in target.split(".", 1)]
+        if not table_name or not col_name:
+            continue
+        totals_by_table[table_name][col_name].append(token)
+        total_token_to_target[token] = (table_name, col_name)
+
+    def _coerce_total_value(raw):
+        try:
+            fv = float(raw)
+            if not math.isfinite(fv):
+                raise ValueError
+        except Exception:
+            return None, "0"
+        return fv, str(int(fv)) if fv.is_integer() else str(fv)
+
+    totals_accum = defaultdict(float)
+    last_totals_per_token = {token: "0" for token in TOTALS}
+
+    child_totals_cols = {col: list(tokens) for col, tokens in totals_by_table.get(child_table, {}).items()}
     # ---- Render all batches ----
     rendered_blocks = []
     for batch_id in (BATCH_IDS or []):
@@ -589,45 +737,69 @@ def fill_and_print(
                 block_html = "\n".join(parts)
 
         # (c) Per-batch totals
-        if tot_cols:
-            exprs = ", ".join([f"COALESCE(SUM({qident(c)}),0) AS {qident(c)}" for c in tot_cols])
+        batch_total_values = {token: "0" for token in TOTALS}
 
-            if len(ccols) == 1:
-                sql = (
-                    f"SELECT {exprs} "
-                    f"FROM {qident(child_table)} "
-                    f"WHERE {qident(ccols[0])} = ? AND {child_pred}"
-                )
-                tot_params = (batch_id,) + tuple(CDATE)
-            else:
-                where = " AND ".join([f"{qident(c)} = ?" for c in ccols])
-                sql = (
-                    f"SELECT {exprs} "
-                    f"FROM {qident(child_table)} "
-                    f"WHERE {where} AND {child_pred}"
-                )
-                tot_parts = _split_bid(batch_id, len(ccols))
-                tot_params = tuple(tot_parts) + tuple(CDATE)
+        if child_totals_cols:
+            child_cols = sorted(child_totals_cols.keys())
+            if child_cols:
+                exprs = ", ".join([f"COALESCE(SUM({qident(c)}),0) AS {qident(c)}" for c in child_cols])
 
-            con = sqlite3.connect(str(DB_PATH)); con.row_factory = sqlite3.Row
-            cur = con.cursor(); cur.execute(sql, tot_params)
-            sums = dict(cur.fetchone() or {}); con.close()
+                if len(ccols) == 1:
+                    sql = (
+                        f"SELECT {exprs} "
+                        f"FROM {qident(child_table)} "
+                        f"WHERE {qident(ccols[0])} = ? AND {child_pred}"
+                    )
+                    tot_params = (batch_id,) + tuple(CDATE)
+                else:
+                    where = " AND ".join([f"{qident(c)} = ?" for c in ccols])
+                    sql = (
+                        f"SELECT {exprs} "
+                        f"FROM {qident(child_table)} "
+                        f"WHERE {where} AND {child_pred}"
+                    )
+                    tot_parts = _split_bid(batch_id, len(ccols))
+                    tot_params = tuple(tot_parts) + tuple(CDATE)
 
-            for token, target in TOTALS.items():
-                target = TOTALS.get(token) or PLACEHOLDER_TO_COL[token]
-                col = target.split(".", 1)[1]
-                v = sums.get(col, 0)
-                try:
-                    fv = float(v)
-                    s = str(int(fv)) if fv.is_integer() else str(fv)
-                except Exception:
-                    s = "0"
-                block_html = sub_token(block_html, token, s)
+                con = sqlite3.connect(str(DB_PATH)); con.row_factory = sqlite3.Row
+                cur = con.cursor(); cur.execute(sql, tot_params)
+                sums = dict(cur.fetchone() or {}); con.close()
+
+                for col in child_cols:
+                    raw_val = sums.get(col, 0)
+                    fv, formatted = _coerce_total_value(raw_val)
+                    if fv is not None:
+                        key = (child_table, col)
+                        totals_accum[key] = totals_accum.get(key, 0.0) + fv
+                    for token in child_totals_cols[col]:
+                        batch_total_values[token] = formatted
+
+        for token, value in batch_total_values.items():
+            block_html = sub_token(block_html, token, value)
+            last_totals_per_token[token] = value
 
         rendered_blocks.append(block_html)
 
+
     # ---- Assemble full document ----
     html_multi = shell_prefix + "\n".join(rendered_blocks) + shell_suffix
+
+    for tok, val in post_literal_specials.items():
+        html_multi = sub_token(html_multi, tok, val if val is not None else '')
+
+    if page_number_tokens or page_count_tokens:
+        html_multi = _inject_page_counter_spans(html_multi, page_number_tokens, page_count_tokens)
+
+    if total_token_to_target:
+        overall_formatted = {}
+        for (table_name, col_name), total in totals_accum.items():
+            _, formatted = _coerce_total_value(total)
+            overall_formatted[(table_name, col_name)] = formatted
+
+        for token, target in total_token_to_target.items():
+            table_name, col_name = target
+            value = overall_formatted.get((table_name, col_name), last_totals_per_token.get(token, "0"))
+            html_multi = sub_token(html_multi, token, value)
 
     # Apply literals globally
     for t, s in LITERALS.items():
@@ -647,18 +819,29 @@ def fill_and_print(
         if async_playwright is None:
             print("⚠️ Playwright not available; skipping PDF generation.")
             return
+
+        html_source = html_path.read_text(encoding="utf-8", errors="ignore")
+        base_url = (base_dir or html_path.parent).as_uri()
+
         async with async_playwright() as p:
             browser = await p.chromium.launch()
-            page = await browser.new_page()
-            await page.goto(html_path.as_uri(), wait_until="networkidle")
-            await page.emulate_media(media="print")
-            await page.pdf(
-                path=str(pdf_path),
-                format="A4",
-                print_background=True,
-                margin={"top":"10mm","right":"10mm","bottom":"10mm","left":"10mm"},
-            )
-            await browser.close()
+            context = None
+            try:
+                context = await browser.new_context(base_url=base_url)
+                page = await context.new_page()
+                await page.set_content(html_source, wait_until="networkidle")
+                await page.emulate_media(media="print")
+                await page.pdf(
+                    path=str(pdf_path),
+                    format="A4",
+                    print_background=True,
+                    margin={"top": "10mm", "right": "10mm", "bottom": "10mm", "left": "10mm"},
+                    prefer_css_page_size=True,
+                )
+            finally:
+                if context is not None:
+                    await context.close()
+                await browser.close()
 
     asyncio.run(html_to_pdf_async(OUT_HTML, OUT_PDF, TEMPLATE_PATH.parent))
     print("✅ Wrote PDF via Playwright:", OUT_PDF)

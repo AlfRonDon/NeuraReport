@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Consumption report</title>
+<style>
+  @page { size: A4; margin: 12mm 14mm; }
+  body { font-family: "Times New Roman", Times, serif; font-size: 12px; color: #000; }
+  .header-box { border: 1px solid #000; padding: 6px 8px 0 8px; margin-bottom: 6mm; }
+  .header-grid { width: 100%; border-collapse: collapse; table-layout: fixed; }
+  .header-grid td { vertical-align: top; }
+  .left-info { width: 60%; }
+  .right-info { width: 40%; text-align: right; }
+  .kv { width: 100%; border-collapse: collapse; table-layout: fixed; }
+  .kv td { padding: 2px 0; }
+  .kv .label { width: 28%; padding-right: 4px; }
+  .kv .colon { width: 2%; text-align: center; }
+  .title { text-align: center; font-weight: bold; font-size: 20px; padding: 3mm 0 2mm; }
+  .rule { border-bottom: 1px solid #000; margin-top: 2mm; }
+  table.report { width: 100%; border-collapse: collapse; table-layout: fixed; }
+  table.report th, table.report td { border: 1px solid #000; padding: 4px 6px; }
+  table.report th { font-weight: bold; }
+  .num { text-align: right; }
+  .sl { width: 8%; text-align: center; }
+  .mat { width: 46%; }
+  .set, .ach { width: 14%; }
+  .err { width: 10%; }
+  .errp { width: 8%; }
+  tfoot .total-row th, tfoot .total-row td { font-weight: bold; }
+  .footer { position: fixed; bottom: 10mm; left: 14mm; right: 14mm; font-size: 12px; }
+  .footer .left { float: left; }
+  .footer .right { float: right; }
+</style>
+</head>
+<body>
+
+<div class="header-box">
+  <table class="header-grid">
+    <tr>
+      <td class="left-info">
+        <table class="kv">
+          <tr><td class="label">Plant name</td><td class="colon">:</td><td>SSR AQUA</td></tr>
+          <tr><td class="label">Location</td><td class="colon">:</td><td>Gudivada</td></tr>
+          <tr><td class="label">Print Date</td><td class="colon">:</td><td>25/03/2024</td></tr>
+        </table>
+      </td>
+      <td class="right-info">
+        <div>From Date: {from_date} To {to_date}</div>
+      </td>
+    </tr>
+    <tr>
+      <td colspan="2" class="title">Consumption report</td>
+    </tr>
+    <tr>
+      <td></td>
+      <td class="right-info" style="padding-bottom:4px;">Recipe code : {recipe_code}</td>
+    </tr>
+  </table>
+  <div class="rule"></div>
+</div>
+
+<table class="report">
+  <colgroup>
+    <col class="sl"><col class="mat"><col class="set"><col class="ach"><col class="err"><col class="errp">
+  </colgroup>
+  <thead>
+    <tr>
+      <th>Sl. No.</th>
+      <th>Material name</th>
+      <th>Set. wt({wt_unit})</th>
+      <th>Ach. wt({wt_unit})</th>
+      <th class="num">Error({wt_unit})</th>
+      <th class="num">Error %</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td class="sl">{rows.sl}</td>
+      <td class="mat">{rows.name}</td>
+      <td class="set num">{rows.set}</td>
+      <td class="ach num">{rows.ach}</td>
+      <td class="err num">{rows.err}</td>
+      <td class="errp num">{rows.errp}</td>
+    </tr>
+  </tbody>
+  <tfoot>
+    <tr class="total-row">
+      <td colspan="2">Total</td>
+      <td class="num">{total_set_kg}</td>
+      <td class="num">{total_ach_kg}</td>
+      <td class="num">{total_err_kg}</td>
+      <td class="num">{total_err_pct}</td>
+    </tr>
+  </tfoot>
+</table>
+
+<div class="footer">
+  <div class="left">Indian Industrial Machines Pvt. Ltd.</div>
+  <div class="right">Page {page_no} of {page_count}</div>
+</div>
+
+</body>
+</html>

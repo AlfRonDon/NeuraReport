@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Consumption report</title>
+<style>
+  @page { size: A4; margin: 14mm; }
+  :root {
+    --border: 1px solid #000;
+  }
+  body {
+    font-family: "Times New Roman", serif;
+    font-size: 12.5px;
+    color: #000;
+    margin: 0;
+  }
+  .page {
+    width: 100%;
+  }
+  .hdr-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    border: var(--border);
+  }
+  .hdr-table td {
+    padding: 6px 8px;
+    vertical-align: top;
+    border: var(--border);
+  }
+  .hdr-left {
+    width: 60%;
+  }
+  .hdr-right {
+    width: 40%;
+    text-align: left;
+  }
+  .label {
+    display: inline-block;
+    min-width: 95px;
+  }
+  .title-row {
+    text-align: center;
+    margin: 6px 0 2px 0;
+  }
+  .title-row h1 {
+    font-size: 22px;
+    font-weight: 700;
+    margin: 0;
+  }
+  .rule {
+    border-bottom: var(--border);
+    margin-top: 4px;
+  }
+
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    margin-top: 8px;
+  }
+  .data-table th,
+  .data-table td {
+    border: var(--border);
+    padding: 6px 8px;
+  }
+  .data-table th {
+    font-weight: 600;
+    text-align: left;
+  }
+  .num { text-align: right; }
+  .slcol { width: 7%; text-align: center; }
+  .namecol { width: 47%; }
+  .setcol { width: 16%; }
+  .achcol { width: 16%; }
+  .errcol { width: 7%; }
+  .errpcol { width: 7%; }
+
+  .total-row td {
+    font-weight: 700;
+  }
+
+  .footer {
+    margin-top: 24mm;
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+  }
+
+  /* Flow support for potential repeats */
+  .batch-block { break-inside: avoid; page-break-inside: avoid; margin: 6mm 0; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <table class="hdr-table">
+    <tr>
+      <td class="hdr-left">
+        <div><span class="label">Plant name</span>: {plant_name}</div><br>
+        <div><span class="label">Location</span>: {location}</div>
+      </td>
+      <td class="hdr-right">
+        <div>
+          <span class="label" style="min-width: 68px;">From Date</span>: {from_date}
+          &nbsp;&nbsp;&nbsp;To {to_date}
+        </div>
+      </td>
+    </tr>
+    <tr>
+      <td class="hdr-left">
+        <div class="title-row">
+          <h1>Consumption report</h1>
+        </div>
+        <div class="rule"></div>
+      </td>
+      <td class="hdr-right">
+        <div><span class="label">Recipe code</span>: {recipe_code}</div>
+      </td>
+    </tr>
+    <tr>
+      <td class="hdr-left">
+        <div><span class="label">Print Date</span>: {print_date}</div>
+      </td>
+      <td class="hdr-right"></td>
+    </tr>
+  </table>
+
+  <table class="data-table">
+    <colgroup>
+      <col class="slcol">
+      <col class="namecol">
+      <col class="setcol">
+      <col class="achcol">
+      <col class="errcol">
+      <col class="errpcol">
+    </colgroup>
+    <thead>
+      <tr>
+        <th class="slcol">Sl. No.</th>
+        <th class="namecol">Material name</th>
+        <th class="setcol num">Set. wt(Kg)</th>
+        <th class="achcol num">Ach. wt(Kg)</th>
+        <th class="errcol num">Error(Kg)</th>
+        <th class="errpcol num">Error %</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="slcol">{rows.sl}</td>
+        <td class="namecol">{rows.name}</td>
+        <td class="setcol num">{rows.set}</td>
+        <td class="achcol num">{rows.ach}</td>
+        <td class="errcol num">{rows.err}</td>
+        <td class="errpcol num">{rows.errp}</td>
+      </tr>
+    </tbody>
+    <tfoot>
+      <tr class="total-row">
+        <td colspan="2">Total</td>
+        <td class="num">{total_set_kg}</td>
+        <td class="num">{total_ach_kg}</td>
+        <td class="num">{total_err_kg}</td>
+        <td class="num">{total_err_pct}</td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <div class="footer">
+    <div>Indian Industrial Machines Pvt. Ltd.</div>
+    <div>Page 1 of 1</div>
+  </div>
+
+</div>
+</body>
+</html>

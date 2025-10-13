@@ -37,13 +37,13 @@ export default function HeartbeatBadge({
 
   const Dot = (
     <Box sx={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
-      <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: color }} />
+      <Box sx={{ width: 8, height: 8, borderRadius: 4, bgcolor: color }} />
       {status === 'testing' && (
         <Box sx={{
           position: 'absolute',
           width: 8,
           height: 8,
-          borderRadius: '50%',
+          borderRadius: 4,
           border: '2px solid',
           borderColor: color,
           animation: `${pulse} 1.2s ease-out infinite`,
@@ -62,4 +62,3 @@ export default function HeartbeatBadge({
     <Tooltip title={tooltip} arrow>{Content}</Tooltip>
   ) : Content
 }
-

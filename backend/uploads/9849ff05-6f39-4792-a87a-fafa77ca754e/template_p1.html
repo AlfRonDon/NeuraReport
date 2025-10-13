@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>{report_title}</title>
+<style>
+  @page { size: A4; margin: 14mm 12mm; }
+  html, body { margin: 0; padding: 0; }
+  body { font-family: "Times New Roman", serif; color: #000; font-size: 12px; }
+  .container { width: 100%; }
+
+  .header-box { border: 1px solid #000; padding: 6mm; }
+  .header-grid { display: grid; grid-template-columns: 1fr 1fr; column-gap: 14mm; row-gap: 2.5mm; }
+  .kv { white-space: nowrap; }
+  .kv .label { display: inline-block; min-width: 30mm; }
+  .kv .value { display: inline-block; }
+
+  .title { text-align: center; font-weight: 700; font-size: 20px; margin: 2mm 0 2mm; }
+  .title-line { border-bottom: 1px solid #000; margin-top: 1mm; }
+
+  table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+  th, td { border: 1px solid #000; padding: 2.2mm 2.5mm; vertical-align: top; }
+  th { font-weight: 700; text-align: left; }
+  .num { text-align: right; }
+  .center { text-align: center; }
+
+  /* Column sizing closely matching the sample */
+  col.col-sl { width: 12mm; }
+  col.col-name { width: auto; }
+  col.col-set, col.col-ach, col.col-err, col.col-errp { width: 28mm; }
+
+  .total-row td { font-weight: 700; }
+  .no-top-border { border-top: 0; }
+
+  .footer { margin-top: 18mm; display: flex; justify-content: space-between; font-size: 11px; }
+  .batch-block { break-inside: avoid; page-break-inside: avoid; margin: 6mm 0; }
+</style>
+</head>
+<body>
+  <div class="container">
+    <div class="header-box">
+      <div class="header-grid">
+        <div>
+          <div class="kv"><span class="label">Plant name</span><span> : </span><span class="value">{plant}</span></div>
+          <div class="kv"><span class="label">Location</span><span> : </span><span class="value">{location}</span></div>
+          <div class="kv"><span class="label">Print Date</span><span> : </span><span class="value">{print_date}</span></div>
+        </div>
+        <div>
+          <div class="kv"><span class="label">From Date</span><span> : </span><span class="value">{from_date}</span>
+            <span style="display:inline-block; min-width: 6mm;"></span>
+            <span>To </span><span class="value">{to_date}</span>
+          </div>
+          <div class="kv"><span class="label">Recipe code</span><span> : </span><span class="value">{recipe_code}</span></div>
+        </div>
+      </div>
+      <div class="title">{report_title}</div>
+      <div class="title-line"></div>
+    </div>
+
+    <div class="batch-block">
+      <table>
+        <colgroup>
+          <col class="col-sl">
+          <col class="col-name">
+          <col class="col-set">
+          <col class="col-ach">
+          <col class="col-err">
+          <col class="col-errp">
+        </colgroup>
+        <thead>
+          <tr>
+            <th class="center">Sl. No.</th>
+            <th>Material name</th>
+            <th class="center">Set. wt(Kg)</th>
+            <th class="center">Ach. wt(Kg)</th>
+            <th class="center">Error(Kg)</th>
+            <th class="center">Error %</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="center">{sl}</td>
+            <td>{name}</td>
+            <td class="num">{set}</td>
+            <td class="num">{ach}</td>
+            <td class="num">{err}</td>
+            <td class="num">{errp}</td>
+          </tr>
+        </tbody>
+        <tfoot>
+          <tr class="total-row">
+            <td colspan="2">Total</td>
+            <td class="num">{total_set_kg}</td>
+            <td class="num">{total_ach_kg}</td>
+            <td class="num">{total_err_kg}</td>
+            <td class="num">{total_err_pct}</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+    <div class="footer">
+      <div>{company}</div>
+      <div>Page {page} of {pages}</div>
+    </div>
+  </div>
+</body>
+</html>

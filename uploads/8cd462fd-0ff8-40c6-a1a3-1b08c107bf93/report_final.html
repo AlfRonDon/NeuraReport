@@ -1,0 +1,187 @@
+<html>
+<head>
+<meta charset="utf-8" />
+<title>{report_title}</title>
+<style>
+  @page { size: A4; margin: 12mm; }
+  :root {
+    --line: #000;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Times New Roman", serif;
+    font-size: 12pt;
+    color: #000;
+    margin: 0;
+  }
+
+  /* Flow helpers */
+  .batch-block { break-inside: avoid; page-break-inside: avoid; margin: 6mm 0; }
+
+  /* Header box */
+  .header-wrap { margin-top: 2mm; }
+  .header {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    border: 1px solid var(--line);
+  }
+  .header td { vertical-align: top; padding: 3mm; }
+  .title {
+    text-align: center;
+    font-size: 22pt;
+    font-weight: bold;
+    padding: 2mm 3mm 3mm;
+  }
+  .kv, .kv-right {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+  }
+  .kv td,
+  .kv-right td {
+    padding: 0.5mm 0;
+    border: none;
+  }
+  .kv .label { width: 34mm; }
+  .kv .colon { width: 4mm; text-align: center; }
+  .kv-right .label { width: 22mm; white-space: nowrap; }
+  .kv-right .colon { width: 4mm; text-align: center; }
+  .right { text-align: right; }
+  .center { text-align: center; }
+
+  /* Main grid */
+  .grid {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    margin-top: 4mm;
+  }
+  .grid th, .grid td {
+    border: 1px solid var(--line);
+    padding: 2.2mm 2.5mm;
+    vertical-align: top;
+  }
+  .grid thead th {
+    font-weight: bold;
+  }
+  .n { text-align: right; white-space: nowrap; }
+  .sl { width: 10%; text-align: center; }
+  .name { width: 40%; }
+  .w1 { width: 15%; }
+  .w2 { width: 15%; }
+  .w3 { width: 10%; }
+  .w4 { width: 10%; }
+  .total-row td {
+    font-weight: bold;
+  }
+
+  /* Footer */
+  .page-footer {
+    position: fixed;
+    left: 12mm; right: 12mm; bottom: 8mm;
+    font-size: 10.5pt;
+    display: flex;
+    align-items: center;
+  }
+  .footer-left { flex: 1; text-align: left; }
+  .footer-center { flex: 1; text-align: center; }
+</style>
+</head>
+<body>
+
+<div class="header-wrap">
+  <table class="header">
+    <tr>
+      <td style="width:65%;">
+        <table class="kv">
+          <tr>
+            <td class="label">Plant name</td>
+            <td class="colon">:</td>
+            <td>{plant}</td>
+          </tr>
+          <tr>
+            <td class="label">Location</td>
+            <td class="colon">:</td>
+            <td>Gudivada</td>
+          </tr>
+          <tr>
+            <td class="label">Print Date</td>
+            <td class="colon">:</td>
+            <td>{print_date}</td>
+          </tr>
+        </table>
+      </td>
+      <td style="width:35%;">
+        <table class="kv-right">
+          <tr>
+            <td class="label right">From Date</td>
+            <td class="colon">:</td>
+            <td>{date_from}</td>
+          </tr>
+          <tr>
+            <td class="label right">To</td>
+            <td class="colon">:</td>
+            <td>{date_to}</td>
+          </tr>
+          <tr>
+            <td class="label right">Recipe code</td>
+            <td class="colon">:</td>
+            <td>xyz</td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+    <tr>
+      <td colspan="2" class="title">{report_title}</td>
+    </tr>
+  </table>
+</div>
+
+<table class="grid">
+  <colgroup>
+    <col class="sl" />
+    <col class="name" />
+    <col class="w1" />
+    <col class="w2" />
+    <col class="w3" />
+    <col class="w4" />
+  </colgroup>
+  <thead>
+    <tr>
+      <th>Sl. No.</th>
+      <th>Material name</th>
+      <th class="n">Set. wt(Kg)</th>
+      <th class="n">Ach. wt(Kg)</th>
+      <th class="n">Error(Kg)</th>
+      <th class="n">Error %</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td class="center">{rows.sl}</td>
+      <td>{rows.name}</td>
+      <td class="n">{rows.set}</td>
+      <td class="n">{rows.ach}</td>
+      <td class="n">{rows.err}</td>
+      <td class="n">{rows.errp}</td>
+    </tr>
+  </tbody>
+  <tfoot>
+    <tr class="total-row">
+      <td colspan="2">Total</td>
+      <td class="n">{totals_set_kg}</td>
+      <td class="n">{totals_ach_kg}</td>
+      <td class="n">{totals_err_kg}</td>
+      <td class="n">{totals_err_pct}</td>
+    </tr>
+  </tfoot>
+</table>
+
+<div class="page-footer">
+  <div class="footer-left">Indian Industrial Machines Pvt. Ltd.</div>
+  <div class="footer-center">Page {page} of {pages}</div>
+</div>
+
+</body>
+</html>

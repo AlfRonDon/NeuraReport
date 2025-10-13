@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Consumption report</title>
+<style>
+  @page { size: A4; margin: 14mm 14mm 18mm 14mm; }
+  body { font-family: "Times New Roman", serif; font-size: 12px; color: #000; }
+  h1 { font-size: 20px; margin: 2mm 0 3mm 0; text-align: center; font-weight: bold; }
+  .header-box { border: 1px solid #000; padding: 4mm 5mm 3mm 5mm; }
+  .kv { width: 100%; border-collapse: collapse; table-layout: fixed; }
+  .kv td { padding: 1mm 0; vertical-align: top; }
+  .kv .left, .kv .right { width: 50%; }
+  .kv .labels { width: 28mm; white-space: nowrap; }
+  .kv .colon { width: 4mm; text-align: center; }
+  .kv .value { width: auto; }
+  .right-align { text-align: right; }
+  .center { text-align: center; }
+
+  table.grid { width: 100%; border-collapse: collapse; table-layout: fixed; margin-top: 4mm; }
+  table.grid th, table.grid td { border: 1px solid #000; padding: 2mm 2mm; }
+  table.grid thead th { font-weight: bold; }
+  .sl { width: 7%; }
+  .name { width: 43%; }
+  .num { width: 12%; text-align: right; }
+  .per { width: 14%; text-align: right; }
+  .total-row td { font-weight: bold; }
+
+  .footer { position: fixed; left: 14mm; right: 14mm; bottom: 8mm; font-size: 11px; }
+  .footer .company { float: left; }
+  .footer .page { text-align: center; }
+  .batch-block { break-inside: avoid; page-break-inside: avoid; margin: 6mm 0; }
+</style>
+</head>
+<body>
+
+<div class="header-box">
+  <table class="kv">
+    <tr>
+      <td class="left">
+        <table class="kv">
+          <tr>
+            <td class="labels">Plant name</td><td class="colon">:</td><td class="value">SSR AQUA</td>
+          </tr>
+          <tr>
+            <td class="labels">Location</td><td class="colon">:</td><td class="value">Gudivada</td>
+          </tr>
+          <tr>
+            <td class="labels">Print Date</td><td class="colon">:</td><td class="value">25/03/2024</td>
+          </tr>
+        </table>
+      </td>
+      <td class="right">
+        <table class="kv" style="float:right; width:auto;">
+          <tr>
+            <td class="labels" style="width:auto;">From&nbsp;Date</td><td class="colon">:</td><td class="value" style="white-space:nowrap;">24/03/2024</td>
+            <td style="width:8mm;"></td>
+            <td class="labels" style="width:auto;">To</td><td class="colon">:</td><td class="value" style="white-space:nowrap;">24/03/2024</td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+
+  <h1>Consumption report</h1>
+
+  <table class="kv">
+    <tr>
+      <td class="left"></td>
+      <td class="right right-align">Recipe code&nbsp;:</td>
+      <td class="value" style="width:auto;">GANGADHAR-2024</td>
+    </tr>
+  </table>
+</div>
+
+<table class="grid">
+  <thead>
+    <tr>
+      <th class="sl">Sl. No.</th>
+      <th class="name">Material name</th>
+      <th class="num">Set. wt({weight_unit})</th>
+      <th class="num">Ach. wt({weight_unit})</th>
+      <th class="num">Error({weight_unit})</th>
+      <th class="per">Error %</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td class="sl">{rows.sl}</td>
+      <td class="name">{rows.name}</td>
+      <td class="num">{rows.set}</td>
+      <td class="num">{rows.ach}</td>
+      <td class="num">{rows.err}</td>
+      <td class="per">{rows.errp}</td>
+    </tr>
+  </tbody>
+  <tfoot>
+    <tr class="total-row">
+      <td colspan="2">Total</td>
+      <td class="num">{total_set}</td>
+      <td class="num">{total_ach}</td>
+      <td class="num">{total_err}</td>
+      <td class="per">{total_errp}</td>
+    </tr>
+  </tfoot>
+</table>
+
+<div class="footer">
+  <div class="company">Indian Industrial Machines Pvt. Ltd.</div>
+  <div class="page">Page {page_no} of {page_count}</div>
+</div>
+
+</body>
+</html>

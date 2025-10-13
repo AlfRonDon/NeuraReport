@@ -1,0 +1,20 @@
+{
+  "correlation_id": "2f98da2b-cff2-496f-8f0f-015e82800c37",
+  "file_checksums": {
+    "reference_p1.png": "c5665bf5d113c696b9653caf6d46b72d5cbcd210880056204ef444531f64aa97",
+    "source.pdf": "ee486120233175d212fc4e83af5f084df28c5345a0c359eedeef3b3f9e922b6c",
+    "template_p1.html": "ec40470dd8157b55825ec88d1d4af6406e0a1b37a54ac68aff818dffef84053d"
+  },
+  "files": {
+    "reference_p1.png": "reference_p1.png",
+    "source.pdf": "source.pdf",
+    "template_p1.html": "template_p1.html"
+  },
+  "input_refs": [
+    "C:\\Users\\alfre\\Downloads\\NeuraReport-main - Copy (2)\\uploads\\c7db3c36-ed21-41a6-9346-2862158c1e92\\source.pdf"
+  ],
+  "pid": 53832,
+  "produced_at": "2025-10-13T20:14:10.919454+00:00",
+  "schema_version": "1.0",
+  "step": "templates_verify"
+}

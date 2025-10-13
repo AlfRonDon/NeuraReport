@@ -1,0 +1,173 @@
+{
+  "connections": {
+    "812f49b3-e001-40b5-9168-781fc10e7243": {
+      "id": "812f49b3-e001-40b5-9168-781fc10e7243",
+      "name": "sqlite@consumption_report_with_date.db",
+      "db_type": "sqlite",
+      "database_path": "C:\\Users\\alfre\\Downloads\\consumption_report_with_date.db",
+      "secret": "gAAAAABo62kflqOz8cpnLSHXEqw8I2ieZ2sIiH9JGSqxhW_6He2YP1fZWN7vTKSN7C9cSqS6NM_RTkL71cf2yPs_-1UgtkuJNghUM5dAGaE2ceHATMngILLgVrigqHKVdRA0eM9QWjibdyG_5rdnqxKlzhOEIo07_yFx1zy112-TsTA4Qy8rR03f2JW-lFlLQWr4Ex58wWhmimXndghGd8wuZd2zLe-C-eDFDljUwKABE7l4ZlkusMay99jajQ_UROFWTqnISg6cQVvlxTeS-tbmvc261EvLUA==",
+      "updated_at": "2025-10-12T08:38:55+00:00",
+      "created_at": "2025-10-12T08:38:55+00:00",
+      "status": "connected",
+      "last_connected_at": "2025-10-12T08:38:55+00:00",
+      "last_latency_ms": 1,
+      "tags": [],
+      "last_detail": "Connected (sqlite@consumption_report_with_date.db)"
+    },
+    "eae443fb-6c24-47d9-822e-8f0450791b80": {
+      "id": "eae443fb-6c24-47d9-822e-8f0450791b80",
+      "name": "sqlite@consumption_report_with_date.db",
+      "db_type": "sqlite",
+      "database_path": "C:\\Users\\alfre\\Downloads\\consumption_report_with_date.db",
+      "secret": "gAAAAABo62kieJY2aCLDuxOBpm0cpILjotilRKAvE2KvzKY1P0viNXoCa_KbOcxggN7vZm4jyORhkZHnWMq1EPKIdSKDwE3bz6hppJ8lC2empSdqVADHLnUrojUp5l4UhXtBJMuCJZrvohux5mltuQPDttwv9cmmQkpS2BTIvK8SO0wBaK6cHBAPQCgWKT6G-ugjhU5-D_zAIWSuVeaDqLsf3umGAN_lYFJ9kzYuHjfMbldfrRTWNDKliaHElBAEoGzXeW5U5hdaPWofuBisAuj9JihWGk3jVQ==",
+      "updated_at": "2025-10-12T08:38:58+00:00",
+      "created_at": "2025-10-12T08:38:58+00:00",
+      "status": "connected",
+      "last_connected_at": "2025-10-12T08:38:58+00:00",
+      "last_latency_ms": 4,
+      "tags": [],
+      "last_detail": "Connected (sqlite@consumption_report_with_date.db)"
+    },
+    "75efbfdc-2fbe-473d-9d65-6e112eec712b": {
+      "id": "75efbfdc-2fbe-473d-9d65-6e112eec712b",
+      "name": "sqlite@consumption_report_with_date.db",
+      "db_type": "sqlite",
+      "database_path": "C:\\Users\\alfre\\Downloads\\consumption_report_with_date.db",
+      "secret": "gAAAAABo62nCJLb4SqNv-ftpLZVEefPXFjqReNPkVZeTSZpJ5ciIZ7jjiLV11xggdFNbTDkC_PNTz3cPOcL10jPnhhWOQov59_saupMkVVzeOeZmJhGXCTz2JL4G0xEZerO5cPqpOJJgUAKsY-CQpktNl_tJ7e5N9fv95qhj3dKUGpXPIoBNbZSwWaEqs3Woowt6imUEMt-33uFZpHen4mB1Y_Y9KkRtbGqQ8JiNDAQ50eBLeWweGFr03wL_C3upb0m5q2dIrBOxlghZW6_PgZGHj-WPDgyK9Q==",
+      "updated_at": "2025-10-12T08:41:38+00:00",
+      "created_at": "2025-10-12T08:41:38+00:00",
+      "status": "connected",
+      "last_connected_at": "2025-10-12T08:41:38+00:00",
+      "last_latency_ms": 17,
+      "tags": [],
+      "last_detail": "Connected (sqlite@consumption_report_with_date.db)"
+    }
+  },
+  "templates": {
+    "1066c8c7-4d8f-429f-afac-6b419b5b2f4a": {
+      "id": "1066c8c7-4d8f-429f-afac-6b419b5b2f4a",
+      "name": "CrystalReportViewer1 (7)",
+      "status": "draft",
+      "artifacts": {
+        "template_html_url": "/uploads/1066c8c7-4d8f-429f-afac-6b419b5b2f4a/template_p1.html",
+        "thumbnail_url": "/uploads/1066c8c7-4d8f-429f-afac-6b419b5b2f4a/reference_p1.png",
+        "pdf_url": "/uploads/1066c8c7-4d8f-429f-afac-6b419b5b2f4a/source.pdf"
+      },
+      "updated_at": "2025-10-10T07:59:52+00:00",
+      "created_at": "2025-10-10T07:59:52+00:00",
+      "tags": [],
+      "last_connection_id": "6d8257cb-2a09-4989-8cdf-38b463ce0e17"
+    },
+    "e972e0c1-2875-48ef-9758-698958acd3d6": {
+      "id": "e972e0c1-2875-48ef-9758-698958acd3d6",
+      "name": "CrystalReportViewer1 (7)",
+      "status": "draft",
+      "artifacts": {
+        "template_html_url": "/uploads/e972e0c1-2875-48ef-9758-698958acd3d6/template_p1.html",
+        "thumbnail_url": "/uploads/e972e0c1-2875-48ef-9758-698958acd3d6/reference_p1.png",
+        "pdf_url": "/uploads/e972e0c1-2875-48ef-9758-698958acd3d6/source.pdf"
+      },
+      "updated_at": "2025-10-10T08:02:39+00:00",
+      "created_at": "2025-10-10T08:02:39+00:00",
+      "tags": [],
+      "last_connection_id": "6d8257cb-2a09-4989-8cdf-38b463ce0e17"
+    },
+    "8cd462fd-0ff8-40c6-a1a3-1b08c107bf93": {
+      "id": "8cd462fd-0ff8-40c6-a1a3-1b08c107bf93",
+      "name": "CrystalReportViewer1 (7)",
+      "status": "approved",
+      "artifacts": {
+        "template_html_url": "/uploads/8cd462fd-0ff8-40c6-a1a3-1b08c107bf93/template_p1.html?ts=1760085433",
+        "thumbnail_url": "/uploads/8cd462fd-0ff8-40c6-a1a3-1b08c107bf93/report_final.png",
+        "pdf_url": "/uploads/8cd462fd-0ff8-40c6-a1a3-1b08c107bf93/source.pdf",
+        "final_html_url": "/uploads/8cd462fd-0ff8-40c6-a1a3-1b08c107bf93/report_final.html?ts=1760085433",
+        "manifest_url": "/templates/8cd462fd-0ff8-40c6-a1a3-1b08c107bf93/artifacts/manifest"
+      },
+      "updated_at": "2025-10-13T19:59:30+00:00",
+      "created_at": "2025-10-10T08:16:45+00:00",
+      "tags": [],
+      "last_connection_id": "812f49b3-e001-40b5-9168-781fc10e7243",
+      "last_run_at": "2025-10-13T19:59:30+00:00"
+    },
+    "3300f6df-a6d8-40a8-9b29-6233fce89eac": {
+      "id": "3300f6df-a6d8-40a8-9b29-6233fce89eac",
+      "name": "CrystalReportViewer1 (7)",
+      "status": "draft",
+      "artifacts": {
+        "template_html_url": "/uploads/3300f6df-a6d8-40a8-9b29-6233fce89eac/template_p1.html",
+        "thumbnail_url": "/uploads/3300f6df-a6d8-40a8-9b29-6233fce89eac/reference_p1.png",
+        "pdf_url": "/uploads/3300f6df-a6d8-40a8-9b29-6233fce89eac/source.pdf"
+      },
+      "updated_at": "2025-10-11T14:16:55+00:00",
+      "created_at": "2025-10-11T14:16:55+00:00",
+      "tags": [],
+      "last_connection_id": "b0194024-4749-4fd4-be5d-04f5d9b1152e"
+    },
+    "6970da4a-5ef1-407e-8245-d5f55e064a06": {
+      "id": "6970da4a-5ef1-407e-8245-d5f55e064a06",
+      "name": "CrystalReportViewer1 (7)",
+      "status": "approved",
+      "artifacts": {
+        "template_html_url": "/uploads/6970da4a-5ef1-407e-8245-d5f55e064a06/template_p1.html?ts=1760193207",
+        "thumbnail_url": "/uploads/6970da4a-5ef1-407e-8245-d5f55e064a06/report_final.png",
+        "pdf_url": "/uploads/6970da4a-5ef1-407e-8245-d5f55e064a06/source.pdf",
+        "final_html_url": "/uploads/6970da4a-5ef1-407e-8245-d5f55e064a06/report_final.html?ts=1760193207",
+        "manifest_url": "/templates/6970da4a-5ef1-407e-8245-d5f55e064a06/artifacts/manifest"
+      },
+      "updated_at": "2025-10-11T14:35:19+00:00",
+      "created_at": "2025-10-11T14:27:35+00:00",
+      "tags": [],
+      "last_connection_id": "b0194024-4749-4fd4-be5d-04f5d9b1152e"
+    },
+    "568fea90-9eaf-4a80-be94-145de8d651c2": {
+      "id": "568fea90-9eaf-4a80-be94-145de8d651c2",
+      "name": "CrystalReportViewer1 (7)",
+      "status": "draft",
+      "artifacts": {
+        "template_html_url": "/uploads/568fea90-9eaf-4a80-be94-145de8d651c2/template_p1.html",
+        "thumbnail_url": "/uploads/568fea90-9eaf-4a80-be94-145de8d651c2/reference_p1.png",
+        "pdf_url": "/uploads/568fea90-9eaf-4a80-be94-145de8d651c2/source.pdf"
+      },
+      "updated_at": "2025-10-11T22:23:57+00:00",
+      "created_at": "2025-10-11T22:23:57+00:00",
+      "tags": [],
+      "last_connection_id": "e9d22f2c-43c3-43b1-b4f7-20322d8653db"
+    },
+    "c7db3c36-ed21-41a6-9346-2862158c1e92": {
+      "id": "c7db3c36-ed21-41a6-9346-2862158c1e92",
+      "name": "CrystalReportViewer1 (7)",
+      "status": "draft",
+      "artifacts": {
+        "template_html_url": "/uploads/c7db3c36-ed21-41a6-9346-2862158c1e92/template_p1.html",
+        "thumbnail_url": "/uploads/c7db3c36-ed21-41a6-9346-2862158c1e92/reference_p1.png",
+        "pdf_url": "/uploads/c7db3c36-ed21-41a6-9346-2862158c1e92/source.pdf"
+      },
+      "updated_at": "2025-10-13T20:14:10+00:00",
+      "created_at": "2025-10-13T20:14:10+00:00",
+      "tags": [],
+      "last_connection_id": "812f49b3-e001-40b5-9168-781fc10e7243"
+    },
+    "74842a25-f22a-47cb-8b8f-28fc8b3b4b9c": {
+      "id": "74842a25-f22a-47cb-8b8f-28fc8b3b4b9c",
+      "name": "CrystalReportViewer1 (7)",
+      "status": "approved",
+      "artifacts": {
+        "template_html_url": "/uploads/74842a25-f22a-47cb-8b8f-28fc8b3b4b9c/template_p1.html?ts=1760386939",
+        "thumbnail_url": "/uploads/74842a25-f22a-47cb-8b8f-28fc8b3b4b9c/report_final.png",
+        "pdf_url": "/uploads/74842a25-f22a-47cb-8b8f-28fc8b3b4b9c/source.pdf",
+        "final_html_url": "/uploads/74842a25-f22a-47cb-8b8f-28fc8b3b4b9c/report_final.html?ts=1760386939",
+        "manifest_url": "/templates/74842a25-f22a-47cb-8b8f-28fc8b3b4b9c/artifacts/manifest"
+      },
+      "updated_at": "2025-10-13T20:25:13+00:00",
+      "created_at": "2025-10-13T20:18:23+00:00",
+      "tags": [],
+      "last_connection_id": "812f49b3-e001-40b5-9168-781fc10e7243",
+      "last_run_at": "2025-10-13T20:25:13+00:00"
+    }
+  },
+  "last_used": {
+    "connection_id": "812f49b3-e001-40b5-9168-781fc10e7243",
+    "template_id": "74842a25-f22a-47cb-8b8f-28fc8b3b4b9c",
+    "updated_at": "2025-10-13T20:25:13+00:00"
+  }
+}

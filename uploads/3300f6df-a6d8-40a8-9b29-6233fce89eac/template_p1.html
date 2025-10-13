@@ -1,0 +1,125 @@
+
+<html>
+<head>
+<meta charset="utf-8" />
+<title>{report_title}</title>
+<style>
+  @page { size: A4; margin: 12mm 14mm; }
+  * { box-sizing: border-box; }
+  body { font-family: "Times New Roman", serif; font-size: 11pt; color:#000; margin:0; }
+  .page { padding: 12mm 14mm; }
+
+  .top-box {
+    border:1px solid #000;
+    padding: 6mm 6mm 4mm;
+    margin-bottom: 6mm;
+  }
+  .top-row {
+    display:flex;
+    justify-content: space-between;
+    gap: 12mm;
+  }
+  .kv { display:flex; align-items: baseline; line-height:1.3; }
+  .kv .k { min-width: 28mm; }
+  .kv .colon { padding: 0 2mm 0 1mm; }
+  .right .kv { justify-content:flex-end; }
+  .title {
+    text-align:center;
+    font-weight:700;
+    font-size: 18pt;
+    margin: 2mm 0 3mm;
+  }
+  .top-box { border-bottom-width: 2px; }
+
+  table.grid {
+    width:100%;
+    border-collapse:collapse;
+    table-layout: fixed;
+  }
+  table.grid th, table.grid td {
+    border:1px solid #000;
+    padding: 3.5px 6px;
+    vertical-align: top;
+  }
+  table.grid th { font-weight:700; }
+  .num { text-align: right; }
+  .center { text-align:center; }
+
+  .total-row td {
+    font-weight:700;
+  }
+
+  .footer {
+    display:flex;
+    justify-content: space-between;
+    margin-top: 14mm;
+    font-size:10pt;
+  }
+
+  .batch-block { break-inside: avoid; page-break-inside: avoid; margin: 6mm 0; }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="top-box">
+    <div class="top-row">
+      <div class="left">
+        <div class="kv"><span class="k">Plant name</span><span class="colon">:</span><span class="v">{plant_name}</span></div>
+        <div class="kv"><span class="k">Location</span><span class="colon">:</span><span class="v">{location}</span></div>
+        <div class="kv"><span class="k">Print Date</span><span class="colon">:</span><span class="v">{print_date}</span></div>
+      </div>
+      <div class="right">
+        <div class="kv"><span class="k">From Date</span><span class="colon">:</span><span class="v">{from_date}</span>  To {to_date}</div>
+        <div class="kv"><span class="k">Recipe code</span><span class="colon">:</span><span class="v">{recipe_code}</span></div>
+      </div>
+    </div>
+    <div class="title">{report_title}</div>
+  </div>
+
+  <table class="grid">
+    <colgroup>
+      <col style="width:8%;" />
+      <col style="width:44%;" />
+      <col style="width:16%;" />
+      <col style="width:16%;" />
+      <col style="width:10%;" />
+      <col style="width:6%;" />
+    </colgroup>
+    <thead>
+      <tr>
+        <th>Sl. No.</th>
+        <th>Material name</th>
+        <th class="num">Set. wt({weights_unit})</th>
+        <th class="num">Ach. wt({weights_unit})</th>
+        <th class="num">Error({weights_unit})</th>
+        <th class="num">Error %</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="center">{rows.sl}</td>
+        <td>{rows.name}</td>
+        <td class="num">{rows.set}</td>
+        <td class="num">{rows.ach}</td>
+        <td class="num">{rows.err}</td>
+        <td class="num">{rows.errp}</td>
+      </tr>
+    </tbody>
+    <tfoot>
+      <tr class="total-row">
+        <td colspan="2">Total</td>
+        <td class="num">{total_set}</td>
+        <td class="num">{total_ach}</td>
+        <td class="num">{total_err}</td>
+        <td class="num">{total_errp}</td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <div class="footer">
+    <div>{company}</div>
+    <div>Page {page_no} of {page_count}</div>
+  </div>
+</div>
+</body>
+</html>

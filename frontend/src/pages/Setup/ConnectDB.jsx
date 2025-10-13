@@ -1,13 +1,22 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import {
-  Box, Paper, Stack, TextField, MenuItem, Button, Typography,
-  Alert, InputAdornment, IconButton, Chip, Collapse, Table, TableHead,
-  TableRow, TableCell, TableBody
+  Box, Stack, TextField, Button, Typography,
+  Alert, InputAdornment, IconButton, Chip, Collapse, List, ListItemButton,
+  ListItemText, Fade, Portal, Grid, FormControl, FormControlLabel,
+  Checkbox, FormHelperText, ToggleButton, ToggleButtonGroup, Tooltip,
+  MenuItem, OutlinedInput, Select
 } from '@mui/material'
-import { useForm } from 'react-hook-form'
+import { alpha, styled } from '@mui/material/styles'
+import { useForm, Controller } from 'react-hook-form'
 import { yupResolver } from '@hookform/resolvers/yup'
 import * as yup from 'yup'
-import { isMock } from '../../api/client'
+import {
+  isMock,
+  testConnection as apiTestConnection,
+  upsertConnection as apiUpsertConnection,
+  deleteConnection as apiDeleteConnection,
+  healthcheckConnection as apiHealthcheckConnection,
+} from '../../api/client'
 import * as mock from '../../api/mock'
 import { useMutation } from '@tanstack/react-query'
 import { useAppStore } from '../../store/useAppStore'
@@ -19,9 +28,571 @@ import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline'
 import SpeedIcon from '@mui/icons-material/Speed'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
+import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight'
+import StorageIcon from '@mui/icons-material/Storage'
+import DnsIcon from '@mui/icons-material/Dns'
+import LanIcon from '@mui/icons-material/Lan'
+import HubIcon from '@mui/icons-material/Hub'
+import CloseIcon from '@mui/icons-material/Close'
+import ContentCopyIcon from '@mui/icons-material/ContentCopy'
 import ConfirmDialog from '../../components/ConfirmDialog.jsx'
 import { useToast } from '../../components/ToastProvider.jsx'
 import HeartbeatBadge from '../../components/HeartbeatBadge.jsx'
+import PanelCompact from '../../components/PanelCompact.jsx'
+import { savePersistedCache } from '../../hooks/useBootstrapState.js'
+const sanitizeDbType = (value) => (typeof value === 'string' ? value.trim().toLowerCase() : '')
+const trimString = (value) => (typeof value === 'string' ? value.trim() : '')
+const formatHostPort = (host, port) => {
+  const cleanHost = trimString(host)
+  if (!cleanHost) return ''
+  const numericPort = typeof port === 'number' ? port : Number(port)
+  if (!numericPort || Number.isNaN(numericPort)) return cleanHost
+  return `${cleanHost}:${numericPort}`
+}
+const buildAuthSegment = (username, password) => {
+  const user = trimString(username)
+  if (!user) return ''
+  const encodedUser = encodeURIComponent(user)
+  if (password != null && password !== '') {
+    return `${encodedUser}:${encodeURIComponent(password)}@`
+  }
+  return `${encodedUser}@`
+}
+const defaultDisplayName = ({ db_type, host, port, database, databasePath }) => {
+  const typeKey = sanitizeDbType(db_type || 'sqlite')
+  if (typeKey === 'sqlite') {
+    const source = trimString(databasePath) || trimString(database) || ''
+    return `sqlite@${source}`
+  }
+  const hostPart = formatHostPort(host, port) || 'unknown'
+  const dbPart = database ? `/${database}` : ''
+  return `${typeKey}@${hostPart}${dbPart}`
+}
+const DB_CONFIG = {
+  postgres: {
+    label: 'PostgreSQL',
+    defaultPort: 5432,
+    buildUrl: ({ username, password, host, port, database }) => {
+      const auth = buildAuthSegment(username, password)
+      return `postgresql://${auth}${trimString(host)}${port ? `:${port}` : ''}/${encodeURIComponent(database)}`
+    },
+    buildDisplay: ({ host, port, database }) => defaultDisplayName({ db_type: 'postgres', host, port, database }),
+  },
+  mysql: {
+    label: 'MySQL/MariaDB',
+    defaultPort: 3306,
+    buildUrl: ({ username, password, host, port, database }) => {
+      const auth = buildAuthSegment(username, password)
+      return `mysql+mysqldb://${auth}${trimString(host)}${port ? `:${port}` : ''}/${encodeURIComponent(database)}`
+    },
+    buildDisplay: ({ host, port, database }) => defaultDisplayName({ db_type: 'mysql', host, port, database }),
+  },
+  mssql: {
+    label: 'SQL Server',
+    defaultPort: 1433,
+    driver: 'ODBC Driver 17 for SQL Server',
+    buildUrl: ({ username, password, host, port, database, ssl, driver }) => {
+      const auth = buildAuthSegment(username, password)
+      const driverName = trimString(driver) || 'ODBC Driver 17 for SQL Server'
+      const params = [`driver=${encodeURIComponent(driverName)}`]
+      if (ssl) {
+        params.push('Encrypt=yes', 'TrustServerCertificate=yes')
+      }
+      const query = params.length ? `?${params.join('&')}` : ''
+      return `mssql+pyodbc://${auth}${trimString(host)}${port ? `:${port}` : ''}/${encodeURIComponent(database)}${query}`
+    },
+    buildDisplay: ({ host, port, database }) => defaultDisplayName({ db_type: 'mssql', host, port, database }),
+  },
+  sqlite: {
+    label: 'SQLite',
+    defaultPort: null,
+    buildDisplay: ({ database }) => defaultDisplayName({ db_type: 'sqlite', database, databasePath: database }),
+  },
+}
+const SUPPORTED_DB_TYPES = Object.keys(DB_CONFIG)
+
+const DB_TYPE_META = {
+  sqlite: {
+    label: DB_CONFIG.sqlite.label,
+    description: 'Lightweight file-based database',
+    icon: StorageIcon,
+    accent: '#7C3AED',
+  },
+  postgres: {
+    label: DB_CONFIG.postgres.label,
+    description: 'Advanced open-source relational database',
+    icon: DnsIcon,
+    accent: '#2563EB',
+  },
+  mysql: {
+    label: DB_CONFIG.mysql.label,
+    description: 'Popular MySQL/MariaDB compatibility',
+    icon: LanIcon,
+    accent: '#0EA5E9',
+  },
+  mssql: {
+    label: DB_CONFIG.mssql.label,
+    description: 'Microsoft SQL Server driver support',
+    icon: HubIcon,
+    accent: '#DB2777',
+  },
+}
+
+const DB_TYPE_OPTIONS = [
+  { value: 'sqlite', ...DB_TYPE_META.sqlite },
+  { value: 'postgres', ...DB_TYPE_META.postgres },
+  { value: 'mysql', ...DB_TYPE_META.mysql },
+  { value: 'mssql', ...DB_TYPE_META.mssql },
+]
+
+const computeCurrentSignature = (values = {}) => JSON.stringify({
+  name: trimString(values.name),
+  db_type: sanitizeDbType(values.db_type),
+  host: trimString(values.host),
+  port: trimString(values.port),
+  db_name: trimString(values.db_name),
+  username: trimString(values.username),
+  password: values.password || '',
+  ssl: Boolean(values.ssl),
+  driver: trimString(values.driver),
+})
+
+
+const CONTROL_HEIGHT = 44
+const CONTROL_RADIUS = 12
+
+const dbTypeToggleGroupSx = (theme) => ({
+  marginTop: theme.spacing(1),
+  display: 'grid',
+  width: '100%',
+  gap: theme.spacing(1),
+  gridTemplateColumns: 'repeat(auto-fit, minmax(175px, 1fr))',
+  [theme.breakpoints.down('sm')]: {
+    gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+  },
+  '& .MuiToggleButtonGroup-grouped': {
+    margin: 0,
+    border: 'none',
+  },
+})
+
+const buildDbTypeButtonSx = (accent) => (theme) => {
+  const accentColor = accent || theme.palette.primary.main
+  return {
+    justifyContent: 'flex-start',
+    alignItems: 'flex-start',
+    textTransform: 'none',
+    borderRadius: 12,
+    border: `1px solid ${alpha(theme.palette.divider, 0.75)}`,
+    padding: theme.spacing(1.1, 1.5),
+    minHeight: 68,
+    display: 'flex',
+    flexDirection: 'row',
+    gap: theme.spacing(1.1),
+    minWidth: 0,
+    backgroundColor: alpha(theme.palette.background.paper, 0.96),
+    color: theme.palette.text.primary,
+    transition: 'border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease, transform 160ms ease',
+    '& .db-type-icon': {
+      width: 24,
+      height: 24,
+      borderRadius: 7,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      color: accentColor,
+      backgroundColor: alpha(accentColor, 0.14),
+      boxShadow: `0 4px 14px ${alpha(accentColor, 0.24)}`,
+      flexShrink: 0,
+    },
+    '& .db-type-meta': {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: theme.spacing(0.25),
+      alignItems: 'flex-start',
+      minWidth: 0,
+    },
+    '&:hover': {
+      borderColor: accentColor,
+      backgroundColor: alpha(accentColor, 0.08),
+    },
+    '&:focus-visible': {
+      outline: `2px solid ${alpha(accentColor, 0.5)}`,
+      outlineOffset: 2,
+    },
+    '&.Mui-selected': {
+      borderColor: accentColor,
+      backgroundColor: alpha(accentColor, 0.14),
+      boxShadow: `0 18px 36px ${alpha(accentColor, 0.28)}`,
+      transform: 'translateY(-1px)',
+    },
+    '&.Mui-selected .db-type-icon': {
+      backgroundColor: alpha(accentColor, 0.22),
+    },
+  }
+}
+
+const gridItemSx = {
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'stretch',
+  flex: 1,
+  minWidth: 0,
+  maxWidth: '100%',
+}
+
+const StyledOutlinedInput = styled(OutlinedInput)(({ theme }) => ({
+  borderRadius: CONTROL_RADIUS,
+  height: CONTROL_HEIGHT,
+  paddingRight: theme.spacing(1),
+  '& .MuiOutlinedInput-notchedOutline': {
+    border: 'none',
+  },
+  '&:hover .MuiOutlinedInput-notchedOutline': {
+    border: 'none',
+  },
+  '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+    border: 'none',
+  },
+  '& .MuiOutlinedInput-input': {
+    display: 'flex',
+    alignItems: 'center',
+    height: CONTROL_HEIGHT,
+    padding: theme.spacing(1.1, 1.75),
+  },
+}))
+
+const SelectField = ({
+  value,
+  options,
+  menuProps: menuPropsProp,
+  id,
+  label,
+  labelId,
+  onChange,
+  onBlur,
+  inputRef,
+  selectControlSx,
+  error,
+  helperText,
+  widestLabel,
+}) => {
+  const normalizedValue = value ?? ''
+  const ghostLabel = widestLabel || options.reduce((longest, opt) => (
+    opt.label.length > longest.length ? opt.label : longest
+  ), '')
+
+  const baseMenuProps = {
+    autoWidth: false,
+    PaperProps: {
+      elevation: 0,
+      style: {
+        borderRadius: '12px',
+        borderTopLeftRadius: '12px',
+        borderTopRightRadius: '12px',
+        borderBottomRightRadius: '12px',
+        borderBottomLeftRadius: '12px',
+      },
+      sx: {
+        mt: 1.25,
+        maxHeight: 320,
+        minWidth: 360,
+        borderRadius: '12px !important',
+        borderTopLeftRadius: '12px !important',
+        borderTopRightRadius: '12px !important',
+        borderBottomRightRadius: '12px !important',
+        borderBottomLeftRadius: '12px !important',
+        border: '1px solid rgba(148,163,184,0.28)',
+        backgroundColor: 'rgba(255,255,255,0.98)',
+        backdropFilter: 'blur(10px)',
+        boxShadow: '0 22px 52px rgba(15,23,42,0.22)',
+        overflow: 'hidden',
+        '&.MuiPaper-rounded': {
+          borderRadius: '12px !important',
+          borderTopLeftRadius: '12px !important',
+          borderTopRightRadius: '12px !important',
+          borderBottomRightRadius: '12px !important',
+          borderBottomLeftRadius: '12px !important',
+        },
+      },
+    },
+    MenuListProps: {
+      sx: { py: 1.1, px: 0.5 },
+    },
+  }
+
+  const menuProps = {
+    ...baseMenuProps,
+    ...menuPropsProp,
+  }
+  if (menuPropsProp?.PaperProps) {
+    menuProps.PaperProps = {
+      ...baseMenuProps.PaperProps,
+      ...menuPropsProp.PaperProps,
+      sx: {
+        ...baseMenuProps.PaperProps.sx,
+        ...(menuPropsProp.PaperProps?.sx || {}),
+      },
+    }
+  }
+  if (menuPropsProp?.MenuListProps) {
+    menuProps.MenuListProps = {
+      ...baseMenuProps.MenuListProps,
+      ...menuPropsProp.MenuListProps,
+      sx: {
+        ...(baseMenuProps.MenuListProps?.sx || {}),
+        ...(menuPropsProp.MenuListProps?.sx || {}),
+      },
+    }
+  }
+
+  return (
+    <Stack
+      direction="row"
+      spacing={1}
+      alignItems="center"
+      sx={{
+        width: '100%',
+        flexWrap: { xs: 'wrap', sm: 'nowrap' },
+        rowGap: { xs: 1, sm: 0 },
+        ml: { xs: 0, sm: 3 },
+      }}
+    >
+      <Typography
+        id={labelId}
+        variant="caption"
+        sx={(theme) => ({
+          fontWeight: theme.typography.fontWeightBold,
+          letterSpacing: '0.08em',
+          textTransform: 'uppercase',
+          color: alpha(theme.palette.text.secondary, 0.85),
+          minWidth: 72,
+          whiteSpace: 'nowrap',
+        })}
+      >
+        {label}
+      </Typography>
+      <FormControl
+        size="small"
+        margin="dense"
+        variant="outlined"
+        error={error}
+        sx={[selectControlSx]}
+        aria-labelledby={labelId}
+      >
+        <Select
+          labelId={labelId}
+          id={id}
+          value={normalizedValue}
+          onChange={onChange}
+          onBlur={onBlur}
+          inputRef={inputRef}
+          input={(
+            <StyledOutlinedInput
+              sx={{
+                pl: 0,
+                pr: 3,
+              }}
+            />
+          )}
+          displayEmpty
+          MenuProps={menuProps}
+          sx={{
+            display: 'block',
+            width: '100%',
+            '& .MuiSelect-select': {
+              display: 'flex',
+              alignItems: 'center',
+              width: '100%',
+              minWidth: 0,
+              paddingTop: 0.5,
+              paddingBottom: 0.5,
+              boxSizing: 'border-box',
+            },
+            '& .MuiSelect-icon': {
+              right: 12,
+              color: 'text.secondary',
+              opacity: 0.68,
+            },
+          }}
+          renderValue={(selected) => {
+            const selectedOption = options.find((opt) => opt.value === selected) || null
+            const IconComponent = selectedOption?.icon
+            const accentColor = selectedOption?.accent
+            return (
+                <Box sx={{ position: 'relative', width: '100%' }}>
+                  <Stack direction="row" spacing={0.6} alignItems="center" sx={{ minWidth: 0, ml: 0.2 }}>
+                    {IconComponent ? (
+                    <Box
+                      sx={(theme) => ({
+                        width: 20,
+                        height: 20,
+                        borderRadius: 6,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: accentColor || theme.palette.primary.main,
+                        backgroundColor: alpha(accentColor || theme.palette.primary.main, 0.12),
+                        boxShadow: `0 4px 12px ${alpha(accentColor || theme.palette.primary.main, 0.18)}`,
+                        flexShrink: 0,
+                        ml: 0.1,
+                      })}
+                    >
+                      <IconComponent fontSize="small" />
+                    </Box>
+                  ) : null}
+                    <Box sx={{
+                      flex: 1,
+                      minWidth: 0,
+                      overflow: 'hidden',
+                    }}>
+                      <Stack
+                        direction="row"
+                        spacing={0.6}
+                        alignItems="center"
+                        sx={{ minWidth: 0 }}
+                      >
+                      <Typography
+                        variant="subtitle2"
+                        component="span"
+                        sx={(theme) => ({
+                          fontWeight: theme.typography.fontWeightSemibold,
+                          color: theme.palette.text.primary,
+                          lineHeight: 1.2,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                          flexShrink: 0,
+                        })}
+                      >
+                        {selectedOption ? selectedOption.label : 'Choose a database'}
+                      </Typography>
+                      <Typography
+                        variant="caption"
+                        component="span"
+                        color="text.secondary"
+                        sx={{
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                          minWidth: 0,
+                        }}
+                      >
+                        {selectedOption?.description || 'Select the engine to connect'}
+                      </Typography>
+                    </Stack>
+                  </Box>
+                </Stack>
+                <Box
+                  aria-hidden
+                  sx={{
+                    position: 'absolute',
+                    inset: 0,
+                    opacity: 0,
+                    whiteSpace: 'nowrap',
+                    pointerEvents: 'none',
+                  }}
+                >
+                  {ghostLabel}
+                </Box>
+              </Box>
+            )
+          }}
+        >
+          {options.map((opt) => {
+            const IconComponent = opt.icon
+            const accentColor = opt.accent
+            return (
+              <MenuItem
+                key={opt.value}
+                value={opt.value}
+                sx={(theme) => ({
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1.1,
+                  py: 1.15,
+                  px: 1.75,
+                  borderRadius: 2,
+                  transition: 'background-color 140ms ease, transform 140ms ease',
+                  '&:hover': {
+                    backgroundColor: alpha(accentColor || theme.palette.primary.main, 0.08),
+                    transform: 'translateX(4px)',
+                  },
+                  '&.Mui-selected': {
+                    backgroundColor: alpha(accentColor || theme.palette.primary.main, 0.12),
+                    color: accentColor || theme.palette.primary.main,
+                    '&:hover': {
+                      backgroundColor: alpha(accentColor || theme.palette.primary.main, 0.16),
+                    },
+                  },
+                })}
+              >
+                {IconComponent ? (
+                  <Box
+                    sx={(theme) => ({
+                      width: 20,
+                      height: 20,
+                      borderRadius: 6,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: accentColor || theme.palette.primary.main,
+                      backgroundColor: alpha(accentColor || theme.palette.primary.main, 0.1),
+                      flexShrink: 0,
+                      ml: 0.15,
+                    })}
+                  >
+                    <IconComponent fontSize="small" />
+                  </Box>
+                ) : null}
+                <Stack
+                  direction="row"
+                  spacing={0.55}
+                  alignItems="center"
+                  sx={{ minWidth: 0, flex: 1 }}
+                >
+                  <Typography
+                    variant="subtitle2"
+                    component="span"
+                    sx={(theme) => ({
+                      fontWeight: theme.typography.fontWeightSemibold,
+                      lineHeight: 1.2,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      flexShrink: 0,
+                    })}
+                  >
+                    {opt.label}
+                  </Typography>
+                  {opt.description ? (
+                    <Typography
+                      variant="caption"
+                      component="span"
+                      color="text.secondary"
+                      sx={{
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        minWidth: 0,
+                      }}
+                    >
+                      {opt.description}
+                    </Typography>
+                  ) : null}
+                </Stack>
+              </MenuItem>
+            )
+          })}
+        </Select>
+        {helperText ? (
+          <FormHelperText sx={{ mt: 0.75, mx: 0.5 }}>{helperText}</FormHelperText>
+        ) : null}
+      </FormControl>
+    </Stack>
+  )
+}
+
 
 /** ---------- validation ---------- */
 const portField = yup
@@ -32,23 +603,32 @@ const portField = yup
   .min(1)
   .max(65535)
 
+
+
 const schema = yup.object({
-  db_type: yup.string().required('Database type is required'),
+  name: yup
+    .string()
+    .trim()
+    .max(80, 'Connection name must be 80 characters or less')
+    .required('Connection name is required'),
+  db_type: yup
+    .string()
+    .oneOf(SUPPORTED_DB_TYPES, 'Unsupported database type')
+    .required('Database type is required'),
   host: yup.string().when('db_type', {
     is: (t) => t !== 'sqlite',
-    then: (f) => f.required('Host is required'),
+    then: (f) => f.required('Host is required for remote databases'),
     otherwise: (f) => f.optional(),
   }),
   port: portField.when('db_type', {
     is: (t) => t !== 'sqlite',
-    then: (f) => f.required('Port is required'),
+    then: (f) => f.required('Port is required for remote databases'),
     otherwise: (f) => f.optional(),
   }),
-  // NOTE: in *your* UI the SQLite path lives in "Database" field
   db_name: yup.string().when('db_type', {
     is: (t) => t === 'sqlite',
-    then: (f) => f.required('Database path is required (SQLite)'),
-    otherwise: (f) => f.required('Database is required'),
+    then: (f) => f.required('Database path is required for SQLite'),
+    otherwise: (f) => f.required('Database name is required'),
   }),
   username: yup.string().when('db_type', {
     is: (t) => t !== 'sqlite',
@@ -63,42 +643,242 @@ const schema = yup.object({
   ssl: yup.boolean().default(false),
 }).required()
 
+
+
 /** ---------- helpers ---------- */
 const stripQuotes = (s) => (s || '').replace(/^["']|["']$/g, '')
 
-/** Convert the form values into a normalized object with db_url (SQLite only for now). */
+
+
+/** Normalize form values into a connection payload. */
 function normalizeConnection(values) {
-  const type = (values.db_type || '').toLowerCase()
-  if (!type) throw new Error('Select a database type')
-
-  if (type !== 'sqlite') {
-    // We only wire SQLite now; others later when drivers are added
-    throw new Error('Only SQLite is supported right now')
+  const typeKey = sanitizeDbType(values.db_type)
+  if (!typeKey) throw new Error('Select a database type')
+  if (!SUPPORTED_DB_TYPES.includes(typeKey)) {
+    throw new Error(`Unsupported database type: ${values.db_type}`)
   }
 
-  const rawPath = stripQuotes((values.db_name || '').trim())
-  if (!rawPath) throw new Error('Provide a path to the SQLite .db file')
+  if (typeKey === 'sqlite') {
+    const rawPath = stripQuotes(trimString(values.db_name))
+    if (!rawPath) throw new Error('Provide a path to the SQLite .db file')
 
-  // Build a consistent db_url for the backend (and nice display name)
-  const normalizedPath = rawPath.replace(/\\/g, '/').replace(/^\.\//, '')
-  let db_url
-  if (normalizedPath.startsWith('sqlite:')) {
-    db_url = normalizedPath
-  } else if (/^[a-zA-Z]:\//.test(normalizedPath)) {
-    db_url = `sqlite:///${normalizedPath}`           // Windows absolute (C:/…)
-  } else if (normalizedPath.startsWith('/')) {
-    db_url = `sqlite://${normalizedPath}`            // POSIX absolute (/…)
-  } else {
-    db_url = `sqlite:///${normalizedPath}`           // relative → sqlite:///rel/path
+    const normalizedPath = rawPath.replace(/\\/g, '/').replace(/^\.\//, '')
+    let db_url
+    if (normalizedPath.startsWith('sqlite:')) {
+      db_url = normalizedPath
+    } else if (/^[a-zA-Z]:\//.test(normalizedPath)) {
+      db_url = `sqlite:///${normalizedPath}`
+    } else if (normalizedPath.startsWith('/')) {
+      db_url = `sqlite://${normalizedPath}`
+    } else {
+      db_url = `sqlite:///${normalizedPath}`
+    }
+
+    return {
+      db_type: 'sqlite',
+      database: rawPath,
+      databasePath: rawPath,
+      path: rawPath,
+      db_url,
+      displayName: defaultDisplayName({ db_type: 'sqlite', databasePath: rawPath }),
+      host: null,
+      port: null,
+      username: null,
+      password: null,
+      ssl: false,
+      driver: null,
+    }
   }
-  const displayName = `sqlite@${rawPath}`
-  return { db_type: 'sqlite', path: rawPath, db_url, displayName }
+
+  const config = DB_CONFIG[typeKey]
+  const host = trimString(values.host)
+  if (!host) throw new Error('Host is required for remote databases')
+
+  const database = trimString(values.db_name)
+  if (!database) throw new Error('Database name is required')
+
+  const username = trimString(values.username)
+  const password = values.password != null ? values.password : ''
+  if (password && !username) {
+    throw new Error('Username is required when providing a password')
+  }
+
+  const rawPort = values.port
+  const portValue =
+    rawPort === '' || rawPort == null ? config.defaultPort : Number(rawPort)
+  if (!Number.isInteger(portValue) || portValue <= 0 || portValue > 65535) {
+    throw new Error('Port must be between 1 and 65535')
+  }
+
+  const ssl = Boolean(values.ssl)
+  const db_url = config.buildUrl({
+    username,
+    password,
+    host,
+    port: portValue,
+    database,
+    ssl,
+    driver: config.driver,
+  })
+  const displayName = config.buildDisplay
+    ? config.buildDisplay({ host, port: portValue, database })
+    : defaultDisplayName({ db_type: typeKey, host, port: portValue, database })
+
+  return {
+    db_type: typeKey,
+    host,
+    port: portValue,
+    database,
+    databasePath: null,
+    path: database,
+    username: username || null,
+    password: password || '',
+    ssl,
+    driver: config.driver || null,
+    db_url,
+    displayName,
+  }
 }
 
-/** The payload format we’ll send to the backend. */
+/** The payload format we'll send to the backend. */
 function payloadFromNormalized(n) {
-  // New flexible shape (backend patch below): prefer db_url
-  return n.db_url ? { db_url: n.db_url } : { db_type: n.db_type, database: n.path }
+  if (n.db_type === 'sqlite') {
+    return {
+      db_type: 'sqlite',
+      db_url: n.db_url,
+      database: n.database,
+    }
+  }
+
+  return {
+    db_type: n.db_type,
+    db_url: n.db_url,
+    host: n.host,
+    port: n.port,
+    database: n.database,
+    username: n.username,
+    password: n.password,
+    ssl: Boolean(n.ssl),
+    driver: n.driver,
+  }
+}
+
+
+
+const pathToFileName = (value) => {
+  if (typeof value !== 'string') return null
+  const segments = value.split(/[/\\]+/).filter(Boolean)
+  return segments.length ? segments[segments.length - 1] : value
+}
+
+
+
+const deriveSqliteUrl = (path) => {
+  if (!path) return null
+  const normalized = path.replace(/\\/g, '/').replace(/^\.\//, '')
+  if (normalized.startsWith('sqlite:')) return normalized
+  if (/^[a-zA-Z]:\//.test(normalized)) return `sqlite:///${normalized}`
+  if (normalized.startsWith('/')) return `sqlite://${normalized}`
+  return `sqlite:///${normalized}`
+}
+
+
+
+const formatSavedConnection = (record = {}, overrides = {}) => {
+  const merged = { ...record, ...overrides }
+  const id = merged.id || merged.backend_connection_id || merged.connection_id
+  if (!id) return null
+
+  const dbTypeRaw = merged.db_type || overrides.db_type || 'sqlite'
+  const dbType = sanitizeDbType(dbTypeRaw || 'sqlite') || 'sqlite'
+
+  const databasePath =
+    merged.databasePath ||
+    merged.database_path ||
+    overrides.databasePath ||
+    overrides.database_path ||
+    null
+
+  const databaseName =
+    merged.database ||
+    merged.database_name ||
+    overrides.database ||
+    overrides.database_name ||
+    (dbType === 'sqlite' ? databasePath : null)
+
+  const rawPortValue = merged.port ?? overrides.port ?? null
+  const portValue =
+    typeof rawPortValue === 'string'
+      ? (rawPortValue.trim() ? Number(rawPortValue) : null)
+      : rawPortValue
+
+  const hostValue =
+    dbType === 'sqlite'
+      ? merged.host ?? overrides.host ?? databasePath
+      : merged.host ?? overrides.host ?? merged.server ?? overrides.server ?? null
+
+  const driver = merged.driver || overrides.driver || null
+  const sslValue =
+    typeof merged.ssl === 'boolean'
+      ? merged.ssl
+      : typeof overrides.ssl === 'boolean'
+        ? overrides.ssl
+        : undefined
+
+  let summary = merged.summary || overrides.summary || null
+  if (!summary) {
+    if (dbType === 'sqlite') {
+      summary = databasePath ? (pathToFileName(databasePath) || databasePath) : null
+    } else {
+      const hostPort = formatHostPort(hostValue, portValue) || hostValue || 'unknown'
+      summary = databaseName ? `${hostPort}/${databaseName}` : hostPort
+    }
+  }
+
+  const lastLatency =
+    typeof merged.lastLatencyMs === 'number'
+      ? merged.lastLatencyMs
+      : typeof merged.last_latency_ms === 'number'
+        ? merged.last_latency_ms
+        : null
+
+  const details = merged.details || merged.last_detail || overrides.details || null
+  const dbUrl =
+    merged.db_url ||
+    overrides.db_url ||
+    (dbType === 'sqlite' && databasePath ? deriveSqliteUrl(databasePath) : null)
+
+  const name =
+    merged.name ||
+    overrides.name ||
+    defaultDisplayName({
+      db_type: dbType,
+      host: hostValue,
+      port: portValue,
+      database: databaseName,
+      databasePath,
+    })
+
+  return {
+    id,
+    backend_connection_id: merged.backend_connection_id || id,
+    name,
+    db_type: dbType,
+    status: merged.status || overrides.status || 'unknown',
+    summary,
+    lastConnected: merged.lastConnected || merged.last_connected_at || overrides.lastConnected || null,
+    lastLatencyMs: lastLatency,
+    details,
+    db_url: dbUrl,
+    host: hostValue,
+    port: portValue,
+    database: databaseName,
+    databasePath,
+    driver,
+    ssl: sslValue,
+    hasCredentials: merged.hasCredentials ?? overrides.hasCredentials ?? true,
+    tags: Array.isArray(merged.tags) ? merged.tags : Array.isArray(overrides.tags) ? overrides.tags : [],
+  }
 }
 
 export default function ConnectDB() {
@@ -114,6 +894,8 @@ export default function ConnectDB() {
     setActiveConnectionId,
   } = useAppStore()
 
+
+
   const toast = useToast()
   const [showPw, setShowPw] = useState(false)
   const [showDetails, setShowDetails] = useState(false)
@@ -121,15 +903,362 @@ export default function ConnectDB() {
   const [confirmSelect, setConfirmSelect] = useState(null)
   const [confirmDelete, setConfirmDelete] = useState(null)
   const [rowHeartbeat, setRowHeartbeat] = useState({})
+  const [canSave, setCanSave] = useState(false)
+  const testedSignatureRef = useRef(null)
+  const currentSignatureRef = useRef('')
+  const duplicateNameTimerRef = useRef(null)
+  const [detailId, setDetailId] = useState(null)
+  const listRef = useRef(null)
+  const panelRef = useRef(null)
+  const [detailAnchor, setDetailAnchor] = useState(null)
+  const detailConnection = useMemo(() => savedConnections.find((c) => c.id === detailId) || null, [savedConnections, detailId])
+  const detailHeartbeat = detailConnection ? rowHeartbeat[detailConnection.id] : null
+  const detailStatus = detailConnection
+    ? (detailHeartbeat?.status || (detailConnection.status === 'connected' ? 'healthy' : (detailConnection.status === 'failed' ? 'unreachable' : 'unknown')))
+    : 'unknown'
+  const detailLatency = detailConnection
+    ? (detailHeartbeat?.latencyMs != null
+      ? detailHeartbeat.latencyMs
+      : detailConnection.lastLatencyMs != null
+      ? detailConnection.lastLatencyMs
+      : undefined)
+    : undefined
+  const detailNote = detailConnection ? (detailConnection.details || detailConnection.lastMessage || 'No recent notes') : 'No recent notes'
   const [lastLatencyMs, setLastLatencyMs] = useState(null)
   const [apiStatus, setApiStatus] = useState('unknown')
-  const { register, handleSubmit, formState: { errors }, watch, reset } = useForm({
+
+
+
+  useEffect(() => {
+    if (!savedConnections.length) {
+      if (detailId !== null) setDetailId(null)
+      return
+    }
+    if (detailId == null) return
+    const hasSelection = savedConnections.some((c) => c.id === detailId)
+    if (!hasSelection) setDetailId(null)
+  }, [savedConnections, detailId])
+
+
+
+  useLayoutEffect(() => {
+    if (typeof window === 'undefined') return undefined
+    if (!detailConnection || !listRef.current) {
+      setDetailAnchor(null)
+      return undefined
+    }
+
+
+
+    const updatePosition = () => {
+      const el = listRef.current
+      if (!el) return
+      const rect = el.getBoundingClientRect()
+      const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 0
+      const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0
+      const maxViewportWidth = Math.max(320, viewportWidth - 32)
+      const clampedWidth = Math.max(480, Math.min(640, rect.width))
+      const width = Math.min(clampedWidth, maxViewportWidth)
+      const panelEl = panelRef.current
+      const measuredHeight = panelEl ? Math.min(panelEl.offsetHeight, viewportHeight - 96) : 0
+      const fallbackHeight = Math.min(rect.height + 260, viewportHeight - 96)
+      const height = measuredHeight || fallbackHeight
+      const maxTop = Math.max(viewportHeight - height - 16, 16)
+      const top = Math.min(Math.max(rect.top, 16), maxTop)
+      const left = Math.min(Math.max(rect.left, 16), Math.max(viewportWidth - width - 16, 16))
+      setDetailAnchor((prev) => {
+        if (prev && prev.top === top && prev.left === left && prev.width === width) return prev
+        return { top, left, width }
+      })
+    }
+
+
+
+    updatePosition()
+    const raf = window.requestAnimationFrame(updatePosition)
+    window.addEventListener('resize', updatePosition)
+    window.addEventListener('scroll', updatePosition, true)
+    return () => {
+      window.cancelAnimationFrame(raf)
+      window.removeEventListener('resize', updatePosition)
+      window.removeEventListener('scroll', updatePosition, true)
+    }
+  }, [detailConnection, detailId, savedConnections.length])
+
+
+
+  const applySelection = (record) => {
+    if (!record) return
+    const targetId = record.backend_connection_id || record.id
+    setActiveConnectionId(targetId)
+    const fallbackUrl =
+      record.db_url ||
+      (sanitizeDbType(record.db_type) === 'sqlite'
+        ? deriveSqliteUrl(record.databasePath || record.database || record.summary || '')
+        : null)
+    setConnection({
+      saved: true,
+      name: record.name,
+      status: record.status,
+      db_url: fallbackUrl || null,
+      latencyMs: record.lastLatencyMs ?? null,
+      lastMessage: record.details || record.status,
+      details: record.details || record.status,
+      connectionId: targetId,
+      db_type: record.db_type,
+      host: record.host ?? null,
+      port: record.port ?? null,
+      database: record.database ?? (sanitizeDbType(record.db_type) === 'sqlite' ? record.databasePath : null),
+      driver: record.driver ?? null,
+      ssl: record.ssl ?? false,
+    })
+    setDetailId(null)
+    toast.show('Connection selected', 'success')
+  }
+
+
+
+  const requestSelect = (record) => {
+    if (!record) return
+    const targetId = record.backend_connection_id || record.id
+    if (activeConnectionId && activeConnectionId !== targetId) {
+      setConfirmSelect(record.id)
+    } else {
+      applySelection(record)
+    }
+  }
+
+
+
+  const beginEditConnection = (record) => {
+    if (!record) return
+    setEditingId(record.id)
+    const typeKey = sanitizeDbType(record.db_type || 'sqlite')
+    const databaseValue =
+      typeKey === 'sqlite'
+        ? record.databasePath || record.database || record.summary || ''
+        : record.database || ''
+    const hostValue = typeKey === 'sqlite' ? '' : (record.host || '')
+    const portValue =
+      typeKey === 'sqlite'
+        ? ''
+        : record.port != null && record.port !== ''
+          ? String(record.port)
+          : ''
+    reset({
+      name: record.name || '',
+      db_type: typeKey || 'sqlite',
+      host: hostValue,
+      port: portValue,
+      db_name: databaseValue,
+      username: '',
+      password: '',
+      ssl: Boolean(record.ssl),
+    })
+    const signature = computeCurrentSignature({
+      name: record.name || '',
+      db_type: typeKey || 'sqlite',
+      host: hostValue,
+      port: portValue,
+      db_name: databaseValue,
+      username: '',
+      password: '',
+      ssl: Boolean(record.ssl),
+    })
+    currentSignatureRef.current = signature
+    testedSignatureRef.current = null
+    setCanSave(false)
+    setDetailId(null)
+    setShowDetails(false)
+    const normalizedUrl =
+      record.db_url ||
+      (sanitizeDbType(record.db_type) === 'sqlite'
+        ? deriveSqliteUrl(record.databasePath || record.database || record.summary || '')
+        : null)
+    setConnection((prev) => ({
+      ...prev,
+      saved: true,
+      status: record.status || prev.status || 'connected',
+      name: record.name || prev.name || record.displayName || '',
+      db_url: normalizedUrl,
+      latencyMs: record.lastLatencyMs ?? prev.latencyMs ?? null,
+      lastMessage: record.details || prev.lastMessage || '',
+      details: record.details || prev.details || '',
+      connectionId: record.backend_connection_id || prev.connectionId || record.id || null,
+    }))
+    setLastLatencyMs(record.lastLatencyMs ?? null)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+
+
+const {
+  register,
+  handleSubmit,
+  formState: { errors },
+  watch,
+  reset,
+  setValue,
+  control,
+  getValues,
+  setError,
+  clearErrors,
+} = useForm({
+    mode: 'onChange',
     resolver: yupResolver(schema),
-    defaultValues: { db_type: 'sqlite', host: '', port: '', db_name: '', username: '', password: '', ssl: false },
+    defaultValues: { name: '', db_type: 'sqlite', host: '', port: '', db_name: '', username: '', password: '', ssl: false },
   })
 
+  useEffect(() => {
+    currentSignatureRef.current = computeCurrentSignature(getValues())
+  }, [getValues])
+
+  useEffect(() => {
+    const subscription = watch((values) => {
+      const nextSignature = computeCurrentSignature(values)
+      currentSignatureRef.current = nextSignature
+      if (testedSignatureRef.current && testedSignatureRef.current !== nextSignature) {
+        testedSignatureRef.current = null
+        setCanSave(false)
+      }
+    })
+    return () => subscription.unsubscribe()
+  }, [watch])
+
+
+
   const dbType = watch('db_type')
-  const isSQLite = dbType?.toLowerCase() === 'sqlite'
+  const dbTypeKey = sanitizeDbType(dbType)
+  const isSQLite = dbTypeKey === 'sqlite'
+const nameValue = watch('name')
+const portValue = watch('port')
+  const dbNameValue = watch('db_name')
+  const activeDbConfig = dbTypeKey ? DB_CONFIG[dbTypeKey] : null
+  const sqliteResolvedUrl = useMemo(() => {
+    if (!isSQLite) return null
+    const raw = trimString(dbNameValue)
+    if (!raw) return null
+    if (raw.startsWith('sqlite:')) return raw
+    const normalized = raw.replace(/\\/g, '/')
+    if (/^[a-zA-Z]:\//.test(normalized)) return `sqlite:///${normalized}`
+    if (normalized.startsWith('/')) return `sqlite://${normalized}`
+    return `sqlite:///${normalized}`
+  }, [isSQLite, dbNameValue])
+  const sqliteResolvedPath = useMemo(() => {
+    if (!sqliteResolvedUrl) return null
+    return sqliteResolvedUrl.replace(/^sqlite:?\/+/, '')
+  }, [sqliteResolvedUrl])
+
+  const checkDuplicateName = useCallback((candidate) => {
+    const trimmed = trimString(candidate)
+    if (!trimmed) return false
+    const normalized = trimmed.toLowerCase()
+    return savedConnections.some((conn) => {
+      if (!conn?.name) return false
+      if (editingId && conn.id === editingId) return false
+      const existing = trimString(conn.name)
+      return !!existing && existing.toLowerCase() === normalized
+    })
+  }, [savedConnections, editingId])
+
+  const copySqlitePath = useCallback(async () => {
+    if (!sqliteResolvedPath) return
+    try {
+      if (typeof navigator !== 'undefined' && navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(sqliteResolvedPath)
+      } else {
+        throw new Error('Clipboard API unavailable')
+      }
+      toast.show('Path copied to clipboard', 'success')
+    } catch {
+      try {
+        const textarea = document.createElement('textarea')
+        textarea.value = sqliteResolvedPath
+        textarea.setAttribute('readonly', '')
+        textarea.style.position = 'absolute'
+        textarea.style.left = '-9999px'
+        document.body.appendChild(textarea)
+        textarea.select()
+        document.execCommand('copy')
+        document.body.removeChild(textarea)
+        toast.show('Path copied to clipboard', 'success')
+      } catch {
+        toast.show('Unable to copy path', 'error')
+      }
+    }
+  }, [sqliteResolvedPath, toast])
+
+
+
+  useEffect(() => {
+    if (!dbTypeKey || dbTypeKey === 'sqlite') return
+    const config = DB_CONFIG[dbTypeKey]
+    if (!config?.defaultPort) return
+    if (!portValue) {
+      setValue('port', String(config.defaultPort))
+    }
+  }, [dbTypeKey, portValue, setValue])
+
+
+
+  const hostHelperText = errors.host?.message || (isSQLite ? 'Not required for SQLite' : ' ')
+  const portHelperText = errors.port?.message
+    || (isSQLite ? 'Not required for SQLite' : (activeDbConfig?.defaultPort ? `Default ${activeDbConfig.defaultPort}` : ' '))
+  const usernameHelperText = errors.username?.message || (isSQLite ? 'Not required for SQLite' : ' ')
+  const passwordHelperText = errors.password?.message || (isSQLite ? 'Not required for SQLite' : ' ')
+  const portPlaceholder = !isSQLite && activeDbConfig?.defaultPort ? String(activeDbConfig.defaultPort) : ''
+  const sharedFieldSx = {
+    '& .MuiOutlinedInput-root': {
+      borderRadius: CONTROL_RADIUS,
+      minHeight: CONTROL_HEIGHT,
+      alignItems: 'center',
+      width: '100%',
+      boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
+    },
+    '& .MuiOutlinedInput-notchedOutline': {
+      borderRadius: CONTROL_RADIUS,
+      borderColor: 'divider',
+    },
+    '&:hover .MuiOutlinedInput-notchedOutline': {
+      borderColor: 'divider',
+    },
+    '& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline': {
+      borderColor: 'primary.main',
+      borderWidth: 2,
+    },
+    '& .MuiOutlinedInput-input': { py: 1.25 },
+    '& .MuiInputLabel-root': (theme) => ({
+      ...theme.typography.overline,
+      color: theme.palette.text.secondary,
+      letterSpacing: '0.14em',
+    }),
+  }
+  const fieldSx = { width: '100%', flexGrow: 1, ...sharedFieldSx }
+
+  useEffect(() => {
+    if (duplicateNameTimerRef.current) {
+      clearTimeout(duplicateNameTimerRef.current)
+    }
+    duplicateNameTimerRef.current = setTimeout(() => {
+      const isDuplicate = checkDuplicateName(nameValue)
+      if (isDuplicate) {
+        if (errors.name?.type !== 'duplicate') {
+          setError('name', { type: 'duplicate', message: 'Connection name already exists' })
+        }
+      } else if (errors.name?.type === 'duplicate') {
+        clearErrors('name')
+      }
+      duplicateNameTimerRef.current = null
+    }, 200)
+    return () => {
+      if (duplicateNameTimerRef.current) {
+        clearTimeout(duplicateNameTimerRef.current)
+        duplicateNameTimerRef.current = null
+      }
+    }
+  }, [nameValue, checkDuplicateName, errors.name?.type, setError, clearErrors])
+
+
 
   /** ---- API health probe (uses real backend when not mock) ---- */
   useEffect(() => {
@@ -152,28 +1281,28 @@ export default function ConnectDB() {
     return () => { cancelled = true; clearInterval(id) }
   }, [])
 
+
+
   /** ---- Test Connection ---- */
   const mutation = useMutation({
     mutationFn: async (formValues) => {
       const normalized = normalizeConnection(formValues)
       const payload = payloadFromNormalized(normalized)
 
+
+
       if (isMock) {
         const response = await mock.testConnection(payload)
         return { normalized, response }
       }
 
-      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/connections/test`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      })
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(data?.detail || 'Connection failed')
+
+
+      const data = await apiTestConnection(payload)
       return {
         normalized,
         response: {
-          ok: true,
+          ok: data.ok ?? true,
           details: data.details || 'Connected',
           latencyMs: typeof data.latency_ms === 'number' ? data.latency_ms : undefined,
           connection_id: data.connection_id,                // server id
@@ -181,9 +1310,12 @@ export default function ConnectDB() {
         }
       }
     },
-    onSuccess: ({ normalized, response }) => {
+    onSuccess: ({ normalized, response }, formValues) => {
       const now = new Date().toISOString()
       const lm = response.latencyMs ?? null
+      const typedName = (watch('name') || '').trim()
+
+
 
       setLastLatencyMs(lm)
       setConnection({
@@ -192,147 +1324,359 @@ export default function ConnectDB() {
         details: response.details,
         latencyMs: lm,
         db_url: normalized.db_url,
-        name: normalized.displayName,
+        name: typedName || normalized.displayName,
         lastCheckedAt: now,
         connectionId: response.connection_id,   // keep in connection state
         normalized: response.normalized,
         saved: false,
       })
 
+
+
       setActiveConnectionId(response.connection_id) // NEW: use backend connection_id
       setShowDetails(true)
+
+      const signature = computeCurrentSignature(formValues || getValues())
+      currentSignatureRef.current = signature
+      testedSignatureRef.current = signature
+      setCanSave(true)
       setSetupStep('generate')      // or 'upload' depending on your flow
       toast.show('Connection successful', 'success')
     },
     onError: (error) => {
       const detail = error?.message || 'Connection failed'
-      setConnection({ status: 'failed', lastMessage: detail, details: detail })
+      const failedAt = new Date().toISOString()
+      setCanSave(false)
+      testedSignatureRef.current = null
+      setConnection({ status: 'failed', lastMessage: detail, details: detail, lastCheckedAt: failedAt })
       setShowDetails(true)
       toast.show(detail, 'error')
     },
   })
 
-  const onSubmit = (values) => {
+
+
+const onSubmit = (values) => {
     // SQLite uses the Database field as path. Host/Port/User/Pass ignored.
+    if (checkDuplicateName(values.name)) {
+      setError('name', { type: 'duplicate', message: 'Connection name already exists' })
+      setCanSave(false)
+      return
+    }
+    setCanSave(false)
     mutation.mutate(values)
   }
 
+
+
   /** ---- Row healthcheck for saved rows ---- */
   const handleRowTest = async (row) => {
+    if (!row) return
     const now = new Date().toISOString()
+    const connectionId = row.backend_connection_id || row.id
+    const storeId = row.id || connectionId
+    if (!storeId) {
+      toast.show('Connection reference is missing. Please re-test and save this connection.', 'error')
+      return
+    }
+
+
+
     try {
-      const normalized = row.db_url
-        ? { db_type: row.db_type, path: row.host, db_url: row.db_url }
-        : normalizeConnection({ db_type: row.db_type, db_name: row.host })
-
-      const payload = payloadFromNormalized(normalized)
-
-      let result
+      let latency = null
+      let details = 'Healthcheck succeeded'
+      const typeKey = sanitizeDbType(row.db_type)
       if (isMock) {
-        result = await mock.testConnection(payload)
-      } else {
-        const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/connections/test`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        })
-        const data = await res.json().catch(() => ({}))
-        if (!res.ok) throw new Error(data?.detail || 'Healthcheck failed')
-        result = {
-          latencyMs: data.latency_ms,
-          details: data.details || 'Connected',
-          connection_id: data.connection_id,   // NEW: fresh server id
+        const normalized = {
+          db_type: typeKey,
+          db_url:
+            row.db_url ||
+            (typeKey === 'sqlite'
+              ? deriveSqliteUrl(row.databasePath || row.database || '')
+              : undefined),
+          host: row.host ?? null,
+          port: row.port ?? null,
+          database: row.database || row.databasePath || '',
+          username: row.username || '',
+          password: '',
+          ssl: row.ssl ?? false,
+          driver: row.driver ?? null,
         }
+        const payload = payloadFromNormalized(normalized)
+        const result = await mock.testConnection(payload)
+        latency = result.latencyMs ?? result.latency_ms ?? null
+        details = result.details || 'Connected'
+        updateSavedConnection(storeId, {
+          status: 'connected',
+          lastConnected: now,
+          lastLatencyMs: latency,
+          details,
+          db_url: normalized.db_url,
+          host: normalized.host ?? (typeKey === 'sqlite' ? normalized.database : null),
+          port: normalized.port ?? null,
+          database: normalized.database,
+          databasePath: typeKey === 'sqlite' ? normalized.database : null,
+          driver: normalized.driver,
+          ssl: normalized.ssl,
+          backend_connection_id: connectionId || storeId,
+        })
+      } else {
+        if (!connectionId) throw new Error('Connection is missing a server identifier. Please re-test and save it.')
+        const res = await apiHealthcheckConnection(connectionId)
+        latency = typeof res.latency_ms === 'number' ? res.latency_ms : null
+        updateSavedConnection(storeId, {
+          status: 'connected',
+          lastConnected: now,
+          lastLatencyMs: latency,
+          details,
+          backend_connection_id: connectionId,
+          db_url:
+            row.db_url ||
+            (typeKey === 'sqlite'
+              ? deriveSqliteUrl(row.databasePath || row.database || row.summary || '')
+              : row.db_url || null),
+          host:
+            typeKey === 'sqlite'
+              ? row.databasePath || row.database || null
+              : row.host ?? null,
+          port: row.port ?? null,
+          database: row.database ?? (typeKey === 'sqlite' ? row.databasePath : null),
+          databasePath: typeKey === 'sqlite' ? (row.databasePath || row.database || null) : null,
+          driver: row.driver ?? null,
+          ssl: row.ssl ?? undefined,
+        })
       }
 
-      const latency = result.latencyMs ?? null
-      updateSavedConnection(row.id, {
-        status: 'connected',
-        lastConnected: now,
-        lastLatencyMs: latency,
-        details: result.details,
-        db_url: normalized.db_url,
-        backend_connection_id: result.connection_id || row.backend_connection_id, // NEW
-      })
-      setRowHeartbeat((prev) => ({ ...prev, [row.id]: { status: 'healthy', latencyMs: latency, ts: Date.now() } }))
 
-      // If this row is active, refresh connection + set server id active
-      if (row.id === activeConnectionId || row.backend_connection_id === activeConnectionId) {
+
+      setRowHeartbeat((prev) => ({
+        ...prev,
+        [storeId]: { status: 'healthy', latencyMs: latency, ts: Date.now() },
+      }))
+
+
+
+      if (
+        activeConnectionId &&
+        (activeConnectionId === connectionId || activeConnectionId === storeId)
+      ) {
+        const fallbackUrl =
+          row.db_url ||
+          (typeKey === 'sqlite'
+            ? deriveSqliteUrl(row.databasePath || row.database || row.summary || '')
+            : null)
         setConnection({
           status: 'connected',
           saved: true,
           name: row.name,
-          db_url: normalized.db_url,
+          db_url: fallbackUrl || null,
           latencyMs: latency,
-          lastMessage: result.details,
-          details: result.details,
+          lastMessage: details,
+          details,
           lastCheckedAt: now,
-          connectionId: result.connection_id || row.backend_connection_id, // NEW
+          connectionId: connectionId || storeId,
+          db_type: row.db_type,
+          host: row.host ?? (typeKey === 'sqlite' ? row.databasePath || row.database || null : null),
+          port: row.port ?? null,
+          database: row.database ?? (typeKey === 'sqlite' ? row.databasePath : null),
+          driver: row.driver ?? null,
+          ssl: row.ssl ?? false,
         })
-        if (result.connection_id) setActiveConnectionId(result.connection_id) // NEW
+        if (!isMock && connectionId) setActiveConnectionId(connectionId)
       }
       toast.show('Healthcheck succeeded', 'success')
     } catch (error) {
       const detail = error?.message || 'Healthcheck failed'
-      updateSavedConnection(row.id, { status: 'failed', details: detail })
-      setRowHeartbeat((prev) => ({ ...prev, [row.id]: { status: 'unreachable', latencyMs: null, ts: Date.now() } }))
-      if (row.id === activeConnectionId) {
-        setConnection({ status: 'failed', lastMessage: detail, details: detail })
+      updateSavedConnection(storeId, { status: 'failed', details: detail })
+      setRowHeartbeat((prev) => ({
+        ...prev,
+        [storeId]: { status: 'unreachable', latencyMs: null, ts: Date.now() },
+      }))
+      if (
+        activeConnectionId &&
+        (activeConnectionId === connectionId || activeConnectionId === storeId)
+      ) {
+        setConnection({ status: 'failed', lastMessage: detail, details: detail, lastCheckedAt: now })
       }
       toast.show(detail, 'error')
     } finally {
+      const snapshot = useAppStore.getState()
+      savePersistedCache({
+        connections: snapshot.savedConnections,
+        templates: snapshot.templates,
+        lastUsed: snapshot.lastUsed,
+      })
       setTimeout(() => setRowHeartbeat((prev) => {
-        const next = { ...prev }; Object.keys(next).forEach(k => {
+        const next = { ...prev }
+        Object.keys(next).forEach((k) => {
           if (Date.now() - next[k].ts > 2500) delete next[k]
-        }); return next
+        })
+        return next
       }), 3000)
     }
   }
 
-  /** ---- Save & Continue (persist in store only) ---- */
-  const handleSave = () => {
+
+
+  /** ---- Save & Continue (persist to backend + store) ---- */
+const handleSave = async () => {
     const values = watch()
+    const friendlyName = trimString(values.name)
+    if (checkDuplicateName(friendlyName)) {
+      setError('name', { type: 'duplicate', message: 'Connection name already exists' })
+      return
+    }
     let normalized
     try {
       normalized = normalizeConnection(values)
     } catch (e) {
       toast.show(e.message, 'error'); return
     }
-    if (connection.status !== 'connected' || connection.db_url !== normalized.db_url) {
-      toast.show('Please test this connection before saving', 'warning'); return
+    const finalName = friendlyName || normalized.displayName
+    const currentSignature = computeCurrentSignature(values)
+    const signatureMatches = testedSignatureRef.current && testedSignatureRef.current === currentSignature
+    if (!canSave || !signatureMatches || connection.status !== 'connected' || connection.db_url !== normalized.db_url) {
+      toast.show('Test the connection with the current settings before saving', 'warning')
+      return
     }
     const now = new Date().toISOString()
-    const base = {
-      name: normalized.displayName,
-      db_type: normalized.db_type,
-      host: normalized.path,       // show the path in the table
-      db_name: values.db_name || '',
-      status: 'connected',
-      lastConnected: now,
-      lastLatencyMs: connection.latencyMs ?? lastLatencyMs ?? null,
-      db_url: normalized.db_url,
-      details: connection.details || connection.lastMessage,
-      backend_connection_id: connection.connectionId || null,   // NEW: persist server id
-    }
-    const id = editingId || `conn_${Date.now()}`
-    if (editingId) updateSavedConnection(editingId, base)
-    else { addSavedConnection({ id, ...base }); }
-    // Set active to server id (preferred); fallback to local id if missing
-    setActiveConnectionId(base.backend_connection_id || id)     // NEW
+    const latency = connection.latencyMs ?? lastLatencyMs ?? null
+    const baseDetails = connection.details || connection.lastMessage || 'Connected'
+    const existingRecord = editingId ? savedConnections.find((c) => c.id === editingId) : null
+    const preferredId =
+      connection.connectionId ||
+      existingRecord?.backend_connection_id ||
+      existingRecord?.id ||
+      editingId ||
+      null
+    const normalizedHostForSave =
+      normalized.db_type === 'sqlite' ? normalized.database : normalized.host
+    const normalizedDatabasePath = normalized.db_type === 'sqlite' ? normalized.database : null
 
-    setEditingId(null)
-    setConnection({
-      saved: true,
-      status: 'connected',
-      name: base.name,
-      db_url: base.db_url,
-      latencyMs: base.lastLatencyMs,
-      lastMessage: base.details,
-      details: base.details,
-      connectionId: base.backend_connection_id,                // NEW
-    })
-    setSetupStep('generate')
-    toast.show('Connection saved', 'success')
+
+
+    try {
+      let persisted
+      if (isMock) {
+        const fallbackId = preferredId || `conn_${Date.now()}`
+        persisted = formatSavedConnection({
+          id: fallbackId,
+          name: finalName,
+          db_type: normalized.db_type,
+          status: 'connected',
+          lastConnected: now,
+          lastLatencyMs: latency,
+          db_url: normalized.db_url,
+          host: normalizedHostForSave,
+          port: normalized.port,
+          database: normalized.database,
+          databasePath: normalizedDatabasePath,
+          driver: normalized.driver,
+          ssl: normalized.ssl,
+          details: baseDetails,
+          hasCredentials: true,
+        })
+      } else {
+        const response = await apiUpsertConnection({
+          id: preferredId,
+          name: finalName,
+          dbType: normalized.db_type,
+          dbUrl: normalized.db_url,
+          database: normalized.database,
+          host: normalized.host,
+          port: normalized.port,
+          username: normalized.username,
+          password: normalized.password,
+          ssl: normalized.ssl,
+          driver: normalized.driver,
+          status: 'connected',
+          latencyMs: latency,
+        })
+        persisted = formatSavedConnection(response, {
+          name: finalName,
+          status: 'connected',
+          lastConnected: now,
+          lastLatencyMs: latency,
+          db_url: normalized.db_url,
+          host: normalizedHostForSave,
+          port: normalized.port,
+          database: normalized.database,
+          databasePath: normalizedDatabasePath,
+          driver: normalized.driver,
+          ssl: normalized.ssl,
+          details: baseDetails,
+          hasCredentials: true,
+        })
+      }
+
+
+
+      if (!persisted) throw new Error('Unable to persist connection. Please try again.')
+
+
+
+      if (editingId && editingId !== persisted.id) {
+        removeSavedConnection(editingId)
+      }
+
+
+
+      addSavedConnection(persisted)
+      const stateAfterSave = useAppStore.getState()
+      savePersistedCache({
+        connections: stateAfterSave.savedConnections,
+        templates: stateAfterSave.templates,
+        lastUsed: stateAfterSave.lastUsed,
+      })
+      setDetailId(persisted.id)
+      setActiveConnectionId(persisted.backend_connection_id || persisted.id)
+
+
+
+      setEditingId(null)
+      setConnection({
+        saved: true,
+        status: 'connected',
+        name: persisted.name,
+        db_url: persisted.db_url,
+        latencyMs: persisted.lastLatencyMs,
+        lastMessage: persisted.details,
+        details: persisted.details,
+        connectionId: persisted.backend_connection_id || persisted.id,
+        db_type: persisted.db_type,
+        host: persisted.host ?? null,
+        port: persisted.port ?? null,
+        database: persisted.database ?? persisted.databasePath ?? null,
+        driver: persisted.driver ?? null,
+        ssl: persisted.ssl ?? false,
+        lastCheckedAt: now,
+      })
+      testedSignatureRef.current = currentSignature
+      setCanSave(true)
+      setSetupStep('generate')
+      toast.show('Connection saved', 'success')
+    } catch (err) {
+      toast.show(err?.message || 'Failed to save connection', 'error')
+    }
   }
+
+
+
+const lastHeartbeatLabel = useMemo(() => {
+    if (!connection.lastCheckedAt) return 'Not tested yet'
+    const ts = new Date(connection.lastCheckedAt)
+    if (Number.isNaN(ts.getTime())) return 'Not tested yet'
+    const delta = Date.now() - ts.getTime()
+    if (delta < 0) return 'Just now'
+    const seconds = Math.floor(delta / 1000)
+    if (seconds < 60) return `${seconds || 1}s ago`
+    const minutes = Math.floor(seconds / 60)
+    if (minutes < 60) return `${minutes}m ago`
+    const hours = Math.floor(minutes / 60)
+    if (hours < 24) return `${hours}h ago`
+    const days = Math.floor(hours / 24)
+    return `${days}d ago`
+  }, [connection.lastCheckedAt])
 
   const hbStatus = useMemo(() => {
     if (mutation.isPending) return 'testing'
@@ -341,74 +1685,255 @@ export default function ConnectDB() {
     return apiStatus
   }, [mutation.isPending, connection.status, apiStatus])
 
+  const heartbeatChipColor = useMemo(() => {
+    switch (hbStatus) {
+      case 'healthy':
+        return 'success'
+      case 'testing':
+        return 'warning'
+      case 'unreachable':
+        return 'error'
+      default:
+        return 'default'
+    }
+  }, [hbStatus])
+
+  const showHeartbeatChip = useMemo(
+    () => Boolean(connection.lastCheckedAt) || mutation.isPending,
+    [connection.lastCheckedAt, mutation.isPending],
+  )
+
+
+
   return (
-    <Paper variant="outlined" sx={{ p: 2 }}>
-      <Typography variant="h6" sx={{ mb: 2 }}>Connect Database</Typography>
+    <Stack spacing={3}>
+      <PanelCompact sx={{ p: { xs: 2.5, md: 3 }, display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <Typography variant="h6">Connect Database</Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+          Connected sources feed both PDF and Excel template pipelines.
+        </Typography>
 
-      <Box component="form" onSubmit={handleSubmit(onSubmit)}>
-        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mb: 2 }}>
-          <TextField select label="DB Type" fullWidth size="small" defaultValue={watch('db_type')} {...register('db_type')}>
-            <MenuItem value="postgres">PostgreSQL</MenuItem>
-            <MenuItem value="mysql">MySQL/MariaDB</MenuItem>
-            <MenuItem value="mssql">SQL Server</MenuItem>
-            <MenuItem value="sqlite">SQLite</MenuItem>
-          </TextField>
-          <TextField
-            label="Host"
-            fullWidth
-            size="small"
-            disabled={isSQLite}
-            error={!!errors.host}
-            helperText={isSQLite ? 'Not used for SQLite' : errors.host?.message}
-            {...register('host')}
-          />
-          <TextField
-            label="Port"
-            fullWidth
-            size="small"
-            disabled={isSQLite}
-            error={!!errors.port}
-            helperText={isSQLite ? 'Not used for SQLite' : errors.port?.message}
-            {...register('port')}
-          />
-        </Stack>
 
-        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mb: 2 }}>
-          <TextField
-            label="Database"
-            placeholder={isSQLite ? 'Path to .db file' : 'Database name'}
-            fullWidth size="small"
-            error={!!errors.db_name}
-            helperText={errors.db_name?.message}
-            {...register('db_name')}
-          />
-          <TextField
-            label="Username"
-            fullWidth size="small"
-            disabled={isSQLite}
-            error={!!errors.username}
-            helperText={isSQLite ? 'Not used for SQLite' : errors.username?.message}
-            {...register('username')}
-          />
-          <TextField
-            label="Password"
-            type={showPw ? 'text' : 'password'}
-            fullWidth size="small"
-            disabled={isSQLite}
-            error={!!errors.password}
-            helperText={isSQLite ? 'Not used for SQLite' : errors.password?.message}
-            InputProps={{
-              endAdornment: (
-                <InputAdornment position="end">
-                  <IconButton onClick={() => setShowPw(v => !v)} edge="end" aria-label="toggle password visibility">
-                    {showPw ? <VisibilityOff /> : <Visibility />}
-                  </IconButton>
-                </InputAdornment>
-              ),
-            }}
-            {...register('password')}
-          />
-        </Stack>
+
+        <Box component="form" onSubmit={handleSubmit(onSubmit)}>
+          <Box sx={{ mb: 3 }}>
+            <Typography
+              variant="overline"
+              id="dbtype-label"
+              sx={(theme) => ({
+                display: 'block',
+                fontWeight: theme.typography.fontWeightBold,
+                letterSpacing: '0.12em',
+                color: alpha(theme.palette.text.secondary, 0.75),
+              })}
+            >
+              Database Type
+            </Typography>
+            <Controller
+              name="db_type"
+              control={control}
+              render={({ field }) => (
+                <FormControl component="fieldset" error={!!errors.db_type} fullWidth>
+                  <ToggleButtonGroup
+                    exclusive
+                    color="standard"
+                    value={field.value ?? 'sqlite'}
+                    onChange={(_, value) => {
+                      if (!value) return
+                      field.onChange(value)
+                    }}
+                    onBlur={field.onBlur}
+                    ref={field.ref}
+                    sx={dbTypeToggleGroupSx}
+                    aria-labelledby="dbtype-label"
+                  >
+                    {DB_TYPE_OPTIONS.map((option) => {
+                      const IconComponent = option.icon
+                      return (
+                        <ToggleButton
+                          key={option.value}
+                          value={option.value}
+                          disableRipple
+                          sx={buildDbTypeButtonSx(option.accent)}
+                          aria-label={option.label}
+                        >
+                          {IconComponent ? (
+                            <Box className="db-type-icon">
+                              <IconComponent fontSize="small" />
+                            </Box>
+                          ) : null}
+                          <Box className="db-type-meta">
+                            <Typography variant="subtitle2" sx={{ fontWeight: 600 }} noWrap>
+                              {option.label}
+                            </Typography>
+                            {option.description ? (
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                                sx={{ lineHeight: 1.3 }}
+                              >
+                                {option.description}
+                              </Typography>
+                            ) : null}
+                          </Box>
+                        </ToggleButton>
+                      )
+                    })}
+                  </ToggleButtonGroup>
+                  <FormHelperText sx={{ mt: 1 }}>
+                    {errors.db_type?.message || 'Choose the database engine you are connecting to'}
+                  </FormHelperText>
+                </FormControl>
+              )}
+            />
+          </Box>
+
+          {/* Row 1: Name, Host, Port */}
+        <Grid container spacing={2} sx={{ mb: 2 }}>
+          <Grid item xs={12} sm={4} md={4} lg={4} sx={gridItemSx}>
+            <TextField
+              label="Connection Name"
+              placeholder="e.g. Reporting Warehouse"
+              fullWidth
+              required
+              size="small"
+              margin="dense"
+              variant="outlined"
+              inputProps={{ maxLength: 80 }}
+              error={!!errors.name}
+              helperText={errors.name?.message || 'Used to save this connection preset'}
+              InputLabelProps={{ shrink: true }}
+              sx={fieldSx}
+              {...register('name')}
+            />
+          </Grid>
+          <Grid item xs={12} sm={4} md={4} lg={4} sx={gridItemSx}>
+            <TextField
+              label="Host"
+              fullWidth
+              size="small"
+              margin="dense"
+              variant="outlined"
+              disabled={isSQLite}
+              error={!!errors.host}
+              helperText={hostHelperText}
+              placeholder={isSQLite ? '' : 'db.example.com'}
+              InputLabelProps={{ shrink: true }}
+              sx={fieldSx}
+              {...register('host')}
+            />
+          </Grid>
+          <Grid item xs={12} sm={4} md={4} lg={4} sx={gridItemSx}>
+            <TextField
+              label="Port"
+              fullWidth
+              size="small"
+              margin="dense"
+              variant="outlined"
+              disabled={isSQLite}
+              error={!!errors.port}
+              helperText={portHelperText}
+              placeholder={portPlaceholder}
+              inputProps={{ inputMode: 'numeric', pattern: '[0-9]*' }}
+              InputLabelProps={{ shrink: true }}
+              sx={fieldSx}
+              {...register('port')}
+            />
+          </Grid>
+        </Grid>
+
+        {isSQLite && sqliteResolvedPath && (
+          <Stack
+            direction={{ xs: 'column', sm: 'row' }}
+            spacing={1}
+            alignItems={{ xs: 'flex-start', sm: 'center' }}
+            sx={{ mb: 2, backgroundColor: 'background.default', borderRadius: 2, px: 1.5, py: 1.25, border: '1px solid', borderColor: 'divider' }}
+          >
+            <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+              Resolved path:
+            </Typography>
+            <Typography
+              variant="caption"
+              sx={{
+                fontFamily: 'var(--font-code, "Menlo", monospace)',
+                color: 'text.primary',
+                wordBreak: 'break-all',
+              }}
+            >
+              {sqliteResolvedPath}
+            </Typography>
+            <Tooltip title="Copy resolved path">
+              <IconButton
+                size="small"
+                color="primary"
+                onClick={copySqlitePath}
+                aria-label="Copy resolved path"
+              >
+                <ContentCopyIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          </Stack>
+        )}
+
+        <Grid container spacing={2} alignItems="flex-start" sx={{ mb: 2 }}>
+          <Grid item xs={12} sm={4} md={4} sx={gridItemSx}>
+            <TextField
+              label="Database"
+              placeholder={isSQLite ? 'Path to .db file' : 'Database name'}
+              fullWidth
+              size="small"
+              margin="dense"
+              variant="outlined"
+              error={!!errors.db_name}
+              helperText={errors.db_name?.message || ' '}
+              InputLabelProps={{ shrink: true }}
+              sx={fieldSx}
+              {...register('db_name')}
+            />
+          </Grid>
+          <Grid item xs={12} sm={4} md={4} sx={gridItemSx}>
+            <TextField
+              label="Username"
+              fullWidth
+              size="small"
+              margin="dense"
+              variant="outlined"
+              disabled={isSQLite}
+              error={!!errors.username}
+              helperText={usernameHelperText}
+              InputLabelProps={{ shrink: true }}
+              sx={fieldSx}
+              {...register('username')}
+            />
+          </Grid>
+          <Grid item xs={12} sm={4} md={4} sx={gridItemSx}>
+            <TextField
+              label="Password"
+              type={showPw ? 'text' : 'password'}
+              fullWidth
+              size="small"
+              margin="dense"
+              variant="outlined"
+              disabled={isSQLite}
+              error={!!errors.password}
+              helperText={passwordHelperText}
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton onClick={() => setShowPw(v => !v)} edge="end" aria-label="toggle password visibility">
+                      {showPw ? <VisibilityOff /> : <Visibility />}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
+              InputLabelProps={{ shrink: true }}
+              sx={fieldSx}
+              {...register('password')}
+            />
+          </Grid>
+        </Grid>
+
+
 
         <Stack direction="row" spacing={2} alignItems="center" sx={{ flexWrap: 'wrap' }}>
           <Button
@@ -422,20 +1947,37 @@ export default function ConnectDB() {
           >
             Test Connection
           </Button>
-          <HeartbeatBadge status={hbStatus} latencyMs={connection.latencyMs ?? lastLatencyMs ?? undefined} />
-
           <Button
             variant="outlined"
             color="success"
-            startIcon={<ArrowForwardIcon />}
-            sx={{ borderRadius: 2, px: 2.5, textTransform: 'none' }}
-            disabled={connection.status !== 'connected'}
+            type="button"
             onClick={handleSave}
+            disabled={mutation.isPending || !canSave}
+            startIcon={<ArrowForwardIcon />}
           >
             Save & Continue
           </Button>
+          <Stack direction="row" spacing={1} alignItems="center">
+            <HeartbeatBadge status={hbStatus} latencyMs={connection.latencyMs ?? lastLatencyMs ?? undefined} />
+            {showHeartbeatChip ? (
+              <Chip
+                label="Last heartbeat"
+                size="small"
+                color={heartbeatChipColor}
+                variant={heartbeatChipColor === 'default' ? 'outlined' : 'filled'}
+                sx={{ fontWeight: 600 }}
+              />
+            ) : null}
+            <Typography variant="caption" color="text.secondary">
+              {lastHeartbeatLabel}
+            </Typography>
+          </Stack>
 
-          {mutation.isPending && <Typography variant="body2" color="text.secondary">Testing…</Typography>}
+
+
+          {mutation.isPending && <Typography variant="body2" color="text.secondary">Testing...</Typography>}
+
+
 
           {connection.status === 'connected' && (
             <Chip color="success" label="Connected" size="small" onClick={() => setShowDetails(v => !v)} />
@@ -443,131 +1985,397 @@ export default function ConnectDB() {
           {connection.status === 'failed' && (
             <Chip color="error" label="Failed" size="small" onClick={() => setShowDetails(v => !v)} />
           )}
+          {!isSQLite && (
+            <Controller
+              name="ssl"
+              control={control}
+              render={({ field }) => (
+                <FormControlLabel
+                  sx={{ m: 0, whiteSpace: 'nowrap' }}
+                  componentsProps={{
+                    typography: {
+                      sx: (theme) => ({
+                        whiteSpace: 'nowrap',
+                        fontWeight: theme.typography.fontWeightSemibold,
+                      }),
+                    },
+                  }}
+                  control={
+                    <Checkbox
+                      size="small"
+                      checked={Boolean(field.value)}
+                      onChange={(event) => field.onChange(event.target.checked)}
+                    />
+                  }
+                  label="Use SSL"
+                />
+              )}
+            />
+          )}
         </Stack>
       </Box>
 
-      <Box sx={{ mt: 2 }}>
-        <Collapse in={showDetails}>
-          {connection.status === 'connected' && <Alert severity="success">{connection.lastMessage}</Alert>}
-          {connection.status === 'failed' && <Alert severity="error">{connection.lastMessage}</Alert>}
-        </Collapse>
-      </Box>
+
+
+        <Box>
+          <Collapse in={showDetails}>
+            {connection.status === 'failed' && <Alert severity="error">{connection.lastMessage}</Alert>}
+          </Collapse>
+        </Box>
+
+
+
+      </PanelCompact>
+
+
 
       {savedConnections.length === 0 && (
-        <Box sx={{ mt: 3, p: 2, border: '1px dashed', borderColor: 'divider', borderRadius: 1, textAlign: 'center' }}>
+        <PanelCompact sx={{ textAlign: 'center', p: { xs: 2.5, md: 3 }, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1.25 }}>
           <Typography variant="body2" color="text.secondary">No saved connections yet.</Typography>
           <Typography variant="caption" color="text.secondary">Test and save a connection to keep it handy.</Typography>
-        </Box>
+        </PanelCompact>
       )}
+
+
 
       {savedConnections.length > 0 && (
-        <Box sx={{ mt: 3, overflowX: 'auto' }}>
-          <Typography variant="subtitle1" sx={{ mb: 1 }}>Saved Connections</Typography>
-          <Table size="small" aria-label="saved connections" sx={{ '& thead th': { bgcolor: 'background.default', fontWeight: 600 } }}>
-            <TableHead>
-              <TableRow>
-                <TableCell>Name</TableCell>
-                <TableCell>DB Type</TableCell>
-                <TableCell>Host/Path</TableCell>
-                <TableCell>Database</TableCell>
-                <TableCell>Status</TableCell>
-                <TableCell>Latency</TableCell>
-                <TableCell>Last Connected</TableCell>
-                <TableCell align="right">Actions</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {savedConnections.map((c) => (
-                <TableRow
-                  key={c.id}
-                  hover
-                  selected={activeConnectionId === c.backend_connection_id || activeConnectionId === c.id}
-                  sx={{ '&:nth-of-type(odd)': { bgcolor: 'action.hover' } }}
-                >
-                  <TableCell>{c.name}</TableCell>
-                  <TableCell>{c.db_type}</TableCell>
-                  <TableCell>{c.host}</TableCell>
-                  <TableCell>{c.db_name || '-'}</TableCell>
-                  <TableCell>
-                    <HeartbeatBadge
-                      withText size="small"
-                      status={c.status === 'connected' ? 'healthy' : (c.status === 'failed' ? 'unreachable' : 'unknown')}
-                      tooltip={c.details || c.status || 'unknown'}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Typography variant="caption" color="text.secondary">
-                      {c.lastLatencyMs != null
-                        ? `${Math.round(c.lastLatencyMs)}ms`
-                        : rowHeartbeat[c.id]?.latencyMs != null
-                        ? `${Math.round(rowHeartbeat[c.id].latencyMs)}ms`
-                        : '-'}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Typography variant="caption" color="text.secondary">
-                      {c.lastConnected ? new Date(c.lastConnected).toLocaleString() : '-'}
-                    </Typography>
-                  </TableCell>
-                  <TableCell align="right">
-                    <Stack direction="row" spacing={1} justifyContent="flex-end" alignItems="center">
-                      <Button
-                        size="small" variant="text" startIcon={<CheckCircleOutlineIcon />} sx={{ textTransform: 'none' }}
-                        onClick={() => {
-                          if (activeConnectionId && (activeConnectionId !== c.backend_connection_id && activeConnectionId !== c.id)) {
-                            setConfirmSelect(c.id)
-                          } else {
-                            setActiveConnectionId(c.backend_connection_id || c.id) // NEW: prefer server id
-                            setConnection({
-                              saved: true, name: c.name, status: c.status,
-                              db_url: c.db_url, latencyMs: c.lastLatencyMs,
-                              lastMessage: c.details || c.status, details: c.details,
-                              connectionId: c.backend_connection_id || null,     // NEW
-                            })
-                            toast.show('Connection selected', 'success')
+        <PanelCompact sx={{ p: { xs: 2.5, md: 3 }, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+          <Typography variant="subtitle1">Saved Connections</Typography>
+          <Stack direction="column" spacing={2} alignItems="stretch">
+            <Box
+              ref={listRef}
+              sx={{
+                flex: '1 1 auto',
+                maxHeight: { md: 480 },
+                overflow: 'hidden',
+                p: { xs: 2, md: 2.5 },
+                pt: { xs: 0.75, md: 1 },
+              }}
+            >
+              <List
+                disablePadding
+                sx={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 1.5,
+                  flex: 1,
+                  pr: 0,
+                  overflowY: 'auto',
+                  maxHeight: { md: 432 },
+                  pt: 0,
+                }}
+              >
+                {savedConnections.map((c) => {
+                  const isActive = activeConnectionId === c.backend_connection_id || activeConnectionId === c.id
+                  const isSelected = detailId === c.id
+                  const heartbeat = rowHeartbeat[c.id]
+                  const status = heartbeat?.status || (c.status === 'connected' ? 'healthy' : (c.status === 'failed' ? 'unreachable' : 'unknown'))
+                  const latency = heartbeat?.latencyMs ?? c.lastLatencyMs ?? null
+                  const lastConnected = c.lastConnected ? new Date(c.lastConnected).toLocaleString() : 'Never connected'
+                  const typeKey = sanitizeDbType(c.db_type)
+                  const locationDisplay =
+                    typeKey === 'sqlite'
+                      ? c.databasePath || c.database || c.summary || '-'
+                      : `${formatHostPort(c.host, c.port) || c.host || '-'}${c.database ? `/${c.database}` : ''}`
+                  const typeLabel = (c.db_type || 'unknown').toUpperCase()
+                  return (
+                    <ListItemButton
+                      key={c.id}
+                      onClick={() => setDetailId(c.id)}
+                      selected={isSelected}
+                      sx={{
+                        alignItems: 'flex-start',
+                        p: 2,
+                        borderRadius: 2,
+                        border: '1px solid',
+                        borderColor: isSelected ? 'primary.main' : 'divider',
+                        boxShadow: isSelected ? '0 12px 24px rgba(15,23,42,0.12)' : 'none',
+                        backgroundColor: 'background.paper',
+                        transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
+                        '&:hover': {
+                          borderColor: 'primary.main',
+                          boxShadow: '0 10px 20px rgba(15,23,42,0.18)',
+                        },
+                      }}
+                    >
+                      <Stack direction="row" spacing={2} sx={{ width: '100%' }} alignItems="flex-start">
+                        <ListItemText
+                          primary={
+                            <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0 }}>
+                              <Typography variant="subtitle2" noWrap title={c.name}>{c.name}</Typography>
+                              {isActive && <Chip size="small" color="success" label="Active" />}
+                            </Stack>
                           }
+                          secondary={
+                            <Stack spacing={0.5} sx={{ mt: 0.25 }}>
+                              <Typography variant="body2" color="text.secondary" noWrap title={locationDisplay || '-'}>
+                                {locationDisplay || '-'}
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                {typeLabel} - {lastConnected}
+                              </Typography>
+                            </Stack>
+                          }
+                          secondaryTypographyProps={{ component: 'div' }}
+                          sx={{ my: 0, flex: 1, minWidth: 0 }}
+                        />
+                        <Stack spacing={0.75} alignItems="flex-end">
+                          <HeartbeatBadge
+                            size="small"
+                            status={status}
+                            latencyMs={latency != null ? latency : undefined}
+                            tooltip={c.details || c.status || 'unknown'}
+                          />
+                          <KeyboardArrowRightIcon color="disabled" sx={{ transform: isSelected ? 'translateX(2px)' : 'none', transition: 'transform 0.2s ease' }} />
+                        </Stack>
+                      </Stack>
+                    </ListItemButton>
+                  )
+                })}
+              </List>
+            </Box>
+          </Stack>
+        </PanelCompact>
+      )}
+      {detailConnection && (
+        <Portal>
+          <Fade in={!!detailConnection} timeout={200}>
+            <Box
+              sx={{
+                position: 'fixed',
+                inset: 0,
+                zIndex: (theme) => theme.zIndex.drawer + 10,
+                pointerEvents: 'none',
+                display: 'flex',
+                alignItems: { xs: 'flex-end', md: 'center' },
+                justifyContent: { xs: 'center', md: 'flex-start' },
+                p: { xs: 2, sm: 3, md: 0 },
+              }}
+            >
+              <Box
+                onClick={() => setDetailId(null)}
+                sx={{
+                  position: 'absolute',
+                  inset: 0,
+                  bgcolor: 'rgba(15,23,42,0.32)',
+                  pointerEvents: 'auto',
+                  zIndex: 0,
+                }}
+              />
+              <PanelCompact
+                ref={panelRef}
+                onClick={(event) => event.stopPropagation()}
+                sx={[
+                  (theme) => {
+                    const anchor = detailAnchor
+                    const base = {
+                      width: anchor ? `${anchor.width}px` : 'min(92vw, 560px)',
+                      maxWidth: anchor ? `${anchor.width}px` : 'min(92vw, 560px)',
+                      pointerEvents: 'auto',
+                      position: 'relative',
+                      zIndex: 1,
+                    }
+                    if (anchor) {
+                      base[theme.breakpoints.up('md')] = {
+                        position: 'absolute',
+                        top: anchor.top,
+                        left: anchor.left,
+                        width: anchor.width,
+                        maxWidth: anchor.width,
+                        transform: 'none',
+                      }
+                    } else {
+                      base[theme.breakpoints.up('md')] = {
+                        position: 'absolute',
+                        top: theme.spacing(10),
+                        left: theme.spacing(10),
+                        width: 560,
+                        maxWidth: 560,
+                      }
+                    }
+                    return base
+                  },
+                  {
+                    p: 0,
+                    gap: 0,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    borderRadius: '18px !important',
+                    borderTopLeftRadius: '18px !important',
+                    borderTopRightRadius: '18px !important',
+                    borderBottomRightRadius: '18px !important',
+                    borderBottomLeftRadius: '18px !important',
+                    boxShadow: '0 12px 32px rgba(15,23,42,0.14)',
+                    maxHeight: {
+                      xs: 'calc(100vh - 96px)',
+                      sm: 'calc(100vh - 112px)',
+                      md: 'calc(100vh - 128px)',
+                    },
+                    overflow: 'hidden',
+                  },
+                ]}
+              >
+                <Box
+                  sx={{
+                    px: 2,
+                    py: 1.25,
+                    borderBottom: '1px solid',
+                    borderColor: 'divider',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1,
+                  }}
+                >
+                  <Button
+                    size="small"
+                    onClick={() => setDetailId(null)}
+                    sx={{
+                      display: { xs: 'inline-flex', md: 'none' },
+                      textTransform: 'none',
+                      px: 0,
+                      minWidth: 0,
+                      color: 'text.secondary',
+                    }}
+                    startIcon={<KeyboardArrowRightIcon sx={{ transform: 'rotate(180deg)' }} />}
+                  >
+                    Back
+                  </Button>
+                  <Typography
+                    variant="subtitle1"
+                    noWrap
+                    title={detailConnection.name}
+                    sx={{ flexGrow: 1, minWidth: 0 }}
+                  >
+                    {detailConnection.name}
+                  </Typography>
+                  <Stack direction="row" spacing={1} alignItems="center" sx={{ flexShrink: 0 }}>
+                    {activeConnectionId === detailConnection.backend_connection_id ||
+                    activeConnectionId === detailConnection.id ? (
+                      <Chip size="small" color="success" label="Active" />
+                    ) : null}
+                    <HeartbeatBadge
+                      withText
+                      size="small"
+                      status={detailStatus}
+                      latencyMs={detailLatency != null ? detailLatency : undefined}
+                      tooltip={detailNote}
+                    />
+                  </Stack>
+                  <IconButton
+                    aria-label="Close details"
+                    onClick={() => setDetailId(null)}
+                    sx={{ color: 'text.secondary' }}
+                  >
+                    <CloseIcon />
+                  </IconButton>
+                </Box>
+                <Box sx={{ flex: 1, overflowY: 'auto', p: 2 }}>
+                  <Stack spacing={1.5}>
+                    <Box>
+                      <Typography variant="caption" color="text.secondary" sx={{ mb: 0.25 }}>
+                        DB TYPE
+                      </Typography>
+                      <Typography variant="body2">
+                        {detailConnection.db_type || '--'}
+                      </Typography>
+                    </Box>
+                    <Box>
+                      <Typography variant="caption" color="text.secondary" sx={{ mb: 0.25 }}>
+                        HOST / PATH
+                      </Typography>
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+                          wordBreak: 'break-all',
                         }}
                       >
-                        Select
-                      </Button>
-
-                      <Button size="small" variant="outlined" color="info" startIcon={<SpeedIcon />} sx={{ textTransform: 'none' }}
-                        onClick={() => handleRowTest(c)}>
-                        Test
-                      </Button>
-                      {rowHeartbeat[c.id] && (
-                        <HeartbeatBadge size="small" status={rowHeartbeat[c.id].status} latencyMs={rowHeartbeat[c.id].latencyMs} />
-                      )}
-
-                      <Button size="small" variant="text" startIcon={<EditIcon />} sx={{ textTransform: 'none' }}
-                        onClick={() => {
-                          setEditingId(c.id)
-                          reset({
-                            db_type: c.db_type || 'sqlite',
-                            host: c.host || '',
-                            port: '',
-                            db_name: c.db_name || '',
-                            username: '',
-                            password: '',
-                            ssl: false,
-                          })
-                          window.scrollTo({ top: 0, behavior: 'smooth' })
-                        }}>
-                        Edit
-                      </Button>
-
-                      <Button size="small" color="error" variant="text" startIcon={<DeleteOutlineIcon />} sx={{ textTransform: 'none' }}
-                        onClick={() => setConfirmDelete(c.id)}>
-                        Delete
-                      </Button>
-                    </Stack>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </Box>
+                        {detailConnection.host || detailConnection.db_url || '--'}
+                      </Typography>
+                    </Box>
+                    <Box>
+                      <Typography variant="caption" color="text.secondary" sx={{ mb: 0.25 }}>
+                        LATENCY
+                      </Typography>
+                      <Typography variant="body2">
+                        {detailLatency != null ? `${Math.round(detailLatency)}ms` : '--'}
+                      </Typography>
+                    </Box>
+                    <Box>
+                      <Typography variant="caption" color="text.secondary" sx={{ mb: 0.25 }}>
+                        LAST CONNECTED
+                      </Typography>
+                      <Typography variant="body2">
+                        {detailConnection.lastConnected
+                          ? new Date(detailConnection.lastConnected).toLocaleString()
+                          : 'Never connected'}
+                      </Typography>
+                    </Box>
+                    <Box>
+                      <Typography variant="caption" color="text.secondary" sx={{ mb: 0.25 }}>
+                        NOTES
+                      </Typography>
+                      <Typography variant="body2" sx={{ whiteSpace: 'pre-line' }}>
+                        {detailNote || '--'}
+                      </Typography>
+                    </Box>
+                  </Stack>
+                </Box>
+                <Box
+                  sx={{
+                    px: 2,
+                    py: 1.25,
+                    borderTop: '1px solid',
+                    borderColor: 'divider',
+                    display: 'flex',
+                    gap: 1,
+                    flexWrap: { xs: 'wrap', sm: 'nowrap' },
+                    justifyContent: 'flex-start',
+                  }}
+                >
+                  <Button
+                    variant="contained"
+                    size="small"
+                    startIcon={<CheckCircleOutlineIcon />}
+                    onClick={() => requestSelect(detailConnection)}
+                  >
+                    Select Connection
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    startIcon={<SpeedIcon />}
+                    onClick={() => handleRowTest(detailConnection)}
+                  >
+                    Test Connection
+                  </Button>
+                  <Button
+                    variant="text"
+                    size="small"
+                    startIcon={<EditIcon />}
+                    onClick={() => beginEditConnection(detailConnection)}
+                  >
+                    Edit Settings
+                  </Button>
+                  <Button
+                    color="error"
+                    variant="text"
+                    size="small"
+                    startIcon={<DeleteOutlineIcon />}
+                    onClick={() => setConfirmDelete(detailConnection.id)}
+                  >
+                    Delete
+                  </Button>
+                </Box>
+              </PanelCompact>
+            </Box>
+          </Fade>
+        </Portal>
       )}
+
+
+
+
 
       <ConfirmDialog
         open={!!confirmSelect}
@@ -578,23 +2386,12 @@ export default function ConnectDB() {
         onConfirm={() => {
           const id = confirmSelect
           const selected = savedConnections.find((x) => x.id === id)
-          if (selected) {
-            setActiveConnectionId(selected.backend_connection_id || id) // NEW
-            setConnection({
-              saved: true,
-              name: selected.name,
-              status: selected.status,
-              db_url: selected.db_url,
-              latencyMs: selected.lastLatencyMs,
-              lastMessage: selected.details || selected.status,
-              details: selected.details,
-              connectionId: selected.backend_connection_id || null, // NEW
-            })
-            toast.show('Connection selected', 'success')
-          }
+          if (selected) applySelection(selected)
           setConfirmSelect(null)
         }}
       />
+
+
 
       <ConfirmDialog
         open={!!confirmDelete}
@@ -602,16 +2399,65 @@ export default function ConnectDB() {
         message="This will permanently remove the saved connection. Continue?"
         confirmText="Delete"
         onClose={() => setConfirmDelete(null)}
-        onConfirm={() => {
-          removeSavedConnection(confirmDelete)
+        onConfirm={async () => {
+          const id = confirmDelete
+          const record = savedConnections.find((x) => x.id === id)
+          if (!record) {
+            setConfirmDelete(null)
+            toast.show('Connection not found', 'error')
+            return
+          }
+          const connectionId = record.backend_connection_id || record.id
+          try {
+            if (!isMock && connectionId) {
+              await apiDeleteConnection(connectionId)
+            }
+          } catch (err) {
+            toast.show(err?.message || 'Failed to delete connection', 'error')
+            return
+          }
+
+
+
+          const remaining = savedConnections.filter((x) => x.id !== id)
+          removeSavedConnection(id)
+          setRowHeartbeat((prev) => {
+            if (!prev[id]) return prev
+            const next = { ...prev }
+            delete next[id]
+            return next
+          })
           toast.show('Connection deleted', 'success')
-          if (activeConnectionId === confirmDelete) {
+          if (record) {
+            const activeMatch =
+              activeConnectionId === record.backend_connection_id ||
+              activeConnectionId === record.id ||
+              activeConnectionId === connectionId
+            if (activeMatch) {
+              setActiveConnectionId(null)
+              setConnection({ saved: false, status: 'disconnected', name: '', db_url: null, latencyMs: null })
+            }
+            if (editingId === id) {
+              setEditingId(null)
+            }
+          }
+          setDetailId(null)
+          if (!remaining.length) {
             setActiveConnectionId(null)
             setConnection({ saved: false, status: 'disconnected', name: '', db_url: null, latencyMs: null })
           }
+          const stateAfterDelete = useAppStore.getState()
+          savePersistedCache({
+            connections: stateAfterDelete.savedConnections,
+            templates: stateAfterDelete.templates,
+            lastUsed: stateAfterDelete.lastUsed,
+          })
           setConfirmDelete(null)
         }}
       />
-    </Paper>
+    </Stack>
   )
 }
+
+
+

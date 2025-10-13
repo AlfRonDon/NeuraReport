@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { Box, Paper, Typography, Stack, Button, List, ListItem, ListItemText } from '@mui/material'
+import { Box, Typography, Stack, Button, List, ListItem, ListItemText } from '@mui/material'
+import Surface from '../../components/layout/Surface.jsx'
 
 export default function UploadTemplate() {
   const [files, setFiles] = useState([])
@@ -10,7 +11,7 @@ export default function UploadTemplate() {
   }
 
   return (
-    <Paper variant="outlined" sx={{ p: 2 }}>
+    <Surface>
       <Typography variant="h6" sx={{ mb: 2 }}>Upload & Verify Template</Typography>
       <Stack spacing={2} direction={{ xs: 'column', sm: 'row' }} alignItems="center">
         <Button variant="outlined" component="label">
@@ -31,7 +32,6 @@ export default function UploadTemplate() {
           </List>
         </Box>
       )}
-    </Paper>
+    </Surface>
   )
 }
-

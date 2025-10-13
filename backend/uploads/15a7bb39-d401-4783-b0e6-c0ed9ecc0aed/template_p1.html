@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>{report_title}</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+@page { size: A4; margin: 14mm 12mm; }
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: "Times New Roman", serif;
+  font-size: 12pt;
+  color: #000;
+}
+.header-box {
+  border: 1px solid #000;
+  padding: 8mm 7mm 6mm 7mm;
+  margin-top: 6mm;
+}
+.header-top,
+.header-bottom {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 8mm;
+  align-items: start;
+}
+.header-top div p,
+.header-bottom div p {
+  margin: 0 0 3mm 0;
+  line-height: 1.2;
+}
+.header-title {
+  text-align: center;
+  font-weight: 700;
+  font-size: 20pt;
+  margin: 2mm 0 3mm 0;
+}
+.label {
+  display: inline-block;
+  min-width: 32mm;
+}
+.header-right {
+  text-align: right;
+}
+.main {
+  margin-top: 5mm;
+}
+.table-wrap {
+  /* no outer border unless visible; the table itself has borders */
+}
+.report-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  border: 1px solid #000;
+}
+.report-table colgroup col:nth-child(1) { width: 8%; }
+.report-table colgroup col:nth-child(2) { width: 48%; }
+.report-table colgroup col:nth-child(3) { width: 14%; }
+.report-table colgroup col:nth-child(4) { width: 14%; }
+.report-table colgroup col:nth-child(5) { width: 8%; }
+.report-table colgroup col:nth-child(6) { width: 8%; }
+.report-table th,
+.report-table td {
+  border: 1px solid #000;
+  padding: 5px 6px;
+  vertical-align: top;
+}
+.report-table thead th {
+  font-weight: 700;
+  text-align: left;
+}
+.report-table td.num,
+.report-table th.num {
+  text-align: right;
+}
+.report-table tfoot td {
+  font-weight: 700;
+}
+tfoot td.label {
+  text-align: left;
+}
+.material {
+  word-break: break-word;
+  white-space: normal;
+}
+.footer {
+  margin-top: 18mm;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  font-size: 10pt;
+}
+.footer .left {
+  justify-self: start;
+}
+.footer .center {
+  justify-self: center;
+}
+.footer .right {
+  justify-self: end;
+}
+.batch-block {
+  break-inside: avoid;
+  page-break-inside: avoid;
+  margin: 6mm 0;
+}
+</style>
+</head>
+<body>
+
+<div class="header-box">
+  <div class="header-top">
+    <div class="header-left">
+      <p><span class="label">Plant name</span>: {plant_name}</p>
+      <p><span class="label">Location</span>: {location}</p>
+    </div>
+    <div class="header-right">
+      <p>From&nbsp;Date: {from_date} &nbsp;&nbsp;To {to_date}</p>
+    </div>
+  </div>
+
+  <div class="header-title">{report_title}</div>
+
+  <div class="header-bottom">
+    <div class="header-left">
+      <p><span class="label">Print Date</span>: {print_date}</p>
+    </div>
+    <div class="header-right">
+      <p>Recipe code : {recipe_code}</p>
+    </div>
+  </div>
+</div>
+
+<div class="main">
+  <div class="table-wrap">
+    <table class="report-table">
+      <colgroup>
+        <col>
+        <col>
+        <col>
+        <col>
+        <col>
+        <col>
+      </colgroup>
+      <thead>
+        <tr>
+          <th>Sl. No.</th>
+          <th>Material name</th>
+          <th class="num">Set. wt({weight_unit})</th>
+          <th class="num">Ach. wt({weight_unit})</th>
+          <th class="num">Error({weight_unit})</th>
+          <th class="num">Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>{rows.sl}</td>
+          <td class="material">{rows.name}</td>
+          <td class="num">{rows.set}</td>
+          <td class="num">{rows.ach}</td>
+          <td class="num">{rows.err}</td>
+          <td class="num">{rows.errp}</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td></td>
+          <td class="label">Total</td>
+          <td class="num">{total_set}</td>
+          <td class="num">{total_ach}</td>
+          <td class="num">{total_err}</td>
+          <td class="num">{total_errp}</td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</div>
+
+<div class="footer">
+  <div class="left">{company}</div>
+  <div class="center">Page {page_no} of {page_count}</div>
+  <div class="right"></div>
+</div>
+
+</body>
+</html>

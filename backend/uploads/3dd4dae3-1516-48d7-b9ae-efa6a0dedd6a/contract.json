@@ -1,0 +1,53 @@
+{
+  "mapping": {
+    "print_date": "records.report_date",
+    "from_date": "records.report_date",
+    "to_date": "records.report_date",
+    "sl": "records.sl_no",
+    "name": "records.material_name",
+    "set": "records.set_wt_kg",
+    "ach": "records.ach_wt_kg",
+    "err": "records.error_kg",
+    "errp": "records.error_pct",
+    "total_set": "records.set_wt_kg",
+    "total_ach": "records.ach_wt_kg",
+    "total_err": "records.error_kg",
+    "total_err_pct": "records.error_pct"
+  },
+  "join": {
+    "parent_table": "records",
+    "parent_key": "report_date",
+    "child_table": "records",
+    "child_key": "report_date"
+  },
+  "date_columns": {
+    "records": "report_date"
+  },
+  "header_tokens": [
+    "report_title",
+    "print_date",
+    "from_date",
+    "to_date"
+  ],
+  "row_tokens": [
+    "sl",
+    "name",
+    "set",
+    "ach",
+    "err",
+    "errp"
+  ],
+  "totals": {
+    "total_set": "records.set_wt_kg",
+    "total_ach": "records.ach_wt_kg",
+    "total_err": "records.error_kg",
+    "total_err_pct": "records.error_pct"
+  },
+  "row_order": [
+    "sl_no",
+    "ROWID"
+  ],
+  "literals": {
+    "report_title": "Consumption report"
+  }
+}

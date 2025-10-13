@@ -1,0 +1,51 @@
+{
+  "mapping": {
+    "to_date": "records.report_date",
+    "rows.sl": "records.sl_no",
+    "rows.name": "records.material_name",
+    "rows.set": "records.set_wt_kg",
+    "rows.ach": "records.ach_wt_kg",
+    "rows.err": "records.error_kg",
+    "rows.errp": "records.error_pct"
+  },
+  "join": {
+    "parent_table": "records",
+    "parent_key": "report_date",
+    "child_table": "records",
+    "child_key": "report_date"
+  },
+  "date_columns": {
+    "records": "report_date"
+  },
+  "header_tokens": [
+    "title",
+    "print_date",
+    "to_date"
+  ],
+  "row_tokens": [
+    "rows.sl",
+    "rows.name",
+    "rows.set",
+    "rows.ach",
+    "rows.err",
+    "rows.errp"
+  ],
+  "totals": {
+    "totals.set": "records.set_wt_kg",
+    "totals.ach": "records.ach_wt_kg",
+    "totals.err": "records.error_kg",
+    "totals.errp": "records.error_pct"
+  },
+  "row_order": [
+    "sl_no",
+    "ROWID"
+  ],
+  "literals": {
+    "title": "Consumption report",
+    "print_date": "25/03/2024"
+  },
+  "meta": {
+    "db_signature": "d82ab7a3bddc7b222319bb6226ffd9272ce00b75cae75a7e775fb4c8f29452bb",
+    "generated_at": 1760386994
+  }
+}

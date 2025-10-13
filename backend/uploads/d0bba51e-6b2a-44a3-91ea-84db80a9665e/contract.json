@@ -1,0 +1,53 @@
+{
+  "mapping": {
+    "sl": "records.sl_no",
+    "name": "records.material_name",
+    "set": "records.set_wt_kg",
+    "ach": "records.ach_wt_kg",
+    "err": "records.error_kg",
+    "errp": "records.error_pct"
+  },
+  "join": {
+    "parent_table": "records",
+    "parent_key": "report_date",
+    "child_table": "records",
+    "child_key": "report_date"
+  },
+  "date_columns": {
+    "records": "report_date"
+  },
+  "header_tokens": [
+    "plant_name",
+    "from_date",
+    "to_date",
+    "location",
+    "print_date",
+    "recipe_code"
+  ],
+  "row_tokens": [
+    "sl",
+    "name",
+    "set",
+    "ach",
+    "err",
+    "errp"
+  ],
+  "totals": {
+    "total_set": "records.set_wt_kg",
+    "total_ach": "records.ach_wt_kg",
+    "total_err": "records.error_kg",
+    "total_errp": "records.error_pct"
+  },
+  "row_order": [
+    "sl_no",
+    "ROWID"
+  ],
+  "literals": {
+    "plant_name": "SSR AQUA",
+    "location": "Gudivada",
+    "print_date": "25/03/2024",
+    "from_date": "24/03/2024",
+    "to_date": "24/03/2024",
+    "recipe_code": "GANGADHAR-2024"
+  }
+}

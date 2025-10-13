@@ -1,0 +1,20 @@
+{
+  "correlation_id": "12e172e9-aa84-4b3d-a77f-61d84468bc9f",
+  "file_checksums": {
+    "report_final.html": "96f58fd7216a3bc6cfcb5f44d3f1f7baada20bb8146b872565e12c8f944eab7d",
+    "report_final.png": "8c25422fd0d31d4d5663cbd136c6277d48c6b54cc7d7745b236d4ff135d75142",
+    "template_p1.html": "96f58fd7216a3bc6cfcb5f44d3f1f7baada20bb8146b872565e12c8f944eab7d"
+  },
+  "files": {
+    "report_final.html": "report_final.html",
+    "report_final.png": "report_final.png",
+    "template_p1.html": "template_p1.html"
+  },
+  "input_refs": [
+    "C:\\Users\\alfre\\Downloads\\NeuraReport-main\\uploads\\6970da4a-5ef1-407e-8245-d5f55e064a06\\mapping_pdf_labels.json"
+  ],
+  "pid": 17668,
+  "produced_at": "2025-10-11T14:35:19.040059+00:00",
+  "schema_version": "1.0",
+  "step": "mapping_thumbnail"
+}

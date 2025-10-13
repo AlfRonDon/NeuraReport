@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Consumption report</title>
+<style>
+  @page {
+    size: A4;
+    margin: 14mm 12mm;
+  }
+  :root {
+    --border: #000;
+  }
+  body {
+    font-family: "Times New Roman", Georgia, serif;
+    font-size: 12px;
+    color: #000;
+    margin: 0;
+  }
+  h1 {
+    font-size: 20px;
+    margin: 6px 0 4px 0;
+    font-weight: 600;
+    text-align: center;
+  }
+  .top-box {
+    border: 1px solid var(--border);
+    padding: 6px 8px 8px 8px;
+  }
+  .hdr-grid {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+  }
+  .hdr-grid td {
+    vertical-align: top;
+    padding: 2px 4px;
+  }
+  .hdr-left {
+    width: 65%;
+  }
+  .hdr-right {
+    width: 35%;
+    text-align: right;
+  }
+  .kv {
+    display: grid;
+    grid-template-columns: 34% 66%;
+    column-gap: 6px;
+    row-gap: 2px;
+  }
+  .kv .lab {
+    text-align: left;
+    white-space: nowrap;
+  }
+  .kv .val {
+    text-align: left;
+    font-weight: 600;
+  }
+  .kv-right {
+    display: grid;
+    grid-template-columns: auto auto;
+    column-gap: 10px;
+    row-gap: 2px;
+    justify-content: end;
+  }
+  .kv-right .lab {
+    white-space: nowrap;
+  }
+  .kv-right .val {
+    min-width: 80px;
+    text-align: left;
+    font-weight: 600;
+  }
+  .title-rule {
+    border-top: 1px solid var(--border);
+    margin-top: 6px;
+  }
+
+  .table-wrap {
+    margin-top: 8px;
+  }
+  table.report {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+  }
+  table.report th, table.report td {
+    border: 1px solid var(--border);
+    padding: 6px 6px;
+    vertical-align: top;
+  }
+  table.report thead th {
+    font-weight: 600;
+  }
+  .c { text-align: center; }
+  .l { text-align: left; }
+  .r { text-align: right; font-variant-numeric: tabular-nums; }
+  .nowrap { white-space: nowrap; }
+  col.c-sl { width: 7%; }
+  col.c-name { width: 53%; }
+  col.c-num { width: 10%; }
+  tfoot td {
+    font-weight: 600;
+  }
+  tfoot td:first-child {
+    text-align: left;
+  }
+
+  .footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-top: 14mm;
+    font-size: 12px;
+  }
+
+  .batch-block {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    margin: 6mm 0;
+  }
+</style>
+
+<style id="nr-page-counter-style">
+  .nr-page-number::after { content: counter(page); }
+  .nr-page-count::after { content: counter(pages); }
+  .nr-page-number, .nr-page-count { white-space: nowrap; }
+</style>
+</head>
+<body>
+
+<div class="top-box">
+  <table class="hdr-grid">
+    <tr>
+      <td class="hdr-left">
+        <div class="kv">
+          <div class="lab">Plant name</div><div class="val">: SSR AQUA</div>
+          <div class="lab">Location</div><div class="val">: Gudivada</div>
+          <div class="lab">Print Date</div><div class="val">: 08/10/2025</div>
+        </div>
+      </td>
+      <td class="hdr-right">
+        <div class="kv-right">
+          <div class="lab">From&nbsp;Date:</div><div class="val">17/09/2025 00:00</div>
+          <div class="lab">To</div><div class="val">09/10/2025 00:00</div>
+          <div class="lab">Recipe code :</div><div class="val">GANGADHAR-2024</div>
+        </div>
+      </td>
+    </tr>
+    <tr>
+      <td colspan="2">
+        <h1>Consumption report</h1>
+        <div class="title-rule"></div>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<div class="table-wrap">
+  <table class="report">
+    <colgroup>
+      <col class="c-sl">
+      <col class="c-name">
+      <col class="c-num">
+      <col class="c-num">
+      <col class="c-num">
+      <col class="c-num">
+    </colgroup>
+    <thead>
+      <tr>
+        <th class="c">Sl. No.</th>
+        <th class="l">Material name</th>
+        <th class="r nowrap">Set. wt(Kg)</th>
+        <th class="r nowrap">Ach. wt(Kg)</th>
+        <th class="r nowrap">Error(Kg)</th>
+        <th class="r nowrap">Error %</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- BEGIN:BATCH (auto) --><tr>
+        <td class="c">1</td>
+        <td class="l">CM 100 + DORB 100 KRR</td>
+        <td class="r">11800.0</td>
+        <td class="r">11803.2</td>
+        <td class="r">3.2</td>
+        <td class="r">0.0271</td>
+      </tr>
+<tr>
+        <td class="c">2</td>
+        <td class="l">CM 100 KRR+ DORB 100 GANGADHAR</td>
+        <td class="r">4200.0</td>
+        <td class="r">4204.4</td>
+        <td class="r">4.4</td>
+        <td class="r">0.1048</td>
+      </tr>
+<tr>
+        <td class="c">3</td>
+        <td class="l">DDGS GANGADHAR</td>
+        <td class="r">6600.0</td>
+        <td class="r">6597.5</td>
+        <td class="r">-2.5</td>
+        <td class="r">-0.0379</td>
+      </tr>
+<tr>
+        <td class="c">4</td>
+        <td class="l">DDGS KRR</td>
+        <td class="r">5400.0</td>
+        <td class="r">5399.3</td>
+        <td class="r">-0.7</td>
+        <td class="r">-0.013</td>
+      </tr>
+<tr>
+        <td class="c">5</td>
+        <td class="l">DORB (COM) KRR</td>
+        <td class="r">14200.0</td>
+        <td class="r">14199.4</td>
+        <td class="r">-0.6</td>
+        <td class="r">-0.0042</td>
+      </tr>
+<tr>
+        <td class="c">6</td>
+        <td class="l">DORB GANGADHAR</td>
+        <td class="r">1800.0</td>
+        <td class="r">1813.5</td>
+        <td class="r">13.5</td>
+        <td class="r">0.75</td>
+      </tr>
+<tr>
+        <td class="c">7</td>
+        <td class="l">MAZIE GANGADHAR</td>
+        <td class="r">14400.0</td>
+        <td class="r">14412.4</td>
+        <td class="r">12.4</td>
+        <td class="r">0.0861</td>
+      </tr>
+<tr>
+        <td class="c">8</td>
+        <td class="l">MBM 100 + DORB 100 KRR</td>
+        <td class="r">13000.0</td>
+        <td class="r">12991.0</td>
+        <td class="r">-9.0</td>
+        <td class="r">-0.0692</td>
+      </tr>
+<tr>
+        <td class="c">9</td>
+        <td class="l">MBM 100 KRR + DORB100 GANGADHAR</td>
+        <td class="r">3000.0</td>
+        <td class="r">2998.5</td>
+        <td class="r">-1.5</td>
+        <td class="r">-0.05</td>
+      </tr>
+<tr>
+        <td class="c">10</td>
+        <td class="l">SALT DOC KRR</td>
+        <td class="r">5600.0</td>
+        <td class="r">5596.8</td>
+        <td class="r">-3.2</td>
+        <td class="r">-0.0571</td>
+      </tr><!-- END:BATCH (auto) -->
+    </tbody>
+    <tfoot>
+      <tr>
+        <td class="l" colspan="2">Total</td>
+        <td class="r">80000</td>
+        <td class="r">80016</td>
+        <td class="r">16</td>
+        <td class="r">0.7366</td>
+      </tr>
+    </tfoot>
+  </table>
+</div>
+
+<div class="footer">
+  <div>{footer_org}</div>
+  <div>Page <span class="nr-page-number"></span> of <span class="nr-page-count"></span></div>
+</div>
+
+</body>
+</html>

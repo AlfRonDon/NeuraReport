@@ -1,6 +1,7 @@
 ﻿from __future__ import annotations
 
 import json
+import logging
 import re
 import sqlite3
 from collections import defaultdict
@@ -8,8 +9,13 @@ from pathlib import Path
 from typing import Dict, Iterable, Sequence
 
 from ..templates.TemplateVerify import MODEL, get_openai_client
+from ..utils import call_chat_completion, load_prompt
+
+logger = logging.getLogger("neura.mapping")
 
 UNRESOLVED = "UNRESOLVED"
+INPUT_SAMPLE = "INPUT_SAMPLE"
+UNRESOLVED_CHOICES = {UNRESOLVED, INPUT_SAMPLE}
 
 
 def get_parent_child_info(db_path: Path) -> Dict[str, object]:
@@ -106,23 +112,14 @@ def llm_pick_with_chat_completions_full_html(
     """Ask the LLM to map headers in the full HTML (not a scoped batch block)."""
     catalog_list = list(catalog)
     html_for_llm = _sanitize_html_for_llm(full_html)
+    catalog_json = json.dumps(catalog_list, ensure_ascii=False)
 
-    prompt = (
-        "Task:\n"
-        "You are given the FULL HTML of a report template. Identify all visible header/label texts that correspond\n"
-        "to data fields (table headers, field labels, totals, etc.). For repeating sections (e.g., tables, cards),\n"
-        "infer the per-row/per-item labels from the structure.\n\n"
-        "Goal:\n"
-        "Map each discovered header/label to exactly one database column from the allow-list CATALOG.\n\n"
-        "Rules:\n"
-        "- Choose strictly from CATALOG (fully-qualified 'table.column').\n"
-        "- If no clear column exists, set the value to UNRESOLVED.\n"
-        "- Do not invent headers or duplicate mappings.\n"
-        "- Prefer concise, human-visible labels (strip punctuation/colons).\n\n"
-        "Inputs:\n"
-        "[FULL_HTML]\n" + html_for_llm + "\n\n"
-        "[CATALOG]\n" + json.dumps(catalog_list, ensure_ascii=False) + "\n\n"
-        "Return strict JSON only in this shape:\n{\n  \"<header>\": \"<table.column or UNRESOLVED>\",\n  ...\n}\n"
+    prompt = load_prompt(
+        "mapping_full_html",
+        replacements={
+            "{html_for_llm}": html_for_llm,
+            "{json.dumps(catalog_list, ensure_ascii=False)}": catalog_json,
+        },
     )
 
     user_content = [{"type": "text", "text": prompt}]
@@ -130,10 +127,11 @@ def llm_pick_with_chat_completions_full_html(
         user_content.extend(image_contents)
 
     client = get_openai_client()
-    response = client.chat.completions.create(
+    response = call_chat_completion(
+        client,
         model=MODEL,
         messages=[{"role": "user", "content": user_content}],
-        # response_format={"type": "json_object"},  # enable only if MODEL supports it
+        description="mapping_full_html",
     )
     raw_text = (response.choices[0].message.content or "").strip()
 
@@ -152,16 +150,26 @@ def llm_pick_with_chat_completions_full_html(
     return {str(k): str(v) for k, v in mapping.items()}
 
 
-def approval_errors(mapping: Dict[str, str], unresolved_token: str = UNRESOLVED) -> list[dict[str, str]]:
+def _choice_key(choice: str) -> str:
+    return str(choice or "").strip()
+
+
+def is_unresolved_choice(choice: str) -> bool:
+    return _choice_key(choice) in UNRESOLVED_CHOICES
+
+
+def approval_errors(mapping: Dict[str, str], unresolved_tokens: Iterable[str] = UNRESOLVED_CHOICES) -> list[dict[str, str]]:
     """Return issues that should block approval (unresolved or duplicate mappings)."""
+    unresolved_set = { _choice_key(tok) for tok in unresolved_tokens }
     reverse = defaultdict(list)
     issues: list[dict[str, str]] = []
 
     for label, choice in mapping.items():
-        if choice == unresolved_token:
-            issues.append({"label": label, "issue": unresolved_token})
+        normalized = _choice_key(choice)
+        if normalized in unresolved_set:
+            issues.append({"label": label, "issue": normalized})
         else:
-            reverse[choice].append(label)
+            reverse[normalized].append(label)
 
     for colid, labels in reverse.items():
         if len(labels) > 1:

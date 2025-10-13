@@ -10,6 +10,7 @@ pdfplumber
 reportlab
 pikepdf
 python-multipart
+cryptography
 
 openai>=1.0.0
 Pillow

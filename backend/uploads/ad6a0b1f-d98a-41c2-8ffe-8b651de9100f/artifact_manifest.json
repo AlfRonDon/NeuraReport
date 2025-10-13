@@ -1,0 +1,22 @@
+{
+  "correlation_id": "bootstrap",
+  "file_checksums": {
+    "contract.json": "ebda41fa0bf179d80e7ebfe01b5c6e3d2b34340d9def1f4d98db88297b4bbcda",
+    "mapping_pdf_labels.json": "53162a84bce338bfcab3535f70b29251e16d332d7c7a5601ec98b864d4f63de0",
+    "report_final.html": "4661f93c0b09484b9c3a1b8b0a3c73c4c039f78ec436bb4a243e1bf569f77cc6",
+    "template_p1.html": "4661f93c0b09484b9c3a1b8b0a3c73c4c039f78ec436bb4a243e1bf569f77cc6"
+  },
+  "files": {
+    "contract.json": "contract.json",
+    "mapping_pdf_labels.json": "mapping_pdf_labels.json",
+    "report_final.html": "report_final.html",
+    "template_p1.html": "template_p1.html"
+  },
+  "input_refs": [
+    "mapping_pdf_labels.json"
+  ],
+  "pid": 32764,
+  "produced_at": "2025-10-09T15:22:37.063438+00:00",
+  "schema_version": "1.0",
+  "step": "bootstrap"
+}

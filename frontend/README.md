@@ -1,12 +1,31 @@
-# React + Vite
+# NeuraReport Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+This package contains the NeuraReport web UI built with React + Vite + MUI. The theme enforces flat 12px surfaces with outlined papers, so please avoid reintroducing component-level elevations or oversized rounded corners.
 
-Currently, two official plugins are available:
+## Install
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+```sh
+npm install
+```
 
-## Expanding the ESLint configuration
+## Development
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+- `npm run dev` – start the Vite dev server
+- `npm run lint` – run ESLint checks
+- `npm run test:ui` / `npm run test:a11y` / `npm run test:visual` – execute Playwright suites
+
+## Layout Sanity Checklist
+
+- Spot-check Setup (Connect, Generate Templates, Generate Report) and Generate routes at 360, 390, 414, 768, 1024, 1280, and 1440 px widths for zero horizontal scroll.
+- Run the automated viewport guard: `npm run test:ui -- tests/e2e/no-horizontal-scroll.spec.js`.
+- Ensure tables, previews, and dialogs stay within their containers with responsive wrapping before merging layout changes.
+
+## Release Checklist
+
+Run the build pipeline from a clean slate to ensure the UI renders with the latest theme overrides:
+
+1. `npm run clean`
+2. `npm run build`
+3. `npm run preview`
+
+The `clean` script removes the Vite build output and cache folders (`dist`, `node_modules/.vite`) so the subsequent build reflects current sources.

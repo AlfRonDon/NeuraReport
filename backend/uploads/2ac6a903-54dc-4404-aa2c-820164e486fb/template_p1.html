@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Consumption report</title>
+<style>
+@page { size: A4; margin: 14mm 16mm; }
+* { box-sizing: border-box; }
+body { font-family: "Times New Roman", Times, serif; color:#000; font-size:12pt; line-height:1.25; }
+.page { width:100%; }
+
+.header-box {
+  border:1px solid #000;
+  padding:6mm 6mm 5mm 6mm;
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap:12mm;
+  align-items:start;
+  margin-bottom:4mm;
+}
+.header-box .kv { margin:1mm 0; white-space:nowrap; }
+.header-box .label { display:inline-block; min-width:32mm; }
+.header-box .right { text-align:left; }
+.header-box .right .label { min-width:auto; }
+.header-box .right .kv.inline { display:flex; align-items:baseline; gap:4mm; }
+
+.title {
+  text-align:center;
+  font-weight:700;
+  font-size:18pt;
+  margin:0 0 3mm 0;
+  padding-bottom:2mm;
+  border-bottom:1px solid #000;
+}
+
+table.report {
+  width:100%;
+  border-collapse:collapse;
+  table-layout:fixed;
+  margin-top:2mm;
+}
+.report th, .report td {
+  border:1px solid #000;
+  padding:2.5mm 2.5mm;
+  vertical-align:top;
+}
+.report th { font-weight:700; }
+.report th.center, .report td.center { text-align:center; }
+.report th.num, .report td.num { text-align:right; }
+.report td.text { word-break:break-word; }
+
+.report tfoot td {
+  font-weight:700;
+}
+
+col.sl { width:9%; }
+col.name { width:45%; }
+col.set { width:15%; }
+col.ach { width:15%; }
+col.err { width:8%; }
+col.errp { width:8%; }
+
+.footer {
+  margin-top:16mm;
+  display:grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  font-size:10pt;
+}
+.footer .left { text-align:left; }
+.footer .center { text-align:center; }
+.footer .right { text-align:right; }
+.batch-block { break-inside: avoid; page-break-inside: avoid; margin: 6mm 0; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="header-box">
+    <div class="left">
+      <div class="kv"><span class="label">Plant name</span> : <span>SSR AQUA</span></div>
+      <div class="kv"><span class="label">Location</span> : <span>Gudivada</span></div>
+      <div class="kv"><span class="label">Print Date</span> : <span>25/03/2024</span></div>
+    </div>
+    <div class="right">
+      <div class="kv inline">
+        <span class="label">From Date:</span> <span>24/03/2024</span>
+        <span>To</span> <span>24/03/2024</span>
+      </div>
+      <div class="kv"><span class="label">Recipe code</span> : <span>GANGADHAR-2024</span></div>
+    </div>
+  </div>
+
+  <div class="title">Consumption report</div>
+
+  <table class="report">
+    <colgroup>
+      <col class="sl"><col class="name"><col class="set"><col class="ach"><col class="err"><col class="errp">
+    </colgroup>
+    <thead>
+      <tr>
+        <th class="center">Sl. No.</th>
+        <th>Material name</th>
+        <th class="num">Set. wt({uom})</th>
+        <th class="num">Ach. wt({uom})</th>
+        <th class="num">Error({uom})</th>
+        <th class="num">Error %</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="center">{sl}</td>
+        <td class="text">{name}</td>
+        <td class="num">{set}</td>
+        <td class="num">{ach}</td>
+        <td class="num">{err}</td>
+        <td class="num">{errp}</td>
+      </tr>
+    </tbody>
+    <tfoot>
+      <tr>
+        <td colspan="2">Total</td>
+        <td class="num">{total_set}</td>
+        <td class="num">{total_ach}</td>
+        <td class="num">{total_err}</td>
+        <td class="num">{total_errp}</td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <div class="footer">
+    <div class="left">Indian Industrial Machines Pvt. Ltd.</div>
+    <div class="center">Page 1 of 1</div>
+    <div class="right"></div>
+  </div>
+
+</div>
+</body>
+</html>

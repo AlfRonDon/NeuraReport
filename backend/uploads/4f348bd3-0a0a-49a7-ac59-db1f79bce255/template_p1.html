@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>{report_title}</title>
+<style>
+  @page { size: A4; margin: 14mm 14mm 20mm 14mm; }
+  html, body { height: 100%; }
+  body {
+    font-family: "Times New Roman", Times, serif;
+    font-size: 12pt;
+    color: #000;
+    margin: 0;
+  }
+
+  .container { padding: 10mm 0 0 0; }
+
+  /* Header block */
+  .header-box {
+    border: 1px solid #000;
+    padding: 6mm 6mm 3mm 6mm;
+  }
+  .header-grid {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+  }
+  .header-grid td { vertical-align: top; }
+  .left-pane { width: 62%; }
+  .right-pane { width: 38%; text-align: right; }
+
+  .kv {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+  }
+  .kv td { padding: 1mm 0.5mm; vertical-align: top; }
+  .kv td.label { width: 34mm; }
+  .kv td.colon { width: 3mm; }
+  .kv td.value { }
+  .right-pane .kv td.label { width: auto; text-align: right; padding-right: 2mm; }
+  .right-pane .kv td.colon { width: 3mm; }
+  .right-pane .kv td.value { text-align: left; }
+
+  .report-title {
+    text-align: center;
+    font-weight: 700;
+    font-size: 18pt;
+    margin-top: 2mm;
+    margin-bottom: 2mm;
+  }
+  .title-rule { border-top: 1px solid #000; height: 0; }
+
+  /* Data table */
+  .grid {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    margin-top: 4mm;
+  }
+  .grid th, .grid td {
+    border: 1px solid #000;
+    padding: 2.5mm 2mm;
+    vertical-align: top;
+  }
+  .grid thead th {
+    font-weight: 700;
+  }
+  .text-left { text-align: left; }
+  .text-right { text-align: right; }
+  .text-center { text-align: center; }
+
+  .grid .sl { width: 8%; }
+  .grid .mat { width: 46%; }
+  .grid .set { width: 14%; }
+  .grid .ach { width: 14%; }
+  .grid .err { width: 10%; }
+  .grid .errp { width: 8%; }
+
+  tfoot td { font-weight: 700; }
+
+  /* Batch block support (if ever repeated) */
+  .batch-block { break-inside: avoid; page-break-inside: avoid; margin: 6mm 0; }
+
+  /* Footer */
+  .footer {
+    position: fixed;
+    left: 14mm; right: 14mm; bottom: 10mm;
+    font-size: 10pt;
+    display: flex;
+    justify-content: space-between;
+    color: #000;
+  }
+</style>
+</head>
+<body>
+  <div class="container">
+    <div class="header-box">
+      <table class="header-grid">
+        <tr>
+          <td class="left-pane">
+            <table class="kv">
+              <tr>
+                <td class="label">Plant name</td>
+                <td class="colon">:</td>
+                <td class="value">{plant_name}</td>
+              </tr>
+              <tr>
+                <td class="label">Location</td>
+                <td class="colon">:</td>
+                <td class="value">{location}</td>
+              </tr>
+              <tr>
+                <td class="label">Print Date</td>
+                <td class="colon">:</td>
+                <td class="value">{print_date}</td>
+              </tr>
+            </table>
+          </td>
+          <td class="right-pane">
+            <table class="kv">
+              <tr>
+                <td class="label">From Date</td>
+                <td class="colon">:</td>
+                <td class="value">{from_date}&nbsp;&nbsp;&nbsp;To&nbsp;{to_date}</td>
+              </tr>
+              <tr><td colspan="3" style="height:3mm"></td></tr>
+              <tr>
+                <td class="label">Recipe code</td>
+                <td class="colon">:</td>
+                <td class="value">{recipe_code}</td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+      <div class="report-title">{report_title}</div>
+      <div class="title-rule"></div>
+    </div>
+
+    <table class="grid">
+      <colgroup>
+        <col class="sl"><col class="mat"><col class="set"><col class="ach"><col class="err"><col class="errp">
+      </colgroup>
+      <thead>
+        <tr>
+          <th class="text-center">Sl. No.</th>
+          <th class="text-left">Material name</th>
+          <th class="text-right">Set. wt(Kg)</th>
+          <th class="text-right">Ach. wt(Kg)</th>
+          <th class="text-right">Error(Kg)</th>
+          <th class="text-right">Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="text-center">{sl}</td>
+          <td class="text-left">{name}</td>
+          <td class="text-right">{set}</td>
+          <td class="text-right">{ach}</td>
+          <td class="text-right">{err}</td>
+          <td class="text-right">{errp}</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td class="text-left" colspan="2">Total</td>
+          <td class="text-right">{total_set}</td>
+          <td class="text-right">{total_ach}</td>
+          <td class="text-right">{total_err}</td>
+          <td class="text-right">{total_errp}</td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+
+  <div class="footer">
+    <div>{footer_company}</div>
+    <div>Page {page_no} of {page_count}</div>
+  </div>
+</body>
+</html>

@@ -1,7 +1,8 @@
+import Grid from '@mui/material/Grid2'
 import { useEffect, useMemo, useState } from 'react'
 import {
-  Box, Paper, Typography, Stack, Button, TextField, Chip, Divider, LinearProgress, Grid,
-  Card, CardActionArea, CardContent, Checkbox, Autocomplete, Tooltip
+  Box, Typography, Stack, Button, TextField, Chip, Divider, LinearProgress,
+  Card, CardActionArea, CardContent, Checkbox, Autocomplete, Tooltip, Dialog, DialogContent, DialogTitle
 } from '@mui/material'
 import { Stepper, Step, StepLabel } from '@mui/material'
 import SearchIcon from '@mui/icons-material/Search'
@@ -10,23 +11,39 @@ import OpenInNewIcon from '@mui/icons-material/OpenInNew'
 import DownloadIcon from '@mui/icons-material/Download'
 import FolderOpenIcon from '@mui/icons-material/FolderOpen'
 import ReplayIcon from '@mui/icons-material/Replay'
+import CheckRoundedIcon from '@mui/icons-material/CheckRounded'
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker'
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
 import { useQuery } from '@tanstack/react-query'
-import { isMock } from '../../api/client'
+import { isMock, API_BASE, withBase, listApprovedTemplates } from '../../api/client'
 import * as mock from '../../api/mock'
+import { savePersistedCache } from '../../hooks/useBootstrapState.js'
 import { useAppStore } from '../../store/useAppStore'
 import { useToast } from '../../components/ToastProvider.jsx'
+import Surface from '../../components/layout/Surface.jsx'
+import ScaledIframePreview from '../../components/ScaledIframePreview.jsx'
+import { resolveTemplatePreviewUrl, resolveTemplateThumbnailUrl } from '../../utils/preview'
 
 /* ----------------------- helpers ----------------------- */
-const API_BASE = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/+$/,'')
 const toSqlFromDayjs = (d) => (d && d.isValid && d.isValid())
   ? d.format('YYYY-MM-DD HH:mm:00')
   : ''
 
 const includeConn = (body, connectionId) =>
   connectionId ? { ...body, connection_id: connectionId } : body
+
+const buildDownloadUrl = (url) => {
+  if (!url) return ''
+  try {
+    const u = new URL(url)
+    u.searchParams.set('download', '1')
+    return u.toString()
+  } catch {
+    const sep = url.includes('?') ? '&' : '?'
+    return `${url}${sep}download=1`
+  }
+}
 
 // 🔻 backend: /reports/discover
 async function discoverReportsAPI({ templateId, startDate, endDate, connectionId }) {
@@ -63,65 +80,192 @@ async function runReportAPI({ templateId, startDate, endDate, batchIds, connecti
   return res.json()
 }
 /* ------------------------------------------------------ */
+const surfaceStackSx = {
+  gap: { xs: 2, md: 2.5 },
+}
+
+const previewFrameSx = {
+  width: '100%',
+  maxWidth: { xs: 260, sm: 280, md: 300, lg: 320 },
+  aspectRatio: '210 / 297',
+  borderRadius: 1,
+  border: '1px solid',
+  borderColor: 'divider',
+  bgcolor: 'background.paper',
+  overflow: 'hidden',
+  position: 'relative',
+  display: 'flex',
+  alignItems: 'flex-start',
+  justifyContent: 'center',
+  mx: 'auto',
+  p: 1,
+}
+
+function StepIndicator(props) {
+  const { active, completed, icon } = props
+  return (
+    <Box
+      sx={{
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontWeight: 600,
+        fontSize: 14,
+        border: '2px solid',
+        borderColor: completed ? 'success.main' : active ? 'primary.main' : 'divider',
+        bgcolor: completed ? 'success.main' : active ? 'primary.main' : 'background.paper',
+        color: completed || active ? 'common.white' : 'text.secondary',
+        transition: 'all 160ms ease',
+        boxShadow: active ? '0 2px 6px rgba(79,70,229,0.2)' : 'none',
+      }}
+    >
+      {completed ? <CheckRoundedIcon fontSize="small" /> : icon}
+    </Box>
+  )
+}
 
 function TemplatePicker({ selected, onToggle, tagFilter, setTagFilter }) {
   const { templates, setTemplates } = useAppStore()
-  const { data } = useQuery({ queryKey: ['templates'], queryFn: () => (isMock ? mock.listTemplates() : Promise.resolve([])) })
-  useEffect(() => { if (data && templates.length === 0) setTemplates(data) }, [data, setTemplates, templates.length])
+  const { data } = useQuery({
+    queryKey: ['templates'],
+    queryFn: () => (isMock ? mock.listTemplates() : listApprovedTemplates()),
+  })
+  useEffect(() => {
+    if (data) {
+      setTemplates(data)
+      const state = useAppStore.getState()
+      savePersistedCache({
+        connections: state.savedConnections,
+        templates: data,
+        lastUsed: state.lastUsed,
+      })
+    }
+  }, [data, setTemplates])
   const approved = useMemo(() => templates.filter((t) => t.status === 'approved'), [templates])
   const allTags = useMemo(() => Array.from(new Set(approved.flatMap((t) => t.tags || []))), [approved])
   const [nameQuery, setNameQuery] = useState('')
+  const [previewOpen, setPreviewOpen] = useState(false)
+  const [previewSrc, setPreviewSrc] = useState(null)
+  const [previewType, setPreviewType] = useState('html')
+  const [previewKey, setPreviewKey] = useState(null)
   const filtered = useMemo(() => {
     const tagFiltered = tagFilter.length ? approved.filter((t) => (t.tags || []).some((tag) => tagFilter.includes(tag))) : approved
     const nq = nameQuery.trim().toLowerCase()
     return nq ? tagFiltered.filter((t) => (t.name || '').toLowerCase().includes(nq)) : tagFiltered
   }, [approved, tagFilter, nameQuery])
 
+  const handleThumbClick = (event, payload) => {
+    event.stopPropagation()
+    const url = payload?.url
+    if (!url) return
+    setPreviewSrc(url)
+    setPreviewType(payload?.type || 'html')
+    setPreviewKey(payload?.key || url)
+    setPreviewOpen(true)
+  }
+
+  const handlePreviewClose = () => {
+    setPreviewOpen(false)
+    setPreviewSrc(null)
+    setPreviewType('html')
+    setPreviewKey(null)
+  }
+
   return (
-    <Paper variant="outlined" sx={{ p: 2 }}>
-      <Typography variant="h6" sx={{ mb: 1 }}>Select Template</Typography>
-      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} sx={{ mb: 2 }}>
+    <Surface sx={surfaceStackSx}>
+      <Typography variant="h6">Select Template</Typography>
+      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
         <Autocomplete
           multiple
           options={allTags}
           value={tagFilter}
           onChange={(e, v) => setTagFilter(v)}
           freeSolo
-          renderInput={(params) => <TextField {...params} label="Filter by tags" size="small" />}
-          sx={{ minWidth: 240, maxWidth: 420 }}
+          renderInput={(params) => <TextField {...params} label="Filter by tags" />}
+          sx={{ minWidth: { xs: '100%', sm: 240 }, maxWidth: 420 }}
         />
-        <TextField size="small" label="Search by name" value={nameQuery} onChange={(e) => setNameQuery(e.target.value)} sx={{ minWidth: 220, maxWidth: 360 }} />
+        <TextField label="Search by name" value={nameQuery} onChange={(e) => setNameQuery(e.target.value)} sx={{ minWidth: { xs: '100%', sm: 220 }, maxWidth: 360 }} />
       </Stack>
       <Grid container spacing={2}>
         {filtered.map((t) => {
           const selectedState = selected.includes(t.id)
           const type = t.sourceType?.toUpperCase() || 'PDF'
+          const previewInfo = resolveTemplatePreviewUrl(t)
+          const thumbnailInfo = resolveTemplateThumbnailUrl(t)
+          const htmlPreview = previewInfo.url
+          const imagePreview = !htmlPreview ? thumbnailInfo.url : null
+          const boxClickable = Boolean(htmlPreview || imagePreview)
           return (
-            <Grid item xs={12} sm={6} md={6} key={t.id}>
+            <Grid size={{ xs: 12, sm: 6, md: 6 }} key={t.id} sx={{ minWidth: 0 }}>
               <Card
-                variant={selectedState ? 'elevation' : 'outlined'}
-                sx={{
-                  position: 'relative',
-                  overflow: 'hidden',
-                  borderRadius: 2,
-                  transition: 'transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease',
-                  '&:hover': { transform: 'translateY(-1px)', boxShadow: 4 },
-                  ...(selectedState ? { borderColor: 'primary.main', boxShadow: 6 } : {}),
-                }}
+                variant="outlined"
+                sx={[
+                  {
+                    position: 'relative',
+                    overflow: 'hidden',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    minHeight: 280,
+                    transition: 'border-color 160ms ease, box-shadow 160ms ease',
+                  },
+                  selectedState && {
+                    borderColor: 'primary.main',
+                    boxShadow: '0 0 0 1px rgba(79,70,229,0.28)',
+                  },
+                ]}
               >
-                <Checkbox checked={selectedState} onChange={() => onToggle(t.id)} sx={{ position: 'absolute', top: 8, left: 8, zIndex: 1 }} aria-label={`Select ${t.name}`} />
-                <CardActionArea onClick={() => onToggle(t.id)}>
-                  <CardContent>
-                    <Box sx={{ height: 240, border: '1px dashed', borderColor: 'divider', borderRadius: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'background.default' }}>
-                      <Typography variant="caption" color="text.secondary">Thumbnail preview</Typography>
+                <Checkbox checked={selectedState} onChange={() => onToggle(t.id)} sx={{ position: 'absolute', top: 12, left: 12, zIndex: 1 }} aria-label={`Select ${t.name}`} />
+                <CardActionArea onClick={() => onToggle(t.id)} sx={{ height: '100%' }}>
+                  <CardContent sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, height: '100%', flexGrow: 1, justifyContent: 'space-between' }}>
+                    {/* Thumbnail preview box: prefer HTML preview when available */}
+                    <Box
+                      sx={[
+                        previewFrameSx,
+                        boxClickable && { cursor: 'pointer' },
+                      ]}
+                      onClick={(e) => {
+                        if (htmlPreview) {
+                          handleThumbClick(e, { url: htmlPreview, key: previewInfo.key, type: 'html' })
+                        } else if (imagePreview) {
+                          handleThumbClick(e, { url: imagePreview, key: imagePreview, type: 'image' })
+                        }
+                      }}
+                    >
+                      {htmlPreview ? (
+                        <ScaledIframePreview
+                          key={previewInfo.key}
+                          src={htmlPreview}
+                          title={`${t.name} preview`}
+                          sx={{ width: '100%', height: '100%' }}
+                        />
+                      ) : imagePreview ? (
+                        <img
+                          src={imagePreview}
+                          alt={`${t.name} preview`}
+                          loading="lazy"
+                          style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block', cursor: 'inherit' }}
+                        />
+                      ) : (
+                        <Typography
+                          variant="caption"
+                          color="text.secondary"
+                          sx={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        >
+                          No preview yet
+                        </Typography>
+                      )}
                     </Box>
-                    <Typography variant="subtitle1" sx={{ mt: 1, fontWeight: 700, lineHeight: 1.2 }} noWrap>{t.name}</Typography>
+
+                    <Typography variant="subtitle1" sx={{ fontWeight: 700, lineHeight: 1.2 }} noWrap>{t.name}</Typography>
                     {!!t.description && (
                       <Typography variant="caption" color="text.secondary" sx={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                         {t.description}
                       </Typography>
                     )}
-                    <Stack direction="row" spacing={1} sx={{ mt: 1, flexWrap: 'wrap' }}>
+                    <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap' }}>
                       {(t.tags || []).slice(0, 4).map((tag) => (
                         <Chip key={tag} label={tag} size="small" />
                       ))}
@@ -129,20 +273,79 @@ function TemplatePicker({ selected, onToggle, tagFilter, setTagFilter }) {
                     </Stack>
                   </CardContent>
                 </CardActionArea>
-                <Box sx={{ position: 'absolute', top: 8, right: 8, display: 'flex', gap: 1, alignItems: 'center' }}>
-                  <Chip size="small" label={type} color="default" />
+                <Box sx={{ position: 'absolute', top: 12, right: 12, display: 'flex', gap: 1, alignItems: 'center' }}>
+                  <Chip size="small" label={type} variant="outlined" />
                 </Box>
               </Card>
             </Grid>
           )
         })}
         {!filtered.length && (
-          <Grid item xs={12}>
+          <Grid size={12}>
             <Typography variant="body2" color="text.secondary">No templates match these filters. Clear filters.</Typography>
           </Grid>
         )}
       </Grid>
-    </Paper>
+      <Dialog
+        open={previewOpen}
+        onClose={handlePreviewClose}
+        maxWidth="lg"
+        fullWidth
+        aria-labelledby="template-preview-title"
+        PaperProps={{
+          sx: {
+            height: '90vh',
+            bgcolor: 'background.default',
+          },
+        }}
+      >
+        <DialogTitle id="template-preview-title">Template Preview</DialogTitle>
+        <DialogContent
+          dividers
+          sx={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'flex-start',
+            overflow: 'auto',
+            bgcolor: 'background.default',
+          }}
+        >
+          {previewSrc && previewType === 'html' ? (
+            <Box
+              sx={{
+                width: '100%',
+                maxWidth: 1120,
+                mx: 'auto',
+                bgcolor: 'background.paper',
+                borderRadius: 1,
+                boxShadow: 2,
+                border: '1px solid',
+                borderColor: 'divider',
+                overflow: 'auto',
+                p: 2,
+              }}
+            >
+              <ScaledIframePreview key={previewKey || previewSrc} src={previewSrc} title="Template HTML preview" sx={{ width: '100%', height: '100%' }} loading="eager" />
+            </Box>
+          ) : previewSrc ? (
+            <Box
+              component="img"
+              src={previewSrc}
+              alt="Template preview"
+              sx={{
+                display: 'block',
+                width: '100%',
+                maxWidth: 1120,
+                height: 'auto',
+                mx: 'auto',
+                borderRadius: 1,
+                boxShadow: 2,
+              }}
+            />
+          ) : null}
+        </DialogContent>
+      </Dialog>
+    </Surface>
   )
 }
 
@@ -150,68 +353,141 @@ function GenerateAndDownload({ selected, autoType, start, end, setStart, setEnd,
   const valid = !!selected.length && !!start && !!end && end.valueOf() >= start.valueOf()
   const { downloads } = useAppStore()
   const targetNames = Object.values(results).map((r) => r.name)
-  const subline = targetNames.length ? `${targetNames.slice(0, 3).join(', ')}${targetNames.length > 3 ? ', …' : ''}` : ''
+  const subline = targetNames.length
+    ? `${targetNames.slice(0, 3).join(', ')}${targetNames.length > 3 ? ', ...' : ''}`
+    : ''
   return (
     <>
-      <Paper variant="outlined" sx={{ p: 2 }}>
-        <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ sm: 'center' }} justifyContent="space-between">
-          <Stack>
+      <Surface sx={surfaceStackSx}>
+        <Stack
+          direction={{ xs: 'column', sm: 'row' }}
+          alignItems={{ xs: 'flex-start', sm: 'center' }}
+          justifyContent="space-between"
+          spacing={{ xs: 1, sm: 2 }}
+        >
+          <Stack spacing={0.5}>
             <Typography variant="h6">Generate & Download</Typography>
             {!!subline && <Typography variant="caption" color="text.secondary">{subline}</Typography>}
           </Stack>
-          <Stack direction="row" spacing={1} alignItems="center">
-            <Button variant="outlined" color="secondary" startIcon={<SearchIcon />} sx={{ textTransform: 'none', borderRadius: 2, px: 2 }} onClick={onFind} disabled={!valid || findDisabled}>Find Reports</Button>
+          <Stack
+            direction={{ xs: 'column', sm: 'row' }}
+            spacing={1}
+            alignItems={{ xs: 'stretch', sm: 'center' }}
+            sx={{ width: { xs: '100%', sm: 'auto' } }}
+          >
+            <Button
+              variant="outlined"
+              color="secondary"
+              startIcon={<SearchIcon />}
+              onClick={onFind}
+              disabled={!valid || findDisabled}
+              aria-label="Discover matching reports"
+              sx={{ width: { xs: '100%', sm: 'auto' } }}
+            >
+              Find Reports
+            </Button>
             <Tooltip title={generateLabel}>
               <span>
-                <Button variant="contained" color="primary" disableElevation startIcon={<RocketLaunchIcon />} sx={{ textTransform: 'none', borderRadius: 2, px: 2 }} onClick={onGenerate} disabled={!canGenerate}>{generateLabel}</Button>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  disableElevation
+                  startIcon={<RocketLaunchIcon />}
+                  onClick={onGenerate}
+                  disabled={!canGenerate}
+                  aria-label={generateLabel}
+                  sx={{ width: { xs: '100%', sm: 'auto' } }}
+                >
+                  {generateLabel}
+                </Button>
               </span>
             </Tooltip>
           </Stack>
         </Stack>
         <LocalizationProvider dateAdapter={AdapterDayjs}>
-          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mt: 2 }}>
-            <DateTimePicker label="Start Date & Time" slotProps={{ textField: { size: 'small' } }} value={start} onChange={(v) => setStart(v)} />
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
+            <DateTimePicker
+              label="Start Date & Time"
+              value={start}
+              onChange={(v) => setStart(v)}
+              slotProps={{
+                textField: {
+                  size: 'small',
+                  FormHelperTextProps: { sx: { color: 'text.primary' } },
+                },
+              }}
+            />
             <DateTimePicker
               label="End Date & Time"
-              slotProps={{ textField: { size: 'small', error: !!(start && end && end.isBefore(start)), helperText: start && end && end.isBefore(start) ? 'End must be after Start' : ' ' } }}
+              slotProps={{
+                textField: {
+                  size: 'small',
+                  error: !!(start && end && end.isBefore(start)),
+                  helperText: start && end && end.isBefore(start) ? 'End must be after Start' : ' ',
+                  FormHelperTextProps: { sx: { color: 'text.primary' } },
+                },
+              }}
               value={end}
               onChange={(v) => setEnd(v)}
             />
-            <Chip label={`Auto: ${autoType || '-'}`} size="small" />
+            <Chip
+              label={`Auto: ${autoType || '-'}`}
+              size="small"
+              variant="outlined"
+              sx={{ alignSelf: { xs: 'flex-start', sm: 'center' } }}
+            />
           </Stack>
         </LocalizationProvider>
 
         {(finding || Object.keys(results).length > 0) && (
-          <Box sx={{ mt: 2 }}>
-            <Divider sx={{ mb: 2 }} />
+          <Box>
+            <Divider sx={{ my: 2 }} />
             <Typography variant="subtitle1">Discovery Results</Typography>
-            {finding && (
-              <Box sx={{ mt: 2 }}>
+            {finding ? (
+              <Stack spacing={1.25} sx={{ mt: 1.5 }}>
                 <LinearProgress />
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                  Searching data…
+                <Typography variant="body2" color="text.secondary">
+                  Searching data...
                 </Typography>
-              </Box>
-            )}
-            {!finding && (
-              <Stack spacing={2} sx={{ mt: 2 }}>
+              </Stack>
+            ) : (
+              <Stack spacing={1.5} sx={{ mt: 1.5 }}>
                 {Object.keys(results).map((tid) => {
                   const r = results[tid]
                   const total = r.rows_total ?? r.batches.reduce((a, b) => a + (b.rows || 0), 0)
                   const count = r.batches_count ?? r.batches.length
                   return (
-                    <Box key={tid} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 1.5 }}>
+                    <Box
+                      key={tid}
+                      sx={{
+                        border: '1px solid',
+                        borderColor: 'divider',
+                        borderRadius: 1,
+                        p: 1.5,
+                        bgcolor: 'background.paper',
+                      }}
+                    >
                       <Typography variant="subtitle2">{r.name}</Typography>
                       {r.batches.length ? (
-                        <Stack spacing={1} sx={{ mt: 1 }}>
+                        <Stack spacing={1} sx={{ mt: 1.25 }}>
                           <Typography variant="body2" color="text.secondary">
                             {count} {count === 1 ? 'batch' : 'batches'} found ({total} rows)
                           </Typography>
                           {r.batches.map((b, idx) => (
-                            <Stack key={b.id || idx} direction="row" spacing={1} alignItems="center">
-                              <Checkbox checked={b.selected} onChange={(e) => onToggleBatch(tid, idx, e.target.checked)} />
-                              <Typography variant="body2">
-                                Batch {idx + 1} • {(b.parent ?? 1)} {(b.parent ?? 1) === 1 ? 'parent' : 'parents'} • {b.rows} rows
+                            <Stack
+                              key={b.id || idx}
+                              direction={{ xs: 'column', sm: 'row' }}
+                              spacing={1}
+                              alignItems={{ xs: 'flex-start', sm: 'center' }}
+                              sx={{ width: '100%' }}
+                            >
+                              <Checkbox
+                                checked={b.selected}
+                                onChange={(e) => onToggleBatch(tid, idx, e.target.checked)}
+                                sx={{ p: 0.5 }}
+                              />
+                              <Typography variant="body2" sx={{ flex: 1, overflowWrap: 'anywhere' }}>
+                                Batch {idx + 1} {'\u2022'} {(b.parent ?? 1)} {(b.parent ?? 1) === 1 ? 'parent' : 'parents'} {'\u2022'} {b.rows} rows
                               </Typography>
                             </Stack>
                           ))}
@@ -227,13 +503,27 @@ function GenerateAndDownload({ selected, autoType, start, end, setStart, setEnd,
           </Box>
         )}
 
-        <Box sx={{ mt: 2 }}>
-          <Divider sx={{ mb: 2 }} />
+        <Box>
+          <Divider sx={{ my: 2 }} />
           <Typography variant="subtitle1">Progress</Typography>
-          <Stack spacing={2} sx={{ mt: 1 }}>
+          <Stack spacing={1.5} sx={{ mt: 1.5 }}>
             {generation.items.map((item) => (
-              <Box key={item.id} sx={{ p: 1.5, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
-                <Stack direction="row" justifyContent="space-between" alignItems="center">
+              <Box
+                key={item.id}
+                sx={{
+                  p: 1.5,
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  borderRadius: 1,
+                  bgcolor: 'background.paper',
+                }}
+              >
+                <Stack
+                  direction={{ xs: 'column', sm: 'row' }}
+                  justifyContent="space-between"
+                  alignItems={{ xs: 'flex-start', sm: 'center' }}
+                  spacing={{ xs: 0.5, sm: 1 }}
+                >
                   <Typography variant="body2" sx={{ fontWeight: 600 }}>
                     {item.name}
                   </Typography>
@@ -242,42 +532,105 @@ function GenerateAndDownload({ selected, autoType, start, end, setStart, setEnd,
                   </Typography>
                 </Stack>
                 <LinearProgress variant="determinate" value={item.progress} sx={{ mt: 1 }} />
-                <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
-                  <Button size="small" variant="outlined" startIcon={<OpenInNewIcon />} sx={{ textTransform: 'none', borderRadius: 2 }} disabled={!item.htmlUrl} component="a" href={item.htmlUrl || '#'} target="_blank" rel="noopener">Open</Button>
-                  <Button size="small" variant="contained" color="primary" disableElevation startIcon={<DownloadIcon />} sx={{ textTransform: 'none', borderRadius: 2 }} disabled={!item.pdfUrl} component="a" href={item.pdfUrl || '#'}>Download</Button>
-                  <Button size="small" variant="text" startIcon={<FolderOpenIcon />} sx={{ textTransform: 'none', borderRadius: 2 }} disabled>Show in folder</Button>
-                  {item.status === 'failed' && <Button size="small" variant="outlined" color="warning" startIcon={<ReplayIcon />} sx={{ textTransform: 'none', borderRadius: 2 }}>Retry</Button>}
+                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ mt: 1 }}>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    startIcon={<OpenInNewIcon />}
+                    disabled={!item.htmlUrl}
+                    component="a"
+                    href={item.htmlUrl || '#'}
+                    target="_blank"
+                    rel="noopener"
+                  >
+                    Open
+                  </Button>
+                  <Button
+                    size="small"
+                    variant="contained"
+                    color="primary"
+                    disableElevation
+                    startIcon={<DownloadIcon />}
+                    disabled={!item.pdfUrl}
+                    component="a"
+                    href={item.pdfUrl ? buildDownloadUrl(item.pdfUrl) : '#'}
+                    target="_blank"
+                    rel="noopener"
+                  >
+                    Download
+                  </Button>
+                  <Button size="small" variant="text" startIcon={<FolderOpenIcon />} disabled>
+                    Show in folder
+                  </Button>
+                  {item.status === 'failed' && (
+                    <Button size="small" variant="outlined" color="warning" startIcon={<ReplayIcon />}>Retry</Button>
+                  )}
                 </Stack>
               </Box>
             ))}
             {!generation.items.length && <Typography variant="body2" color="text.secondary">No runs yet</Typography>}
           </Stack>
         </Box>
-      </Paper>
+      </Surface>
 
-      <Paper variant="outlined" sx={{ p: 2 }}>
+      <Surface sx={surfaceStackSx}>
         <Typography variant="h6">Recently Downloaded</Typography>
-        <Stack spacing={1} sx={{ mt: 1 }}>
+        <Stack spacing={1.5}>
           {downloads.map((d, i) => (
-            <Stack key={i} direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ sm: 'center' }} justifyContent="space-between" sx={{ p: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
-              <Typography variant="body2">{d.filename} • {d.template} • {d.format.toUpperCase()} • {d.size}</Typography>
-              <Stack direction="row" spacing={1}>
-                <Button size="small" variant="outlined" startIcon={<OpenInNewIcon />} sx={{ textTransform: 'none', borderRadius: 2 }} disabled={!d.htmlUrl} component="a" href={d.htmlUrl || '#'} target="_blank">Open</Button>
-                <Button size="small" variant="text" startIcon={<FolderOpenIcon />} sx={{ textTransform: 'none', borderRadius: 2 }} disabled>Show in folder</Button>
-                <Button size="small" variant="contained" color="success" disableElevation startIcon={<ReplayIcon />} sx={{ textTransform: 'none', borderRadius: 2 }} onClick={d.onRerun}>Re-run</Button>
+            <Stack
+              key={i}
+              spacing={1}
+              sx={{
+                p: 1.5,
+                border: '1px solid',
+                borderColor: 'divider',
+                borderRadius: 1,
+                bgcolor: 'background.paper',
+              }}
+            >
+              <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                {d.filename} {'\u2022'} {d.template} {'\u2022'} {d.format.toUpperCase()} {'\u2022'} {d.size}
+              </Typography>
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  startIcon={<OpenInNewIcon />}
+                  disabled={!d.htmlUrl}
+                  component="a"
+                  href={d.htmlUrl || '#'}
+                  target="_blank"
+                  rel="noopener"
+                >
+                  Open
+                </Button>
+                <Button size="small" variant="text" startIcon={<FolderOpenIcon />} disabled>
+                  Show in folder
+                </Button>
+                <Button
+                  size="small"
+                  variant="contained"
+                  color="success"
+                  disableElevation
+                  startIcon={<ReplayIcon />}
+                  onClick={d.onRerun}
+                >
+                  Re-run
+                </Button>
               </Stack>
             </Stack>
           ))}
           {!downloads.length && <Typography variant="body2" color="text.secondary">No recent downloads yet.</Typography>}
         </Stack>
-      </Paper>
+      </Surface>
     </>
   )
 }
 
+
 export default function TemplatesPane() {
   // pull connection if available; API can fallback when not provided
-  const { templates, addDownload, activeConnection } = useAppStore()
+  const { templates, addDownload, activeConnectionId } = useAppStore()
   const toast = useToast()
   const approved = useMemo(() => templates.filter((t) => t.status === 'approved'), [templates])
   const [selected, setSelected] = useState([])
@@ -308,7 +661,7 @@ export default function TemplatesPane() {
           templateId: t.id,
           startDate: start,
           endDate: end,
-          connectionId: activeConnection?.id,   // pass when available
+          connectionId: activeConnectionId,   // pass when available
         })
         r[t.id] = {
           name: t.name,
@@ -359,10 +712,10 @@ export default function TemplatesPane() {
           startDate: start,
           endDate: end,
           batchIds: batchIdsFor(it.tplId),
-          connectionId: activeConnection?.id,   // pass when available
+          connectionId: activeConnectionId,   // pass when available
         })
-        const htmlUrl = `${API_BASE}${data.html_url}`
-        const pdfUrl  = `${API_BASE}${data.pdf_url}`
+        const htmlUrl = data?.html_url ? withBase(data.html_url) : null
+        const pdfUrl  = data?.pdf_url ? withBase(data.pdf_url) : null
 
         setGeneration((prev) => ({ items: prev.items.map((x) => (x.id === it.id ? { ...x, progress: 100, status: 'complete', htmlUrl, pdfUrl } : x)) }))
         addDownload({ filename: `${it.name}.pdf`, template: it.name, format: 'pdf', size: '', htmlUrl, pdfUrl, onRerun: () => onGenerate() })
@@ -380,19 +733,32 @@ export default function TemplatesPane() {
 
   return (
     <>
-      <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
-        <Typography variant="h6" sx={{ mb: 1 }}>Generate Report</Typography>
-        <Stepper activeStep={activeStep} alternativeLabel sx={{ pb: 1 }}>
-          {['Select Template', 'Select Date & Time', 'Generate Report'].map((label) => (
-            <Step key={label}>
-              <StepLabel>{label}</StepLabel>
-            </Step>
-          ))}
-        </Stepper>
-        <Typography variant="caption" color="text.secondary">
-          {selected.length} selected • {dateRangeValid ? 'Range set' : 'Choose a range'}
-        </Typography>
-      </Paper>
+      <Surface sx={[surfaceStackSx, { mb: 3 }]}>
+        <Stack spacing={1.5}>
+          <Typography variant="h6">Generate Report</Typography>
+          <Stepper
+            activeStep={activeStep}
+            alternativeLabel
+            aria-label="Generate report steps"
+            sx={{
+              pb: 0,
+              '& .MuiStep-root': { position: 'relative' },
+              '& .MuiStepConnector-root': { top: 16 },
+              '& .MuiStepLabel-label': { mt: 1 },
+              '& .MuiStepConnector-line': { borderColor: 'divider' },
+            }}
+          >
+            {['Select Template', 'Select Date & Time', 'Generate Report'].map((label) => (
+              <Step key={label}>
+                <StepLabel StepIconComponent={StepIndicator}>{label}</StepLabel>
+              </Step>
+            ))}
+          </Stepper>
+          <Typography variant="caption" color="text.secondary">
+            {`${selected.length} selected \u2022 ${dateRangeValid ? 'Range set' : 'Choose a range'}`}
+          </Typography>
+        </Stack>
+      </Surface>
       <TemplatePicker selected={selected} onToggle={onToggle} tagFilter={tagFilter} setTagFilter={setTagFilter} />
       <GenerateAndDownload
         selected={approved.filter((t) => selected.includes(t.id)).map((t) => t.id)}
@@ -414,3 +780,9 @@ export default function TemplatesPane() {
     </>
   )
 }
+
+
+
+
+
+

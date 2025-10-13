@@ -1,20 +1,28 @@
 import React from 'react'
 import {
-  Paper, Typography, Box, Stack, Button, Divider, Chip, CircularProgress,
-  List, ListItem, ListItemText, Alert,
+  Typography,
+  Box,
+  Stack,
+  Button,
+  Divider,
+  Chip,
+  CircularProgress,
+  List,
+  ListItem,
+  ListItemText,
+  Alert,
 } from '@mui/material'
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import RefreshIcon from '@mui/icons-material/Refresh'
 import { useAppStore } from '../../store/useAppStore'
 import { mappingPreview, approveMapping } from '../../api/templates'
+import { withBase, fetchArtifactManifest, fetchArtifactHead } from '../../api/client'
 import { useToast } from '../../components/ToastProvider.jsx'
+import Surface from '../../components/layout/Surface.jsx'
+import ScaledIframePreview from '../../components/ScaledIframePreview.jsx'
+import { resolveTemplatePreviewUrl, appendCacheBuster } from '../../utils/preview'
 
-// cache-busting helper
-const withCache = (src, cacheKey) => {
-  if (!src) return src
-  return src.includes('?') ? `${src}&v=${cacheKey}` : `${src}?v=${cacheKey}`
-}
 
 export default function PreviewApprove() {
   const toast = useToast()
@@ -23,7 +31,7 @@ export default function PreviewApprove() {
     templateId,
     connection,
     cacheKey,
-    bumpCache,
+    setCacheKey,
     htmlUrls,
     setHtmlUrls,
   } = useAppStore()
@@ -31,33 +39,67 @@ export default function PreviewApprove() {
   const connectionId = connection?.connectionId || null
 
   const [loading, setLoading] = React.useState(false)
-  const [mapping, setMapping] = React.useState(null)       // { header -> table.col | UNRESOLVED }
-  const [errors, setErrors] = React.useState([])           // [{ label, issue }]
-  const [catalog, setCatalog] = React.useState([])         // ["table.col", ...]
+  const [mapping, setMapping] = React.useState(null)
+  const [errors, setErrors] = React.useState([])
+  const [catalog, setCatalog] = React.useState([])
   const [lastPreviewAt, setLastPreviewAt] = React.useState(null)
 
   const canPreview = Boolean(templateId && connectionId)
   const canApprove = Boolean(mapping && templateId)
 
-  // Seed default preview URLs when template changes (photocopy first)
   React.useEffect(() => {
     if (!templateId) return
-    setHtmlUrls(prev => ({
-      ...prev,
-      template: `/uploads/${templateId}/template_p1.html`,
-      final: prev?.final || `/uploads/${templateId}/report_final.html`,
-    }))
-    bumpCache()
-  }, [templateId, setHtmlUrls, bumpCache])
+    let cancelled = false
+    ;(async () => {
+      try {
+        const manifest = await fetchArtifactManifest(templateId)
+        if (cancelled) return
+        const producedAt = manifest?.produced_at
+        const key = producedAt ? Date.parse(producedAt) || producedAt : Date.now()
+        setCacheKey(key)
+        const files = manifest?.files || {}
+        const templateRel = files['template_p1.html'] || 'template_p1.html'
+        const finalRel = files['report_final.html'] || null
+        const templateBase = withBase(`/uploads/${templateId}/${templateRel}`)
+        const finalBase = finalRel ? withBase(`/uploads/${templateId}/${finalRel}`) : null
+        setHtmlUrls(() => ({
+          template: appendCacheBuster(templateBase, key),
+          final: finalBase ? appendCacheBuster(finalBase, key) : null,
+        }))
+      } catch (err) {
+        if (cancelled) return
+        const key = Date.now()
+        setCacheKey(key)
+        setHtmlUrls((prev) => ({
+          ...prev,
+          template: appendCacheBuster(withBase(`/uploads/${templateId}/template_p1.html`), key),
+        }))
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [templateId, setCacheKey, setHtmlUrls])
 
-  // Prefer template preview (photocopy) when present; else fall back to final
-  const templateUrl =
-    htmlUrls?.template || (templateId ? `/uploads/${templateId}/template_p1.html` : null)
-  const finalUrl =
-    htmlUrls?.final || (templateId ? `/uploads/${templateId}/report_final.html` : null)
+  const templateUrl = htmlUrls?.template || (templateId ? `/uploads/${templateId}/template_p1.html` : null)
+  const finalUrl = htmlUrls?.final || (templateId ? `/uploads/${templateId}/report_final.html` : null)
+  const fallbackTemplate = templateUrl ? withBase(templateUrl) : null
+  const fallbackFinal = finalUrl ? withBase(finalUrl) : null
 
-  const baseHtml = templateUrl || finalUrl
-  const src = withCache(baseHtml, cacheKey)
+  const previewInfo = resolveTemplatePreviewUrl(
+    {
+      templateId,
+      final_html_url: htmlUrls?.final || fallbackFinal,
+      template_html_url: htmlUrls?.template || fallbackTemplate,
+      html_url: fallbackFinal,
+      template_html: fallbackTemplate,
+      manifest_produced_at: cacheKey,
+      previewTs: cacheKey,
+    },
+    { ts: cacheKey },
+  )
+  const previewSrc = previewInfo.url
+  const previewKey = previewInfo.key || `${templateId || 'preview'}-${cacheKey}`
 
   async function onGenerateMapping() {
     if (!canPreview) {
@@ -72,10 +114,9 @@ export default function PreviewApprove() {
       setCatalog(resp.catalog || [])
       setLastPreviewAt(new Date().toLocaleString())
 
-      // If backend returns a preview URL, persist and force reload
       if (resp.html_url) {
-        setHtmlUrls(prev => ({ ...prev, final: resp.html_url }))
-        bumpCache()
+        setHtmlUrls((prev) => ({ ...prev, final: withBase(resp.html_url) }))
+        setCacheKey(Date.now())
       }
       toast.show('Mapping generated.', 'success')
     } catch (e) {
@@ -93,14 +134,39 @@ export default function PreviewApprove() {
     }
     setLoading(true)
     try {
-      const resp = await approveMapping(templateId, mapping)
+      const resp = await approveMapping(templateId, mapping, { connectionId, userValuesText: '' })
+      const stripQuery = (url) => (url ? url.split('?')[0] : url)
+      const refinedFinal = resp?.final_html_url ? withBase(stripQuery(resp.final_html_url)) : null
+      const refinedTemplate = resp?.template_html_url ? withBase(stripQuery(resp.template_html_url)) : null
 
-      // Use the cache-busted URLs returned by the backend for instant refresh
+      let manifest = resp?.manifest || null
+      if (!manifest) {
+        try {
+          manifest = await fetchArtifactManifest(templateId)
+        } catch (err) {
+          console.warn('manifest fetch failed', err)
+        }
+      }
+
+      const producedAtRaw = manifest?.produced_at
+      const cacheSeed = producedAtRaw ? Date.parse(producedAtRaw) || producedAtRaw : Date.now()
+      setCacheKey(cacheSeed)
+
+      const buildFromManifest = (name) => {
+        const rel = manifest?.files?.[name]
+        if (!rel) return null
+        return withBase(`/uploads/${templateId}/${rel}`)
+      }
+
+      const templateBase = buildFromManifest('template_p1.html') || refinedTemplate || htmlUrls.template
+      const finalBase = buildFromManifest('report_final.html') || refinedFinal || templateBase
+      const templateUrl = templateBase ? appendCacheBuster(templateBase, cacheSeed) : null
+      const finalUrl = finalBase ? appendCacheBuster(finalBase, cacheSeed) : templateUrl
+
       setHtmlUrls({
-        final: resp.final_html_url || htmlUrls.final,
-        template: resp.template_html_url || htmlUrls.template,  // ⬅️ use the photocopy URL if present
+        template: templateUrl || finalUrl,
+        final: finalUrl || templateUrl,
       })
-      bumpCache()
 
       toast.show('Mapping approved and auto-filled HTML saved.', 'success')
     } catch (e) {
@@ -112,12 +178,23 @@ export default function PreviewApprove() {
   }
 
   return (
-    <Paper variant="outlined" sx={{ p: 2 }}>
-      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
+    <Surface>
+      <Stack
+        direction={{ xs: 'column', sm: 'row' }}
+        alignItems={{ xs: 'flex-start', sm: 'center' }}
+        justifyContent="space-between"
+        spacing={{ xs: 1.5, sm: 2 }}
+        sx={{ mb: 2 }}
+      >
         <Typography variant="h6">Preview & Approve</Typography>
-        <Stack direction="row" spacing={1} alignItems="center">
+        <Stack
+          direction="row"
+          spacing={1}
+          alignItems="center"
+          sx={{ flexWrap: 'wrap', rowGap: 0.5 }}
+        >
           <Chip
-            label={templateId ? `Template: ${templateId.slice(0, 8)}…` : 'No template'}
+            label={templateId ? `Template: ${templateId.slice(0, 8)}...` : 'No template'}
             size="small"
             color={templateId ? 'default' : 'warning'}
           />
@@ -130,7 +207,6 @@ export default function PreviewApprove() {
       </Stack>
 
       <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
-        {/* LEFT: HTML preview */}
         <Box
           flex={1}
           minHeight={320}
@@ -138,19 +214,14 @@ export default function PreviewApprove() {
             border: '1px solid',
             borderColor: 'divider',
             borderRadius: 1,
-            overflow: 'hidden',
-            display: 'flex',
-            alignItems: 'stretch',
-            justifyContent: 'center',
+            overflow: 'auto',
+            p: 1,
             bgcolor: 'background.paper',
+            minWidth: 0,
           }}
         >
-          {src ? (
-            <iframe
-              title="html-preview"
-              src={src}
-              style={{ width: '100%', height: '70vh', border: 0, background: 'white' }}
-            />
+          {previewSrc ? (
+            <ScaledIframePreview key={previewKey} src={previewSrc} title="html-preview" sx={{ width: '100%' }} loading="eager" />
           ) : (
             <Box
               sx={{ p: 3, display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%' }}
@@ -162,35 +233,38 @@ export default function PreviewApprove() {
           )}
         </Box>
 
-        {/* RIGHT: Mapping / Actions */}
-        <Box width={{ xs: '100%', md: 420 }}>
+        <Box width={{ xs: '100%', md: 420 }} sx={{ minWidth: 0 }}>
           <Stack spacing={2}>
             <Typography variant="subtitle1">Detected Placeholders</Typography>
 
-            <Stack direction="row" spacing={1}>
+            <Stack
+              direction={{ xs: 'column', sm: 'row' }}
+              spacing={1}
+              sx={{ width: { xs: '100%', sm: 'auto' } }}
+            >
               <Button
-                startIcon={loading ? <CircularProgress size={16}/> : <AutoFixHighIcon />}
+                startIcon={loading ? <CircularProgress size={16} /> : <AutoFixHighIcon />}
                 variant="outlined"
                 onClick={onGenerateMapping}
                 disabled={!canPreview || loading}
-                sx={{ textTransform: 'none', borderRadius: 2 }}
+                sx={{ width: { xs: '100%', sm: 'auto' } }}
               >
-                {loading ? 'Working…' : 'Generate Mapping'}
+                {loading ? 'Working...' : 'Generate Mapping'}
               </Button>
               <Button
                 startIcon={<CheckCircleIcon />}
                 variant="contained"
                 onClick={onApprove}
                 disabled={!canApprove || loading}
-                sx={{ textTransform: 'none', borderRadius: 2 }}
+                sx={{ width: { xs: '100%', sm: 'auto' } }}
               >
                 Approve
               </Button>
               <Button
                 startIcon={<RefreshIcon />}
-                onClick={() => bumpCache()}
-                disabled={!src}
-                sx={{ textTransform: 'none', borderRadius: 2 }}
+                onClick={() => setCacheKey(Date.now())}
+                disabled={!previewSrc}
+                sx={{ width: { xs: '100%', sm: 'auto' } }}
               >
                 Reload Preview
               </Button>
@@ -202,7 +276,6 @@ export default function PreviewApprove() {
               </Typography>
             )}
 
-            {/* Mapping summary */}
             {mapping && (
               <>
                 {errors?.length ? (
@@ -226,23 +299,27 @@ export default function PreviewApprove() {
                       </ListItem>
                     ))}
                     {!Object.keys(mapping || {}).length && (
-                      <ListItem><ListItemText primary="No placeholders mapped yet." /></ListItem>
+                      <ListItem>
+                        <ListItemText primary="No placeholders mapped yet." />
+                      </ListItem>
                     )}
                   </List>
                 </Box>
 
                 {!!errors?.length && (
                   <>
-                    <Typography variant="subtitle2" sx={{ mt: 1 }}>Issues</Typography>
+                    <Typography variant="subtitle2" sx={{ mt: 1 }}>
+                      Issues
+                    </Typography>
                     <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, maxHeight: 160, overflow: 'auto' }}>
                       <List dense disablePadding>
-                        {errors.map((e, i) => (
-                          <ListItem key={i} divider sx={{ px: 1.5 }}>
+                        {errors.map((issue, idx) => (
+                          <ListItem key={`${issue.label}-${idx}`} divider sx={{ px: 1.5 }}>
                             <ListItemText
                               primaryTypographyProps={{ variant: 'body2', color: 'warning.main' }}
                               secondaryTypographyProps={{ variant: 'caption' }}
-                              primary={e.label}
-                              secondary={e.issue}
+                              primary={issue.label}
+                              secondary={issue.issue}
                             />
                           </ListItem>
                         ))}
@@ -258,8 +335,8 @@ export default function PreviewApprove() {
                       Catalog ({catalog.length})
                     </Typography>
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
-                      {catalog.slice(0, 50).map((c) => (
-                        <Chip key={c} size="small" label={c} variant="outlined" />
+                      {catalog.slice(0, 50).map((entry) => (
+                        <Chip key={entry} size="small" label={entry} variant="outlined" />
                       ))}
                       {catalog.length > 50 && <Chip size="small" label={`+${catalog.length - 50} more`} />}
                     </Box>
@@ -270,6 +347,7 @@ export default function PreviewApprove() {
           </Stack>
         </Box>
       </Stack>
-    </Paper>
+    </Surface>
   )
 }
+

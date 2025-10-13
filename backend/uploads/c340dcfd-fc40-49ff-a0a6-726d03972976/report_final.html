@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Consumption report</title>
+<style>
+  @page { size: A4; margin: 12mm; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Times New Roman", serif;
+    font-size: 11pt;
+    color: #000;
+    margin: 0;
+  }
+
+  .header-box {
+    border: 1px solid #000;
+    padding: 4mm 5mm;
+    margin-top: 6mm;
+  }
+  .header-grid {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+  }
+  .header-grid td {
+    vertical-align: top;
+    padding: 2px 4px;
+  }
+  .hdr-label {
+    display: inline-block;
+    min-width: 28mm;
+  }
+  .right {
+    text-align: right;
+  }
+  .title {
+    text-align: center;
+    font-size: 20pt;
+    font-weight: bold;
+    margin: 4mm 0 2mm 0;
+  }
+  .rule {
+    border-top: 1px solid #000;
+    margin: 0 0 4mm 0;
+  }
+
+  table.report {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    margin-top: 1mm;
+  }
+  table.report th, table.report td {
+    border: 1px solid #000;
+    padding: 6px 6px;
+  }
+  table.report th {
+    font-weight: bold;
+    text-align: left;
+  }
+  .col-sl { width: 8%; text-align: center; }
+  .col-name { width: 48%; }
+  .col-set, .col-ach, .col-err, .col-errp { text-align: right; }
+  .col-set { width: 14%; }
+  .col-ach { width: 14%; }
+  .col-err { width: 9%; }
+  .col-errp { width: 7%; }
+
+  .num { text-align: right; }
+  .center { text-align: center; }
+
+  .total-row td {
+    font-weight: bold;
+  }
+
+  .footer {
+    margin-top: 18mm;
+    font-size: 10pt;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .batch-block { break-inside: avoid; page-break-inside: avoid; margin: 6mm 0; }
+</style>
+</head>
+<body>
+
+<div class="header-box">
+  <table class="header-grid">
+    <colgroup>
+      <col style="width:60%">
+      <col style="width:40%">
+    </colgroup>
+    <tr>
+      <td>
+        <div><span class="hdr-label">Plant name</span>: {{plant_name}}</div>
+      </td>
+      <td class="right">
+        <div>From Date: {{from_date}}&nbsp;&nbsp;&nbsp;To {{to_date}}</div>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <div><span class="hdr-label">Location</span>: {{location}}</div>
+      </td>
+      <td class="right">
+        <div>Recipe code : {{recipe_code}}</div>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <div><span class="hdr-label">Print Date</span>: {{print_date}}</div>
+      </td>
+      <td></td>
+    </tr>
+  </table>
+</div>
+
+<div class="title">Consumption report</div>
+<div class="rule"></div>
+
+<table class="report">
+  <colgroup>
+    <col class="col-sl">
+    <col class="col-name">
+    <col class="col-set">
+    <col class="col-ach">
+    <col class="col-err">
+    <col class="col-errp">
+  </colgroup>
+  <thead>
+    <tr>
+      <th class="center">Sl. No.</th>
+      <th>Material name</th>
+      <th class="col-set">Set. wt({{weights_unit}})</th>
+      <th class="col-ach">Ach. wt({{weights_unit}})</th>
+      <th class="col-err">Error({{weights_unit}})</th>
+      <th class="col-errp">Error %</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td class="center">{{sl}}</td>
+      <td>{{name}}</td>
+      <td class="num">{{set}}</td>
+      <td class="num">{{ach}}</td>
+      <td class="num">{{err}}</td>
+      <td class="num">{{errp}}</td>
+    </tr>
+  </tbody>
+  <tfoot>
+    <tr class="total-row">
+      <td colspan="2">Total</td>
+      <td class="num">{{totals_set}}</td>
+      <td class="num">{{totals_ach}}</td>
+      <td class="num">{{totals_err}}</td>
+      <td class="num">{{totals_errp}}</td>
+    </tr>
+  </tfoot>
+</table>
+
+<div class="footer">
+  <div>Indian Industrial Machines Pvt. Ltd.</div>
+  <div>Page {{page_no}} of {{page_count}}</div>
+</div>
+
+</body>
+</html>

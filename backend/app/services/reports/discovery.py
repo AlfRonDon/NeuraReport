@@ -12,14 +12,16 @@ from ..mapping.HeaderMapping import get_parent_child_info  # (still used by call
 # Re-export the centralized contract builder from auto_fill.py
 # so existing imports don't break: `from ...reports.discovery import build_or_load_contract`
 try:
-    from .auto_fill import build_or_load_contract  # type: ignore
+    from ..mapping.auto_fill import build_or_load_contract  # type: ignore
 except Exception:
-    # If auto_fill is not available for some reason, surface a clear error when called
-    def build_or_load_contract(*args, **kwargs):  # type: ignore
-        raise RuntimeError(
-            "build_or_load_contract has moved to auto_fill.py. "
-            "Ensure auto_fill.py exists and import from .auto_fill instead."
-        )
+    try:
+        from .auto_fill import build_or_load_contract  # type: ignore
+    except Exception as exc:  # pragma: no cover
+        # Surface a clear error when neither location is present
+        def build_or_load_contract(*args, **kwargs):  # type: ignore
+            raise RuntimeError(
+                "build_or_load_contract unavailable. Ensure mapping.auto_fill.build_or_load_contract exists."
+            ) from exc
 
 
 # ======================================================================

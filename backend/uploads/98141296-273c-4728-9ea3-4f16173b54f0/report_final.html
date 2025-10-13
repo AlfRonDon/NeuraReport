@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>${report_title}</title>
+<style>
+  @page { size: A4; margin: 12mm; }
+  body { font-family: "Times New Roman", serif; font-size: 11pt; color: #000; margin: 0; }
+  h1 { font-size: 20pt; margin: 6mm 0 4mm; text-align: center; font-weight: bold; }
+  .topbar { width: 100%; border-collapse: collapse; table-layout: fixed; }
+  .topbar td { vertical-align: top; padding: 0; }
+  .kv { width: 100%; border-collapse: collapse; }
+  .kv td { padding: 1mm 2mm; }
+  .kv td.label { white-space: nowrap; }
+  .printline { margin: 2mm 0 4mm; font-weight: bold; }
+  .rule { border-top: 1px solid #000; margin-top: 2mm; }
+  .batch-block { break-inside: avoid; page-break-inside: avoid; margin: 6mm 0; border: 1px solid #000; padding: 3mm; }
+  .twocol { width: 100%; border-collapse: collapse; table-layout: fixed; }
+  .twocol td { vertical-align: top; }
+  .grid { width: 100%; border-collapse: collapse; table-layout: fixed; }
+  .grid th, .grid td { border: 1px solid #000; padding: 2mm; }
+  .right { text-align: right; }
+  .center { text-align: center; }
+  .small { font-size: 10pt; }
+  .colgroup-materials col.bin { width: 8%; }
+  .colgroup-materials col.name { width: 40%; }
+  .colgroup-materials col.set { width: 12%; }
+  .colgroup-materials col.ach { width: 12%; }
+  .colgroup-materials col.err { width: 12%; }
+  .colgroup-materials col.errp { width: 8%; }
+  .colgroup-materials col.ddur { width: 8%; }
+  footer { position: fixed; left: 12mm; right: 12mm; bottom: 10mm; font-size: 10pt; }
+  footer .fwrap { display: table; width: 100%; }
+  footer .fcell { display: table-cell; vertical-align: middle; }
+  footer .center { text-align: center; }
+  footer .right { text-align: right; }
+</style>
+</head>
+<body>
+
+<table class="topbar">
+  <tr>
+    <td style="width:60%;">
+      <table class="kv">
+        <tr><td class="label">Plant name :</td><td>${plant}</td></tr>
+        <tr><td class="label">Location :</td><td>${location}</td></tr>
+      </table>
+    </td>
+    <td style="width:40%;">
+      <table class="kv" style="float:right;">
+        <tr><td class="label">Date :</td><td class="right">${report_date}</td></tr>
+        <tr><td class="label">Recipe :</td><td class="right">${report_recipe}</td></tr>
+        <tr><td class="label">Shift No :</td><td class="right">${report_shift}</td></tr>
+      </table>
+    </td>
+  </tr>
+</table>
+
+<h1>${report_title}</h1>
+
+<div class="printline">Print Date &nbsp;: &nbsp;${print_date}</div>
+
+<!-- BEGIN:BLOCK_REPEAT batches -->
+<section class="batch-block">
+
+  <table class="twocol">
+    <tr>
+      <td style="width:60%; padding-right:3mm;">
+        <table class="kv">
+          <tr><td class="label">Batch No</td><td>:</td><td>${batch_no}</td></tr>
+          <tr><td class="label">Batch Date</td><td>:</td><td>${batch_date}</td></tr>
+          <tr><td class="label">Shift No</td><td>:</td><td>${shift_no}</td></tr>
+          <tr><td class="label">Recipe Name</td><td>:</td><td>${recipe_name}</td></tr>
+          <tr><td class="label">Recipe Code</td><td>:</td><td>${recipe_code}</td></tr>
+          <tr><td class="label">Recipe No</td><td>:</td><td>${recipe_no}</td></tr>
+        </table>
+      </td>
+      <td style="width:40%; padding-left:3mm;">
+        <table class="grid small">
+          <colgroup>
+            <col style="width:22%;">
+            <col style="width:42%;">
+            <col style="width:36%;">
+          </colgroup>
+          <thead>
+            <tr>
+              <th class="center">Scale</th>
+              <th class="center">Start time</th>
+              <th class="center">Dur(sec)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="center">Main1</td>
+              <td class="center">${main1_start}</td>
+              <td class="right">${main1_dur}</td>
+            </tr>
+            <tr>
+              <td class="center">Main2</td>
+              <td class="center">${main2_start}</td>
+              <td class="right">${main2_dur}</td>
+            </tr>
+          </tbody>
+        </table>
+      </td>
+    </tr>
+  </table>
+
+  <div style="height:3mm;"></div>
+
+  <table class="grid small">
+    <colgroup class="colgroup-materials">
+      <col class="bin"><col class="name"><col class="set"><col class="ach"><col class="err"><col class="errp"><col class="ddur">
+    </colgroup>
+    <thead>
+      <tr>
+        <th class="center">Bin No</th>
+        <th class="center">Material Name</th>
+        <th class="center">Set wt(Kg)</th>
+        <th class="center">Ach wt(Kg)</th>
+        <th class="center">Error(Kg)</th>
+        <th class="center">Error %</th>
+        <th class="center">Dosine Dur (sec)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="right">${sl}</td>
+        <td>${name}</td>
+        <td class="right">${set}</td>
+        <td class="right">${ach}</td>
+        <td class="right">${err}</td>
+        <td class="right">${errp}</td>
+        <td class="right"></td>
+      </tr>
+    </tbody>
+    <tfoot>
+      <tr>
+        <th class="right" colspan="2">Total :</th>
+        <th class="right">${tot_set}</th>
+        <th class="right">${tot_ach}</th>
+        <th class="right">${tot_err}</th>
+        <th class="right">${tot_errp}</th>
+        <th class="right">${tot_dur_sec}</th>
+      </tr>
+    </tfoot>
+  </table>
+
+</section>
+<!-- END:BLOCK_REPEAT -->
+
+<footer>
+  <div class="fwrap">
+    <div class="fcell">Indian Industrial Machines Pvt. Ltd.</div>
+    <div class="fcell center">Page ${page_no} of ${page_count}</div>
+    <div class="fcell right"></div>
+  </div>
+</footer>
+
+</body>
+</html>

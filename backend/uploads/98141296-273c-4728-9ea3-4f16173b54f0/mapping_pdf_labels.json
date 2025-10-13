@@ -1,0 +1,112 @@
+[
+  {
+    "header": "Ach wt(Kg)",
+    "placeholder": "{Ach wt(Kg)}",
+    "mapping": "records.ach_wt_kg"
+  },
+  {
+    "header": "Batch Date",
+    "placeholder": "{Batch Date}",
+    "mapping": "UNRESOLVED"
+  },
+  {
+    "header": "Batch No",
+    "placeholder": "{Batch No}",
+    "mapping": "UNRESOLVED"
+  },
+  {
+    "header": "Bin No",
+    "placeholder": "{Bin No}",
+    "mapping": "records.sl_no"
+  },
+  {
+    "header": "Date",
+    "placeholder": "{Date}",
+    "mapping": "records.report_date"
+  },
+  {
+    "header": "Dosine Dur (sec)",
+    "placeholder": "{Dosine Dur (sec)}",
+    "mapping": "UNRESOLVED"
+  },
+  {
+    "header": "Dur(sec)",
+    "placeholder": "{Dur(sec)}",
+    "mapping": "UNRESOLVED"
+  },
+  {
+    "header": "Error %",
+    "placeholder": "{Error %}",
+    "mapping": "records.error_pct"
+  },
+  {
+    "header": "Error(Kg)",
+    "placeholder": "{Error(Kg)}",
+    "mapping": "records.error_kg"
+  },
+  {
+    "header": "Location",
+    "placeholder": "{Location}",
+    "mapping": "UNRESOLVED"
+  },
+  {
+    "header": "Material Name",
+    "placeholder": "{Material Name}",
+    "mapping": "records.material_name"
+  },
+  {
+    "header": "Plant name",
+    "placeholder": "{Plant name}",
+    "mapping": "UNRESOLVED"
+  },
+  {
+    "header": "Print Date",
+    "placeholder": "{Print Date}",
+    "mapping": "UNRESOLVED"
+  },
+  {
+    "header": "Recipe",
+    "placeholder": "{Recipe}",
+    "mapping": "UNRESOLVED"
+  },
+  {
+    "header": "Recipe Code",
+    "placeholder": "{Recipe Code}",
+    "mapping": "UNRESOLVED"
+  },
+  {
+    "header": "Recipe Name",
+    "placeholder": "{Recipe Name}",
+    "mapping": "UNRESOLVED"
+  },
+  {
+    "header": "Recipe No",
+    "placeholder": "{Recipe No}",
+    "mapping": "UNRESOLVED"
+  },
+  {
+    "header": "Scale",
+    "placeholder": "{Scale}",
+    "mapping": "UNRESOLVED"
+  },
+  {
+    "header": "Set wt(Kg)",
+    "placeholder": "{Set wt(Kg)}",
+    "mapping": "records.set_wt_kg"
+  },
+  {
+    "header": "Shift No",
+    "placeholder": "{Shift No}",
+    "mapping": "UNRESOLVED"
+  },
+  {
+    "header": "Start time",
+    "placeholder": "{Start time}",
+    "mapping": "UNRESOLVED"
+  },
+  {
+    "header": "Total",
+    "placeholder": "{Total}",
+    "mapping": "UNRESOLVED"
+  }
+]
