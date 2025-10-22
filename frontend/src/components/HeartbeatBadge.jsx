@@ -30,8 +30,8 @@ export default function HeartbeatBadge({
   }, [status])
 
   const text = label || (
-    status === 'testing' ? 'Pinging…' :
-    status === 'healthy' ? (latencyMs != null ? `Healthy • ${Math.round(latencyMs)}ms` : 'Healthy') :
+    status === 'testing' ? 'Pinging...' :
+    status === 'healthy' ? (latencyMs != null ? `Healthy (${Math.round(latencyMs)} ms)` : 'Healthy') :
     status === 'unreachable' ? 'Unreachable' : 'Unknown'
   )
 

@@ -23,6 +23,7 @@ const grey = {
 
 const borderColor = alpha(grey[300], 0.9)
 const focusShadow = `0 0 0 3px ${alpha(primaryMain, 0.24)}`
+const subtleGradient = 'linear-gradient(180deg, rgba(79,70,229,0.05) 0%, rgba(14,165,233,0.04) 24%, rgba(255,255,255,0) 70%)'
 
 const theme = createTheme({
   palette: {
@@ -144,14 +145,21 @@ const theme = createTheme({
         },
         body: {
           backgroundColor: grey[50],
+          backgroundImage: subtleGradient,
           color: grey[900],
           minWidth: 0,
           overflowWrap: 'anywhere',
+          textRendering: 'optimizeLegibility',
+          WebkitFontSmoothing: 'antialiased',
+          MozOsxFontSmoothing: 'grayscale',
         },
         '#root': {
           minHeight: '100vh',
           minWidth: 0,
           width: '100%',
+        },
+        '*, *::before, *::after': {
+          boxSizing: 'border-box',
         },
         'p, h1, h2, h3, h4, h5, h6, span, li, dd, dt': {
           overflowWrap: 'anywhere',
@@ -175,6 +183,33 @@ const theme = createTheme({
           maxWidth: '100%',
           whiteSpace: 'pre-wrap',
           wordBreak: 'break-word',
+        },
+        '::selection': {
+          backgroundColor: alpha(primaryMain, 0.18),
+          color: grey[900],
+        },
+        '::-webkit-scrollbar': {
+          width: 10,
+          height: 10,
+        },
+        '::-webkit-scrollbar-thumb': {
+          backgroundColor: alpha(grey[500], 0.4),
+          borderRadius: 999,
+        },
+        '::-webkit-scrollbar-thumb:hover': {
+          backgroundColor: alpha(grey[500], 0.6),
+        },
+      },
+    },
+    MuiPaper: {
+      styleOverrides: {
+        root: {
+          backgroundImage: 'none',
+        },
+        outlined: {
+          borderColor,
+          backgroundImage: subtleGradient,
+          boxShadow: '0 8px 22px rgba(15, 23, 42, 0.04)',
         },
       },
     },

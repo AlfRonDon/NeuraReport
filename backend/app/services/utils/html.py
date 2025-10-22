@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from html import escape
 from html.parser import HTMLParser
 from typing import Iterable
@@ -52,6 +53,8 @@ ALLOWED_TAGS = {
 
 SELF_CLOSING = {"br", "hr", "img", "meta", "link", "col"}
 
+_REPEAT_COMMENT_RE = re.compile(r"^\s*(BEGIN:BLOCK_REPEAT\b.*|END:BLOCK_REPEAT\b.*)\s*$", re.IGNORECASE)
+
 ALLOWED_ATTRS = {
     "*": {
         "class",
@@ -67,6 +70,7 @@ ALLOWED_ATTRS = {
         "data-index",
         "data-name",
         "data-value",
+        "data-label",
     },
     "img": {"src", "alt"},
     "meta": {"charset"},
@@ -116,8 +120,8 @@ class _Sanitizer(HTMLParser):
         self._output.append(f"&#{name};")
 
     def handle_comment(self, data: str) -> None:
-        # comments stripped
-        return
+        if _REPEAT_COMMENT_RE.match(data):
+            self._output.append(f"<!--{data}-->")
 
     def get_output(self) -> str:
         return "".join(self._output)

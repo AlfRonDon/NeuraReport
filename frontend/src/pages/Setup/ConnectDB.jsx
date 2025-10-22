@@ -114,25 +114,21 @@ const SUPPORTED_DB_TYPES = Object.keys(DB_CONFIG)
 const DB_TYPE_META = {
   sqlite: {
     label: DB_CONFIG.sqlite.label,
-    description: 'Lightweight file-based database',
     icon: StorageIcon,
     accent: '#7C3AED',
   },
   postgres: {
     label: DB_CONFIG.postgres.label,
-    description: 'Advanced open-source relational database',
     icon: DnsIcon,
     accent: '#2563EB',
   },
   mysql: {
     label: DB_CONFIG.mysql.label,
-    description: 'Popular MySQL/MariaDB compatibility',
     icon: LanIcon,
     accent: '#0EA5E9',
   },
   mssql: {
     label: DB_CONFIG.mssql.label,
-    description: 'Microsoft SQL Server driver support',
     icon: HubIcon,
     accent: '#DB2777',
   },
@@ -157,6 +153,17 @@ const computeCurrentSignature = (values = {}) => JSON.stringify({
   driver: trimString(values.driver),
 })
 
+const DEFAULT_FORM_VALUES = {
+  name: '',
+  db_type: 'sqlite',
+  host: '',
+  port: '',
+  db_name: '',
+  username: '',
+  password: '',
+  ssl: false,
+}
+
 
 const CONTROL_HEIGHT = 44
 const CONTROL_RADIUS = 12
@@ -179,8 +186,8 @@ const dbTypeToggleGroupSx = (theme) => ({
 const buildDbTypeButtonSx = (accent) => (theme) => {
   const accentColor = accent || theme.palette.primary.main
   return {
-    justifyContent: 'flex-start',
-    alignItems: 'flex-start',
+    justifyContent: 'center',
+    alignItems: 'center',
     textTransform: 'none',
     borderRadius: 12,
     border: `1px solid ${alpha(theme.palette.divider, 0.75)}`,
@@ -209,7 +216,8 @@ const buildDbTypeButtonSx = (accent) => (theme) => {
       display: 'flex',
       flexDirection: 'column',
       gap: theme.spacing(0.25),
-      alignItems: 'flex-start',
+      alignItems: 'center',
+      textAlign: 'center',
       minWidth: 0,
     },
     '&:hover': {
@@ -421,7 +429,7 @@ const SelectField = ({
             const accentColor = selectedOption?.accent
             return (
                 <Box sx={{ position: 'relative', width: '100%' }}>
-                  <Stack direction="row" spacing={0.6} alignItems="center" sx={{ minWidth: 0, ml: 0.2 }}>
+                  <Stack direction="row" spacing={0.6} alignItems="center" sx={{ minWidth: 0, ml: 0.2, justifyContent: 'center' }}>
                     {IconComponent ? (
                     <Box
                       sx={(theme) => ({
@@ -446,41 +454,23 @@ const SelectField = ({
                       minWidth: 0,
                       overflow: 'hidden',
                     }}>
-                      <Stack
-                        direction="row"
-                        spacing={0.6}
-                        alignItems="center"
-                        sx={{ minWidth: 0 }}
-                      >
-                      <Typography
-                        variant="subtitle2"
-                        component="span"
-                        sx={(theme) => ({
-                          fontWeight: theme.typography.fontWeightSemibold,
-                          color: theme.palette.text.primary,
-                          lineHeight: 1.2,
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                          flexShrink: 0,
-                        })}
-                      >
-                        {selectedOption ? selectedOption.label : 'Choose a database'}
-                      </Typography>
-                      <Typography
-                        variant="caption"
-                        component="span"
-                        color="text.secondary"
-                        sx={{
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                          minWidth: 0,
-                        }}
-                      >
-                        {selectedOption?.description || 'Select the engine to connect'}
-                      </Typography>
-                    </Stack>
+                    <Typography
+                      variant="subtitle2"
+                      component="span"
+                      sx={(theme) => ({
+                        fontWeight: theme.typography.fontWeightSemibold,
+                        color: theme.palette.text.primary,
+                        lineHeight: 1.2,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        flexShrink: 0,
+                        minWidth: 0,
+                        textAlign: 'center',
+                      })}
+                    >
+                      {selectedOption ? selectedOption.label : 'Choose a database'}
+                    </Typography>
                   </Box>
                 </Stack>
                 <Box
@@ -509,6 +499,7 @@ const SelectField = ({
                 sx={(theme) => ({
                   display: 'flex',
                   alignItems: 'center',
+                  justifyContent: 'center',
                   gap: 1.1,
                   py: 1.15,
                   px: 1.75,
@@ -545,42 +536,23 @@ const SelectField = ({
                     <IconComponent fontSize="small" />
                   </Box>
                 ) : null}
-                <Stack
-                  direction="row"
-                  spacing={0.55}
-                  alignItems="center"
-                  sx={{ minWidth: 0, flex: 1 }}
+                <Typography
+                  variant="subtitle2"
+                  component="span"
+                  sx={(theme) => ({
+                    fontWeight: theme.typography.fontWeightSemibold,
+                    lineHeight: 1.2,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                    flexShrink: 0,
+                    minWidth: 0,
+                    flex: 1,
+                    textAlign: 'center',
+                  })}
                 >
-                  <Typography
-                    variant="subtitle2"
-                    component="span"
-                    sx={(theme) => ({
-                      fontWeight: theme.typography.fontWeightSemibold,
-                      lineHeight: 1.2,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                      flexShrink: 0,
-                    })}
-                  >
-                    {opt.label}
-                  </Typography>
-                  {opt.description ? (
-                    <Typography
-                      variant="caption"
-                      component="span"
-                      color="text.secondary"
-                      sx={{
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                        minWidth: 0,
-                      }}
-                    >
-                      {opt.description}
-                    </Typography>
-                  ) : null}
-                </Stack>
+                  {opt.label}
+                </Typography>
               </MenuItem>
             )
           })}
@@ -1106,7 +1078,7 @@ const {
 } = useForm({
     mode: 'onChange',
     resolver: yupResolver(schema),
-    defaultValues: { name: '', db_type: 'sqlite', host: '', port: '', db_name: '', username: '', password: '', ssl: false },
+    defaultValues: { ...DEFAULT_FORM_VALUES },
   })
 
   useEffect(() => {
@@ -1651,8 +1623,9 @@ const handleSave = async () => {
         ssl: persisted.ssl ?? false,
         lastCheckedAt: now,
       })
-      testedSignatureRef.current = currentSignature
-      setCanSave(true)
+      testedSignatureRef.current = null
+      reset({ ...DEFAULT_FORM_VALUES })
+      setCanSave(false)
       setSetupStep('generate')
       toast.show('Connection saved', 'success')
     } catch (err) {
@@ -1766,21 +1739,12 @@ const lastHeartbeatLabel = useMemo(() => {
                             <Typography variant="subtitle2" sx={{ fontWeight: 600 }} noWrap>
                               {option.label}
                             </Typography>
-                            {option.description ? (
-                              <Typography
-                                variant="caption"
-                                color="text.secondary"
-                                sx={{ lineHeight: 1.3 }}
-                              >
-                                {option.description}
-                              </Typography>
-                            ) : null}
                           </Box>
                         </ToggleButton>
                       )
                     })}
                   </ToggleButtonGroup>
-                  <FormHelperText sx={{ mt: 1 }}>
+                  <FormHelperText sx={{ mt: 1, textAlign: 'center' }}>
                     {errors.db_type?.message || 'Choose the database engine you are connecting to'}
                   </FormHelperText>
                 </FormControl>

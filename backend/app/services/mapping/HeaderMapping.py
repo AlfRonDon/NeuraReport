@@ -1,21 +1,19 @@
 ﻿from __future__ import annotations
 
-import json
 import logging
-import re
 import sqlite3
 from collections import defaultdict
 from pathlib import Path
-from typing import Dict, Iterable, Sequence
+from typing import Dict, Iterable
 
-from ..templates.TemplateVerify import MODEL, get_openai_client
-from ..utils import call_chat_completion, load_prompt
 
 logger = logging.getLogger("neura.mapping")
 
 UNRESOLVED = "UNRESOLVED"
 INPUT_SAMPLE = "INPUT_SAMPLE"
-UNRESOLVED_CHOICES = {UNRESOLVED, INPUT_SAMPLE}
+REPORT_SELECTED_VALUE = "LATER_SELECTED"
+REPORT_SELECTED_DISPLAY = "To Be Selected in report generator"
+UNRESOLVED_CHOICES = {UNRESOLVED, INPUT_SAMPLE, REPORT_SELECTED_VALUE}
 
 
 def get_parent_child_info(db_path: Path) -> Dict[str, object]:
@@ -89,65 +87,6 @@ def get_parent_child_info(db_path: Path) -> Dict[str, object]:
         "parent_columns": parent_cols,
         "common_names": common,
     }
-
-
-# add near the imports
-_HTML_STRIP_RE = re.compile(
-    r"(?is)<!--.*?-->|<script\b[^>]*>.*?</script>|<style\b[^>]*>.*?</style>"
-)
-
-def _sanitize_html_for_llm(html_text: str) -> str:
-    text = _HTML_STRIP_RE.sub("", html_text)
-    # collapse long whitespace
-    text = re.sub(r"[ \t]{2,}", " ", text)
-    text = re.sub(r"\n{3,}", "\n\n", text)
-    return text.strip()
-
-
-def llm_pick_with_chat_completions_full_html(
-    full_html: str,
-    catalog: Sequence[str],
-    image_contents: Iterable[dict] | None = None,
-) -> Dict[str, str]:
-    """Ask the LLM to map headers in the full HTML (not a scoped batch block)."""
-    catalog_list = list(catalog)
-    html_for_llm = _sanitize_html_for_llm(full_html)
-    catalog_json = json.dumps(catalog_list, ensure_ascii=False)
-
-    prompt = load_prompt(
-        "mapping_full_html",
-        replacements={
-            "{html_for_llm}": html_for_llm,
-            "{json.dumps(catalog_list, ensure_ascii=False)}": catalog_json,
-        },
-    )
-
-    user_content = [{"type": "text", "text": prompt}]
-    if image_contents:
-        user_content.extend(image_contents)
-
-    client = get_openai_client()
-    response = call_chat_completion(
-        client,
-        model=MODEL,
-        messages=[{"role": "user", "content": user_content}],
-        description="mapping_full_html",
-    )
-    raw_text = (response.choices[0].message.content or "").strip()
-
-    try:
-        mapping = json.loads(raw_text)
-        if not isinstance(mapping, dict):
-            raise ValueError("Expected a JSON object")
-    except Exception:
-        fallback = re.search(r"\{[\s\S]*\}", raw_text)
-        if not fallback:
-            raise RuntimeError("Could not parse JSON mapping from model output.")
-        mapping = json.loads(fallback.group(0))
-        if not isinstance(mapping, dict):
-            raise RuntimeError("Parsed JSON is not an object.")
-
-    return {str(k): str(v) for k, v in mapping.items()}
 
 
 def _choice_key(choice: str) -> str:

@@ -1,8 +1,9 @@
 import Grid from '@mui/material/Grid2'
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   Box, Typography, Stack, Button, TextField, Chip, Divider, LinearProgress,
-  Card, CardActionArea, CardContent, Checkbox, Autocomplete, Tooltip, Dialog, DialogContent, DialogTitle
+  Card, CardActionArea, CardContent, Autocomplete, Tooltip, Dialog, DialogContent, DialogTitle,
+  CircularProgress, Checkbox, Alert,
 } from '@mui/material'
 import { Stepper, Step, StepLabel } from '@mui/material'
 import SearchIcon from '@mui/icons-material/Search'
@@ -15,8 +16,8 @@ import CheckRoundedIcon from '@mui/icons-material/CheckRounded'
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker'
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
-import { useQuery } from '@tanstack/react-query'
-import { isMock, API_BASE, withBase, listApprovedTemplates } from '../../api/client'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { isMock, API_BASE, withBase, listApprovedTemplates, deleteTemplate as deleteTemplateRequest, fetchTemplateKeyOptions } from '../../api/client'
 import * as mock from '../../api/mock'
 import { savePersistedCache } from '../../hooks/useBootstrapState.js'
 import { useAppStore } from '../../store/useAppStore'
@@ -24,8 +25,13 @@ import { useToast } from '../../components/ToastProvider.jsx'
 import Surface from '../../components/layout/Surface.jsx'
 import ScaledIframePreview from '../../components/ScaledIframePreview.jsx'
 import { resolveTemplatePreviewUrl, resolveTemplateThumbnailUrl } from '../../utils/preview'
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
+import EmptyState from '../../components/feedback/EmptyState.jsx'
+import LoadingState from '../../components/feedback/LoadingState.jsx'
 
 /* ----------------------- helpers ----------------------- */
+const ALL_OPTION = '__ALL__'
+
 const toSqlFromDayjs = (d) => (d && d.isValid && d.isValid())
   ? d.format('YYYY-MM-DD HH:mm:00')
   : ''
@@ -45,8 +51,45 @@ const buildDownloadUrl = (url) => {
   }
 }
 
-// 🔻 backend: /reports/discover
-async function discoverReportsAPI({ templateId, startDate, endDate, connectionId }) {
+const addKeyValues = (body, keyValues) => {
+  if (!keyValues || typeof keyValues !== 'object') return body
+  const cleaned = {}
+  Object.entries(keyValues).forEach(([token, rawValue]) => {
+    const name = typeof token === 'string' ? token.trim() : ''
+    if (!name) return
+    let values = []
+    if (Array.isArray(rawValue)) {
+      const seen = new Set()
+      rawValue.forEach((entry) => {
+        if (entry === ALL_OPTION) return
+        const text = entry == null ? '' : String(entry).trim()
+        if (!text || seen.has(text)) return
+        seen.add(text)
+        values.push(text)
+      })
+    } else if (rawValue != null) {
+      const text = String(rawValue).trim()
+      if (text && text !== ALL_OPTION) {
+        values = [text]
+      }
+    }
+    if (!values.length) return
+    cleaned[name] = values.length === 1 ? values[0] : values
+  })
+  if (!Object.keys(cleaned).length) return body
+  return { ...body, key_values: cleaned }
+}
+
+const formatTokenLabel = (token) => {
+  if (!token) return ''
+  return token
+    .replace(/[_\-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/(^|\s)([a-z])/g, (match, prefix, char) => `${prefix}${char.toUpperCase()}`)
+}
+
+async function discoverReportsAPI({ templateId, startDate, endDate, connectionId, keyValues }) {
   if (!API_BASE) throw new Error('VITE_API_BASE_URL is not set')
   const base = {
     template_id: templateId,
@@ -56,14 +99,14 @@ async function discoverReportsAPI({ templateId, startDate, endDate, connectionId
   const res = await fetch(`${API_BASE}/reports/discover`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(includeConn(base, connectionId)),
+    body: JSON.stringify(addKeyValues(includeConn(base, connectionId), keyValues)),
   })
   if (!res.ok) throw new Error(await res.text().catch(()=>`Discovery failed (${res.status})`))
   return res.json()
 }
 
 // 🔻 backend: /reports/run
-async function runReportAPI({ templateId, startDate, endDate, batchIds, connectionId }) {
+async function runReportAPI({ templateId, startDate, endDate, batchIds, connectionId, keyValues }) {
   if (!API_BASE) throw new Error('VITE_API_BASE_URL is not set')
   const base = {
     template_id: templateId,
@@ -74,7 +117,7 @@ async function runReportAPI({ templateId, startDate, endDate, batchIds, connecti
   const res = await fetch(`${API_BASE}/reports/run`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(includeConn(base, connectionId)),
+    body: JSON.stringify(addKeyValues(includeConn(base, connectionId), keyValues)),
   })
   if (!res.ok) throw new Error(await res.text().catch(()=>`Run failed (${res.status})`))
   return res.json()
@@ -128,8 +171,11 @@ function StepIndicator(props) {
 }
 
 function TemplatePicker({ selected, onToggle, tagFilter, setTagFilter }) {
-  const { templates, setTemplates } = useAppStore()
-  const { data } = useQuery({
+  const { templates, setTemplates, removeTemplate, setSetupNav } = useAppStore()
+  const toast = useToast()
+  const queryClient = useQueryClient()
+  const [deleting, setDeleting] = useState(null)
+  const { data, isLoading, isFetching } = useQuery({
     queryKey: ['templates'],
     queryFn: () => (isMock ? mock.listTemplates() : listApprovedTemplates()),
   })
@@ -156,6 +202,193 @@ function TemplatePicker({ selected, onToggle, tagFilter, setTagFilter }) {
     const nq = nameQuery.trim().toLowerCase()
     return nq ? tagFiltered.filter((t) => (t.name || '').toLowerCase().includes(nq)) : tagFiltered
   }, [approved, tagFilter, nameQuery])
+  const loadingTemplates = !templates.length && (isLoading || isFetching)
+  const noApprovedTemplates = !loadingTemplates && approved.length === 0
+  const filtersActive = tagFilter.length > 0 || Boolean(nameQuery.trim())
+  const clearFilters = useCallback(() => {
+    setTagFilter([])
+    setNameQuery('')
+  }, [setTagFilter, setNameQuery])
+  const renderTemplateCards = () => (
+    <Grid container spacing={2}>
+      {filtered.map((t) => {
+        const selectedState = selected.includes(t.id)
+        const type = t.sourceType?.toUpperCase() || 'PDF'
+        const previewInfo = resolveTemplatePreviewUrl(t)
+        const thumbnailInfo = resolveTemplateThumbnailUrl(t)
+        const htmlPreview = previewInfo.url
+        const imagePreview = !htmlPreview ? thumbnailInfo.url : null
+        const boxClickable = Boolean(htmlPreview || imagePreview)
+        return (
+          <Grid size={{ xs: 12, sm: 6, md: 6 }} key={t.id} sx={{ minWidth: 0 }}>
+            <Card
+              variant="outlined"
+              sx={[
+                {
+                  position: 'relative',
+                  overflow: 'hidden',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  minHeight: 280,
+                  transition: 'border-color 160ms ease, box-shadow 160ms ease',
+                },
+                selectedState && {
+                  borderColor: 'primary.main',
+                  boxShadow: '0 0 0 1px rgba(79,70,229,0.28)',
+                },
+              ]}
+            >
+              <CardActionArea component="div" onClick={() => onToggle(t.id)} sx={{ height: '100%' }}>
+                <CardContent sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, height: '100%', flexGrow: 1 }}>
+                  <Box
+                    sx={[
+                      previewFrameSx,
+                      boxClickable && { cursor: 'pointer' },
+                    ]}
+                    onClick={(e) => {
+                      if (htmlPreview) {
+                        handleThumbClick(e, { url: htmlPreview, key: previewInfo.key, type: 'html' })
+                      } else if (imagePreview) {
+                        handleThumbClick(e, { url: imagePreview, key: imagePreview, type: 'image' })
+                      }
+                    }}
+                  >
+                    {htmlPreview ? (
+                      <ScaledIframePreview
+                        key={previewInfo.key}
+                        src={htmlPreview}
+                        title={`${t.name} preview`}
+                        sx={{ width: '100%', height: '100%' }}
+                        frameAspectRatio="210 / 297"
+                      />
+                    ) : imagePreview ? (
+                      <img
+                        src={imagePreview}
+                        alt={`${t.name} preview`}
+                        loading="lazy"
+                        style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block', cursor: 'inherit' }}
+                      />
+                    ) : (
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        sx={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                      >
+                        No preview yet
+                      </Typography>
+                    )}
+                  </Box>
+
+                  {!!t.description && (
+                    <Typography variant="caption" color="text.secondary" sx={{ display: '-webkit-box', WebKitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                      {t.description}
+                    </Typography>
+                  )}
+                  <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap' }}>
+                    {(t.tags || []).slice(0, 4).map((tag) => (
+                      <Chip key={tag} label={tag} size="small" />
+                    ))}
+                    {!!(t.tags || []).slice(4).length && <Chip size="small" label={`+${(t.tags || []).length - 4}`} variant="outlined" />}
+                  </Stack>
+                  <Divider sx={{ mt: 'auto', my: 1 }} />
+                  <Stack spacing={1} alignItems="flex-start">
+                    <Typography variant="subtitle1" sx={{ fontWeight: 700, lineHeight: 1.2 }} noWrap>
+                      {t.name}
+                    </Typography>
+                    <Stack
+                      direction="row"
+                      spacing={1}
+                      alignItems="center"
+                      sx={{ flexWrap: 'wrap', rowGap: 1 }}
+                    >
+                      <Chip size="small" label={type} variant="outlined" />
+                      <Button
+                        size="small"
+                        variant={selectedState ? 'contained' : 'outlined'}
+                        color="primary"
+                        onClick={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          onToggle(t.id)
+                        }}
+                        onMouseDown={(e) => e.stopPropagation()}
+                        aria-label={`${selectedState ? 'Deselect' : 'Select'} ${t.name || 'template'}`}
+                      >
+                        {selectedState ? 'Selected' : 'Select'}
+                      </Button>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        color="error"
+                        startIcon={
+                          deleting === t.id ? (
+                            <CircularProgress size={16} color="inherit" />
+                          ) : (
+                            <DeleteOutlineIcon fontSize="small" />
+                          )
+                        }
+                        onClick={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          handleDeleteTemplate(t)
+                        }}
+                        onMouseDown={(e) => e.stopPropagation()}
+                        disabled={deleting === t.id}
+                        aria-label={`Delete ${t.name || 'template'}`}
+                      >
+                        Delete
+                      </Button>
+                    </Stack>
+
+                  </Stack>
+                </CardContent>
+              </CardActionArea>
+            </Card>
+          </Grid>
+        )
+      })}
+    </Grid>
+  )
+  let templateListContent
+  if (loadingTemplates) {
+    templateListContent = (
+      <Box sx={{ py: 6, display: 'flex', justifyContent: 'center' }}>
+        <LoadingState
+          label="Loading templates..."
+          description="Fetching approved templates from the server."
+        />
+      </Box>
+    )
+  } else if (noApprovedTemplates) {
+    templateListContent = (
+      <EmptyState
+        size="large"
+        title="No approved templates yet"
+        description="Upload and verify a template to make it available for report runs."
+        action={
+          <Button variant="contained" onClick={() => setSetupNav('generate')}>
+            Upload template
+          </Button>
+        }
+      />
+    )
+  } else if (!filtered.length) {
+    templateListContent = (
+      <EmptyState
+        title="No templates match these filters"
+        description="Adjust your filters or clear them to see all approved templates."
+        action={
+          filtersActive ? (
+            <Button variant="outlined" size="small" onClick={clearFilters}>
+              Clear filters
+            </Button>
+          ) : null
+        }
+      />
+    )
+  } else {
+    templateListContent = renderTemplateCards()
+  }
 
   const handleThumbClick = (event, payload) => {
     event.stopPropagation()
@@ -174,9 +407,43 @@ function TemplatePicker({ selected, onToggle, tagFilter, setTagFilter }) {
     setPreviewKey(null)
   }
 
+  const handleDeleteTemplate = async (template) => {
+    if (!template?.id) return
+    const name = template.name || template.id
+    if (typeof window !== 'undefined') {
+      const confirmed = window.confirm(`Delete template "${name}"? This action cannot be undone.`)
+      if (!confirmed) return
+    }
+    setDeleting(template.id)
+    try {
+      await deleteTemplateRequest(template.id)
+      removeTemplate(template.id)
+      if (selected.includes(template.id)) {
+        onToggle(template.id)
+      }
+      queryClient.setQueryData(['templates'], (prev) => {
+        if (Array.isArray(prev)) {
+          return prev.filter((tpl) => tpl?.id !== template.id)
+        }
+        return prev
+      })
+      const state = useAppStore.getState()
+      savePersistedCache({
+        connections: state.savedConnections,
+        templates: state.templates,
+        lastUsed: state.lastUsed,
+      })
+      toast.show(`Deleted "${name}"`, 'success')
+    } catch (err) {
+      toast.show(String(err), 'error')
+    } finally {
+      setDeleting(null)
+    }
+  }
+
   return (
     <Surface sx={surfaceStackSx}>
-      <Typography variant="h6">Select Template</Typography>
+      <Typography variant="h6">Select Templates</Typography>
       <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
         <Autocomplete
           multiple
@@ -217,9 +484,8 @@ function TemplatePicker({ selected, onToggle, tagFilter, setTagFilter }) {
                   },
                 ]}
               >
-                <Checkbox checked={selectedState} onChange={() => onToggle(t.id)} sx={{ position: 'absolute', top: 12, left: 12, zIndex: 1 }} aria-label={`Select ${t.name}`} />
-                <CardActionArea onClick={() => onToggle(t.id)} sx={{ height: '100%' }}>
-                  <CardContent sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, height: '100%', flexGrow: 1, justifyContent: 'space-between' }}>
+                <CardActionArea component="div" onClick={() => onToggle(t.id)} sx={{ height: '100%' }}>
+                  <CardContent sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, height: '100%', flexGrow: 1 }}>
                     {/* Thumbnail preview box: prefer HTML preview when available */}
                     <Box
                       sx={[
@@ -240,6 +506,7 @@ function TemplatePicker({ selected, onToggle, tagFilter, setTagFilter }) {
                           src={htmlPreview}
                           title={`${t.name} preview`}
                           sx={{ width: '100%', height: '100%' }}
+                          frameAspectRatio="210 / 297"
                         />
                       ) : imagePreview ? (
                         <img
@@ -259,7 +526,6 @@ function TemplatePicker({ selected, onToggle, tagFilter, setTagFilter }) {
                       )}
                     </Box>
 
-                    <Typography variant="subtitle1" sx={{ fontWeight: 700, lineHeight: 1.2 }} noWrap>{t.name}</Typography>
                     {!!t.description && (
                       <Typography variant="caption" color="text.secondary" sx={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                         {t.description}
@@ -271,14 +537,62 @@ function TemplatePicker({ selected, onToggle, tagFilter, setTagFilter }) {
                       ))}
                       {!!(t.tags || []).slice(4).length && <Chip size="small" label={`+${(t.tags || []).length - 4}`} variant="outlined" />}
                     </Stack>
+                    <Divider sx={{ mt: 'auto', my: 1 }} />
+                    <Stack spacing={1} alignItems="flex-start">
+                      <Typography variant="subtitle1" sx={{ fontWeight: 700, lineHeight: 1.2 }} noWrap>
+                        {t.name}
+                      </Typography>
+                      <Stack
+                        direction="row"
+                        spacing={1}
+                        alignItems="center"
+                        sx={{ flexWrap: 'wrap', rowGap: 1 }}
+                      >
+                        <Chip size="small" label={type} variant="outlined" />
+                        <Button
+                          size="small"
+                          variant={selectedState ? 'contained' : 'outlined'}
+                          color="primary"
+                          onClick={(e) => {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            onToggle(t.id)
+                          }}
+                          onMouseDown={(e) => e.stopPropagation()}
+                          aria-label={`${selectedState ? 'Deselect' : 'Select'} ${t.name || 'template'}`}
+                        >
+                          {selectedState ? 'Selected' : 'Select'}
+                        </Button>
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          color="error"
+                          startIcon={
+                            deleting === t.id ? (
+                              <CircularProgress size={16} color="inherit" />
+                            ) : (
+                              <DeleteOutlineIcon fontSize="small" />
+                            )
+                          }
+                          onClick={(e) => {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            handleDeleteTemplate(t)
+                          }}
+                          onMouseDown={(e) => e.stopPropagation()}
+                          disabled={deleting === t.id}
+                          aria-label={`Delete ${t.name || 'template'}`}
+                        >
+                          Delete
+                        </Button>
+                      </Stack>
+
+                    </Stack>
                   </CardContent>
                 </CardActionArea>
-                <Box sx={{ position: 'absolute', top: 12, right: 12, display: 'flex', gap: 1, alignItems: 'center' }}>
-                  <Chip size="small" label={type} variant="outlined" />
-                </Box>
               </Card>
             </Grid>
-          )
+          );
         })}
         {!filtered.length && (
           <Grid size={12}>
@@ -349,13 +663,33 @@ function TemplatePicker({ selected, onToggle, tagFilter, setTagFilter }) {
   )
 }
 
-function GenerateAndDownload({ selected, autoType, start, end, setStart, setEnd, onFind, findDisabled, finding, results, onToggleBatch, onGenerate, canGenerate, generateLabel, generation }) {
-  const valid = !!selected.length && !!start && !!end && end.valueOf() >= start.valueOf()
+function GenerateAndDownload({ selected, selectedTemplates, autoType, start, end, setStart, setEnd, onFind, findDisabled, finding, results, onToggleBatch, onGenerate, canGenerate, generateLabel, generation, onRetryGeneration = () => {}, keyValues = {}, onKeyValueChange = () => {}, keysReady = true, keyOptions = {}, keyOptionsLoading = {} }) {
+  const valid = selectedTemplates.length > 0 && !!start && !!end && end.valueOf() >= start.valueOf()
   const { downloads } = useAppStore()
   const targetNames = Object.values(results).map((r) => r.name)
   const subline = targetNames.length
     ? `${targetNames.slice(0, 3).join(', ')}${targetNames.length > 3 ? ', ...' : ''}`
     : ''
+  const templatesWithKeys = useMemo(() => (
+    selectedTemplates
+      .map((tpl) => {
+        const mappingTokens = Array.isArray(tpl?.mappingKeys)
+          ? tpl.mappingKeys.map((token) => (typeof token === 'string' ? token.trim() : '')).filter(Boolean)
+          : []
+        const templateOptions = keyOptions[tpl.id] || {}
+        const sourceTokens = mappingTokens.length ? mappingTokens : Object.keys(templateOptions)
+        if (!sourceTokens.length) return null
+        const tokens = sourceTokens.map((token) => ({
+          name: token,
+          required: mappingTokens.includes(token),
+          options: templateOptions[token] || [],
+        }))
+        return { tpl, tokens }
+      })
+      .filter(Boolean)
+  ), [selectedTemplates, keyOptions])
+  const keyPanelVisible = templatesWithKeys.length > 0 && Object.keys(results).length > 0
+  const keysMissing = keyPanelVisible && !keysReady
   return (
     <>
       <Surface sx={surfaceStackSx}>
@@ -366,7 +700,7 @@ function GenerateAndDownload({ selected, autoType, start, end, setStart, setEnd,
           spacing={{ xs: 1, sm: 2 }}
         >
           <Stack spacing={0.5}>
-            <Typography variant="h6">Generate & Download</Typography>
+            <Typography variant="h6">Run Reports</Typography>
             {!!subline && <Typography variant="caption" color="text.secondary">{subline}</Typography>}
           </Stack>
           <Stack
@@ -438,6 +772,95 @@ function GenerateAndDownload({ selected, autoType, start, end, setStart, setEnd,
             />
           </Stack>
         </LocalizationProvider>
+
+        {keyPanelVisible && (
+          <Stack spacing={1.5} sx={{ mt: 2 }}>
+            <Typography variant="subtitle2">Key Token Values</Typography>
+            {keysMissing && (
+              <Alert severity="warning">Fill in all key token values to enable discovery and runs.</Alert>
+            )}
+            {templatesWithKeys.length > 0 ? (
+              templatesWithKeys.map(({ tpl, tokens }) => (
+                <Box
+                  key={tpl.id}
+                  sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 1.5, bgcolor: 'background.paper' }}
+                >
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>{tpl.name || tpl.id}</Typography>
+                  <Stack spacing={1} sx={{ mt: 1 }}>
+                    {tokens.map(({ name, required, options = [] }) => {
+                    const rawOptions = Array.isArray(options) && options.length ? options : (keyOptions?.[tpl.id]?.[name] || [])
+                    const normalizedOptions = Array.from(
+                      new Set(
+                        rawOptions
+                          .map((option) => (option == null ? '' : String(option).trim()))
+                          .filter(Boolean),
+                      ),
+                    )
+                    const dropdownOptions = [ALL_OPTION, ...normalizedOptions]
+                    const loading = Boolean(keyOptionsLoading?.[tpl.id])
+                    const value = Array.isArray(keyValues?.[tpl.id]?.[name]) ? keyValues[tpl.id][name] : []
+                    return (
+                      <Autocomplete
+                        key={`${tpl.id}-${name}`}
+                        multiple
+                        disableCloseOnSelect
+                        options={dropdownOptions}
+                        value={value}
+                        loading={loading}
+                        onChange={(_event, newValue) => {
+                          let next = Array.isArray(newValue) ? newValue.filter(Boolean) : []
+                          if (next.includes(ALL_OPTION)) {
+                            next = [ALL_OPTION]
+                          } else {
+                            next = Array.from(new Set(next))
+                          }
+                          onKeyValueChange(tpl.id, name, next)
+                        }}
+                        getOptionLabel={(option) => (option === ALL_OPTION ? 'All' : option)}
+                        renderTags={(tagValue, getTagProps) =>
+                          tagValue.map((option, index) => (
+                            <Chip
+                              {...getTagProps({ index })}
+                              key={`${tpl.id}-${name}-tag-${option}-${index}`}
+                              size="small"
+                              label={option === ALL_OPTION ? 'All' : option}
+                            />
+                          ))
+                        }
+                        renderInput={(params) => (
+                          <TextField
+                            {...params}
+                            label={`${formatTokenLabel(name)}${required ? ' *' : ''}`}
+                            required={required}
+                            placeholder={loading ? 'Loading...' : dropdownOptions.length ? 'Select values' : 'No options'}
+                          />
+                        )}
+                      />
+                    );
+                    })}
+                  </Stack>
+                </Box>
+              ))
+            ) : (
+              <Box
+                sx={{
+                  border: '1px dashed',
+                  borderColor: 'divider',
+                  borderRadius: 1,
+                  p: 1.5,
+                  bgcolor: 'background.default',
+                  color: 'text.secondary',
+                }}
+              >
+                <Typography variant="body2">
+                  {(selectedTemplates.length === 0
+                    ? 'Select a template to configure key token filters.'
+                    : 'Selected templates do not define key tokens.')}
+                </Typography>
+              </Box>
+            )}
+          </Stack>
+        )}
 
         {(finding || Object.keys(results).length > 0) && (
           <Box>
@@ -563,7 +986,15 @@ function GenerateAndDownload({ selected, autoType, start, end, setStart, setEnd,
                     Show in folder
                   </Button>
                   {item.status === 'failed' && (
-                    <Button size="small" variant="outlined" color="warning" startIcon={<ReplayIcon />}>Retry</Button>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      color="warning"
+                      startIcon={<ReplayIcon />}
+                      onClick={() => onRetryGeneration(item)}
+                    >
+                      Retry
+                    </Button>
                   )}
                 </Stack>
               </Box>
@@ -636,38 +1067,224 @@ export default function TemplatesPane() {
   const [selected, setSelected] = useState([])
   const [tagFilter, setTagFilter] = useState([])
   const onToggle = (id) => setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]))
-  const selectedTypes = useMemo(() => approved.filter((t) => selected.includes(t.id)).map((t) => t.sourceType), [approved, selected])
+  const selectedTemplates = useMemo(() => approved.filter((t) => selected.includes(t.id)), [approved, selected])
+  const selectedTypes = useMemo(() => selectedTemplates.map((t) => t.sourceType), [selectedTemplates])
   const autoType = selectedTypes.length === 0 ? '-' : selectedTypes.every((t) => t === selectedTypes[0]) ? selectedTypes[0]?.toUpperCase() : 'Mixed'
-
-  // Run Config state
+  const [keyValues, setKeyValues] = useState({})
+  const [keyOptions, setKeyOptions] = useState({})
+  const [keyOptionsLoading, setKeyOptionsLoading] = useState({})
   const [start, setStart] = useState(null)
   const [end, setEnd] = useState(null)
   const [finding, setFinding] = useState(false)
-  const [results, setResults] = useState({}) // { tplId: { name, batches:[{id,parent,rows,selected}], batches_count, rows_total } }
+  const [results, setResults] = useState({})
   const [generation, setGeneration] = useState({ items: [] })
+
+  useEffect(() => {
+    setKeyValues((prev) => {
+      const next = {}
+      selectedTemplates.forEach((tpl) => {
+        if (prev[tpl.id]) next[tpl.id] = prev[tpl.id]
+      })
+      if (Object.keys(next).length === Object.keys(prev).length) return prev
+      return next
+    })
+  }, [selectedTemplates])
+  useEffect(() => {
+    setKeyOptions((prev) => {
+      const next = {}
+      selectedTemplates.forEach((tpl) => {
+        if (prev[tpl.id]) next[tpl.id] = prev[tpl.id]
+      })
+      return next
+    })
+    setKeyOptionsLoading((prev) => {
+      const next = {}
+      selectedTemplates.forEach((tpl) => {
+        if (prev[tpl.id]) next[tpl.id] = prev[tpl.id]
+      })
+      return next
+    })
+  }, [selectedTemplates])
+
+  const getTemplateKeyTokens = useCallback(
+    (tpl) => {
+      if (!tpl) return []
+      const fromState = Array.isArray(tpl?.mappingKeys)
+        ? tpl.mappingKeys.map((token) => (typeof token === 'string' ? token.trim() : '')).filter(Boolean)
+        : []
+      if (fromState.length) return fromState
+      const existing = keyOptions[tpl.id] || {}
+      return Object.keys(existing)
+    },
+    [keyOptions],
+  )
+
+  useEffect(() => {
+    if (!start || !end) return
+    if (!Object.keys(results).length) return
+    const startSql = toSqlFromDayjs(start)
+    const endSql = toSqlFromDayjs(end)
+    if (!startSql || !endSql) return
+    let cancelled = false
+    const pendingIds = new Set()
+    selectedTemplates.forEach((tpl) => {
+      const tokens = Array.isArray(tpl?.mappingKeys)
+        ? tpl.mappingKeys.map((token) => (typeof token === 'string' ? token.trim() : '')).filter(Boolean)
+        : []
+      if (!tokens.length) return
+      const existingOptions = keyOptions[tpl.id] || {}
+      const missing = tokens.filter((token) => existingOptions[token] === undefined)
+      if (!missing.length) return
+      if (keyOptionsLoading[tpl.id]) return
+      pendingIds.add(tpl.id)
+      setKeyOptionsLoading((prev) => ({ ...prev, [tpl.id]: true }))
+      fetchTemplateKeyOptions(tpl.id, {
+        connectionId: tpl.lastConnectionId || activeConnectionId,
+        tokens: missing,
+        limit: 100,
+        startDate: startSql,
+        endDate: endSql,
+      })
+        .then((data) => {
+          if (cancelled) return
+          const incoming = data?.keys && typeof data.keys === 'object' ? data.keys : {}
+          const normalizedBatch = {}
+          missing.forEach((token) => {
+            const rawValues = incoming[token]
+            const normalized = Array.isArray(rawValues)
+              ? Array.from(new Set(rawValues.map((value) => (value == null ? '' : String(value).trim())).filter(Boolean)))
+              : []
+            normalizedBatch[token] = normalized
+          })
+          setKeyOptions((prev) => {
+            const prevTemplateOptions = prev[tpl.id] || {}
+            const nextTemplateOptions = { ...prevTemplateOptions }
+            Object.entries(normalizedBatch).forEach(([token, values]) => {
+              nextTemplateOptions[token] = values
+            })
+            return { ...prev, [tpl.id]: nextTemplateOptions }
+          })
+        })
+        .catch((err) => {
+          if (cancelled) return
+          console.warn('key_options_fetch_failed', err)
+          toast.show(`Failed to load key options for ${tpl.name || tpl.id}`, 'error')
+        })
+        .finally(() => {
+          if (cancelled) return
+          setKeyOptionsLoading((prev) => ({ ...prev, [tpl.id]: false }))
+        })
+    })
+    return () => {
+      cancelled = true
+      if (pendingIds.size) {
+        setKeyOptionsLoading((prev) => {
+          const next = { ...prev }
+          pendingIds.forEach((id) => {
+            if (next[id]) delete next[id]
+          })
+          return next
+        })
+      }
+    }
+  }, [selectedTemplates, start, end, results, keyOptions, toast, activeConnectionId])
+
+  const keysReady = useMemo(() => {
+    return selectedTemplates.every((tpl) => {
+      const tokens = getTemplateKeyTokens(tpl)
+      if (!tokens.length) return true
+      const provided = keyValues[tpl.id] || {}
+      return tokens.every((token) => {
+        const values = provided[token]
+        if (!Array.isArray(values) || values.length === 0) return false
+        if (values.includes(ALL_OPTION)) return true
+        return values.some((value) => value && value.trim())
+      })
+    })
+  }, [selectedTemplates, keyValues, getTemplateKeyTokens])
+
+  const collectMissingKeys = useCallback(() => {
+    const missing = []
+    selectedTemplates.forEach((tpl) => {
+      const tokens = getTemplateKeyTokens(tpl)
+      if (!tokens.length) return
+      const provided = keyValues[tpl.id] || {}
+      const absent = tokens.filter((token) => {
+        const values = provided[token]
+        if (!Array.isArray(values) || values.length === 0) return true
+        if (values.includes(ALL_OPTION)) return false
+        return !values.some((value) => value && value.trim())
+      })
+      if (absent.length) {
+        missing.push({ tpl, tokens: absent.map((token) => formatTokenLabel(token)) })
+      }
+    })
+    return missing
+  }, [selectedTemplates, getTemplateKeyTokens, keyValues])
+
+  const handleKeyValueChange = useCallback((templateId, token, values) => {
+    setKeyValues((prev) => {
+      const next = { ...prev }
+      const existing = { ...(next[templateId] || {}) }
+      let normalized = Array.isArray(values) ? values.map((value) => (value == null ? '' : String(value).trim())) : []
+      normalized = normalized.filter(Boolean)
+      if (normalized.includes(ALL_OPTION)) {
+        normalized = [ALL_OPTION]
+      } else {
+        normalized = Array.from(new Set(normalized))
+      }
+      if (normalized.length) {
+        existing[token] = normalized
+        next[templateId] = existing
+      } else {
+        delete existing[token]
+        if (Object.keys(existing).length) next[templateId] = existing
+        else delete next[templateId]
+      }
+      return next
+    })
+  }, [])
+
+  const buildKeyFiltersForTemplate = useCallback((templateId) => {
+    const provided = keyValues[templateId] || {}
+    const payload = {}
+    Object.entries(provided).forEach(([token, values]) => {
+      if (!Array.isArray(values) || values.length === 0) return
+      if (values.includes(ALL_OPTION)) return
+      const normalized = Array.from(new Set(values.filter((value) => value && value.trim())))
+      if (!normalized.length) return
+      payload[token] = normalized.length === 1 ? normalized[0] : normalized
+    })
+    return payload
+  }, [keyValues])
+
+  // Run Config state (key-driven discovery & generation)
 
   useEffect(() => { setResults({}); setFinding(false) }, [selected, start?.valueOf(), end?.valueOf()])
 
   const onFind = async () => {
     if (!API_BASE) return toast.show('VITE_API_BASE_URL is not set', 'error')
-    if (!selected.length || !start || !end) return toast.show('Select a template and choose a start/end date.', 'warning')
+    if (!selectedTemplates.length || !start || !end) return toast.show('Select a template and choose a start/end date.', 'warning')
 
+    setKeyOptions({})
+    setKeyOptionsLoading({})
     setFinding(true)
     try {
       const r = {}
-      const targets = approved.filter((t) => selected.includes(t.id))
-      for (const t of targets) {
+      for (const t of selectedTemplates) {
+        const keyFilters = buildKeyFiltersForTemplate(t.id)
         const data = await discoverReportsAPI({
           templateId: t.id,
           startDate: start,
           endDate: end,
           connectionId: activeConnectionId,   // pass when available
+          keyValues: Object.keys(keyFilters).length ? keyFilters : undefined,
         })
         r[t.id] = {
           name: t.name,
-          batches: (data.batches || []).map(b => ({ ...b, selected: b.selected ?? true })),
+          batches: (data.batches || []).map((b) => ({ ...b, selected: b.selected ?? true })),
           batches_count: data.batches_count ?? (data.batches?.length || 0),
-          rows_total: data.rows_total ?? (data.batches?.reduce((a,b)=>a+(b.rows||0),0) || 0),
+          rows_total: data.rows_total ?? (data.batches?.reduce((a, b) => a + (b.rows || 0), 0) || 0),
         }
       }
       setResults(r)
@@ -687,32 +1304,44 @@ export default function TemplatesPane() {
 
   const canGenerate = useMemo(() => {
     const hasSel = Object.values(results).length > 0 && Object.values(results).some((r) => r.batches.some((b) => b.selected))
-    return hasSel && !!start && !!end && end.valueOf() >= start.valueOf()
-  }, [results, start, end])
+    const rangeReady = !!start && !!end && end.valueOf() >= start.valueOf()
+    return hasSel && rangeReady && keysReady
+  }, [results, start, end, keysReady])
 
   const generateLabel = useMemo(() => {
-    const names = approved.filter((t) => selected.includes(t.id)).map((t) => t.name)
-    return names.length ? `Generate reports for ${names.length} templates` : 'Generate Reports'
-  }, [approved, selected])
+    const names = selectedTemplates.map((t) => t.name)
+    if (!names.length) return 'Run Reports'
+    const preview = names.slice(0, 2).join(', ')
+    const extra = names.length > 2 ? ` +${names.length - 2} more` : ''
+    return `Run reports for ${preview}${extra}`
+  }, [selectedTemplates])
 
   const batchIdsFor = (tplId) =>
     (results[tplId]?.batches || []).filter(b => b.selected).map(b => b.id)
 
   const onGenerate = async () => {
     if (!API_BASE) return toast.show('VITE_API_BASE_URL is not set', 'error')
+    if (!selectedTemplates.length) return toast.show('Select at least one template.', 'warning')
+    const missing = collectMissingKeys()
+    if (missing.length) {
+      const message = missing.map(({ tpl, tokens }) => `${tpl.name || tpl.id}: ${tokens.join(', ')}`).join('; ')
+      toast.show(`Provide values for key tokens before running (${message}).`, 'warning')
+      return
+    }
 
-    const targets = approved.filter((t) => selected.includes(t.id))
-    const seed = targets.map((t) => ({ id: `${t.id}-${Date.now()}`, tplId: t.id, name: t.name, status: 'running', progress: 10, htmlUrl: null, pdfUrl: null }))
+    const seed = selectedTemplates.map((t) => ({ id: `${t.id}-${Date.now()}`, tplId: t.id, name: t.name, status: 'running', progress: 10, htmlUrl: null, pdfUrl: null }))
     setGeneration({ items: seed })
 
-    for (const it of seed) {
-      try {
-        const data = await runReportAPI({
-          templateId: it.tplId,
+  for (const it of seed) {
+    try {
+      const keyFilters = buildKeyFiltersForTemplate(it.tplId)
+      const data = await runReportAPI({
+        templateId: it.tplId,
           startDate: start,
           endDate: end,
           batchIds: batchIdsFor(it.tplId),
           connectionId: activeConnectionId,   // pass when available
+          keyValues: Object.keys(keyFilters).length ? keyFilters : undefined,
         })
         const htmlUrl = data?.html_url ? withBase(data.html_url) : null
         const pdfUrl  = data?.pdf_url ? withBase(data.pdf_url) : null
@@ -726,6 +1355,81 @@ export default function TemplatesPane() {
     }
   }
 
+  const retryGenerationItem = async (item) => {
+    if (!API_BASE) {
+      toast.show('VITE_API_BASE_URL is not set', 'error')
+      return
+    }
+    if (!item?.tplId) {
+      toast.show('Unable to retry this run. Refresh and try again.', 'error')
+      return
+    }
+    if (!start || !end) {
+      toast.show('Select a start and end date before retrying.', 'warning')
+      return
+    }
+
+    const missing = collectMissingKeys().find(({ tpl }) => tpl.id === item.tplId)
+    if (missing) {
+      toast.show(`Provide values for key tokens before running (${missing.tokens.join(', ')})`, 'warning')
+      return
+    }
+
+    const batches = batchIdsFor(item.tplId)
+    if (!batches.length) {
+      toast.show('Select at least one batch before retrying this template.', 'warning')
+      return
+    }
+
+    setGeneration((prev) => ({
+      items: prev.items.map((x) => (
+        x.id === item.id
+          ? { ...x, status: 'running', progress: 10, htmlUrl: null, pdfUrl: null }
+          : x
+      )),
+    }))
+
+    try {
+      const keyFilters = buildKeyFiltersForTemplate(item.tplId)
+      const data = await runReportAPI({
+        templateId: item.tplId,
+        startDate: start,
+        endDate: end,
+        batchIds: batches,
+        connectionId: activeConnectionId,
+        keyValues: Object.keys(keyFilters).length ? keyFilters : undefined,
+      })
+      const htmlUrl = data?.html_url ? withBase(data.html_url) : null
+      const pdfUrl = data?.pdf_url ? withBase(data.pdf_url) : null
+
+      setGeneration((prev) => ({
+        items: prev.items.map((x) => (
+          x.id === item.id
+            ? { ...x, progress: 100, status: 'complete', htmlUrl, pdfUrl }
+            : x
+        )),
+      }))
+      addDownload({
+        filename: `${item.name}.pdf`,
+        template: item.name,
+        format: 'pdf',
+        size: '',
+        htmlUrl,
+        pdfUrl,
+        onRerun: () => onGenerate(),
+      })
+    } catch (e) {
+      setGeneration((prev) => ({
+        items: prev.items.map((x) => (
+          x.id === item.id
+            ? { ...x, progress: 100, status: 'failed' }
+            : x
+        )),
+      }))
+      toast.show(String(e), 'error')
+    }
+  }
+
   const dateRangeValid = !!start && !!end && end.valueOf() >= start.valueOf()
   let activeStep = 0
   if (selected.length > 0) activeStep = 1
@@ -735,11 +1439,11 @@ export default function TemplatesPane() {
     <>
       <Surface sx={[surfaceStackSx, { mb: 3 }]}>
         <Stack spacing={1.5}>
-          <Typography variant="h6">Generate Report</Typography>
+          <Typography variant="h6">Run Reports</Typography>
           <Stepper
             activeStep={activeStep}
             alternativeLabel
-            aria-label="Generate report steps"
+            aria-label="Report run steps"
             sx={{
               pb: 0,
               '& .MuiStep-root': { position: 'relative' },
@@ -748,7 +1452,7 @@ export default function TemplatesPane() {
               '& .MuiStepConnector-line': { borderColor: 'divider' },
             }}
           >
-            {['Select Template', 'Select Date & Time', 'Generate Report'].map((label) => (
+            {['Select Templates', 'Set Date Range', 'Run Reports'].map((label) => (
               <Step key={label}>
                 <StepLabel StepIconComponent={StepIndicator}>{label}</StepLabel>
               </Step>
@@ -759,9 +1463,15 @@ export default function TemplatesPane() {
           </Typography>
         </Stack>
       </Surface>
-      <TemplatePicker selected={selected} onToggle={onToggle} tagFilter={tagFilter} setTagFilter={setTagFilter} />
+      <TemplatePicker
+        selected={selected}
+        onToggle={onToggle}
+        tagFilter={tagFilter}
+        setTagFilter={setTagFilter}
+      />
       <GenerateAndDownload
-        selected={approved.filter((t) => selected.includes(t.id)).map((t) => t.id)}
+        selected={selected}
+        selectedTemplates={selectedTemplates}
         autoType={autoType}
         start={start}
         end={end}
@@ -776,6 +1486,12 @@ export default function TemplatesPane() {
         canGenerate={canGenerate}
         generateLabel={generateLabel}
         generation={generation}
+        onRetryGeneration={retryGenerationItem}
+        keyValues={keyValues}
+        onKeyValueChange={handleKeyValueChange}
+        keysReady={keysReady}
+        keyOptions={keyOptions}
+        keyOptionsLoading={keyOptionsLoading}
       />
     </>
   )

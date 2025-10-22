@@ -5,13 +5,26 @@ import json
 import logging
 import base64
 import sqlite3
+import shutil
+from dataclasses import dataclass
+from functools import lru_cache
 from pathlib import Path
 from collections import defaultdict
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Iterable, List, Optional
 
 import asyncio
 
-from ..utils import call_chat_completion, write_text_atomic, sanitize_html, load_prompt
+from ..utils import (
+    call_chat_completion,
+    write_text_atomic,
+    write_json_atomic,
+    sanitize_html,
+    render_html_to_png as _render_html_to_png_sync,
+    normalize_token_braces,
+    extract_tokens,
+)
+from ..prompts.llm_prompts import LLM_CALL_PROMPTS
+from ..render.html_raster import rasterize_html_to_png, save_png
 from .css_merge import merge_css_into_html, replace_table_colgroup
 from .layout_hints import get_layout_hints
 
@@ -45,43 +58,149 @@ try:
 except ImportError:  # pragma: no cover
     OpenAI = None  # type: ignore
 
-try:
-    from playwright.async_api import async_playwright
-except ImportError:  # pragma: no cover
-    async_playwright = None  # type: ignore
-
-PDF_PATH = Path(os.getenv("PDF_PATH", r"C:\Users\alfre\OneDrive\Desktop\CrystalReportViewer1 (6).pdf"))
-
-OUT_DIR = Path.cwd() / "llm_pdf_mapping_outputs_v2"
-OUT_DIR.mkdir(parents=True, exist_ok=True)
-
-MODEL      = os.getenv("OPENAI_MODEL", "gpt-5") 
-DPI        = int(os.getenv("PDF_DPI", "400"))
-ITERATIONS = int(os.getenv("REFINE_ITERS", "1"))
-
-
-def _env_float(name: str, default: float) -> float:
-    value = os.getenv(name)
-    if value is None:
-        return default
-    try:
-        return float(value)
-    except ValueError:
-        logging.getLogger("neura.template_verify").warning(
-            "invalid_env_float",
-            extra={"event": "invalid_env_float", "name": name, "value": value},
-        )
-        return default
-
-
-TARGET_SSIM = _env_float("PHOTOCOPY_TARGET_SSIM", 0.985)
-FIX_ACCEPT_PATCH_ONLY = os.getenv("PHOTOCOPY_FIX_ACCEPT_PATCH_ONLY", "0") == "1"
-OUT_PDF = OUT_DIR / "report_filled_new.pdf"
+MODEL = os.getenv("OPENAI_MODEL", "gpt-5")
 
 
 _client: Optional["OpenAI"] = None
 
 logger = logging.getLogger("neura.template_verify")
+
+
+@dataclass
+class InitialHtmlResult:
+    html: str
+    schema: Optional[Dict[str, Any]]
+    schema_text: Optional[str]
+
+
+@lru_cache(maxsize=1)
+def _load_llm_call1_prompt() -> str:
+    try:
+        return LLM_CALL_PROMPTS["llm_call_1"]
+    except KeyError as exc:  # pragma: no cover
+        raise RuntimeError("Prompt 'llm_call_1' missing from LLM_CALL_PROMPTS") from exc
+
+
+@lru_cache(maxsize=1)
+def _load_llm_call2_prompt() -> str:
+    try:
+        return LLM_CALL_PROMPTS["llm_call_2"]
+    except KeyError as exc:  # pragma: no cover
+        raise RuntimeError("Prompt 'llm_call_2' missing from LLM_CALL_PROMPTS") from exc
+
+
+def _extract_marked_section(text: str, begin: str, end: str) -> Optional[str]:
+    pattern = re.compile(re.escape(begin) + r"([\s\S]*?)" + re.escape(end))
+    match = pattern.search(text)
+    if not match:
+        return None
+    return match.group(1).strip()
+
+
+def _strip_braces(token: str) -> str:
+    token = normalize_token_braces(token or "").strip()
+    if token.startswith("{") and token.endswith("}"):
+        return token[1:-1].strip()
+    return token
+
+
+def _dedupe_preserve_order(items: Iterable[str]) -> List[str]:
+    seen: Dict[str, None] = {}
+    for item in items:
+        if item not in seen:
+            seen[item] = None
+    return list(seen.keys())
+
+
+_BEGIN_REPEAT_RE = re.compile(r"<!--\s*BEGIN:BLOCK_REPEAT\b", re.IGNORECASE)
+_REPEAT_BLOCK_RE = re.compile(
+    r"<!--\s*BEGIN:BLOCK_REPEAT\b.*?-->(.*?)<!--\s*END:BLOCK_REPEAT\b.*?-->",
+    re.IGNORECASE | re.DOTALL,
+)
+_TR_PATTERN = re.compile(r"<tr\b", re.IGNORECASE)
+
+
+def _extract_tokens(html_text: str) -> set[str]:
+    return set(extract_tokens(normalize_token_braces(html_text or "")))
+
+
+def _repeat_marker_counts(html_text: str) -> int:
+    return len(_BEGIN_REPEAT_RE.findall(html_text or ""))
+
+
+def _prototype_row_counts(html_text: str) -> List[int]:
+    counts: List[int] = []
+    for block in _REPEAT_BLOCK_RE.finditer(html_text or ""):
+        segment = block.group(1) or ""
+        counts.append(len(_TR_PATTERN.findall(segment)))
+    return counts
+
+
+def _write_fix_metrics(tdir: Path, payload: Dict[str, Any]) -> Path:
+    metrics_path = Path(tdir) / "fix_metrics.json"
+    write_json_atomic(
+        metrics_path,
+        payload,
+        indent=2,
+        ensure_ascii=False,
+        sort_keys=True,
+        step="template_verify_fix_metrics",
+    )
+    return metrics_path
+
+
+def _parse_schema_ext(raw: str) -> Optional[Dict[str, Any]]:
+    if not raw:
+        return None
+    try:
+        data = json.loads(raw)
+    except Exception as exc:
+        logger.warning(
+            "schema_ext_json_parse_failed",
+            extra={
+                "event": "schema_ext_json_parse_failed",
+                "error": str(exc),
+                "snippet": raw[:200],
+            },
+        )
+        return None
+    if not isinstance(data, dict):
+        logger.warning(
+            "schema_ext_invalid_type",
+            extra={"event": "schema_ext_invalid_type", "snippet": raw[:200]},
+        )
+        return None
+
+    try:
+        scalars_raw = data.get("scalars", [])
+        row_tokens_raw = data.get("row_tokens", [])
+        totals_raw = data.get("totals", [])
+        notes_raw = data.get("notes", "")
+
+        scalars = _dedupe_preserve_order([_strip_braces(str(tok)) for tok in list(scalars_raw or []) if str(tok).strip()])
+        rows = _dedupe_preserve_order([_strip_braces(str(tok)) for tok in list(row_tokens_raw or []) if str(tok).strip()])
+        totals = _dedupe_preserve_order([_strip_braces(str(tok)) for tok in list(totals_raw or []) if str(tok).strip()])
+
+        if not isinstance(notes_raw, str):
+            notes = str(notes_raw)
+        else:
+            notes = notes_raw
+    except Exception as exc:
+        logger.warning(
+            "schema_ext_validation_failed",
+            extra={
+                "event": "schema_ext_validation_failed",
+                "error": str(exc),
+            },
+        )
+        return None
+
+    return {
+        "scalars": scalars,
+        "row_tokens": rows,
+        "totals": totals,
+        "notes": notes,
+    }
 
 
 def get_openai_client():
@@ -254,27 +373,42 @@ def apply_fix_response(html_before: str, llm_output: str) -> str:
 
     return output
 
-async def render_html_to_png(html_path: Path, out_png: Path):
-    """Render HTML to PNG at A4 size (400 DPI)."""
-    if async_playwright is None:
-        raise RuntimeError("playwright is required for HTML rendering. Install with `pip install playwright` and run `playwright install chromium`.")
-    html_abs = "file://" + str(html_path.resolve())
-    async with async_playwright() as pw:
-        browser = await pw.chromium.launch()
-        page = await browser.new_page(
-            viewport={"width": 3308, "height": 4677}  # A4 @ 400 DPI
+def render_panel_preview(
+    html_path: Path,
+    dest_png: Path,
+    *,
+    fallback_png: Optional[Path] = None,
+    dpi: int = 144,
+) -> Path:
+    """
+    Generate a template snapshot that matches the front-end preview
+    (CSS-sized A4 at ~96 DPI, optionally with a device scale factor).
+    Falls back to the existing PNG if rasterisation fails.
+    """
+    html_path = Path(html_path)
+    dest_png = Path(dest_png)
+    fallback_png = Path(fallback_png) if fallback_png else None
+    try:
+        html_text = html_path.read_text(encoding="utf-8")
+        png_bytes = rasterize_html_to_png(html_text, dpi=dpi, method="screenshot")
+        save_png(png_bytes, str(dest_png))
+    except Exception:
+        logger.warning(
+            "render_panel_preview_failed",
+            exc_info=True,
+            extra={"event": "render_panel_preview_failed", "html_path": str(html_path)},
         )
-        await page.goto(html_abs, wait_until="networkidle")
-        await page.screenshot(path=str(out_png), full_page=True)
-        await browser.close()
-    logger.info(
-        "html_rendered_to_png",
-        extra={
-            "event": "html_rendered_to_png",
-            "html_path": str(html_path),
-            "png_path": str(out_png),
-        },
-    )
+        if fallback_png and fallback_png.exists():
+            dest_png.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(fallback_png, dest_png)
+    return dest_png
+
+
+def render_html_to_png(html_path: Path, out_png: Path, *, page_size: str = "A4") -> None:
+    """
+    Render HTML to PNG using the shared utils helper for compatibility with existing imports.
+    """
+    _render_html_to_png_sync(html_path, out_png, page_size=page_size)
 
 
 def compare_images(ref_img_path: Path, test_img_path: Path, out_diff: Path):
@@ -298,7 +432,8 @@ def compare_images(ref_img_path: Path, test_img_path: Path, out_diff: Path):
 
 
 def save_html(path: Path, html: str):
-    write_text_atomic(path, sanitize_html(html), encoding="utf-8", step="template_verify_save")
+    normalized_html = sanitize_html(normalize_token_braces(html))
+    write_text_atomic(path, normalized_html, encoding="utf-8", step="template_verify_save")
     logger.info(
         "html_saved",
         extra={"event": "html_saved", "path": str(path)},
@@ -307,157 +442,278 @@ def save_html(path: Path, html: str):
 
 # OpenAI client initialised lazily via get_openai_client()
 
-def request_schema_for_page(page_png: Path, layout_hints: Optional[Dict[str, Any]] = None) -> dict:
-    """Ask the LLM to emit a placeholder schema JSON for a single page. Return parsed dict."""
-    prompt = load_prompt("template_schema_page")
+def request_initial_html(
+    page_png: Path,
+    schema_json: Optional[dict],
+    layout_hints: Optional[Dict[str, Any]] = None,
+) -> InitialHtmlResult:
+    """Ask the LLM to synthesize the first-pass HTML photocopy and optional schema."""
+    prompt_template = _load_llm_call1_prompt()
+    schema_str = ""
+    if schema_json:
+        schema_str = json.dumps(schema_json, ensure_ascii=False, separators=(",", ":"))
+    prompt = prompt_template.replace("{schema_str}", schema_str)
     hints_json = json.dumps(layout_hints or {}, ensure_ascii=False, separators=(",", ":"))
-    client = get_openai_client()
-    resp = call_chat_completion(
-        client,
-        model=MODEL,
-        messages=[{
-            "role": "user",
-            "content": [
-                {"type": "text", "text": prompt},
-                {"type": "text", "text": "HINTS_JSON:\n" + hints_json},
-                {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{b64_image(page_png)}"}},
-            ]
-        }],
-        description="template_schema_page",
+
+    content: list[dict[str, Any]] = [{"type": "text", "text": prompt}]
+    if hints_json and hints_json != "{}":
+        content.append({"type": "text", "text": "HINTS_JSON:\n" + hints_json})
+    content.append(
+        {
+            "type": "image_url",
+            "image_url": {"url": f"data:image/png;base64,{b64_image(page_png)}"},
+        }
     )
-    txt = resp.choices[0].message.content.strip()
-    body = strip_code_fences(txt)
-    try:
-        return json.loads(body)
-    except Exception:
-        m = re.search(r"\{[\s\S]*\}", body)
-        return json.loads(m.group(0)) if m else {"scalars": {}, "blocks": {}, "notes": "(parse_error)"}
-def request_initial_html(page_png: Path, schema_json: dict, layout_hints: Optional[Dict[str, Any]] = None) -> str:
-    """Ask the LLM to synthesize the first-pass HTML photocopy."""
-    prompt = load_prompt("template_initial_html")
-    hints_json = json.dumps(layout_hints or {}, ensure_ascii=False, separators=(",", ":"))
-    schema_str = json.dumps(schema_json, ensure_ascii=False, separators=(",", ":"))
-    legacy_schema = normalize_schema_for_initial_html(schema_json)
-    legacy_str = json.dumps(legacy_schema, ensure_ascii=False, separators=(",", ":"))
+
     client = get_openai_client()
     resp = call_chat_completion(
         client,
         model=MODEL,
-        messages=[{
-            "role": "user",
-            "content": [
-                {"type": "text", "text": prompt},
-                {"type": "text", "text": "SCHEMA:\n" + schema_str},
-                {"type": "text", "text": "SCHEMA_LEGACY:\n" + legacy_str},
-                {"type": "text", "text": "HINTS_JSON:\n" + hints_json},
-                {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{b64_image(page_png)}"}},
-            ]
-        }],
+        messages=[{"role": "user", "content": content}],
         description="template_initial_html",
     )
-    html = strip_code_fences(resp.choices[0].message.content)
-    return html
-def request_fix_html(schema_json: dict, ref_png: Path, render_png: Path, current_html: str, ssim_value: float) -> str:
-    """Ask the LLM for CSS/HTML refinements and merge the response."""
-    prompt = load_prompt(
-        "template_fix_html",
-        replacements={"{{ssim_value:.4f}}": f"{ssim_value:.4f}"},
+
+    raw_content = strip_code_fences(resp.choices[0].message.content or "")
+
+    html_section = _extract_marked_section(raw_content, "<!--BEGIN_HTML-->", "<!--END_HTML-->")
+    if html_section is None:
+        logger.warning(
+            "initial_html_marker_missing",
+            extra={
+                "event": "initial_html_marker_missing",
+                "marker": "HTML",
+            },
+        )
+        html_section = raw_content
+    html_clean = normalize_token_braces(html_section.strip())
+
+    schema_section = _extract_marked_section(
+        raw_content, "<!--BEGIN_SCHEMA_JSON-->", "<!--END_SCHEMA_JSON-->"
     )
-    schema_str = json.dumps(schema_json, ensure_ascii=False, separators=(",", ":"))
+    schema_payload = None
+    if schema_section:
+        schema_payload = _parse_schema_ext(schema_section)
+        if schema_payload is None:
+            logger.warning(
+                "initial_schema_ext_invalid",
+                extra={
+                    "event": "initial_schema_ext_invalid",
+                    "snippet": schema_section[:200],
+                },
+            )
+
+    return InitialHtmlResult(
+        html=html_clean,
+        schema=schema_payload,
+        schema_text=schema_section,
+    )
+def request_fix_html(
+    pdf_dir: Path,
+    html_path: Path,
+    schema_path_or_none: Optional[Path],
+    reference_png_path: Path,
+    render_png_path: Path,
+    ssim_value: float,
+) -> Dict[str, Any]:
+    """
+    Execute the single-pass HTML refinement call (LLM CALL 2) and enforce strict invariants.
+
+    Returns a payload with acceptance metadata and artifact paths:
+        {
+            "accepted": bool,
+            "rejected_reason": Optional[str],
+            "render_after_path": Optional[Path],
+            "metrics_path": Path,
+            "raw_response": str,
+        }
+    """
+    pdf_dir = Path(pdf_dir)
+    html_path = Path(html_path)
+    schema_path = Path(schema_path_or_none) if schema_path_or_none else None
+    reference_png_path = Path(reference_png_path)
+    render_png_path = Path(render_png_path)
+
+    current_html = html_path.read_text(encoding="utf-8")
+
+    schema_text = "{}"
+    if schema_path and schema_path.exists():
+        try:
+            schema_payload = json.loads(schema_path.read_text(encoding="utf-8"))
+            schema_text = json.dumps(schema_payload, ensure_ascii=False, indent=2, sort_keys=True)
+        except Exception as exc:
+            logger.warning(
+                "template_fix_html_schema_load_failed",
+                extra={
+                    "event": "template_fix_html_schema_load_failed",
+                    "path": str(schema_path),
+                    "error": str(exc),
+                },
+            )
+            schema_text = "{}"
+
+    prompt_template = _load_llm_call2_prompt()
+    prompt_text = prompt_template.replace("{{ssim_value:.4f}}", "0.0000")
+    prompt_text = prompt_text.replace("{schema_str}", schema_text)
+    prompt_text = prompt_text.replace("{current_html}", current_html)
+    prompt_text = prompt_text.replace("(embedded image URL)", "").strip()
+
     client = get_openai_client()
-    max_attempts = 2 if FIX_ACCEPT_PATCH_ONLY else 1
-    last_output = ""
-    for attempt in range(1, max_attempts + 1):
-        resp = call_chat_completion(
-            client,
-            model=MODEL,
-            messages=[{
+    response = call_chat_completion(
+        client,
+        model=MODEL,
+        messages=[
+            {
                 "role": "user",
                 "content": [
-                    {"type": "text", "text": prompt},
-                    {"type": "text", "text": "SCHEMA:\n" + schema_str},
-                    {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{b64_image(ref_png)}"}},
-                    {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{b64_image(render_png)}"}},
-                    {"type": "text", "text": "CURRENT_HTML:\n" + current_html},
-                ]
-            }],
-            description="template_fix_html",
+                    {"type": "text", "text": prompt_text},
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:image/png;base64,{b64_image(reference_png_path)}",
+                            "detail": "high",
+                        },
+                    },
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:image/png;base64,{b64_image(render_png_path)}",
+                            "detail": "high",
+                        },
+                    },
+                ],
+            }
+        ],
+        description="template_fix_html_call2",
+    )
+    raw_response = (response.choices[0].message.content or "").strip()
+
+    refined_html = _extract_marked_section(raw_response, "<!--BEGIN_HTML-->", "<!--END_HTML-->")
+    metrics: Dict[str, Any] = {
+        "accepted": False,
+        "rejected_reason": None,
+    }
+    render_after_path: Optional[Path] = None
+
+    if refined_html is None:
+        logger.warning(
+            "template_fix_html_missing_markers",
+            extra={
+                "event": "template_fix_html_missing_markers",
+                "snippet": raw_response[:300],
+            },
         )
-        last_output = strip_code_fences(resp.choices[0].message.content or "")
-        has_css_patch = bool(CSS_PATCH_RE.search(last_output))
-        has_html_block = bool(HTML_BLOCK_RE.search(last_output))
-        if FIX_ACCEPT_PATCH_ONLY and not has_css_patch and has_html_block and attempt < max_attempts:
-            logger.warning(
-                "template_fix_html_css_patch_required",
-                extra={
-                    "event": "template_fix_html_css_patch_required",
-                    "attempt": attempt,
-                },
-            )
-            continue
-        merged = apply_fix_response(current_html, last_output)
-        if FIX_ACCEPT_PATCH_ONLY and not has_css_patch and has_html_block:
-            logger.warning(
-                "template_fix_html_full_html_fallback",
-                extra={
-                    "event": "template_fix_html_full_html_fallback",
-                    "attempt": attempt,
-                },
-            )
-        return merged
-    return apply_fix_response(current_html, last_output)
+        metrics["rejected_reason"] = "missing_markers"
+        save_html(html_path, current_html)
+        metrics_path = _write_fix_metrics(pdf_dir, metrics)
+        return {
+            "accepted": False,
+            "rejected_reason": "missing_markers",
+            "render_after_path": render_after_path,
+            "render_after_full_path": None,
+            "metrics_path": metrics_path,
+            "raw_response": raw_response,
+        }
+
+    tokens_before = _extract_tokens(current_html)
+    tokens_after = _extract_tokens(refined_html)
+    if tokens_before != tokens_after:
+        logger.warning(
+            "template_fix_html_token_drift",
+            extra={
+                "event": "template_fix_html_token_drift",
+                "tokens_missing": sorted(tokens_before - tokens_after),
+                "tokens_added": sorted(tokens_after - tokens_before),
+            },
+        )
+        metrics["rejected_reason"] = "token_drift"
+        save_html(html_path, current_html)
+        metrics_path = _write_fix_metrics(pdf_dir, metrics)
+        return {
+            "accepted": False,
+            "rejected_reason": "token_drift",
+            "render_after_path": render_after_path,
+            "render_after_full_path": None,
+            "metrics_path": metrics_path,
+            "raw_response": raw_response,
+        }
+
+    repeats_before = _repeat_marker_counts(current_html)
+    repeats_after = _repeat_marker_counts(refined_html)
+    if repeats_before != repeats_after:
+        logger.warning(
+            "template_fix_html_repeat_marker_drift",
+            extra={
+                "event": "template_fix_html_repeat_marker_drift",
+                "before": repeats_before,
+                "after": repeats_after,
+            },
+        )
+        metrics["rejected_reason"] = "repeat_marker_drift"
+        save_html(html_path, current_html)
+        metrics_path = _write_fix_metrics(pdf_dir, metrics)
+        return {
+            "accepted": False,
+            "rejected_reason": "repeat_marker_drift",
+            "render_after_path": render_after_path,
+            "render_after_full_path": None,
+            "metrics_path": metrics_path,
+            "raw_response": raw_response,
+        }
+
+    prototype_before = _prototype_row_counts(current_html)
+    prototype_after = _prototype_row_counts(refined_html)
+    if prototype_before != prototype_after:
+        logger.warning(
+            "template_fix_html_prototype_row_drift",
+            extra={
+                "event": "template_fix_html_prototype_row_drift",
+                "before": prototype_before,
+                "after": prototype_after,
+            },
+        )
+        metrics["rejected_reason"] = "prototype_row_drift"
+        save_html(html_path, current_html)
+        metrics_path = _write_fix_metrics(pdf_dir, metrics)
+        return {
+            "accepted": False,
+            "rejected_reason": "prototype_row_drift",
+            "render_after_path": render_after_path,
+            "render_after_full_path": None,
+            "metrics_path": metrics_path,
+            "raw_response": raw_response,
+        }
+
+    save_html(html_path, refined_html)
+    metrics["accepted"] = True
+
+    render_after_full_path = pdf_dir / "render_p1_after_full.png"
+    render_html_to_png(html_path, render_after_full_path)
+    render_after_path = pdf_dir / "render_p1_after.png"
+    render_panel_preview(html_path, render_after_path, fallback_png=render_after_full_path)
+    metrics_path = _write_fix_metrics(pdf_dir, metrics)
+
+    logger.info(
+        "template_fix_html_complete",
+        extra={
+            "event": "template_fix_html_complete",
+            "accepted": metrics["accepted"],
+        },
+    )
+
+    return {
+        "accepted": True,
+        "rejected_reason": None,
+        "render_after_path": render_after_path,
+        "render_after_full_path": render_after_full_path,
+        "metrics_path": metrics_path,
+        "raw_response": raw_response,
+    }
 async def main():
-    # 1) PDF â†’ PNGs
-    ref_pngs = pdf_to_pngs(PDF_PATH, OUT_DIR, dpi=DPI)
-    ref_pngs = ref_pngs[:1]
-    print(f"Extracted {len(ref_pngs)} page image(s).")
-
-    # 2) LLM schema + initial HTML + iterative refinements
-    schemas = {}
-    all_final_pages = []
-    for page_idx, ref_png in enumerate(ref_pngs, start=1):
-        page_hints = get_layout_hints(PDF_PATH, page_idx - 1)
-        schema = request_schema_for_page(ref_png, layout_hints=page_hints)
-        schemas[f"p{page_idx}"] = schema
-        (OUT_DIR / f"schema_p{page_idx}.json").write_text(json.dumps(schema, indent=2), encoding="utf-8")
-
-        html_v1 = request_initial_html(ref_png, schema, layout_hints=page_hints)
-        curr_html_path = OUT_DIR / f"template_p{page_idx}_v1.html"
-        save_html(curr_html_path, html_v1)
-
-        for i in range(1, ITERATIONS + 1):
-            render_png = OUT_DIR / f"render_p{page_idx}_v{i}.png"
-            diff_png   = OUT_DIR / f"diff_p{page_idx}_v{i}.png"
-            await render_html_to_png(curr_html_path, render_png)
-
-            score = compare_images(ref_png, render_png, diff_png)
-            print(f"[page {page_idx} | v{i}] SSIM={score:.4f} -> {diff_png.name}")
-
-            if score >= TARGET_SSIM:
-                break
-
-            curr_html = request_fix_html(schemas[f"p{page_idx}"], ref_png, render_png, curr_html_path.read_text(encoding="utf-8"), score)
-            curr_html_path = OUT_DIR / f"template_p{page_idx}_v{i+1}.html"
-            save_html(curr_html_path, curr_html)
-
-        all_final_pages.append(curr_html_path.read_text(encoding="utf-8"))
-
-    # 3) Compose pages correctly (only body content)
-    def body_content(doc: str) -> str:
-        m = re.search(r"(?is)<body\b[^>]*>(.*?)</body>", doc)
-        return (m.group(1) if m else doc).strip()
-
-    combined = ["<!doctype html><html><head><meta charset='utf-8'><title>All Pages</title></head><body>"]
-    combined += [body_content(p) + "<div style='page-break-after: always;'></div>" for p in all_final_pages[:-1]]
-    combined += [body_content(all_final_pages[-1])]
-    combined.append("</body></html>")
-    final_path = OUT_DIR / "template_all_pages_final.html"
-    save_html(final_path, "\n".join(combined))
-    print("Combined HTML:", final_path)
-
-
+    raise RuntimeError("Legacy CLI entrypoint removed. Use the API verify flow instead.")
 if __name__ == "__main__":
     asyncio.run(main())
+
+
 
 
 

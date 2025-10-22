@@ -58,6 +58,12 @@ export function resolveTemplatePreviewUrl(template, options = {}) {
   ]
 
   const templateCandidates = [
+    template.htmlUrls?.llm2,
+    template.llm2_html_url,
+    template.llm2HtmlUrl,
+    artifacts.llm2_html_url,
+    artifacts.llm2HtmlUrl,
+    manifestFiles['template_llm2.html'],
     template.htmlUrls?.template,
     template.template_html_url,
     template.templateHtmlUrl,
@@ -72,10 +78,15 @@ export function resolveTemplatePreviewUrl(template, options = {}) {
     template.templateHtml,
     template.html_url,
     template.htmlUrl,
+    template.llm2_html_url,
+    template.llm2HtmlUrl,
     artifacts.html_url,
     artifacts.htmlUrl,
     artifacts.html,
+    artifacts.llm2_html_url,
+    artifacts.llm2HtmlUrl,
     manifestFiles['template_html'],
+    manifestFiles['template_llm2.html'],
     options.fallbackUrl,
   ]
 

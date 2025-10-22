@@ -1,9 +1,18 @@
 from __future__ import annotations
 
+import json
 import logging
 import os
+import threading
 import time
+from datetime import datetime
+from pathlib import Path
 from typing import Any, Callable, Dict, Iterable, Tuple
+
+try:
+    from openai import RateLimitError
+except ImportError:  # pragma: no cover - optional dependency during tests
+    RateLimitError = None  # type: ignore[assignment]
 
 logger = logging.getLogger("neura.llm")
 
@@ -26,6 +35,64 @@ else:
 _MAX_ATTEMPTS = int(os.getenv("OPENAI_MAX_ATTEMPTS", "3"))
 _BACKOFF_INITIAL = float(os.getenv("OPENAI_BACKOFF_SECONDS", "1.5"))
 _BACKOFF_MULTIPLIER = float(os.getenv("OPENAI_BACKOFF_MULTIPLIER", "2.0"))
+
+_LOG_PATH_ENV = os.getenv("LLM_RAW_OUTPUT_PATH")
+if _LOG_PATH_ENV:
+    _RAW_OUTPUT_PATH = Path(_LOG_PATH_ENV).expanduser()
+else:
+    _RAW_OUTPUT_PATH = Path(__file__).resolve().parents[3] / "llm_raw_outputs.md"
+
+_RAW_OUTPUT_LOCK = threading.Lock()
+
+
+def _coerce_jsonable(value: Any) -> Any:
+    """Best-effort conversion of OpenAI responses to JSON-serialisable data."""
+    if isinstance(value, (str, int, float, bool)) or value is None:
+        return value
+
+    if isinstance(value, dict):
+        return {str(k): _coerce_jsonable(v) for k, v in value.items()}
+
+    if isinstance(value, (list, tuple, set)):
+        return [_coerce_jsonable(v) for v in value]
+
+    for attr in ("model_dump", "to_dict", "dict"):
+        method = getattr(value, attr, None)
+        if callable(method):
+            try:
+                return _coerce_jsonable(method())
+            except Exception:
+                continue
+
+    json_method = getattr(value, "model_dump_json", None)
+    if callable(json_method):
+        try:
+            return _coerce_jsonable(json.loads(json_method()))
+        except Exception:
+            pass
+
+    return repr(value)
+
+
+def _append_raw_output(description: str, response: Any) -> None:
+    """Append the raw LLM response to a Markdown log file."""
+    timestamp = datetime.utcnow().isoformat(timespec="seconds") + "Z"
+    entry = _coerce_jsonable(response)
+
+    try:
+        with _RAW_OUTPUT_LOCK:
+            _RAW_OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
+            with _RAW_OUTPUT_PATH.open("a", encoding="utf-8") as handle:
+                handle.write(f"## {timestamp} - {description}\n\n")
+                handle.write("```json\n")
+                handle.write(json.dumps(entry, indent=2))
+                handle.write("\n```\n\n")
+    except Exception as exc:  # pragma: no cover - logging must not break execution
+        logger.debug(
+            "llm_raw_output_log_failed",
+            extra={"event": "llm_raw_output_log_failed"},
+            exc_info=(type(exc), exc, exc.__traceback__),
+        )
 
 
 def _resolve_create(client: Any, timeout: float | None) -> Tuple[Callable[..., Any], Dict[str, Any]]:
@@ -52,6 +119,71 @@ def _resolve_create(client: Any, timeout: float | None) -> Tuple[Callable[..., A
     raise AttributeError("OpenAI client does not expose chat completions API")
 
 
+def _is_temperature_unsupported_error(exc: BaseException) -> bool:
+    """Return True when the error indicates temperature overrides are not allowed."""
+    body = getattr(exc, "body", None)
+    if isinstance(body, dict):
+        error = body.get("error")
+        if isinstance(error, dict):
+            if error.get("param") == "temperature" and error.get("code") == "unsupported_value":
+                return True
+            message = str(error.get("message") or "")
+        else:
+            message = ""
+    else:
+        message = ""
+
+    detail = message or str(getattr(exc, "message", "")) or str(exc)
+    detail_lower = detail.lower()
+    return "temperature" in detail_lower and "unsupported" in detail_lower
+
+
+def _is_quota_exceeded_error(exc: BaseException) -> bool:
+    """Return True when the exception represents an OpenAI quota / rate limit exhaustion."""
+    if RateLimitError is not None and isinstance(exc, RateLimitError):
+        return True
+
+    body = getattr(exc, "body", None)
+    if isinstance(body, dict):
+        error = body.get("error")
+        if isinstance(error, dict):
+            code = str(error.get("code") or "").lower()
+            if code == "insufficient_quota":
+                return True
+            error_type = str(error.get("type") or "").lower()
+            if error_type == "insufficient_quota":
+                return True
+            message = error.get("message")
+            if isinstance(message, str):
+                message_lower = message.lower()
+                if "insufficient_quota" in message_lower:
+                    return True
+                if "quota" in message_lower and ("exceeded" in message_lower or "insufficient" in message_lower):
+                    return True
+
+    detail = str(exc)
+    detail_lower = detail.lower()
+    if "insufficient_quota" in detail_lower:
+        return True
+    return "exceeded your current quota" in detail_lower
+
+
+def _extract_openai_error_message(exc: BaseException) -> str:
+    """Return the most meaningful error message we can extract from an OpenAI exception."""
+    body = getattr(exc, "body", None)
+    if isinstance(body, dict):
+        error = body.get("error")
+        if isinstance(error, dict):
+            message = error.get("message")
+            if isinstance(message, str) and message.strip():
+                return message.strip()
+
+    message = getattr(exc, "message", None)
+    if isinstance(message, str) and message.strip():
+        return message.strip()
+    return str(exc)
+
+
 def call_chat_completion(
     client: Any,
     *,
@@ -76,7 +208,8 @@ def call_chat_completion(
     delay = _BACKOFF_INITIAL
     last_exc: BaseException | None = None
 
-    for attempt in range(1, _MAX_ATTEMPTS + 1):
+    attempt = 1
+    while attempt <= _MAX_ATTEMPTS:
         create_fn, extra_kwargs = _resolve_create(client, timeout)
         payload = {
             "model": model,
@@ -84,6 +217,7 @@ def call_chat_completion(
             **kwargs,
             **extra_kwargs,
         }
+        quota_exceeded = False
         try:
             logger.info(
                 "llm_call_start",
@@ -95,6 +229,7 @@ def call_chat_completion(
                 },
             )
             response = create_fn(**payload)
+            _append_raw_output(description, response)
             logger.info(
                 "llm_call_success",
                 extra={
@@ -111,6 +246,7 @@ def call_chat_completion(
                 payload.pop("timeout", None)
                 try:
                     response = create_fn(**payload)
+                    _append_raw_output(description, response)
                     logger.info(
                         "llm_call_success",
                         extra={
@@ -124,10 +260,28 @@ def call_chat_completion(
                     return response
                 except Exception as inner_exc:
                     last_exc = inner_exc
+                    quota_exceeded = _is_quota_exceeded_error(inner_exc)
             else:
                 last_exc = exc
+                quota_exceeded = _is_quota_exceeded_error(exc)
         except Exception as exc:
+            if "temperature" in kwargs and _is_temperature_unsupported_error(exc):
+                logger.info(
+                    "llm_temperature_override_removed",
+                    extra={
+                        "event": "llm_temperature_override_removed",
+                        "description": description,
+                        "attempt": attempt,
+                        "model": model,
+                    },
+                )
+                kwargs.pop("temperature", None)
+                continue
             last_exc = exc
+            quota_exceeded = _is_quota_exceeded_error(exc)
+
+        if quota_exceeded:
+            break
 
         logger.warning(
             "llm_call_retry",
@@ -146,8 +300,10 @@ def call_chat_completion(
 
         time.sleep(delay)
         delay *= _BACKOFF_MULTIPLIER
+        attempt += 1
 
     assert last_exc is not None
+    quota_exceeded = _is_quota_exceeded_error(last_exc)
     logger.error(
         "llm_call_failed",
         extra={
@@ -155,7 +311,14 @@ def call_chat_completion(
             "description": description,
             "attempts": _MAX_ATTEMPTS,
             "model": model,
+            "quota_exceeded": quota_exceeded,
         },
         exc_info=last_exc,
     )
+    if quota_exceeded:
+        message = _extract_openai_error_message(last_exc)
+        raise RuntimeError(
+            f"{description} failed because the OpenAI API quota was exceeded. "
+            f"{message or 'Please review your API plan and billing details.'}"
+        ) from last_exc
     raise RuntimeError(f"{description} failed after {_MAX_ATTEMPTS} attempts") from last_exc

@@ -6,13 +6,13 @@
       "db_type": "sqlite",
       "database_path": "C:\\Users\\alfre\\Downloads\\consumption_report_with_date.db",
       "secret": "gAAAAABo62kflqOz8cpnLSHXEqw8I2ieZ2sIiH9JGSqxhW_6He2YP1fZWN7vTKSN7C9cSqS6NM_RTkL71cf2yPs_-1UgtkuJNghUM5dAGaE2ceHATMngILLgVrigqHKVdRA0eM9QWjibdyG_5rdnqxKlzhOEIo07_yFx1zy112-TsTA4Qy8rR03f2JW-lFlLQWr4Ex58wWhmimXndghGd8wuZd2zLe-C-eDFDljUwKABE7l4ZlkusMay99jajQ_UROFWTqnISg6cQVvlxTeS-tbmvc261EvLUA==",
-      "updated_at": "2025-10-12T08:38:55+00:00",
+      "updated_at": "2025-10-15T22:36:48+00:00",
       "created_at": "2025-10-12T08:38:55+00:00",
       "status": "connected",
-      "last_connected_at": "2025-10-12T08:38:55+00:00",
+      "last_connected_at": "2025-10-15T22:36:48+00:00",
       "last_latency_ms": 1,
       "tags": [],
-      "last_detail": "Connected (sqlite@consumption_report_with_date.db)"
+      "last_detail": "Healthcheck succeeded"
     },
     "eae443fb-6c24-47d9-822e-8f0450791b80": {
       "id": "eae443fb-6c24-47d9-822e-8f0450791b80",
@@ -41,6 +41,34 @@
       "last_latency_ms": 17,
       "tags": [],
       "last_detail": "Connected (sqlite@consumption_report_with_date.db)"
+    },
+    "4b38fc3a-1f06-40f3-bc5e-50c9ea5a1e74": {
+      "id": "4b38fc3a-1f06-40f3-bc5e-50c9ea5a1e74",
+      "name": "recipetest",
+      "db_type": "sqlite",
+      "database_path": "C:\\Users\\alfre\\Downloads\\recipe_log.sqlite3",
+      "secret": "gAAAAABo8Et3m5tRwQT9VSRbHjsO3YYnFze8rwp0lup54sSdZDdpd9lyZ6brqD8IoC0ym8QUZDhmaui9DjvFeL4yc4ogPB02dt80C4NSfxdnTCxNhzw4Vj1oRI2vOBAVGW7wcpmQiWLdnjlc6p-km4X2mJRkarbjZJPzk5vbpxYaHrGemcx00XmI2J8geLOj9VkHVZHPwbI3-YrMYlbzMWUEjcTyuiZXtCoRNV12tBwW5MDraTWRqrPMmBZg9EP8buCFfbd7kgcU",
+      "updated_at": "2025-10-22T21:06:52+00:00",
+      "created_at": "2025-10-16T01:33:40+00:00",
+      "status": "connected",
+      "last_connected_at": "2025-10-22T21:06:52+00:00",
+      "last_latency_ms": 99,
+      "tags": [],
+      "last_detail": "Healthcheck succeeded"
+    },
+    "a74f7414-a960-474a-a3b6-d02014cd55e8": {
+      "id": "a74f7414-a960-474a-a3b6-d02014cd55e8",
+      "name": "Neuract",
+      "db_type": "sqlite",
+      "database_path": "C:\\Users\\alfre\\Downloads\\consumption_report_with_date.db",
+      "secret": "gAAAAABo8FFrSVv0Vtp3Zc9zay-UT4jmzS4hN-WfZJDeGEtQQNR9lPZPDjS6qi6k1HOiF96k4wyFoQ_iczwNNf2lH8VKDw8YxETsdCJO2ohXHTwF2MndzjtZe8uv2aDtt7SF08oUdswLpsvuUlkTPAIZGRfU25a5xYAnBAMFwB4aN8AKu0lTJCRrIt9-gY4WA96il2KzlLcg_R0hCpc9wQgHtpXfLVjo8oKd-VWmpdWRIQVYT78XXeoeOQc1tLgCBHoA3VoC37iQcppS_gwlAYIONKJ7TlqVvg==",
+      "updated_at": "2025-10-16T01:59:07+00:00",
+      "created_at": "2025-10-16T01:58:57+00:00",
+      "status": "connected",
+      "last_connected_at": "2025-10-16T01:59:07+00:00",
+      "last_latency_ms": 4.0,
+      "tags": [],
+      "last_detail": null
     }
   },
   "templates": {
@@ -51,7 +79,8 @@
       "artifacts": {
         "template_html_url": "/uploads/1066c8c7-4d8f-429f-afac-6b419b5b2f4a/template_p1.html",
         "thumbnail_url": "/uploads/1066c8c7-4d8f-429f-afac-6b419b5b2f4a/reference_p1.png",
-        "pdf_url": "/uploads/1066c8c7-4d8f-429f-afac-6b419b5b2f4a/source.pdf"
+        "pdf_url": "/uploads/1066c8c7-4d8f-429f-afac-6b419b5b2f4a/source.pdf",
+        "page_summary_url": ""
       },
       "updated_at": "2025-10-10T07:59:52+00:00",
       "created_at": "2025-10-10T07:59:52+00:00",
@@ -65,29 +94,13 @@
       "artifacts": {
         "template_html_url": "/uploads/e972e0c1-2875-48ef-9758-698958acd3d6/template_p1.html",
         "thumbnail_url": "/uploads/e972e0c1-2875-48ef-9758-698958acd3d6/reference_p1.png",
-        "pdf_url": "/uploads/e972e0c1-2875-48ef-9758-698958acd3d6/source.pdf"
+        "pdf_url": "/uploads/e972e0c1-2875-48ef-9758-698958acd3d6/source.pdf",
+        "page_summary_url": ""
       },
       "updated_at": "2025-10-10T08:02:39+00:00",
       "created_at": "2025-10-10T08:02:39+00:00",
       "tags": [],
       "last_connection_id": "6d8257cb-2a09-4989-8cdf-38b463ce0e17"
-    },
-    "8cd462fd-0ff8-40c6-a1a3-1b08c107bf93": {
-      "id": "8cd462fd-0ff8-40c6-a1a3-1b08c107bf93",
-      "name": "CrystalReportViewer1 (7)",
-      "status": "approved",
-      "artifacts": {
-        "template_html_url": "/uploads/8cd462fd-0ff8-40c6-a1a3-1b08c107bf93/template_p1.html?ts=1760085433",
-        "thumbnail_url": "/uploads/8cd462fd-0ff8-40c6-a1a3-1b08c107bf93/report_final.png",
-        "pdf_url": "/uploads/8cd462fd-0ff8-40c6-a1a3-1b08c107bf93/source.pdf",
-        "final_html_url": "/uploads/8cd462fd-0ff8-40c6-a1a3-1b08c107bf93/report_final.html?ts=1760085433",
-        "manifest_url": "/templates/8cd462fd-0ff8-40c6-a1a3-1b08c107bf93/artifacts/manifest"
-      },
-      "updated_at": "2025-10-13T19:59:30+00:00",
-      "created_at": "2025-10-10T08:16:45+00:00",
-      "tags": [],
-      "last_connection_id": "812f49b3-e001-40b5-9168-781fc10e7243",
-      "last_run_at": "2025-10-13T19:59:30+00:00"
     },
     "3300f6df-a6d8-40a8-9b29-6233fce89eac": {
       "id": "3300f6df-a6d8-40a8-9b29-6233fce89eac",
@@ -96,26 +109,11 @@
       "artifacts": {
         "template_html_url": "/uploads/3300f6df-a6d8-40a8-9b29-6233fce89eac/template_p1.html",
         "thumbnail_url": "/uploads/3300f6df-a6d8-40a8-9b29-6233fce89eac/reference_p1.png",
-        "pdf_url": "/uploads/3300f6df-a6d8-40a8-9b29-6233fce89eac/source.pdf"
+        "pdf_url": "/uploads/3300f6df-a6d8-40a8-9b29-6233fce89eac/source.pdf",
+        "page_summary_url": ""
       },
       "updated_at": "2025-10-11T14:16:55+00:00",
       "created_at": "2025-10-11T14:16:55+00:00",
-      "tags": [],
-      "last_connection_id": "b0194024-4749-4fd4-be5d-04f5d9b1152e"
-    },
-    "6970da4a-5ef1-407e-8245-d5f55e064a06": {
-      "id": "6970da4a-5ef1-407e-8245-d5f55e064a06",
-      "name": "CrystalReportViewer1 (7)",
-      "status": "approved",
-      "artifacts": {
-        "template_html_url": "/uploads/6970da4a-5ef1-407e-8245-d5f55e064a06/template_p1.html?ts=1760193207",
-        "thumbnail_url": "/uploads/6970da4a-5ef1-407e-8245-d5f55e064a06/report_final.png",
-        "pdf_url": "/uploads/6970da4a-5ef1-407e-8245-d5f55e064a06/source.pdf",
-        "final_html_url": "/uploads/6970da4a-5ef1-407e-8245-d5f55e064a06/report_final.html?ts=1760193207",
-        "manifest_url": "/templates/6970da4a-5ef1-407e-8245-d5f55e064a06/artifacts/manifest"
-      },
-      "updated_at": "2025-10-11T14:35:19+00:00",
-      "created_at": "2025-10-11T14:27:35+00:00",
       "tags": [],
       "last_connection_id": "b0194024-4749-4fd4-be5d-04f5d9b1152e"
     },
@@ -126,7 +124,8 @@
       "artifacts": {
         "template_html_url": "/uploads/568fea90-9eaf-4a80-be94-145de8d651c2/template_p1.html",
         "thumbnail_url": "/uploads/568fea90-9eaf-4a80-be94-145de8d651c2/reference_p1.png",
-        "pdf_url": "/uploads/568fea90-9eaf-4a80-be94-145de8d651c2/source.pdf"
+        "pdf_url": "/uploads/568fea90-9eaf-4a80-be94-145de8d651c2/source.pdf",
+        "page_summary_url": ""
       },
       "updated_at": "2025-10-11T22:23:57+00:00",
       "created_at": "2025-10-11T22:23:57+00:00",
@@ -140,34 +139,909 @@
       "artifacts": {
         "template_html_url": "/uploads/c7db3c36-ed21-41a6-9346-2862158c1e92/template_p1.html",
         "thumbnail_url": "/uploads/c7db3c36-ed21-41a6-9346-2862158c1e92/reference_p1.png",
-        "pdf_url": "/uploads/c7db3c36-ed21-41a6-9346-2862158c1e92/source.pdf"
+        "pdf_url": "/uploads/c7db3c36-ed21-41a6-9346-2862158c1e92/source.pdf",
+        "page_summary_url": ""
       },
       "updated_at": "2025-10-13T20:14:10+00:00",
       "created_at": "2025-10-13T20:14:10+00:00",
       "tags": [],
       "last_connection_id": "812f49b3-e001-40b5-9168-781fc10e7243"
     },
-    "74842a25-f22a-47cb-8b8f-28fc8b3b4b9c": {
-      "id": "74842a25-f22a-47cb-8b8f-28fc8b3b4b9c",
+    "f27f274d-1e2e-400a-bec0-2d40f24393af": {
+      "id": "f27f274d-1e2e-400a-bec0-2d40f24393af",
+      "name": "CrystalReportViewer1 (7)",
+      "status": "draft",
+      "artifacts": {
+        "template_html_url": "/uploads/f27f274d-1e2e-400a-bec0-2d40f24393af/template_p1.html",
+        "thumbnail_url": "/uploads/f27f274d-1e2e-400a-bec0-2d40f24393af/reference_p1.png",
+        "pdf_url": "/uploads/f27f274d-1e2e-400a-bec0-2d40f24393af/source.pdf",
+        "page_summary_url": ""
+      },
+      "updated_at": "2025-10-15T16:22:13+00:00",
+      "created_at": "2025-10-15T16:22:13+00:00",
+      "tags": [],
+      "last_connection_id": "146e0189-b80c-43b8-8d06-72119c665d0a"
+    },
+    "04723c02-2633-4a40-bda9-234090c3d1ac": {
+      "id": "04723c02-2633-4a40-bda9-234090c3d1ac",
+      "name": "CrystalReportViewer1 (7)",
+      "status": "draft",
+      "artifacts": {
+        "template_html_url": "/uploads/04723c02-2633-4a40-bda9-234090c3d1ac/template_p1.html",
+        "thumbnail_url": "/uploads/04723c02-2633-4a40-bda9-234090c3d1ac/reference_p1.png",
+        "pdf_url": "/uploads/04723c02-2633-4a40-bda9-234090c3d1ac/source.pdf",
+        "page_summary_url": ""
+      },
+      "updated_at": "2025-10-15T16:38:35+00:00",
+      "created_at": "2025-10-15T16:38:35+00:00",
+      "tags": [],
+      "last_connection_id": "b2888d27-876f-46ee-b82d-64b70e9987e6"
+    },
+    "6895b616-cb97-446c-892f-f44c7a970c46": {
+      "id": "6895b616-cb97-446c-892f-f44c7a970c46",
+      "name": "CrystalReportViewer1 (7)",
+      "status": "draft",
+      "artifacts": {
+        "template_html_url": "/uploads/6895b616-cb97-446c-892f-f44c7a970c46/template_p1.html",
+        "thumbnail_url": "/uploads/6895b616-cb97-446c-892f-f44c7a970c46/reference_p1.png",
+        "pdf_url": "/uploads/6895b616-cb97-446c-892f-f44c7a970c46/source.pdf",
+        "page_summary_url": ""
+      },
+      "updated_at": "2025-10-15T16:58:59+00:00",
+      "created_at": "2025-10-15T16:58:59+00:00",
+      "tags": [],
+      "last_connection_id": "b2888d27-876f-46ee-b82d-64b70e9987e6"
+    },
+    "c3ae1b27-669a-4084-b87d-8f21b9ecc09f": {
+      "id": "c3ae1b27-669a-4084-b87d-8f21b9ecc09f",
+      "name": "CrystalReportViewer1 (7)",
+      "status": "draft",
+      "artifacts": {
+        "template_html_url": "/uploads/c3ae1b27-669a-4084-b87d-8f21b9ecc09f/template_p1.html",
+        "thumbnail_url": "/uploads/c3ae1b27-669a-4084-b87d-8f21b9ecc09f/reference_p1.png",
+        "pdf_url": "/uploads/c3ae1b27-669a-4084-b87d-8f21b9ecc09f/source.pdf",
+        "page_summary_url": ""
+      },
+      "updated_at": "2025-10-15T16:59:20+00:00",
+      "created_at": "2025-10-15T16:59:20+00:00",
+      "tags": [],
+      "last_connection_id": "b7e1ce60-384b-496f-8e64-fcb4241ec16d"
+    },
+    "75abd8e2-1e2f-4a47-9c68-90c7e8b39f94": {
+      "id": "75abd8e2-1e2f-4a47-9c68-90c7e8b39f94",
+      "name": "CrystalReportViewer1 (7)",
+      "status": "draft",
+      "artifacts": {
+        "template_html_url": "/uploads/75abd8e2-1e2f-4a47-9c68-90c7e8b39f94/template_p1.html",
+        "thumbnail_url": "/uploads/75abd8e2-1e2f-4a47-9c68-90c7e8b39f94/reference_p1.png",
+        "pdf_url": "/uploads/75abd8e2-1e2f-4a47-9c68-90c7e8b39f94/source.pdf",
+        "schema_ext_url": "/uploads/75abd8e2-1e2f-4a47-9c68-90c7e8b39f94/schema_ext.json",
+        "render_png_url": "/uploads/75abd8e2-1e2f-4a47-9c68-90c7e8b39f94/render_p1.png",
+        "fix_metrics_url": "/uploads/75abd8e2-1e2f-4a47-9c68-90c7e8b39f94/fix_metrics.json",
+        "page_summary_url": ""
+      },
+      "updated_at": "2025-10-15T22:00:00+00:00",
+      "created_at": "2025-10-15T22:00:00+00:00",
+      "tags": [],
+      "last_connection_id": "812f49b3-e001-40b5-9168-781fc10e7243"
+    },
+    "accd8ef2-7acc-41e9-95a3-d293e0e41beb": {
+      "id": "accd8ef2-7acc-41e9-95a3-d293e0e41beb",
+      "name": "CrystalReportViewer1 (7)",
+      "status": "draft",
+      "artifacts": {
+        "template_html_url": "/uploads/accd8ef2-7acc-41e9-95a3-d293e0e41beb/template_p1.html",
+        "thumbnail_url": "/uploads/accd8ef2-7acc-41e9-95a3-d293e0e41beb/reference_p1.png",
+        "pdf_url": "/uploads/accd8ef2-7acc-41e9-95a3-d293e0e41beb/source.pdf",
+        "schema_ext_url": "/uploads/accd8ef2-7acc-41e9-95a3-d293e0e41beb/schema_ext.json",
+        "render_png_url": "/uploads/accd8ef2-7acc-41e9-95a3-d293e0e41beb/render_p1.png",
+        "fix_metrics_url": "/uploads/accd8ef2-7acc-41e9-95a3-d293e0e41beb/fix_metrics.json",
+        "page_summary_url": ""
+      },
+      "updated_at": "2025-10-15T22:06:32+00:00",
+      "created_at": "2025-10-15T22:06:32+00:00",
+      "tags": [],
+      "last_connection_id": "812f49b3-e001-40b5-9168-781fc10e7243"
+    },
+    "5e3b4dd6-e6c0-4ff6-8bf0-45c3df089db3": {
+      "id": "5e3b4dd6-e6c0-4ff6-8bf0-45c3df089db3",
+      "name": "CrystalReportViewer1 (7)",
+      "status": "draft",
+      "artifacts": {
+        "template_html_url": "/uploads/5e3b4dd6-e6c0-4ff6-8bf0-45c3df089db3/template_p1.html",
+        "thumbnail_url": "/uploads/5e3b4dd6-e6c0-4ff6-8bf0-45c3df089db3/reference_p1.png",
+        "pdf_url": "/uploads/5e3b4dd6-e6c0-4ff6-8bf0-45c3df089db3/source.pdf",
+        "schema_ext_url": "/uploads/5e3b4dd6-e6c0-4ff6-8bf0-45c3df089db3/schema_ext.json",
+        "render_png_url": "/uploads/5e3b4dd6-e6c0-4ff6-8bf0-45c3df089db3/render_p1.png",
+        "fix_metrics_url": "/uploads/5e3b4dd6-e6c0-4ff6-8bf0-45c3df089db3/fix_metrics.json",
+        "page_summary_url": ""
+      },
+      "updated_at": "2025-10-15T22:23:32+00:00",
+      "created_at": "2025-10-15T22:23:32+00:00",
+      "tags": [],
+      "last_connection_id": "812f49b3-e001-40b5-9168-781fc10e7243"
+    },
+    "435e1df9-3764-4a01-a5b1-6f40488f03f2": {
+      "id": "435e1df9-3764-4a01-a5b1-6f40488f03f2",
+      "name": "CrystalReportViewer1 (7)",
+      "status": "draft",
+      "artifacts": {
+        "template_html_url": "/uploads/435e1df9-3764-4a01-a5b1-6f40488f03f2/template_p1.html",
+        "thumbnail_url": "/uploads/435e1df9-3764-4a01-a5b1-6f40488f03f2/reference_p1.png",
+        "pdf_url": "/uploads/435e1df9-3764-4a01-a5b1-6f40488f03f2/source.pdf",
+        "schema_ext_url": "/uploads/435e1df9-3764-4a01-a5b1-6f40488f03f2/schema_ext.json",
+        "render_png_url": "/uploads/435e1df9-3764-4a01-a5b1-6f40488f03f2/render_p1.png",
+        "fix_metrics_url": "/uploads/435e1df9-3764-4a01-a5b1-6f40488f03f2/fix_metrics.json",
+        "page_summary_url": ""
+      },
+      "updated_at": "2025-10-15T22:41:59+00:00",
+      "created_at": "2025-10-15T22:41:59+00:00",
+      "tags": [],
+      "last_connection_id": "812f49b3-e001-40b5-9168-781fc10e7243"
+    },
+    "b789567f-a5ff-4375-952f-05cceca3aa9b": {
+      "id": "b789567f-a5ff-4375-952f-05cceca3aa9b",
+      "name": "CrystalReportViewer1 (6)",
+      "status": "draft",
+      "artifacts": {
+        "template_html_url": "/uploads/b789567f-a5ff-4375-952f-05cceca3aa9b/template_p1.html",
+        "thumbnail_url": "/uploads/b789567f-a5ff-4375-952f-05cceca3aa9b/reference_p1.png",
+        "pdf_url": "/uploads/b789567f-a5ff-4375-952f-05cceca3aa9b/source.pdf",
+        "schema_ext_url": "/uploads/b789567f-a5ff-4375-952f-05cceca3aa9b/schema_ext.json",
+        "render_png_url": "/uploads/b789567f-a5ff-4375-952f-05cceca3aa9b/render_p1.png",
+        "fix_metrics_url": "/uploads/b789567f-a5ff-4375-952f-05cceca3aa9b/fix_metrics.json",
+        "mapping_step3_url": "/uploads/b789567f-a5ff-4375-952f-05cceca3aa9b/mapping_step3.json",
+        "constant_replacements_url": "/uploads/b789567f-a5ff-4375-952f-05cceca3aa9b/constant_replacements.json",
+        "page_summary_url": ""
+      },
+      "updated_at": "2025-10-16T00:19:30+00:00",
+      "created_at": "2025-10-15T23:48:20+00:00",
+      "tags": [],
+      "last_connection_id": "812f49b3-e001-40b5-9168-781fc10e7243"
+    },
+    "62464c32-e735-444e-8a54-0e182919c249": {
+      "id": "62464c32-e735-444e-8a54-0e182919c249",
+      "name": "CrystalReportViewer1 (7)",
+      "status": "draft",
+      "artifacts": {
+        "template_html_url": "/uploads/62464c32-e735-444e-8a54-0e182919c249/template_p1.html",
+        "thumbnail_url": "/uploads/62464c32-e735-444e-8a54-0e182919c249/reference_p1.png",
+        "pdf_url": "/uploads/62464c32-e735-444e-8a54-0e182919c249/source.pdf",
+        "schema_ext_url": "/uploads/62464c32-e735-444e-8a54-0e182919c249/schema_ext.json",
+        "render_png_url": "/uploads/62464c32-e735-444e-8a54-0e182919c249/render_p1.png",
+        "fix_metrics_url": "/uploads/62464c32-e735-444e-8a54-0e182919c249/fix_metrics.json",
+        "page_summary_url": ""
+      },
+      "updated_at": "2025-10-16T00:29:36+00:00",
+      "created_at": "2025-10-16T00:29:36+00:00",
+      "tags": [],
+      "last_connection_id": "812f49b3-e001-40b5-9168-781fc10e7243"
+    },
+    "19de812c-4c89-4594-a468-bf352f876468": {
+      "id": "19de812c-4c89-4594-a468-bf352f876468",
+      "name": "CrystalReportViewer1 (7)",
+      "status": "draft",
+      "artifacts": {
+        "template_html_url": "/uploads/19de812c-4c89-4594-a468-bf352f876468/template_p1.html",
+        "thumbnail_url": "/uploads/19de812c-4c89-4594-a468-bf352f876468/reference_p1.png",
+        "pdf_url": "/uploads/19de812c-4c89-4594-a468-bf352f876468/source.pdf",
+        "schema_ext_url": "/uploads/19de812c-4c89-4594-a468-bf352f876468/schema_ext.json",
+        "render_png_url": "/uploads/19de812c-4c89-4594-a468-bf352f876468/render_p1.png",
+        "fix_metrics_url": "/uploads/19de812c-4c89-4594-a468-bf352f876468/fix_metrics.json",
+        "mapping_step3_url": "/uploads/19de812c-4c89-4594-a468-bf352f876468/mapping_step3.json",
+        "constant_replacements_url": "/uploads/19de812c-4c89-4594-a468-bf352f876468/constant_replacements.json",
+        "page_summary_url": ""
+      },
+      "updated_at": "2025-10-16T01:38:38+00:00",
+      "created_at": "2025-10-16T01:36:55+00:00",
+      "tags": [],
+      "last_connection_id": "4b38fc3a-1f06-40f3-bc5e-50c9ea5a1e74"
+    },
+    "df4da2eb-77f7-4906-8ea1-118b84f8f217": {
+      "id": "df4da2eb-77f7-4906-8ea1-118b84f8f217",
+      "name": "CrystalReportViewer1 (7)",
+      "status": "draft",
+      "artifacts": {
+        "template_html_url": "/uploads/df4da2eb-77f7-4906-8ea1-118b84f8f217/template_p1.html",
+        "thumbnail_url": "/uploads/df4da2eb-77f7-4906-8ea1-118b84f8f217/reference_p1.png",
+        "pdf_url": "/uploads/df4da2eb-77f7-4906-8ea1-118b84f8f217/source.pdf",
+        "schema_ext_url": "/uploads/df4da2eb-77f7-4906-8ea1-118b84f8f217/schema_ext.json",
+        "render_png_url": "/uploads/df4da2eb-77f7-4906-8ea1-118b84f8f217/render_p1.png",
+        "render_after_png_url": "/uploads/df4da2eb-77f7-4906-8ea1-118b84f8f217/render_p1_after.png",
+        "fix_metrics_url": "/uploads/df4da2eb-77f7-4906-8ea1-118b84f8f217/fix_metrics.json",
+        "page_summary_url": ""
+      },
+      "updated_at": "2025-10-16T02:37:58+00:00",
+      "created_at": "2025-10-16T02:37:58+00:00",
+      "tags": [],
+      "last_connection_id": "4b38fc3a-1f06-40f3-bc5e-50c9ea5a1e74"
+    },
+    "567794a7-7c75-47d4-ab37-024d4d43d17a": {
+      "id": "567794a7-7c75-47d4-ab37-024d4d43d17a",
+      "name": "CrystalReportViewer1 (7)",
+      "status": "draft",
+      "artifacts": {
+        "template_html_url": "/uploads/567794a7-7c75-47d4-ab37-024d4d43d17a/template_p1.html",
+        "thumbnail_url": "/uploads/567794a7-7c75-47d4-ab37-024d4d43d17a/reference_p1.png",
+        "pdf_url": "/uploads/567794a7-7c75-47d4-ab37-024d4d43d17a/source.pdf",
+        "schema_ext_url": "/uploads/567794a7-7c75-47d4-ab37-024d4d43d17a/schema_ext.json",
+        "render_png_url": "/uploads/567794a7-7c75-47d4-ab37-024d4d43d17a/render_p1.png",
+        "render_after_png_url": "/uploads/567794a7-7c75-47d4-ab37-024d4d43d17a/render_p1_after.png",
+        "fix_metrics_url": "/uploads/567794a7-7c75-47d4-ab37-024d4d43d17a/fix_metrics.json",
+        "page_summary_url": ""
+      },
+      "updated_at": "2025-10-16T02:43:50+00:00",
+      "created_at": "2025-10-16T02:43:50+00:00",
+      "tags": [],
+      "last_connection_id": "4b38fc3a-1f06-40f3-bc5e-50c9ea5a1e74"
+    },
+    "f017df2d-176b-48c3-86f7-7a024b2d7ab5": {
+      "id": "f017df2d-176b-48c3-86f7-7a024b2d7ab5",
+      "name": "CrystalReportViewer1 (7)",
+      "status": "draft",
+      "artifacts": {
+        "template_html_url": "/uploads/f017df2d-176b-48c3-86f7-7a024b2d7ab5/template_p1.html",
+        "thumbnail_url": "/uploads/f017df2d-176b-48c3-86f7-7a024b2d7ab5/reference_p1.png",
+        "pdf_url": "/uploads/f017df2d-176b-48c3-86f7-7a024b2d7ab5/source.pdf",
+        "schema_ext_url": "/uploads/f017df2d-176b-48c3-86f7-7a024b2d7ab5/schema_ext.json",
+        "render_png_url": "/uploads/f017df2d-176b-48c3-86f7-7a024b2d7ab5/render_p1.png",
+        "render_after_png_url": "/uploads/f017df2d-176b-48c3-86f7-7a024b2d7ab5/render_p1_after.png",
+        "fix_metrics_url": "/uploads/f017df2d-176b-48c3-86f7-7a024b2d7ab5/fix_metrics.json",
+        "page_summary_url": ""
+      },
+      "updated_at": "2025-10-16T02:51:11+00:00",
+      "created_at": "2025-10-16T02:51:11+00:00",
+      "tags": [],
+      "last_connection_id": "4b38fc3a-1f06-40f3-bc5e-50c9ea5a1e74"
+    },
+    "fdfb5862-2fe6-43b1-b9e9-5e01f829c5b1": {
+      "id": "fdfb5862-2fe6-43b1-b9e9-5e01f829c5b1",
+      "name": "CrystalReportViewer1 (7)",
+      "status": "draft",
+      "artifacts": {
+        "template_html_url": "/uploads/fdfb5862-2fe6-43b1-b9e9-5e01f829c5b1/template_p1.html",
+        "thumbnail_url": "/uploads/fdfb5862-2fe6-43b1-b9e9-5e01f829c5b1/reference_p1.png",
+        "pdf_url": "/uploads/fdfb5862-2fe6-43b1-b9e9-5e01f829c5b1/source.pdf",
+        "schema_ext_url": "/uploads/fdfb5862-2fe6-43b1-b9e9-5e01f829c5b1/schema_ext.json",
+        "render_png_url": "/uploads/fdfb5862-2fe6-43b1-b9e9-5e01f829c5b1/render_p1.png",
+        "render_after_png_url": "/uploads/fdfb5862-2fe6-43b1-b9e9-5e01f829c5b1/render_p1_after.png",
+        "fix_metrics_url": "/uploads/fdfb5862-2fe6-43b1-b9e9-5e01f829c5b1/fix_metrics.json",
+        "mapping_step3_url": "/uploads/fdfb5862-2fe6-43b1-b9e9-5e01f829c5b1/mapping_step3.json",
+        "constant_replacements_url": "/uploads/fdfb5862-2fe6-43b1-b9e9-5e01f829c5b1/constant_replacements.json",
+        "page_summary_url": ""
+      },
+      "updated_at": "2025-10-16T03:02:53+00:00",
+      "created_at": "2025-10-16T02:58:36+00:00",
+      "tags": [],
+      "last_connection_id": "4b38fc3a-1f06-40f3-bc5e-50c9ea5a1e74"
+    },
+    "2aaa4f88-107e-410f-ba89-051bce8d5aa9": {
+      "id": "2aaa4f88-107e-410f-ba89-051bce8d5aa9",
+      "name": "CrystalReportViewer1 (7)",
+      "status": "draft",
+      "artifacts": {
+        "template_html_url": "/uploads/2aaa4f88-107e-410f-ba89-051bce8d5aa9/template_p1.html?ts=2ab7b1f2bacf5228",
+        "thumbnail_url": "/uploads/2aaa4f88-107e-410f-ba89-051bce8d5aa9/reference_p1.png",
+        "pdf_url": "/uploads/2aaa4f88-107e-410f-ba89-051bce8d5aa9/source.pdf",
+        "schema_ext_url": "/uploads/2aaa4f88-107e-410f-ba89-051bce8d5aa9/schema_ext.json",
+        "render_png_url": "/uploads/2aaa4f88-107e-410f-ba89-051bce8d5aa9/render_p1.png",
+        "render_after_png_url": "/uploads/2aaa4f88-107e-410f-ba89-051bce8d5aa9/render_p1_after.png",
+        "html_preview_png_url": "/uploads/2aaa4f88-107e-410f-ba89-051bce8d5aa9/html_preview_400dpi.png",
+        "fix_metrics_url": "/uploads/2aaa4f88-107e-410f-ba89-051bce8d5aa9/fix_metrics.json",
+        "page_summary_url": ""
+      },
+      "updated_at": "2025-10-16T03:37:35+00:00",
+      "created_at": "2025-10-16T03:37:35+00:00",
+      "tags": [],
+      "last_connection_id": "4b38fc3a-1f06-40f3-bc5e-50c9ea5a1e74"
+    },
+    "c8bcf728-d2fa-4068-84f9-2c4fd9f1c458": {
+      "id": "c8bcf728-d2fa-4068-84f9-2c4fd9f1c458",
+      "name": "CrystalReportViewer1 (7)",
+      "status": "draft",
+      "artifacts": {
+        "template_html_url": "/uploads/c8bcf728-d2fa-4068-84f9-2c4fd9f1c458/template_p1.html?ts=463cae6ec56ce966",
+        "thumbnail_url": "/uploads/c8bcf728-d2fa-4068-84f9-2c4fd9f1c458/reference_p1.png",
+        "pdf_url": "/uploads/c8bcf728-d2fa-4068-84f9-2c4fd9f1c458/source.pdf",
+        "schema_ext_url": "/uploads/c8bcf728-d2fa-4068-84f9-2c4fd9f1c458/schema_ext.json",
+        "render_png_url": "/uploads/c8bcf728-d2fa-4068-84f9-2c4fd9f1c458/render_p1.png",
+        "render_after_png_url": "/uploads/c8bcf728-d2fa-4068-84f9-2c4fd9f1c458/render_p1_after.png",
+        "html_preview_png_url": "/uploads/c8bcf728-d2fa-4068-84f9-2c4fd9f1c458/html_preview_400dpi.png",
+        "fix_metrics_url": "/uploads/c8bcf728-d2fa-4068-84f9-2c4fd9f1c458/fix_metrics.json",
+        "mapping_step3_url": "/uploads/c8bcf728-d2fa-4068-84f9-2c4fd9f1c458/mapping_step3.json",
+        "constant_replacements_url": "/uploads/c8bcf728-d2fa-4068-84f9-2c4fd9f1c458/constant_replacements.json",
+        "page_summary_url": ""
+      },
+      "updated_at": "2025-10-16T15:16:16+00:00",
+      "created_at": "2025-10-16T15:10:38+00:00",
+      "tags": [],
+      "last_connection_id": "4b38fc3a-1f06-40f3-bc5e-50c9ea5a1e74"
+    },
+    "23cd2c70-a75f-4936-b57e-355ce3cef379": {
+      "id": "23cd2c70-a75f-4936-b57e-355ce3cef379",
+      "name": "CrystalReportViewer1 (7)",
+      "status": "draft",
+      "artifacts": {
+        "template_html_url": "/uploads/23cd2c70-a75f-4936-b57e-355ce3cef379/template_p1.html?ts=2e069f32dd4b9aab",
+        "thumbnail_url": "/uploads/23cd2c70-a75f-4936-b57e-355ce3cef379/reference_p1.png",
+        "pdf_url": "/uploads/23cd2c70-a75f-4936-b57e-355ce3cef379/source.pdf",
+        "schema_ext_url": "/uploads/23cd2c70-a75f-4936-b57e-355ce3cef379/schema_ext.json",
+        "render_png_url": "/uploads/23cd2c70-a75f-4936-b57e-355ce3cef379/render_p1.png",
+        "render_after_png_url": "/uploads/23cd2c70-a75f-4936-b57e-355ce3cef379/render_p1_after.png",
+        "html_preview_png_url": "/uploads/23cd2c70-a75f-4936-b57e-355ce3cef379/html_preview_400dpi.png",
+        "fix_metrics_url": "/uploads/23cd2c70-a75f-4936-b57e-355ce3cef379/fix_metrics.json",
+        "mapping_step3_url": "/uploads/23cd2c70-a75f-4936-b57e-355ce3cef379/mapping_step3.json",
+        "constant_replacements_url": "/uploads/23cd2c70-a75f-4936-b57e-355ce3cef379/constant_replacements.json",
+        "page_summary_url": ""
+      },
+      "updated_at": "2025-10-16T19:49:05+00:00",
+      "created_at": "2025-10-16T19:45:39+00:00",
+      "tags": [],
+      "last_connection_id": "4b38fc3a-1f06-40f3-bc5e-50c9ea5a1e74"
+    },
+    "f68ec1e0-4210-483a-ac9d-230b6b0b66af": {
+      "id": "f68ec1e0-4210-483a-ac9d-230b6b0b66af",
+      "name": "CrystalReportViewer1 (7)",
+      "status": "draft",
+      "artifacts": {
+        "template_html_url": "/uploads/f68ec1e0-4210-483a-ac9d-230b6b0b66af/template_p1.html?ts=d089c7c43880f61b",
+        "thumbnail_url": "/uploads/f68ec1e0-4210-483a-ac9d-230b6b0b66af/reference_p1.png",
+        "pdf_url": "/uploads/f68ec1e0-4210-483a-ac9d-230b6b0b66af/source.pdf",
+        "schema_ext_url": "/uploads/f68ec1e0-4210-483a-ac9d-230b6b0b66af/schema_ext.json",
+        "render_png_url": "/uploads/f68ec1e0-4210-483a-ac9d-230b6b0b66af/render_p1.png",
+        "render_after_png_url": "/uploads/f68ec1e0-4210-483a-ac9d-230b6b0b66af/render_p1_after.png",
+        "fix_metrics_url": "/uploads/f68ec1e0-4210-483a-ac9d-230b6b0b66af/fix_metrics.json",
+        "mapping_step3_url": "/uploads/f68ec1e0-4210-483a-ac9d-230b6b0b66af/mapping_step3.json",
+        "constant_replacements_url": "/uploads/f68ec1e0-4210-483a-ac9d-230b6b0b66af/constant_replacements.json",
+        "page_summary_url": ""
+      },
+      "updated_at": "2025-10-16T20:36:40+00:00",
+      "created_at": "2025-10-16T20:32:30+00:00",
+      "tags": [],
+      "last_connection_id": "4b38fc3a-1f06-40f3-bc5e-50c9ea5a1e74"
+    },
+    "a31fe37b-d25d-4f08-b103-b5d6c585fe6a": {
+      "id": "a31fe37b-d25d-4f08-b103-b5d6c585fe6a",
+      "name": "CrystalReportViewer1 (7)",
+      "status": "draft",
+      "artifacts": {
+        "template_html_url": "/uploads/a31fe37b-d25d-4f08-b103-b5d6c585fe6a/template_p1.html?ts=aeef1fa73bddf913",
+        "thumbnail_url": "/uploads/a31fe37b-d25d-4f08-b103-b5d6c585fe6a/reference_p1.png",
+        "pdf_url": "/uploads/a31fe37b-d25d-4f08-b103-b5d6c585fe6a/source.pdf",
+        "llm2_html_url": "/uploads/a31fe37b-d25d-4f08-b103-b5d6c585fe6a/template_llm2.html?ts=c87c212fdf26d890",
+        "schema_ext_url": "/uploads/a31fe37b-d25d-4f08-b103-b5d6c585fe6a/schema_ext.json",
+        "render_png_url": "/uploads/a31fe37b-d25d-4f08-b103-b5d6c585fe6a/render_p1.png",
+        "fix_metrics_url": "/uploads/a31fe37b-d25d-4f08-b103-b5d6c585fe6a/fix_metrics.json",
+        "mapping_step3_url": "/uploads/a31fe37b-d25d-4f08-b103-b5d6c585fe6a/mapping_step3.json",
+        "constant_replacements_url": "/uploads/a31fe37b-d25d-4f08-b103-b5d6c585fe6a/constant_replacements.json",
+        "page_summary_url": "/uploads/a31fe37b-d25d-4f08-b103-b5d6c585fe6a/page_summary.txt?ts=a3cd2f2bd8baaeeb"
+      },
+      "updated_at": "2025-10-17T05:28:06+00:00",
+      "created_at": "2025-10-17T05:20:22+00:00",
+      "tags": [],
+      "last_connection_id": "4b38fc3a-1f06-40f3-bc5e-50c9ea5a1e74"
+    },
+    "46712944-0ca1-46d0-8e36-ae40d5552f4d": {
+      "id": "46712944-0ca1-46d0-8e36-ae40d5552f4d",
+      "name": "CrystalReportViewer1 (7)",
+      "status": "draft",
+      "artifacts": {
+        "template_html_url": "/uploads/46712944-0ca1-46d0-8e36-ae40d5552f4d/template_p1.html?ts=0c43b8ae0808ff3b",
+        "thumbnail_url": "/uploads/46712944-0ca1-46d0-8e36-ae40d5552f4d/reference_p1.png",
+        "pdf_url": "/uploads/46712944-0ca1-46d0-8e36-ae40d5552f4d/source.pdf",
+        "llm2_html_url": "/uploads/46712944-0ca1-46d0-8e36-ae40d5552f4d/template_llm2.html?ts=aac71f19614dfda9",
+        "schema_ext_url": "/uploads/46712944-0ca1-46d0-8e36-ae40d5552f4d/schema_ext.json",
+        "render_png_url": "/uploads/46712944-0ca1-46d0-8e36-ae40d5552f4d/render_p1.png",
+        "render_after_png_url": "/uploads/46712944-0ca1-46d0-8e36-ae40d5552f4d/render_p1_after.png",
+        "fix_metrics_url": "/uploads/46712944-0ca1-46d0-8e36-ae40d5552f4d/fix_metrics.json",
+        "mapping_step3_url": "/uploads/46712944-0ca1-46d0-8e36-ae40d5552f4d/mapping_step3.json",
+        "constant_replacements_url": "/uploads/46712944-0ca1-46d0-8e36-ae40d5552f4d/constant_replacements.json",
+        "page_summary_url": "/uploads/46712944-0ca1-46d0-8e36-ae40d5552f4d/page_summary.txt?ts=465688af65e7dc07"
+      },
+      "updated_at": "2025-10-17T12:34:52+00:00",
+      "created_at": "2025-10-17T12:27:16+00:00",
+      "tags": [],
+      "last_connection_id": "4b38fc3a-1f06-40f3-bc5e-50c9ea5a1e74"
+    },
+    "0f6fccf1-fa46-4a1e-99e8-15cfeca06297": {
+      "id": "0f6fccf1-fa46-4a1e-99e8-15cfeca06297",
+      "name": "CrystalReportViewer1 (7)",
+      "status": "mapping_previewed",
+      "artifacts": {
+        "template_html_url": "/uploads/0f6fccf1-fa46-4a1e-99e8-15cfeca06297/template_p1.html",
+        "thumbnail_url": "/uploads/0f6fccf1-fa46-4a1e-99e8-15cfeca06297/reference_p1.png",
+        "pdf_url": "/uploads/0f6fccf1-fa46-4a1e-99e8-15cfeca06297/source.pdf",
+        "schema_ext_url": "/uploads/0f6fccf1-fa46-4a1e-99e8-15cfeca06297/schema_ext.json",
+        "render_png_url": "/uploads/0f6fccf1-fa46-4a1e-99e8-15cfeca06297/render_p1.png",
+        "render_after_png_url": "/uploads/0f6fccf1-fa46-4a1e-99e8-15cfeca06297/render_p1_after.png",
+        "fix_metrics_url": "/uploads/0f6fccf1-fa46-4a1e-99e8-15cfeca06297/fix_metrics.json",
+        "mapping_step3_url": "/uploads/0f6fccf1-fa46-4a1e-99e8-15cfeca06297/mapping_step3.json",
+        "constants_inlined_url": "/uploads/0f6fccf1-fa46-4a1e-99e8-15cfeca06297/constant_replacements.json"
+      },
+      "updated_at": "2025-10-19T04:55:33+00:00",
+      "created_at": "2025-10-19T04:52:33+00:00",
+      "tags": [],
+      "last_connection_id": "4b38fc3a-1f06-40f3-bc5e-50c9ea5a1e74"
+    },
+    "9ced2aa3-3931-4a82-960f-98c196ca82e1": {
+      "id": "9ced2aa3-3931-4a82-960f-98c196ca82e1",
+      "name": "CrystalReportViewer1 (7)",
+      "status": "draft",
+      "artifacts": {
+        "template_html_url": "/uploads/9ced2aa3-3931-4a82-960f-98c196ca82e1/template_p1.html",
+        "thumbnail_url": "/uploads/9ced2aa3-3931-4a82-960f-98c196ca82e1/reference_p1.png",
+        "pdf_url": "/uploads/9ced2aa3-3931-4a82-960f-98c196ca82e1/source.pdf",
+        "schema_ext_url": "/uploads/9ced2aa3-3931-4a82-960f-98c196ca82e1/schema_ext.json",
+        "render_png_url": "/uploads/9ced2aa3-3931-4a82-960f-98c196ca82e1/render_p1_llm.png",
+        "render_after_png_url": "/uploads/9ced2aa3-3931-4a82-960f-98c196ca82e1/render_p1_after.png",
+        "fix_metrics_url": "/uploads/9ced2aa3-3931-4a82-960f-98c196ca82e1/fix_metrics.json",
+        "manifest_url": "/templates/9ced2aa3-3931-4a82-960f-98c196ca82e1/artifacts/manifest"
+      },
+      "updated_at": "2025-10-19T12:17:32+00:00",
+      "created_at": "2025-10-19T12:17:32+00:00",
+      "tags": [],
+      "last_connection_id": "test-connection"
+    },
+    "81266ad6-01a0-49a3-a51c-078fe62a456c": {
+      "id": "81266ad6-01a0-49a3-a51c-078fe62a456c",
+      "name": "CrystalReportViewer1 (7)",
+      "status": "mapping_previewed",
+      "artifacts": {
+        "template_html_url": "/uploads/81266ad6-01a0-49a3-a51c-078fe62a456c/template_p1.html",
+        "thumbnail_url": "/uploads/81266ad6-01a0-49a3-a51c-078fe62a456c/reference_p1.png",
+        "pdf_url": "/uploads/81266ad6-01a0-49a3-a51c-078fe62a456c/source.pdf",
+        "schema_ext_url": "/uploads/81266ad6-01a0-49a3-a51c-078fe62a456c/schema_ext.json",
+        "render_png_url": "/uploads/81266ad6-01a0-49a3-a51c-078fe62a456c/render_p1_llm.png",
+        "render_after_png_url": "/uploads/81266ad6-01a0-49a3-a51c-078fe62a456c/render_p1_after.png",
+        "fix_metrics_url": "/uploads/81266ad6-01a0-49a3-a51c-078fe62a456c/fix_metrics.json",
+        "manifest_url": "/templates/81266ad6-01a0-49a3-a51c-078fe62a456c/artifacts/manifest",
+        "mapping_step3_url": "/uploads/81266ad6-01a0-49a3-a51c-078fe62a456c/mapping_step3.json",
+        "constants_inlined_url": "/uploads/81266ad6-01a0-49a3-a51c-078fe62a456c/constant_replacements.json"
+      },
+      "updated_at": "2025-10-19T15:40:51+00:00",
+      "created_at": "2025-10-19T15:38:34+00:00",
+      "tags": [],
+      "last_connection_id": "4b38fc3a-1f06-40f3-bc5e-50c9ea5a1e74"
+    },
+    "3e77829f-fb56-4d9c-a9eb-1fe7da02cfd3": {
+      "id": "3e77829f-fb56-4d9c-a9eb-1fe7da02cfd3",
+      "name": "CrystalReportViewer1 (7)",
+      "status": "draft",
+      "artifacts": {
+        "template_html_url": "/uploads/3e77829f-fb56-4d9c-a9eb-1fe7da02cfd3/template_p1.html",
+        "thumbnail_url": "/uploads/3e77829f-fb56-4d9c-a9eb-1fe7da02cfd3/reference_p1.png",
+        "pdf_url": "/uploads/3e77829f-fb56-4d9c-a9eb-1fe7da02cfd3/source.pdf",
+        "schema_ext_url": "/uploads/3e77829f-fb56-4d9c-a9eb-1fe7da02cfd3/schema_ext.json",
+        "render_png_url": "/uploads/3e77829f-fb56-4d9c-a9eb-1fe7da02cfd3/render_p1_llm.png",
+        "render_after_png_url": "/uploads/3e77829f-fb56-4d9c-a9eb-1fe7da02cfd3/render_p1_after.png",
+        "fix_metrics_url": "/uploads/3e77829f-fb56-4d9c-a9eb-1fe7da02cfd3/fix_metrics.json",
+        "manifest_url": "/templates/3e77829f-fb56-4d9c-a9eb-1fe7da02cfd3/artifacts/manifest"
+      },
+      "updated_at": "2025-10-19T15:50:36+00:00",
+      "created_at": "2025-10-19T15:50:36+00:00",
+      "tags": [],
+      "last_connection_id": "4b38fc3a-1f06-40f3-bc5e-50c9ea5a1e74"
+    },
+    "8e1c72fa-cb6b-47ac-9981-2e8b92f82784": {
+      "id": "8e1c72fa-cb6b-47ac-9981-2e8b92f82784",
+      "name": "CrystalReportViewer1 (7)",
+      "status": "draft",
+      "artifacts": {
+        "template_html_url": "/uploads/8e1c72fa-cb6b-47ac-9981-2e8b92f82784/template_p1.html",
+        "thumbnail_url": "/uploads/8e1c72fa-cb6b-47ac-9981-2e8b92f82784/reference_p1.png",
+        "pdf_url": "/uploads/8e1c72fa-cb6b-47ac-9981-2e8b92f82784/source.pdf",
+        "schema_ext_url": "/uploads/8e1c72fa-cb6b-47ac-9981-2e8b92f82784/schema_ext.json",
+        "render_png_url": "/uploads/8e1c72fa-cb6b-47ac-9981-2e8b92f82784/render_p1_llm.png",
+        "render_after_png_url": "/uploads/8e1c72fa-cb6b-47ac-9981-2e8b92f82784/render_p1_after.png",
+        "fix_metrics_url": "/uploads/8e1c72fa-cb6b-47ac-9981-2e8b92f82784/fix_metrics.json",
+        "manifest_url": "/templates/8e1c72fa-cb6b-47ac-9981-2e8b92f82784/artifacts/manifest"
+      },
+      "updated_at": "2025-10-19T17:45:54+00:00",
+      "created_at": "2025-10-19T17:45:54+00:00",
+      "tags": [],
+      "last_connection_id": "4b38fc3a-1f06-40f3-bc5e-50c9ea5a1e74"
+    },
+    "3de3219c-071f-47f1-b835-2c9ea8ac7db0": {
+      "id": "3de3219c-071f-47f1-b835-2c9ea8ac7db0",
+      "name": "CrystalReportViewer1 (7)",
+      "status": "mapping_corrections_previewed",
+      "artifacts": {
+        "template_html_url": "/uploads/3de3219c-071f-47f1-b835-2c9ea8ac7db0/template_p1.html",
+        "thumbnail_url": "/uploads/3de3219c-071f-47f1-b835-2c9ea8ac7db0/reference_p1.png",
+        "pdf_url": "/uploads/3de3219c-071f-47f1-b835-2c9ea8ac7db0/source.pdf",
+        "schema_ext_url": "/uploads/3de3219c-071f-47f1-b835-2c9ea8ac7db0/schema_ext.json",
+        "render_png_url": "/uploads/3de3219c-071f-47f1-b835-2c9ea8ac7db0/render_p1_llm.png",
+        "render_after_png_url": "/uploads/3de3219c-071f-47f1-b835-2c9ea8ac7db0/render_p1_after.png",
+        "fix_metrics_url": "/uploads/3de3219c-071f-47f1-b835-2c9ea8ac7db0/fix_metrics.json",
+        "manifest_url": "/templates/3de3219c-071f-47f1-b835-2c9ea8ac7db0/artifacts/manifest",
+        "mapping_step3_url": "/uploads/3de3219c-071f-47f1-b835-2c9ea8ac7db0/mapping_step3.json",
+        "constants_inlined_url": "/uploads/3de3219c-071f-47f1-b835-2c9ea8ac7db0/constant_replacements.json",
+        "page_summary_url": "/uploads/3de3219c-071f-47f1-b835-2c9ea8ac7db0/page_summary.txt"
+      },
+      "updated_at": "2025-10-19T18:22:01+00:00",
+      "created_at": "2025-10-19T18:12:59+00:00",
+      "tags": [],
+      "last_connection_id": "4b38fc3a-1f06-40f3-bc5e-50c9ea5a1e74"
+    },
+    "babefbea-ef3f-4631-82be-15731f99d245": {
+      "id": "babefbea-ef3f-4631-82be-15731f99d245",
+      "name": "CrystalReportViewer1 (7)",
+      "status": "mapping_corrections_previewed",
+      "artifacts": {
+        "template_html_url": "/uploads/babefbea-ef3f-4631-82be-15731f99d245/template_p1.html",
+        "thumbnail_url": "/uploads/babefbea-ef3f-4631-82be-15731f99d245/reference_p1.png",
+        "pdf_url": "/uploads/babefbea-ef3f-4631-82be-15731f99d245/source.pdf",
+        "schema_ext_url": "/uploads/babefbea-ef3f-4631-82be-15731f99d245/schema_ext.json",
+        "render_png_url": "/uploads/babefbea-ef3f-4631-82be-15731f99d245/render_p1_llm.png",
+        "render_after_png_url": "/uploads/babefbea-ef3f-4631-82be-15731f99d245/render_p1_after.png",
+        "fix_metrics_url": "/uploads/babefbea-ef3f-4631-82be-15731f99d245/fix_metrics.json",
+        "manifest_url": "/templates/babefbea-ef3f-4631-82be-15731f99d245/artifacts/manifest",
+        "mapping_step3_url": "/uploads/babefbea-ef3f-4631-82be-15731f99d245/mapping_step3.json",
+        "constants_inlined_url": "/uploads/babefbea-ef3f-4631-82be-15731f99d245/constant_replacements.json",
+        "page_summary_url": "/uploads/babefbea-ef3f-4631-82be-15731f99d245/page_summary.txt"
+      },
+      "updated_at": "2025-10-19T18:38:18+00:00",
+      "created_at": "2025-10-19T18:31:10+00:00",
+      "tags": [],
+      "last_connection_id": "4b38fc3a-1f06-40f3-bc5e-50c9ea5a1e74"
+    },
+    "97a1d7ed-9596-4315-aef9-e62852ab0ddb": {
+      "id": "97a1d7ed-9596-4315-aef9-e62852ab0ddb",
+      "name": "CrystalReportViewer1 (7)",
+      "status": "mapping_previewed",
+      "artifacts": {
+        "template_html_url": "/uploads/97a1d7ed-9596-4315-aef9-e62852ab0ddb/template_p1.html",
+        "thumbnail_url": "/uploads/97a1d7ed-9596-4315-aef9-e62852ab0ddb/reference_p1.png",
+        "pdf_url": "/uploads/97a1d7ed-9596-4315-aef9-e62852ab0ddb/source.pdf",
+        "schema_ext_url": "/uploads/97a1d7ed-9596-4315-aef9-e62852ab0ddb/schema_ext.json",
+        "render_png_url": "/uploads/97a1d7ed-9596-4315-aef9-e62852ab0ddb/render_p1_llm.png",
+        "render_after_png_url": "/uploads/97a1d7ed-9596-4315-aef9-e62852ab0ddb/render_p1_after.png",
+        "fix_metrics_url": "/uploads/97a1d7ed-9596-4315-aef9-e62852ab0ddb/fix_metrics.json",
+        "manifest_url": "/templates/97a1d7ed-9596-4315-aef9-e62852ab0ddb/artifacts/manifest",
+        "mapping_step3_url": "/uploads/97a1d7ed-9596-4315-aef9-e62852ab0ddb/mapping_step3.json",
+        "constants_inlined_url": "/uploads/97a1d7ed-9596-4315-aef9-e62852ab0ddb/constant_replacements.json"
+      },
+      "updated_at": "2025-10-19T20:56:18+00:00",
+      "created_at": "2025-10-19T20:46:05+00:00",
+      "tags": [],
+      "last_connection_id": "4b38fc3a-1f06-40f3-bc5e-50c9ea5a1e74"
+    },
+    "4b0664d0-44b2-4a55-9b4f-d4c5d01464f3": {
+      "id": "4b0664d0-44b2-4a55-9b4f-d4c5d01464f3",
+      "name": "CrystalReportViewer1 (7)",
+      "status": "mapping_corrections_previewed",
+      "artifacts": {
+        "template_html_url": "/uploads/4b0664d0-44b2-4a55-9b4f-d4c5d01464f3/template_p1.html",
+        "thumbnail_url": "/uploads/4b0664d0-44b2-4a55-9b4f-d4c5d01464f3/reference_p1.png",
+        "pdf_url": "/uploads/4b0664d0-44b2-4a55-9b4f-d4c5d01464f3/source.pdf",
+        "schema_ext_url": "/uploads/4b0664d0-44b2-4a55-9b4f-d4c5d01464f3/schema_ext.json",
+        "render_png_url": "/uploads/4b0664d0-44b2-4a55-9b4f-d4c5d01464f3/render_p1_llm.png",
+        "render_after_png_url": "/uploads/4b0664d0-44b2-4a55-9b4f-d4c5d01464f3/render_p1_after.png",
+        "fix_metrics_url": "/uploads/4b0664d0-44b2-4a55-9b4f-d4c5d01464f3/fix_metrics.json",
+        "manifest_url": "/templates/4b0664d0-44b2-4a55-9b4f-d4c5d01464f3/artifacts/manifest",
+        "mapping_step3_url": "/uploads/4b0664d0-44b2-4a55-9b4f-d4c5d01464f3/mapping_step3.json",
+        "constants_inlined_url": "/uploads/4b0664d0-44b2-4a55-9b4f-d4c5d01464f3/constant_replacements.json",
+        "page_summary_url": "/uploads/4b0664d0-44b2-4a55-9b4f-d4c5d01464f3/page_summary.txt"
+      },
+      "updated_at": "2025-10-19T21:43:40+00:00",
+      "created_at": "2025-10-19T21:32:35+00:00",
+      "tags": [],
+      "last_connection_id": "test-connection"
+    },
+    "d1095f3e-4098-41f4-89d6-87bdc37f76d6": {
+      "id": "d1095f3e-4098-41f4-89d6-87bdc37f76d6",
       "name": "CrystalReportViewer1 (7)",
       "status": "approved",
       "artifacts": {
-        "template_html_url": "/uploads/74842a25-f22a-47cb-8b8f-28fc8b3b4b9c/template_p1.html?ts=1760386939",
-        "thumbnail_url": "/uploads/74842a25-f22a-47cb-8b8f-28fc8b3b4b9c/report_final.png",
-        "pdf_url": "/uploads/74842a25-f22a-47cb-8b8f-28fc8b3b4b9c/source.pdf",
-        "final_html_url": "/uploads/74842a25-f22a-47cb-8b8f-28fc8b3b4b9c/report_final.html?ts=1760386939",
-        "manifest_url": "/templates/74842a25-f22a-47cb-8b8f-28fc8b3b4b9c/artifacts/manifest"
+        "template_html_url": "/uploads/d1095f3e-4098-41f4-89d6-87bdc37f76d6/report_final.html",
+        "thumbnail_url": "/uploads/d1095f3e-4098-41f4-89d6-87bdc37f76d6/reference_p1.png",
+        "pdf_url": "/uploads/d1095f3e-4098-41f4-89d6-87bdc37f76d6/source.pdf",
+        "schema_ext_url": "/uploads/d1095f3e-4098-41f4-89d6-87bdc37f76d6/schema_ext.json",
+        "render_png_url": "/uploads/d1095f3e-4098-41f4-89d6-87bdc37f76d6/render_p1_llm.png",
+        "render_after_png_url": "/uploads/d1095f3e-4098-41f4-89d6-87bdc37f76d6/render_p1_after.png",
+        "fix_metrics_url": "/uploads/d1095f3e-4098-41f4-89d6-87bdc37f76d6/fix_metrics.json",
+        "manifest_url": "/templates/d1095f3e-4098-41f4-89d6-87bdc37f76d6/artifacts/manifest",
+        "mapping_step3_url": "/uploads/d1095f3e-4098-41f4-89d6-87bdc37f76d6/mapping_step3.json",
+        "constants_inlined_url": "/uploads/d1095f3e-4098-41f4-89d6-87bdc37f76d6/constant_replacements.json",
+        "page_summary_url": "/uploads/d1095f3e-4098-41f4-89d6-87bdc37f76d6/page_summary.txt",
+        "final_html_url": "/uploads/d1095f3e-4098-41f4-89d6-87bdc37f76d6/report_final.html",
+        "overview_url": "/uploads/d1095f3e-4098-41f4-89d6-87bdc37f76d6/overview.md",
+        "step5_requirements_url": "/uploads/d1095f3e-4098-41f4-89d6-87bdc37f76d6/step5_requirements.json",
+        "generator_sql_pack_url": "/uploads/d1095f3e-4098-41f4-89d6-87bdc37f76d6/generator/sql_pack.sql",
+        "generator_output_schemas_url": "/uploads/d1095f3e-4098-41f4-89d6-87bdc37f76d6/generator/output_schemas.json",
+        "generator_assets_url": "/uploads/d1095f3e-4098-41f4-89d6-87bdc37f76d6/generator/generator_assets.json"
       },
-      "updated_at": "2025-10-13T20:25:13+00:00",
-      "created_at": "2025-10-13T20:18:23+00:00",
+      "updated_at": "2025-10-21T10:10:13+00:00",
+      "created_at": "2025-10-19T23:07:55+00:00",
       "tags": [],
-      "last_connection_id": "812f49b3-e001-40b5-9168-781fc10e7243",
-      "last_run_at": "2025-10-13T20:25:13+00:00"
+      "last_connection_id": "4b38fc3a-1f06-40f3-bc5e-50c9ea5a1e74",
+      "generator": {
+        "dialect": "sqlite",
+        "params": {
+          "required": [
+            "from_date",
+            "to_date"
+          ],
+          "optional": [
+            "plant_name",
+            "location",
+            "print_date",
+            "recipe_code",
+            "page_no",
+            "page_count"
+          ]
+        },
+        "invalid": false,
+        "needs_user_fix": [
+          "Join block in Step-4 contract specifies empty child_table/child_key; retained as-is to mirror contract. If a join is required, provide non-empty child table/key."
+        ],
+        "summary": {
+          "dialect": "sqlite",
+          "params": {
+            "required": [
+              "from_date",
+              "to_date"
+            ],
+            "optional": [
+              "plant_name",
+              "location",
+              "print_date",
+              "recipe_code",
+              "page_no",
+              "page_count"
+            ]
+          },
+          "notes": "SQL uses CTEs to unpivot bins, filter/aggregate rows, compute sl_no via ROW_NUMBER, and calculate totals from the rows dataset. Optional recipe_code filter applies only when provided and non-empty.",
+          "needs_user_fix_count": 1,
+          "catalog_enforced": true,
+          "schema_checked": true
+        },
+        "dry_run": null,
+        "updated_at": "2025-10-20T00:37:11+00:00"
+      },
+      "last_run_at": "2025-10-21T10:10:13+00:00"
+    },
+    "b576ffa9-1b82-4537-b3a8-a0ba31161b20": {
+      "id": "b576ffa9-1b82-4537-b3a8-a0ba31161b20",
+      "name": "CrystalReportViewer1 (7)",
+      "status": "mapping_previewed",
+      "artifacts": {
+        "template_html_url": "/uploads/b576ffa9-1b82-4537-b3a8-a0ba31161b20/template_p1.html",
+        "thumbnail_url": "/uploads/b576ffa9-1b82-4537-b3a8-a0ba31161b20/reference_p1.png",
+        "pdf_url": "/uploads/b576ffa9-1b82-4537-b3a8-a0ba31161b20/source.pdf",
+        "schema_ext_url": "/uploads/b576ffa9-1b82-4537-b3a8-a0ba31161b20/schema_ext.json",
+        "render_png_url": "/uploads/b576ffa9-1b82-4537-b3a8-a0ba31161b20/render_p1_llm.png",
+        "render_after_png_url": "/uploads/b576ffa9-1b82-4537-b3a8-a0ba31161b20/render_p1_after.png",
+        "fix_metrics_url": "/uploads/b576ffa9-1b82-4537-b3a8-a0ba31161b20/fix_metrics.json",
+        "manifest_url": "/templates/b576ffa9-1b82-4537-b3a8-a0ba31161b20/artifacts/manifest",
+        "mapping_step3_url": "/uploads/b576ffa9-1b82-4537-b3a8-a0ba31161b20/mapping_step3.json",
+        "constants_inlined_url": "/uploads/b576ffa9-1b82-4537-b3a8-a0ba31161b20/constant_replacements.json"
+      },
+      "updated_at": "2025-10-20T00:43:07+00:00",
+      "created_at": "2025-10-20T00:41:17+00:00",
+      "tags": [],
+      "last_connection_id": "4b38fc3a-1f06-40f3-bc5e-50c9ea5a1e74"
+    },
+    "f2b1d2be-dd69-49d2-8274-4a2c84205cef": {
+      "id": "f2b1d2be-dd69-49d2-8274-4a2c84205cef",
+      "name": "CrystalReportViewer1 (7)",
+      "status": "mapping_corrections_previewed",
+      "artifacts": {
+        "template_html_url": "/uploads/f2b1d2be-dd69-49d2-8274-4a2c84205cef/template_p1.html",
+        "thumbnail_url": "/uploads/f2b1d2be-dd69-49d2-8274-4a2c84205cef/reference_p1.png",
+        "pdf_url": "/uploads/f2b1d2be-dd69-49d2-8274-4a2c84205cef/source.pdf",
+        "schema_ext_url": "/uploads/f2b1d2be-dd69-49d2-8274-4a2c84205cef/schema_ext.json",
+        "render_png_url": "/uploads/f2b1d2be-dd69-49d2-8274-4a2c84205cef/render_p1_llm.png",
+        "render_after_png_url": "/uploads/f2b1d2be-dd69-49d2-8274-4a2c84205cef/render_p1_after.png",
+        "fix_metrics_url": "/uploads/f2b1d2be-dd69-49d2-8274-4a2c84205cef/fix_metrics.json",
+        "manifest_url": "/templates/f2b1d2be-dd69-49d2-8274-4a2c84205cef/artifacts/manifest",
+        "mapping_step3_url": "/uploads/f2b1d2be-dd69-49d2-8274-4a2c84205cef/mapping_step3.json",
+        "constants_inlined_url": "/uploads/f2b1d2be-dd69-49d2-8274-4a2c84205cef/constant_replacements.json",
+        "page_summary_url": "/uploads/f2b1d2be-dd69-49d2-8274-4a2c84205cef/page_summary.txt"
+      },
+      "updated_at": "2025-10-20T01:11:37+00:00",
+      "created_at": "2025-10-20T01:05:24+00:00",
+      "tags": [],
+      "last_connection_id": "4b38fc3a-1f06-40f3-bc5e-50c9ea5a1e74"
+    },
+    "018479e8-8574-4921-9be5-038692c1b1cb": {
+      "id": "018479e8-8574-4921-9be5-038692c1b1cb",
+      "name": "CrystalReportViewer1 (7)",
+      "status": "mapping_previewed",
+      "artifacts": {
+        "template_html_url": "/uploads/018479e8-8574-4921-9be5-038692c1b1cb/template_p1.html",
+        "thumbnail_url": "/uploads/018479e8-8574-4921-9be5-038692c1b1cb/reference_p1.png",
+        "pdf_url": "/uploads/018479e8-8574-4921-9be5-038692c1b1cb/source.pdf",
+        "schema_ext_url": "/uploads/018479e8-8574-4921-9be5-038692c1b1cb/schema_ext.json",
+        "render_png_url": "/uploads/018479e8-8574-4921-9be5-038692c1b1cb/render_p1_llm.png",
+        "render_after_png_url": "/uploads/018479e8-8574-4921-9be5-038692c1b1cb/render_p1_after.png",
+        "fix_metrics_url": "/uploads/018479e8-8574-4921-9be5-038692c1b1cb/fix_metrics.json",
+        "manifest_url": "/templates/018479e8-8574-4921-9be5-038692c1b1cb/artifacts/manifest",
+        "mapping_step3_url": "/uploads/018479e8-8574-4921-9be5-038692c1b1cb/mapping_step3.json",
+        "constants_inlined_url": "/uploads/018479e8-8574-4921-9be5-038692c1b1cb/constant_replacements.json"
+      },
+      "updated_at": "2025-10-21T09:08:46+00:00",
+      "created_at": "2025-10-21T09:01:56+00:00",
+      "tags": [],
+      "last_connection_id": "4b38fc3a-1f06-40f3-bc5e-50c9ea5a1e74",
+      "mapping_keys": []
+    },
+    "9b390a0c-aaf4-42df-8681-31ebdbd8b099": {
+      "id": "9b390a0c-aaf4-42df-8681-31ebdbd8b099",
+      "name": "CrystalReportViewer1 (7)",
+      "status": "pending",
+      "artifacts": {
+        "template_html_url": "/uploads/9b390a0c-aaf4-42df-8681-31ebdbd8b099/report_final.html",
+        "thumbnail_url": "/uploads/9b390a0c-aaf4-42df-8681-31ebdbd8b099/reference_p1.png",
+        "pdf_url": "/uploads/9b390a0c-aaf4-42df-8681-31ebdbd8b099/source.pdf",
+        "schema_ext_url": "/uploads/9b390a0c-aaf4-42df-8681-31ebdbd8b099/schema_ext.json",
+        "render_png_url": "/uploads/9b390a0c-aaf4-42df-8681-31ebdbd8b099/render_p1_llm.png",
+        "render_after_png_url": "/uploads/9b390a0c-aaf4-42df-8681-31ebdbd8b099/render_p1_after.png",
+        "fix_metrics_url": "/uploads/9b390a0c-aaf4-42df-8681-31ebdbd8b099/fix_metrics.json",
+        "manifest_url": "/templates/9b390a0c-aaf4-42df-8681-31ebdbd8b099/artifacts/manifest",
+        "mapping_step3_url": "/uploads/9b390a0c-aaf4-42df-8681-31ebdbd8b099/mapping_step3.json",
+        "constants_inlined_url": "/uploads/9b390a0c-aaf4-42df-8681-31ebdbd8b099/constant_replacements.json",
+        "page_summary_url": "/uploads/9b390a0c-aaf4-42df-8681-31ebdbd8b099/page_summary.txt",
+        "final_html_url": "/uploads/9b390a0c-aaf4-42df-8681-31ebdbd8b099/report_final.html",
+        "overview_url": "/uploads/9b390a0c-aaf4-42df-8681-31ebdbd8b099/overview.md",
+        "step5_requirements_url": "/uploads/9b390a0c-aaf4-42df-8681-31ebdbd8b099/step5_requirements.json",
+        "mapping_keys_url": "/uploads/9b390a0c-aaf4-42df-8681-31ebdbd8b099/mapping_keys.json"
+      },
+      "updated_at": "2025-10-21T12:10:22+00:00",
+      "created_at": "2025-10-21T11:53:25+00:00",
+      "tags": [],
+      "last_connection_id": "4b38fc3a-1f06-40f3-bc5e-50c9ea5a1e74",
+      "mapping_keys": [
+        "recipe_code"
+      ]
+    },
+    "a0a7c933-137e-4e0a-8e4b-06ede45838e2": {
+      "id": "a0a7c933-137e-4e0a-8e4b-06ede45838e2",
+      "name": "CrystalReportViewer1 (7)",
+      "status": "pending",
+      "artifacts": {
+        "template_html_url": "/uploads/a0a7c933-137e-4e0a-8e4b-06ede45838e2/report_final.html",
+        "thumbnail_url": "/uploads/a0a7c933-137e-4e0a-8e4b-06ede45838e2/reference_p1.png",
+        "pdf_url": "/uploads/a0a7c933-137e-4e0a-8e4b-06ede45838e2/source.pdf",
+        "schema_ext_url": "/uploads/a0a7c933-137e-4e0a-8e4b-06ede45838e2/schema_ext.json",
+        "render_png_url": "/uploads/a0a7c933-137e-4e0a-8e4b-06ede45838e2/render_p1_llm.png",
+        "render_after_png_url": "/uploads/a0a7c933-137e-4e0a-8e4b-06ede45838e2/render_p1_after.png",
+        "fix_metrics_url": "/uploads/a0a7c933-137e-4e0a-8e4b-06ede45838e2/fix_metrics.json",
+        "manifest_url": "/templates/a0a7c933-137e-4e0a-8e4b-06ede45838e2/artifacts/manifest",
+        "mapping_step3_url": "/uploads/a0a7c933-137e-4e0a-8e4b-06ede45838e2/mapping_step3.json",
+        "constants_inlined_url": "/uploads/a0a7c933-137e-4e0a-8e4b-06ede45838e2/constant_replacements.json",
+        "page_summary_url": "/uploads/a0a7c933-137e-4e0a-8e4b-06ede45838e2/page_summary.txt",
+        "final_html_url": "/uploads/a0a7c933-137e-4e0a-8e4b-06ede45838e2/report_final.html",
+        "overview_url": "/uploads/a0a7c933-137e-4e0a-8e4b-06ede45838e2/overview.md",
+        "step5_requirements_url": "/uploads/a0a7c933-137e-4e0a-8e4b-06ede45838e2/step5_requirements.json",
+        "mapping_keys_url": "/uploads/a0a7c933-137e-4e0a-8e4b-06ede45838e2/mapping_keys.json"
+      },
+      "updated_at": "2025-10-21T14:12:46+00:00",
+      "created_at": "2025-10-21T13:41:26+00:00",
+      "tags": [],
+      "last_connection_id": "4b38fc3a-1f06-40f3-bc5e-50c9ea5a1e74",
+      "mapping_keys": [
+        "recipe_code"
+      ]
+    },
+    "4d69034a-bf88-4d9e-8f43-8e4043a6de93": {
+      "id": "4d69034a-bf88-4d9e-8f43-8e4043a6de93",
+      "name": "CrystalReportViewer1 (7)",
+      "status": "approved",
+      "artifacts": {
+        "template_html_url": "/uploads/4d69034a-bf88-4d9e-8f43-8e4043a6de93/report_final.html",
+        "thumbnail_url": "/uploads/4d69034a-bf88-4d9e-8f43-8e4043a6de93/reference_p1.png",
+        "pdf_url": "/uploads/4d69034a-bf88-4d9e-8f43-8e4043a6de93/source.pdf",
+        "schema_ext_url": "/uploads/4d69034a-bf88-4d9e-8f43-8e4043a6de93/schema_ext.json",
+        "render_png_url": "/uploads/4d69034a-bf88-4d9e-8f43-8e4043a6de93/render_p1_llm.png",
+        "render_after_png_url": "/uploads/4d69034a-bf88-4d9e-8f43-8e4043a6de93/render_p1_after.png",
+        "fix_metrics_url": "/uploads/4d69034a-bf88-4d9e-8f43-8e4043a6de93/fix_metrics.json",
+        "manifest_url": "/templates/4d69034a-bf88-4d9e-8f43-8e4043a6de93/artifacts/manifest",
+        "mapping_step3_url": "/uploads/4d69034a-bf88-4d9e-8f43-8e4043a6de93/mapping_step3.json",
+        "constants_inlined_url": "/uploads/4d69034a-bf88-4d9e-8f43-8e4043a6de93/constant_replacements.json",
+        "page_summary_url": "/uploads/4d69034a-bf88-4d9e-8f43-8e4043a6de93/page_summary.txt",
+        "final_html_url": "/uploads/4d69034a-bf88-4d9e-8f43-8e4043a6de93/report_final.html",
+        "contract_url": "/uploads/4d69034a-bf88-4d9e-8f43-8e4043a6de93/contract.json",
+        "overview_url": "/uploads/4d69034a-bf88-4d9e-8f43-8e4043a6de93/overview.md",
+        "step5_requirements_url": "/uploads/4d69034a-bf88-4d9e-8f43-8e4043a6de93/step5_requirements.json",
+        "generator_sql_pack_url": "/uploads/4d69034a-bf88-4d9e-8f43-8e4043a6de93/generator/sql_pack.sql",
+        "generator_output_schemas_url": "/uploads/4d69034a-bf88-4d9e-8f43-8e4043a6de93/generator/output_schemas.json",
+        "generator_assets_url": "/uploads/4d69034a-bf88-4d9e-8f43-8e4043a6de93/generator/generator_assets.json",
+        "mapping_keys_url": "/uploads/4d69034a-bf88-4d9e-8f43-8e4043a6de93/mapping_keys.json"
+      },
+      "updated_at": "2025-10-22T19:15:13+00:00",
+      "created_at": "2025-10-21T15:43:57+00:00",
+      "tags": [],
+      "last_connection_id": "4b38fc3a-1f06-40f3-bc5e-50c9ea5a1e74",
+      "mapping_keys": [
+        "recipe_code"
+      ],
+      "generator": {
+        "dialect": "sqlite",
+        "params": {
+          "required": [
+            "from_date",
+            "to_date",
+            "recipe_code"
+          ],
+          "optional": [
+            "plant_name",
+            "location",
+            "print_date",
+            "page_number"
+          ]
+        },
+        "invalid": true,
+        "needs_user_fix": [
+          "schema_ambiguous:header",
+          "schema_mismatch:rows",
+          "schema_ambiguous:totals"
+        ],
+        "summary": {},
+        "updated_at": "2025-10-21T16:03:40+00:00"
+      },
+      "last_run_at": "2025-10-22T19:15:13+00:00"
+    },
+    "84024e2b-9a61-4e19-b1b7-420019d891ef": {
+      "id": "84024e2b-9a61-4e19-b1b7-420019d891ef",
+      "name": "CrystalReportViewer1 (7)",
+      "status": "approved",
+      "artifacts": {
+        "template_html_url": "/uploads/84024e2b-9a61-4e19-b1b7-420019d891ef/report_final.html",
+        "thumbnail_url": "/uploads/84024e2b-9a61-4e19-b1b7-420019d891ef/reference_p1.png",
+        "pdf_url": "/uploads/84024e2b-9a61-4e19-b1b7-420019d891ef/source.pdf",
+        "schema_ext_url": "/uploads/84024e2b-9a61-4e19-b1b7-420019d891ef/schema_ext.json",
+        "render_png_url": "/uploads/84024e2b-9a61-4e19-b1b7-420019d891ef/render_p1_llm.png",
+        "render_after_png_url": "/uploads/84024e2b-9a61-4e19-b1b7-420019d891ef/render_p1_after.png",
+        "fix_metrics_url": "/uploads/84024e2b-9a61-4e19-b1b7-420019d891ef/fix_metrics.json",
+        "manifest_url": "/templates/84024e2b-9a61-4e19-b1b7-420019d891ef/artifacts/manifest",
+        "mapping_step3_url": "/uploads/84024e2b-9a61-4e19-b1b7-420019d891ef/mapping_step3.json",
+        "constants_inlined_url": "/uploads/84024e2b-9a61-4e19-b1b7-420019d891ef/constant_replacements.json",
+        "page_summary_url": "/uploads/84024e2b-9a61-4e19-b1b7-420019d891ef/page_summary.txt",
+        "final_html_url": "/uploads/84024e2b-9a61-4e19-b1b7-420019d891ef/report_final.html",
+        "contract_url": "/uploads/84024e2b-9a61-4e19-b1b7-420019d891ef/contract.json",
+        "overview_url": "/uploads/84024e2b-9a61-4e19-b1b7-420019d891ef/overview.md",
+        "step5_requirements_url": "/uploads/84024e2b-9a61-4e19-b1b7-420019d891ef/step5_requirements.json",
+        "generator_sql_pack_url": "/uploads/84024e2b-9a61-4e19-b1b7-420019d891ef/generator/sql_pack.sql",
+        "generator_output_schemas_url": "/uploads/84024e2b-9a61-4e19-b1b7-420019d891ef/generator/output_schemas.json",
+        "generator_assets_url": "/uploads/84024e2b-9a61-4e19-b1b7-420019d891ef/generator/generator_assets.json",
+        "mapping_keys_url": "/uploads/84024e2b-9a61-4e19-b1b7-420019d891ef/mapping_keys.json"
+      },
+      "updated_at": "2025-10-22T23:50:03+00:00",
+      "created_at": "2025-10-22T21:10:06+00:00",
+      "tags": [],
+      "last_connection_id": "4b38fc3a-1f06-40f3-bc5e-50c9ea5a1e74",
+      "mapping_keys": [
+        "recipe_code"
+      ],
+      "generator": {
+        "dialect": "sqlite",
+        "params": {
+          "required": [
+            "from_date",
+            "to_date",
+            "recipe_code"
+          ],
+          "optional": [
+            "report_title",
+            "plant_name",
+            "location",
+            "print_date",
+            "page_no",
+            "page_total"
+          ]
+        },
+        "invalid": false,
+        "needs_user_fix": [],
+        "summary": {},
+        "updated_at": "2025-10-22T21:25:19+00:00"
+      },
+      "last_run_at": "2025-10-22T23:50:03+00:00"
     }
   },
   "last_used": {
-    "connection_id": "812f49b3-e001-40b5-9168-781fc10e7243",
-    "template_id": "74842a25-f22a-47cb-8b8f-28fc8b3b4b9c",
-    "updated_at": "2025-10-13T20:25:13+00:00"
+    "connection_id": "4b38fc3a-1f06-40f3-bc5e-50c9ea5a1e74",
+    "template_id": "84024e2b-9a61-4e19-b1b7-420019d891ef",
+    "updated_at": "2025-10-22T23:50:03+00:00"
   }
 }

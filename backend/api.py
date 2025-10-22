@@ -3,16 +3,18 @@ from __future__ import annotations
 import asyncio
 import base64
 import contextlib
+import hashlib
 import json
 import logging
 import os
 import re
 import shutil
+import sqlite3
 import tempfile
 import time
 import uuid
 from pathlib import Path
-from typing import Optional
+from typing import Any, Dict, Iterable, Iterator, Mapping, Optional, Sequence
 
 from email.utils import formatdate
 from urllib.parse import parse_qs, quote
@@ -23,53 +25,66 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import StreamingResponse, JSONResponse
 from pydantic import BaseModel
 
-# â... DB helpers
+# DB helpers
 from .app.services.connections.db_connection import (
     resolve_db_path,
     verify_sqlite,
     save_connection,
 )
 
-# â... Template building helpers (TemplateVerify.py)
+# Template building helpers (TemplateVerify.py)
 from .app.services.templates.TemplateVerify import (
     pdf_to_pngs,
-    request_schema_for_page,
     request_initial_html,
+    request_fix_html,
     save_html,
     render_html_to_png,  # <-- used to produce the thumbnail from final_html
+    render_panel_preview,
 )
 from .app.services.templates.layout_hints import get_layout_hints
 
-# â... Header-mapping helpers
+# Header-mapping helpers
 from .app.services.mapping.HeaderMapping import (
     get_parent_child_info,
     approval_errors,
+    REPORT_SELECTED_VALUE,
 )
 
-# Prefer full-HTML mapper if present; else fallback to legacy
-try:
-    from .app.services.mapping.HeaderMapping import (
-        llm_pick_with_chat_completions_full_html as _llm_map_full_html,
-    )
-except Exception:
-    from .app.services.mapping.HeaderMapping import (
-        llm_pick_with_chat_completions as _legacy_llm_scope_mapper,
-    )
+# Discovery helpers
+from .app.services.reports.discovery import discover_batches_and_counts
 
-    def _llm_map_full_html(full_html: str, catalog, image_contents=None):
-        return _legacy_llm_scope_mapper(full_html, catalog, image_contents)
-
-# â... Discovery helpers (build_or_load_contract is re-exported here but implemented in auto_fill.py)
-from .app.services.reports.discovery import (
-    build_or_load_contract,
-    discover_batches_and_counts,
+# Mapping + downstream LLM pipelines
+from .app.services.mapping.AutoMapInline import (
+    MappingInlineResult,
+    MappingInlineValidationError,
+    run_llm_call_3,
+    catalog_sha256 as _catalog_sha256,
+    schema_sha256 as _schema_sha256,
 )
-
-# â... Auto-fill after Approve Mapping (this produces `final_html`)
-from .app.services.mapping.auto_fill import run_after_approve
+from .app.services.prompts.llm_prompts import (
+    PROMPT_VERSION,
+    PROMPT_VERSION_3_5,
+    PROMPT_VERSION_4,
+)
+from .app.services.mapping.CorrectionsPreview import (
+    CorrectionsPreviewError,
+    run_corrections_preview,
+)
+from .app.services.contract.ContractBuilderV2 import (
+    ContractBuilderError,
+    build_or_load_contract_v2,
+    load_contract_v2,
+)
+from .app.services.generator.GeneratorAssetsV1 import (
+    GeneratorAssetsError,
+    build_generator_assets_from_payload,
+)
+from .app.services.mapping.auto_fill import _compute_db_signature as _compute_db_signature_impl
+from .app.services.render.html_raster import rasterize_html_to_png, save_png
 from .app.config import load_settings, log_settings
 from .app.services.utils import (
     write_json_atomic,
+    write_text_atomic,
     acquire_template_lock,
     TemplateLockError,
     write_artifact_manifest,
@@ -263,11 +278,49 @@ class TestPayload(BaseModel):
 
 
 class MappingPayload(BaseModel):
-    # UI currently posts { "<header or token>": "table.col" | "UNRESOLVED" | "INPUT_SAMPLE", ... }
+    # UI currently posts { "<header or token>": "table.col" | "params.value" | "UNRESOLVED" | "INPUT_SAMPLE" | "To Be Selected in report generator" | "SQL fragment", ... }
     mapping: dict[str, str]
     connection_id: Optional[str] = None
     user_values_text: Optional[str] = None
+    user_instructions: Optional[str] = None
+    dialect_hint: Optional[str] = None
+    catalog_allowlist: Optional[list[str]] = None
+    params_spec: Optional[list[str]] = None
+    sample_params: Optional[dict[str, Any]] = None
+    generator_dialect: Optional[str] = None
+    force_generator_rebuild: bool = False
+    keys: Optional[list[str]] = None
 
+    class Config:
+        extra = "allow"
+
+
+class GeneratorAssetsPayload(BaseModel):
+    step4_output: Optional[dict[str, Any]] = None
+    contract: Optional[dict[str, Any]] = None
+    overview_md: Optional[str] = None
+    final_template_html: Optional[str] = None
+    reference_pdf_image: Optional[str] = None
+    catalog: Optional[list[str]] = None
+    dialect: Optional[str] = "sqlite"
+    params: Optional[list[str]] = None
+    sample_params: Optional[dict[str, Any]] = None
+    force_rebuild: bool = False
+    key_tokens: Optional[list[str]] = None
+
+    class Config:
+        extra = "allow"
+
+
+class CorrectionsPreviewPayload(BaseModel):
+    user_input: Optional[str] = ""
+    page: int = 1
+    mapping_override: Optional[dict[str, Any]] = None
+    sample_tokens: Optional[list[str]] = None
+    model_selector: Optional[str] = None
+
+    class Config:
+        extra = "allow"
 
 class ConnectionUpsertPayload(BaseModel):
     id: Optional[str] = None
@@ -291,6 +344,7 @@ class RunPayload(BaseModel):
     start_date: str
     end_date: str
     batch_ids: Optional[list[str]] = None
+    key_values: Optional[dict[str, Any]] = None
 
 
 class DiscoverPayload(BaseModel):
@@ -298,6 +352,7 @@ class DiscoverPayload(BaseModel):
     connection_id: Optional[str] = None
     start_date: str
     end_date: str
+    key_values: Optional[dict[str, Any]] = None
 
 
 # ---------- Helpers for connections ----------
@@ -352,6 +407,51 @@ def _norm_placeholder(name: str) -> str:
     return "{" + core + "}"
 
 
+_REPORT_DATE_PREFIXES = {
+    "from",
+    "to",
+    "start",
+    "end",
+    "begin",
+    "finish",
+    "through",
+    "thru",
+}
+_REPORT_DATE_KEYWORDS = {
+    "date",
+    "dt",
+    "day",
+    "period",
+    "range",
+    "time",
+    "timestamp",
+    "window",
+    "month",
+    "year",
+}
+_PARAM_REF_RE = re.compile(r"^params\.[A-Za-z_][\w]*$")
+
+
+def _token_parts_for_report_filters(token: str) -> list[str]:
+    normalized = re.sub(r"[^a-z0-9]+", "_", str(token or "").lower())
+    return [part for part in normalized.split("_") if part]
+
+
+def _is_report_generator_date_token_label(token: str) -> bool:
+    parts = _token_parts_for_report_filters(token)
+    if not parts:
+        return False
+    has_prefix = any(part in _REPORT_DATE_PREFIXES for part in parts)
+    has_keyword = any(part in _REPORT_DATE_KEYWORDS for part in parts)
+    if has_prefix and has_keyword:
+        return True
+    if parts[0] in _REPORT_DATE_KEYWORDS and any(part in _REPORT_DATE_PREFIXES for part in parts[1:]):
+        return True
+    if parts[-1] in _REPORT_DATE_KEYWORDS and any(part in _REPORT_DATE_PREFIXES for part in parts[:-1]):
+        return True
+    return False
+
+
 def _template_dir(template_id: str, *, must_exist: bool = True, create: bool = False) -> Path:
     """
     Resolve the uploads directory for a template_id with validation to prevent path traversal.
@@ -384,15 +484,25 @@ def _http_error(status_code: int, code: str, message: str, details: str | None =
 def _normalize_mapping_for_autofill(mapping: dict[str, str]) -> list[dict]:
     """
     Convert UI dict to the list format expected by auto_fill:
-      [{"header": <key>, "placeholder": "{Token}", "mapping": "table.col"|"UNRESOLVED"|"INPUT_SAMPLE"}, ...]
+      [{"header": <key>, "placeholder": "{Token}", "mapping": "table.col"|"UNRESOLVED"|"INPUT_SAMPLE"|"LATER_SELECTED"}, ...]
     """
     out: list[dict] = []
     for k, v in mapping.items():
+        mapping_value = v
+        if isinstance(mapping_value, str) and _is_report_generator_date_token_label(k):
+            normalized_value = mapping_value.strip()
+            lowered = normalized_value.lower()
+            if not normalized_value:
+                mapping_value = ""
+            elif _PARAM_REF_RE.match(normalized_value) or lowered.startswith("to be selected"):
+                mapping_value = REPORT_SELECTED_VALUE
+            elif lowered == "input_sample":
+                mapping_value = "INPUT_SAMPLE"
         out.append(
             {
                 "header": k,
                 "placeholder": _norm_placeholder(k),
-                "mapping": v,
+                "mapping": mapping_value,
             }
         )
     return out
@@ -442,6 +552,224 @@ def _load_image_contents(template_id: str) -> list[dict]:
             extra={"event": "image_contents_load_failed", "template_id": template_id, "path": str(path)},
         )
         return []
+
+
+
+
+def _artifact_url(path: Path | None) -> Optional[str]:
+    if path is None:
+        return None
+    try:
+        resolved = path.resolve()
+    except Exception:
+        return None
+    if not resolved.exists():
+        return None
+    try:
+        rel = resolved.relative_to(UPLOAD_ROOT_BASE)
+    except ValueError:
+        return None
+    return f"/uploads/{rel.as_posix()}"
+
+
+def _normalize_artifact_map(artifacts: Mapping[str, Any] | None) -> dict[str, str]:
+    normalized: dict[str, str] = {}
+    if not artifacts:
+        return normalized
+    for name, raw in artifacts.items():
+        url: Optional[str] = None
+        if isinstance(raw, Path):
+            url = _artifact_url(raw)
+        elif isinstance(raw, str):
+            if raw.startswith("/"):
+                url = raw
+            else:
+                url = _artifact_url(Path(raw))
+        else:
+            continue
+        if url:
+            normalized[str(name)] = url
+    return normalized
+
+
+def _sha256_path(path: Path | None) -> Optional[str]:
+    if path is None or not path.exists():
+        return None
+    h = hashlib.sha256()
+    with path.open('rb') as handle:
+        for chunk in iter(lambda: handle.read(65536), b''):
+            if not chunk:
+                break
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def _sha256_text(text: str) -> str:
+    return hashlib.sha256(text.encode('utf-8')).hexdigest()
+
+
+def _load_schema_ext(template_dir: Path) -> Optional[dict[str, Any]]:
+    schema_path = template_dir / 'schema_ext.json'
+    if not schema_path.exists():
+        return None
+    try:
+        return json.loads(schema_path.read_text(encoding='utf-8'))
+    except Exception:
+        logger.warning(
+            'schema_ext_parse_failed',
+            extra={
+                'event': 'schema_ext_parse_failed',
+                'template_dir': str(template_dir),
+                'path': str(schema_path),
+            },
+        )
+        return None
+
+
+def _build_catalog_from_db(db_path: Path) -> list[str]:
+    catalog: list[str] = []
+    try:
+        with sqlite3.connect(str(db_path)) as con:
+            cur = con.cursor()
+            cur.execute(
+                "SELECT name FROM sqlite_master "
+                "WHERE type='table' AND name NOT LIKE 'sqlite_%' "
+                "ORDER BY name;"
+            )
+            tables = [row[0] for row in cur.fetchall()]
+            for table in tables:
+                try:
+                    cur.execute(f"PRAGMA table_info('{table}')")
+                    for col in cur.fetchall():
+                        col_name = str(col[1] or '').strip()
+                        if col_name:
+                            catalog.append(f"{table}.{col_name}")
+                except Exception:
+                    continue
+    except Exception as exc:
+        logger.exception(
+            'catalog_build_failed',
+            extra={'event': 'catalog_build_failed', 'db_path': str(db_path)},
+            exc_info=exc,
+        )
+        return []
+    return catalog
+
+
+def compute_db_signature(db_path: Path) -> Optional[str]:
+    try:
+        return _compute_db_signature_impl(db_path)
+    except Exception:
+        logger.exception(
+            'db_signature_failed',
+            extra={'event': 'db_signature_failed', 'db_path': str(db_path)},
+        )
+        return None
+
+
+def _find_reference_pdf(template_dir: Path) -> Optional[Path]:
+    for name in ('source.pdf', 'upload.pdf', 'template.pdf', 'report.pdf'):
+        candidate = template_dir / name
+        if candidate.exists():
+            return candidate
+    return None
+
+
+def _find_reference_png(template_dir: Path) -> Optional[Path]:
+    for name in ('report_final.png', 'reference_p1.png', 'render_p1.png'):
+        candidate = template_dir / name
+        if candidate.exists():
+            return candidate
+    return None
+
+
+def _load_json_file(path: Path) -> Optional[dict[str, Any]]:
+    if not path.exists():
+        return None
+    try:
+        return json.loads(path.read_text(encoding='utf-8'))
+    except Exception:
+        logger.warning(
+            'json_load_failed',
+            extra={'event': 'json_load_failed', 'path': str(path)},
+            exc_info=True,
+        )
+        return None
+
+
+def _load_mapping_step3(template_dir: Path) -> tuple[Optional[dict[str, Any]], Path]:
+    mapping_path = template_dir / 'mapping_step3.json'
+    return _load_json_file(mapping_path), mapping_path
+
+
+_MAPPING_KEYS_FILENAME = "mapping_keys.json"
+_COLUMN_REF_CAPTURE_RE = re.compile(
+    r"""
+    ["`\[]?
+    (?P<table>[A-Za-z_][\w]*)
+    ["`\]]?
+    \.
+    ["`\[]?
+    (?P<column>[A-Za-z_][\w]*)
+    ["`\]]?
+    """,
+    re.VERBOSE,
+)
+
+
+def _mapping_keys_path(template_dir: Path) -> Path:
+    return template_dir / _MAPPING_KEYS_FILENAME
+
+
+_DIRECT_COLUMN_RE = re.compile(r"^(?P<table>[A-Za-z_][\w]*)\.(?P<column>[A-Za-z_][\w]*)$")
+
+
+def _normalize_key_tokens(raw: Iterable[str] | None) -> list[str]:
+    if raw is None:
+        return []
+    seen: set[str] = set()
+    normalized: list[str] = []
+    for item in raw:
+        text = str(item or "").strip()
+        if not text or text in seen:
+            continue
+        seen.add(text)
+        normalized.append(text)
+    return normalized
+
+
+def _load_mapping_keys(template_dir: Path) -> list[str]:
+    path = _mapping_keys_path(template_dir)
+    if not path.exists():
+        return []
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        logger.warning(
+            "mapping_keys_load_failed",
+            extra={"event": "mapping_keys_load_failed", "path": str(path)},
+            exc_info=True,
+        )
+        return []
+
+    if isinstance(data, dict):
+        raw_keys = data.get("keys")
+    elif isinstance(data, list):
+        raw_keys = data
+    else:
+        raw_keys = None
+    return _normalize_key_tokens(raw_keys if isinstance(raw_keys, Iterable) else None)
+
+
+def _write_mapping_keys(template_dir: Path, keys: Iterable[str]) -> list[str]:
+    normalized = _normalize_key_tokens(keys)
+    path = _mapping_keys_path(template_dir)
+    payload = {
+        "keys": normalized,
+        "updated_at": int(time.time()),
+    }
+    write_json_atomic(path, payload, ensure_ascii=False, indent=2, step="mapping_keys")
+    return normalized
 
 
 def _check_fs_writable(root: Path) -> tuple[bool, str]:
@@ -751,6 +1079,59 @@ def list_templates_endpoint(request: Request, status: Optional[str] = None):
     return {"status": "ok", "templates": templates, "correlation_id": correlation_id}
 
 
+@app.delete("/templates/{template_id}")
+def delete_template_endpoint(template_id: str, request: Request):
+    correlation_id = getattr(request.state, "correlation_id", None) or get_correlation_id()
+    existing_record = state_store.get_template_record(template_id)
+    try:
+        tdir = _template_dir(template_id, must_exist=False, create=False)
+    except HTTPException:
+        raise
+
+    lock_ctx = contextlib.nullcontext()
+    if tdir.exists():
+        try:
+            lock_ctx = acquire_template_lock(tdir, "template_delete", correlation_id)
+        except TemplateLockError:
+            raise _http_error(409, "template_locked", "Template is currently processing another request.")
+
+    removed_dir = False
+    with lock_ctx:
+        if tdir.exists():
+            try:
+                shutil.rmtree(tdir)
+                removed_dir = True
+            except FileNotFoundError:
+                removed_dir = False
+            except Exception as exc:
+                logger.error(
+                    "template_delete_failed",
+                    extra={
+                        "event": "template_delete_failed",
+                        "template_id": template_id,
+                        "correlation_id": correlation_id,
+                    },
+                    exc_info=True,
+                )
+                raise _http_error(500, "template_delete_failed", f"Failed to remove template files: {exc}")
+
+        removed_state = state_store.delete_template(template_id)
+
+    if not removed_state and not removed_dir and existing_record is None:
+        raise _http_error(404, "template_not_found", "template_id not found")
+
+    logger.info(
+        "template_deleted",
+        extra={
+            "event": "template_deleted",
+            "template_id": template_id,
+            "correlation_id": correlation_id,
+        },
+    )
+
+    return {"status": "ok", "template_id": template_id, "correlation_id": correlation_id}
+
+
 @app.post("/templates/verify")
 async def verify_template(
     file: UploadFile = File(...),
@@ -796,106 +1177,266 @@ async def verify_template(
                 },
             )
 
+        stage_timings: dict[str, float] = {}
+
+        def start_stage(stage_key: str, label: str, progress: int | float, **payload: Any) -> bytes:
+            stage_timings[stage_key] = time.time()
+            event_payload: dict[str, Any] = {
+                "stage": stage_key,
+                "label": label,
+                "status": "started",
+                "progress": progress,
+                "template_id": tid,
+            }
+            if payload:
+                event_payload.update(payload)
+            return emit("stage", **event_payload)
+
+        def finish_stage(
+            stage_key: str,
+            label: str,
+            *,
+            progress: int | float | None = None,
+            status: str = "complete",
+            **payload: Any,
+        ) -> bytes:
+            started = stage_timings.pop(stage_key, None)
+            elapsed_ms = int((time.time() - started) * 1000) if started else None
+            event_payload: dict[str, Any] = {
+                "stage": stage_key,
+                "label": label,
+                "status": status,
+                "template_id": tid,
+            }
+            if progress is not None:
+                event_payload["progress"] = progress
+            if elapsed_ms is not None:
+                event_payload["elapsed_ms"] = elapsed_ms
+            if payload:
+                event_payload.update(payload)
+            return emit("stage", **event_payload)
+
         try:
-            stage_name = "Uploading source PDF..."
+            stage_key = "verify.upload_pdf"
+            stage_label = "Uploading your PDF"
             stage_started = time.time()
-            yield emit(
-                "stage",
-                stage=stage_name,
-                progress=5,
-                template_id=tid,
-            )
-            tmp = tempfile.NamedTemporaryFile(
-                dir=str(tdir),
-                prefix="source.",
-                suffix=".pdf.tmp",
-                delete=False,
-            )
+            yield start_stage(stage_key, stage_label, progress=5)
+            total_bytes = 0
             try:
-                with tmp:
-                    total_bytes = 0
-                    limit_bytes = MAX_VERIFY_PDF_BYTES
-                    while True:
-                        chunk = file.file.read(1024 * 1024)
-                        if not chunk:
-                            break
-                        total_bytes += len(chunk)
-                        if limit_bytes is not None and total_bytes > limit_bytes:
-                            log_stage(stage_name, "error", stage_started)
-                            logger.warning(
-                                "verify_template_pdf_too_large",
-                                extra={
-                                    "event": "verify_template_pdf_too_large",
-                                    "template_id": tid,
-                                    "limit_bytes": limit_bytes,
-                                    "received_bytes": total_bytes,
-                                    "correlation_id": correlation_id,
-                                },
-                            )
-                            raise RuntimeError(
-                                f"Uploaded PDF exceeds {_format_bytes(limit_bytes)} limit."
-                            )
-                        tmp.write(chunk)
-                    tmp.flush()
-                    with contextlib.suppress(OSError):
-                        os.fsync(tmp.fileno())
-                Path(tmp.name).replace(pdf_path)
-            finally:
+                tmp = tempfile.NamedTemporaryFile(
+                    dir=str(tdir),
+                    prefix="source.",
+                    suffix=".pdf.tmp",
+                    delete=False,
+                )
+                try:
+                    with tmp:
+                        limit_bytes = MAX_VERIFY_PDF_BYTES
+                        while True:
+                            chunk = file.file.read(1024 * 1024)
+                            if not chunk:
+                                break
+                            total_bytes += len(chunk)
+                            if limit_bytes is not None and total_bytes > limit_bytes:
+                                logger.warning(
+                                    "verify_template_pdf_too_large",
+                                    extra={
+                                        "event": "verify_template_pdf_too_large",
+                                        "template_id": tid,
+                                        "limit_bytes": limit_bytes,
+                                        "received_bytes": total_bytes,
+                                        "correlation_id": correlation_id,
+                                    },
+                                )
+                                raise RuntimeError(f"Uploaded PDF exceeds {_format_bytes(limit_bytes)} limit.")
+                            tmp.write(chunk)
+                        tmp.flush()
+                        with contextlib.suppress(OSError):
+                            os.fsync(tmp.fileno())
+                    Path(tmp.name).replace(pdf_path)
+                finally:
+                    with contextlib.suppress(FileNotFoundError):
+                        Path(tmp.name).unlink(missing_ok=True)
+            except Exception as exc:
+                log_stage(stage_label, "error", stage_started)
+                yield finish_stage(
+                    stage_key,
+                    stage_label,
+                    progress=5,
+                    status="error",
+                    detail=str(exc),
+                    size_bytes=total_bytes or None,
+                )
+                raise
+            else:
+                log_stage(stage_label, "ok", stage_started)
+                yield finish_stage(stage_key, stage_label, progress=20, size_bytes=total_bytes)
+
+            stage_key = "verify.render_reference_preview"
+            stage_label = "Rendering a preview image"
+            stage_started = time.time()
+            yield start_stage(stage_key, stage_label, progress=25)
+            png_path: Path | None = None
+            layout_hints: dict[str, Any] | None = None
+            try:
+                ref_pngs = pdf_to_pngs(pdf_path, tdir, dpi=int(os.getenv("PDF_DPI", "400")))
+                if not ref_pngs:
+                    raise RuntimeError("No pages rendered from PDF")
+                png_path = ref_pngs[0]
+                layout_hints = get_layout_hints(pdf_path, 0)
+            except Exception as exc:
+                log_stage(stage_label, "error", stage_started)
+                yield finish_stage(stage_key, stage_label, progress=25, status="error", detail=str(exc))
+                raise
+            else:
+                log_stage(stage_label, "ok", stage_started)
+                yield finish_stage(stage_key, stage_label, progress=60)
+
+            stage_key = "verify.generate_html"
+            stage_label = "Converting preview to HTML"
+            stage_started = time.time()
+            yield start_stage(stage_key, stage_label, progress=70)
+            try:
+                initial_result = request_initial_html(png_path, None, layout_hints=layout_hints)
+                html_text = initial_result.html
+                schema_payload = initial_result.schema or {}
+                save_html(html_path, html_text)
+            except Exception as exc:
+                log_stage(stage_label, "error", stage_started)
+                yield finish_stage(stage_key, stage_label, progress=70, status="error", detail=str(exc))
+                raise
+
+            schema_path = tdir / "schema_ext.json"
+            if schema_payload:
+                try:
+                    write_json_atomic(schema_path, schema_payload, indent=2, ensure_ascii=False, step="verify_schema_ext")
+                except Exception:
+                    logger.exception(
+                        "verify_schema_write_failed",
+                        extra={
+                            "event": "verify_schema_write_failed",
+                            "template_id": tid,
+                            "correlation_id": correlation_id,
+                        },
+                    )
+            else:
                 with contextlib.suppress(FileNotFoundError):
-                    Path(tmp.name).unlink(missing_ok=True)
-            file.file.close()
-            log_stage(stage_name, "ok", stage_started)
+                    schema_path.unlink()
 
-            stage_name = "Rendering first page preview..."
+            log_stage(stage_label, "ok", stage_started)
+            yield finish_stage(stage_key, stage_label, progress=78)
+
+            # Render HTML to PNG for comparison
+            render_png_path = tdir / "render_p1.png"
+            tight_render_png_path = render_png_path
+            stage_key = "verify.render_html_preview"
+            stage_label = "Rendering the HTML preview"
             stage_started = time.time()
-            yield emit(
-                "stage",
-                stage=stage_name,
-                progress=25,
-                template_id=tid,
-            )
-            ref_pngs = pdf_to_pngs(pdf_path, tdir, dpi=int(os.getenv("PDF_DPI", "400")))
-            if not ref_pngs:
-                raise RuntimeError("No pages rendered from PDF")
-            png_path = ref_pngs[0]
-            layout_hints = get_layout_hints(pdf_path, 0)
-            log_stage(stage_name, "ok", stage_started)
+            yield start_stage(stage_key, stage_label, progress=80)
+            try:
+                render_html_to_png(html_path, render_png_path)
+                panel_png_path = render_png_path.with_name("render_p1_llm.png")
+                render_panel_preview(html_path, panel_png_path, fallback_png=render_png_path)
+                tight_render_png_path = panel_png_path if panel_png_path.exists() else render_png_path
+                log_stage(stage_label, "ok", stage_started)
+                yield finish_stage(stage_key, stage_label, progress=88)
+            except Exception as exc:  # pragma: no cover - surfaced to client
+                log_stage(stage_label, "error", stage_started)
+                yield finish_stage(stage_key, stage_label, progress=80, status="error", detail=str(exc))
+                raise
 
-            stage_name = "Inferring table and header schema..."
+            # Optional HTML refinement pass
+            stage_key = "verify.refine_html_layout"
+            stage_label = "Refining HTML layout fidelity..."
             stage_started = time.time()
-            yield emit(
-                "stage",
-                stage=stage_name,
-                progress=55,
-                template_id=tid,
-            )
-            schema = request_schema_for_page(png_path, layout_hints=layout_hints)
-            log_stage(stage_name, "ok", stage_started)
+            max_fix_passes = int(os.getenv("MAX_FIX_PASSES", "1"))
+            fix_enabled = os.getenv("VERIFY_FIX_HTML_ENABLED", "true").lower() not in {"false", "0"}
 
-            stage_name = "Synthesizing HTML photocopy..."
+            yield start_stage(
+                stage_key,
+                stage_label,
+                progress=90,
+                max_fix_passes=max_fix_passes,
+                fix_enabled=fix_enabled,
+            )
+
+            fix_result: Optional[dict[str, Any]] = None
+            render_after_path: Optional[Path] = None
+            render_after_full_path: Optional[Path] = None
+            metrics_path: Optional[Path] = None
+            fix_attempted = fix_enabled and max_fix_passes > 0
+
+            if fix_attempted:
+                try:
+                    fix_result = request_fix_html(
+                        tdir,
+                        html_path,
+                        schema_path if schema_payload else None,
+                        png_path,
+                        tight_render_png_path,
+                        0.0,
+                    )
+                except Exception:
+                    logger.exception(
+                        "verify_template_fix_html_failed",
+                        extra={
+                            "event": "verify_template_fix_html_failed",
+                            "template_id": tid,
+                            "correlation_id": correlation_id,
+                        },
+                    )
+                else:
+                    render_after_path = fix_result.get("render_after_path")
+                    render_after_full_path = fix_result.get("render_after_full_path")
+                    metrics_path = fix_result.get("metrics_path")
+
+            log_stage(stage_label, "ok", stage_started)
+            yield finish_stage(
+                stage_key,
+                stage_label,
+                progress=96,
+                skipped=not fix_attempted,
+                fix_attempted=fix_attempted,
+                fix_accepted=bool(fix_result and fix_result.get("accepted")),
+                render_after=_artifact_url(render_after_path) if render_after_path else None,
+                metrics=_artifact_url(metrics_path) if metrics_path else None,
+            )
+
+            schema_url = _artifact_url(schema_path) if schema_payload else None
+            render_url = _artifact_url(tight_render_png_path)
+            render_after_url = _artifact_url(render_after_path) if render_after_path else None
+            metrics_url = _artifact_url(metrics_path) if metrics_path else None
+
+            manifest_files: dict[str, Path] = {
+                "source.pdf": pdf_path,
+                "reference_p1.png": png_path,
+                "template_p1.html": html_path,
+                "render_p1.png": render_png_path,
+            }
+            if tight_render_png_path and tight_render_png_path.exists():
+                manifest_files["render_p1_llm.png"] = tight_render_png_path
+            if schema_payload:
+                manifest_files["schema_ext.json"] = schema_path
+            if render_after_path:
+                manifest_files["render_p1_after.png"] = render_after_path
+            if render_after_full_path and render_after_full_path.exists():
+                manifest_files["render_p1_after_full.png"] = render_after_full_path
+            if metrics_path:
+                manifest_files["fix_metrics.json"] = metrics_path
+
+            stage_key = "verify.save_artifacts"
+            stage_label = "Saving verification artifacts"
             stage_started = time.time()
-            yield emit(
-                "stage",
-                stage=stage_name,
-                progress=80,
-                template_id=tid,
-            )
-            html_text = request_initial_html(png_path, schema, layout_hints=layout_hints)
-            save_html(html_path, html_text)
-
+            yield start_stage(stage_key, stage_label, progress=97)
             try:
                 write_artifact_manifest(
                     tdir,
                     step="templates_verify",
-                    files={
-                        "source.pdf": pdf_path,
-                        "reference_p1.png": png_path,
-                        "template_p1.html": html_path,
-                    },
+                    files=manifest_files,
                     inputs=[str(pdf_path)],
                     correlation_id=correlation_id,
                 )
-            except Exception:
+            except Exception as exc:  # pragma: no cover - logging only
                 logger.exception(
                     "verify_template_manifest_failed",
                     extra={
@@ -904,32 +1445,70 @@ async def verify_template(
                         "correlation_id": correlation_id,
                     },
                 )
-            log_stage(stage_name, "ok", stage_started)
+                log_stage(stage_label, "error", stage_started)
+                yield finish_stage(
+                    stage_key,
+                    stage_label,
+                    progress=97,
+                    status="error",
+                    detail=str(exc),
+                )
+            else:
+                log_stage(stage_label, "ok", stage_started)
+                yield finish_stage(
+                    stage_key,
+                    stage_label,
+                    progress=99,
+                    manifest_files=len(manifest_files),
+                    schema_url=schema_url,
+                    render_url=render_url,
+                    render_after_url=render_after_url,
+                    metrics_url=metrics_url,
+                )
 
             template_name = Path(getattr(file, "filename", "") or "").stem or f"Template {tid[:8]}"
+            artifacts_for_state = {
+                "template_html_url": f"/uploads/{tid}/template_p1.html",
+                "thumbnail_url": f"/uploads/{tid}/reference_p1.png",
+                "pdf_url": f"/uploads/{tid}/source.pdf",
+            }
+            if schema_url:
+                artifacts_for_state["schema_ext_url"] = schema_url
+            if render_url:
+                artifacts_for_state["render_png_url"] = render_url
+            if render_after_url:
+                artifacts_for_state["render_after_png_url"] = render_after_url
+            if metrics_url:
+                artifacts_for_state["fix_metrics_url"] = metrics_url
+            manifest_url = f"/templates/{tid}/artifacts/manifest"
+            artifacts_for_state["manifest_url"] = manifest_url
+
             state_store.upsert_template(
                 tid,
                 name=template_name,
                 status="draft",
-                artifacts={
-                    "template_html_url": f"/uploads/{tid}/template_p1.html",
-                    "thumbnail_url": f"/uploads/{tid}/reference_p1.png",
-                    "pdf_url": f"/uploads/{tid}/source.pdf",
-                },
+                artifacts=artifacts_for_state,
                 connection_id=connection_id or None,
             )
             state_store.set_last_used(connection_id or None, tid)
 
+            total_elapsed_ms = int((time.time() - pipeline_started) * 1000)
             yield emit(
                 "result",
                 stage="Verification complete.",
                 progress=100,
                 template_id=tid,
-                schema=schema,
+                schema=schema_payload,
+                elapsed_ms=total_elapsed_ms,
                 artifacts={
                     "pdf_url": f"/uploads/{tid}/source.pdf",
                     "png_url": f"/uploads/{tid}/reference_p1.png",
                     "html_url": f"/uploads/{tid}/template_p1.html",
+                    "manifest_url": manifest_url,
+                    **({"schema_ext_url": schema_url} if schema_url else {}),
+                    **({"render_png_url": render_url} if render_url else {}),
+                    **({"render_after_png_url": render_after_url} if render_after_url else {}),
+                    **({"fix_metrics_url": metrics_url} if metrics_url else {}),
                 },
             )
             logger.info(
@@ -937,9 +1516,9 @@ async def verify_template(
                 extra={
                     "event": "verify_template_complete",
                     "template_id": tid,
-                    "schema_keys": list(schema.keys()),
+                    "schema_keys": list(schema_payload.keys()),
                     "correlation_id": correlation_id,
-                    "elapsed_ms": int((time.time() - pipeline_started) * 1000),
+                    "elapsed_ms": total_elapsed_ms,
                 },
             )
         except Exception as e:
@@ -960,101 +1539,285 @@ async def verify_template(
 
     headers = {"Content-Type": "application/x-ndjson"}
     return StreamingResponse(event_stream(), headers=headers, media_type="application/x-ndjson")
+
+
+def _mapping_preview_pipeline(
+    template_id: str,
+    connection_id: Optional[str],
+    request: Optional[Request],
+    *,
+    correlation_id: Optional[str] = None,
+    force_refresh: bool = False,
+) -> Iterator[dict[str, Any]]:
+    correlation_id = correlation_id or (getattr(request.state, 'correlation_id', None) if request else None)
+    yield {
+        'event': 'stage',
+        'stage': 'mapping_preview',
+        'status': 'start',
+        'template_id': template_id,
+        'correlation_id': correlation_id,
+        'prompt_version': PROMPT_VERSION,
+    }
+
+    template_dir = _template_dir(template_id)
+    mapping_keys_path = _mapping_keys_path(template_dir)
+    html_path = template_dir / 'template_p1.html'
+    if not html_path.exists():
+        raise _http_error(404, 'template_not_ready', 'Run /templates/verify first')
+    template_html = html_path.read_text(encoding='utf-8', errors='ignore')
+
+    schema_ext = _load_schema_ext(template_dir) or {}
+
+    db_path = _db_path_from_payload_or_default(connection_id)
+    verify_sqlite(db_path)
+
+    try:
+        schema_info = get_parent_child_info(db_path)
+    except Exception as exc:
+        logger.exception(
+            'mapping_preview_schema_probe_failed',
+            extra={'event': 'mapping_preview_schema_probe_failed', 'template_id': template_id},
+        )
+        raise _http_error(500, 'db_introspection_failed', f'DB introspection failed: {exc}')
+
+    catalog = list(dict.fromkeys(_build_catalog_from_db(db_path)))
+    pdf_sha = _sha256_path(_find_reference_pdf(template_dir)) or ''
+    png_path = _find_reference_png(template_dir)
+    db_sig = compute_db_signature(db_path) or ''
+    html_pre_sha = _sha256_text(template_html)
+    catalog_sha = _catalog_sha256(catalog)
+    schema_sha = _schema_sha256(schema_ext)
+    saved_keys = _load_mapping_keys(template_dir)
+
+    cache_payload = {
+        'pdf_sha': pdf_sha,
+        'db_signature': db_sig,
+        'html_sha': html_pre_sha,
+        'prompt_version': PROMPT_VERSION,
+        'catalog_sha': catalog_sha,
+        'schema_sha': schema_sha,
+    }
+    cache_key = hashlib.sha256(json.dumps(cache_payload, sort_keys=True).encode('utf-8')).hexdigest()
+
+    cached_doc, mapping_path = _load_mapping_step3(template_dir)
+    constants_path = template_dir / 'constant_replacements.json'
+    if not force_refresh and cached_doc:
+        prompt_meta = cached_doc.get('prompt_meta') or {}
+        post_sha = prompt_meta.get('post_html_sha256')
+        pre_sha_cached = prompt_meta.get('pre_html_sha256')
+        cache_key_stored = prompt_meta.get('cache_key')
+        html_matches_pre = pre_sha_cached == html_pre_sha
+        html_matches_post = bool(post_sha and post_sha == html_pre_sha)
+        cache_key_matches = cache_key_stored == cache_key
+        cache_match = (
+            (cache_key_matches and (html_matches_pre or html_matches_post))
+            or (html_matches_post and cache_key_stored and not cache_key_matches)
+        )
+        if cache_match:
+            effective_cache_key = cache_key if cache_key_matches else (cache_key_stored or cache_key)
+            mapping = cached_doc.get('mapping') or {}
+            constant_replacements = cached_doc.get('constant_replacements') or {}
+            if not constant_replacements and isinstance(cached_doc.get('raw_payload'), dict):
+                constant_replacements = cached_doc['raw_payload'].get('constant_replacements') or {}
+            errors = approval_errors(mapping)
+            cached_prompt_version = prompt_meta.get('prompt_version') or PROMPT_VERSION
+            yield {
+                'event': 'stage',
+                'stage': 'mapping_preview',
+                'status': 'cached',
+                'template_id': template_id,
+                'cache_key': effective_cache_key,
+                'correlation_id': correlation_id,
+                'prompt_version': cached_prompt_version,
+            }
+            return {
+                'mapping': mapping,
+                'errors': errors,
+                'schema_info': schema_info,
+                'catalog': catalog,
+                'cache_key': effective_cache_key,
+                'cached': True,
+                'constant_replacements': constant_replacements,
+                'constant_replacements_count': len(constant_replacements),
+                'prompt_version': cached_prompt_version,
+                'keys': saved_keys,
+            }
+
+    try:
+        lock_ctx = acquire_template_lock(template_dir, 'mapping_preview', correlation_id)
+    except TemplateLockError:
+        raise _http_error(409, 'template_locked', 'Template is currently processing another request.')
+
+    with lock_ctx:
+        try:
+            result = run_llm_call_3(
+                template_html,
+                catalog,
+                schema_ext,
+                PROMPT_VERSION,
+                str(png_path) if png_path else '',
+                cache_key,
+            )
+        except MappingInlineValidationError as exc:
+            raise _http_error(422, 'mapping_llm_invalid', str(exc))
+        except Exception as exc:
+            logger.exception(
+                'mapping_preview_llm_failed',
+                extra={'event': 'mapping_preview_llm_failed', 'template_id': template_id},
+            )
+            raise _http_error(500, 'mapping_llm_failed', str(exc))
+
+        html_applied = result.html_constants_applied
+        write_text_atomic(html_path, html_applied, encoding='utf-8', step='mapping_preview_html')
+        html_post_sha = _sha256_text(html_applied)
+
+        mapping_doc = {
+            'mapping': result.mapping,
+            'meta': result.meta,
+            'prompt_meta': {
+                **(result.prompt_meta or {}),
+                'cache_key': cache_key,
+                'pre_html_sha256': html_pre_sha,
+                'post_html_sha256': html_post_sha,
+                'prompt_version': PROMPT_VERSION,
+                'catalog_sha256': catalog_sha,
+                'schema_sha256': schema_sha,
+                'pdf_sha256': pdf_sha,
+                'db_signature': db_sig,
+            },
+            'raw_payload': result.raw_payload,
+            'constant_replacements': result.constant_replacements,
+            'token_samples': result.token_samples,
+        }
+        write_json_atomic(
+            mapping_path,
+            mapping_doc,
+            ensure_ascii=False,
+            indent=2,
+            step='mapping_preview_mapping',
+        )
+        write_json_atomic(
+            constants_path,
+            result.constant_replacements,
+            ensure_ascii=False,
+            indent=2,
+            step='mapping_preview_constants',
+        )
+        files_payload = {
+            html_path.name: html_path,
+            mapping_path.name: mapping_path,
+            constants_path.name: constants_path,
+        }
+        if mapping_keys_path.exists():
+            files_payload[mapping_keys_path.name] = mapping_keys_path
+        write_artifact_manifest(
+            template_dir,
+            step='mapping_inline_llm_call_3',
+            files=files_payload,
+            inputs=[
+                f'cache_key={cache_key}',
+                f'catalog_sha256={catalog_sha}',
+                f'schema_sha256={schema_sha}',
+                f'html_pre_sha256={html_pre_sha}',
+                f'html_post_sha256={html_post_sha}',
+            ],
+            correlation_id=correlation_id,
+        )
+
+    errors = approval_errors(result.mapping)
+    constant_replacements = result.constant_replacements
+
+    record = state_store.get_template_record(template_id) or {}
+    template_name = record.get('name') or f'Template {template_id[:8]}'
+    artifacts = {
+        'template_html_url': _artifact_url(html_path),
+        'mapping_step3_url': _artifact_url(mapping_path),
+    }
+    constants_url = _artifact_url(constants_path)
+    if constants_url:
+        artifacts['constants_inlined_url'] = constants_url
+    if mapping_keys_path.exists():
+        artifacts['mapping_keys_url'] = _artifact_url(mapping_keys_path)
+    schema_path = template_dir / 'schema_ext.json'
+    schema_url = _artifact_url(schema_path) if schema_path.exists() else None
+    if schema_url:
+        artifacts['schema_ext_url'] = schema_url
+    state_store.upsert_template(
+        template_id,
+        name=template_name,
+        status='mapping_previewed',
+        artifacts={k: v for k, v in artifacts.items() if v},
+        connection_id=connection_id or record.get('last_connection_id'),
+        mapping_keys=saved_keys,
+    )
+
+    yield {
+        'event': 'stage',
+        'stage': 'mapping_preview',
+        'status': 'ok',
+        'template_id': template_id,
+        'cache_key': cache_key,
+        'correlation_id': correlation_id,
+        'prompt_version': PROMPT_VERSION,
+    }
+
+    return {
+        'mapping': result.mapping,
+        'errors': errors,
+        'schema_info': schema_info,
+        'catalog': catalog,
+        'cache_key': cache_key,
+        'cached': False,
+        'constant_replacements': constant_replacements,
+        'constant_replacements_count': len(constant_replacements),
+        'prompt_version': PROMPT_VERSION,
+        'keys': saved_keys,
+    }
+
 @app.post("/templates/{template_id}/mapping/preview")
-def mapping_preview(template_id: str, connection_id: str, request: Request):
+def mapping_preview(template_id: str, connection_id: str, request: Request, force_refresh: bool = False):
+    correlation_id = getattr(request.state, "correlation_id", None)
     logger.info(
         "mapping_preview_start",
         extra={
             "event": "mapping_preview_start",
             "template_id": template_id,
             "connection_id": connection_id,
-            "correlation_id": getattr(request.state, "correlation_id", None),
+            "force_refresh": force_refresh,
+            "correlation_id": correlation_id,
         },
     )
-    # 1) DB
+    pipeline = _mapping_preview_pipeline(
+        template_id,
+        connection_id,
+        request,
+        correlation_id=correlation_id,
+        force_refresh=force_refresh,
+    )
     try:
-        db_path: Path = resolve_db_path(
-            connection_id=connection_id, db_url=None, db_path=None
-        )
-        verify_sqlite(db_path)
-    except Exception as e:
-        raise _http_error(400, "connection_invalid", f"Invalid connection_id: {e}")
+        while True:
+            next(pipeline)
+    except StopIteration as stop:
+        payload = stop.value or {}
 
-    # 2) HTML
-    tdir = _template_dir(template_id)
-    html_path = tdir / "report_final.html"
-    if not html_path.exists():
-        html_path = tdir / "template_p1.html"
-    if not html_path.exists():
-        raise _http_error(404, "template_not_ready", "Run /templates/verify first")
-    template_html = html_path.read_text(encoding="utf-8", errors="ignore")
-
-    image_contents = _load_image_contents(template_id)
-    if not image_contents:
-        ref_png = tdir / "reference_p1.png"
-        if ref_png.exists():
-            try:
-                b64 = base64.b64encode(ref_png.read_bytes()).decode("utf-8")
-                image_contents = [
-                    {
-                        "type": "image_url",
-                        "image_url": {"url": f"data:image/png;base64,{b64}"},
-                    }
-                ]
-                _save_image_contents(template_id, image_contents)
-            except Exception:
-                image_contents = []
-
-    # 3) catalog
-    try:
-        info = get_parent_child_info(db_path)
-    except Exception as e:
-        raise _http_error(500, "db_introspection_failed", f"DB introspection failed: {e}")
-
-    parent = info["parent table"]
-    child = info["child table"]
-    catalog = [*(f"{parent}.{c}" for c in info["parent_columns"])]
-    catalog += [*(f"{child}.{c}" for c in info["child_columns"])]
-
-    # 4) map
-    try:
-        mapping = _llm_map_full_html(
-            template_html,
-            catalog,
-            image_contents=image_contents or None,
-        )
-        errors = approval_errors(mapping)
-    except Exception as e:
-        raise _http_error(500, "auto_mapping_failed", f"Auto-mapping failed: {e}")
-
-    result = {
-        "mapping": mapping,
-        "errors": errors,
-        "schema_info": info,
-        "catalog": catalog,
-    }
     logger.info(
         "mapping_preview_complete",
         extra={
             "event": "mapping_preview_complete",
             "template_id": template_id,
-            "schema_parent": info.get("parent table"),
-            "schema_child": info.get("child table"),
-            "catalog_size": len(catalog),
-            "correlation_id": getattr(request.state, "correlation_id", None),
+            "connection_id": connection_id,
+            "cache_key": payload.get("cache_key"),
+            "cached": payload.get("cached", False),
+            "correlation_id": correlation_id,
         },
     )
-    return result
+    return payload
+
 
 
 @app.post("/templates/{template_id}/mapping/approve")
 def mapping_approve(template_id: str, payload: MappingPayload, request: Request):
-    """
-    Save approved mapping as a LIST of objects that include header+placeholder+mapping,
-    then run the auto-fill to generate the FINAL HTML (auto_fill.final_html).
-    We also render a PNG thumbnail from that HTML and return both URLs so the UI
-    can refresh immediately (mapping dialog preview, verify page, template cards).
-    """
+    """Persist approved mapping, rebuild contract artifacts, and refresh generator assets."""
     correlation_id = getattr(request.state, "correlation_id", None)
     logger.info(
         "mapping_approve_start",
@@ -1066,12 +1829,32 @@ def mapping_approve(template_id: str, payload: MappingPayload, request: Request)
             "correlation_id": correlation_id,
         },
     )
-    tdir = _template_dir(template_id)
 
-    user_values_text = (payload.user_values_text or "").strip()
+    template_dir = _template_dir(template_id)
+    base_template_path = template_dir / "template_p1.html"
+    final_html_path = template_dir / "report_final.html"
+    mapping_path = template_dir / "mapping_pdf_labels.json"
+    mapping_keys_path = _mapping_keys_path(template_dir)
+    incoming_keys = _normalize_key_tokens(payload.keys)
+    mapping_dict = payload.mapping or {}
+    keys_clean = [key for key in incoming_keys if key in mapping_dict]
 
     try:
-        lock_ctx = acquire_template_lock(tdir, "mapping_approve", correlation_id)
+        db_path = _db_path_from_payload_or_default(payload.connection_id)
+        verify_sqlite(db_path)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise _http_error(400, "db_invalid", f"Invalid database reference: {exc}")
+
+    schema_ext = _load_schema_ext(template_dir) or {}
+    auto_mapping_doc, _ = _load_mapping_step3(template_dir)
+    auto_mapping_proposal = auto_mapping_doc or {}
+    catalog = list(dict.fromkeys(_build_catalog_from_db(db_path)))
+    db_sig = compute_db_signature(db_path)
+
+    try:
+        lock_ctx = acquire_template_lock(template_dir, "mapping_approve", correlation_id)
     except TemplateLockError:
         raise _http_error(
             status_code=409,
@@ -1081,6 +1864,7 @@ def mapping_approve(template_id: str, payload: MappingPayload, request: Request)
 
     def event_stream():
         pipeline_started = time.time()
+        nonlocal keys_clean
 
         def log_stage(stage_name: str, status: str, started: float) -> None:
             logger.info(
@@ -1095,284 +1879,467 @@ def mapping_approve(template_id: str, payload: MappingPayload, request: Request)
                 },
             )
 
-        def emit(event: str, **payload_data):
+        def emit(event: str, **payload_data: Any) -> bytes:
             data = {"event": event, **payload_data}
             return (json.dumps(data, ensure_ascii=False) + "\n").encode("utf-8")
 
-        mapping_path = tdir / "mapping_pdf_labels.json"
-        result: dict[str, object] = {}
-        imgc = []
+        stage_timings: dict[str, float] = {}
+
+        def start_stage(stage_key: str, label: str, progress: int | float, **payload_data: Any) -> bytes:
+            stage_timings[stage_key] = time.time()
+            payload = {
+                "stage": stage_key,
+                "label": label,
+                "status": "started",
+                "progress": progress,
+                "template_id": template_id,
+            }
+            if payload_data:
+                payload.update(payload_data)
+            return emit("stage", **payload)
+
+        def finish_stage(
+            stage_key: str,
+            label: str,
+            *,
+            progress: int | float | None = None,
+            status: str = "complete",
+            **payload_data: Any,
+        ) -> bytes:
+            started = stage_timings.pop(stage_key, None)
+            elapsed_ms = int((time.time() - started) * 1000) if started else None
+            payload: dict[str, Any] = {
+                "stage": stage_key,
+                "label": label,
+                "status": status,
+                "template_id": template_id,
+            }
+            if progress is not None:
+                payload["progress"] = progress
+            if elapsed_ms is not None:
+                payload["elapsed_ms"] = elapsed_ms
+            if payload_data:
+                payload.update(payload_data)
+            return emit("stage", **payload)
+
         contract_ready = False
-        png_url = None
+        contract_stage_summary: dict[str, Any] | None = None
+        generator_stage_summary: dict[str, Any] | None = None
+        contract_result: dict[str, Any] = {}
+        generator_result: dict[str, Any] | None = None
+        generator_artifacts_urls: dict[str, str] = {}
 
         with lock_ctx:
-            # 1) normalize and save mapping (list form used by auto_fill)
-            stage_name = "Saving approved mapping..."
+            # 1) Persist normalized mapping
+            stage_key = "mapping.save"
+            stage_label = "Saving mapping changes"
             stage_started = time.time()
             try:
-                yield emit(
-                    "stage",
-                    stage=stage_name,
-                    progress=5,
-                    template_id=template_id,
-                )
+                yield start_stage(stage_key, stage_label, progress=5)
                 normalized_list = _normalize_mapping_for_autofill(payload.mapping)
+                # retain only tokens present in normalized mapping
+                normalized_headers = {entry["header"] for entry in normalized_list}
+                keys_clean = [key for key in keys_clean if key in normalized_headers]
                 validate_mapping_schema(normalized_list)
                 write_json_atomic(mapping_path, normalized_list, indent=2, ensure_ascii=False, step="mapping_save")
-                logger.info(
-                    "mapping_saved",
-                    extra={
-                        "event": "mapping_saved",
-                        "template_id": template_id,
-                        "mapping_entries": len(normalized_list),
-                        "path": str(mapping_path),
-                        "correlation_id": correlation_id,
-                    },
+                keys_clean = _write_mapping_keys(template_dir, keys_clean)
+                manifest_files = {mapping_path.name: mapping_path}
+                if mapping_keys_path.exists():
+                    manifest_files[mapping_keys_path.name] = mapping_keys_path
+                write_artifact_manifest(
+                    template_dir,
+                    step="mapping_save",
+                    files=manifest_files,
+                    inputs=[f"mapping_tokens={len(normalized_list)}", f"mapping_keys={len(keys_clean)}"],
+                    correlation_id=correlation_id,
                 )
-                log_stage(stage_name, "ok", stage_started)
-            except Exception as e:
-                log_stage(stage_name, "error", stage_started)
+                log_stage(stage_label, "ok", stage_started)
+                yield finish_stage(stage_key, stage_label, progress=20, mapping_tokens=len(normalized_list))
+            except Exception as exc:
+                log_stage(stage_label, "error", stage_started)
                 logger.exception(
                     "mapping_save_failed",
                     extra={"event": "mapping_save_failed", "template_id": template_id, "correlation_id": correlation_id},
                 )
+                yield finish_stage(stage_key, stage_label, progress=5, status="error", detail=str(exc))
                 yield emit(
                     "error",
-                    stage="Saving mapping failed.",
-                    detail=str(e),
-                    template_id=template_id,
-                )
-                return
-
-            # 2) run post-approve flow (this writes final_html and returns its path/url)
-            stage_name = "Generating final HTML (sample picks & user values)..."
-            stage_started = time.time()
-            try:
-                yield emit(
-                    "stage",
-                    stage=stage_name,
-                    progress=45,
-                    template_id=template_id,
-                )
-                result = run_after_approve(template_id=template_id, uploads_root=UPLOAD_ROOT, user_values_text=user_values_text)
-                imgc = result.get("image_contents") or []
-                if isinstance(imgc, list):
-                    _save_image_contents(template_id, imgc)
-                else:
-                    imgc = []
-                logger.info(
-                    "run_after_approve_complete",
-                    extra={
-                        "event": "run_after_approve_complete",
-                        "template_id": template_id,
-                        "token_map_size": result.get("token_map_size"),
-                        "correlation_id": correlation_id,
-                    },
-                )
-                log_stage(stage_name, "ok", stage_started)
-            except HTTPException as exc:
-                log_stage(stage_name, "error", stage_started)
-                logger.warning(
-                    "run_after_approve_failed",
-                    extra={
-                        "event": "run_after_approve_failed",
-                        "template_id": template_id,
-                        "detail": exc.detail,
-                        "correlation_id": correlation_id,
-                    },
-                )
-                yield emit(
-                    "error",
-                    stage="Auto-fill after approve failed.",
-                    detail=exc.detail,
-                    template_id=template_id,
-                )
-                return
-            except Exception as e:
-                log_stage(stage_name, "error", stage_started)
-                logger.exception(
-                    "run_after_approve_failed",
-                    extra={"event": "run_after_approve_failed", "template_id": template_id, "correlation_id": correlation_id},
-                )
-                yield emit(
-                    "error",
-                    stage="Auto-fill after approve failed.",
-                    detail=str(e),
-                    template_id=template_id,
-                )
-                return
-
-            # 3) Build or update contract.json immediately so downstream discover runs use the cache
-            stage_name = "Building contract cache..."
-            stage_started = time.time()
-            try:
-                yield emit(
-                    "stage",
-                    stage=stage_name,
-                    progress=65,
-                    template_id=template_id,
-                )
-                db_path = _db_path_from_payload_or_default(payload.connection_id)
-            except HTTPException as exc:
-                log_stage(stage_name, "error", stage_started)
-                logger.warning(
-                    "contract_build_connection_failed",
-                    extra={
-                        "event": "contract_build_connection_failed",
-                        "template_id": template_id,
-                        "detail": exc.detail,
-                        "correlation_id": correlation_id,
-                    },
-                )
-                yield emit(
-                    "error",
-                    stage="Contract build failed.",
-                    detail=f"Contract build requires a valid connection: {exc.detail}",
-                    template_id=template_id,
-                )
-                return
-            except Exception as exc:
-                log_stage(stage_name, "error", stage_started)
-                logger.exception(
-                    "contract_build_prep_failed",
-                    extra={"event": "contract_build_prep_failed", "template_id": template_id, "correlation_id": correlation_id},
-                )
-                yield emit(
-                    "error",
-                    stage="Contract build failed.",
+                    stage=stage_key,
+                    label=stage_label,
                     detail=str(exc),
                     template_id=template_id,
                 )
                 return
 
+            # 2) Ensure final HTML exists for downstream steps
+            stage_key = "mapping.prepare_template"
+            stage_label = "Preparing template shell"
+            stage_started = time.time()
             try:
-                from .app.services.reports.ReportGenerate import (
-                    client as openai_client,
-                    MODEL as OPENAI_MODEL,
-                )
-            except Exception as e:
+                yield start_stage(stage_key, stage_label, progress=25)
+                if not base_template_path.exists():
+                    raise FileNotFoundError("template_p1.html not found. Run /templates/verify first.")
+                if not final_html_path.exists():
+                    final_html_path.write_text(
+                        base_template_path.read_text(encoding="utf-8", errors="ignore"),
+                        encoding="utf-8",
+                    )
+                log_stage(stage_label, "ok", stage_started)
+                yield finish_stage(stage_key, stage_label, progress=50)
+            except Exception as exc:
+                log_stage(stage_label, "error", stage_started)
                 logger.exception(
-                    "openai_client_unavailable",
-                    extra={"event": "openai_client_unavailable", "template_id": template_id, "correlation_id": correlation_id},
+                    "mapping_prepare_final_html_failed",
+                    extra={"event": "mapping_prepare_final_html_failed", "template_id": template_id, "correlation_id": correlation_id},
                 )
+                yield finish_stage(stage_key, stage_label, progress=25, status="error", detail=str(exc))
                 yield emit(
                     "error",
-                    stage="OpenAI client unavailable for contract build.",
-                    detail=str(e),
+                    stage=stage_key,
+                    label=stage_label,
+                    detail=str(exc),
                     template_id=template_id,
                 )
                 return
 
+            final_html_url = _artifact_url(final_html_path)
+            template_html_url = final_html_url or _artifact_url(base_template_path)
+            tokens_mapped = len(payload.mapping or {})
+
+            # 3) Contract build (LLM Call 4)
+            stage_key = "contract_build_v2"
+            stage_label = "Drafting contract package"
+            stage_started = time.time()
+            yield start_stage(
+                stage_key,
+                stage_label,
+                progress=55,
+                contract_ready=False,
+                blueprint_ready=bool(auto_mapping_proposal),
+                overview_md=None,
+                cached=False,
+                warnings=[],
+                assumptions=[],
+                validation={},
+                prompt_version=PROMPT_VERSION_4,
+            )
             try:
-                build_or_load_contract(
-                    uploads_root=UPLOAD_ROOT,
-                    template_id=template_id,
-                    db_path=db_path,
-                    openai_client=openai_client,
-                    model=OPENAI_MODEL,
-                    image_contents=imgc if imgc else _load_image_contents(template_id),
+                final_html_text = final_html_path.read_text(encoding="utf-8", errors="ignore")
+                contract_result = build_or_load_contract_v2(
+                    template_dir=template_dir,
+                    catalog=catalog,
+                    final_template_html=final_html_text,
+                    schema=schema_ext,
+                    auto_mapping_proposal=auto_mapping_proposal,
+                    mapping_override=payload.mapping,
+                    user_instructions=payload.user_instructions or "",
+                    dialect_hint=payload.dialect_hint,
+                    db_signature=db_sig,
+                    key_tokens=keys_clean,
                 )
                 contract_ready = True
-                logger.info(
-                    "contract_cached",
-                    extra={
-                        "event": "contract_cached",
-                        "template_id": template_id,
-                        "db_path": str(db_path),
-                        "correlation_id": correlation_id,
-                    },
+                contract_artifacts_urls = _normalize_artifact_map(contract_result.get("artifacts"))
+                contract_stage_summary = {
+                    "stage": stage_key,
+                    "status": "done",
+                    "contract_ready": True,
+                    "overview_md": contract_result.get("overview_md"),
+                    "cached": contract_result.get("cached"),
+                    "warnings": contract_result.get("warnings"),
+                    "assumptions": contract_result.get("assumptions"),
+                    "validation": contract_result.get("validation"),
+                    "artifacts": contract_artifacts_urls,
+                    "prompt_version": PROMPT_VERSION_4,
+                }
+                log_stage(stage_label, "ok", stage_started)
+                yield finish_stage(
+                    stage_key,
+                    stage_label,
+                    progress=75,
+                    contract_ready=True,
+                    overview_md=contract_result.get("overview_md"),
+                    cached=contract_result.get("cached"),
+                    warnings=contract_result.get("warnings"),
+                    assumptions=contract_result.get("assumptions"),
+                    validation=contract_result.get("validation"),
+                    artifacts=contract_artifacts_urls,
+                    prompt_version=PROMPT_VERSION_4,
                 )
-                log_stage(stage_name, "ok", stage_started)
-            except Exception as e:
-                log_stage(stage_name, "error", stage_started)
+            except ContractBuilderError as exc:
+                log_stage(stage_label, "error", stage_started)
                 logger.exception(
                     "contract_build_failed",
                     extra={"event": "contract_build_failed", "template_id": template_id, "correlation_id": correlation_id},
                 )
+                yield finish_stage(
+                    stage_key,
+                    stage_label,
+                    progress=55,
+                    status="error",
+                    detail=str(exc),
+                    prompt_version=PROMPT_VERSION_4,
+                )
                 yield emit(
                     "error",
-                    stage="Contract build failed.",
-                    detail=str(e),
+                    stage=stage_key,
+                    label=stage_label,
+                    detail=str(exc),
                     template_id=template_id,
+                    prompt_version=PROMPT_VERSION_4,
+                )
+                return
+            except Exception as exc:
+                log_stage(stage_label, "error", stage_started)
+                logger.exception(
+                    "contract_build_failed",
+                    extra={"event": "contract_build_failed", "template_id": template_id, "correlation_id": correlation_id},
+                )
+                yield finish_stage(
+                    stage_key,
+                    stage_label,
+                    progress=55,
+                    status="error",
+                    detail=str(exc),
+                    prompt_version=PROMPT_VERSION_4,
+                )
+                yield emit(
+                    "error",
+                    stage=stage_key,
+                    label=stage_label,
+                    detail=str(exc),
+                    template_id=template_id,
+                    prompt_version=PROMPT_VERSION_4,
                 )
                 return
 
-            # 4) Render a PNG thumbnail from the final HTML (best-effort)
-            final_html_path_str = result.get("final_html_path")
-            if final_html_path_str:
-                stage_name = "Rendering template thumbnail..."
-                stage_started = time.time()
-                try:
-                    yield emit(
-                        "stage",
-                        stage=stage_name,
-                        progress=85,
-                        template_id=template_id,
-                    )
-                    final_html_path = Path(final_html_path_str)
-                    thumb_path = final_html_path.parent / "report_final.png"
-                    asyncio.run(render_html_to_png(final_html_path, thumb_path))
-                    png_url = f"/uploads/{template_id}/{thumb_path.name}"
-                    write_artifact_manifest(
-                        tdir,
-                        step="mapping_thumbnail",
-                        files={
-                            "report_final.html": tdir / "report_final.html",
-                            "template_p1.html": tdir / "template_p1.html",
-                            "report_final.png": thumb_path,
-                        },
-                        inputs=[str(mapping_path)],
-                        correlation_id=correlation_id,
-                    )
-                    log_stage(stage_name, "ok", stage_started)
-                except Exception:
-                    png_url = None
-                    log_stage(stage_name, "error", stage_started)
+            # 4) Generator assets (LLM Call 5)
+            stage_key = "generator_assets_v1"
+            stage_label = "Creating generator assets"
+            stage_started = time.time()
+            generator_dialect = payload.generator_dialect or payload.dialect_hint or "sqlite"
+            yield start_stage(stage_key, stage_label, progress=80, dialect=generator_dialect)
+            try:
+                generator_result = build_generator_assets_from_payload(
+                    template_dir=template_dir,
+                    step4_output=contract_result,
+                    final_template_html=final_html_path.read_text(encoding="utf-8", errors="ignore"),
+                    reference_pdf_image=None,
+                    catalog_allowlist=payload.catalog_allowlist or catalog,
+                    dialect=generator_dialect,
+                    params_spec=payload.params_spec,
+                    sample_params=payload.sample_params,
+                    force_rebuild=payload.force_generator_rebuild,
+                    key_tokens=keys_clean,
+                )
+                generator_artifacts_urls = _normalize_artifact_map(generator_result.get("artifacts"))
+                generator_stage_summary = {
+                    "stage": stage_key,
+                    "status": "done",
+                    "invalid": generator_result.get("invalid"),
+                    "needs_user_fix": list(generator_result.get("needs_user_fix") or []),
+                    "dialect": generator_result.get("dialect"),
+                    "params": generator_result.get("params"),
+                    "summary": generator_result.get("summary"),
+                    "dry_run": generator_result.get("dry_run"),
+                    "cached": generator_result.get("cached"),
+                    "artifacts": generator_artifacts_urls,
+                }
+                log_stage(stage_label, "ok", stage_started)
+                yield finish_stage(
+                    stage_key,
+                    stage_label,
+                    progress=92,
+                    invalid=generator_result.get("invalid"),
+                    needs_user_fix=list(generator_result.get("needs_user_fix") or []),
+                    dialect=generator_result.get("dialect"),
+                    params=generator_result.get("params"),
+                    summary=generator_result.get("summary"),
+                    dry_run=generator_result.get("dry_run"),
+                    cached=generator_result.get("cached"),
+                    artifacts=generator_artifacts_urls,
+                )
+            except GeneratorAssetsError as exc:
+                log_stage(stage_label, "error", stage_started)
+                logger.exception(
+                    "generator_assets_failed",
+                    extra={"event": "generator_assets_failed", "template_id": template_id, "correlation_id": correlation_id},
+                )
+                generator_stage_summary = {
+                    "stage": stage_key,
+                    "status": "error",
+                    "detail": str(exc),
+                }
+                generator_artifacts_urls = {}
+                yield finish_stage(
+                    stage_key,
+                    stage_label,
+                    progress=90,
+                    status="error",
+                    detail=str(exc),
+                )
+            except Exception as exc:
+                log_stage(stage_label, "error", stage_started)
+                logger.exception(
+                    "generator_assets_failed",
+                    extra={"event": "generator_assets_failed", "template_id": template_id, "correlation_id": correlation_id},
+                )
+                generator_stage_summary = {
+                    "stage": stage_key,
+                    "status": "error",
+                    "detail": str(exc),
+                }
+                generator_artifacts_urls = {}
+                yield finish_stage(
+                    stage_key,
+                    stage_label,
+                    progress=90,
+                    status="error",
+                    detail=str(exc),
+                )
 
-            manifest_data = load_manifest(tdir) or {}
+            # 5) Thumbnail snapshot (best-effort)
+            stage_key = "mapping.thumbnail"
+            stage_label = "Capturing template thumbnail"
+            stage_started = time.time()
+            thumbnail_url = None
+            try:
+                yield start_stage(stage_key, stage_label, progress=95)
+                thumb_path = final_html_path.parent / "report_final.png"
+                asyncio.run(render_html_to_png(final_html_path, thumb_path))
+                thumbnail_url = _artifact_url(thumb_path)
+                write_artifact_manifest(
+                    template_dir,
+                    step="mapping_thumbnail",
+                    files={
+                        "report_final.html": final_html_path,
+                        "template_p1.html": base_template_path,
+                        "report_final.png": thumb_path,
+                    },
+                    inputs=[str(mapping_path)],
+                    correlation_id=correlation_id,
+                )
+                log_stage(stage_label, "ok", stage_started)
+                yield finish_stage(
+                    stage_key,
+                    stage_label,
+                    progress=98,
+                    thumbnail_url=thumbnail_url,
+                )
+            except Exception:
+                log_stage(stage_label, "error", stage_started)
+                yield finish_stage(
+                    stage_key,
+                    stage_label,
+                    progress=95,
+                    status="error",
+                )
+
+            manifest_data = load_manifest(template_dir) or {}
             manifest_url = f"/templates/{template_id}/artifacts/manifest"
-            existing_tpl = state_store.get_template_record(template_id) or {}
-            tpl_name = existing_tpl.get("name") or f"Template {template_id[:8]}"
+            page_summary_path = template_dir / "page_summary.txt"
+            page_summary_url = _artifact_url(page_summary_path)
+
+            contract_artifacts = (
+                contract_stage_summary.get("artifacts") if isinstance(contract_stage_summary, dict) else {}
+            )
+            generator_artifacts = (
+                generator_stage_summary.get("artifacts") if isinstance(generator_stage_summary, dict) else {}
+            )
+            if not isinstance(generator_artifacts, dict):
+                generator_artifacts = {}
+
+            generator_contract_url = (
+                generator_artifacts.get("contract")
+                or generator_artifacts.get("contract.json")
+            )
+            contract_url = (
+                generator_contract_url
+                or contract_artifacts.get("contract")
+                or contract_artifacts.get("contract.json")
+            )
+
             artifacts_payload = {
-                "template_html_url": result.get("template_html_url"),
-                "final_html_url": result.get("final_html_url"),
-                "thumbnail_url": png_url,
+                "template_html_url": template_html_url,
+                "final_html_url": final_html_url,
+                "thumbnail_url": thumbnail_url,
                 "manifest_url": manifest_url,
+                "page_summary_url": page_summary_url,
+                "contract_url": contract_url,
+                "overview_url": contract_artifacts.get("overview"),
+                "step5_requirements_url": contract_artifacts.get("step5_requirements"),
+                "generator_sql_pack_url": generator_artifacts.get("sql_pack"),
+                "generator_output_schemas_url": generator_artifacts.get("output_schemas"),
+                "generator_assets_url": generator_artifacts.get("generator_assets"),
+                "mapping_keys_url": _artifact_url(mapping_keys_path) if mapping_keys_path.exists() else None,
             }
+
+            final_contract_ready = bool(generator_contract_url)
+
+            existing_tpl = state_store.get_template_record(template_id) or {}
             state_store.upsert_template(
                 template_id,
-                name=tpl_name,
-                status="approved" if contract_ready else "pending",
+                name=existing_tpl.get("name") or f"Template {template_id[:8]}",
+                status="approved" if final_contract_ready else "pending",
                 artifacts={k: v for k, v in artifacts_payload.items() if v},
                 connection_id=payload.connection_id or existing_tpl.get("last_connection_id"),
+                mapping_keys=keys_clean,
             )
-            state_store.set_last_used(payload.connection_id or existing_tpl.get("last_connection_id"), template_id)
-            yield emit(
-                "result",
-                stage="Approval complete.",
-                progress=100,
-                template_id=template_id,
-                saved=f"/uploads/{template_id}/mapping_pdf_labels.json",
-                final_html_path=result.get("final_html_path"),
-                final_html_url=result.get("final_html_url"),
-                template_html_url=result.get("template_html_url"),
-                thumbnail_url=png_url,
-                contract_ready=contract_ready,
-                token_map_size=result.get("token_map_size", 0),
-                user_values_supplied=bool(user_values_text),
-                manifest=manifest_data,
-                manifest_url=manifest_url,
+
+            if generator_result:
+                state_store.update_template_generator(
+                    template_id,
+                    dialect=generator_result.get("dialect"),
+                    params=generator_result.get("params"),
+                    invalid=bool(generator_result.get("invalid")),
+                    needs_user_fix=generator_result.get("needs_user_fix") or [],
+                    summary=generator_result.get("summary"),
+                    dry_run=generator_result.get("dry_run"),
+                )
+
+            state_store.set_last_used(
+                payload.connection_id or existing_tpl.get("last_connection_id"),
+                template_id,
             )
+
+            total_elapsed_ms = int((time.time() - pipeline_started) * 1000)
+            contract_ready = final_contract_ready
+            result_payload = {
+                "stage": "Approval complete.",
+                "progress": 100,
+                "template_id": template_id,
+                "saved": _artifact_url(mapping_path),
+                "final_html_path": str(final_html_path),
+                "final_html_url": final_html_url,
+                "template_html_url": template_html_url,
+                "thumbnail_url": thumbnail_url,
+                "contract_ready": contract_ready,
+                "token_map_size": tokens_mapped,
+                "user_values_supplied": bool((payload.user_values_text or "").strip()),
+                "manifest": manifest_data,
+                "manifest_url": manifest_url,
+                "artifacts": {k: v for k, v in artifacts_payload.items() if v},
+                "contract_stage": contract_stage_summary,
+                "generator_stage": generator_stage_summary,
+                "prompt_versions": {
+                    "mapping": PROMPT_VERSION,
+                    "corrections": PROMPT_VERSION_3_5,
+                    "contract": PROMPT_VERSION_4,
+                },
+                "elapsed_ms": total_elapsed_ms,
+                "keys": keys_clean,
+                "keys_count": len(keys_clean),
+            }
+            yield emit("result", **result_payload)
+
             logger.info(
                 "mapping_approve_complete",
                 extra={
                     "event": "mapping_approve_complete",
                     "template_id": template_id,
-                    "final_html": result.get("final_html_url"),
                     "contract_ready": contract_ready,
-                    "thumbnail_url": png_url,
+                    "thumbnail_url": thumbnail_url,
                     "correlation_id": correlation_id,
-                    "elapsed_ms": int((time.time() - pipeline_started) * 1000),
+                    "elapsed_ms": total_elapsed_ms,
                 },
             )
 
@@ -1380,49 +2347,594 @@ def mapping_approve(template_id: str, payload: MappingPayload, request: Request)
     return StreamingResponse(event_stream(), headers=headers, media_type="application/x-ndjson")
 
 
+
+@app.get("/templates/{template_id}/keys/options")
+def mapping_key_options(
+    template_id: str,
+    request: Request,
+    connection_id: str | None = None,
+    tokens: str | None = None,
+    limit: int = 50,
+    start_date: str | None = None,
+    end_date: str | None = None,
+):
+    correlation_id = getattr(request.state, "correlation_id", None)
+    logger.info(
+        "mapping_key_options_start",
+        extra={
+            "event": "mapping_key_options_start",
+            "template_id": template_id,
+            "connection_id": connection_id,
+            "tokens": tokens,
+            "limit": limit,
+            "start_date": start_date,
+            "end_date": end_date,
+            "correlation_id": correlation_id,
+        },
+    )
+    template_dir = _template_dir(template_id)
+    keys_available = _load_mapping_keys(template_dir)
+    if not keys_available:
+        return {"keys": {}}
+
+    if tokens:
+        requested = [token.strip() for token in tokens.split(",") if token.strip()]
+        token_list = [token for token in requested if token in keys_available]
+    else:
+        token_list = list(keys_available)
+
+    if not token_list:
+        return {"keys": {}}
+
+    try:
+        limit_value = int(limit)
+    except (TypeError, ValueError):
+        limit_value = 50
+    limit_value = max(1, min(limit_value, 500))
+
+    mapping_path = template_dir / "mapping_pdf_labels.json"
+    if not mapping_path.exists():
+        raise _http_error(404, "mapping_not_found", "Approved mapping not found for template.")
+    try:
+        mapping_doc = json.loads(mapping_path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        raise _http_error(500, "mapping_load_failed", f"Failed to read mapping file: {exc}")
+
+    mapping_lookup: dict[str, str] = {}
+    if isinstance(mapping_doc, list):
+        for entry in mapping_doc:
+            if not isinstance(entry, dict):
+                continue
+            header = entry.get("header")
+            mapping_value = entry.get("mapping")
+            if isinstance(header, str) and isinstance(mapping_value, str):
+                mapping_lookup[header] = mapping_value.strip()
+    else:
+        raise _http_error(500, "mapping_invalid", "Approved mapping is not in the expected format.")
+
+    contract_filters_required: dict[str, str] = {}
+    contract_filters_optional: dict[str, str] = {}
+    contract_date_columns: dict[str, str] = {}
+    contract_path = template_dir / "contract.json"
+    if contract_path.exists():
+        try:
+            contract_data = json.loads(contract_path.read_text(encoding="utf-8"))
+        except Exception:
+            contract_data = {}
+        filters_section = contract_data.get("filters") or {}
+        if isinstance(filters_section, dict):
+            required_map = filters_section.get("required") or {}
+            optional_map = filters_section.get("optional") or {}
+            if isinstance(required_map, dict):
+                for key, expr in required_map.items():
+                    if isinstance(key, str) and isinstance(expr, str):
+                        contract_filters_required[key] = expr.strip()
+            if isinstance(optional_map, dict):
+                for key, expr in optional_map.items():
+                    if isinstance(key, str) and isinstance(expr, str):
+                        contract_filters_optional[key] = expr.strip()
+        date_columns_section = contract_data.get("date_columns") or {}
+        if isinstance(date_columns_section, dict):
+            for table_name, column_name in date_columns_section.items():
+                if not isinstance(table_name, str) or not isinstance(column_name, str):
+                    continue
+                table_clean = table_name.strip(' "`[]').lower()
+                column_clean = column_name.strip(' "`[]')
+                if table_clean and column_clean:
+                    contract_date_columns[table_clean] = column_clean
+
+    db_path = _db_path_from_payload_or_default(connection_id)
+    verify_sqlite(db_path)
+
+    options: dict[str, list[str]] = {}
+    ident_re = re.compile(r"^[A-Za-z_][\w]*$")
+
+    def _resolve_column(token: str) -> tuple[str, str] | None:
+        expr = mapping_lookup.get(token, "")
+        match = _DIRECT_COLUMN_RE.match(expr)
+        if match:
+            table_raw = match.group("table")
+            column_raw = match.group("column")
+            table_clean = table_raw.strip(' "`[]') if isinstance(table_raw, str) else ""
+            column_clean = column_raw.strip(' "`[]') if isinstance(column_raw, str) else ""
+            if table_clean and column_clean:
+                return table_clean, column_clean
+        filter_expr = contract_filters_required.get(token) or contract_filters_optional.get(token)
+        if isinstance(filter_expr, str):
+            match_filter = _DIRECT_COLUMN_RE.match(filter_expr)
+            if match_filter:
+                table_raw = match_filter.group("table")
+                column_raw = match_filter.group("column")
+                table_clean = table_raw.strip(' "`[]') if isinstance(table_raw, str) else ""
+                column_clean = column_raw.strip(' "`[]') if isinstance(column_raw, str) else ""
+                if table_clean and column_clean:
+                    return table_clean, column_clean
+        return None
+
+    with sqlite3.connect(str(db_path)) as con:
+        for token in token_list:
+            column_ref = _resolve_column(token)
+            if not column_ref:
+                options[token] = []
+                continue
+            table, column = column_ref
+            if not table or not column:
+                options[token] = []
+                continue
+            if not ident_re.match(table) or not ident_re.match(column):
+                options[token] = []
+                continue
+            quoted_table = f'"{table}"'
+            quoted_column = f'"{column}"'
+            conditions = [f"{quoted_column} IS NOT NULL"]
+            params: list[str] = []
+            date_column_name = contract_date_columns.get(table.lower())
+            if date_column_name and ident_re.match(date_column_name):
+                quoted_date_column = f'"{date_column_name}"'
+                if start_date and end_date:
+                    conditions.append(f"{quoted_date_column} BETWEEN ? AND ?")
+                    params.extend([start_date, end_date])
+                elif start_date:
+                    conditions.append(f"{quoted_date_column} >= ?")
+                    params.append(start_date)
+                elif end_date:
+                    conditions.append(f"{quoted_date_column} <= ?")
+                    params.append(end_date)
+            where_clause = " AND ".join(conditions) if conditions else "1=1"
+            sql = (
+                f"SELECT DISTINCT {quoted_column} FROM {quoted_table} "
+                f"WHERE {where_clause} ORDER BY {quoted_column} ASC LIMIT ?"
+            )
+            params_with_limit = tuple(params + [limit_value])
+            try:
+                rows = [
+                    str(row[0])
+                    for row in con.execute(sql, params_with_limit)
+                    if row and row[0] is not None
+                ]
+            except sqlite3.Error:
+                rows = []
+            options[token] = rows
+
+    logger.info(
+        "mapping_key_options_complete",
+        extra={
+            "event": "mapping_key_options_complete",
+            "template_id": template_id,
+            "tokens": token_list,
+            "correlation_id": correlation_id,
+        },
+    )
+    return {"keys": options}
+
+
+
+@app.post("/templates/{template_id}/mapping/corrections-preview")
+def mapping_corrections_preview(template_id: str, payload: CorrectionsPreviewPayload, request: Request):
+    correlation_id = getattr(request.state, "correlation_id", None)
+    logger.info(
+        "corrections_preview_start",
+        extra={
+            "event": "corrections_preview_start",
+            "template_id": template_id,
+            "correlation_id": correlation_id,
+        },
+    )
+
+    template_dir = _template_dir(template_id)
+    template_html_path = template_dir / "template_p1.html"
+    mapping_step3_path = template_dir / "mapping_step3.json"
+    schema_ext_path = template_dir / "schema_ext.json"
+
+    page_index = max(1, int(payload.page or 1))
+    reference_png = template_dir / f"reference_p{page_index}.png"
+    page_png_path = reference_png if reference_png.exists() else None
+
+    def event_stream():
+        started = time.time()
+
+        def emit(event: str, **data: Any) -> bytes:
+            return (json.dumps({"event": event, **data}, ensure_ascii=False) + "\n").encode("utf-8")
+
+        yield emit(
+            "stage",
+            stage="corrections_preview",
+            status="start",
+            progress=10,
+            template_id=template_id,
+            correlation_id=correlation_id,
+            prompt_version=PROMPT_VERSION_3_5,
+        )
+        try:
+            result = run_corrections_preview(
+                upload_dir=template_dir,
+                template_html_path=template_html_path,
+                mapping_step3_path=mapping_step3_path,
+                schema_ext_path=schema_ext_path,
+                user_input=payload.user_input or "",
+                page_png_path=page_png_path,
+                model_selector=payload.model_selector,
+                mapping_override=payload.mapping_override,
+                sample_tokens=payload.sample_tokens,
+            )
+        except CorrectionsPreviewError as exc:
+            logger.warning(
+                "corrections_preview_failed",
+                extra={"event": "corrections_preview_failed", "template_id": template_id, "correlation_id": correlation_id},
+            )
+            yield emit(
+                "error",
+                stage="corrections_preview",
+                detail=str(exc),
+                template_id=template_id,
+            )
+            return
+        except Exception as exc:
+            logger.exception(
+                "corrections_preview_unexpected",
+                extra={"event": "corrections_preview_unexpected", "template_id": template_id, "correlation_id": correlation_id},
+            )
+            yield emit(
+                "error",
+                stage="corrections_preview",
+                detail=str(exc),
+                template_id=template_id,
+            )
+            return
+
+        artifacts_raw = result.get("artifacts") or {}
+        artifacts: dict[str, str] = {}
+        for name, value in artifacts_raw.items():
+            resolved: Optional[Path]
+            if isinstance(value, Path):
+                resolved = value
+            else:
+                try:
+                    resolved = Path(value)
+                except Exception:
+                    resolved = None
+            url = _artifact_url(resolved)
+            if url:
+                artifacts[str(name)] = url
+
+        template_html_url = artifacts.get("template_html")
+        page_summary_url = artifacts.get("page_summary")
+        if template_html_url or page_summary_url:
+            existing_tpl = state_store.get_template_record(template_id) or {}
+            artifacts_for_state: dict[str, str] = {}
+            if template_html_url:
+                artifacts_for_state["template_html_url"] = template_html_url
+            if page_summary_url:
+                artifacts_for_state["page_summary_url"] = page_summary_url
+            if artifacts_for_state:
+                existing_status = (existing_tpl.get("status") or "").lower()
+                next_status = existing_tpl.get("status") or "mapping_corrections_previewed"
+                if existing_status != "approved":
+                    next_status = "mapping_corrections_previewed"
+                state_store.upsert_template(
+                    template_id,
+                    name=existing_tpl.get("name") or f"Template {template_id[:8]}",
+                    status=next_status,
+                    artifacts=artifacts_for_state,
+                    connection_id=existing_tpl.get("last_connection_id"),
+                )
+
+        yield emit(
+            "stage",
+            stage="corrections_preview",
+            status="done",
+            progress=90,
+            template_id=template_id,
+            correlation_id=correlation_id,
+            cache_hit=bool(result.get("cache_hit")),
+            prompt_version=PROMPT_VERSION_3_5,
+        )
+
+        yield emit(
+            "result",
+            template_id=template_id,
+            summary=result.get("summary") or {},
+            processed=result.get("processed") or {},
+            artifacts=artifacts,
+            cache_key=result.get("cache_key"),
+            cache_hit=bool(result.get("cache_hit")),
+            prompt_version=PROMPT_VERSION_3_5,
+        )
+
+        logger.info(
+            "corrections_preview_complete",
+            extra={
+                "event": "corrections_preview_complete",
+                "template_id": template_id,
+                "elapsed_ms": int((time.time() - started) * 1000),
+                "correlation_id": correlation_id,
+            },
+        )
+
+    headers = {"Content-Type": "application/x-ndjson"}
+    return StreamingResponse(event_stream(), headers=headers, media_type="application/x-ndjson")
+
+
+@app.post("/templates/{template_id}/generator-assets/v1")
+def generator_assets_v1(template_id: str, payload: GeneratorAssetsPayload, request: Request):
+    correlation_id = getattr(request.state, "correlation_id", None)
+    logger.info(
+        "generator_assets_v1_start",
+        extra={
+            "event": "generator_assets_v1_start",
+            "template_id": template_id,
+            "correlation_id": correlation_id,
+            "force_rebuild": bool(payload.force_rebuild),
+        },
+    )
+
+    template_dir = _template_dir(template_id)
+    base_template_path = template_dir / "template_p1.html"
+    final_template_path = template_dir / "report_final.html"
+    contract_path = template_dir / "contract.json"
+    overview_path = template_dir / "overview.md"
+    step5_path = template_dir / "step5_requirements.json"
+
+    def _load_step4_payload() -> dict[str, Any]:
+        contract_payload = payload.step4_output.get("contract") if payload.step4_output else None
+        overview_md = payload.step4_output.get("overview_md") if payload.step4_output else None
+        step5_requirements = payload.step4_output.get("step5_requirements") if payload.step4_output else None
+
+        if contract_payload is None:
+            if payload.contract is not None:
+                contract_payload = payload.contract
+            elif contract_path.exists():
+                contract_payload = json.loads(contract_path.read_text(encoding="utf-8"))
+        if contract_payload is None:
+            raise HTTPException(status_code=422, detail="Contract payload is required to build generator assets.")
+
+        if overview_md is None:
+            if payload.overview_md is not None:
+                overview_md = payload.overview_md
+            elif overview_path.exists():
+                overview_md = overview_path.read_text(encoding="utf-8")
+
+        if step5_requirements is None:
+            if step5_path.exists():
+                try:
+                    step5_requirements = json.loads(step5_path.read_text(encoding="utf-8"))
+                except Exception:
+                    step5_requirements = {}
+            else:
+                step5_requirements = {}
+
+        return {
+            "contract": contract_payload,
+            "overview_md": overview_md,
+            "step5_requirements": step5_requirements or {},
+        }
+
+    if payload.step4_output:
+        step4_output = payload.step4_output
+    else:
+        step4_output = _load_step4_payload()
+
+    final_template_html = payload.final_template_html
+    if final_template_html is None:
+        source_path = final_template_path if final_template_path.exists() else base_template_path
+        if not source_path.exists():
+            raise HTTPException(status_code=422, detail="Template HTML not found. Run mapping approval first.")
+        final_template_html = source_path.read_text(encoding="utf-8", errors="ignore")
+
+    catalog_allowlist = payload.catalog or None
+    params_spec = payload.params or None
+    sample_params = payload.sample_params or None
+    dialect = payload.dialect or "sqlite"
+    if payload.key_tokens is not None:
+        incoming_key_tokens = _normalize_key_tokens(payload.key_tokens)
+    else:
+        incoming_key_tokens = _load_mapping_keys(template_dir)
+
+    try:
+        lock_ctx = acquire_template_lock(template_dir, "generator_assets_v1", correlation_id)
+    except TemplateLockError:
+        raise _http_error(
+            status_code=409,
+            code="template_locked",
+            message="Template is currently processing another request.",
+        )
+
+    def event_stream():
+        started = time.time()
+
+        def emit(event: str, **data: Any) -> bytes:
+            return (json.dumps({"event": event, **data}, ensure_ascii=False) + "\n").encode("utf-8")
+
+        with lock_ctx:
+            yield emit(
+                "stage",
+                stage="generator_assets_v1",
+                status="start",
+                progress=10,
+                template_id=template_id,
+                correlation_id=correlation_id,
+            )
+            try:
+                result = build_generator_assets_from_payload(
+                    template_dir=template_dir,
+                    step4_output=step4_output,
+                    final_template_html=final_template_html,
+                    reference_pdf_image=payload.reference_pdf_image,
+                    catalog_allowlist=catalog_allowlist,
+                    dialect=dialect,
+                    params_spec=params_spec,
+                    sample_params=sample_params,
+                    force_rebuild=payload.force_rebuild,
+                    key_tokens=incoming_key_tokens,
+                )
+            except GeneratorAssetsError as exc:
+                logger.warning(
+                    "generator_assets_v1_failed",
+                    extra={"event": "generator_assets_v1_failed", "template_id": template_id, "correlation_id": correlation_id},
+                )
+                yield emit(
+                    "error",
+                    stage="generator_assets_v1",
+                    detail=str(exc),
+                    template_id=template_id,
+                )
+                return
+            except Exception as exc:
+                logger.exception(
+                    "generator_assets_v1_unexpected",
+                    extra={"event": "generator_assets_v1_unexpected", "template_id": template_id, "correlation_id": correlation_id},
+                )
+                yield emit(
+                    "error",
+                    stage="generator_assets_v1",
+                    detail=str(exc),
+                    template_id=template_id,
+                )
+                return
+
+            artifacts_urls = _normalize_artifact_map(result.get("artifacts"))
+            yield emit(
+                "stage",
+                stage="generator_assets_v1",
+                status="done",
+                progress=90,
+                template_id=template_id,
+                correlation_id=correlation_id,
+                invalid=result.get("invalid"),
+                needs_user_fix=result.get("needs_user_fix") or [],
+                dialect=result.get("dialect"),
+                params=result.get("params"),
+                summary=result.get("summary"),
+                dry_run=result.get("dry_run"),
+                cached=result.get("cached"),
+                artifacts=artifacts_urls,
+            )
+
+            manifest = load_manifest(template_dir) or {}
+            manifest_url = f"/templates/{template_id}/artifacts/manifest"
+
+            existing_tpl = state_store.get_template_record(template_id) or {}
+            artifacts_payload = {
+                "contract_url": artifacts_urls.get("contract"),
+                "generator_sql_pack_url": artifacts_urls.get("sql_pack"),
+                "generator_output_schemas_url": artifacts_urls.get("output_schemas"),
+                "generator_assets_url": artifacts_urls.get("generator_assets"),
+                "manifest_url": manifest_url,
+            }
+            state_store.upsert_template(
+                template_id,
+                name=existing_tpl.get("name") or f"Template {template_id[:8]}",
+                status=existing_tpl.get("status") or "approved",
+                artifacts={k: v for k, v in artifacts_payload.items() if v},
+                connection_id=existing_tpl.get("last_connection_id"),
+            )
+            state_store.update_template_generator(
+                template_id,
+                dialect=result.get("dialect"),
+                params=result.get("params"),
+                invalid=bool(result.get("invalid")),
+                needs_user_fix=result.get("needs_user_fix") or [],
+                summary=result.get("summary"),
+                dry_run=result.get("dry_run"),
+            )
+
+            yield emit(
+                "result",
+                template_id=template_id,
+                invalid=result.get("invalid"),
+                needs_user_fix=result.get("needs_user_fix") or [],
+                dialect=result.get("dialect"),
+                params=result.get("params"),
+                summary=result.get("summary"),
+                dry_run=result.get("dry_run"),
+                cached=result.get("cached"),
+                artifacts=artifacts_urls,
+                manifest=manifest,
+                manifest_url=manifest_url,
+            )
+
+            logger.info(
+                "generator_assets_v1_complete",
+                extra={
+                    "event": "generator_assets_v1_complete",
+                    "template_id": template_id,
+                    "invalid": result.get("invalid"),
+                    "needs_user_fix": len(result.get("needs_user_fix") or []),
+                    "correlation_id": correlation_id,
+                    "elapsed_ms": int((time.time() - started) * 1000),
+                },
+            )
+
+    headers = {"Content-Type": "application/x-ndjson"}
+    return StreamingResponse(event_stream(), headers=headers, media_type="application/x-ndjson")
+
+
+
 # ---------- Discover ----------
 @app.post("/reports/discover")
 def discover_reports(p: DiscoverPayload):
+    template_dir = _template_dir(p.template_id)
     db_path = _db_path_from_payload_or_default(p.connection_id)
     if not db_path.exists():
         raise _http_error(400, "db_not_found", f"DB not found: {db_path}")
 
-    # OpenAI client/env indirection (as in your repo)
     try:
-        from .app.services.reports.ReportGenerate import (
-            client as openai_client,
-            MODEL as OPENAI_MODEL,
+        load_contract_v2(template_dir)
+    except Exception as exc:
+        logger.exception(
+            "contract_artifacts_load_failed",
+            extra={"event": "contract_artifacts_load_failed", "template_id": p.template_id},
         )
-    except Exception as e:
-        raise _http_error(500, "openai_unavailable", f"OpenAI client unavailable: {e}")
+        raise _http_error(500, "contract_load_failed", f"Failed to load contract artifacts: {exc}")
 
-    # Load the SAME image_contents captured during mapping_approve() / run_after_approve()
-    image_contents = _load_image_contents(p.template_id)
-
+    contract_path = template_dir / "contract.json"
+    if not contract_path.exists():
+        raise _http_error(400, "contract_not_ready", "Contract artifacts missing. Approve mapping first.")
     try:
-        OBJ = build_or_load_contract(
-            uploads_root=UPLOAD_ROOT,
-            template_id=p.template_id,
-            db_path=db_path,
-            openai_client=openai_client,
-            model=OPENAI_MODEL,
-            # optional, but reuses the exact PDF image grounding
-            image_contents=image_contents,
-        )
-    except Exception as e:
-        raise _http_error(500, "contract_load_failed", f"Contract build/load failed: {e}")
+        contract_payload = json.loads(contract_path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        raise _http_error(500, "contract_invalid", f"Invalid contract.json: {exc}")
+
+    key_values_payload: dict[str, Any] = {}
+    if isinstance(p.key_values, dict):
+        for token, raw_value in p.key_values.items():
+            name = str(token or "").strip()
+            if not name or raw_value is None:
+                continue
+            key_values_payload[name] = raw_value
 
     try:
         summary = discover_batches_and_counts(
             db_path=db_path,
-            contract=OBJ,
+            contract=contract_payload,
             start_date=p.start_date,
             end_date=p.end_date,
+            key_values=key_values_payload,
         )
-    except Exception as e:
-        raise _http_error(500, "discovery_failed", f"Discovery failed: {e}")
+    except Exception as exc:
+        raise _http_error(500, "discovery_failed", f"Discovery failed: {exc}")
 
-    manifest_data = load_manifest(_template_dir(p.template_id, must_exist=False)) or {}
+    manifest_data = load_manifest(template_dir) or {}
     manifest_url = f"/templates/{p.template_id}/artifacts/manifest"
     tpl_record = state_store.get_template_record(p.template_id) or {}
     tpl_name = tpl_record.get("name") or f"Template {p.template_id[:8]}"
@@ -1503,6 +3015,14 @@ def start_run(p: RunPayload, request: Request):
         except Exception as exc:
             raise _http_error(500, "invalid_contract", str(exc))
 
+    key_values_payload: dict[str, Any] = {}
+    if isinstance(p.key_values, dict):
+        for token, raw_value in p.key_values.items():
+            name = str(token or "").strip()
+            if not name or raw_value is None:
+                continue
+            key_values_payload[name] = raw_value
+
     ts = str(int(time.time()))
     out_html = tdir / f"filled_{ts}.html"
     out_pdf = tdir / f"filled_{ts}.pdf"
@@ -1527,6 +3047,7 @@ def start_run(p: RunPayload, request: Request):
                 START_DATE=p.start_date,
                 END_DATE=p.end_date,
                 batch_ids=p.batch_ids,
+                KEY_VALUES=key_values_payload,
             )
             if tmp_html.exists():
                 tmp_html.replace(out_html)
@@ -1589,7 +3110,3 @@ def start_run(p: RunPayload, request: Request):
         "manifest_produced_at": manifest_data.get("produced_at"),
         "correlation_id": correlation_id,
     }
-
-
-
-

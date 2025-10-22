@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import base64
 import hashlib
@@ -9,7 +9,7 @@ import time
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, Iterable, Optional
+from typing import Any, Dict, Iterable, Mapping, Optional
 
 from cryptography.fernet import Fernet, InvalidToken
 
@@ -18,6 +18,20 @@ from ..utils import write_json_atomic
 
 def _now_iso() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+
+
+def _normalize_mapping_keys(values: Optional[Iterable[str]]) -> list[str]:
+    if not values:
+        return []
+    seen: set[str] = set()
+    normalized: list[str] = []
+    for raw in values:
+        text = str(raw or "").strip()
+        if not text or text in seen:
+            continue
+        seen.add(text)
+        normalized.append(text)
+    return normalized
 
 
 class StateStore:
@@ -278,6 +292,7 @@ class StateStore:
         artifacts: Optional[dict] = None,
         tags: Optional[Iterable[str]] = None,
         connection_id: Optional[str] = None,
+        mapping_keys: Optional[Iterable[str]] = None,
     ) -> dict:
         tid = template_id
         now = _now_iso()
@@ -285,18 +300,24 @@ class StateStore:
             state = self._read_state()
             record = state["templates"].get(tid, {})
             created_at = record.get("created_at", now)
+            existing_artifacts = record.get("artifacts") or {}
+            merged_artifacts = {**existing_artifacts, **(artifacts or {})}
             record.update(
                 {
                     "id": tid,
                     "name": name,
                     "status": status,
-                    "artifacts": {**(record.get("artifacts") or {}), **(artifacts or {})},
+                    "artifacts": {k: v for k, v in merged_artifacts.items() if v},
                     "updated_at": now,
                     "created_at": created_at,
                     "tags": sorted(set(tags or record.get("tags") or [])),
                     "last_connection_id": connection_id or record.get("last_connection_id"),
                 }
             )
+            if mapping_keys is not None:
+                record["mapping_keys"] = _normalize_mapping_keys(mapping_keys)
+            elif "mapping_keys" not in record:
+                record["mapping_keys"] = []
             state["templates"][tid] = record
             self._write_state(state)
             return self._sanitize_template(record)
@@ -315,8 +336,88 @@ class StateStore:
             state["templates"][template_id] = record
             self._write_state(state)
 
+    def delete_template(self, template_id: str) -> bool:
+        with self._lock:
+            state = self._read_state()
+            removed = state["templates"].pop(template_id, None)
+            if removed is None:
+                return False
+            last_used = state.get("last_used") or {}
+            if last_used.get("template_id") == template_id:
+                last_used["template_id"] = None
+                last_used["updated_at"] = _now_iso()
+                state["last_used"] = last_used
+            self._write_state(state)
+            return True
+
+    def update_template_generator(
+        self,
+        template_id: str,
+        *,
+        dialect: Optional[str] = None,
+        params: Optional[Mapping[str, Any]] = None,
+        invalid: Optional[bool] = None,
+        needs_user_fix: Optional[Iterable[Any]] = None,
+        summary: Optional[Mapping[str, Any]] = None,
+        dry_run: Optional[Any] = None,
+        cached: Optional[bool] = None,
+    ) -> Optional[dict]:
+        now = _now_iso()
+        with self._lock:
+            state = self._read_state()
+            record = state["templates"].get(template_id)
+            if not record:
+                return None
+            generator = dict(record.get("generator") or {})
+            if dialect is not None:
+                generator["dialect"] = dialect
+            if params is not None:
+                generator["params"] = dict(params)
+            if invalid is not None:
+                generator["invalid"] = bool(invalid)
+            if needs_user_fix is not None:
+                cleaned = []
+                for item in needs_user_fix:
+                    text = str(item).strip()
+                    if text:
+                        cleaned.append(text)
+                generator["needs_user_fix"] = cleaned
+            if summary is not None:
+                generator["summary"] = dict(summary)
+            if dry_run is not None:
+                generator["dry_run"] = dry_run
+            if cached is not None:
+                generator["cached"] = bool(cached)
+            generator["updated_at"] = now
+            record["generator"] = generator
+            record["updated_at"] = now
+            state["templates"][template_id] = record
+            self._write_state(state)
+            return self._sanitize_template(record)
+
     def _sanitize_template(self, rec: Dict[str, Any]) -> dict:
         artifacts = rec.get("artifacts") or {}
+        mapping_keys = rec.get("mapping_keys") or []
+        generator_raw = rec.get("generator") or {}
+        generator_meta: Optional[dict] = None
+        if generator_raw:
+            generator_meta = {
+                "dialect": generator_raw.get("dialect"),
+                "invalid": generator_raw.get("invalid"),
+                "needsUserFix": list(generator_raw.get("needs_user_fix") or []),
+                "params": generator_raw.get("params"),
+                "summary": generator_raw.get("summary"),
+                "dryRun": generator_raw.get("dry_run"),
+                "cached": generator_raw.get("cached"),
+                "updatedAt": generator_raw.get("updated_at"),
+            }
+            if generator_meta["needsUserFix"] is None:
+                generator_meta["needsUserFix"] = []
+            generator_meta = {
+                key: value
+                for key, value in generator_meta.items()
+                if value is not None or key in {"invalid", "needsUserFix"}
+            }
         return {
             "id": rec.get("id"),
             "name": rec.get("name"),
@@ -326,11 +427,9 @@ class StateStore:
             "updatedAt": rec.get("updated_at"),
             "lastRunAt": rec.get("last_run_at"),
             "lastConnectionId": rec.get("last_connection_id"),
-            "artifacts": {
-                k: v
-                for k, v in artifacts.items()
-                if k in {"thumbnail_url", "template_html_url", "pdf_url", "final_html_url", "manifest_url"}
-            },
+            "mappingKeys": list(mapping_keys),
+            "artifacts": {k: v for k, v in artifacts.items() if v},
+            "generator": generator_meta,
         }
 
     # ------------------------------------------------------------------

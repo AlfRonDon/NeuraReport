@@ -2,7 +2,6 @@ import re
 
 STYLE_RE = re.compile(r"(?is)<style\b[^>]*>(.*?)</style>")
 HEAD_CLOSE_RE = re.compile(r"(?i)</head>")
-COLGROUP_RE = re.compile(r"(<colgroup\b[^>]*>.*?</colgroup>)", re.I | re.S)
 
 
 def _extract_css(css_patch: str) -> str:

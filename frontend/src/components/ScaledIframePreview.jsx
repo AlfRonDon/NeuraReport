@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Box from '@mui/material/Box'
 
 import { DEFAULT_PAGE_DIMENSIONS } from '../utils/preview'
@@ -15,11 +15,53 @@ const roundScaleForDpr = (scale) => {
   return Math.max(MIN_SCALE, Math.round(scale * factor) / factor)
 }
 
+const parseAspectRatio = (value) => {
+  if (value == null) return null
+
+  const fromNumbers = (wRaw, hRaw) => {
+    const w = Number(wRaw)
+    const h = Number(hRaw)
+    if (!Number.isFinite(w) || !Number.isFinite(h) || w <= 0 || h <= 0) return null
+    return {
+      css: `${w} / ${h}`,
+      ratio: w / h,
+    }
+  }
+
+  if (Array.isArray(value) && value.length === 2) {
+    return fromNumbers(value[0], value[1])
+  }
+
+  if (typeof value === 'number') {
+    return value > 0 ? fromNumbers(value, 1) : null
+  }
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim()
+    if (!trimmed) return null
+    const slashMatch = trimmed.match(/^(\d*\.?\d+)\s*\/\s*(\d*\.?\d+)$/)
+    if (slashMatch) {
+      return fromNumbers(slashMatch[1], slashMatch[2])
+    }
+    const numeric = Number(trimmed)
+    if (Number.isFinite(numeric) && numeric > 0) {
+      return fromNumbers(numeric, 1)
+    }
+    return {
+      css: trimmed,
+      ratio: null,
+    }
+  }
+
+  return null
+}
+
 /**
- * Keeps A4-style HTML previews crisp by measuring the iframe content and scaling it
- * to the available container box. We read the iframe body (when same-origin) after
- * load, and fall back to a default A4 size when cross-origin prevents inspection.
+ * Keeps HTML previews crisp by measuring the iframe content and scaling it
+ * to the available container box. We read the iframe body (when same-origin)
+ * after load, and fall back to declared page dimensions otherwise.
  * Scale recalculates on iframe load, container resize, and window resize/zoom.
+ * `fit` lets callers force scaling by width/height instead of the default "contain".
  */
 export default function ScaledIframePreview({
   src,
@@ -29,6 +71,9 @@ export default function ScaledIframePreview({
   sx,
   loading = 'lazy',
   background = 'white',
+  frameAspectRatio = null,
+  fit = 'contain', // layout fit strategy for scaling
+  contentAlign = 'center',
 }) {
   const containerRef = useRef(null)
   const iframeRef = useRef(null)
@@ -40,6 +85,7 @@ export default function ScaledIframePreview({
     height: pageHeight,
   })
   const contentSizeRef = useRef(contentSize)
+  const aspect = useMemo(() => parseAspectRatio(frameAspectRatio), [frameAspectRatio])
 
   const schedule = useCallback((cb) => {
     if (rafRef.current) cancelAnimationFrame(rafRef.current)
@@ -57,15 +103,31 @@ export default function ScaledIframePreview({
 
       const rect = container.getBoundingClientRect()
       const availableWidth = rect.width || container.clientWidth || target.width
-      const availableHeightRaw = rect.height || container.clientHeight || target.height
+      let availableHeightRaw = rect.height || container.clientHeight || 0
+      if (!availableHeightRaw && aspect?.ratio) {
+        availableHeightRaw = availableWidth / aspect.ratio
+      }
+      if (!availableHeightRaw) {
+        availableHeightRaw = target.height
+      }
       const widthRatio = availableWidth / target.width
       const heightRatio = availableHeightRaw > 0 ? availableHeightRaw / target.height : widthRatio
-      const rawScale = Math.min(widthRatio, heightRatio)
+      let rawScale
+      if (fit === 'width') {
+        rawScale = widthRatio
+      } else if (fit === 'height') {
+        rawScale = heightRatio
+      } else {
+        rawScale = Math.min(widthRatio, heightRatio)
+      }
+      if (!Number.isFinite(rawScale) || rawScale <= 0) {
+        rawScale = 1
+      }
       const nextScale = roundScaleForDpr(rawScale)
 
       setScale((prev) => (Math.abs(prev - nextScale) < 0.002 ? prev : nextScale))
     },
-    [setScale],
+    [aspect?.ratio, fit],
   )
 
   const applyContentSize = useCallback(
@@ -173,11 +235,27 @@ export default function ScaledIframePreview({
   )
 
   const scaledHeight = contentSize.height * scale
+  const scaledWidth = contentSize.width * scale
+  const alignTop = contentAlign === 'top'
+  const containerStyles = {
+    position: 'relative',
+    width: '100%',
+    overflow: 'hidden',
+    ...sx,
+  }
+  if (aspect?.css) {
+    containerStyles.aspectRatio = aspect.css
+    containerStyles.height = 'auto'
+  }
+  const positioned = Boolean(aspect?.css)
 
   return (
-    <Box ref={containerRef} sx={{ position: 'relative', width: '100%', ...sx }}>
+    <Box ref={containerRef} sx={containerStyles}>
       <Box
         sx={{
+          position: positioned ? 'absolute' : 'relative',
+          top: positioned ? (alignTop ? 0 : '50%') : 0,
+          left: positioned ? '50%' : 0,
           width: contentSize.width,
           height: contentSize.height,
           transform: `scale(${scale})`,
@@ -185,6 +263,14 @@ export default function ScaledIframePreview({
           pointerEvents: 'auto',
           bgcolor: background,
         }}
+        style={
+          positioned
+            ? {
+                marginLeft: `${-scaledWidth / 2}px`,
+                ...(alignTop ? {} : { marginTop: `${-scaledHeight / 2}px` }),
+              }
+            : undefined
+        }
       >
         {/* key is handled by parent; iframe width/height stay at intrinsic size */}
         <iframe
@@ -201,7 +287,9 @@ export default function ScaledIframePreview({
           }}
         />
       </Box>
-      <Box sx={{ width: '100%', height: scaledHeight, visibility: 'hidden', pointerEvents: 'none' }} />
+      {!positioned && (
+        <Box sx={{ width: '100%', height: scaledHeight, visibility: 'hidden', pointerEvents: 'none' }} />
+      )}
     </Box>
   )
 }

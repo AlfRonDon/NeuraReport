@@ -97,8 +97,8 @@ export default function SetupPage() {
         <Typography variant="overline" sx={{ color: 'text.secondary' }}>Setup</Typography>
         <List dense disablePadding role="tablist" aria-label="Setup flow" sx={{ display: 'grid', gap: 1 }}>
           <NavItem icon={<StorageIcon fontSize="small" />} label="Connect" active={setupNav === 'connect'} onClick={() => setSetupNav('connect')} />
-          <NavItem icon={<AutoAwesomeIcon fontSize="small" />} label="Generate Templates" active={setupNav === 'generate'} onClick={() => setSetupNav('generate')} />
-          <NavItem icon={<ArticleIcon fontSize="small" />} label="Generate Report" active={setupNav === 'templates'} onClick={() => setSetupNav('templates')} />
+          <NavItem icon={<AutoAwesomeIcon fontSize="small" />} label="Upload & Verify" active={setupNav === 'generate'} onClick={() => setSetupNav('generate')} />
+          <NavItem icon={<ArticleIcon fontSize="small" />} label="Run Reports" active={setupNav === 'templates'} onClick={() => setSetupNav('templates')} />
         </List>
         <Divider />
         <Stack spacing={1}>

@@ -4,6 +4,7 @@ import json
 import sqlite3
 import sys
 import types
+import uuid
 from pathlib import Path
 
 import pytest
@@ -106,6 +107,39 @@ def test_last_used_endpoint_updates_store(client: TestClient, fresh_state):
     assert store_state["template_id"] == "tpl-9"
 
 
+def test_delete_template_removes_state_and_files(client: TestClient, fresh_state):
+    template_id = str(uuid.uuid4())
+    fresh_state.upsert_template(
+        template_id,
+        name="To remove",
+        status="approved",
+        artifacts={"template_html_url": f"/uploads/{template_id}/template.html"},
+    )
+    fresh_state.set_last_used(None, template_id)
+
+    template_dir = api.UPLOAD_ROOT / template_id
+    template_dir.mkdir(parents=True, exist_ok=True)
+    (template_dir / "template.html").write_text("<html/>", encoding="utf-8")
+
+    resp = client.delete(f"/templates/{template_id}")
+    assert resp.status_code == 200
+    payload = resp.json()
+    assert payload["status"] == "ok"
+    assert payload["template_id"] == template_id
+    assert not template_dir.exists()
+    assert fresh_state.get_template_record(template_id) is None
+    assert fresh_state.get_last_used()["template_id"] is None
+
+
+def test_delete_template_missing_returns_404(client: TestClient):
+    template_id = str(uuid.uuid4())
+    resp = client.delete(f"/templates/{template_id}")
+    assert resp.status_code == 404
+    payload = resp.json()
+    assert payload["status"] == "error"
+    assert payload["code"] == "template_not_found"
+
+
 def test_reports_run_uses_persisted_connection(client: TestClient, fresh_state, tmp_path, monkeypatch):
     # Prepare sqlite database
     db_path = tmp_path / "data.db"
@@ -131,7 +165,6 @@ def test_reports_run_uses_persisted_connection(client: TestClient, fresh_state, 
     fresh_state.upsert_template(template_id, name="Run Template", status="approved")
 
     monkeypatch.setattr(api, "validate_contract_schema", lambda _: None)
-    monkeypatch.setattr(api, "build_or_load_contract", lambda **kwargs: {"join": {}, "date_columns": {}})
 
     from backend.app.services.reports import ReportGenerate as report_generate
 

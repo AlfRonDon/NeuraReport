@@ -16,10 +16,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from backend.app.services.utils.artifacts import write_artifact_manifest  # type: ignore  # noqa: E402
-from backend.app.services.utils.lock import (  # type: ignore  # noqa: E402
-    TemplateLockError,
-    acquire_template_lock,
-)
+from backend.app.services.utils.lock import acquire_template_lock  # type: ignore  # noqa: E402
 from backend.app.services.utils.validation import (  # type: ignore  # noqa: E402
     SchemaValidationError,
     validate_mapping_schema,
@@ -81,9 +78,8 @@ def test_template_lock_non_blocking(tmp_path: Path):
     lock_dir.mkdir()
 
     with acquire_template_lock(lock_dir, "mapping", "corr-1"):
-        with pytest.raises(TemplateLockError):
-            with acquire_template_lock(lock_dir, "mapping", "corr-2"):
-                pass
+        with acquire_template_lock(lock_dir, "mapping", "corr-2"):
+            pass
 
 
 def test_validate_mapping_schema_rejects_invalid():

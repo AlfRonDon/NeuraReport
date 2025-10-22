@@ -3,11 +3,9 @@ import threading
 import time
 from pathlib import Path
 
-import pytest
-
 os.environ.setdefault("OPENAI_API_KEY", "test-key")
 
-from backend.app.services.utils.lock import TemplateLockError, acquire_template_lock  # noqa: E402
+from backend.app.services.utils.lock import acquire_template_lock  # noqa: E402
 
 
 def test_acquire_template_lock_non_blocking(tmp_path: Path):
@@ -15,10 +13,9 @@ def test_acquire_template_lock_non_blocking(tmp_path: Path):
     tdir.mkdir(parents=True, exist_ok=True)
 
     with acquire_template_lock(tdir, "mapping"):
-        with pytest.raises(TemplateLockError):
-            with acquire_template_lock(tdir, "mapping"):
-                pass
-    assert not list(tdir.glob(".lock.*")), "lock files should be cleaned up after release"
+        with acquire_template_lock(tdir, "mapping"):
+            pass
+    assert not list(tdir.glob(".lock.*")), "locks are disabled so no files should be created"
 
 
 def test_acquire_template_lock_allows_release(tmp_path: Path):
@@ -38,13 +35,9 @@ def test_acquire_template_lock_allows_release(tmp_path: Path):
 
     def second():
         first_ready.wait(timeout=1)
-        try:
-            with acquire_template_lock(tdir, "run"):
-                results.append("second")
-        except TemplateLockError:
-            results.append("blocked")
-        finally:
-            second_started.set()
+        with acquire_template_lock(tdir, "run"):
+            results.append("second")
+        second_started.set()
 
     t1 = threading.Thread(target=first)
     t2 = threading.Thread(target=second)
@@ -54,5 +47,5 @@ def test_acquire_template_lock_allows_release(tmp_path: Path):
     t2.join()
 
     assert "first" in results
-    assert "blocked" in results
-    assert not list(tdir.glob(".lock.*")), "lock files should not linger after concurrent attempts"
+    assert "second" in results
+    assert not list(tdir.glob(".lock.*")), "locks are disabled so no files should be created"

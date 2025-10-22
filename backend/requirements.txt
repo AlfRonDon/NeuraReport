@@ -5,15 +5,17 @@ psycopg
 pyodbc
 mysqlclient
 asyncmy
-PyMuPDF
+pymupdf
 pdfplumber
 reportlab
 pikepdf
 python-multipart
 cryptography
 
+jsonschema>=4.18.0
+
 openai>=1.0.0
-Pillow
+pillow
 numpy
 opencv-python
 scikit-image

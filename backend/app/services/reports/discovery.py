@@ -1,89 +1,100 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
-import json
 import re
 import sqlite3
+from datetime import datetime
 from pathlib import Path
-from typing import Dict, List
+from typing import Any, Dict, List, Mapping, Optional
 
-# Reuse your existing helpers exactly as requested
-from ..mapping.HeaderMapping import get_parent_child_info  # (still used by callers elsewhere)
+from ..mapping.HeaderMapping import get_parent_child_info  # re-export for compatibility
 
-# Re-export the centralized contract builder from auto_fill.py
-# so existing imports don't break: `from ...reports.discovery import build_or_load_contract`
-try:
+try:  # pragma: no cover - compatibility shim
     from ..mapping.auto_fill import build_or_load_contract  # type: ignore
-except Exception:
+except Exception:  # pragma: no cover
     try:
         from .auto_fill import build_or_load_contract  # type: ignore
     except Exception as exc:  # pragma: no cover
-        # Surface a clear error when neither location is present
-        def build_or_load_contract(*args, **kwargs):  # type: ignore
+        def build_or_load_contract(*_args, **_kwargs):  # type: ignore
             raise RuntimeError(
                 "build_or_load_contract unavailable. Ensure mapping.auto_fill.build_or_load_contract exists."
             ) from exc
 
+from .date_utils import get_col_type, mk_between_pred_for_date
+from .contract_adapter import ContractAdapter
 
-# ======================================================================
-# (2) DATE / TYPE HELPERS (used for BOTH parent_date and child_date)
-# ======================================================================
+_DATE_INPUT_FORMATS = (
+    "%Y-%m-%d %H:%M:%S",
+    "%Y-%m-%d %H:%M",
+    "%Y-%m-%d",
+    "%d/%m/%Y %H:%M:%S",
+    "%d/%m/%Y %H:%M",
+    "%d/%m/%Y",
+    "%m/%d/%Y %H:%M:%S",
+    "%m/%d/%Y %H:%M",
+    "%m/%d/%Y",
+)
 
-def _get_col_type(db_path: Path, table: str, col: str) -> str:
-    """
-    Return the SQLite column type string (uppercased) for table.col
-    or '' if not found.
-    """
-    if not col:
-        return ""
-    with sqlite3.connect(str(db_path)) as con:
-        cur = con.cursor()
+
+def _parse_date_like(value) -> datetime | None:
+    if value is None:
+        return None
+    text = str(value).strip()
+    if not text:
+        return None
+    iso_try = text.replace("Z", "+00:00")
+    if " " in iso_try and "T" not in iso_try:
+        iso_try = iso_try.replace(" ", "T", 1)
+    try:
+        return datetime.fromisoformat(iso_try)
+    except ValueError:
+        pass
+    for fmt in _DATE_INPUT_FORMATS:
         try:
-            cur.execute(f"PRAGMA table_info('{table}')")
-        except Exception:
-            return ""
-        for _, name, ctype, *_ in cur.fetchall():
-            if str(name).lower() == str(col).lower():
-                return (ctype or "").upper()
-    return ""
+            return datetime.strptime(text, fmt)
+        except ValueError:
+            continue
+    return None
 
 
-def _mk_between_pred_for_date(col: str, col_type: str) -> tuple[str, callable]:
+def _normalize_for_between(value) -> str:
     """
-    Returns (sql_predicate, param_adapter) for a date/time column.
-    - For INTEGER: treats big magnitudes as epoch millis -> normalize to seconds.
-    - For TEXT/NUMERIC/empty: uses datetime(col) BETWEEN datetime(?).
-    - For missing/invalid column: returns "1=1" and an adapter that takes (s,e) → ().
+    Produce an ISO-like string that SQLite's datetime() understands.
+    Falls back to the trimmed raw value when parsing fails.
     """
-    if not col or not col_type:
-        # no usable date column — run unfiltered
-        return "1=1", (lambda s, e: tuple())
+    dt = _parse_date_like(value)
+    if dt is None:
+        return "" if value is None else str(value).strip()
+    if dt.tzinfo is not None:
+        return dt.isoformat(sep=" ")
+    if dt.hour or dt.minute or dt.second or dt.microsecond:
+        return dt.strftime("%Y-%m-%d %H:%M:%S")
+    return dt.strftime("%Y-%m-%d")
 
-    t = (col_type or "").upper()
-
-    if "INT" in t:
-        pred = (
-            f"(CASE WHEN ABS({col}) > 32503680000 THEN {col}/1000 ELSE {col} END) "
-            f"BETWEEN strftime('%s', ?) AND strftime('%s', ?)"
-        )
-        adapt = lambda s, e: (s, e)
-        return pred, adapt
-
-    # default: TEXT/NUMERIC/etc.
-    pred = f"datetime({col}) BETWEEN datetime(?) AND datetime(?)"
-    adapt = lambda s, e: (s, e)
-    return pred, adapt
-
-
-# ======================================================================
-# (4) DISCOVERY — BATCH IDS + PARENT / CHILD COUNTS BETWEEN DATES
-# ======================================================================
 
 def _concat_key_expr(cols: List[str]) -> str:
     parts = [f"COALESCE(CAST({c} AS TEXT),'')" for c in cols]
     expr = parts[0]
-    for p in parts[1:]:
-        expr = f"{expr} || '|' || {p}"
+    for part in parts[1:]:
+        expr = f"{expr} || '|' || {part}"
     return expr
+
+
+def _split_bid_parts(bid: object, expected_len: int) -> List[str]:
+    """
+    Split a composite batch identifier that was generated by _concat_key_expr.
+    Handles non-string identifiers gracefully and pads/truncates the result
+    so callers always receive exactly expected_len parts.
+    """
+    if expected_len <= 1:
+        return ["" if bid is None else str(bid)]
+
+    text = "" if bid is None else str(bid)
+    parts = text.split("|")
+    if len(parts) < expected_len:
+        parts.extend([""] * (expected_len - len(parts)))
+    elif len(parts) > expected_len:
+        parts = parts[:expected_len]
+    return parts
 
 
 def discover_batches_and_counts(
@@ -92,6 +103,7 @@ def discover_batches_and_counts(
     contract: dict,
     start_date: str,
     end_date: str,
+    key_values: Mapping[str, Any] | None = None,
 ) -> dict:
     """
     Discover distinct batch IDs and count:
@@ -104,86 +116,305 @@ def discover_batches_and_counts(
         "rows_total": <int>       # sum of child rows
       }
     """
-    JOIN = contract["join"]
-    DATE_COLUMNS = contract["date_columns"]
+    adapter = ContractAdapter(contract)
+    join_cfg = contract.get("join") or {}
+    date_columns = adapter.date_columns or (contract.get("date_columns") or {})
 
-    parent_table = JOIN["parent_table"]
-    child_table  = JOIN["child_table"]
-    parent_key   = JOIN["parent_key"]
-    child_key    = JOIN["child_key"]
+    parent_table = adapter.parent_table or (join_cfg.get("parent_table") or "").strip()
+    child_table = adapter.child_table or (join_cfg.get("child_table") or "").strip()
+    parent_key = adapter.parent_key if adapter.parent_key is not None else join_cfg.get("parent_key")
+    child_key = adapter.child_key if adapter.child_key is not None else join_cfg.get("child_key")
 
-    parent_date  = DATE_COLUMNS.get(parent_table, "")
-    child_date   = DATE_COLUMNS.get(child_table, "")
+    if not parent_table:
+        raise ValueError("contract.join.parent_table is required for discovery")
 
-    def _split_keys(s: str) -> List[str]:
-        return [c.strip() for c in str(s).split(",") if c and c.strip()]
+    parent_date = (date_columns.get(parent_table) or "").strip()
+    child_date = (date_columns.get(child_table) or "").strip() if child_table else ""
+
+    def _split_keys(raw_keys: object) -> List[str]:
+        """
+        Normalise the join key field from the contract. Handles strings, comma-separated
+        strings, iterables, and scalars (e.g., integers). Returns a list of non-empty strings.
+        """
+        if raw_keys is None:
+            return []
+        if isinstance(raw_keys, (list, tuple, set)):
+            items = raw_keys
+        else:
+            text = str(raw_keys).strip()
+            if not text:
+                return []
+            if isinstance(raw_keys, str):
+                if "," in text:
+                    items = text.split(",")
+                elif "|" in text:
+                    items = text.split("|")
+                else:
+                    items = [text]
+            else:
+                items = [text]
+        result: List[str] = []
+        for item in items:
+            token = str(item).strip()
+            if token:
+                result.append(token)
+        return result
 
     pcols = _split_keys(parent_key)
     ccols = _split_keys(child_key)
+    use_rowid = False
+
+    if not pcols:
+        if ccols:
+            pcols = list(ccols)
+        else:
+            use_rowid = True
+            pcols = ["__rowid__"]
+
+    has_child = bool(child_table and ccols)
 
     # Type-aware BETWEEN predicates (gracefully handle missing/invalid date columns)
-    parent_type = _get_col_type(db_path, parent_table, parent_date)
-    child_type  = _get_col_type(db_path, child_table,  child_date)
-    parent_pred, adapt_parent = _mk_between_pred_for_date(parent_date, parent_type)
-    child_pred,  adapt_child  = _mk_between_pred_for_date(child_date,  child_type)
-    parent_params = adapt_parent(start_date, end_date)  # () if predicate is 1=1
-    child_params  = adapt_child(start_date, end_date)   # () if predicate is 1=1
+    parent_type = get_col_type(db_path, parent_table, parent_date)
+    child_type = get_col_type(db_path, child_table, child_date) if has_child else ""
+    parent_pred, adapt_parent = mk_between_pred_for_date(parent_date, parent_type)
+    child_pred, adapt_child = mk_between_pred_for_date(child_date, child_type) if has_child else ("1=1", lambda *_: tuple())
 
+    db_start = _normalize_for_between(start_date)
+    db_end = _normalize_for_between(end_date)
+    parent_params = tuple(adapt_parent(db_start, db_end))
+    child_params = tuple(adapt_child(db_start, db_end)) if has_child else tuple()
+
+    if not isinstance(key_values, Mapping):
+        key_values = {}
+    mapping_section = adapter.mapping or (contract.get("mapping") or {})
+    parent_filters: list[tuple[str, Any]] = []
+    child_filters: list[tuple[str, Any]] = []
+
+    def _split_table_and_column(expr_text: str, fallback_table: str) -> tuple[str, str]:
+        expr_text = expr_text.strip()
+        if "." in expr_text:
+            table_name, column_name = expr_text.split(".", 1)
+        else:
+            table_name, column_name = fallback_table, expr_text
+        table_name = table_name.strip(' "`[]').lower()
+        column_name = column_name.strip(' "`[]')
+        return table_name, column_name
+
+    def _normalize_key_value(raw_value: Any) -> list[str]:
+        if isinstance(raw_value, (list, tuple, set)):
+            values: list[str] = []
+            for item in raw_value:
+                text = str(item or "").strip()
+                if text and text not in values:
+                    values.append(text)
+            return values
+        text = str(raw_value or "").strip()
+        return [text] if text else []
+
+    _IDENT_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+
+    def qident(name: str) -> str:
+        if _IDENT_RE.match(name):
+            return name
+        safe = name.replace('"', '""')
+        return f'"{safe}"'
+
+    def _append_filter_target(expr_text: str, value: Any, collection: list[tuple[str, Any]], expected_table: str):
+        if not expr_text or not expected_table:
+            return
+        table_name, column_name = _split_table_and_column(expr_text, expected_table)
+        if table_name != expected_table.lower():
+            return
+        if not column_name:
+            return
+        normalized = _normalize_key_value(value)
+        if not normalized:
+            return
+        for idx, (col, existing_values) in enumerate(collection):
+            if col == column_name:
+                existing_list = _normalize_key_value(existing_values)
+                merged = existing_list + [item for item in normalized if item not in existing_list]
+                collection[idx] = (col, merged)
+                break
+        else:
+            collection.append((column_name, normalized))
+
+    if key_values:
+        parent_table_lc = parent_table.lower()
+        child_table_lc = child_table.lower() if child_table else ""
+        for token, raw_value in key_values.items():
+            if raw_value is None:
+                continue
+            expr = mapping_section.get(token)
+            if not isinstance(expr, str):
+                continue
+            expr_text = expr.strip()
+            if not expr_text or expr_text.upper().startswith("PARAM:"):
+                continue
+            if "." not in expr_text:
+                continue
+            table_name, column_name = expr_text.split(".", 1)
+            table_name = table_name.strip(' "`[]')
+            column_name = column_name.strip(' "`[]')
+            if not column_name:
+                continue
+            table_key = table_name.lower()
+            if table_key == parent_table_lc:
+                values = _normalize_key_value(raw_value)
+                if values:
+                    parent_filters.append((column_name, values))
+            if has_child and table_key == child_table_lc:
+                values = _normalize_key_value(raw_value)
+                if values:
+                    child_filters.append((column_name, values))
+
+    if isinstance(key_values, Mapping):
+        for token, expr in adapter.required_filters.items():
+            value = key_values.get(token)
+            if value is None:
+                continue
+            _append_filter_target(expr, value, parent_filters, parent_table)
+            if has_child:
+                _append_filter_target(expr, value, child_filters, child_table)
+        for token, expr in adapter.optional_filters.items():
+            value = key_values.get(token)
+            if value in (None, ""):
+                continue
+            _append_filter_target(expr, value, parent_filters, parent_table)
+            if has_child:
+                _append_filter_target(expr, value, child_filters, child_table)
+    parent_filter_sqls: list[str] = []
+    parent_filter_values: list[str] = []
+    for col, raw_values in parent_filters:
+        values = _normalize_key_value(raw_values)
+        if not values:
+            continue
+        unique_values: list[str] = []
+        for val in values:
+            text = str(val or "").strip()
+            if text and text not in unique_values:
+                unique_values.append(text)
+        if not unique_values:
+            continue
+        column_sql = qident(col)
+        if len(unique_values) == 1:
+            parent_filter_sqls.append(f"{column_sql} = ?")
+        else:
+            placeholders = ", ".join("?" for _ in unique_values)
+            parent_filter_sqls.append(f"{column_sql} IN ({placeholders})")
+        parent_filter_values.extend(unique_values)
+
+    child_filter_sqls: list[str] = []
+    child_filter_values: list[str] = []
+    for col, raw_values in child_filters:
+        values = _normalize_key_value(raw_values)
+        if not values:
+            continue
+        unique_values: list[str] = []
+        for val in values:
+            text = str(val or "").strip()
+            if text and text not in unique_values:
+                unique_values.append(text)
+        if not unique_values:
+            continue
+        column_sql = qident(col)
+        if len(unique_values) == 1:
+            child_filter_sqls.append(f"{column_sql} = ?")
+        else:
+            placeholders = ", ".join("?" for _ in unique_values)
+            child_filter_sqls.append(f"{column_sql} IN ({placeholders})")
+        child_filter_values.extend(unique_values)
+
+    def _merge_predicate(base: str, extras: list[str]) -> str:
+        if not extras:
+            return base
+        extras_joined = " AND ".join(extras)
+        base = base or "1=1"
+        return f"({base}) AND {extras_joined}"
+
+    parent_where_clause = _merge_predicate(parent_pred, parent_filter_sqls)
+    child_where_clause = _merge_predicate(child_pred, child_filter_sqls) if has_child else child_pred
+    parent_filter_values_tuple = tuple(parent_filter_values)
+    child_filter_values_tuple = tuple(child_filter_values)
+    parent_params_all = tuple(parent_params) + parent_filter_values_tuple
+    child_params_all = tuple(child_params) + child_filter_values_tuple if has_child else tuple()
     with sqlite3.connect(str(db_path)) as con:
         con.row_factory = sqlite3.Row
         cur = con.cursor()
 
         # 1) Distinct parent ids in range (this is our batch list)
-        if len(pcols) == 1:
-            sql = f"SELECT DISTINCT {pcols[0]} AS bid FROM {parent_table} WHERE {parent_pred}"
-            parent_ids = [r["bid"] for r in cur.execute(sql, parent_params)]
+        if use_rowid:
+            sql = f"SELECT rowid AS bid FROM {parent_table} WHERE {parent_where_clause}"
+            parent_ids = [row["bid"] for row in cur.execute(sql, parent_params_all)]
+        elif len(pcols) == 1:
+            sql = f"SELECT DISTINCT {pcols[0]} AS bid FROM {parent_table} WHERE {parent_where_clause}"
+            parent_ids = [row["bid"] for row in cur.execute(sql, parent_params_all)]
         else:
-            sql = f"SELECT DISTINCT {_concat_key_expr(pcols)} AS bid FROM {parent_table} WHERE {parent_pred}"
-            parent_ids = [r["bid"] for r in cur.execute(sql, parent_params)]
+            sql = f"SELECT DISTINCT {_concat_key_expr(pcols)} AS bid FROM {parent_table} WHERE {parent_where_clause}"
+            parent_ids = [row["bid"] for row in cur.execute(sql, parent_params_all)]
 
         # Fallback to child ids if parent had none
-        if not parent_ids:
+        if not parent_ids and has_child:
             if len(ccols) == 1:
-                sql = f"SELECT DISTINCT {ccols[0]} AS bid FROM {child_table} WHERE {child_pred}"
-                parent_ids = [r["bid"] for r in cur.execute(sql, child_params)]
+                sql = f"SELECT DISTINCT {ccols[0]} AS bid FROM {child_table} WHERE {child_where_clause}"
+                parent_ids = [row["bid"] for row in cur.execute(sql, child_params_all)]
             else:
-                sql = f"SELECT DISTINCT {_concat_key_expr(ccols)} AS bid FROM {child_table} WHERE {child_pred}"
-                parent_ids = [r["bid"] for r in cur.execute(sql, child_params)]
+                sql = f"SELECT DISTINCT {_concat_key_expr(ccols)} AS bid FROM {child_table} WHERE {child_where_clause}"
+                parent_ids = [row["bid"] for row in cur.execute(sql, child_params_all)]
 
         # 2) Per-batch counts: parent (batches) + child (rows)
         batches: List[Dict[str, object]] = []
         rows_total = 0
 
         for bid in parent_ids:
+            bid_str = "" if bid is None else str(bid)
             # parent count
-            if len(pcols) == 1:
-                sqlp = f"SELECT COUNT(*) AS n FROM {parent_table} WHERE {pcols[0]} = ? AND {parent_pred}"
-                params_p = (bid,) + tuple(parent_params)
-                parent_cnt = cur.execute(sqlp, params_p).fetchone()["n"]
+            if use_rowid:
+                sql_parent = f"SELECT COUNT(*) AS n FROM {parent_table} WHERE rowid = ? AND {parent_where_clause}"
+                params_parent = (bid,) + tuple(parent_params) + parent_filter_values_tuple
+                parent_cnt = cur.execute(sql_parent, params_parent).fetchone()["n"]
+            elif len(pcols) == 1:
+                sql_parent = f"SELECT COUNT(*) AS n FROM {parent_table} WHERE {pcols[0]} = ? AND {parent_where_clause}"
+                params_parent = (bid,) + tuple(parent_params) + parent_filter_values_tuple
+                parent_cnt = cur.execute(sql_parent, params_parent).fetchone()["n"]
             else:
-                parts = bid.split("|")
-                where = " AND ".join([f"{c} = ?" for c in pcols])
-                sqlp = f"SELECT COUNT(*) AS n FROM {parent_table} WHERE {where} AND {parent_pred}"
-                params_p = tuple(parts) + tuple(parent_params)
-                parent_cnt = cur.execute(sqlp, params_p).fetchone()["n"]
+                parts = _split_bid_parts(bid, len(pcols))
+                where_parent = " AND ".join([f"{col} = ?" for col in pcols])
+                sql_parent = f"SELECT COUNT(*) AS n FROM {parent_table} WHERE {where_parent} AND {parent_where_clause}"
+                params_parent = tuple(parts) + tuple(parent_params) + parent_filter_values_tuple
+                parent_cnt = cur.execute(sql_parent, params_parent).fetchone()["n"]
 
             # child rows
-            if len(ccols) == 1:
-                sqlc = f"SELECT COUNT(*) AS n FROM {child_table} WHERE {ccols[0]} = ? AND {child_pred}"
-                params_c = (bid,) + tuple(child_params)
-                child_cnt = cur.execute(sqlc, params_c).fetchone()["n"]
+            if has_child:
+                if len(ccols) == 1:
+                    sql_child = f"SELECT COUNT(*) AS n FROM {child_table} WHERE {ccols[0]} = ? AND {child_where_clause}"
+                    params_child = (bid,) + tuple(child_params) + child_filter_values_tuple
+                    child_cnt = cur.execute(sql_child, params_child).fetchone()["n"]
+                else:
+                    parts_child = _split_bid_parts(bid, len(ccols))
+                    where_child = " AND ".join([f"{col} = ?" for col in ccols])
+                    sql_child = f"SELECT COUNT(*) AS n FROM {child_table} WHERE {where_child} AND {child_where_clause}"
+                    params_child = tuple(parts_child) + tuple(child_params) + child_filter_values_tuple
+                    child_cnt = cur.execute(sql_child, params_child).fetchone()["n"]
             else:
-                parts = bid.split("|")
-                where = " AND ".join([f"{c} = ?" for c in ccols])
-                sqlc = f"SELECT COUNT(*) AS n FROM {child_table} WHERE {where} AND {child_pred}"
-                params_c = tuple(parts) + tuple(child_params)
-                child_cnt = cur.execute(sqlc, params_c).fetchone()["n"]
+                # No child table available; use parent count.
+                child_cnt = parent_cnt
 
             rows_total += int(child_cnt)
-            batches.append({"id": bid, "parent": int(parent_cnt), "rows": int(child_cnt)})
+            batches.append({"id": bid_str, "parent": int(parent_cnt), "rows": int(child_cnt)})
 
     return {
         "batches": batches,
         "batches_count": len(batches),
         "rows_total": rows_total,
     }
+
+
+
+
+
+
+
+
+
+

@@ -48,10 +48,10 @@ export const useAppStore = create((set, get) => ({
     })),
   setActiveConnection: (conn) => set({ activeConnection: conn }),
 
-  // 🔹 Latest verified template id + artifacts (used by Generate Mapping)
+  // 🔹 Latest verified template id + artifacts (used by the mapping editor)
   templateId: null,
   setTemplateId: (id) => set({ templateId: id }),
-  verifyArtifacts: null, // { pdf_url, png_url, html_url }
+  verifyArtifacts: null, // { pdf_url, png_url, html_url, llm2_html_url, schema_ext_url }
   setVerifyArtifacts: (arts) => set({ verifyArtifacts: arts }),
 
   // 🔹 Preview cache-buster + server-provided HTML URLs
@@ -61,7 +61,8 @@ export const useAppStore = create((set, get) => ({
   setCacheKey: (value) => set({ cacheKey: value ?? Date.now() }),
   // htmlUrls.final -> report_final.html?ts=...
   // htmlUrls.template -> template_p1.html?ts=...
-  htmlUrls: { final: null, template: null },
+  // htmlUrls.llm2 -> template_llm2.html?ts=...
+  htmlUrls: { final: null, template: null, llm2: null },
   setHtmlUrls: (urlsOrUpdater) =>
     set((state) => {
       const next =
@@ -82,7 +83,7 @@ export const useAppStore = create((set, get) => ({
       activeConnectionId: null,
       activeConnection: null,
       // reset preview URLs so panes don't show stale content after a full reset
-      htmlUrls: { final: null, template: null },
+      htmlUrls: { final: null, template: null, llm2: null },
       // (leave cacheKey as-is; callers can bumpCache() explicitly when needed)
     }),
 
@@ -90,6 +91,26 @@ export const useAppStore = create((set, get) => ({
   templates: [],
   setTemplates: (templates) => set({ templates }),
   addTemplate: (tpl) => set({ templates: [tpl, ...get().templates] }),
+  removeTemplate: (id) =>
+    set((state) => {
+      const templates = state.templates.filter((tpl) => tpl.id !== id)
+      const nextLastUsed =
+        state.lastUsed && typeof state.lastUsed === 'object'
+          ? { ...state.lastUsed }
+          : { connectionId: null, templateId: null }
+      if (nextLastUsed.templateId === id) {
+        nextLastUsed.templateId = null
+      }
+      const nextTemplateId = state.templateId === id ? null : state.templateId
+      const nextLastApproved =
+        state.lastApprovedTemplate?.id === id ? null : state.lastApprovedTemplate
+      return {
+        templates,
+        templateId: nextTemplateId,
+        lastUsed: nextLastUsed,
+        lastApprovedTemplate: nextLastApproved,
+      }
+    }),
 
   // Last approved template summary
   lastApprovedTemplate: null,
