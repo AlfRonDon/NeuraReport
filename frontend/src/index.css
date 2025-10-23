@@ -1,7 +1,10 @@
 /* Reset Vite demo styles to avoid layout conflicts with MUI */
 :root {
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
+  --font-ui: 'Outfit', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  --font-secondary: 'Work Sans', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  --font-brand: 'Oxanium', 'Outfit', 'Segoe UI', sans-serif;
+  font-family: var(--font-ui);
+  line-height: 1.55;
   font-weight: 400;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -11,6 +14,7 @@
 body {
   margin: 0;
   min-width: 320px;
+  font-family: var(--font-ui);
 }
 
 /* Keep anchors neutral; MUI theme will style components */

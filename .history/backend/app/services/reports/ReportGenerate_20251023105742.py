@@ -334,6 +334,10 @@ def fill_and_print(
     _canonicalize_cache: dict[tuple[str, str, str], str] = {}
 
     for token, values in list(key_values_map.items()):
+        expanded_values = _expand_all_placeholder(token, values)
+        if expanded_values != values:
+            key_values_map[token] = expanded_values
+            values = expanded_values
         resolved = _resolve_token_column(token)
         if not resolved:
             continue

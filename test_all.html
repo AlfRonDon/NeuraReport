@@ -1,0 +1,4607 @@
+<html>
+<head>
+<meta charset="utf-8" />
+<title>Consumption report</title>
+<style>
+  @page { size: A4; margin: 14mm; }
+  :root{
+    --row-gap: 2.5mm;
+
+    /* Column widths must sum to page content width (~182mm) */
+    --col-slno-w: 12mm;
+    --col-material-w: 78mm;
+    --col-set-w: 30mm;
+    --col-ach-w: 30mm;
+    --col-errkg-w: 18mm;
+    --col-errpct-w: 14mm;
+  }
+
+  html,body{
+    font-family:"Times New Roman", serif;
+    color:#000;
+    font-size:11pt;
+    line-height:1.25;
+  }
+  h1{
+    font-size:16.5pt;
+    margin:0;
+    font-weight:bold;
+    text-align:center;
+    line-height:1.15;
+  }
+  small{font-size:9.5pt;}
+
+  /* Header box */
+  #report-header{
+    border:1px solid #000;
+    padding:4.8mm 6mm 4.2mm;
+    margin-bottom:2.8mm;
+  }
+  #header-row{
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 18mm;
+    align-items:start;
+  }
+  #header-left table,
+  #header-right table{
+    width:100%;
+    border-collapse:collapse;
+    table-layout:fixed;
+  }
+  #header-left td,
+  #header-right td{
+    padding:0.7mm 0;
+    vertical-align:top;
+  }
+  #header-left td.label,
+  #header-right td.label{
+    width:30mm;
+    white-space:nowrap;
+  }
+  #title-wrap{
+    margin-top:2mm;
+    margin-bottom:1.4mm;
+  }
+
+  /* Main data table */
+  #data-table{
+    width:100%;
+    border-collapse:collapse;
+    table-layout:fixed;
+    font-variant-numeric: tabular-nums;
+  }
+  #data-table th, #data-table td{
+    border:1px solid #000;
+    vertical-align:middle;
+  }
+  #data-table thead th{
+    text-align:center;
+    font-weight:bold;
+    white-space:nowrap;
+    padding:2mm 2mm 2mm 2mm;
+    font-size:11pt;
+  }
+  #data-table tbody td{
+    padding:1.8mm 2mm;
+    font-size:11pt;
+  }
+  #data-table tfoot td{
+    padding:2mm 2mm;
+  }
+
+  /* Column widths */
+  #data-table col.slno{width:var(--col-slno-w);}
+  #data-table col.material{width:var(--col-material-w);}
+  #data-table col.set{width:var(--col-set-w);}
+  #data-table col.ach{width:var(--col-ach-w);}
+  #data-table col.errkg{width:var(--col-errkg-w);}
+  #data-table col.errpct{width:var(--col-errpct-w);}
+
+  /* Alignments */
+  .ta-right{text-align:right;}
+  .ta-center{text-align:center;}
+
+  /* Totals */
+  #report-totals td{
+    font-weight:bold;
+  }
+
+  /* Footer */
+  footer{
+    position:fixed;
+    bottom:10.5mm;
+    left:14mm;
+    right:14mm;
+    display:flex;
+    justify-content:space-between;
+    font-size:9.5pt;
+  }
+
+  /* Prevent table breaks inside one logical block (future multiple rows) */
+  tbody, tfoot{break-inside:avoid; page-break-inside:avoid;}
+</style>
+
+<style id="nr-page-counter-style">
+  .nr-page-number,
+  .nr-page-count { white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .nr-page-label { white-space: nowrap; }
+  @media screen {
+    .nr-page-number::after { content: attr(data-nr-screen); }
+    .nr-page-count::after { content: attr(data-nr-total-pages); }
+  }
+  @media print {
+    body { counter-reset: page; }
+    .nr-page-number::after { content: counter(page); }
+    .nr-page-count::after { content: counter(pages); }
+    .nr-page-count[data-nr-total-pages]::after { content: attr(data-nr-total-pages); }
+  }
+</style>
+</head>
+<body>
+<div class="nr-key-section" data-nr-section="1">
+<section id="report-header">
+    <div id="header-row">
+      <div id="header-left">
+        <table>
+          <tr>
+            <td class="label">Plant name</td>
+            <td>: SSR AQUA</td>
+          </tr>
+          <tr>
+            <td class="label">Location</td>
+            <td>: Gudivada</td>
+          </tr>
+          <tr>
+            <td class="label">Print Date</td>
+            <td>: 23/10/2025</td>
+          </tr>
+        </table>
+      </div>
+      <div id="header-right">
+        <table>
+          <tr>
+            <td class="label">From Date</td>
+            <td>: 31/05/2025 00:00    To 15/10/2025 23:59</td>
+          </tr>
+          <tr>
+            <td class="label">Recipe code</td>
+            <td>: B_PRASAD</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+    <div id="title-wrap">
+      <h1>Consumption report</h1>
+    </div>
+  </section>
+
+  <table id="data-table">
+    <colgroup>
+      <col class="slno" />
+      <col class="material" />
+      <col class="set" />
+      <col class="ach" />
+      <col class="errkg" />
+      <col class="errpct" />
+    </colgroup>
+    <thead>
+      <tr>
+        <th data-label="sl_no">Sl. No.</th>
+        <th data-label="material_name">Material name</th>
+        <th data-label="set_wt_kg">Set. wt(Kg)</th>
+        <th data-label="ach_wt_kg">Ach. wt(Kg)</th>
+        <th data-label="error_kg">Error(Kg)</th>
+        <th data-label="error_pct">Error %</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- BEGIN:BATCH (auto) --><tr>
+        <td class="ta-center">2</td>
+        <td>B RICE</td>
+        <td class="ta-right">3700</td>
+        <td class="ta-right">3717</td>
+        <td class="ta-right">17</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">3</td>
+        <td>GNDOC</td>
+        <td class="ta-right">4200</td>
+        <td class="ta-right">4104</td>
+        <td class="ta-right">-96</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">4</td>
+        <td>MAIDA</td>
+        <td class="ta-right">6375</td>
+        <td class="ta-right">6269</td>
+        <td class="ta-right">-106</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">5</td>
+        <td>R BRAWN</td>
+        <td class="ta-right">12600</td>
+        <td class="ta-right">12348</td>
+        <td class="ta-right">-252</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">6</td>
+        <td>RECYCLE P</td>
+        <td class="ta-right">5777</td>
+        <td class="ta-right">5593</td>
+        <td class="ta-right">-184</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">7</td>
+        <td>RG 60%</td>
+        <td class="ta-right">3150</td>
+        <td class="ta-right">3055</td>
+        <td class="ta-right">-95</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">8</td>
+        <td>SOYA</td>
+        <td class="ta-right">34650</td>
+        <td class="ta-right">34506</td>
+        <td class="ta-right">-144</td>
+        <td class="ta-right">0.00</td>
+      </tr><!-- END:BATCH (auto) -->
+    </tbody>
+    <tfoot id="report-totals">
+      <tr>
+        <td colspan="2" class="ta-center">Total</td>
+        <td class="ta-right">70452</td>
+        <td class="ta-right">69592</td>
+        <td class="ta-right">-860</td>
+        <td class="ta-right">0</td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <footer>
+    <div>Indian Industrial Machines Pvt. Ltd.</div>
+    <div>Page <span class="nr-page-number" data-nr-counter="page" aria-label="Current page number"></span> of <span class="nr-page-count" data-nr-counter="pages" aria-label="Total page count"></span></div>
+  </footer>
+
+<script id="nr-page-counter-script">
+(function() {
+  const METRICS = {"page_width_mm": 210.0, "page_height_mm": 297.0, "margin_top_mm": 14.0, "margin_bottom_mm": 14.0};
+  const PX_PER_MM = 96 / 25.4;
+
+  function computeTotals() {
+    try {
+      const doc = document.documentElement;
+      const body = document.body;
+      if (!doc || !body) return;
+      const usableHeightMm = Math.max(METRICS.page_height_mm - (METRICS.margin_top_mm + METRICS.margin_bottom_mm), 0.1);
+      const usableHeightPx = usableHeightMm * PX_PER_MM;
+      const contentHeight = Math.max(
+        body.scrollHeight,
+        body.offsetHeight,
+        doc.scrollHeight,
+        doc.offsetHeight
+      );
+      const totalPages = Math.max(1, Math.ceil(contentHeight / usableHeightPx));
+      const totalAsString = String(totalPages);
+      doc.setAttribute('data-nr-total-pages', totalAsString);
+      const countNodes = document.querySelectorAll('[data-nr-counter="pages"]');
+      countNodes.forEach((node) => {
+        node.setAttribute('data-nr-screen', totalAsString);
+        node.setAttribute('data-nr-total-pages', totalAsString);
+      });
+      const pageNodes = document.querySelectorAll('[data-nr-counter="page"]');
+      pageNodes.forEach((node) => {
+        if (!node.getAttribute('data-nr-screen')) {
+          node.setAttribute('data-nr-screen', '1');
+        }
+      });
+    } catch (err) {
+      if (typeof console !== 'undefined' && console.warn) {
+        console.warn('nr-page-counter: unable to compute preview counters', err);
+      }
+    }
+  }
+
+  function scheduleCompute() {
+    computeTotals();
+    setTimeout(computeTotals, 180);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      scheduleCompute();
+    }, { once: true });
+  } else {
+    scheduleCompute();
+  }
+
+  if (typeof window !== 'undefined') {
+    window.addEventListener('resize', computeTotals, { passive: true });
+  }
+})();
+</script>
+</div>
+
+<div class="nr-key-section" data-nr-section="2" style="page-break-before: always;">
+<section id="report-header">
+    <div id="header-row">
+      <div id="header-left">
+        <table>
+          <tr>
+            <td class="label">Plant name</td>
+            <td>: SSR AQUA</td>
+          </tr>
+          <tr>
+            <td class="label">Location</td>
+            <td>: Gudivada</td>
+          </tr>
+          <tr>
+            <td class="label">Print Date</td>
+            <td>: 23/10/2025</td>
+          </tr>
+        </table>
+      </div>
+      <div id="header-right">
+        <table>
+          <tr>
+            <td class="label">From Date</td>
+            <td>: 31/05/2025 00:00    To 15/10/2025 23:59</td>
+          </tr>
+          <tr>
+            <td class="label">Recipe code</td>
+            <td>: DELTA</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+    <div id="title-wrap">
+      <h1>Consumption report</h1>
+    </div>
+  </section>
+
+  <table id="data-table">
+    <colgroup>
+      <col class="slno" />
+      <col class="material" />
+      <col class="set" />
+      <col class="ach" />
+      <col class="errkg" />
+      <col class="errpct" />
+    </colgroup>
+    <thead>
+      <tr>
+        <th data-label="sl_no">Sl. No.</th>
+        <th data-label="material_name">Material name</th>
+        <th data-label="set_wt_kg">Set. wt(Kg)</th>
+        <th data-label="ach_wt_kg">Ach. wt(Kg)</th>
+        <th data-label="error_kg">Error(Kg)</th>
+        <th data-label="error_pct">Error %</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- BEGIN:BATCH (auto) --><tr>
+        <td class="ta-center">2</td>
+        <td>FISH MEAL</td>
+        <td class="ta-right">10300</td>
+        <td class="ta-right">10269</td>
+        <td class="ta-right">-31</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">3</td>
+        <td>MAIDA</td>
+        <td class="ta-right">20600</td>
+        <td class="ta-right">20596</td>
+        <td class="ta-right">-4</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">4</td>
+        <td>R BRAWAN</td>
+        <td class="ta-right">10300</td>
+        <td class="ta-right">10076</td>
+        <td class="ta-right">-224</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">5</td>
+        <td>RECYCLE P</td>
+        <td class="ta-right">6200</td>
+        <td class="ta-right">6040</td>
+        <td class="ta-right">-160</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">6</td>
+        <td>RG 60%</td>
+        <td class="ta-right">12875</td>
+        <td class="ta-right">12750</td>
+        <td class="ta-right">-125</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">7</td>
+        <td>SOYA</td>
+        <td class="ta-right">30900</td>
+        <td class="ta-right">30694</td>
+        <td class="ta-right">-206</td>
+        <td class="ta-right">0.00</td>
+      </tr><!-- END:BATCH (auto) -->
+    </tbody>
+    <tfoot id="report-totals">
+      <tr>
+        <td colspan="2" class="ta-center">Total</td>
+        <td class="ta-right">91175</td>
+        <td class="ta-right">90425</td>
+        <td class="ta-right">-750</td>
+        <td class="ta-right">0</td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <footer>
+    <div>Indian Industrial Machines Pvt. Ltd.</div>
+    <div>Page <span class="nr-page-number" data-nr-counter="page" aria-label="Current page number"></span> of <span class="nr-page-count" data-nr-counter="pages" aria-label="Total page count"></span></div>
+  </footer>
+
+<script id="nr-page-counter-script">
+(function() {
+  const METRICS = {"page_width_mm": 210.0, "page_height_mm": 297.0, "margin_top_mm": 14.0, "margin_bottom_mm": 14.0};
+  const PX_PER_MM = 96 / 25.4;
+
+  function computeTotals() {
+    try {
+      const doc = document.documentElement;
+      const body = document.body;
+      if (!doc || !body) return;
+      const usableHeightMm = Math.max(METRICS.page_height_mm - (METRICS.margin_top_mm + METRICS.margin_bottom_mm), 0.1);
+      const usableHeightPx = usableHeightMm * PX_PER_MM;
+      const contentHeight = Math.max(
+        body.scrollHeight,
+        body.offsetHeight,
+        doc.scrollHeight,
+        doc.offsetHeight
+      );
+      const totalPages = Math.max(1, Math.ceil(contentHeight / usableHeightPx));
+      const totalAsString = String(totalPages);
+      doc.setAttribute('data-nr-total-pages', totalAsString);
+      const countNodes = document.querySelectorAll('[data-nr-counter="pages"]');
+      countNodes.forEach((node) => {
+        node.setAttribute('data-nr-screen', totalAsString);
+        node.setAttribute('data-nr-total-pages', totalAsString);
+      });
+      const pageNodes = document.querySelectorAll('[data-nr-counter="page"]');
+      pageNodes.forEach((node) => {
+        if (!node.getAttribute('data-nr-screen')) {
+          node.setAttribute('data-nr-screen', '1');
+        }
+      });
+    } catch (err) {
+      if (typeof console !== 'undefined' && console.warn) {
+        console.warn('nr-page-counter: unable to compute preview counters', err);
+      }
+    }
+  }
+
+  function scheduleCompute() {
+    computeTotals();
+    setTimeout(computeTotals, 180);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      scheduleCompute();
+    }, { once: true });
+  } else {
+    scheduleCompute();
+  }
+
+  if (typeof window !== 'undefined') {
+    window.addEventListener('resize', computeTotals, { passive: true });
+  }
+})();
+</script>
+</div>
+
+<div class="nr-key-section" data-nr-section="3" style="page-break-before: always;">
+<section id="report-header">
+    <div id="header-row">
+      <div id="header-left">
+        <table>
+          <tr>
+            <td class="label">Plant name</td>
+            <td>: SSR AQUA</td>
+          </tr>
+          <tr>
+            <td class="label">Location</td>
+            <td>: Gudivada</td>
+          </tr>
+          <tr>
+            <td class="label">Print Date</td>
+            <td>: 23/10/2025</td>
+          </tr>
+        </table>
+      </div>
+      <div id="header-right">
+        <table>
+          <tr>
+            <td class="label">From Date</td>
+            <td>: 31/05/2025 00:00    To 15/10/2025 23:59</td>
+          </tr>
+          <tr>
+            <td class="label">Recipe code</td>
+            <td>: DEMO_1</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+    <div id="title-wrap">
+      <h1>Consumption report</h1>
+    </div>
+  </section>
+
+  <table id="data-table">
+    <colgroup>
+      <col class="slno" />
+      <col class="material" />
+      <col class="set" />
+      <col class="ach" />
+      <col class="errkg" />
+      <col class="errpct" />
+    </colgroup>
+    <thead>
+      <tr>
+        <th data-label="sl_no">Sl. No.</th>
+        <th data-label="material_name">Material name</th>
+        <th data-label="set_wt_kg">Set. wt(Kg)</th>
+        <th data-label="ach_wt_kg">Ach. wt(Kg)</th>
+        <th data-label="error_kg">Error(Kg)</th>
+        <th data-label="error_pct">Error %</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- BEGIN:BATCH (auto) --><!-- END:BATCH (auto) -->
+    </tbody>
+    <tfoot id="report-totals">
+      <tr>
+        <td colspan="2" class="ta-center">Total</td>
+        <td class="ta-right">0</td>
+        <td class="ta-right">0</td>
+        <td class="ta-right">0</td>
+        <td class="ta-right">0</td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <footer>
+    <div>Indian Industrial Machines Pvt. Ltd.</div>
+    <div>Page <span class="nr-page-number" data-nr-counter="page" aria-label="Current page number"></span> of <span class="nr-page-count" data-nr-counter="pages" aria-label="Total page count"></span></div>
+  </footer>
+
+<script id="nr-page-counter-script">
+(function() {
+  const METRICS = {"page_width_mm": 210.0, "page_height_mm": 297.0, "margin_top_mm": 14.0, "margin_bottom_mm": 14.0};
+  const PX_PER_MM = 96 / 25.4;
+
+  function computeTotals() {
+    try {
+      const doc = document.documentElement;
+      const body = document.body;
+      if (!doc || !body) return;
+      const usableHeightMm = Math.max(METRICS.page_height_mm - (METRICS.margin_top_mm + METRICS.margin_bottom_mm), 0.1);
+      const usableHeightPx = usableHeightMm * PX_PER_MM;
+      const contentHeight = Math.max(
+        body.scrollHeight,
+        body.offsetHeight,
+        doc.scrollHeight,
+        doc.offsetHeight
+      );
+      const totalPages = Math.max(1, Math.ceil(contentHeight / usableHeightPx));
+      const totalAsString = String(totalPages);
+      doc.setAttribute('data-nr-total-pages', totalAsString);
+      const countNodes = document.querySelectorAll('[data-nr-counter="pages"]');
+      countNodes.forEach((node) => {
+        node.setAttribute('data-nr-screen', totalAsString);
+        node.setAttribute('data-nr-total-pages', totalAsString);
+      });
+      const pageNodes = document.querySelectorAll('[data-nr-counter="page"]');
+      pageNodes.forEach((node) => {
+        if (!node.getAttribute('data-nr-screen')) {
+          node.setAttribute('data-nr-screen', '1');
+        }
+      });
+    } catch (err) {
+      if (typeof console !== 'undefined' && console.warn) {
+        console.warn('nr-page-counter: unable to compute preview counters', err);
+      }
+    }
+  }
+
+  function scheduleCompute() {
+    computeTotals();
+    setTimeout(computeTotals, 180);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      scheduleCompute();
+    }, { once: true });
+  } else {
+    scheduleCompute();
+  }
+
+  if (typeof window !== 'undefined') {
+    window.addEventListener('resize', computeTotals, { passive: true });
+  }
+})();
+</script>
+</div>
+
+<div class="nr-key-section" data-nr-section="4" style="page-break-before: always;">
+<section id="report-header">
+    <div id="header-row">
+      <div id="header-left">
+        <table>
+          <tr>
+            <td class="label">Plant name</td>
+            <td>: SSR AQUA</td>
+          </tr>
+          <tr>
+            <td class="label">Location</td>
+            <td>: Gudivada</td>
+          </tr>
+          <tr>
+            <td class="label">Print Date</td>
+            <td>: 23/10/2025</td>
+          </tr>
+        </table>
+      </div>
+      <div id="header-right">
+        <table>
+          <tr>
+            <td class="label">From Date</td>
+            <td>: 31/05/2025 00:00    To 15/10/2025 23:59</td>
+          </tr>
+          <tr>
+            <td class="label">Recipe code</td>
+            <td>: DEMO_2</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+    <div id="title-wrap">
+      <h1>Consumption report</h1>
+    </div>
+  </section>
+
+  <table id="data-table">
+    <colgroup>
+      <col class="slno" />
+      <col class="material" />
+      <col class="set" />
+      <col class="ach" />
+      <col class="errkg" />
+      <col class="errpct" />
+    </colgroup>
+    <thead>
+      <tr>
+        <th data-label="sl_no">Sl. No.</th>
+        <th data-label="material_name">Material name</th>
+        <th data-label="set_wt_kg">Set. wt(Kg)</th>
+        <th data-label="ach_wt_kg">Ach. wt(Kg)</th>
+        <th data-label="error_kg">Error(Kg)</th>
+        <th data-label="error_pct">Error %</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- BEGIN:BATCH (auto) --><!-- END:BATCH (auto) -->
+    </tbody>
+    <tfoot id="report-totals">
+      <tr>
+        <td colspan="2" class="ta-center">Total</td>
+        <td class="ta-right">0</td>
+        <td class="ta-right">0</td>
+        <td class="ta-right">0</td>
+        <td class="ta-right">0</td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <footer>
+    <div>Indian Industrial Machines Pvt. Ltd.</div>
+    <div>Page <span class="nr-page-number" data-nr-counter="page" aria-label="Current page number"></span> of <span class="nr-page-count" data-nr-counter="pages" aria-label="Total page count"></span></div>
+  </footer>
+
+<script id="nr-page-counter-script">
+(function() {
+  const METRICS = {"page_width_mm": 210.0, "page_height_mm": 297.0, "margin_top_mm": 14.0, "margin_bottom_mm": 14.0};
+  const PX_PER_MM = 96 / 25.4;
+
+  function computeTotals() {
+    try {
+      const doc = document.documentElement;
+      const body = document.body;
+      if (!doc || !body) return;
+      const usableHeightMm = Math.max(METRICS.page_height_mm - (METRICS.margin_top_mm + METRICS.margin_bottom_mm), 0.1);
+      const usableHeightPx = usableHeightMm * PX_PER_MM;
+      const contentHeight = Math.max(
+        body.scrollHeight,
+        body.offsetHeight,
+        doc.scrollHeight,
+        doc.offsetHeight
+      );
+      const totalPages = Math.max(1, Math.ceil(contentHeight / usableHeightPx));
+      const totalAsString = String(totalPages);
+      doc.setAttribute('data-nr-total-pages', totalAsString);
+      const countNodes = document.querySelectorAll('[data-nr-counter="pages"]');
+      countNodes.forEach((node) => {
+        node.setAttribute('data-nr-screen', totalAsString);
+        node.setAttribute('data-nr-total-pages', totalAsString);
+      });
+      const pageNodes = document.querySelectorAll('[data-nr-counter="page"]');
+      pageNodes.forEach((node) => {
+        if (!node.getAttribute('data-nr-screen')) {
+          node.setAttribute('data-nr-screen', '1');
+        }
+      });
+    } catch (err) {
+      if (typeof console !== 'undefined' && console.warn) {
+        console.warn('nr-page-counter: unable to compute preview counters', err);
+      }
+    }
+  }
+
+  function scheduleCompute() {
+    computeTotals();
+    setTimeout(computeTotals, 180);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      scheduleCompute();
+    }, { once: true });
+  } else {
+    scheduleCompute();
+  }
+
+  if (typeof window !== 'undefined') {
+    window.addEventListener('resize', computeTotals, { passive: true });
+  }
+})();
+</script>
+</div>
+
+<div class="nr-key-section" data-nr-section="5" style="page-break-before: always;">
+<section id="report-header">
+    <div id="header-row">
+      <div id="header-left">
+        <table>
+          <tr>
+            <td class="label">Plant name</td>
+            <td>: SSR AQUA</td>
+          </tr>
+          <tr>
+            <td class="label">Location</td>
+            <td>: Gudivada</td>
+          </tr>
+          <tr>
+            <td class="label">Print Date</td>
+            <td>: 23/10/2025</td>
+          </tr>
+        </table>
+      </div>
+      <div id="header-right">
+        <table>
+          <tr>
+            <td class="label">From Date</td>
+            <td>: 31/05/2025 00:00    To 15/10/2025 23:59</td>
+          </tr>
+          <tr>
+            <td class="label">Recipe code</td>
+            <td>: DEMO_3</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+    <div id="title-wrap">
+      <h1>Consumption report</h1>
+    </div>
+  </section>
+
+  <table id="data-table">
+    <colgroup>
+      <col class="slno" />
+      <col class="material" />
+      <col class="set" />
+      <col class="ach" />
+      <col class="errkg" />
+      <col class="errpct" />
+    </colgroup>
+    <thead>
+      <tr>
+        <th data-label="sl_no">Sl. No.</th>
+        <th data-label="material_name">Material name</th>
+        <th data-label="set_wt_kg">Set. wt(Kg)</th>
+        <th data-label="ach_wt_kg">Ach. wt(Kg)</th>
+        <th data-label="error_kg">Error(Kg)</th>
+        <th data-label="error_pct">Error %</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- BEGIN:BATCH (auto) --><!-- END:BATCH (auto) -->
+    </tbody>
+    <tfoot id="report-totals">
+      <tr>
+        <td colspan="2" class="ta-center">Total</td>
+        <td class="ta-right">0</td>
+        <td class="ta-right">0</td>
+        <td class="ta-right">0</td>
+        <td class="ta-right">0</td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <footer>
+    <div>Indian Industrial Machines Pvt. Ltd.</div>
+    <div>Page <span class="nr-page-number" data-nr-counter="page" aria-label="Current page number"></span> of <span class="nr-page-count" data-nr-counter="pages" aria-label="Total page count"></span></div>
+  </footer>
+
+<script id="nr-page-counter-script">
+(function() {
+  const METRICS = {"page_width_mm": 210.0, "page_height_mm": 297.0, "margin_top_mm": 14.0, "margin_bottom_mm": 14.0};
+  const PX_PER_MM = 96 / 25.4;
+
+  function computeTotals() {
+    try {
+      const doc = document.documentElement;
+      const body = document.body;
+      if (!doc || !body) return;
+      const usableHeightMm = Math.max(METRICS.page_height_mm - (METRICS.margin_top_mm + METRICS.margin_bottom_mm), 0.1);
+      const usableHeightPx = usableHeightMm * PX_PER_MM;
+      const contentHeight = Math.max(
+        body.scrollHeight,
+        body.offsetHeight,
+        doc.scrollHeight,
+        doc.offsetHeight
+      );
+      const totalPages = Math.max(1, Math.ceil(contentHeight / usableHeightPx));
+      const totalAsString = String(totalPages);
+      doc.setAttribute('data-nr-total-pages', totalAsString);
+      const countNodes = document.querySelectorAll('[data-nr-counter="pages"]');
+      countNodes.forEach((node) => {
+        node.setAttribute('data-nr-screen', totalAsString);
+        node.setAttribute('data-nr-total-pages', totalAsString);
+      });
+      const pageNodes = document.querySelectorAll('[data-nr-counter="page"]');
+      pageNodes.forEach((node) => {
+        if (!node.getAttribute('data-nr-screen')) {
+          node.setAttribute('data-nr-screen', '1');
+        }
+      });
+    } catch (err) {
+      if (typeof console !== 'undefined' && console.warn) {
+        console.warn('nr-page-counter: unable to compute preview counters', err);
+      }
+    }
+  }
+
+  function scheduleCompute() {
+    computeTotals();
+    setTimeout(computeTotals, 180);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      scheduleCompute();
+    }, { once: true });
+  } else {
+    scheduleCompute();
+  }
+
+  if (typeof window !== 'undefined') {
+    window.addEventListener('resize', computeTotals, { passive: true });
+  }
+})();
+</script>
+</div>
+
+<div class="nr-key-section" data-nr-section="6" style="page-break-before: always;">
+<section id="report-header">
+    <div id="header-row">
+      <div id="header-left">
+        <table>
+          <tr>
+            <td class="label">Plant name</td>
+            <td>: SSR AQUA</td>
+          </tr>
+          <tr>
+            <td class="label">Location</td>
+            <td>: Gudivada</td>
+          </tr>
+          <tr>
+            <td class="label">Print Date</td>
+            <td>: 23/10/2025</td>
+          </tr>
+        </table>
+      </div>
+      <div id="header-right">
+        <table>
+          <tr>
+            <td class="label">From Date</td>
+            <td>: 31/05/2025 00:00    To 15/10/2025 23:59</td>
+          </tr>
+          <tr>
+            <td class="label">Recipe code</td>
+            <td>: FISHFEED</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+    <div id="title-wrap">
+      <h1>Consumption report</h1>
+    </div>
+  </section>
+
+  <table id="data-table">
+    <colgroup>
+      <col class="slno" />
+      <col class="material" />
+      <col class="set" />
+      <col class="ach" />
+      <col class="errkg" />
+      <col class="errpct" />
+    </colgroup>
+    <thead>
+      <tr>
+        <th data-label="sl_no">Sl. No.</th>
+        <th data-label="material_name">Material name</th>
+        <th data-label="set_wt_kg">Set. wt(Kg)</th>
+        <th data-label="ach_wt_kg">Ach. wt(Kg)</th>
+        <th data-label="error_kg">Error(Kg)</th>
+        <th data-label="error_pct">Error %</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- BEGIN:BATCH (auto) --><tr>
+        <td class="ta-center">2</td>
+        <td>B RICE</td>
+        <td class="ta-right">1150</td>
+        <td class="ta-right">1137</td>
+        <td class="ta-right">-13</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">3</td>
+        <td>DOB</td>
+        <td class="ta-right">5500</td>
+        <td class="ta-right">5491</td>
+        <td class="ta-right">-9</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">4</td>
+        <td>GNDOC</td>
+        <td class="ta-right">1350</td>
+        <td class="ta-right">1316</td>
+        <td class="ta-right">-34</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">5</td>
+        <td>M FIBER</td>
+        <td class="ta-right">2250</td>
+        <td class="ta-right">2178</td>
+        <td class="ta-right">-72</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">6</td>
+        <td>MDOC</td>
+        <td class="ta-right">560</td>
+        <td class="ta-right">563</td>
+        <td class="ta-right">3</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">7</td>
+        <td>RG 45%</td>
+        <td class="ta-right">2500</td>
+        <td class="ta-right">2416</td>
+        <td class="ta-right">-84</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">8</td>
+        <td>RICE DUST</td>
+        <td class="ta-right">700</td>
+        <td class="ta-right">711</td>
+        <td class="ta-right">11</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">9</td>
+        <td>SOYA</td>
+        <td class="ta-right">1800</td>
+        <td class="ta-right">1749</td>
+        <td class="ta-right">-51</td>
+        <td class="ta-right">0.00</td>
+      </tr><!-- END:BATCH (auto) -->
+    </tbody>
+    <tfoot id="report-totals">
+      <tr>
+        <td colspan="2" class="ta-center">Total</td>
+        <td class="ta-right">15810</td>
+        <td class="ta-right">15561</td>
+        <td class="ta-right">-249</td>
+        <td class="ta-right">0</td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <footer>
+    <div>Indian Industrial Machines Pvt. Ltd.</div>
+    <div>Page <span class="nr-page-number" data-nr-counter="page" aria-label="Current page number"></span> of <span class="nr-page-count" data-nr-counter="pages" aria-label="Total page count"></span></div>
+  </footer>
+
+<script id="nr-page-counter-script">
+(function() {
+  const METRICS = {"page_width_mm": 210.0, "page_height_mm": 297.0, "margin_top_mm": 14.0, "margin_bottom_mm": 14.0};
+  const PX_PER_MM = 96 / 25.4;
+
+  function computeTotals() {
+    try {
+      const doc = document.documentElement;
+      const body = document.body;
+      if (!doc || !body) return;
+      const usableHeightMm = Math.max(METRICS.page_height_mm - (METRICS.margin_top_mm + METRICS.margin_bottom_mm), 0.1);
+      const usableHeightPx = usableHeightMm * PX_PER_MM;
+      const contentHeight = Math.max(
+        body.scrollHeight,
+        body.offsetHeight,
+        doc.scrollHeight,
+        doc.offsetHeight
+      );
+      const totalPages = Math.max(1, Math.ceil(contentHeight / usableHeightPx));
+      const totalAsString = String(totalPages);
+      doc.setAttribute('data-nr-total-pages', totalAsString);
+      const countNodes = document.querySelectorAll('[data-nr-counter="pages"]');
+      countNodes.forEach((node) => {
+        node.setAttribute('data-nr-screen', totalAsString);
+        node.setAttribute('data-nr-total-pages', totalAsString);
+      });
+      const pageNodes = document.querySelectorAll('[data-nr-counter="page"]');
+      pageNodes.forEach((node) => {
+        if (!node.getAttribute('data-nr-screen')) {
+          node.setAttribute('data-nr-screen', '1');
+        }
+      });
+    } catch (err) {
+      if (typeof console !== 'undefined' && console.warn) {
+        console.warn('nr-page-counter: unable to compute preview counters', err);
+      }
+    }
+  }
+
+  function scheduleCompute() {
+    computeTotals();
+    setTimeout(computeTotals, 180);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      scheduleCompute();
+    }, { once: true });
+  } else {
+    scheduleCompute();
+  }
+
+  if (typeof window !== 'undefined') {
+    window.addEventListener('resize', computeTotals, { passive: true });
+  }
+})();
+</script>
+</div>
+
+<div class="nr-key-section" data-nr-section="7" style="page-break-before: always;">
+<section id="report-header">
+    <div id="header-row">
+      <div id="header-left">
+        <table>
+          <tr>
+            <td class="label">Plant name</td>
+            <td>: SSR AQUA</td>
+          </tr>
+          <tr>
+            <td class="label">Location</td>
+            <td>: Gudivada</td>
+          </tr>
+          <tr>
+            <td class="label">Print Date</td>
+            <td>: 23/10/2025</td>
+          </tr>
+        </table>
+      </div>
+      <div id="header-right">
+        <table>
+          <tr>
+            <td class="label">From Date</td>
+            <td>: 31/05/2025 00:00    To 15/10/2025 23:59</td>
+          </tr>
+          <tr>
+            <td class="label">Recipe code</td>
+            <td>: FISHFEED_3</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+    <div id="title-wrap">
+      <h1>Consumption report</h1>
+    </div>
+  </section>
+
+  <table id="data-table">
+    <colgroup>
+      <col class="slno" />
+      <col class="material" />
+      <col class="set" />
+      <col class="ach" />
+      <col class="errkg" />
+      <col class="errpct" />
+    </colgroup>
+    <thead>
+      <tr>
+        <th data-label="sl_no">Sl. No.</th>
+        <th data-label="material_name">Material name</th>
+        <th data-label="set_wt_kg">Set. wt(Kg)</th>
+        <th data-label="ach_wt_kg">Ach. wt(Kg)</th>
+        <th data-label="error_kg">Error(Kg)</th>
+        <th data-label="error_pct">Error %</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- BEGIN:BATCH (auto) --><tr>
+        <td class="ta-center">2</td>
+        <td>B RICE</td>
+        <td class="ta-right">2300</td>
+        <td class="ta-right">2314</td>
+        <td class="ta-right">14</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">3</td>
+        <td>DOB</td>
+        <td class="ta-right">9200</td>
+        <td class="ta-right">8986</td>
+        <td class="ta-right">-214</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">4</td>
+        <td>MDOC</td>
+        <td class="ta-right">160</td>
+        <td class="ta-right">155</td>
+        <td class="ta-right">-5</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">5</td>
+        <td>MM</td>
+        <td class="ta-right">0</td>
+        <td class="ta-right">0</td>
+        <td class="ta-right">0</td>
+        <td class="ta-right"></td>
+      </tr>
+<tr>
+        <td class="ta-center">6</td>
+        <td>MMD</td>
+        <td class="ta-right">1000</td>
+        <td class="ta-right">982</td>
+        <td class="ta-right">-18</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">7</td>
+        <td>MMw3p</td>
+        <td class="ta-right">300</td>
+        <td class="ta-right">291</td>
+        <td class="ta-right">-9</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">8</td>
+        <td>RG 45%</td>
+        <td class="ta-right">2300</td>
+        <td class="ta-right">2226</td>
+        <td class="ta-right">-74</td>
+        <td class="ta-right">0.00</td>
+      </tr><!-- END:BATCH (auto) -->
+    </tbody>
+    <tfoot id="report-totals">
+      <tr>
+        <td colspan="2" class="ta-center">Total</td>
+        <td class="ta-right">15260</td>
+        <td class="ta-right">14954</td>
+        <td class="ta-right">-306</td>
+        <td class="ta-right">0</td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <footer>
+    <div>Indian Industrial Machines Pvt. Ltd.</div>
+    <div>Page <span class="nr-page-number" data-nr-counter="page" aria-label="Current page number"></span> of <span class="nr-page-count" data-nr-counter="pages" aria-label="Total page count"></span></div>
+  </footer>
+
+<script id="nr-page-counter-script">
+(function() {
+  const METRICS = {"page_width_mm": 210.0, "page_height_mm": 297.0, "margin_top_mm": 14.0, "margin_bottom_mm": 14.0};
+  const PX_PER_MM = 96 / 25.4;
+
+  function computeTotals() {
+    try {
+      const doc = document.documentElement;
+      const body = document.body;
+      if (!doc || !body) return;
+      const usableHeightMm = Math.max(METRICS.page_height_mm - (METRICS.margin_top_mm + METRICS.margin_bottom_mm), 0.1);
+      const usableHeightPx = usableHeightMm * PX_PER_MM;
+      const contentHeight = Math.max(
+        body.scrollHeight,
+        body.offsetHeight,
+        doc.scrollHeight,
+        doc.offsetHeight
+      );
+      const totalPages = Math.max(1, Math.ceil(contentHeight / usableHeightPx));
+      const totalAsString = String(totalPages);
+      doc.setAttribute('data-nr-total-pages', totalAsString);
+      const countNodes = document.querySelectorAll('[data-nr-counter="pages"]');
+      countNodes.forEach((node) => {
+        node.setAttribute('data-nr-screen', totalAsString);
+        node.setAttribute('data-nr-total-pages', totalAsString);
+      });
+      const pageNodes = document.querySelectorAll('[data-nr-counter="page"]');
+      pageNodes.forEach((node) => {
+        if (!node.getAttribute('data-nr-screen')) {
+          node.setAttribute('data-nr-screen', '1');
+        }
+      });
+    } catch (err) {
+      if (typeof console !== 'undefined' && console.warn) {
+        console.warn('nr-page-counter: unable to compute preview counters', err);
+      }
+    }
+  }
+
+  function scheduleCompute() {
+    computeTotals();
+    setTimeout(computeTotals, 180);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      scheduleCompute();
+    }, { once: true });
+  } else {
+    scheduleCompute();
+  }
+
+  if (typeof window !== 'undefined') {
+    window.addEventListener('resize', computeTotals, { passive: true });
+  }
+})();
+</script>
+</div>
+
+<div class="nr-key-section" data-nr-section="8" style="page-break-before: always;">
+<section id="report-header">
+    <div id="header-row">
+      <div id="header-left">
+        <table>
+          <tr>
+            <td class="label">Plant name</td>
+            <td>: SSR AQUA</td>
+          </tr>
+          <tr>
+            <td class="label">Location</td>
+            <td>: Gudivada</td>
+          </tr>
+          <tr>
+            <td class="label">Print Date</td>
+            <td>: 23/10/2025</td>
+          </tr>
+        </table>
+      </div>
+      <div id="header-right">
+        <table>
+          <tr>
+            <td class="label">From Date</td>
+            <td>: 31/05/2025 00:00    To 15/10/2025 23:59</td>
+          </tr>
+          <tr>
+            <td class="label">Recipe code</td>
+            <td>: FLU</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+    <div id="title-wrap">
+      <h1>Consumption report</h1>
+    </div>
+  </section>
+
+  <table id="data-table">
+    <colgroup>
+      <col class="slno" />
+      <col class="material" />
+      <col class="set" />
+      <col class="ach" />
+      <col class="errkg" />
+      <col class="errpct" />
+    </colgroup>
+    <thead>
+      <tr>
+        <th data-label="sl_no">Sl. No.</th>
+        <th data-label="material_name">Material name</th>
+        <th data-label="set_wt_kg">Set. wt(Kg)</th>
+        <th data-label="ach_wt_kg">Ach. wt(Kg)</th>
+        <th data-label="error_kg">Error(Kg)</th>
+        <th data-label="error_pct">Error %</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- BEGIN:BATCH (auto) --><tr>
+        <td class="ta-center">2</td>
+        <td>B RICE</td>
+        <td class="ta-right">700</td>
+        <td class="ta-right">702</td>
+        <td class="ta-right">2</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">3</td>
+        <td>DOB</td>
+        <td class="ta-right">3248</td>
+        <td class="ta-right">3220</td>
+        <td class="ta-right">-28</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">4</td>
+        <td>F-RECYCLE</td>
+        <td class="ta-right">200</td>
+        <td class="ta-right">192</td>
+        <td class="ta-right">-8</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">5</td>
+        <td>GNDOC</td>
+        <td class="ta-right">350</td>
+        <td class="ta-right">354</td>
+        <td class="ta-right">4</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">6</td>
+        <td>M CORN</td>
+        <td class="ta-right">700</td>
+        <td class="ta-right">659</td>
+        <td class="ta-right">-41</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">7</td>
+        <td>RG 45%</td>
+        <td class="ta-right">700</td>
+        <td class="ta-right">476</td>
+        <td class="ta-right">-224</td>
+        <td class="ta-right">0.00</td>
+      </tr><!-- END:BATCH (auto) -->
+    </tbody>
+    <tfoot id="report-totals">
+      <tr>
+        <td colspan="2" class="ta-center">Total</td>
+        <td class="ta-right">5898</td>
+        <td class="ta-right">5603</td>
+        <td class="ta-right">-295</td>
+        <td class="ta-right">0</td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <footer>
+    <div>Indian Industrial Machines Pvt. Ltd.</div>
+    <div>Page <span class="nr-page-number" data-nr-counter="page" aria-label="Current page number"></span> of <span class="nr-page-count" data-nr-counter="pages" aria-label="Total page count"></span></div>
+  </footer>
+
+<script id="nr-page-counter-script">
+(function() {
+  const METRICS = {"page_width_mm": 210.0, "page_height_mm": 297.0, "margin_top_mm": 14.0, "margin_bottom_mm": 14.0};
+  const PX_PER_MM = 96 / 25.4;
+
+  function computeTotals() {
+    try {
+      const doc = document.documentElement;
+      const body = document.body;
+      if (!doc || !body) return;
+      const usableHeightMm = Math.max(METRICS.page_height_mm - (METRICS.margin_top_mm + METRICS.margin_bottom_mm), 0.1);
+      const usableHeightPx = usableHeightMm * PX_PER_MM;
+      const contentHeight = Math.max(
+        body.scrollHeight,
+        body.offsetHeight,
+        doc.scrollHeight,
+        doc.offsetHeight
+      );
+      const totalPages = Math.max(1, Math.ceil(contentHeight / usableHeightPx));
+      const totalAsString = String(totalPages);
+      doc.setAttribute('data-nr-total-pages', totalAsString);
+      const countNodes = document.querySelectorAll('[data-nr-counter="pages"]');
+      countNodes.forEach((node) => {
+        node.setAttribute('data-nr-screen', totalAsString);
+        node.setAttribute('data-nr-total-pages', totalAsString);
+      });
+      const pageNodes = document.querySelectorAll('[data-nr-counter="page"]');
+      pageNodes.forEach((node) => {
+        if (!node.getAttribute('data-nr-screen')) {
+          node.setAttribute('data-nr-screen', '1');
+        }
+      });
+    } catch (err) {
+      if (typeof console !== 'undefined' && console.warn) {
+        console.warn('nr-page-counter: unable to compute preview counters', err);
+      }
+    }
+  }
+
+  function scheduleCompute() {
+    computeTotals();
+    setTimeout(computeTotals, 180);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      scheduleCompute();
+    }, { once: true });
+  } else {
+    scheduleCompute();
+  }
+
+  if (typeof window !== 'undefined') {
+    window.addEventListener('resize', computeTotals, { passive: true });
+  }
+})();
+</script>
+</div>
+
+<div class="nr-key-section" data-nr-section="9" style="page-break-before: always;">
+<section id="report-header">
+    <div id="header-row">
+      <div id="header-left">
+        <table>
+          <tr>
+            <td class="label">Plant name</td>
+            <td>: SSR AQUA</td>
+          </tr>
+          <tr>
+            <td class="label">Location</td>
+            <td>: Gudivada</td>
+          </tr>
+          <tr>
+            <td class="label">Print Date</td>
+            <td>: 23/10/2025</td>
+          </tr>
+        </table>
+      </div>
+      <div id="header-right">
+        <table>
+          <tr>
+            <td class="label">From Date</td>
+            <td>: 31/05/2025 00:00    To 15/10/2025 23:59</td>
+          </tr>
+          <tr>
+            <td class="label">Recipe code</td>
+            <td>: FLUTO_24P</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+    <div id="title-wrap">
+      <h1>Consumption report</h1>
+    </div>
+  </section>
+
+  <table id="data-table">
+    <colgroup>
+      <col class="slno" />
+      <col class="material" />
+      <col class="set" />
+      <col class="ach" />
+      <col class="errkg" />
+      <col class="errpct" />
+    </colgroup>
+    <thead>
+      <tr>
+        <th data-label="sl_no">Sl. No.</th>
+        <th data-label="material_name">Material name</th>
+        <th data-label="set_wt_kg">Set. wt(Kg)</th>
+        <th data-label="ach_wt_kg">Ach. wt(Kg)</th>
+        <th data-label="error_kg">Error(Kg)</th>
+        <th data-label="error_pct">Error %</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- BEGIN:BATCH (auto) --><tr>
+        <td class="ta-center">2</td>
+        <td>B RICE</td>
+        <td class="ta-right">35100</td>
+        <td class="ta-right">35602</td>
+        <td class="ta-right">502</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">3</td>
+        <td>DOB</td>
+        <td class="ta-right">122280</td>
+        <td class="ta-right">120055</td>
+        <td class="ta-right">-2225</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">4</td>
+        <td>F-RECYCLE</td>
+        <td class="ta-right">850</td>
+        <td class="ta-right">846</td>
+        <td class="ta-right">-4</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">5</td>
+        <td>GNDOC</td>
+        <td class="ta-right">9340</td>
+        <td class="ta-right">9724</td>
+        <td class="ta-right">384</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">6</td>
+        <td>M CORN</td>
+        <td class="ta-right">14600</td>
+        <td class="ta-right">14532</td>
+        <td class="ta-right">-68</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">7</td>
+        <td>MDOC</td>
+        <td class="ta-right">8790</td>
+        <td class="ta-right">8829</td>
+        <td class="ta-right">39</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">8</td>
+        <td>R BRAWN</td>
+        <td class="ta-right">1600</td>
+        <td class="ta-right">1622</td>
+        <td class="ta-right">22</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">9</td>
+        <td>RECYCLE Q</td>
+        <td class="ta-right">12800</td>
+        <td class="ta-right">12766</td>
+        <td class="ta-right">-34</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">10</td>
+        <td>RG 45%</td>
+        <td class="ta-right">43760</td>
+        <td class="ta-right">41814</td>
+        <td class="ta-right">-1946</td>
+        <td class="ta-right">0.00</td>
+      </tr><!-- END:BATCH (auto) -->
+    </tbody>
+    <tfoot id="report-totals">
+      <tr>
+        <td colspan="2" class="ta-center">Total</td>
+        <td class="ta-right">249120</td>
+        <td class="ta-right">245790</td>
+        <td class="ta-right">-3330</td>
+        <td class="ta-right">0</td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <footer>
+    <div>Indian Industrial Machines Pvt. Ltd.</div>
+    <div>Page <span class="nr-page-number" data-nr-counter="page" aria-label="Current page number"></span> of <span class="nr-page-count" data-nr-counter="pages" aria-label="Total page count"></span></div>
+  </footer>
+
+<script id="nr-page-counter-script">
+(function() {
+  const METRICS = {"page_width_mm": 210.0, "page_height_mm": 297.0, "margin_top_mm": 14.0, "margin_bottom_mm": 14.0};
+  const PX_PER_MM = 96 / 25.4;
+
+  function computeTotals() {
+    try {
+      const doc = document.documentElement;
+      const body = document.body;
+      if (!doc || !body) return;
+      const usableHeightMm = Math.max(METRICS.page_height_mm - (METRICS.margin_top_mm + METRICS.margin_bottom_mm), 0.1);
+      const usableHeightPx = usableHeightMm * PX_PER_MM;
+      const contentHeight = Math.max(
+        body.scrollHeight,
+        body.offsetHeight,
+        doc.scrollHeight,
+        doc.offsetHeight
+      );
+      const totalPages = Math.max(1, Math.ceil(contentHeight / usableHeightPx));
+      const totalAsString = String(totalPages);
+      doc.setAttribute('data-nr-total-pages', totalAsString);
+      const countNodes = document.querySelectorAll('[data-nr-counter="pages"]');
+      countNodes.forEach((node) => {
+        node.setAttribute('data-nr-screen', totalAsString);
+        node.setAttribute('data-nr-total-pages', totalAsString);
+      });
+      const pageNodes = document.querySelectorAll('[data-nr-counter="page"]');
+      pageNodes.forEach((node) => {
+        if (!node.getAttribute('data-nr-screen')) {
+          node.setAttribute('data-nr-screen', '1');
+        }
+      });
+    } catch (err) {
+      if (typeof console !== 'undefined' && console.warn) {
+        console.warn('nr-page-counter: unable to compute preview counters', err);
+      }
+    }
+  }
+
+  function scheduleCompute() {
+    computeTotals();
+    setTimeout(computeTotals, 180);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      scheduleCompute();
+    }, { once: true });
+  } else {
+    scheduleCompute();
+  }
+
+  if (typeof window !== 'undefined') {
+    window.addEventListener('resize', computeTotals, { passive: true });
+  }
+})();
+</script>
+</div>
+
+<div class="nr-key-section" data-nr-section="10" style="page-break-before: always;">
+<section id="report-header">
+    <div id="header-row">
+      <div id="header-left">
+        <table>
+          <tr>
+            <td class="label">Plant name</td>
+            <td>: SSR AQUA</td>
+          </tr>
+          <tr>
+            <td class="label">Location</td>
+            <td>: Gudivada</td>
+          </tr>
+          <tr>
+            <td class="label">Print Date</td>
+            <td>: 23/10/2025</td>
+          </tr>
+        </table>
+      </div>
+      <div id="header-right">
+        <table>
+          <tr>
+            <td class="label">From Date</td>
+            <td>: 31/05/2025 00:00    To 15/10/2025 23:59</td>
+          </tr>
+          <tr>
+            <td class="label">Recipe code</td>
+            <td>: FLUTO_4MM</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+    <div id="title-wrap">
+      <h1>Consumption report</h1>
+    </div>
+  </section>
+
+  <table id="data-table">
+    <colgroup>
+      <col class="slno" />
+      <col class="material" />
+      <col class="set" />
+      <col class="ach" />
+      <col class="errkg" />
+      <col class="errpct" />
+    </colgroup>
+    <thead>
+      <tr>
+        <th data-label="sl_no">Sl. No.</th>
+        <th data-label="material_name">Material name</th>
+        <th data-label="set_wt_kg">Set. wt(Kg)</th>
+        <th data-label="ach_wt_kg">Ach. wt(Kg)</th>
+        <th data-label="error_kg">Error(Kg)</th>
+        <th data-label="error_pct">Error %</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- BEGIN:BATCH (auto) --><!-- END:BATCH (auto) -->
+    </tbody>
+    <tfoot id="report-totals">
+      <tr>
+        <td colspan="2" class="ta-center">Total</td>
+        <td class="ta-right">0</td>
+        <td class="ta-right">0</td>
+        <td class="ta-right">0</td>
+        <td class="ta-right">0</td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <footer>
+    <div>Indian Industrial Machines Pvt. Ltd.</div>
+    <div>Page <span class="nr-page-number" data-nr-counter="page" aria-label="Current page number"></span> of <span class="nr-page-count" data-nr-counter="pages" aria-label="Total page count"></span></div>
+  </footer>
+
+<script id="nr-page-counter-script">
+(function() {
+  const METRICS = {"page_width_mm": 210.0, "page_height_mm": 297.0, "margin_top_mm": 14.0, "margin_bottom_mm": 14.0};
+  const PX_PER_MM = 96 / 25.4;
+
+  function computeTotals() {
+    try {
+      const doc = document.documentElement;
+      const body = document.body;
+      if (!doc || !body) return;
+      const usableHeightMm = Math.max(METRICS.page_height_mm - (METRICS.margin_top_mm + METRICS.margin_bottom_mm), 0.1);
+      const usableHeightPx = usableHeightMm * PX_PER_MM;
+      const contentHeight = Math.max(
+        body.scrollHeight,
+        body.offsetHeight,
+        doc.scrollHeight,
+        doc.offsetHeight
+      );
+      const totalPages = Math.max(1, Math.ceil(contentHeight / usableHeightPx));
+      const totalAsString = String(totalPages);
+      doc.setAttribute('data-nr-total-pages', totalAsString);
+      const countNodes = document.querySelectorAll('[data-nr-counter="pages"]');
+      countNodes.forEach((node) => {
+        node.setAttribute('data-nr-screen', totalAsString);
+        node.setAttribute('data-nr-total-pages', totalAsString);
+      });
+      const pageNodes = document.querySelectorAll('[data-nr-counter="page"]');
+      pageNodes.forEach((node) => {
+        if (!node.getAttribute('data-nr-screen')) {
+          node.setAttribute('data-nr-screen', '1');
+        }
+      });
+    } catch (err) {
+      if (typeof console !== 'undefined' && console.warn) {
+        console.warn('nr-page-counter: unable to compute preview counters', err);
+      }
+    }
+  }
+
+  function scheduleCompute() {
+    computeTotals();
+    setTimeout(computeTotals, 180);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      scheduleCompute();
+    }, { once: true });
+  } else {
+    scheduleCompute();
+  }
+
+  if (typeof window !== 'undefined') {
+    window.addEventListener('resize', computeTotals, { passive: true });
+  }
+})();
+</script>
+</div>
+
+<div class="nr-key-section" data-nr-section="11" style="page-break-before: always;">
+<section id="report-header">
+    <div id="header-row">
+      <div id="header-left">
+        <table>
+          <tr>
+            <td class="label">Plant name</td>
+            <td>: SSR AQUA</td>
+          </tr>
+          <tr>
+            <td class="label">Location</td>
+            <td>: Gudivada</td>
+          </tr>
+          <tr>
+            <td class="label">Print Date</td>
+            <td>: 23/10/2025</td>
+          </tr>
+        </table>
+      </div>
+      <div id="header-right">
+        <table>
+          <tr>
+            <td class="label">From Date</td>
+            <td>: 31/05/2025 00:00    To 15/10/2025 23:59</td>
+          </tr>
+          <tr>
+            <td class="label">Recipe code</td>
+            <td>: IMPACT</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+    <div id="title-wrap">
+      <h1>Consumption report</h1>
+    </div>
+  </section>
+
+  <table id="data-table">
+    <colgroup>
+      <col class="slno" />
+      <col class="material" />
+      <col class="set" />
+      <col class="ach" />
+      <col class="errkg" />
+      <col class="errpct" />
+    </colgroup>
+    <thead>
+      <tr>
+        <th data-label="sl_no">Sl. No.</th>
+        <th data-label="material_name">Material name</th>
+        <th data-label="set_wt_kg">Set. wt(Kg)</th>
+        <th data-label="ach_wt_kg">Ach. wt(Kg)</th>
+        <th data-label="error_kg">Error(Kg)</th>
+        <th data-label="error_pct">Error %</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- BEGIN:BATCH (auto) --><tr>
+        <td class="ta-center">2</td>
+        <td>B RICE</td>
+        <td class="ta-right">16800</td>
+        <td class="ta-right">16711</td>
+        <td class="ta-right">-89</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">3</td>
+        <td>DOB</td>
+        <td class="ta-right">17528</td>
+        <td class="ta-right">17081</td>
+        <td class="ta-right">-447</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">4</td>
+        <td>GNDOC</td>
+        <td class="ta-right">3360</td>
+        <td class="ta-right">3300</td>
+        <td class="ta-right">-60</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">5</td>
+        <td>R BRAWN</td>
+        <td class="ta-right">500</td>
+        <td class="ta-right">472</td>
+        <td class="ta-right">-28</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">6</td>
+        <td>RECYCLE Q</td>
+        <td class="ta-right">8400</td>
+        <td class="ta-right">8091</td>
+        <td class="ta-right">-309</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">7</td>
+        <td>RG 45%</td>
+        <td class="ta-right">14700</td>
+        <td class="ta-right">14249</td>
+        <td class="ta-right">-451</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">8</td>
+        <td>SOYA</td>
+        <td class="ta-right">7700</td>
+        <td class="ta-right">7453</td>
+        <td class="ta-right">-247</td>
+        <td class="ta-right">0.00</td>
+      </tr><!-- END:BATCH (auto) -->
+    </tbody>
+    <tfoot id="report-totals">
+      <tr>
+        <td colspan="2" class="ta-center">Total</td>
+        <td class="ta-right">68988</td>
+        <td class="ta-right">67357</td>
+        <td class="ta-right">-1631</td>
+        <td class="ta-right">0</td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <footer>
+    <div>Indian Industrial Machines Pvt. Ltd.</div>
+    <div>Page <span class="nr-page-number" data-nr-counter="page" aria-label="Current page number"></span> of <span class="nr-page-count" data-nr-counter="pages" aria-label="Total page count"></span></div>
+  </footer>
+
+<script id="nr-page-counter-script">
+(function() {
+  const METRICS = {"page_width_mm": 210.0, "page_height_mm": 297.0, "margin_top_mm": 14.0, "margin_bottom_mm": 14.0};
+  const PX_PER_MM = 96 / 25.4;
+
+  function computeTotals() {
+    try {
+      const doc = document.documentElement;
+      const body = document.body;
+      if (!doc || !body) return;
+      const usableHeightMm = Math.max(METRICS.page_height_mm - (METRICS.margin_top_mm + METRICS.margin_bottom_mm), 0.1);
+      const usableHeightPx = usableHeightMm * PX_PER_MM;
+      const contentHeight = Math.max(
+        body.scrollHeight,
+        body.offsetHeight,
+        doc.scrollHeight,
+        doc.offsetHeight
+      );
+      const totalPages = Math.max(1, Math.ceil(contentHeight / usableHeightPx));
+      const totalAsString = String(totalPages);
+      doc.setAttribute('data-nr-total-pages', totalAsString);
+      const countNodes = document.querySelectorAll('[data-nr-counter="pages"]');
+      countNodes.forEach((node) => {
+        node.setAttribute('data-nr-screen', totalAsString);
+        node.setAttribute('data-nr-total-pages', totalAsString);
+      });
+      const pageNodes = document.querySelectorAll('[data-nr-counter="page"]');
+      pageNodes.forEach((node) => {
+        if (!node.getAttribute('data-nr-screen')) {
+          node.setAttribute('data-nr-screen', '1');
+        }
+      });
+    } catch (err) {
+      if (typeof console !== 'undefined' && console.warn) {
+        console.warn('nr-page-counter: unable to compute preview counters', err);
+      }
+    }
+  }
+
+  function scheduleCompute() {
+    computeTotals();
+    setTimeout(computeTotals, 180);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      scheduleCompute();
+    }, { once: true });
+  } else {
+    scheduleCompute();
+  }
+
+  if (typeof window !== 'undefined') {
+    window.addEventListener('resize', computeTotals, { passive: true });
+  }
+})();
+</script>
+</div>
+
+<div class="nr-key-section" data-nr-section="12" style="page-break-before: always;">
+<section id="report-header">
+    <div id="header-row">
+      <div id="header-left">
+        <table>
+          <tr>
+            <td class="label">Plant name</td>
+            <td>: SSR AQUA</td>
+          </tr>
+          <tr>
+            <td class="label">Location</td>
+            <td>: Gudivada</td>
+          </tr>
+          <tr>
+            <td class="label">Print Date</td>
+            <td>: 23/10/2025</td>
+          </tr>
+        </table>
+      </div>
+      <div id="header-right">
+        <table>
+          <tr>
+            <td class="label">From Date</td>
+            <td>: 31/05/2025 00:00    To 15/10/2025 23:59</td>
+          </tr>
+          <tr>
+            <td class="label">Recipe code</td>
+            <td>: NUMEI</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+    <div id="title-wrap">
+      <h1>Consumption report</h1>
+    </div>
+  </section>
+
+  <table id="data-table">
+    <colgroup>
+      <col class="slno" />
+      <col class="material" />
+      <col class="set" />
+      <col class="ach" />
+      <col class="errkg" />
+      <col class="errpct" />
+    </colgroup>
+    <thead>
+      <tr>
+        <th data-label="sl_no">Sl. No.</th>
+        <th data-label="material_name">Material name</th>
+        <th data-label="set_wt_kg">Set. wt(Kg)</th>
+        <th data-label="ach_wt_kg">Ach. wt(Kg)</th>
+        <th data-label="error_kg">Error(Kg)</th>
+        <th data-label="error_pct">Error %</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- BEGIN:BATCH (auto) --><tr>
+        <td class="ta-center">2</td>
+        <td>B RICE</td>
+        <td class="ta-right">32100</td>
+        <td class="ta-right">32427</td>
+        <td class="ta-right">327</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">3</td>
+        <td>FISH MEAL</td>
+        <td class="ta-right">15850</td>
+        <td class="ta-right">15402</td>
+        <td class="ta-right">-448</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">4</td>
+        <td>GNDOC</td>
+        <td class="ta-right">16050</td>
+        <td class="ta-right">16257</td>
+        <td class="ta-right">207</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">5</td>
+        <td>MAIDA</td>
+        <td class="ta-right">48150</td>
+        <td class="ta-right">47827</td>
+        <td class="ta-right">-323</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">6</td>
+        <td>R BRAWAN</td>
+        <td class="ta-right">10000</td>
+        <td class="ta-right">9393</td>
+        <td class="ta-right">-607</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">7</td>
+        <td>R BRAWN</td>
+        <td class="ta-right">6050</td>
+        <td class="ta-right">5693</td>
+        <td class="ta-right">-357</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">8</td>
+        <td>RECYCLE P</td>
+        <td class="ta-right">32100</td>
+        <td class="ta-right">31884</td>
+        <td class="ta-right">-216</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">9</td>
+        <td>RG 60%</td>
+        <td class="ta-right">19260</td>
+        <td class="ta-right">18790</td>
+        <td class="ta-right">-470</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">10</td>
+        <td>SOYA</td>
+        <td class="ta-right">87954</td>
+        <td class="ta-right">87444</td>
+        <td class="ta-right">-510</td>
+        <td class="ta-right">0.00</td>
+      </tr><!-- END:BATCH (auto) -->
+    </tbody>
+    <tfoot id="report-totals">
+      <tr>
+        <td colspan="2" class="ta-center">Total</td>
+        <td class="ta-right">267514</td>
+        <td class="ta-right">265117</td>
+        <td class="ta-right">-2397</td>
+        <td class="ta-right">0</td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <footer>
+    <div>Indian Industrial Machines Pvt. Ltd.</div>
+    <div>Page <span class="nr-page-number" data-nr-counter="page" aria-label="Current page number"></span> of <span class="nr-page-count" data-nr-counter="pages" aria-label="Total page count"></span></div>
+  </footer>
+
+<script id="nr-page-counter-script">
+(function() {
+  const METRICS = {"page_width_mm": 210.0, "page_height_mm": 297.0, "margin_top_mm": 14.0, "margin_bottom_mm": 14.0};
+  const PX_PER_MM = 96 / 25.4;
+
+  function computeTotals() {
+    try {
+      const doc = document.documentElement;
+      const body = document.body;
+      if (!doc || !body) return;
+      const usableHeightMm = Math.max(METRICS.page_height_mm - (METRICS.margin_top_mm + METRICS.margin_bottom_mm), 0.1);
+      const usableHeightPx = usableHeightMm * PX_PER_MM;
+      const contentHeight = Math.max(
+        body.scrollHeight,
+        body.offsetHeight,
+        doc.scrollHeight,
+        doc.offsetHeight
+      );
+      const totalPages = Math.max(1, Math.ceil(contentHeight / usableHeightPx));
+      const totalAsString = String(totalPages);
+      doc.setAttribute('data-nr-total-pages', totalAsString);
+      const countNodes = document.querySelectorAll('[data-nr-counter="pages"]');
+      countNodes.forEach((node) => {
+        node.setAttribute('data-nr-screen', totalAsString);
+        node.setAttribute('data-nr-total-pages', totalAsString);
+      });
+      const pageNodes = document.querySelectorAll('[data-nr-counter="page"]');
+      pageNodes.forEach((node) => {
+        if (!node.getAttribute('data-nr-screen')) {
+          node.setAttribute('data-nr-screen', '1');
+        }
+      });
+    } catch (err) {
+      if (typeof console !== 'undefined' && console.warn) {
+        console.warn('nr-page-counter: unable to compute preview counters', err);
+      }
+    }
+  }
+
+  function scheduleCompute() {
+    computeTotals();
+    setTimeout(computeTotals, 180);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      scheduleCompute();
+    }, { once: true });
+  } else {
+    scheduleCompute();
+  }
+
+  if (typeof window !== 'undefined') {
+    window.addEventListener('resize', computeTotals, { passive: true });
+  }
+})();
+</script>
+</div>
+
+<div class="nr-key-section" data-nr-section="13" style="page-break-before: always;">
+<section id="report-header">
+    <div id="header-row">
+      <div id="header-left">
+        <table>
+          <tr>
+            <td class="label">Plant name</td>
+            <td>: SSR AQUA</td>
+          </tr>
+          <tr>
+            <td class="label">Location</td>
+            <td>: Gudivada</td>
+          </tr>
+          <tr>
+            <td class="label">Print Date</td>
+            <td>: 23/10/2025</td>
+          </tr>
+        </table>
+      </div>
+      <div id="header-right">
+        <table>
+          <tr>
+            <td class="label">From Date</td>
+            <td>: 31/05/2025 00:00    To 15/10/2025 23:59</td>
+          </tr>
+          <tr>
+            <td class="label">Recipe code</td>
+            <td>: PROVA</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+    <div id="title-wrap">
+      <h1>Consumption report</h1>
+    </div>
+  </section>
+
+  <table id="data-table">
+    <colgroup>
+      <col class="slno" />
+      <col class="material" />
+      <col class="set" />
+      <col class="ach" />
+      <col class="errkg" />
+      <col class="errpct" />
+    </colgroup>
+    <thead>
+      <tr>
+        <th data-label="sl_no">Sl. No.</th>
+        <th data-label="material_name">Material name</th>
+        <th data-label="set_wt_kg">Set. wt(Kg)</th>
+        <th data-label="ach_wt_kg">Ach. wt(Kg)</th>
+        <th data-label="error_kg">Error(Kg)</th>
+        <th data-label="error_pct">Error %</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- BEGIN:BATCH (auto) --><tr>
+        <td class="ta-center">2</td>
+        <td>FISH MEAL</td>
+        <td class="ta-right">28000</td>
+        <td class="ta-right">27389</td>
+        <td class="ta-right">-611</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">3</td>
+        <td>MAIDA</td>
+        <td class="ta-right">56400</td>
+        <td class="ta-right">55960</td>
+        <td class="ta-right">-440</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">4</td>
+        <td>R BRAWAN</td>
+        <td class="ta-right">27000</td>
+        <td class="ta-right">26180</td>
+        <td class="ta-right">-820</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">5</td>
+        <td>RECYCLE P</td>
+        <td class="ta-right">15700</td>
+        <td class="ta-right">15133</td>
+        <td class="ta-right">-567</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">6</td>
+        <td>RG 60%</td>
+        <td class="ta-right">35250</td>
+        <td class="ta-right">38312</td>
+        <td class="ta-right">3062</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">7</td>
+        <td>SOYA</td>
+        <td class="ta-right">84600</td>
+        <td class="ta-right">84331</td>
+        <td class="ta-right">-269</td>
+        <td class="ta-right">0.00</td>
+      </tr><!-- END:BATCH (auto) -->
+    </tbody>
+    <tfoot id="report-totals">
+      <tr>
+        <td colspan="2" class="ta-center">Total</td>
+        <td class="ta-right">246950</td>
+        <td class="ta-right">247305</td>
+        <td class="ta-right">355</td>
+        <td class="ta-right">0</td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <footer>
+    <div>Indian Industrial Machines Pvt. Ltd.</div>
+    <div>Page <span class="nr-page-number" data-nr-counter="page" aria-label="Current page number"></span> of <span class="nr-page-count" data-nr-counter="pages" aria-label="Total page count"></span></div>
+  </footer>
+
+<script id="nr-page-counter-script">
+(function() {
+  const METRICS = {"page_width_mm": 210.0, "page_height_mm": 297.0, "margin_top_mm": 14.0, "margin_bottom_mm": 14.0};
+  const PX_PER_MM = 96 / 25.4;
+
+  function computeTotals() {
+    try {
+      const doc = document.documentElement;
+      const body = document.body;
+      if (!doc || !body) return;
+      const usableHeightMm = Math.max(METRICS.page_height_mm - (METRICS.margin_top_mm + METRICS.margin_bottom_mm), 0.1);
+      const usableHeightPx = usableHeightMm * PX_PER_MM;
+      const contentHeight = Math.max(
+        body.scrollHeight,
+        body.offsetHeight,
+        doc.scrollHeight,
+        doc.offsetHeight
+      );
+      const totalPages = Math.max(1, Math.ceil(contentHeight / usableHeightPx));
+      const totalAsString = String(totalPages);
+      doc.setAttribute('data-nr-total-pages', totalAsString);
+      const countNodes = document.querySelectorAll('[data-nr-counter="pages"]');
+      countNodes.forEach((node) => {
+        node.setAttribute('data-nr-screen', totalAsString);
+        node.setAttribute('data-nr-total-pages', totalAsString);
+      });
+      const pageNodes = document.querySelectorAll('[data-nr-counter="page"]');
+      pageNodes.forEach((node) => {
+        if (!node.getAttribute('data-nr-screen')) {
+          node.setAttribute('data-nr-screen', '1');
+        }
+      });
+    } catch (err) {
+      if (typeof console !== 'undefined' && console.warn) {
+        console.warn('nr-page-counter: unable to compute preview counters', err);
+      }
+    }
+  }
+
+  function scheduleCompute() {
+    computeTotals();
+    setTimeout(computeTotals, 180);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      scheduleCompute();
+    }, { once: true });
+  } else {
+    scheduleCompute();
+  }
+
+  if (typeof window !== 'undefined') {
+    window.addEventListener('resize', computeTotals, { passive: true });
+  }
+})();
+</script>
+</div>
+
+<div class="nr-key-section" data-nr-section="14" style="page-break-before: always;">
+<section id="report-header">
+    <div id="header-row">
+      <div id="header-left">
+        <table>
+          <tr>
+            <td class="label">Plant name</td>
+            <td>: SSR AQUA</td>
+          </tr>
+          <tr>
+            <td class="label">Location</td>
+            <td>: Gudivada</td>
+          </tr>
+          <tr>
+            <td class="label">Print Date</td>
+            <td>: 23/10/2025</td>
+          </tr>
+        </table>
+      </div>
+      <div id="header-right">
+        <table>
+          <tr>
+            <td class="label">From Date</td>
+            <td>: 31/05/2025 00:00    To 15/10/2025 23:59</td>
+          </tr>
+          <tr>
+            <td class="label">Recipe code</td>
+            <td>: Q</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+    <div id="title-wrap">
+      <h1>Consumption report</h1>
+    </div>
+  </section>
+
+  <table id="data-table">
+    <colgroup>
+      <col class="slno" />
+      <col class="material" />
+      <col class="set" />
+      <col class="ach" />
+      <col class="errkg" />
+      <col class="errpct" />
+    </colgroup>
+    <thead>
+      <tr>
+        <th data-label="sl_no">Sl. No.</th>
+        <th data-label="material_name">Material name</th>
+        <th data-label="set_wt_kg">Set. wt(Kg)</th>
+        <th data-label="ach_wt_kg">Ach. wt(Kg)</th>
+        <th data-label="error_kg">Error(Kg)</th>
+        <th data-label="error_pct">Error %</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- BEGIN:BATCH (auto) --><tr>
+        <td class="ta-center">2</td>
+        <td>B RICE</td>
+        <td class="ta-right">30400</td>
+        <td class="ta-right">30595</td>
+        <td class="ta-right">195</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">3</td>
+        <td>DOB</td>
+        <td class="ta-right">57600</td>
+        <td class="ta-right">57539</td>
+        <td class="ta-right">-61</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">4</td>
+        <td>M FIBER</td>
+        <td class="ta-right">5100</td>
+        <td class="ta-right">4979</td>
+        <td class="ta-right">-121</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">5</td>
+        <td>MEET MEAL</td>
+        <td class="ta-right">7192</td>
+        <td class="ta-right">7027</td>
+        <td class="ta-right">-165</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">6</td>
+        <td>R BRAWN</td>
+        <td class="ta-right">4200</td>
+        <td class="ta-right">4063</td>
+        <td class="ta-right">-137</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">7</td>
+        <td>RECYCLE Q</td>
+        <td class="ta-right">15200</td>
+        <td class="ta-right">14941</td>
+        <td class="ta-right">-259</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">8</td>
+        <td>RICE DUST</td>
+        <td class="ta-right">22200</td>
+        <td class="ta-right">21588</td>
+        <td class="ta-right">-612</td>
+        <td class="ta-right">0.00</td>
+      </tr><!-- END:BATCH (auto) -->
+    </tbody>
+    <tfoot id="report-totals">
+      <tr>
+        <td colspan="2" class="ta-center">Total</td>
+        <td class="ta-right">141892</td>
+        <td class="ta-right">140732</td>
+        <td class="ta-right">-1160</td>
+        <td class="ta-right">0</td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <footer>
+    <div>Indian Industrial Machines Pvt. Ltd.</div>
+    <div>Page <span class="nr-page-number" data-nr-counter="page" aria-label="Current page number"></span> of <span class="nr-page-count" data-nr-counter="pages" aria-label="Total page count"></span></div>
+  </footer>
+
+<script id="nr-page-counter-script">
+(function() {
+  const METRICS = {"page_width_mm": 210.0, "page_height_mm": 297.0, "margin_top_mm": 14.0, "margin_bottom_mm": 14.0};
+  const PX_PER_MM = 96 / 25.4;
+
+  function computeTotals() {
+    try {
+      const doc = document.documentElement;
+      const body = document.body;
+      if (!doc || !body) return;
+      const usableHeightMm = Math.max(METRICS.page_height_mm - (METRICS.margin_top_mm + METRICS.margin_bottom_mm), 0.1);
+      const usableHeightPx = usableHeightMm * PX_PER_MM;
+      const contentHeight = Math.max(
+        body.scrollHeight,
+        body.offsetHeight,
+        doc.scrollHeight,
+        doc.offsetHeight
+      );
+      const totalPages = Math.max(1, Math.ceil(contentHeight / usableHeightPx));
+      const totalAsString = String(totalPages);
+      doc.setAttribute('data-nr-total-pages', totalAsString);
+      const countNodes = document.querySelectorAll('[data-nr-counter="pages"]');
+      countNodes.forEach((node) => {
+        node.setAttribute('data-nr-screen', totalAsString);
+        node.setAttribute('data-nr-total-pages', totalAsString);
+      });
+      const pageNodes = document.querySelectorAll('[data-nr-counter="page"]');
+      pageNodes.forEach((node) => {
+        if (!node.getAttribute('data-nr-screen')) {
+          node.setAttribute('data-nr-screen', '1');
+        }
+      });
+    } catch (err) {
+      if (typeof console !== 'undefined' && console.warn) {
+        console.warn('nr-page-counter: unable to compute preview counters', err);
+      }
+    }
+  }
+
+  function scheduleCompute() {
+    computeTotals();
+    setTimeout(computeTotals, 180);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      scheduleCompute();
+    }, { once: true });
+  } else {
+    scheduleCompute();
+  }
+
+  if (typeof window !== 'undefined') {
+    window.addEventListener('resize', computeTotals, { passive: true });
+  }
+})();
+</script>
+</div>
+
+<div class="nr-key-section" data-nr-section="15" style="page-break-before: always;">
+<section id="report-header">
+    <div id="header-row">
+      <div id="header-left">
+        <table>
+          <tr>
+            <td class="label">Plant name</td>
+            <td>: SSR AQUA</td>
+          </tr>
+          <tr>
+            <td class="label">Location</td>
+            <td>: Gudivada</td>
+          </tr>
+          <tr>
+            <td class="label">Print Date</td>
+            <td>: 23/10/2025</td>
+          </tr>
+        </table>
+      </div>
+      <div id="header-right">
+        <table>
+          <tr>
+            <td class="label">From Date</td>
+            <td>: 31/05/2025 00:00    To 15/10/2025 23:59</td>
+          </tr>
+          <tr>
+            <td class="label">Recipe code</td>
+            <td>: QNEW</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+    <div id="title-wrap">
+      <h1>Consumption report</h1>
+    </div>
+  </section>
+
+  <table id="data-table">
+    <colgroup>
+      <col class="slno" />
+      <col class="material" />
+      <col class="set" />
+      <col class="ach" />
+      <col class="errkg" />
+      <col class="errpct" />
+    </colgroup>
+    <thead>
+      <tr>
+        <th data-label="sl_no">Sl. No.</th>
+        <th data-label="material_name">Material name</th>
+        <th data-label="set_wt_kg">Set. wt(Kg)</th>
+        <th data-label="ach_wt_kg">Ach. wt(Kg)</th>
+        <th data-label="error_kg">Error(Kg)</th>
+        <th data-label="error_pct">Error %</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- BEGIN:BATCH (auto) --><tr>
+        <td class="ta-center">2</td>
+        <td>DOB</td>
+        <td class="ta-right">5200</td>
+        <td class="ta-right">19399</td>
+        <td class="ta-right">14199</td>
+        <td class="ta-right">2.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">3</td>
+        <td>RECYCLE Q</td>
+        <td class="ta-right">14300</td>
+        <td class="ta-right">14203</td>
+        <td class="ta-right">-97</td>
+        <td class="ta-right">0.00</td>
+      </tr><!-- END:BATCH (auto) -->
+    </tbody>
+    <tfoot id="report-totals">
+      <tr>
+        <td colspan="2" class="ta-center">Total</td>
+        <td class="ta-right">19500</td>
+        <td class="ta-right">33602</td>
+        <td class="ta-right">14102</td>
+        <td class="ta-right">0</td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <footer>
+    <div>Indian Industrial Machines Pvt. Ltd.</div>
+    <div>Page <span class="nr-page-number" data-nr-counter="page" aria-label="Current page number"></span> of <span class="nr-page-count" data-nr-counter="pages" aria-label="Total page count"></span></div>
+  </footer>
+
+<script id="nr-page-counter-script">
+(function() {
+  const METRICS = {"page_width_mm": 210.0, "page_height_mm": 297.0, "margin_top_mm": 14.0, "margin_bottom_mm": 14.0};
+  const PX_PER_MM = 96 / 25.4;
+
+  function computeTotals() {
+    try {
+      const doc = document.documentElement;
+      const body = document.body;
+      if (!doc || !body) return;
+      const usableHeightMm = Math.max(METRICS.page_height_mm - (METRICS.margin_top_mm + METRICS.margin_bottom_mm), 0.1);
+      const usableHeightPx = usableHeightMm * PX_PER_MM;
+      const contentHeight = Math.max(
+        body.scrollHeight,
+        body.offsetHeight,
+        doc.scrollHeight,
+        doc.offsetHeight
+      );
+      const totalPages = Math.max(1, Math.ceil(contentHeight / usableHeightPx));
+      const totalAsString = String(totalPages);
+      doc.setAttribute('data-nr-total-pages', totalAsString);
+      const countNodes = document.querySelectorAll('[data-nr-counter="pages"]');
+      countNodes.forEach((node) => {
+        node.setAttribute('data-nr-screen', totalAsString);
+        node.setAttribute('data-nr-total-pages', totalAsString);
+      });
+      const pageNodes = document.querySelectorAll('[data-nr-counter="page"]');
+      pageNodes.forEach((node) => {
+        if (!node.getAttribute('data-nr-screen')) {
+          node.setAttribute('data-nr-screen', '1');
+        }
+      });
+    } catch (err) {
+      if (typeof console !== 'undefined' && console.warn) {
+        console.warn('nr-page-counter: unable to compute preview counters', err);
+      }
+    }
+  }
+
+  function scheduleCompute() {
+    computeTotals();
+    setTimeout(computeTotals, 180);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      scheduleCompute();
+    }, { once: true });
+  } else {
+    scheduleCompute();
+  }
+
+  if (typeof window !== 'undefined') {
+    window.addEventListener('resize', computeTotals, { passive: true });
+  }
+})();
+</script>
+</div>
+
+<div class="nr-key-section" data-nr-section="16" style="page-break-before: always;">
+<section id="report-header">
+    <div id="header-row">
+      <div id="header-left">
+        <table>
+          <tr>
+            <td class="label">Plant name</td>
+            <td>: SSR AQUA</td>
+          </tr>
+          <tr>
+            <td class="label">Location</td>
+            <td>: Gudivada</td>
+          </tr>
+          <tr>
+            <td class="label">Print Date</td>
+            <td>: 23/10/2025</td>
+          </tr>
+        </table>
+      </div>
+      <div id="header-right">
+        <table>
+          <tr>
+            <td class="label">From Date</td>
+            <td>: 31/05/2025 00:00    To 15/10/2025 23:59</td>
+          </tr>
+          <tr>
+            <td class="label">Recipe code</td>
+            <td>: QPLUS</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+    <div id="title-wrap">
+      <h1>Consumption report</h1>
+    </div>
+  </section>
+
+  <table id="data-table">
+    <colgroup>
+      <col class="slno" />
+      <col class="material" />
+      <col class="set" />
+      <col class="ach" />
+      <col class="errkg" />
+      <col class="errpct" />
+    </colgroup>
+    <thead>
+      <tr>
+        <th data-label="sl_no">Sl. No.</th>
+        <th data-label="material_name">Material name</th>
+        <th data-label="set_wt_kg">Set. wt(Kg)</th>
+        <th data-label="ach_wt_kg">Ach. wt(Kg)</th>
+        <th data-label="error_kg">Error(Kg)</th>
+        <th data-label="error_pct">Error %</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- BEGIN:BATCH (auto) --><tr>
+        <td class="ta-center">2</td>
+        <td>B RICE</td>
+        <td class="ta-right">148400</td>
+        <td class="ta-right">148918</td>
+        <td class="ta-right">518</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">3</td>
+        <td>DOB</td>
+        <td class="ta-right">208314</td>
+        <td class="ta-right">207135</td>
+        <td class="ta-right">-1179</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">4</td>
+        <td>GNDOC</td>
+        <td class="ta-right">29680</td>
+        <td class="ta-right">29534</td>
+        <td class="ta-right">-146</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">5</td>
+        <td>M FIBER</td>
+        <td class="ta-right">2520</td>
+        <td class="ta-right">2364</td>
+        <td class="ta-right">-156</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">6</td>
+        <td>MEET MEAL</td>
+        <td class="ta-right">4800</td>
+        <td class="ta-right">4820</td>
+        <td class="ta-right">20</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">7</td>
+        <td>R BRAWN</td>
+        <td class="ta-right">1140</td>
+        <td class="ta-right">1050</td>
+        <td class="ta-right">-90</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">8</td>
+        <td>RECYCLE Q</td>
+        <td class="ta-right">74200</td>
+        <td class="ta-right">73101</td>
+        <td class="ta-right">-1099</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">9</td>
+        <td>RG 45%</td>
+        <td class="ta-right">129850</td>
+        <td class="ta-right">127313</td>
+        <td class="ta-right">-2537</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">10</td>
+        <td>SOYA</td>
+        <td class="ta-right">37100</td>
+        <td class="ta-right">36153</td>
+        <td class="ta-right">-947</td>
+        <td class="ta-right">0.00</td>
+      </tr><!-- END:BATCH (auto) -->
+    </tbody>
+    <tfoot id="report-totals">
+      <tr>
+        <td colspan="2" class="ta-center">Total</td>
+        <td class="ta-right">636004</td>
+        <td class="ta-right">630388</td>
+        <td class="ta-right">-5616</td>
+        <td class="ta-right">0</td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <footer>
+    <div>Indian Industrial Machines Pvt. Ltd.</div>
+    <div>Page <span class="nr-page-number" data-nr-counter="page" aria-label="Current page number"></span> of <span class="nr-page-count" data-nr-counter="pages" aria-label="Total page count"></span></div>
+  </footer>
+
+<script id="nr-page-counter-script">
+(function() {
+  const METRICS = {"page_width_mm": 210.0, "page_height_mm": 297.0, "margin_top_mm": 14.0, "margin_bottom_mm": 14.0};
+  const PX_PER_MM = 96 / 25.4;
+
+  function computeTotals() {
+    try {
+      const doc = document.documentElement;
+      const body = document.body;
+      if (!doc || !body) return;
+      const usableHeightMm = Math.max(METRICS.page_height_mm - (METRICS.margin_top_mm + METRICS.margin_bottom_mm), 0.1);
+      const usableHeightPx = usableHeightMm * PX_PER_MM;
+      const contentHeight = Math.max(
+        body.scrollHeight,
+        body.offsetHeight,
+        doc.scrollHeight,
+        doc.offsetHeight
+      );
+      const totalPages = Math.max(1, Math.ceil(contentHeight / usableHeightPx));
+      const totalAsString = String(totalPages);
+      doc.setAttribute('data-nr-total-pages', totalAsString);
+      const countNodes = document.querySelectorAll('[data-nr-counter="pages"]');
+      countNodes.forEach((node) => {
+        node.setAttribute('data-nr-screen', totalAsString);
+        node.setAttribute('data-nr-total-pages', totalAsString);
+      });
+      const pageNodes = document.querySelectorAll('[data-nr-counter="page"]');
+      pageNodes.forEach((node) => {
+        if (!node.getAttribute('data-nr-screen')) {
+          node.setAttribute('data-nr-screen', '1');
+        }
+      });
+    } catch (err) {
+      if (typeof console !== 'undefined' && console.warn) {
+        console.warn('nr-page-counter: unable to compute preview counters', err);
+      }
+    }
+  }
+
+  function scheduleCompute() {
+    computeTotals();
+    setTimeout(computeTotals, 180);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      scheduleCompute();
+    }, { once: true });
+  } else {
+    scheduleCompute();
+  }
+
+  if (typeof window !== 'undefined') {
+    window.addEventListener('resize', computeTotals, { passive: true });
+  }
+})();
+</script>
+</div>
+
+<div class="nr-key-section" data-nr-section="17" style="page-break-before: always;">
+<section id="report-header">
+    <div id="header-row">
+      <div id="header-left">
+        <table>
+          <tr>
+            <td class="label">Plant name</td>
+            <td>: SSR AQUA</td>
+          </tr>
+          <tr>
+            <td class="label">Location</td>
+            <td>: Gudivada</td>
+          </tr>
+          <tr>
+            <td class="label">Print Date</td>
+            <td>: 23/10/2025</td>
+          </tr>
+        </table>
+      </div>
+      <div id="header-right">
+        <table>
+          <tr>
+            <td class="label">From Date</td>
+            <td>: 31/05/2025 00:00    To 15/10/2025 23:59</td>
+          </tr>
+          <tr>
+            <td class="label">Recipe code</td>
+            <td>: Q_PLUS</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+    <div id="title-wrap">
+      <h1>Consumption report</h1>
+    </div>
+  </section>
+
+  <table id="data-table">
+    <colgroup>
+      <col class="slno" />
+      <col class="material" />
+      <col class="set" />
+      <col class="ach" />
+      <col class="errkg" />
+      <col class="errpct" />
+    </colgroup>
+    <thead>
+      <tr>
+        <th data-label="sl_no">Sl. No.</th>
+        <th data-label="material_name">Material name</th>
+        <th data-label="set_wt_kg">Set. wt(Kg)</th>
+        <th data-label="ach_wt_kg">Ach. wt(Kg)</th>
+        <th data-label="error_kg">Error(Kg)</th>
+        <th data-label="error_pct">Error %</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- BEGIN:BATCH (auto) --><tr>
+        <td class="ta-center">2</td>
+        <td>B RICE</td>
+        <td class="ta-right">7000</td>
+        <td class="ta-right">7047</td>
+        <td class="ta-right">47</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">3</td>
+        <td>DOB</td>
+        <td class="ta-right">10395</td>
+        <td class="ta-right">10424</td>
+        <td class="ta-right">29</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">4</td>
+        <td>GNDOC</td>
+        <td class="ta-right">1400</td>
+        <td class="ta-right">1428</td>
+        <td class="ta-right">28</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">5</td>
+        <td>RECYCLE Q</td>
+        <td class="ta-right">3500</td>
+        <td class="ta-right">3443</td>
+        <td class="ta-right">-57</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">6</td>
+        <td>RG 45%</td>
+        <td class="ta-right">6125</td>
+        <td class="ta-right">6087</td>
+        <td class="ta-right">-38</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">7</td>
+        <td>SOYA</td>
+        <td class="ta-right">1750</td>
+        <td class="ta-right">1713</td>
+        <td class="ta-right">-37</td>
+        <td class="ta-right">0.00</td>
+      </tr><!-- END:BATCH (auto) -->
+    </tbody>
+    <tfoot id="report-totals">
+      <tr>
+        <td colspan="2" class="ta-center">Total</td>
+        <td class="ta-right">30170</td>
+        <td class="ta-right">30142</td>
+        <td class="ta-right">-28</td>
+        <td class="ta-right">0</td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <footer>
+    <div>Indian Industrial Machines Pvt. Ltd.</div>
+    <div>Page <span class="nr-page-number" data-nr-counter="page" aria-label="Current page number"></span> of <span class="nr-page-count" data-nr-counter="pages" aria-label="Total page count"></span></div>
+  </footer>
+
+<script id="nr-page-counter-script">
+(function() {
+  const METRICS = {"page_width_mm": 210.0, "page_height_mm": 297.0, "margin_top_mm": 14.0, "margin_bottom_mm": 14.0};
+  const PX_PER_MM = 96 / 25.4;
+
+  function computeTotals() {
+    try {
+      const doc = document.documentElement;
+      const body = document.body;
+      if (!doc || !body) return;
+      const usableHeightMm = Math.max(METRICS.page_height_mm - (METRICS.margin_top_mm + METRICS.margin_bottom_mm), 0.1);
+      const usableHeightPx = usableHeightMm * PX_PER_MM;
+      const contentHeight = Math.max(
+        body.scrollHeight,
+        body.offsetHeight,
+        doc.scrollHeight,
+        doc.offsetHeight
+      );
+      const totalPages = Math.max(1, Math.ceil(contentHeight / usableHeightPx));
+      const totalAsString = String(totalPages);
+      doc.setAttribute('data-nr-total-pages', totalAsString);
+      const countNodes = document.querySelectorAll('[data-nr-counter="pages"]');
+      countNodes.forEach((node) => {
+        node.setAttribute('data-nr-screen', totalAsString);
+        node.setAttribute('data-nr-total-pages', totalAsString);
+      });
+      const pageNodes = document.querySelectorAll('[data-nr-counter="page"]');
+      pageNodes.forEach((node) => {
+        if (!node.getAttribute('data-nr-screen')) {
+          node.setAttribute('data-nr-screen', '1');
+        }
+      });
+    } catch (err) {
+      if (typeof console !== 'undefined' && console.warn) {
+        console.warn('nr-page-counter: unable to compute preview counters', err);
+      }
+    }
+  }
+
+  function scheduleCompute() {
+    computeTotals();
+    setTimeout(computeTotals, 180);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      scheduleCompute();
+    }, { once: true });
+  } else {
+    scheduleCompute();
+  }
+
+  if (typeof window !== 'undefined') {
+    window.addEventListener('resize', computeTotals, { passive: true });
+  }
+})();
+</script>
+</div>
+
+<div class="nr-key-section" data-nr-section="18" style="page-break-before: always;">
+<section id="report-header">
+    <div id="header-row">
+      <div id="header-left">
+        <table>
+          <tr>
+            <td class="label">Plant name</td>
+            <td>: SSR AQUA</td>
+          </tr>
+          <tr>
+            <td class="label">Location</td>
+            <td>: Gudivada</td>
+          </tr>
+          <tr>
+            <td class="label">Print Date</td>
+            <td>: 23/10/2025</td>
+          </tr>
+        </table>
+      </div>
+      <div id="header-right">
+        <table>
+          <tr>
+            <td class="label">From Date</td>
+            <td>: 31/05/2025 00:00    To 15/10/2025 23:59</td>
+          </tr>
+          <tr>
+            <td class="label">Recipe code</td>
+            <td>: RAJUGARU</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+    <div id="title-wrap">
+      <h1>Consumption report</h1>
+    </div>
+  </section>
+
+  <table id="data-table">
+    <colgroup>
+      <col class="slno" />
+      <col class="material" />
+      <col class="set" />
+      <col class="ach" />
+      <col class="errkg" />
+      <col class="errpct" />
+    </colgroup>
+    <thead>
+      <tr>
+        <th data-label="sl_no">Sl. No.</th>
+        <th data-label="material_name">Material name</th>
+        <th data-label="set_wt_kg">Set. wt(Kg)</th>
+        <th data-label="ach_wt_kg">Ach. wt(Kg)</th>
+        <th data-label="error_kg">Error(Kg)</th>
+        <th data-label="error_pct">Error %</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- BEGIN:BATCH (auto) --><tr>
+        <td class="ta-center">2</td>
+        <td>B RICE</td>
+        <td class="ta-right">2700</td>
+        <td class="ta-right">2764</td>
+        <td class="ta-right">64</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">3</td>
+        <td>FISH MEAL</td>
+        <td class="ta-right">18525</td>
+        <td class="ta-right">18429</td>
+        <td class="ta-right">-96</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">4</td>
+        <td>GNDOC</td>
+        <td class="ta-right">6300</td>
+        <td class="ta-right">6434</td>
+        <td class="ta-right">134</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">5</td>
+        <td>M CORN</td>
+        <td class="ta-right">21500</td>
+        <td class="ta-right">21534</td>
+        <td class="ta-right">34</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">6</td>
+        <td>MAIDA</td>
+        <td class="ta-right">52050</td>
+        <td class="ta-right">52515</td>
+        <td class="ta-right">465</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">7</td>
+        <td>R BRAWN</td>
+        <td class="ta-right">17880</td>
+        <td class="ta-right">17440</td>
+        <td class="ta-right">-440</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">8</td>
+        <td>RG 60%</td>
+        <td class="ta-right">17200</td>
+        <td class="ta-right">16877</td>
+        <td class="ta-right">-323</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">9</td>
+        <td>SOYA</td>
+        <td class="ta-right">59950</td>
+        <td class="ta-right">59782</td>
+        <td class="ta-right">-168</td>
+        <td class="ta-right">0.00</td>
+      </tr><!-- END:BATCH (auto) -->
+    </tbody>
+    <tfoot id="report-totals">
+      <tr>
+        <td colspan="2" class="ta-center">Total</td>
+        <td class="ta-right">196105</td>
+        <td class="ta-right">195775</td>
+        <td class="ta-right">-330</td>
+        <td class="ta-right">0</td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <footer>
+    <div>Indian Industrial Machines Pvt. Ltd.</div>
+    <div>Page <span class="nr-page-number" data-nr-counter="page" aria-label="Current page number"></span> of <span class="nr-page-count" data-nr-counter="pages" aria-label="Total page count"></span></div>
+  </footer>
+
+<script id="nr-page-counter-script">
+(function() {
+  const METRICS = {"page_width_mm": 210.0, "page_height_mm": 297.0, "margin_top_mm": 14.0, "margin_bottom_mm": 14.0};
+  const PX_PER_MM = 96 / 25.4;
+
+  function computeTotals() {
+    try {
+      const doc = document.documentElement;
+      const body = document.body;
+      if (!doc || !body) return;
+      const usableHeightMm = Math.max(METRICS.page_height_mm - (METRICS.margin_top_mm + METRICS.margin_bottom_mm), 0.1);
+      const usableHeightPx = usableHeightMm * PX_PER_MM;
+      const contentHeight = Math.max(
+        body.scrollHeight,
+        body.offsetHeight,
+        doc.scrollHeight,
+        doc.offsetHeight
+      );
+      const totalPages = Math.max(1, Math.ceil(contentHeight / usableHeightPx));
+      const totalAsString = String(totalPages);
+      doc.setAttribute('data-nr-total-pages', totalAsString);
+      const countNodes = document.querySelectorAll('[data-nr-counter="pages"]');
+      countNodes.forEach((node) => {
+        node.setAttribute('data-nr-screen', totalAsString);
+        node.setAttribute('data-nr-total-pages', totalAsString);
+      });
+      const pageNodes = document.querySelectorAll('[data-nr-counter="page"]');
+      pageNodes.forEach((node) => {
+        if (!node.getAttribute('data-nr-screen')) {
+          node.setAttribute('data-nr-screen', '1');
+        }
+      });
+    } catch (err) {
+      if (typeof console !== 'undefined' && console.warn) {
+        console.warn('nr-page-counter: unable to compute preview counters', err);
+      }
+    }
+  }
+
+  function scheduleCompute() {
+    computeTotals();
+    setTimeout(computeTotals, 180);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      scheduleCompute();
+    }, { once: true });
+  } else {
+    scheduleCompute();
+  }
+
+  if (typeof window !== 'undefined') {
+    window.addEventListener('resize', computeTotals, { passive: true });
+  }
+})();
+</script>
+</div>
+
+<div class="nr-key-section" data-nr-section="19" style="page-break-before: always;">
+<section id="report-header">
+    <div id="header-row">
+      <div id="header-left">
+        <table>
+          <tr>
+            <td class="label">Plant name</td>
+            <td>: SSR AQUA</td>
+          </tr>
+          <tr>
+            <td class="label">Location</td>
+            <td>: Gudivada</td>
+          </tr>
+          <tr>
+            <td class="label">Print Date</td>
+            <td>: 23/10/2025</td>
+          </tr>
+        </table>
+      </div>
+      <div id="header-right">
+        <table>
+          <tr>
+            <td class="label">From Date</td>
+            <td>: 31/05/2025 00:00    To 15/10/2025 23:59</td>
+          </tr>
+          <tr>
+            <td class="label">Recipe code</td>
+            <td>: REC_FLUTOF</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+    <div id="title-wrap">
+      <h1>Consumption report</h1>
+    </div>
+  </section>
+
+  <table id="data-table">
+    <colgroup>
+      <col class="slno" />
+      <col class="material" />
+      <col class="set" />
+      <col class="ach" />
+      <col class="errkg" />
+      <col class="errpct" />
+    </colgroup>
+    <thead>
+      <tr>
+        <th data-label="sl_no">Sl. No.</th>
+        <th data-label="material_name">Material name</th>
+        <th data-label="set_wt_kg">Set. wt(Kg)</th>
+        <th data-label="ach_wt_kg">Ach. wt(Kg)</th>
+        <th data-label="error_kg">Error(Kg)</th>
+        <th data-label="error_pct">Error %</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- BEGIN:BATCH (auto) --><tr>
+        <td class="ta-center">2</td>
+        <td>B RICE</td>
+        <td class="ta-right">2900</td>
+        <td class="ta-right">2885</td>
+        <td class="ta-right">-15</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">3</td>
+        <td>DOB</td>
+        <td class="ta-right">2800</td>
+        <td class="ta-right">2772</td>
+        <td class="ta-right">-28</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">4</td>
+        <td>EED</td>
+        <td class="ta-right">2100</td>
+        <td class="ta-right">2083</td>
+        <td class="ta-right">-17</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">5</td>
+        <td>F-RECYCLE</td>
+        <td class="ta-right">33800</td>
+        <td class="ta-right">33698</td>
+        <td class="ta-right">-102</td>
+        <td class="ta-right">0.00</td>
+      </tr><!-- END:BATCH (auto) -->
+    </tbody>
+    <tfoot id="report-totals">
+      <tr>
+        <td colspan="2" class="ta-center">Total</td>
+        <td class="ta-right">41600</td>
+        <td class="ta-right">41438</td>
+        <td class="ta-right">-162</td>
+        <td class="ta-right">0</td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <footer>
+    <div>Indian Industrial Machines Pvt. Ltd.</div>
+    <div>Page <span class="nr-page-number" data-nr-counter="page" aria-label="Current page number"></span> of <span class="nr-page-count" data-nr-counter="pages" aria-label="Total page count"></span></div>
+  </footer>
+
+<script id="nr-page-counter-script">
+(function() {
+  const METRICS = {"page_width_mm": 210.0, "page_height_mm": 297.0, "margin_top_mm": 14.0, "margin_bottom_mm": 14.0};
+  const PX_PER_MM = 96 / 25.4;
+
+  function computeTotals() {
+    try {
+      const doc = document.documentElement;
+      const body = document.body;
+      if (!doc || !body) return;
+      const usableHeightMm = Math.max(METRICS.page_height_mm - (METRICS.margin_top_mm + METRICS.margin_bottom_mm), 0.1);
+      const usableHeightPx = usableHeightMm * PX_PER_MM;
+      const contentHeight = Math.max(
+        body.scrollHeight,
+        body.offsetHeight,
+        doc.scrollHeight,
+        doc.offsetHeight
+      );
+      const totalPages = Math.max(1, Math.ceil(contentHeight / usableHeightPx));
+      const totalAsString = String(totalPages);
+      doc.setAttribute('data-nr-total-pages', totalAsString);
+      const countNodes = document.querySelectorAll('[data-nr-counter="pages"]');
+      countNodes.forEach((node) => {
+        node.setAttribute('data-nr-screen', totalAsString);
+        node.setAttribute('data-nr-total-pages', totalAsString);
+      });
+      const pageNodes = document.querySelectorAll('[data-nr-counter="page"]');
+      pageNodes.forEach((node) => {
+        if (!node.getAttribute('data-nr-screen')) {
+          node.setAttribute('data-nr-screen', '1');
+        }
+      });
+    } catch (err) {
+      if (typeof console !== 'undefined' && console.warn) {
+        console.warn('nr-page-counter: unable to compute preview counters', err);
+      }
+    }
+  }
+
+  function scheduleCompute() {
+    computeTotals();
+    setTimeout(computeTotals, 180);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      scheduleCompute();
+    }, { once: true });
+  } else {
+    scheduleCompute();
+  }
+
+  if (typeof window !== 'undefined') {
+    window.addEventListener('resize', computeTotals, { passive: true });
+  }
+})();
+</script>
+</div>
+
+<div class="nr-key-section" data-nr-section="20" style="page-break-before: always;">
+<section id="report-header">
+    <div id="header-row">
+      <div id="header-left">
+        <table>
+          <tr>
+            <td class="label">Plant name</td>
+            <td>: SSR AQUA</td>
+          </tr>
+          <tr>
+            <td class="label">Location</td>
+            <td>: Gudivada</td>
+          </tr>
+          <tr>
+            <td class="label">Print Date</td>
+            <td>: 23/10/2025</td>
+          </tr>
+        </table>
+      </div>
+      <div id="header-right">
+        <table>
+          <tr>
+            <td class="label">From Date</td>
+            <td>: 31/05/2025 00:00    To 15/10/2025 23:59</td>
+          </tr>
+          <tr>
+            <td class="label">Recipe code</td>
+            <td>: SATYNARAYA</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+    <div id="title-wrap">
+      <h1>Consumption report</h1>
+    </div>
+  </section>
+
+  <table id="data-table">
+    <colgroup>
+      <col class="slno" />
+      <col class="material" />
+      <col class="set" />
+      <col class="ach" />
+      <col class="errkg" />
+      <col class="errpct" />
+    </colgroup>
+    <thead>
+      <tr>
+        <th data-label="sl_no">Sl. No.</th>
+        <th data-label="material_name">Material name</th>
+        <th data-label="set_wt_kg">Set. wt(Kg)</th>
+        <th data-label="ach_wt_kg">Ach. wt(Kg)</th>
+        <th data-label="error_kg">Error(Kg)</th>
+        <th data-label="error_pct">Error %</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- BEGIN:BATCH (auto) --><tr>
+        <td class="ta-center">2</td>
+        <td>B RICE</td>
+        <td class="ta-right">3350</td>
+        <td class="ta-right">3430</td>
+        <td class="ta-right">80</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">3</td>
+        <td>GNDOC</td>
+        <td class="ta-right">3350</td>
+        <td class="ta-right">3212</td>
+        <td class="ta-right">-138</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">4</td>
+        <td>MAIDA</td>
+        <td class="ta-right">6700</td>
+        <td class="ta-right">6612</td>
+        <td class="ta-right">-88</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">5</td>
+        <td>NA</td>
+        <td class="ta-right">16000</td>
+        <td class="ta-right">15808</td>
+        <td class="ta-right">-192</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">6</td>
+        <td>NAD</td>
+        <td class="ta-right">6000</td>
+        <td class="ta-right">5930</td>
+        <td class="ta-right">-70</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">7</td>
+        <td>NAw3p</td>
+        <td class="ta-right">4800</td>
+        <td class="ta-right">4742</td>
+        <td class="ta-right">-58</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">8</td>
+        <td>R BRAWN</td>
+        <td class="ta-right">10050</td>
+        <td class="ta-right">9866</td>
+        <td class="ta-right">-184</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">9</td>
+        <td>RECYCLE P</td>
+        <td class="ta-right">4085</td>
+        <td class="ta-right">3950</td>
+        <td class="ta-right">-135</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">10</td>
+        <td>RG 60%</td>
+        <td class="ta-right">3350</td>
+        <td class="ta-right">3263</td>
+        <td class="ta-right">-87</td>
+        <td class="ta-right">0.00</td>
+      </tr><!-- END:BATCH (auto) -->
+    </tbody>
+    <tfoot id="report-totals">
+      <tr>
+        <td colspan="2" class="ta-center">Total</td>
+        <td class="ta-right">57685</td>
+        <td class="ta-right">56813</td>
+        <td class="ta-right">-872</td>
+        <td class="ta-right">0</td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <footer>
+    <div>Indian Industrial Machines Pvt. Ltd.</div>
+    <div>Page <span class="nr-page-number" data-nr-counter="page" aria-label="Current page number"></span> of <span class="nr-page-count" data-nr-counter="pages" aria-label="Total page count"></span></div>
+  </footer>
+
+<script id="nr-page-counter-script">
+(function() {
+  const METRICS = {"page_width_mm": 210.0, "page_height_mm": 297.0, "margin_top_mm": 14.0, "margin_bottom_mm": 14.0};
+  const PX_PER_MM = 96 / 25.4;
+
+  function computeTotals() {
+    try {
+      const doc = document.documentElement;
+      const body = document.body;
+      if (!doc || !body) return;
+      const usableHeightMm = Math.max(METRICS.page_height_mm - (METRICS.margin_top_mm + METRICS.margin_bottom_mm), 0.1);
+      const usableHeightPx = usableHeightMm * PX_PER_MM;
+      const contentHeight = Math.max(
+        body.scrollHeight,
+        body.offsetHeight,
+        doc.scrollHeight,
+        doc.offsetHeight
+      );
+      const totalPages = Math.max(1, Math.ceil(contentHeight / usableHeightPx));
+      const totalAsString = String(totalPages);
+      doc.setAttribute('data-nr-total-pages', totalAsString);
+      const countNodes = document.querySelectorAll('[data-nr-counter="pages"]');
+      countNodes.forEach((node) => {
+        node.setAttribute('data-nr-screen', totalAsString);
+        node.setAttribute('data-nr-total-pages', totalAsString);
+      });
+      const pageNodes = document.querySelectorAll('[data-nr-counter="page"]');
+      pageNodes.forEach((node) => {
+        if (!node.getAttribute('data-nr-screen')) {
+          node.setAttribute('data-nr-screen', '1');
+        }
+      });
+    } catch (err) {
+      if (typeof console !== 'undefined' && console.warn) {
+        console.warn('nr-page-counter: unable to compute preview counters', err);
+      }
+    }
+  }
+
+  function scheduleCompute() {
+    computeTotals();
+    setTimeout(computeTotals, 180);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      scheduleCompute();
+    }, { once: true });
+  } else {
+    scheduleCompute();
+  }
+
+  if (typeof window !== 'undefined') {
+    window.addEventListener('resize', computeTotals, { passive: true });
+  }
+})();
+</script>
+</div>
+
+<div class="nr-key-section" data-nr-section="21" style="page-break-before: always;">
+<section id="report-header">
+    <div id="header-row">
+      <div id="header-left">
+        <table>
+          <tr>
+            <td class="label">Plant name</td>
+            <td>: SSR AQUA</td>
+          </tr>
+          <tr>
+            <td class="label">Location</td>
+            <td>: Gudivada</td>
+          </tr>
+          <tr>
+            <td class="label">Print Date</td>
+            <td>: 23/10/2025</td>
+          </tr>
+        </table>
+      </div>
+      <div id="header-right">
+        <table>
+          <tr>
+            <td class="label">From Date</td>
+            <td>: 31/05/2025 00:00    To 15/10/2025 23:59</td>
+          </tr>
+          <tr>
+            <td class="label">Recipe code</td>
+            <td>: S_PRASAD</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+    <div id="title-wrap">
+      <h1>Consumption report</h1>
+    </div>
+  </section>
+
+  <table id="data-table">
+    <colgroup>
+      <col class="slno" />
+      <col class="material" />
+      <col class="set" />
+      <col class="ach" />
+      <col class="errkg" />
+      <col class="errpct" />
+    </colgroup>
+    <thead>
+      <tr>
+        <th data-label="sl_no">Sl. No.</th>
+        <th data-label="material_name">Material name</th>
+        <th data-label="set_wt_kg">Set. wt(Kg)</th>
+        <th data-label="ach_wt_kg">Ach. wt(Kg)</th>
+        <th data-label="error_kg">Error(Kg)</th>
+        <th data-label="error_pct">Error %</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- BEGIN:BATCH (auto) --><tr>
+        <td class="ta-center">2</td>
+        <td>FISH MEAL</td>
+        <td class="ta-right">1200</td>
+        <td class="ta-right">1203</td>
+        <td class="ta-right">3</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">3</td>
+        <td>MAIDA</td>
+        <td class="ta-right">15550</td>
+        <td class="ta-right">15491</td>
+        <td class="ta-right">-59</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">4</td>
+        <td>R BRAWN</td>
+        <td class="ta-right">21225</td>
+        <td class="ta-right">20616</td>
+        <td class="ta-right">-609</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">5</td>
+        <td>RG 60%</td>
+        <td class="ta-right">14350</td>
+        <td class="ta-right">14327</td>
+        <td class="ta-right">-23</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">6</td>
+        <td>SOYA</td>
+        <td class="ta-right">36395</td>
+        <td class="ta-right">36325</td>
+        <td class="ta-right">-70</td>
+        <td class="ta-right">0.00</td>
+      </tr><!-- END:BATCH (auto) -->
+    </tbody>
+    <tfoot id="report-totals">
+      <tr>
+        <td colspan="2" class="ta-center">Total</td>
+        <td class="ta-right">88720</td>
+        <td class="ta-right">87966</td>
+        <td class="ta-right">-754</td>
+        <td class="ta-right">0</td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <footer>
+    <div>Indian Industrial Machines Pvt. Ltd.</div>
+    <div>Page <span class="nr-page-number" data-nr-counter="page" aria-label="Current page number"></span> of <span class="nr-page-count" data-nr-counter="pages" aria-label="Total page count"></span></div>
+  </footer>
+
+<script id="nr-page-counter-script">
+(function() {
+  const METRICS = {"page_width_mm": 210.0, "page_height_mm": 297.0, "margin_top_mm": 14.0, "margin_bottom_mm": 14.0};
+  const PX_PER_MM = 96 / 25.4;
+
+  function computeTotals() {
+    try {
+      const doc = document.documentElement;
+      const body = document.body;
+      if (!doc || !body) return;
+      const usableHeightMm = Math.max(METRICS.page_height_mm - (METRICS.margin_top_mm + METRICS.margin_bottom_mm), 0.1);
+      const usableHeightPx = usableHeightMm * PX_PER_MM;
+      const contentHeight = Math.max(
+        body.scrollHeight,
+        body.offsetHeight,
+        doc.scrollHeight,
+        doc.offsetHeight
+      );
+      const totalPages = Math.max(1, Math.ceil(contentHeight / usableHeightPx));
+      const totalAsString = String(totalPages);
+      doc.setAttribute('data-nr-total-pages', totalAsString);
+      const countNodes = document.querySelectorAll('[data-nr-counter="pages"]');
+      countNodes.forEach((node) => {
+        node.setAttribute('data-nr-screen', totalAsString);
+        node.setAttribute('data-nr-total-pages', totalAsString);
+      });
+      const pageNodes = document.querySelectorAll('[data-nr-counter="page"]');
+      pageNodes.forEach((node) => {
+        if (!node.getAttribute('data-nr-screen')) {
+          node.setAttribute('data-nr-screen', '1');
+        }
+      });
+    } catch (err) {
+      if (typeof console !== 'undefined' && console.warn) {
+        console.warn('nr-page-counter: unable to compute preview counters', err);
+      }
+    }
+  }
+
+  function scheduleCompute() {
+    computeTotals();
+    setTimeout(computeTotals, 180);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      scheduleCompute();
+    }, { once: true });
+  } else {
+    scheduleCompute();
+  }
+
+  if (typeof window !== 'undefined') {
+    window.addEventListener('resize', computeTotals, { passive: true });
+  }
+})();
+</script>
+</div>
+
+<div class="nr-key-section" data-nr-section="22" style="page-break-before: always;">
+<section id="report-header">
+    <div id="header-row">
+      <div id="header-left">
+        <table>
+          <tr>
+            <td class="label">Plant name</td>
+            <td>: SSR AQUA</td>
+          </tr>
+          <tr>
+            <td class="label">Location</td>
+            <td>: Gudivada</td>
+          </tr>
+          <tr>
+            <td class="label">Print Date</td>
+            <td>: 23/10/2025</td>
+          </tr>
+        </table>
+      </div>
+      <div id="header-right">
+        <table>
+          <tr>
+            <td class="label">From Date</td>
+            <td>: 31/05/2025 00:00    To 15/10/2025 23:59</td>
+          </tr>
+          <tr>
+            <td class="label">Recipe code</td>
+            <td>: T_P_1_6MM</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+    <div id="title-wrap">
+      <h1>Consumption report</h1>
+    </div>
+  </section>
+
+  <table id="data-table">
+    <colgroup>
+      <col class="slno" />
+      <col class="material" />
+      <col class="set" />
+      <col class="ach" />
+      <col class="errkg" />
+      <col class="errpct" />
+    </colgroup>
+    <thead>
+      <tr>
+        <th data-label="sl_no">Sl. No.</th>
+        <th data-label="material_name">Material name</th>
+        <th data-label="set_wt_kg">Set. wt(Kg)</th>
+        <th data-label="ach_wt_kg">Ach. wt(Kg)</th>
+        <th data-label="error_kg">Error(Kg)</th>
+        <th data-label="error_pct">Error %</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- BEGIN:BATCH (auto) --><tr>
+        <td class="ta-center">2</td>
+        <td>B RICE</td>
+        <td class="ta-right">550</td>
+        <td class="ta-right">514</td>
+        <td class="ta-right">-36</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">3</td>
+        <td>GNDOC</td>
+        <td class="ta-right">550</td>
+        <td class="ta-right">506</td>
+        <td class="ta-right">-44</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">4</td>
+        <td>MAIDA</td>
+        <td class="ta-right">975</td>
+        <td class="ta-right">937</td>
+        <td class="ta-right">-38</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">5</td>
+        <td>R BRAWN</td>
+        <td class="ta-right">1650</td>
+        <td class="ta-right">1586</td>
+        <td class="ta-right">-64</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">6</td>
+        <td>RECYCLE P</td>
+        <td class="ta-right">390</td>
+        <td class="ta-right">382</td>
+        <td class="ta-right">-8</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">7</td>
+        <td>RG 60%</td>
+        <td class="ta-right">675</td>
+        <td class="ta-right">628</td>
+        <td class="ta-right">-47</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">8</td>
+        <td>SOYA</td>
+        <td class="ta-right">4650</td>
+        <td class="ta-right">4558</td>
+        <td class="ta-right">-92</td>
+        <td class="ta-right">0.00</td>
+      </tr><!-- END:BATCH (auto) -->
+    </tbody>
+    <tfoot id="report-totals">
+      <tr>
+        <td colspan="2" class="ta-center">Total</td>
+        <td class="ta-right">9440</td>
+        <td class="ta-right">9111</td>
+        <td class="ta-right">-329</td>
+        <td class="ta-right">0</td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <footer>
+    <div>Indian Industrial Machines Pvt. Ltd.</div>
+    <div>Page <span class="nr-page-number" data-nr-counter="page" aria-label="Current page number"></span> of <span class="nr-page-count" data-nr-counter="pages" aria-label="Total page count"></span></div>
+  </footer>
+
+<script id="nr-page-counter-script">
+(function() {
+  const METRICS = {"page_width_mm": 210.0, "page_height_mm": 297.0, "margin_top_mm": 14.0, "margin_bottom_mm": 14.0};
+  const PX_PER_MM = 96 / 25.4;
+
+  function computeTotals() {
+    try {
+      const doc = document.documentElement;
+      const body = document.body;
+      if (!doc || !body) return;
+      const usableHeightMm = Math.max(METRICS.page_height_mm - (METRICS.margin_top_mm + METRICS.margin_bottom_mm), 0.1);
+      const usableHeightPx = usableHeightMm * PX_PER_MM;
+      const contentHeight = Math.max(
+        body.scrollHeight,
+        body.offsetHeight,
+        doc.scrollHeight,
+        doc.offsetHeight
+      );
+      const totalPages = Math.max(1, Math.ceil(contentHeight / usableHeightPx));
+      const totalAsString = String(totalPages);
+      doc.setAttribute('data-nr-total-pages', totalAsString);
+      const countNodes = document.querySelectorAll('[data-nr-counter="pages"]');
+      countNodes.forEach((node) => {
+        node.setAttribute('data-nr-screen', totalAsString);
+        node.setAttribute('data-nr-total-pages', totalAsString);
+      });
+      const pageNodes = document.querySelectorAll('[data-nr-counter="page"]');
+      pageNodes.forEach((node) => {
+        if (!node.getAttribute('data-nr-screen')) {
+          node.setAttribute('data-nr-screen', '1');
+        }
+      });
+    } catch (err) {
+      if (typeof console !== 'undefined' && console.warn) {
+        console.warn('nr-page-counter: unable to compute preview counters', err);
+      }
+    }
+  }
+
+  function scheduleCompute() {
+    computeTotals();
+    setTimeout(computeTotals, 180);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      scheduleCompute();
+    }, { once: true });
+  } else {
+    scheduleCompute();
+  }
+
+  if (typeof window !== 'undefined') {
+    window.addEventListener('resize', computeTotals, { passive: true });
+  }
+})();
+</script>
+</div>
+
+<div class="nr-key-section" data-nr-section="23" style="page-break-before: always;">
+<section id="report-header">
+    <div id="header-row">
+      <div id="header-left">
+        <table>
+          <tr>
+            <td class="label">Plant name</td>
+            <td>: SSR AQUA</td>
+          </tr>
+          <tr>
+            <td class="label">Location</td>
+            <td>: Gudivada</td>
+          </tr>
+          <tr>
+            <td class="label">Print Date</td>
+            <td>: 23/10/2025</td>
+          </tr>
+        </table>
+      </div>
+      <div id="header-right">
+        <table>
+          <tr>
+            <td class="label">From Date</td>
+            <td>: 31/05/2025 00:00    To 15/10/2025 23:59</td>
+          </tr>
+          <tr>
+            <td class="label">Recipe code</td>
+            <td>: fluto_28p</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+    <div id="title-wrap">
+      <h1>Consumption report</h1>
+    </div>
+  </section>
+
+  <table id="data-table">
+    <colgroup>
+      <col class="slno" />
+      <col class="material" />
+      <col class="set" />
+      <col class="ach" />
+      <col class="errkg" />
+      <col class="errpct" />
+    </colgroup>
+    <thead>
+      <tr>
+        <th data-label="sl_no">Sl. No.</th>
+        <th data-label="material_name">Material name</th>
+        <th data-label="set_wt_kg">Set. wt(Kg)</th>
+        <th data-label="ach_wt_kg">Ach. wt(Kg)</th>
+        <th data-label="error_kg">Error(Kg)</th>
+        <th data-label="error_pct">Error %</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- BEGIN:BATCH (auto) --><tr>
+        <td class="ta-center">2</td>
+        <td>B RICE</td>
+        <td class="ta-right">1320</td>
+        <td class="ta-right">1343</td>
+        <td class="ta-right">23</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">3</td>
+        <td>DOB</td>
+        <td class="ta-right">4900</td>
+        <td class="ta-right">4901</td>
+        <td class="ta-right">1</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">4</td>
+        <td>F-RECYCLE</td>
+        <td class="ta-right">200</td>
+        <td class="ta-right">196</td>
+        <td class="ta-right">-4</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">5</td>
+        <td>FISH MEAL</td>
+        <td class="ta-right">200</td>
+        <td class="ta-right">193</td>
+        <td class="ta-right">-7</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">6</td>
+        <td>GNDOC</td>
+        <td class="ta-right">980</td>
+        <td class="ta-right">1006</td>
+        <td class="ta-right">26</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">7</td>
+        <td>M CORN</td>
+        <td class="ta-right">500</td>
+        <td class="ta-right">504</td>
+        <td class="ta-right">4</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">8</td>
+        <td>MAIDA</td>
+        <td class="ta-right">200</td>
+        <td class="ta-right">195</td>
+        <td class="ta-right">-5</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">9</td>
+        <td>MDOC</td>
+        <td class="ta-right">400</td>
+        <td class="ta-right">400</td>
+        <td class="ta-right">0</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">10</td>
+        <td>RG 45%</td>
+        <td class="ta-right">1800</td>
+        <td class="ta-right">1765</td>
+        <td class="ta-right">-35</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">11</td>
+        <td>SOYA</td>
+        <td class="ta-right">1020</td>
+        <td class="ta-right">1015</td>
+        <td class="ta-right">-5</td>
+        <td class="ta-right">0.00</td>
+      </tr><!-- END:BATCH (auto) -->
+    </tbody>
+    <tfoot id="report-totals">
+      <tr>
+        <td colspan="2" class="ta-center">Total</td>
+        <td class="ta-right">11520</td>
+        <td class="ta-right">11518</td>
+        <td class="ta-right">-2</td>
+        <td class="ta-right">0</td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <footer>
+    <div>Indian Industrial Machines Pvt. Ltd.</div>
+    <div>Page <span class="nr-page-number" data-nr-counter="page" aria-label="Current page number"></span> of <span class="nr-page-count" data-nr-counter="pages" aria-label="Total page count"></span></div>
+  </footer>
+
+<script id="nr-page-counter-script">
+(function() {
+  const METRICS = {"page_width_mm": 210.0, "page_height_mm": 297.0, "margin_top_mm": 14.0, "margin_bottom_mm": 14.0};
+  const PX_PER_MM = 96 / 25.4;
+
+  function computeTotals() {
+    try {
+      const doc = document.documentElement;
+      const body = document.body;
+      if (!doc || !body) return;
+      const usableHeightMm = Math.max(METRICS.page_height_mm - (METRICS.margin_top_mm + METRICS.margin_bottom_mm), 0.1);
+      const usableHeightPx = usableHeightMm * PX_PER_MM;
+      const contentHeight = Math.max(
+        body.scrollHeight,
+        body.offsetHeight,
+        doc.scrollHeight,
+        doc.offsetHeight
+      );
+      const totalPages = Math.max(1, Math.ceil(contentHeight / usableHeightPx));
+      const totalAsString = String(totalPages);
+      doc.setAttribute('data-nr-total-pages', totalAsString);
+      const countNodes = document.querySelectorAll('[data-nr-counter="pages"]');
+      countNodes.forEach((node) => {
+        node.setAttribute('data-nr-screen', totalAsString);
+        node.setAttribute('data-nr-total-pages', totalAsString);
+      });
+      const pageNodes = document.querySelectorAll('[data-nr-counter="page"]');
+      pageNodes.forEach((node) => {
+        if (!node.getAttribute('data-nr-screen')) {
+          node.setAttribute('data-nr-screen', '1');
+        }
+      });
+    } catch (err) {
+      if (typeof console !== 'undefined' && console.warn) {
+        console.warn('nr-page-counter: unable to compute preview counters', err);
+      }
+    }
+  }
+
+  function scheduleCompute() {
+    computeTotals();
+    setTimeout(computeTotals, 180);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      scheduleCompute();
+    }, { once: true });
+  } else {
+    scheduleCompute();
+  }
+
+  if (typeof window !== 'undefined') {
+    window.addEventListener('resize', computeTotals, { passive: true });
+  }
+})();
+</script>
+</div>
+
+<div class="nr-key-section" data-nr-section="24" style="page-break-before: always;">
+<section id="report-header">
+    <div id="header-row">
+      <div id="header-left">
+        <table>
+          <tr>
+            <td class="label">Plant name</td>
+            <td>: SSR AQUA</td>
+          </tr>
+          <tr>
+            <td class="label">Location</td>
+            <td>: Gudivada</td>
+          </tr>
+          <tr>
+            <td class="label">Print Date</td>
+            <td>: 23/10/2025</td>
+          </tr>
+        </table>
+      </div>
+      <div id="header-right">
+        <table>
+          <tr>
+            <td class="label">From Date</td>
+            <td>: 31/05/2025 00:00    To 15/10/2025 23:59</td>
+          </tr>
+          <tr>
+            <td class="label">Recipe code</td>
+            <td>: koramenu</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+    <div id="title-wrap">
+      <h1>Consumption report</h1>
+    </div>
+  </section>
+
+  <table id="data-table">
+    <colgroup>
+      <col class="slno" />
+      <col class="material" />
+      <col class="set" />
+      <col class="ach" />
+      <col class="errkg" />
+      <col class="errpct" />
+    </colgroup>
+    <thead>
+      <tr>
+        <th data-label="sl_no">Sl. No.</th>
+        <th data-label="material_name">Material name</th>
+        <th data-label="set_wt_kg">Set. wt(Kg)</th>
+        <th data-label="ach_wt_kg">Ach. wt(Kg)</th>
+        <th data-label="error_kg">Error(Kg)</th>
+        <th data-label="error_pct">Error %</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- BEGIN:BATCH (auto) --><tr>
+        <td class="ta-center">2</td>
+        <td>FISH MEAL</td>
+        <td class="ta-right">400</td>
+        <td class="ta-right">389</td>
+        <td class="ta-right">-11</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">3</td>
+        <td>MAIDA</td>
+        <td class="ta-right">900</td>
+        <td class="ta-right">895</td>
+        <td class="ta-right">-5</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">4</td>
+        <td>RG 60%</td>
+        <td class="ta-right">500</td>
+        <td class="ta-right">496</td>
+        <td class="ta-right">-4</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">5</td>
+        <td>SOYA</td>
+        <td class="ta-right">1200</td>
+        <td class="ta-right">1197</td>
+        <td class="ta-right">-3</td>
+        <td class="ta-right">0.00</td>
+      </tr><!-- END:BATCH (auto) -->
+    </tbody>
+    <tfoot id="report-totals">
+      <tr>
+        <td colspan="2" class="ta-center">Total</td>
+        <td class="ta-right">3000</td>
+        <td class="ta-right">2977</td>
+        <td class="ta-right">-23</td>
+        <td class="ta-right">0</td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <footer>
+    <div>Indian Industrial Machines Pvt. Ltd.</div>
+    <div>Page <span class="nr-page-number" data-nr-counter="page" aria-label="Current page number"></span> of <span class="nr-page-count" data-nr-counter="pages" aria-label="Total page count"></span></div>
+  </footer>
+
+<script id="nr-page-counter-script">
+(function() {
+  const METRICS = {"page_width_mm": 210.0, "page_height_mm": 297.0, "margin_top_mm": 14.0, "margin_bottom_mm": 14.0};
+  const PX_PER_MM = 96 / 25.4;
+
+  function computeTotals() {
+    try {
+      const doc = document.documentElement;
+      const body = document.body;
+      if (!doc || !body) return;
+      const usableHeightMm = Math.max(METRICS.page_height_mm - (METRICS.margin_top_mm + METRICS.margin_bottom_mm), 0.1);
+      const usableHeightPx = usableHeightMm * PX_PER_MM;
+      const contentHeight = Math.max(
+        body.scrollHeight,
+        body.offsetHeight,
+        doc.scrollHeight,
+        doc.offsetHeight
+      );
+      const totalPages = Math.max(1, Math.ceil(contentHeight / usableHeightPx));
+      const totalAsString = String(totalPages);
+      doc.setAttribute('data-nr-total-pages', totalAsString);
+      const countNodes = document.querySelectorAll('[data-nr-counter="pages"]');
+      countNodes.forEach((node) => {
+        node.setAttribute('data-nr-screen', totalAsString);
+        node.setAttribute('data-nr-total-pages', totalAsString);
+      });
+      const pageNodes = document.querySelectorAll('[data-nr-counter="page"]');
+      pageNodes.forEach((node) => {
+        if (!node.getAttribute('data-nr-screen')) {
+          node.setAttribute('data-nr-screen', '1');
+        }
+      });
+    } catch (err) {
+      if (typeof console !== 'undefined' && console.warn) {
+        console.warn('nr-page-counter: unable to compute preview counters', err);
+      }
+    }
+  }
+
+  function scheduleCompute() {
+    computeTotals();
+    setTimeout(computeTotals, 180);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      scheduleCompute();
+    }, { once: true });
+  } else {
+    scheduleCompute();
+  }
+
+  if (typeof window !== 'undefined') {
+    window.addEventListener('resize', computeTotals, { passive: true });
+  }
+})();
+</script>
+</div>
+
+<div class="nr-key-section" data-nr-section="25" style="page-break-before: always;">
+<section id="report-header">
+    <div id="header-row">
+      <div id="header-left">
+        <table>
+          <tr>
+            <td class="label">Plant name</td>
+            <td>: SSR AQUA</td>
+          </tr>
+          <tr>
+            <td class="label">Location</td>
+            <td>: Gudivada</td>
+          </tr>
+          <tr>
+            <td class="label">Print Date</td>
+            <td>: 23/10/2025</td>
+          </tr>
+        </table>
+      </div>
+      <div id="header-right">
+        <table>
+          <tr>
+            <td class="label">From Date</td>
+            <td>: 31/05/2025 00:00    To 15/10/2025 23:59</td>
+          </tr>
+          <tr>
+            <td class="label">Recipe code</td>
+            <td>: thirdparty</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+    <div id="title-wrap">
+      <h1>Consumption report</h1>
+    </div>
+  </section>
+
+  <table id="data-table">
+    <colgroup>
+      <col class="slno" />
+      <col class="material" />
+      <col class="set" />
+      <col class="ach" />
+      <col class="errkg" />
+      <col class="errpct" />
+    </colgroup>
+    <thead>
+      <tr>
+        <th data-label="sl_no">Sl. No.</th>
+        <th data-label="material_name">Material name</th>
+        <th data-label="set_wt_kg">Set. wt(Kg)</th>
+        <th data-label="ach_wt_kg">Ach. wt(Kg)</th>
+        <th data-label="error_kg">Error(Kg)</th>
+        <th data-label="error_pct">Error %</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- BEGIN:BATCH (auto) --><tr>
+        <td class="ta-center">2</td>
+        <td>B RICE</td>
+        <td class="ta-right">500</td>
+        <td class="ta-right">507</td>
+        <td class="ta-right">7</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">3</td>
+        <td>GNDOC</td>
+        <td class="ta-right">750</td>
+        <td class="ta-right">736</td>
+        <td class="ta-right">-14</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">4</td>
+        <td>MAIDA</td>
+        <td class="ta-right">500</td>
+        <td class="ta-right">520</td>
+        <td class="ta-right">20</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">5</td>
+        <td>R BRAWN</td>
+        <td class="ta-right">500</td>
+        <td class="ta-right">486</td>
+        <td class="ta-right">-14</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">6</td>
+        <td>RG 45%</td>
+        <td class="ta-right">1000</td>
+        <td class="ta-right">980</td>
+        <td class="ta-right">-20</td>
+        <td class="ta-right">0.00</td>
+      </tr>
+<tr>
+        <td class="ta-center">7</td>
+        <td>new3p</td>
+        <td class="ta-right">750</td>
+        <td class="ta-right">746</td>
+        <td class="ta-right">-4</td>
+        <td class="ta-right">0.00</td>
+      </tr><!-- END:BATCH (auto) -->
+    </tbody>
+    <tfoot id="report-totals">
+      <tr>
+        <td colspan="2" class="ta-center">Total</td>
+        <td class="ta-right">4000</td>
+        <td class="ta-right">3975</td>
+        <td class="ta-right">-25</td>
+        <td class="ta-right">0</td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <footer>
+    <div>Indian Industrial Machines Pvt. Ltd.</div>
+    <div>Page <span class="nr-page-number" data-nr-counter="page" aria-label="Current page number"></span> of <span class="nr-page-count" data-nr-counter="pages" aria-label="Total page count"></span></div>
+  </footer>
+
+<script id="nr-page-counter-script">
+(function() {
+  const METRICS = {"page_width_mm": 210.0, "page_height_mm": 297.0, "margin_top_mm": 14.0, "margin_bottom_mm": 14.0};
+  const PX_PER_MM = 96 / 25.4;
+
+  function computeTotals() {
+    try {
+      const doc = document.documentElement;
+      const body = document.body;
+      if (!doc || !body) return;
+      const usableHeightMm = Math.max(METRICS.page_height_mm - (METRICS.margin_top_mm + METRICS.margin_bottom_mm), 0.1);
+      const usableHeightPx = usableHeightMm * PX_PER_MM;
+      const contentHeight = Math.max(
+        body.scrollHeight,
+        body.offsetHeight,
+        doc.scrollHeight,
+        doc.offsetHeight
+      );
+      const totalPages = Math.max(1, Math.ceil(contentHeight / usableHeightPx));
+      const totalAsString = String(totalPages);
+      doc.setAttribute('data-nr-total-pages', totalAsString);
+      const countNodes = document.querySelectorAll('[data-nr-counter="pages"]');
+      countNodes.forEach((node) => {
+        node.setAttribute('data-nr-screen', totalAsString);
+        node.setAttribute('data-nr-total-pages', totalAsString);
+      });
+      const pageNodes = document.querySelectorAll('[data-nr-counter="page"]');
+      pageNodes.forEach((node) => {
+        if (!node.getAttribute('data-nr-screen')) {
+          node.setAttribute('data-nr-screen', '1');
+        }
+      });
+    } catch (err) {
+      if (typeof console !== 'undefined' && console.warn) {
+        console.warn('nr-page-counter: unable to compute preview counters', err);
+      }
+    }
+  }
+
+  function scheduleCompute() {
+    computeTotals();
+    setTimeout(computeTotals, 180);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      scheduleCompute();
+    }, { once: true });
+  } else {
+    scheduleCompute();
+  }
+
+  if (typeof window !== 'undefined') {
+    window.addEventListener('resize', computeTotals, { passive: true });
+  }
+})();
+</script>
+</div>
+</body>
+</html>

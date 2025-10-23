@@ -1035,7 +1035,7 @@
         "generator_assets_url": "/uploads/84024e2b-9a61-4e19-b1b7-420019d891ef/generator/generator_assets.json",
         "mapping_keys_url": "/uploads/84024e2b-9a61-4e19-b1b7-420019d891ef/mapping_keys.json"
       },
-      "updated_at": "2025-10-23T04:33:24+00:00",
+      "updated_at": "2025-10-23T05:09:08+00:00",
       "created_at": "2025-10-22T21:10:06+00:00",
       "tags": [],
       "last_connection_id": "4b38fc3a-1f06-40f3-bc5e-50c9ea5a1e74",
@@ -1064,12 +1064,12 @@
         "summary": {},
         "updated_at": "2025-10-22T21:25:19+00:00"
       },
-      "last_run_at": "2025-10-23T04:33:24+00:00"
+      "last_run_at": "2025-10-23T05:09:08+00:00"
     }
   },
   "last_used": {
     "connection_id": "4b38fc3a-1f06-40f3-bc5e-50c9ea5a1e74",
     "template_id": "84024e2b-9a61-4e19-b1b7-420019d891ef",
-    "updated_at": "2025-10-23T04:33:24+00:00"
+    "updated_at": "2025-10-23T05:09:08+00:00"
   }
 }

@@ -95,7 +95,7 @@ function AppHeader() {
                 <Typography
                   component="span"
                   sx={{
-                    fontFamily: "'Oxanium', 'Poppins', 'Segoe UI', 'Inter', sans-serif",
+                    fontFamily: 'var(--font-brand, "Oxanium", "Outfit", "Segoe UI", sans-serif)',
                     fontWeight: 700,
                     fontSize: 34,
                     letterSpacing: '0.06em',
@@ -128,7 +128,7 @@ function AppHeader() {
               sx={{
                 fontWeight: 700,
                 letterSpacing: '0.05em',
-                fontFamily: "'Oxanium', 'Poppins', 'Segoe UI', 'Inter', sans-serif",
+                fontFamily: 'var(--font-brand, "Oxanium", "Outfit", "Segoe UI", sans-serif)',
                 display: 'inline-flex',
                 alignItems: 'baseline',
               }}

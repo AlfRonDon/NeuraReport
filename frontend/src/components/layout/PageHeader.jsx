@@ -26,7 +26,14 @@ function renderCrumb(crumb, index) {
         color="text.secondary"
         href={href}
         onClick={onClick}
-        sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}
+        sx={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 0.5,
+          fontFamily: 'var(--font-secondary, "Work Sans", "Segoe UI", "Helvetica Neue", Arial, sans-serif)',
+          fontSize: 'inherit',
+          letterSpacing: '-0.005em',
+        }}
       >
         {leading}
         <span>{label}</span>
@@ -38,7 +45,13 @@ function renderCrumb(crumb, index) {
       key={`${label || index}-${index}`}
       variant="body2"
       color="text.secondary"
-      sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}
+      sx={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 0.5,
+        fontFamily: 'var(--font-secondary, "Work Sans", "Segoe UI", "Helvetica Neue", Arial, sans-serif)',
+        letterSpacing: '-0.005em',
+      }}
     >
       {leading}
       <span>{label}</span>
@@ -87,7 +100,7 @@ const PageHeader = forwardRef(function PageHeader(
           <Breadcrumbs
             aria-label="breadcrumb"
             separator="/"
-            sx={{ fontSize: 13, color: 'text.secondary' }}
+            sx={{ fontSize: '0.9rem', color: 'text.secondary', letterSpacing: '-0.005em' }}
           >
             {crumbs.map((crumb, index) => renderCrumb(crumb, index))}
           </Breadcrumbs>

@@ -21,9 +21,16 @@ const grey = {
   900: '#1F2433',
 }
 
+const fontFamilyUi = '"Outfit", "Segoe UI", "Helvetica Neue", Arial, sans-serif'
+const fontFamilySecondary = '"Work Sans", "Segoe UI", "Helvetica Neue", Arial, sans-serif'
+const fontFamilyBrand = '"Oxanium", "Outfit", "Segoe UI", sans-serif'
+
 const borderColor = alpha(grey[300], 0.9)
 const focusShadow = `0 0 0 3px ${alpha(primaryMain, 0.24)}`
 const subtleGradient = 'linear-gradient(180deg, rgba(79,70,229,0.05) 0%, rgba(14,165,233,0.04) 24%, rgba(255,255,255,0) 70%)'
+const secondaryTextTone = alpha(grey[700], 0.88)
+const helperTextTone = alpha(grey[700], 0.72)
+const captionTextTone = alpha(grey[600], 0.82)
 
 const theme = createTheme({
   palette: {
@@ -62,79 +69,92 @@ const theme = createTheme({
   },
   spacing: 8,
   typography: {
-    fontFamily: '"Inter", "Roboto", "Segoe UI", "Helvetica Neue", Arial, sans-serif',
+    fontFamily: fontFamilyUi,
+    fontWeightRegular: 400,
+    fontWeightMedium: 500,
+    fontWeightSemibold: 600,
+    fontWeightBold: 600,
     h1: {
       fontSize: '2.375rem',
-      fontWeight: 700,
+      fontWeight: 600,
       letterSpacing: '-0.02em',
-      lineHeight: 1.2,
+      lineHeight: 1.18,
     },
     h2: {
       fontSize: '1.875rem',
-      fontWeight: 700,
+      fontWeight: 600,
       letterSpacing: '-0.015em',
-      lineHeight: 1.25,
+      lineHeight: 1.22,
     },
     h3: {
       fontSize: '1.5rem',
-      fontWeight: 700,
+      fontWeight: 600,
       letterSpacing: '-0.01em',
-      lineHeight: 1.3,
+      lineHeight: 1.26,
     },
     h4: {
       fontSize: '1.25rem',
-      fontWeight: 600,
+      fontWeight: 500,
       letterSpacing: '-0.01em',
-      lineHeight: 1.3,
+      lineHeight: 1.28,
     },
     h5: {
       fontSize: '1.125rem',
-      fontWeight: 600,
-      lineHeight: 1.35,
+      fontWeight: 500,
+      letterSpacing: '-0.005em',
+      lineHeight: 1.3,
     },
     h6: {
       fontSize: '1rem',
-      fontWeight: 600,
-      lineHeight: 1.35,
+      fontWeight: 500,
+      letterSpacing: '-0.005em',
+      lineHeight: 1.32,
     },
     subtitle1: {
-      fontSize: '0.95rem',
-      fontWeight: 600,
+      fontSize: '1rem',
+      fontWeight: 500,
       lineHeight: 1.45,
-      color: grey[700],
+      color: secondaryTextTone,
     },
     subtitle2: {
-      fontSize: '0.85rem',
-      fontWeight: 600,
-      lineHeight: 1.35,
-      color: grey[600],
+      fontSize: '0.9rem',
+      fontWeight: 500,
+      lineHeight: 1.4,
+      fontFamily: fontFamilyUi,
+      color: secondaryTextTone,
     },
     body1: {
       fontSize: '0.95rem',
+      fontWeight: 400,
       lineHeight: 1.6,
       color: grey[700],
     },
     body2: {
-      fontSize: '0.875rem',
+      fontSize: '0.9rem',
+      fontWeight: 400,
       lineHeight: 1.55,
-      color: grey[600],
+      fontFamily: fontFamilySecondary,
+      color: helperTextTone,
     },
     caption: {
-      fontSize: '0.75rem',
-      lineHeight: 1.4,
-      letterSpacing: '0.02em',
-      color: grey[500],
+      fontSize: '0.78rem',
+      lineHeight: 1.45,
+      letterSpacing: '0.015em',
+      fontFamily: fontFamilySecondary,
+      color: captionTextTone,
     },
     button: {
+      fontFamily: fontFamilyUi,
       fontWeight: 600,
-      letterSpacing: '-0.005em',
+      letterSpacing: '-0.01em',
     },
     overline: {
       fontSize: '0.75rem',
-      fontWeight: 600,
-      letterSpacing: '0.18em',
+      fontWeight: 500,
+      letterSpacing: '0.16em',
       textTransform: 'uppercase',
-      color: grey[500],
+      fontFamily: fontFamilySecondary,
+      color: helperTextTone,
     },
   },
   components: {
@@ -142,6 +162,9 @@ const theme = createTheme({
       styleOverrides: {
         ':root': {
           colorScheme: 'light',
+          '--font-ui': fontFamilyUi,
+          '--font-secondary': fontFamilySecondary,
+          '--font-brand': fontFamilyBrand,
         },
         body: {
           backgroundColor: grey[50],
@@ -152,6 +175,7 @@ const theme = createTheme({
           textRendering: 'optimizeLegibility',
           WebkitFontSmoothing: 'antialiased',
           MozOsxFontSmoothing: 'grayscale',
+          fontFamily: fontFamilyUi,
         },
         '#root': {
           minHeight: '100vh',
@@ -299,8 +323,9 @@ const theme = createTheme({
         root: {
           textTransform: 'none',
           borderRadius: 10,
+          fontFamily: fontFamilyUi,
           fontWeight: 600,
-          letterSpacing: '-0.005em',
+          letterSpacing: '-0.01em',
           paddingInline: 18,
           paddingBlock: 10,
           '&:focus-visible': {
@@ -347,6 +372,8 @@ const theme = createTheme({
         root: {
           borderRadius: 12,
           fontWeight: 500,
+          fontFamily: fontFamilyUi,
+          letterSpacing: '-0.005em',
         },
         sizeSmall: {
           height: 24,
@@ -356,6 +383,7 @@ const theme = createTheme({
     MuiInputLabel: {
       styleOverrides: {
         root: {
+          fontFamily: fontFamilyUi,
           fontWeight: 500,
           letterSpacing: '-0.005em',
         },
@@ -382,6 +410,8 @@ const theme = createTheme({
           },
         },
         input: {
+          fontFamily: fontFamilyUi,
+          letterSpacing: '-0.005em',
           paddingBlock: 10,
         },
       },
@@ -389,7 +419,30 @@ const theme = createTheme({
     MuiFormLabel: {
       styleOverrides: {
         root: {
+          fontFamily: fontFamilyUi,
           letterSpacing: '-0.005em',
+        },
+      },
+    },
+    MuiFormHelperText: {
+      styleOverrides: {
+        root: {
+          marginTop: 6,
+          fontSize: '0.82rem',
+          lineHeight: 1.4,
+          fontFamily: fontFamilySecondary,
+          color: helperTextTone,
+        },
+      },
+    },
+    MuiTooltip: {
+      styleOverrides: {
+        tooltip: {
+          fontFamily: fontFamilySecondary,
+          fontSize: '0.85rem',
+          lineHeight: 1.4,
+          letterSpacing: '0',
+          padding: '8px 12px',
         },
       },
     },
@@ -418,8 +471,9 @@ const theme = createTheme({
       styleOverrides: {
         root: {
           textTransform: 'none',
+          fontFamily: fontFamilyUi,
           fontWeight: 600,
-          letterSpacing: '-0.005em',
+          letterSpacing: '-0.01em',
           minWidth: 'auto',
         },
       },
@@ -427,6 +481,7 @@ const theme = createTheme({
     MuiListItemButton: {
       styleOverrides: {
         root: {
+          fontFamily: fontFamilyUi,
           borderRadius: 8,
           '&.Mui-selected': {
             backgroundColor: alpha(primaryMain, 0.12),
@@ -459,6 +514,7 @@ const theme = createTheme({
         root: {
           borderRadius: 10,
           alignItems: 'flex-start',
+          fontFamily: fontFamilyUi,
           '& .MuiAlert-icon': {
             marginTop: 4,
           },
@@ -483,6 +539,7 @@ const theme = createTheme({
     MuiStepLabel: {
       styleOverrides: {
         label: {
+          fontFamily: fontFamilyUi,
           fontWeight: 600,
           letterSpacing: '-0.01em',
           '&.Mui-active': {
@@ -497,7 +554,9 @@ const theme = createTheme({
     MuiLink: {
       styleOverrides: {
         root: {
+          fontFamily: fontFamilyUi,
           fontWeight: 500,
+          letterSpacing: '-0.005em',
           '&:focus-visible': {
             outline: 'none',
             boxShadow: focusShadow,

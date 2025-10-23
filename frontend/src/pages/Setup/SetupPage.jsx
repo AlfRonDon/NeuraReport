@@ -88,8 +88,8 @@ export default function SetupPage() {
     ],
     generate: [
       'Drop in a PDF or Excel template, keep the intended data source selected, then hit Verify Template to generate the photocopy preview.',
-      'Open Review Mapping, work through each token, inspect its requirements, bind it to the appropriate mapping in the dropdown, and provide SQL expressions if needed.',
-      'Before approval, supply correction notes in the Preview dialog and verify the template looks right. Then provide narrative instructions if prompted and run Approve Template.',
+      'Open Review Mapping, work through each token, inspect its requirements, bind it to the appropriate mapping in the dropdown, and provide SQL expressions.',
+      'Before approval, supply correction notes in the Preview dialog and verify the template looks right. Then provide narrative instructions and Approve Template.',
     ],
     templates: [
       'Choose one or more approved templates and, if needed, filter them by tags or name.',
