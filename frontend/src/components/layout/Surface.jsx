@@ -1,3 +1,4 @@
+import { forwardRef } from 'react'
 import Paper from '@mui/material/Paper'
 
 const baseSx = {
@@ -11,11 +12,16 @@ const baseSx = {
   minWidth: 0,
 }
 
-export default function Surface({ children, sx = [], ...props }) {
+const Surface = forwardRef(function Surface(
+  { children, sx = [], variant = 'outlined', elevation = 0, ...props },
+  ref,
+) {
   const sxArray = Array.isArray(sx) ? sx : [sx]
   return (
     <Paper
-      variant="outlined"
+      ref={ref}
+      variant={variant}
+      elevation={elevation}
       {...props}
       sx={[
         baseSx,
@@ -25,4 +31,6 @@ export default function Surface({ children, sx = [], ...props }) {
       {children}
     </Paper>
   )
-}
+})
+
+export default Surface

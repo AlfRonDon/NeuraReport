@@ -38,8 +38,12 @@ import ContentCopyIcon from '@mui/icons-material/ContentCopy'
 import ConfirmDialog from '../../components/ConfirmDialog.jsx'
 import { useToast } from '../../components/ToastProvider.jsx'
 import HeartbeatBadge from '../../components/HeartbeatBadge.jsx'
-import PanelCompact from '../../components/PanelCompact.jsx'
+import Surface from '../../components/layout/Surface.jsx'
+import SectionHeader from '../../components/layout/SectionHeader.jsx'
+import EmptyState from '../../components/feedback/EmptyState.jsx'
+import FormErrorSummary from '../../components/form/FormErrorSummary.jsx'
 import { savePersistedCache } from '../../hooks/useBootstrapState.js'
+import useFormErrorFocus from '../../hooks/useFormErrorFocus.js'
 const sanitizeDbType = (value) => (typeof value === 'string' ? value.trim().toLowerCase() : '')
 const trimString = (value) => (typeof value === 'string' ? value.trim() : '')
 const formatHostPort = (host, port) => {
@@ -167,6 +171,28 @@ const DEFAULT_FORM_VALUES = {
 
 const CONTROL_HEIGHT = 44
 const CONTROL_RADIUS = 12
+
+const FORM_FIELD_ORDER = [
+  'name',
+  'db_type',
+  'host',
+  'port',
+  'db_name',
+  'username',
+  'password',
+  'ssl',
+]
+
+const FORM_FIELD_LABELS = {
+  name: 'Connection name',
+  db_type: 'Database type',
+  host: 'Host',
+  port: 'Port',
+  db_name: 'Database',
+  username: 'Username',
+  password: 'Password',
+  ssl: 'Use SSL',
+}
 
 const dbTypeToggleGroupSx = (theme) => ({
   marginTop: theme.spacing(1),
@@ -1067,7 +1093,7 @@ export default function ConnectDB() {
 const {
   register,
   handleSubmit,
-  formState: { errors },
+  formState: { errors, isSubmitted, submitCount },
   watch,
   reset,
   setValue,
@@ -1075,6 +1101,7 @@ const {
   getValues,
   setError,
   clearErrors,
+  setFocus,
 } = useForm({
     mode: 'onChange',
     resolver: yupResolver(schema),
@@ -1173,11 +1200,13 @@ const portValue = watch('port')
 
 
 
-  const hostHelperText = errors.host?.message || (isSQLite ? 'Not required for SQLite' : ' ')
+  const hostHelperText = errors.host?.message || (isSQLite ? 'Host not required for SQLite file connections' : 'Enter the database host or IP address.')
   const portHelperText = errors.port?.message
-    || (isSQLite ? 'Not required for SQLite' : (activeDbConfig?.defaultPort ? `Default ${activeDbConfig.defaultPort}` : ' '))
-  const usernameHelperText = errors.username?.message || (isSQLite ? 'Not required for SQLite' : ' ')
-  const passwordHelperText = errors.password?.message || (isSQLite ? 'Not required for SQLite' : ' ')
+    || (isSQLite
+      ? 'Port not required for SQLite'
+      : (activeDbConfig?.defaultPort ? `Defaults to ${activeDbConfig.defaultPort}` : 'Enter the TCP port for the database service.'))
+  const usernameHelperText = errors.username?.message || (isSQLite ? 'Username not required for SQLite' : 'Provide the database user with read access.')
+  const passwordHelperText = errors.password?.message || (isSQLite ? 'Password not required for SQLite' : 'Provide the password for the database user.')
   const portPlaceholder = !isSQLite && activeDbConfig?.defaultPort ? String(activeDbConfig.defaultPort) : ''
   const sharedFieldSx = {
     '& .MuiOutlinedInput-root': {
@@ -1229,6 +1258,23 @@ const portValue = watch('port')
       }
     }
   }, [nameValue, checkDuplicateName, errors.name?.type, setError, clearErrors])
+
+  useFormErrorFocus(
+    { errors, isSubmitted, submitCount },
+    setFocus,
+    FORM_FIELD_ORDER,
+  )
+
+  const showErrorSummary = (isSubmitted || submitCount > 0) && Object.keys(errors || {}).length > 0
+
+  const handleFocusErrorField = useCallback((fieldName) => {
+    if (!fieldName) return
+    try {
+      setFocus(fieldName, { shouldSelect: true })
+    } catch {
+      /* field may be controlled via Controller without direct focus target */
+    }
+  }, [setFocus])
 
 
 
@@ -1680,13 +1726,54 @@ const lastHeartbeatLabel = useMemo(() => {
 
   return (
     <Stack spacing={3}>
-      <PanelCompact sx={{ p: { xs: 2.5, md: 3 }, display: 'flex', flexDirection: 'column', gap: 2 }}>
-        <Typography variant="h6">Connect Database</Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-          Connected sources feed both PDF and Excel template pipelines.
-        </Typography>
+      <Surface
+        component="section"
+        aria-labelledby="connect-db-heading"
+        sx={{ p: { xs: 2.5, md: 3 }, display: 'flex', flexDirection: 'column', gap: 2.5 }}
+      >
+        <SectionHeader
+          id="connect-db-heading"
+          eyebrow="Step 1"
+          title="Connect Database"
+          subtitle="Connected sources feed both PDF and spreadsheet template pipelines."
+          action={
+            <Stack
+              direction="row"
+              alignItems="center"
+              spacing={1}
+              sx={{ flexWrap: 'wrap', justifyContent: { xs: 'flex-start', sm: 'flex-end' } }}
+            >
+              <HeartbeatBadge
+                status={hbStatus}
+                latencyMs={connection.latencyMs ?? lastLatencyMs ?? undefined}
+              />
+              {showHeartbeatChip ? (
+                <Chip
+                  label="Last heartbeat"
+                  size="small"
+                  color={heartbeatChipColor}
+                  variant={heartbeatChipColor === 'default' ? 'outlined' : 'filled'}
+                  sx={{ fontWeight: 600 }}
+                />
+              ) : null}
+              <Typography variant="caption" color="text.secondary">
+                {lastHeartbeatLabel}
+              </Typography>
+            </Stack>
+          }
+        />
 
 
+
+        <FormErrorSummary
+          errors={errors}
+          visible={showErrorSummary}
+          fieldOrder={FORM_FIELD_ORDER}
+          fieldLabels={FORM_FIELD_LABELS}
+          onFocusField={handleFocusErrorField}
+          description="Resolve the items below before testing or saving the connection."
+          sx={{ mb: 2 }}
+        />
 
         <Box component="form" onSubmit={handleSubmit(onSubmit)}>
           <Box sx={{ mb: 3 }}>
@@ -1899,56 +1986,63 @@ const lastHeartbeatLabel = useMemo(() => {
 
 
 
-        <Stack direction="row" spacing={2} alignItems="center" sx={{ flexWrap: 'wrap' }}>
-          <Button
-            variant="contained"
-            color="primary"
-            disableElevation
-            startIcon={<PlayArrowIcon />}
-            sx={{ borderRadius: 2, px: 2.5, textTransform: 'none' }}
-            type="submit"
-            disabled={mutation.isPending}
+        <Stack
+          direction={{ xs: 'column', md: 'row' }}
+          spacing={1.5}
+          alignItems={{ xs: 'stretch', md: 'center' }}
+          sx={{ flexWrap: 'wrap', rowGap: 1.5 }}
+        >
+          <Stack
+            direction="row"
+            spacing={1}
+            alignItems="center"
+            sx={{ flexWrap: 'wrap' }}
           >
-            Test Connection
-          </Button>
-          <Button
-            variant="outlined"
-            color="success"
-            type="button"
-            onClick={handleSave}
-            disabled={mutation.isPending || !canSave}
-            startIcon={<ArrowForwardIcon />}
-          >
-            Save & Continue
-          </Button>
-          <Stack direction="row" spacing={1} alignItems="center">
-            <HeartbeatBadge status={hbStatus} latencyMs={connection.latencyMs ?? lastLatencyMs ?? undefined} />
-            {showHeartbeatChip ? (
-              <Chip
-                label="Last heartbeat"
-                size="small"
-                color={heartbeatChipColor}
-                variant={heartbeatChipColor === 'default' ? 'outlined' : 'filled'}
-                sx={{ fontWeight: 600 }}
-              />
-            ) : null}
-            <Typography variant="caption" color="text.secondary">
-              {lastHeartbeatLabel}
-            </Typography>
+            <Button
+              variant="contained"
+              color="primary"
+              disableElevation
+              startIcon={<PlayArrowIcon />}
+              sx={{ borderRadius: 2, px: 2.5, textTransform: 'none' }}
+              type="submit"
+              disabled={mutation.isPending}
+            >
+              Test Connection
+            </Button>
+            <Button
+              variant="outlined"
+              color="success"
+              type="button"
+              onClick={handleSave}
+              disabled={mutation.isPending || !canSave}
+              startIcon={<ArrowForwardIcon />}
+            >
+              Save & Continue
+            </Button>
           </Stack>
-
-
-
-          {mutation.isPending && <Typography variant="body2" color="text.secondary">Testing...</Typography>}
-
-
-
-          {connection.status === 'connected' && (
-            <Chip color="success" label="Connected" size="small" onClick={() => setShowDetails(v => !v)} />
-          )}
-          {connection.status === 'failed' && (
-            <Chip color="error" label="Failed" size="small" onClick={() => setShowDetails(v => !v)} />
-          )}
+          <Stack direction="row" spacing={1} alignItems="center" sx={{ flexWrap: 'wrap' }}>
+            {mutation.isPending && (
+              <Typography variant="body2" color="text.secondary" role="status" aria-live="polite">
+                Testing connection...
+              </Typography>
+            )}
+            {connection.status === 'connected' && (
+              <Chip
+                color="success"
+                label="Connected"
+                size="small"
+                onClick={() => setShowDetails((v) => !v)}
+              />
+            )}
+            {connection.status === 'failed' && (
+              <Chip
+                color="error"
+                label="Failed"
+                size="small"
+                onClick={() => setShowDetails((v) => !v)}
+              />
+            )}
+          </Stack>
           {!isSQLite && (
             <Controller
               name="ssl"
@@ -1989,22 +2083,29 @@ const lastHeartbeatLabel = useMemo(() => {
 
 
 
-      </PanelCompact>
+      </Surface>
 
 
 
-      {savedConnections.length === 0 && (
-        <PanelCompact sx={{ textAlign: 'center', p: { xs: 2.5, md: 3 }, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1.25 }}>
-          <Typography variant="body2" color="text.secondary">No saved connections yet.</Typography>
-          <Typography variant="caption" color="text.secondary">Test and save a connection to keep it handy.</Typography>
-        </PanelCompact>
-      )}
-
-
-
-      {savedConnections.length > 0 && (
-        <PanelCompact sx={{ p: { xs: 2.5, md: 3 }, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-          <Typography variant="subtitle1">Saved Connections</Typography>
+      <Surface
+        component="section"
+        aria-labelledby="saved-connections-heading"
+        sx={{ p: { xs: 2.5, md: 3 }, display: 'flex', flexDirection: 'column', gap: 2 }}
+      >
+        <SectionHeader
+          id="saved-connections-heading"
+          eyebrow="Step 2"
+          title="Saved Connections"
+          subtitle="Tested connections stay synced for quick reuse."
+        />
+        {savedConnections.length === 0 ? (
+          <EmptyState
+            size="medium"
+            title="No saved connections yet"
+            description="Test and save a connection to reuse it across template runs."
+            sx={{ borderStyle: 'solid' }}
+          />
+        ) : (
           <Stack direction="column" spacing={2} alignItems="stretch">
             <Box
               ref={listRef}
@@ -2099,8 +2200,8 @@ const lastHeartbeatLabel = useMemo(() => {
               </List>
             </Box>
           </Stack>
-        </PanelCompact>
-      )}
+        )}
+      </Surface>
       {detailConnection && (
         <Portal>
           <Fade in={!!detailConnection} timeout={200}>
@@ -2126,7 +2227,7 @@ const lastHeartbeatLabel = useMemo(() => {
                   zIndex: 0,
                 }}
               />
-              <PanelCompact
+              <Surface
                 ref={panelRef}
                 onClick={(event) => event.stopPropagation()}
                 sx={[
@@ -2331,7 +2432,7 @@ const lastHeartbeatLabel = useMemo(() => {
                     Delete
                   </Button>
                 </Box>
-              </PanelCompact>
+              </Surface>
             </Box>
           </Fade>
         </Portal>

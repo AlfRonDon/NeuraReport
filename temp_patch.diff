@@ -1,0 +1,110 @@
+*** Begin Patch
+*** Update File: backend/app/services/reports/ReportGenerate.py
+@@
+-    if not key_values_map:
+-        key_value_groups: list[dict[str, list[str]]] = [{}]
+-    elif multi_key_selected:
+-        key_value_groups = _expand_key_value_groups(key_values_map)
+-    else:
+-        key_value_groups = [key_values_map]
+-
+-    if multi_key_selected and not __force_single:
+-        html_sections: list[str] = []
+-        tmp_outputs: list[tuple[Path, Path]] = []
+-        try:
+-            for idx, selection in enumerate(key_value_groups, start=1):
+-                tmp_html = OUT_HTML.with_name(f"{OUT_HTML.stem}__key{idx}.html")
+-                tmp_pdf = OUT_PDF.with_name(f"{OUT_PDF.stem}__key{idx}.pdf")
+-                result = fill_and_print(
+-                    OBJ=OBJ,
+-                    TEMPLATE_PATH=TEMPLATE_PATH,
+-                    DB_PATH=DB_PATH,
+-                    OUT_HTML=tmp_html,
+-                    OUT_PDF=tmp_pdf,
+-                    START_DATE=START_DATE,
+-                    END_DATE=END_DATE,
+-                    batch_ids=None,
+-                    IMAGE_CONTENTS=IMAGE_CONTENTS,
+-                    KEY_VALUES=selection or None,
+-                    GENERATOR_BUNDLE=GENERATOR_BUNDLE,
+-                    __force_single=True,
+-                )
+-                if not result.get("rows_rendered"):
+-                    print(f"Skipping key selection {selection} - no rows rendered.")
+-                    for key in ("html_path", "pdf_path"):
+-                        path = result.get(key)
+-                        if path:
+-                            with contextlib.suppress(FileNotFoundError):
+-                                Path(path).unlink()
+-                    continue
+-                html_sections.append(Path(result["html_path"]).read_text(encoding="utf-8", errors="ignore"))
+-                tmp_outputs.append((Path(result["html_path"]), Path(result["pdf_path"])))
+-
+-            if not html_sections:
+-                return {"html_path": str(OUT_HTML), "pdf_path": str(OUT_PDF), "rows_rendered": False}
+-
+-            combined_html = _combine_html_documents(html_sections)
+-            OUT_HTML.write_text(combined_html, encoding="utf-8")
+-            asyncio.run(html_to_pdf_async(OUT_HTML, OUT_PDF, TEMPLATE_PATH.parent))
+-            return {"html_path": str(OUT_HTML), "pdf_path": str(OUT_PDF), "rows_rendered": True}
+-        finally:
+-            for tmp_html_path, tmp_pdf_path in tmp_outputs:
+-                for path in (tmp_html_path, tmp_pdf_path):
+-                    try:
+-                        path.unlink()
+-                    except FileNotFoundError:
+-                        pass
++    if not key_values_map:
++        key_value_groups: list[dict[str, list[str]]] = [{}]
++    elif multi_key_selected:
++        key_value_groups = _expand_key_value_groups(key_values_map)
++    else:
++        key_value_groups = [key_values_map]
++
++    if multi_key_selected and not __force_single:
++        html_sections: list[str] = []
++        tmp_outputs: list[tuple[Path, Path]] = []
++        try:
++            for idx, selection in enumerate(key_value_groups, start=1):
++                tmp_html = OUT_HTML.with_name(f"{OUT_HTML.stem}__key{idx}.html")
++                tmp_pdf = OUT_PDF.with_name(f"{OUT_PDF.stem}__key{idx}.pdf")
++                result = fill_and_print(
++                    OBJ=OBJ,
++                    TEMPLATE_PATH=TEMPLATE_PATH,
++                    DB_PATH=DB_PATH,
++                    OUT_HTML=tmp_html,
++                    OUT_PDF=tmp_pdf,
++                    START_DATE=START_DATE,
++                    END_DATE=END_DATE,
++                    batch_ids=None,
++                    IMAGE_CONTENTS=IMAGE_CONTENTS,
++                    KEY_VALUES=selection or None,
++                    GENERATOR_BUNDLE=GENERATOR_BUNDLE,
++                    __force_single=True,
++                )
++                if result.get("rows_rendered"):
++                    html_sections.append(Path(result["html_path"]).read_text(encoding="utf-8", errors="ignore"))
++                    tmp_outputs.append((Path(result["html_path"]), Path(result["pdf_path"])))
++                else:
++                    print(f"Skipping key selection {selection} - no rows rendered.")
++                    for key in ("html_path", "pdf_path"):
++                        path = result.get(key)
++                        if path:
++                            with contextlib.suppress(FileNotFoundError):
++                                Path(path).unlink()
++
++            if not html_sections:
++                return {"html_path": str(OUT_HTML), "pdf_path": str(OUT_PDF), "rows_rendered": False}
++
++            combined_html = _combine_html_documents(html_sections)
++            OUT_HTML.write_text(combined_html, encoding="utf-8")
++            asyncio.run(html_to_pdf_async(OUT_HTML, OUT_PDF, TEMPLATE_PATH.parent))
++            return {"html_path": str(OUT_HTML), "pdf_path": str(OUT_PDF), "rows_rendered": True}
++        finally:
++            for tmp_html_path, tmp_pdf_path in tmp_outputs:
++                for path in (tmp_html_path, tmp_pdf_path):
++                    try:
++                        path.unlink()
++                    except FileNotFoundError:
++                        pass
+*** End Patch

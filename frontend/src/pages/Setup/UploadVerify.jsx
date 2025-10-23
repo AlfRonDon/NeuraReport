@@ -62,7 +62,7 @@ function withCache(src, cacheKey) {
     const url = new URL(src, base)
     url.searchParams.set('v', key)
     return url.toString()
-  } catch (err) {
+  } catch {
     const base = src.split('?')[0]
     return `${base}?v=${encodeURIComponent(key)}`
   }
@@ -258,7 +258,7 @@ export default function UploadVerify() {
           llm2: withCache(llm2Base, key),
           final: finalBase ? withCache(finalBase, key) : null,
         }))
-      } catch (err) {
+      } catch {
         if (cancelled) return
         const key = Date.now()
         setCacheKey(key)
@@ -820,7 +820,7 @@ export default function UploadVerify() {
               {file.name}
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              {(format || 'Unknown format')} • {formatFileSize(file.size)}
+              {(format || 'Unknown format')} - {formatFileSize(file.size)}
             </Typography>
           </Stack>
           <Stack direction="row" spacing={1} alignItems="center" justifyContent="flex-end">
@@ -910,33 +910,66 @@ export default function UploadVerify() {
               <Typography variant="subtitle2">Generated HTML (photocopy)</Typography>
               <Box
                 sx={{
-                  border: '1px solid',
-                  borderColor: 'divider',
-                  borderRadius: 2,
-                  overflow: 'hidden',
+                  position: 'relative',
                   aspectRatio: '210 / 297',
-                  bgcolor: 'background.paper',
-                  boxShadow: '0 16px 38px rgba(15, 23, 42, 0.08)',
+                  width: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
                 }}
               >
                 {templateIframeSrc ? (
-                  <ScaledIframePreview
-                    key={templateIframeKey}
-                    src={templateIframeSrc}
-                    title="template-preview"
-                    sx={{ width: '100%', height: '100%' }}
-                    frameAspectRatio="210 / 297"
-                    loading="eager"
-                    contentAlign="top"
-                  />
+                  <>
+                    <ScaledIframePreview
+                      key={templateIframeKey}
+                      src={templateIframeSrc}
+                      title="template-preview"
+                      frameAspectRatio="210 / 297"
+                      loading="eager"
+                      contentAlign="top"
+                      pageShadow
+                      pageRadius={18}
+                      pageBorderColor="rgba(15,23,42,0.08)"
+                      marginGuides={{ inset: 36, color: 'rgba(79,70,229,0.3)' }}
+                      sx={{ width: '100%', height: '100%' }}
+                    />
+                    {verifying && (
+                      <Box
+                        sx={{
+                          position: 'absolute',
+                          inset: 0,
+                          zIndex: 1,
+                          bgcolor: 'rgba(15,23,42,0.06)',
+                          backdropFilter: 'blur(1.5px)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          p: 2,
+                        }}
+                      >
+                        <LoadingState
+                          label="Generating preview..."
+                          description="We are re-rendering the A4 layout to match the reference PDF."
+                          inline
+                          dense
+                          color="secondary"
+                        />
+                      </Box>
+                    )}
+                  </>
                 ) : (
                   <Box
                     sx={{
                       height: '100%',
+                      width: '100%',
+                      borderRadius: 2,
+                      border: '1px dashed',
+                      borderColor: 'divider',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       px: 2,
+                      bgcolor: 'background.paper',
                     }}
                   >
                     <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center' }}>
@@ -1085,20 +1118,18 @@ export default function UploadVerify() {
 
                 <Box
                   sx={{
-                    border: '1px solid',
-                    borderColor: 'divider',
-                    borderRadius: 1,
-                    p: 1,
-                    overflowX: 'hidden',
-                    overflowY: 'auto',
-                    bgcolor: 'background.paper',
                     flexGrow: 1,
                     flexBasis: 0,
-                    display: 'flex',
-                    flexDirection: 'column',
                     minHeight: 0,
-                    aspectRatio: '210 / 297',
                     maxHeight: { md: '70vh' },
+                    borderRadius: 2,
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    bgcolor: 'background.paper',
+                    p: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
                   }}
                 >
                   {templateIframeSrc ? (
@@ -1106,11 +1137,15 @@ export default function UploadVerify() {
                       key={`${templateIframeKey}-mapping`}
                       title="mapping-template-preview"
                       src={templateIframeSrc}
-                      sx={{ width: '100%', flexGrow: 1, minHeight: 0 }}
+                      sx={{ width: '100%', maxHeight: '100%' }}
                       frameAspectRatio="210 / 297"
                       fit="width"
                       loading="eager"
                       contentAlign="top"
+                      pageShadow
+                      pageRadius={16}
+                      pageBorderColor="rgba(15,23,42,0.08)"
+                      marginGuides={{ inset: 32, color: 'rgba(79,70,229,0.28)' }}
                     />
                   ) : (
                     <Typography variant="body2" color="text.secondary" sx={{ px: 2, textAlign: 'center' }}>

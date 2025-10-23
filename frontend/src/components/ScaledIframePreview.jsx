@@ -74,6 +74,10 @@ export default function ScaledIframePreview({
   frameAspectRatio = null,
   fit = 'contain', // layout fit strategy for scaling
   contentAlign = 'center',
+  pageShadow = false,
+  pageBorderColor = 'rgba(15,23,42,0.12)',
+  pageRadius = 12,
+  marginGuides = false,
 }) {
   const containerRef = useRef(null)
   const iframeRef = useRef(null)
@@ -86,6 +90,20 @@ export default function ScaledIframePreview({
   })
   const contentSizeRef = useRef(contentSize)
   const aspect = useMemo(() => parseAspectRatio(frameAspectRatio), [frameAspectRatio])
+  const marginGuideConfig = useMemo(() => {
+    if (!marginGuides) return null
+    if (typeof marginGuides === 'object') {
+      const inset = Math.max(0, Number(marginGuides.inset ?? marginGuides.offset ?? 36))
+      return {
+        inset,
+        color: marginGuides.color || 'rgba(79,70,229,0.28)',
+      }
+    }
+    return {
+      inset: 36,
+      color: 'rgba(79,70,229,0.28)',
+    }
+  }, [marginGuides])
 
   const schedule = useCallback((cb) => {
     if (rafRef.current) cancelAnimationFrame(rafRef.current)
@@ -177,7 +195,7 @@ export default function ScaledIframePreview({
         width: Math.ceil(measuredWidth),
         height: Math.ceil(measuredHeight),
       }
-    } catch (err) {
+    } catch {
       // Cross-origin frames cannot be inspected; fall back to declared dimensions.
       return fallback
     }
@@ -240,7 +258,7 @@ export default function ScaledIframePreview({
   const containerStyles = {
     position: 'relative',
     width: '100%',
-    overflow: 'hidden',
+    overflow: 'visible',
     ...sx,
   }
   if (aspect?.css) {
@@ -248,6 +266,16 @@ export default function ScaledIframePreview({
     containerStyles.height = 'auto'
   }
   const positioned = Boolean(aspect?.css)
+  const resolvedPageRadius = Number.isFinite(Number(pageRadius)) ? Math.max(Number(pageRadius), 0) : 0
+  const resolvedPageShadow = pageShadow
+    ? (typeof pageShadow === 'string' ? pageShadow : '0 32px 48px rgba(15,23,42,0.18)')
+    : 'none'
+  const resolvedBorderColor = typeof pageBorderColor === 'string' && pageBorderColor.trim()
+    ? pageBorderColor
+    : null
+  const marginInset = marginGuideConfig
+    ? Math.max(0, Math.min(marginGuideConfig.inset, Math.min(contentSize.width, contentSize.height) / 2))
+    : 0
 
   return (
     <Box ref={containerRef} sx={containerStyles}>
@@ -261,7 +289,6 @@ export default function ScaledIframePreview({
           transform: `scale(${scale})`,
           transformOrigin: 'top left',
           pointerEvents: 'auto',
-          bgcolor: background,
         }}
         style={
           positioned
@@ -272,20 +299,48 @@ export default function ScaledIframePreview({
             : undefined
         }
       >
-        {/* key is handled by parent; iframe width/height stay at intrinsic size */}
-        <iframe
-          ref={iframeRef}
-          src={src}
-          title={title}
-          loading={loading}
-          style={{
+        <Box
+          sx={{
             width: contentSize.width,
             height: contentSize.height,
-            border: 0,
-            display: 'block',
-            background,
+            borderRadius: resolvedPageRadius,
+            overflow: 'hidden',
+            bgcolor: background,
+            boxShadow: resolvedPageShadow,
+            border: resolvedBorderColor ? `1px solid ${resolvedBorderColor}` : 'none',
+            position: 'relative',
           }}
-        />
+        >
+          <iframe
+            ref={iframeRef}
+            src={src}
+            title={title}
+            loading={loading}
+            style={{
+              width: contentSize.width,
+              height: contentSize.height,
+              border: 0,
+              display: 'block',
+              background,
+            }}
+          />
+          {marginGuideConfig && marginInset > 0 && (
+            <Box
+              aria-hidden
+              sx={{
+                position: 'absolute',
+                inset: marginInset,
+                border: '1px dashed',
+                borderColor: marginGuideConfig.color,
+                borderRadius: Math.max(resolvedPageRadius - 6, 0),
+                pointerEvents: 'none',
+              }}
+              style={{
+                borderStyle: 'dashed',
+              }}
+            />
+          )}
+        </Box>
       </Box>
       {!positioned && (
         <Box sx={{ width: '100%', height: scaledHeight, visibility: 'hidden', pointerEvents: 'none' }} />

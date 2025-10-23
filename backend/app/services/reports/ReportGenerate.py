@@ -9,6 +9,7 @@ from datetime import datetime
 from pathlib import Path
 from decimal import Decimal, InvalidOperation
 from typing import Any, Iterable, Mapping, Sequence
+from itertools import product
 
 try:
     from PIL import Image
@@ -264,6 +265,76 @@ def fill_and_print(
                     values = [text]
             if values:
                 key_values_map[name] = values
+
+    _DIRECT_COLUMN_RE = re.compile(r"^(?P<table>[A-Za-z_][\w]*)\.(?P<column>[A-Za-z_][\w]*)$")
+    _SQL_IDENT_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+
+    def _safe_ident(name: str) -> str:
+        if _SQL_IDENT_RE.match(name):
+            return name
+        safe = str(name).replace('"', '""')
+        return f'"{safe}"'
+
+    def _resolve_token_column(token: str) -> tuple[str, str] | None:
+        mapping_expr = PLACEHOLDER_TO_COL.get(token)
+        if isinstance(mapping_expr, str):
+            match = _DIRECT_COLUMN_RE.match(mapping_expr.strip())
+            if match:
+                return match.group("table"), match.group("column")
+        required_filters = contract_adapter.required_filters
+        optional_filters = contract_adapter.optional_filters
+        filter_expr = (required_filters.get(token) or optional_filters.get(token) or "").strip()
+        match = _DIRECT_COLUMN_RE.match(filter_expr)
+        if match:
+            return match.group("table"), match.group("column")
+        return None
+
+    def _canonicalize_case(table: str, column: str, raw_value: str) -> str:
+        cache_key = (table.lower(), column.lower(), raw_value.lower())
+        if cache_key in _canonicalize_cache:
+            return _canonicalize_cache[cache_key]
+        table_ident = _safe_ident(table)
+        column_ident = _safe_ident(column)
+        sql = (
+            f"SELECT {column_ident} FROM {table_ident} "
+            f"WHERE {column_ident} = ? COLLATE NOCASE LIMIT 1"
+        )
+        canonical = raw_value
+        con = sqlite3.connect(str(DB_PATH))
+        try:
+            cur = con.cursor()
+            row = cur.execute(sql, (raw_value,)).fetchone()
+            if row and row[0] is not None:
+                canonical = str(row[0])
+        except sqlite3.Error:
+            canonical = raw_value
+        finally:
+            con.close()
+        _canonicalize_cache[cache_key] = canonical
+        return canonical
+
+    _canonicalize_cache: dict[tuple[str, str, str], str] = {}
+
+    for token, values in list(key_values_map.items()):
+        resolved = _resolve_token_column(token)
+        if not resolved:
+            continue
+        table_name, column_name = resolved
+        if not table_name or not column_name:
+            continue
+        updated_values: list[str] = []
+        changed = False
+        for value in values:
+            if not isinstance(value, str) or not value.strip():
+                updated_values.append(value)
+                continue
+            canon = _canonicalize_case(table_name, column_name, value.strip())
+            if canon != value:
+                changed = True
+            updated_values.append(canon)
+        if changed:
+            key_values_map[token] = updated_values
+
     for token, values in key_values_map.items():
         LITERALS[token] = ", ".join(values)
 
@@ -276,29 +347,29 @@ def fill_and_print(
 
     multi_key_selected = any(len(values) > 1 for values in key_values_map.values())
 
-    def _expand_key_value_groups(values_map: dict[str, list[str]]) -> list[dict[str, list[str]]]:
+    def _iter_key_combinations(values_map: dict[str, list[str]]) -> Iterable[dict[str, str]]:
         if not values_map:
-            return [{}]
-        groups: list[dict[str, list[str]]] = [{}]
+            yield {}
+            return
+        tokens: list[str] = []
+        value_lists: list[list[str]] = []
         for token, raw_values in values_map.items():
-            trimmed: list[str] = []
+            unique: list[str] = []
             seen_local: set[str] = set()
             for val in raw_values:
                 text = str(val or "").strip()
                 if not text or text in seen_local:
                     continue
                 seen_local.add(text)
-                trimmed.append(text)
-            if not trimmed:
-                continue
-            next_groups: list[dict[str, list[str]]] = []
-            for base in groups:
-                for value in trimmed:
-                    combined = {k: list(v) for k, v in base.items()}
-                    combined[token] = [value]
-                    next_groups.append(combined)
-            groups = next_groups or groups
-        return groups or [{}]
+                unique.append(text)
+            if unique:
+                tokens.append(token)
+                value_lists.append(unique)
+        if not tokens:
+            yield {}
+            return
+        for combo in product(*value_lists):
+            yield {token: value for token, value in zip(tokens, combo)}
 
     async def html_to_pdf_async(html_path: Path, pdf_path: Path, base_dir: Path):
         if async_playwright is None:
@@ -351,13 +422,16 @@ def fill_and_print(
                     head_html = head_match.group(0).strip()
                 body_match = body_pattern.search(text)
                 if body_match:
-                    combined_body.append(body_match.group("body").strip())
+                    section_body = body_match.group("body").strip()
                 else:
-                    combined_body.append(text.strip())
+                    section_body = text.strip()
+                combined_body.append(f'<div class="nr-key-section" data-nr-section="1">\n{section_body}\n</div>')
             else:
                 body_match = body_pattern.search(text)
                 section = body_match.group("body").strip() if body_match else text.strip()
-                combined_body.append(f"<!-- NR:key-section {idx + 1} -->\n{section}")
+                combined_body.append(
+                    f'<div class="nr-key-section" data-nr-section="{idx + 1}" style="page-break-before: always;">\n{section}\n</div>'
+                )
 
         doc_lines = []
         if doc_type:
@@ -421,25 +495,76 @@ def fill_and_print(
                 row[col] = idx
 
     def _value_for_token(row: Mapping[str, Any], token: str) -> Any:
+        if not token:
+            return None
         if token in row:
             return row[token]
-        col_name = _extract_col_name(PLACEHOLDER_TO_COL.get(token))
-        if col_name and col_name in row:
-            return row[col_name]
-        return row.get(token)
+        normalized = str(token).lower()
+        for key in row.keys():
+            if isinstance(key, str) and key.lower() == normalized:
+                return row[key]
+        mapped = PLACEHOLDER_TO_COL.get(token)
+        if mapped:
+            col = _extract_col_name(mapped)
+            if col:
+                if col in row:
+                    return row[col]
+                for key in row.keys():
+                    if isinstance(key, str) and key.lower() == col.lower():
+                        return row[key]
+        return None
 
-    if not key_values_map:
-        key_value_groups: list[dict[str, list[str]]] = [{}]
-    elif multi_key_selected:
-        key_value_groups = _expand_key_value_groups(key_values_map)
-    else:
-        key_value_groups = [key_values_map]
+    def _prune_placeholder_rows(rows: Sequence[Mapping[str, Any]], tokens: Sequence[str]) -> list[dict[str, Any]]:
+        material_tokens = [tok for tok in tokens if tok and 'material' in tok.lower()]
+        pruned: list[dict[str, Any]] = []
+        for row in rows:
+            keep = True
+            for tok in material_tokens:
+                if not _value_has_content(_value_for_token(row, tok)):
+                    keep = False
+                    break
+            if keep:
+                pruned.append(dict(row))
+        return pruned if pruned else [dict(row) for row in rows]
+
+    def _filter_rows_for_render(
+        rows: Sequence[Mapping[str, Any]],
+        row_tokens_template: Sequence[str],
+        row_columns: Sequence[str],
+        *,
+        treat_all_as_data: bool,
+    ) -> list[dict[str, Any]]:
+        if not rows:
+            return []
+
+        if treat_all_as_data:
+            prepared = [dict(row) for row in rows]
+        else:
+            significant_tokens = [
+                tok for tok in row_tokens_template
+                if tok and not any(keyword in tok.lower() for keyword in ("row", "serial", "sl"))
+            ]
+            significant_columns = [
+                col for col in row_columns
+                if col and not any(keyword in col.lower() for keyword in ("row", "serial", "sl"))
+            ]
+            prepared: list[dict[str, Any]] = []
+            for row in rows:
+                if significant_tokens or significant_columns:
+                    if not _row_has_any_data(row, significant_tokens, significant_columns):
+                        continue
+                prepared.append(dict(row))
+
+        if prepared:
+            _reindex_serial_fields(prepared, row_tokens_template, row_columns)
+        return prepared
 
     if multi_key_selected and not __force_single:
         html_sections: list[str] = []
         tmp_outputs: list[tuple[Path, Path]] = []
         try:
-            for idx, selection in enumerate(key_value_groups, start=1):
+            for idx, combo in enumerate(_iter_key_combinations(key_values_map), start=1):
+                selection: dict[str, str] = {token: value for token, value in combo.items()}
                 tmp_html = OUT_HTML.with_name(f"{OUT_HTML.stem}__key{idx}.html")
                 tmp_pdf = OUT_PDF.with_name(f"{OUT_PDF.stem}__key{idx}.pdf")
                 result = fill_and_print(
@@ -456,19 +581,10 @@ def fill_and_print(
                     GENERATOR_BUNDLE=GENERATOR_BUNDLE,
                     __force_single=True,
                 )
-                if not result.get("rows_rendered"):
-                    print(f"Skipping key selection {selection} - no rows rendered.")
-                    for key in ("html_path", "pdf_path"):
-                        path = result.get(key)
-                        if path:
-                            with contextlib.suppress(FileNotFoundError):
-                                Path(path).unlink()
-                    continue
                 html_sections.append(Path(result["html_path"]).read_text(encoding="utf-8", errors="ignore"))
                 tmp_outputs.append((Path(result["html_path"]), Path(result["pdf_path"])))
 
             if not html_sections:
-                print("No key selections produced output; returning empty report.")
                 return {"html_path": str(OUT_HTML), "pdf_path": str(OUT_PDF), "rows_rendered": False}
 
             combined_html = _combine_html_documents(html_sections)
@@ -477,11 +593,9 @@ def fill_and_print(
             return {"html_path": str(OUT_HTML), "pdf_path": str(OUT_PDF), "rows_rendered": True}
         finally:
             for tmp_html_path, tmp_pdf_path in tmp_outputs:
-                for path in (tmp_html_path, tmp_pdf_path):
-                    try:
-                        path.unlink()
-                    except FileNotFoundError:
-                        pass
+                for path_sel in (tmp_html_path, tmp_pdf_path):
+                    with contextlib.suppress(FileNotFoundError):
+                        path_sel.unlink()
 
     def _get_literal_raw(token: str) -> str:
         if token not in LITERALS:
@@ -1450,14 +1564,13 @@ def fill_and_print(
   .nr-page-label { white-space: nowrap; }
   @media screen {
     .nr-page-number::after { content: attr(data-nr-screen); }
-    .nr-page-count::after { content: attr(data-nr-screen); }
+    .nr-page-count::after { content: attr(data-nr-total-pages); }
   }
   @media print {
     body { counter-reset: page; }
-    .nr-page-number { counter-increment: page; }
     .nr-page-number::after { content: counter(page); }
     .nr-page-count::after { content: counter(pages); }
-    html[data-nr-total-pages] .nr-page-count::after { content: attr(data-nr-total-pages); }
+    .nr-page-count[data-nr-total-pages]::after { content: attr(data-nr-total-pages); }
   }
 </style>
 """
@@ -1489,10 +1602,12 @@ def fill_and_print(
         doc.offsetHeight
       );
       const totalPages = Math.max(1, Math.ceil(contentHeight / usableHeightPx));
-      doc.setAttribute('data-nr-total-pages', String(totalPages));
+      const totalAsString = String(totalPages);
+      doc.setAttribute('data-nr-total-pages', totalAsString);
       const countNodes = document.querySelectorAll('[data-nr-counter="pages"]');
       countNodes.forEach((node) => {{
-        node.setAttribute('data-nr-screen', String(totalPages));
+        node.setAttribute('data-nr-screen', totalAsString);
+        node.setAttribute('data-nr-total-pages', totalAsString);
       }});
       const pageNodes = document.querySelectorAll('[data-nr-counter="page"]');
       pageNodes.forEach((node) => {{
@@ -1650,44 +1765,29 @@ def fill_and_print(
 
         allowed_row_tokens = {t for t in PLACEHOLDER_TO_COL.keys() if t not in TOTALS} - set(HEADER_TOKENS)
         rows_data = generator_results.get("rows") or []
+        filtered_rows: list[dict[str, Any]] = []
+        row_tokens_in_template: list[str] = []
+
         if rows_data:
             tbody_m, tbody_inner = best_rows_tbody(block_html, allowed_row_tokens)
-            filtered_rows: list[dict[str, Any]] = []
-            row_tokens_in_template: list[str] = []
-            significant_tokens = [
-                tok for tok in allowed_row_tokens
-                if tok and not any(keyword in tok.lower() for keyword in ("row", "serial", "sl"))
-            ]
-            significant_columns = [
-                col for col in {
-                    _extract_col_name(PLACEHOLDER_TO_COL.get(tok))
-                    for tok in allowed_row_tokens
-                }
-                if col and not any(keyword in col.lower() for keyword in ("row", "serial", "sl"))
-            ]
-
             if tbody_m and tbody_inner:
                 row_template, row_span, row_tokens_in_template = find_row_template(tbody_inner, allowed_row_tokens)
                 if row_template and row_tokens_in_template:
-                    serial_columns_all = [
+                    row_columns_template = [
                         _extract_col_name(PLACEHOLDER_TO_COL.get(tok)) or ""
                         for tok in row_tokens_in_template
                     ]
-                    significant_tokens = [
-                        tok for tok in row_tokens_in_template
-                        if tok and not any(keyword in tok.lower() for keyword in ("row", "serial", "sl"))
-                    ]
-                    significant_columns = [
-                        col for col in (_extract_col_name(PLACEHOLDER_TO_COL.get(tok)) for tok in row_tokens_in_template)
-                        if col and not any(keyword in col.lower() for keyword in ("row", "serial", "sl"))
-                    ]
-                    for row in rows_data:
-                        if (significant_tokens or significant_columns) and not _row_has_any_data(row, significant_tokens, significant_columns):
-                            continue
-                        filtered_rows.append(dict(row))
+                    filtered_rows = _filter_rows_for_render(
+                        rows_data,
+                        row_tokens_in_template,
+                        row_columns_template,
+                        treat_all_as_data=bool(__force_single),
+                    )
+                    filtered_rows = _prune_placeholder_rows(filtered_rows, row_tokens_in_template)
+                    if __force_single:
+                        print(f"[multi-debug] generator rows: total={len(rows_data)}, filtered={len(filtered_rows)}, key_values={KEY_VALUES}")
                     if filtered_rows:
-                        _reindex_serial_fields(filtered_rows, row_tokens_in_template, serial_columns_all)
-                        parts = []
+                        parts: list[str] = []
                         for row in filtered_rows:
                             tr = row_template
                             for tok in row_tokens_in_template:
@@ -1701,24 +1801,20 @@ def fill_and_print(
                              for m in re.finditer(r"\{\{\s*([^}\n]+?)\s*\}\}|\{\s*([^}\n]+?)\s*\}", block_html)]
                 row_tokens_in_template = [t.strip() for t in tr_tokens if t and t.strip() in allowed_row_tokens]
                 if row_tokens_in_template:
-                    serial_columns_all = [
+                    row_columns_template = [
                         _extract_col_name(PLACEHOLDER_TO_COL.get(tok)) or ""
                         for tok in row_tokens_in_template
                     ]
-                    significant_tokens = [
-                        tok for tok in row_tokens_in_template
-                        if tok and not any(keyword in tok.lower() for keyword in ("row", "serial", "sl"))
-                    ]
-                    significant_columns = [
-                        col for col in (_extract_col_name(PLACEHOLDER_TO_COL.get(tok)) for tok in row_tokens_in_template)
-                        if col and not any(keyword in col.lower() for keyword in ("row", "serial", "sl"))
-                    ]
-                    for row in rows_data:
-                        if (significant_tokens or significant_columns) and not _row_has_any_data(row, significant_tokens, significant_columns):
-                            continue
-                        filtered_rows.append(dict(row))
+                    filtered_rows = _filter_rows_for_render(
+                        rows_data,
+                        row_tokens_in_template,
+                        row_columns_template,
+                        treat_all_as_data=bool(__force_single),
+                    )
+                    filtered_rows = _prune_placeholder_rows(filtered_rows, row_tokens_in_template)
+                    if __force_single:
+                        print(f"[multi-debug] generator rows (no tbody): total={len(rows_data)}, filtered={len(filtered_rows)}, key_values={KEY_VALUES}")
                     if filtered_rows:
-                        _reindex_serial_fields(filtered_rows, row_tokens_in_template, serial_columns_all)
                         parts = []
                         for row in filtered_rows:
                             tr = prototype_block
@@ -1728,22 +1824,22 @@ def fill_and_print(
                             parts.append(tr)
                         block_html = "\n".join(parts)
 
-            if filtered_rows:
-                totals_row = (generator_results.get("totals") or [{}])[0]
-                for token in TOTALS:
-                    value = totals_row.get(token)
-                    formatted = format_token_value(token, value)
-                    block_html = sub_token(block_html, token, formatted)
-                    last_totals_per_token[token] = formatted
-                    target = total_token_to_target.get(token)
-                    if target:
-                        fv, _formatted = _coerce_total_value(value)
-                        if fv is not None:
-                            totals_accum[target] = totals_accum.get(target, 0.0) + fv
+        if filtered_rows:
+            totals_row = (generator_results.get("totals") or [{}])[0]
+            for token in TOTALS:
+                value = totals_row.get(token)
+                formatted = format_token_value(token, value)
+                block_html = sub_token(block_html, token, formatted)
+                last_totals_per_token[token] = formatted
+                target = total_token_to_target.get(token)
+                if target:
+                    fv, _formatted = _coerce_total_value(value)
+                    if fv is not None:
+                        totals_accum[target] = totals_accum.get(target, 0.0) + fv
 
-                rendered_blocks.append(block_html)
-            else:
-                print("Generator SQL produced no usable row data after filtering; skipping block.")
+            rendered_blocks.append(block_html)
+        else:
+            print("Generator SQL produced no usable row data after filtering; skipping block.")
     else:
             for batch_id in (BATCH_IDS or []):
                 block_html = prototype_block
@@ -1871,6 +1967,11 @@ def fill_and_print(
                                 continue
                             filtered_rows.append(dict(r))
 
+                        if not filtered_rows and rows:
+                            filtered_rows = [dict(r) for r in rows]
+                        filtered_rows = _prune_placeholder_rows(filtered_rows, row_tokens_in_template)
+                        if __force_single:
+                            print(f"[multi-debug] sql rows: total={len(rows)}, filtered={len(filtered_rows)}, key_values={KEY_VALUES}")
                         if not filtered_rows:
                             print(f"No significant child rows for batch {batch_id}; skipping block.")
                             continue
@@ -1934,10 +2035,6 @@ def fill_and_print(
                         rows = [dict(r) for r in cur.fetchall()]
                         con.close()
 
-                        if not rows:
-                            print(f"No child rows found (no tbody path) for batch {batch_id}; skipping block.")
-                            continue
-
                         significant_cols = [
                             col
                             for col in row_cols_needed
@@ -1949,6 +2046,11 @@ def fill_and_print(
                                 continue
                             filtered_rows.append(dict(r))
 
+                        if not filtered_rows and rows:
+                            filtered_rows = [dict(r) for r in rows]
+                        filtered_rows = _prune_placeholder_rows(filtered_rows, row_tokens_in_template)
+                        if __force_single:
+                            print(f"[multi-debug] sql rows (no tbody): total={len(rows)}, filtered={len(filtered_rows)}, key_values={KEY_VALUES}")
                         if not filtered_rows:
                             print(f"No significant child rows (no tbody path) for batch {batch_id}; skipping block.")
                             continue
@@ -2058,8 +2160,6 @@ def fill_and_print(
 # keep CLI usage (unchanged)
 if __name__ == "__main__":
     print("Module ready for API integration. Call fill_and_print(...) from your FastAPI endpoint.")
-
-
 
 
 

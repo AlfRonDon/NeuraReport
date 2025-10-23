@@ -69,6 +69,34 @@
       "last_latency_ms": 4.0,
       "tags": [],
       "last_detail": null
+    },
+    "2b1a0d7e-7624-4de3-a394-034761271751": {
+      "id": "2b1a0d7e-7624-4de3-a394-034761271751",
+      "name": "sqlite@consumption_report_with_date.db",
+      "db_type": "sqlite",
+      "database_path": "C:\\Users\\alfre\\Downloads\\consumption_report_with_date.db",
+      "secret": "gAAAAABo-ZvtPhd3ubHILcKV0YraiDg9FjO0AtHrfHcsVGh40SDPBnMDtkzaQY3c3gcush-WzJCKJ4lnV0aoWidxCyUgOXBxhD4eWlWRJZMTdqdS5ZsAaNur9G8nPPKRldOcwjllSb0e20BS7vqG8F8A8Z9hywG5gq9LdFlieWboMhXuRT1HsRDVMxe3qL4Jk87V8IEfNFwOBJV5ll5TojqtvF6WqicnCf8qGX1R4GYAt6zelJ6xhsnt3Dv-AfZFHGxvqcNx7eqiCPQX9THiTOPMZCPSeCMR0g==",
+      "updated_at": "2025-10-23T03:07:25+00:00",
+      "created_at": "2025-10-23T03:07:25+00:00",
+      "status": "connected",
+      "last_connected_at": "2025-10-23T03:07:25+00:00",
+      "last_latency_ms": 18,
+      "tags": [],
+      "last_detail": "Connected (sqlite@consumption_report_with_date.db)"
+    },
+    "d9a5a8fc-767f-4a00-98f5-fa0ec2f0f884": {
+      "id": "d9a5a8fc-767f-4a00-98f5-fa0ec2f0f884",
+      "name": "sqlite@consumption_report_with_date.db",
+      "db_type": "sqlite",
+      "database_path": "C:\\Users\\alfre\\Downloads\\consumption_report_with_date.db",
+      "secret": "gAAAAABo-ZvxjzX-aZlPLfa84065fcYJ1L4--sz4ECm2DP4rFR16Mv2vEmt9rsVMKuPZEOWf5c3gHFf_t7cVDWMDnrcHfalJhmgIW3gMFvGlkeLzm_eHm5c2Ey9tDasJSFhyTg_3UDc13wzBIGglR0mTw7fj5KdASqQzhxsB4sxfIdDRGXe775y0YSnrTQMNkSJ6wdvHCjIOI2Cp_n2C9667yfVW0Pr6OaIw5fC1lWnOA1aM4iPRHm2ihdajhOvip2QBXgnixiUtuL5e-jhx9blq9qkBBnZXPA==",
+      "updated_at": "2025-10-23T03:07:29+00:00",
+      "created_at": "2025-10-23T03:07:29+00:00",
+      "status": "connected",
+      "last_connected_at": "2025-10-23T03:07:29+00:00",
+      "last_latency_ms": 7,
+      "tags": [],
+      "last_detail": "Connected (sqlite@consumption_report_with_date.db)"
     }
   },
   "templates": {
@@ -1007,7 +1035,7 @@
         "generator_assets_url": "/uploads/84024e2b-9a61-4e19-b1b7-420019d891ef/generator/generator_assets.json",
         "mapping_keys_url": "/uploads/84024e2b-9a61-4e19-b1b7-420019d891ef/mapping_keys.json"
       },
-      "updated_at": "2025-10-22T23:50:03+00:00",
+      "updated_at": "2025-10-23T04:33:24+00:00",
       "created_at": "2025-10-22T21:10:06+00:00",
       "tags": [],
       "last_connection_id": "4b38fc3a-1f06-40f3-bc5e-50c9ea5a1e74",
@@ -1036,12 +1064,12 @@
         "summary": {},
         "updated_at": "2025-10-22T21:25:19+00:00"
       },
-      "last_run_at": "2025-10-22T23:50:03+00:00"
+      "last_run_at": "2025-10-23T04:33:24+00:00"
     }
   },
   "last_used": {
     "connection_id": "4b38fc3a-1f06-40f3-bc5e-50c9ea5a1e74",
     "template_id": "84024e2b-9a61-4e19-b1b7-420019d891ef",
-    "updated_at": "2025-10-22T23:50:03+00:00"
+    "updated_at": "2025-10-23T04:33:24+00:00"
   }
 }
