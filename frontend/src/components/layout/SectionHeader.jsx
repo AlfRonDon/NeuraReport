@@ -1,4 +1,5 @@
 import { Box, Stack, Typography } from '@mui/material'
+import InfoTooltip from '../common/InfoTooltip.jsx'
 
 const SectionHeader = ({
   title,
@@ -7,9 +8,14 @@ const SectionHeader = ({
   action = null,
   align = 'flex-start',
   sx = [],
+  helpContent = null,
+  helpPlacement = 'top',
+  helpTooltipProps = {},
   ...props
 }) => {
   const sxArray = Array.isArray(sx) ? sx : [sx]
+  const hasHelp = !!helpContent
+
   return (
     <Stack
       direction={{ xs: 'column', sm: 'row' }}
@@ -38,9 +44,27 @@ const SectionHeader = ({
             {eyebrow}
           </Typography>
         )}
-        <Typography variant="h6" component="h2" sx={{ wordBreak: 'break-word' }}>
-          {title}
-        </Typography>
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 0.75,
+            flexWrap: 'nowrap',
+            minWidth: 0,
+          }}
+        >
+          <Typography variant="h6" component="h2" sx={{ wordBreak: 'break-word' }}>
+            {title}
+          </Typography>
+          {hasHelp ? (
+            <InfoTooltip
+              content={helpContent}
+              placement={helpPlacement}
+              ariaLabel={`More information about ${title}`}
+              {...helpTooltipProps}
+            />
+          ) : null}
+        </Box>
         {subtitle && (
           <Typography variant="body2" color="text.secondary">
             {subtitle}
@@ -64,4 +88,3 @@ const SectionHeader = ({
 }
 
 export default SectionHeader
-

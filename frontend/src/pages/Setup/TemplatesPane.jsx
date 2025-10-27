@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   Box, Typography, Stack, Button, TextField, Chip, Divider, LinearProgress,
   Card, CardActionArea, CardContent, Autocomplete, Tooltip, Dialog, DialogContent, DialogTitle,
-  CircularProgress, Checkbox, Alert,
+  CircularProgress, Checkbox, Alert, Collapse,
 } from '@mui/material'
 import { Stepper, Step, StepLabel } from '@mui/material'
 import SearchIcon from '@mui/icons-material/Search'
@@ -13,6 +13,8 @@ import DownloadIcon from '@mui/icons-material/Download'
 import FolderOpenIcon from '@mui/icons-material/FolderOpen'
 import ReplayIcon from '@mui/icons-material/Replay'
 import CheckRoundedIcon from '@mui/icons-material/CheckRounded'
+import ListAltIcon from '@mui/icons-material/ListAlt'
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker'
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
@@ -28,6 +30,8 @@ import { resolveTemplatePreviewUrl, resolveTemplateThumbnailUrl } from '../../ut
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import EmptyState from '../../components/feedback/EmptyState.jsx'
 import LoadingState from '../../components/feedback/LoadingState.jsx'
+import InfoTooltip from '../../components/common/InfoTooltip.jsx'
+import TOOLTIP_COPY from '../../content/tooltipCopy.jsx'
 
 /* ----------------------- helpers ----------------------- */
 const ALL_OPTION = '__ALL__'
@@ -58,10 +62,14 @@ const addKeyValues = (body, keyValues) => {
     const name = typeof token === 'string' ? token.trim() : ''
     if (!name) return
     let values = []
+    let sawAll = false
     if (Array.isArray(rawValue)) {
       const seen = new Set()
       rawValue.forEach((entry) => {
-        if (entry === ALL_OPTION) return
+        if (entry === ALL_OPTION) {
+          sawAll = true
+          return
+        }
         const text = entry == null ? '' : String(entry).trim()
         if (!text || seen.has(text)) return
         seen.add(text)
@@ -71,9 +79,16 @@ const addKeyValues = (body, keyValues) => {
       const text = String(rawValue).trim()
       if (text && text !== ALL_OPTION) {
         values = [text]
+      } else if (text === ALL_OPTION) {
+        sawAll = true
       }
     }
-    if (!values.length) return
+    if (!values.length) {
+      if (sawAll) {
+        cleaned[name] = 'All'
+      }
+      return
+    }
     cleaned[name] = values.length === 1 ? values[0] : values
   })
   if (!Object.keys(cleaned).length) return body
@@ -443,7 +458,13 @@ function TemplatePicker({ selected, onToggle, tagFilter, setTagFilter }) {
 
   return (
     <Surface sx={surfaceStackSx}>
-      <Typography variant="h6">Select Templates</Typography>
+      <Stack direction="row" alignItems="center" spacing={0.75}>
+        <Typography variant="h6">Select Templates</Typography>
+        <InfoTooltip
+          content={TOOLTIP_COPY.templatePicker}
+          ariaLabel="How to select templates"
+        />
+      </Stack>
       <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
         <Autocomplete
           multiple
@@ -688,8 +709,20 @@ function GenerateAndDownload({ selected, selectedTemplates, autoType, start, end
       })
       .filter(Boolean)
   ), [selectedTemplates, keyOptions])
-  const keyPanelVisible = templatesWithKeys.length > 0 && Object.keys(results).length > 0
+  const [discoveryOpen, setDiscoveryOpen] = useState(false)
+  const resultCount = useMemo(() => Object.keys(results).length, [results])
+
+  useEffect(() => {
+    if (finding) setDiscoveryOpen(true)
+  }, [finding])
+
+  useEffect(() => {
+    if (resultCount > 0) setDiscoveryOpen(true)
+  }, [resultCount])
+
+  const keyPanelVisible = templatesWithKeys.length > 0 && resultCount > 0
   const keysMissing = keyPanelVisible && !keysReady
+  const handleToggleDiscovery = () => setDiscoveryOpen((prev) => !prev)
   return (
     <>
       <Surface sx={surfaceStackSx}>
@@ -700,7 +733,13 @@ function GenerateAndDownload({ selected, selectedTemplates, autoType, start, end
           spacing={{ xs: 1, sm: 2 }}
         >
           <Stack spacing={0.5}>
-            <Typography variant="h6">Run Reports</Typography>
+            <Stack direction="row" alignItems="center" spacing={0.75}>
+              <Typography variant="h6">Run Reports</Typography>
+              <InfoTooltip
+                content={TOOLTIP_COPY.runReports}
+                ariaLabel="How to run reports"
+              />
+            </Stack>
             {!!subline && <Typography variant="caption" color="text.secondary">{subline}</Typography>}
           </Stack>
           <Stack
@@ -773,6 +812,97 @@ function GenerateAndDownload({ selected, selectedTemplates, autoType, start, end
           </Stack>
         </LocalizationProvider>
 
+        <Button
+          variant="outlined"
+          size="small"
+          startIcon={<ListAltIcon />}
+          endIcon={
+            <ExpandMoreIcon
+              sx={{
+                transform: discoveryOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                transition: 'transform 160ms ease',
+              }}
+            />
+          }
+          onClick={handleToggleDiscovery}
+          aria-expanded={discoveryOpen}
+          aria-controls="discovery-results-panel"
+          sx={{ alignSelf: { xs: 'stretch', sm: 'flex-start' } }}
+        >
+          Discovery Lists
+        </Button>
+
+        <Collapse in={discoveryOpen} timeout="auto" unmountOnExit>
+          <Box
+            id="discovery-results-panel"
+            role="region"
+            aria-label="Discovery results"
+            sx={{ mt: 2 }}
+          >
+            {finding ? (
+              <Stack spacing={1.25} sx={{ mt: 1.5 }}>
+                <LinearProgress />
+                <Typography variant="body2" color="text.secondary">
+                  Searching data...
+                </Typography>
+              </Stack>
+            ) : resultCount > 0 ? (
+              <Stack spacing={1.5} sx={{ mt: 1.5 }}>
+                {Object.keys(results).map((tid) => {
+                  const r = results[tid]
+                  const total = r.rows_total ?? r.batches.reduce((a, b) => a + (b.rows || 0), 0)
+                  const count = r.batches_count ?? r.batches.length
+                  return (
+                    <Box
+                      key={tid}
+                      sx={{
+                        border: '1px solid',
+                        borderColor: 'divider',
+                        borderRadius: 1,
+                        p: 1.5,
+                        bgcolor: 'background.paper',
+                      }}
+                    >
+                      <Typography variant="subtitle2">{r.name}</Typography>
+                      {r.batches.length ? (
+                        <Stack spacing={1} sx={{ mt: 1.25 }}>
+                          <Typography variant="body2" color="text.secondary">
+                            {count} {count === 1 ? 'batch' : 'batches'} found ({total} rows)
+                          </Typography>
+                          {r.batches.map((b, idx) => (
+                            <Stack
+                              key={b.id || idx}
+                              direction={{ xs: 'column', sm: 'row' }}
+                              spacing={1}
+                              alignItems={{ xs: 'flex-start', sm: 'center' }}
+                              sx={{ width: '100%' }}
+                            >
+                              <Checkbox
+                                checked={b.selected}
+                                onChange={(e) => onToggleBatch(tid, idx, e.target.checked)}
+                                sx={{ p: 0.5 }}
+                              />
+                              <Typography variant="body2" sx={{ flex: 1, overflowWrap: 'anywhere' }}>
+                                Batch {idx + 1} {'\u2022'} {(b.parent ?? 1)} {(b.parent ?? 1) === 1 ? 'parent' : 'parents'} {'\u2022'} {b.rows} rows
+                              </Typography>
+                            </Stack>
+                          ))}
+                        </Stack>
+                      ) : (
+                        <Typography variant="body2" color="text.secondary">No data found for this range.</Typography>
+                      )}
+                    </Box>
+                  )
+                })}
+              </Stack>
+            ) : (
+              <Alert severity="info" sx={{ mt: 1.5 }}>
+                No discovery results yet. Run Find Reports after setting your date range.
+              </Alert>
+            )}
+          </Box>
+        </Collapse>
+
         {keyPanelVisible && (
           <Stack spacing={1.5} sx={{ mt: 2 }}>
             <Typography variant="subtitle2">Key Token Values</Typography>
@@ -798,7 +928,10 @@ function GenerateAndDownload({ selected, selectedTemplates, autoType, start, end
                     )
                     const dropdownOptions = [ALL_OPTION, ...normalizedOptions]
                     const loading = Boolean(keyOptionsLoading?.[tpl.id])
-                    const value = Array.isArray(keyValues?.[tpl.id]?.[name]) ? keyValues[tpl.id][name] : []
+                    const storedValue = Array.isArray(keyValues?.[tpl.id]?.[name]) ? keyValues[tpl.id][name] : []
+                    const value = storedValue.includes(ALL_OPTION)
+                      ? [ALL_OPTION]
+                      : storedValue
                     return (
                       <Autocomplete
                         key={`${tpl.id}-${name}`}
@@ -810,7 +943,7 @@ function GenerateAndDownload({ selected, selectedTemplates, autoType, start, end
                         onChange={(_event, newValue) => {
                           let next = Array.isArray(newValue) ? newValue.filter(Boolean) : []
                           if (next.includes(ALL_OPTION)) {
-                            next = [ALL_OPTION]
+                            next = [ALL_OPTION, ...normalizedOptions]
                           } else {
                             next = Array.from(new Set(next))
                           }
@@ -860,70 +993,6 @@ function GenerateAndDownload({ selected, selectedTemplates, autoType, start, end
               </Box>
             )}
           </Stack>
-        )}
-
-        {(finding || Object.keys(results).length > 0) && (
-          <Box>
-            <Divider sx={{ my: 2 }} />
-            <Typography variant="subtitle1">Discovery Results</Typography>
-            {finding ? (
-              <Stack spacing={1.25} sx={{ mt: 1.5 }}>
-                <LinearProgress />
-                <Typography variant="body2" color="text.secondary">
-                  Searching data...
-                </Typography>
-              </Stack>
-            ) : (
-              <Stack spacing={1.5} sx={{ mt: 1.5 }}>
-                {Object.keys(results).map((tid) => {
-                  const r = results[tid]
-                  const total = r.rows_total ?? r.batches.reduce((a, b) => a + (b.rows || 0), 0)
-                  const count = r.batches_count ?? r.batches.length
-                  return (
-                    <Box
-                      key={tid}
-                      sx={{
-                        border: '1px solid',
-                        borderColor: 'divider',
-                        borderRadius: 1,
-                        p: 1.5,
-                        bgcolor: 'background.paper',
-                      }}
-                    >
-                      <Typography variant="subtitle2">{r.name}</Typography>
-                      {r.batches.length ? (
-                        <Stack spacing={1} sx={{ mt: 1.25 }}>
-                          <Typography variant="body2" color="text.secondary">
-                            {count} {count === 1 ? 'batch' : 'batches'} found ({total} rows)
-                          </Typography>
-                          {r.batches.map((b, idx) => (
-                            <Stack
-                              key={b.id || idx}
-                              direction={{ xs: 'column', sm: 'row' }}
-                              spacing={1}
-                              alignItems={{ xs: 'flex-start', sm: 'center' }}
-                              sx={{ width: '100%' }}
-                            >
-                              <Checkbox
-                                checked={b.selected}
-                                onChange={(e) => onToggleBatch(tid, idx, e.target.checked)}
-                                sx={{ p: 0.5 }}
-                              />
-                              <Typography variant="body2" sx={{ flex: 1, overflowWrap: 'anywhere' }}>
-                                Batch {idx + 1} {'\u2022'} {(b.parent ?? 1)} {(b.parent ?? 1) === 1 ? 'parent' : 'parents'} {'\u2022'} {b.rows} rows
-                              </Typography>
-                            </Stack>
-                          ))}
-                        </Stack>
-                      ) : (
-                        <Typography variant="body2" color="text.secondary">No data found for this range.</Typography>
-                      )}
-                    </Box>
-                  )
-                })}
-              </Stack>
-            )}
-          </Box>
         )}
 
         <Box>
@@ -1005,7 +1074,13 @@ function GenerateAndDownload({ selected, selectedTemplates, autoType, start, end
       </Surface>
 
       <Surface sx={surfaceStackSx}>
-        <Typography variant="h6">Recently Downloaded</Typography>
+        <Stack direction="row" alignItems="center" spacing={0.75}>
+          <Typography variant="h6">Recently Downloaded</Typography>
+          <InfoTooltip
+            content={TOOLTIP_COPY.recentDownloads}
+            ariaLabel="How to use recent downloads"
+          />
+        </Stack>
         <Stack spacing={1.5}>
           {downloads.map((d, i) => (
             <Stack
@@ -1029,11 +1104,25 @@ function GenerateAndDownload({ selected, selectedTemplates, autoType, start, end
                   startIcon={<OpenInNewIcon />}
                   disabled={!d.htmlUrl}
                   component="a"
-                  href={d.htmlUrl || '#'}
+                  href={d.htmlUrl ? withBase(d.htmlUrl) : '#'}
                   target="_blank"
                   rel="noopener"
                 >
                   Open
+                </Button>
+                <Button
+                  size="small"
+                  variant="contained"
+                  color="primary"
+                  disableElevation
+                  startIcon={<DownloadIcon />}
+                  disabled={!d.pdfUrl}
+                  component="a"
+                  href={d.pdfUrl ? buildDownloadUrl(withBase(d.pdfUrl)) : '#'}
+                  target="_blank"
+                  rel="noopener"
+                >
+                  Download
                 </Button>
                 <Button size="small" variant="text" startIcon={<FolderOpenIcon />} disabled>
                   Show in folder
@@ -1250,8 +1339,25 @@ export default function TemplatesPane() {
     const payload = {}
     Object.entries(provided).forEach(([token, values]) => {
       if (!Array.isArray(values) || values.length === 0) return
-      if (values.includes(ALL_OPTION)) return
-      const normalized = Array.from(new Set(values.filter((value) => value && value.trim())))
+      if (values.includes(ALL_OPTION)) {
+        const options = keyOptions[templateId]?.[token] || []
+        const normalizedOptions = Array.from(
+          new Set(
+            options
+              .map((option) => (option == null ? '' : String(option).trim()))
+              .filter(Boolean),
+          ),
+        )
+        if (normalizedOptions.length) {
+          payload[token] = normalizedOptions.length === 1 ? normalizedOptions[0] : normalizedOptions
+        } else {
+          payload[token] = 'All'
+        }
+        return
+      }
+      const normalized = Array.from(
+        new Set(values.filter((value) => value && value.trim() && value !== ALL_OPTION)),
+      )
       if (!normalized.length) return
       payload[token] = normalized.length === 1 ? normalized[0] : normalized
     })
@@ -1439,7 +1545,13 @@ export default function TemplatesPane() {
     <>
       <Surface sx={[surfaceStackSx, { mb: 3 }]}>
         <Stack spacing={1.5}>
-          <Typography variant="h6">Run Reports</Typography>
+          <Stack direction="row" alignItems="center" spacing={0.75}>
+            <Typography variant="h6">Run Reports</Typography>
+            <InfoTooltip
+              content={TOOLTIP_COPY.runReports}
+              ariaLabel="Run report guidance"
+            />
+          </Stack>
           <Stepper
             activeStep={activeStep}
             alternativeLabel

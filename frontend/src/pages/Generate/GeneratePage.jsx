@@ -15,6 +15,8 @@ import Surface from '../../components/layout/Surface.jsx'
 import EmptyState from '../../components/feedback/EmptyState.jsx'
 import LoadingState from '../../components/feedback/LoadingState.jsx'
 import ScaledIframePreview from '../../components/ScaledIframePreview.jsx'
+import InfoTooltip from '../../components/common/InfoTooltip.jsx'
+import TOOLTIP_COPY from '../../content/tooltipCopy.jsx'
 import { resolveTemplatePreviewUrl, resolveTemplateThumbnailUrl } from '../../utils/preview'
 
 /* -----------------------------------------------------------
@@ -66,19 +68,34 @@ const buildDownloadUrl = (url) => {
 function normalizeKeyValuePayload(keyValues) {
   if (!keyValues || typeof keyValues !== 'object') return null
   const cleaned = {}
+  const ALL_SENTINELS = new Set(['all', 'select all', '__NR_SELECT_ALL__'])
   Object.entries(keyValues).forEach(([token, value]) => {
     const name = typeof token === 'string' ? token.trim() : ''
     if (!name) return
     const base = Array.isArray(value) ? value : [value]
     const seen = new Set()
     const normalized = []
+    let sawAll = false
     base.forEach((raw) => {
       const text = raw == null ? '' : String(raw).trim()
       if (!text || seen.has(text)) return
+      if (ALL_SENTINELS.has(text.toLowerCase())) {
+        sawAll = true
+        return
+      }
       seen.add(text)
       normalized.push(text)
     })
-    if (!normalized.length) return
+    if (!normalized.length) {
+      if (sawAll) {
+        cleaned[name] = 'All'
+      }
+      return
+    }
+    if (sawAll) {
+      cleaned[name] = 'All'
+      return
+    }
     cleaned[name] = normalized.length === 1 ? normalized[0] : normalized
   })
   return Object.keys(cleaned).length ? cleaned : null
@@ -226,7 +243,13 @@ function TemplatePicker({ selected, onToggle, outputFormats, setOutputFormats, t
   return (
     <Surface sx={surfaceStackSx}>
       <Stack spacing={1.5}>
-        <Typography variant="h6">Template Picker</Typography>
+        <Stack direction="row" alignItems="center" spacing={0.75}>
+          <Typography variant="h6">Template Picker</Typography>
+          <InfoTooltip
+            content={TOOLTIP_COPY.templatePicker}
+            ariaLabel="Template picker guidance"
+          />
+        </Stack>
         <Autocomplete
           multiple
           options={allTags}
@@ -350,7 +373,6 @@ function TemplatePicker({ selected, onToggle, outputFormats, setOutputFormats, t
                         sx={{ width: '100%', height: '100%' }}
                         frameAspectRatio="210 / 297"
                         pageShadow
-                        pageRadius={16}
                         pageBorderColor="rgba(15,23,42,0.08)"
                         marginGuides={{ inset: 28, color: 'rgba(79,70,229,0.28)' }}
                       />
@@ -579,7 +601,13 @@ function GenerateAndDownload({
           spacing={{ xs: 1, sm: 2 }}
         >
           <Stack spacing={0.5}>
-            <Typography variant="h6">Run Reports</Typography>
+            <Stack direction="row" alignItems="center" spacing={0.75}>
+              <Typography variant="h6">Run Reports</Typography>
+              <InfoTooltip
+                content={TOOLTIP_COPY.runReports}
+                ariaLabel="Run reports guidance"
+              />
+            </Stack>
             {!!subline && <Typography variant="caption" color="text.secondary">{subline}</Typography>}
           </Stack>
           <Stack
@@ -678,9 +706,15 @@ function GenerateAndDownload({
                     const uniqueTokenOptions = tokenOptions.filter((opt, idx, arr) => arr.indexOf(opt) === idx)
                     const SELECT_ALL_OPTION = '__NR_SELECT_ALL__'
                     const optionsWithAll = uniqueTokenOptions.length > 1 ? [...uniqueTokenOptions, SELECT_ALL_OPTION] : uniqueTokenOptions
-                    const displayValue = rawValue
-                      .filter((val, idx) => rawValue.indexOf(val) === idx)
-                      .filter((val) => val !== SELECT_ALL_OPTION)
+                    const ALL_SENTINELS = new Set(['all', 'select all', SELECT_ALL_OPTION.toLowerCase()])
+                    const isAllStored = rawValue.some(
+                      (val) => typeof val === 'string' && ALL_SENTINELS.has(val.toLowerCase()),
+                    )
+                    const displayValue = isAllStored
+                      ? [SELECT_ALL_OPTION]
+                      : rawValue
+                        .filter((val, idx) => rawValue.indexOf(val) === idx)
+                        .filter((val) => val !== SELECT_ALL_OPTION)
                     return (
                       <Autocomplete
                         key={token}
@@ -691,11 +725,14 @@ function GenerateAndDownload({
                         getOptionLabel={(option) => (option === SELECT_ALL_OPTION ? 'All values' : option)}
                         filterSelectedOptions
                         renderTags={(value, getTagProps) => {
-                          const isAllSelected =
+                          const isAllSelectedExplicit =
                             uniqueTokenOptions.length > 0 &&
                             value.length === uniqueTokenOptions.length &&
                             value.every((item) => uniqueTokenOptions.includes(item))
-                          if (isAllSelected) {
+                          const selectedIncludesAllSentinel = value.some(
+                            (item) => typeof item === 'string' && ALL_SENTINELS.has(item.toLowerCase()),
+                          )
+                          if (isAllSelectedExplicit || selectedIncludesAllSentinel) {
                             return [
                               <Chip
                                 {...getTagProps({ index: 0 })}
@@ -719,12 +756,18 @@ function GenerateAndDownload({
                             .filter((item) => item.length > 0)
                           const hasSelectAll = normalized.some((item) => {
                             const lower = item.toLowerCase()
-                            return item === SELECT_ALL_OPTION || lower === 'all' || lower === 'select all'
+                            return item === SELECT_ALL_OPTION || ALL_SENTINELS.has(lower)
                           })
+                          const sanitized = normalized.filter(
+                            (item) => !ALL_SENTINELS.has(item.toLowerCase()) && item !== SELECT_ALL_OPTION,
+                          )
                           if (hasSelectAll) {
-                            onKeyValueChange(tpl.id, token, uniqueTokenOptions)
+                            const allList = uniqueTokenOptions.length
+                              ? [SELECT_ALL_OPTION, ...uniqueTokenOptions]
+                              : [SELECT_ALL_OPTION]
+                            onKeyValueChange(tpl.id, token, allList)
                           } else {
-                            onKeyValueChange(tpl.id, token, normalized)
+                            onKeyValueChange(tpl.id, token, sanitized)
                           }
                         }}
                         isOptionEqualToValue={(option, optionValue) => option === optionValue}
@@ -884,7 +927,13 @@ function GenerateAndDownload({
       </Surface>
 
       <Surface sx={surfaceStackSx}>
-        <Typography variant="h6">Recently Downloaded</Typography>
+        <Stack direction="row" alignItems="center" spacing={0.75}>
+          <Typography variant="h6">Recently Downloaded</Typography>
+          <InfoTooltip
+            content={TOOLTIP_COPY.recentDownloads}
+            ariaLabel="Recent downloads guidance"
+          />
+        </Stack>
         <Stack spacing={1.5}>
           {downloads.map((d, i) => (
             <Stack
@@ -902,8 +951,27 @@ function GenerateAndDownload({
                 {d.filename} {'\u2022'} {d.template} {'\u2022'} {d.format.toUpperCase()} {'\u2022'} {d.size || 'Size unknown'}
               </Typography>
               <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
-                <Button size="small" variant="outlined" disabled={!d.htmlUrl} component="a" href={d.htmlUrl || '#'} target="_blank" rel="noopener">
+                <Button
+                  size="small"
+                  variant="outlined"
+                  disabled={!d.htmlUrl}
+                  component="a"
+                  href={d.htmlUrl ? withBase(d.htmlUrl) : '#'}
+                  target="_blank"
+                  rel="noopener"
+                >
                   Open
+                </Button>
+                <Button
+                  size="small"
+                  variant="contained"
+                  disabled={!d.pdfUrl}
+                  component="a"
+                  href={d.pdfUrl ? buildDownloadUrl(withBase(d.pdfUrl)) : '#'}
+                  target="_blank"
+                  rel="noopener"
+                >
+                  Download
                 </Button>
                 <Button size="small" variant="text" disabled>
                   Show in folder

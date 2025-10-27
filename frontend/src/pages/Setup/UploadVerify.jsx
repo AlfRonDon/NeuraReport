@@ -23,6 +23,8 @@ import { resolveTemplatePreviewUrl } from '../../utils/preview'
 import Surface from '../../components/layout/Surface.jsx'
 import EmptyState from '../../components/feedback/EmptyState.jsx'
 import LoadingState from '../../components/feedback/LoadingState.jsx'
+import InfoTooltip from '../../components/common/InfoTooltip.jsx'
+import TOOLTIP_COPY from '../../content/tooltipCopy.jsx'
 
 function detectFormat(file) {
   if (!file?.name) return null
@@ -661,8 +663,14 @@ export default function UploadVerify() {
   return (
     <Surface sx={{ gap: { xs: 2, md: 2.5 } }}>
       <Stack spacing={1}>
-        <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ sm: 'center' }} justifyContent="space-between">
-          <Typography variant="h6">Upload & Verify Template</Typography>
+        <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ sm: 'center' }} justifyContent="space-between" spacing={1.5}>
+          <Stack direction="row" alignItems="center" spacing={0.75}>
+            <Typography variant="h6">Upload & Verify Template</Typography>
+            <InfoTooltip
+              content={TOOLTIP_COPY.uploadVerifyTemplate}
+              ariaLabel="How to upload and verify a template"
+            />
+          </Stack>
           <Button
             size="small"
             variant="outlined"
@@ -916,6 +924,12 @@ export default function UploadVerify() {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  borderRadius: 2,
+                  overflow: 'hidden',
+                  bgcolor: 'background.paper',
+                  boxShadow: '0 16px 38px rgba(15, 23, 42, 0.08)',
                 }}
               >
                 {templateIframeSrc ? (
@@ -927,9 +941,7 @@ export default function UploadVerify() {
                       frameAspectRatio="210 / 297"
                       loading="eager"
                       contentAlign="top"
-                      pageShadow
-                      pageRadius={18}
-                      pageBorderColor="rgba(15,23,42,0.08)"
+                      pageChrome={false}
                       marginGuides={{ inset: 36, color: 'rgba(79,70,229,0.3)' }}
                       sx={{ width: '100%', height: '100%' }}
                     />
@@ -1104,10 +1116,10 @@ export default function UploadVerify() {
             {/* LEFT: dedicated preview + template meta */}
             <Box
               sx={{
-                width: { xs: '100%', md: '40%' },
-                flexBasis: { md: '40%' },
-                maxWidth: { md: '40%' },
-                minWidth: { md: 320 },
+                width: { xs: '100%', md: '50%' },
+                flexBasis: { md: '50%' },
+                maxWidth: { md: '50%' },
+                minWidth: { md: 360 },
                 flexShrink: 0,
                 display: 'flex',
                 flexDirection: 'column',
@@ -1118,35 +1130,44 @@ export default function UploadVerify() {
 
                 <Box
                   sx={{
-                    flexGrow: 1,
-                    flexBasis: 0,
-                    minHeight: 0,
-                    maxHeight: { md: '70vh' },
-                    borderRadius: 2,
-                    border: '1px solid',
-                    borderColor: 'divider',
-                    bgcolor: 'background.paper',
-                    p: 1,
+                    width: '100%',
+                    alignSelf: 'stretch',
+                    position: 'relative',
                     display: 'flex',
+                    flexDirection: 'column',
                     alignItems: 'center',
-                    justifyContent: 'center',
+                    gap: 2,
+                    mb: 2,
                   }}
                 >
                   {templateIframeSrc ? (
-                    <ScaledIframePreview
-                      key={`${templateIframeKey}-mapping`}
-                      title="mapping-template-preview"
-                      src={templateIframeSrc}
-                      sx={{ width: '100%', maxHeight: '100%' }}
-                      frameAspectRatio="210 / 297"
-                      fit="width"
-                      loading="eager"
-                      contentAlign="top"
-                      pageShadow
-                      pageRadius={16}
-                      pageBorderColor="rgba(15,23,42,0.08)"
-                      marginGuides={{ inset: 32, color: 'rgba(79,70,229,0.28)' }}
-                    />
+                    <Box
+                      sx={{
+                        width: '100%',
+                        maxWidth: { xs: 'min(100%, 620px)', md: 'min(100%, 960px)' },
+                        aspectRatio: '210 / 297',
+                        maxHeight: {
+                          xs: 'min(1440px, calc(260vw), calc(175vh))',
+                          md: 'min(2880px, calc(200vw), calc(175vh))',
+                        },
+                        flexShrink: 0,
+                        margin: '0 auto',
+                      }}
+                    >
+                      <ScaledIframePreview
+                        key={`${templateIframeKey}-mapping`}
+                        title="mapping-template-preview"
+                        src={templateIframeSrc}
+                        sx={{ width: '100%', height: '100%', overflow: 'hidden', borderRadius: 0 }}
+                        frameAspectRatio="210 / 297"
+                        fit="width"
+                        loading="eager"
+                        contentAlign="top"
+                        pageShadow
+                        pageBorderColor="rgba(15,23,42,0.08)"
+                        clampToParentHeight
+                      />
+                    </Box>
                   ) : (
                     <Typography variant="body2" color="text.secondary" sx={{ px: 2, textAlign: 'center' }}>
                       Upload and verify a template to see the photocopy preview here.
@@ -1183,9 +1204,9 @@ export default function UploadVerify() {
             {/* RIGHT: Mapping editor */}
             <Box
               sx={{
-                width: { xs: '100%', md: '60%' },
-                flexBasis: { md: '60%' },
-                maxWidth: { md: '60%' },
+                width: { xs: '100%', md: '50%' },
+                flexBasis: { md: '50%' },
+                maxWidth: { md: '50%' },
                 minWidth: 0,
                 display: 'flex',
                 flexDirection: 'column',
@@ -1222,6 +1243,8 @@ export default function UploadVerify() {
     </Surface>
   )
 }
+
+
 
 
 

@@ -1,10 +1,10 @@
 {
-  "correlation_id": "bootstrap",
+  "correlation_id": "tests",
   "file_checksums": {
-    "contract.json": "ebda41fa0bf179d80e7ebfe01b5c6e3d2b34340d9def1f4d98db88297b4bbcda",
-    "mapping_pdf_labels.json": "53162a84bce338bfcab3535f70b29251e16d332d7c7a5601ec98b864d4f63de0",
-    "report_final.html": "4661f93c0b09484b9c3a1b8b0a3c73c4c039f78ec436bb4a243e1bf569f77cc6",
-    "template_p1.html": "4661f93c0b09484b9c3a1b8b0a3c73c4c039f78ec436bb4a243e1bf569f77cc6"
+    "contract.json": "fb2d38b839ad998c4cc6a97fac22976c48b1f1d6eea616a42ec2a9d06b0a3042",
+    "mapping_pdf_labels.json": "5c51bd60521e8649270166b7a7c1860944e2ff8868c4bae7a049cc87d33d193f",
+    "report_final.html": "d804afc9d61e6f9c4fbbe94b5c996ab173b1a4a06ec5caba5ef3ed9339434ba0",
+    "template_p1.html": "7b69af89eb3f96c14fb4f609525063977123bba5690e346636bf2fd6b19e86a5"
   },
   "files": {
     "contract.json": "contract.json",
@@ -13,10 +13,10 @@
     "template_p1.html": "template_p1.html"
   },
   "input_refs": [
-    "mapping_pdf_labels.json"
+    "fixture"
   ],
-  "pid": 32764,
-  "produced_at": "2025-10-09T15:22:37.063438+00:00",
+  "pid": 32688,
+  "produced_at": "2025-10-18T13:10:11.304973+00:00",
   "schema_version": "1.0",
-  "step": "bootstrap"
+  "step": "fixture_setup"
 }

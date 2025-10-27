@@ -9,6 +9,8 @@ import { alpha } from "@mui/material/styles";
 import { mappingPreview, mappingApprove, withBase } from "../api/client";
 import { useStepTimingEstimator, formatDuration } from "../hooks/useStepTimingEstimator";
 import CorrectionsPreviewPanel from "./CorrectionsPreviewPanel.jsx";
+import InfoTooltip from "./common/InfoTooltip.jsx";
+import TOOLTIP_COPY from "../content/tooltipCopy.jsx";
 
 const VALUE_UNRESOLVED = "UNRESOLVED";
 const VALUE_SAMPLE = "INPUT_SAMPLE";
@@ -53,6 +55,19 @@ const REPORT_SELECTED_SUFFIXES = new Set(["info", "number", "no", "num", "count"
 const SAMPLE_ALIAS = "To Be Selected in report generator";
 const SAMPLE_STATUS_SAMPLE = "Input sample";
 const SAMPLE_STATUS_LATER = "Later Selected";
+const APPROVE_STAGE_LABELS = {
+  "mapping.save": "Saving your column selections",
+  "mapping.prepare_template": "Preparing the template preview",
+  "contract_build_v2": "Drafting the narrative package",
+  "generator_assets_v1": "Refreshing generator assets",
+  "mapping.thumbnail": "Capturing updated preview",
+  "approve.result": "Approval complete",
+};
+
+const getFriendlyStageLabel = (stageKey, fallback) => {
+  if (!stageKey) return fallback;
+  return APPROVE_STAGE_LABELS[stageKey] || fallback;
+};
 
 const normalizeTokenParts = (token) => {
   if (!token) return [];
@@ -470,10 +485,11 @@ export default function HeaderMappingEditor({
     beginApproveTiming();
     setSaving(true);
     setErrorMsg("");
-    setApproveStage("Saving mapping changes - in progress...");
+    const initialStageLabel = getFriendlyStageLabel("mapping.save", "Saving mapping changes");
+    setApproveStage(`${initialStageLabel} - in progress...`);
     setApproveLog([{
       key: "mapping.save",
-      label: "Saving mapping changes",
+      label: initialStageLabel,
       status: "started",
       startedAt: Date.now(),
       updatedAt: Date.now(),
@@ -496,7 +512,8 @@ export default function HeaderMappingEditor({
 
       if (eventType === "stage") {
         const stageKey = typeof evt.stage === "string" ? evt.stage : String(evt.stage ?? "stage");
-        const label = evt.label || evt.message || stageKey;
+        const rawLabel = evt.label || evt.message || stageKey;
+        const friendlyLabel = getFriendlyStageLabel(stageKey, rawLabel);
         const rawStatus = typeof evt.status === "string" ? evt.status.toLowerCase() : "";
         let status = "started";
         if (rawStatus === "done" || rawStatus === "complete") status = "complete";
@@ -508,16 +525,16 @@ export default function HeaderMappingEditor({
 
         let stageSummary = "";
         if (status === "complete") {
-          if (skipped) stageSummary = `${label} - skipped`;
-          else if (evt.elapsed_ms != null) stageSummary = `${label} - done in ${formatDuration(evt.elapsed_ms)}`;
-          else stageSummary = `${label} - done`;
+          if (skipped) stageSummary = `${friendlyLabel} - skipped`;
+          else if (evt.elapsed_ms != null) stageSummary = `${friendlyLabel} - finished in ${formatDuration(evt.elapsed_ms)}`;
+          else stageSummary = `${friendlyLabel} - finished`;
         } else if (status === "error") {
           const detail = evt.detail ? `: ${evt.detail}` : "";
-          stageSummary = `${label} - failed${detail}`;
+          stageSummary = `${friendlyLabel} - failed${detail}`;
         } else if (status === "skipped") {
-          stageSummary = `${label} - skipped`;
+          stageSummary = `${friendlyLabel} - skipped`;
         } else {
-          stageSummary = `${label} - in progress...`;
+          stageSummary = `${friendlyLabel} - in progress...`;
         }
         setApproveStage(stageSummary);
 
@@ -531,7 +548,7 @@ export default function HeaderMappingEditor({
             : existing?.elapsedMs ?? null;
           const nextEntry = {
             key: stageKey,
-            label,
+            label: friendlyLabel,
             status,
             startedAt,
             updatedAt: now,
@@ -551,12 +568,16 @@ export default function HeaderMappingEditor({
           markApproveStageDone(stageKey, evt.elapsed_ms);
         }
       } else if (eventType === "result") {
-        const label = evt.stage || "Approval complete.";
+        const resultKey = typeof evt.stage === "string" ? evt.stage : "approve.result";
+        const rawLabel = evt.label || evt.message || evt.stage || "Approval complete.";
+        const friendlyLabel = getFriendlyStageLabel(resultKey, rawLabel);
         const now = Date.now();
         const summary = evt.elapsed_ms != null
-          ? `${label} - finished in ${formatDuration(evt.elapsed_ms)}`
-          : label;
+          ? `${friendlyLabel} - finished in ${formatDuration(evt.elapsed_ms)}`
+          : friendlyLabel;
         setApproveStage(summary);
+        trackApproveStage(resultKey);
+        markApproveStageDone(resultKey, evt.elapsed_ms);
         setApproveProgress((p) => {
           if (typeof evt.progress === "number") {
             return evt.progress;
@@ -569,7 +590,7 @@ export default function HeaderMappingEditor({
           const existing = idx === -1 ? null : entries[idx];
           const nextEntry = {
             key: "approve.result",
-            label,
+            label: friendlyLabel,
             status: "complete",
             startedAt: existing?.startedAt ?? now,
             updatedAt: now,
@@ -583,14 +604,18 @@ export default function HeaderMappingEditor({
           return entries;
         });
       } else if (eventType === "error") {
-        const label = evt.stage || "Approval failed";
+        const errorKey = typeof evt.stage === "string" ? evt.stage : "approve.error";
+        const rawLabel = evt.label || evt.message || evt.stage || "Approval failed";
+        const friendlyLabel = getFriendlyStageLabel(errorKey, rawLabel);
         const detail = evt.detail || "Unknown error";
-        setApproveStage(`${label} - failed: ${detail}`);
+        setApproveStage(`${friendlyLabel} - failed: ${detail}`);
+        trackApproveStage(errorKey);
+        markApproveStageDone(errorKey, evt.elapsed_ms);
         setApproveLog((prev) => [
           ...prev,
           {
             key: `approve.error.${Date.now()}`,
-            label,
+            label: friendlyLabel,
             status: "error",
             startedAt: Date.now(),
             updatedAt: Date.now(),
@@ -627,8 +652,7 @@ export default function HeaderMappingEditor({
         setPreview((prev) => (prev ? { ...prev, keys: normalizedRespKeys } : prev));
       }
       setApproveProgress((p) => (p < 100 ? 100 : p));
-      setApproveStage("Approval complete.");
-      trackApproveStage("Approval complete.");
+      setApproveStage((prev) => prev || `${getFriendlyStageLabel("approve.result", "Approval complete")}.`);
       outcome = "success";
       const maybe = onApproved?.({ ...resp, requestId });
       if (maybe && typeof maybe.then === "function") {
@@ -768,7 +792,13 @@ export default function HeaderMappingEditor({
   return (
     <>
     <Stack spacing={2}>
-      <Typography variant="h6">Header Mappings</Typography>
+      <Stack direction="row" alignItems="center" spacing={0.75}>
+        <Typography variant="h6">Header Mappings</Typography>
+        <InfoTooltip
+          content={TOOLTIP_COPY.headerMappings}
+          ariaLabel="Header mappings guidance"
+        />
+      </Stack>
 
       {!!errorMsg && <Alert severity="error">{errorMsg}</Alert>}
 
@@ -911,7 +941,14 @@ export default function HeaderMappingEditor({
                           }
                           FormHelperTextProps={{ sx: { mt: 0.5 } }}
                         />
-                        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <Box
+                          sx={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "flex-start",
+                            gap: 1,
+                          }}
+                        >
                           <Typography
                             variant="caption"
                             color={exprIssues.length > 0 ? "warning.main" : "text.secondary"}
@@ -923,6 +960,7 @@ export default function HeaderMappingEditor({
                             variant="text"
                             onClick={() => handleUseDropdown(header)}
                             disabled={waiting}
+                            sx={{ minWidth: 100 }}
                           >
                             Use dropdown
                           </Button>
@@ -1109,52 +1147,6 @@ export default function HeaderMappingEditor({
           </Stack>
         </Stack>
 
-        {(saving || approveLog.length > 0) && (
-          <Box sx={{ mt: 1 }}>
-            {approveStage && (
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                {approveStage}
-              </Typography>
-            )}
-            <LinearProgress variant="determinate" value={approveProgress} />
-            <Box sx={{ mt: 0.5, display: 'grid', gap: 0.25 }}>
-              {approveLog.map((entry, idx) => {
-                const baseLabel = entry?.label || entry?.key || `Step ${idx + 1}`
-                let suffix = ''
-                if (entry?.status === 'complete') {
-                  if (entry?.skipped) suffix = ' (skipped)'
-                  else if (entry?.elapsedMs != null) suffix = ` (${formatDuration(entry.elapsedMs)})`
-                  else suffix = ' (done)'
-                } else if (entry?.status === 'error') {
-                  suffix = ` (failed${entry?.detail ? `: ${entry.detail}` : ''})`
-                } else if (entry?.status === 'started') {
-                  suffix = ' (in progress)'
-                } else if (entry?.status === 'skipped') {
-                  suffix = ' (skipped)'
-                }
-                const text = `${baseLabel}${suffix}`
-                const isActive = Boolean(saving && entry?.status === 'started')
-                const isError = entry?.status === 'error'
-                return (
-                  <Typography
-                    key={`${entry?.key || baseLabel}-${idx}`}
-                    variant="caption"
-                    color={isActive ? 'primary.main' : isError ? 'error.main' : 'text.secondary'}
-                  >
-                    {idx + 1}. {text}
-                  </Typography>
-                )
-              })}
-            </Box>
-            <Typography variant="caption" color="text.secondary" sx={{ mt: 1 }}>
-              Estimated time remaining:{' '}
-              {approveEta.ms == null
-                ? "Learning step timings..."
-                : `${approveEta.reliable ? "" : "~ "}${formatDuration(approveEta.ms)}${approveEta.reliable ? "" : " (learning)"}`}
-            </Typography>
-          </Box>
-        )}
-
         {/* subtle overlay to indicate busy state */}
         {waiting && (
           <Box
@@ -1198,7 +1190,14 @@ export default function HeaderMappingEditor({
       fullWidth
       disableEscapeKeyDown={saving}
     >
-      <DialogTitle>Narrative Instructions</DialogTitle>
+      <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+        Narrative Instructions
+        <InfoTooltip
+          content={TOOLTIP_COPY.llm4Narrative}
+          ariaLabel="Narrative guidance"
+          placement="bottom-start"
+        />
+      </DialogTitle>
       <DialogContent dividers sx={{ pt: 1.5 }}>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
           Describe any custom logic, aggregations, or layout rules the contract builder should follow. These instructions shape the final narrative output.
@@ -1230,6 +1229,68 @@ export default function HeaderMappingEditor({
           onChange={(e) => setLlm4Instructions(e.target.value)}
           disabled={waiting}
         />
+        {(saving || approveLog.length > 0) && (
+          <Box
+            sx={{
+              mt: 3,
+              p: 2,
+              borderRadius: 2,
+              border: "1px solid",
+              borderColor: (theme) => alpha(theme.palette.primary.main, 0.18),
+              bgcolor: (theme) => alpha(theme.palette.primary.main, 0.04),
+            }}
+          >
+            <Typography variant="subtitle2" sx={{ mb: 1 }}>
+              Approval progress
+            </Typography>
+            {approveStage && (
+              <Typography variant="body2" sx={{ mb: 1 }}>
+                {approveStage}
+              </Typography>
+            )}
+            <LinearProgress
+              variant="determinate"
+              value={approveProgress}
+              sx={{ height: 6, borderRadius: 999 }}
+            />
+            <Box sx={{ mt: 1.5, display: "grid", gap: 0.5 }}>
+              {approveLog.map((entry, idx) => {
+                const baseLabel = entry?.label || entry?.key || `Step ${idx + 1}`;
+                let suffix = "";
+                if (entry?.status === "complete") {
+                  if (entry?.skipped) suffix = " - skipped";
+                  else if (entry?.elapsedMs != null) suffix = ` - finished in ${formatDuration(entry.elapsedMs)}`;
+                  else suffix = " - finished";
+                } else if (entry?.status === "error") {
+                  suffix = ` - failed${entry?.detail ? `: ${entry.detail}` : ""}`;
+                } else if (entry?.status === "started") {
+                  suffix = " - in progress";
+                } else if (entry?.status === "skipped") {
+                  suffix = " - skipped";
+                }
+                const text = `${baseLabel}${suffix}`;
+                const isActive = Boolean(saving && entry?.status === "started");
+                const isError = entry?.status === "error";
+                return (
+                  <Typography
+                    key={`${entry?.key || baseLabel}-${idx}`}
+                    variant="caption"
+                    color={isActive ? "primary.main" : isError ? "error.main" : "text.secondary"}
+                    sx={{ fontWeight: isActive ? 600 : 400 }}
+                  >
+                    {idx + 1}. {text}
+                  </Typography>
+                );
+              })}
+            </Box>
+            <Typography variant="caption" color="text.secondary" sx={{ mt: 1 }}>
+              Estimated time remaining:{" "}
+              {approveEta.ms == null
+                ? "Learning step timings..."
+                : `${approveEta.reliable ? "" : "~ "}${formatDuration(approveEta.ms)}${approveEta.reliable ? "" : " (learning)"}`}
+            </Typography>
+          </Box>
+        )}
       </DialogContent>
       <DialogActions sx={{ justifyContent: "space-between" }}>
         <Button

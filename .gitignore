@@ -5,46 +5,62 @@ Thumbs.db
 *.swo
 .idea/
 .vscode/
+.history/
 
-# Root-level common
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Python binaries and caches
+.venv/
+venv/
+backend/.venv/
+backend/venv/
+**/__pycache__/
+*.py[cod]
+.pytest_cache/
+backend/.pytest_cache/
+.mypy_cache/
+backend/.mypy_cache/
+.ruff_cache/
+backend/.ruff_cache/
+
+# Coverage reports
+htmlcov/
+backend/htmlcov/
+.coverage
+coverage/
+coverage.xml
+*.coverage
+
+# Logs and temp
 *.log
 *.tmp
 *.bak
 *.orig
 *.local
-.env
-.env.*
-!.env.example
 
-# Node / Vite (frontend)
+# Frontend generated content
 frontend/node_modules/
 frontend/dist/
 frontend/.vite/
 frontend/.eslintcache
 frontend/.cache/
 
-# Python (backend)
-backend/.venv/
-backend/venv/
-backend/__pycache__/
-backend/**/*.pyc
-backend/.mypy_cache/
-backend/.pytest_cache/
-backend/htmlcov/
-backend/.coverage
-backend/coverage.xml
-backend/.ruff_cache/
+# Generated runtime data
+uploads/
+NeuraReport-backup-no-venv.zip
+__tmp_*.py
+__tmp_*.pdf
+_latest_gen.txt
+*.sqlite3
+*.db
+test_all.*
+test_counter.html
 
-# Build artifacts (generic)
+# Build artifacts
 build/
 dist/
-coverage/
-*.coverage
-
-# Temporary files
 tmp/
 temp/
-*.tmp
-
-
-NeuraReport-backup-no-venv.zip

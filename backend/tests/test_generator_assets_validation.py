@@ -22,13 +22,36 @@ from backend.app.services.utils.validation import (
 
 
 def _make_contract(tokens: dict[str, list[str]]) -> dict[str, Any]:
+    tokens_copy: dict[str, Any] = {
+        key: list(value) if isinstance(value, list) else value for key, value in tokens.items()
+    }
+    row_tokens = list(tokens_copy.get("row_tokens") or [])
+    columns = [
+        {"as": token, "from": [f"lines.{token}"]}
+        for token in row_tokens[:2]
+        if isinstance(token, str) and token
+    ]
+    if not columns:
+        columns = [{"as": "row_value", "from": ["lines.row_value"]}]
+        if not row_tokens:
+            row_tokens = ["row_value"]
+    elif not row_tokens:
+        row_tokens = [col["as"] for col in columns]
+
+    tokens_copy["row_tokens"] = row_tokens
     return {
-        "tokens": tokens,
+        "tokens": tokens_copy,
         "mapping": {},
         "join": {"parent_table": "batches", "parent_key": "id", "child_table": "lines", "child_key": "batch_id"},
         "date_columns": {},
         "filters": {},
-        "reshape_rules": [],
+        "reshape_rules": [
+            {
+                "purpose": "rows",
+                "strategy": "UNION_ALL",
+                "columns": columns,
+            }
+        ],
         "row_computed": {},
         "totals_math": {},
         "formatters": {},
@@ -276,4 +299,88 @@ def test_normalise_sql_pack_fills_missing_entrypoints(monkeypatch, tmp_path):
 
     assert result["invalid"] is False
 
+
+def test_generator_assets_requires_step5_contract(monkeypatch, tmp_path):
+    template_dir = tmp_path / "tpl"
+    template_dir.mkdir()
+    _write_png(template_dir / "report_final.png")
+
+    step4_output = {
+        "contract": _make_contract({"scalars": ["h1"], "row_tokens": ["r1"], "totals": ["t1"]}),
+        "overview_md": "#",
+        "step5_requirements": {},
+    }
+
+    payload_without_contract = {
+        "sql_pack": {
+            "script": "SELECT 1 AS h1;",
+            "entrypoints": {"header": "SELECT 1 AS h1", "rows": "SELECT 1 AS r1", "totals": "SELECT 1 AS t1"},
+            "params": {"required": [], "optional": []},
+        },
+        "output_schemas": {"header": ["h1"], "rows": ["r1"], "totals": ["t1"]},
+        "needs_user_fix": [],
+        "summary": {},
+    }
+
+    def fake_response(*args, **kwargs):
+        return FakeResponse(json.dumps(payload_without_contract, ensure_ascii=False))
+
+    monkeypatch.setattr(generator_assets, "call_chat_completion", lambda *args, **kwargs: fake_response())
+    monkeypatch.setattr(generator_assets, "get_openai_client", lambda: object())
+
+    with pytest.raises(generator_assets.GeneratorAssetsError) as excinfo:
+        generator_assets.build_generator_assets_from_payload(
+            template_dir=template_dir,
+            step4_output=step4_output,
+            final_template_html="<html></html>",
+            reference_pdf_image=None,
+            catalog_allowlist=None,
+            params_spec=[],
+        )
+    assert "contract payload" in str(excinfo.value)
+
+
+def test_generator_assets_validates_step5_contract(monkeypatch, tmp_path):
+    template_dir = tmp_path / "tpl"
+    template_dir.mkdir()
+    _write_png(template_dir / "report_final.png")
+
+    good_contract = _make_contract({"scalars": ["h1"], "row_tokens": ["r1"], "totals": ["t1"]})
+    bad_contract = dict(good_contract)
+    bad_contract["reshape_rules"] = [{"purpose": "rows", "strategy": "UNION_ALL", "columns": []}]
+
+    step4_output = {
+        "contract": good_contract,
+        "overview_md": "#",
+        "step5_requirements": {},
+    }
+
+    payload_with_bad_contract = {
+        "contract": bad_contract,
+        "sql_pack": {
+            "script": "SELECT 1 AS h1;",
+            "entrypoints": {"header": "SELECT 1 AS h1", "rows": "SELECT 1 AS r1", "totals": "SELECT 1 AS t1"},
+            "params": {"required": [], "optional": []},
+        },
+        "output_schemas": {"header": ["h1"], "rows": ["r1"], "totals": ["t1"]},
+        "needs_user_fix": [],
+        "summary": {},
+    }
+
+    def fake_response(*args, **kwargs):
+        return FakeResponse(json.dumps(payload_with_bad_contract, ensure_ascii=False))
+
+    monkeypatch.setattr(generator_assets, "call_chat_completion", lambda *args, **kwargs: fake_response())
+    monkeypatch.setattr(generator_assets, "get_openai_client", lambda: object())
+
+    with pytest.raises(generator_assets.GeneratorAssetsError) as excinfo:
+        generator_assets.build_generator_assets_from_payload(
+            template_dir=template_dir,
+            step4_output=step4_output,
+            final_template_html="<html></html>",
+            reference_pdf_image=None,
+            catalog_allowlist=None,
+            params_spec=[],
+        )
+    assert "Generator contract failed validation" in str(excinfo.value)
 

@@ -1,85 +1,94 @@
 # Configuration Reference
 
-This document is the single source of truth for configuring NeuraReport across
-backend services, scripts, and the frontend. All values are ASCII to keep the
-file portable between Windows, macOS, and Linux.
+NeuraReport reads the following environment variables and settings when launching the backend, scripts, and frontend.
 
 ## Backend Environment Variables
 
-| Variable | Required | Default | Notes / Example |
+### Core service
+
+| Variable | Required | Default | Description |
 | --- | --- | --- | --- |
-| `OPENAI_API_KEY` | Yes (prod) | _none_ | OpenAI API token. Set `NEURA_ALLOW_MISSING_OPENAI=true` only for local tests. |
-| `NEURA_ALLOW_MISSING_OPENAI` | No | `false` | Permits startup without an API key for offline/local runs. |
-| `OPENAI_MODEL` | No | `gpt-5` | Chat model used for schema, HTML, and contract prompts. |
-| `OPENAI_REQUEST_TIMEOUT_SECONDS` | No | _none_ | Optional timeout (seconds) for LLM calls. Leave unset or `0` to disable. |
-| `OPENAI_MAX_ATTEMPTS` | No | `3` | Number of retry attempts for LLM calls. |
-| `OPENAI_BACKOFF_SECONDS` | No | `1.5` | Initial exponential backoff delay (seconds). |
+| `OPENAI_API_KEY` | Yes (prod) | _none_ | API token used for every LLM call. Allow missing only for offline testing. |
+| `NEURA_ALLOW_MISSING_OPENAI` | No | `false` | Set to `true` to bypass the API key requirement when running offline. |
+| `OPENAI_MODEL` | No | `gpt-5` | Model identifier passed to OpenAI for Calls 1-5. |
+| `UPLOAD_ROOT` | No | `backend/uploads` | Directory that stores per-template artifacts and manifests. Created on boot. |
+| `NR_DEFAULT_DB` | No | _none_ | Default SQLite database path used when the UI omits a connection id. |
+| `DB_PATH` | No | _none_ | Legacy fallback path for the default database (`NR_DEFAULT_DB` takes precedence). |
+| `NEURA_STATE_DIR` | No | `backend/state` | Location of the encrypted state store (`state.json`) and generated secret. |
+| `NEURA_STATE_SECRET` | No | auto-generated | Base64 Fernet key. Provide to share state across installs or retain secrets. |
+| `NEURA_MAX_VERIFY_PDF_BYTES` | No | unlimited | Maximum upload size (bytes) for `/templates/verify`. `0` or unset disables the limit. |
+| `PDF_DPI` | No | `400` | DPI used when rasterising PDFs to PNG during verification. |
+| `MAX_FIX_PASSES` | No | `1` | Number of refinement passes attempted during Call 2 (`VERIFY_FIX_HTML_ENABLED` must be true). |
+| `VERIFY_FIX_HTML_ENABLED` | No | `true` | Disable (`false`/`0`) to skip the Call 2 HTML refinement stage. |
+| `ARTIFACT_WARN_BYTES` | No | `5242880` (5 MiB) | Threshold used by `scripts/artifact_stats.py` and CI for artifact sizes. |
+| `ARTIFACT_WARN_RENDER_MS` | No | `2000` | Threshold used by `scripts/artifact_stats.py` and CI for render durations. |
+| `NEURA_VERSION` | No | `version.json` value or `dev` | Overrides the version stamped on logs and health endpoints. |
+| `NEURA_COMMIT` | No | `version.json` value or `unknown` | Overrides the commit hash exposed in logs and health endpoints. |
+
+### LLM behaviour
+
+| Variable | Required | Default | Description |
+| --- | --- | --- | --- |
+| `OPENAI_REQUEST_TIMEOUT_SECONDS` | No | _none_ | Per-request timeout in seconds. Leave unset or `0` to disable. |
+| `OPENAI_MAX_ATTEMPTS` | No | `3` | Retry count for `call_chat_completion`. |
+| `OPENAI_BACKOFF_SECONDS` | No | `1.5` | Initial backoff delay between retries (seconds). |
 | `OPENAI_BACKOFF_MULTIPLIER` | No | `2.0` | Multiplier applied to each retry delay. |
-| `PDF_DPI` | No | `400` | DPI when rasterizing templates into PNG during verification. |
-| `NEURA_MAX_VERIFY_PDF_BYTES` | No | _none_ (disabled) | Maximum allowed size for PDF uploads during verification; set a positive value to enforce a limit (`0` disables the check). |
-| `REFINE_ITERS` | No | `1` | Number of LLM refinement passes during template verification. |
-| `UPLOAD_ROOT` | No | `backend/uploads` | Absolute/relative path where artifacts are stored. |
-| `NR_DEFAULT_DB` | No | _none_ | Default SQLite database used when the UI does not provide one. |
-| `DB_PATH` | No | _none_ | Legacy path override for the default DB (takes precedence over `NR_DEFAULT_DB`). |
-| `NEURA_STATE_DIR` | No | `backend/state` | Directory that stores encrypted state (connections, last-used template). |
-| `NEURA_STATE_SECRET` | No | Auto-generated | Base64 Fernet key for encrypting state; supply for deterministic deployments. |
-| `NEURA_HEALTH_EXTERNAL_HEAD` | No | `https://api.openai.com/v1/models` (used by `/readyz`) | Optional external service checked via HTTP HEAD. |
-| `NEURA_FAIL_AFTER_STEP` | No | _none_ | Testing hook; set to a pipeline step name (e.g., `mapping_save`) to simulate rollback failures. |
-| `NEURA_VERSION` | No | Version from `backend/app/version.json` or `dev` | Override logged application version. |
-| `NEURA_COMMIT` | No | Commit from `backend/app/version.json` or `unknown` | Override logged Git commit hash. |
-| `ARTIFACT_WARN_BYTES` | No | `5242880` (5 MiB) | Size threshold used by `scripts/artifact_stats.py` and CI. |
-| `ARTIFACT_WARN_RENDER_MS` | No | `2000` | Render time threshold used by `scripts/artifact_stats.py` and CI. |
+| `LLM_RAW_OUTPUT_PATH` | No | `llm_raw_outputs.md` | Absolute or relative path for dumping raw LLM responses. |
 
-### Script/CLI Helpers
+### Health & diagnostics
 
-These variables are optional and only used by developer utilities.
+| Variable | Required | Default | Description |
+| --- | --- | --- | --- |
+| `NEURA_HEALTH_EXTERNAL_HEAD` | No | `https://api.openai.com/v1/models` | Optional URL probed via HTTP HEAD in `/healthz` and `/readyz`. |
+| `NEURA_FAIL_AFTER_STEP` | No | _none_ | Testing hook that raises after the named pipeline step (for rollback drills). |
 
-| Variable | Used By | Notes |
+### CLI / tooling helpers
+
+| Variable | Used by | Description |
 | --- | --- | --- |
-| `CONNECTION_ID` / `DB_URL` / `DB_PATH` | `backend/app/services/connections/db_connection.py` CLI | Provide defaults when running the connection helper script directly. |
-| `PDF_PATH` | `backend/app/services/templates/TemplateVerify.py` demo script | Path to a PDF when running the verification module as a standalone script. |
+| `CONNECTION_ID` | `backend/app/services/connections/db_connection.py` CLI | Supplies a connection id when resolving DB paths via the helper script. |
+| `DB_URL` | same | Alternative to `--db-url` when running the helper script. |
+| `DB_PATH` | same | Legacy override for SQLite paths (also used as a backend fallback). |
 
 ## Frontend (Vite) Environment Variables
 
-| Variable | Required | Default | Notes |
+| Variable | Required | Default | Description |
 | --- | --- | --- | --- |
-| `VITE_API_BASE_URL` | No | `http://127.0.0.1:8000` | Backend base URL for API calls. |
-| `VITE_USE_MOCK` | No | `true` | Enables mock API data for local development; set to `false` for real backend integration. |
+| `VITE_API_BASE_URL` | No | `http://127.0.0.1:8000` | Base URL used by the frontend HTTP client. |
+| `VITE_USE_MOCK` | No | `true` | Serve mock API responses when set to `true`. Use `false` for real backend integration. |
 
 ## Ports
 
-- Backend FastAPI (uvicorn): `8000`
-- Frontend Vite dev server: `5173`
+- Backend (FastAPI via uvicorn): `8000`
+- Frontend (Vite dev server): `5173`
 
-## Key File Paths
+## Key Paths
 
 - Backend source: `backend/`
-- Uploads root: `backend/uploads/<template_id>/`
+- Template uploads: `backend/uploads/<template_id>/`
 - Artifact manifest: `backend/uploads/<template_id>/artifact_manifest.json`
-- JSON Schemas: `backend/app/schemas/*.schema.json`
+- State store: `backend/state/state.json`
+- LLM output log: `llm_raw_outputs.md` (configurable)
 - Scripts: `scripts/*.py`
-
-## Windows vs. Unix Notes
-
-- Commands in this document use PowerShell syntax. On macOS/Linux replace `python` with `python3` and use `export VAR=value`.
-- File locking uses exclusive creates (`os.O_EXCL`), which work on NTFS and modern POSIX filesystems.
-- Paths stored in manifests are relative, so they are portable across operating systems.
 
 ## Runtime Validation
 
 On startup the backend:
 
 1. Ensures `OPENAI_API_KEY` is present unless `NEURA_ALLOW_MISSING_OPENAI=true`.
-2. Creates/verifies the uploads directory specified by `UPLOAD_ROOT`.
-3. Logs sanitized configuration along with the application version and commit.
+2. Creates/verifies the uploads directory (`UPLOAD_ROOT`).
+3. Logs a sanitized configuration summary (model, version, commit, storage paths).
+4. Generates `NEURA_STATE_SECRET` if absent and persists it next to `state.json`.
 
-## Example Commands
+## Example Session Configuration
 
-Windows PowerShell (persist for current session):
+Windows PowerShell:
 
 ```powershell
 $env:OPENAI_API_KEY = "sk-..."
-$env:UPLOAD_ROOT = "C:\neura\uploads"
+$env:UPLOAD_ROOT = "$PWD\\backend\\uploads"
+$env:NEURA_STATE_SECRET = "my-shared-secret"
+uvicorn backend.api:app --reload
 ```
 
 Unix shells:
@@ -87,4 +96,6 @@ Unix shells:
 ```bash
 export OPENAI_API_KEY="sk-..."
 export UPLOAD_ROOT="$PWD/backend/uploads"
+export NEURA_STATE_SECRET="my-shared-secret"
+uvicorn backend.api:app --reload
 ```

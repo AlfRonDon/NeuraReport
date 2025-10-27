@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { Box, Typography, Stack, Button, List, ListItem, ListItemText } from '@mui/material'
 import Surface from '../../components/layout/Surface.jsx'
+import InfoTooltip from '../../components/common/InfoTooltip.jsx'
+import TOOLTIP_COPY from '../../content/tooltipCopy.jsx'
 
 export default function UploadTemplate() {
   const [files, setFiles] = useState([])
@@ -12,7 +14,13 @@ export default function UploadTemplate() {
 
   return (
     <Surface>
-      <Typography variant="h6" sx={{ mb: 2 }}>Upload & Verify Template</Typography>
+      <Stack direction="row" alignItems="center" spacing={0.75} sx={{ mb: 2 }}>
+        <Typography variant="h6">Upload & Verify Template</Typography>
+        <InfoTooltip
+          content={TOOLTIP_COPY.uploadTemplate}
+          ariaLabel="Upload and verify guidance"
+        />
+      </Stack>
       <Stack spacing={2} direction={{ xs: 'column', sm: 'row' }} alignItems="center">
         <Button variant="outlined" component="label">
           Choose PDF

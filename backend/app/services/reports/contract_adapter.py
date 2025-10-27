@@ -410,10 +410,19 @@ class ContractAdapter:
         """
         if not self._reshape_rules:
             raise ValueError("contract.reshape_rules is required to synthesise SQL")
-        rule = self._reshape_rules[0]
+        rule = next(
+            (
+                item
+                for item in self._reshape_rules
+                if isinstance(item, Mapping) and item.get("columns")
+            ),
+            None,
+        )
+        if not rule:
+            raise ValueError("contract.reshape_rules must include at least one rule with column definitions")
         columns = rule.get("columns") or []
         if not columns:
-            raise ValueError("contract.reshape_rules[0].columns must define at least one column")
+            raise ValueError("contract.reshape_rules columns must define at least one column")
 
         per_column_sources: List[Tuple[str, List[str]]] = []
         select_aliases: List[str] = []

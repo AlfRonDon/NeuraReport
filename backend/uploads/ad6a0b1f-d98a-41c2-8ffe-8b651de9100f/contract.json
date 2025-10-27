@@ -1,59 +1,26 @@
 {
   "mapping": {
-    "rows.sl": "records.sl_no",
-    "rows.name": "records.material_name",
-    "rows.set": "records.set_wt_kg",
-    "rows.ach": "records.ach_wt_kg",
-    "rows.err": "records.error_kg",
-    "rows.errp": "records.error_pct",
-    "total_set": "records.set_wt_kg",
-    "total_ach": "records.ach_wt_kg",
-    "total_err": "records.error_kg",
-    "total_errp": "records.error_pct"
+    "report_title": "reports.title",
+    "row_value": "reports.value"
   },
   "join": {
-    "parent_table": "records",
-    "parent_key": "report_date",
-    "child_table": "records",
-    "child_key": "report_date"
+    "parent_table": "reports",
+    "parent_key": "id",
+    "child_table": "reports",
+    "child_key": "id"
   },
   "date_columns": {
-    "records": "report_date"
+    "reports": "created_at"
   },
   "header_tokens": [
-    "title",
-    "print_date",
-    "date_from",
-    "date_to",
-    "company",
-    "page_no",
-    "page_total"
+    "report_title"
   ],
   "row_tokens": [
-    "rows.sl",
-    "rows.name",
-    "rows.set",
-    "rows.ach",
-    "rows.err",
-    "rows.errp"
+    "row_value"
   ],
-  "totals": {
-    "total_set": "records.set_wt_kg",
-    "total_ach": "records.ach_wt_kg",
-    "total_err": "records.error_kg",
-    "total_errp": "records.error_pct"
-  },
+  "totals": {},
   "row_order": [
-    "sl_no",
-    "ROWID"
+    "id"
   ],
-  "literals": {
-    "title": "Consumption report",
-    "print_date": "25/03/2024",
-    "date_from": "24/03/2024",
-    "date_to": "24/03/2024",
-    "company": "Indian Industrial Machines Pvt. Ltd.",
-    "page_no": "1",
-    "page_total": "1"
-  }
+  "literals": {}
 }

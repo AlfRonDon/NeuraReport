@@ -1,5 +1,6 @@
 import { forwardRef } from 'react'
 import { Box, Stack, Typography, Breadcrumbs, Link } from '@mui/material'
+import InfoTooltip from '../common/InfoTooltip.jsx'
 
 const toArray = (value) => (Array.isArray(value) ? value : value ? [value] : [])
 
@@ -69,12 +70,16 @@ const PageHeader = forwardRef(function PageHeader(
     children,
     sx = [],
     disablePadding = false,
+    helpContent = null,
+    helpPlacement = 'top',
+    helpTooltipProps = {},
     ...props
   },
   ref,
 ) {
   const sxArray = Array.isArray(sx) ? sx : [sx]
   const crumbs = toArray(breadcrumbs).filter(Boolean)
+  const hasHelp = !!helpContent
 
   return (
     <Box
@@ -124,9 +129,26 @@ const PageHeader = forwardRef(function PageHeader(
                 {eyebrow}
               </Typography>
             )}
-            <Typography variant="h4" component="h1">
-              {title}
-            </Typography>
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1,
+                flexWrap: 'wrap',
+              }}
+            >
+              <Typography variant="h4" component="h1">
+                {title}
+              </Typography>
+              {hasHelp ? (
+                <InfoTooltip
+                  content={helpContent}
+                  placement={helpPlacement}
+                  ariaLabel={`More information about ${title}`}
+                  {...helpTooltipProps}
+                />
+              ) : null}
+            </Box>
             {description && (
               <Typography variant="body1" color="text.secondary">
                 {description}

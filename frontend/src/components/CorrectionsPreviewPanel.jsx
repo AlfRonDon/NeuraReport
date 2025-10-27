@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Box, Button, CircularProgress, LinearProgress, Stack, TextField, Typography } from '@mui/material';
 
 import { runCorrectionsPreview } from '../api/client';
+import InfoTooltip from './common/InfoTooltip.jsx';
+import TOOLTIP_COPY from '../content/tooltipCopy.jsx';
 
 export default function CorrectionsPreviewPanel({
   templateId,
@@ -15,7 +17,6 @@ export default function CorrectionsPreviewPanel({
 }) {
   const [instructions, setInstructions] = useState(initialInstructions || '');
   const latestInstructionsRef = useRef(initialInstructions || '');
-  const syncTimerRef = useRef(null);
   const [running, setRunning] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [result, setResult] = useState(null);
@@ -54,30 +55,8 @@ export default function CorrectionsPreviewPanel({
 
   const flushInstructions = useCallback(() => {
     if (typeof onInstructionsChange !== 'function') return;
-    if (syncTimerRef.current) {
-      clearTimeout(syncTimerRef.current);
-      syncTimerRef.current = null;
-    }
     onInstructionsChange(latestInstructionsRef.current);
   }, [onInstructionsChange]);
-
-  useEffect(() => {
-    if (typeof onInstructionsChange !== 'function') return undefined;
-    if (syncTimerRef.current) {
-      clearTimeout(syncTimerRef.current);
-    }
-    const valueForCallback = instructions;
-    syncTimerRef.current = setTimeout(() => {
-      onInstructionsChange(valueForCallback);
-      syncTimerRef.current = null;
-    }, 300);
-    return () => {
-      if (syncTimerRef.current) {
-        clearTimeout(syncTimerRef.current);
-        syncTimerRef.current = null;
-      }
-    };
-  }, [instructions, onInstructionsChange]);
 
   useEffect(() => () => {
     flushInstructions();
@@ -154,7 +133,14 @@ export default function CorrectionsPreviewPanel({
       }}
     >
       <Stack spacing={1.5}>
-        <Typography variant="subtitle1">Corrections Assistant</Typography>
+        <Stack direction="row" alignItems="center" spacing={0.75}>
+          <Typography variant="subtitle1">Corrections Assistant</Typography>
+          <InfoTooltip
+            content={TOOLTIP_COPY.llm35Corrections}
+            ariaLabel="Corrections assistant guidance"
+            placement="bottom-start"
+          />
+        </Stack>
         <Typography variant="body2" color="text.secondary">
           Provide instructions to fix the template and inline constants. Each run updates the HTML and refreshes the page
           summary for the narrative step.

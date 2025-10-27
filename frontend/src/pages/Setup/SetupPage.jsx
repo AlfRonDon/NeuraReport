@@ -1,7 +1,20 @@
-import { Box, Typography, Stack, List, ListItemButton, ListItemIcon, ListItemText, Chip } from '@mui/material'
+import { useState } from 'react'
+import {
+  Box,
+  Typography,
+  Stack,
+  List,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
+  Chip,
+  Button,
+  Collapse,
+} from '@mui/material'
 import StorageIcon from '@mui/icons-material/Storage'
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
 import ArticleIcon from '@mui/icons-material/Article'
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
 import ConnectDB from './ConnectDB'
 import UploadVerify from './UploadVerify'
 import TemplatesPane from './TemplatesPane.jsx'
@@ -108,6 +121,7 @@ export default function SetupPage() {
     'Select a setup step to view the focused checklist for that part of the pipeline.',
   ]
   const activeHeading = sectionHeadings[setupNav] || 'Get Started'
+  const [detailsOpen, setDetailsOpen] = useState(false)
 
   return (
     <Stack spacing={{ xs: 3, md: 4 }}>
@@ -115,37 +129,59 @@ export default function SetupPage() {
         title={activeHeading}
         description={null}
         disablePadding
-        sx={{ pb: { xs: 0.5, sm: 0.75 } }}>
-        <Stack spacing={2} sx={{ width: '100%' }}>
-          <Box
-            component="section"
-            aria-label="Step instructions"
-            sx={{ color: 'text.secondary' }}
+        sx={{ pb: { xs: 0.5, sm: 0.75 } }}
+        actions={(
+          <Button
+            type="button"
+            size="small"
+            variant="outlined"
+            onClick={() => setDetailsOpen((prev) => !prev)}
+            aria-expanded={detailsOpen}
+            aria-controls="setup-step-details"
+            sx={{
+              fontWeight: 600,
+              textTransform: 'none',
+              fontSize: '0.95rem',
+              py: 0.75,
+              px: 1.75,
+            }}
           >
-            <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary' }}>
-              What to do in this step
-            </Typography>
+            {detailsOpen ? 'Hide Section Info' : 'About This Section'}
+          </Button>
+        )}>
+        <Stack spacing={2} sx={{ width: '100%' }}>
+          <Collapse in={detailsOpen} timeout="auto" unmountOnExit>
             <Box
-              component="ol"
-              sx={{
-                mt: 0.75,
-                pl: 3,
-                display: 'grid',
-                gap: 0.5,
-              }}
+              id="setup-step-details"
+              component="section"
+              aria-label="Step instructions"
+              sx={{ color: 'text.secondary' }}
             >
-              {activeSummary.map((item, index) => (
-                <Typography
-                  key={`${setupNav || 'setup'}-summary-${index}`}
-                  component="li"
-                  variant="body2"
-                  sx={{ display: 'list-item', color: 'text.secondary' }}
-                >
-                  {item}
-                </Typography>
-              ))}
+              <Typography variant="subtitle1" sx={{ fontWeight: 700, color: 'text.primary', fontSize: '1rem' }}>
+                What to do in this step
+              </Typography>
+              <Box
+                component="ol"
+                sx={{
+                  mt: 1,
+                  pl: 3,
+                  display: 'grid',
+                  gap: 0.75,
+                }}
+              >
+                {activeSummary.map((item, index) => (
+                  <Typography
+                    key={`${setupNav || 'setup'}-summary-${index}`}
+                    component="li"
+                    variant="body1"
+                    sx={{ display: 'list-item', color: 'text.secondary', lineHeight: 1.55 }}
+                  >
+                    {item}
+                  </Typography>
+                ))}
+              </Box>
             </Box>
-          </Box>
+          </Collapse>
           <Stack direction="row" spacing={1} flexWrap="wrap" aria-label="Setup progress">
             {setupProgress.map((step) => (
               <Chip
@@ -157,6 +193,17 @@ export default function SetupPage() {
                 sx={{ fontWeight: step.active ? 600 : 500 }}
               />
             ))}
+          </Stack>
+          <Stack
+            direction="row"
+            alignItems="center"
+            spacing={0.75}
+            sx={{ mt: 0.5, color: 'text.secondary' }}
+          >
+            <InfoOutlinedIcon fontSize="small" color="info" />
+            <Typography variant="caption" color="inherit">
+              Blue info icons on each panel share detailed instructions and tips.
+            </Typography>
           </Stack>
         </Stack>
       </PageHeader>

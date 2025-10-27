@@ -7,10 +7,14 @@ const nowMs = () => (typeof performance !== 'undefined' ? performance.now() : Da
 const clamp = (value, min = 0) => (value < min ? min : value)
 
 const MAX_SAMPLES_PER_STAGE = 12
+const MAX_RAW_SAMPLES = 60
 const MAX_VALID_DURATION_MS = 30 * 60 * 1000 // cap at 30 minutes to discard extreme outliers
 const MIN_VALID_DURATION_MS = 1 // treat sub-millisecond stages as 1ms so we still learn their order
 const TRIM_RATIO = 0.2
 const MIN_CONFIDENT_SAMPLES = 3
+const IMPROVEMENT_WEIGHT = 0.9
+const REGRESSION_WEIGHT = 0.35
+const OUTLIER_CLAMP_MULTIPLIER = 2
 
 const sanitizeDuration = (value) => {
   if (!Number.isFinite(value)) return null
@@ -23,52 +27,96 @@ const sanitizeDuration = (value) => {
 
 const computeAverageFromSamples = (samples) => {
   if (!Array.isArray(samples) || samples.length === 0) return null
-  if (samples.length === 1) return samples[0]
   const sorted = [...samples].sort((a, b) => a - b)
   const maxTrim = Math.floor((sorted.length - 1) / 2)
   const trim = Math.min(Math.floor(sorted.length * TRIM_RATIO), maxTrim)
   const start = trim
   const end = sorted.length - trim
   const window = sorted.slice(start, end > start ? end : sorted.length)
+  if (!window.length) return null
+  if (window.length === 1) return window[0]
+  if (window.length === 2) return (window[0] + window[1]) / 2
+  if (window.length <= 4) {
+    const mid = Math.floor(window.length / 2)
+    if (window.length % 2 === 0) {
+      return (window[mid - 1] + window[mid]) / 2
+    }
+    return window[mid]
+  }
   const total = window.reduce((sum, value) => sum + value, 0)
-  return window.length ? total / window.length : null
+  return total / window.length
 }
 
 const normalizeHistoryEntry = (entry) => {
   if (!entry || typeof entry !== 'object') {
-    return { samples: [], avgMs: null, count: 0, lastMs: null }
+    return { samples: [], rawSamples: [], avgMs: null, count: 0, lastMs: null }
   }
 
-  const samples = []
-  if (Array.isArray(entry.samples)) {
+  const rawSamples = []
+  if (Array.isArray(entry.rawSamples)) {
+    entry.rawSamples.forEach((value) => {
+      const sanitized = sanitizeDuration(value)
+      if (sanitized != null) rawSamples.push(sanitized)
+    })
+  }
+
+  if (!rawSamples.length && Array.isArray(entry.samples)) {
+    entry.samples.forEach((value) => {
+      const sanitized = sanitizeDuration(value)
+      if (sanitized != null) rawSamples.push(sanitized)
+    })
+  }
+
+  if (!rawSamples.length && typeof entry.lastMs === 'number') {
+    const sanitized = sanitizeDuration(entry.lastMs)
+    if (sanitized != null) rawSamples.push(sanitized)
+  }
+
+  if (!rawSamples.length && typeof entry.avgMs === 'number') {
+    const sanitized = sanitizeDuration(entry.avgMs)
+    if (sanitized != null) rawSamples.push(sanitized)
+  }
+
+  if (!rawSamples.length && typeof entry.totalMs === 'number' && typeof entry.count === 'number' && entry.count > 0) {
+    const avg = sanitizeDuration(entry.totalMs / entry.count)
+    if (avg != null) rawSamples.push(avg)
+  }
+
+  const trimmedRaw = rawSamples.slice(-MAX_RAW_SAMPLES)
+  let samples = []
+  if (Array.isArray(entry.samples) && entry.samples.length) {
     entry.samples.forEach((value) => {
       const sanitized = sanitizeDuration(value)
       if (sanitized != null) samples.push(sanitized)
     })
   }
-
-  if (!samples.length && typeof entry.lastMs === 'number') {
-    const sanitized = sanitizeDuration(entry.lastMs)
-    if (sanitized != null) samples.push(sanitized)
+  if (!samples.length && trimmedRaw.length) {
+    samples = trimmedRaw.slice(-MAX_SAMPLES_PER_STAGE)
+  } else if (samples.length > MAX_SAMPLES_PER_STAGE) {
+    samples = samples.slice(-MAX_SAMPLES_PER_STAGE)
+  }
+  if (samples.length >= 2) {
+    const latest = samples[samples.length - 1]
+    const cap = latest * OUTLIER_CLAMP_MULTIPLIER
+    const filtered = []
+    samples.forEach((value, idx) => {
+      if (idx === samples.length - 1 || value <= cap) filtered.push(value)
+    })
+    if (!filtered.includes(latest)) filtered.push(latest)
+    samples = filtered
   }
 
-  if (!samples.length && typeof entry.avgMs === 'number') {
-    const sanitized = sanitizeDuration(entry.avgMs)
-    if (sanitized != null) samples.push(sanitized)
-  }
-
-  if (!samples.length && typeof entry.totalMs === 'number' && typeof entry.count === 'number' && entry.count > 0) {
-    const avg = sanitizeDuration(entry.totalMs / entry.count)
-    if (avg != null) samples.push(avg)
-  }
-
-  const cappedSamples = samples.slice(-MAX_SAMPLES_PER_STAGE)
-  const avgMs = computeAverageFromSamples(cappedSamples)
-  const lastMs = cappedSamples.length ? cappedSamples[cappedSamples.length - 1] : null
-  const count = Number.isFinite(entry.count) ? Math.max(entry.count, cappedSamples.length) : cappedSamples.length
+  const avgMs = computeAverageFromSamples(samples)
+  const lastMs = trimmedRaw.length ? trimmedRaw[trimmedRaw.length - 1] : samples.length ? samples[samples.length - 1] : null
+  const count = Math.max(
+    Number.isFinite(entry.count) ? entry.count : 0,
+    trimmedRaw.length,
+    samples.length,
+  )
 
   return {
-    samples: cappedSamples,
+    samples,
+    rawSamples: trimmedRaw,
     avgMs: avgMs ?? null,
     count,
     lastMs,
@@ -85,9 +133,31 @@ const normalizeHistory = (history) => {
 
 const getSampleCount = (entry) => {
   if (!entry || typeof entry !== 'object') return 0
+  if (Array.isArray(entry.rawSamples)) return entry.rawSamples.length
   if (Array.isArray(entry.samples)) return entry.samples.length
   if (typeof entry.count === 'number') return entry.count
   return 0
+}
+
+const resolveStageEstimate = (entry, fallback = null) => {
+  let estimate = fallback
+  if (entry && typeof entry === 'object') {
+    const candidates = []
+    if (Array.isArray(entry.samples) && entry.samples.length) {
+      candidates.push(entry.samples[entry.samples.length - 1])
+    }
+    if (Array.isArray(entry.rawSamples) && entry.rawSamples.length) {
+      candidates.push(entry.rawSamples[entry.rawSamples.length - 1])
+    }
+    if (typeof entry.lastMs === 'number') {
+      candidates.push(entry.lastMs)
+    }
+    candidates.forEach((value) => {
+      if (!Number.isFinite(value)) return
+      estimate = estimate == null ? value : Math.min(estimate, value)
+    })
+  }
+  return estimate
 }
 
 const loadFromStorage = (storageKey) => {
@@ -118,6 +188,7 @@ const averageDuration = (entry) => {
   if (!entry || typeof entry !== 'object') return null
   if (typeof entry.avgMs === 'number' && !Number.isNaN(entry.avgMs)) return entry.avgMs
   if (Array.isArray(entry.samples) && entry.samples.length) return computeAverageFromSamples(entry.samples)
+  if (Array.isArray(entry.rawSamples) && entry.rawSamples.length) return computeAverageFromSamples(entry.rawSamples)
   if (typeof entry.totalMs === 'number' && typeof entry.count === 'number' && entry.count > 0) {
     return entry.totalMs / entry.count
   }
@@ -185,19 +256,42 @@ export function useStepTimingEstimator(cacheKey) {
     if (sanitized == null) return
     setHistory((prev) => {
       const previous = prev?.[stage]
-      const samples = previous?.samples ? previous.samples.slice() : []
-      samples.push(sanitized)
-      if (samples.length > MAX_SAMPLES_PER_STAGE) {
-        samples.splice(0, samples.length - MAX_SAMPLES_PER_STAGE)
+      const rawSamples = previous?.rawSamples ? previous.rawSamples.slice() : []
+      rawSamples.push(sanitized)
+      if (rawSamples.length > MAX_RAW_SAMPLES) {
+        rawSamples.splice(0, rawSamples.length - MAX_RAW_SAMPLES)
       }
-      const avgMs = computeAverageFromSamples(samples)
-      const lastMs = samples.length ? samples[samples.length - 1] : null
-      const prevCount = Number.isFinite(previous?.count) ? previous.count : samples.length - 1
-      const count = Math.min((prevCount || 0) + 1, 1000)
+      let samples = rawSamples.slice(-MAX_SAMPLES_PER_STAGE)
+      if (samples.length >= 2) {
+        const latestIdx = samples.length - 1
+        const latest = samples[latestIdx]
+        const outlierCap = latest * OUTLIER_CLAMP_MULTIPLIER
+        samples = samples.filter((value, idx) => idx === latestIdx || value <= outlierCap)
+        if (!samples.includes(latest)) {
+          samples.push(latest)
+        }
+      }
+      const trimmedAvg = computeAverageFromSamples(samples) ?? sanitized
+      const priorAvg = Number.isFinite(previous?.avgMs) ? previous.avgMs : null
+      const baseline = sanitized <= trimmedAvg ? sanitized : trimmedAvg
+      const weight = priorAvg == null
+        ? 1
+        : sanitized <= priorAvg
+          ? IMPROVEMENT_WEIGHT
+          : REGRESSION_WEIGHT
+      const rawAvg = priorAvg == null
+        ? baseline
+        : sanitized <= priorAvg * 0.5
+          ? sanitized
+          : (priorAvg * (1 - weight)) + (baseline * weight)
+      const avgMs = sanitizeDuration(rawAvg) ?? baseline
+      const lastMs = rawSamples.length ? rawSamples[rawSamples.length - 1] : samples.length ? samples[samples.length - 1] : null
+      const count = Math.min(rawSamples.length, 1000)
       return {
         ...prev,
         [stage]: {
           samples,
+          rawSamples,
           avgMs,
           lastMs,
           count,
@@ -227,11 +321,15 @@ export function useStepTimingEstimator(cacheKey) {
     const elapsed = stageStartRef.current != null ? nowMs() - stageStartRef.current : 0
     const currentEntry = averages?.[stage]
     const currentAvg = averageDuration(currentEntry)
+    let currentEstimate = resolveStageEstimate(currentEntry, currentAvg)
+    if (currentEstimate != null) {
+      currentEstimate = Math.max(currentEstimate, elapsed)
+    }
     const currentSamples = getSampleCount(currentEntry)
-    if (currentAvg != null) {
+    if (currentEstimate != null) {
       hasKnown = true
       if (currentSamples < MIN_CONFIDENT_SAMPLES) missing = true
-      remaining += clamp(currentAvg - elapsed, 0)
+      remaining += clamp(currentEstimate - elapsed, 0)
     } else {
       missing = true
     }
@@ -241,11 +339,12 @@ export function useStepTimingEstimator(cacheKey) {
       if (completedSetRef.current.has(step)) continue
       const entry = averages?.[step]
       const avg = averageDuration(entry)
+      const estimate = resolveStageEstimate(entry, avg)
       const sampleCount = getSampleCount(entry)
-      if (avg != null) {
+      if (estimate != null) {
         hasKnown = true
         if (sampleCount < MIN_CONFIDENT_SAMPLES) missing = true
-        remaining += avg
+        remaining += estimate
       } else {
         missing = true
       }

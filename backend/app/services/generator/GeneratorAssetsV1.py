@@ -86,8 +86,8 @@ def _validate_entrypoints_against_schema(
         if expected_tokens:
             aliases = _extract_aliases(sql)
             if aliases:
-                compared = zip(expected_tokens, aliases[: len(expected_tokens)])
-                mismatch = [token for token, alias in compared if token != alias]
+                alias_set = {alias.strip() for alias in aliases if alias}
+                mismatch = [token for token in expected_tokens if token not in alias_set]
                 if mismatch:
                     issues.append(f"schema_mismatch:{section}")
             else:
@@ -269,11 +269,6 @@ def build_generator_assets_from_payload(
     template_dir = Path(template_dir)
     template_dir.mkdir(parents=True, exist_ok=True)
 
-    try:
-        validate_contract_v2(step4_output.get("contract") or {})
-    except Exception as exc:  # pragma: no cover - validation failure
-        raise GeneratorAssetsError(f"Invalid Step 4 contract payload: {exc}") from exc
-
     catalog_list = [str(item) for item in (catalog_allowlist or []) if str(item).strip()]
     params_list = list(params_spec or [])
     sample_params_dict = dict(sample_params or {})
@@ -315,7 +310,13 @@ def build_generator_assets_from_payload(
         raise GeneratorAssetsError(f"Generator response was not valid JSON: {exc}") from exc
 
     sql_pack_raw = response_payload.get("sql_pack") or {}
-    contract = response_payload.get("contract") or step4_output.get("contract") or {}
+    contract = response_payload.get("contract")
+    if not isinstance(contract, Mapping) or not contract:
+        raise GeneratorAssetsError("Generator LLM response did not include a contract payload.")
+    try:
+        validate_contract_v2(contract)
+    except Exception as exc:
+        raise GeneratorAssetsError(f"Generator contract failed validation: {exc}") from exc
 
     output_schemas_payload = response_payload.get("output_schemas")
     if isinstance(output_schemas_payload, Mapping):
@@ -346,6 +347,10 @@ def build_generator_assets_from_payload(
         entrypoints = _default_entrypoints(legacy_entrypoints)
 
     script_text = sql_pack_raw.get("script")
+    if isinstance(script_text, str) and script_text.strip():
+        script_for_validation = script_text
+    else:
+        script_for_validation = _render_sql_script(script_text, entrypoints)
 
     params_section = sql_pack_raw.get("params")
     required_params: list[str] = []
@@ -369,7 +374,7 @@ def build_generator_assets_from_payload(
 
     sql_pack_normalized = {
         "dialect": sql_pack_raw.get("dialect") or response_payload.get("dialect") or dialect or "sqlite",
-        "script": script_text,
+        "script": script_for_validation,
         "entrypoints": entrypoints,
         "params": params_normalized,
     }

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from itertools import zip_longest
 from pathlib import Path
 from typing import Any
@@ -306,14 +306,43 @@ def validate_contract_v2(data: Any) -> None:
         location = f" at {path}" if path else ""
         raise SchemaValidationError(f"contract_v2 validation error{location}: {err.message}")
 
+    reshape_rules = data.get("reshape_rules")
+    if isinstance(reshape_rules, list):
+        column_rule_found = False
+        for idx, rule in enumerate(reshape_rules):
+            if not isinstance(rule, Mapping):
+                continue
+            columns = rule.get("columns")
+            if columns is None:
+                continue
+            if not isinstance(columns, list) or not columns:
+                raise SchemaValidationError(
+                    f"contract.reshape_rules[{idx}].columns must be a non-empty array when provided"
+                )
+            for col_idx, column in enumerate(columns):
+                if not isinstance(column, Mapping):
+                    raise SchemaValidationError(
+                        f"contract.reshape_rules[{idx}].columns[{col_idx}] must be an object"
+                    )
+                alias = column.get("as")
+                if not isinstance(alias, str) or not alias.strip():
+                    raise SchemaValidationError(
+                        f"contract.reshape_rules[{idx}].columns[{col_idx}].as must be a non-empty string"
+                    )
+            column_rule_found = True
+        if not column_rule_found:
+            raise SchemaValidationError(
+                "contract.reshape_rules must include at least one rule with column definitions"
+            )
+
     join = data.get("join")
     if isinstance(join, dict):
         parent_table = join.get("parent_table")
-        parent_key = join.get("parent_key")
         if not isinstance(parent_table, str) or not parent_table.strip():
             raise SchemaValidationError("contract.join.parent_table must be a non-empty string")
-        if parent_key is not None and not isinstance(parent_key, str):
-            raise SchemaValidationError("contract.join.parent_key must be a string when provided")
+        parent_key = join.get("parent_key")
+        if not isinstance(parent_key, str) or not parent_key.strip():
+            raise SchemaValidationError("contract.join.parent_key must be a non-empty string")
 
         child_table = join.get("child_table")
         child_key = join.get("child_key")

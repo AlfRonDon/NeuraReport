@@ -71,11 +71,15 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["purpose", "strategy", "columns"],
+        "required": ["purpose", "strategy"],
         "properties": {
           "purpose": {"type": "string"},
           "strategy": {"type": "string"},
           "explain": {"type": "string"},
+          "where": {
+            "type": "array",
+            "items": {"type": "string"}
+          },
           "columns": {
             "type": "array",
             "items": {

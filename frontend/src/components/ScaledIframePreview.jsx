@@ -8,6 +8,23 @@ const MIN_SCALE = 0.01
 const getDevicePixelRatio = () =>
   (typeof window !== 'undefined' && window.devicePixelRatio) ? window.devicePixelRatio : 1
 
+const parseCssLength = (value) => {
+  if (!value || value === 'none' || value === 'auto' || typeof value !== 'string') return null
+  const lower = value.toLowerCase()
+  const numeric = Number.parseFloat(lower)
+  if (!Number.isFinite(numeric) || numeric <= 0) return null
+  if (lower.endsWith('px')) return numeric
+  if (typeof window !== 'undefined') {
+    if (lower.endsWith('vh')) {
+      return window.innerHeight * (numeric / 100)
+    }
+    if (lower.endsWith('vw')) {
+      return window.innerWidth * (numeric / 100)
+    }
+  }
+  return null
+}
+
 const roundScaleForDpr = (scale) => {
   if (!Number.isFinite(scale) || scale <= 0) return 1
   const dpr = getDevicePixelRatio()
@@ -76,8 +93,10 @@ export default function ScaledIframePreview({
   contentAlign = 'center',
   pageShadow = false,
   pageBorderColor = 'rgba(15,23,42,0.12)',
-  pageRadius = 12,
+  pageRadius = 0,
   marginGuides = false,
+  clampToParentHeight = false,
+  pageChrome = true,
 }) {
   const containerRef = useRef(null)
   const iframeRef = useRef(null)
@@ -128,11 +147,37 @@ export default function ScaledIframePreview({
       if (!availableHeightRaw) {
         availableHeightRaw = target.height
       }
+      if (clampToParentHeight) {
+        let ancestor = container.parentElement
+        while (ancestor) {
+          const ancestorRect = ancestor.getBoundingClientRect?.()
+          const ancestorHeight = ancestorRect?.height || ancestor.clientHeight || 0
+          const computedStyle = typeof window !== 'undefined' ? window.getComputedStyle?.(ancestor) : null
+          if (computedStyle) {
+            const maxHeightPx = parseCssLength(computedStyle.maxHeight)
+            if (maxHeightPx) {
+              availableHeightRaw = Math.min(availableHeightRaw, maxHeightPx)
+            }
+            const heightPx = parseCssLength(computedStyle.height)
+            if (heightPx) {
+              availableHeightRaw = Math.min(availableHeightRaw, heightPx)
+            }
+          }
+          if (ancestorHeight > 0) {
+            availableHeightRaw = Math.min(availableHeightRaw, ancestorHeight)
+            break
+          }
+          ancestor = ancestor.parentElement
+        }
+      }
       const widthRatio = availableWidth / target.width
       const heightRatio = availableHeightRaw > 0 ? availableHeightRaw / target.height : widthRatio
       let rawScale
       if (fit === 'width') {
         rawScale = widthRatio
+        if (heightRatio > 0 && heightRatio < rawScale) {
+          rawScale = heightRatio
+        }
       } else if (fit === 'height') {
         rawScale = heightRatio
       } else {
@@ -145,7 +190,7 @@ export default function ScaledIframePreview({
 
       setScale((prev) => (Math.abs(prev - nextScale) < 0.002 ? prev : nextScale))
     },
-    [aspect?.ratio, fit],
+    [aspect?.ratio, fit, clampToParentHeight],
   )
 
   const applyContentSize = useCallback(
@@ -266,13 +311,16 @@ export default function ScaledIframePreview({
     containerStyles.height = 'auto'
   }
   const positioned = Boolean(aspect?.css)
-  const resolvedPageRadius = Number.isFinite(Number(pageRadius)) ? Math.max(Number(pageRadius), 0) : 0
-  const resolvedPageShadow = pageShadow
+  const resolvedPageRadius = pageChrome && Number.isFinite(Number(pageRadius))
+    ? Math.max(Number(pageRadius), 0)
+    : 0
+  const resolvedPageShadow = pageChrome && pageShadow
     ? (typeof pageShadow === 'string' ? pageShadow : '0 32px 48px rgba(15,23,42,0.18)')
     : 'none'
-  const resolvedBorderColor = typeof pageBorderColor === 'string' && pageBorderColor.trim()
+  const resolvedBorderColor = pageChrome && typeof pageBorderColor === 'string' && pageBorderColor.trim()
     ? pageBorderColor
     : null
+  const resolvedBackground = pageChrome ? background : 'transparent'
   const marginInset = marginGuideConfig
     ? Math.max(0, Math.min(marginGuideConfig.inset, Math.min(contentSize.width, contentSize.height) / 2))
     : 0
@@ -305,7 +353,7 @@ export default function ScaledIframePreview({
             height: contentSize.height,
             borderRadius: resolvedPageRadius,
             overflow: 'hidden',
-            bgcolor: background,
+            bgcolor: resolvedBackground,
             boxShadow: resolvedPageShadow,
             border: resolvedBorderColor ? `1px solid ${resolvedBorderColor}` : 'none',
             position: 'relative',
@@ -321,7 +369,7 @@ export default function ScaledIframePreview({
               height: contentSize.height,
               border: 0,
               display: 'block',
-              background,
+              background: pageChrome ? background : undefined,
             }}
           />
           {marginGuideConfig && marginInset > 0 && (

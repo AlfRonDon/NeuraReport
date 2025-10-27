@@ -107,6 +107,33 @@ def test_contract_v2_schema_valid():
     validate_contract_v2(_sample_contract())
 
 
+def test_contract_v2_schema_allows_base_filter_rule_without_columns():
+    contract = _sample_contract()
+    contract["reshape_rules"].insert(
+        0,
+        {
+            "purpose": "Filter base recipes",
+            "strategy": "BASE_FILTER",
+            "where": ["recipes.start_time >= :from_date", "recipes.start_time <= :to_date"],
+        },
+    )
+    validate_contract_v2(contract)
+
+
+def test_contract_v2_schema_requires_column_rule():
+    contract = _sample_contract()
+    contract["reshape_rules"] = [
+        {
+            "purpose": "Filter base recipes",
+            "strategy": "BASE_FILTER",
+            "where": ["recipes.start_time >= :from_date"],
+        }
+    ]
+    with pytest.raises(SchemaValidationError) as excinfo:
+        validate_contract_v2(contract)
+    assert "reshape_rules" in str(excinfo.value)
+
+
 def test_step5_requirements_schema_valid():
     validate_step5_requirements(_sample_step5_requirements())
 

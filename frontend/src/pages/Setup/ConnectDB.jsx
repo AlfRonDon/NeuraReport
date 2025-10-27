@@ -42,6 +42,7 @@ import Surface from '../../components/layout/Surface.jsx'
 import SectionHeader from '../../components/layout/SectionHeader.jsx'
 import EmptyState from '../../components/feedback/EmptyState.jsx'
 import FormErrorSummary from '../../components/form/FormErrorSummary.jsx'
+import TOOLTIP_COPY from '../../content/tooltipCopy.jsx'
 import { savePersistedCache } from '../../hooks/useBootstrapState.js'
 import useFormErrorFocus from '../../hooks/useFormErrorFocus.js'
 const sanitizeDbType = (value) => (typeof value === 'string' ? value.trim().toLowerCase() : '')
@@ -1736,6 +1737,8 @@ const lastHeartbeatLabel = useMemo(() => {
           eyebrow="Step 1"
           title="Connect Database"
           subtitle="Connected sources feed both PDF and spreadsheet template pipelines."
+          helpContent={TOOLTIP_COPY.connectDatabase}
+          helpPlacement="left"
           action={
             <Stack
               direction="row"
@@ -2097,6 +2100,8 @@ const lastHeartbeatLabel = useMemo(() => {
           eyebrow="Step 2"
           title="Saved Connections"
           subtitle="Tested connections stay synced for quick reuse."
+          helpContent={TOOLTIP_COPY.savedConnections}
+          helpPlacement="left"
         />
         {savedConnections.length === 0 ? (
           <EmptyState

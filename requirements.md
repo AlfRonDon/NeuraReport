@@ -1,218 +1,132 @@
-# One‑liner
+# NeuraReport Requirements
 
-Tauri desktop app with React frontend and Python backend that lets users connect to a database, ingest PDF report templates for AI‑assisted mapping, and generate/download reports in batches by date range.
+## Product Summary
 
----
+- Desktop-first report automation assistant that packages a FastAPI backend with a React/Tauri shell.
+- Primary use case: ingest PDF report templates, map them to SQL data, and render scheduled batches to PDF/HTML with LLM assistance.
+- Operates offline by default; remote LLM calls are only executed when an operator provides credentials.
 
-## 1) Goals & Non‑Goals
+## Goals
 
-**Goals**
+- Deliver a single-install desktop experience that bundles the UI and Python services.
+- Support a repeatable template lifecycle: verify -> map -> approve -> generate -> download.
+- Produce audit-friendly artifacts (HTML, JSON manifests, mapping DSL, contract metadata, run outputs).
+- Provide resilient automation with retryable LLM stages, locking, caching, and manifest tracking.
+- Keep operator UX approachable through guided flows, real-time feedback, and safe defaults.
 
-- Zero‑install end‑user experience (single desktop app; no separate servers required by default).
-- Support common SQL sources (PostgreSQL, MySQL/MariaDB, SQL Server, SQLite) with schema introspection.
-- AI‑assisted template understanding and schema→template field mapping, with user approval.
-- Deterministic, reproducible report generation with progress, logs, and downloadable outputs.
-- Batch runs (multiple templates, date ranges), with job queue and resumability.
+## Non-Goals
 
-**Non‑Goals (v1)**
+- Multi-tenant SaaS hosting or cloud tenancy isolation.
+- Real-time dashboards or ad-hoc exploratory analytics.
+- Arbitrary machine learning beyond template understanding and validation.
+- Handling of write-heavy workloads or destructive DML against source databases.
 
-- Realtime dashboards, streaming, or live charts.
-- Multi‑tenant cloud SaaS; default is local‑first. (Remote runner optional; see Architecture.)
-- Arbitrary ML training. The AI is only for mapping/validation, not for predictive analytics.
+## Personas & Primary Flows
 
----
+### Operator
 
-## 2) User Roles & Primary Flows
+1. Connect a SQL data source (SQLite today; other drivers planned).
+2. Upload a template PDF and monitor the verification stream (LLM Call 1/2 produce HTML and schema).
+3. Trigger auto-mapping, review corrections, and approve mappings (LLM Call 3/3.5).
+4. Approve the template to produce contract and generator assets (LLM Call 4/5).
+5. Discover available batches for a date range and provide any key token overrides.
+6. Run a batch, download PDF/HTML outputs, and archive manifests.
+7. Consult logs and manifests when troubleshooting.
 
-- **Operator**: Connects to DB, uploads template(s), approves field mapping, runs reports.
-- **Admin/Power User** (optional): Manages connections, credentials policy, output locations, LLM mode (local vs cloud), advanced logging.
+### Admin / Power User
 
-**Two‑tab flow**
+- Configure environment secrets and defaults (OpenAI key, upload root, default DB).
+- Maintain connection metadata, encrypted state keys, and artifact retention.
+- Monitor health endpoints and system logs.
 
-1. **Setup**: Connect DB → Upload/Verify Template → Preview → Approve & Save.
-2. **Generate**: Pick template(s) → Pick date range(s) → Choose output format(s) → Run → Download.
+### Developer / Support
 
----
+- Run diagnostic hooks (for example `NEURA_FAIL_AFTER_STEP`), capture `llm_raw_outputs.md`, and inspect manifests.
+- Extend pipeline scripts or regression tests as part of delivery.
 
-## 3) Tech Stack
+## Experience Requirements
 
-**Desktop shell**
+### Desktop Shell
 
-- Tauri (Rust core) for lightweight, secure desktop packaging on Windows/macOS/Linux.
-- Sidecar process to run Python backend locally; app auto‑manages lifecycle.
+- Implemented with Tauri; launches the Python backend as a managed sidecar.
+- Integrates with OS keychain to protect encrypted state (`NEURA_STATE_SECRET` overrides for reproducible keys).
+- Must support Windows, macOS, and Linux with code-signed installers and delta updates (future automation).
 
-**Frontend**
+### Frontend (React 18 + Vite)
 
-- React 18 (use JavaScript, dont use typescript).
-- UI system: use MUI wherever needed.
-- State mgmt: lightweight store (Zustand) + React Query (server state) for fetching/progress.
-- Forms & validation: Zod or Yup for robust input handling.
+- Single-page app with sticky global header (connection heartbeat, active setup step).
+- Setup workspace uses a 25%/75% split between navigation and content (see `immediateRequirements.md` for layout details).
+- Tabs: Connect, Upload & Verify, Run Reports.
+- React Query manages server state; Zustand provides app-wide store.
+- Streams NDJSON responses for verification, mapping approval, and generator runs; renders progress live.
+- Toast notifications for every async action and disabled states until prerequisites succeed.
+- Templates view renders a responsive card grid with thumbnails, tags, output badges, and quick download actions.
+- Supports mock/offline mode via `VITE_USE_MOCK=true` and configurable API base through `VITE_API_BASE_URL`.
 
-**Backend (local)**
+### Backend (FastAPI)
 
-- Python 3.11+ with FastAPI (HTTP over localhost) for a clean API boundary.
-- PDF tooling: PyMuPDF (layout extraction/preview), pdfplumber (text/table heuristics), ReportLab (programmatic PDF render), pikepdf (merge/stamp).
-- DB access: SQLAlchemy + drivers (psycopg/pg8000, mysqlclient/asyncmy, pyodbc for SQL Server). Safe connection test + schema import.
-- Job runner: Async background tasks (FastAPI + asyncio), with a local SQLite job table; pluggable to a remote worker if enabled.
-- AI layer: Pluggable LLM orchestration. Modes:
+- Exposes endpoints:
+  - `/health`, `/healthz`, `/readyz` (filesystem, clock, OpenAI, optional external HEAD).
+  - `/connections` CRUD, `/connections/test`, `/connections/{id}/health`.
+  - `/state/bootstrap`, `/state/last-used`.
+  - `/templates/verify` (stream), `/templates/{id}/mapping/preview`, `/templates/{id}/mapping/corrections-preview`, `/templates/{id}/mapping/approve`, `/templates/{id}/keys/options`.
+  - `/templates/{id}/generator-assets/v1`, `/templates/{id}/artifacts/{manifest|head}`.
+  - `/reports/discover`, `/reports/run`.
+- Static `/uploads/<template_id>/...` served with ETag, cache-control headers, and optional `download=1` disposition.
+- All streaming endpoints emit JSON lines (`event: stage|result|error`) with correlation IDs.
+- Per-template locks (`acquire_template_lock`) prevent concurrent mutations.
 
-  - Local: ship with a small on‑device model (optional) or use embeddings + rules.
-  - Cloud: configurable providers (OpenAI, Azure, etc.). All off by default until user opts in.
+### AI & LLM Orchestration
 
-**Storage**
+- Call 1: `TemplateVerify.request_initial_html` converts reference PNG to HTML + schema JSON.
+- Call 2: `TemplateVerify.request_fix_html` refines CSS and metrics when enabled.
+- Call 3: `MappingInline.run_llm_call_3` inlines constants, emits mapping JSON, token samples, and prompt metadata.
+- Call 3.5: `CorrectionsPreview.run_corrections_preview` applies operator edits and produces `page_summary.txt`.
+- Call 4: `ContractBuilderV2.build_or_load_contract_v2` drafts the contract blueprint and overview.
+- Call 5: `GeneratorAssetsV1.build_generator_assets_from_payload` generates SQL packs, params spec, and runtime bundle.
+- Raw responses captured in `llm_raw_outputs.md` when `LLM_RAW_OUTPUT_PATH` is set.
 
-- App data dir: `connections.json` (encrypted), `templates/`, `mappings/`, `runs/`, `outputs/`, `logs/`, and `jobs.db` (SQLite).
-- Encryption at rest via OS keychain + optional passphrase for sensitive fields.
+## Template Lifecycle & Artifacts
 
-**Packaging & Updates**
+- Each template owns `uploads/<template_id>/` containing:
+  - `source.pdf`, `reference_pN.png`, `template_p1.html`, `schema_ext.json`, render previews.
+  - `mapping_step3.json`, `constant_replacements.json`, `page_summary.txt` when available.
+  - `mapping_pdf_labels.json` (approved mapping), `report_final.html`, `contract.json`, generator bundles, thumbnails.
+  - `artifact_manifest.json` updated after every step with file hashes and input lineage.
+- `state/state.json` stores encrypted connections, template metadata, generator status, and last-used selections.
+- Mapping tokens tracked in `mapping_keys.json`; generator metadata persisted under the template record.
 
-- Tauri bundler for installers; code‑signed; delta updates.
+## Reporting Workflow
 
----
+1. `/reports/discover` loads `contract.json`, queries the DB for batch IDs, row counts, and totals, and returns selectable batches.
+2. `/reports/run` loads the contract, calls `fill_and_print`, writes `filled_<timestamp>.html`/`.pdf`, updates the manifest, and records run metadata.
+3. The UI surfaces download links immediately and records recent artifacts for operator convenience.
 
-## 4) Architecture Overview
+## Security & Privacy
 
-**Local‑first (default)**
+- Secrets encrypted with Fernet (auto-generated unless `NEURA_STATE_SECRET` supplied).
+- No outbound network requests occur unless an OpenAI key is provided.
+- PDF uploads and generated artifacts remain on local disk; manifests expose relative paths only.
+- Health endpoints safe to expose; artifact retrieval requires local filesystem access.
 
-- React UI (WebView) ↔ FastAPI (localhost) ↔ Python services ↔ DB drivers ↔ External DB.
-- File I/O local to machine; no network egress unless user enables cloud LLM.
+## Observability & Performance
 
-**Optional Remote Runner**
+- Every request logs `X-Correlation-ID`, elapsed time, and structured metadata.
+- Verification targets <8 seconds for 5-10 page PDFs on development hardware.
+- Mapping + contract pipeline aims for <45 seconds; generator assets <10 seconds with warm caches.
+- Streaming payloads include `elapsed_ms`; manifests capture `produced_at`.
+- `ARTIFACT_WARN_BYTES` and `ARTIFACT_WARN_RENDER_MS` control CI guardrails.
 
-- For heavy OCR/LLM tasks, user can point to a remote job runner (same API). Desktop remains the control plane.
+## Failure Handling
 
-**Key Services**
+- Atomic writes for JSON/HTML to avoid partial artifacts; rollbacks can be simulated through `NEURA_FAIL_AFTER_STEP`.
+- Template-level locks prevent concurrent writes during mapping, approval, and run stages.
+- LLM retries use exponential backoff (configurable via `OPENAI_MAX_ATTEMPTS`, `OPENAI_BACKOFF_*`).
+- Cached artifacts reused when SHA256 signatures match prompt metadata.
 
-- **Connection Manager**: Test/save DB credentials, fetch schema (tables, columns, types, relations), cache metadata.
-- **Template Service**: Ingest PDF, extract layout, identify placeholders, compute a normalized “Template Layout JSON”.
-- **Mapping Assistant**: Suggest mapping from layout fields to SQL expressions using schema + LLM/embeddings; returns mapping with confidence and rationales.
-- **Report Engine**: Execute queries safely (limits, timeouts), paginate data, render to PDF/CSV/XLSX, stitch pages, embed images, and write outputs.
-- **Jobs & Logs**: Queue runs, track progress states, store run metadata and logs for download/debugging.
+## Future Enhancements
 
----
-
-## 5) Data & File Model (v1)
-
-**Entities**
-
-- **Connection**: id, name, db_type, host/port, db_name, auth (username/secret ref), ssl options, created/updated_at.
-- **Template**: id, name, description, tags, source_pdf_path, layout_json_path, version, status (draft/approved), created_by, created_at.
-- **Mapping**: id, template_id, mapping_json (field→SQL/expr), confidence_scores, examples, version, approved_by, approved_at.
-- **Run**: id, name, templates\[], date_range(s), output_formats\[], status, progress, started_at, finished_at.
-- **Output**: id, run_id, template_id, file_path, file_type, checksum, size, created_at.
-- **Log**: id, run_id, level, message, timestamp.
-
-**Key Files**
-
-- **Template Layout JSON**: normalized primitives: text blocks, images, tables, boundaries, variables (placeholders), fonts.
-- **Mapping JSON**: stable DSL that binds placeholders to SQL sources; supports transforms (formatting, currency, date, rounding, concat) and guards (null‑safe defaults).
-
----
-
-## 6) AI‑Assisted Mapping — How It Works
-
-1. **Template Ingest**: Parse PDF; detect text boxes, labels, tables, images; identify likely placeholders by delimiters or heuristics.
-2. **Schema Import**: Fetch tables/columns, types, FK hints, and sample values (limited, anonymized) for context.
-3. **Candidate Mapping**: Use embedding similarity and rules to propose matches (e.g., “Invoice No.” ↔ `orders.invoice_id`).
-4. **SQL Suggestion**: Compose safe SQL/CTEs per placeholder, with parameter slots for date range. Enforce LIMITs during preview.
-5. **User Review**: Show proposals with confidence and rationale; allow edit, test preview, and mark approved.
-6. **Save**: Version mapping; changes tracked for audit.
-
-**Fallbacks**
-
-- If AI confidence is low, default to manual field binding via a guided UI (pick table/column, add simple transforms).
-
----
-
-## 7) Security & Privacy
-
-- **Secrets** stored via OS keychain; optional passphrase unlock on app start.
-- **No data leaves device** unless user explicitly enables cloud LLM and consents per run.
-- **SQL Safety**: parameterized queries, read‑only connections where possible, query timeouts, row limits for previews.
-- **Audit**: every approve/run logged with user, time, template version, mapping version, and DB connection used.
-
----
-
-## 8) Performance Targets
-
-- Cold start < 2s on typical dev laptop; first run setup may be longer.
-- Template ingest for a 5–10 page PDF: < 8s local (no OCR); < 20s if OCR is required.
-- Report render 100–500 rows with mixed text/tables/images: < 10s per template on local CPU.
-- Memory footprint steady‑state: < 500MB.
-
----
-
-## 9) UI/UX Spec (Two‑Tab App)
-
-### Tab 1 — Setup
-
-**Layout**: Two‑pane layout with a right‑side stepper nav: 1) Connect DB, 2) Upload Template, 3) Verify, 4) Preview, 5) Approve & Save.
-
-**Connect DB section**
-
-- Inputs: DB type, host/port, DB name, username/password (show/hide), SSL toggle.
-- Actions: Test Connection, Save Connection; status chip (Connected/Failed) with details dropdown.
-- Empty state: “No connection yet — test and save to continue.”
-- Errors: Inline field errors + toast; copyable error details for support.
-
-**Upload & Verify Template**
-
-- Drag‑and‑drop for PDF; file card with name, pages, size, detected fonts.
-- **AI Verification modal**: shows progress bar with stages: Parse → Detect Placeholders → Build Layout JSON → Sanity Checks. If pass: green tick; if fail: red state + suggestions.
-
-**Preview & Approve**
-
-- Split view: left = interactive PDF preview; right = detected placeholders list with statuses and suggestions.
-- Tools: zoom, pan, click‑to‑inspect placeholder highlight.
-- Actions: Accept suggestion, Edit mapping, Mark unresolved.
-- Save as Template: name, description, tags; version auto‑increments.
-
-### Tab 2 — Generate
-
-**Template Picker**
-
-- Grid/list of templates with search/tags; multi‑select; filter by status (approved only by default).
-
-**Run Config**
-
-- Date range picker (start datetime, end datetime, timezone). Optional per‑template overrides.
-- Output formats: PDF, XLSX, CSV, ZIP (bundled). Output directory picker.
-- Run button with safeguards (warn if no approved mapping).
-
-**Run Monitor**
-
-- Job list with statuses (Queued, Running, Rendering, Complete, Failed), per‑template progress bars.
-- Collapsible run logs (INFO/WARN/ERROR) and per‑template mini‑preview thumbnails when ready.
-- Buttons: Open folder, Download all, Download single, Re‑run failed.
-
-**Empty & Error States**
-
-- No templates yet: CTA to go to Setup tab.
-- Failed run: show error summary and link to logs; offer “Retry with safe defaults.”
-
----
-
-## 10) Edge Cases & Handling
-
-- **Scanned PDFs/OCR**: Optional OCR step using Tesseract; mark low‑confidence regions for manual mapping.
-- **Dynamic tables across pages**: Table continuation markers and column match; enforce page breaks.
-- **Images & logos**: Preserve DPI; if missing, allow replacement.
-- **Fonts**: Embed or substitute; warn on missing fonts; use fallbacks.
-- **Localization**: Number/date formats per locale; consistent timezone handling for queries.
-- **Large datasets**: Pagination or summary sections; cap rows; warn on heavy queries.
-
----
-
-## 11) Determinism & QA
-
-- **Golden PDF Regression**: User can save a run output as a “golden.” Future runs compare via SSIM/PDiff and textual diff (extracted text); fail or warn on threshold.
-- **Snapshotting**: Store mapping version + DB schema hash with run; detect drift and request re‑approval if schema changes.
-
----
-
-## 13) Nice‑to‑Haves (Post‑v1)
-
-- Scheduling (cron‑like) and email export.
-- Multi‑DB joins via views or staging tables.
-- Role‑based access (multiple operators on shared machine).
-- Template marketplace/importer.
+- Additional connectors (Postgres, MySQL, SQL Server) and credential vault integration.
+- Scheduled runs, email/webhook delivery, and batch orchestration.
+- Multi-page correction workflows and cross-template batch runs.
+- CI-driven packaging and auto-updater channels for the desktop shell.
