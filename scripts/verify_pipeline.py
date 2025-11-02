@@ -37,6 +37,7 @@ class CheckResult:
     ok: bool
     detail: str = ""
 
+
 OPTIONAL_CHECKS: set[str] = {
     "artifact_manifest",
     "filled.html_artifacts",
