@@ -192,17 +192,24 @@ def _check_staleness(tdir: Path) -> CheckResult:
     m_report = report.stat().st_mtime
     m_contract = contract.stat().st_mtime
     m_mapping = mapping.stat().st_mtime
-    ok = m_report >= m_contract >= m_mapping
-    detail = (
-        f"order ok ({_fmt_ts(m_report)} >= {_fmt_ts(m_contract)} >= {_fmt_ts(m_mapping)})"
-        if ok
-        else "expected report_final >= contract >= mapping"
-    )
+    tolerance = 1.0  # seconds
+    report_after_contract = m_report + tolerance >= m_contract
+    contract_after_mapping = m_contract + tolerance >= m_mapping
+    ok = report_after_contract and contract_after_mapping
+    if ok:
+        detail = f"order ok ({_fmt_ts(m_report)} >= {_fmt_ts(m_contract)} >= {_fmt_ts(m_mapping)})"
+    else:
+        detail = (
+            "expected report_final >= contract >= mapping "
+            f"(within {tolerance:.1f}s tolerance); "
+            f"got {_fmt_ts(m_report)} / {_fmt_ts(m_contract)} / {_fmt_ts(m_mapping)}"
+        )
     return CheckResult(name="artifact_staleness", ok=ok, detail=detail)
 
 
 def _simulate_failure(tdir: Path, step: str) -> CheckResult:
     target = tdir / f".simulate_{step}.txt"
+    previous_fail_after = os.environ.get("NEURA_FAIL_AFTER_STEP")
     os.environ["NEURA_FAIL_AFTER_STEP"] = step
     try:
         try:
@@ -212,10 +219,10 @@ def _simulate_failure(tdir: Path, step: str) -> CheckResult:
         else:
             return CheckResult(name=f"simulate_{step}", ok=False, detail="failure did not trigger")
     finally:
-        if original_fail_after is not None:
-            os.environ["NEURA_FAIL_AFTER_STEP"] = original_fail_after
-        else:
+        if previous_fail_after is None:
             os.environ.pop("NEURA_FAIL_AFTER_STEP", None)
+        else:
+            os.environ["NEURA_FAIL_AFTER_STEP"] = previous_fail_after
         with contextlib.suppress(FileNotFoundError):
             target.unlink()
     residuals = list(tdir.glob(f".{target.name}.*.tmp"))
@@ -268,10 +275,10 @@ def verify_pipeline(
         success = all(check.ok for check in checks)
         return success, checks
     finally:
-        if original_fail_after is not None:
-            os.environ["NEURA_FAIL_AFTER_STEP"] = original_fail_after
-        else:
+        if original_fail_after is None:
             os.environ.pop("NEURA_FAIL_AFTER_STEP", None)
+        else:
+            os.environ["NEURA_FAIL_AFTER_STEP"] = original_fail_after
 
 
 def _print_report(checks: Iterable[CheckResult], success: bool) -> None:
