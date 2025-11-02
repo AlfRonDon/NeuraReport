@@ -72,17 +72,21 @@ from .app.services.state import state_store
 from .app.services.templates.layout_hints import get_layout_hints
 
 # Template building helpers (TemplateVerify.py)
-from .app.services.templates.TemplateVerify import (
-    rasterize_html_to_png as _template_rasterize_html_to_png,
-    render_html_to_png,  # <-- used to produce the thumbnail from final_html
-)
+# isort: off
 from .app.services.templates.TemplateVerify import (
     pdf_to_pngs,
+    rasterize_html_to_png as _template_rasterize_html_to_png,
+    render_html_to_png,  # <-- used to produce the thumbnail from final_html
     render_panel_preview,
     request_fix_html,
     request_initial_html,
     save_html,
 )
+# isort: on
+
+# Keep a public alias so tests can monkeypatch api.rasterize_html_to_png.
+rasterize_html_to_png = _template_rasterize_html_to_png
+
 from .app.services.utils import (
     TemplateLockError,
     acquire_template_lock,
