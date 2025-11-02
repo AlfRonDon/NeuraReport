@@ -77,11 +77,11 @@ from .app.services.templates.TemplateVerify import (
     pdf_to_pngs,
     rasterize_html_to_png as _template_rasterize_html_to_png,
     render_html_to_png,
-    save_png,
     render_panel_preview,
     request_fix_html,
     request_initial_html,
     save_html,
+    save_png as _template_save_png,
 )
 
 # isort: on
@@ -101,6 +101,7 @@ from .app.services.utils.artifacts import load_manifest
 
 # Keep a public alias so tests can monkeypatch api.rasterize_html_to_png.
 rasterize_html_to_png = _template_rasterize_html_to_png
+save_png = _template_save_png
 
 # ---------- App & CORS ----------
 logger = logging.getLogger("neura.api")
