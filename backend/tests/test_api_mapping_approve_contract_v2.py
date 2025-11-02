@@ -40,7 +40,9 @@ def _make_template_dir(root: Path, template_id: str) -> Path:
         "totals": ["total_qty"],
         "notes": "",
     }
-    write_json_atomic(tdir / "schema_ext.json", schema_payload, ensure_ascii=False, indent=2)
+    write_json_atomic(
+        tdir / "schema_ext.json", schema_payload, ensure_ascii=False, indent=2
+    )
     mapping_step3 = {
         "mapping": {
             "report_title": "batches.title",
@@ -52,7 +54,9 @@ def _make_template_dir(root: Path, template_id: str) -> Path:
             "unresolved": [],
         },
     }
-    write_json_atomic(tdir / "mapping_step3.json", mapping_step3, ensure_ascii=False, indent=2)
+    write_json_atomic(
+        tdir / "mapping_step3.json", mapping_step3, ensure_ascii=False, indent=2
+    )
     return tdir
 
 
@@ -68,7 +72,9 @@ def test_mapping_approve_emits_contract_stage(monkeypatch, tmp_path, client):
     db_path = tmp_path / "db.sqlite"
     db_path.touch()
 
-    monkeypatch.setattr(api, "_db_path_from_payload_or_default", lambda connection_id: db_path)
+    monkeypatch.setattr(
+        api, "_db_path_from_payload_or_default", lambda connection_id: db_path
+    )
     monkeypatch.setattr(
         api,
         "get_parent_child_info",
@@ -115,7 +121,9 @@ def test_mapping_approve_emits_contract_stage(monkeypatch, tmp_path, client):
             "order_by": {"rows": ["material_name ASC"]},
             "filters": {},
         }
-        overview_path.write_text("# Contract Overview\n\n- Details here.", encoding="utf-8")
+        overview_path.write_text(
+            "# Contract Overview\n\n- Details here.", encoding="utf-8"
+        )
         write_json_atomic(
             step5_path,
             {
@@ -161,7 +169,11 @@ def test_mapping_approve_emits_contract_stage(monkeypatch, tmp_path, client):
             "step5_requirements": {},
             "assumptions": [],
             "warnings": [],
-            "validation": {"unknown_columns": [], "unknown_tokens": [], "token_coverage": {}},
+            "validation": {
+                "unknown_columns": [],
+                "unknown_tokens": [],
+                "token_coverage": {},
+            },
             "artifacts": {
                 "overview": overview_path,
                 "step5_requirements": step5_path,
@@ -176,7 +188,9 @@ def test_mapping_approve_emits_contract_stage(monkeypatch, tmp_path, client):
             "cached": False,
         }
 
-    monkeypatch.setattr(api, "build_or_load_contract_v2", fake_build_or_load_contract_v2)
+    monkeypatch.setattr(
+        api, "build_or_load_contract_v2", fake_build_or_load_contract_v2
+    )
     monkeypatch.setattr(api, "render_html_to_png", lambda *_, **__: None)
 
     def fake_panel(html_path: Path, dest_png: Path, **kwargs):
@@ -196,6 +210,7 @@ def test_mapping_approve_emits_contract_stage(monkeypatch, tmp_path, client):
         params_spec=None,
         sample_params=None,
         force_rebuild: bool = False,
+        key_tokens=None,
     ):
         generator_dir = template_dir / "generator"
         generator_dir.mkdir(parents=True, exist_ok=True)
@@ -203,7 +218,12 @@ def test_mapping_approve_emits_contract_stage(monkeypatch, tmp_path, client):
         sql_pack_path = generator_dir / "sql_pack.sql"
         output_schemas_path = generator_dir / "output_schemas.json"
         assets_meta_path = generator_dir / "generator_assets.json"
-        write_json_atomic(contract_path, step4_output.get("contract") or {}, ensure_ascii=False, indent=2)
+        write_json_atomic(
+            contract_path,
+            step4_output.get("contract") or {},
+            ensure_ascii=False,
+            indent=2,
+        )
         sql_pack_path.write_text("-- test sql pack", encoding="utf-8")
         write_json_atomic(
             output_schemas_path,
@@ -240,7 +260,11 @@ def test_mapping_approve_emits_contract_stage(monkeypatch, tmp_path, client):
             "cached": False,
         }
 
-    monkeypatch.setattr(api, "build_generator_assets_from_payload", fake_build_generator_assets_from_payload)
+    monkeypatch.setattr(
+        api,
+        "build_generator_assets_from_payload",
+        fake_build_generator_assets_from_payload,
+    )
 
     payload = {
         "mapping": {
@@ -260,17 +284,25 @@ def test_mapping_approve_emits_contract_stage(monkeypatch, tmp_path, client):
         headers={"x-correlation-id": "test-correlation"},
     )
     assert response.status_code == 200
-    lines = [line for line in response.content.decode("utf-8").splitlines() if line.strip()]
+    lines = [
+        line for line in response.content.decode("utf-8").splitlines() if line.strip()
+    ]
     events = [json.loads(line) for line in lines]
 
-    stage_events = [evt for evt in events if evt.get("event") == "stage" and evt.get("stage") == "contract_build_v2"]
+    stage_events = [
+        evt
+        for evt in events
+        if evt.get("event") == "stage" and evt.get("stage") == "contract_build_v2"
+    ]
     assert stage_events, "Expected contract_build_v2 stage events"
     assert stage_events[0]["contract_ready"] is False
     assert stage_events[0].get("blueprint_ready") is True
     assert "overview_md" in stage_events[0]
     assert stage_events[-1]["contract_ready"] is True
     generator_stage_events = [
-        evt for evt in events if evt.get("event") == "stage" and evt.get("stage") == "generator_assets_v1"
+        evt
+        for evt in events
+        if evt.get("event") == "stage" and evt.get("stage") == "generator_assets_v1"
     ]
     assert generator_stage_events, "Expected generator_assets_v1 stage event"
     assert "contract" in (generator_stage_events[-1].get("artifacts") or {})
