@@ -165,9 +165,7 @@ async def correlation_middleware(request: Request, call_next):
     content_type = response.headers.get("Content-Type", "")
     response.headers["X-Correlation-ID"] = correlation_id
     response.headers.setdefault("X-Content-Type-Options", "nosniff")
-    if content_type.startswith(
-        ("application/json", "text/html", "application/x-ndjson")
-    ):
+    if content_type.startswith(("application/json", "text/html", "application/x-ndjson")):
         response.headers.setdefault("Cache-Control", "no-store")
     set_correlation_id(None)
     return response
@@ -176,13 +174,9 @@ async def correlation_middleware(request: Request, call_next):
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException):
     request_state = getattr(request, "state", None)
-    correlation_id = (
-        getattr(request_state, "correlation_id", None) or get_correlation_id()
-    )
+    correlation_id = getattr(request_state, "correlation_id", None) or get_correlation_id()
     detail = exc.detail
-    if not isinstance(detail, dict) or not {"status", "code", "message"} <= set(
-        detail.keys()
-    ):
+    if not isinstance(detail, dict) or not {"status", "code", "message"} <= set(detail.keys()):
         detail = {
             "status": "error",
             "code": f"http_{exc.status_code}",
@@ -264,9 +258,7 @@ class UploadsStaticFiles(StaticFiles):
             etag = f'"{stat_result.st_mtime_ns:x}-{stat_result.st_size:x}"'
             response.headers["Cache-Control"] = "no-store, max-age=0"
             response.headers["ETag"] = etag
-            response.headers["Last-Modified"] = formatdate(
-                stat_result.st_mtime, usegmt=True
-            )
+            response.headers["Last-Modified"] = formatdate(stat_result.st_mtime, usegmt=True)
             if query_params.get("download"):
                 filename = Path(full_path).name
                 quoted = quote(filename)
@@ -461,20 +453,14 @@ def _is_report_generator_date_token_label(token: str) -> bool:
     has_keyword = any(part in _REPORT_DATE_KEYWORDS for part in parts)
     if has_prefix and has_keyword:
         return True
-    if parts[0] in _REPORT_DATE_KEYWORDS and any(
-        part in _REPORT_DATE_PREFIXES for part in parts[1:]
-    ):
+    if parts[0] in _REPORT_DATE_KEYWORDS and any(part in _REPORT_DATE_PREFIXES for part in parts[1:]):
         return True
-    if parts[-1] in _REPORT_DATE_KEYWORDS and any(
-        part in _REPORT_DATE_PREFIXES for part in parts[:-1]
-    ):
+    if parts[-1] in _REPORT_DATE_KEYWORDS and any(part in _REPORT_DATE_PREFIXES for part in parts[:-1]):
         return True
     return False
 
 
-def _template_dir(
-    template_id: str, *, must_exist: bool = True, create: bool = False
-) -> Path:
+def _template_dir(template_id: str, *, must_exist: bool = True, create: bool = False) -> Path:
     """
     Resolve the uploads directory for a template_id with validation to prevent path traversal.
     """
@@ -496,9 +482,7 @@ def _template_dir(
     return tdir
 
 
-def _http_error(
-    status_code: int, code: str, message: str, details: str | None = None
-) -> HTTPException:
+def _http_error(status_code: int, code: str, message: str, details: str | None = None) -> HTTPException:
     payload = {"status": "error", "code": code, "message": message}
     if details:
         payload["details"] = details
@@ -518,9 +502,7 @@ def _normalize_mapping_for_autofill(mapping: dict[str, str]) -> list[dict]:
             lowered = normalized_value.lower()
             if not normalized_value:
                 mapping_value = ""
-            elif _PARAM_REF_RE.match(normalized_value) or lowered.startswith(
-                "to be selected"
-            ):
+            elif _PARAM_REF_RE.match(normalized_value) or lowered.startswith("to be selected"):
                 mapping_value = REPORT_SELECTED_VALUE
             elif lowered == "input_sample":
                 mapping_value = "INPUT_SAMPLE"
@@ -542,9 +524,7 @@ def _save_image_contents(template_id: str, contents: list[dict]) -> None:
     tdir = _template_dir(template_id, must_exist=False, create=True)
     path = tdir / "_image_contents.json"
     try:
-        write_json_atomic(
-            path, contents, ensure_ascii=False, indent=2, step="image_contents"
-        )
+        write_json_atomic(path, contents, ensure_ascii=False, indent=2, step="image_contents")
         logger.info(
             "image_contents_saved",
             extra={
@@ -670,9 +650,7 @@ def _build_catalog_from_db(db_path: Path) -> list[str]:
         with sqlite3.connect(str(db_path)) as con:
             cur = con.cursor()
             cur.execute(
-                "SELECT name FROM sqlite_master "
-                "WHERE type='table' AND name NOT LIKE 'sqlite_%' "
-                "ORDER BY name;"
+                "SELECT name FROM sqlite_master " "WHERE type='table' AND name NOT LIKE 'sqlite_%' " "ORDER BY name;"
             )
             tables = [row[0] for row in cur.fetchall()]
             for table in tables:
@@ -759,9 +737,7 @@ def _mapping_keys_path(template_dir: Path) -> Path:
     return template_dir / _MAPPING_KEYS_FILENAME
 
 
-_DIRECT_COLUMN_RE = re.compile(
-    r"^(?P<table>[A-Za-z_][\w]*)\.(?P<column>[A-Za-z_][\w]*)$"
-)
+_DIRECT_COLUMN_RE = re.compile(r"^(?P<table>[A-Za-z_][\w]*)\.(?P<column>[A-Za-z_][\w]*)$")
 
 
 def _normalize_key_tokens(raw: Iterable[str] | None) -> list[str]:
@@ -841,9 +817,7 @@ def _check_external_head(url: str, api_key: str | None) -> tuple[bool, str]:
     if api_key:
         req.add_header("Authorization", f"Bearer {api_key}")
     try:
-        with urllib.request.urlopen(
-            req, timeout=10
-        ) as resp:  # pragma: no cover - network path optional
+        with urllib.request.urlopen(req, timeout=10) as resp:  # pragma: no cover - network path optional
             status = getattr(resp, "status", resp.getcode())
             ok = 200 <= status < 400
             return ok, f"status={status}"
@@ -855,18 +829,12 @@ def _check_external_head(url: str, api_key: str | None) -> tuple[bool, str]:
         return False, str(exc)
 
 
-def _health_response(
-    request: Request, checks: dict[str, tuple[bool, str]]
-) -> JSONResponse:
+def _health_response(request: Request, checks: dict[str, tuple[bool, str]]) -> JSONResponse:
     status_ok = all(ok for ok, _ in checks.values())
-    correlation_id = (
-        getattr(request.state, "correlation_id", None) or get_correlation_id()
-    )
+    correlation_id = getattr(request.state, "correlation_id", None) or get_correlation_id()
     payload = {
         "status": "ok" if status_ok else "error",
-        "checks": {
-            name: {"ok": ok, "detail": detail} for name, (ok, detail) in checks.items()
-        },
+        "checks": {name: {"ok": ok, "detail": detail} for name, (ok, detail) in checks.items()},
         "version": APP_VERSION,
         "commit": APP_COMMIT,
         "correlation_id": correlation_id,
@@ -881,9 +849,7 @@ def healthz(request: Request):
     checks["clock"] = _check_clock()
     external_url = os.getenv("NEURA_HEALTH_EXTERNAL_HEAD")
     if external_url:
-        checks["external"] = _check_external_head(
-            external_url, SETTINGS.openai_api_key or None
-        )
+        checks["external"] = _check_external_head(external_url, SETTINGS.openai_api_key or None)
     return _health_response(request, checks)
 
 
@@ -896,12 +862,8 @@ def readyz(request: Request):
         bool(SETTINGS.openai_api_key),
         "configured" if SETTINGS.openai_api_key else "missing",
     )
-    external_url = (
-        os.getenv("NEURA_HEALTH_EXTERNAL_HEAD") or "https://api.openai.com/v1/models"
-    )
-    checks["external"] = _check_external_head(
-        external_url, SETTINGS.openai_api_key or None
-    )
+    external_url = os.getenv("NEURA_HEALTH_EXTERNAL_HEAD") or "https://api.openai.com/v1/models"
+    checks["external"] = _check_external_head(external_url, SETTINGS.openai_api_key or None)
     return _health_response(request, checks)
 
 
@@ -911,9 +873,7 @@ def get_artifact_manifest(template_id: str, request: Request):
     manifest = load_manifest(tdir)
     if not manifest:
         raise _http_error(404, "manifest_missing", "artifact manifest not found")
-    correlation_id = (
-        getattr(request.state, "correlation_id", None) or get_correlation_id()
-    )
+    correlation_id = getattr(request.state, "correlation_id", None) or get_correlation_id()
     return {"status": "ok", "manifest": manifest, "correlation_id": correlation_id}
 
 
@@ -933,16 +893,12 @@ def get_artifact_head(template_id: str, request: Request, name: str):
     exists = target.exists()
     size = target.stat().st_size if exists else 0
     last_modified = target.stat().st_mtime if exists else None
-    etag = (
-        f'"{target.stat().st_mtime_ns:x}-{target.stat().st_size:x}"' if exists else None
+    etag = f'"{target.stat().st_mtime_ns:x}-{target.stat().st_size:x}"' if exists else None
+    checksum = (manifest.get("file_checksums") or {}).get(safe_name) or (manifest.get("file_checksums") or {}).get(
+        target.name
     )
-    checksum = (manifest.get("file_checksums") or {}).get(safe_name) or (
-        manifest.get("file_checksums") or {}
-    ).get(target.name)
 
-    correlation_id = (
-        getattr(request.state, "correlation_id", None) or get_correlation_id()
-    )
+    correlation_id = getattr(request.state, "correlation_id", None) or get_correlation_id()
     return {
         "status": "ok",
         "correlation_id": correlation_id,
@@ -954,9 +910,7 @@ def get_artifact_head(template_id: str, request: Request, name: str):
             "produced_at": produced_at,
             "manifest_path": manifest_rel,
             "etag": etag,
-            "last_modified": formatdate(last_modified, usegmt=True)
-            if last_modified
-            else None,
+            "last_modified": formatdate(last_modified, usegmt=True) if last_modified else None,
         },
     }
 
@@ -993,9 +947,7 @@ def test_connection(p: TestPayload, request: Request):
         detail=f"Connected ({display_name})",
         latency_ms=latency_ms,
     )
-    correlation_id = (
-        getattr(request.state, "correlation_id", None) or get_correlation_id()
-    )
+    correlation_id = getattr(request.state, "correlation_id", None) or get_correlation_id()
 
     return {
         "ok": True,
@@ -1012,9 +964,7 @@ def test_connection(p: TestPayload, request: Request):
 
 @app.get("/connections")
 def list_connections(request: Request):
-    correlation_id = (
-        getattr(request.state, "correlation_id", None) or get_correlation_id()
-    )
+    correlation_id = getattr(request.state, "correlation_id", None) or get_correlation_id()
     return {
         "status": "ok",
         "connections": state_store.list_connections(),
@@ -1034,9 +984,7 @@ def upsert_connection(payload: ConnectionUpsertPayload, request: Request):
     existing = state_store.get_connection_record(payload.id) if payload.id else None
     try:
         if payload.db_url:
-            db_path = resolve_db_path(
-                connection_id=None, db_url=payload.db_url, db_path=None
-            )
+            db_path = resolve_db_path(connection_id=None, db_url=payload.db_url, db_path=None)
         elif payload.database:
             db_path = Path(payload.database)
         elif existing and existing.get("database_path"):
@@ -1080,9 +1028,7 @@ def upsert_connection(payload: ConnectionUpsertPayload, request: Request):
             latency_ms=payload.latency_ms,
         )
 
-    correlation_id = (
-        getattr(request.state, "correlation_id", None) or get_correlation_id()
-    )
+    correlation_id = getattr(request.state, "correlation_id", None) or get_correlation_id()
     return {
         "status": "ok",
         "connection": record,
@@ -1095,9 +1041,7 @@ def delete_connection(connection_id: str, request: Request):
     removed = state_store.delete_connection(connection_id)
     if not removed:
         raise _http_error(404, "connection_not_found", "Connection not found.")
-    correlation_id = (
-        getattr(request.state, "correlation_id", None) or get_correlation_id()
-    )
+    correlation_id = getattr(request.state, "correlation_id", None) or get_correlation_id()
     return {
         "status": "ok",
         "connection_id": connection_id,
@@ -1109,9 +1053,7 @@ def delete_connection(connection_id: str, request: Request):
 def healthcheck_connection(connection_id: str, request: Request):
     t0 = time.time()
     try:
-        db_path = resolve_db_path(
-            connection_id=connection_id, db_url=None, db_path=None
-        )
+        db_path = resolve_db_path(connection_id=connection_id, db_url=None, db_path=None)
         verify_sqlite(db_path)
     except Exception as exc:
         state_store.record_connection_ping(
@@ -1129,9 +1071,7 @@ def healthcheck_connection(connection_id: str, request: Request):
         detail="Healthcheck succeeded",
         latency_ms=latency_ms,
     )
-    correlation_id = (
-        getattr(request.state, "correlation_id", None) or get_correlation_id()
-    )
+    correlation_id = getattr(request.state, "correlation_id", None) or get_correlation_id()
     return {
         "status": "ok",
         "connection_id": connection_id,
@@ -1142,9 +1082,7 @@ def healthcheck_connection(connection_id: str, request: Request):
 
 @app.get("/state/bootstrap")
 def bootstrap_state(request: Request):
-    correlation_id = (
-        getattr(request.state, "correlation_id", None) or get_correlation_id()
-    )
+    correlation_id = getattr(request.state, "correlation_id", None) or get_correlation_id()
     return {
         "status": "ok",
         "connections": state_store.list_connections(),
@@ -1157,9 +1095,7 @@ def bootstrap_state(request: Request):
 @app.post("/state/last-used")
 def set_last_used(payload: LastUsedPayload, request: Request):
     data = state_store.set_last_used(payload.connection_id, payload.template_id)
-    correlation_id = (
-        getattr(request.state, "correlation_id", None) or get_correlation_id()
-    )
+    correlation_id = getattr(request.state, "correlation_id", None) or get_correlation_id()
     return {"status": "ok", "last_used": data, "correlation_id": correlation_id}
 
 
@@ -1168,20 +1104,14 @@ def list_templates_endpoint(request: Request, status: Optional[str] = None):
     templates = state_store.list_templates()
     if status:
         status_lower = status.lower()
-        templates = [
-            t for t in templates if (t.get("status") or "").lower() == status_lower
-        ]
-    correlation_id = (
-        getattr(request.state, "correlation_id", None) or get_correlation_id()
-    )
+        templates = [t for t in templates if (t.get("status") or "").lower() == status_lower]
+    correlation_id = getattr(request.state, "correlation_id", None) or get_correlation_id()
     return {"status": "ok", "templates": templates, "correlation_id": correlation_id}
 
 
 @app.delete("/templates/{template_id}")
 def delete_template_endpoint(template_id: str, request: Request):
-    correlation_id = (
-        getattr(request.state, "correlation_id", None) or get_correlation_id()
-    )
+    correlation_id = getattr(request.state, "correlation_id", None) or get_correlation_id()
     existing_record = state_store.get_template_record(template_id)
     try:
         tdir = _template_dir(template_id, must_exist=False, create=False)
@@ -1257,9 +1187,7 @@ async def verify_template(
     html_path = tdir / "template_p1.html"
 
     request_state = getattr(request, "state", None)
-    correlation_id = (
-        getattr(request_state, "correlation_id", None) or get_correlation_id()
-    )
+    correlation_id = getattr(request_state, "correlation_id", None) or get_correlation_id()
 
     logger.info(
         "verify_template_start",
@@ -1293,9 +1221,7 @@ async def verify_template(
 
         stage_timings: dict[str, float] = {}
 
-        def start_stage(
-            stage_key: str, label: str, progress: int | float, **payload: Any
-        ) -> bytes:
+        def start_stage(stage_key: str, label: str, progress: int | float, **payload: Any) -> bytes:
             stage_timings[stage_key] = time.time()
             event_payload: dict[str, Any] = {
                 "stage": stage_key,
@@ -1364,9 +1290,7 @@ async def verify_template(
                                         "correlation_id": correlation_id,
                                     },
                                 )
-                                raise RuntimeError(
-                                    f"Uploaded PDF exceeds {_format_bytes(limit_bytes)} limit."
-                                )
+                                raise RuntimeError(f"Uploaded PDF exceeds {_format_bytes(limit_bytes)} limit.")
                             tmp.write(chunk)
                         tmp.flush()
                         with contextlib.suppress(OSError):
@@ -1388,9 +1312,7 @@ async def verify_template(
                 raise
             else:
                 log_stage(stage_label, "ok", stage_started)
-                yield finish_stage(
-                    stage_key, stage_label, progress=20, size_bytes=total_bytes
-                )
+                yield finish_stage(stage_key, stage_label, progress=20, size_bytes=total_bytes)
 
             stage_key = "verify.render_reference_preview"
             stage_label = "Rendering a preview image"
@@ -1399,18 +1321,14 @@ async def verify_template(
             png_path: Path | None = None
             layout_hints: dict[str, Any] | None = None
             try:
-                ref_pngs = pdf_to_pngs(
-                    pdf_path, tdir, dpi=int(os.getenv("PDF_DPI", "400"))
-                )
+                ref_pngs = pdf_to_pngs(pdf_path, tdir, dpi=int(os.getenv("PDF_DPI", "400")))
                 if not ref_pngs:
                     raise RuntimeError("No pages rendered from PDF")
                 png_path = ref_pngs[0]
                 layout_hints = get_layout_hints(pdf_path, 0)
             except Exception as exc:
                 log_stage(stage_label, "error", stage_started)
-                yield finish_stage(
-                    stage_key, stage_label, progress=25, status="error", detail=str(exc)
-                )
+                yield finish_stage(stage_key, stage_label, progress=25, status="error", detail=str(exc))
                 raise
             else:
                 log_stage(stage_label, "ok", stage_started)
@@ -1421,17 +1339,13 @@ async def verify_template(
             stage_started = time.time()
             yield start_stage(stage_key, stage_label, progress=70)
             try:
-                initial_result = request_initial_html(
-                    png_path, None, layout_hints=layout_hints
-                )
+                initial_result = request_initial_html(png_path, None, layout_hints=layout_hints)
                 html_text = initial_result.html
                 schema_payload = initial_result.schema or {}
                 save_html(html_path, html_text)
             except Exception as exc:
                 log_stage(stage_label, "error", stage_started)
-                yield finish_stage(
-                    stage_key, stage_label, progress=70, status="error", detail=str(exc)
-                )
+                yield finish_stage(stage_key, stage_label, progress=70, status="error", detail=str(exc))
                 raise
 
             schema_path = tdir / "schema_ext.json"
@@ -1470,19 +1384,13 @@ async def verify_template(
             try:
                 render_html_to_png(html_path, render_png_path)
                 panel_png_path = render_png_path.with_name("render_p1_llm.png")
-                render_panel_preview(
-                    html_path, panel_png_path, fallback_png=render_png_path
-                )
-                tight_render_png_path = (
-                    panel_png_path if panel_png_path.exists() else render_png_path
-                )
+                render_panel_preview(html_path, panel_png_path, fallback_png=render_png_path)
+                tight_render_png_path = panel_png_path if panel_png_path.exists() else render_png_path
                 log_stage(stage_label, "ok", stage_started)
                 yield finish_stage(stage_key, stage_label, progress=88)
             except Exception as exc:  # pragma: no cover - surfaced to client
                 log_stage(stage_label, "error", stage_started)
-                yield finish_stage(
-                    stage_key, stage_label, progress=80, status="error", detail=str(exc)
-                )
+                yield finish_stage(stage_key, stage_label, progress=80, status="error", detail=str(exc))
                 raise
 
             # Optional HTML refinement pass
@@ -1541,17 +1449,13 @@ async def verify_template(
                 skipped=not fix_attempted,
                 fix_attempted=fix_attempted,
                 fix_accepted=bool(fix_result and fix_result.get("accepted")),
-                render_after=_artifact_url(render_after_path)
-                if render_after_path
-                else None,
+                render_after=_artifact_url(render_after_path) if render_after_path else None,
                 metrics=_artifact_url(metrics_path) if metrics_path else None,
             )
 
             schema_url = _artifact_url(schema_path) if schema_payload else None
             render_url = _artifact_url(tight_render_png_path)
-            render_after_url = (
-                _artifact_url(render_after_path) if render_after_path else None
-            )
+            render_after_url = _artifact_url(render_after_path) if render_after_path else None
             metrics_url = _artifact_url(metrics_path) if metrics_path else None
 
             manifest_files: dict[str, Path] = {
@@ -1613,9 +1517,7 @@ async def verify_template(
                     metrics_url=metrics_url,
                 )
 
-            template_name = (
-                Path(getattr(file, "filename", "") or "").stem or f"Template {tid[:8]}"
-            )
+            template_name = Path(getattr(file, "filename", "") or "").stem or f"Template {tid[:8]}"
             artifacts_for_state = {
                 "template_html_url": f"/uploads/{tid}/template_p1.html",
                 "thumbnail_url": f"/uploads/{tid}/reference_p1.png",
@@ -1656,11 +1558,7 @@ async def verify_template(
                     "manifest_url": manifest_url,
                     **({"schema_ext_url": schema_url} if schema_url else {}),
                     **({"render_png_url": render_url} if render_url else {}),
-                    **(
-                        {"render_after_png_url": render_after_url}
-                        if render_after_url
-                        else {}
-                    ),
+                    **({"render_after_png_url": render_after_url} if render_after_url else {}),
                     **({"fix_metrics_url": metrics_url} if metrics_url else {}),
                 },
             )
@@ -1695,9 +1593,7 @@ async def verify_template(
                 file.file.close()
 
     headers = {"Content-Type": "application/x-ndjson"}
-    return StreamingResponse(
-        event_stream(), headers=headers, media_type="application/x-ndjson"
-    )
+    return StreamingResponse(event_stream(), headers=headers, media_type="application/x-ndjson")
 
 
 def _mapping_preview_pipeline(
@@ -1708,9 +1604,7 @@ def _mapping_preview_pipeline(
     correlation_id: Optional[str] = None,
     force_refresh: bool = False,
 ) -> Iterator[dict[str, Any]]:
-    correlation_id = correlation_id or (
-        getattr(request.state, "correlation_id", None) if request else None
-    )
+    correlation_id = correlation_id or (getattr(request.state, "correlation_id", None) if request else None)
     yield {
         "event": "stage",
         "stage": "mapping_preview",
@@ -1742,9 +1636,7 @@ def _mapping_preview_pipeline(
                 "template_id": template_id,
             },
         )
-        raise _http_error(
-            500, "db_introspection_failed", f"DB introspection failed: {exc}"
-        )
+        raise _http_error(500, "db_introspection_failed", f"DB introspection failed: {exc}")
 
     catalog = list(dict.fromkeys(_build_catalog_from_db(db_path)))
     pdf_sha = _sha256_path(_find_reference_pdf(template_dir)) or ""
@@ -1763,9 +1655,7 @@ def _mapping_preview_pipeline(
         "catalog_sha": catalog_sha,
         "schema_sha": schema_sha,
     }
-    cache_key = hashlib.sha256(
-        json.dumps(cache_payload, sort_keys=True).encode("utf-8")
-    ).hexdigest()
+    cache_key = hashlib.sha256(json.dumps(cache_payload, sort_keys=True).encode("utf-8")).hexdigest()
 
     cached_doc, mapping_path = _load_mapping_step3(template_dir)
     constants_path = template_dir / "constant_replacements.json"
@@ -1777,21 +1667,15 @@ def _mapping_preview_pipeline(
         html_matches_pre = pre_sha_cached == html_pre_sha
         html_matches_post = bool(post_sha and post_sha == html_pre_sha)
         cache_key_matches = cache_key_stored == cache_key
-        cache_match = (
-            cache_key_matches and (html_matches_pre or html_matches_post)
-        ) or (html_matches_post and cache_key_stored and not cache_key_matches)
+        cache_match = (cache_key_matches and (html_matches_pre or html_matches_post)) or (
+            html_matches_post and cache_key_stored and not cache_key_matches
+        )
         if cache_match:
-            effective_cache_key = (
-                cache_key if cache_key_matches else (cache_key_stored or cache_key)
-            )
+            effective_cache_key = cache_key if cache_key_matches else (cache_key_stored or cache_key)
             mapping = cached_doc.get("mapping") or {}
             constant_replacements = cached_doc.get("constant_replacements") or {}
-            if not constant_replacements and isinstance(
-                cached_doc.get("raw_payload"), dict
-            ):
-                constant_replacements = (
-                    cached_doc["raw_payload"].get("constant_replacements") or {}
-                )
+            if not constant_replacements and isinstance(cached_doc.get("raw_payload"), dict):
+                constant_replacements = cached_doc["raw_payload"].get("constant_replacements") or {}
             errors = approval_errors(mapping)
             cached_prompt_version = prompt_meta.get("prompt_version") or PROMPT_VERSION
             yield {
@@ -1817,13 +1701,9 @@ def _mapping_preview_pipeline(
             }
 
     try:
-        lock_ctx = acquire_template_lock(
-            template_dir, "mapping_preview", correlation_id
-        )
+        lock_ctx = acquire_template_lock(template_dir, "mapping_preview", correlation_id)
     except TemplateLockError:
-        raise _http_error(
-            409, "template_locked", "Template is currently processing another request."
-        )
+        raise _http_error(409, "template_locked", "Template is currently processing another request.")
 
     with lock_ctx:
         try:
@@ -1848,9 +1728,7 @@ def _mapping_preview_pipeline(
             raise _http_error(500, "mapping_llm_failed", str(exc))
 
         html_applied = result.html_constants_applied
-        write_text_atomic(
-            html_path, html_applied, encoding="utf-8", step="mapping_preview_html"
-        )
+        write_text_atomic(html_path, html_applied, encoding="utf-8", step="mapping_preview_html")
         html_post_sha = _sha256_text(html_applied)
 
         mapping_doc = {
@@ -1958,9 +1836,7 @@ def _mapping_preview_pipeline(
 
 
 @app.post("/templates/{template_id}/mapping/preview")
-def mapping_preview(
-    template_id: str, connection_id: str, request: Request, force_refresh: bool = False
-):
+def mapping_preview(template_id: str, connection_id: str, request: Request, force_refresh: bool = False):
     correlation_id = getattr(request.state, "correlation_id", None)
     logger.info(
         "mapping_preview_start",
@@ -2038,9 +1914,7 @@ def mapping_approve(template_id: str, payload: MappingPayload, request: Request)
     db_sig = compute_db_signature(db_path)
 
     try:
-        lock_ctx = acquire_template_lock(
-            template_dir, "mapping_approve", correlation_id
-        )
+        lock_ctx = acquire_template_lock(template_dir, "mapping_approve", correlation_id)
     except TemplateLockError:
         raise _http_error(
             status_code=409,
@@ -2071,9 +1945,7 @@ def mapping_approve(template_id: str, payload: MappingPayload, request: Request)
 
         stage_timings: dict[str, float] = {}
 
-        def start_stage(
-            stage_key: str, label: str, progress: int | float, **payload_data: Any
-        ) -> bytes:
+        def start_stage(stage_key: str, label: str, progress: int | float, **payload_data: Any) -> bytes:
             stage_timings[stage_key] = time.time()
             payload = {
                 "stage": stage_key,
@@ -2165,9 +2037,7 @@ def mapping_approve(template_id: str, payload: MappingPayload, request: Request)
                         "correlation_id": correlation_id,
                     },
                 )
-                yield finish_stage(
-                    stage_key, stage_label, progress=5, status="error", detail=str(exc)
-                )
+                yield finish_stage(stage_key, stage_label, progress=5, status="error", detail=str(exc))
                 yield emit(
                     "error",
                     stage=stage_key,
@@ -2184,9 +2054,7 @@ def mapping_approve(template_id: str, payload: MappingPayload, request: Request)
             try:
                 yield start_stage(stage_key, stage_label, progress=25)
                 if not base_template_path.exists():
-                    raise FileNotFoundError(
-                        "template_p1.html not found. Run /templates/verify first."
-                    )
+                    raise FileNotFoundError("template_p1.html not found. Run /templates/verify first.")
                 if not final_html_path.exists():
                     final_html_path.write_text(
                         base_template_path.read_text(encoding="utf-8", errors="ignore"),
@@ -2204,9 +2072,7 @@ def mapping_approve(template_id: str, payload: MappingPayload, request: Request)
                         "correlation_id": correlation_id,
                     },
                 )
-                yield finish_stage(
-                    stage_key, stage_label, progress=25, status="error", detail=str(exc)
-                )
+                yield finish_stage(stage_key, stage_label, progress=25, status="error", detail=str(exc))
                 yield emit(
                     "error",
                     stage=stage_key,
@@ -2238,9 +2104,7 @@ def mapping_approve(template_id: str, payload: MappingPayload, request: Request)
                 prompt_version=PROMPT_VERSION_4,
             )
             try:
-                final_html_text = final_html_path.read_text(
-                    encoding="utf-8", errors="ignore"
-                )
+                final_html_text = final_html_path.read_text(encoding="utf-8", errors="ignore")
                 contract_result = build_or_load_contract_v2(
                     template_dir=template_dir,
                     catalog=catalog,
@@ -2254,9 +2118,7 @@ def mapping_approve(template_id: str, payload: MappingPayload, request: Request)
                     key_tokens=keys_clean,
                 )
                 contract_ready = True
-                contract_artifacts_urls = _normalize_artifact_map(
-                    contract_result.get("artifacts")
-                )
+                contract_artifacts_urls = _normalize_artifact_map(contract_result.get("artifacts"))
                 contract_stage_summary = {
                     "stage": stage_key,
                     "status": "done",
@@ -2342,19 +2204,13 @@ def mapping_approve(template_id: str, payload: MappingPayload, request: Request)
             stage_key = "generator_assets_v1"
             stage_label = "Creating generator assets"
             stage_started = time.time()
-            generator_dialect = (
-                payload.generator_dialect or payload.dialect_hint or "sqlite"
-            )
-            yield start_stage(
-                stage_key, stage_label, progress=80, dialect=generator_dialect
-            )
+            generator_dialect = payload.generator_dialect or payload.dialect_hint or "sqlite"
+            yield start_stage(stage_key, stage_label, progress=80, dialect=generator_dialect)
             try:
                 generator_result = build_generator_assets_from_payload(
                     template_dir=template_dir,
                     step4_output=contract_result,
-                    final_template_html=final_html_path.read_text(
-                        encoding="utf-8", errors="ignore"
-                    ),
+                    final_template_html=final_html_path.read_text(encoding="utf-8", errors="ignore"),
                     reference_pdf_image=None,
                     catalog_allowlist=payload.catalog_allowlist or catalog,
                     dialect=generator_dialect,
@@ -2363,16 +2219,12 @@ def mapping_approve(template_id: str, payload: MappingPayload, request: Request)
                     force_rebuild=payload.force_generator_rebuild,
                     key_tokens=keys_clean,
                 )
-                generator_artifacts_urls = _normalize_artifact_map(
-                    generator_result.get("artifacts")
-                )
+                generator_artifacts_urls = _normalize_artifact_map(generator_result.get("artifacts"))
                 generator_stage_summary = {
                     "stage": stage_key,
                     "status": "done",
                     "invalid": generator_result.get("invalid"),
-                    "needs_user_fix": list(
-                        generator_result.get("needs_user_fix") or []
-                    ),
+                    "needs_user_fix": list(generator_result.get("needs_user_fix") or []),
                     "dialect": generator_result.get("dialect"),
                     "params": generator_result.get("params"),
                     "summary": generator_result.get("summary"),
@@ -2484,25 +2336,17 @@ def mapping_approve(template_id: str, payload: MappingPayload, request: Request)
             page_summary_url = _artifact_url(page_summary_path)
 
             contract_artifacts = (
-                contract_stage_summary.get("artifacts")
-                if isinstance(contract_stage_summary, dict)
-                else {}
+                contract_stage_summary.get("artifacts") if isinstance(contract_stage_summary, dict) else {}
             )
             generator_artifacts = (
-                generator_stage_summary.get("artifacts")
-                if isinstance(generator_stage_summary, dict)
-                else {}
+                generator_stage_summary.get("artifacts") if isinstance(generator_stage_summary, dict) else {}
             )
             if not isinstance(generator_artifacts, dict):
                 generator_artifacts = {}
 
-            generator_contract_url = generator_artifacts.get(
-                "contract"
-            ) or generator_artifacts.get("contract.json")
+            generator_contract_url = generator_artifacts.get("contract") or generator_artifacts.get("contract.json")
             contract_url = (
-                generator_contract_url
-                or contract_artifacts.get("contract")
-                or contract_artifacts.get("contract.json")
+                generator_contract_url or contract_artifacts.get("contract") or contract_artifacts.get("contract.json")
             )
 
             artifacts_payload = {
@@ -2515,13 +2359,9 @@ def mapping_approve(template_id: str, payload: MappingPayload, request: Request)
                 "overview_url": contract_artifacts.get("overview"),
                 "step5_requirements_url": contract_artifacts.get("step5_requirements"),
                 "generator_sql_pack_url": generator_artifacts.get("sql_pack"),
-                "generator_output_schemas_url": generator_artifacts.get(
-                    "output_schemas"
-                ),
+                "generator_output_schemas_url": generator_artifacts.get("output_schemas"),
                 "generator_assets_url": generator_artifacts.get("generator_assets"),
-                "mapping_keys_url": _artifact_url(mapping_keys_path)
-                if mapping_keys_path.exists()
-                else None,
+                "mapping_keys_url": _artifact_url(mapping_keys_path) if mapping_keys_path.exists() else None,
             }
 
             final_contract_ready = bool(generator_contract_url)
@@ -2532,8 +2372,7 @@ def mapping_approve(template_id: str, payload: MappingPayload, request: Request)
                 name=existing_tpl.get("name") or f"Template {template_id[:8]}",
                 status="approved" if final_contract_ready else "pending",
                 artifacts={k: v for k, v in artifacts_payload.items() if v},
-                connection_id=payload.connection_id
-                or existing_tpl.get("last_connection_id"),
+                connection_id=payload.connection_id or existing_tpl.get("last_connection_id"),
                 mapping_keys=keys_clean,
             )
 
@@ -2596,9 +2435,7 @@ def mapping_approve(template_id: str, payload: MappingPayload, request: Request)
             )
 
     headers = {"Content-Type": "application/x-ndjson"}
-    return StreamingResponse(
-        event_stream(), headers=headers, media_type="application/x-ndjson"
-    )
+    return StreamingResponse(event_stream(), headers=headers, media_type="application/x-ndjson")
 
 
 @app.get("/templates/{template_id}/keys/options")
@@ -2647,15 +2484,11 @@ def mapping_key_options(
 
     mapping_path = template_dir / "mapping_pdf_labels.json"
     if not mapping_path.exists():
-        raise _http_error(
-            404, "mapping_not_found", "Approved mapping not found for template."
-        )
+        raise _http_error(404, "mapping_not_found", "Approved mapping not found for template.")
     try:
         mapping_doc = json.loads(mapping_path.read_text(encoding="utf-8"))
     except Exception as exc:
-        raise _http_error(
-            500, "mapping_load_failed", f"Failed to read mapping file: {exc}"
-        )
+        raise _http_error(500, "mapping_load_failed", f"Failed to read mapping file: {exc}")
 
     mapping_lookup: dict[str, str] = {}
     if isinstance(mapping_doc, list):
@@ -2667,9 +2500,7 @@ def mapping_key_options(
             if isinstance(header, str) and isinstance(mapping_value, str):
                 mapping_lookup[header] = mapping_value.strip()
     else:
-        raise _http_error(
-            500, "mapping_invalid", "Approved mapping is not in the expected format."
-        )
+        raise _http_error(500, "mapping_invalid", "Approved mapping is not in the expected format.")
 
     contract_filters_required: dict[str, str] = {}
     contract_filters_optional: dict[str, str] = {}
@@ -2715,25 +2546,17 @@ def mapping_key_options(
             table_raw = match.group("table")
             column_raw = match.group("column")
             table_clean = table_raw.strip(' "`[]') if isinstance(table_raw, str) else ""
-            column_clean = (
-                column_raw.strip(' "`[]') if isinstance(column_raw, str) else ""
-            )
+            column_clean = column_raw.strip(' "`[]') if isinstance(column_raw, str) else ""
             if table_clean and column_clean:
                 return table_clean, column_clean
-        filter_expr = contract_filters_required.get(
-            token
-        ) or contract_filters_optional.get(token)
+        filter_expr = contract_filters_required.get(token) or contract_filters_optional.get(token)
         if isinstance(filter_expr, str):
             match_filter = _DIRECT_COLUMN_RE.match(filter_expr)
             if match_filter:
                 table_raw = match_filter.group("table")
                 column_raw = match_filter.group("column")
-                table_clean = (
-                    table_raw.strip(' "`[]') if isinstance(table_raw, str) else ""
-                )
-                column_clean = (
-                    column_raw.strip(' "`[]') if isinstance(column_raw, str) else ""
-                )
+                table_clean = table_raw.strip(' "`[]') if isinstance(table_raw, str) else ""
+                column_clean = column_raw.strip(' "`[]') if isinstance(column_raw, str) else ""
                 if table_clean and column_clean:
                     return table_clean, column_clean
         return None
@@ -2774,11 +2597,7 @@ def mapping_key_options(
             )
             params_with_limit = tuple(params + [limit_value])
             try:
-                rows = [
-                    str(row[0])
-                    for row in con.execute(sql, params_with_limit)
-                    if row and row[0] is not None
-                ]
+                rows = [str(row[0]) for row in con.execute(sql, params_with_limit) if row and row[0] is not None]
             except sqlite3.Error:
                 rows = []
             options[token] = rows
@@ -2796,9 +2615,7 @@ def mapping_key_options(
 
 
 @app.post("/templates/{template_id}/mapping/corrections-preview")
-def mapping_corrections_preview(
-    template_id: str, payload: CorrectionsPreviewPayload, request: Request
-):
+def mapping_corrections_preview(template_id: str, payload: CorrectionsPreviewPayload, request: Request):
     correlation_id = getattr(request.state, "correlation_id", None)
     logger.info(
         "corrections_preview_start",
@@ -2822,9 +2639,7 @@ def mapping_corrections_preview(
         started = time.time()
 
         def emit(event: str, **data: Any) -> bytes:
-            return (
-                json.dumps({"event": event, **data}, ensure_ascii=False) + "\n"
-            ).encode("utf-8")
+            return (json.dumps({"event": event, **data}, ensure_ascii=False) + "\n").encode("utf-8")
 
         yield emit(
             "stage",
@@ -2906,9 +2721,7 @@ def mapping_corrections_preview(
                 artifacts_for_state["page_summary_url"] = page_summary_url
             if artifacts_for_state:
                 existing_status = (existing_tpl.get("status") or "").lower()
-                next_status = (
-                    existing_tpl.get("status") or "mapping_corrections_previewed"
-                )
+                next_status = existing_tpl.get("status") or "mapping_corrections_previewed"
                 if existing_status != "approved":
                     next_status = "mapping_corrections_previewed"
                 state_store.upsert_template(
@@ -2952,15 +2765,11 @@ def mapping_corrections_preview(
         )
 
     headers = {"Content-Type": "application/x-ndjson"}
-    return StreamingResponse(
-        event_stream(), headers=headers, media_type="application/x-ndjson"
-    )
+    return StreamingResponse(event_stream(), headers=headers, media_type="application/x-ndjson")
 
 
 @app.post("/templates/{template_id}/generator-assets/v1")
-def generator_assets_v1(
-    template_id: str, payload: GeneratorAssetsPayload, request: Request
-):
+def generator_assets_v1(template_id: str, payload: GeneratorAssetsPayload, request: Request):
     correlation_id = getattr(request.state, "correlation_id", None)
     logger.info(
         "generator_assets_v1_start",
@@ -2980,17 +2789,9 @@ def generator_assets_v1(
     step5_path = template_dir / "step5_requirements.json"
 
     def _load_step4_payload() -> dict[str, Any]:
-        contract_payload = (
-            payload.step4_output.get("contract") if payload.step4_output else None
-        )
-        overview_md = (
-            payload.step4_output.get("overview_md") if payload.step4_output else None
-        )
-        step5_requirements = (
-            payload.step4_output.get("step5_requirements")
-            if payload.step4_output
-            else None
-        )
+        contract_payload = payload.step4_output.get("contract") if payload.step4_output else None
+        overview_md = payload.step4_output.get("overview_md") if payload.step4_output else None
+        step5_requirements = payload.step4_output.get("step5_requirements") if payload.step4_output else None
 
         if contract_payload is None:
             if payload.contract is not None:
@@ -3012,9 +2813,7 @@ def generator_assets_v1(
         if step5_requirements is None:
             if step5_path.exists():
                 try:
-                    step5_requirements = json.loads(
-                        step5_path.read_text(encoding="utf-8")
-                    )
+                    step5_requirements = json.loads(step5_path.read_text(encoding="utf-8"))
                 except Exception:
                     step5_requirements = {}
             else:
@@ -3033,9 +2832,7 @@ def generator_assets_v1(
 
     final_template_html = payload.final_template_html
     if final_template_html is None:
-        source_path = (
-            final_template_path if final_template_path.exists() else base_template_path
-        )
+        source_path = final_template_path if final_template_path.exists() else base_template_path
         if not source_path.exists():
             raise HTTPException(
                 status_code=422,
@@ -3053,9 +2850,7 @@ def generator_assets_v1(
         incoming_key_tokens = _load_mapping_keys(template_dir)
 
     try:
-        lock_ctx = acquire_template_lock(
-            template_dir, "generator_assets_v1", correlation_id
-        )
+        lock_ctx = acquire_template_lock(template_dir, "generator_assets_v1", correlation_id)
     except TemplateLockError:
         raise _http_error(
             status_code=409,
@@ -3067,9 +2862,7 @@ def generator_assets_v1(
         started = time.time()
 
         def emit(event: str, **data: Any) -> bytes:
-            return (
-                json.dumps({"event": event, **data}, ensure_ascii=False) + "\n"
-            ).encode("utf-8")
+            return (json.dumps({"event": event, **data}, ensure_ascii=False) + "\n").encode("utf-8")
 
         with lock_ctx:
             yield emit(
@@ -3200,9 +2993,7 @@ def generator_assets_v1(
             )
 
     headers = {"Content-Type": "application/x-ndjson"}
-    return StreamingResponse(
-        event_stream(), headers=headers, media_type="application/x-ndjson"
-    )
+    return StreamingResponse(event_stream(), headers=headers, media_type="application/x-ndjson")
 
 
 # ---------- Discover ----------
@@ -3223,9 +3014,7 @@ def discover_reports(p: DiscoverPayload):
                 "template_id": p.template_id,
             },
         )
-        raise _http_error(
-            500, "contract_load_failed", f"Failed to load contract artifacts: {exc}"
-        )
+        raise _http_error(500, "contract_load_failed", f"Failed to load contract artifacts: {exc}")
 
     contract_path = template_dir / "contract.json"
     if not contract_path.exists():
@@ -3300,10 +3089,7 @@ def _ensure_contract_files(template_id: str) -> tuple[Path, Path]:
     if not contract_path.exists():
         raise HTTPException(
             status_code=400,
-            detail=(
-                "Missing contract.json. Finish template approval/mapping to create a "
-                "contract for generation."
-            ),
+            detail=("Missing contract.json. Finish template approval/mapping to create a " "contract for generation."),
         )
 
     return template_html_path, contract_path
@@ -3356,9 +3142,7 @@ def start_run(p: RunPayload, request: Request):
     try:
         lock_ctx = acquire_template_lock(tdir, "reports_run", correlation_id)
     except TemplateLockError:
-        raise _http_error(
-            409, "template_locked", "Template is currently processing another request."
-        )
+        raise _http_error(409, "template_locked", "Template is currently processing another request.")
 
     with lock_ctx:
         try:
@@ -3394,9 +3178,7 @@ def start_run(p: RunPayload, request: Request):
                 tmp_html.unlink(missing_ok=True)
             with contextlib.suppress(FileNotFoundError):
                 tmp_pdf.unlink(missing_ok=True)
-            raise _http_error(
-                500, "report_generation_failed", f"Report generation failed: {e}"
-            )
+            raise _http_error(500, "report_generation_failed", f"Report generation failed: {e}")
 
     write_artifact_manifest(
         tdir,

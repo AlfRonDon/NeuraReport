@@ -61,9 +61,7 @@ def test_verify_pipeline_success(monkeypatch):
 
 def test_verify_pipeline_simulate_flag(monkeypatch):
     monkeypatch.delenv("NEURA_FAIL_AFTER_STEP", raising=False)
-    success, checks = verify_pipeline(
-        TEMPLATE_ID, UPLOADS_ROOT, simulate=["mapping_save"]
-    )
+    success, checks = verify_pipeline(TEMPLATE_ID, UPLOADS_ROOT, simulate=["mapping_save"])
     assert success
     sim_check = _lookup_check(checks, "simulate_mapping_save")
     assert sim_check.ok, sim_check.detail
@@ -105,13 +103,9 @@ def test_staleness_detection(tmp_path: Path):
 
     (tdir / "source.pdf").write_bytes(b"%PDF")
     (tdir / "reference_p1.png").write_bytes(b"\x89PNG\r\n")
-    (tdir / "template_p1.html").write_text(
-        "<html><body>Template</body></html>", encoding="utf-8"
-    )
+    (tdir / "template_p1.html").write_text("<html><body>Template</body></html>", encoding="utf-8")
     report_html = tdir / "report_final.html"
-    report_html.write_text(
-        '<html><body><img src="reference_p1.png" /></body></html>', encoding="utf-8"
-    )
+    report_html.write_text('<html><body><img src="reference_p1.png" /></body></html>', encoding="utf-8")
 
     mapping_path = tdir / "mapping_pdf_labels.json"
     mapping_data = [
