@@ -38,9 +38,7 @@ class CheckResult:
     detail: str = ""
 
 
-def _resolve_template_dir(
-    uploads_root: Path, template_id: str
-) -> Tuple[Path, CheckResult]:
+def _resolve_template_dir(uploads_root: Path, template_id: str) -> Tuple[Path, CheckResult]:
     """
     Ensure template_id is a UUID and resolve its directory under uploads_root.
     """
@@ -98,9 +96,7 @@ def _check_html_images(tdir: Path) -> CheckResult:
         return CheckResult(name="report_final_images", ok=False, detail="file missing")
     text = path.read_text(encoding="utf-8", errors="ignore")
     missing: list[str] = []
-    for src in re.findall(
-        r'<img[^>]+src=["\']([^"\']+)["\']', text, flags=re.IGNORECASE
-    ):
+    for src in re.findall(r'<img[^>]+src=["\']([^"\']+)["\']', text, flags=re.IGNORECASE):
         if src.startswith(("http://", "https://", "data:")):
             continue
         candidate = (path.parent / src).resolve()
@@ -115,16 +111,12 @@ def _check_html_images(tdir: Path) -> CheckResult:
 
 def _check_mapping(path: Path) -> CheckResult:
     if not path.exists():
-        return CheckResult(
-            name="mapping_pdf_labels.json", ok=False, detail="file missing"
-        )
+        return CheckResult(name="mapping_pdf_labels.json", ok=False, detail="file missing")
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
         validate_mapping_schema(data)
     except (json.JSONDecodeError, SchemaValidationError) as exc:
-        return CheckResult(
-            name="mapping_pdf_labels_schema", ok=False, detail=f"invalid: {exc}"
-        )
+        return CheckResult(name="mapping_pdf_labels_schema", ok=False, detail=f"invalid: {exc}")
     count = len(data) if isinstance(data, list) else 0
     return CheckResult(name="mapping_pdf_labels_schema", ok=True, detail=f"{count} entries")  # type: ignore[arg-type]
 
@@ -142,15 +134,11 @@ def _check_contract(path: Path) -> CheckResult:
 
 def _check_image_contents(path: Path) -> CheckResult:
     if not path.exists():
-        return CheckResult(
-            name="_image_contents.json", ok=True, detail="optional file missing"
-        )
+        return CheckResult(name="_image_contents.json", ok=True, detail="optional file missing")
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
     except json.JSONDecodeError as exc:
-        return CheckResult(
-            name="_image_contents.json", ok=False, detail=f"invalid JSON: {exc}"
-        )
+        return CheckResult(name="_image_contents.json", ok=False, detail=f"invalid JSON: {exc}")
     ok = isinstance(data, list)
     detail = f"{len(data)} image entries" if ok else "expected list"
     return CheckResult(name="_image_contents_schema", ok=ok, detail=detail)
@@ -166,9 +154,7 @@ def _glob_filled_files(tdir: Path, suffix: str) -> CheckResult:
 def _check_manifest(tdir: Path) -> CheckResult:
     manifest = load_manifest(tdir)
     if not manifest:
-        return CheckResult(
-            name="artifact_manifest", ok=False, detail="missing or unreadable"
-        )
+        return CheckResult(name="artifact_manifest", ok=False, detail="missing or unreadable")
     errors: list[str] = []
     if manifest.get("schema_version") != MANIFEST_SCHEMA_VERSION:
         errors.append(f"schema_version={manifest.get('schema_version')}")
@@ -202,9 +188,7 @@ def _check_staleness(tdir: Path) -> CheckResult:
     mapping = tdir / "mapping_pdf_labels.json"
     missing = [str(p.name) for p in (report, contract, mapping) if not p.exists()]
     if missing:
-        return CheckResult(
-            name="artifact_staleness", ok=False, detail="missing: " + ", ".join(missing)
-        )
+        return CheckResult(name="artifact_staleness", ok=False, detail="missing: " + ", ".join(missing))
     m_report = report.stat().st_mtime
     m_contract = contract.stat().st_mtime
     m_mapping = mapping.stat().st_mtime
@@ -226,20 +210,14 @@ def _simulate_failure(tdir: Path, step: str) -> CheckResult:
         except RuntimeError:
             pass
         else:
-            return CheckResult(
-                name=f"simulate_{step}", ok=False, detail="failure did not trigger"
-            )
+            return CheckResult(name=f"simulate_{step}", ok=False, detail="failure did not trigger")
     finally:
         os.environ.pop("NEURA_FAIL_AFTER_STEP", None)
         with contextlib.suppress(FileNotFoundError):
             target.unlink()
     residuals = list(tdir.glob(f".{target.name}.*.tmp"))
     ok = not residuals
-    detail = (
-        "rollback ok"
-        if ok
-        else "residual temps: " + ", ".join(p.name for p in residuals)
-    )
+    detail = "rollback ok" if ok else "residual temps: " + ", ".join(p.name for p in residuals)
     return CheckResult(name=f"simulate_{step}", ok=ok, detail=detail)
 
 
@@ -305,9 +283,7 @@ def _print_report(checks: Iterable[CheckResult], success: bool) -> None:
 
 
 def main(argv: List[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(
-        description="Verify pipeline artifacts for a template."
-    )
+    parser = argparse.ArgumentParser(description="Verify pipeline artifacts for a template.")
     default_uploads = Path(__file__).resolve().parents[1] / "backend" / "uploads"
     parser.add_argument("--template-id", required=True, help="Template UUID to verify.")
     parser.add_argument(
@@ -324,9 +300,7 @@ def main(argv: List[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
-    success, checks = verify_pipeline(
-        args.template_id, args.uploads_root, simulate=args.simulate
-    )
+    success, checks = verify_pipeline(args.template_id, args.uploads_root, simulate=args.simulate)
     _print_report(checks, success)
     return 0 if success else 1
 
