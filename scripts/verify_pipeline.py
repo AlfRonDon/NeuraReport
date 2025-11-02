@@ -225,7 +225,11 @@ def verify_pipeline(
     template_id: str, uploads_root: Path, simulate: Iterable[str] | None = None
 ) -> Tuple[bool, List[CheckResult]]:
     uploads_root = uploads_root.resolve()
-    original_fail_after = os.environ.pop("NEURA_FAIL_AFTER_STEP", None)
+    original_fail_after = os.environ.get("NEURA_FAIL_AFTER_STEP")
+    if original_fail_after:
+        os.environ["NEURA_FAIL_AFTER_STEP"] = ""
+    else:
+        os.environ.pop("NEURA_FAIL_AFTER_STEP", None)
     checks: List[CheckResult] = []
 
     try:
