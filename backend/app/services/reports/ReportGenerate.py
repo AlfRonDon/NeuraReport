@@ -415,25 +415,29 @@ def fill_and_print(
         html_source = html_path.read_text(encoding="utf-8", errors="ignore")
         base_url = (base_dir or html_path.parent).as_uri()
 
-        async with async_playwright() as p:
-            browser = await p.chromium.launch()
-            context = None
-            try:
-                context = await browser.new_context(base_url=base_url)
-                page = await context.new_page()
-                await page.set_content(html_source, wait_until="networkidle")
-                await page.emulate_media(media="print")
-                await page.pdf(
-                    path=str(pdf_path),
-                    format="A4",
-                    print_background=True,
-                    margin={"top": "10mm", "right": "10mm", "bottom": "10mm", "left": "10mm"},
-                    prefer_css_page_size=True,
-                )
-            finally:
-                if context is not None:
-                    await context.close()
-                await browser.close()
+        try:
+            async with async_playwright() as p:
+                browser = await p.chromium.launch()
+                context = None
+                try:
+                    context = await browser.new_context(base_url=base_url)
+                    page = await context.new_page()
+                    await page.set_content(html_source, wait_until="networkidle")
+                    await page.emulate_media(media="print")
+                    await page.pdf(
+                        path=str(pdf_path),
+                        format="A4",
+                        print_background=True,
+                        margin={"top": "10mm", "right": "10mm", "bottom": "10mm", "left": "10mm"},
+                        prefer_css_page_size=True,
+                    )
+                finally:
+                    if context is not None:
+                        await context.close()
+                    await browser.close()
+        except Exception as exc:
+            print(f"Playwright failed to render PDF ({exc}); skipping PDF generation.")
+            return
 
     def _combine_html_documents(html_sections: list[str]) -> str:
         if not html_sections:

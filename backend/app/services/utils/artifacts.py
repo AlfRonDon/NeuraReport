@@ -6,7 +6,7 @@ import logging
 import os
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Iterable, Mapping
+from typing import Any, Iterable, Mapping
 
 from .fs import write_json_atomic
 
@@ -42,13 +42,45 @@ def write_artifact_manifest(
     """
     template_dir = template_dir.resolve()
     manifest_path = template_dir / MANIFEST_NAME
+
+    existing_payload: dict[str, Any] = {}
+    if manifest_path.exists():
+        try:
+            existing_payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+        except Exception:
+            logger.exception(
+                "manifest_read_failed",
+                extra={"event": "manifest_read_failed", "path": str(manifest_path)},
+            )
+            existing_payload = {}
+
+    existing_files = dict(existing_payload.get("files") or {})
+    existing_checksums = dict(existing_payload.get("file_checksums") or {})
+    existing_inputs = list(existing_payload.get("input_refs") or [])
+
+    def _store_path(path: Path) -> str:
+        try:
+            return str(path.resolve().relative_to(template_dir))
+        except ValueError:
+            return str(path)
+
+    merged_files = existing_files | {name: _store_path(path) for name, path in files.items()}
+    new_checksums = compute_checksums(files)
+    merged_checksums = existing_checksums | new_checksums
+
+    input_list = list(inputs)
+    merged_inputs: list[str] = []
+    for item in existing_inputs + input_list:
+        if item not in merged_inputs:
+            merged_inputs.append(item)
+
     payload = {
         "schema_version": MANIFEST_SCHEMA_VERSION,
         "produced_at": datetime.now(timezone.utc).isoformat(),
         "step": step,
-        "files": {name: str(path.relative_to(template_dir)) for name, path in files.items()},
-        "file_checksums": compute_checksums(files),
-        "input_refs": list(inputs),
+        "files": merged_files,
+        "file_checksums": merged_checksums,
+        "input_refs": merged_inputs,
         "correlation_id": correlation_id,
         "pid": os.getpid(),
     }

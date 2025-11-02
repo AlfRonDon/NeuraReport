@@ -1890,8 +1890,7 @@ def mapping_approve(template_id: str, payload: MappingPayload, request: Request)
                 "progress": progress,
                 "template_id": template_id,
             }
-            if payload_data:
-                payload.update(payload_data)
+            payload.update(payload_data)
             return emit("stage", **payload)
 
         def finish_stage(
@@ -1914,8 +1913,7 @@ def mapping_approve(template_id: str, payload: MappingPayload, request: Request)
                 payload["progress"] = progress
             if elapsed_ms is not None:
                 payload["elapsed_ms"] = elapsed_ms
-            if payload_data:
-                payload.update(payload_data)
+            payload.update(payload_data)
             return emit("stage", **payload)
 
         contract_ready = False

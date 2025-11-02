@@ -3,6 +3,7 @@ from __future__ import annotations
 import base64
 import io
 import json
+import asyncio
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -149,8 +150,7 @@ def test_request_fix_html_reject_token_drift(monkeypatch, tmp_path: Path) -> Non
     assert "{amount}" in roundtrip_html
 
 
-@pytest.mark.asyncio
-async def test_fix_html_refine_stage_runs_even_when_target_met(monkeypatch, tmp_path: Path) -> None:
+def test_fix_html_refine_stage_runs_even_when_target_met(monkeypatch, tmp_path: Path) -> None:
     # Ensure uploads land in temp sandbox
     monkeypatch.setattr(api, "UPLOAD_ROOT", tmp_path)
     monkeypatch.setattr(api, "UPLOAD_ROOT_BASE", tmp_path.resolve())
@@ -242,40 +242,43 @@ async def test_fix_html_refine_stage_runs_even_when_target_met(monkeypatch, tmp_
     monkeypatch.setenv("VERIFY_FIX_HTML_ENABLED", "true")
     monkeypatch.setenv("MAX_FIX_PASSES", "1")
 
-    upload = api.UploadFile(file=io.BytesIO(b"%PDF-1.4\n"), filename="source.pdf")
-    response = await api.verify_template(file=upload, connection_id="conn-1", refine_iters=0, request=None)
+    async def _run_verification() -> None:
+        upload = api.UploadFile(file=io.BytesIO(b"%PDF-1.4\n"), filename="source.pdf")
+        response = await api.verify_template(file=upload, connection_id="conn-1", refine_iters=0, request=None)
 
-    chunks = [chunk async for chunk in response.body_iterator]
-    events = []
-    for chunk in chunks:
-        text = chunk.decode("utf-8").strip()
-        if not text:
-            continue
-        for part in text.split("`n"):
-            part = part.strip()
-            if part:
-                events.append(json.loads(part))
+        chunks = [chunk async for chunk in response.body_iterator]
+        events = []
+        for chunk in chunks:
+            text = chunk.decode("utf-8").strip()
+            if not text:
+                continue
+            for part in text.split("`n"):
+                part = part.strip()
+                if part:
+                    events.append(json.loads(part))
 
-    fix_stage = next(
-        ev
-        for ev in events
-        if ev.get("event") == "stage"
-        and ev.get("label") == "Refining HTML layout fidelity..."
-        and ev.get("status") == "complete"
-    )
-    assert fix_calls, "refinement pass should run"
-    assert fix_stage["skipped"] is False
-    assert fix_stage["fix_attempted"] is True
-    assert fix_stage["fix_accepted"] is True
+        fix_stage = next(
+            ev
+            for ev in events
+            if ev.get("event") == "stage"
+            and ev.get("label") == "Refining HTML layout fidelity..."
+            and ev.get("status") == "complete"
+        )
+        assert fix_calls, "refinement pass should run"
+        assert fix_stage["skipped"] is False
+        assert fix_stage["fix_attempted"] is True
+        assert fix_stage["fix_accepted"] is True
 
-    result_event = next(ev for ev in events if ev.get("event") == "result")
-    assert "render_png_url" in result_event["artifacts"]
-    assert "render_after_png_url" in result_event["artifacts"]
+        result_event = next(ev for ev in events if ev.get("event") == "result")
+        assert "render_png_url" in result_event["artifacts"]
+        assert "render_after_png_url" in result_event["artifacts"]
 
-    assert manifest_calls, "artifact manifest should be recorded"
-    manifest_files = manifest_calls[-1]
-    assert "render_p1.png" in manifest_files
-    assert "render_p1_llm.png" in manifest_files
-    assert "render_p1_after.png" in manifest_files
-    assert "render_p1_after_full.png" in manifest_files
-    assert "fix_metrics.json" in manifest_files
+        assert manifest_calls, "artifact manifest should be recorded"
+        manifest_files = manifest_calls[-1]
+        assert "render_p1.png" in manifest_files
+        assert "render_p1_llm.png" in manifest_files
+        assert "render_p1_after.png" in manifest_files
+        assert "render_p1_after_full.png" in manifest_files
+        assert "fix_metrics.json" in manifest_files
+
+    asyncio.run(_run_verification())
