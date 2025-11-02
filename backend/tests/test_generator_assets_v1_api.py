@@ -9,7 +9,9 @@ from typing import Any, Dict
 import pytest
 from fastapi.testclient import TestClient
 
-PNG_BYTES = base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg==")
+PNG_BYTES = base64.b64decode(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg=="
+)
 
 
 def _write_png(path: Path) -> None:
@@ -20,7 +22,10 @@ os.environ.setdefault("NEURA_ALLOW_MISSING_OPENAI", "true")
 
 from backend import api  # noqa: E402
 from backend.app.services.state import StateStore  # noqa: E402
-from backend.app.services.utils import write_artifact_manifest, write_json_atomic  # noqa: E402
+from backend.app.services.utils import (  # noqa: E402
+    write_artifact_manifest,
+    write_json_atomic,
+)
 
 
 @pytest.fixture
@@ -36,6 +41,7 @@ def client(tmp_path, monkeypatch):
     monkeypatch.setattr("backend.app.services.state.state_store", test_state_store)
     monkeypatch.setattr("backend.app.services.state.store.state_store", test_state_store)
     return TestClient(api.app)
+
 
 def _setup_template_dir(root: Path, template_id: str) -> Path:
     tdir = root / template_id

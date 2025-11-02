@@ -61,10 +61,7 @@ def _estimate_table_columns(page) -> Optional[int]:
             prev = idx
         clusters.append((start, prev))
 
-        significant = [
-            (lo, hi) for lo, hi in clusters
-            if (hi - lo) >= min_span
-        ]
+        significant = [(lo, hi) for lo, hi in clusters if (hi - lo) >= min_span]
         line_count = len(significant)
         if line_count >= 2:
             return line_count - 1  # vertical dividers imply columns

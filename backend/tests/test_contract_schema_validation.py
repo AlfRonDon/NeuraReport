@@ -2,7 +2,10 @@ from __future__ import annotations
 
 import pytest
 
-from backend.app.services.utils.validation import SchemaValidationError, validate_contract_schema
+from backend.app.services.utils.validation import (
+    SchemaValidationError,
+    validate_contract_schema,
+)
 
 
 def _base_contract() -> dict:

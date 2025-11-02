@@ -1,3 +1,4 @@
+exclude: '^\.history[\\/]'
 repos:
   - repo: https://github.com/psf/black
     rev: 23.9.1

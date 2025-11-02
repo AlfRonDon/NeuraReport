@@ -1,32 +1,21 @@
-﻿import os
-import sys
-import re
+﻿import asyncio
+import base64
 import json
 import logging
-import base64
-import sqlite3
+import os
+import re
 import shutil
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
-from collections import defaultdict
 from typing import Any, Dict, Iterable, List, Optional
 
-import asyncio
-
-from ..utils import (
-    call_chat_completion,
-    write_text_atomic,
-    write_json_atomic,
-    sanitize_html,
-    render_html_to_png as _render_html_to_png_sync,
-    normalize_token_braces,
-    extract_tokens,
-)
 from ..prompts.llm_prompts import LLM_CALL_PROMPTS
 from ..render.html_raster import rasterize_html_to_png, save_png
+from ..utils import call_chat_completion, extract_tokens, normalize_token_braces
+from ..utils import render_html_to_png as _render_html_to_png_sync
+from ..utils import sanitize_html, write_json_atomic, write_text_atomic
 from .css_merge import merge_css_into_html, replace_table_colgroup
-from .layout_hints import get_layout_hints
 
 try:
     from PIL import Image
@@ -177,8 +166,12 @@ def _parse_schema_ext(raw: str) -> Optional[Dict[str, Any]]:
         totals_raw = data.get("totals", [])
         notes_raw = data.get("notes", "")
 
-        scalars = _dedupe_preserve_order([_strip_braces(str(tok)) for tok in list(scalars_raw or []) if str(tok).strip()])
-        rows = _dedupe_preserve_order([_strip_braces(str(tok)) for tok in list(row_tokens_raw or []) if str(tok).strip()])
+        scalars = _dedupe_preserve_order(
+            [_strip_braces(str(tok)) for tok in list(scalars_raw or []) if str(tok).strip()]
+        )
+        rows = _dedupe_preserve_order(
+            [_strip_braces(str(tok)) for tok in list(row_tokens_raw or []) if str(tok).strip()]
+        )
         totals = _dedupe_preserve_order([_strip_braces(str(tok)) for tok in list(totals_raw or []) if str(tok).strip()])
 
         if not isinstance(notes_raw, str):
@@ -247,9 +240,11 @@ def pdf_to_pngs(pdf_path: Path, out_dir: Path, dpi=400):
 def b64_image(path: Path):
     return base64.b64encode(path.read_bytes()).decode("utf-8")
 
+
 def strip_code_fences(text: str) -> str:
     m = re.search(r"```(?:html|HTML)?\s*([\s\S]*?)```", text)
     return m.group(1).strip() if m else text.strip()
+
 
 CSS_PATCH_RE = re.compile(r"<!--BEGIN_CSS_PATCH-->([\s\S]*?)<!--END_CSS_PATCH-->", re.I)
 HTML_BLOCK_RE = re.compile(r"<!--BEGIN_HTML-->([\s\S]*?)<!--END_HTML-->", re.I)
@@ -373,6 +368,7 @@ def apply_fix_response(html_before: str, llm_output: str) -> str:
 
     return output
 
+
 def render_panel_preview(
     html_path: Path,
     dest_png: Path,
@@ -442,6 +438,7 @@ def save_html(path: Path, html: str):
 
 # OpenAI client initialised lazily via get_openai_client()
 
+
 def request_initial_html(
     page_png: Path,
     schema_json: Optional[dict],
@@ -487,9 +484,7 @@ def request_initial_html(
         html_section = raw_content
     html_clean = normalize_token_braces(html_section.strip())
 
-    schema_section = _extract_marked_section(
-        raw_content, "<!--BEGIN_SCHEMA_JSON-->", "<!--END_SCHEMA_JSON-->"
-    )
+    schema_section = _extract_marked_section(raw_content, "<!--BEGIN_SCHEMA_JSON-->", "<!--END_SCHEMA_JSON-->")
     schema_payload = None
     if schema_section:
         schema_payload = _parse_schema_ext(schema_section)
@@ -507,6 +502,8 @@ def request_initial_html(
         schema=schema_payload,
         schema_text=schema_section,
     )
+
+
 def request_fix_html(
     pdf_dir: Path,
     html_path: Path,
@@ -708,12 +705,11 @@ def request_fix_html(
         "metrics_path": metrics_path,
         "raw_response": raw_response,
     }
+
+
 async def main():
     raise RuntimeError("Legacy CLI entrypoint removed. Use the API verify flow instead.")
+
+
 if __name__ == "__main__":
     asyncio.run(main())
-
-
-
-
-

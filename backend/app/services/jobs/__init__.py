@@ -1,2 +1,1 @@
 """Jobs & logs placeholder."""
-

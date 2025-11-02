@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import importlib
 import json
 import os
 from pathlib import Path
@@ -10,9 +11,10 @@ from fastapi.testclient import TestClient
 
 os.environ.setdefault("NEURA_ALLOW_MISSING_OPENAI", "true")
 
-from backend import api
-from backend.app.services.utils import write_artifact_manifest, write_json_atomic
-
+api = importlib.import_module("backend.api")
+utils_module = importlib.import_module("backend.app.services.utils")
+write_artifact_manifest = utils_module.write_artifact_manifest
+write_json_atomic = utils_module.write_json_atomic
 
 PNG_BYTES = base64.b64decode(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg=="

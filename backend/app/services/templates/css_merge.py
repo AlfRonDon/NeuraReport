@@ -63,4 +63,4 @@ def replace_table_colgroup(html: str, table_id: str, new_colgroup_html: str) -> 
         new_body = prepend + body
 
     new_table = start_tag + new_body + end_tag
-    return html[:match.start()] + new_table + html[match.end():]
+    return html[: match.start()] + new_table + html[match.end() :]

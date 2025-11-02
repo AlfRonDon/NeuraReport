@@ -8,11 +8,16 @@ import logging
 import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Mapping, Sequence
+from typing import Any, Iterable, Mapping, Sequence
 
-from ..templates.TemplateVerify import MODEL, get_openai_client
 from ..prompts import llm_prompts
-from ..utils import call_chat_completion, extract_tokens, strip_code_fences, validate_mapping_inline_v4
+from ..templates.TemplateVerify import MODEL, get_openai_client
+from ..utils import (
+    call_chat_completion,
+    extract_tokens,
+    strip_code_fences,
+    validate_mapping_inline_v4,
+)
 from ..utils.validation import normalize_mapping_inline_payload
 from .HeaderMapping import REPORT_SELECTED_VALUE
 
@@ -95,6 +100,7 @@ _SQL_EXPR_HINT_RE = re.compile(
     """,
     re.IGNORECASE | re.VERBOSE,
 )
+
 
 def _normalized_token_parts(token: str) -> list[str]:
     normalized = re.sub(r"[^a-z0-9]+", "_", str(token or "").lower())
@@ -184,13 +190,10 @@ def _mapping_allowlist_errors(mapping: dict[str, str], catalog: Iterable[str]) -
         if PARAM_REF_RE.match(normalized):
             continue
         referenced: list[str] = [
-            f"{match.group('table')}.{match.group('column')}"
-            for match in _COLUMN_REF_RE.finditer(normalized)
+            f"{match.group('table')}.{match.group('column')}" for match in _COLUMN_REF_RE.finditer(normalized)
         ]
         if not referenced and not _SQL_EXPR_HINT_RE.search(normalized):
-            errors.append(
-                f"{key!r} -> value is not a catalog column, params reference, or recognizable SQL expression"
-            )
+            errors.append(f"{key!r} -> value is not a catalog column, params reference, or recognizable SQL expression")
             continue
         invalid = [col for col in referenced if col not in allowed_catalog]
         if invalid:
@@ -262,9 +265,7 @@ def _apply_constant_replacements(html: str, replacements: Mapping[str, Any]) -> 
     return updated
 
 
-def _normalize_token_samples(
-    token_samples_raw: Mapping[str, Any] | None, expected_tokens: set[str]
-) -> dict[str, str]:
+def _normalize_token_samples(token_samples_raw: Mapping[str, Any] | None, expected_tokens: set[str]) -> dict[str, str]:
     if not isinstance(token_samples_raw, Mapping):
         raise MappingInlineValidationError("token_samples must be an object with token -> literal value")
 
@@ -438,9 +439,7 @@ def run_llm_call_3(
 
             allowlist_errors = _mapping_allowlist_errors(mapping, catalog)
             if allowlist_errors:
-                raise MappingInlineValidationError(
-                    "Mapping values outside allow-list: " + ", ".join(allowlist_errors)
-                )
+                raise MappingInlineValidationError("Mapping values outside allow-list: " + ", ".join(allowlist_errors))
 
             original_tokens = set(extract_tokens(template_html))
 
@@ -466,9 +465,7 @@ def run_llm_call_3(
 
             overlap = inline_token_set.intersection(set(mapping.keys()))
             if overlap:
-                raise MappingInlineValidationError(
-                    f"Constant tokens still present in mapping: {sorted(overlap)}"
-                )
+                raise MappingInlineValidationError(f"Constant tokens still present in mapping: {sorted(overlap)}")
 
             html_constants_applied = _apply_constant_replacements(template_html, constant_entries)
 
@@ -498,9 +495,7 @@ def run_llm_call_3(
             ambiguous = meta.get("ambiguous")
             if isinstance(ambiguous, list):
                 meta["ambiguous"] = [
-                    entry
-                    for entry in ambiguous
-                    if isinstance(entry, dict) and entry.get("header") in mapping
+                    entry for entry in ambiguous if isinstance(entry, dict) and entry.get("header") in mapping
                 ]
 
             hints = meta.get("hints")

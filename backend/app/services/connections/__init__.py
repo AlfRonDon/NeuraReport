@@ -1,2 +1,1 @@
 """Connections service placeholder."""
-

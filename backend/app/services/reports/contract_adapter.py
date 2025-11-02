@@ -2,9 +2,8 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
+from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
-
 
 _PARAM_RE = re.compile(r"PARAM:([A-Za-z0-9_]+)")
 _AGG_FN_RE = re.compile(r"\b(SUM|COUNT|AVG|MIN|MAX)\s*\(", re.IGNORECASE)
@@ -354,9 +353,7 @@ class ContractAdapter:
         if include_date_range and self._parent_table:
             date_col = self._date_columns.get(self._parent_table)
             if date_col:
-                predicates.append(
-                    f"datetime({date_col}) BETWEEN datetime(:from_date) AND datetime(:to_date)"
-                )
+                predicates.append(f"datetime({date_col}) BETWEEN datetime(:from_date) AND datetime(:to_date)")
                 params.extend(["from_date", "to_date"])
                 used_tokens.update({"from_date", "to_date"})
 
@@ -411,11 +408,7 @@ class ContractAdapter:
         if not self._reshape_rules:
             raise ValueError("contract.reshape_rules is required to synthesise SQL")
         rule = next(
-            (
-                item
-                for item in self._reshape_rules
-                if isinstance(item, Mapping) and item.get("columns")
-            ),
+            (item for item in self._reshape_rules if isinstance(item, Mapping) and item.get("columns")),
             None,
         )
         if not rule:
@@ -600,8 +593,7 @@ class ContractAdapter:
             raise ValueError("Unable to build totals dataset without expressions")
 
         totals_sql = (
-            f"{totals_alias} AS (\n"
-            f"  SELECT\n    " + ",\n    ".join(select_clauses) + f"\n  FROM {rows_alias}\n)"
+            f"{totals_alias} AS (\n" f"  SELECT\n    " + ",\n    ".join(select_clauses) + f"\n  FROM {rows_alias}\n)"
         )
         return totals_sql, tokens_in_order
 

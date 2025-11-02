@@ -3,8 +3,6 @@ from __future__ import annotations
 import sqlite3
 from pathlib import Path
 
-import pytest
-
 from backend.app.services.reports.discovery import discover_batches_and_counts
 
 
@@ -23,9 +21,7 @@ def test_discover_handles_contract_without_child_table(tmp_path: Path):
     db_path = tmp_path / "db.sqlite"
     _build_db(
         db_path,
-        schema_statements=[
-            "CREATE TABLE recipes (id INTEGER PRIMARY KEY, start_time TEXT, plant TEXT)"
-        ],
+        schema_statements=["CREATE TABLE recipes (id INTEGER PRIMARY KEY, start_time TEXT, plant TEXT)"],
         data_statements=[
             ("INSERT INTO recipes (id, start_time, plant) VALUES (?, ?, ?)", (1, "2025-01-05", "A")),
             ("INSERT INTO recipes (id, start_time, plant) VALUES (?, ?, ?)", (2, "2024-12-31", "B")),
@@ -159,9 +155,7 @@ def test_discover_falls_back_to_rowid_when_no_keys(tmp_path: Path):
     db_path = tmp_path / "db.sqlite"
     _build_db(
         db_path,
-        schema_statements=[
-            "CREATE TABLE readings (start_ts TEXT, metric REAL)"
-        ],
+        schema_statements=["CREATE TABLE readings (start_ts TEXT, metric REAL)"],
         data_statements=[
             ("INSERT INTO readings VALUES (?, ?)", ("2025-05-01", 1.1)),
             ("INSERT INTO readings VALUES (?, ?)", ("2025-05-15", 2.2)),

@@ -1,4 +1,6 @@
-from backend.app.services.templates.TemplateVerify import normalize_schema_for_initial_html
+from backend.app.services.templates.TemplateVerify import (
+    normalize_schema_for_initial_html,
+)
 
 
 def test_normalize_preserves_legacy_shape():

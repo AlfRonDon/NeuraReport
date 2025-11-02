@@ -7,7 +7,6 @@ from pathlib import Path
 from typing import Any
 
 
-
 @dataclass(frozen=True)
 class Settings:
     openai_api_key: str

@@ -1,21 +1,25 @@
 # app/services/connections/db_connection.py
 from __future__ import annotations
 
-import os, json, tempfile, argparse
+import argparse
+import json
+import os
+import sqlite3
+import tempfile
+import uuid
 from pathlib import Path
 from urllib.parse import urlparse
-import sqlite3
-import time
-import uuid
 
 from ..state import state_store
 
 STORAGE = os.path.join(tempfile.gettempdir(), "neura_connections.jsonl")
 
+
 def _strip_quotes(s: str | None) -> str | None:
     if s is None:
         return None
-    return s.strip().strip('\'"')
+    return s.strip().strip("'\"")
+
 
 def _sqlite_path_from_url(db_url: str) -> str:
     u = urlparse(db_url)
@@ -24,6 +28,7 @@ def _sqlite_path_from_url(db_url: str) -> str:
     if raw.startswith("/") and len(raw) >= 3 and raw[2] == ":":
         raw = raw.lstrip("/")
     return raw.replace("/", os.sep)
+
 
 def resolve_db_path(connection_id: str | None, db_url: str | None, db_path: str | None) -> Path:
     # a) connection_id -> lookup in STORAGE
@@ -72,6 +77,7 @@ def resolve_db_path(connection_id: str | None, db_url: str | None, db_path: str 
 
     raise RuntimeError("No DB specified. Provide --connection-id OR --db-url OR --db-path (or DB_PATH env).")
 
+
 def verify_sqlite(path: Path) -> None:
     """Raise on missing file or connection failure."""
     if not Path(path).exists():
@@ -82,6 +88,7 @@ def verify_sqlite(path: Path) -> None:
         con.close()
     except Exception as e:
         raise RuntimeError(f"SQLite error: {e}")
+
 
 def save_connection(cfg: dict) -> str:
     """Persist a minimal record and return a connection_id."""
@@ -110,8 +117,8 @@ def save_connection(cfg: dict) -> str:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="NeuraReport DB resolver")
     parser.add_argument("--connection-id")
-    parser.add_argument("--db-url")     # e.g. sqlite:///C:/Users/you/file.db
-    parser.add_argument("--db-path")    # legacy: direct path
+    parser.add_argument("--db-url")  # e.g. sqlite:///C:/Users/you/file.db
+    parser.add_argument("--db-path")  # legacy: direct path
     args = parser.parse_args()
 
     DB_PATH = resolve_db_path(

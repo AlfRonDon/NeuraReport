@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib
 import json
 import os
 from pathlib import Path
@@ -9,9 +10,13 @@ from fastapi.testclient import TestClient
 
 os.environ.setdefault("NEURA_ALLOW_MISSING_OPENAI", "true")
 
-from backend import api
-from backend.app.services.utils import write_artifact_manifest, write_json_atomic
-from backend.tests.test_api_mapping_approve_contract_v2 import PNG_BYTES, _make_template_dir
+api = importlib.import_module("backend.api")
+utils_module = importlib.import_module("backend.app.services.utils")
+write_artifact_manifest = utils_module.write_artifact_manifest
+write_json_atomic = utils_module.write_json_atomic
+contract_test_module = importlib.import_module("backend.tests.test_api_mapping_approve_contract_v2")
+PNG_BYTES = contract_test_module.PNG_BYTES
+_make_template_dir = contract_test_module._make_template_dir
 
 
 @pytest.fixture
@@ -81,11 +86,20 @@ def test_manifest_contains_contract_artifacts(monkeypatch, tmp_path, client):
         overview_path.write_text("# Contract Overview", encoding="utf-8")
         write_json_atomic(
             step5_path,
-            {"datasets": {}, "parameters": {}, "transformations": [], "edge_cases": [], "dialect_notes": [], "artifact_expectations": {}},
+            {
+                "datasets": {},
+                "parameters": {},
+                "transformations": [],
+                "edge_cases": [],
+                "dialect_notes": [],
+                "artifact_expectations": {},
+            },
             ensure_ascii=False,
             indent=2,
         )
-        write_json_atomic(meta_path, {"assumptions": [], "warnings": [], "validation": {}}, ensure_ascii=False, indent=2)
+        write_json_atomic(
+            meta_path, {"assumptions": [], "warnings": [], "validation": {}}, ensure_ascii=False, indent=2
+        )
 
         write_artifact_manifest(
             template_dir,

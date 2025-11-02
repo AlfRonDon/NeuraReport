@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import sqlite3
 import sys
 import types
@@ -10,8 +9,8 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-
 fernet_module = types.ModuleType("cryptography.fernet")
+
 
 class _DummyFernet:
     def __init__(self, key):
@@ -27,18 +26,19 @@ class _DummyFernet:
     def decrypt(self, token: bytes) -> bytes:
         return token
 
-fernet_module.Fernet = _DummyFernet
-fernet_module.InvalidToken = Exception
+
+setattr(fernet_module, "Fernet", _DummyFernet)
+setattr(fernet_module, "InvalidToken", Exception)
 crypto_module = types.ModuleType("cryptography")
-crypto_module.fernet = fernet_module
+setattr(crypto_module, "fernet", fernet_module)
 sys.modules.setdefault("cryptography", crypto_module)
 sys.modules.setdefault("cryptography.fernet", fernet_module)
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from .. import api  # noqa: E402
-from ..app.services.state import store as state_store_module  # noqa: E402
 from ..app.services.connections import db_connection as db_conn_module  # noqa: E402
+from ..app.services.state import store as state_store_module  # noqa: E402
 
 
 @pytest.fixture

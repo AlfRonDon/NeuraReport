@@ -1,10 +1,10 @@
 ﻿import json
 import uuid
-from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
 
+from backend import api
 from backend.app.services.mapping import AutoMapInline
 from backend.app.services.mapping.AutoMapInline import (
     MappingInlineResult,
@@ -12,18 +12,11 @@ from backend.app.services.mapping.AutoMapInline import (
 )
 from backend.app.services.mapping.HeaderMapping import REPORT_SELECTED_VALUE
 from backend.app.services.prompts import llm_prompts
-from backend import api
 
 
 def _dummy_response(payload: dict) -> SimpleNamespace:
     content = json.dumps(payload)
-    return SimpleNamespace(
-        choices=[
-            SimpleNamespace(
-                message=SimpleNamespace(content=content)
-            )
-        ]
-    )
+    return SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(content=content))])
 
 
 def _basic_schema() -> dict:
@@ -196,9 +189,6 @@ def test_llm_call_3_rejects_date_inline(monkeypatch):
 
 
 def test_mapping_preview_cache_short_circuit(monkeypatch, tmp_path):
-    original_upload_root = api.UPLOAD_ROOT
-    original_upload_base = api.UPLOAD_ROOT_BASE
-
     monkeypatch.setattr(api, "UPLOAD_ROOT", tmp_path)
     monkeypatch.setattr(api, "UPLOAD_ROOT_BASE", tmp_path)
 
@@ -296,24 +286,18 @@ def test_mapping_preview_cache_short_circuit(monkeypatch, tmp_path):
 
 
 def test_mapping_allowlist_rejects_legacy_wrapper():
-    errors = AutoMapInline._mapping_allowlist_errors(
-        {"total_set": "DERIVED:SUM(recipes.bin1_sp)"}, ["recipes.bin1_sp"]
-    )
+    errors = AutoMapInline._mapping_allowlist_errors({"total_set": "DERIVED:SUM(recipes.bin1_sp)"}, ["recipes.bin1_sp"])
     assert errors
     assert "legacy wrapper" in errors[0]
 
 
 def test_mapping_allowlist_allows_params_reference():
-    errors = AutoMapInline._mapping_allowlist_errors(
-        {"from_date": "params.from_date"}, ["recipes.bin1_sp"]
-    )
+    errors = AutoMapInline._mapping_allowlist_errors({"from_date": "params.from_date"}, ["recipes.bin1_sp"])
     assert errors == []
 
 
 def test_mapping_allowlist_rejects_unknown_format():
-    errors = AutoMapInline._mapping_allowlist_errors(
-        {"weird": "some_value"}, ["recipes.bin1_sp"]
-    )
+    errors = AutoMapInline._mapping_allowlist_errors({"weird": "some_value"}, ["recipes.bin1_sp"])
     assert errors
     assert "recognizable SQL expression" in errors[0]
 

@@ -21,7 +21,9 @@ from backend.app.services.utils.artifacts import (  # type: ignore  # noqa: E402
     compute_checksums,
     load_manifest,
 )
-from backend.app.services.utils.fs import write_text_atomic  # type: ignore  # noqa: E402
+from backend.app.services.utils.fs import (  # type: ignore  # noqa: E402
+    write_text_atomic,
+)
 from backend.app.services.utils.validation import (  # type: ignore  # noqa: E402
     SchemaValidationError,
     validate_contract_schema,
@@ -219,7 +221,9 @@ def _simulate_failure(tdir: Path, step: str) -> CheckResult:
     return CheckResult(name=f"simulate_{step}", ok=ok, detail=detail)
 
 
-def verify_pipeline(template_id: str, uploads_root: Path, simulate: Iterable[str] | None = None) -> Tuple[bool, List[CheckResult]]:
+def verify_pipeline(
+    template_id: str, uploads_root: Path, simulate: Iterable[str] | None = None
+) -> Tuple[bool, List[CheckResult]]:
     uploads_root = uploads_root.resolve()
     checks: List[CheckResult] = []
 

@@ -8,9 +8,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from backend.app.services.templates import TemplateVerify as tv
 import backend.api as api
-
+from backend.app.services.templates import TemplateVerify as tv
 
 PNG_BYTES = base64.b64decode(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg=="
@@ -63,9 +62,7 @@ def test_request_fix_html_success(monkeypatch, tmp_path: Path) -> None:
 
     def fake_call_chat_completion(client, model, messages, description):
         content = f"<!--BEGIN_HTML-->{refined_html}<!--END_HTML-->"
-        return SimpleNamespace(
-            choices=[SimpleNamespace(message=SimpleNamespace(content=content))]
-        )
+        return SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(content=content))])
 
     render_calls: list[Path] = []
 
@@ -76,9 +73,11 @@ def test_request_fix_html_success(monkeypatch, tmp_path: Path) -> None:
     monkeypatch.setattr(tv, "get_openai_client", lambda: object())
     monkeypatch.setattr(tv, "call_chat_completion", fake_call_chat_completion)
     monkeypatch.setattr(tv, "render_html_to_png", fake_render_html_to_png)
+
     def fake_panel_preview(html_path_arg: Path, dest_png: Path, **kwargs) -> Path:
         dest_png.write_bytes(PNG_BYTES)
         return dest_png
+
     monkeypatch.setattr(tv, "render_panel_preview", fake_panel_preview)
     result = tv.request_fix_html(
         tmp_path,
@@ -118,9 +117,7 @@ def test_request_fix_html_reject_token_drift(monkeypatch, tmp_path: Path) -> Non
 
     def fake_call_chat_completion(client, model, messages, description):
         content = f"<!--BEGIN_HTML-->{drifted_html}<!--END_HTML-->"
-        return SimpleNamespace(
-            choices=[SimpleNamespace(message=SimpleNamespace(content=content))]
-        )
+        return SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(content=content))])
 
     monkeypatch.setattr(tv, "get_openai_client", lambda: object())
     monkeypatch.setattr(tv, "call_chat_completion", fake_call_chat_completion)

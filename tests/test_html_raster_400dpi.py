@@ -1,13 +1,14 @@
+import importlib
 import io
 
 import pytest
 
 pytest.importorskip("playwright.sync_api")
-pytest.importorskip("PIL.Image")
+pil_image_module = pytest.importorskip("PIL.Image")
+Image = pil_image_module.Image
 
-from PIL import Image
-
-from backend.app.services.render.html_raster import rasterize_html_to_png
+render_module = importlib.import_module("backend.app.services.render.html_raster")
+rasterize_html_to_png = render_module.rasterize_html_to_png
 
 
 def _dims(png_bytes: bytes):

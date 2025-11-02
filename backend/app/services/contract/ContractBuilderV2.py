@@ -1,15 +1,15 @@
 from __future__ import annotations
 
 import hashlib
-import re
-import os
 import json
 import logging
+import os
+import re
 import time
 from pathlib import Path
-from typing import Any, Dict, Iterable, Mapping, Optional
+from typing import Any, Iterable, Mapping, Optional
 
-from ..prompts.llm_prompts import build_llm_call_4_prompt, PROMPT_VERSION_4
+from ..prompts.llm_prompts import PROMPT_VERSION_4, build_llm_call_4_prompt
 from ..templates.TemplateVerify import get_openai_client
 from ..utils import (
     call_chat_completion,
@@ -286,16 +286,11 @@ def _normalize_sql_mapping_sections(
         if not cleaned:
             raise ContractBuilderError(f"contract mapping for '{token}' is empty after normalization.")
         if _SUBQUERY_RE.search(cleaned):
-            raise ContractBuilderError(f"contract mapping for '{token}' contains disallowed SQL (subqueries or statements).")
-        referenced = {
-            f"{match.group('table')}.{match.group('column')}"
-            for match in _COLUMN_REF_RE.finditer(cleaned)
-        }
-        invalid = [
-            ref
-            for ref in referenced
-            if ref not in allow_catalog and ref.split(".")[0] in allowed_tables
-        ]
+            raise ContractBuilderError(
+                f"contract mapping for '{token}' contains disallowed SQL (subqueries or statements)."
+            )
+        referenced = {f"{match.group('table')}.{match.group('column')}" for match in _COLUMN_REF_RE.finditer(cleaned)}
+        invalid = [ref for ref in referenced if ref not in allow_catalog and ref.split(".")[0] in allowed_tables]
         if invalid:
             raise ContractBuilderError(
                 f"contract mapping for '{token}' references columns outside catalog: {sorted(invalid)}"
@@ -304,18 +299,12 @@ def _normalize_sql_mapping_sections(
 
     mapping_section = contract.get("mapping")
     if isinstance(mapping_section, dict):
-        contract["mapping"] = {
-            str(token): _validate_expr(str(token), expr)
-            for token, expr in mapping_section.items()
-        }
+        contract["mapping"] = {str(token): _validate_expr(str(token), expr) for token, expr in mapping_section.items()}
 
     for section in ("totals", "row_computed", "totals_math"):
         block = contract.get(section)
         if isinstance(block, dict):
-            contract[section] = {
-                str(token): _validate_expr(str(token), expr)
-                for token, expr in block.items()
-            }
+            contract[section] = {str(token): _validate_expr(str(token), expr) for token, expr in block.items()}
 
 
 def _serialize_contract(contract: dict[str, Any]) -> dict[str, Any]:
@@ -369,9 +358,8 @@ def build_or_load_contract_v2(
     cached = _load_cached_payload(template_dir)
     if cached:
         meta = cached.get("meta") or {}
-        if (
-            meta.get("input_signature") == input_signature
-            and (db_signature is None or meta.get("db_signature") == db_signature)
+        if meta.get("input_signature") == input_signature and (
+            db_signature is None or meta.get("db_signature") == db_signature
         ):
             logger.info(
                 "contract_v2_cache_hit",
@@ -531,6 +519,8 @@ def load_contract_v2(template_dir: Path) -> Optional[dict[str, Any]]:
         return None
     cached["cached"] = True
     return cached
+
+
 _COLUMN_REF_RE = re.compile(
     r"""
     ["`\[]?

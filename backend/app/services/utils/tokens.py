@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-from typing import Iterable, List
+from typing import List
 
 _DOUBLE_BRACE_PATTERN = re.compile(r"\{\{\s*([^{}]+?)\s*\}\}")
 _TOKEN_PATTERN = re.compile(r"\{\{[^{}]+\}\}|\{[^{}]+\}")

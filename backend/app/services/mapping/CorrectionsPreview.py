@@ -7,8 +7,8 @@ import re
 from pathlib import Path
 from typing import Any, Collection, Mapping, Sequence
 
+from ..prompts.llm_prompts import PROMPT_VERSION_3_5, build_llm_call_3_5_prompt
 from ..templates.TemplateVerify import MODEL, get_openai_client
-from ..prompts.llm_prompts import build_llm_call_3_5_prompt, PROMPT_VERSION_3_5
 from ..utils import (
     call_chat_completion,
     extract_tokens,
@@ -19,7 +19,7 @@ from ..utils import (
     write_text_atomic,
 )
 from ..utils.validation import SchemaValidationError
-from .HeaderMapping import INPUT_SAMPLE, REPORT_SELECTED_VALUE, REPORT_SELECTED_DISPLAY
+from .HeaderMapping import INPUT_SAMPLE, REPORT_SELECTED_DISPLAY, REPORT_SELECTED_VALUE
 
 logger = logging.getLogger("neura.mapping.corrections_preview")
 
@@ -167,6 +167,8 @@ def _display_mapping_value(token: str, value: str) -> str:
         if _is_sample_value(trimmed):
             return VALUE_SAMPLE
     return trimmed
+
+
 def _ensure_invariants(
     original_html: str,
     final_html: str,
@@ -186,9 +188,7 @@ def _ensure_invariants(
 
     unexpected_tokens = final_tokens - original_tokens
     if unexpected_tokens:
-        raise CorrectionsPreviewError(
-            "New tokens introduced in final template: " f"{sorted(unexpected_tokens)}"
-        )
+        raise CorrectionsPreviewError("New tokens introduced in final template: " f"{sorted(unexpected_tokens)}")
 
     removed_tokens = original_tokens - final_tokens
     missing_expected = sorted(expected_inline - removed_tokens)
@@ -215,9 +215,7 @@ def _ensure_invariants(
         if not sample_text:
             continue
         if sample_text in final_html:
-            raise CorrectionsPreviewError(
-                f"Sample value leaked into final template for token {token!r}."
-            )
+            raise CorrectionsPreviewError(f"Sample value leaked into final template for token {token!r}.")
 
     return sorted(removed_tokens), missing_expected, unexpected_removed
     original_tokens = set(extract_tokens(original_html))
@@ -225,9 +223,7 @@ def _ensure_invariants(
 
     unexpected_tokens = final_tokens - original_tokens
     if unexpected_tokens:
-        raise CorrectionsPreviewError(
-            "New tokens introduced in final template: " f"{sorted(unexpected_tokens)}"
-        )
+        raise CorrectionsPreviewError("New tokens introduced in final template: " f"{sorted(unexpected_tokens)}")
 
     removed_tokens = original_tokens - final_tokens
     expected_inline = {str(tok) for tok in expected_inline_tokens if str(tok)}
@@ -330,14 +326,8 @@ def run_corrections_preview(
     if override_clean:
         mapping_clean.update(override_clean)
 
-    sample_tokens_set = {
-        str(tok).strip()
-        for tok in (sample_tokens or [])
-        if isinstance(tok, str) and str(tok).strip()
-    }
-    inline_expected_tokens: set[str] = {
-        token for token, value in mapping_clean.items() if _is_sample_value(value)
-    }
+    sample_tokens_set = {str(tok).strip() for tok in (sample_tokens or []) if isinstance(tok, str) and str(tok).strip()}
+    inline_expected_tokens: set[str] = {token for token, value in mapping_clean.items() if _is_sample_value(value)}
     sample_tokens_set.update(inline_expected_tokens)
 
     token_samples_raw = mapping_payload.get("token_samples")
@@ -348,20 +338,14 @@ def run_corrections_preview(
     token_samples_clean: dict[str, str] | None = None
     if isinstance(token_samples_raw, Mapping):
         token_samples_clean = {
-            str(key).strip(): str(value)
-            for key, value in token_samples_raw.items()
-            if str(key).strip()
+            str(key).strip(): str(value) for key, value in token_samples_raw.items() if str(key).strip()
         }
     else:
         token_samples_clean = None
 
     mapping_context = mapping_payload.get("raw_payload")
     if not isinstance(mapping_context, Mapping):
-        mapping_context = {
-            key: value
-            for key, value in mapping_payload.items()
-            if key not in {"mapping"}
-        }
+        mapping_context = {key: value for key, value in mapping_payload.items() if key not in {"mapping"}}
     mapping_context = dict(mapping_context)
     mapping_context["mapping"] = dict(mapping_clean)
     if override_clean:
@@ -546,9 +530,7 @@ def run_corrections_preview(
     last_error: Exception | None = None
     llm_response_payload: dict[str, Any] | None = None
     for attempt in (1, 2):
-        messages = [
-            {"role": "system", "content": [{"type": "text", "text": system_text}]}
-        ]
+        messages = [{"role": "system", "content": [{"type": "text", "text": system_text}]}]
         user_entry = json.loads(json.dumps(base_messages))  # deep copy
         if validation_feedback:
             user_entry[0]["content"].append(

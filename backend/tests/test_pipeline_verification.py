@@ -1,34 +1,40 @@
 from __future__ import annotations
-import os
-os.environ.setdefault("OPENAI_API_KEY", "test-key")
 
-
+import importlib
 import json
 import os
 import sys
 import time
 from pathlib import Path
+from typing import Any
 
 import pytest
+
+os.environ.setdefault("OPENAI_API_KEY", "test-key")
+os.environ.setdefault("NEURA_ALLOW_MISSING_OPENAI", "true")
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from backend.app.services.utils.artifacts import write_artifact_manifest  # type: ignore  # noqa: E402
-from backend.app.services.utils.lock import acquire_template_lock  # type: ignore  # noqa: E402
-from backend.app.services.utils.validation import (  # type: ignore  # noqa: E402
-    SchemaValidationError,
-    validate_mapping_schema,
-)
-from scripts.verify_pipeline import CheckResult, verify_pipeline  # type: ignore  # noqa: E402
+artifacts_module = importlib.import_module("backend.app.services.utils.artifacts")
+write_artifact_manifest = artifacts_module.write_artifact_manifest
 
+lock_module = importlib.import_module("backend.app.services.utils.lock")
+acquire_template_lock = lock_module.acquire_template_lock
+
+validation_module = importlib.import_module("backend.app.services.utils.validation")
+SchemaValidationError = validation_module.SchemaValidationError
+validate_mapping_schema = validation_module.validate_mapping_schema
+
+pipeline_module = importlib.import_module("scripts.verify_pipeline")
+verify_pipeline = pipeline_module.verify_pipeline
 
 TEMPLATE_ID = "ad6a0b1f-d98a-41c2-8ffe-8b651de9100f"
 UPLOADS_ROOT = REPO_ROOT / "backend" / "uploads"
 
 
-def _lookup_check(checks: list[CheckResult], name: str) -> CheckResult:
+def _lookup_check(checks: list[Any], name: str) -> Any:
     for check in checks:
         if check.name == name:
             return check
@@ -97,7 +103,7 @@ def test_staleness_detection(tmp_path: Path):
     (tdir / "reference_p1.png").write_bytes(b"\x89PNG\r\n")
     (tdir / "template_p1.html").write_text("<html><body>Template</body></html>", encoding="utf-8")
     report_html = tdir / "report_final.html"
-    report_html.write_text("<html><body><img src=\"reference_p1.png\" /></body></html>", encoding="utf-8")
+    report_html.write_text('<html><body><img src="reference_p1.png" /></body></html>', encoding="utf-8")
 
     mapping_path = tdir / "mapping_pdf_labels.json"
     mapping_data = [

@@ -7,11 +7,6 @@ from typing import Any
 
 import pytest
 
-PNG_BYTES = base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg==")
-
-def _write_png(path: Path) -> None:
-    path.write_bytes(PNG_BYTES)
-
 from backend.app.services.generator import GeneratorAssetsV1 as generator_assets
 from backend.app.services.utils.validation import (
     SchemaValidationError,
@@ -20,6 +15,14 @@ from backend.app.services.utils.validation import (
     validate_generator_sql_pack,
 )
 
+PNG_BYTES = base64.b64decode(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg=="
+)
+
+
+def _write_png(path: Path) -> None:
+    path.write_bytes(PNG_BYTES)
+
 
 def _make_contract(tokens: dict[str, list[str]]) -> dict[str, Any]:
     tokens_copy: dict[str, Any] = {
@@ -27,9 +30,7 @@ def _make_contract(tokens: dict[str, list[str]]) -> dict[str, Any]:
     }
     row_tokens = list(tokens_copy.get("row_tokens") or [])
     columns = [
-        {"as": token, "from": [f"lines.{token}"]}
-        for token in row_tokens[:2]
-        if isinstance(token, str) and token
+        {"as": token, "from": [f"lines.{token}"]} for token in row_tokens[:2] if isinstance(token, str) and token
     ]
     if not columns:
         columns = [{"as": "row_value", "from": ["lines.row_value"]}]
@@ -383,4 +384,3 @@ def test_generator_assets_validates_step5_contract(monkeypatch, tmp_path):
             params_spec=[],
         )
     assert "Generator contract failed validation" in str(excinfo.value)
-

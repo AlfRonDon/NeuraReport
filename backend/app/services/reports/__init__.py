@@ -1,2 +1,1 @@
 """Report engine placeholder."""
-

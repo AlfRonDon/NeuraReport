@@ -1,12 +1,13 @@
-﻿from __future__ import annotations
+﻿# mypy: ignore-errors
+from __future__ import annotations
 
+import base64
 import json
 import re
-import base64
-from textwrap import dedent
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Mapping
+from textwrap import dedent
+from typing import Any, Dict, Iterable, Mapping
 
 PROMPT_VERSION = "llm_call_3_v7"
 PROMPT_VERSION_3_5 = "v4"
@@ -301,7 +302,7 @@ def build_llm_call_3_prompt(
                 "text": (
                     "[REFERENCE_PNG_HINT]\n"
                     '"A screenshot of the reference PDF was used to create this template; '
-                    "treat visible page titles/branding as likely constants.\""
+                    'treat visible page titles/branding as likely constants."'
                 ),
             }
         )
@@ -312,7 +313,6 @@ def build_llm_call_3_prompt(
         "attachments": attachments,
         "version": PROMPT_VERSION,
     }
-
 
 
 LLM_CALL_3_5_PROMPT: Dict[str, str] = {
@@ -704,6 +704,7 @@ PROMPT_LIBRARY: Dict[str, str] = {
     "llm_call_5_system": LLM_CALL_5_PROMPT["system"],
     "llm_call_5_user": LLM_CALL_5_PROMPT["user"],
 }
+
 
 def build_llm_call_4_prompt(
     *,

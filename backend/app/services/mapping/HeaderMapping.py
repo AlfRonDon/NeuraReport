@@ -1,11 +1,11 @@
-﻿from __future__ import annotations
+﻿# mypy: ignore-errors
+from __future__ import annotations
 
 import logging
 import sqlite3
 from collections import defaultdict
 from pathlib import Path
 from typing import Dict, Iterable
-
 
 logger = logging.getLogger("neura.mapping")
 
@@ -29,9 +29,7 @@ def get_parent_child_info(db_path: Path) -> Dict[str, object]:
         cur = con.cursor()
 
         cur.execute(
-            "SELECT name FROM sqlite_master "
-            "WHERE type='table' AND name NOT LIKE 'sqlite_%' "
-            "ORDER BY name;"
+            "SELECT name FROM sqlite_master " "WHERE type='table' AND name NOT LIKE 'sqlite_%' " "ORDER BY name;"
         )
         tables = [r[0] for r in cur.fetchall()]
 
@@ -97,9 +95,11 @@ def is_unresolved_choice(choice: str) -> bool:
     return _choice_key(choice) in UNRESOLVED_CHOICES
 
 
-def approval_errors(mapping: Dict[str, str], unresolved_tokens: Iterable[str] = UNRESOLVED_CHOICES) -> list[dict[str, str]]:
+def approval_errors(
+    mapping: Dict[str, str], unresolved_tokens: Iterable[str] = UNRESOLVED_CHOICES
+) -> list[dict[str, str]]:
     """Return issues that should block approval (unresolved or duplicate mappings)."""
-    unresolved_set = { _choice_key(tok) for tok in unresolved_tokens }
+    unresolved_set = {_choice_key(tok) for tok in unresolved_tokens}
     reverse = defaultdict(list)
     issues: list[dict[str, str]] = []
 

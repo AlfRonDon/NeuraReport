@@ -7,7 +7,6 @@ import pytest
 from backend.app.services.mapping import CorrectionsPreview as cp_module
 from backend.app.services.mapping.CorrectionsPreview import run_corrections_preview
 
-
 TEMPLATE_HTML = """<!doctype html>
 <html>
   <body>
@@ -25,21 +24,13 @@ TEMPLATE_HTML = """<!doctype html>
 
 FAKE_RESPONSE = {
     "final_template_html": TEMPLATE_HTML,
-    "page_summary": (
-        "Full-width header titled {report_title}, followed by a single-column table listing {row_value}."
-    ),
+    "page_summary": ("Full-width header titled {report_title}, followed by a single-column table listing {row_value}."),
 }
 
 
 def _fake_response():
     content = json.dumps(FAKE_RESPONSE)
-    return SimpleNamespace(
-        choices=[
-            SimpleNamespace(
-                message=SimpleNamespace(content=content)
-            )
-        ]
-    )
+    return SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(content=content))])
 
 
 def write_fixture_files(base_dir: Path):
@@ -102,9 +93,7 @@ def test_corrections_preview_integration(tmp_path, monkeypatched_llm):
     assert "page_summary.txt" in files.values()
 
     mapping_labels = read_json(upload_dir / "mapping_pdf_labels.json")
-    assert mapping_labels == [
-        {"header": "row_value", "placeholder": "{row_value}", "mapping": "reports.value"}
-    ]
+    assert mapping_labels == [{"header": "row_value", "placeholder": "{row_value}", "mapping": "reports.value"}]
 
     # Second run should be served from cache.
     cached = run_corrections_preview(

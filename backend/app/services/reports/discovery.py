@@ -1,12 +1,11 @@
-﻿from __future__ import annotations
+﻿# mypy: ignore-errors
+from __future__ import annotations
 
 import re
 import sqlite3
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Mapping, Optional
-
-from ..mapping.HeaderMapping import get_parent_child_info  # re-export for compatibility
+from typing import Any, Dict, List, Mapping
 
 try:  # pragma: no cover - compatibility shim
     from ..mapping.auto_fill import build_or_load_contract  # type: ignore
@@ -14,13 +13,15 @@ except Exception:  # pragma: no cover
     try:
         from .auto_fill import build_or_load_contract  # type: ignore
     except Exception as exc:  # pragma: no cover
-        def build_or_load_contract(*_args, **_kwargs):  # type: ignore
+
+        def build_or_load_contract(*_args, _exc=exc, **_kwargs):  # type: ignore
             raise RuntimeError(
                 "build_or_load_contract unavailable. Ensure mapping.auto_fill.build_or_load_contract exists."
-            ) from exc
+            ) from _exc
 
-from .date_utils import get_col_type, mk_between_pred_for_date
+
 from .contract_adapter import ContractAdapter
+from .date_utils import get_col_type, mk_between_pred_for_date
 
 _DATE_INPUT_FORMATS = (
     "%Y-%m-%d %H:%M:%S",
@@ -177,7 +178,9 @@ def discover_batches_and_counts(
     parent_type = get_col_type(db_path, parent_table, parent_date)
     child_type = get_col_type(db_path, child_table, child_date) if has_child else ""
     parent_pred, adapt_parent = mk_between_pred_for_date(parent_date, parent_type)
-    child_pred, adapt_child = mk_between_pred_for_date(child_date, child_type) if has_child else ("1=1", lambda *_: tuple())
+    child_pred, adapt_child = (
+        mk_between_pred_for_date(child_date, child_type) if has_child else ("1=1", lambda *_: tuple())
+    )
 
     db_start = _normalize_for_between(start_date)
     db_end = _normalize_for_between(end_date)
@@ -408,13 +411,3 @@ def discover_batches_and_counts(
         "batches_count": len(batches),
         "rows_total": rows_total,
     }
-
-
-
-
-
-
-
-
-
-

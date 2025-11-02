@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import sqlite3
 from pathlib import Path
+from typing import Any, cast
 
 from backend.app.services.reports.ReportGenerate import fill_and_print
 
@@ -34,11 +35,7 @@ def _write_generator_bundle(
         )
 
     entrypoints = {
-        "header": (
-            "SELECT "
-            + ", ".join(header_select_parts)
-            + ";"
-        ),
+        "header": ("SELECT " + ", ".join(header_select_parts) + ";"),
         "rows": (
             "SELECT "
             "ROW_NUMBER() OVER (ORDER BY material_name) AS sl_no, "
@@ -165,10 +162,17 @@ def _write_contract(
         },
     }
     if include_page_fields:
-        contract["mapping"]["page_no"] = "PARAM:page_no"
-        contract["mapping"][page_total_col] = f"PARAM:{page_total_col}"
-        contract["header_tokens"].extend(["page_no", page_total_col])
-        contract["tokens"]["scalars"].extend(["page_no", page_total_col])
+        mapping = cast(dict[str, Any], contract["mapping"])
+        mapping["page_no"] = "PARAM:page_no"
+        mapping[page_total_col] = f"PARAM:{page_total_col}"
+
+        header_tokens = cast(list[str], contract["header_tokens"])
+        header_tokens.extend(["page_no", page_total_col])
+
+        tokens = cast(dict[str, Any], contract["tokens"])
+        scalars = cast(list[str], tokens.get("scalars") or [])
+        scalars.extend(["page_no", page_total_col])
+        tokens["scalars"] = scalars
     return contract
 
 
@@ -284,5 +288,5 @@ def test_fill_and_print_supports_page_total_token(tmp_path):
     output = out_html.read_text(encoding="utf-8")
     assert 'class="nr-page-number"' in output
     assert 'class="nr-page-count"' in output
-    assert "Page <span class=\"nr-page-number\"" in output
-    assert "of <span class=\"nr-page-count\"" in output
+    assert 'Page <span class="nr-page-number"' in output
+    assert 'of <span class="nr-page-count"' in output

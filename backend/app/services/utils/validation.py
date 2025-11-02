@@ -32,13 +32,9 @@ if Draft7Validator is not None:
         (JSON_SCHEMA_DIR / "mapping_inline_v4.schema.json").read_text(encoding="utf-8")
     )
     _MAPPING_INLINE_V4_VALIDATOR = Draft7Validator(_MAPPING_INLINE_V4_SCHEMA)
-    _LLM_CALL_3_5_SCHEMA = json.loads(
-        (JSON_SCHEMA_DIR / "llm_call_3_5.schema.json").read_text(encoding="utf-8")
-    )
+    _LLM_CALL_3_5_SCHEMA = json.loads((JSON_SCHEMA_DIR / "llm_call_3_5.schema.json").read_text(encoding="utf-8"))
     _LLM_CALL_3_5_VALIDATOR = Draft7Validator(_LLM_CALL_3_5_SCHEMA)
-    _CONTRACT_V2_SCHEMA = json.loads(
-        (JSON_SCHEMA_DIR / "contract_v2.schema.json").read_text(encoding="utf-8")
-    )
+    _CONTRACT_V2_SCHEMA = json.loads((JSON_SCHEMA_DIR / "contract_v2.schema.json").read_text(encoding="utf-8"))
     _CONTRACT_V2_VALIDATOR = Draft7Validator(_CONTRACT_V2_SCHEMA)
     _STEP5_REQUIREMENTS_SCHEMA = json.loads(
         (JSON_SCHEMA_DIR / "step5_requirements.schema.json").read_text(encoding="utf-8")
@@ -243,9 +239,7 @@ def validate_contract_schema(data: Any) -> None:
     child_table_text = child_table_raw.strip() if isinstance(child_table_raw, str) else ""
     child_key_text = child_key_raw.strip() if isinstance(child_key_raw, str) else ""
     if child_table_text and not child_key_text:
-        raise SchemaValidationError(
-            "contract.join.child_key must be a non-empty string when child_table is provided"
-        )
+        raise SchemaValidationError("contract.join.child_key must be a non-empty string when child_table is provided")
     for key in ("date_columns", "totals", "literals"):
         if not isinstance(data[key], dict):
             raise SchemaValidationError(f"contract.{key} must be an object")
@@ -321,9 +315,7 @@ def validate_contract_v2(data: Any) -> None:
                 )
             for col_idx, column in enumerate(columns):
                 if not isinstance(column, Mapping):
-                    raise SchemaValidationError(
-                        f"contract.reshape_rules[{idx}].columns[{col_idx}] must be an object"
-                    )
+                    raise SchemaValidationError(f"contract.reshape_rules[{idx}].columns[{col_idx}] must be an object")
                 alias = column.get("as")
                 if not isinstance(alias, str) or not alias.strip():
                     raise SchemaValidationError(
@@ -331,9 +323,7 @@ def validate_contract_v2(data: Any) -> None:
                     )
             column_rule_found = True
         if not column_rule_found:
-            raise SchemaValidationError(
-                "contract.reshape_rules must include at least one rule with column definitions"
-            )
+            raise SchemaValidationError("contract.reshape_rules must include at least one rule with column definitions")
 
     join = data.get("join")
     if isinstance(join, dict):

@@ -5,7 +5,6 @@ from backend.app.services.mapping.CorrectionsPreview import (
     _ensure_invariants,
 )
 
-
 ORIGINAL_HTML = """<!doctype html>
 <html>
   <body>
@@ -43,10 +42,7 @@ def test_invariants_fail_token_rename():
 
 
 def test_invariants_fail_sample_leak():
-    final_html = (
-        ORIGINAL_HTML.replace("{report_title}", "Consumption Report")
-        .replace("{row_value}", "42")
-    )
+    final_html = ORIGINAL_HTML.replace("{report_title}", "Consumption Report").replace("{row_value}", "42")
     with pytest.raises(CorrectionsPreviewError):
         _ensure_invariants(
             original_html=ORIGINAL_HTML,

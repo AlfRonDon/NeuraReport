@@ -51,6 +51,7 @@ def _extract_aliases(sql: str | None) -> list[str]:
     pattern = re.compile(r"\bAS\s+([A-Za-z_][\w]*)", re.IGNORECASE)
     return pattern.findall(sql)
 
+
 def _derive_output_schemas(contract: Mapping[str, Any] | None) -> dict[str, list[str]]:
     """
     Build header/rows/totals token lists from the contract when the LLM response
@@ -61,7 +62,9 @@ def _derive_output_schemas(contract: Mapping[str, Any] | None) -> dict[str, list
 
     header_tokens = _normalized_tokens(contract.get("header_tokens") if isinstance(contract, Mapping) else None)
     row_tokens = _normalized_tokens(contract.get("row_tokens") if isinstance(contract, Mapping) else None)
-    totals_tokens = _normalized_tokens(list((contract.get("totals") or {}).keys()) if isinstance(contract, Mapping) else None)
+    totals_tokens = _normalized_tokens(
+        list((contract.get("totals") or {}).keys()) if isinstance(contract, Mapping) else None
+    )
 
     if isinstance(tokens_section, Mapping):
         header_tokens = header_tokens or _normalized_tokens(tokens_section.get("scalars"))
@@ -340,9 +343,13 @@ def build_generator_assets_from_payload(
         entrypoints = _default_entrypoints(entrypoints_raw)
     else:
         legacy_entrypoints = {
-            "header": sql_pack_raw.get("header"),
-            "rows": sql_pack_raw.get("rows"),
-            "totals": sql_pack_raw.get("totals"),
+            key: value
+            for key, value in {
+                "header": sql_pack_raw.get("header"),
+                "rows": sql_pack_raw.get("rows"),
+                "totals": sql_pack_raw.get("totals"),
+            }.items()
+            if isinstance(value, str)
         }
         entrypoints = _default_entrypoints(legacy_entrypoints)
 
@@ -386,7 +393,9 @@ def build_generator_assets_from_payload(
 
     schema_issues = _validate_entrypoints_against_schema(entrypoints, output_schemas)
     if schema_issues:
-        logger.warning("generator_assets_schema_issues", extra={"event": "generator_assets_schema_issues", "issues": schema_issues})
+        logger.warning(
+            "generator_assets_schema_issues", extra={"event": "generator_assets_schema_issues", "issues": schema_issues}
+        )
 
     needs_user_fix = _ensure_iter(response_payload.get("needs_user_fix")) + schema_issues
     invalid = bool(response_payload.get("invalid")) or bool(schema_issues)
@@ -458,4 +467,3 @@ def load_generator_assets_bundle(template_dir: Path) -> dict[str, Any] | None:
         "key_tokens": meta.get("key_tokens") or [],
     }
     return bundle
-
