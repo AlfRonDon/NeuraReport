@@ -86,6 +86,56 @@ def _ensure_playwright_browsers_path() -> None:
         os.environ["PLAYWRIGHT_BROWSERS_PATH"] = str(candidate)
 
 
+def _inject_page_counter_spans(
+    html_in: str,
+    page_tokens: Iterable[str],
+    count_tokens: Iterable[str],
+    label_tokens: Iterable[str],
+) -> str:
+    page_tokens = {tok for tok in page_tokens if tok}
+    count_tokens = {tok for tok in count_tokens if tok}
+    label_tokens = {tok for tok in label_tokens if tok}
+    if not (page_tokens or count_tokens or label_tokens):
+        return html_in
+
+    page_markup = (
+        '<span class="nr-page-number" data-nr-counter="page" aria-label="Current page number" '
+        'data-nr-screen="1" data-nr-page-estimate="1">1</span>'
+    )
+    count_markup = (
+        '<span class="nr-page-count" data-nr-counter="pages" aria-label="Total page count" '
+        'data-nr-screen="1" data-nr-total-pages="1">1</span>'
+    )
+
+    updated = html_in
+    for tok in page_tokens:
+        updated = sub_token(updated, tok, page_markup)
+    for tok in count_tokens:
+        updated = sub_token(updated, tok, count_markup)
+    for tok in label_tokens:
+        if count_tokens:
+            label_markup = (
+                f'<span class="nr-page-label" data-nr-counter-label="1">Page {page_markup} of {count_markup}</span>'
+            )
+        else:
+            label_markup = f'<span class="nr-page-label" data-nr-counter-label="1">Page {page_markup}</span>'
+        updated = sub_token(updated, tok, label_markup)
+
+    if (page_tokens or count_tokens or label_tokens) and "nr-page-counter-style" not in updated:
+        style_block = """
+<style id="nr-page-counter-style">
+  .nr-page-number,
+  .nr-page-count { white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .nr-page-label { white-space: nowrap; }
+</style>
+"""
+        if "</head>" in updated:
+            updated = updated.replace("</head>", style_block + "</head>", 1)
+        else:
+            updated = style_block + updated
+    return updated
+
+
 def _segment_has_any_token(segment: str, tokens: Iterable[str]) -> bool:
     for token in tokens:
         if not token:
@@ -2122,6 +2172,8 @@ def fill_and_print(
     # Apply literals globally
     for t, s in LITERALS.items():
         html_multi = sub_token(html_multi, t, s)
+
+    html_multi = _inject_page_counter_spans(html_multi, page_number_tokens, page_count_tokens, page_label_tokens)
 
     # Blank any remaining known tokens
     ALL_KNOWN_TOKENS = set(HEADER_TOKENS) | set(ROW_TOKENS) | set(TOTALS.keys()) | set(LITERALS.keys())

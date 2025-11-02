@@ -73,6 +73,7 @@ from .app.services.templates.layout_hints import get_layout_hints
 
 # Template building helpers (TemplateVerify.py)
 from .app.services.templates.TemplateVerify import (
+    rasterize_html_to_png,
     render_html_to_png,  # <-- used to produce the thumbnail from final_html
 )
 from .app.services.templates.TemplateVerify import (
