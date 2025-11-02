@@ -73,7 +73,7 @@ from .app.services.templates.layout_hints import get_layout_hints
 
 # Template building helpers (TemplateVerify.py)
 from .app.services.templates.TemplateVerify import (
-    rasterize_html_to_png,  # noqa: F401 - re-exported for tests
+    rasterize_html_to_png as _template_rasterize_html_to_png,
     render_html_to_png,  # <-- used to produce the thumbnail from final_html
 )
 from .app.services.templates.TemplateVerify import (
@@ -101,6 +101,8 @@ logger = logging.getLogger("neura.api")
 SETTINGS = load_settings()
 log_settings(logger, SETTINGS)
 app = FastAPI(title="NeuraReport API")
+
+rasterize_html_to_png = _template_rasterize_html_to_png
 
 app.add_middleware(
     CORSMiddleware,
