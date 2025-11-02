@@ -225,6 +225,7 @@ def verify_pipeline(
     template_id: str, uploads_root: Path, simulate: Iterable[str] | None = None
 ) -> Tuple[bool, List[CheckResult]]:
     uploads_root = uploads_root.resolve()
+    os.environ.pop("NEURA_FAIL_AFTER_STEP", None)
     checks: List[CheckResult] = []
 
     tdir, dir_check = _resolve_template_dir(uploads_root, template_id)
