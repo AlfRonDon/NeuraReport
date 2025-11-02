@@ -212,7 +212,10 @@ def _simulate_failure(tdir: Path, step: str) -> CheckResult:
         else:
             return CheckResult(name=f"simulate_{step}", ok=False, detail="failure did not trigger")
     finally:
-        os.environ.pop("NEURA_FAIL_AFTER_STEP", None)
+        if original_fail_after is not None:
+            os.environ["NEURA_FAIL_AFTER_STEP"] = original_fail_after
+        else:
+            os.environ.pop("NEURA_FAIL_AFTER_STEP", None)
         with contextlib.suppress(FileNotFoundError):
             target.unlink()
     residuals = list(tdir.glob(f".{target.name}.*.tmp"))
@@ -226,10 +229,7 @@ def verify_pipeline(
 ) -> Tuple[bool, List[CheckResult]]:
     uploads_root = uploads_root.resolve()
     original_fail_after = os.environ.get("NEURA_FAIL_AFTER_STEP")
-    if original_fail_after:
-        os.environ["NEURA_FAIL_AFTER_STEP"] = ""
-    else:
-        os.environ.pop("NEURA_FAIL_AFTER_STEP", None)
+    os.environ["NEURA_FAIL_AFTER_STEP"] = ""
     checks: List[CheckResult] = []
 
     try:
@@ -270,6 +270,8 @@ def verify_pipeline(
     finally:
         if original_fail_after is not None:
             os.environ["NEURA_FAIL_AFTER_STEP"] = original_fail_after
+        else:
+            os.environ.pop("NEURA_FAIL_AFTER_STEP", None)
 
 
 def _print_report(checks: Iterable[CheckResult], success: bool) -> None:
