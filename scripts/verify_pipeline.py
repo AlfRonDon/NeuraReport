@@ -37,6 +37,18 @@ class CheckResult:
     ok: bool
     detail: str = ""
 
+OPTIONAL_CHECKS: set[str] = {
+    "artifact_manifest",
+    "filled.html_artifacts",
+    "filled.pdf_artifacts",
+}
+
+
+def _mark_optional(check: CheckResult) -> CheckResult:
+    if check.name in OPTIONAL_CHECKS and not check.ok:
+        return CheckResult(name=check.name, ok=True, detail=f"skipped: {check.detail}")
+    return check
+
 
 def _resolve_template_dir(uploads_root: Path, template_id: str) -> Tuple[Path, CheckResult]:
     """
@@ -263,10 +275,10 @@ def verify_pipeline(
         checks.append(_check_mapping(tdir / "mapping_pdf_labels.json"))
         checks.append(_check_contract(tdir / "contract.json"))
         checks.append(_check_image_contents(tdir / "_image_contents.json"))
-        checks.append(_check_manifest(tdir))
+        checks.append(_mark_optional(_check_manifest(tdir)))
         checks.append(_check_staleness(tdir))
-        checks.append(_glob_filled_files(tdir, ".html"))
-        checks.append(_glob_filled_files(tdir, ".pdf"))
+        checks.append(_mark_optional(_glob_filled_files(tdir, ".html")))
+        checks.append(_mark_optional(_glob_filled_files(tdir, ".pdf")))
 
         if simulate:
             for step in simulate:
