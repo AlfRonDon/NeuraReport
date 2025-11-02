@@ -84,9 +84,6 @@ from .app.services.templates.TemplateVerify import (
 )
 # isort: on
 
-# Keep a public alias so tests can monkeypatch api.rasterize_html_to_png.
-rasterize_html_to_png = _template_rasterize_html_to_png
-
 from .app.services.utils import (
     TemplateLockError,
     acquire_template_lock,
@@ -100,13 +97,14 @@ from .app.services.utils import (
 )
 from .app.services.utils.artifacts import load_manifest
 
+# Keep a public alias so tests can monkeypatch api.rasterize_html_to_png.
+rasterize_html_to_png = _template_rasterize_html_to_png
+
 # ---------- App & CORS ----------
 logger = logging.getLogger("neura.api")
 SETTINGS = load_settings()
 log_settings(logger, SETTINGS)
 app = FastAPI(title="NeuraReport API")
-
-rasterize_html_to_png = _template_rasterize_html_to_png
 
 app.add_middleware(
     CORSMiddleware,
