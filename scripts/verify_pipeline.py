@@ -225,43 +225,47 @@ def verify_pipeline(
     template_id: str, uploads_root: Path, simulate: Iterable[str] | None = None
 ) -> Tuple[bool, List[CheckResult]]:
     uploads_root = uploads_root.resolve()
-    os.environ.pop("NEURA_FAIL_AFTER_STEP", None)
+    original_fail_after = os.environ.pop("NEURA_FAIL_AFTER_STEP", None)
     checks: List[CheckResult] = []
 
-    tdir, dir_check = _resolve_template_dir(uploads_root, template_id)
-    checks.append(dir_check)
-    if not dir_check.ok:
-        return False, checks
+    try:
+        tdir, dir_check = _resolve_template_dir(uploads_root, template_id)
+        checks.append(dir_check)
+        if not dir_check.ok:
+            return False, checks
 
-    required_files = [
-        "source.pdf",
-        "reference_p1.png",
-        "template_p1.html",
-        "report_final.html",
-        "mapping_pdf_labels.json",
-        "contract.json",
-    ]
+        required_files = [
+            "source.pdf",
+            "reference_p1.png",
+            "template_p1.html",
+            "report_final.html",
+            "mapping_pdf_labels.json",
+            "contract.json",
+        ]
 
-    for rel in required_files:
-        checks.append(_check_file_exists(tdir, rel))
+        for rel in required_files:
+            checks.append(_check_file_exists(tdir, rel))
 
-    checks.append(_check_html(tdir / "template_p1.html", "template_html_valid"))
-    checks.append(_check_html(tdir / "report_final.html", "final_html_valid"))
-    checks.append(_check_html_images(tdir))
-    checks.append(_check_mapping(tdir / "mapping_pdf_labels.json"))
-    checks.append(_check_contract(tdir / "contract.json"))
-    checks.append(_check_image_contents(tdir / "_image_contents.json"))
-    checks.append(_check_manifest(tdir))
-    checks.append(_check_staleness(tdir))
-    checks.append(_glob_filled_files(tdir, ".html"))
-    checks.append(_glob_filled_files(tdir, ".pdf"))
+        checks.append(_check_html(tdir / "template_p1.html", "template_html_valid"))
+        checks.append(_check_html(tdir / "report_final.html", "final_html_valid"))
+        checks.append(_check_html_images(tdir))
+        checks.append(_check_mapping(tdir / "mapping_pdf_labels.json"))
+        checks.append(_check_contract(tdir / "contract.json"))
+        checks.append(_check_image_contents(tdir / "_image_contents.json"))
+        checks.append(_check_manifest(tdir))
+        checks.append(_check_staleness(tdir))
+        checks.append(_glob_filled_files(tdir, ".html"))
+        checks.append(_glob_filled_files(tdir, ".pdf"))
 
-    if simulate:
-        for step in simulate:
-            checks.append(_simulate_failure(tdir, step))
+        if simulate:
+            for step in simulate:
+                checks.append(_simulate_failure(tdir, step))
 
-    success = all(check.ok for check in checks)
-    return success, checks
+        success = all(check.ok for check in checks)
+        return success, checks
+    finally:
+        if original_fail_after is not None:
+            os.environ["NEURA_FAIL_AFTER_STEP"] = original_fail_after
 
 
 def _print_report(checks: Iterable[CheckResult], success: bool) -> None:
