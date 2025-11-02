@@ -1,9 +1,9 @@
 from __future__ import annotations
 
+import asyncio
 import base64
 import io
 import json
-import asyncio
 from pathlib import Path
 from types import SimpleNamespace
 
