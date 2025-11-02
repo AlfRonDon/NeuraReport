@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import os
 from pathlib import Path
 from typing import Tuple
 
@@ -65,6 +66,20 @@ def _ensure_dimensions(path: Path, target: Tuple[int, int]) -> None:
         )
 
 
+def _ensure_playwright_browsers_path() -> None:
+    """
+    Patch in the system-level Playwright browser cache when packaging omits it.
+    """
+    if os.environ.get("PLAYWRIGHT_BROWSERS_PATH"):
+        return
+    local_app = os.getenv("LOCALAPPDATA")
+    if not local_app:
+        return
+    candidate = Path(local_app) / "ms-playwright"
+    if candidate.exists():
+        os.environ["PLAYWRIGHT_BROWSERS_PATH"] = str(candidate)
+
+
 def render_html_to_png(
     html_path: Path,
     out_png_path: Path,
@@ -82,6 +97,8 @@ def render_html_to_png(
             "playwright is required for HTML rendering. Install with `pip install playwright` "
             "and run `playwright install chromium`."
         )
+
+    _ensure_playwright_browsers_path()
 
     html_path = Path(html_path).resolve()
     out_png_path = Path(out_png_path).resolve()

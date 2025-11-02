@@ -4,6 +4,7 @@ import json
 import math
 import re
 import sqlite3
+import os
 from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
@@ -68,6 +69,20 @@ def _token_regex(token: str) -> re.Pattern:
         cached = re.compile(rf"\{{\{{?\s*{re.escape(cleaned)}\s*\}}\}}?")
         _TOKEN_REGEX_CACHE[cleaned] = cached
     return cached
+
+
+def _ensure_playwright_browsers_path() -> None:
+    """
+    Ensure packaged builds can reuse the system Playwright cache.
+    """
+    if os.environ.get("PLAYWRIGHT_BROWSERS_PATH"):
+        return
+    local_app = os.getenv("LOCALAPPDATA")
+    if not local_app:
+        return
+    candidate = Path(local_app) / "ms-playwright"
+    if candidate.exists():
+        os.environ["PLAYWRIGHT_BROWSERS_PATH"] = str(candidate)
 
 
 def _segment_has_any_token(segment: str, tokens: Iterable[str]) -> bool:
@@ -396,6 +411,8 @@ def fill_and_print(
             print("Playwright not available; skipping PDF generation.")
             return
 
+        _ensure_playwright_browsers_path()
+
         html_source = html_path.read_text(encoding="utf-8", errors="ignore")
         base_url = (base_dir or html_path.parent).as_uri()
 
@@ -499,13 +516,15 @@ def fill_and_print(
                 return True
         return False
 
+    def _is_serial_label(name: str | None) -> bool:
+        if not name:
+            return False
+        lower = str(name).lower()
+        return any(keyword in lower for keyword in ("row", "serial", "sl"))
+
     def _reindex_serial_fields(rows: list[dict], tokens: Sequence[str], columns: Sequence[str]) -> None:
-        serial_tokens = [
-            tok for tok in tokens if tok and any(keyword in tok.lower() for keyword in ("row", "serial", "sl"))
-        ]
-        serial_columns = [
-            col for col in columns if col and any(keyword in col.lower() for keyword in ("row", "serial", "sl"))
-        ]
+        serial_tokens = [tok for tok in tokens if _is_serial_label(tok)]
+        serial_columns = [col for col in columns if _is_serial_label(col)]
         if not serial_tokens and not serial_columns:
             return
         for idx, row in enumerate(rows, start=1):
@@ -1452,442 +1471,91 @@ def fill_and_print(
     def format_token_value(token: str, raw_value: Any) -> str:
         return contract_adapter.format_value(token, raw_value)
 
-    def _convert_css_length_to_mm(raw: str) -> float | None:
-        if not raw:
-            return None
-        text = raw.strip().lower()
-        if not text or text == "auto":
-            return None
-        m = re.match(r"([-+]?\d*\.?\d+)\s*(mm|cm|in|pt|pc|px)?", text)
-        if not m:
-            return None
-        value = float(m.group(1))
-        unit = m.group(2) or "px"
-        if unit == "mm":
-            return value
-        if unit == "cm":
-            return value * 10.0
-        if unit in {"in", "inch", "inches"}:
-            return value * 25.4
-        if unit == "pt":
-            return value * (25.4 / 72.0)
-        if unit == "pc":
-            return value * (25.4 / 6.0)
-        if unit == "px":
-            return value * (25.4 / 96.0)
-        return None
+    FOOTER_NUMBER_SPAN_RE = re.compile(
+        r'(<span\b[^>]*class=["\'][^"\']*nr-page-number[^"\']*["\'][^>]*>)(.*?)(</span>)',
+        re.IGNORECASE | re.DOTALL,
+    )
+    FOOTER_COUNT_SPAN_RE = re.compile(
+        r'(<span\b[^>]*class=["\'][^"\']*nr-page-count[^"\']*["\'][^>]*>)(.*?)(</span>)',
+        re.IGNORECASE | re.DOTALL,
+    )
 
-    def _parse_page_size_value(value: str) -> tuple[float, float] | None:
-        if not value:
-            return None
-        text = value.strip().lower()
-        if not text:
-            return None
-        size_map: dict[str, tuple[float, float]] = {
-            "a3": (297.0, 420.0),
-            "a4": (210.0, 297.0),
-            "a5": (148.0, 210.0),
-            "letter": (215.9, 279.4),
-            "legal": (215.9, 355.6),
-            "tabloid": (279.4, 431.8),
-        }
-        tokens = text.split()
-        orientation = None
-        size_tokens = tokens
-        if tokens and tokens[-1] in {"portrait", "landscape"}:
-            orientation = tokens[-1]
-            size_tokens = tokens[:-1]
-        if len(size_tokens) == 1 and size_tokens[0] in size_map:
-            width_mm, height_mm = size_map[size_tokens[0]]
-        elif len(size_tokens) >= 2:
-            first = _convert_css_length_to_mm(size_tokens[0])
-            second = _convert_css_length_to_mm(size_tokens[1])
-            if first is None or second is None:
-                return None
-            width_mm, height_mm = first, second
-        else:
-            return None
-        if orientation == "landscape":
-            width_mm, height_mm = height_mm, width_mm
-        return width_mm, height_mm
+    def _set_static_footer_numbers(html_in: str) -> str:
+        number_matches = list(FOOTER_NUMBER_SPAN_RE.finditer(html_in))
+        total = len(number_matches)
+        if not total:
+            return html_in
 
-    def _parse_margin_shorthand(value: str) -> tuple[float | None, float | None, float | None, float | None]:
-        parts = [p for p in re.split(r"\s+", value.strip()) if p]
-        values = [_convert_css_length_to_mm(p) for p in parts]
-        if not values:
-            return None, None, None, None
-        if len(values) == 1:
-            top = right = bottom = left = values[0]
-        elif len(values) == 2:
-            top = bottom = values[0]
-            right = left = values[1]
-        elif len(values) == 3:
-            top = values[0]
-            right = left = values[1]
-            bottom = values[2]
-        else:
-            top, right, bottom, left = values[:4]
-        return top, right, bottom, left
+        def _set_attr(tag: str, attr: str, value: str) -> str:
+            pattern = re.compile(rf'({attr}\s*=\s*")[^"]*(")', re.IGNORECASE)
+            if pattern.search(tag):
+                return pattern.sub(lambda m: f'{m.group(1)}{value}{m.group(2)}', tag)
+            insert_at = tag.rfind('>')
+            if insert_at == -1:
+                return tag + f' {attr}="{value}"'
+            return f'{tag[:insert_at]} {attr}="{value}"{tag[insert_at:]}'
 
-    def _extract_page_metrics(html_in: str) -> dict[str, float]:
-        default_width_mm, default_height_mm = 210.0, 297.0
-        margin_top_mm = 0.0
-        margin_bottom_mm = 0.0
-        page_match = re.search(r"@page\b[^{]*\{(?P<body>.*?)\}", html_in, re.IGNORECASE | re.DOTALL)
-        if page_match:
-            block = page_match.group("body")
-            size_match = re.search(r"size\s*:\s*([^;]+);?", block, re.IGNORECASE)
-            if size_match:
-                parsed_size = _parse_page_size_value(size_match.group(1))
-                if parsed_size:
-                    default_width_mm, default_height_mm = parsed_size
-            margin_match = re.search(r"margin\s*:\s*([^;]+);?", block, re.IGNORECASE)
-            if margin_match:
-                mt, _, mb, _ = _parse_margin_shorthand(margin_match.group(1))
-                if mt is not None:
-                    margin_top_mm = mt
-                if mb is not None:
-                    margin_bottom_mm = mb
-            for name, setter in (("margin-top", "top"), ("margin-bottom", "bottom")):
-                specific = re.search(rf"{name}\s*:\s*([^;]+);?", block, re.IGNORECASE)
-                if specific:
-                    as_mm = _convert_css_length_to_mm(specific.group(1))
-                    if as_mm is None:
-                        continue
-                    if setter == "top":
-                        margin_top_mm = as_mm
-                    else:
-                        margin_bottom_mm = as_mm
-        return {
-            "page_width_mm": default_width_mm,
-            "page_height_mm": default_height_mm,
-            "margin_top_mm": max(margin_top_mm, 0.0),
-            "margin_bottom_mm": max(margin_bottom_mm, 0.0),
-        }
+        page_index = {"value": 0}
 
-    def _inject_page_counter_spans(
-        html_in: str,
-        page_tokens: set[str],
-        count_tokens: set[str],
-        label_tokens: set[str] | None = None,
-    ) -> str:
-        label_tokens = label_tokens or set()
-        updated = html_in
-        page_markup = '<span class="nr-page-number" data-nr-counter="page" aria-label="Current page number"></span>'
-        count_markup = '<span class="nr-page-count" data-nr-counter="pages" aria-label="Total page count"></span>'
+        def replace_number(match: re.Match[str]) -> str:
+            page_index["value"] += 1
+            value = str(page_index["value"])
+            open_tag, _, close_tag = match.groups()
+            open_tag = _set_attr(open_tag, "data-nr-screen", value)
+            open_tag = _set_attr(open_tag, "data-nr-page-estimate", value)
+            return f"{open_tag}{value}{close_tag}"
 
-        for tok in page_tokens:
-            updated = sub_token(updated, tok, page_markup)
-        for tok in count_tokens:
-            updated = sub_token(updated, tok, count_markup)
-        for tok in label_tokens:
-            if count_tokens:
-                label_markup = f'<span class="nr-page-label" data-nr-counter-label="1">Page {page_markup} of {count_markup}</span>'
-            else:
-                label_markup = f'<span class="nr-page-label" data-nr-counter-label="1">Page {page_markup}</span>'
-            updated = sub_token(updated, tok, label_markup)
+        html_out = FOOTER_NUMBER_SPAN_RE.sub(replace_number, html_in)
+        total_str = str(total)
 
-        if (page_tokens or count_tokens or label_tokens) and 'nr-page-counter-style' not in updated:
-            style_block = """
-<style id="nr-page-counter-style">
-  .nr-page-number,
-  .nr-page-count { white-space: nowrap; font-variant-numeric: tabular-nums; }
-  .nr-page-label { white-space: nowrap; }
-  @media screen {
-    .nr-page-number::after { content: attr(data-nr-screen); }
-    .nr-page-count::after { content: attr(data-nr-total-pages); }
-  }
-  @media print {
-    body { counter-reset: page; }
-    .nr-page-number::after { content: counter(page); }
-    .nr-page-count::after { content: counter(pages); }
-    .nr-page-count[data-nr-total-pages]::after { content: attr(data-nr-total-pages); }
-  }
-</style>
-"""
-            if '</head>' in updated:
-                updated = updated.replace('</head>', style_block + '</head>', 1)
-            else:
-                updated = style_block + updated
+        def replace_count(match: re.Match[str]) -> str:
+            open_tag, _, close_tag = match.groups()
+            open_tag = _set_attr(open_tag, "data-nr-total-pages", total_str)
+            open_tag = _set_attr(open_tag, "data-nr-screen", total_str)
+            return f"{open_tag}{total_str}{close_tag}"
 
-        if (page_tokens or count_tokens or label_tokens) and 'nr-page-counter-script' not in updated:
-            metrics = _extract_page_metrics(updated)
-            metrics_json = json.dumps(metrics)
-            script_template = """
-<script id="nr-page-counter-script">
-(function() {
-  const METRICS = __NR_METRICS__;
-  const PX_PER_MM = 96 / 25.4;
-  const BREAK_VALUES = ['page', 'always', 'left', 'right'];
-  const TRAILING_BREAK_SENTINEL = '__nr_trailing_break__';
-  let lastPageNodes = [];
-  let lastCountNodes = [];
+        html_out = FOOTER_COUNT_SPAN_RE.sub(replace_count, html_out)
+        return html_out
 
-  function isForcedBreak(value) {
-    if (!value) return false;
-    const normalized = String(value).toLowerCase().trim();
-    if (!normalized) return false;
-    return BREAK_VALUES.indexOf(normalized) !== -1;
-  }
+    FOOTER_FIXED_PATTERNS: tuple[tuple[re.Pattern, str], ...] = (
+        (
+            re.compile(r'(?<![\w.-])footer\b[^{}]*\{[^{}]*position\s*:\s*fixed', re.IGNORECASE | re.DOTALL),
+            "footer",
+        ),
+        (
+            re.compile(r'#page-footer\b[^{}]*\{[^{}]*position\s*:\s*fixed', re.IGNORECASE | re.DOTALL),
+            "#page-footer",
+        ),
+    )
 
-  function readBreakValue(style, which) {
-    if (!style) return '';
-    if (which === 'before') {
-      return (
-        style.getPropertyValue('break-before') ||
-        style.getPropertyValue('page-break-before') ||
-        style.breakBefore ||
-        style.pageBreakBefore ||
-        ''
-      );
-    }
-    return (
-      style.getPropertyValue('break-after') ||
-      style.getPropertyValue('page-break-after') ||
-      style.breakAfter ||
-      style.pageBreakAfter ||
-      ''
-    );
-  }
+    def _ensure_footer_static_preview(html_in: str) -> str:
+        if 'data-nr-footer-fix' in html_in:
+            return html_in
 
-  function findNextElement(node) {
-    if (!node) return null;
-    let current = node;
-    while (current) {
-      if (current.nextElementSibling) return current.nextElementSibling;
-      current = current.parentElement;
-    }
-    return null;
-  }
+        selectors: list[str] = []
+        for pattern, selector in FOOTER_FIXED_PATTERNS:
+            if pattern.search(html_in):
+                selectors.append(selector)
 
-  function resolveNodeOffset(node) {
-    if (!node || typeof node.getBoundingClientRect !== 'function') return 0;
-    const rect = node.getBoundingClientRect();
-    const scrollY = typeof window !== 'undefined' ? window.scrollY || window.pageYOffset || 0 : 0;
-    return Math.max(0, rect.top + scrollY);
-  }
+        if not selectors:
+            return html_in
 
-  function collectManualBreakAnchors(root) {
-    if (!root || !root.ownerDocument) return [];
-    const anchors = [];
-    const seen = new Set();
-    const showElement = typeof NodeFilter !== 'undefined' && NodeFilter.SHOW_ELEMENT ? NodeFilter.SHOW_ELEMENT : 1;
-    const walker = root.ownerDocument.createTreeWalker(root, showElement);
+        unique_selectors = list(dict.fromkeys(selectors))
+        selectors_str = ", ".join(unique_selectors)
+        style_block = (
+            "\n<style data-nr-footer-fix>\n"
+            f"  {selectors_str} {{\n"
+            "    position: static !important;\n"
+            "    margin-top: 4mm;\n"
+            "  }\n"
+            "</style>\n"
+        )
 
-    function pushAnchor(target) {
-      if (!target) return;
-      if (seen.has(target)) return;
-      seen.add(target);
-      anchors.push(target);
-    }
-
-    while (walker.nextNode()) {
-      const element = walker.currentNode;
-      const style = window.getComputedStyle ? window.getComputedStyle(element) : null;
-      if (!style) continue;
-      if (isForcedBreak(readBreakValue(style, 'before'))) {
-        pushAnchor(element);
-      }
-      if (isForcedBreak(readBreakValue(style, 'after'))) {
-        const next = findNextElement(element);
-        pushAnchor(next || TRAILING_BREAK_SENTINEL);
-      }
-    }
-    return anchors;
-  }
-
-  function buildPageStartOffsets(manualAnchors, usableHeightPx, contentHeight, totalPages) {
-    const offsets = [0];
-    const seenOffsets = new Set([0]);
-    manualAnchors.forEach((anchor) => {
-      let offset = null;
-      if (anchor === TRAILING_BREAK_SENTINEL) {
-        offset = contentHeight + usableHeightPx;
-      } else if (anchor && typeof anchor.getBoundingClientRect === 'function') {
-        offset = resolveNodeOffset(anchor);
-      }
-      if (offset == null || !Number.isFinite(offset)) {
-        return;
-      }
-      const key = Math.round(offset * 1000) / 1000;
-      if (seenOffsets.has(key)) return;
-      seenOffsets.add(key);
-      offsets.push(offset);
-    });
-
-    offsets.sort((a, b) => a - b);
-
-    while (offsets.length < totalPages) {
-      const last = offsets[offsets.length - 1];
-      offsets.push(last + usableHeightPx);
-    }
-
-    return offsets;
-  }
-
-  function resolvePageIndexFromOffsets(offset, startOffsets) {
-    if (!startOffsets || !startOffsets.length) return 0;
-    let index = 0;
-    for (let i = 0; i < startOffsets.length; i += 1) {
-      if (offset >= startOffsets[i] - 0.5) {
-        index = i;
-      } else {
-        break;
-      }
-    }
-    return index;
-  }
-
-  function indexOfSection(node, sections) {
-    if (!node || !sections || !sections.length) return -1;
-    const target = typeof node.closest === 'function' ? node.closest('.nr-key-section') : null;
-    if (!target) return -1;
-    for (let i = 0; i < sections.length; i += 1) {
-      if (sections[i] === target) {
-        return i;
-      }
-    }
-    return -1;
-  }
-
-  function assignScreenText(node, text, key) {
-    if (!node) return;
-    const stringText = text == null ? '' : String(text);
-    if (node.getAttribute('aria-label') === null) {
-      node.setAttribute('aria-label', key === 'count' ? 'Total page count' : 'Current page number');
-    }
-    node.setAttribute('data-nr-screen', stringText);
-    if (key === 'count') {
-      node.setAttribute('data-nr-total-pages', stringText);
-    } else {
-      node.setAttribute('data-nr-page-estimate', stringText);
-    }
-    node.setAttribute('data-nr-' + key + '-text', stringText);
-    node.textContent = stringText;
-  }
-
-  function clearNodesForPrint() {
-    const nodes = lastPageNodes.concat(lastCountNodes);
-    nodes.forEach((node) => {
-      if (!node) return;
-      if (!node.hasAttribute('data-nr-print-cache')) {
-        node.setAttribute('data-nr-print-cache', node.textContent || '');
-      }
-      node.textContent = '';
-    });
-  }
-
-  function restoreNodesAfterPrint() {
-    const nodes = lastPageNodes.concat(lastCountNodes);
-    nodes.forEach((node) => {
-      if (!node) return;
-      const cached = node.getAttribute('data-nr-print-cache');
-      if (cached != null) {
-        const key = node.getAttribute('data-nr-counter') === 'pages' ? 'count' : 'page';
-        const preferred = node.getAttribute('data-nr-' + key + '-text');
-        node.textContent = preferred != null ? preferred : cached;
-        node.removeAttribute('data-nr-print-cache');
-      }
-    });
-  }
-
-  function computeTotals() {
-    try {
-      const doc = document.documentElement;
-      const body = document.body;
-      if (!doc || !body) return;
-      const usableHeightMm = Math.max(METRICS.page_height_mm - (METRICS.margin_top_mm + METRICS.margin_bottom_mm), 0.1);
-      const usableHeightPx = usableHeightMm * PX_PER_MM;
-      const contentHeight = Math.max(
-        body.scrollHeight,
-        body.offsetHeight,
-        doc.scrollHeight,
-        doc.offsetHeight
-      );
-      const contentPages = Math.max(1, Math.ceil(contentHeight / usableHeightPx));
-      const manualAnchors = collectManualBreakAnchors(body);
-      const manualPages = manualAnchors.length > 0 ? manualAnchors.length + 1 : 1;
-      const totalPages = Math.max(contentPages, manualPages);
-      const startOffsets = buildPageStartOffsets(manualAnchors, usableHeightPx, contentHeight, totalPages);
-      const totalAsString = String(totalPages);
-      doc.setAttribute('data-nr-total-pages', totalAsString);
-      const countNodes = Array.from(document.querySelectorAll('[data-nr-counter="pages"]'));
-      countNodes.forEach((node) => assignScreenText(node, totalAsString, 'count'));
-      const pageNodes = Array.from(document.querySelectorAll('[data-nr-counter="page"]'));
-      const sections = Array.from(document.querySelectorAll('.nr-key-section'));
-      pageNodes.forEach((node) => {
-        const sectionIndex = indexOfSection(node, sections);
-        let pageIndex;
-        if (sectionIndex >= 0) {
-          pageIndex = sectionIndex;
-        } else {
-          const offset = resolveNodeOffset(node);
-          pageIndex = resolvePageIndexFromOffsets(offset, startOffsets);
-        }
-        const pageNumber = Math.min(totalPages, Math.max(1, pageIndex + 1));
-        assignScreenText(node, String(pageNumber), 'page');
-      });
-      lastPageNodes = pageNodes;
-      lastCountNodes = countNodes;
-    } catch (err) {
-      if (typeof console !== 'undefined' && console.warn) {
-        console.warn('nr-page-counter: unable to compute preview counters', err);
-      }
-    }
-  }
-
-  function scheduleCompute() {
-    computeTotals();
-    setTimeout(computeTotals, 180);
-  }
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-      scheduleCompute();
-    }, { once: true });
-  } else {
-    scheduleCompute();
-  }
-
-  if (typeof window !== 'undefined') {
-    window.addEventListener('resize', computeTotals, { passive: true });
-    window.addEventListener('beforeprint', clearNodesForPrint);
-    window.addEventListener('afterprint', () => {
-      restoreNodesAfterPrint();
-      scheduleCompute();
-    });
-    if (typeof window.matchMedia === 'function') {
-      const mediaQuery = window.matchMedia('print');
-      if (typeof mediaQuery.addEventListener === 'function') {
-        mediaQuery.addEventListener('change', (event) => {
-          if (event.matches) {
-            clearNodesForPrint();
-          } else {
-            restoreNodesAfterPrint();
-            scheduleCompute();
-          }
-        });
-      } else if (typeof mediaQuery.addListener === 'function') {
-        mediaQuery.addListener((event) => {
-          if (event.matches) {
-            clearNodesForPrint();
-          } else {
-            restoreNodesAfterPrint();
-            scheduleCompute();
-          }
-        });
-      }
-    }
-  }
-})();
-</script>
-"""
-            script_block = script_template.replace("__NR_METRICS__", metrics_json)
-            if '</body>' in updated:
-                updated = updated.replace('</body>', script_block + '</body>', 1)
-            else:
-                updated = updated + script_block
-        return updated
+        if '</head>' in html_in:
+            return html_in.replace('</head>', style_block + '</head>', 1)
+        if '<body' in html_in:
+            return html_in.replace('<body', style_block + '<body', 1)
+        return style_block + html_in
 
     def _blank_known_tokens_text(text: str, tokens) -> str:
         for t in tokens:
@@ -2026,14 +1694,24 @@ def fill_and_print(
                         treat_all_as_data=bool(__force_single),
                     )
                     filtered_rows = _prune_placeholder_rows(filtered_rows, row_tokens_in_template)
+                    _reindex_serial_fields(filtered_rows, row_tokens_in_template, row_columns_template)
+                    if filtered_rows:
+                        _log_debug(
+                            "[multi-debug] reindexed rows (tbody)",
+                            {"first_sl": filtered_rows[0].get("sl_no"), "count": len(filtered_rows)},
+                        )
                     if __force_single:
                         _log_debug(f"[multi-debug] generator rows: total={len(rows_data)}, filtered={len(filtered_rows)}, key_values={KEY_VALUES}")
                     if filtered_rows:
+                        serial_token_set = {tok for tok in row_tokens_in_template if _is_serial_label(tok)}
                         parts: list[str] = []
-                        for row in filtered_rows:
+                        for idx, row in enumerate(filtered_rows, start=1):
                             tr = row_template
                             for tok in row_tokens_in_template:
-                                val = _value_for_token(row, tok)
+                                if tok in serial_token_set:
+                                    val = idx
+                                else:
+                                    val = _value_for_token(row, tok)
                                 tr = sub_token(tr, tok, format_token_value(tok, val))
                             parts.append(tr)
                         new_tbody_inner = tbody_inner[:row_span[0]] + "\n".join(parts) + tbody_inner[row_span[1]:]
@@ -2054,14 +1732,24 @@ def fill_and_print(
                         treat_all_as_data=bool(__force_single),
                     )
                     filtered_rows = _prune_placeholder_rows(filtered_rows, row_tokens_in_template)
+                    _reindex_serial_fields(filtered_rows, row_tokens_in_template, row_columns_template)
+                    if filtered_rows:
+                        _log_debug(
+                            "[multi-debug] reindexed rows (no tbody)",
+                            {"first_sl": filtered_rows[0].get("sl_no"), "count": len(filtered_rows)},
+                        )
                     if __force_single:
                         _log_debug(f"[multi-debug] generator rows (no tbody): total={len(rows_data)}, filtered={len(filtered_rows)}, key_values={KEY_VALUES}")
                     if filtered_rows:
+                        serial_token_set = {tok for tok in row_tokens_in_template if _is_serial_label(tok)}
                         parts = []
-                        for row in filtered_rows:
+                        for idx, row in enumerate(filtered_rows, start=1):
                             tr = prototype_block
                             for tok in row_tokens_in_template:
-                                val = _value_for_token(row, tok)
+                                if tok in serial_token_set:
+                                    val = idx
+                                else:
+                                    val = _value_for_token(row, tok)
                                 tr = sub_token(tr, tok, format_token_value(tok, val))
                             parts.append(tr)
                         block_html = "\n".join(parts)
@@ -2219,15 +1907,26 @@ def fill_and_print(
                             continue
 
                         _reindex_serial_fields(filtered_rows, row_tokens_in_template, row_cols_needed)
+                        if filtered_rows:
+                            _log_debug(
+                                "[multi-debug] reindexed rows sql (tbody)",
+                                {"first_sl": filtered_rows[0].get("sl_no"), "count": len(filtered_rows)},
+                            )
 
+                        serial_token_set = {t for t in row_tokens_in_template if _is_serial_label(t)}
+                        serial_column_set = {c for c in row_cols_needed if _is_serial_label(c)}
                         parts: list[str] = []
-                        for r in filtered_rows:
+                        for idx, r in enumerate(filtered_rows, start=1):
                             tr = row_template
                             for t in row_tokens_in_template:
                                 col = _extract_col_name(PLACEHOLDER_TO_COL.get(t))
                                 if not col:
                                     continue
-                                tr = sub_token(tr, t, format_token_value(t, r.get(col)))
+                                if t in serial_token_set or col in serial_column_set:
+                                    value = idx
+                                else:
+                                    value = r.get(col)
+                                tr = sub_token(tr, t, format_token_value(t, value))
                             parts.append(tr)
 
                         new_tbody_inner = tbody_inner[:row_span[0]] + "\n".join(parts) + tbody_inner[row_span[1]:]
@@ -2298,15 +1997,26 @@ def fill_and_print(
                             continue
 
                         _reindex_serial_fields(filtered_rows, row_tokens_in_template, row_cols_needed)
+                        if filtered_rows:
+                            _log_debug(
+                                "[multi-debug] reindexed rows sql (no tbody)",
+                                {"first_sl": filtered_rows[0].get("sl_no"), "count": len(filtered_rows)},
+                            )
 
+                        serial_token_set = {t for t in row_tokens_in_template if _is_serial_label(t)}
+                        serial_column_set = {c for c in row_cols_needed if _is_serial_label(c)}
                         parts = []
-                        for r in filtered_rows:
+                        for idx, r in enumerate(filtered_rows, start=1):
                             tr = prototype_block  # the <tr> itself
                             for t in row_tokens_in_template:
                                 col = _extract_col_name(PLACEHOLDER_TO_COL.get(t))
                                 if not col:
                                     continue
-                                tr = sub_token(tr, t, format_token_value(t, r.get(col)))
+                                if t in serial_token_set or col in serial_column_set:
+                                    value = idx
+                                else:
+                                    value = r.get(col)
+                                tr = sub_token(tr, t, format_token_value(t, value))
                             parts.append(tr)
 
                         block_html = "\n".join(parts)
@@ -2365,9 +2075,6 @@ def fill_and_print(
     for tok, val in post_literal_specials.items():
         html_multi = sub_token(html_multi, tok, val if val is not None else '')
 
-    if page_number_tokens or page_count_tokens or page_label_tokens:
-        html_multi = _inject_page_counter_spans(html_multi, page_number_tokens, page_count_tokens, page_label_tokens)
-
     if total_token_to_target:
         overall_formatted = {}
         for (table_name, col_name), total in totals_accum.items():
@@ -2386,6 +2093,10 @@ def fill_and_print(
     # Blank any remaining known tokens
     ALL_KNOWN_TOKENS = set(HEADER_TOKENS) | set(ROW_TOKENS) | set(TOTALS.keys()) | set(LITERALS.keys())
     html_multi = blank_known_tokens(html_multi, ALL_KNOWN_TOKENS)
+
+    html_multi = _set_static_footer_numbers(html_multi)
+
+    html_multi = _ensure_footer_static_preview(html_multi)
 
     # write to the path requested by the API
     OUT_HTML.write_text(html_multi, encoding="utf-8")

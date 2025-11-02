@@ -1049,7 +1049,7 @@
         "generator_assets_url": "/uploads/84024e2b-9a61-4e19-b1b7-420019d891ef/generator/generator_assets.json",
         "mapping_keys_url": "/uploads/84024e2b-9a61-4e19-b1b7-420019d891ef/mapping_keys.json"
       },
-      "updated_at": "2025-10-24T12:34:39+00:00",
+      "updated_at": "2025-10-30T10:47:17+00:00",
       "created_at": "2025-10-22T21:10:06+00:00",
       "tags": [],
       "last_connection_id": "4b38fc3a-1f06-40f3-bc5e-50c9ea5a1e74",
@@ -1078,7 +1078,7 @@
         "summary": {},
         "updated_at": "2025-10-22T21:25:19+00:00"
       },
-      "last_run_at": "2025-10-24T12:34:39+00:00"
+      "last_run_at": "2025-10-30T10:47:17+00:00"
     },
     "68264d01-a2f3-41cf-ba00-be15524d5113": {
       "id": "68264d01-a2f3-41cf-ba00-be15524d5113",
@@ -1219,11 +1219,71 @@
       "tags": [],
       "last_connection_id": "4b38fc3a-1f06-40f3-bc5e-50c9ea5a1e74",
       "mapping_keys": []
+    },
+    "26ccc47b-b12e-46ed-a0a9-4a45b5d35675": {
+      "id": "26ccc47b-b12e-46ed-a0a9-4a45b5d35675",
+      "name": "CrystalReportViewer1 (7)",
+      "status": "approved",
+      "artifacts": {
+        "template_html_url": "/uploads/26ccc47b-b12e-46ed-a0a9-4a45b5d35675/report_final.html",
+        "thumbnail_url": "/uploads/26ccc47b-b12e-46ed-a0a9-4a45b5d35675/reference_p1.png",
+        "pdf_url": "/uploads/26ccc47b-b12e-46ed-a0a9-4a45b5d35675/source.pdf",
+        "schema_ext_url": "/uploads/26ccc47b-b12e-46ed-a0a9-4a45b5d35675/schema_ext.json",
+        "render_png_url": "/uploads/26ccc47b-b12e-46ed-a0a9-4a45b5d35675/render_p1_llm.png",
+        "render_after_png_url": "/uploads/26ccc47b-b12e-46ed-a0a9-4a45b5d35675/render_p1_after.png",
+        "fix_metrics_url": "/uploads/26ccc47b-b12e-46ed-a0a9-4a45b5d35675/fix_metrics.json",
+        "manifest_url": "/templates/26ccc47b-b12e-46ed-a0a9-4a45b5d35675/artifacts/manifest",
+        "mapping_step3_url": "/uploads/26ccc47b-b12e-46ed-a0a9-4a45b5d35675/mapping_step3.json",
+        "constants_inlined_url": "/uploads/26ccc47b-b12e-46ed-a0a9-4a45b5d35675/constant_replacements.json",
+        "page_summary_url": "/uploads/26ccc47b-b12e-46ed-a0a9-4a45b5d35675/page_summary.txt",
+        "final_html_url": "/uploads/26ccc47b-b12e-46ed-a0a9-4a45b5d35675/report_final.html",
+        "contract_url": "/uploads/26ccc47b-b12e-46ed-a0a9-4a45b5d35675/contract.json",
+        "overview_url": "/uploads/26ccc47b-b12e-46ed-a0a9-4a45b5d35675/overview.md",
+        "step5_requirements_url": "/uploads/26ccc47b-b12e-46ed-a0a9-4a45b5d35675/step5_requirements.json",
+        "generator_sql_pack_url": "/uploads/26ccc47b-b12e-46ed-a0a9-4a45b5d35675/generator/sql_pack.sql",
+        "generator_output_schemas_url": "/uploads/26ccc47b-b12e-46ed-a0a9-4a45b5d35675/generator/output_schemas.json",
+        "generator_assets_url": "/uploads/26ccc47b-b12e-46ed-a0a9-4a45b5d35675/generator/generator_assets.json",
+        "mapping_keys_url": "/uploads/26ccc47b-b12e-46ed-a0a9-4a45b5d35675/mapping_keys.json"
+      },
+      "updated_at": "2025-10-29T11:20:46+00:00",
+      "created_at": "2025-10-29T10:44:49+00:00",
+      "tags": [],
+      "last_connection_id": "4b38fc3a-1f06-40f3-bc5e-50c9ea5a1e74",
+      "mapping_keys": [
+        "recipe_code"
+      ],
+      "generator": {
+        "dialect": "sqlite",
+        "params": {
+          "required": [
+            "from_date",
+            "to_date",
+            "recipe_code"
+          ],
+          "optional": [
+            "plant_name",
+            "location",
+            "print_date",
+            "report_title",
+            "company_name",
+            "page_no",
+            "page_total"
+          ]
+        },
+        "invalid": true,
+        "needs_user_fix": [
+          "schema_ambiguous:header",
+          "schema_mismatch:rows",
+          "schema_ambiguous:totals"
+        ],
+        "summary": {},
+        "updated_at": "2025-10-29T11:20:46+00:00"
+      }
     }
   },
   "last_used": {
     "connection_id": "4b38fc3a-1f06-40f3-bc5e-50c9ea5a1e74",
     "template_id": "84024e2b-9a61-4e19-b1b7-420019d891ef",
-    "updated_at": "2025-10-24T12:34:39+00:00"
+    "updated_at": "2025-10-30T10:47:17+00:00"
   }
 }
