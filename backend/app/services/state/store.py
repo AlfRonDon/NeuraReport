@@ -292,6 +292,7 @@ class StateStore:
         tags: Optional[Iterable[str]] = None,
         connection_id: Optional[str] = None,
         mapping_keys: Optional[Iterable[str]] = None,
+        template_type: Optional[str] = None,
     ) -> dict:
         tid = template_id
         now = _now_iso()
@@ -301,6 +302,7 @@ class StateStore:
             created_at = record.get("created_at", now)
             existing_artifacts = record.get("artifacts") or {}
             merged_artifacts = {**existing_artifacts, **(artifacts or {})}
+            kind = template_type or record.get("kind") or "pdf"
             record.update(
                 {
                     "id": tid,
@@ -311,6 +313,7 @@ class StateStore:
                     "created_at": created_at,
                     "tags": sorted(set(tags or record.get("tags") or [])),
                     "last_connection_id": connection_id or record.get("last_connection_id"),
+                    "kind": kind,
                 }
             )
             if mapping_keys is not None:
@@ -421,6 +424,7 @@ class StateStore:
             "id": rec.get("id"),
             "name": rec.get("name"),
             "status": rec.get("status"),
+            "kind": rec.get("kind") or "pdf",
             "tags": list(rec.get("tags") or []),
             "createdAt": rec.get("created_at"),
             "updatedAt": rec.get("updated_at"),

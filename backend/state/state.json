@@ -111,6 +111,62 @@
       "last_latency_ms": 5.0,
       "tags": [],
       "last_detail": null
+    },
+    "89b1fb52-476b-4ce3-a9c9-535659119f74": {
+      "id": "89b1fb52-476b-4ce3-a9c9-535659119f74",
+      "name": "reporttest",
+      "db_type": "sqlite",
+      "database_path": "C:\\Users\\alfre\\Downloads\\recipe_log.sqlite3",
+      "secret": "gAAAAABpDZvocbaP8WGams6oF-qvntcDrMotxoWLWetWlQES3emU4iFhCLw4WfCcO3FZcwIiR9hGdfGfbG7W1W-OqlsfgV1uglGZ1cIHkznNn8TN6WbDads5y7dFVnC0H9Bjjkw_iT5syBj2-_KyiMj1Z7XxiQJVV3Z8QEU5RHzLCiuE3vIqh2qBlB6_4B85mkMOIuypR6WM1Hxf-iNQSyWq_fknO7R2cJegwb7OM8KI8mqtU73s-m-rKglFOPux0gynofvaZTRo",
+      "updated_at": "2025-11-07T07:12:40+00:00",
+      "created_at": "2025-11-07T07:12:37+00:00",
+      "status": "connected",
+      "last_connected_at": "2025-11-07T07:12:40+00:00",
+      "last_latency_ms": 34.0,
+      "tags": [],
+      "last_detail": null
+    },
+    "e20cde29-5a51-47a8-bed6-655711ff6d02": {
+      "id": "e20cde29-5a51-47a8-bed6-655711ff6d02",
+      "name": "testtopcon",
+      "db_type": "sqlite",
+      "database_path": "C:\\Users\\alfre\\Downloads\\topcon.db",
+      "secret": "gAAAAABpDa5ab9qEfEAIG78d7dPRPTHcJBxracvNNEhkTk3rO5AtSWn26YShy_t_U-LQqOIzsOLlKlj8nPTqWGOsdvl6v6Wg0XPPIkcz8K5roCkISORjeEMGu0KNhVG4IcfxkqwU15Pjao5tfzqPgv0VqVHVrfXyCP5W9A1u87tOxkf9poppIGiZqaziMmItKd9tRMjf0l6A-aYzPDGjmYd3WxTmzTIxRLhZCkfm0xNirRlJ9P0rcXU=",
+      "updated_at": "2025-11-07T08:31:22+00:00",
+      "created_at": "2025-11-07T08:31:20+00:00",
+      "status": "connected",
+      "last_connected_at": "2025-11-07T08:31:22+00:00",
+      "last_latency_ms": 8.0,
+      "tags": [],
+      "last_detail": null
+    },
+    "bfabba1e-1b82-4c9d-993e-1a946b58b072": {
+      "id": "bfabba1e-1b82-4c9d-993e-1a946b58b072",
+      "name": "test",
+      "db_type": "sqlite",
+      "database_path": "C:\\Users\\alfre\\Downloads\\topcon.db",
+      "secret": "gAAAAABpDb5olNtUQPvsSTc9lPME9ndcqLlSmIIjVj1dWdTu6He6RO3SN5wRDrpCT4dQv4-5iSUHNKDbQktVi4d9r6mhW_M2DtufV6shERTJmLu4_pVDy3YyVRIWTYfPLGOzV965Al9_lz_-0u2Jujjv3yZXxn21PdaE_NZtAWfWWwlc8OP7gnj07wcSkGij0346-2CVsZv1oCRHM77Do5z4xeLJHG88_73zpg3ivLv_NaIDSGGUrs0=",
+      "updated_at": "2025-11-07T09:39:52+00:00",
+      "created_at": "2025-11-07T09:39:51+00:00",
+      "status": "connected",
+      "last_connected_at": "2025-11-07T09:39:52+00:00",
+      "last_latency_ms": 5.0,
+      "tags": [],
+      "last_detail": null
+    },
+    "45e88073-70f5-4784-bd17-193b01b425c8": {
+      "id": "45e88073-70f5-4784-bd17-193b01b425c8",
+      "name": "Testreportexcel",
+      "db_type": "sqlite",
+      "database_path": "C:\\Users\\alfre\\Downloads\\topcon.db",
+      "secret": "gAAAAABpEOelIov8g45hZzYkTO3kaTY56DitjyMheSaLB4Az_hQkJh36rjSh9mgWDE9IUiLCOnK-yUs8rLutfwIcFlaL2ep2_JII7LkXnRz9S5aSyoo5yNzap_Snyuhftjcf2no0usnON60oBfdNPIFgCzBX6mCpsyLOlbhRvZQAN40B0A_slAYnWXpuyAfUo8tXeYNcGAsdwtPC2lnhbWgK6pv7DggtcRDSSdac9DShDO6RP_hsLHE=",
+      "updated_at": "2025-11-09T19:12:37+00:00",
+      "created_at": "2025-11-09T19:12:36+00:00",
+      "status": "connected",
+      "last_connected_at": "2025-11-09T19:12:37+00:00",
+      "last_latency_ms": 13.0,
+      "tags": [],
+      "last_detail": null
     }
   },
   "templates": {
@@ -1049,7 +1105,7 @@
         "generator_assets_url": "/uploads/84024e2b-9a61-4e19-b1b7-420019d891ef/generator/generator_assets.json",
         "mapping_keys_url": "/uploads/84024e2b-9a61-4e19-b1b7-420019d891ef/mapping_keys.json"
       },
-      "updated_at": "2025-10-30T10:47:17+00:00",
+      "updated_at": "2025-11-05T13:07:21+00:00",
       "created_at": "2025-10-22T21:10:06+00:00",
       "tags": [],
       "last_connection_id": "4b38fc3a-1f06-40f3-bc5e-50c9ea5a1e74",
@@ -1078,7 +1134,7 @@
         "summary": {},
         "updated_at": "2025-10-22T21:25:19+00:00"
       },
-      "last_run_at": "2025-10-30T10:47:17+00:00"
+      "last_run_at": "2025-11-05T13:07:21+00:00"
     },
     "68264d01-a2f3-41cf-ba00-be15524d5113": {
       "id": "68264d01-a2f3-41cf-ba00-be15524d5113",
@@ -1279,11 +1335,833 @@
         "summary": {},
         "updated_at": "2025-10-29T11:20:46+00:00"
       }
+    },
+    "a9661388-1d17-420b-8451-fa78f25804f4": {
+      "id": "a9661388-1d17-420b-8451-fa78f25804f4",
+      "name": "CrystalReportViewer1 (7)",
+      "status": "pending",
+      "artifacts": {
+        "template_html_url": "/uploads/a9661388-1d17-420b-8451-fa78f25804f4/report_final.html",
+        "thumbnail_url": "/uploads/a9661388-1d17-420b-8451-fa78f25804f4/reference_p1.png",
+        "pdf_url": "/uploads/a9661388-1d17-420b-8451-fa78f25804f4/source.pdf",
+        "schema_ext_url": "/uploads/a9661388-1d17-420b-8451-fa78f25804f4/schema_ext.json",
+        "render_png_url": "/uploads/a9661388-1d17-420b-8451-fa78f25804f4/render_p1_llm.png",
+        "render_after_png_url": "/uploads/a9661388-1d17-420b-8451-fa78f25804f4/render_p1_after.png",
+        "fix_metrics_url": "/uploads/a9661388-1d17-420b-8451-fa78f25804f4/fix_metrics.json",
+        "manifest_url": "/templates/a9661388-1d17-420b-8451-fa78f25804f4/artifacts/manifest",
+        "mapping_step3_url": "/uploads/a9661388-1d17-420b-8451-fa78f25804f4/mapping_step3.json",
+        "constants_inlined_url": "/uploads/a9661388-1d17-420b-8451-fa78f25804f4/constant_replacements.json",
+        "final_html_url": "/uploads/a9661388-1d17-420b-8451-fa78f25804f4/report_final.html",
+        "overview_url": "/uploads/a9661388-1d17-420b-8451-fa78f25804f4/overview.md",
+        "step5_requirements_url": "/uploads/a9661388-1d17-420b-8451-fa78f25804f4/step5_requirements.json",
+        "mapping_keys_url": "/uploads/a9661388-1d17-420b-8451-fa78f25804f4/mapping_keys.json"
+      },
+      "updated_at": "2025-11-04T09:48:33+00:00",
+      "created_at": "2025-11-04T09:21:05+00:00",
+      "tags": [],
+      "last_connection_id": "4b38fc3a-1f06-40f3-bc5e-50c9ea5a1e74",
+      "mapping_keys": []
+    },
+    "d51f7309-e17c-451b-9049-7c1c77c04940": {
+      "id": "d51f7309-e17c-451b-9049-7c1c77c04940",
+      "name": "CrystalReportViewer1 (7)",
+      "status": "mapping_previewed",
+      "artifacts": {
+        "template_html_url": "/uploads/d51f7309-e17c-451b-9049-7c1c77c04940/template_p1.html",
+        "thumbnail_url": "/uploads/d51f7309-e17c-451b-9049-7c1c77c04940/reference_p1.png",
+        "pdf_url": "/uploads/d51f7309-e17c-451b-9049-7c1c77c04940/source.pdf",
+        "schema_ext_url": "/uploads/d51f7309-e17c-451b-9049-7c1c77c04940/schema_ext.json",
+        "render_png_url": "/uploads/d51f7309-e17c-451b-9049-7c1c77c04940/render_p1_llm.png",
+        "render_after_png_url": "/uploads/d51f7309-e17c-451b-9049-7c1c77c04940/render_p1_after.png",
+        "fix_metrics_url": "/uploads/d51f7309-e17c-451b-9049-7c1c77c04940/fix_metrics.json",
+        "manifest_url": "/templates/d51f7309-e17c-451b-9049-7c1c77c04940/artifacts/manifest",
+        "mapping_step3_url": "/uploads/d51f7309-e17c-451b-9049-7c1c77c04940/mapping_step3.json",
+        "constants_inlined_url": "/uploads/d51f7309-e17c-451b-9049-7c1c77c04940/constant_replacements.json"
+      },
+      "updated_at": "2025-11-04T10:38:07+00:00",
+      "created_at": "2025-11-04T10:34:12+00:00",
+      "tags": [],
+      "last_connection_id": "4b38fc3a-1f06-40f3-bc5e-50c9ea5a1e74",
+      "mapping_keys": []
+    },
+    "e80a5ea6-b367-4ecf-b97f-092e48a5e6c4": {
+      "id": "e80a5ea6-b367-4ecf-b97f-092e48a5e6c4",
+      "name": "CrystalReportViewer1 (7)",
+      "status": "approved",
+      "artifacts": {
+        "template_html_url": "/uploads/e80a5ea6-b367-4ecf-b97f-092e48a5e6c4/report_final.html",
+        "thumbnail_url": "/uploads/e80a5ea6-b367-4ecf-b97f-092e48a5e6c4/reference_p1.png",
+        "pdf_url": "/uploads/e80a5ea6-b367-4ecf-b97f-092e48a5e6c4/source.pdf",
+        "schema_ext_url": "/uploads/e80a5ea6-b367-4ecf-b97f-092e48a5e6c4/schema_ext.json",
+        "render_png_url": "/uploads/e80a5ea6-b367-4ecf-b97f-092e48a5e6c4/render_p1_llm.png",
+        "render_after_png_url": "/uploads/e80a5ea6-b367-4ecf-b97f-092e48a5e6c4/render_p1_after.png",
+        "fix_metrics_url": "/uploads/e80a5ea6-b367-4ecf-b97f-092e48a5e6c4/fix_metrics.json",
+        "manifest_url": "/templates/e80a5ea6-b367-4ecf-b97f-092e48a5e6c4/artifacts/manifest",
+        "mapping_step3_url": "/uploads/e80a5ea6-b367-4ecf-b97f-092e48a5e6c4/mapping_step3.json",
+        "constants_inlined_url": "/uploads/e80a5ea6-b367-4ecf-b97f-092e48a5e6c4/constant_replacements.json",
+        "final_html_url": "/uploads/e80a5ea6-b367-4ecf-b97f-092e48a5e6c4/report_final.html",
+        "contract_url": "/uploads/e80a5ea6-b367-4ecf-b97f-092e48a5e6c4/contract.json",
+        "overview_url": "/uploads/e80a5ea6-b367-4ecf-b97f-092e48a5e6c4/overview.md",
+        "step5_requirements_url": "/uploads/e80a5ea6-b367-4ecf-b97f-092e48a5e6c4/step5_requirements.json",
+        "generator_sql_pack_url": "/uploads/e80a5ea6-b367-4ecf-b97f-092e48a5e6c4/generator/sql_pack.sql",
+        "generator_output_schemas_url": "/uploads/e80a5ea6-b367-4ecf-b97f-092e48a5e6c4/generator/output_schemas.json",
+        "generator_assets_url": "/uploads/e80a5ea6-b367-4ecf-b97f-092e48a5e6c4/generator/generator_assets.json",
+        "mapping_keys_url": "/uploads/e80a5ea6-b367-4ecf-b97f-092e48a5e6c4/mapping_keys.json"
+      },
+      "updated_at": "2025-11-05T13:23:41+00:00",
+      "created_at": "2025-11-05T13:13:00+00:00",
+      "tags": [],
+      "last_connection_id": "4b38fc3a-1f06-40f3-bc5e-50c9ea5a1e74",
+      "mapping_keys": [
+        "recipe_code"
+      ],
+      "generator": {
+        "dialect": "sqlite",
+        "params": {
+          "required": [
+            "recipe_code"
+          ],
+          "optional": [
+            "plant_name",
+            "location",
+            "print_date",
+            "from_date",
+            "to_date",
+            "page_no",
+            "page_total"
+          ]
+        },
+        "invalid": true,
+        "needs_user_fix": [
+          "schema_mismatch:header"
+        ],
+        "summary": {},
+        "updated_at": "2025-11-05T13:22:45+00:00"
+      },
+      "last_run_at": "2025-11-05T13:23:41+00:00"
+    },
+    "ea48c70d-133e-48bb-ac49-32f854bcbd81": {
+      "id": "ea48c70d-133e-48bb-ac49-32f854bcbd81",
+      "name": "CrystalReportViewer1 (7)",
+      "status": "mapping_previewed",
+      "artifacts": {
+        "template_html_url": "/uploads/ea48c70d-133e-48bb-ac49-32f854bcbd81/template_p1.html",
+        "thumbnail_url": "/uploads/ea48c70d-133e-48bb-ac49-32f854bcbd81/reference_p1.png",
+        "pdf_url": "/uploads/ea48c70d-133e-48bb-ac49-32f854bcbd81/source.pdf",
+        "schema_ext_url": "/uploads/ea48c70d-133e-48bb-ac49-32f854bcbd81/schema_ext.json",
+        "render_png_url": "/uploads/ea48c70d-133e-48bb-ac49-32f854bcbd81/render_p1_llm.png",
+        "render_after_png_url": "/uploads/ea48c70d-133e-48bb-ac49-32f854bcbd81/render_p1_after.png",
+        "fix_metrics_url": "/uploads/ea48c70d-133e-48bb-ac49-32f854bcbd81/fix_metrics.json",
+        "manifest_url": "/templates/ea48c70d-133e-48bb-ac49-32f854bcbd81/artifacts/manifest",
+        "mapping_step3_url": "/uploads/ea48c70d-133e-48bb-ac49-32f854bcbd81/mapping_step3.json",
+        "constants_inlined_url": "/uploads/ea48c70d-133e-48bb-ac49-32f854bcbd81/constant_replacements.json"
+      },
+      "updated_at": "2025-11-07T05:57:27+00:00",
+      "created_at": "2025-11-07T05:54:45+00:00",
+      "tags": [],
+      "last_connection_id": "4b38fc3a-1f06-40f3-bc5e-50c9ea5a1e74",
+      "mapping_keys": []
+    },
+    "9fb28f60-1706-46c6-8377-cfb22ed6bb3b": {
+      "id": "9fb28f60-1706-46c6-8377-cfb22ed6bb3b",
+      "name": "CrystalReportViewer1 (7)",
+      "status": "pending",
+      "artifacts": {
+        "template_html_url": "/uploads/9fb28f60-1706-46c6-8377-cfb22ed6bb3b/report_final.html",
+        "thumbnail_url": "/uploads/9fb28f60-1706-46c6-8377-cfb22ed6bb3b/reference_p1.png",
+        "pdf_url": "/uploads/9fb28f60-1706-46c6-8377-cfb22ed6bb3b/source.pdf",
+        "schema_ext_url": "/uploads/9fb28f60-1706-46c6-8377-cfb22ed6bb3b/schema_ext.json",
+        "render_png_url": "/uploads/9fb28f60-1706-46c6-8377-cfb22ed6bb3b/render_p1_llm.png",
+        "render_after_png_url": "/uploads/9fb28f60-1706-46c6-8377-cfb22ed6bb3b/render_p1_after.png",
+        "fix_metrics_url": "/uploads/9fb28f60-1706-46c6-8377-cfb22ed6bb3b/fix_metrics.json",
+        "manifest_url": "/templates/9fb28f60-1706-46c6-8377-cfb22ed6bb3b/artifacts/manifest",
+        "mapping_step3_url": "/uploads/9fb28f60-1706-46c6-8377-cfb22ed6bb3b/mapping_step3.json",
+        "constants_inlined_url": "/uploads/9fb28f60-1706-46c6-8377-cfb22ed6bb3b/constant_replacements.json",
+        "final_html_url": "/uploads/9fb28f60-1706-46c6-8377-cfb22ed6bb3b/report_final.html",
+        "overview_url": "/uploads/9fb28f60-1706-46c6-8377-cfb22ed6bb3b/overview.md",
+        "step5_requirements_url": "/uploads/9fb28f60-1706-46c6-8377-cfb22ed6bb3b/step5_requirements.json",
+        "mapping_keys_url": "/uploads/9fb28f60-1706-46c6-8377-cfb22ed6bb3b/mapping_keys.json"
+      },
+      "updated_at": "2025-11-07T06:28:07+00:00",
+      "created_at": "2025-11-07T06:18:07+00:00",
+      "tags": [],
+      "last_connection_id": "4b38fc3a-1f06-40f3-bc5e-50c9ea5a1e74",
+      "mapping_keys": [
+        "recipe_code"
+      ]
+    },
+    "3bdde08b-6abc-4f58-89c6-d3e85295631a": {
+      "id": "3bdde08b-6abc-4f58-89c6-d3e85295631a",
+      "name": "CrystalReportViewer1 (7)",
+      "status": "approved",
+      "artifacts": {
+        "template_html_url": "/uploads/3bdde08b-6abc-4f58-89c6-d3e85295631a/report_final.html",
+        "thumbnail_url": "/uploads/3bdde08b-6abc-4f58-89c6-d3e85295631a/reference_p1.png",
+        "pdf_url": "/uploads/3bdde08b-6abc-4f58-89c6-d3e85295631a/source.pdf",
+        "schema_ext_url": "/uploads/3bdde08b-6abc-4f58-89c6-d3e85295631a/schema_ext.json",
+        "render_png_url": "/uploads/3bdde08b-6abc-4f58-89c6-d3e85295631a/render_p1_llm.png",
+        "render_after_png_url": "/uploads/3bdde08b-6abc-4f58-89c6-d3e85295631a/render_p1_after.png",
+        "fix_metrics_url": "/uploads/3bdde08b-6abc-4f58-89c6-d3e85295631a/fix_metrics.json",
+        "manifest_url": "/templates/3bdde08b-6abc-4f58-89c6-d3e85295631a/artifacts/manifest",
+        "mapping_step3_url": "/uploads/3bdde08b-6abc-4f58-89c6-d3e85295631a/mapping_step3.json",
+        "constants_inlined_url": "/uploads/3bdde08b-6abc-4f58-89c6-d3e85295631a/constant_replacements.json",
+        "final_html_url": "/uploads/3bdde08b-6abc-4f58-89c6-d3e85295631a/report_final.html",
+        "contract_url": "/uploads/3bdde08b-6abc-4f58-89c6-d3e85295631a/contract.json",
+        "overview_url": "/uploads/3bdde08b-6abc-4f58-89c6-d3e85295631a/overview.md",
+        "step5_requirements_url": "/uploads/3bdde08b-6abc-4f58-89c6-d3e85295631a/step5_requirements.json",
+        "generator_sql_pack_url": "/uploads/3bdde08b-6abc-4f58-89c6-d3e85295631a/generator/sql_pack.sql",
+        "generator_output_schemas_url": "/uploads/3bdde08b-6abc-4f58-89c6-d3e85295631a/generator/output_schemas.json",
+        "generator_assets_url": "/uploads/3bdde08b-6abc-4f58-89c6-d3e85295631a/generator/generator_assets.json",
+        "mapping_keys_url": "/uploads/3bdde08b-6abc-4f58-89c6-d3e85295631a/mapping_keys.json"
+      },
+      "updated_at": "2025-11-07T07:42:26+00:00",
+      "created_at": "2025-11-07T06:33:58+00:00",
+      "tags": [],
+      "last_connection_id": "89b1fb52-476b-4ce3-a9c9-535659119f74",
+      "mapping_keys": [
+        "recipe_code"
+      ],
+      "generator": {
+        "dialect": "sqlite",
+        "params": {
+          "required": [
+            "from_date",
+            "to_date",
+            "recipe_code"
+          ],
+          "optional": [
+            "plant_name",
+            "location",
+            "print_date",
+            "page_no",
+            "page_count"
+          ]
+        },
+        "invalid": false,
+        "needs_user_fix": [],
+        "summary": {},
+        "updated_at": "2025-11-07T06:43:27+00:00"
+      },
+      "last_run_at": "2025-11-07T07:42:26+00:00"
+    },
+    "5887183b-f6b8-4c96-a9f5-8363c5cae52f": {
+      "id": "5887183b-f6b8-4c96-a9f5-8363c5cae52f",
+      "name": "CrystalReportViewer1 (7)",
+      "status": "approved",
+      "artifacts": {
+        "template_html_url": "/uploads/5887183b-f6b8-4c96-a9f5-8363c5cae52f/report_final.html",
+        "thumbnail_url": "/uploads/5887183b-f6b8-4c96-a9f5-8363c5cae52f/reference_p1.png",
+        "pdf_url": "/uploads/5887183b-f6b8-4c96-a9f5-8363c5cae52f/source.pdf",
+        "schema_ext_url": "/uploads/5887183b-f6b8-4c96-a9f5-8363c5cae52f/schema_ext.json",
+        "render_png_url": "/uploads/5887183b-f6b8-4c96-a9f5-8363c5cae52f/render_p1_llm.png",
+        "render_after_png_url": "/uploads/5887183b-f6b8-4c96-a9f5-8363c5cae52f/render_p1_after.png",
+        "fix_metrics_url": "/uploads/5887183b-f6b8-4c96-a9f5-8363c5cae52f/fix_metrics.json",
+        "manifest_url": "/templates/5887183b-f6b8-4c96-a9f5-8363c5cae52f/artifacts/manifest",
+        "mapping_step3_url": "/uploads/5887183b-f6b8-4c96-a9f5-8363c5cae52f/mapping_step3.json",
+        "constants_inlined_url": "/uploads/5887183b-f6b8-4c96-a9f5-8363c5cae52f/constant_replacements.json",
+        "page_summary_url": "/uploads/5887183b-f6b8-4c96-a9f5-8363c5cae52f/page_summary.txt",
+        "final_html_url": "/uploads/5887183b-f6b8-4c96-a9f5-8363c5cae52f/report_final.html",
+        "contract_url": "/uploads/5887183b-f6b8-4c96-a9f5-8363c5cae52f/contract.json",
+        "overview_url": "/uploads/5887183b-f6b8-4c96-a9f5-8363c5cae52f/overview.md",
+        "step5_requirements_url": "/uploads/5887183b-f6b8-4c96-a9f5-8363c5cae52f/step5_requirements.json",
+        "generator_sql_pack_url": "/uploads/5887183b-f6b8-4c96-a9f5-8363c5cae52f/generator/sql_pack.sql",
+        "generator_output_schemas_url": "/uploads/5887183b-f6b8-4c96-a9f5-8363c5cae52f/generator/output_schemas.json",
+        "generator_assets_url": "/uploads/5887183b-f6b8-4c96-a9f5-8363c5cae52f/generator/generator_assets.json",
+        "mapping_keys_url": "/uploads/5887183b-f6b8-4c96-a9f5-8363c5cae52f/mapping_keys.json"
+      },
+      "updated_at": "2025-11-07T07:42:03+00:00",
+      "created_at": "2025-11-07T07:17:21+00:00",
+      "tags": [],
+      "last_connection_id": "89b1fb52-476b-4ce3-a9c9-535659119f74",
+      "mapping_keys": [
+        "recipe_code"
+      ],
+      "generator": {
+        "dialect": "sqlite",
+        "params": {
+          "required": [
+            "recipe_code"
+          ],
+          "optional": [
+            "from_date",
+            "to_date",
+            "print_date",
+            "page_info"
+          ]
+        },
+        "invalid": false,
+        "needs_user_fix": [],
+        "summary": {},
+        "updated_at": "2025-11-07T07:42:03+00:00"
+      }
+    },
+    "1e272c8a-aafd-4047-9284-8b93ae9694f3": {
+      "id": "1e272c8a-aafd-4047-9284-8b93ae9694f3",
+      "name": "Report Format",
+      "status": "draft",
+      "artifacts": {
+        "template_html_url": "/uploads/1e272c8a-aafd-4047-9284-8b93ae9694f3/template_p1.html",
+        "thumbnail_url": "/uploads/1e272c8a-aafd-4047-9284-8b93ae9694f3/reference_p1.png",
+        "pdf_url": "/uploads/1e272c8a-aafd-4047-9284-8b93ae9694f3/source.pdf",
+        "schema_ext_url": "/uploads/1e272c8a-aafd-4047-9284-8b93ae9694f3/schema_ext.json",
+        "render_png_url": "/uploads/1e272c8a-aafd-4047-9284-8b93ae9694f3/render_p1_llm.png",
+        "render_after_png_url": "/uploads/1e272c8a-aafd-4047-9284-8b93ae9694f3/render_p1_after.png",
+        "fix_metrics_url": "/uploads/1e272c8a-aafd-4047-9284-8b93ae9694f3/fix_metrics.json",
+        "manifest_url": "/templates/1e272c8a-aafd-4047-9284-8b93ae9694f3/artifacts/manifest"
+      },
+      "updated_at": "2025-11-07T08:36:39+00:00",
+      "created_at": "2025-11-07T08:36:39+00:00",
+      "tags": [],
+      "last_connection_id": "e20cde29-5a51-47a8-bed6-655711ff6d02",
+      "mapping_keys": []
+    },
+    "1b5f2609-5cf2-4fb1-9f71-e21c61b87563": {
+      "id": "1b5f2609-5cf2-4fb1-9f71-e21c61b87563",
+      "name": "samplepdf",
+      "status": "draft",
+      "artifacts": {
+        "template_html_url": "/uploads/1b5f2609-5cf2-4fb1-9f71-e21c61b87563/template_p1.html",
+        "thumbnail_url": "/uploads/1b5f2609-5cf2-4fb1-9f71-e21c61b87563/reference_p1.png",
+        "pdf_url": "/uploads/1b5f2609-5cf2-4fb1-9f71-e21c61b87563/source.pdf",
+        "schema_ext_url": "/uploads/1b5f2609-5cf2-4fb1-9f71-e21c61b87563/schema_ext.json",
+        "render_png_url": "/uploads/1b5f2609-5cf2-4fb1-9f71-e21c61b87563/render_p1_llm.png",
+        "render_after_png_url": "/uploads/1b5f2609-5cf2-4fb1-9f71-e21c61b87563/render_p1_after.png",
+        "fix_metrics_url": "/uploads/1b5f2609-5cf2-4fb1-9f71-e21c61b87563/fix_metrics.json",
+        "manifest_url": "/templates/1b5f2609-5cf2-4fb1-9f71-e21c61b87563/artifacts/manifest"
+      },
+      "updated_at": "2025-11-07T09:44:39+00:00",
+      "created_at": "2025-11-07T09:44:39+00:00",
+      "tags": [],
+      "last_connection_id": "bfabba1e-1b82-4c9d-993e-1a946b58b072",
+      "mapping_keys": []
+    },
+    "dcd7b1ac-47e4-4338-ab5f-699ccb48f189": {
+      "id": "dcd7b1ac-47e4-4338-ab5f-699ccb48f189",
+      "name": "CrystalReportViewer1 (7)",
+      "status": "approved",
+      "artifacts": {
+        "template_html_url": "/uploads/dcd7b1ac-47e4-4338-ab5f-699ccb48f189/report_final.html",
+        "thumbnail_url": "/uploads/dcd7b1ac-47e4-4338-ab5f-699ccb48f189/reference_p1.png",
+        "pdf_url": "/uploads/dcd7b1ac-47e4-4338-ab5f-699ccb48f189/source.pdf",
+        "schema_ext_url": "/uploads/dcd7b1ac-47e4-4338-ab5f-699ccb48f189/schema_ext.json",
+        "render_png_url": "/uploads/dcd7b1ac-47e4-4338-ab5f-699ccb48f189/render_p1_llm.png",
+        "render_after_png_url": "/uploads/dcd7b1ac-47e4-4338-ab5f-699ccb48f189/render_p1_after.png",
+        "fix_metrics_url": "/uploads/dcd7b1ac-47e4-4338-ab5f-699ccb48f189/fix_metrics.json",
+        "manifest_url": "/templates/dcd7b1ac-47e4-4338-ab5f-699ccb48f189/artifacts/manifest",
+        "mapping_step3_url": "/uploads/dcd7b1ac-47e4-4338-ab5f-699ccb48f189/mapping_step3.json",
+        "constants_inlined_url": "/uploads/dcd7b1ac-47e4-4338-ab5f-699ccb48f189/constant_replacements.json",
+        "final_html_url": "/uploads/dcd7b1ac-47e4-4338-ab5f-699ccb48f189/report_final.html",
+        "contract_url": "/uploads/dcd7b1ac-47e4-4338-ab5f-699ccb48f189/contract.json",
+        "overview_url": "/uploads/dcd7b1ac-47e4-4338-ab5f-699ccb48f189/overview.md",
+        "step5_requirements_url": "/uploads/dcd7b1ac-47e4-4338-ab5f-699ccb48f189/step5_requirements.json",
+        "generator_sql_pack_url": "/uploads/dcd7b1ac-47e4-4338-ab5f-699ccb48f189/generator/sql_pack.sql",
+        "generator_output_schemas_url": "/uploads/dcd7b1ac-47e4-4338-ab5f-699ccb48f189/generator/output_schemas.json",
+        "generator_assets_url": "/uploads/dcd7b1ac-47e4-4338-ab5f-699ccb48f189/generator/generator_assets.json",
+        "mapping_keys_url": "/uploads/dcd7b1ac-47e4-4338-ab5f-699ccb48f189/mapping_keys.json"
+      },
+      "updated_at": "2025-11-07T11:08:19+00:00",
+      "created_at": "2025-11-07T10:07:50+00:00",
+      "tags": [],
+      "last_connection_id": "4b38fc3a-1f06-40f3-bc5e-50c9ea5a1e74",
+      "mapping_keys": [],
+      "kind": "pdf",
+      "generator": {
+        "dialect": "sqlite",
+        "params": {
+          "required": [
+            "from_date",
+            "to_date",
+            "plant_name",
+            "recipe_code"
+          ],
+          "optional": [
+            "location",
+            "print_date",
+            "report_title",
+            "company_name",
+            "page_number",
+            "page_count"
+          ]
+        },
+        "invalid": true,
+        "needs_user_fix": [
+          "schema_ambiguous:header",
+          "schema_mismatch:rows"
+        ],
+        "summary": {},
+        "updated_at": "2025-11-07T11:08:19+00:00"
+      }
+    },
+    "00000000-0000-0000-0000-000000000002": {
+      "id": "00000000-0000-0000-0000-000000000002",
+      "name": "Template 00000000",
+      "status": "pending",
+      "artifacts": {
+        "template_html_url": "/uploads/00000000-0000-0000-0000-000000000002/report_final.html",
+        "final_html_url": "/uploads/00000000-0000-0000-0000-000000000002/report_final.html",
+        "manifest_url": "/templates/00000000-0000-0000-0000-000000000002/artifacts/manifest",
+        "contract_url": "/uploads/00000000-0000-0000-0000-000000000002/contract.json",
+        "overview_url": "/uploads/00000000-0000-0000-0000-000000000002/overview.md",
+        "step5_requirements_url": "/uploads/00000000-0000-0000-0000-000000000002/step5_requirements.json",
+        "mapping_keys_url": "/uploads/00000000-0000-0000-0000-000000000002/mapping_keys.json"
+      },
+      "updated_at": "2025-11-09T18:59:32+00:00",
+      "created_at": "2025-11-09T18:59:11+00:00",
+      "tags": [],
+      "last_connection_id": "test-connection",
+      "kind": "pdf",
+      "mapping_keys": []
+    },
+    "1e634882-0073-4e9d-afda-c08bb90ef3fa": {
+      "id": "1e634882-0073-4e9d-afda-c08bb90ef3fa",
+      "name": "Flowmeter Reports Format",
+      "status": "draft",
+      "artifacts": {
+        "template_html_url": "/excel-uploads/1e634882-0073-4e9d-afda-c08bb90ef3fa/template_p1.html",
+        "thumbnail_url": "/excel-uploads/1e634882-0073-4e9d-afda-c08bb90ef3fa/reference_p1.png",
+        "excel_url": "/excel-uploads/1e634882-0073-4e9d-afda-c08bb90ef3fa/source.xlsx",
+        "manifest_url": "/excel/1e634882-0073-4e9d-afda-c08bb90ef3fa/artifacts/manifest",
+        "render_png_url": "/excel-uploads/1e634882-0073-4e9d-afda-c08bb90ef3fa/reference_p1.png"
+      },
+      "updated_at": "2025-11-09T19:12:55+00:00",
+      "created_at": "2025-11-09T19:12:55+00:00",
+      "tags": [],
+      "last_connection_id": "45e88073-70f5-4784-bd17-193b01b425c8",
+      "kind": "excel",
+      "mapping_keys": []
+    },
+    "92ff8ebc-7003-4182-ad5a-2e788357e784": {
+      "id": "92ff8ebc-7003-4182-ad5a-2e788357e784",
+      "name": "flipped_flow_meter_table",
+      "status": "mapping_previewed",
+      "artifacts": {
+        "template_html_url": "/excel-uploads/92ff8ebc-7003-4182-ad5a-2e788357e784/template_p1.html",
+        "thumbnail_url": "/excel-uploads/92ff8ebc-7003-4182-ad5a-2e788357e784/reference_p1.png",
+        "excel_url": "/excel-uploads/92ff8ebc-7003-4182-ad5a-2e788357e784/source.xlsx",
+        "manifest_url": "/excel/92ff8ebc-7003-4182-ad5a-2e788357e784/artifacts/manifest",
+        "render_png_url": "/excel-uploads/92ff8ebc-7003-4182-ad5a-2e788357e784/reference_p1.png",
+        "mapping_step3_url": "/excel-uploads/92ff8ebc-7003-4182-ad5a-2e788357e784/mapping_step3.json",
+        "constants_inlined_url": "/excel-uploads/92ff8ebc-7003-4182-ad5a-2e788357e784/constant_replacements.json"
+      },
+      "updated_at": "2025-11-09T19:53:32+00:00",
+      "created_at": "2025-11-09T19:51:46+00:00",
+      "tags": [],
+      "last_connection_id": "45e88073-70f5-4784-bd17-193b01b425c8",
+      "kind": "excel",
+      "mapping_keys": []
+    },
+    "32fd92ca-82f4-4f01-b597-3c3973832826": {
+      "id": "32fd92ca-82f4-4f01-b597-3c3973832826",
+      "name": "flipped_flow_meter_table",
+      "status": "mapping_previewed",
+      "artifacts": {
+        "template_html_url": "/excel-uploads/32fd92ca-82f4-4f01-b597-3c3973832826/template_p1.html",
+        "thumbnail_url": "/excel-uploads/32fd92ca-82f4-4f01-b597-3c3973832826/reference_p1.png",
+        "excel_url": "/excel-uploads/32fd92ca-82f4-4f01-b597-3c3973832826/source.xlsx",
+        "manifest_url": "/excel/32fd92ca-82f4-4f01-b597-3c3973832826/artifacts/manifest",
+        "render_png_url": "/excel-uploads/32fd92ca-82f4-4f01-b597-3c3973832826/reference_p1.png",
+        "mapping_step3_url": "/excel-uploads/32fd92ca-82f4-4f01-b597-3c3973832826/mapping_step3.json",
+        "constants_inlined_url": "/excel-uploads/32fd92ca-82f4-4f01-b597-3c3973832826/constant_replacements.json"
+      },
+      "updated_at": "2025-11-09T20:28:46+00:00",
+      "created_at": "2025-11-09T20:27:18+00:00",
+      "tags": [],
+      "last_connection_id": "45e88073-70f5-4784-bd17-193b01b425c8",
+      "kind": "excel",
+      "mapping_keys": []
+    },
+    "55a2285c-883c-40e6-a88e-0edf0b55d9c2": {
+      "id": "55a2285c-883c-40e6-a88e-0edf0b55d9c2",
+      "name": "flipped_flow_meter_table",
+      "status": "draft",
+      "artifacts": {
+        "template_html_url": "/excel-uploads/55a2285c-883c-40e6-a88e-0edf0b55d9c2/template_p1.html",
+        "thumbnail_url": "/excel-uploads/55a2285c-883c-40e6-a88e-0edf0b55d9c2/reference_p1.png",
+        "excel_url": "/excel-uploads/55a2285c-883c-40e6-a88e-0edf0b55d9c2/source.xlsx",
+        "manifest_url": "/excel/55a2285c-883c-40e6-a88e-0edf0b55d9c2/artifacts/manifest",
+        "render_png_url": "/excel-uploads/55a2285c-883c-40e6-a88e-0edf0b55d9c2/reference_p1.png"
+      },
+      "updated_at": "2025-11-09T20:53:15+00:00",
+      "created_at": "2025-11-09T20:53:15+00:00",
+      "tags": [],
+      "last_connection_id": "45e88073-70f5-4784-bd17-193b01b425c8",
+      "kind": "excel",
+      "mapping_keys": []
+    },
+    "2ccf1999-b03a-47ca-a62c-8161537df9fe": {
+      "id": "2ccf1999-b03a-47ca-a62c-8161537df9fe",
+      "name": "flipped_flow_meter_table",
+      "status": "draft",
+      "artifacts": {
+        "template_html_url": "/excel-uploads/2ccf1999-b03a-47ca-a62c-8161537df9fe/template_p1.html",
+        "thumbnail_url": "/excel-uploads/2ccf1999-b03a-47ca-a62c-8161537df9fe/reference_p1.png",
+        "excel_url": "/excel-uploads/2ccf1999-b03a-47ca-a62c-8161537df9fe/source.xlsx",
+        "manifest_url": "/excel/2ccf1999-b03a-47ca-a62c-8161537df9fe/artifacts/manifest",
+        "render_png_url": "/excel-uploads/2ccf1999-b03a-47ca-a62c-8161537df9fe/reference_p1.png"
+      },
+      "updated_at": "2025-11-10T07:38:42+00:00",
+      "created_at": "2025-11-10T07:38:42+00:00",
+      "tags": [],
+      "last_connection_id": "45e88073-70f5-4784-bd17-193b01b425c8",
+      "kind": "excel",
+      "mapping_keys": []
+    },
+    "20967303-7bd1-4186-8bef-3a6306ebfb6b": {
+      "id": "20967303-7bd1-4186-8bef-3a6306ebfb6b",
+      "name": "flipped_flow_meter_table",
+      "status": "draft",
+      "artifacts": {
+        "template_html_url": "/excel-uploads/20967303-7bd1-4186-8bef-3a6306ebfb6b/template_p1.html",
+        "thumbnail_url": "/excel-uploads/20967303-7bd1-4186-8bef-3a6306ebfb6b/reference_p1.png",
+        "excel_url": "/excel-uploads/20967303-7bd1-4186-8bef-3a6306ebfb6b/source.xlsx",
+        "manifest_url": "/excel/20967303-7bd1-4186-8bef-3a6306ebfb6b/artifacts/manifest",
+        "render_png_url": "/excel-uploads/20967303-7bd1-4186-8bef-3a6306ebfb6b/reference_p1.png"
+      },
+      "updated_at": "2025-11-10T07:43:39+00:00",
+      "created_at": "2025-11-10T07:43:39+00:00",
+      "tags": [],
+      "last_connection_id": "45e88073-70f5-4784-bd17-193b01b425c8",
+      "kind": "excel",
+      "mapping_keys": []
+    },
+    "bebe1236-493b-45af-8750-74138749c524": {
+      "id": "bebe1236-493b-45af-8750-74138749c524",
+      "name": "flipped_flow_meter_table",
+      "status": "mapping_previewed",
+      "artifacts": {
+        "template_html_url": "/excel-uploads/bebe1236-493b-45af-8750-74138749c524/template_p1.html",
+        "thumbnail_url": "/excel-uploads/bebe1236-493b-45af-8750-74138749c524/reference_p1.png",
+        "excel_url": "/excel-uploads/bebe1236-493b-45af-8750-74138749c524/source.xlsx",
+        "manifest_url": "/excel/bebe1236-493b-45af-8750-74138749c524/artifacts/manifest",
+        "render_png_url": "/excel-uploads/bebe1236-493b-45af-8750-74138749c524/reference_p1.png",
+        "mapping_step3_url": "/excel-uploads/bebe1236-493b-45af-8750-74138749c524/mapping_step3.json",
+        "constants_inlined_url": "/excel-uploads/bebe1236-493b-45af-8750-74138749c524/constant_replacements.json"
+      },
+      "updated_at": "2025-11-10T07:55:54+00:00",
+      "created_at": "2025-11-10T07:51:46+00:00",
+      "tags": [],
+      "last_connection_id": "45e88073-70f5-4784-bd17-193b01b425c8",
+      "kind": "excel",
+      "mapping_keys": []
+    },
+    "cdd20abc-43fc-4f61-89fc-426c8195b600": {
+      "id": "cdd20abc-43fc-4f61-89fc-426c8195b600",
+      "name": "flipped_flow_meter_table",
+      "status": "draft",
+      "artifacts": {
+        "template_html_url": "/excel-uploads/cdd20abc-43fc-4f61-89fc-426c8195b600/template_p1.html",
+        "thumbnail_url": "/excel-uploads/cdd20abc-43fc-4f61-89fc-426c8195b600/reference_p1.png",
+        "excel_url": "/excel-uploads/cdd20abc-43fc-4f61-89fc-426c8195b600/source.xlsx",
+        "manifest_url": "/excel/cdd20abc-43fc-4f61-89fc-426c8195b600/artifacts/manifest",
+        "render_png_url": "/excel-uploads/cdd20abc-43fc-4f61-89fc-426c8195b600/reference_p1.png"
+      },
+      "updated_at": "2025-11-10T08:40:12+00:00",
+      "created_at": "2025-11-10T08:40:12+00:00",
+      "tags": [],
+      "last_connection_id": "45e88073-70f5-4784-bd17-193b01b425c8",
+      "kind": "excel",
+      "mapping_keys": []
+    },
+    "99fcc831-338a-4ca7-b428-7ac24e1af7cf": {
+      "id": "99fcc831-338a-4ca7-b428-7ac24e1af7cf",
+      "name": "flipped_flow_meter_table",
+      "status": "pending",
+      "artifacts": {
+        "template_html_url": "/excel-uploads/99fcc831-338a-4ca7-b428-7ac24e1af7cf/report_final.html",
+        "thumbnail_url": "/excel-uploads/99fcc831-338a-4ca7-b428-7ac24e1af7cf/reference_p1.png",
+        "excel_url": "/excel-uploads/99fcc831-338a-4ca7-b428-7ac24e1af7cf/source.xlsx",
+        "manifest_url": "/excel/99fcc831-338a-4ca7-b428-7ac24e1af7cf/artifacts/manifest",
+        "render_png_url": "/excel-uploads/99fcc831-338a-4ca7-b428-7ac24e1af7cf/reference_p1.png",
+        "mapping_step3_url": "/excel-uploads/99fcc831-338a-4ca7-b428-7ac24e1af7cf/mapping_step3.json",
+        "constants_inlined_url": "/excel-uploads/99fcc831-338a-4ca7-b428-7ac24e1af7cf/constant_replacements.json",
+        "final_html_url": "/excel-uploads/99fcc831-338a-4ca7-b428-7ac24e1af7cf/report_final.html",
+        "overview_url": "/excel-uploads/99fcc831-338a-4ca7-b428-7ac24e1af7cf/overview.md",
+        "step5_requirements_url": "/excel-uploads/99fcc831-338a-4ca7-b428-7ac24e1af7cf/step5_requirements.json",
+        "mapping_keys_url": "/excel-uploads/99fcc831-338a-4ca7-b428-7ac24e1af7cf/mapping_keys.json"
+      },
+      "updated_at": "2025-11-10T09:06:11+00:00",
+      "created_at": "2025-11-10T08:52:13+00:00",
+      "tags": [],
+      "last_connection_id": "45e88073-70f5-4784-bd17-193b01b425c8",
+      "kind": "excel",
+      "mapping_keys": []
+    },
+    "47d1c9e0-eff6-42cb-9482-0a52b4f0ff36": {
+      "id": "47d1c9e0-eff6-42cb-9482-0a52b4f0ff36",
+      "name": "flipped_flow_meter_table",
+      "status": "pending",
+      "artifacts": {
+        "template_html_url": "/excel-uploads/47d1c9e0-eff6-42cb-9482-0a52b4f0ff36/report_final.html",
+        "thumbnail_url": "/excel-uploads/47d1c9e0-eff6-42cb-9482-0a52b4f0ff36/reference_p1.png",
+        "excel_url": "/excel-uploads/47d1c9e0-eff6-42cb-9482-0a52b4f0ff36/source.xlsx",
+        "manifest_url": "/excel/47d1c9e0-eff6-42cb-9482-0a52b4f0ff36/artifacts/manifest",
+        "render_png_url": "/excel-uploads/47d1c9e0-eff6-42cb-9482-0a52b4f0ff36/reference_p1.png",
+        "mapping_step3_url": "/excel-uploads/47d1c9e0-eff6-42cb-9482-0a52b4f0ff36/mapping_step3.json",
+        "constants_inlined_url": "/excel-uploads/47d1c9e0-eff6-42cb-9482-0a52b4f0ff36/constant_replacements.json",
+        "final_html_url": "/excel-uploads/47d1c9e0-eff6-42cb-9482-0a52b4f0ff36/report_final.html",
+        "overview_url": "/excel-uploads/47d1c9e0-eff6-42cb-9482-0a52b4f0ff36/overview.md",
+        "step5_requirements_url": "/excel-uploads/47d1c9e0-eff6-42cb-9482-0a52b4f0ff36/step5_requirements.json",
+        "mapping_keys_url": "/excel-uploads/47d1c9e0-eff6-42cb-9482-0a52b4f0ff36/mapping_keys.json"
+      },
+      "updated_at": "2025-11-10T10:03:29+00:00",
+      "created_at": "2025-11-10T09:54:28+00:00",
+      "tags": [],
+      "last_connection_id": "45e88073-70f5-4784-bd17-193b01b425c8",
+      "kind": "excel",
+      "mapping_keys": []
+    },
+    "36364c89-afe7-4b63-bb9d-29be36d97368": {
+      "id": "36364c89-afe7-4b63-bb9d-29be36d97368",
+      "name": "flipped_flow_meter_table",
+      "status": "pending",
+      "artifacts": {
+        "template_html_url": "/excel-uploads/36364c89-afe7-4b63-bb9d-29be36d97368/report_final.html",
+        "thumbnail_url": "/excel-uploads/36364c89-afe7-4b63-bb9d-29be36d97368/reference_p1.png",
+        "excel_url": "/excel-uploads/36364c89-afe7-4b63-bb9d-29be36d97368/source.xlsx",
+        "manifest_url": "/excel/36364c89-afe7-4b63-bb9d-29be36d97368/artifacts/manifest",
+        "render_png_url": "/excel-uploads/36364c89-afe7-4b63-bb9d-29be36d97368/reference_p1.png",
+        "mapping_step3_url": "/excel-uploads/36364c89-afe7-4b63-bb9d-29be36d97368/mapping_step3.json",
+        "constants_inlined_url": "/excel-uploads/36364c89-afe7-4b63-bb9d-29be36d97368/constant_replacements.json",
+        "final_html_url": "/excel-uploads/36364c89-afe7-4b63-bb9d-29be36d97368/report_final.html",
+        "overview_url": "/excel-uploads/36364c89-afe7-4b63-bb9d-29be36d97368/overview.md",
+        "step5_requirements_url": "/excel-uploads/36364c89-afe7-4b63-bb9d-29be36d97368/step5_requirements.json",
+        "mapping_keys_url": "/excel-uploads/36364c89-afe7-4b63-bb9d-29be36d97368/mapping_keys.json"
+      },
+      "updated_at": "2025-11-10T10:31:15+00:00",
+      "created_at": "2025-11-10T10:25:24+00:00",
+      "tags": [],
+      "last_connection_id": "45e88073-70f5-4784-bd17-193b01b425c8",
+      "kind": "excel",
+      "mapping_keys": []
+    },
+    "0fced7e3-6b39-41b6-b04b-72b938cb9149": {
+      "id": "0fced7e3-6b39-41b6-b04b-72b938cb9149",
+      "name": "flipped_flow_meter_table",
+      "status": "approved",
+      "artifacts": {
+        "template_html_url": "/excel-uploads/0fced7e3-6b39-41b6-b04b-72b938cb9149/report_final.html",
+        "thumbnail_url": "/excel-uploads/0fced7e3-6b39-41b6-b04b-72b938cb9149/reference_p1.png",
+        "excel_url": "/excel-uploads/0fced7e3-6b39-41b6-b04b-72b938cb9149/source.xlsx",
+        "manifest_url": "/excel/0fced7e3-6b39-41b6-b04b-72b938cb9149/artifacts/manifest",
+        "render_png_url": "/excel-uploads/0fced7e3-6b39-41b6-b04b-72b938cb9149/reference_p1.png",
+        "mapping_step3_url": "/excel-uploads/0fced7e3-6b39-41b6-b04b-72b938cb9149/mapping_step3.json",
+        "constants_inlined_url": "/excel-uploads/0fced7e3-6b39-41b6-b04b-72b938cb9149/constant_replacements.json",
+        "final_html_url": "/excel-uploads/0fced7e3-6b39-41b6-b04b-72b938cb9149/report_final.html",
+        "overview_url": "/excel-uploads/0fced7e3-6b39-41b6-b04b-72b938cb9149/overview.md",
+        "step5_requirements_url": "/excel-uploads/0fced7e3-6b39-41b6-b04b-72b938cb9149/step5_requirements.json",
+        "mapping_keys_url": "/excel-uploads/0fced7e3-6b39-41b6-b04b-72b938cb9149/mapping_keys.json",
+        "contract_url": "/excel-uploads/0fced7e3-6b39-41b6-b04b-72b938cb9149/contract.json",
+        "generator_sql_pack_url": "/excel-uploads/0fced7e3-6b39-41b6-b04b-72b938cb9149/generator/sql_pack.sql",
+        "generator_output_schemas_url": "/excel-uploads/0fced7e3-6b39-41b6-b04b-72b938cb9149/generator/output_schemas.json",
+        "generator_assets_url": "/excel-uploads/0fced7e3-6b39-41b6-b04b-72b938cb9149/generator/generator_assets.json"
+      },
+      "updated_at": "2025-11-10T16:59:59+00:00",
+      "created_at": "2025-11-10T10:34:06+00:00",
+      "tags": [],
+      "last_connection_id": "45e88073-70f5-4784-bd17-193b01b425c8",
+      "kind": "excel",
+      "mapping_keys": [],
+      "generator": {
+        "dialect": "sqlite",
+        "params": {
+          "required": [
+            "start_ts_utc",
+            "end_ts_utc"
+          ],
+          "optional": []
+        },
+        "invalid": false,
+        "needs_user_fix": [],
+        "summary": {},
+        "updated_at": "2025-11-10T11:43:18+00:00"
+      },
+      "last_run_at": "2025-11-10T16:59:59+00:00"
+    },
+    "31a73f87-c372-4700-b14f-a257eaaa7fe2": {
+      "id": "31a73f87-c372-4700-b14f-a257eaaa7fe2",
+      "name": "CrystalReportViewer1 (7)",
+      "status": "approved",
+      "artifacts": {
+        "template_html_url": "/uploads/31a73f87-c372-4700-b14f-a257eaaa7fe2/report_final.html",
+        "thumbnail_url": "/uploads/31a73f87-c372-4700-b14f-a257eaaa7fe2/reference_p1.png",
+        "pdf_url": "/uploads/31a73f87-c372-4700-b14f-a257eaaa7fe2/source.pdf",
+        "schema_ext_url": "/uploads/31a73f87-c372-4700-b14f-a257eaaa7fe2/schema_ext.json",
+        "render_png_url": "/uploads/31a73f87-c372-4700-b14f-a257eaaa7fe2/render_p1_llm.png",
+        "render_after_png_url": "/uploads/31a73f87-c372-4700-b14f-a257eaaa7fe2/render_p1_after.png",
+        "fix_metrics_url": "/uploads/31a73f87-c372-4700-b14f-a257eaaa7fe2/fix_metrics.json",
+        "manifest_url": "/templates/31a73f87-c372-4700-b14f-a257eaaa7fe2/artifacts/manifest",
+        "mapping_step3_url": "/uploads/31a73f87-c372-4700-b14f-a257eaaa7fe2/mapping_step3.json",
+        "constants_inlined_url": "/uploads/31a73f87-c372-4700-b14f-a257eaaa7fe2/constant_replacements.json",
+        "final_html_url": "/uploads/31a73f87-c372-4700-b14f-a257eaaa7fe2/report_final.html",
+        "overview_url": "/uploads/31a73f87-c372-4700-b14f-a257eaaa7fe2/overview.md",
+        "step5_requirements_url": "/uploads/31a73f87-c372-4700-b14f-a257eaaa7fe2/step5_requirements.json",
+        "mapping_keys_url": "/uploads/31a73f87-c372-4700-b14f-a257eaaa7fe2/mapping_keys.json",
+        "contract_url": "/uploads/31a73f87-c372-4700-b14f-a257eaaa7fe2/contract.json",
+        "generator_sql_pack_url": "/uploads/31a73f87-c372-4700-b14f-a257eaaa7fe2/generator/sql_pack.sql",
+        "generator_output_schemas_url": "/uploads/31a73f87-c372-4700-b14f-a257eaaa7fe2/generator/output_schemas.json",
+        "generator_assets_url": "/uploads/31a73f87-c372-4700-b14f-a257eaaa7fe2/generator/generator_assets.json"
+      },
+      "updated_at": "2025-11-10T21:43:04+00:00",
+      "created_at": "2025-11-10T16:25:50+00:00",
+      "tags": [],
+      "last_connection_id": "4b38fc3a-1f06-40f3-bc5e-50c9ea5a1e74",
+      "kind": "pdf",
+      "mapping_keys": [
+        "recipe_code"
+      ],
+      "generator": {
+        "dialect": "sqlite",
+        "params": {
+          "required": [
+            "from_date",
+            "to_date",
+            "recipe_code"
+          ],
+          "optional": [
+            "plant_name",
+            "location",
+            "print_date",
+            "page_no",
+            "page_total"
+          ]
+        },
+        "invalid": false,
+        "needs_user_fix": [],
+        "summary": {},
+        "updated_at": "2025-11-10T16:46:58+00:00"
+      },
+      "last_run_at": "2025-11-10T21:43:04+00:00"
+    },
+    "9daa5c03-3636-456b-8fc6-80025a64c5ec": {
+      "id": "9daa5c03-3636-456b-8fc6-80025a64c5ec",
+      "name": "flipped_flow_meter_table",
+      "status": "draft",
+      "artifacts": {
+        "template_html_url": "/excel-uploads/9daa5c03-3636-456b-8fc6-80025a64c5ec/template_p1.html",
+        "thumbnail_url": "/excel-uploads/9daa5c03-3636-456b-8fc6-80025a64c5ec/reference_p1.png",
+        "xlsx_url": "/excel-uploads/9daa5c03-3636-456b-8fc6-80025a64c5ec/source.xlsx",
+        "manifest_url": "/excel/9daa5c03-3636-456b-8fc6-80025a64c5ec/artifacts/manifest",
+        "sample_rows_url": "/excel-uploads/9daa5c03-3636-456b-8fc6-80025a64c5ec/sample_rows.json",
+        "reference_html_url": "/excel-uploads/9daa5c03-3636-456b-8fc6-80025a64c5ec/reference_p1.html"
+      },
+      "updated_at": "2025-11-10T16:50:26+00:00",
+      "created_at": "2025-11-10T16:50:26+00:00",
+      "tags": [],
+      "last_connection_id": "4b38fc3a-1f06-40f3-bc5e-50c9ea5a1e74",
+      "kind": "excel",
+      "mapping_keys": []
+    },
+    "411eac38-0d44-4dc5-81af-36a137f7f393": {
+      "id": "411eac38-0d44-4dc5-81af-36a137f7f393",
+      "name": "CrystalReportViewer1 (7)",
+      "status": "approved",
+      "artifacts": {
+        "template_html_url": "/uploads/411eac38-0d44-4dc5-81af-36a137f7f393/report_final.html",
+        "thumbnail_url": "/uploads/411eac38-0d44-4dc5-81af-36a137f7f393/reference_p1.png",
+        "pdf_url": "/uploads/411eac38-0d44-4dc5-81af-36a137f7f393/source.pdf",
+        "schema_ext_url": "/uploads/411eac38-0d44-4dc5-81af-36a137f7f393/schema_ext.json",
+        "render_png_url": "/uploads/411eac38-0d44-4dc5-81af-36a137f7f393/render_p1_llm.png",
+        "render_after_png_url": "/uploads/411eac38-0d44-4dc5-81af-36a137f7f393/render_p1_after.png",
+        "fix_metrics_url": "/uploads/411eac38-0d44-4dc5-81af-36a137f7f393/fix_metrics.json",
+        "manifest_url": "/templates/411eac38-0d44-4dc5-81af-36a137f7f393/artifacts/manifest",
+        "mapping_step3_url": "/uploads/411eac38-0d44-4dc5-81af-36a137f7f393/mapping_step3.json",
+        "constants_inlined_url": "/uploads/411eac38-0d44-4dc5-81af-36a137f7f393/constant_replacements.json",
+        "final_html_url": "/uploads/411eac38-0d44-4dc5-81af-36a137f7f393/report_final.html",
+        "contract_url": "/uploads/411eac38-0d44-4dc5-81af-36a137f7f393/contract.json",
+        "overview_url": "/uploads/411eac38-0d44-4dc5-81af-36a137f7f393/overview.md",
+        "step5_requirements_url": "/uploads/411eac38-0d44-4dc5-81af-36a137f7f393/step5_requirements.json",
+        "generator_sql_pack_url": "/uploads/411eac38-0d44-4dc5-81af-36a137f7f393/generator/sql_pack.sql",
+        "generator_output_schemas_url": "/uploads/411eac38-0d44-4dc5-81af-36a137f7f393/generator/output_schemas.json",
+        "generator_assets_url": "/uploads/411eac38-0d44-4dc5-81af-36a137f7f393/generator/generator_assets.json",
+        "mapping_keys_url": "/uploads/411eac38-0d44-4dc5-81af-36a137f7f393/mapping_keys.json"
+      },
+      "updated_at": "2025-11-10T20:51:07+00:00",
+      "created_at": "2025-11-10T20:43:38+00:00",
+      "tags": [],
+      "last_connection_id": "4b38fc3a-1f06-40f3-bc5e-50c9ea5a1e74",
+      "kind": "pdf",
+      "mapping_keys": [
+        "recipe_code"
+      ],
+      "generator": {
+        "dialect": "sqlite",
+        "params": {
+          "required": [
+            "recipe_code",
+            "from_date",
+            "to_date"
+          ],
+          "optional": [
+            "plant_name",
+            "location",
+            "print_date",
+            "page_info"
+          ]
+        },
+        "invalid": false,
+        "needs_user_fix": [],
+        "summary": {},
+        "updated_at": "2025-11-10T20:51:07+00:00"
+      }
+    },
+    "9cb051af-7b33-4f27-b995-e77dd76a615d": {
+      "id": "9cb051af-7b33-4f27-b995-e77dd76a615d",
+      "name": "CrystalReportViewer1 (7)",
+      "status": "approved",
+      "artifacts": {
+        "template_html_url": "/uploads/9cb051af-7b33-4f27-b995-e77dd76a615d/report_final.html",
+        "thumbnail_url": "/uploads/9cb051af-7b33-4f27-b995-e77dd76a615d/reference_p1.png",
+        "pdf_url": "/uploads/9cb051af-7b33-4f27-b995-e77dd76a615d/source.pdf",
+        "schema_ext_url": "/uploads/9cb051af-7b33-4f27-b995-e77dd76a615d/schema_ext.json",
+        "render_png_url": "/uploads/9cb051af-7b33-4f27-b995-e77dd76a615d/render_p1_llm.png",
+        "render_after_png_url": "/uploads/9cb051af-7b33-4f27-b995-e77dd76a615d/render_p1_after.png",
+        "fix_metrics_url": "/uploads/9cb051af-7b33-4f27-b995-e77dd76a615d/fix_metrics.json",
+        "manifest_url": "/templates/9cb051af-7b33-4f27-b995-e77dd76a615d/artifacts/manifest",
+        "mapping_step3_url": "/uploads/9cb051af-7b33-4f27-b995-e77dd76a615d/mapping_step3.json",
+        "constants_inlined_url": "/uploads/9cb051af-7b33-4f27-b995-e77dd76a615d/constant_replacements.json",
+        "page_summary_url": "/uploads/9cb051af-7b33-4f27-b995-e77dd76a615d/page_summary.txt",
+        "final_html_url": "/uploads/9cb051af-7b33-4f27-b995-e77dd76a615d/report_final.html",
+        "contract_url": "/uploads/9cb051af-7b33-4f27-b995-e77dd76a615d/contract.json",
+        "overview_url": "/uploads/9cb051af-7b33-4f27-b995-e77dd76a615d/overview.md",
+        "step5_requirements_url": "/uploads/9cb051af-7b33-4f27-b995-e77dd76a615d/step5_requirements.json",
+        "generator_sql_pack_url": "/uploads/9cb051af-7b33-4f27-b995-e77dd76a615d/generator/sql_pack.sql",
+        "generator_output_schemas_url": "/uploads/9cb051af-7b33-4f27-b995-e77dd76a615d/generator/output_schemas.json",
+        "generator_assets_url": "/uploads/9cb051af-7b33-4f27-b995-e77dd76a615d/generator/generator_assets.json",
+        "mapping_keys_url": "/uploads/9cb051af-7b33-4f27-b995-e77dd76a615d/mapping_keys.json"
+      },
+      "updated_at": "2025-11-10T21:29:58+00:00",
+      "created_at": "2025-11-10T21:17:02+00:00",
+      "tags": [],
+      "last_connection_id": "4b38fc3a-1f06-40f3-bc5e-50c9ea5a1e74",
+      "kind": "pdf",
+      "mapping_keys": [],
+      "generator": {
+        "dialect": "sqlite",
+        "params": {
+          "required": [
+            "from_date",
+            "to_date",
+            "recipe_code",
+            "plant_name"
+          ],
+          "optional": [
+            "location",
+            "print_date",
+            "page_info"
+          ]
+        },
+        "invalid": true,
+        "needs_user_fix": [
+          "schema_mismatch:rows"
+        ],
+        "summary": {},
+        "updated_at": "2025-11-10T21:29:58+00:00"
+      }
     }
   },
   "last_used": {
     "connection_id": "4b38fc3a-1f06-40f3-bc5e-50c9ea5a1e74",
-    "template_id": "84024e2b-9a61-4e19-b1b7-420019d891ef",
-    "updated_at": "2025-10-30T10:47:17+00:00"
+    "template_id": "31a73f87-c372-4700-b14f-a257eaaa7fe2",
+    "updated_at": "2025-11-10T21:43:04+00:00"
   }
 }

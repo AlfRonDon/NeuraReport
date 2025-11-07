@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any, Collection, Mapping, Sequence
 
 from ..prompts.llm_prompts import PROMPT_VERSION_3_5, build_llm_call_3_5_prompt
+from ..prompts.llm_prompts_excel import EXCEL_PROMPT_VERSION_3_5, build_excel_llm_call_3_5_prompt
 from ..templates.TemplateVerify import MODEL, get_openai_client
 from ..utils import (
     call_chat_completion,
@@ -277,6 +278,9 @@ def run_corrections_preview(
     model_selector: str | None = None,
     mapping_override: Mapping[str, Any] | None = None,
     sample_tokens: Sequence[str] | None = None,
+    *,
+    prompt_builder=build_llm_call_3_5_prompt,
+    prompt_version: str = PROMPT_VERSION_3_5,
 ) -> dict[str, Any]:
     upload_dir = upload_dir.resolve()
     template_html_path = template_html_path.resolve()
@@ -464,7 +468,7 @@ def run_corrections_preview(
         mapping_sha,
         user_input_sha,
         model_name,
-        PROMPT_VERSION_3_5,
+        prompt_version,
     ]
     cache_key = hashlib.sha256("|".join(cache_components).encode("utf-8")).hexdigest()
 
@@ -512,7 +516,7 @@ def run_corrections_preview(
                     "artifacts": artifacts,
                 }
 
-    prompt_payload = build_llm_call_3_5_prompt(
+    prompt_payload = prompt_builder(
         template_html=template_html_original,
         schema=schema_payload,
         user_input=user_input or "",
@@ -558,7 +562,7 @@ def run_corrections_preview(
                 client,
                 model=model_name,
                 messages=messages,
-                description="llm_call_3_5",
+                description=prompt_version,
                 response_format={"type": "json_object"},
                 temperature=0.0,
             )
@@ -691,7 +695,7 @@ def run_corrections_preview(
 
     stage_document = {
         "cache_key": cache_key,
-        "prompt_version": PROMPT_VERSION_3_5,
+        "prompt_version": prompt_version,
         "model": model_name,
         "input_template_sha256": template_sha_before,
         "mapping_sha256": mapping_sha,

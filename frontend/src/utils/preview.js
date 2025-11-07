@@ -29,12 +29,22 @@ export const appendCacheBuster = (url, ts) => {
   }
 }
 
+export const getUploadsBase = (templateOrKind) => {
+  const kind =
+    typeof templateOrKind === 'string'
+      ? templateOrKind
+      : templateOrKind?.kind || templateOrKind?.templateKind || templateOrKind?.sourceKind
+  return kind === 'excel' ? 'excel-uploads' : 'uploads'
+}
+
 const ensureAbsolutePath = (template, path) => {
   if (!path || typeof path !== 'string') return null
   if (/^https?:\/\//i.test(path)) return path
   if (path.startsWith('/')) return path
   const templateId = template?.id || template?.templateId || template?.template_id
-  return templateId ? `/uploads/${templateId}/${path}` : path
+  if (!templateId) return path
+  const base = getUploadsBase(template)
+  return `/${base}/${templateId}/${path}`
 }
 
 const pickFirst = (candidates) => candidates.find((item) => typeof item === 'string' && item.length > 0) || null

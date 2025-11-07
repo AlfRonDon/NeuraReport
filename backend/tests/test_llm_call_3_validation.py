@@ -65,6 +65,78 @@ def test_llm_call_3_happy_path(monkeypatch):
     assert result.prompt_meta["cache_key"] == "cache-key-1"
 
 
+def test_llm_call_3_allows_missing_tokens_when_enabled(monkeypatch):
+    html = "<html><body><table><tr><td>DATE</td></tr></table></body></html>"
+    catalog = ["neuract__Flowmeters.timestamp_utc"]
+    schema = _basic_schema()
+
+    payload = {
+        "mapping": {"date": "neuract__Flowmeters.timestamp_utc"},
+        "token_samples": {},
+        "meta": {"unresolved": [], "hints": {}},
+    }
+
+    monkeypatch.setattr(AutoMapInline, "call_chat_completion", lambda *args, **kwargs: _dummy_response(payload))
+    monkeypatch.setattr(AutoMapInline, "get_openai_client", lambda: object())
+
+    result_default = AutoMapInline.run_llm_call_3(
+        html,
+        catalog,
+        schema,
+        llm_prompts.PROMPT_VERSION,
+        png_path="",
+        cache_key="cache-key-missing-tokens",
+    )
+    assert result_default.mapping == {}
+
+    result_allowed = AutoMapInline.run_llm_call_3(
+        html,
+        catalog,
+        schema,
+        llm_prompts.PROMPT_VERSION,
+        png_path="",
+        cache_key="cache-key-missing-tokens-allowed",
+        allow_missing_tokens=True,
+    )
+    assert result_allowed.mapping == {"date": "neuract__Flowmeters.timestamp_utc"}
+
+
+def test_llm_call_3_allows_extra_token_samples_when_flag_set(monkeypatch):
+    html = "<html><body><table><tr><td>DATE</td></tr></table></body></html>"
+    catalog = ["neuract__Flowmeters.timestamp_utc"]
+    schema = _basic_schema()
+
+    payload = {
+        "mapping": {"date": "neuract__Flowmeters.timestamp_utc"},
+        "token_samples": {"date": "2024-01-01"},
+        "meta": {"unresolved": [], "hints": {}},
+    }
+
+    monkeypatch.setattr(AutoMapInline, "call_chat_completion", lambda *args, **kwargs: _dummy_response(payload))
+    monkeypatch.setattr(AutoMapInline, "get_openai_client", lambda: object())
+
+    with pytest.raises(MappingInlineValidationError):
+        AutoMapInline.run_llm_call_3(
+            html,
+            catalog,
+            schema,
+            llm_prompts.PROMPT_VERSION,
+            png_path="",
+            cache_key="cache-key-extra-token-samples",
+        )
+
+    result_allowed = AutoMapInline.run_llm_call_3(
+        html,
+        catalog,
+        schema,
+        llm_prompts.PROMPT_VERSION,
+        png_path="",
+        cache_key="cache-key-extra-token-samples-allowed",
+        allow_missing_tokens=True,
+    )
+    assert result_allowed.mapping == {"date": "neuract__Flowmeters.timestamp_utc"}
+
+
 def test_llm_call_3_coerces_report_filters_to_input_sample(monkeypatch):
     html = "<html><body><p>{from_date}</p><p>{to_date}</p></body></html>"
     catalog: list[str] = []

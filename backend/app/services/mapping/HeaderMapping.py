@@ -16,6 +16,21 @@ REPORT_SELECTED_DISPLAY = "To Be Selected in report generator"
 UNRESOLVED_CHOICES = {UNRESOLVED, INPUT_SAMPLE, REPORT_SELECTED_VALUE}
 
 
+def _detect_measurement_table(tables: list[str], cols: Dict[str, list[str]]) -> str | None:
+    """Return the name of a wide measurement table (e.g., neuract__Flowmeters) if present."""
+    for table in tables:
+        lower_name = table.lower()
+        if "flowmeter" not in lower_name and "flowmeters" not in lower_name and not lower_name.startswith("neuract__"):
+            continue
+        column_names = cols.get(table) or []
+        if len(column_names) < 3:
+            continue
+        timestamp_like = any("timestamp" in c.lower() or c.lower().endswith("_utc") for c in column_names)
+        if timestamp_like:
+            return table
+    return None
+
+
 def get_parent_child_info(db_path: Path) -> Dict[str, object]:
     """Inspect the SQLite database and infer suitable parent/child tables.
 
@@ -55,6 +70,25 @@ def get_parent_child_info(db_path: Path) -> Dict[str, object]:
         for table in tables:
             cur.execute(f"PRAGMA table_info('{table}')")
             cols[table] = [row[1] for row in cur.fetchall()]
+
+        # Additional case: wide measurement tables (e.g., neuract__Flowmeters)
+        measurement_table = _detect_measurement_table(tables, cols)
+        if measurement_table:
+            measurement_cols = cols.get(measurement_table, [])
+            if not measurement_cols:
+                cur.execute(f"PRAGMA table_info('{measurement_table}')")
+                measurement_cols = [row[1] for row in cur.fetchall()]
+            lower_cols = [c.lower() for c in measurement_cols]
+            timestamp_cols = [c for c in measurement_cols if "timestamp" in c.lower() or c.lower().endswith("_utc")]
+            if not timestamp_cols and measurement_cols:
+                timestamp_cols = [measurement_cols[0]]
+            return {
+                "child table": measurement_table,
+                "parent table": measurement_table,
+                "child_columns": measurement_cols,
+                "parent_columns": measurement_cols,
+                "common_names": sorted(set(timestamp_cols) if timestamp_cols else set(measurement_cols)),
+            }
 
         # preferred pair by name
         preferred_child, preferred_parent = "batch_lines", "batches"

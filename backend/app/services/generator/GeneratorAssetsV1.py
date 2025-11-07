@@ -4,9 +4,9 @@ import json
 import logging
 import re
 from pathlib import Path
-from typing import Any, Iterable, Mapping, Sequence
+from typing import Any, Iterable, Mapping, Sequence, Callable, Optional
 
-from ..prompts.llm_prompts import get_prompt_generator_assets
+from ..prompts.llm_prompts import get_prompt_generator_assets as get_pdf_prompt_generator_assets
 from ..templates.TemplateVerify import get_openai_client
 from ..utils import write_artifact_manifest, write_json_atomic, write_text_atomic
 from ..utils.llm import call_chat_completion
@@ -152,6 +152,138 @@ def _prepare_step4_for_prompt(step4_output: Mapping[str, Any]) -> dict[str, Any]
 
 
 _JSON_FENCE_RE = re.compile(r"```(?:json)?\s*(\{.*\})\s*```", re.DOTALL | re.IGNORECASE)
+_JSON_ARRAY_CLOSURE_FIXES: tuple[tuple[str, str], ...] = (
+    ("\n    },\n    \"row_computed\"", "\n    ],\n    \"row_computed\""),
+    ("\n    },\n    \"header_tokens\"", "\n    ],\n    \"header_tokens\""),
+    ("\n    },\n    \"row_tokens\"", "\n    ],\n    \"row_tokens\""),
+    ("\n    },\n    \"row_order\"", "\n    ],\n    \"row_order\""),
+)
+
+
+def _repair_generator_json(text: str) -> Mapping[str, Any] | None:
+    """
+    Attempt to repair simple LLM mistakes where arrays are closed with `}` instead of `]`.
+    """
+    working = text
+    max_attempts = len(_JSON_ARRAY_CLOSURE_FIXES) + 1
+    for _ in range(max_attempts):
+        try:
+            return json.loads(working)
+        except json.JSONDecodeError:
+            replaced = False
+            for needle, replacement in _JSON_ARRAY_CLOSURE_FIXES:
+                if needle in working:
+                    working = working.replace(needle, replacement, 1)
+                    replaced = True
+                    break
+            if not replaced:
+                return None
+    try:
+        return json.loads(working)
+    except json.JSONDecodeError:
+        return None
+
+
+def _ensure_reshape_rule_purpose(contract: Mapping[str, Any]) -> None:
+    """
+    Backfill reshape rule purpose strings when the LLM omits them.
+    """
+    reshape_rules = contract.get("reshape_rules")
+    if not isinstance(reshape_rules, list):
+        return
+    for idx, rule in enumerate(reshape_rules):
+        if not isinstance(rule, dict):
+            continue
+        purpose = rule.get("purpose")
+        if isinstance(purpose, str) and purpose.strip():
+            continue
+        alias = str(rule.get("alias") or "").strip()
+        strategy = str(rule.get("strategy") or "").strip()
+        if alias and strategy:
+            summary = f"{alias} {strategy} rule"
+        elif alias:
+            summary = f"{alias} reshape rule"
+        elif strategy:
+            summary = f"{strategy} reshape rule"
+        else:
+            summary = f"Reshape rule {idx + 1}"
+        rule["purpose"] = summary[:120]
+
+
+def _ensure_row_order(contract: Mapping[str, Any]) -> None:
+    """
+    Normalise row_order to a non-empty list, deriving it from order_by when omitted.
+    """
+    row_order_raw = contract.get("row_order")
+    cleaned: list[str] = []
+    if isinstance(row_order_raw, str):
+        text = row_order_raw.strip()
+        if text:
+            cleaned = [text]
+    elif isinstance(row_order_raw, list):
+        cleaned = [str(item).strip() for item in row_order_raw if str(item or "").strip()]
+
+    order_block = contract.get("order_by")
+    rows_spec: Any = None
+    if isinstance(order_block, Mapping):
+        rows_spec = order_block.get("rows")
+    elif isinstance(order_block, list):
+        rows_spec = list(order_block)
+        contract["order_by"] = {"rows": list(rows_spec)}
+    elif isinstance(order_block, str) and order_block.strip():
+        rows_spec = [order_block.strip()]
+        contract["order_by"] = {"rows": list(rows_spec)}
+    else:
+        contract["order_by"] = {"rows": []}
+    if isinstance(rows_spec, list):
+        rows_order = [str(item).strip() for item in rows_spec if str(item or "").strip()]
+    elif isinstance(rows_spec, str) and rows_spec.strip():
+        rows_order = [rows_spec.strip()]
+        contract["order_by"]["rows"] = rows_order
+    else:
+        rows_order = []
+
+    contract["row_order"] = cleaned or rows_order or ["ROWID"]
+
+
+def _normalize_contract_join(contract: Mapping[str, Any]) -> None:
+    """
+    Drop or sanitise join blocks that the LLM emits with blank keys so schema validation
+    is not tripped up by placeholder values.
+    """
+    join = contract.get("join")
+    if not isinstance(join, Mapping):
+        return
+
+    parent_table = str(join.get("parent_table") or "").strip()
+    parent_key = str(join.get("parent_key") or "").strip()
+    child_table = str(join.get("child_table") or "").strip()
+    child_key = str(join.get("child_key") or "").strip()
+
+    if not parent_table or not parent_key:
+        if any((parent_table, parent_key, child_table, child_key)):
+            logger.info(
+                "generator_contract_join_dropped",
+                extra={
+                    "event": "generator_contract_join_dropped",
+                    "parent_table": parent_table,
+                    "parent_key": parent_key,
+                    "child_table": child_table,
+                    "child_key": child_key,
+                },
+            )
+        contract.pop("join", None)
+        return
+
+    normalized_join: dict[str, str] = {
+        "parent_table": parent_table,
+        "parent_key": parent_key,
+    }
+    if child_table and child_key:
+        normalized_join["child_table"] = child_table
+        normalized_join["child_key"] = child_key
+
+    contract["join"] = normalized_join
 
 
 def _parse_generator_response(raw_text: str) -> dict[str, Any]:
@@ -164,6 +296,9 @@ def _parse_generator_response(raw_text: str) -> dict[str, Any]:
     try:
         return json.loads(text)
     except json.JSONDecodeError as exc:
+        repaired_payload = _repair_generator_json(text)
+        if repaired_payload is not None:
+            return repaired_payload
         start = text.find("{")
         end = text.rfind("}")
         if start != -1 and end != -1 and end > start:
@@ -175,8 +310,11 @@ def _parse_generator_response(raw_text: str) -> dict[str, Any]:
         raise GeneratorAssetsError(f"Generator response was not valid JSON: {exc}") from exc
 
 
-def _prepare_messages(payload: dict[str, Any]) -> list[dict[str, str]]:
-    prompts = get_prompt_generator_assets()
+def _prepare_messages(
+    payload: dict[str, Any],
+    prompt_getter: Callable[[], dict[str, str]],
+) -> list[dict[str, str]]:
+    prompts = prompt_getter() or {}
     system_text = prompts.get("system") or "You generate SQL packs."
     user_template = prompts.get("user")
     user_payload = json.dumps(payload, ensure_ascii=False, indent=2)
@@ -184,7 +322,10 @@ def _prepare_messages(payload: dict[str, Any]) -> list[dict[str, str]]:
         user_text = user_template.replace("{payload}", user_payload)
     else:
         user_text = f"{user_template or ''}\n{user_payload}"
-    user_text = f"{user_text.strip()}\n\nIMPORTANT: Output strictly valid JSON. Use double quotes for every key and string value. Do not include trailing commas or comments."
+    user_text = (
+        f"{user_text.strip()}\n\nIMPORTANT: Output strictly valid JSON. Use double quotes for every key and string "
+        f"value. Do not include trailing commas or comments."
+    )
     return [
         {"role": "system", "content": system_text},
         {"role": "user", "content": user_text.strip()},
@@ -262,12 +403,14 @@ def build_generator_assets_from_payload(
     step4_output: Mapping[str, Any],
     final_template_html: str,
     reference_pdf_image: Any = None,
+    reference_worksheet_html: str | None = None,
     catalog_allowlist: Iterable[str] | None = None,
     params_spec: Sequence[str] | None = None,
     sample_params: Mapping[str, Any] | None = None,
     force_rebuild: bool = False,
     dialect: str | None = None,
     key_tokens: Iterable[str] | None = None,
+    prompt_getter: Optional[Callable[[], dict[str, str]]] = None,
 ) -> dict[str, Any]:
     template_dir = Path(template_dir)
     template_dir.mkdir(parents=True, exist_ok=True)
@@ -280,6 +423,8 @@ def build_generator_assets_from_payload(
 
     request_payload = {
         "final_template_html": final_template_html,
+        # For PDF-driven flows, this conveys the raster reference. For Excel flows,
+        # callers may supply `reference_worksheet_html` instead (preferred).
         "reference_pdf_image": reference_pdf_image,
         "step4_output": step4_prompt_payload,
         "catalog_allowlist": catalog_list,
@@ -288,12 +433,15 @@ def build_generator_assets_from_payload(
         "force_rebuild": bool(force_rebuild),
         "key_tokens": _normalized_tokens(key_tokens),
     }
+    if isinstance(reference_worksheet_html, str) and reference_worksheet_html.strip():
+        request_payload["reference_worksheet_html"] = reference_worksheet_html
 
     client = get_openai_client()
     if client is None:
         raise GeneratorAssetsError("OpenAI client is not configured.")
 
-    messages = _prepare_messages(request_payload)
+    prompt_factory = prompt_getter or get_pdf_prompt_generator_assets
+    messages = _prepare_messages(request_payload, prompt_factory)
     try:
         raw_response = call_chat_completion(
             client,
@@ -317,6 +465,9 @@ def build_generator_assets_from_payload(
     if not isinstance(contract, Mapping) or not contract:
         raise GeneratorAssetsError("Generator LLM response did not include a contract payload.")
     try:
+        _ensure_reshape_rule_purpose(contract)
+        _ensure_row_order(contract)
+        _normalize_contract_join(contract)
         validate_contract_v2(contract)
     except Exception as exc:
         raise GeneratorAssetsError(f"Generator contract failed validation: {exc}") from exc

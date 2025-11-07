@@ -1,9 +1,59 @@
 import { create } from 'zustand'
 
+const DISCOVERY_STORAGE_KEY = 'neura.discovery.v1'
+
+const defaultDiscoveryState = { results: {}, meta: null }
+
+const loadDiscoveryFromStorage = () => {
+  if (typeof window === 'undefined') return defaultDiscoveryState
+  try {
+    const raw = window.localStorage.getItem(DISCOVERY_STORAGE_KEY)
+    if (!raw) return defaultDiscoveryState
+    const parsed = JSON.parse(raw)
+    const results =
+      parsed && parsed.results && typeof parsed.results === 'object' ? parsed.results : {}
+    const meta = parsed && parsed.meta && typeof parsed.meta === 'object' ? parsed.meta : null
+    return { results, meta }
+  } catch {
+    return defaultDiscoveryState
+  }
+}
+
+const persistDiscoveryToStorage = (results, meta) => {
+  if (typeof window === 'undefined') return
+  try {
+    window.localStorage.setItem(
+      DISCOVERY_STORAGE_KEY,
+      JSON.stringify({
+        results: results && typeof results === 'object' ? results : {},
+        meta: meta && typeof meta === 'object' ? meta : null,
+        ts: Date.now(),
+      }),
+    )
+  } catch {
+    // swallow storage errors (private mode, quota, etc.)
+  }
+}
+
+const clearDiscoveryStorage = () => {
+  if (typeof window === 'undefined') return
+  try {
+    window.localStorage.removeItem(DISCOVERY_STORAGE_KEY)
+  } catch {
+    // swallow
+  }
+}
+
+const discoveryInitial = loadDiscoveryFromStorage()
+
 export const useAppStore = create((set, get) => ({
   // Setup nav (left navigation panes)
   setupNav: 'connect', // 'connect' | 'generate' | 'templates'
   setSetupNav: (pane) => set({ setupNav: pane }),
+
+  templateKind: 'pdf', // 'pdf' | 'excel'
+  setTemplateKind: (kind) =>
+    set({ templateKind: kind === 'excel' ? 'excel' : 'pdf' }),
 
   // Setup flow gating
   setupStep: 'connect', // 'connect' | 'upload' | 'mapping' | 'approve'
@@ -141,11 +191,77 @@ export const useAppStore = create((set, get) => ({
         activeConnection,
         templateId: Object.prototype.hasOwnProperty.call(next, 'templateId')
           ? next.templateId
-          : state.templateId,
+        : state.templateId,
       }
     }),
+
+  // Discovery list sharing
+  discoveryResults: discoveryInitial.results,
+  discoveryMeta: discoveryInitial.meta,
+  discoveryFinding: false,
+  setDiscoveryResults: (results, meta) =>
+    set((state) => {
+      const nextResults =
+        results && typeof results === 'object' ? results : defaultDiscoveryState.results
+      const nextMeta = meta
+        ? { ...(state.discoveryMeta || {}), ...meta }
+        : state.discoveryMeta
+      persistDiscoveryToStorage(nextResults, nextMeta)
+      return { discoveryResults: nextResults, discoveryMeta: nextMeta }
+    }),
+  setDiscoveryMeta: (meta) =>
+    set((state) => {
+      if (!meta || typeof meta !== 'object') return {}
+      const nextMeta = { ...(state.discoveryMeta || {}), ...meta }
+      persistDiscoveryToStorage(state.discoveryResults, nextMeta)
+      return { discoveryMeta: nextMeta }
+    }),
+  clearDiscoveryResults: () =>
+    set(() => {
+      clearDiscoveryStorage()
+      return {
+        discoveryResults: defaultDiscoveryState.results,
+        discoveryMeta: defaultDiscoveryState.meta,
+      }
+    }),
+  updateDiscoveryBatchSelection: (tplId, batchIdx, selected) =>
+    set((state) => {
+      const target = state.discoveryResults?.[tplId]
+      if (!target || !Array.isArray(target.batches)) return {}
+      const nextBatches = target.batches.map((batch, idx) =>
+        idx === batchIdx ? { ...batch, selected } : batch,
+      )
+      const nextResults = {
+        ...state.discoveryResults,
+        [tplId]: { ...target, batches: nextBatches },
+      }
+      persistDiscoveryToStorage(nextResults, state.discoveryMeta)
+      return { discoveryResults: nextResults }
+    }),
+  setDiscoveryFinding: (flag = false) => set({ discoveryFinding: !!flag }),
 }))
 
 if (typeof window !== 'undefined') {
   window.__NEURA_APP_STORE__ = useAppStore
+  window.addEventListener('storage', (event) => {
+    if (event.key !== DISCOVERY_STORAGE_KEY) return
+    try {
+      const parsed = event.newValue ? JSON.parse(event.newValue) : null
+      useAppStore.setState({
+        discoveryResults:
+          parsed && parsed.results && typeof parsed.results === 'object'
+            ? parsed.results
+            : defaultDiscoveryState.results,
+        discoveryMeta:
+          parsed && parsed.meta && typeof parsed.meta === 'object'
+            ? parsed.meta
+            : defaultDiscoveryState.meta,
+      })
+    } catch {
+      useAppStore.setState({
+        discoveryResults: defaultDiscoveryState.results,
+        discoveryMeta: defaultDiscoveryState.meta,
+      })
+    }
+  })
 }

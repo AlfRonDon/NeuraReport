@@ -1,11 +1,12 @@
 import Grid from '@mui/material/Grid2'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Box, Typography, Stack, Button, TextField, Chip, Divider, LinearProgress,
   Card, CardActionArea, CardContent, Autocomplete, Tooltip, Dialog, DialogContent, DialogTitle,
-  CircularProgress, Checkbox, Alert, Collapse,
+  CircularProgress, Alert,
 } from '@mui/material'
 import { Stepper, Step, StepLabel } from '@mui/material'
+import { alpha } from '@mui/material/styles'
 import SearchIcon from '@mui/icons-material/Search'
 import RocketLaunchIcon from '@mui/icons-material/RocketLaunch'
 import OpenInNewIcon from '@mui/icons-material/OpenInNew'
@@ -14,12 +15,20 @@ import FolderOpenIcon from '@mui/icons-material/FolderOpen'
 import ReplayIcon from '@mui/icons-material/Replay'
 import CheckRoundedIcon from '@mui/icons-material/CheckRounded'
 import ListAltIcon from '@mui/icons-material/ListAlt'
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker'
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { isMock, API_BASE, withBase, listApprovedTemplates, deleteTemplate as deleteTemplateRequest, fetchTemplateKeyOptions } from '../../api/client'
+import {
+  isMock,
+  withBase,
+  listApprovedTemplates,
+  deleteTemplate as deleteTemplateRequest,
+  fetchTemplateKeyOptions,
+  discoverReports,
+  runReport,
+  normalizeRunArtifacts,
+} from '../../api/client'
 import * as mock from '../../api/mock'
 import { savePersistedCache } from '../../hooks/useBootstrapState.js'
 import { useAppStore } from '../../store/useAppStore'
@@ -32,12 +41,16 @@ import EmptyState from '../../components/feedback/EmptyState.jsx'
 import LoadingState from '../../components/feedback/LoadingState.jsx'
 import InfoTooltip from '../../components/common/InfoTooltip.jsx'
 import TOOLTIP_COPY from '../../content/tooltipCopy.jsx'
+import DiscoveryListsPanel from './DiscoveryListsPanel.jsx'
 
 /* ----------------------- helpers ----------------------- */
 const ALL_OPTION = '__ALL__'
 
 const toSqlFromDayjs = (d) => (d && d.isValid && d.isValid())
   ? d.format('YYYY-MM-DD HH:mm:00')
+  : ''
+const formatDisplayDate = (d) => (d && typeof d?.isValid === 'function' && d.isValid())
+  ? d.format('MMM D, YYYY h:mm A')
   : ''
 
 const includeConn = (body, connectionId) =>
@@ -103,39 +116,11 @@ const formatTokenLabel = (token) => {
     .trim()
     .replace(/(^|\s)([a-z])/g, (match, prefix, char) => `${prefix}${char.toUpperCase()}`)
 }
-
-async function discoverReportsAPI({ templateId, startDate, endDate, connectionId, keyValues }) {
-  if (!API_BASE) throw new Error('VITE_API_BASE_URL is not set')
-  const base = {
-    template_id: templateId,
-    start_date: toSqlFromDayjs(startDate),
-    end_date: toSqlFromDayjs(endDate),
-  }
-  const res = await fetch(`${API_BASE}/reports/discover`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(addKeyValues(includeConn(base, connectionId), keyValues)),
-  })
-  if (!res.ok) throw new Error(await res.text().catch(()=>`Discovery failed (${res.status})`))
-  return res.json()
-}
-
-// 🔻 backend: /reports/run
-async function runReportAPI({ templateId, startDate, endDate, batchIds, connectionId, keyValues }) {
-  if (!API_BASE) throw new Error('VITE_API_BASE_URL is not set')
-  const base = {
-    template_id: templateId,
-    start_date: toSqlFromDayjs(startDate),
-    end_date: toSqlFromDayjs(endDate),
-    batch_ids: (batchIds && batchIds.length) ? batchIds : null,
-  }
-  const res = await fetch(`${API_BASE}/reports/run`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(addKeyValues(includeConn(base, connectionId), keyValues)),
-  })
-  if (!res.ok) throw new Error(await res.text().catch(()=>`Run failed (${res.status})`))
-  return res.json()
+const getTemplateKind = (template) => (template?.kind === 'excel' ? 'excel' : 'pdf')
+const formatCount = (value) => {
+  const num = Number(value || 0)
+  if (!Number.isFinite(num)) return '0'
+  return num.toLocaleString()
 }
 /* ------------------------------------------------------ */
 const surfaceStackSx = {
@@ -228,7 +213,7 @@ function TemplatePicker({ selected, onToggle, tagFilter, setTagFilter }) {
     <Grid container spacing={2}>
       {filtered.map((t) => {
         const selectedState = selected.includes(t.id)
-        const type = t.sourceType?.toUpperCase() || 'PDF'
+        const type = getTemplateKind(t).toUpperCase()
         const previewInfo = resolveTemplatePreviewUrl(t)
         const thumbnailInfo = resolveTemplateThumbnailUrl(t)
         const htmlPreview = previewInfo.url
@@ -480,7 +465,7 @@ function TemplatePicker({ selected, onToggle, tagFilter, setTagFilter }) {
       <Grid container spacing={2}>
         {filtered.map((t) => {
           const selectedState = selected.includes(t.id)
-          const type = t.sourceType?.toUpperCase() || 'PDF'
+          const type = getTemplateKind(t).toUpperCase()
           const previewInfo = resolveTemplatePreviewUrl(t)
           const thumbnailInfo = resolveTemplateThumbnailUrl(t)
           const htmlPreview = previewInfo.url
@@ -684,45 +669,63 @@ function TemplatePicker({ selected, onToggle, tagFilter, setTagFilter }) {
   )
 }
 
-function GenerateAndDownload({ selected, selectedTemplates, autoType, start, end, setStart, setEnd, onFind, findDisabled, finding, results, onToggleBatch, onGenerate, canGenerate, generateLabel, generation, onRetryGeneration = () => {}, keyValues = {}, onKeyValueChange = () => {}, keysReady = true, keyOptions = {}, keyOptionsLoading = {} }) {
+function GenerateAndDownload({ selected, selectedTemplates, autoType, start, end, setStart, setEnd, onFind, findDisabled, finding, results, onGenerate, canGenerate, generateLabel, generation, onRetryGeneration = () => {}, keyValues = {}, onKeyValueChange = () => {}, keysReady = true, keyOptions = {}, keyOptionsLoading = {}, onOpenDiscovery = () => {} }) {
   const valid = selectedTemplates.length > 0 && !!start && !!end && end.valueOf() >= start.valueOf()
   const { downloads } = useAppStore()
   const targetNames = Object.values(results).map((r) => r.name)
   const subline = targetNames.length
     ? `${targetNames.slice(0, 3).join(', ')}${targetNames.length > 3 ? ', ...' : ''}`
     : ''
-  const templatesWithKeys = useMemo(() => (
-    selectedTemplates
-      .map((tpl) => {
-        const mappingTokens = Array.isArray(tpl?.mappingKeys)
-          ? tpl.mappingKeys.map((token) => (typeof token === 'string' ? token.trim() : '')).filter(Boolean)
-          : []
-        const templateOptions = keyOptions[tpl.id] || {}
-        const sourceTokens = mappingTokens.length ? mappingTokens : Object.keys(templateOptions)
-        if (!sourceTokens.length) return null
-        const tokens = sourceTokens.map((token) => ({
-          name: token,
-          required: mappingTokens.includes(token),
-          options: templateOptions[token] || [],
-        }))
-        return { tpl, tokens }
-      })
-      .filter(Boolean)
-  ), [selectedTemplates, keyOptions])
-  const [discoveryOpen, setDiscoveryOpen] = useState(false)
+  const templatesWithKeys = useMemo(
+    () =>
+      selectedTemplates
+        .map((tpl) => {
+          const mappingTokens = Array.isArray(tpl?.mappingKeys)
+            ? tpl.mappingKeys.map((token) => (typeof token === 'string' ? token.trim() : '')).filter(Boolean)
+            : []
+          const templateOptions = keyOptions[tpl.id] || {}
+          const sourceTokens = mappingTokens.length ? mappingTokens : Object.keys(templateOptions)
+          if (!sourceTokens.length) return null
+          const tokens = sourceTokens.map((token) => ({
+            name: token,
+            required: mappingTokens.includes(token),
+            options: templateOptions[token] || [],
+          }))
+          return { tpl, tokens }
+        })
+        .filter(Boolean),
+    [selectedTemplates, keyOptions],
+  )
   const resultCount = useMemo(() => Object.keys(results).length, [results])
-
-  useEffect(() => {
-    if (finding) setDiscoveryOpen(true)
-  }, [finding])
-
-  useEffect(() => {
-    if (resultCount > 0) setDiscoveryOpen(true)
-  }, [resultCount])
-
   const keyPanelVisible = templatesWithKeys.length > 0 && resultCount > 0
-  const keysMissing = keyPanelVisible && !keysReady
-  const handleToggleDiscovery = () => setDiscoveryOpen((prev) => !prev)
+  const discoverySummary = useMemo(() => {
+    const entries = Object.values(results || {})
+    if (!entries.length) return null
+    return entries.reduce(
+      (acc, entry) => {
+        const batches = typeof entry.batches_count === 'number'
+          ? entry.batches_count
+          : Array.isArray(entry.batches)
+            ? entry.batches.length
+            : 0
+        const rows = typeof entry.rows_total === 'number'
+          ? entry.rows_total
+          : Array.isArray(entry.batches)
+            ? entry.batches.reduce((sum, batch) => sum + (batch.rows || 0), 0)
+            : 0
+        const selectedBatches = Array.isArray(entry.batches)
+          ? entry.batches.filter((batch) => batch.selected).length
+          : 0
+        return {
+          templates: acc.templates + 1,
+          batches: acc.batches + batches,
+          rows: acc.rows + rows,
+          selected: acc.selected + selectedBatches,
+        }
+      },
+      { templates: 0, batches: 0, rows: 0, selected: 0 },
+    )
+  }, [results])
   return (
     <>
       <Surface sx={surfaceStackSx}>
@@ -812,112 +815,63 @@ function GenerateAndDownload({ selected, selectedTemplates, autoType, start, end
           </Stack>
         </LocalizationProvider>
 
-        <Button
-          variant="outlined"
-          size="small"
-          startIcon={<ListAltIcon />}
-          endIcon={
-            <ExpandMoreIcon
-              sx={{
-                transform: discoveryOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-                transition: 'transform 160ms ease',
-              }}
-            />
+        <Tooltip
+          title={
+            resultCount > 0
+              ? 'Open the full discovery list panel'
+              : 'Run Find Reports to populate discovery lists'
           }
-          onClick={handleToggleDiscovery}
-          aria-expanded={discoveryOpen}
-          aria-controls="discovery-results-panel"
-          sx={{ alignSelf: { xs: 'stretch', sm: 'flex-start' } }}
         >
-          Discovery Lists
-        </Button>
+          <span>
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={<ListAltIcon />}
+              endIcon={<OpenInNewIcon />}
+              onClick={onOpenDiscovery}
+              disabled={resultCount === 0 && !finding}
+              sx={{ alignSelf: { xs: 'stretch', sm: 'flex-start' } }}
+            >
+              Discovery Lists
+            </Button>
+          </span>
+        </Tooltip>
+        {finding ? (
+          <Stack spacing={1.25} sx={{ mt: 1.5 }}>
+            <LinearProgress />
+            <Typography variant="body2" color="text.secondary">
+              Searching data...
+            </Typography>
+          </Stack>
+        ) : discoverySummary ? (
+          <Alert severity="success" sx={{ mt: 1.5 }}>
+            {`${formatCount(discoverySummary.templates)} ${discoverySummary.templates === 1 ? 'template' : 'templates'} \u2022 ${formatCount(discoverySummary.batches)} ${discoverySummary.batches === 1 ? 'batch' : 'batches'} \u2022 ${formatCount(discoverySummary.rows)} rows`}
+            <Typography component="span" variant="body2" sx={{ display: 'block', mt: 0.5 }}>
+              {discoverySummary.selected > 0
+                ? `${formatCount(discoverySummary.selected)} batch${discoverySummary.selected === 1 ? '' : 'es'} selected for run`
+                : 'No batches selected yet. Update selections in the discovery panel.'}
+            </Typography>
+          </Alert>
+        ) : (
+          <Alert severity="info" sx={{ mt: 1.5 }}>
+            No discovery results yet. Run Find Reports after setting your date range.
+          </Alert>
+        )}
 
-        <Collapse in={discoveryOpen} timeout="auto" unmountOnExit>
-          <Box
-            id="discovery-results-panel"
-            role="region"
-            aria-label="Discovery results"
-            sx={{ mt: 2 }}
-          >
-            {finding ? (
-              <Stack spacing={1.25} sx={{ mt: 1.5 }}>
-                <LinearProgress />
-                <Typography variant="body2" color="text.secondary">
-                  Searching data...
-                </Typography>
-              </Stack>
-            ) : resultCount > 0 ? (
-              <Stack spacing={1.5} sx={{ mt: 1.5 }}>
-                {Object.keys(results).map((tid) => {
-                  const r = results[tid]
-                  const total = r.rows_total ?? r.batches.reduce((a, b) => a + (b.rows || 0), 0)
-                  const count = r.batches_count ?? r.batches.length
-                  return (
-                    <Box
-                      key={tid}
-                      sx={{
-                        border: '1px solid',
-                        borderColor: 'divider',
-                        borderRadius: 1,
-                        p: 1.5,
-                        bgcolor: 'background.paper',
-                      }}
-                    >
-                      <Typography variant="subtitle2">{r.name}</Typography>
-                      {r.batches.length ? (
-                        <Stack spacing={1} sx={{ mt: 1.25 }}>
-                          <Typography variant="body2" color="text.secondary">
-                            {count} {count === 1 ? 'batch' : 'batches'} found ({total} rows)
-                          </Typography>
-                          {r.batches.map((b, idx) => (
-                            <Stack
-                              key={b.id || idx}
-                              direction={{ xs: 'column', sm: 'row' }}
-                              spacing={1}
-                              alignItems={{ xs: 'flex-start', sm: 'center' }}
-                              sx={{ width: '100%' }}
-                            >
-                              <Checkbox
-                                checked={b.selected}
-                                onChange={(e) => onToggleBatch(tid, idx, e.target.checked)}
-                                sx={{ p: 0.5 }}
-                              />
-                              <Typography variant="body2" sx={{ flex: 1, overflowWrap: 'anywhere' }}>
-                                Batch {idx + 1} {'\u2022'} {(b.parent ?? 1)} {(b.parent ?? 1) === 1 ? 'parent' : 'parents'} {'\u2022'} {b.rows} rows
-                              </Typography>
-                            </Stack>
-                          ))}
-                        </Stack>
-                      ) : (
-                        <Typography variant="body2" color="text.secondary">No data found for this range.</Typography>
-                      )}
-                    </Box>
-                  )
-                })}
-              </Stack>
-            ) : (
-              <Alert severity="info" sx={{ mt: 1.5 }}>
-                No discovery results yet. Run Find Reports after setting your date range.
-              </Alert>
-            )}
-          </Box>
-        </Collapse>
-
-        {keyPanelVisible && (
+        {templatesWithKeys.length > 0 && resultCount > 0 && (
           <Stack spacing={1.5} sx={{ mt: 2 }}>
             <Typography variant="subtitle2">Key Token Values</Typography>
-            {keysMissing && (
+            {!keysReady && (
               <Alert severity="warning">Fill in all key token values to enable discovery and runs.</Alert>
             )}
-            {templatesWithKeys.length > 0 ? (
-              templatesWithKeys.map(({ tpl, tokens }) => (
-                <Box
-                  key={tpl.id}
-                  sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 1.5, bgcolor: 'background.paper' }}
-                >
-                  <Typography variant="body2" sx={{ fontWeight: 600 }}>{tpl.name || tpl.id}</Typography>
-                  <Stack spacing={1} sx={{ mt: 1 }}>
-                    {tokens.map(({ name, required, options = [] }) => {
+            {templatesWithKeys.map(({ tpl, tokens }) => (
+              <Box
+                key={tpl.id}
+                sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 1.5, bgcolor: 'background.paper' }}
+              >
+                <Typography variant="body2" sx={{ fontWeight: 600 }}>{tpl.name || tpl.id}</Typography>
+                <Stack spacing={1} sx={{ mt: 1 }}>
+                  {tokens.map(({ name, required, options = [] }) => {
                     const rawOptions = Array.isArray(options) && options.length ? options : (keyOptions?.[tpl.id]?.[name] || [])
                     const normalizedOptions = Array.from(
                       new Set(
@@ -969,29 +923,11 @@ function GenerateAndDownload({ selected, selectedTemplates, autoType, start, end
                           />
                         )}
                       />
-                    );
-                    })}
-                  </Stack>
-                </Box>
-              ))
-            ) : (
-              <Box
-                sx={{
-                  border: '1px dashed',
-                  borderColor: 'divider',
-                  borderRadius: 1,
-                  p: 1.5,
-                  bgcolor: 'background.default',
-                  color: 'text.secondary',
-                }}
-              >
-                <Typography variant="body2">
-                  {(selectedTemplates.length === 0
-                    ? 'Select a template to configure key token filters.'
-                    : 'Selected templates do not define key tokens.')}
-                </Typography>
+                    )
+                  })}
+                </Stack>
               </Box>
-            )}
+            ))}
           </Stack>
         )}
 
@@ -1051,6 +987,36 @@ function GenerateAndDownload({ selected, selectedTemplates, autoType, start, end
                   >
                     Download
                   </Button>
+                  {item.docxUrl && (
+                    <Button
+                      size="small"
+                      variant="contained"
+                      color="secondary"
+                      disableElevation
+                      startIcon={<DownloadIcon />}
+                      component="a"
+                      href={buildDownloadUrl(item.docxUrl)}
+                      target="_blank"
+                      rel="noopener"
+                    >
+                      Download DOCX
+                    </Button>
+                  )}
+                  {item.xlsxUrl && (
+                    <Button
+                      size="small"
+                      variant="contained"
+                      color="info"
+                      disableElevation
+                      startIcon={<DownloadIcon />}
+                      component="a"
+                      href={buildDownloadUrl(item.xlsxUrl)}
+                      target="_blank"
+                      rel="noopener"
+                    >
+                      Download XLSX
+                    </Button>
+                  )}
                   <Button size="small" variant="text" startIcon={<FolderOpenIcon />} disabled>
                     Show in folder
                   </Button>
@@ -1082,64 +1048,164 @@ function GenerateAndDownload({ selected, selectedTemplates, autoType, start, end
           />
         </Stack>
         <Stack spacing={1.5}>
-          {downloads.map((d, i) => (
-            <Stack
-              key={i}
-              spacing={1}
-              sx={{
-                p: 1.5,
-                border: '1px solid',
-                borderColor: 'divider',
-                borderRadius: 1,
-                bgcolor: 'background.paper',
-              }}
-            >
-              <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                {d.filename} {'\u2022'} {d.template} {'\u2022'} {d.format.toUpperCase()} {'\u2022'} {d.size}
-              </Typography>
-              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
-                <Button
-                  size="small"
-                  variant="outlined"
-                  startIcon={<OpenInNewIcon />}
-                  disabled={!d.htmlUrl}
-                  component="a"
-                  href={d.htmlUrl ? withBase(d.htmlUrl) : '#'}
-                  target="_blank"
-                  rel="noopener"
-                >
-                  Open
-                </Button>
-                <Button
-                  size="small"
-                  variant="contained"
-                  color="primary"
-                  disableElevation
-                  startIcon={<DownloadIcon />}
-                  disabled={!d.pdfUrl}
-                  component="a"
-                  href={d.pdfUrl ? buildDownloadUrl(withBase(d.pdfUrl)) : '#'}
-                  target="_blank"
-                  rel="noopener"
-                >
-                  Download
-                </Button>
-                <Button size="small" variant="text" startIcon={<FolderOpenIcon />} disabled>
-                  Show in folder
-                </Button>
-                <Button
-                  size="small"
-                  variant="contained"
-                  color="success"
-                  disableElevation
-                  startIcon={<ReplayIcon />}
-                  onClick={d.onRerun}
-                >
-                  Re-run
-                </Button>
-              </Stack>
-            </Stack>
-          ))}
+          {downloads.map((d, i) => {
+            const metaLine = [d.template, d.format ? d.format.toUpperCase() : null, d.size || 'Size unknown']
+              .filter(Boolean)
+              .join(' \u2022 ')
+            const formatChips = [
+              d.pdfUrl && { label: 'PDF', color: 'primary' },
+              d.docxUrl && { label: 'DOCX', color: 'secondary' },
+              d.xlsxUrl && { label: 'XLSX', color: 'info' },
+            ].filter(Boolean)
+            const actionButtons = [
+              {
+                key: 'open',
+                label: 'Open preview',
+                variant: 'outlined',
+                color: 'inherit',
+                disabled: !d.htmlUrl,
+                href: d.htmlUrl ? withBase(d.htmlUrl) : null,
+              },
+              {
+                key: 'pdf',
+                label: 'Download PDF',
+                variant: 'contained',
+                color: 'primary',
+                disabled: !d.pdfUrl,
+                href: d.pdfUrl ? buildDownloadUrl(withBase(d.pdfUrl)) : null,
+              },
+              d.docxUrl && {
+                key: 'docx',
+                label: 'Download DOCX',
+                variant: 'outlined',
+                color: 'primary',
+                href: buildDownloadUrl(withBase(d.docxUrl)),
+              },
+              d.xlsxUrl && {
+                key: 'xlsx',
+                label: 'Download XLSX',
+                variant: 'outlined',
+                color: 'info',
+                href: buildDownloadUrl(withBase(d.xlsxUrl)),
+              },
+            ].filter(Boolean)
+            return (
+              <Box
+                key={`${d.filename}-${i}`}
+                sx={{
+                  p: { xs: 1.5, md: 2 },
+                  borderRadius: 2,
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  bgcolor: 'background.paper',
+                  boxShadow: '0 6px 20px rgba(15,23,42,0.06)',
+                  transition: 'border-color 200ms ease, box-shadow 200ms ease, transform 160ms ease',
+                  '&:hover': {
+                    borderColor: 'primary.light',
+                    boxShadow: '0 10px 30px rgba(79,70,229,0.14)',
+                    transform: 'translateY(-2px)',
+                  },
+                }}
+              >
+                <Stack spacing={1.5}>
+                  <Stack
+                    direction={{ xs: 'column', md: 'row' }}
+                    spacing={1}
+                    justifyContent="space-between"
+                    alignItems={{ md: 'center' }}
+                  >
+                    <Box sx={{ minWidth: 0 }}>
+                      <Typography variant="subtitle1" sx={{ fontWeight: 600 }} noWrap title={d.filename}>
+                        {d.filename}
+                      </Typography>
+                      {metaLine && (
+                        <Typography
+                          variant="body2"
+                          color="text.secondary"
+                          sx={{ mt: 0.5 }}
+                          noWrap
+                          title={metaLine}
+                        >
+                          {metaLine}
+                        </Typography>
+                      )}
+                    </Box>
+                    {!!formatChips.length && (
+                      <Stack direction="row" spacing={0.75} flexWrap="wrap" justifyContent={{ xs: 'flex-start', md: 'flex-end' }}>
+                        {formatChips.map(({ label, color: colorKey }) => (
+                          <Chip
+                            key={label}
+                            size="small"
+                            label={label}
+                            sx={(theme) => ({
+                              borderRadius: 1,
+                              fontWeight: 600,
+                              bgcolor: alpha(theme.palette[colorKey].main, 0.12),
+                              color: theme.palette[colorKey].dark,
+                              border: '1px solid',
+                              borderColor: alpha(theme.palette[colorKey].main, 0.3),
+                            })}
+                          />
+                        ))}
+                      </Stack>
+                    )}
+                  </Stack>
+
+                  <Divider />
+
+                  <Stack
+                    direction={{ xs: 'column', lg: 'row' }}
+                    spacing={1.25}
+                    alignItems={{ lg: 'flex-start' }}
+                  >
+                    <Stack
+                      direction="row"
+                      spacing={1}
+                      flexWrap="wrap"
+                      sx={{ flexGrow: 1, columnGap: 1, rowGap: 1 }}
+                    >
+                      {actionButtons.map((action) => {
+                        const linkProps = action.href
+                          ? { component: 'a', href: action.href, target: '_blank', rel: 'noopener' }
+                          : {}
+                        return (
+                          <Button
+                            key={action.key}
+                            size="small"
+                            variant={action.variant}
+                            color={action.color}
+                            disabled={action.disabled}
+                            sx={{
+                              textTransform: 'none',
+                              minWidth: { xs: '100%', sm: 0 },
+                              flex: { xs: '1 1 100%', sm: '0 0 auto' },
+                              px: 2.5,
+                            }}
+                            {...linkProps}
+                          >
+                            {action.label}
+                          </Button>
+                        )
+                      })}
+                    </Stack>
+                    <Box sx={{ width: { xs: '100%', lg: 'auto' } }}>
+                      <Button
+                        size="small"
+                        variant="contained"
+                        color="success"
+                        disableElevation
+                        startIcon={<ReplayIcon />}
+                        onClick={d.onRerun}
+                        sx={{ width: { xs: '100%', lg: 'auto' }, textTransform: 'none', px: 2.5 }}
+                      >
+                        Re-run
+                      </Button>
+                    </Box>
+                  </Stack>
+                </Stack>
+              </Box>
+            )
+          })}
           {!downloads.length && <Typography variant="body2" color="text.secondary">No recent downloads yet.</Typography>}
         </Stack>
       </Surface>
@@ -1150,23 +1216,48 @@ function GenerateAndDownload({ selected, selectedTemplates, autoType, start, end
 
 export default function TemplatesPane() {
   // pull connection if available; API can fallback when not provided
-  const { templates, addDownload, activeConnectionId } = useAppStore()
+  const templates = useAppStore((state) => state.templates)
+  const addDownload = useAppStore((state) => state.addDownload)
+  const activeConnectionId = useAppStore((state) => state.activeConnectionId)
+  const activeConnection = useAppStore((state) => state.activeConnection)
+  const finding = useAppStore((state) => state.discoveryFinding)
+  const setFinding = useAppStore((state) => state.setDiscoveryFinding)
+  const results = useAppStore((state) => state.discoveryResults)
+  const discoveryMeta = useAppStore((state) => state.discoveryMeta)
+  const setDiscoveryResults = useAppStore((state) => state.setDiscoveryResults)
+  const clearDiscoveryResults = useAppStore((state) => state.clearDiscoveryResults)
   const toast = useToast()
   const approved = useMemo(() => templates.filter((t) => t.status === 'approved'), [templates])
   const [selected, setSelected] = useState([])
   const [tagFilter, setTagFilter] = useState([])
   const onToggle = (id) => setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]))
   const selectedTemplates = useMemo(() => approved.filter((t) => selected.includes(t.id)), [approved, selected])
-  const selectedTypes = useMemo(() => selectedTemplates.map((t) => t.sourceType), [selectedTemplates])
-  const autoType = selectedTypes.length === 0 ? '-' : selectedTypes.every((t) => t === selectedTypes[0]) ? selectedTypes[0]?.toUpperCase() : 'Mixed'
+  const selectedTypes = useMemo(
+    () => selectedTemplates.map((t) => getTemplateKind(t).toUpperCase()),
+    [selectedTemplates],
+  )
+  const autoType =
+    selectedTypes.length === 0
+      ? '-'
+      : selectedTypes.every((t) => t === selectedTypes[0])
+        ? selectedTypes[0]
+        : 'Mixed'
   const [keyValues, setKeyValues] = useState({})
   const [keyOptions, setKeyOptions] = useState({})
   const [keyOptionsLoading, setKeyOptionsLoading] = useState({})
   const [start, setStart] = useState(null)
   const [end, setEnd] = useState(null)
-  const [finding, setFinding] = useState(false)
-  const [results, setResults] = useState({})
   const [generation, setGeneration] = useState({ items: [] })
+  const [discoveryPanelOpen, setDiscoveryPanelOpen] = useState(false)
+  const discoveryResetReady = useRef(false)
+  const keyOptionsFetchKeyRef = useRef({})
+  const isDevEnv = typeof import.meta !== 'undefined' && Boolean(import.meta.env?.DEV)
+
+  useEffect(() => {
+    if (!isDevEnv || typeof window === 'undefined') return
+    window.__NR_SETUP_KEY_OPTIONS__ = keyOptions
+    window.__NR_SETUP_KEY_VALUES__ = keyValues
+  }, [keyOptions, keyValues, isDevEnv])
 
   useEffect(() => {
     setKeyValues((prev) => {
@@ -1208,43 +1299,56 @@ export default function TemplatesPane() {
     [keyOptions],
   )
 
-  useEffect(() => {
-    if (!start || !end) return
-    if (!Object.keys(results).length) return
-    const startSql = toSqlFromDayjs(start)
-    const endSql = toSqlFromDayjs(end)
-    if (!startSql || !endSql) return
-    let cancelled = false
-    const pendingIds = new Set()
-    selectedTemplates.forEach((tpl) => {
+  const requestKeyOptions = useCallback(
+    (tpl, startSql, endSql) => {
+      if (!startSql || !endSql) return
       const tokens = Array.isArray(tpl?.mappingKeys)
         ? tpl.mappingKeys.map((token) => (typeof token === 'string' ? token.trim() : '')).filter(Boolean)
         : []
       if (!tokens.length) return
-      const existingOptions = keyOptions[tpl.id] || {}
-      const missing = tokens.filter((token) => existingOptions[token] === undefined)
-      if (!missing.length) return
-      if (keyOptionsLoading[tpl.id]) return
-      pendingIds.add(tpl.id)
+      const discoveryConnectionId =
+        discoveryMeta?.connectionId && (discoveryMeta?.templateIds || []).includes(tpl.id)
+          ? discoveryMeta.connectionId
+          : null
+      const effectiveConnectionId =
+        discoveryConnectionId || activeConnectionId || tpl.lastConnectionId || undefined
+      const paramKey = `${effectiveConnectionId || 'auto'}|${startSql}|${endSql}`
+      if (keyOptionsFetchKeyRef.current[tpl.id] === paramKey) {
+        return
+      }
+      keyOptionsFetchKeyRef.current[tpl.id] = paramKey
       setKeyOptionsLoading((prev) => ({ ...prev, [tpl.id]: true }))
+
       fetchTemplateKeyOptions(tpl.id, {
-        connectionId: tpl.lastConnectionId || activeConnectionId,
-        tokens: missing,
+        connectionId: effectiveConnectionId,
+        tokens,
         limit: 100,
         startDate: startSql,
         endDate: endSql,
+        kind: tpl.kind || 'pdf',
       })
         .then((data) => {
-          if (cancelled) return
           const incoming = data?.keys && typeof data.keys === 'object' ? data.keys : {}
           const normalizedBatch = {}
-          missing.forEach((token) => {
+          tokens.forEach((token) => {
             const rawValues = incoming[token]
             const normalized = Array.isArray(rawValues)
               ? Array.from(new Set(rawValues.map((value) => (value == null ? '' : String(value).trim())).filter(Boolean)))
               : []
             normalizedBatch[token] = normalized
           })
+          if (typeof window !== 'undefined' && typeof window.__nrLogKeyOptions === 'function') {
+            try {
+              window.__nrLogKeyOptions({
+                templateId: tpl.id,
+                connectionId: effectiveConnectionId || tpl.lastConnectionId || null,
+                tokens,
+                payload: incoming,
+              })
+            } catch (err) {
+              console.warn('nr_key_options_log_failed', err)
+            }
+          }
           setKeyOptions((prev) => {
             const prevTemplateOptions = prev[tpl.id] || {}
             const nextTemplateOptions = { ...prevTemplateOptions }
@@ -1255,28 +1359,23 @@ export default function TemplatesPane() {
           })
         })
         .catch((err) => {
-          if (cancelled) return
           console.warn('key_options_fetch_failed', err)
           toast.show(`Failed to load key options for ${tpl.name || tpl.id}`, 'error')
         })
         .finally(() => {
-          if (cancelled) return
           setKeyOptionsLoading((prev) => ({ ...prev, [tpl.id]: false }))
         })
-    })
-    return () => {
-      cancelled = true
-      if (pendingIds.size) {
-        setKeyOptionsLoading((prev) => {
-          const next = { ...prev }
-          pendingIds.forEach((id) => {
-            if (next[id]) delete next[id]
-          })
-          return next
-        })
-      }
-    }
-  }, [selectedTemplates, start, end, results, keyOptions, toast, activeConnectionId])
+    },
+    [activeConnectionId, discoveryMeta, toast],
+  )
+
+  useEffect(() => {
+    if (!start || !end) return
+    const startSql = toSqlFromDayjs(start)
+    const endSql = toSqlFromDayjs(end)
+    if (!startSql || !endSql) return
+    selectedTemplates.forEach((tpl) => requestKeyOptions(tpl, startSql, endSql))
+  }, [selectedTemplates, start, end, requestKeyOptions])
 
   const keysReady = useMemo(() => {
     return selectedTemplates.every((tpl) => {
@@ -1351,7 +1450,7 @@ export default function TemplatesPane() {
         if (normalizedOptions.length) {
           payload[token] = normalizedOptions.length === 1 ? normalizedOptions[0] : normalizedOptions
         } else {
-          payload[token] = 'All'
+          return // options not loaded yet; skip filtering to avoid forcing "All"
         }
         return
       }
@@ -1366,25 +1465,38 @@ export default function TemplatesPane() {
 
   // Run Config state (key-driven discovery & generation)
 
-  useEffect(() => { setResults({}); setFinding(false) }, [selected, start?.valueOf(), end?.valueOf()])
+  useEffect(() => {
+    if (!discoveryResetReady.current) {
+      discoveryResetReady.current = true
+      return
+    }
+    clearDiscoveryResults()
+    setFinding(false)
+    setDiscoveryPanelOpen(false)
+  }, [clearDiscoveryResults, setFinding, selected, start?.valueOf(), end?.valueOf()])
 
   const onFind = async () => {
-    if (!API_BASE) return toast.show('VITE_API_BASE_URL is not set', 'error')
     if (!selectedTemplates.length || !start || !end) return toast.show('Select a template and choose a start/end date.', 'warning')
+    const startSql = toSqlFromDayjs(start)
+    const endSql = toSqlFromDayjs(end)
+    if (!startSql || !endSql) return toast.show('Provide a valid start and end date.', 'warning')
 
     setKeyOptions({})
+    keyOptionsFetchKeyRef.current = {}
     setKeyOptionsLoading({})
     setFinding(true)
     try {
       const r = {}
       for (const t of selectedTemplates) {
         const keyFilters = buildKeyFiltersForTemplate(t.id)
-        const data = await discoverReportsAPI({
+        requestKeyOptions(t, startSql, endSql)
+        const data = await discoverReports({
           templateId: t.id,
-          startDate: start,
-          endDate: end,
-          connectionId: activeConnectionId,   // pass when available
+          startDate: startSql,
+          endDate: endSql,
+          connectionId: activeConnectionId || undefined,
           keyValues: Object.keys(keyFilters).length ? keyFilters : undefined,
+          kind: getTemplateKind(t),
         })
         r[t.id] = {
           name: t.name,
@@ -1393,19 +1505,27 @@ export default function TemplatesPane() {
           rows_total: data.rows_total ?? (data.batches?.reduce((a, b) => a + (b.rows || 0), 0) || 0),
         }
       }
-      setResults(r)
+      setDiscoveryResults(r, {
+        startSql,
+        endSql,
+        startDisplay: formatDisplayDate(start),
+        endDisplay: formatDisplayDate(end),
+        templateSummary: selectedTemplates.map((t) => ({
+          id: t.id,
+          name: t.name,
+          kind: getTemplateKind(t),
+        })),
+        templateIds: selectedTemplates.map((t) => t.id),
+        connectionId: activeConnectionId || null,
+        connectionName: activeConnection?.name || activeConnection?.connection_name || '',
+        autoType,
+        fetchedAt: new Date().toISOString(),
+      })
     } catch (e) {
       toast.show(String(e), 'error')
     } finally {
       setFinding(false)
     }
-  }
-
-  const onToggleBatch = (id, idx, val) => {
-    setResults((prev) => ({
-      ...prev,
-      [id]: { ...prev[id], batches: prev[id].batches.map((b, i) => (i === idx ? { ...b, selected: val } : b)) },
-    }))
   }
 
   const canGenerate = useMemo(() => {
@@ -1426,8 +1546,11 @@ export default function TemplatesPane() {
     (results[tplId]?.batches || []).filter(b => b.selected).map(b => b.id)
 
   const onGenerate = async () => {
-    if (!API_BASE) return toast.show('VITE_API_BASE_URL is not set', 'error')
     if (!selectedTemplates.length) return toast.show('Select at least one template.', 'warning')
+    if (!start || !end) return toast.show('Choose a start and end date before running.', 'warning')
+    const startSql = toSqlFromDayjs(start)
+    const endSql = toSqlFromDayjs(end)
+    if (!startSql || !endSql) return toast.show('Provide a valid date range.', 'warning')
     const missing = collectMissingKeys()
     if (missing.length) {
       const message = missing.map(({ tpl, tokens }) => `${tpl.name || tpl.id}: ${tokens.join(', ')}`).join('; ')
@@ -1435,43 +1558,96 @@ export default function TemplatesPane() {
       return
     }
 
-    const seed = selectedTemplates.map((t) => ({ id: `${t.id}-${Date.now()}`, tplId: t.id, name: t.name, status: 'running', progress: 10, htmlUrl: null, pdfUrl: null }))
+    const timestamp = Date.now()
+    const seed = selectedTemplates.map((t, idx) => ({
+      id: `${t.id}-${timestamp + idx}`,
+      tplId: t.id,
+      name: t.name,
+      kind: getTemplateKind(t),
+      status: 'running',
+      progress: 10,
+      htmlUrl: null,
+      pdfUrl: null,
+      docxUrl: null,
+      xlsxUrl: null,
+    }))
     setGeneration({ items: seed })
 
-  for (const it of seed) {
-    try {
-      const keyFilters = buildKeyFiltersForTemplate(it.tplId)
-      const data = await runReportAPI({
-        templateId: it.tplId,
-          startDate: start,
-          endDate: end,
+    for (const it of seed) {
+      try {
+        const keyFilters = buildKeyFiltersForTemplate(it.tplId)
+        const requestDocx = true
+        const requestXlsx = it.kind === 'excel'
+        const data = await runReport({
+          templateId: it.tplId,
+          startDate: startSql,
+          endDate: endSql,
           batchIds: batchIdsFor(it.tplId),
-          connectionId: activeConnectionId,   // pass when available
+          connectionId: activeConnectionId || undefined,
           keyValues: Object.keys(keyFilters).length ? keyFilters : undefined,
+          docx: requestDocx,
+          xlsx: requestXlsx,
+          kind: it.kind,
         })
-        const htmlUrl = data?.html_url ? withBase(data.html_url) : null
-        const pdfUrl  = data?.pdf_url ? withBase(data.pdf_url) : null
+        const normalized = normalizeRunArtifacts(data || {})
+        const htmlUrl = normalized.html_url || null
+        const pdfUrl = normalized.pdf_url || null
+        const docxUrl = normalized.docx_url || null
+        const xlsxUrl = normalized.xlsx_url || null
 
-        setGeneration((prev) => ({ items: prev.items.map((x) => (x.id === it.id ? { ...x, progress: 100, status: 'complete', htmlUrl, pdfUrl } : x)) }))
-        addDownload({ filename: `${it.name}.pdf`, template: it.name, format: 'pdf', size: '', htmlUrl, pdfUrl, onRerun: () => onGenerate() })
+        setGeneration((prev) => ({
+          items: prev.items.map((x) =>
+            x.id === it.id ? { ...x, progress: 100, status: 'complete', htmlUrl, pdfUrl, docxUrl, xlsxUrl } : x,
+          ),
+        }))
+        const formatParts = []
+        if (pdfUrl) formatParts.push('pdf')
+        if (docxUrl) formatParts.push('docx')
+        if (xlsxUrl) formatParts.push('xlsx')
+        const formatLabel = formatParts.length ? formatParts.join(' + ') : 'html'
+        let filenameExt = 'pdf'
+        if (xlsxUrl && requestXlsx) {
+          filenameExt = 'xlsx'
+        } else if (docxUrl && requestDocx) {
+          filenameExt = 'docx'
+        } else if (!pdfUrl) {
+          filenameExt = 'html'
+        }
+        addDownload({
+          filename: `${it.name}.${filenameExt}`,
+          template: it.name,
+          format: formatLabel,
+          size: '',
+          htmlUrl,
+          pdfUrl,
+          docxUrl,
+          xlsxUrl,
+          onRerun: () => onGenerate(),
+        })
       } catch (e) {
-        setGeneration((prev) => ({ items: prev.items.map((x) => (x.id === it.id ? { ...x, progress: 100, status: 'failed' } : x)) }))
+        setGeneration((prev) => ({
+          items: prev.items.map((x) =>
+            x.id === it.id ? { ...x, progress: 100, status: 'failed' } : x,
+          ),
+        }))
         toast.show(String(e), 'error')
       }
     }
   }
 
   const retryGenerationItem = async (item) => {
-    if (!API_BASE) {
-      toast.show('VITE_API_BASE_URL is not set', 'error')
-      return
-    }
     if (!item?.tplId) {
       toast.show('Unable to retry this run. Refresh and try again.', 'error')
       return
     }
     if (!start || !end) {
       toast.show('Select a start and end date before retrying.', 'warning')
+      return
+    }
+    const startSql = toSqlFromDayjs(start)
+    const endSql = toSqlFromDayjs(end)
+    if (!startSql || !endSql) {
+      toast.show('Provide a valid date range.', 'warning')
       return
     }
 
@@ -1490,38 +1666,63 @@ export default function TemplatesPane() {
     setGeneration((prev) => ({
       items: prev.items.map((x) => (
         x.id === item.id
-          ? { ...x, status: 'running', progress: 10, htmlUrl: null, pdfUrl: null }
+          ? { ...x, status: 'running', progress: 10, htmlUrl: null, pdfUrl: null, docxUrl: null, xlsxUrl: null }
           : x
       )),
     }))
 
     try {
       const keyFilters = buildKeyFiltersForTemplate(item.tplId)
-      const data = await runReportAPI({
+      const templateForKind = selectedTemplates.find((tpl) => tpl.id === item.tplId)
+      const runKind = item.kind || getTemplateKind(templateForKind)
+      const requestDocx = true
+      const requestXlsx = runKind === 'excel'
+      const data = await runReport({
         templateId: item.tplId,
-        startDate: start,
-        endDate: end,
+        startDate: startSql,
+        endDate: endSql,
         batchIds: batches,
-        connectionId: activeConnectionId,
+        connectionId: activeConnectionId || undefined,
         keyValues: Object.keys(keyFilters).length ? keyFilters : undefined,
+        docx: requestDocx,
+        xlsx: requestXlsx,
+        kind: runKind,
       })
-      const htmlUrl = data?.html_url ? withBase(data.html_url) : null
-      const pdfUrl = data?.pdf_url ? withBase(data.pdf_url) : null
+      const normalized = normalizeRunArtifacts(data || {})
+      const htmlUrl = normalized.html_url || null
+      const pdfUrl = normalized.pdf_url || null
+      const docxUrl = normalized.docx_url || null
+      const xlsxUrl = normalized.xlsx_url || null
 
       setGeneration((prev) => ({
         items: prev.items.map((x) => (
           x.id === item.id
-            ? { ...x, progress: 100, status: 'complete', htmlUrl, pdfUrl }
+            ? { ...x, progress: 100, status: 'complete', htmlUrl, pdfUrl, docxUrl, xlsxUrl }
             : x
         )),
       }))
+      const formatParts = []
+      if (pdfUrl) formatParts.push('pdf')
+      if (docxUrl) formatParts.push('docx')
+      if (xlsxUrl) formatParts.push('xlsx')
+      const formatLabel = formatParts.length ? formatParts.join(' + ') : 'html'
+      let filenameExt = 'pdf'
+      if (xlsxUrl && requestXlsx) {
+        filenameExt = 'xlsx'
+      } else if (docxUrl && requestDocx) {
+        filenameExt = 'docx'
+      } else if (!pdfUrl) {
+        filenameExt = 'html'
+      }
       addDownload({
-        filename: `${item.name}.pdf`,
+        filename: `${item.name}.${filenameExt}`,
         template: item.name,
-        format: 'pdf',
+        format: formatLabel,
         size: '',
         htmlUrl,
         pdfUrl,
+        docxUrl,
+        xlsxUrl,
         onRerun: () => onGenerate(),
       })
     } catch (e) {
@@ -1593,7 +1794,6 @@ export default function TemplatesPane() {
         findDisabled={finding}
         finding={finding}
         results={results}
-        onToggleBatch={onToggleBatch}
         onGenerate={onGenerate}
         canGenerate={canGenerate}
         generateLabel={generateLabel}
@@ -1604,7 +1804,9 @@ export default function TemplatesPane() {
         keysReady={keysReady}
         keyOptions={keyOptions}
         keyOptionsLoading={keyOptionsLoading}
+        onOpenDiscovery={() => setDiscoveryPanelOpen(true)}
       />
+      <DiscoveryListsPanel open={discoveryPanelOpen} onClose={() => setDiscoveryPanelOpen(false)} />
     </>
   )
 }

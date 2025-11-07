@@ -12,6 +12,7 @@ NeuraReport reads the following environment variables and settings when launchin
 | `NEURA_ALLOW_MISSING_OPENAI` | No | `false` | Set to `true` to bypass the API key requirement when running offline. |
 | `OPENAI_MODEL` | No | `gpt-5` | Model identifier passed to OpenAI for Calls 1-5. |
 | `UPLOAD_ROOT` | No | `backend/uploads` | Directory that stores per-template artifacts and manifests. Created on boot. |
+| `EXCEL_UPLOAD_ROOT` | No | `backend/uploads_excel` | Directory for Excel pipeline artifacts and manifests. Created on boot. |
 | `NR_DEFAULT_DB` | No | _none_ | Default SQLite database path used when the UI omits a connection id. |
 | `DB_PATH` | No | _none_ | Legacy fallback path for the default database (`NR_DEFAULT_DB` takes precedence). |
 | `NEURA_STATE_DIR` | No | `backend/state` | Location of the encrypted state store (`state.json`) and generated secret. |

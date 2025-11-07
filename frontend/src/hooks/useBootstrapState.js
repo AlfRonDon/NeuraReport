@@ -20,6 +20,7 @@ const safeTemplateCache = (tpl) => ({
   name: tpl?.name ?? '',
   status: tpl?.status ?? 'draft',
   tags: Array.isArray(tpl?.tags) ? tpl.tags : [],
+  kind: tpl?.kind || 'pdf',
 })
 
 export const loadPersistedCache = () => {

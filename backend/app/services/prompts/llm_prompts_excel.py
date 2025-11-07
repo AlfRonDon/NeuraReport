@@ -1,140 +1,32 @@
-# mypy: ignore-errors
-from __future__ import annotations
+﻿from __future__ import annotations
 
-import base64
 import json
-import re
 from functools import lru_cache
-from pathlib import Path
 from textwrap import dedent
 from typing import Any, Dict, Iterable, Mapping
 
-PROMPT_VERSION = "llm_call_3_v7"
-PROMPT_VERSION_3_5 = "v4"
-PROMPT_VERSION_4 = "v2"
-LLM_CALL_PROMPTS: Dict[str, str] = {
-    "llm_call_1": dedent(
-        """\
-        Produce a COMPLETE, self-contained HTML document (<!DOCTYPE html> ...) with inline <style>. It must visually photocopy the given PDF page image as closely as possible. Mirror fonts, spacing, borders, alignment, and table layouts. Tables must use border-collapse, 1px borders, and table-layout: fixed for neat alignment.
+from . import llm_prompts as _pdf_prompts
 
-        SCHEMA USAGE
-        - If a SCHEMA is provided below, use ONLY placeholders from that SCHEMA exactly as written (same names).
-        - If SCHEMA is NOT provided, FIRST infer a compact schema (see OUTPUT FORMAT for SCHEMA_JSON) and then use ONLY those tokens in the HTML.
-        - In HTML, placeholders must be written as {token} (single braces). In SCHEMA_JSON they must appear WITHOUT braces (e.g., "report_title").
-        - If a value is not in SCHEMA/SCHEMA_JSON, render it as literal text. If a token exists in SCHEMA/SCHEMA_JSON but does not appear on this page, omit it.
-
-        REPEATABLE BLOCK (edge case)
-        - If the page clearly contains repeating sections (visually identical blocks stacked vertically), output ONE prototype of that block wrapped exactly as:
-        <!-- BEGIN:BLOCK_REPEAT batches -->
-        <section class='batch-block'>...</section>
-        <!-- END:BLOCK_REPEAT -->
-        - Place header/footer OUTSIDE these markers. Do NOT clone or duplicate multiple blocks.
-
-        ROW PROTOTYPES
-        - For tables with repeating rows, output headers plus a single <tbody><tr>...</tr></tbody> row prototype.
-        - Keep any final summary/total row if it exists.
-
-        STRUCTURE & CSS
-        - The result must be printable: use @page size A4 with sensible margins.
-        - Prefer flowing layout (avoid fixed heights). Avoid absolute positioning except for persistent header/footer if clearly present.
-        - Reproduce what is visible - draw ONLY the rules/lines that exist in the image. Default to no borders and transparent backgrounds; add borders per edge only where a line is visible.
-        - Use table markup ONLY for true grids and structured data (never div-based). Use borderless tables or simple divs for key/value areas. Avoid unnecessary nested tables or enclosing frames.
-        - Right-align numeric columns where appropriate; keep typographic rhythm tight enough to match the PDF.
-
-        PROJECT-SPECIFIC ADDITIONS (to aid later steps while keeping fidelity)
-        - Add a minimal set of CSS custom properties to make column widths and key spacings easy to refine later (e.g., :root { --col-1-w: 24mm; --row-gap: 2mm; }). Use these variables inside the CSS you produce.
-        - Add stable IDs for major zones only (no extra wrappers): #report-header, #data-table (main grid), #report-totals (if present). Do NOT add decorative containers.
-        - For table header cells, include a data-label attribute with the visible header text normalized (e.g., <th data-label="header_label">Material Name</th>). Visible text must remain unchanged.
-
-        OUTPUT RULES
-        - No lorem ipsum or sample values. No external resources.
-        - No comments except the repeat markers if applicable.
-        - Do NOT rename or invent tokens beyond SCHEMA/SCHEMA_JSON.
-        - Return ONLY the outputs described below - no markdown fences, no explanations.
-
-        OUTPUT FORMAT
-        1) First, the RAW HTML between these exact markers:
-        <!--BEGIN_HTML-->
-        ...full html...
-        <!--END_HTML-->
-
-        2) Then, the SCHEMA JSON between these markers (EXAMPLE ONLY - replace with actual tokens discovered from THIS page; do NOT output these example names):
-        <!--BEGIN_SCHEMA_JSON-->
-        {
-          "scalars": ["scalar_token_1","scalar_token_2","scalar_token_3"],
-          "row_tokens": ["row_token_1","row_token_2","row_token_3"],
-          "totals": ["total_token_1","total_token_2","total_token_3"],
-          "notes": ""
-        }
-        <!--END_SCHEMA_JSON-->
-
-        If SCHEMA is provided below, ensure SCHEMA_JSON you output matches it exactly (names and membership). If SCHEMA is not provided, infer SCHEMA_JSON consistently with the placeholders you used in the HTML (one-to-one, no extras).
-
-        [INPUTS]
-        - PDF page image is attached.
-        - SCHEMA (may be absent):
-        SCHEMA:
-        {schema_str}
-        """
-    ).strip(),
-    "llm_call_2": dedent(
-        """\
-        Compare these images: REFERENCE (PDF page) vs RENDER (current HTML). SSIM={{ssim_value:.4f}}.
-        Goal: refine the provided HTML/CSS so the render becomes a near-perfect PHOTOCOPY of the reference.
-
-        STRICT RULES (unchanged core)
-        - Do NOT rename, add, remove, or move SCHEMA placeholders; keep all tokens exactly as in the current HTML.
-        - Do NOT change the number of repeating sections or table rows that currently exist in the HTML.
-        - If repeat markers (e.g., <!-- BEGIN:BLOCK_REPEAT ... -->) are present, keep them unchanged with exactly one prototype inside.
-        - Prefer CSS edits; only introduce minimal HTML wrappers (e.g., structural containers/colgroups) if strictly necessary to achieve alignment - never alter tokens.
-
-        PROJECT-SPECIFIC ADDITIONS (minimal, to suit our pipeline)
-        - First adjust existing CSS custom properties if present (e.g., --col-1-w, --col-2-w, --row-gap, --header-h); only if insufficient, then edit rules.
-        - Respect stable IDs/zones if present (#report-header, #data-table, #report-totals). Do not add decorative wrappers.
-        - Use millimetre-based sizing where practical for print parity (e.g., widths, padding, margins in mm). Snap adjustments to small increments (~0.1mm / 0.25px) to avoid jitter.
-        - For numeric columns, ensure right alignment and enable tabular figures (font-variant-numeric: tabular-nums) so digits align vertically.
-        - Borders/lines: match only what is visible in the reference; prefer per-edge borders to mimic single ruled lines. Avoid box-shadows, rounded corners, blurs, gradients, or tints unless clearly present in the reference.
-        - Pagination stability: keep .batch-block printable (break-inside: avoid; page-break-inside: avoid); do not fix heights unless the reference shows fixed frames.
-        - Do NOT scale the entire page via CSS transforms to "cheat" alignment. Correct geometry via widths, margins, paddings, line-height, letter-spacing, and colgroup widths.
-
-        VISUAL MATCHING (unchanged intent)
-        Identify and correct EVERY visible discrepancy between reference and render at any scale. Infer and adjust geometry, proportions, typography and line metrics, borders/line weights, grid/column structure, text/number alignment, intra/inter-block spacing, pagination behavior, page frame presence, and header/footer placement. Derive all values from the reference image; do not assume defaults. The result should be indistinguishable from the reference when printed.
-
-        OUTPUT (tightened for our tooling)
-        - Return FULL HTML (<!DOCTYPE html> ...) with inline <style> only - no external resources.
-        - No markdown, no commentary, no sample data.
-        - Preserve existing IDs/classes/markers; add only what is minimally required for fidelity.
-        - Wrap output exactly between these markers:
-        <!--BEGIN_HTML-->
-        ...full refined html...
-        <!--END_HTML-->
-
-        [INPUTS]
-        SCHEMA:
-        {schema_str}
-
-        [REFERENCE_IMAGE]
-        (embedded image URL)
-
-        [RENDER_IMAGE]
-        (embedded image URL)
-
-        [CURRENT_HTML]
-        {current_html}
-        """
-    ).strip(),
-}
+EXCEL_PROMPT_VERSION = "excel_llm_call_3_v1"
+EXCEL_PROMPT_VERSION_3_5 = "excel_llm_call_3_5_v1"
+EXCEL_PROMPT_VERSION_4 = "excel_llm_call_4_v2"
+EXCEL_PROMPT_VERSION_5 = "excel_llm_call_5_v1"
 
 _INPUT_MARKER = "[INPUTS]"
-_CALL3_PROMPT_SECTION = """
-You are given the FULL HTML of a report template and a strict DB CATALOG. Your job now has TWO parts:
+
+_sanitize_html = _pdf_prompts._sanitize_html
+_format_catalog = _pdf_prompts._format_catalog
+_format_schema = _pdf_prompts._format_schema
+
+_EXCEL_CALL3_PROMPT_SECTION = dedent("""
+You are given the FULL HTML of an Excel-rendered worksheet template and a strict DB CATALOG. Your job now has TWO parts:
 A) AUTO-MAPPING:
 Identify all visible header/label texts that correspond to data fields (table headers, field labels, totals, footer labels, etc.) and map each token/label to exactly one database column from the allow-list CATALOG.
 B) CONSTANT VALUE DISCOVERY:
-Detect placeholders/tokens that are visually constant on the reference PDF (e.g., report title, company/brand name, static section captions) and record their literal values WITHOUT editing the HTML. Only capture constants when you are 100% confident the value is not per-run data (i.e., will not vary by date/batch/user). Leave truly dynamic tokens untouched.
+Detect placeholders/tokens that are visually constant on the worksheet (e.g., report title, company/brand name, static section captions) and record their literal values WITHOUT editing the HTML. Only capture constants when you are 100% confident the value is not per-run data (i.e., will not vary by date/batch/user). Leave truly dynamic tokens untouched.
 --------------------------------------------------------------------------------
 GOALS
-- Produce a JSON object that (1) proposes a strict mapping, and (2) lists constant placeholders you can safely replace using the sample PDF values.
+- Produce a JSON object that (1) proposes a strict mapping, and (2) lists constant placeholders you can safely replace using the sample worksheet values.
 - Treat the provided HTML as read-only context; do not attempt to rewrite or return it.
 - Ignore join/date speculation entirely.
 CORE RULES (unchanged)
@@ -166,7 +58,7 @@ CONSTANT PLACEHOLDERS (UPDATED)
 - Remove constant tokens from the "mapping" object so downstream steps treat them as literals.
 TOKEN SNAPSHOT (UPDATED)
 - Emit a "token_samples" object that enumerates EVERY placeholder token from the HTML (exact token name, no braces).
-- For each token output the literal string you see on the PDF (best effort). Never leave it blank—if the token is absent or unreadable, return a descriptive fallback such as "NOT_VISIBLE" or "UNREADABLE".
+- For each token output the literal string you see in the worksheet (via the HTML or reference image) as a best effort. Never leave it blank—if the token is absent or unreadable, return a descriptive fallback such as "NOT_VISIBLE" or "UNREADABLE".
 - Match capitalization, punctuation, and spacing exactly when the text is clear.
 INPUTS
 [FULL_HTML]
@@ -177,7 +69,7 @@ Optional:
 [SCHEMA_JSON]
 {schema_json_if_any}
 [REFERENCE_PNG_HINT]
-"A screenshot of the reference PDF was used to create this template; treat visible page titles/branding as likely constants."
+"A screenshot of the Excel worksheet was used to create this template; treat visible sheet titles/branding as likely constants."
 OUTPUT -- STRICT JSON ONLY (v7)
 {
   "mapping": {
@@ -200,123 +92,60 @@ VALIDATION & FORMATTING
 - Any token you remove from "mapping" (because it is constant) must still appear in "token_samples" with the literal string you inlined.
 - Do not add or rename remaining tokens. Do not alter repeat markers/tbody row prototypes.
 - "token_samples" must include every placeholder exactly once and each value must be a non-empty string (use "NOT_VISIBLE"/"UNREADABLE" instead of leaving blanks).
-""".strip()
-
+""").strip()
 
 @lru_cache(maxsize=1)
-def _load_llm_call_3_section() -> tuple[str, str]:
-    section = _CALL3_PROMPT_SECTION
+def _load_excel_llm_call_3_section() -> tuple[str, str]:
+    section = _EXCEL_CALL3_PROMPT_SECTION
     if _INPUT_MARKER in section:
         system, remainder = section.split(_INPUT_MARKER, 1)
         system_text = system.strip()
         user_template = f"{_INPUT_MARKER}{remainder}".strip()
     else:
-        system_text = section.strip()
+        system_text = section
         user_template = ""
-
     return system_text, user_template
 
 
-def _sanitize_html(html: str) -> str:
-    """
-    Strip comments, scripts, and excessive whitespace to keep prompts compact.
-    """
-    html = html or ""
-    # remove script tags/HTML comments but preserve repeat markers and inline CSS
-    comment_re = re.compile(r"(?is)<!--(?!\s*(BEGIN:BLOCK_REPEAT|END:BLOCK_REPEAT)).*?-->")
-    script_re = re.compile(r"(?is)<script\b[^>]*>.*?</script>")
-    collapsed = script_re.sub("", comment_re.sub("", html))
-    collapsed = re.sub(r"[ \t]{2,}", " ", collapsed)
-    collapsed = re.sub(r"\n{3,}", "\n\n", collapsed)
-    return collapsed.strip()
-
-
-def _format_catalog(catalog: Iterable[str]) -> str:
-    catalog_list = [str(item).strip() for item in catalog]
-    return json.dumps(catalog_list, ensure_ascii=False, indent=2)
-
-
-def _normalize_schema_payload(schema: Mapping[str, Any] | None) -> Dict[str, Any]:
-    base = {
-        "scalars": [],
-        "row_tokens": [],
-        "totals": [],
-        "notes": "",
-    }
-    if not isinstance(schema, Mapping):
-        return base
-
-    def _collect(key: str) -> list[str]:
-        values = schema.get(key, [])
-        if isinstance(values, Iterable) and not isinstance(values, (str, bytes)):
-            return [str(item).strip() for item in values if str(item).strip()]
-        return []
-
-    base["scalars"] = _collect("scalars")
-    base["row_tokens"] = _collect("row_tokens")
-    base["totals"] = _collect("totals")
-
-    notes = schema.get("notes")
-    if notes is not None:
-        base["notes"] = str(notes)
-    return base
-
-
-def _format_schema(schema: Dict[str, Any] | None) -> str:
-    normalized = _normalize_schema_payload(schema)
-    return json.dumps(normalized, ensure_ascii=False, indent=2, sort_keys=True)
-
-
-def build_llm_call_3_prompt(
+def build_excel_llm_call_3_prompt(
     html: str,
     catalog: Iterable[str],
     schema_json: Dict[str, Any] | None = None,
+    *,
+    sample_data: Mapping[str, Any] | None = None,
 ) -> Dict[str, Any]:
-    """
-    Build the system/user payload for LLM Call 3 (auto-map + constant discovery).
-    """
-    system_template, user_template = _load_llm_call_3_section()
+    system_template, user_template = _load_excel_llm_call_3_section()
     if not user_template:
         user_template = system_template
         system_template = (
-            "You are a meticulous analyst that performs report auto-mapping and constant inlining. "
-            "Follow the subsequent instructions strictly."
+            "You are the Excel auto-mapping analyst. Follow the subsequent instructions exactly and return JSON only."
         )
 
     html_block = _sanitize_html(html)
     catalog_block = _format_catalog(catalog)
     schema_block = _format_schema(schema_json)
+    sample_block = (
+        json.dumps(sample_data, ensure_ascii=False, indent=2) if sample_data else ""
+    )
 
     user_payload = user_template
     for placeholder, value in (
         ("{html_for_llm}", html_block),
         ("{catalog_json}", catalog_block),
         ("{schema_json_if_any}", schema_block),
+        ("{sample_row_json_if_any}", sample_block),
     ):
         user_payload = user_payload.replace(placeholder, value)
-
-    attachments: list[dict[str, Any]] = []
-    if "[REFERENCE_PNG_HINT]" not in user_payload:
-        attachments.append(
-            {
-                "type": "text",
-                "text": (
-                    "[REFERENCE_PNG_HINT]\n"
-                    '"A screenshot of the reference PDF was used to create this template; '
-                    'treat visible page titles/branding as likely constants."'
-                ),
-            }
-        )
 
     return {
         "system": system_template.strip(),
         "user": user_payload.strip(),
-        "attachments": attachments,
-        "version": PROMPT_VERSION,
+        "attachments": [],
+        "version": EXCEL_PROMPT_VERSION,
     }
 
 
-LLM_CALL_3_5_PROMPT: Dict[str, str] = {
+EXCEL_LLM_CALL_3_5_PROMPT: Dict[str, str] = {
     "system": dedent(
         """\
         You are the Step 3.5 corrections specialist.
@@ -334,13 +163,13 @@ LLM_CALL_3_5_PROMPT: Dict[str, str] = {
         - The `mapping_context.mapping` object reflects the latest binding state after Step 3 and any overrides. Tokens mapped to "INPUT_SAMPLE" must be inlined; leave tokens mapped to SQL expressions or table columns untouched unless instructed otherwise.
         - The `mapping_context.token_samples` dictionary lists the literal strings extracted in Step 3 for every placeholder. Inline tokens using these values exactly.
         - `mapping_context.sample_tokens` / `mapping_context.inline_tokens` highlight placeholders the user wants to double-check; use these cues when reporting lingering uncertainties in the page summary.
-        - A reference PNG is attached via `image_url`. Treat it as general context while following all other instructions.
+        - When provided, `reference_worksheet_html` contains a data-only rendering of the worksheet used to derive the template. Use it only to confirm literal strings; do not re-map tokens based on it.
         - `user_input` contains the authoritative instructions for this pass. Follow it exactly.
 
         Output (strict JSON, no markdown fences, no extra keys):
         {
           "final_template_html": "<string>",  // template after applying user instructions and inlining required constants
-          "page_summary": "<string>"          // thorough prose description of the PDF page; must be non-empty
+          "page_summary": "<string>"          // thorough prose description of the worksheet; must be non-empty
         }
 
         Validation checklist before responding:
@@ -355,54 +184,17 @@ LLM_CALL_3_5_PROMPT: Dict[str, str] = {
 
         """
     ).strip(),
-    "user": dedent(
-        """\
-        {
-          "template_html": "<HTML from step 3 with constants already inlined where obvious>",
-          "schema": {
-            "scalars": ["..."],
-            "row_tokens": ["..."],
-            "totals": ["..."]
-          },
-          "mapping_context": {
-            "mapping": {
-              "recipe_code": "recipes.recipe_code",
-              "set_weight": "SUM(recipes.bin1_sp + recipes.bin2_sp)",
-              "material_name": "INPUT_SAMPLE"
-            },
-            "mapping_override": { "material_name": "INPUT_SAMPLE" },
-            "sample_tokens": ["material_name", "qty"],
-            "token_samples": {
-              "material_name": "Aluminum Oxide 45 Micron",
-              "qty": "12.50 kg"
-            }
-          },
-          "token_samples": {
-            "plant_name": "North Works Plant 05",
-            "location": "Boulder, CO"
-          },
-          "user_input": "Free-form instructions and corrections. Examples: 1) Change 'Reciepe' -> 'Recipe'; 2) Inline company_name using what you see on the PDF; 3) Add a bold border to the totals row; 4) Move the logo into the header; 5) Describe visible signatures in the summary."
-        }
-        """
-    ).strip(),
+    "user": "USER (JSON payload):\n{payload}",
 }
 
 
-def _build_data_uri(path: Path | None) -> str | None:
-    if not path or not path.exists():
-        return None
-    try:
-        encoded = base64.b64encode(path.read_bytes()).decode("utf-8")
-    except Exception:  # pragma: no cover
-        return None
-    return f"data:image/png;base64,{encoded}"
-
-
-def build_llm_call_3_5_prompt(
+def build_excel_llm_call_3_5_prompt(
+    *,
     template_html: str,
     schema: Mapping[str, Any] | None,
     user_input: str,
     page_png_path: str | None = None,
+    reference_worksheet_html: str | None = None,
     mapping_context: Mapping[str, Any] | None = None,
 ) -> Dict[str, Any]:
     schema_payload = dict(schema or {})
@@ -411,45 +203,36 @@ def build_llm_call_3_5_prompt(
         "schema": schema_payload,
         "user_input": user_input or "",
     }
-
     if mapping_context:
-        mapping_context_clean = dict(mapping_context)
-        payload["mapping_context"] = mapping_context_clean
+        payload["mapping_context"] = dict(mapping_context)
+    if isinstance(reference_worksheet_html, str) and reference_worksheet_html.strip():
+        payload["reference_worksheet_html"] = reference_worksheet_html
 
-    data_uri = _build_data_uri(Path(page_png_path) if page_png_path else None)
+    # Prefer full worksheet HTML when provided; otherwise, attach optional page image as a fallback.
+    from pathlib import Path as _Path  # local import to avoid cycles
+    try:
+        _build_data_uri = _pdf_prompts._build_data_uri  # type: ignore[attr-defined]
+    except Exception:  # pragma: no cover
+        _build_data_uri = lambda _p: None  # type: ignore
+
+    data_uri = None if reference_worksheet_html else _build_data_uri(_Path(page_png_path) if page_png_path else None)
     payload_json = json.dumps(payload, ensure_ascii=False, indent=2)
     user_content = [
-        {
-            "type": "text",
-            "text": f"USER (JSON payload):\n{payload_json}",
-        }
+        {"type": "text", "text": EXCEL_LLM_CALL_3_5_PROMPT["user"].format(payload=payload_json)}
     ]
     if data_uri:
-        user_content.append(
-            {
-                "type": "image_url",
-                "image_url": {
-                    "url": data_uri,
-                    "detail": "high",
-                },
-            }
-        )
+        user_content.append({"type": "image_url", "image_url": {"url": data_uri, "detail": "high"}})
 
-    messages = [
-        {
-            "role": "user",
-            "content": user_content,
-        }
-    ]
+    messages = [{"role": "user", "content": user_content}]
 
     return {
-        "system": LLM_CALL_3_5_PROMPT["system"],
+        "system": EXCEL_LLM_CALL_3_5_PROMPT["system"],
         "messages": messages,
-        "version": PROMPT_VERSION_3_5,
+        "version": EXCEL_PROMPT_VERSION_3_5,
     }
 
 
-LLM_CALL_4_SYSTEM_PROMPT = dedent(
+EXCEL_LLM_CALL_4_SYSTEM_PROMPT = dedent(
     """\
     LLM CALL 4 - Step-5 Hand-off Builder
     You generate the structured payload that LLM Call 5 will consume. Your job is to:
@@ -475,7 +258,7 @@ LLM_CALL_4_SYSTEM_PROMPT = dedent(
     User message (JSON payload):
     {
       "final_template_html": "<HTML from Step 3.5 (constants already inlined; dynamic tokens preserved)>",
-      "page_summary": "Detailed narrative of the PDF page from Step 3.5",
+      "page_summary": "Detailed narrative of the worksheet from Step 3.5",
       "schema": {
         "scalars": ["..."],
         "row_tokens": ["..."],
@@ -604,11 +387,69 @@ LLM_CALL_4_SYSTEM_PROMPT = dedent(
     """
 ).strip()
 
-LLM_CALL_5_PROMPT: Dict[str, str] = {
+def build_excel_llm_call_4_prompt(
+    *,
+    final_template_html: str,
+    page_summary: str,
+    schema: Mapping[str, Any] | None,
+    auto_mapping_proposal: Mapping[str, Any],
+    mapping_override: Mapping[str, Any] | None,
+    user_instructions: str,
+    catalog: Iterable[str],
+    dialect_hint: str | None = None,
+    key_tokens: Iterable[str] | None = None,
+) -> Dict[str, Any]:
+    key_tokens_list: list[str] = []
+    if key_tokens:
+        seen: set[str] = set()
+        for token in key_tokens:
+            text = str(token or "").strip()
+            if not text or text in seen:
+                continue
+            seen.add(text)
+            key_tokens_list.append(text)
+
+    payload: Dict[str, Any] = {
+        "final_template_html": final_template_html,
+        "page_summary": page_summary,
+        "schema": dict(schema or {}),
+        "auto_mapping_proposal": dict(auto_mapping_proposal or {}),
+        "mapping_override": dict(mapping_override or {}),
+        "user_instructions": user_instructions or "",
+        "catalog": [str(item) for item in catalog],
+    }
+    if key_tokens_list:
+        payload["key_tokens"] = key_tokens_list
+    if dialect_hint is not None:
+        payload["dialect_hint"] = str(dialect_hint)
+
+    payload_json = json.dumps(payload, ensure_ascii=False, indent=2)
+    messages = [
+        {
+            "role": "user",
+            "content": [
+                {
+                    "type": "text",
+                    "text": payload_json,
+                }
+            ],
+        }
+    ]
+
+    return {
+        "system": EXCEL_LLM_CALL_4_SYSTEM_PROMPT,
+        "messages": messages,
+        "version": EXCEL_PROMPT_VERSION_4,
+    }
+
+
+
+# ------------------------- LLM CALL 5 (Excel) -------------------------
+EXCEL_LLM_CALL_5_PROMPT =  {
     "system": dedent(
         """\
-        LLM CALL 5 - Generator Assets Emitter
-        You are the Step-5 generator bundle author. Given the final template HTML, the complete Step-4 payload, and an optional reference image, you must emit every runtime artifact required by the Python pipeline.
+        LLM CALL 5 - Generator Assets Emitter (Excel)
+        You are the Step-5 generator bundle author. Given the final template HTML and the complete Step-4 payload, you must emit every runtime artifact required by the Python pipeline. An optional reference worksheet HTML may be provided for context.
 
         Canonical sources:
         * Treat `step4_output.contract` as the authoritative blueprint for tokens, bindings, reshape rules, joins, filters, and math. Do not add/drop/rename tokens.
@@ -667,7 +508,6 @@ LLM_CALL_5_PROMPT: Dict[str, str] = {
           -- TOTALS SELECT --
           ...select...
         * Ensure each SELECT projects aliases exactly matching the tokens for that section; do not emit multiple SELECT statements per token or redundant aliases.
-        * Whenever you aggregate the detail rows, materialize that result as a named CTE (e.g., `WITH long_bins AS (...), rows AS (...)`) and reuse it everywhere. Window functions must order by the CTE column names (never aliases defined later in the same SELECT), and the totals SELECT must read directly from that shared `rows` CTE rather than referencing an undefined table.
         * Provide an `entrypoints` object where each SELECT projects aliases exactly matching the contract token order (header → scalars, rows → row tokens, totals → totals tokens).
         * Reflect the contract join keys and filters in the SQL. Header, rows, and totals must reference the parent key columns in their FROM/JOIN clauses, respecting optional filter semantics.
         * Ensure `params.required/optional` aligns with the contract bindings and Step-4 requirements. Optional filters only apply when the parameter is non-null/non-empty.
@@ -697,7 +537,7 @@ LLM_CALL_5_PROMPT: Dict[str, str] = {
             "warnings": [/* OPTIONAL strings */],
             "validation": { /* OPTIONAL validation report */ }
           },
-          "reference_pdf_image": "OPTIONAL: data URI or URL to the page PNG/JPG used as visual reference",
+          "reference_worksheet_html": "OPTIONAL: full worksheet HTML snapshot for context (do not re-derive tokens from this)",
           "key_tokens": ["plant_name", "recipe_code"],
           "dialect": "sqlite"
         }
@@ -705,89 +545,20 @@ LLM_CALL_5_PROMPT: Dict[str, str] = {
     ).strip(),
 }
 
-PROMPT_LIBRARY: Dict[str, str] = {
-    **LLM_CALL_PROMPTS,
-    "llm_call_3_5_system": LLM_CALL_3_5_PROMPT["system"],
-    "llm_call_3_5_user": LLM_CALL_3_5_PROMPT["user"],
-    "llm_call_4_system": LLM_CALL_4_SYSTEM_PROMPT,
-    "llm_call_5_system": LLM_CALL_5_PROMPT["system"],
-    "llm_call_5_user": LLM_CALL_5_PROMPT["user"],
-}
-
-
-def build_llm_call_4_prompt(
-    *,
-    final_template_html: str,
-    page_summary: str,
-    schema: Mapping[str, Any] | None,
-    auto_mapping_proposal: Mapping[str, Any],
-    mapping_override: Mapping[str, Any] | None,
-    user_instructions: str,
-    catalog: Iterable[str],
-    dialect_hint: str | None = None,
-    key_tokens: Iterable[str] | None = None,
-) -> Dict[str, Any]:
-    """
-    Build the payload for LLM Call 4 (contract builder + overview).
-    """
-    system_text = LLM_CALL_4_SYSTEM_PROMPT
-    key_tokens_list: list[str] = []
-    if key_tokens:
-        seen: set[str] = set()
-        for token in key_tokens:
-            text = str(token or "").strip()
-            if not text or text in seen:
-                continue
-            seen.add(text)
-            key_tokens_list.append(text)
-    payload: Dict[str, Any] = {
-        "final_template_html": final_template_html,
-        "page_summary": page_summary,
-        "schema": dict(schema or {}),
-        "auto_mapping_proposal": dict(auto_mapping_proposal or {}),
-        "mapping_override": dict(mapping_override or {}),
-        "user_instructions": user_instructions or "",
-        "catalog": [str(item) for item in catalog],
-    }
-    if key_tokens_list:
-        payload["key_tokens"] = key_tokens_list
-    if dialect_hint is not None:
-        payload["dialect_hint"] = str(dialect_hint)
-
-    payload_json = json.dumps(payload, ensure_ascii=False, indent=2)
-    messages = [
-        {
-            "role": "user",
-            "content": [
-                {
-                    "type": "text",
-                    "text": payload_json,
-                }
-            ],
-        }
-    ]
-
-    return {
-        "system": system_text,
-        "messages": messages,
-        "version": PROMPT_VERSION_4,
-    }
-
 
 @lru_cache(maxsize=1)
-def get_prompt_generator_assets() -> Dict[str, str]:
-    """Return the system and user template strings for LLM CALL 5."""
-    return dict(LLM_CALL_5_PROMPT)
+def get_excel_prompt_generator_assets() -> Dict[str, str]:
+    """Return the Excel-specific system/user templates for LLM CALL 5."""
+    return dict(EXCEL_LLM_CALL_5_PROMPT)
 
 
 __all__ = [
-    "build_llm_call_3_prompt",
-    "build_llm_call_3_5_prompt",
-    "PROMPT_VERSION",
-    "PROMPT_VERSION_3_5",
-    "PROMPT_VERSION_4",
-    "build_llm_call_4_prompt",
-    "LLM_CALL_PROMPTS",
-    "PROMPT_LIBRARY",
-    "get_prompt_generator_assets",
+    "EXCEL_PROMPT_VERSION",
+    "EXCEL_PROMPT_VERSION_3_5",
+    "EXCEL_PROMPT_VERSION_4",
+    "EXCEL_PROMPT_VERSION_5",
+    "build_excel_llm_call_3_prompt",
+    "build_excel_llm_call_3_5_prompt",
+    "build_excel_llm_call_4_prompt",
+    "get_excel_prompt_generator_assets",
 ]

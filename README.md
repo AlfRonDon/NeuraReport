@@ -8,7 +8,8 @@ NeuraReport is a desktop-first reporting assistant that pairs a FastAPI backend 
 - `frontend/` - Vite + React 18 SPA that streams pipeline progress and manages state with React Query/Zustand.
 - `desktop/` - Tauri scaffold for packaging the web UI with the Python sidecar (currently a stub).
 - `scripts/` - Developer utilities (`verify_pipeline.py`, `artifact_stats.py`, etc.).
-- `uploads/` - Generated artifacts, manifests, and run outputs (created at runtime).
+- `uploads/` - PDF pipeline artifacts, manifests, and run outputs (created at runtime).
+- `uploads_excel/` - Excel pipeline artifacts and history (created at runtime when Excel flow is used).
 - `state/` - Encrypted state store (`state.json`) plus generated Fernet secret.
 - `dummy.db`, `scratch_recipe.db` - Sample SQLite datasets for development.
 

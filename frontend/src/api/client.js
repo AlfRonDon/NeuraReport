@@ -1,4 +1,5 @@
 import axios from 'axios'
+import * as mock from './mock'
 
 
 
@@ -23,6 +24,68 @@ export const sleep = (ms = 400) => new Promise(r => setTimeout(r, ms))
 // whether to use mock API
 
 export const isMock = (import.meta.env.VITE_USE_MOCK || 'true') === 'true'
+
+const normalizeKind = (kind) => (kind === 'excel' ? 'excel' : 'pdf')
+
+const TEMPLATE_ROUTES = {
+  pdf: {
+    verify: () => `${API_BASE}/templates/verify`,
+    mappingPreview: (id) => `${API_BASE}/templates/${encodeURIComponent(id)}/mapping/preview`,
+    corrections: (id) => `${API_BASE}/templates/${encodeURIComponent(id)}/mapping/corrections-preview`,
+    approve: (id) => `${API_BASE}/templates/${encodeURIComponent(id)}/mapping/approve`,
+    generator: (id) => `${API_BASE}/templates/${encodeURIComponent(id)}/generator-assets/v1`,
+    manifest: (id) => `${API_BASE}/templates/${encodeURIComponent(id)}/artifacts/manifest`,
+    head: (id, name) =>
+      `${API_BASE}/templates/${encodeURIComponent(id)}/artifacts/head?name=${encodeURIComponent(name)}`,
+    keys: (id) => `${API_BASE}/templates/${encodeURIComponent(id)}/keys/options`,
+    discover: () => `${API_BASE}/reports/discover`,
+    run: () => `${API_BASE}/reports/run`,
+    uploadsBase: '/uploads',
+    manifestBase: '/templates',
+  },
+  excel: {
+    verify: () => `${API_BASE}/excel/verify`,
+    mappingPreview: (id) => `${API_BASE}/excel/${encodeURIComponent(id)}/mapping/preview`,
+    corrections: (id) => `${API_BASE}/excel/${encodeURIComponent(id)}/mapping/corrections-preview`,
+    approve: (id) => `${API_BASE}/excel/${encodeURIComponent(id)}/mapping/approve`,
+    generator: (id) => `${API_BASE}/excel/${encodeURIComponent(id)}/generator-assets/v1`,
+    manifest: (id) => `${API_BASE}/excel/${encodeURIComponent(id)}/artifacts/manifest`,
+    head: (id, name) =>
+      `${API_BASE}/excel/${encodeURIComponent(id)}/artifacts/head?name=${encodeURIComponent(name)}`,
+    keys: (id) => `${API_BASE}/excel/${encodeURIComponent(id)}/keys/options`,
+    discover: () => `${API_BASE}/excel/reports/discover`,
+    run: () => `${API_BASE}/excel/reports/run`,
+    uploadsBase: '/excel-uploads',
+    manifestBase: '/excel',
+  },
+}
+
+const getTemplateRoutes = (kind) => TEMPLATE_ROUTES[normalizeKind(kind)]
+
+const prepareKeyValues = (values) => {
+  if (!values || typeof values !== 'object') return undefined
+  const payload = {}
+  Object.entries(values).forEach(([token, raw]) => {
+    if (!token) return
+    if (Array.isArray(raw)) {
+      const normalized = raw
+        .map((value) => (value == null ? '' : String(value).trim()))
+        .filter(Boolean)
+      if (!normalized.length) return
+      payload[token] = normalized.length === 1 ? normalized[0] : normalized
+      return
+    }
+    if (raw === undefined || raw === null) return
+    const text = typeof raw === 'string' ? raw.trim() : raw
+    if (typeof text === 'string') {
+      if (!text) return
+      payload[token] = text
+      return
+    }
+    payload[token] = raw
+  })
+  return Object.keys(payload).length ? payload : undefined
+}
 
 
 
@@ -80,24 +143,16 @@ export async function testConnection({ db_url, db_type, database }) {
 
 // 2) Upload + verify a PDF template (streaming progress)
 
-export async function verifyTemplate({ file, connectionId, refineIters = 0, onProgress } = {}) {
-
+export async function verifyTemplate({ file, connectionId, refineIters = 0, onProgress, kind = 'pdf' } = {}) {
   const form = new FormData()
-
   form.append('file', file)
-
-  form.append('connection_id', connectionId)
-
+  const normalizedConnectionId = connectionId ?? ''
+  form.append('connection_id', normalizedConnectionId)
   form.append('refine_iters', String(refineIters ?? 0))
 
-
-
-  const res = await fetch(`${API_BASE}/templates/verify`, {
-
+  const res = await fetch(getTemplateRoutes(kind).verify(), {
     method: 'POST',
-
     body: form,
-
   })
 
 
@@ -299,73 +354,38 @@ export async function verifyTemplate({ file, connectionId, refineIters = 0, onPr
 // 3) Auto-generate header→column mapping
 
 export async function mappingPreview(templateId, connectionId, options = {}) {
-
+  const kind = options.kind || 'pdf'
   const params = { connection_id: connectionId ?? '' }
-
   if (Object.prototype.hasOwnProperty.call(options, 'forceRefresh')) {
-
     params.force_refresh = options.forceRefresh
-
   }
-
-
-
-  const { data } = await api.post(
-
-    `/templates/${templateId}/mapping/preview`,
-
-    null,
-
-    { params }
-
-  )
-
+  const endpoint = getTemplateRoutes(kind).mappingPreview(templateId)
+  const { data } = await api.post(endpoint, null, { params })
   return data
-
-  // { mapping, errors, schema_info, catalog }
-
 }
 
 
 
 export async function runCorrectionsPreview({
-
   templateId,
-
   userInput = '',
-
   page = 1,
-
   mappingOverride,
-
   sampleTokens,
-
   onEvent,
-
   signal,
-
+  kind = 'pdf',
 } = {}) {
-
   if (!templateId) {
-
     throw new Error('templateId is required for corrections preview')
-
   }
-
   if (signal?.aborted) {
-
     throw new DOMException('Aborted', 'AbortError')
-
   }
 
-
-
-  const res = await fetch(`${API_BASE}/templates/${encodeURIComponent(templateId)}/mapping/corrections-preview`, {
-
+  const res = await fetch(getTemplateRoutes(kind).corrections(templateId), {
     method: 'POST',
-
     headers: { 'Content-Type': 'application/json' },
-
     body: JSON.stringify({
       user_input: userInput,
       page,
@@ -376,9 +396,7 @@ export async function runCorrectionsPreview({
         ? { sample_tokens: sampleTokens }
         : {}),
     }),
-
     signal,
-
   })
 
 
@@ -545,64 +563,38 @@ export async function runCorrectionsPreview({
 
 // 4) Approve & save the mapping (streaming progress)
 
-export async function fetchArtifactManifest(templateId) {
-
-  const res = await fetch(`${API_BASE}/templates/${encodeURIComponent(templateId)}/artifacts/manifest`);
-
+export async function fetchArtifactManifest(templateId, { kind = 'pdf' } = {}) {
+  const res = await fetch(getTemplateRoutes(kind).manifest(templateId))
   if (!res.ok) {
-
-    throw new Error(await res.text().catch(() => `Manifest fetch failed (${res.status})`));
-
+    throw new Error(await res.text().catch(() => `Manifest fetch failed (${res.status})`))
   }
-
-  const data = await res.json();
-
-  return data?.manifest ?? data;
-
+  const data = await res.json()
+  return data?.manifest ?? data
 }
 
-
-
-export async function fetchArtifactHead(templateId, name) {
-
-  const url = `${API_BASE}/templates/${encodeURIComponent(templateId)}/artifacts/head?name=${encodeURIComponent(name)}`;
-
-  const res = await fetch(url);
-
+export async function fetchArtifactHead(templateId, name, { kind = 'pdf' } = {}) {
+  const url = getTemplateRoutes(kind).head(templateId, name)
+  const res = await fetch(url)
   if (!res.ok) {
-
-    throw new Error(await res.text().catch(() => `Artifact head failed (${res.status})`));
-
+    throw new Error(await res.text().catch(() => `Artifact head failed (${res.status})`))
   }
-
-  return res.json();
-
+  return res.json()
 }
 
 
 
 export async function mappingApprove(
-
   templateId,
-
   mapping,
-
   {
-
     connectionId,
-
     userValuesText = '',
-
     userInstructions = '',
-
     keys,
-
     onProgress,
-
     signal,
-
+    kind = 'pdf',
   } = {}
-
 ) {
 
   const payload = { mapping }
@@ -630,7 +622,7 @@ export async function mappingApprove(
 
 
 
-  const res = await fetch(`${API_BASE}/templates/${templateId}/mapping/approve`, {
+  const res = await fetch(getTemplateRoutes(kind).approve(templateId), {
 
     method: 'POST',
 
@@ -852,7 +844,7 @@ export async function mappingApprove(
 
     try {
 
-      manifest = await fetchArtifactManifest(templateId)
+      manifest = await fetchArtifactManifest(templateId, { kind })
 
     } catch (err) {
 
@@ -911,7 +903,10 @@ export async function mappingApprove(
 }
 
 
-export async function fetchTemplateKeyOptions(templateId, { connectionId, tokens, limit, startDate, endDate } = {}) {
+export async function fetchTemplateKeyOptions(
+  templateId,
+  { connectionId, tokens, limit, startDate, endDate, kind = 'pdf' } = {},
+) {
   if (!templateId) {
     throw new Error('templateId is required to fetch key options')
   }
@@ -924,9 +919,8 @@ export async function fetchTemplateKeyOptions(templateId, { connectionId, tokens
   if (endDate) params.set('end_date', endDate)
 
   const query = params.size ? `?${params.toString()}` : ''
-  const res = await fetch(
-    `${API_BASE}/templates/${encodeURIComponent(templateId)}/keys/options${query}`,
-  )
+  const endpoint = getTemplateRoutes(kind).keys(templateId)
+  const res = await fetch(`${endpoint}${query}`)
   if (!res.ok) {
     const text = await res.text().catch(() => '')
     throw new Error(text || `Key options fetch failed (${res.status})`)
@@ -955,7 +949,7 @@ export async function fetchTemplateKeyOptions(templateId, { connectionId, tokens
 
 // 5) Step-5 Generator Assets (SQL + Schemas)
 
-export async function postGeneratorAssetsV1(templateId, body, { onProgress, signal } = {}) {
+export async function postGeneratorAssetsV1(templateId, body, { onProgress, signal, kind = 'pdf' } = {}) {
 
   if (signal?.aborted) {
 
@@ -965,7 +959,7 @@ export async function postGeneratorAssetsV1(templateId, body, { onProgress, sign
 
 
 
-  const res = await fetch(`${API_BASE}/templates/${encodeURIComponent(templateId)}/generator-assets/v1`, {
+  const res = await fetch(getTemplateRoutes(kind).generator(templateId), {
 
     method: 'POST',
 
@@ -1175,12 +1169,19 @@ export function normalizeArtifacts(artifacts) {
 
 // A) List approved templates (adjust if your API differs)
 
-export async function listApprovedTemplates() {
-
-  const { data } = await api.get('/templates', { params: { status: 'approved' } })
-
-  return data?.templates || []
-
+export async function listApprovedTemplates({ kind = 'all' } = {}) {
+  if (isMock) {
+    const templates = mock.listTemplates() || []
+    if (kind === 'excel') return templates.filter((tpl) => (tpl.kind || 'pdf') === 'excel')
+    if (kind === 'pdf') return templates.filter((tpl) => (tpl.kind || 'pdf') === 'pdf')
+    return templates
+  }
+  const params = { status: 'approved' }
+  const { data } = await api.get('/templates', { params })
+  const templates = Array.isArray(data?.templates) ? data.templates : []
+  if (kind === 'excel') return templates.filter((tpl) => (tpl.kind || 'pdf') === 'excel')
+  if (kind === 'pdf') return templates.filter((tpl) => (tpl.kind || 'pdf') === 'pdf')
+  return templates
 }
 
 export async function deleteTemplate(templateId) {
@@ -1196,52 +1197,53 @@ export async function deleteTemplate(templateId) {
 
 // B) Run a report for a date range (returns artifact URLs)
 
-export async function runReport({ templateId, connectionId, startDate, endDate, batchIds = null }) {
-
-  const { data } = await api.post('/reports/run', {
-
+export async function runReport({
+  templateId,
+  connectionId,
+  startDate,
+  endDate,
+  batchIds = null,
+  keyValues,
+  docx = false,
+  xlsx = false,
+  kind = 'pdf',
+}) {
+  const payload = {
     template_id: templateId,
-
     connection_id: connectionId,
-
-    start_date: startDate,   // ISO string
-
-    end_date: endDate,       // ISO string
-
-    batch_ids: batchIds,     // optional
-
-  })
-
+    start_date: startDate,
+    end_date: endDate,
+  }
+  if (Array.isArray(batchIds) && batchIds.length) {
+    payload.batch_ids = batchIds
+  }
+  const preparedKeyValues = prepareKeyValues(keyValues)
+  if (preparedKeyValues) {
+    payload.key_values = preparedKeyValues
+  }
+  if (docx) {
+    payload.docx = true
+  }
+  if (xlsx) {
+    payload.xlsx = true
+  }
+  const { data } = await api.post(getTemplateRoutes(kind).run(), payload)
   return data
-
-  // → {
-
-  //   ok, run_id, template_id, start_date, end_date,
-
-  //   html_url: "/uploads/<tid>/filled_*.html",
-
-  //   pdf_url:  "/uploads/<tid>/filled_*.pdf"
-
-  // }
-
 }
+
 
 
 
 // C) Normalize a run response’s artifact URLs to absolute
 
 export function normalizeRunArtifacts(run) {
-
   return {
-
     ...run,
-
     html_url: withBase(run.html_url),
-
     pdf_url: withBase(run.pdf_url),
-
+    docx_url: run.docx_url ? withBase(run.docx_url) : null,
+    xlsx_url: run.xlsx_url ? withBase(run.xlsx_url) : null,
   }
-
 }
 
 // D) Optional: placeholder for a future discovery endpoint
@@ -1268,24 +1270,26 @@ export async function discoverBatches() {
 
 }
 
-export async function discoverReports({ templateId, connectionId, startDate, endDate }) {
-
+export async function discoverReports({
+  templateId,
+  connectionId,
+  startDate,
+  endDate,
+  keyValues,
+  kind = 'pdf',
+}) {
   const payload = {
-
     template_id: templateId,
-
     start_date: startDate,
-
     end_date: endDate,
-
   }
-
   if (connectionId) payload.connection_id = connectionId
-
-  const { data } = await api.post('/reports/discover', payload)
-
-  return data // { template_id, name, batches:[{id,parent,rows,selected}], batches_count, rows_total }
-
+  const preparedKeyValues = prepareKeyValues(keyValues)
+  if (preparedKeyValues) {
+    payload.key_values = preparedKeyValues
+  }
+  const { data } = await api.post(getTemplateRoutes(kind).discover(), payload)
+  return data
 }
 
 
@@ -1421,6 +1425,7 @@ export async function recordLastUsed({ connectionId, templateId }) {
   return data?.last_used
 
 }
+
 
 
 

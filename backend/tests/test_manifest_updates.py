@@ -60,6 +60,8 @@ def test_manifest_contains_contract_artifacts(monkeypatch, tmp_path, client):
         dialect_hint: str | None,
         db_signature: str | None = None,
         key_tokens=None,
+        prompt_builder=None,
+        prompt_version=None,
     ):
         contract_path = template_dir / "contract.json"
         overview_path = template_dir / "overview.md"

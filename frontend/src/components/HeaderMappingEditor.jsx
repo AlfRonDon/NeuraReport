@@ -3,7 +3,7 @@ import {
   Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle,
   FormControl, MenuItem, List, ListItem, ListSubheader, Select, Stack, Table,
   TableBody, TableCell, TableHead, TableRow, Typography, Alert, CircularProgress,
-  LinearProgress, TextField, Switch
+  LinearProgress, TextField, Switch, Tooltip
 } from "@mui/material";
 import { alpha } from "@mui/material/styles";
 import { mappingPreview, mappingApprove, withBase } from "../api/client";
@@ -172,6 +172,7 @@ const getExpressionIssues = (value, catalogSet, groupedCatalog) => {
 export default function HeaderMappingEditor({
   templateId,
   connectionId,
+  templateKind = "pdf",
   onApproved,                     // callback after successful save (receives server resp with URLs)
   blockApproveUntilResolved,      // preferred name
   disabledApproveWhileUnresolved, // back-compat alias
@@ -189,6 +190,7 @@ export default function HeaderMappingEditor({
   const [approveStage, setApproveStage] = useState("");
   const [approveLog, setApproveLog] = useState([]);
   const [approveProgress, setApproveProgress] = useState(0);
+  const [correctionsComplete, setCorrectionsComplete] = useState(false);
   const [correctionsDialogOpen, setCorrectionsDialogOpen] = useState(false);
   const [contractDialogOpen, setContractDialogOpen] = useState(false);
   const [llm35Instructions, setLlm35Instructions] = useState("");
@@ -208,6 +210,8 @@ export default function HeaderMappingEditor({
       if (typeof onCorrectionsComplete === "function") {
         onCorrectionsComplete(payload);
       }
+
+      setCorrectionsComplete(true);
     },
     [onCorrectionsComplete]
   );
@@ -261,6 +265,7 @@ export default function HeaderMappingEditor({
       setContractDialogOpen(false);
       setLlm35Instructions("");
       setLlm4Instructions("");
+      setCorrectionsComplete(false);
       return;
     }
     let cancelled = false;
@@ -278,9 +283,10 @@ export default function HeaderMappingEditor({
     setContractDialogOpen(false);
     setLlm35Instructions("");
     setLlm4Instructions("");
+    setCorrectionsComplete(false);
     (async () => {
       try {
-        const data = await mappingPreview(templateId, connectionId);
+        const data = await mappingPreview(templateId, connectionId, { kind: templateKind });
         if (cancelled) return;
         const initialMapping = data.mapping || {};
         const catalogSet = new Set(
@@ -323,6 +329,7 @@ export default function HeaderMappingEditor({
         );
         setSelectedKeys(normalizedKeys);
         setPreview({ ...data, keys: normalizedKeys });
+        setCorrectionsComplete(Boolean(data?.artifacts?.page_summary_url));
       } catch (e) {
         if (!cancelled) {
           setErrorMsg(e?.message || "Failed to load mapping preview");
@@ -466,6 +473,7 @@ export default function HeaderMappingEditor({
     setExpressionOrigin({});
     setMapping(Object.fromEntries(headersAll.map((h) => [h, VALUE_UNRESOLVED])));
     setSelectedKeys([]);
+    setCorrectionsComplete(false);
   };
 
   const handleApprove = async () => {
@@ -635,6 +643,7 @@ export default function HeaderMappingEditor({
         keys: Array.from(selectedKeysSet),
         onProgress: handleProgress,
         signal: controller.signal,
+        kind: templateKind,
       });
       if (approveRequestRef.current !== requestId) {
         outcome = "aborted";
@@ -777,9 +786,10 @@ export default function HeaderMappingEditor({
   const waiting = fetching || saving;
   const approvalBlocked =
     headersAll.length === 0 ||
+    !correctionsComplete ||
     (blockApproval && unresolvedCount > 0);
   const approveActionDisabled = waiting || approvalBlocked;
-  const approveButtonDisabled = waiting;
+  const approveButtonDisabled = waiting || !correctionsComplete;
 
   const handleApproveFromDialog = async () => {
     if (approveActionDisabled) return;
@@ -869,6 +879,7 @@ export default function HeaderMappingEditor({
           sx={{
             minWidth: 640,
             width: '100%',
+            tableLayout: { xs: 'auto', md: 'fixed' },
             '& th, & td': {
               whiteSpace: 'normal',
               wordBreak: 'break-word',
@@ -878,8 +889,25 @@ export default function HeaderMappingEditor({
         >
           <TableHead>
             <TableRow>
-              <TableCell sx={{ width: '35%', fontWeight: 600 }}>Header</TableCell>
-              <TableCell sx={{ width: '40%', fontWeight: 600 }}>Map to column</TableCell>
+              <TableCell
+                sx={{
+                  width: { xs: '33%', md: '25%' },
+                  minWidth: { xs: 176, md: 220 },
+                  fontWeight: 600,
+                }}
+              >
+                Header
+              </TableCell>
+              <TableCell
+                sx={{
+                  width: { xs: 'auto', md: '43%' },
+                  minWidth: { xs: 248, md: 334 },
+                  maxWidth: { md: 430 },
+                  fontWeight: 600,
+                }}
+              >
+                Map to column
+              </TableCell>
               <TableCell sx={{ width: '10%', fontWeight: 600, textAlign: 'center' }}>Key</TableCell>
               <TableCell sx={{ width: '15%', fontWeight: 600 }}>Status</TableCell>
             </TableRow>
@@ -921,12 +949,27 @@ export default function HeaderMappingEditor({
                 (directColumn || normalized === VALUE_UNRESOLVED);
               return (
                 <TableRow key={header}>
-                  <TableCell sx={{ fontWeight: 500 }}>{header}</TableCell>
-                  <TableCell sx={{ minWidth: 0 }}>
+                  <TableCell
+                    sx={{
+                      fontWeight: 500,
+                      width: { xs: '33%', md: '25%' },
+                      minWidth: { xs: 176, md: 220 },
+                    }}
+                  >
+                    {header}
+                  </TableCell>
+                  <TableCell
+                    sx={{
+                      width: { xs: 'auto', md: '43%' },
+                      minWidth: { xs: 248, md: 334 },
+                      maxWidth: { md: 430 },
+                    }}
+                  >
                     {expressionActive ? (
-                      <Stack spacing={0.75}>
+                      <Stack spacing={0.75} sx={{ width: '100%' }}>
                         <TextField
                           size="small"
+                          fullWidth
                           multiline
                           minRows={1}
                           value={valueString}
@@ -967,11 +1010,43 @@ export default function HeaderMappingEditor({
                         </Box>
                       </Stack>
                     ) : (
-                      <Stack spacing={0.5}>
+                      <Stack spacing={0.5} sx={{ width: '100%' }}>
                         <FormControl fullWidth size="small" disabled={waiting}>
                           <Select
                             value={valueString || VALUE_UNRESOLVED}
                             onChange={(e) => handleChange(header, e.target.value)}
+                            renderValue={(selected) => {
+                              const resolvedSelected = selected || VALUE_UNRESOLVED;
+                              const sampleMatch = sampleOptions.find((option) => option.value === resolvedSelected);
+                              const displayValue =
+                                resolvedSelected === VALUE_UNRESOLVED
+                                  ? "User Input"
+                                  : sampleMatch?.label || resolvedSelected;
+                              return (
+                                <Tooltip title={displayValue}>
+                                  <Typography
+                                    component="span"
+                                    sx={{
+                                      display: 'block',
+                                      maxWidth: '100%',
+                                      whiteSpace: 'nowrap',
+                                      overflow: 'hidden',
+                                      textOverflow: 'ellipsis',
+                                    }}
+                                  >
+                                    {displayValue}
+                                  </Typography>
+                                </Tooltip>
+                              );
+                            }}
+                            sx={{
+                              '& .MuiSelect-select': {
+                                display: 'block',
+                                whiteSpace: 'nowrap',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                              },
+                            }}
                             MenuProps={{ PaperProps: { style: { maxHeight: 320 } } }}
                           >
                             <ListSubheader disableSticky>Choose column</ListSubheader>
@@ -1112,7 +1187,6 @@ export default function HeaderMappingEditor({
                 ? "No headers detected in template"
                 : (unresolvedCount ? `${unresolvedCount} unresolved` : "All resolved")}
             </Typography>
-
           </Stack>
 
           <Stack
@@ -1147,6 +1221,16 @@ export default function HeaderMappingEditor({
           </Stack>
         </Stack>
 
+        {!correctionsComplete && (
+          <Typography
+            variant="caption"
+            color="text.secondary"
+            sx={{ mt: 0.75, maxWidth: { xs: "100%", sm: 420 } }}
+          >
+            Run the Corrections Assistant and save the preview before approving.
+          </Typography>
+        )}
+
         {/* subtle overlay to indicate busy state */}
         {waiting && (
           <Box
@@ -1169,6 +1253,7 @@ export default function HeaderMappingEditor({
       <DialogContent sx={{ p: 0 }}>
         <CorrectionsPreviewPanel
           templateId={templateId}
+          templateKind={templateKind}
           disabled={waiting}
           onCompleted={handleCorrectionsCompleted}
           onInstructionsChange={setLlm35Instructions}

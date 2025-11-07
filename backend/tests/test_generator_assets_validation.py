@@ -384,3 +384,57 @@ def test_generator_assets_validates_step5_contract(monkeypatch, tmp_path):
             params_spec=[],
         )
     assert "Generator contract failed validation" in str(excinfo.value)
+
+
+def test_generator_assets_backfills_row_order_and_purpose(monkeypatch, tmp_path):
+    template_dir = tmp_path / "tpl"
+    template_dir.mkdir()
+    _write_png(template_dir / "report_final.png")
+
+    tokens = {"scalars": [], "row_tokens": ["row_material_name"], "totals": []}
+    contract_blueprint = _make_contract(tokens)
+    contract_blueprint["order_by"] = {"rows": ["rows.row_material_name ASC"]}
+    contract_blueprint["reshape_rules"][0].pop("purpose", None)
+
+    step4_output = {
+        "contract": contract_blueprint,
+        "overview_md": "#",
+        "step5_requirements": {},
+    }
+
+    response_payload = {
+        "contract": json.loads(json.dumps(contract_blueprint)),
+        "sql_pack": {
+            "script": "-- HEADER SELECT --\nSELECT 1;\n-- ROWS SELECT --\nSELECT 1 AS row_material_name;\n-- TOTALS SELECT --\nSELECT 1;",
+            "entrypoints": {
+                "header": "SELECT 1",
+                "rows": "SELECT 1 AS row_material_name",
+                "totals": "SELECT 1",
+            },
+            "params": {"required": [], "optional": []},
+        },
+        "output_schemas": {"header": [], "rows": ["row_material_name"], "totals": []},
+        "needs_user_fix": [],
+        "summary": {},
+    }
+
+    def fake_response(*args, **kwargs):
+        return FakeResponse(json.dumps(response_payload, ensure_ascii=False))
+
+    monkeypatch.setattr(generator_assets, "call_chat_completion", lambda *args, **kwargs: fake_response())
+    monkeypatch.setattr(generator_assets, "get_openai_client", lambda: object())
+
+    result = generator_assets.build_generator_assets_from_payload(
+        template_dir=template_dir,
+        step4_output=step4_output,
+        final_template_html="<html></html>",
+        reference_pdf_image=None,
+        catalog_allowlist=None,
+        params_spec=[],
+    )
+
+    assert result["invalid"] is False
+
+    written_contract = json.loads((template_dir / "contract.json").read_text(encoding="utf-8"))
+    assert written_contract["row_order"] == ["rows.row_material_name ASC"]
+    assert written_contract["reshape_rules"][0]["purpose"]

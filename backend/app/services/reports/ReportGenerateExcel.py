@@ -1,3 +1,10 @@
+"""Excel-specific report generation pipeline.
+
+This module mirrors the baseline `ReportGenerate` implementation so the
+Excel ingestion flow can evolve independently (e.g., different token
+rules, workbook-aware helpers) without perturbing the PDF path.
+"""
+
 import asyncio
 import contextlib
 import json
@@ -57,6 +64,161 @@ _BATCH_BLOCK_ANY_TAG = re.compile(
 
 _TOKEN_REGEX_CACHE: dict[str, re.Pattern] = {}
 _TR_BLOCK_RE = re.compile(r"(?is)<tr\b[^>]*>.*?</tr>")
+_TABLE_RE = re.compile(r"(?is)<table\b[^>]*>(?P<body>.*?)</table>")
+_ROW_RE = re.compile(r"(?is)<tr\b[^>]*>(?P<body>.*?)</tr>")
+_CELL_RE = re.compile(r"(?is)<t(?:d|h)\b[^>]*>.*?</t(?:d|h)>")
+_ROW_ONLY_RE = re.compile(r"(?is)<tr\b[^>]*>")
+_COLSPAN_RE = re.compile(r'(?is)colspan\s*=\s*["\']?(\d+)["\']?')
+
+_EXCEL_PRINT_STYLE_ID = "excel-print-sizing"
+_EXCEL_PRINT_MARGIN_MM = 10
+_DEFAULT_EXCEL_PRINT_SCALE = 0.82
+_MIN_EXCEL_PRINT_SCALE = 0.4
+_MAX_EXCEL_PRINT_SCALE = 0.97
+_PAGE_HEIGHT_PX = 980
+_BASE_ROW_HEIGHT_PX = 28
+_EXCEL_STYLE_BLOCK_RE = re.compile(
+    r'(?is)<style\b[^>]*id=["\']excel-print-sizing["\'][^>]*>.*?</style>'
+)
+
+
+def _clamp_excel_print_scale(scale: float | None) -> float:
+    if scale is None or not isinstance(scale, (float, int)):
+        return _DEFAULT_EXCEL_PRINT_SCALE
+    return max(_MIN_EXCEL_PRINT_SCALE, min(float(scale), _MAX_EXCEL_PRINT_SCALE))
+
+
+def _estimate_excel_print_scale(column_count: int) -> float:
+    count = max(0, int(column_count))
+    if count <= 8:
+        return 0.98
+    if count <= 12:
+        return 0.9
+    if count <= 16:
+        return 0.82
+    if count <= 20:
+        return 0.74
+    if count <= 24:
+        return 0.68
+    if count <= 30:
+        return 0.6
+    if count <= 36:
+        return 0.52
+    if count <= 44:
+        return 0.48
+    return 0.44
+
+
+def _count_table_columns(html_text: str) -> int:
+    max_cols = 0
+    for table_match in _TABLE_RE.finditer(html_text or ""):
+        table_body = table_match.group("body") or ""
+        for row_match in _ROW_RE.finditer(table_body):
+            row_html = row_match.group("body") or ""
+            total = 0
+            for cell_match in _CELL_RE.finditer(row_html):
+                cell_html = cell_match.group(0)
+                span_match = _COLSPAN_RE.search(cell_html)
+                span = 1
+                if span_match:
+                    try:
+                        span = max(1, int(span_match.group(1)))
+                    except (TypeError, ValueError):
+                        span = 1
+                total += span
+            if total:
+                max_cols = max(max_cols, total)
+        if max_cols:
+            break
+    return max_cols
+
+
+def _count_table_rows(html_text: str) -> int:
+    return len(_ROW_ONLY_RE.findall(html_text or ""))
+
+
+def _estimate_rows_per_page(scale: float) -> int:
+    clamped = _clamp_excel_print_scale(scale)
+    if clamped <= 0:
+        return 1
+    capacity = int((_PAGE_HEIGHT_PX / _BASE_ROW_HEIGHT_PX) / clamped)
+    return max(1, capacity)
+
+
+def _inject_excel_print_styles(
+    html_text: str,
+    *,
+    scale: float | None = None,
+    rows_per_page: int | None = None,
+) -> str:
+    """
+    Ensure Excel-generated reports include print-specific CSS that
+    switches pages to landscape and downscales the rendered content.
+    """
+    scale_value = _clamp_excel_print_scale(scale)
+    scale_str = f"{scale_value:.4f}".rstrip("0").rstrip(".")
+    pagination_css = ""
+    if rows_per_page and rows_per_page > 0:
+        pagination_css = (
+            "@media print {\n"
+            f"  tbody tr:nth-of-type({rows_per_page}n+1):not(:first-child) {{\n"
+            "    break-before: page;\n"
+            "    page-break-before: always;\n"
+            "  }\n"
+            "}\n"
+        )
+
+    style_block = (
+        f'\n<style id="{_EXCEL_PRINT_STYLE_ID}">\n'
+        f":root {{ --excel-print-scale: {scale_str}; }}\n"
+        "@page {\n"
+        "  size: A4 landscape;\n"
+        f"  margin: {_EXCEL_PRINT_MARGIN_MM}mm;\n"
+        "}\n"
+        "html, body {\n"
+        "  margin: 0 auto;\n"
+        "  padding: 0;\n"
+        "  background: #fff;\n"
+        "  max-width: calc(100% / var(--excel-print-scale));\n"
+        "}\n"
+        "body {\n"
+        "  width: calc(100% / var(--excel-print-scale));\n"
+        "  min-height: calc(100% / var(--excel-print-scale));\n"
+        "  transform-origin: top left;\n"
+        "}\n"
+        "table {\n"
+        "  width: 100% !important;\n"
+        "  table-layout: fixed;\n"
+        "  border-collapse: collapse;\n"
+        "}\n"
+        "th, td {\n"
+        "  word-break: break-word;\n"
+        "  white-space: normal;\n"
+        "}\n"
+        "@media screen {\n"
+        "  body {\n"
+        "    transform: scale(var(--excel-print-scale));\n"
+        "  }\n"
+        "}\n"
+        "@media print {\n"
+        "  body {\n"
+        "    transform: scale(var(--excel-print-scale));\n"
+        "    zoom: 1;\n"
+        "  }\n"
+        "}\n"
+        f"{pagination_css}"
+        "</style>\n"
+    )
+
+    if _EXCEL_STYLE_BLOCK_RE.search(html_text):
+        return _EXCEL_STYLE_BLOCK_RE.sub(style_block, html_text, count=1)
+
+    head_close = re.search(r"(?is)</head>", html_text)
+    if head_close:
+        idx = head_close.start()
+        return f"{html_text[:idx]}{style_block}{html_text[idx:]}"
+
+    return f"{style_block}{html_text}"
 
 
 def _token_regex(token: str) -> re.Pattern:
@@ -256,6 +418,7 @@ def fill_and_print(
 
     HEADER_TOKENS = contract_adapter.scalar_tokens or OBJ.get("header_tokens", [])
     ROW_TOKENS = contract_adapter.row_tokens or OBJ.get("row_tokens", [])
+    row_token_count = sum(1 for tok in ROW_TOKENS if isinstance(tok, str) and tok.strip())
     TOTALS = contract_adapter.totals_mapping or OBJ.get("totals", {})
     ROW_ORDER = contract_adapter.row_order or OBJ.get("row_order", ["ROWID"])
     LITERALS = {
@@ -414,6 +577,7 @@ def fill_and_print(
                 await page.pdf(
                     path=str(pdf_path),
                     format="A4",
+                    landscape=True,
                     print_background=True,
                     margin={"top": "10mm", "right": "10mm", "bottom": "10mm", "left": "10mm"},
                     prefer_css_page_size=True,
@@ -502,56 +666,15 @@ def fill_and_print(
                 continue
             if _value_has_content(row.get(col)):
                 return True
-        for key, value in row.items():
-            if not isinstance(key, str):
-                continue
-            if _is_counter_field(key):
-                continue
-            if _value_has_content(value):
-                return True
         return False
 
-    def _is_counter_field(name: str | None) -> bool:
-        if not name:
-            return False
-        if not isinstance(name, str):
-            name = str(name)
-        normalized = re.sub(r"[^a-z0-9]", "", name.lower())
-        if not normalized:
-            return False
-        if normalized in {
-            "row",
-            "rowid",
-            "rowno",
-            "rownum",
-            "rownumber",
-            "rowindex",
-            "rowcounter",
-            "srno",
-            "sno",
-        }:
-            return True
-        counter_markers = ("serial", "sequence", "seq", "counter")
-        if any(marker in normalized for marker in counter_markers):
-            return True
-        counter_suffixes = (
-            "slno",
-            "srno",
-            "sno",
-            "snum",
-            "snumber",
-            "sl",
-            "no",
-            "num",
-            "number",
-            "idx",
-            "index",
-        )
-        return any(normalized.endswith(suffix) and normalized.startswith("row") for suffix in counter_suffixes)
-
     def _reindex_serial_fields(rows: list[dict], tokens: Sequence[str], columns: Sequence[str]) -> None:
-        serial_tokens = [tok for tok in tokens if _is_counter_field(tok)]
-        serial_columns = [col for col in columns if _is_counter_field(col)]
+        serial_tokens = [
+            tok for tok in tokens if tok and any(keyword in tok.lower() for keyword in ("row", "serial", "sl"))
+        ]
+        serial_columns = [
+            col for col in columns if col and any(keyword in col.lower() for keyword in ("row", "serial", "sl"))
+        ]
         if not serial_tokens and not serial_columns:
             return
         for idx, row in enumerate(rows, start=1):
@@ -606,13 +729,19 @@ def fill_and_print(
         if treat_all_as_data:
             prepared = [dict(row) for row in rows]
         else:
-            significant_tokens = [tok for tok in row_tokens_template if tok and not _is_counter_field(tok)]
-            significant_columns = [col for col in row_columns if col and not _is_counter_field(col)]
-            guard_rows = bool(significant_tokens or significant_columns)
+            significant_tokens = [
+                tok for tok in row_tokens_template
+                if tok and not any(keyword in tok.lower() for keyword in ("row", "serial", "sl"))
+            ]
+            significant_columns = [
+                col for col in row_columns
+                if col and not any(keyword in col.lower() for keyword in ("row", "serial", "sl"))
+            ]
             prepared: list[dict[str, Any]] = []
             for row in rows:
-                if guard_rows and not _row_has_any_data(row, significant_tokens, significant_columns):
-                    continue
+                if significant_tokens or significant_columns:
+                    if not _row_has_any_data(row, significant_tokens, significant_columns):
+                        continue
                 prepared.append(dict(row))
 
         if prepared:
@@ -649,8 +778,26 @@ def fill_and_print(
                 return {"html_path": str(OUT_HTML), "pdf_path": str(OUT_PDF), "rows_rendered": False}
 
             combined_html = _combine_html_documents(html_sections)
+            column_count = max(row_token_count, _count_table_columns(combined_html))
+            excel_print_scale = _estimate_excel_print_scale(column_count)
+            row_count = _count_table_rows(combined_html)
+            rows_per_page = _estimate_rows_per_page(excel_print_scale)
+            if row_count <= rows_per_page:
+                rows_per_page = None
+            combined_html = _inject_excel_print_styles(
+                combined_html,
+                scale=excel_print_scale,
+                rows_per_page=rows_per_page,
+            )
             OUT_HTML.write_text(combined_html, encoding="utf-8")
-            asyncio.run(html_to_pdf_async(OUT_HTML, OUT_PDF, TEMPLATE_PATH.parent))
+            asyncio.run(
+                html_to_pdf_async(
+                    OUT_HTML,
+                    OUT_PDF,
+                    TEMPLATE_PATH.parent,
+                    pdf_scale=excel_print_scale,
+                )
+            )
             return {"html_path": str(OUT_HTML), "pdf_path": str(OUT_PDF), "rows_rendered": True}
         finally:
             for tmp_html_path, tmp_pdf_path in tmp_outputs:
@@ -1551,7 +1698,6 @@ def fill_and_print(
             width_mm, height_mm = height_mm, width_mm
         return width_mm, height_mm
 
-
     def _parse_margin_shorthand(value: str) -> tuple[float | None, float | None, float | None, float | None]:
         parts = [p for p in re.split(r"\s+", value.strip()) if p]
         values = [_convert_css_length_to_mm(p) for p in parts]
@@ -1612,323 +1758,30 @@ def fill_and_print(
         count_tokens: set[str],
         label_tokens: set[str] | None = None,
     ) -> str:
-        label_tokens = label_tokens or set()
-        updated = html_in
-        page_markup = '<span class="nr-page-number" data-nr-counter="page" aria-label="Current page number"></span>'
-        count_markup = '<span class="nr-page-count" data-nr-counter="pages" aria-label="Total page count"></span>'
+        tokens_to_remove = {
+            tok for tok in page_tokens if tok
+        } | {tok for tok in count_tokens if tok} | {tok for tok in (label_tokens or set()) if tok}
+        if not tokens_to_remove:
+            return html_in
 
-        for tok in page_tokens:
-            updated = sub_token(updated, tok, page_markup)
-        for tok in count_tokens:
-            updated = sub_token(updated, tok, count_markup)
-        for tok in label_tokens:
-            if count_tokens:
-                label_markup = f'<span class="nr-page-label" data-nr-counter-label="1">Page {page_markup} of {count_markup}</span>'
-            else:
-                label_markup = f'<span class="nr-page-label" data-nr-counter-label="1">Page {page_markup}</span>'
-            updated = sub_token(updated, tok, label_markup)
+        token_pattern = "|".join(re.escape(tok) for tok in tokens_to_remove)
+        placeholder_pattern = rf"(?:\{{\{{\s*(?:{token_pattern})\s*\}}\}}|\{{\s*(?:{token_pattern})\s*\}})"
+        placeholder_re = re.compile(placeholder_pattern)
+        element_re = re.compile(
+            rf"(?is)<(?P<tag>[a-z0-9:_-]+)(?:\s[^>]*)?>(?:(?!</(?P=tag)>).)*?{placeholder_pattern}(?:(?!</(?P=tag)>).)*?</(?P=tag)>"
+        )
+        line_re = re.compile(rf"(?im)^[^\n]*{placeholder_pattern}[^\n]*\n?")
 
-        if (page_tokens or count_tokens or label_tokens) and 'nr-page-counter-style' not in updated:
-            style_block = """
-<style id="nr-page-counter-style">
-  .nr-page-number,
-  .nr-page-count { white-space: nowrap; font-variant-numeric: tabular-nums; }
-  .nr-page-label { white-space: nowrap; }
-  @media screen {
-    .nr-page-number::after { content: attr(data-nr-screen); }
-    .nr-page-count::after { content: attr(data-nr-total-pages); }
-  }
-  @media print {
-    body { counter-reset: page; }
-    .nr-page-number::after { content: counter(page); }
-    .nr-page-count::after { content: counter(pages); }
-    .nr-page-count[data-nr-total-pages]::after { content: attr(data-nr-total-pages); }
-  }
-</style>
-"""
-            if '</head>' in updated:
-                updated = updated.replace('</head>', style_block + '</head>', 1)
-            else:
-                updated = style_block + updated
+        def _remove_blocks(text: str) -> str:
+            while True:
+                text, count = element_re.subn("", text)
+                if count == 0:
+                    break
+            text = line_re.sub("", text)
+            text = placeholder_re.sub("", text)
+            return text
 
-        if (page_tokens or count_tokens or label_tokens) and 'nr-page-counter-script' not in updated:
-            metrics = _extract_page_metrics(updated)
-            metrics_json = json.dumps(metrics)
-            script_template = """
-<script id="nr-page-counter-script">
-(function() {
-  const METRICS = __NR_METRICS__;
-  const PX_PER_MM = 96 / 25.4;
-  const BREAK_VALUES = ['page', 'always', 'left', 'right'];
-  const TRAILING_BREAK_SENTINEL = '__nr_trailing_break__';
-  let lastPageNodes = [];
-  let lastCountNodes = [];
-
-  function isForcedBreak(value) {
-    if (!value) return false;
-    const normalized = String(value).toLowerCase().trim();
-    if (!normalized) return false;
-    return BREAK_VALUES.indexOf(normalized) !== -1;
-  }
-
-  function readBreakValue(style, which) {
-    if (!style) return '';
-    if (which === 'before') {
-      return (
-        style.getPropertyValue('break-before') ||
-        style.getPropertyValue('page-break-before') ||
-        style.breakBefore ||
-        style.pageBreakBefore ||
-        ''
-      );
-    }
-    return (
-      style.getPropertyValue('break-after') ||
-      style.getPropertyValue('page-break-after') ||
-      style.breakAfter ||
-      style.pageBreakAfter ||
-      ''
-    );
-  }
-
-  function findNextElement(node) {
-    if (!node) return null;
-    let current = node;
-    while (current) {
-      if (current.nextElementSibling) return current.nextElementSibling;
-      current = current.parentElement;
-    }
-    return null;
-  }
-
-  function resolveNodeOffset(node) {
-    if (!node || typeof node.getBoundingClientRect !== 'function') return 0;
-    const rect = node.getBoundingClientRect();
-    const scrollY = typeof window !== 'undefined' ? window.scrollY || window.pageYOffset || 0 : 0;
-    return Math.max(0, rect.top + scrollY);
-  }
-
-  function collectManualBreakAnchors(root) {
-    if (!root || !root.ownerDocument) return [];
-    const anchors = [];
-    const seen = new Set();
-    const showElement = typeof NodeFilter !== 'undefined' && NodeFilter.SHOW_ELEMENT ? NodeFilter.SHOW_ELEMENT : 1;
-    const walker = root.ownerDocument.createTreeWalker(root, showElement);
-
-    function pushAnchor(target) {
-      if (!target) return;
-      if (seen.has(target)) return;
-      seen.add(target);
-      anchors.push(target);
-    }
-
-    while (walker.nextNode()) {
-      const element = walker.currentNode;
-      const style = window.getComputedStyle ? window.getComputedStyle(element) : null;
-      if (!style) continue;
-      if (isForcedBreak(readBreakValue(style, 'before'))) {
-        pushAnchor(element);
-      }
-      if (isForcedBreak(readBreakValue(style, 'after'))) {
-        const next = findNextElement(element);
-        pushAnchor(next || TRAILING_BREAK_SENTINEL);
-      }
-    }
-    return anchors;
-  }
-
-  function buildPageStartOffsets(manualAnchors, usableHeightPx, contentHeight, totalPages) {
-    const offsets = [0];
-    const seenOffsets = new Set([0]);
-    manualAnchors.forEach((anchor) => {
-      let offset = null;
-      if (anchor === TRAILING_BREAK_SENTINEL) {
-        offset = contentHeight + usableHeightPx;
-      } else if (anchor && typeof anchor.getBoundingClientRect === 'function') {
-        offset = resolveNodeOffset(anchor);
-      }
-      if (offset == null || !Number.isFinite(offset)) {
-        return;
-      }
-      const key = Math.round(offset * 1000) / 1000;
-      if (seenOffsets.has(key)) return;
-      seenOffsets.add(key);
-      offsets.push(offset);
-    });
-
-    offsets.sort((a, b) => a - b);
-
-    while (offsets.length < totalPages) {
-      const last = offsets[offsets.length - 1];
-      offsets.push(last + usableHeightPx);
-    }
-
-    return offsets;
-  }
-
-  function resolvePageIndexFromOffsets(offset, startOffsets) {
-    if (!startOffsets || !startOffsets.length) return 0;
-    let index = 0;
-    for (let i = 0; i < startOffsets.length; i += 1) {
-      if (offset >= startOffsets[i] - 0.5) {
-        index = i;
-      } else {
-        break;
-      }
-    }
-    return index;
-  }
-
-  function indexOfSection(node, sections) {
-    if (!node || !sections || !sections.length) return -1;
-    const target = typeof node.closest === 'function' ? node.closest('.nr-key-section') : null;
-    if (!target) return -1;
-    for (let i = 0; i < sections.length; i += 1) {
-      if (sections[i] === target) {
-        return i;
-      }
-    }
-    return -1;
-  }
-
-  function assignScreenText(node, text, key) {
-    if (!node) return;
-    const stringText = text == null ? '' : String(text);
-    if (node.getAttribute('aria-label') === null) {
-      node.setAttribute('aria-label', key === 'count' ? 'Total page count' : 'Current page number');
-    }
-    node.setAttribute('data-nr-screen', stringText);
-    if (key === 'count') {
-      node.setAttribute('data-nr-total-pages', stringText);
-    } else {
-      node.setAttribute('data-nr-page-estimate', stringText);
-    }
-    node.setAttribute('data-nr-' + key + '-text', stringText);
-    node.textContent = stringText;
-  }
-
-  function clearNodesForPrint() {
-    const nodes = lastPageNodes.concat(lastCountNodes);
-    nodes.forEach((node) => {
-      if (!node) return;
-      if (!node.hasAttribute('data-nr-print-cache')) {
-        node.setAttribute('data-nr-print-cache', node.textContent || '');
-      }
-      node.textContent = '';
-    });
-  }
-
-  function restoreNodesAfterPrint() {
-    const nodes = lastPageNodes.concat(lastCountNodes);
-    nodes.forEach((node) => {
-      if (!node) return;
-      const cached = node.getAttribute('data-nr-print-cache');
-      if (cached != null) {
-        const key = node.getAttribute('data-nr-counter') === 'pages' ? 'count' : 'page';
-        const preferred = node.getAttribute('data-nr-' + key + '-text');
-        node.textContent = preferred != null ? preferred : cached;
-        node.removeAttribute('data-nr-print-cache');
-      }
-    });
-  }
-
-  function computeTotals() {
-    try {
-      const doc = document.documentElement;
-      const body = document.body;
-      if (!doc || !body) return;
-      const usableHeightMm = Math.max(METRICS.page_height_mm - (METRICS.margin_top_mm + METRICS.margin_bottom_mm), 0.1);
-      const usableHeightPx = usableHeightMm * PX_PER_MM;
-      const contentHeight = Math.max(
-        body.scrollHeight,
-        body.offsetHeight,
-        doc.scrollHeight,
-        doc.offsetHeight
-      );
-      const contentPages = Math.max(1, Math.ceil(contentHeight / usableHeightPx));
-      const manualAnchors = collectManualBreakAnchors(body);
-      const manualPages = manualAnchors.length > 0 ? manualAnchors.length + 1 : 1;
-      const totalPages = Math.max(contentPages, manualPages);
-      const startOffsets = buildPageStartOffsets(manualAnchors, usableHeightPx, contentHeight, totalPages);
-      const totalAsString = String(totalPages);
-      doc.setAttribute('data-nr-total-pages', totalAsString);
-      const countNodes = Array.from(document.querySelectorAll('[data-nr-counter="pages"]'));
-      countNodes.forEach((node) => assignScreenText(node, totalAsString, 'count'));
-      const pageNodes = Array.from(document.querySelectorAll('[data-nr-counter="page"]'));
-      const sections = Array.from(document.querySelectorAll('.nr-key-section'));
-      pageNodes.forEach((node) => {
-        const sectionIndex = indexOfSection(node, sections);
-        let pageIndex;
-        if (sectionIndex >= 0) {
-          pageIndex = sectionIndex;
-        } else {
-          const offset = resolveNodeOffset(node);
-          pageIndex = resolvePageIndexFromOffsets(offset, startOffsets);
-        }
-        const pageNumber = Math.min(totalPages, Math.max(1, pageIndex + 1));
-        assignScreenText(node, String(pageNumber), 'page');
-      });
-      lastPageNodes = pageNodes;
-      lastCountNodes = countNodes;
-    } catch (err) {
-      if (typeof console !== 'undefined' && console.warn) {
-        console.warn('nr-page-counter: unable to compute preview counters', err);
-      }
-    }
-  }
-
-  function scheduleCompute() {
-    computeTotals();
-    setTimeout(computeTotals, 180);
-  }
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-      scheduleCompute();
-    }, { once: true });
-  } else {
-    scheduleCompute();
-  }
-
-  if (typeof window !== 'undefined') {
-    window.addEventListener('resize', computeTotals, { passive: true });
-    window.addEventListener('beforeprint', clearNodesForPrint);
-    window.addEventListener('afterprint', () => {
-      restoreNodesAfterPrint();
-      scheduleCompute();
-    });
-    if (typeof window.matchMedia === 'function') {
-      const mediaQuery = window.matchMedia('print');
-      if (typeof mediaQuery.addEventListener === 'function') {
-        mediaQuery.addEventListener('change', (event) => {
-          if (event.matches) {
-            clearNodesForPrint();
-          } else {
-            restoreNodesAfterPrint();
-            scheduleCompute();
-          }
-        });
-      } else if (typeof mediaQuery.addListener === 'function') {
-        mediaQuery.addListener((event) => {
-          if (event.matches) {
-            clearNodesForPrint();
-          } else {
-            restoreNodesAfterPrint();
-            scheduleCompute();
-          }
-        });
-      }
-    }
-  }
-})();
-</script>
-"""
-            script_block = script_template.replace("__NR_METRICS__", metrics_json)
-            if '</body>' in updated:
-                updated = updated.replace('</body>', script_block + '</body>', 1)
-            else:
-                updated = updated + script_block
-        return updated
+        return _remove_blocks(html_in)
     def _blank_known_tokens_text(text: str, tokens) -> str:
         for t in tokens:
             text = re.sub(r"\{\{\s*" + re.escape(t) + r"\s*\}\}", "", text)
@@ -2427,13 +2280,32 @@ def fill_and_print(
     ALL_KNOWN_TOKENS = set(HEADER_TOKENS) | set(ROW_TOKENS) | set(TOTALS.keys()) | set(LITERALS.keys())
     html_multi = blank_known_tokens(html_multi, ALL_KNOWN_TOKENS)
 
+    column_count = max(row_token_count, _count_table_columns(html_multi))
+    excel_print_scale = _estimate_excel_print_scale(column_count)
+    row_count = _count_table_rows(html_multi)
+    rows_per_page = _estimate_rows_per_page(excel_print_scale)
+    if row_count <= rows_per_page:
+        rows_per_page = None
+    html_multi = _inject_excel_print_styles(
+        html_multi,
+        scale=excel_print_scale,
+        rows_per_page=rows_per_page,
+    )
+
     # write to the path requested by the API
     OUT_HTML.write_text(html_multi, encoding="utf-8")
     print("Wrote HTML:", OUT_HTML)
 
     print("BATCH_IDS:", len(BATCH_IDS or []), (BATCH_IDS or [])[:20] if BATCH_IDS else [])
 
-    asyncio.run(html_to_pdf_async(OUT_HTML, OUT_PDF, TEMPLATE_PATH.parent))
+    asyncio.run(
+        html_to_pdf_async(
+            OUT_HTML,
+            OUT_PDF,
+            TEMPLATE_PATH.parent,
+            pdf_scale=excel_print_scale,
+        )
+    )
     print("Wrote PDF via Playwright:", OUT_PDF)
 
     return {"html_path": str(OUT_HTML), "pdf_path": str(OUT_PDF), "rows_rendered": rows_rendered}
@@ -2442,6 +2314,10 @@ def fill_and_print(
 # keep CLI usage (unchanged)
 if __name__ == "__main__":
     print("Module ready for API integration. Call fill_and_print(...) from your FastAPI endpoint.")
+
+
+
+
 
 
 

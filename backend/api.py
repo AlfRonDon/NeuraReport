@@ -68,6 +68,11 @@ from .app.services.prompts.llm_prompts import (
 
 # Discovery helpers
 from .app.services.reports.discovery import discover_batches_and_counts
+from .app.services.reports.discovery_excel import (
+    discover_batches_and_counts as discover_batches_and_counts_excel,
+)
+from .app.services.reports.docx_export import html_file_to_docx, pdf_file_to_docx
+from .app.services.reports.xlsx_export import html_file_to_xlsx
 from .app.services.state import state_store
 from .app.services.templates.layout_hints import get_layout_hints
 
@@ -83,6 +88,7 @@ from .app.services.templates.TemplateVerify import (
     save_html,
     save_png as _template_save_png,
 )
+from .app.services.excel.ExcelVerify import xlsx_to_html_preview
 
 # isort: on
 
@@ -191,8 +197,16 @@ APP_DIR = Path(__file__).parent.resolve()
 UPLOAD_ROOT = SETTINGS.uploads_root
 UPLOAD_ROOT.mkdir(parents=True, exist_ok=True)
 UPLOAD_ROOT_BASE = UPLOAD_ROOT.resolve()
+EXCEL_UPLOAD_ROOT = SETTINGS.excel_uploads_root
+EXCEL_UPLOAD_ROOT.mkdir(parents=True, exist_ok=True)
+EXCEL_UPLOAD_ROOT_BASE = EXCEL_UPLOAD_ROOT.resolve()
 APP_VERSION = SETTINGS.version
 APP_COMMIT = SETTINGS.commit
+
+_UPLOAD_KIND_BASES: dict[str, tuple[Path, str]] = {
+    "pdf": (UPLOAD_ROOT_BASE, "/uploads"),
+    "excel": (EXCEL_UPLOAD_ROOT_BASE, "/excel-uploads"),
+}
 
 
 _DEFAULT_VERIFY_PDF_BYTES: int | None = None
@@ -269,6 +283,7 @@ class UploadsStaticFiles(StaticFiles):
 
 
 app.mount("/uploads", UploadsStaticFiles(directory=str(UPLOAD_ROOT)), name="uploads")
+app.mount("/excel-uploads", UploadsStaticFiles(directory=str(EXCEL_UPLOAD_ROOT)), name="excel-uploads")
 
 
 # ---------- Health ----------
@@ -353,6 +368,8 @@ class RunPayload(BaseModel):
     end_date: str
     batch_ids: Optional[list[str]] = None
     key_values: Optional[dict[str, Any]] = None
+    docx: bool = False
+    xlsx: bool = False
 
 
 class DiscoverPayload(BaseModel):
@@ -440,6 +457,25 @@ _REPORT_DATE_KEYWORDS = {
 _PARAM_REF_RE = re.compile(r"^params\.[A-Za-z_][\w]*$")
 
 
+def _normalize_template_id(template_id: str) -> str:
+    try:
+        return str(uuid.UUID(str(template_id)))
+    except (ValueError, TypeError):
+        raise _http_error(400, "invalid_template_id", "Invalid template_id format")
+
+
+def _resolve_template_kind(template_id: str) -> str:
+    record = state_store.get_template_record(template_id) or {}
+    kind = str(record.get("kind") or "").lower()
+    if kind in _UPLOAD_KIND_BASES:
+        return kind
+    tid = _normalize_template_id(template_id)
+    excel_dir = EXCEL_UPLOAD_ROOT_BASE / tid
+    if excel_dir.exists():
+        return "excel"
+    return "pdf"
+
+
 def _token_parts_for_report_filters(token: str) -> list[str]:
     normalized = re.sub(r"[^a-z0-9]+", "_", str(token or "").lower())
     return [part for part in normalized.split("_") if part]
@@ -460,17 +496,24 @@ def _is_report_generator_date_token_label(token: str) -> bool:
     return False
 
 
-def _template_dir(template_id: str, *, must_exist: bool = True, create: bool = False) -> Path:
-    """
-    Resolve the uploads directory for a template_id with validation to prevent path traversal.
-    """
-    try:
-        tid = uuid.UUID(str(template_id))
-    except (ValueError, TypeError):
-        raise _http_error(400, "invalid_template_id", "Invalid template_id format")
+def _template_dir(
+    template_id: str,
+    *,
+    must_exist: bool = True,
+    create: bool = False,
+    kind: str = "pdf",
+) -> Path:
+    """Resolve the uploads directory for a template_id within the selected kind root."""
 
-    tdir = (UPLOAD_ROOT_BASE / str(tid)).resolve()
-    if UPLOAD_ROOT_BASE not in tdir.parents:
+    normalized_kind = (kind or "pdf").lower()
+    if normalized_kind not in _UPLOAD_KIND_BASES:
+        raise _http_error(400, "invalid_template_kind", f"Unsupported template kind: {kind}")
+
+    tid = _normalize_template_id(template_id)
+    base_dir, _ = _UPLOAD_KIND_BASES[normalized_kind]
+
+    tdir = (base_dir / tid).resolve()
+    if base_dir not in tdir.parents:
         raise _http_error(400, "invalid_template_path", "Invalid template_id path")
 
     if must_exist and not tdir.exists():
@@ -583,11 +626,41 @@ def _artifact_url(path: Path | None) -> Optional[str]:
         return None
     if not resolved.exists():
         return None
+    for kind, (base_dir, prefix) in _UPLOAD_KIND_BASES.items():
+        try:
+            rel = resolved.relative_to(base_dir)
+        except ValueError:
+            continue
+        return f"{prefix}/{rel.as_posix()}"
+    return None
+
+
+_EXCEL_SCALE_RE = re.compile(r"--excel-print-scale:\s*([0-9]*\.?[0-9]+)")
+
+
+def _extract_excel_print_scale_from_html(html_path: Path) -> Optional[float]:
     try:
-        rel = resolved.relative_to(UPLOAD_ROOT_BASE)
-    except ValueError:
+        html_text = html_path.read_text(encoding="utf-8", errors="ignore")
+    except Exception:
         return None
-    return f"/uploads/{rel.as_posix()}"
+    match = _EXCEL_SCALE_RE.search(html_text)
+    if not match:
+        return None
+    try:
+        value = float(match.group(1))
+    except (TypeError, ValueError):
+        return None
+    if value <= 0 or value > 1.0:
+        return None
+    return value
+
+
+def _manifest_endpoint(template_id: str, kind: str = "pdf") -> str:
+    return (
+        f"/excel/{template_id}/artifacts/manifest"
+        if (kind or "pdf").lower() == "excel"
+        else f"/templates/{template_id}/artifacts/manifest"
+    )
 
 
 def _normalize_artifact_map(artifacts: Mapping[str, Any] | None) -> dict[str, str]:
@@ -608,6 +681,37 @@ def _normalize_artifact_map(artifacts: Mapping[str, Any] | None) -> dict[str, st
         if url:
             normalized[str(name)] = url
     return normalized
+
+
+def _write_debug_log(template_id: str, *, kind: str, event: str, payload: Mapping[str, Any]) -> None:
+    try:
+        tdir = _template_dir(template_id, kind=kind, must_exist=False, create=True)
+        debug_dir = tdir / "_debug"
+        debug_dir.mkdir(parents=True, exist_ok=True)
+        timestamp = time.strftime("%Y%m%d-%H%M%S")
+        filename = debug_dir / f"{event}-{timestamp}-{uuid.uuid4().hex[:6]}.json"
+        write_json_atomic(
+            filename,
+            {
+                "event": event,
+                "timestamp": timestamp,
+                "template_id": template_id,
+                "template_kind": kind,
+                **{k: v for k, v in payload.items()},
+            },
+            ensure_ascii=False,
+            indent=2,
+            step="debug_log",
+        )
+    except Exception:
+        logger.exception(
+            "debug_log_write_failed",
+            extra={
+                "event": "debug_log_write_failed",
+                "template_id": template_id,
+                "template_kind": kind,
+            },
+        )
 
 
 def _sha256_path(path: Path | None) -> Optional[str]:
@@ -867,9 +971,8 @@ def readyz(request: Request):
     return _health_response(request, checks)
 
 
-@app.get("/templates/{template_id}/artifacts/manifest")
-def get_artifact_manifest(template_id: str, request: Request):
-    tdir = _template_dir(template_id)
+def _artifact_manifest_response(template_id: str, request: Request, *, kind: str) -> dict:
+    tdir = _template_dir(template_id, kind=kind)
     manifest = load_manifest(tdir)
     if not manifest:
         raise _http_error(404, "manifest_missing", "artifact manifest not found")
@@ -877,9 +980,18 @@ def get_artifact_manifest(template_id: str, request: Request):
     return {"status": "ok", "manifest": manifest, "correlation_id": correlation_id}
 
 
-@app.get("/templates/{template_id}/artifacts/head")
-def get_artifact_head(template_id: str, request: Request, name: str):
-    tdir = _template_dir(template_id)
+@app.get("/templates/{template_id}/artifacts/manifest")
+def get_artifact_manifest(template_id: str, request: Request):
+    return _artifact_manifest_response(template_id, request, kind="pdf")
+
+
+@app.get("/excel/{template_id}/artifacts/manifest")
+def get_artifact_manifest_excel(template_id: str, request: Request):
+    return _artifact_manifest_response(template_id, request, kind="excel")
+
+
+def _artifact_head_response(template_id: str, request: Request, name: str, *, kind: str) -> dict:
+    tdir = _template_dir(template_id, kind=kind)
     safe_name = Path(name).name
     target = (tdir / safe_name).resolve()
     if not str(target).startswith(str(tdir.resolve())):
@@ -913,6 +1025,16 @@ def get_artifact_head(template_id: str, request: Request, name: str):
             "last_modified": formatdate(last_modified, usegmt=True) if last_modified else None,
         },
     }
+
+
+@app.get("/templates/{template_id}/artifacts/head")
+def get_artifact_head(template_id: str, request: Request, name: str):
+    return _artifact_head_response(template_id, request, name, kind="pdf")
+
+
+@app.get("/excel/{template_id}/artifacts/head")
+def get_artifact_head_excel(template_id: str, request: Request, name: str):
+    return _artifact_head_response(template_id, request, name, kind="excel")
 
 
 # ---------- Routes ----------
@@ -1113,8 +1235,9 @@ def list_templates_endpoint(request: Request, status: Optional[str] = None):
 def delete_template_endpoint(template_id: str, request: Request):
     correlation_id = getattr(request.state, "correlation_id", None) or get_correlation_id()
     existing_record = state_store.get_template_record(template_id)
+    template_kind = _resolve_template_kind(template_id)
     try:
-        tdir = _template_dir(template_id, must_exist=False, create=False)
+        tdir = _template_dir(template_id, must_exist=False, create=False, kind=template_kind)
     except HTTPException:
         raise
 
@@ -1519,9 +1642,9 @@ async def verify_template(
 
             template_name = Path(getattr(file, "filename", "") or "").stem or f"Template {tid[:8]}"
             artifacts_for_state = {
-                "template_html_url": f"/uploads/{tid}/template_p1.html",
-                "thumbnail_url": f"/uploads/{tid}/reference_p1.png",
-                "pdf_url": f"/uploads/{tid}/source.pdf",
+                "template_html_url": _artifact_url(html_path),
+                "thumbnail_url": _artifact_url(png_path),
+                "pdf_url": _artifact_url(pdf_path),
             }
             if schema_url:
                 artifacts_for_state["schema_ext_url"] = schema_url
@@ -1531,7 +1654,7 @@ async def verify_template(
                 artifacts_for_state["render_after_png_url"] = render_after_url
             if metrics_url:
                 artifacts_for_state["fix_metrics_url"] = metrics_url
-            manifest_url = f"/templates/{tid}/artifacts/manifest"
+            manifest_url = _manifest_endpoint(tid, kind="pdf")
             artifacts_for_state["manifest_url"] = manifest_url
 
             state_store.upsert_template(
@@ -1540,6 +1663,7 @@ async def verify_template(
                 status="draft",
                 artifacts=artifacts_for_state,
                 connection_id=connection_id or None,
+                template_type="pdf",
             )
             state_store.set_last_used(connection_id or None, tid)
 
@@ -1552,9 +1676,9 @@ async def verify_template(
                 schema=schema_payload,
                 elapsed_ms=total_elapsed_ms,
                 artifacts={
-                    "pdf_url": f"/uploads/{tid}/source.pdf",
-                    "png_url": f"/uploads/{tid}/reference_p1.png",
-                    "html_url": f"/uploads/{tid}/template_p1.html",
+                    "pdf_url": _artifact_url(pdf_path),
+                    "png_url": _artifact_url(png_path),
+                    "html_url": _artifact_url(html_path),
                     "manifest_url": manifest_url,
                     **({"schema_ext_url": schema_url} if schema_url else {}),
                     **({"render_png_url": render_url} if render_url else {}),
@@ -1596,6 +1720,230 @@ async def verify_template(
     return StreamingResponse(event_stream(), headers=headers, media_type="application/x-ndjson")
 
 
+@app.post("/excel/verify")
+async def verify_template_excel(
+    file: UploadFile = File(...),
+    connection_id: str = Form(""),
+    request: Request = None,
+):
+    template_kind = "excel"
+    tid = str(uuid.uuid4())
+    tdir = _template_dir(tid, must_exist=False, create=True, kind=template_kind)
+    xlsx_path = tdir / "source.xlsx"
+
+    request_state = getattr(request, "state", None)
+    correlation_id = getattr(request_state, "correlation_id", None) or get_correlation_id()
+
+    logger.info(
+        "excel_verify_start",
+        extra={
+            "event": "excel_verify_start",
+            "template_id": tid,
+            "filename": getattr(file, "filename", None),
+            "correlation_id": correlation_id,
+        },
+    )
+
+    def event_stream():
+        pipeline_started = time.time()
+
+        def emit(event: str, **payload):
+            data = {"event": event, **payload}
+            return (json.dumps(data, ensure_ascii=False) + "\n").encode("utf-8")
+
+        stage_timings: dict[str, float] = {}
+
+        def start_stage(stage_key: str, label: str, progress: int | float, **payload: Any) -> bytes:
+            stage_timings[stage_key] = time.time()
+            event_payload = {
+                "stage": stage_key,
+                "label": label,
+                "status": "started",
+                "progress": progress,
+                "template_id": tid,
+                "kind": template_kind,
+            }
+            if payload:
+                event_payload.update(payload)
+            return emit("stage", **event_payload)
+
+        def finish_stage(
+            stage_key: str,
+            label: str,
+            *,
+            progress: int | float | None = None,
+            status: str = "complete",
+            **payload: Any,
+        ) -> bytes:
+            started = stage_timings.pop(stage_key, None)
+            elapsed_ms = int((time.time() - started) * 1000) if started else None
+            event_payload = {
+                "stage": stage_key,
+                "label": label,
+                "status": status,
+                "template_id": tid,
+                "kind": template_kind,
+            }
+            if progress is not None:
+                event_payload["progress"] = progress
+            if elapsed_ms is not None:
+                event_payload["elapsed_ms"] = elapsed_ms
+            if payload:
+                event_payload.update(payload)
+            return emit("stage", **event_payload)
+
+        try:
+            # Stage: upload Excel
+            stage_key = "excel.upload_file"
+            stage_label = "Uploading your workbook"
+            yield start_stage(stage_key, stage_label, progress=5)
+            total_bytes = 0
+            try:
+                tmp = tempfile.NamedTemporaryFile(
+                    dir=str(tdir),
+                    prefix="source.",
+                    suffix=".xlsx.tmp",
+                    delete=False,
+                )
+                try:
+                    with tmp:
+                        while True:
+                            chunk = file.file.read(1024 * 1024)
+                            if not chunk:
+                                break
+                            total_bytes += len(chunk)
+                            tmp.write(chunk)
+                        tmp.flush()
+                        with contextlib.suppress(OSError):
+                            os.fsync(tmp.fileno())
+                    Path(tmp.name).replace(xlsx_path)
+                finally:
+                    with contextlib.suppress(FileNotFoundError):
+                        Path(tmp.name).unlink(missing_ok=True)
+            except Exception as exc:
+                yield finish_stage(stage_key, stage_label, progress=5, status="error", detail=str(exc))
+                raise
+            else:
+                yield finish_stage(stage_key, stage_label, progress=25, size_bytes=total_bytes)
+
+            # Stage: build HTML + preview
+            stage_key = "excel.generate_html"
+            stage_label = "Building preview HTML"
+            yield start_stage(stage_key, stage_label, progress=45)
+            try:
+                preview = xlsx_to_html_preview(xlsx_path, tdir)
+                html_path = preview.html_path
+                png_path = preview.png_path
+            except Exception as exc:
+                yield finish_stage(stage_key, stage_label, progress=45, status="error", detail=str(exc))
+                raise
+            else:
+                yield finish_stage(stage_key, stage_label, progress=80)
+
+            # Stage: write manifest
+            schema_path = tdir / "schema_ext.json"
+            sample_rows_path = tdir / "sample_rows.json"
+            reference_html_path = tdir / "reference_p1.html"
+            manifest_files: dict[str, Path] = {"source.xlsx": xlsx_path, "template_p1.html": html_path}
+            if png_path and png_path.exists():
+                manifest_files[png_path.name] = png_path
+            if sample_rows_path.exists():
+                manifest_files[sample_rows_path.name] = sample_rows_path
+            if reference_html_path.exists():
+                manifest_files[reference_html_path.name] = reference_html_path
+
+            stage_key = "excel.save_artifacts"
+            stage_label = "Saving verification artifacts"
+            yield start_stage(stage_key, stage_label, progress=90)
+            try:
+                write_artifact_manifest(
+                    tdir,
+                    step="excel_verify",
+                    files=manifest_files,
+                    inputs=[str(xlsx_path)],
+                    correlation_id=correlation_id,
+                )
+            except Exception as exc:
+                yield finish_stage(stage_key, stage_label, progress=90, status="error", detail=str(exc))
+                raise
+            else:
+                yield finish_stage(stage_key, stage_label, progress=96, manifest_files=len(manifest_files))
+
+            manifest_url = _manifest_endpoint(tid, kind=template_kind)
+            html_url = _artifact_url(html_path)
+            png_url = _artifact_url(png_path)
+            xlsx_url = _artifact_url(xlsx_path)
+            sample_rows_url = _artifact_url(sample_rows_path) if sample_rows_path.exists() else None
+            reference_html_url = _artifact_url(reference_html_path) if reference_html_path.exists() else None
+
+            state_store.upsert_template(
+                tid,
+                name=Path(getattr(file, "filename", "") or "Workbook").stem or f"Template {tid[:8]}",
+                status="draft",
+                artifacts={
+                    "template_html_url": html_url,
+                    "thumbnail_url": png_url,
+                    "xlsx_url": xlsx_url,
+                    "manifest_url": manifest_url,
+                    **({"sample_rows_url": sample_rows_url} if sample_rows_url else {}),
+                    **({"reference_html_url": reference_html_url} if reference_html_url else {}),
+                },
+                connection_id=connection_id or None,
+                template_type=template_kind,
+            )
+            state_store.set_last_used(connection_id or None, tid)
+
+            total_elapsed_ms = int((time.time() - pipeline_started) * 1000)
+            yield emit(
+                "result",
+                stage="Excel verification complete.",
+                progress=100,
+                template_id=tid,
+                kind=template_kind,
+                schema=None,
+                elapsed_ms=total_elapsed_ms,
+                artifacts={
+                    "xlsx_url": xlsx_url,
+                    "png_url": png_url,
+                    "html_url": html_url,
+                    "manifest_url": manifest_url,
+                    **({"sample_rows_url": sample_rows_url} if sample_rows_url else {}),
+                    **({"reference_html_url": reference_html_url} if reference_html_url else {}),
+                },
+            )
+            logger.info(
+                "excel_verify_complete",
+                extra={
+                    "event": "excel_verify_complete",
+                    "template_id": tid,
+                    "correlation_id": correlation_id,
+                    "elapsed_ms": total_elapsed_ms,
+                },
+            )
+        except Exception as exc:  # pragma: no cover - best-effort diagnostics
+            yield emit(
+                "error",
+                stage="Excel verification failed.",
+                detail=str(exc),
+                template_id=tid,
+                kind=template_kind,
+            )
+            logger.exception(
+                "excel_verify_failed",
+                extra={
+                    "event": "excel_verify_failed",
+                    "template_id": tid,
+                    "correlation_id": correlation_id,
+                },
+            )
+        finally:
+            with contextlib.suppress(Exception):
+                file.file.close()
+
+    headers = {"Content-Type": "application/x-ndjson"}
+    return StreamingResponse(event_stream(), headers=headers, media_type="application/x-ndjson")
+
+
 def _mapping_preview_pipeline(
     template_id: str,
     connection_id: Optional[str],
@@ -1603,6 +1951,7 @@ def _mapping_preview_pipeline(
     *,
     correlation_id: Optional[str] = None,
     force_refresh: bool = False,
+    kind: str = "pdf",
 ) -> Iterator[dict[str, Any]]:
     correlation_id = correlation_id or (getattr(request.state, "correlation_id", None) if request else None)
     yield {
@@ -1614,7 +1963,7 @@ def _mapping_preview_pipeline(
         "prompt_version": PROMPT_VERSION,
     }
 
-    template_dir = _template_dir(template_id)
+    template_dir = _template_dir(template_id, kind=kind)
     mapping_keys_path = _mapping_keys_path(template_dir)
     html_path = template_dir / "template_p1.html"
     if not html_path.exists():
@@ -1809,6 +2158,7 @@ def _mapping_preview_pipeline(
         artifacts={k: v for k, v in artifacts.items() if v},
         connection_id=connection_id or record.get("last_connection_id"),
         mapping_keys=saved_keys,
+        template_type=kind,
     )
 
     yield {
@@ -1835,8 +2185,14 @@ def _mapping_preview_pipeline(
     }
 
 
-@app.post("/templates/{template_id}/mapping/preview")
-def mapping_preview(template_id: str, connection_id: str, request: Request, force_refresh: bool = False):
+def _mapping_preview_route(
+    template_id: str,
+    connection_id: str,
+    request: Request,
+    force_refresh: bool = False,
+    *,
+    kind: str = "pdf",
+) -> dict:
     correlation_id = getattr(request.state, "correlation_id", None)
     logger.info(
         "mapping_preview_start",
@@ -1845,6 +2201,7 @@ def mapping_preview(template_id: str, connection_id: str, request: Request, forc
             "template_id": template_id,
             "connection_id": connection_id,
             "force_refresh": force_refresh,
+            "template_kind": kind,
             "correlation_id": correlation_id,
         },
     )
@@ -1854,6 +2211,7 @@ def mapping_preview(template_id: str, connection_id: str, request: Request, forc
         request,
         correlation_id=correlation_id,
         force_refresh=force_refresh,
+        kind=kind,
     )
     try:
         while True:
@@ -1869,14 +2227,42 @@ def mapping_preview(template_id: str, connection_id: str, request: Request, forc
             "connection_id": connection_id,
             "cache_key": payload.get("cache_key"),
             "cached": payload.get("cached", False),
+            "template_kind": kind,
             "correlation_id": correlation_id,
         },
     )
     return payload
 
 
-@app.post("/templates/{template_id}/mapping/approve")
-def mapping_approve(template_id: str, payload: MappingPayload, request: Request):
+@app.post("/templates/{template_id}/mapping/preview")
+def mapping_preview(template_id: str, connection_id: str, request: Request, force_refresh: bool = False):
+    return _mapping_preview_route(
+        template_id,
+        connection_id,
+        request,
+        force_refresh,
+        kind="pdf",
+    )
+
+
+@app.post("/excel/{template_id}/mapping/preview")
+def mapping_preview_excel(template_id: str, connection_id: str, request: Request, force_refresh: bool = False):
+    return _mapping_preview_route(
+        template_id,
+        connection_id,
+        request,
+        force_refresh,
+        kind="excel",
+    )
+
+
+def _mapping_approve_route(
+    template_id: str,
+    payload: MappingPayload,
+    request: Request,
+    *,
+    kind: str = "pdf",
+):
     """Persist approved mapping, rebuild contract artifacts, and refresh generator assets."""
     correlation_id = getattr(request.state, "correlation_id", None)
     logger.info(
@@ -1886,11 +2272,12 @@ def mapping_approve(template_id: str, payload: MappingPayload, request: Request)
             "template_id": template_id,
             "connection_id": payload.connection_id,
             "mapping_size": len(payload.mapping or {}),
+            "template_kind": kind,
             "correlation_id": correlation_id,
         },
     )
 
-    template_dir = _template_dir(template_id)
+    template_dir = _template_dir(template_id, kind=kind)
     base_template_path = template_dir / "template_p1.html"
     final_html_path = template_dir / "report_final.html"
     mapping_path = template_dir / "mapping_pdf_labels.json"
@@ -2331,7 +2718,7 @@ def mapping_approve(template_id: str, payload: MappingPayload, request: Request)
                 )
 
             manifest_data = load_manifest(template_dir) or {}
-            manifest_url = f"/templates/{template_id}/artifacts/manifest"
+            manifest_url = _manifest_endpoint(template_id, kind=kind)
             page_summary_path = template_dir / "page_summary.txt"
             page_summary_url = _artifact_url(page_summary_path)
 
@@ -2374,6 +2761,7 @@ def mapping_approve(template_id: str, payload: MappingPayload, request: Request)
                 artifacts={k: v for k, v in artifacts_payload.items() if v},
                 connection_id=payload.connection_id or existing_tpl.get("last_connection_id"),
                 mapping_keys=keys_clean,
+                template_type=kind,
             )
 
             if generator_result:
@@ -2438,8 +2826,170 @@ def mapping_approve(template_id: str, payload: MappingPayload, request: Request)
     return StreamingResponse(event_stream(), headers=headers, media_type="application/x-ndjson")
 
 
-@app.get("/templates/{template_id}/keys/options")
-def mapping_key_options(
+@app.post("/templates/{template_id}/mapping/approve")
+def mapping_approve(template_id: str, payload: MappingPayload, request: Request):
+    return _mapping_approve_route(template_id, payload, request, kind="pdf")
+
+
+@app.post("/excel/{template_id}/mapping/approve")
+def mapping_approve_excel(template_id: str, payload: MappingPayload, request: Request):
+    return _mapping_approve_route(template_id, payload, request, kind="excel")
+
+
+def _normalize_tokens_request(tokens: str | None, keys_available: list[str]) -> list[str]:
+    if not tokens:
+        return list(keys_available)
+    requested = [token.strip() for token in str(tokens).split(",") if token.strip()]
+    return [token for token in requested if token in keys_available]
+
+
+def _build_mapping_lookup(mapping_doc: list[dict[str, Any]]) -> dict[str, str]:
+    lookup: dict[str, str] = {}
+    for entry in mapping_doc:
+        if not isinstance(entry, dict):
+            continue
+        header = entry.get("header")
+        mapping_value = entry.get("mapping")
+        if isinstance(header, str) and isinstance(mapping_value, str):
+            lookup[header] = mapping_value.strip()
+    return lookup
+
+
+def _extract_contract_metadata(contract_data: dict[str, Any]) -> tuple[dict[str, str], dict[str, str], dict[str, str]]:
+    required: dict[str, str] = {}
+    optional: dict[str, str] = {}
+    date_columns: dict[str, str] = {}
+    filters_section = contract_data.get("filters") or {}
+    if isinstance(filters_section, dict):
+        required_map = filters_section.get("required") or {}
+        optional_map = filters_section.get("optional") or {}
+        if isinstance(required_map, dict):
+            for key, expr in required_map.items():
+                if isinstance(key, str) and isinstance(expr, str):
+                    required[key] = expr.strip()
+        if isinstance(optional_map, dict):
+            for key, expr in optional_map.items():
+                if isinstance(key, str) and isinstance(expr, str):
+                    optional[key] = expr.strip()
+    date_columns_section = contract_data.get("date_columns") or {}
+    if isinstance(date_columns_section, dict):
+        for table_name, column_name in date_columns_section.items():
+            if not isinstance(table_name, str) or not isinstance(column_name, str):
+                continue
+            table_clean = table_name.strip(' "`[]').lower()
+            column_clean = column_name.strip(' "`[]')
+            if table_clean and column_clean:
+                date_columns[table_clean] = column_clean
+    return required, optional, date_columns
+
+
+def _resolve_token_binding(
+    token: str,
+    mapping_lookup: Mapping[str, str],
+    contract_filters_required: Mapping[str, str],
+    contract_filters_optional: Mapping[str, str],
+) -> tuple[Optional[str], Optional[str], Optional[str]]:
+    expr = mapping_lookup.get(token, "")
+    match = _DIRECT_COLUMN_RE.match(expr)
+    if match:
+        table_raw = match.group("table")
+        column_raw = match.group("column")
+        table_clean = table_raw.strip(' "`[]') if isinstance(table_raw, str) else ""
+        column_clean = column_raw.strip(' "`[]') if isinstance(column_raw, str) else ""
+        if table_clean and column_clean:
+            return table_clean, column_clean, "mapping"
+    filter_expr = contract_filters_required.get(token) or contract_filters_optional.get(token)
+    if isinstance(filter_expr, str):
+        match_filter = _DIRECT_COLUMN_RE.match(filter_expr)
+        if match_filter:
+            table_raw = match_filter.group("table")
+            column_raw = match_filter.group("column")
+            table_clean = table_raw.strip(' "`[]') if isinstance(table_raw, str) else ""
+            column_clean = column_raw.strip(' "`[]') if isinstance(column_raw, str) else ""
+            if table_clean and column_clean:
+                return table_clean, column_clean, "contract_filter"
+    return None, None, None
+
+
+def _execute_token_query(
+    con: sqlite3.Connection,
+    *,
+    token: str,
+    table_clean: str,
+    column_clean: str,
+    date_column_name: Optional[str],
+    start_date: Optional[str],
+    end_date: Optional[str],
+    limit_value: int,
+) -> tuple[list[str], dict[str, Any]]:
+    quoted_table = f'"{table_clean}"'
+    quoted_column = f'"{column_clean}"'
+    base_conditions = [
+        f"{quoted_column} IS NOT NULL",
+        f"TRIM(CAST({quoted_column} AS TEXT)) <> ''",
+    ]
+    conditions = list(base_conditions)
+    params: list[str] = []
+    ident_re = re.compile(r"^[A-Za-z_][\w]*$")
+    if date_column_name and ident_re.match(date_column_name):
+        quoted_date_column = f'"{date_column_name}"'
+        if start_date and end_date:
+            conditions.append(f"{quoted_date_column} BETWEEN ? AND ?")
+            params.extend([start_date, end_date])
+        elif start_date:
+            conditions.append(f"{quoted_date_column} >= ?")
+            params.append(start_date)
+        elif end_date:
+            conditions.append(f"{quoted_date_column} <= ?")
+            params.append(end_date)
+
+    debug_info: dict[str, Any] = {
+        "table": table_clean,
+        "column": column_clean,
+        "date_column": date_column_name,
+        "applied_date_filters": len(params) > 0,
+        "sql": None,
+        "params": None,
+        "fallback_used": False,
+        "error": None,
+        "row_count": 0,
+    }
+
+    def run_query(where_clause: str, query_params: list[str]) -> tuple[list[str], Optional[str]]:
+        sql = (
+            f"SELECT DISTINCT {quoted_column} AS value FROM {quoted_table} "
+            f"WHERE {where_clause} ORDER BY {quoted_column} ASC LIMIT ?"
+        )
+        params_with_limit = tuple(list(query_params) + [limit_value])
+        try:
+            rows = [
+                str(row["value"])
+                for row in con.execute(sql, params_with_limit)
+                if row and row["value"] is not None
+            ]
+            return rows, None
+        except sqlite3.Error as exc:
+            return [], str(exc)
+
+    where_clause = " AND ".join(conditions) if conditions else "1=1"
+    rows, error = run_query(where_clause, params)
+    debug_info.update({"sql": where_clause, "params": params, "row_count": len(rows)})
+    if error:
+        debug_info["error"] = error
+    if not rows and params:
+        fallback_clause = " AND ".join(base_conditions)
+        fallback_rows, fallback_error = run_query(fallback_clause, [])
+        debug_info["fallback_used"] = True
+        debug_info["fallback_sql"] = fallback_clause
+        debug_info["fallback_error"] = fallback_error
+        if fallback_rows:
+            rows = fallback_rows
+            debug_info["row_count"] = len(rows)
+            debug_info["error"] = fallback_error
+    return rows, debug_info
+
+
+def _mapping_key_options_route(
     template_id: str,
     request: Request,
     connection_id: str | None = None,
@@ -2447,6 +2997,9 @@ def mapping_key_options(
     limit: int = 50,
     start_date: str | None = None,
     end_date: str | None = None,
+    *,
+    kind: str = "pdf",
+    debug: bool = False,
 ):
     correlation_id = getattr(request.state, "correlation_id", None)
     logger.info(
@@ -2459,19 +3012,34 @@ def mapping_key_options(
             "limit": limit,
             "start_date": start_date,
             "end_date": end_date,
+            "template_kind": kind,
             "correlation_id": correlation_id,
         },
     )
-    template_dir = _template_dir(template_id)
+    def _resolve_connection_id(explicit_id: str | None) -> str | None:
+        if explicit_id:
+            explicit_id = str(explicit_id).strip()
+            if explicit_id:
+                return explicit_id
+        try:
+            record = state_store.get_template_record(template_id) or {}
+        except Exception:
+            record = {}
+        last_conn = record.get("last_connection_id")
+        if last_conn:
+            return str(last_conn)
+        last_used = state_store.get_last_used() or {}
+        fallback_conn = last_used.get("connection_id")
+        return str(fallback_conn) if fallback_conn else None
+
+    effective_connection_id = _resolve_connection_id(connection_id)
+
+    template_dir = _template_dir(template_id, kind=kind)
     keys_available = _load_mapping_keys(template_dir)
     if not keys_available:
         return {"keys": {}}
 
-    if tokens:
-        requested = [token.strip() for token in tokens.split(",") if token.strip()]
-        token_list = [token for token in requested if token in keys_available]
-    else:
-        token_list = list(keys_available)
+    token_list = _normalize_tokens_request(tokens, keys_available)
 
     if not token_list:
         return {"keys": {}}
@@ -2490,17 +3058,9 @@ def mapping_key_options(
     except Exception as exc:
         raise _http_error(500, "mapping_load_failed", f"Failed to read mapping file: {exc}")
 
-    mapping_lookup: dict[str, str] = {}
-    if isinstance(mapping_doc, list):
-        for entry in mapping_doc:
-            if not isinstance(entry, dict):
-                continue
-            header = entry.get("header")
-            mapping_value = entry.get("mapping")
-            if isinstance(header, str) and isinstance(mapping_value, str):
-                mapping_lookup[header] = mapping_value.strip()
-    else:
+    if not isinstance(mapping_doc, list):
         raise _http_error(500, "mapping_invalid", "Approved mapping is not in the expected format.")
+    mapping_lookup = _build_mapping_lookup(mapping_doc)
 
     contract_filters_required: dict[str, str] = {}
     contract_filters_optional: dict[str, str] = {}
@@ -2511,96 +3071,65 @@ def mapping_key_options(
             contract_data = json.loads(contract_path.read_text(encoding="utf-8"))
         except Exception:
             contract_data = {}
-        filters_section = contract_data.get("filters") or {}
-        if isinstance(filters_section, dict):
-            required_map = filters_section.get("required") or {}
-            optional_map = filters_section.get("optional") or {}
-            if isinstance(required_map, dict):
-                for key, expr in required_map.items():
-                    if isinstance(key, str) and isinstance(expr, str):
-                        contract_filters_required[key] = expr.strip()
-            if isinstance(optional_map, dict):
-                for key, expr in optional_map.items():
-                    if isinstance(key, str) and isinstance(expr, str):
-                        contract_filters_optional[key] = expr.strip()
-        date_columns_section = contract_data.get("date_columns") or {}
-        if isinstance(date_columns_section, dict):
-            for table_name, column_name in date_columns_section.items():
-                if not isinstance(table_name, str) or not isinstance(column_name, str):
-                    continue
-                table_clean = table_name.strip(' "`[]').lower()
-                column_clean = column_name.strip(' "`[]')
-                if table_clean and column_clean:
-                    contract_date_columns[table_clean] = column_clean
+        (
+            contract_filters_required,
+            contract_filters_optional,
+            contract_date_columns,
+        ) = _extract_contract_metadata(contract_data)
 
-    db_path = _db_path_from_payload_or_default(connection_id)
+    db_path = _db_path_from_payload_or_default(effective_connection_id)
     verify_sqlite(db_path)
 
     options: dict[str, list[str]] = {}
-    ident_re = re.compile(r"^[A-Za-z_][\w]*$")
-
-    def _resolve_column(token: str) -> tuple[str, str] | None:
-        expr = mapping_lookup.get(token, "")
-        match = _DIRECT_COLUMN_RE.match(expr)
-        if match:
-            table_raw = match.group("table")
-            column_raw = match.group("column")
-            table_clean = table_raw.strip(' "`[]') if isinstance(table_raw, str) else ""
-            column_clean = column_raw.strip(' "`[]') if isinstance(column_raw, str) else ""
-            if table_clean and column_clean:
-                return table_clean, column_clean
-        filter_expr = contract_filters_required.get(token) or contract_filters_optional.get(token)
-        if isinstance(filter_expr, str):
-            match_filter = _DIRECT_COLUMN_RE.match(filter_expr)
-            if match_filter:
-                table_raw = match_filter.group("table")
-                column_raw = match_filter.group("column")
-                table_clean = table_raw.strip(' "`[]') if isinstance(table_raw, str) else ""
-                column_clean = column_raw.strip(' "`[]') if isinstance(column_raw, str) else ""
-                if table_clean and column_clean:
-                    return table_clean, column_clean
-        return None
+    debug_payload: dict[str, Any] = {
+        "template_id": template_id,
+        "connection_id": effective_connection_id,
+        "db_path": str(db_path),
+        "tokens_available": keys_available,
+        "token_details": {},
+    }
 
     with sqlite3.connect(str(db_path)) as con:
+        con.row_factory = sqlite3.Row
         for token in token_list:
-            column_ref = _resolve_column(token)
-            if not column_ref:
-                options[token] = []
-                continue
-            table, column = column_ref
-            if not table or not column:
-                options[token] = []
-                continue
-            if not ident_re.match(table) or not ident_re.match(column):
-                options[token] = []
-                continue
-            quoted_table = f'"{table}"'
-            quoted_column = f'"{column}"'
-            conditions = [f"{quoted_column} IS NOT NULL"]
-            params: list[str] = []
-            date_column_name = contract_date_columns.get(table.lower())
-            if date_column_name and ident_re.match(date_column_name):
-                quoted_date_column = f'"{date_column_name}"'
-                if start_date and end_date:
-                    conditions.append(f"{quoted_date_column} BETWEEN ? AND ?")
-                    params.extend([start_date, end_date])
-                elif start_date:
-                    conditions.append(f"{quoted_date_column} >= ?")
-                    params.append(start_date)
-                elif end_date:
-                    conditions.append(f"{quoted_date_column} <= ?")
-                    params.append(end_date)
-            where_clause = " AND ".join(conditions) if conditions else "1=1"
-            sql = (
-                f"SELECT DISTINCT {quoted_column} FROM {quoted_table} "
-                f"WHERE {where_clause} ORDER BY {quoted_column} ASC LIMIT ?"
+            table_clean, column_clean, binding_source = _resolve_token_binding(
+                token,
+                mapping_lookup,
+                contract_filters_required,
+                contract_filters_optional,
             )
-            params_with_limit = tuple(params + [limit_value])
-            try:
-                rows = [str(row[0]) for row in con.execute(sql, params_with_limit) if row and row[0] is not None]
-            except sqlite3.Error:
-                rows = []
+            if not table_clean or not column_clean:
+                options[token] = []
+                continue
+            date_column_name = contract_date_columns.get(table_clean.lower())
+            rows, token_debug = _execute_token_query(
+                con,
+                token=token,
+                table_clean=table_clean,
+                column_clean=column_clean,
+                date_column_name=date_column_name,
+                start_date=start_date,
+                end_date=end_date,
+                limit_value=limit_value,
+            )
+            if binding_source:
+                token_debug["binding_source"] = binding_source
             options[token] = rows
+            if token_debug.get("error"):
+                logger.warning(
+                    "mapping_key_query_failed",
+                    extra={
+                        "event": "mapping_key_query_failed",
+                        "template_id": template_id,
+                        "token": token,
+                        "table": table_clean,
+                        "column": column_clean,
+                        "db_path": str(db_path),
+                        "error": token_debug["error"],
+                        "correlation_id": correlation_id,
+                    },
+                )
+            debug_payload["token_details"][token] = token_debug
 
     logger.info(
         "mapping_key_options_complete",
@@ -2608,14 +3137,78 @@ def mapping_key_options(
             "event": "mapping_key_options_complete",
             "template_id": template_id,
             "tokens": token_list,
+            "template_kind": kind,
             "correlation_id": correlation_id,
         },
     )
-    return {"keys": options}
+    response: dict[str, Any] = {"keys": options}
+    _write_debug_log(
+        template_id,
+        kind=kind,
+        event="mapping_key_options",
+        payload=debug_payload,
+    )
+    if debug:
+        response["debug"] = debug_payload
+    return response
 
 
-@app.post("/templates/{template_id}/mapping/corrections-preview")
-def mapping_corrections_preview(template_id: str, payload: CorrectionsPreviewPayload, request: Request):
+@app.get("/templates/{template_id}/keys/options")
+def mapping_key_options(
+    template_id: str,
+    request: Request,
+    connection_id: str | None = None,
+    tokens: str | None = None,
+    limit: int = 50,
+    start_date: str | None = None,
+    end_date: str | None = None,
+    debug: bool = False,
+):
+    return _mapping_key_options_route(
+        template_id,
+        request,
+        connection_id,
+        tokens,
+        limit,
+        start_date,
+        end_date,
+        kind="pdf",
+        debug=debug,
+    )
+
+
+@app.get("/excel/{template_id}/keys/options")
+def mapping_key_options_excel(
+    template_id: str,
+    request: Request,
+    connection_id: str | None = None,
+    tokens: str | None = None,
+    limit: int = 50,
+    start_date: str | None = None,
+    end_date: str | None = None,
+    debug: bool = False,
+):
+    return _mapping_key_options_route(
+        template_id,
+        request,
+        connection_id,
+        tokens,
+        limit,
+        start_date,
+        end_date,
+        kind="excel",
+        debug=debug,
+    )
+
+
+
+def _mapping_corrections_preview_route(
+    template_id: str,
+    payload: CorrectionsPreviewPayload,
+    request: Request,
+    *,
+    kind: str = "pdf",
+):
     correlation_id = getattr(request.state, "correlation_id", None)
     logger.info(
         "corrections_preview_start",
@@ -2623,10 +3216,11 @@ def mapping_corrections_preview(template_id: str, payload: CorrectionsPreviewPay
             "event": "corrections_preview_start",
             "template_id": template_id,
             "correlation_id": correlation_id,
+            "template_kind": kind,
         },
     )
 
-    template_dir = _template_dir(template_id)
+    template_dir = _template_dir(template_id, kind=kind)
     template_html_path = template_dir / "template_p1.html"
     mapping_step3_path = template_dir / "mapping_step3.json"
     schema_ext_path = template_dir / "schema_ext.json"
@@ -2730,6 +3324,7 @@ def mapping_corrections_preview(template_id: str, payload: CorrectionsPreviewPay
                     status=next_status,
                     artifacts=artifacts_for_state,
                     connection_id=existing_tpl.get("last_connection_id"),
+                    template_type=kind,
                 )
 
         yield emit(
@@ -2768,8 +3363,23 @@ def mapping_corrections_preview(template_id: str, payload: CorrectionsPreviewPay
     return StreamingResponse(event_stream(), headers=headers, media_type="application/x-ndjson")
 
 
-@app.post("/templates/{template_id}/generator-assets/v1")
-def generator_assets_v1(template_id: str, payload: GeneratorAssetsPayload, request: Request):
+@app.post("/templates/{template_id}/mapping/corrections-preview")
+def mapping_corrections_preview(template_id: str, payload: CorrectionsPreviewPayload, request: Request):
+    return _mapping_corrections_preview_route(template_id, payload, request, kind="pdf")
+
+
+@app.post("/excel/{template_id}/mapping/corrections-preview")
+def mapping_corrections_preview_excel(template_id: str, payload: CorrectionsPreviewPayload, request: Request):
+    return _mapping_corrections_preview_route(template_id, payload, request, kind="excel")
+
+
+def _generator_assets_route(
+    template_id: str,
+    payload: GeneratorAssetsPayload,
+    request: Request,
+    *,
+    kind: str = "pdf",
+):
     correlation_id = getattr(request.state, "correlation_id", None)
     logger.info(
         "generator_assets_v1_start",
@@ -2778,10 +3388,11 @@ def generator_assets_v1(template_id: str, payload: GeneratorAssetsPayload, reque
             "template_id": template_id,
             "correlation_id": correlation_id,
             "force_rebuild": bool(payload.force_rebuild),
+            "template_kind": kind,
         },
     )
 
-    template_dir = _template_dir(template_id)
+    template_dir = _template_dir(template_id, kind=kind)
     base_template_path = template_dir / "template_p1.html"
     final_template_path = template_dir / "report_final.html"
     contract_path = template_dir / "contract.json"
@@ -2938,7 +3549,7 @@ def generator_assets_v1(template_id: str, payload: GeneratorAssetsPayload, reque
             )
 
             manifest = load_manifest(template_dir) or {}
-            manifest_url = f"/templates/{template_id}/artifacts/manifest"
+            manifest_url = _manifest_endpoint(template_id, kind=kind)
 
             existing_tpl = state_store.get_template_record(template_id) or {}
             artifacts_payload = {
@@ -2954,6 +3565,7 @@ def generator_assets_v1(template_id: str, payload: GeneratorAssetsPayload, reque
                 status=existing_tpl.get("status") or "approved",
                 artifacts={k: v for k, v in artifacts_payload.items() if v},
                 connection_id=existing_tpl.get("last_connection_id"),
+                template_type=kind,
             )
             state_store.update_template_generator(
                 template_id,
@@ -2996,10 +3608,18 @@ def generator_assets_v1(template_id: str, payload: GeneratorAssetsPayload, reque
     return StreamingResponse(event_stream(), headers=headers, media_type="application/x-ndjson")
 
 
-# ---------- Discover ----------
-@app.post("/reports/discover")
-def discover_reports(p: DiscoverPayload):
-    template_dir = _template_dir(p.template_id)
+@app.post("/templates/{template_id}/generator-assets/v1")
+def generator_assets_v1(template_id: str, payload: GeneratorAssetsPayload, request: Request):
+    return _generator_assets_route(template_id, payload, request, kind="pdf")
+
+
+@app.post("/excel/{template_id}/generator-assets/v1")
+def generator_assets_v1_excel(template_id: str, payload: GeneratorAssetsPayload, request: Request):
+    return _generator_assets_route(template_id, payload, request, kind="excel")
+
+
+def _discover_reports_route(p: DiscoverPayload, *, kind: str = "pdf") -> dict:
+    template_dir = _template_dir(p.template_id, kind=kind)
     db_path = _db_path_from_payload_or_default(p.connection_id)
     if not db_path.exists():
         raise _http_error(400, "db_not_found", f"DB not found: {db_path}")
@@ -3036,8 +3656,12 @@ def discover_reports(p: DiscoverPayload):
                 continue
             key_values_payload[name] = raw_value
 
+    discover_fn = (
+        discover_batches_and_counts if kind == "pdf" else discover_batches_and_counts_excel
+    )
+
     try:
-        summary = discover_batches_and_counts(
+        summary = discover_fn(
             db_path=db_path,
             contract=contract_payload,
             start_date=p.start_date,
@@ -3048,7 +3672,7 @@ def discover_reports(p: DiscoverPayload):
         raise _http_error(500, "discovery_failed", f"Discovery failed: {exc}")
 
     manifest_data = load_manifest(template_dir) or {}
-    manifest_url = f"/templates/{p.template_id}/artifacts/manifest"
+    manifest_url = _manifest_endpoint(p.template_id, kind=kind)
     tpl_record = state_store.get_template_record(p.template_id) or {}
     tpl_name = tpl_record.get("name") or f"Template {p.template_id[:8]}"
     state_store.set_last_used(p.connection_id, p.template_id)
@@ -3072,9 +3696,19 @@ def discover_reports(p: DiscoverPayload):
     }
 
 
+@app.post("/reports/discover")
+def discover_reports(p: DiscoverPayload):
+    return _discover_reports_route(p, kind="pdf")
+
+
+@app.post("/excel/reports/discover")
+def discover_reports_excel(p: DiscoverPayload):
+    return _discover_reports_route(p, kind="excel")
+
+
 # ---------- Run ----------
-def _ensure_contract_files(template_id: str) -> tuple[Path, Path]:
-    tdir = _template_dir(template_id)
+def _ensure_contract_files(template_id: str, *, kind: str = "pdf") -> tuple[Path, Path]:
+    tdir = _template_dir(template_id, kind=kind)
 
     template_html_path = tdir / "report_final.html"
     if not template_html_path.exists():
@@ -3095,8 +3729,7 @@ def _ensure_contract_files(template_id: str) -> tuple[Path, Path]:
     return template_html_path, contract_path
 
 
-@app.post("/reports/run")
-def start_run(p: RunPayload, request: Request):
+def _reports_run_route(p: RunPayload, request: Request, *, kind: str = "pdf"):
     correlation_id = getattr(request.state, "correlation_id", None)
     run_started = time.time()
     logger.info(
@@ -3105,6 +3738,7 @@ def start_run(p: RunPayload, request: Request):
             "event": "reports_run_start",
             "template_id": p.template_id,
             "connection_id": p.connection_id,
+            "template_kind": kind,
             "correlation_id": correlation_id,
         },
     )
@@ -3112,7 +3746,7 @@ def start_run(p: RunPayload, request: Request):
     if not db_path.exists():
         raise _http_error(400, "db_not_found", f"DB not found: {db_path}")
 
-    template_html_path, contract_path = _ensure_contract_files(p.template_id)
+    template_html_path, contract_path = _ensure_contract_files(p.template_id, kind=kind)
     tdir = template_html_path.parent
 
     try:
@@ -3133,11 +3767,24 @@ def start_run(p: RunPayload, request: Request):
                 continue
             key_values_payload[name] = raw_value
 
+    docx_requested = bool(p.docx)
+    xlsx_requested = bool(p.xlsx)
+    docx_landscape = kind == "excel"
+    docx_enabled = docx_requested or docx_landscape or kind == "pdf"
+    xlsx_enabled = xlsx_requested or kind == "excel"
+
     ts = str(int(time.time()))
     out_html = tdir / f"filled_{ts}.html"
     out_pdf = tdir / f"filled_{ts}.pdf"
+    out_docx = tdir / f"filled_{ts}.docx" if docx_enabled else None
+    out_xlsx = tdir / f"filled_{ts}.xlsx" if xlsx_enabled else None
     tmp_html = out_html.with_name(out_html.name + ".tmp")
     tmp_pdf = out_pdf.with_name(out_pdf.name + ".tmp")
+    tmp_docx = out_docx.with_name(out_docx.name + ".tmp") if out_docx else None
+    tmp_xlsx = out_xlsx.with_name(out_xlsx.name + ".tmp") if out_xlsx else None
+    docx_path: Path | None = None
+    docx_font_scale: float | None = None
+    xlsx_path: Path | None = None
 
     try:
         lock_ctx = acquire_template_lock(tdir, "reports_run", correlation_id)
@@ -3146,7 +3793,12 @@ def start_run(p: RunPayload, request: Request):
 
     with lock_ctx:
         try:
-            from .app.services.reports.ReportGenerate import fill_and_print
+            if kind == "excel":
+                from .app.services.reports import ReportGenerateExcel as report_generate_module
+            else:
+                from .app.services.reports import ReportGenerate as report_generate_module
+
+            fill_and_print = report_generate_module.fill_and_print
 
             fill_and_print(
                 OBJ=OBJ,
@@ -3163,6 +3815,82 @@ def start_run(p: RunPayload, request: Request):
                 tmp_html.replace(out_html)
             if tmp_pdf.exists():
                 tmp_pdf.replace(out_pdf)
+            if docx_enabled and out_docx and tmp_docx:
+                docx_tmp_result: Path | None = None
+                if kind == "pdf":
+                    try:
+                        docx_tmp_result = pdf_file_to_docx(out_pdf, tmp_docx)
+                    except Exception:
+                        with contextlib.suppress(FileNotFoundError):
+                            tmp_docx.unlink(missing_ok=True)
+                        logger.exception(
+                            "docx_pdf_convert_failed",
+                            extra={
+                                "event": "docx_pdf_convert_failed",
+                                "template_id": p.template_id,
+                                "template_kind": kind,
+                                "correlation_id": correlation_id,
+                            },
+                        )
+                if docx_tmp_result is None:
+                    if docx_landscape:
+                        docx_font_scale = _extract_excel_print_scale_from_html(out_html) or docx_font_scale
+                    try:
+                        docx_tmp_result = html_file_to_docx(
+                            out_html,
+                            tmp_docx,
+                            landscape=docx_landscape,
+                            body_font_scale=docx_font_scale or (0.82 if docx_landscape else None),
+                        )
+                    except Exception:
+                        with contextlib.suppress(FileNotFoundError):
+                            tmp_docx.unlink(missing_ok=True)
+                        logger.exception(
+                            "docx_export_failed",
+                            extra={
+                                "event": "docx_export_failed",
+                                "template_id": p.template_id,
+                                "template_kind": kind,
+                                "correlation_id": correlation_id,
+                            },
+                        )
+                    else:
+                        if docx_tmp_result:
+                            docx_tmp_path = Path(docx_tmp_result)
+                            if docx_tmp_path != out_docx:
+                                docx_tmp_path.replace(out_docx)
+                            docx_path = out_docx
+                        else:
+                            with contextlib.suppress(FileNotFoundError):
+                                tmp_docx.unlink(missing_ok=True)
+                else:
+                    if docx_tmp_result and docx_tmp_result != out_docx:
+                        Path(docx_tmp_result).replace(out_docx)
+                    docx_path = out_docx
+            if xlsx_enabled and out_xlsx and tmp_xlsx:
+                try:
+                    xlsx_tmp_result = html_file_to_xlsx(out_html, tmp_xlsx)
+                except Exception:
+                    with contextlib.suppress(FileNotFoundError):
+                        tmp_xlsx.unlink(missing_ok=True)
+                    logger.exception(
+                        "xlsx_export_failed",
+                        extra={
+                            "event": "xlsx_export_failed",
+                            "template_id": p.template_id,
+                            "template_kind": kind,
+                            "correlation_id": correlation_id,
+                        },
+                    )
+                else:
+                    if xlsx_tmp_result:
+                        xlsx_tmp_path = Path(xlsx_tmp_result)
+                        if xlsx_tmp_path != out_xlsx:
+                            xlsx_tmp_path.replace(out_xlsx)
+                        xlsx_path = out_xlsx
+                    else:
+                        with contextlib.suppress(FileNotFoundError):
+                            tmp_xlsx.unlink(missing_ok=True)
         except ImportError:
             raise _http_error(
                 501,
@@ -3178,21 +3906,33 @@ def start_run(p: RunPayload, request: Request):
                 tmp_html.unlink(missing_ok=True)
             with contextlib.suppress(FileNotFoundError):
                 tmp_pdf.unlink(missing_ok=True)
+            if tmp_docx is not None:
+                with contextlib.suppress(FileNotFoundError):
+                    tmp_docx.unlink(missing_ok=True)
+            if tmp_xlsx is not None:
+                with contextlib.suppress(FileNotFoundError):
+                    tmp_xlsx.unlink(missing_ok=True)
             raise _http_error(500, "report_generation_failed", f"Report generation failed: {e}")
+
+    artifact_files = {
+        out_html.name: out_html,
+        out_pdf.name: out_pdf,
+    }
+    if docx_path and out_docx:
+        artifact_files[out_docx.name] = out_docx
+    if xlsx_path and out_xlsx:
+        artifact_files[out_xlsx.name] = out_xlsx
 
     write_artifact_manifest(
         tdir,
         step="reports_run",
-        files={
-            out_html.name: out_html,
-            out_pdf.name: out_pdf,
-        },
+        files=artifact_files,
         inputs=[str(contract_path), str(db_path)],
         correlation_id=correlation_id,
     )
 
     manifest_data = load_manifest(tdir) or {}
-    manifest_url = f"/templates/{p.template_id}/artifacts/manifest"
+    manifest_url = _manifest_endpoint(p.template_id, kind=kind)
     state_store.record_template_run(p.template_id, p.connection_id)
     state_store.set_last_used(p.connection_id, p.template_id)
 
@@ -3203,6 +3943,8 @@ def start_run(p: RunPayload, request: Request):
             "template_id": p.template_id,
             "html": str(out_html.name),
             "pdf": str(out_pdf.name),
+            "docx": str(out_docx.name) if docx_path and out_docx else None,
+            "xlsx": str(out_xlsx.name) if xlsx_path and out_xlsx else None,
             "correlation_id": correlation_id,
             "elapsed_ms": int((time.time() - run_started) * 1000),
         },
@@ -3214,9 +3956,21 @@ def start_run(p: RunPayload, request: Request):
         "template_id": p.template_id,
         "start_date": p.start_date,
         "end_date": p.end_date,
-        "html_url": f"/uploads/{p.template_id}/{out_html.name}",
-        "pdf_url": f"/uploads/{p.template_id}/{out_pdf.name}",
+        "html_url": _artifact_url(out_html),
+        "pdf_url": _artifact_url(out_pdf),
+        "docx_url": _artifact_url(out_docx) if docx_path and out_docx else None,
+        "xlsx_url": _artifact_url(out_xlsx) if xlsx_path and out_xlsx else None,
         "manifest_url": manifest_url,
         "manifest_produced_at": manifest_data.get("produced_at"),
         "correlation_id": correlation_id,
     }
+
+
+@app.post("/reports/run")
+def start_run(p: RunPayload, request: Request):
+    return _reports_run_route(p, request, kind="pdf")
+
+
+@app.post("/excel/reports/run")
+def start_run_excel(p: RunPayload, request: Request):
+    return _reports_run_route(p, request, kind="excel")

@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any, Iterable, Mapping, Optional
 
 from ..prompts.llm_prompts import PROMPT_VERSION_4, build_llm_call_4_prompt
+from ..prompts.llm_prompts_excel import EXCEL_PROMPT_VERSION_4, build_excel_llm_call_4_prompt
 from ..templates.TemplateVerify import get_openai_client
 from ..utils import (
     call_chat_completion,
@@ -220,11 +221,21 @@ def _augment_contract_for_compat(contract: dict[str, Any]) -> dict[str, Any]:
         contract["totals"] = {tok: str(mapping.get(tok, "")) for tok in totals}
 
     if "row_order" not in contract:
-        rows_order = []
-        order_by = contract.get("order_by") or {}
-        rows_spec = order_by.get("rows")
+        rows_order: list[str] = []
+        order_by_block = contract.get("order_by")
+        rows_spec: Any = None
+        if isinstance(order_by_block, Mapping):
+            rows_spec = order_by_block.get("rows")
+        elif isinstance(order_by_block, list):
+            rows_spec = list(order_by_block)
+            contract["order_by"] = {"rows": list(rows_spec)}
+        else:
+            if order_by_block not in (None, {}):
+                contract["order_by"] = {}
         if isinstance(rows_spec, list) and rows_spec:
-            rows_order = [str(item) for item in rows_spec]
+            rows_order = [str(item) for item in rows_spec if str(item).strip()]
+        elif isinstance(rows_spec, str) and rows_spec.strip():
+            rows_order = [rows_spec.strip()]
         contract["row_order"] = rows_order or ["ROWID"]
 
     contract.setdefault("literals", contract.get("literals", {}))
@@ -263,6 +274,218 @@ def _normalize_contract_payload(contract: Mapping[str, Any] | None) -> dict[str,
     return normalized
 
 
+def _extract_mapping_entries(source: Mapping[str, Any] | None) -> dict[str, str]:
+    if not isinstance(source, Mapping):
+        return {}
+    mapping_section = source.get("mapping")
+    if isinstance(mapping_section, Mapping):
+        source = mapping_section
+    return {str(token): str(expr) for token, expr in source.items()}
+
+
+def _reshape_rule_from_step5(step5_requirements: Mapping[str, Any] | None) -> dict[str, Any] | None:
+    if not isinstance(step5_requirements, Mapping):
+        return None
+    reshape = step5_requirements.get("reshape")
+    if not isinstance(reshape, Mapping):
+        return None
+    selections = reshape.get("select") or reshape.get("selection") or []
+    columns: list[dict[str, Any]] = []
+    for entry in selections:
+        if not isinstance(entry, Mapping):
+            continue
+        expr = str(entry.get("expr") or entry.get("expression") or entry.get("column") or "").strip()
+        alias = str(entry.get("as") or entry.get("alias") or "").strip() or expr
+        if not alias or not expr:
+            continue
+        columns.append({"as": alias, "from": [expr]})
+    if not columns:
+        return None
+    rule: dict[str, Any] = {
+        "purpose": reshape.get("purpose") or "Auto-generated reshape derived from Step-5 requirements.",
+        "strategy": reshape.get("strategy") or "SELECT",
+        "columns": columns,
+    }
+    explain = reshape.get("explain") or reshape.get("description")
+    if explain:
+        rule["explain"] = explain
+    for key in ("order_by", "ordering"):
+        order_val = reshape.get(key)
+        if order_val:
+            rule["order_by"] = order_val
+            break
+    filters = reshape.get("where") or reshape.get("filters")
+    if filters:
+        rule["filters"] = filters
+    group_by = reshape.get("group_by")
+    if group_by:
+        rule["group_by"] = group_by
+    return rule
+
+
+def _reshape_rule_from_mapping(mapping: Mapping[str, str], row_tokens: list[str]) -> dict[str, Any] | None:
+    columns: list[dict[str, Any]] = []
+    for token in row_tokens:
+        expr = str(mapping.get(token) or "").strip()
+        if not expr:
+            continue
+        columns.append({"as": token, "from": [expr]})
+    if not columns:
+        return None
+    return {
+        "purpose": "Auto-generated reshape rule derived from mapping tokens.",
+        "strategy": "SELECT",
+        "columns": columns,
+    }
+
+
+def _has_valid_reshape_rule(rules: Any) -> bool:
+    if not isinstance(rules, list):
+        return False
+    for rule in rules:
+        if not isinstance(rule, Mapping):
+            continue
+        columns = rule.get("columns")
+        if isinstance(columns, list) and columns:
+            return True
+    return False
+
+
+def _ensure_contract_defaults(
+    contract: dict[str, Any],
+    *,
+    schema: Mapping[str, Any],
+    auto_mapping: Mapping[str, Any] | None,
+    mapping_override: Mapping[str, Any] | None,
+    step5_requirements: Mapping[str, Any] | None,
+) -> dict[str, str]:
+    tokens_block_raw = contract.get("tokens")
+    tokens_block = tokens_block_raw if isinstance(tokens_block_raw, dict) else {}
+    tokens_block = {key: value for key, value in tokens_block.items() if key in {"scalars", "row_tokens", "totals"}}
+
+    schema_scalars = list(schema.get("scalars") or [])
+    schema_rows = list(schema.get("row_tokens") or [])
+    schema_totals = list(schema.get("totals") or [])
+
+    scalars = list(tokens_block.get("scalars") or []) or schema_scalars
+    row_tokens = list(tokens_block.get("row_tokens") or []) or schema_rows
+    totals = list(tokens_block.get("totals") or []) or schema_totals
+
+    if not row_tokens:
+        auto_map = _extract_mapping_entries(auto_mapping)
+        inferred_rows = [token for token in auto_map if token.startswith("row_")]
+        if inferred_rows:
+            row_tokens = inferred_rows
+
+    contract["tokens"] = {
+        "scalars": scalars,
+        "row_tokens": row_tokens,
+        "totals": totals,
+    }
+
+    mapping_sources = {}
+    mapping_sources.update(_extract_mapping_entries(auto_mapping))
+    if isinstance(mapping_override, Mapping):
+        mapping_sources.update({str(k): str(v) for k, v in mapping_override.items()})
+
+    mapping_section_raw = contract.get("mapping")
+    mapping_section = mapping_section_raw if isinstance(mapping_section_raw, dict) else {}
+    contract["mapping"] = mapping_section
+    for token in [*scalars, *row_tokens, *totals]:
+        if token and token not in mapping_section and token in mapping_sources:
+            mapping_section[token] = mapping_sources[token]
+
+    if not _has_valid_reshape_rule(contract.get("reshape_rules")):
+        rule = _reshape_rule_from_step5(step5_requirements) or _reshape_rule_from_mapping(
+            mapping_section, row_tokens
+        )
+        if rule:
+            contract["reshape_rules"] = [rule]
+
+    return mapping_sources
+
+
+def _normalize_reshape_rules(contract: dict[str, Any]) -> None:
+    rules = contract.get("reshape_rules")
+    if not isinstance(rules, list):
+        contract["reshape_rules"] = []
+        return
+
+    normalized_rules: list[dict[str, Any]] = []
+    for raw_rule in rules:
+        if not isinstance(raw_rule, Mapping):
+            continue
+        rule = dict(raw_rule)
+
+        columns_raw = rule.get("columns")
+        if not isinstance(columns_raw, list) or not columns_raw:
+            continue
+
+        normalized_columns: list[dict[str, Any]] = []
+        for entry in columns_raw:
+            if not isinstance(entry, Mapping):
+                continue
+            alias = str(entry.get("as") or entry.get("alias") or "").strip()
+            if not alias:
+                continue
+            from_raw = entry.get("from")
+            sources: list[str] = []
+            if isinstance(from_raw, str):
+                value = from_raw.strip()
+                if value:
+                    sources = [value]
+            elif isinstance(from_raw, list):
+                sources = [str(item).strip() for item in from_raw if str(item or "").strip()]
+            if not sources:
+                continue
+            normalized_columns.append({"as": alias, "from": sources})
+        if not normalized_columns:
+            continue
+        rule["columns"] = normalized_columns
+
+        order_by = rule.get("order_by")
+        if isinstance(order_by, str):
+            text = order_by.strip()
+            rule["order_by"] = [text] if text else []
+        elif isinstance(order_by, list):
+            rule["order_by"] = [str(item).strip() for item in order_by if str(item or "").strip()]
+        else:
+            rule["order_by"] = []
+
+        normalized_rules.append(rule)
+        rule.setdefault("purpose", "Auto-generated reshape rule derived from Step-5 requirements.")
+
+    contract["reshape_rules"] = normalized_rules
+
+
+def _normalize_ordering(contract: dict[str, Any]) -> None:
+    order_block = contract.get("order_by")
+    if isinstance(order_block, Mapping):
+        rows_val = order_block.get("rows")
+        if isinstance(rows_val, str):
+            rows_list = [rows_val.strip()] if rows_val.strip() else []
+            order_block["rows"] = rows_list
+        elif isinstance(rows_val, list):
+            order_block["rows"] = [str(item).strip() for item in rows_val if str(item or "").strip()]
+        else:
+            order_block["rows"] = []
+        contract["order_by"] = order_block
+    elif isinstance(order_block, str):
+        text = order_block.strip()
+        contract["order_by"] = {"rows": [text] if text else []}
+    else:
+        contract["order_by"] = {"rows": []}
+
+    row_order_val = contract.get("row_order")
+    if isinstance(row_order_val, str):
+        text = row_order_val.strip()
+        contract["row_order"] = [text] if text else ["ROWID"]
+    elif isinstance(row_order_val, list) and row_order_val:
+        contract["row_order"] = [str(item).strip() for item in row_order_val if str(item or "").strip()]
+    else:
+        contract["row_order"] = ["ROWID"]
+
+
 def _clean_sql_fragment(value: Any) -> str:
     text = str(value or "").strip()
     if _LEGACY_WRAPPER_RE.search(text):
@@ -277,6 +500,7 @@ def _normalize_sql_mapping_sections(
     contract: dict[str, Any],
     *,
     allow_list: Iterable[str],
+    fallback_mapping: Mapping[str, str] | None = None,
 ) -> None:
     allow_catalog = {str(item).strip() for item in allow_list if str(item).strip()}
     allowed_tables = {entry.split(".")[0] for entry in allow_catalog if "." in entry}
@@ -299,7 +523,28 @@ def _normalize_sql_mapping_sections(
 
     mapping_section = contract.get("mapping")
     if isinstance(mapping_section, dict):
-        contract["mapping"] = {str(token): _validate_expr(str(token), expr) for token, expr in mapping_section.items()}
+        normalized: dict[str, str] = {}
+        for token, expr in mapping_section.items():
+            token_name = str(token)
+            try:
+                normalized[token_name] = _validate_expr(token_name, expr)
+            except ContractBuilderError as exc:
+                fallback_expr = None
+                if fallback_mapping:
+                    fallback_expr = fallback_mapping.get(token_name)
+                if fallback_expr:
+                    logger.warning(
+                        "contract_mapping_fallback",
+                        extra={
+                            "event": "contract_mapping_fallback",
+                            "token": token_name,
+                            "error": str(exc),
+                        },
+                    )
+                    normalized[token_name] = _validate_expr(token_name, fallback_expr)
+                else:
+                    raise
+        contract["mapping"] = normalized
 
     for section in ("totals", "row_computed", "totals_math"):
         block = contract.get(section)
@@ -326,6 +571,8 @@ def build_or_load_contract_v2(
     *,
     db_signature: str | None = None,
     key_tokens: Iterable[str] | None = None,
+    prompt_builder=build_llm_call_4_prompt,
+    prompt_version: str = PROMPT_VERSION_4,
 ) -> dict[str, Any]:
     """
     Build (or return cached) contract artifacts using LLM Call 4.
@@ -380,7 +627,7 @@ def build_or_load_contract_v2(
         },
     )
 
-    prompt_payload = build_llm_call_4_prompt(
+    prompt_payload = prompt_builder(
         final_template_html=final_template_html,
         page_summary=page_summary,
         schema=schema_payload,
@@ -407,7 +654,7 @@ def build_or_load_contract_v2(
             client,
             model=model_name,
             messages=messages,
-            description="contract_build_v2",
+            description=prompt_version,
         )
     except Exception as exc:  # pragma: no cover - network issues bubble up
         raise ContractBuilderError(f"LLM Call 4 request failed: {exc}") from exc
@@ -419,15 +666,22 @@ def build_or_load_contract_v2(
         snippet = content[:200]
         raise ContractBuilderError(f"LLM Call 4 response was not valid JSON (snippet: {snippet!r})") from exc
 
-    overview_md = str(llm_payload.get("overview_md", ""))
+    overview_md = str(llm_payload.get("overview_md") or "").strip()
+    if not overview_md:
+        page_summary = str(llm_payload.get("page_summary") or "").strip()
+        if page_summary:
+            overview_md = page_summary
+    if not overview_md:
+        overview_md = (
+            "## Contract Overview\n\n"
+            "The user skipped Step 3.5 corrections or no summary was generated. "
+            "Add narrative instructions in the Approve dialog to replace this placeholder."
+        )
     step5_requirements = llm_payload.get("step5_requirements") or {}
     contract = _normalize_contract_payload(llm_payload.get("contract"))
     assumptions = list(llm_payload.get("assumptions") or [])
     warnings = list(llm_payload.get("warnings") or [])
     validation = llm_payload.get("validation") or {}
-
-    if not overview_md.strip():
-        raise ContractBuilderError("overview_md must be a non-empty string.")
 
     validation.setdefault("unknown_columns", [])
     validation.setdefault("unknown_tokens", [])
@@ -440,8 +694,21 @@ def build_or_load_contract_v2(
         },
     )
 
+    fallback_mapping_sources = _ensure_contract_defaults(
+        contract,
+        schema=schema_payload,
+        auto_mapping=auto_mapping_proposal,
+        mapping_override=mapping_override_payload,
+        step5_requirements=step5_requirements,
+    )
+    _normalize_reshape_rules(contract)
+    _normalize_ordering(contract)
     contract = _augment_contract_for_compat(_serialize_contract(contract))
-    _normalize_sql_mapping_sections(contract, allow_list=allow_list)
+    _normalize_sql_mapping_sections(
+        contract,
+        allow_list=allow_list,
+        fallback_mapping=fallback_mapping_sources,
+    )
 
     now = int(time.time())
     overview_path = template_dir / _OVERVIEW_FILENAME
@@ -451,8 +718,10 @@ def build_or_load_contract_v2(
     write_text_atomic(overview_path, overview_md, encoding="utf-8", step="contract_v2_overview_write")
     write_json_atomic(step5_path, step5_requirements, indent=2, ensure_ascii=False, step="contract_v2_step5_write")
 
+    contract_path = template_dir / _CONTRACT_FILENAME
+
     meta_payload = {
-        "prompt_version": PROMPT_VERSION_4,
+        "prompt_version": prompt_version,
         "model": model_name,
         "input_signature": input_signature,
         "db_signature": db_signature,
@@ -467,6 +736,7 @@ def build_or_load_contract_v2(
         "key_tokens": key_tokens_list,
     }
     write_json_atomic(meta_path, meta_payload, indent=2, ensure_ascii=False, step="contract_v2_meta_write")
+    write_json_atomic(contract_path, contract, indent=2, ensure_ascii=False, step="contract_v2_contract_write")
 
     write_artifact_manifest(
         template_dir,
@@ -475,6 +745,7 @@ def build_or_load_contract_v2(
             _OVERVIEW_FILENAME: overview_path,
             _STEP5_REQ_FILENAME: step5_path,
             _META_FILENAME: meta_path,
+            _CONTRACT_FILENAME: contract_path,
         },
         inputs=[
             f"contract_v2_input_signature={input_signature}",

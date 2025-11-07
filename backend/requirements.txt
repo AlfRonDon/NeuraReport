@@ -20,3 +20,7 @@ numpy
 opencv-python
 scikit-image
 playwright
+openpyxl
+html2docx
+python-docx
+pdf2docx

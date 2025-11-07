@@ -23,6 +23,8 @@ from .HeaderMapping import REPORT_SELECTED_VALUE
 
 logger = logging.getLogger("neura.mapping.inline")
 
+MAPPING_INLINE_MAX_ATTEMPTS = 5
+
 ALLOWED_SPECIAL_VALUES = {"UNRESOLVED", "INPUT_SAMPLE", REPORT_SELECTED_VALUE}
 LEGACY_WRAPPER_RE = re.compile(r"(?i)\b(DERIVED\s*:|TABLE_COLUMNS\s*\[|COLUMN_EXP\s*\[|PARAM\s*:)")
 PARAM_REF_RE = re.compile(r"^params\.[A-Za-z_][\w]*$")
@@ -234,6 +236,11 @@ def _validate_constant_replacements(
 
         if token not in available_tokens:
             raise MappingInlineValidationError(f"Token '{token}' not present in template HTML")
+        # Treat row-level placeholders as inherently dynamic even if schema is absent.
+        if token.lower().startswith("row_"):
+            raise MappingInlineValidationError(
+                f"Token '{token}' is a row-level placeholder and cannot be treated as a constant"
+            )
         if token in schema_tokens:
             raise MappingInlineValidationError(f"Token '{token}' is defined as dynamic in the schema")
         if _TOKEN_DATE_RE.search(token):
@@ -265,7 +272,12 @@ def _apply_constant_replacements(html: str, replacements: Mapping[str, Any]) -> 
     return updated
 
 
-def _normalize_token_samples(token_samples_raw: Mapping[str, Any] | None, expected_tokens: set[str]) -> dict[str, str]:
+def _normalize_token_samples(
+    token_samples_raw: Mapping[str, Any] | None,
+    expected_tokens: set[str],
+    *,
+    allow_missing_tokens: bool = False,
+) -> dict[str, str]:
     if not isinstance(token_samples_raw, Mapping):
         raise MappingInlineValidationError("token_samples must be an object with token -> literal value")
 
@@ -294,7 +306,11 @@ def _normalize_token_samples(token_samples_raw: Mapping[str, Any] | None, expect
 
     extras = sorted(set(normalized) - expected_tokens)
     if extras:
-        raise MappingInlineValidationError(f"token_samples contains unknown tokens: {extras}")
+        if allow_missing_tokens:
+            for extra in extras:
+                normalized.pop(extra, None)
+        else:
+            raise MappingInlineValidationError(f"token_samples contains unknown tokens: {extras}")
 
     return normalized
 
@@ -360,8 +376,12 @@ def run_llm_call_3(
     prompt_version: str,
     png_path: str,
     cache_key: str,
+    prompt_builder=None,
+    *,
+    allow_missing_tokens: bool = False,
 ) -> MappingInlineResult:
-    prompt_payload = llm_prompts.build_llm_call_3_prompt(template_html, catalog, schema)
+    builder = prompt_builder or llm_prompts.build_llm_call_3_prompt
+    prompt_payload = builder(template_html, catalog, schema)
     system_text = prompt_payload.get("system", "")
     user_text = prompt_payload.get("user", "")
     attachments = prompt_payload.get("attachments", [])
@@ -377,7 +397,7 @@ def run_llm_call_3(
     validation_feedback: str | None = None
     last_error: Exception | None = None
 
-    for attempt in (1, 2):
+    for attempt in range(1, MAPPING_INLINE_MAX_ATTEMPTS + 1):
         messages = _build_messages(system_text, user_text, attachments, png_uri, validation_feedback)
         try:
             logger.info(
@@ -442,26 +462,39 @@ def run_llm_call_3(
                 raise MappingInlineValidationError("Mapping values outside allow-list: " + ", ".join(allowlist_errors))
 
             original_tokens = set(extract_tokens(template_html))
+            # Excel templates often use row-level placeholders like `row_<token>` in the tbody
+            # while the mapping keys use header labels (e.g., `material_name`). Those row_* tokens
+            # are dynamic by design and must never be treated as constants even when they are not
+            # present in the mapping object. Exclude them from constant detection to avoid
+            # accidentally inlining dynamic row placeholders when schema is absent.
+            row_like_tokens = {tok for tok in original_tokens if str(tok).lower().startswith("row_")}
 
-            token_samples = _normalize_token_samples(payload.get("token_samples"), original_tokens)
-            constant_tokens = original_tokens - set(mapping.keys())
+            token_samples = _normalize_token_samples(
+                payload.get("token_samples"),
+                original_tokens,
+                allow_missing_tokens=allow_missing_tokens,
+            )
+            constant_tokens = (original_tokens - set(mapping.keys())) - row_like_tokens
             constant_entries = {token: token_samples[token] for token in constant_tokens}
             inline_token_set = _validate_constant_replacements(template_html, constant_entries, schema)
 
             missing_tokens = [token for token in list(mapping.keys()) if token not in original_tokens]
             if missing_tokens:
-                logger.warning(
-                    "mapping_inline_missing_tokens",
+                log_event = "mapping_inline_missing_tokens_allowed" if allow_missing_tokens else "mapping_inline_missing_tokens"
+                log_level = logger.info if allow_missing_tokens else logger.warning
+                log_level(
+                    log_event,
                     extra={
-                        "event": "mapping_inline_missing_tokens",
+                        "event": log_event,
                         "attempt": attempt,
                         "tokens": sorted(missing_tokens),
                         "prompt_version": prompt_version,
                         "cache_key": cache_key,
                     },
                 )
-                for token in missing_tokens:
-                    mapping.pop(token, None)
+                if not allow_missing_tokens:
+                    for token in missing_tokens:
+                        mapping.pop(token, None)
 
             overlap = inline_token_set.intersection(set(mapping.keys()))
             if overlap:

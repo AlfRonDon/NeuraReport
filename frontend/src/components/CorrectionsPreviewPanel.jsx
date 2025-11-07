@@ -7,6 +7,7 @@ import TOOLTIP_COPY from '../content/tooltipCopy.jsx';
 
 export default function CorrectionsPreviewPanel({
   templateId,
+  templateKind = 'pdf',
   disabled,
   onCompleted,
   onInstructionsChange = () => {},
@@ -93,6 +94,7 @@ export default function CorrectionsPreviewPanel({
         sampleTokens: sampleTokensSnapshot,
         onEvent: () => {},
         signal: controller.signal,
+        kind: templateKind,
       });
       setResult(finalEvent);
       onCompleted?.(finalEvent);

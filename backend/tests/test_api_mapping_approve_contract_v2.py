@@ -93,6 +93,8 @@ def test_mapping_approve_emits_contract_stage(monkeypatch, tmp_path, client):
         dialect_hint: str | None,
         db_signature: str | None = None,
         key_tokens=None,
+        prompt_builder=None,
+        prompt_version=None,
     ):
         overview_path = template_dir / "overview.md"
         step5_path = template_dir / "step5_requirements.json"

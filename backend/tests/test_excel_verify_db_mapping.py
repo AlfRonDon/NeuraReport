@@ -1,0 +1,75 @@
+from __future__ import annotations
+
+import sqlite3
+from pathlib import Path
+
+import pytest
+
+openpyxl = pytest.importorskip("openpyxl")
+
+from backend.app.services.excel import ExcelVerify as excel_verify_module
+from backend.app.services.excel.ExcelVerify import xlsx_to_html_preview
+
+
+def _make_sample_db(db_path: Path) -> None:
+    conn = sqlite3.connect(db_path)
+    try:
+        conn.execute(
+            """
+            CREATE TABLE flows (
+                timestamp_utc TEXT,
+                di_raw_inlet_fm_3 REAL
+            )
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE meta (
+                plant TEXT,
+                operator TEXT
+            )
+            """
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def _make_sample_xlsx(xlsx_path: Path) -> None:
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Sample Sheet"
+    ws.append(["DATE", "DI_RAW_INLET_FM_3"])
+    ws.append(["2024-01-01", 123.45])
+    wb.save(xlsx_path)
+
+
+def test_excel_preview_injects_db_placeholders(tmp_path, monkeypatch):
+    db_path = tmp_path / "sample.db"
+    _make_sample_db(db_path)
+
+    xlsx_path = tmp_path / "sample.xlsx"
+    _make_sample_xlsx(xlsx_path)
+
+    render_calls: list[Path] = []
+
+    def fake_render_html_to_png(html_path: Path, out_png_path: Path, *, page_size: str = "A4", dpi: int = 144) -> None:
+        render_calls.append(html_path)
+        out_png_path.write_bytes(b"fake")
+
+    monkeypatch.setattr(excel_verify_module, "render_html_to_png", fake_render_html_to_png)
+
+    out_dir = tmp_path / "out"
+    result = xlsx_to_html_preview(xlsx_path, out_dir, db_path=db_path)
+
+    assert result.html_path.exists()
+    assert result.png_path and result.png_path.exists()
+    html_text = result.html_path.read_text(encoding="utf-8")
+
+    assert "<td>DATE</td>" in html_text
+    assert "<td>DI_RAW_INLET_FM_3</td>" in html_text
+    assert "{flows.di_raw_inlet_fm_3}" in html_text
+    assert "{DATE}" in html_text
+    assert "2024-01-01" not in html_text
+    assert html_text.count("<tr>") == 2
+    assert render_calls, "Expected preview PNG render to be invoked"

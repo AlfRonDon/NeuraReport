@@ -12,14 +12,22 @@ import CloudUploadOutlinedIcon from '@mui/icons-material/CloudUploadOutlined'
 import { alpha } from '@mui/material/styles'
 import { useAppStore } from '../../store/useAppStore'
 import { useToast } from '../../components/ToastProvider.jsx'
-import { withBase, fetchArtifactManifest, fetchArtifactHead } from '../../api/client'
-import { verifyTemplate as apiVerifyTemplate } from '../../api/templates'
+import {
+  withBase,
+  fetchArtifactManifest,
+  fetchArtifactHead,
+  verifyTemplate as apiVerifyTemplate,
+  mappingPreview,
+  runCorrectionsPreview,
+  mappingApprove,
+  postGeneratorAssetsV1,
+} from '../../api/client'
 import { useStepTimingEstimator, formatDuration } from '../../hooks/useStepTimingEstimator'
 
 // Mapping UI
 import HeaderMappingEditor from '../../components/HeaderMappingEditor'
 import ScaledIframePreview from '../../components/ScaledIframePreview.jsx'
-import { resolveTemplatePreviewUrl } from '../../utils/preview'
+import { resolveTemplatePreviewUrl, getUploadsBase } from '../../utils/preview'
 import Surface from '../../components/layout/Surface.jsx'
 import EmptyState from '../../components/feedback/EmptyState.jsx'
 import LoadingState from '../../components/feedback/LoadingState.jsx'
@@ -36,6 +44,7 @@ function detectFormat(file) {
 
 const ACCEPTED_FORMATS = new Set(['PDF', 'Excel'])
 const ACCEPTED_EXTENSIONS = '.pdf,.xls,.xlsx'
+const EXCEL_MAX_DATA_ROWS = Number(import.meta.env?.VITE_EXCEL_MAX_DATA_ROWS ?? '5') || 5
 
 const formatFileSize = (bytes) => {
   if (!Number.isFinite(bytes) || bytes <= 0) return '0 KB'
@@ -106,12 +115,14 @@ export default function UploadVerify() {
     setSetupStep,
     templateId,
     setTemplateId,
-    setVerifyArtifacts,
-    cacheKey,
-    setCacheKey,
-    htmlUrls,
-    setHtmlUrls,
-  } = useAppStore()
+  setVerifyArtifacts,
+  cacheKey,
+  setCacheKey,
+  htmlUrls,
+  setHtmlUrls,
+  templateKind,
+  setTemplateKind,
+} = useAppStore()
 
   const [file, setFile] = useState(null)
 
@@ -124,6 +135,11 @@ export default function UploadVerify() {
   const [verifyLog, setVerifyLog] = useState([])
   const [preview, setPreview] = useState(null) // { templateId, schema, htmlUrl, llm2HtmlUrl, pngUrl, pdfUrl }
   const previewTemplateId = preview?.templateId
+  const previewKind = useMemo(
+    () => (preview?.kind === 'excel' ? 'excel' : templateKind === 'excel' ? 'excel' : 'pdf'),
+    [preview?.kind, templateKind],
+  )
+  const previewUploadsBase = useMemo(() => `/${getUploadsBase(previewKind)}`, [previewKind])
 
 
   const [mappingOpen, setMappingOpen] = useState(false)
@@ -176,10 +192,13 @@ export default function UploadVerify() {
         return
       }
       resetVerificationState({ clearFile: true })
+      const detected = detectFormat(selectedFile)
+      const nextKind = detected === 'Excel' ? 'excel' : 'pdf'
+      setTemplateKind(nextKind)
       setFile(selectedFile)
       setSetupStep('upload')
     },
-    [resetVerificationState, setSetupStep, toast],
+    [resetVerificationState, setSetupStep, setTemplateKind, toast],
   )
 
   const clearFile = useCallback(() => {
@@ -224,6 +243,8 @@ export default function UploadVerify() {
 
 
   const connectionId = connection?.connectionId || activeConnectionId || null
+  const normalizedTemplateKind = (templateKind || '').toLowerCase()
+  const isExcelFlow = normalizedTemplateKind === 'excel' || format === 'Excel'
   const canGenerate = !!file && verified && !!preview?.templateId && !!connectionId
 
   const onPick = (e) => {
@@ -243,7 +264,7 @@ export default function UploadVerify() {
     let cancelled = false
     ;(async () => {
       try {
-        const manifest = await fetchArtifactManifest(preview.templateId)
+        const manifest = await fetchArtifactManifest(preview.templateId, { kind: previewKind })
         if (cancelled) return
         const producedAt = manifest?.produced_at
         const key = producedAt ? Date.parse(producedAt) || producedAt : Date.now()
@@ -252,9 +273,9 @@ export default function UploadVerify() {
         const templateRel = files['template_p1.html'] || 'template_p1.html'
         const llm2Rel = files['template_llm2.html'] || templateRel
         const finalRel = files['report_final.html'] || null
-        const templateBase = withBase(`/uploads/${preview.templateId}/${templateRel}`)
-        const llm2Base = withBase(`/uploads/${preview.templateId}/${llm2Rel}`)
-        const finalBase = finalRel ? withBase(`/uploads/${preview.templateId}/${finalRel}`) : null
+        const templateBase = withBase(`${previewUploadsBase}/${preview.templateId}/${templateRel}`)
+        const llm2Base = withBase(`${previewUploadsBase}/${preview.templateId}/${llm2Rel}`)
+        const finalBase = finalRel ? withBase(`${previewUploadsBase}/${preview.templateId}/${finalRel}`) : null
         setHtmlUrls(() => ({
           template: withCache(templateBase, key),
           llm2: withCache(llm2Base, key),
@@ -266,21 +287,21 @@ export default function UploadVerify() {
         setCacheKey(key)
         setHtmlUrls((prev) => ({
           ...prev,
-          template: withCache(withBase(`/uploads/${preview.templateId}/template_p1.html`), key),
-          llm2: withCache(withBase(`/uploads/${preview.templateId}/template_llm2.html`), key),
+          template: withCache(withBase(`${previewUploadsBase}/${preview.templateId}/template_p1.html`), key),
+          llm2: withCache(withBase(`${previewUploadsBase}/${preview.templateId}/template_llm2.html`), key),
         }))
       }
     })()
     return () => {
       cancelled = true
     }
-  }, [preview?.templateId, setCacheKey, setHtmlUrls])
+  }, [preview?.templateId, previewKind, previewUploadsBase, setCacheKey, setHtmlUrls])
 
 
   const startVerify = async () => {
     if (!file) return
-    if (!connectionId) {
-      toast.show('Please connect to a database first', 'warning')
+    if (isExcelFlow && !connectionId) {
+      toast.show('Please connect to a database before verifying Excel templates.', 'warning')
       return
     }
 
@@ -416,13 +437,18 @@ export default function UploadVerify() {
         file,
         connectionId,
         onProgress: handleProgress,
+        kind: templateKind,
       })
 
+      const resolvedKind =
+        res?.kind === 'excel' ? 'excel' : res?.kind === 'pdf' ? 'pdf' : templateKind
+      setTemplateKind(resolvedKind)
       const schemaExtUrl = res.schema_ext_url || res.artifacts?.schema_ext_url || null
       const htmlUrl = res.artifacts?.html_url || null
       const llm2Url = res.llm2_html_url || res.artifacts?.llm2_html_url || htmlUrl
       const pv = {
         templateId: res.template_id,
+        kind: resolvedKind,
         schema: res.schema,
         schemaExtUrl,
         htmlUrl,
@@ -432,7 +458,7 @@ export default function UploadVerify() {
       }
       setPreview(pv)
       setTemplateId(res.template_id)
-      setVerifyArtifacts(res.artifacts)
+      setVerifyArtifacts(res.artifacts ? { ...res.artifacts, kind: resolvedKind } : null)
 
       setHtmlUrls({ template: htmlUrl, llm2: llm2Url, final: null })
       setCacheKey(Date.now())
@@ -443,7 +469,10 @@ export default function UploadVerify() {
       toast.show('Template verified', 'success')
     } catch (err) {
       console.error(err)
-      const msg = err?.message || 'Verification failed'
+      let msg = err?.message || 'Verification failed'
+      if (/Excel verification failed/i.test(err?.message || '')) {
+        msg = `Excel previews currently support up to ${EXCEL_MAX_DATA_ROWS} data rows. Delete extra rows and upload the file again.`
+      }
       setVerifyStage(`Verification failed: ${msg}`)
       setVerifyLog((prev) => [
         ...prev,
@@ -494,7 +523,7 @@ export default function UploadVerify() {
 
     if (!manifest && templateId) {
       try {
-        manifest = await fetchArtifactManifest(templateId)
+        manifest = await fetchArtifactManifest(templateId, { kind: previewKind })
       } catch (err) {
         console.warn('manifest fetch failed', err)
       }
@@ -508,7 +537,7 @@ export default function UploadVerify() {
       if (!templateId) return null
       const rel = manifest?.files?.[name]
       if (!rel) return null
-      return withBase(`/uploads/${templateId}/${rel}`)
+      return withBase(`${previewUploadsBase}/${templateId}/${rel}`)
     }
 
     const templateBase = buildFromManifest('template_p1.html') || refinedTemplate || (preview?.htmlUrl ? stripQuery(preview.htmlUrl) : null)
@@ -526,7 +555,7 @@ export default function UploadVerify() {
 
     if (templateId && thumbnailBase) {
       try {
-        const head = await fetchArtifactHead(templateId, 'report_final.png')
+        const head = await fetchArtifactHead(templateId, 'report_final.png', { kind: previewKind })
         if (!head?.artifact?.exists) {
           thumbnailBase = null
         }
@@ -570,11 +599,13 @@ export default function UploadVerify() {
       }))
     }
 
+    const resolvedTemplateKind = previewKind || templateKind || 'pdf'
     const tpl = {
       id: templateId || `tpl_${Date.now()}`,
       name: tplName || file?.name || 'Template',
       status: 'approved',
-      sourceType: (format || 'PDF').toLowerCase(),
+      sourceType: resolvedTemplateKind,
+      kind: resolvedTemplateKind,
       tags: tplTags ? tplTags.split(',').map((s) => s.trim()).filter(Boolean) : [],
       description: tplDesc || '',
       htmlUrl: finalUrl || templateUrl || undefined,
@@ -623,6 +654,9 @@ export default function UploadVerify() {
         if (!hasPrevious && fallbackTemplateId) {
           next.templateId = fallbackTemplateId
         }
+        if (!hasPrevious) {
+          next.kind = previewKind
+        }
         if (templateUrl) {
           next.htmlUrl = templateUrl
           next.llm2HtmlUrl = templateUrl
@@ -635,7 +669,7 @@ export default function UploadVerify() {
         return next
       })
     },
-    [previewTemplateId, templateId, setCacheKey, setHtmlUrls, setPreview],
+    [previewKind, previewTemplateId, templateId, setCacheKey, setHtmlUrls, setPreview],
   )
 
 
@@ -652,6 +686,7 @@ export default function UploadVerify() {
       template_html_url: htmlUrls?.template,
       llm2_html_url: htmlUrls?.llm2,
       html_url: effectiveTemplateHtml,
+      kind: previewKind,
       previewTs: cacheKey,
       manifest_produced_at: cacheKey,
     },
@@ -786,9 +821,14 @@ export default function UploadVerify() {
             <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
               {dropDisabled ? 'Verification in progress...' : 'Drop template here or click to browse'}
             </Typography>
-            <Typography id={dropDescriptionId} variant="body2" color="text.secondary">
-              Accepts PDF or Excel files (.pdf, .xls, .xlsx)
-            </Typography>
+              <Typography id={dropDescriptionId} variant="body2" color="text.secondary">
+                Accepts PDF or Excel files (.pdf, .xls, .xlsx)
+              </Typography>
+              {format === 'Excel' && (
+                <Alert severity="info" sx={{ mt: 1, alignSelf: 'stretch' }}>
+                  Excel previews support up to {EXCEL_MAX_DATA_ROWS} data rows. Delete extra rows before uploading a new file.
+                </Alert>
+              )}
             <Stack direction="row" spacing={1}>
               <Chip label="PDF" size="small" variant="outlined" />
               <Chip label="Excel" size="small" variant="outlined" />
@@ -1223,6 +1263,7 @@ export default function UploadVerify() {
                 <HeaderMappingEditor
                   templateId={preview?.templateId}
                   connectionId={connectionId}
+                  templateKind={previewKind}
                   onApproved={(resp) => {
                     onApprove(resp)
                     setMappingOpen(false)

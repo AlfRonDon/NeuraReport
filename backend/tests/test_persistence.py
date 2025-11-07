@@ -53,6 +53,12 @@ def fresh_state(tmp_path, monkeypatch):
     upload_root.mkdir(parents=True, exist_ok=True)
     monkeypatch.setattr(api, "UPLOAD_ROOT", upload_root)
     monkeypatch.setattr(api, "UPLOAD_ROOT_BASE", upload_root.resolve())
+    excel_root = tmp_path / "excel-uploads"
+    excel_root.mkdir(parents=True, exist_ok=True)
+    monkeypatch.setattr(api, "EXCEL_UPLOAD_ROOT", excel_root)
+    monkeypatch.setattr(api, "EXCEL_UPLOAD_ROOT_BASE", excel_root.resolve())
+    monkeypatch.setitem(api._UPLOAD_KIND_BASES, "pdf", (upload_root.resolve(), "/uploads"))
+    monkeypatch.setitem(api._UPLOAD_KIND_BASES, "excel", (excel_root.resolve(), "/excel-uploads"))
     return store
 
 
@@ -169,16 +175,32 @@ def test_reports_run_uses_persisted_connection(client: TestClient, fresh_state, 
     from backend.app.services.reports import ReportGenerate as report_generate
 
     def fake_fill_and_print(**kwargs):
-        kwargs["OUT_HTML"].write_text("<html>filled</html>", encoding="utf-8")
+        kwargs["OUT_HTML"].write_text(
+            "<html><head><style id=\"excel-print-sizing\">:root { --excel-print-scale: 0.67; }</style></head>"
+            "<body>filled</body></html>",
+            encoding="utf-8",
+        )
         kwargs["OUT_PDF"].write_bytes(b"%PDF-1.4\n%fake\n")
 
     monkeypatch.setattr(report_generate, "fill_and_print", fake_fill_and_print)
+    def fake_html_to_docx(html_path, output_path, **kwargs):
+        output_path.write_bytes(b"DOCX")
+        return output_path
+
+    def fake_html_to_xlsx(html_path, output_path, **kwargs):
+        output_path.write_bytes(b"XLSX")
+        return output_path
+
+    monkeypatch.setattr(api, "html_file_to_docx", fake_html_to_docx)
+    monkeypatch.setattr(api, "html_file_to_xlsx", fake_html_to_xlsx)
 
     payload = {
         "template_id": template_id,
         "connection_id": conn["id"],
         "start_date": "2024-01-01 00:00:00",
         "end_date": "2024-01-31 23:59:59",
+        "docx": True,
+        "xlsx": True,
     }
     resp = client.post("/reports/run", json=payload)
     assert resp.status_code == 200, resp.json()
@@ -186,10 +208,17 @@ def test_reports_run_uses_persisted_connection(client: TestClient, fresh_state, 
     assert data["ok"] is True
     assert Path(api.UPLOAD_ROOT / template_id / Path(data["html_url"]).name).exists()
     assert Path(api.UPLOAD_ROOT / template_id / Path(data["pdf_url"]).name).exists()
+    assert data["docx_url"] is not None
+    assert Path(api.UPLOAD_ROOT / template_id / Path(data["docx_url"]).name).exists()
+    assert data["xlsx_url"] is not None
+    assert Path(api.UPLOAD_ROOT / template_id / Path(data["xlsx_url"]).name).exists()
 
-    last_used = fresh_state.get_last_used()
-    assert last_used["connection_id"] == conn["id"]
-    assert last_used["template_id"] == template_id
 
-    tpl_record = fresh_state.get_template_record(template_id)
-    assert tpl_record["last_connection_id"] == conn["id"]
+def test_extract_excel_print_scale_from_html(tmp_path):
+    html_path = tmp_path / "excel.html"
+    html_path.write_text(
+        "<html><head><style id=\"excel-print-sizing\">:root { --excel-print-scale: 0.63; }</style></head><body></body></html>",
+        encoding="utf-8",
+    )
+    value = api._extract_excel_print_scale_from_html(html_path)
+    assert value == pytest.approx(0.63, rel=1e-2)

@@ -12,6 +12,7 @@ class Settings:
     openai_api_key: str
     openai_model: str
     uploads_root: Path
+    excel_uploads_root: Path
     artifact_warn_bytes: int
     artifact_warn_render_ms: int
     version: str
@@ -54,6 +55,10 @@ def load_settings() -> Settings:
     uploads_root = Path(os.getenv("UPLOAD_ROOT", str(uploads_default))).resolve()
     uploads_root.mkdir(parents=True, exist_ok=True)
 
+    excel_uploads_default = Path(__file__).resolve().parents[2] / "uploads_excel"
+    excel_uploads_root = Path(os.getenv("EXCEL_UPLOAD_ROOT", str(excel_uploads_default))).resolve()
+    excel_uploads_root.mkdir(parents=True, exist_ok=True)
+
     artifact_warn_bytes = _coerce_int("ARTIFACT_WARN_BYTES", 5 * 1024 * 1024)
     artifact_warn_render_ms = _coerce_int("ARTIFACT_WARN_RENDER_MS", 2000)
 
@@ -69,6 +74,7 @@ def load_settings() -> Settings:
         artifact_warn_render_ms=artifact_warn_render_ms,
         version=version,
         commit=commit,
+        excel_uploads_root=excel_uploads_root,
     )
 
 
@@ -83,6 +89,7 @@ def log_settings(logger, settings: Settings) -> None:
             "openai_model": settings.openai_model,
             "openai_key": key_preview,
             "uploads_root": str(settings.uploads_root),
+            "excel_uploads_root": str(settings.excel_uploads_root),
             "artifact_warn_bytes": settings.artifact_warn_bytes,
             "artifact_warn_render_ms": settings.artifact_warn_render_ms,
         },
