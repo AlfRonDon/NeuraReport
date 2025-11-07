@@ -1,16 +1,15 @@
-# mypy: ignore-errors
 import asyncio
 import contextlib
 import json
-import os
+import math
 import re
 import sqlite3
 from collections import defaultdict
 from datetime import datetime
-from decimal import Decimal, InvalidOperation
-from itertools import product
 from pathlib import Path
+from decimal import Decimal, InvalidOperation
 from typing import Any, Iterable, Mapping, Sequence
+from itertools import product
 
 try:
     from PIL import Image
@@ -42,19 +41,18 @@ try:
 except ImportError:  # pragma: no cover
     async_playwright = None  # type: ignore
 
-from .contract_adapter import ContractAdapter, format_decimal_str
 from .date_utils import get_col_type, mk_between_pred_for_date
-
+from .contract_adapter import ContractAdapter, format_decimal_str
 # ------------------------------------------------------------------
 # Tolerant batch-block detection + stripping (explicit/implicit)
 # ------------------------------------------------------------------
 _BATCH_BLOCK_ANY_TAG = re.compile(
-    r"(?is)"
-    r"<(?P<tag>section|div|article|main|tbody|tr)\b"
+    r'(?is)'
+    r'<(?P<tag>section|div|article|main|tbody|tr)\b'
     r'[^>]*\bclass\s*=\s*["\'][^"\']*\bbatch-block\b[^"\']*["\']'
-    r"[^>]*>"
-    r"(?P<inner>.*?)"
-    r"</(?P=tag)>"
+    r'[^>]*>'
+    r'(?P<inner>.*?)'
+    r'</(?P=tag)>'
 )
 
 _TOKEN_REGEX_CACHE: dict[str, re.Pattern] = {}
@@ -72,20 +70,6 @@ def _token_regex(token: str) -> re.Pattern:
     return cached
 
 
-def _ensure_playwright_browsers_path() -> None:
-    """
-    Ensure packaged builds can reuse the system Playwright cache.
-    """
-    if os.environ.get("PLAYWRIGHT_BROWSERS_PATH"):
-        return
-    local_app = os.getenv("LOCALAPPDATA")
-    if not local_app:
-        return
-    candidate = Path(local_app) / "ms-playwright"
-    if candidate.exists():
-        os.environ["PLAYWRIGHT_BROWSERS_PATH"] = str(candidate)
-
-
 def _segment_has_any_token(segment: str, tokens: Iterable[str]) -> bool:
     for token in tokens:
         if not token:
@@ -100,7 +84,9 @@ def _find_rowish_block(html_text: str, row_tokens: Iterable[str]) -> tuple[str, 
     if not candidate_tokens:
         return None
 
-    matches = [m for m in _TR_BLOCK_RE.finditer(html_text) if _segment_has_any_token(m.group(0), candidate_tokens)]
+    matches = [
+        m for m in _TR_BLOCK_RE.finditer(html_text) if _segment_has_any_token(m.group(0), candidate_tokens)
+    ]
     if not matches:
         return None
 
@@ -135,7 +121,6 @@ def _select_prototype_block(html_text: str, row_tokens: Iterable[str]) -> tuple[
     end_last = start0 + len(block_full)
     return block_full.strip(), start0, end_last
 
-
 def _find_or_infer_batch_block(html_text: str) -> tuple[str, str, str]:
     """
     Return (full_match, tag_name, inner_html) of the repeating unit.
@@ -147,43 +132,40 @@ def _find_or_infer_batch_block(html_text: str) -> tuple[str, str, str]:
     """
     m = _BATCH_BLOCK_ANY_TAG.search(html_text)
     if m:
-        return m.group(0), m.group("tag").lower(), m.group("inner")
+        return m.group(0), m.group('tag').lower(), m.group('inner')
 
-    m_tbody = re.search(r"(?is)<tbody\b[^>]*>(?P<body>.*?)</tbody>", html_text)
+    m_tbody = re.search(r'(?is)<tbody\b[^>]*>(?P<body>.*?)</tbody>', html_text)
     if m_tbody:
-        tbody = m_tbody.group("body")
-        m_tr = re.search(r"(?is)<tr\b[^>]*>(?P<tr>.*?)</tr>", tbody)
+        tbody = m_tbody.group('body')
+        m_tr = re.search(r'(?is)<tr\b[^>]*>(?P<tr>.*?)</tr>', tbody)
         if m_tr:
-            return m_tr.group(0), "tr", m_tr.group("tr")
+            return m_tr.group(0), 'tr', m_tr.group('tr')
 
-    m_div = re.search(r"(?is)<div\b[^>]*\b(row|item|card)\b[^>]*>(?P<inner>.*?)</div>", html_text)
+    m_div = re.search(r'(?is)<div\b[^>]*\b(row|item|card)\b[^>]*>(?P<inner>.*?)</div>', html_text)
     if m_div:
-        return m_div.group(0), "div", m_div.group("inner")
+        return m_div.group(0), 'div', m_div.group('inner')
 
-    m_body = re.search(r"(?is)<body\b[^>]*>(?P<body>.*?)</body>", html_text)
+    m_body = re.search(r'(?is)<body\b[^>]*>(?P<body>.*?)</body>', html_text)
     if m_body:
-        body = m_body.group("body")
-        m_cont = re.search(r"(?is)<(section|main|div|article)\b[^>]*>(?P<inner>.*?)</\1>", body)
+        body = m_body.group('body')
+        m_cont = re.search(r'(?is)<(section|main|div|article)\b[^>]*>(?P<inner>.*?)</\1>', body)
         if m_cont:
-            return m_cont.group(0), m_cont.group(1).lower(), m_cont.group("inner")
+            return m_cont.group(0), m_cont.group(1).lower(), m_cont.group('inner')
 
     raise RuntimeError("No explicit batch-block and no suitable repeating unit could be inferred.")
-
 
 def _strip_found_block(html_text: str, block_full: str, block_tag: str) -> str:
     """Remove the found/inferred block once (used to build shell)."""
     return html_text.replace(block_full, "", 1)
-
 
 def html_without_batch_blocks(html_text: str) -> str:
     """Legacy stripper kept for compatibility."""
     pat = re.compile(r'(?is)\s*<section\s+class=["\']batch-block["\']\s*>.*?</section>\s*')
     return pat.sub("", html_text)
 
-
 def _raise_no_block(html: str, cause: Exception | None = None) -> None:
     """Build a short <section ...> preview and raise ValueError from here."""
-    sec_tags = re.findall(r"(?is)<section\b[^>]*>", html)
+    sec_tags = re.findall(r'(?is)<section\b[^>]*>', html)
     preview_lines = []
     for i, t in enumerate(sec_tags[:12]):
         snip = t[:140].replace("\n", " ")
@@ -277,7 +259,8 @@ def fill_and_print(
     TOTALS = contract_adapter.totals_mapping or OBJ.get("totals", {})
     ROW_ORDER = contract_adapter.row_order or OBJ.get("row_order", ["ROWID"])
     LITERALS = {
-        str(token): "" if value is None else str(value) for token, value in (OBJ.get("literals", {}) or {}).items()
+        str(token): "" if value is None else str(value)
+        for token, value in (OBJ.get("literals", {}) or {}).items()
     }
     FORMATTERS = contract_adapter.formatters
     key_values_map: dict[str, list[str]] = {}
@@ -330,7 +313,10 @@ def fill_and_print(
             return _canonicalize_cache[cache_key]
         table_ident = _safe_ident(table)
         column_ident = _safe_ident(column)
-        sql = f"SELECT {column_ident} FROM {table_ident} " f"WHERE {column_ident} = ? COLLATE NOCASE LIMIT 1"
+        sql = (
+            f"SELECT {column_ident} FROM {table_ident} "
+            f"WHERE {column_ident} = ? COLLATE NOCASE LIMIT 1"
+        )
         canonical = raw_value
         con = sqlite3.connect(str(DB_PATH))
         try:
@@ -410,34 +396,28 @@ def fill_and_print(
             print("Playwright not available; skipping PDF generation.")
             return
 
-        _ensure_playwright_browsers_path()
-
         html_source = html_path.read_text(encoding="utf-8", errors="ignore")
         base_url = (base_dir or html_path.parent).as_uri()
 
-        try:
-            async with async_playwright() as p:
-                browser = await p.chromium.launch()
-                context = None
-                try:
-                    context = await browser.new_context(base_url=base_url)
-                    page = await context.new_page()
-                    await page.set_content(html_source, wait_until="networkidle")
-                    await page.emulate_media(media="print")
-                    await page.pdf(
-                        path=str(pdf_path),
-                        format="A4",
-                        print_background=True,
-                        margin={"top": "10mm", "right": "10mm", "bottom": "10mm", "left": "10mm"},
-                        prefer_css_page_size=True,
-                    )
-                finally:
-                    if context is not None:
-                        await context.close()
-                    await browser.close()
-        except Exception as exc:
-            print(f"Playwright failed to render PDF ({exc}); skipping PDF generation.")
-            return
+        async with async_playwright() as p:
+            browser = await p.chromium.launch()
+            context = None
+            try:
+                context = await browser.new_context(base_url=base_url)
+                page = await context.new_page()
+                await page.set_content(html_source, wait_until="networkidle")
+                await page.emulate_media(media="print")
+                await page.pdf(
+                    path=str(pdf_path),
+                    format="A4",
+                    print_background=True,
+                    margin={"top": "10mm", "right": "10mm", "bottom": "10mm", "left": "10mm"},
+                    prefer_css_page_size=True,
+                )
+            finally:
+                if context is not None:
+                    await context.close()
+                await browser.close()
 
     def _combine_html_documents(html_sections: list[str]) -> str:
         if not html_sections:
@@ -456,7 +436,7 @@ def fill_and_print(
                 doctype_match = doctype_pattern.search(text)
                 if doctype_match:
                     doc_type = doctype_match.group(0).strip()
-                    text = text[doctype_match.end() :]
+                    text = text[doctype_match.end():]
                 head_match = head_pattern.search(text)
                 if head_match:
                     head_html = head_match.group(0).strip()
@@ -519,15 +499,13 @@ def fill_and_print(
                 return True
         return False
 
-    def _is_serial_label(name: str | None) -> bool:
-        if not name:
-            return False
-        lower = str(name).lower()
-        return any(keyword in lower for keyword in ("row", "serial", "sl"))
-
     def _reindex_serial_fields(rows: list[dict], tokens: Sequence[str], columns: Sequence[str]) -> None:
-        serial_tokens = [tok for tok in tokens if _is_serial_label(tok)]
-        serial_columns = [col for col in columns if _is_serial_label(col)]
+        serial_tokens = [
+            tok for tok in tokens if tok and any(keyword in tok.lower() for keyword in ("row", "serial", "sl"))
+        ]
+        serial_columns = [
+            col for col in columns if col and any(keyword in col.lower() for keyword in ("row", "serial", "sl"))
+        ]
         if not serial_tokens and not serial_columns:
             return
         for idx, row in enumerate(rows, start=1):
@@ -557,7 +535,7 @@ def fill_and_print(
         return None
 
     def _prune_placeholder_rows(rows: Sequence[Mapping[str, Any]], tokens: Sequence[str]) -> list[dict[str, Any]]:
-        material_tokens = [tok for tok in tokens if tok and "material" in tok.lower()]
+        material_tokens = [tok for tok in tokens if tok and 'material' in tok.lower()]
         pruned: list[dict[str, Any]] = []
         for row in rows:
             keep = True
@@ -583,13 +561,11 @@ def fill_and_print(
             prepared = [dict(row) for row in rows]
         else:
             significant_tokens = [
-                tok
-                for tok in row_tokens_template
+                tok for tok in row_tokens_template
                 if tok and not any(keyword in tok.lower() for keyword in ("row", "serial", "sl"))
             ]
             significant_columns = [
-                col
-                for col in row_columns
+                col for col in row_columns
                 if col and not any(keyword in col.lower() for keyword in ("row", "serial", "sl"))
             ]
             prepared: list[dict[str, Any]] = []
@@ -680,20 +656,18 @@ def fill_and_print(
     shell_suffix = END_TAG + html[end_last:]
 
     parent_table = JOIN.get("parent_table", "")
-    parent_key = JOIN.get("parent_key", "")
-    child_table = JOIN.get("child_table", "")
-    child_key = JOIN.get("child_key", "")
-    parent_date = DATE_COLUMNS.get(parent_table, "")
-    child_date = DATE_COLUMNS.get(child_table, "")
-    order_col = ROW_ORDER[0] if ROW_ORDER else "ROWID"
+    parent_key   = JOIN.get("parent_key", "")
+    child_table  = JOIN.get("child_table", "")
+    child_key    = JOIN.get("child_key", "")
+    parent_date  = DATE_COLUMNS.get(parent_table, "")
+    child_date   = DATE_COLUMNS.get(child_table, "")
+    order_col    = ROW_ORDER[0] if ROW_ORDER else "ROWID"
 
     def _normalize_token_name(name: str) -> str:
-        return re.sub(r"[^a-z0-9]", "", name.lower())
+        return re.sub(r'[^a-z0-9]', '', name.lower())
 
     token_index: dict[str, set[str]] = defaultdict(set)
-    all_candidate_tokens = (
-        set(TEMPLATE_TOKENS) | set(HEADER_TOKENS) | set(ROW_TOKENS) | set(TOTALS.keys()) | set(LITERALS.keys())
-    )
+    all_candidate_tokens = set(TEMPLATE_TOKENS) | set(HEADER_TOKENS) | set(ROW_TOKENS) | set(TOTALS.keys()) | set(LITERALS.keys())
 
     def _token_synonym_keys(norm: str) -> set[str]:
         """
@@ -739,9 +713,9 @@ def fill_and_print(
         if not val:
             return None
 
-        iso_try = val.replace("Z", "+00:00")
-        if " " in iso_try and "T" not in iso_try:
-            iso_try = iso_try.replace(" ", "T", 1)
+        iso_try = val.replace('Z', '+00:00')
+        if ' ' in iso_try and 'T' not in iso_try:
+            iso_try = iso_try.replace(' ', 'T', 1)
         try:
             return datetime.fromisoformat(iso_try)
         except ValueError:
@@ -814,11 +788,11 @@ def fill_and_print(
         if raw_value is None:
             return False
         text = str(raw_value)
-        if re.search(r"\d{1,2}:\d{2}", text):
+        if re.search(r'\d{1,2}:\d{2}', text):
             return True
-        if re.search(r"\b(am|pm)\b", text, flags=re.IGNORECASE):
+        if re.search(r'\b(am|pm)\b', text, flags=re.IGNORECASE):
             return True
-        if "T" in text or "t" in text:
+        if 'T' in text or 't' in text:
             return True
         return False
 
@@ -827,7 +801,7 @@ def fill_and_print(
             return ""
 
         token_lower = token.lower()
-        token_clean = re.sub(r"[^a-z0-9]", "", token_lower)
+        token_clean = re.sub(r'[^a-z0-9]', '', token_lower)
 
         def _has(*needles: str) -> bool:
             return any(needle in token_clean for needle in needles)
@@ -877,7 +851,6 @@ def fill_and_print(
         if rfc822_like or http_like:
             try:
                 from email.utils import format_datetime as _email_format_datetime
-
                 base_dt = dt_for_format
                 if base_dt.tzinfo is None:
                     base_dt = base_dt.astimezone()
@@ -963,9 +936,7 @@ def fill_and_print(
             return dt_obj.strftime("%Y-%m-%d")
         return "" if raw_value is None else str(raw_value).strip()
 
-    def _run_generator_entrypoints(
-        entrypoints: dict, sql_params: dict[str, object]
-    ) -> dict[str, list[dict[str, object]]]:
+    def _run_generator_entrypoints(entrypoints: dict, sql_params: dict[str, object]) -> dict[str, list[dict[str, object]]]:
         if not entrypoints:
             return {}
         con = sqlite3.connect(str(DB_PATH))
@@ -1046,18 +1017,9 @@ def fill_and_print(
     end_has_time = _has_time_component(END_DATE, end_dt)
 
     START_DATE_KEYS = {"fromdate", "datefrom", "startdate", "periodstart", "rangefrom", "fromdt", "startdt"}
-    END_DATE_KEYS = {"todate", "dateto", "enddate", "periodend", "rangeto", "todt", "enddt"}
-    PRINT_DATE_KEYS = {
-        "printdate",
-        "printedon",
-        "printeddate",
-        "generatedon",
-        "generateddate",
-        "rundate",
-        "runon",
-        "generatedat",
-    }
-    PAGE_NO_KEYS = {
+    END_DATE_KEYS   = {"todate", "dateto", "enddate", "periodend", "rangeto", "todt", "enddt"}
+    PRINT_DATE_KEYS = {"printdate", "printedon", "printeddate", "generatedon", "generateddate", "rundate", "runon", "generatedat"}
+    PAGE_NO_KEYS    = {
         "page",
         "pageno",
         "pagenum",
@@ -1152,7 +1114,6 @@ def fill_and_print(
     post_literal_specials = {tok: val for tok, val in special_values.items() if tok not in LITERALS}
 
     _ident_re = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
-
     def qident(name: str) -> str:
         if _ident_re.match(name):
             return name
@@ -1491,91 +1452,442 @@ def fill_and_print(
     def format_token_value(token: str, raw_value: Any) -> str:
         return contract_adapter.format_value(token, raw_value)
 
-    FOOTER_NUMBER_SPAN_RE = re.compile(
-        r'(<span\b[^>]*class=["\'][^"\']*nr-page-number[^"\']*["\'][^>]*>)(.*?)(</span>)',
-        re.IGNORECASE | re.DOTALL,
-    )
-    FOOTER_COUNT_SPAN_RE = re.compile(
-        r'(<span\b[^>]*class=["\'][^"\']*nr-page-count[^"\']*["\'][^>]*>)(.*?)(</span>)',
-        re.IGNORECASE | re.DOTALL,
-    )
+    def _convert_css_length_to_mm(raw: str) -> float | None:
+        if not raw:
+            return None
+        text = raw.strip().lower()
+        if not text or text == "auto":
+            return None
+        m = re.match(r"([-+]?\d*\.?\d+)\s*(mm|cm|in|pt|pc|px)?", text)
+        if not m:
+            return None
+        value = float(m.group(1))
+        unit = m.group(2) or "px"
+        if unit == "mm":
+            return value
+        if unit == "cm":
+            return value * 10.0
+        if unit in {"in", "inch", "inches"}:
+            return value * 25.4
+        if unit == "pt":
+            return value * (25.4 / 72.0)
+        if unit == "pc":
+            return value * (25.4 / 6.0)
+        if unit == "px":
+            return value * (25.4 / 96.0)
+        return None
 
-    def _set_static_footer_numbers(html_in: str) -> str:
-        number_matches = list(FOOTER_NUMBER_SPAN_RE.finditer(html_in))
-        total = len(number_matches)
-        if not total:
-            return html_in
+    def _parse_page_size_value(value: str) -> tuple[float, float] | None:
+        if not value:
+            return None
+        text = value.strip().lower()
+        if not text:
+            return None
+        size_map: dict[str, tuple[float, float]] = {
+            "a3": (297.0, 420.0),
+            "a4": (210.0, 297.0),
+            "a5": (148.0, 210.0),
+            "letter": (215.9, 279.4),
+            "legal": (215.9, 355.6),
+            "tabloid": (279.4, 431.8),
+        }
+        tokens = text.split()
+        orientation = None
+        size_tokens = tokens
+        if tokens and tokens[-1] in {"portrait", "landscape"}:
+            orientation = tokens[-1]
+            size_tokens = tokens[:-1]
+        if len(size_tokens) == 1 and size_tokens[0] in size_map:
+            width_mm, height_mm = size_map[size_tokens[0]]
+        elif len(size_tokens) >= 2:
+            first = _convert_css_length_to_mm(size_tokens[0])
+            second = _convert_css_length_to_mm(size_tokens[1])
+            if first is None or second is None:
+                return None
+            width_mm, height_mm = first, second
+        else:
+            return None
+        if orientation == "landscape":
+            width_mm, height_mm = height_mm, width_mm
+        return width_mm, height_mm
 
-        def _set_attr(tag: str, attr: str, value: str) -> str:
-            pattern = re.compile(rf'({attr}\s*=\s*")[^"]*(")', re.IGNORECASE)
-            if pattern.search(tag):
-                return pattern.sub(lambda m: f"{m.group(1)}{value}{m.group(2)}", tag)
-            insert_at = tag.rfind(">")
-            if insert_at == -1:
-                return tag + f' {attr}="{value}"'
-            return f'{tag[:insert_at]} {attr}="{value}"{tag[insert_at:]}'
+    def _parse_margin_shorthand(value: str) -> tuple[float | None, float | None, float | None, float | None]:
+        parts = [p for p in re.split(r"\s+", value.strip()) if p]
+        values = [_convert_css_length_to_mm(p) for p in parts]
+        if not values:
+            return None, None, None, None
+        if len(values) == 1:
+            top = right = bottom = left = values[0]
+        elif len(values) == 2:
+            top = bottom = values[0]
+            right = left = values[1]
+        elif len(values) == 3:
+            top = values[0]
+            right = left = values[1]
+            bottom = values[2]
+        else:
+            top, right, bottom, left = values[:4]
+        return top, right, bottom, left
 
-        page_index = {"value": 0}
+    def _extract_page_metrics(html_in: str) -> dict[str, float]:
+        default_width_mm, default_height_mm = 210.0, 297.0
+        margin_top_mm = 0.0
+        margin_bottom_mm = 0.0
+        page_match = re.search(r"@page\b[^{]*\{(?P<body>.*?)\}", html_in, re.IGNORECASE | re.DOTALL)
+        if page_match:
+            block = page_match.group("body")
+            size_match = re.search(r"size\s*:\s*([^;]+);?", block, re.IGNORECASE)
+            if size_match:
+                parsed_size = _parse_page_size_value(size_match.group(1))
+                if parsed_size:
+                    default_width_mm, default_height_mm = parsed_size
+            margin_match = re.search(r"margin\s*:\s*([^;]+);?", block, re.IGNORECASE)
+            if margin_match:
+                mt, _, mb, _ = _parse_margin_shorthand(margin_match.group(1))
+                if mt is not None:
+                    margin_top_mm = mt
+                if mb is not None:
+                    margin_bottom_mm = mb
+            for name, setter in (("margin-top", "top"), ("margin-bottom", "bottom")):
+                specific = re.search(rf"{name}\s*:\s*([^;]+);?", block, re.IGNORECASE)
+                if specific:
+                    as_mm = _convert_css_length_to_mm(specific.group(1))
+                    if as_mm is None:
+                        continue
+                    if setter == "top":
+                        margin_top_mm = as_mm
+                    else:
+                        margin_bottom_mm = as_mm
+        return {
+            "page_width_mm": default_width_mm,
+            "page_height_mm": default_height_mm,
+            "margin_top_mm": max(margin_top_mm, 0.0),
+            "margin_bottom_mm": max(margin_bottom_mm, 0.0),
+        }
 
-        def replace_number(match: re.Match[str]) -> str:
-            page_index["value"] += 1
-            value = str(page_index["value"])
-            open_tag, _, close_tag = match.groups()
-            open_tag = _set_attr(open_tag, "data-nr-screen", value)
-            open_tag = _set_attr(open_tag, "data-nr-page-estimate", value)
-            return f"{open_tag}{value}{close_tag}"
+    def _inject_page_counter_spans(
+        html_in: str,
+        page_tokens: set[str],
+        count_tokens: set[str],
+        label_tokens: set[str] | None = None,
+    ) -> str:
+        label_tokens = label_tokens or set()
+        updated = html_in
+        page_markup = '<span class="nr-page-number" data-nr-counter="page" aria-label="Current page number"></span>'
+        count_markup = '<span class="nr-page-count" data-nr-counter="pages" aria-label="Total page count"></span>'
 
-        html_out = FOOTER_NUMBER_SPAN_RE.sub(replace_number, html_in)
-        total_str = str(total)
+        for tok in page_tokens:
+            updated = sub_token(updated, tok, page_markup)
+        for tok in count_tokens:
+            updated = sub_token(updated, tok, count_markup)
+        for tok in label_tokens:
+            if count_tokens:
+                label_markup = f'<span class="nr-page-label" data-nr-counter-label="1">Page {page_markup} of {count_markup}</span>'
+            else:
+                label_markup = f'<span class="nr-page-label" data-nr-counter-label="1">Page {page_markup}</span>'
+            updated = sub_token(updated, tok, label_markup)
 
-        def replace_count(match: re.Match[str]) -> str:
-            open_tag, _, close_tag = match.groups()
-            open_tag = _set_attr(open_tag, "data-nr-total-pages", total_str)
-            open_tag = _set_attr(open_tag, "data-nr-screen", total_str)
-            return f"{open_tag}{total_str}{close_tag}"
+        if (page_tokens or count_tokens or label_tokens) and 'nr-page-counter-style' not in updated:
+            style_block = """
+<style id="nr-page-counter-style">
+  .nr-page-number,
+  .nr-page-count { white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .nr-page-label { white-space: nowrap; }
+  @media screen {
+    .nr-page-number::after { content: attr(data-nr-screen); }
+    .nr-page-count::after { content: attr(data-nr-total-pages); }
+  }
+  @media print {
+    body { counter-reset: page; }
+    .nr-page-number::after { content: counter(page); }
+    .nr-page-count::after { content: counter(pages); }
+    .nr-page-count[data-nr-total-pages]::after { content: attr(data-nr-total-pages); }
+  }
+</style>
+"""
+            if '</head>' in updated:
+                updated = updated.replace('</head>', style_block + '</head>', 1)
+            else:
+                updated = style_block + updated
 
-        html_out = FOOTER_COUNT_SPAN_RE.sub(replace_count, html_out)
-        return html_out
+        if (page_tokens or count_tokens or label_tokens) and 'nr-page-counter-script' not in updated:
+            metrics = _extract_page_metrics(updated)
+            metrics_json = json.dumps(metrics)
+            script_template = """
+<script id="nr-page-counter-script">
+(function() {
+  const METRICS = __NR_METRICS__;
+  const PX_PER_MM = 96 / 25.4;
+  const BREAK_VALUES = ['page', 'always', 'left', 'right'];
+  const TRAILING_BREAK_SENTINEL = '__nr_trailing_break__';
+  let lastPageNodes = [];
+  let lastCountNodes = [];
 
-    FOOTER_FIXED_PATTERNS: tuple[tuple[re.Pattern, str], ...] = (
-        (
-            re.compile(r"(?<![\w.-])footer\b[^{}]*\{[^{}]*position\s*:\s*fixed", re.IGNORECASE | re.DOTALL),
-            "footer",
-        ),
-        (
-            re.compile(r"#page-footer\b[^{}]*\{[^{}]*position\s*:\s*fixed", re.IGNORECASE | re.DOTALL),
-            "#page-footer",
-        ),
-    )
+  function isForcedBreak(value) {
+    if (!value) return false;
+    const normalized = String(value).toLowerCase().trim();
+    if (!normalized) return false;
+    return BREAK_VALUES.indexOf(normalized) !== -1;
+  }
 
-    def _ensure_footer_static_preview(html_in: str) -> str:
-        if "data-nr-footer-fix" in html_in:
-            return html_in
+  function readBreakValue(style, which) {
+    if (!style) return '';
+    if (which === 'before') {
+      return (
+        style.getPropertyValue('break-before') ||
+        style.getPropertyValue('page-break-before') ||
+        style.breakBefore ||
+        style.pageBreakBefore ||
+        ''
+      );
+    }
+    return (
+      style.getPropertyValue('break-after') ||
+      style.getPropertyValue('page-break-after') ||
+      style.breakAfter ||
+      style.pageBreakAfter ||
+      ''
+    );
+  }
 
-        selectors: list[str] = []
-        for pattern, selector in FOOTER_FIXED_PATTERNS:
-            if pattern.search(html_in):
-                selectors.append(selector)
+  function findNextElement(node) {
+    if (!node) return null;
+    let current = node;
+    while (current) {
+      if (current.nextElementSibling) return current.nextElementSibling;
+      current = current.parentElement;
+    }
+    return null;
+  }
 
-        if not selectors:
-            return html_in
+  function resolveNodeOffset(node) {
+    if (!node || typeof node.getBoundingClientRect !== 'function') return 0;
+    const rect = node.getBoundingClientRect();
+    const scrollY = typeof window !== 'undefined' ? window.scrollY || window.pageYOffset || 0 : 0;
+    return Math.max(0, rect.top + scrollY);
+  }
 
-        unique_selectors = list(dict.fromkeys(selectors))
-        selectors_str = ", ".join(unique_selectors)
-        style_block = (
-            "\n<style data-nr-footer-fix>\n"
-            f"  {selectors_str} {{\n"
-            "    position: static !important;\n"
-            "    margin-top: 4mm;\n"
-            "  }\n"
-            "</style>\n"
-        )
+  function collectManualBreakAnchors(root) {
+    if (!root || !root.ownerDocument) return [];
+    const anchors = [];
+    const seen = new Set();
+    const showElement = typeof NodeFilter !== 'undefined' && NodeFilter.SHOW_ELEMENT ? NodeFilter.SHOW_ELEMENT : 1;
+    const walker = root.ownerDocument.createTreeWalker(root, showElement);
 
-        if "</head>" in html_in:
-            return html_in.replace("</head>", style_block + "</head>", 1)
-        if "<body" in html_in:
-            return html_in.replace("<body", style_block + "<body", 1)
-        return style_block + html_in
+    function pushAnchor(target) {
+      if (!target) return;
+      if (seen.has(target)) return;
+      seen.add(target);
+      anchors.push(target);
+    }
+
+    while (walker.nextNode()) {
+      const element = walker.currentNode;
+      const style = window.getComputedStyle ? window.getComputedStyle(element) : null;
+      if (!style) continue;
+      if (isForcedBreak(readBreakValue(style, 'before'))) {
+        pushAnchor(element);
+      }
+      if (isForcedBreak(readBreakValue(style, 'after'))) {
+        const next = findNextElement(element);
+        pushAnchor(next || TRAILING_BREAK_SENTINEL);
+      }
+    }
+    return anchors;
+  }
+
+  function buildPageStartOffsets(manualAnchors, usableHeightPx, contentHeight, totalPages) {
+    const offsets = [0];
+    const seenOffsets = new Set([0]);
+    manualAnchors.forEach((anchor) => {
+      let offset = null;
+      if (anchor === TRAILING_BREAK_SENTINEL) {
+        offset = contentHeight + usableHeightPx;
+      } else if (anchor && typeof anchor.getBoundingClientRect === 'function') {
+        offset = resolveNodeOffset(anchor);
+      }
+      if (offset == null || !Number.isFinite(offset)) {
+        return;
+      }
+      const key = Math.round(offset * 1000) / 1000;
+      if (seenOffsets.has(key)) return;
+      seenOffsets.add(key);
+      offsets.push(offset);
+    });
+
+    offsets.sort((a, b) => a - b);
+
+    while (offsets.length < totalPages) {
+      const last = offsets[offsets.length - 1];
+      offsets.push(last + usableHeightPx);
+    }
+
+    return offsets;
+  }
+
+  function resolvePageIndexFromOffsets(offset, startOffsets) {
+    if (!startOffsets || !startOffsets.length) return 0;
+    let index = 0;
+    for (let i = 0; i < startOffsets.length; i += 1) {
+      if (offset >= startOffsets[i] - 0.5) {
+        index = i;
+      } else {
+        break;
+      }
+    }
+    return index;
+  }
+
+  function indexOfSection(node, sections) {
+    if (!node || !sections || !sections.length) return -1;
+    const target = typeof node.closest === 'function' ? node.closest('.nr-key-section') : null;
+    if (!target) return -1;
+    for (let i = 0; i < sections.length; i += 1) {
+      if (sections[i] === target) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
+  function assignScreenText(node, text, key) {
+    if (!node) return;
+    const stringText = text == null ? '' : String(text);
+    if (node.getAttribute('aria-label') === null) {
+      node.setAttribute('aria-label', key === 'count' ? 'Total page count' : 'Current page number');
+    }
+    node.setAttribute('data-nr-screen', stringText);
+    if (key === 'count') {
+      node.setAttribute('data-nr-total-pages', stringText);
+    } else {
+      node.setAttribute('data-nr-page-estimate', stringText);
+    }
+    node.setAttribute('data-nr-' + key + '-text', stringText);
+    node.textContent = stringText;
+  }
+
+  function clearNodesForPrint() {
+    const nodes = lastPageNodes.concat(lastCountNodes);
+    nodes.forEach((node) => {
+      if (!node) return;
+      if (!node.hasAttribute('data-nr-print-cache')) {
+        node.setAttribute('data-nr-print-cache', node.textContent || '');
+      }
+      node.textContent = '';
+    });
+  }
+
+  function restoreNodesAfterPrint() {
+    const nodes = lastPageNodes.concat(lastCountNodes);
+    nodes.forEach((node) => {
+      if (!node) return;
+      const cached = node.getAttribute('data-nr-print-cache');
+      if (cached != null) {
+        const key = node.getAttribute('data-nr-counter') === 'pages' ? 'count' : 'page';
+        const preferred = node.getAttribute('data-nr-' + key + '-text');
+        node.textContent = preferred != null ? preferred : cached;
+        node.removeAttribute('data-nr-print-cache');
+      }
+    });
+  }
+
+  function computeTotals() {
+    try {
+      const doc = document.documentElement;
+      const body = document.body;
+      if (!doc || !body) return;
+      const usableHeightMm = Math.max(METRICS.page_height_mm - (METRICS.margin_top_mm + METRICS.margin_bottom_mm), 0.1);
+      const usableHeightPx = usableHeightMm * PX_PER_MM;
+      const contentHeight = Math.max(
+        body.scrollHeight,
+        body.offsetHeight,
+        doc.scrollHeight,
+        doc.offsetHeight
+      );
+      const contentPages = Math.max(1, Math.ceil(contentHeight / usableHeightPx));
+      const manualAnchors = collectManualBreakAnchors(body);
+      const manualPages = manualAnchors.length > 0 ? manualAnchors.length + 1 : 1;
+      const totalPages = Math.max(contentPages, manualPages);
+      const startOffsets = buildPageStartOffsets(manualAnchors, usableHeightPx, contentHeight, totalPages);
+      const totalAsString = String(totalPages);
+      doc.setAttribute('data-nr-total-pages', totalAsString);
+      const countNodes = Array.from(document.querySelectorAll('[data-nr-counter="pages"]'));
+      countNodes.forEach((node) => assignScreenText(node, totalAsString, 'count'));
+      const pageNodes = Array.from(document.querySelectorAll('[data-nr-counter="page"]'));
+      const sections = Array.from(document.querySelectorAll('.nr-key-section'));
+      pageNodes.forEach((node) => {
+        const sectionIndex = indexOfSection(node, sections);
+        let pageIndex;
+        if (sectionIndex >= 0) {
+          pageIndex = sectionIndex;
+        } else {
+          const offset = resolveNodeOffset(node);
+          pageIndex = resolvePageIndexFromOffsets(offset, startOffsets);
+        }
+        const pageNumber = Math.min(totalPages, Math.max(1, pageIndex + 1));
+        assignScreenText(node, String(pageNumber), 'page');
+      });
+      lastPageNodes = pageNodes;
+      lastCountNodes = countNodes;
+    } catch (err) {
+      if (typeof console !== 'undefined' && console.warn) {
+        console.warn('nr-page-counter: unable to compute preview counters', err);
+      }
+    }
+  }
+
+  function scheduleCompute() {
+    computeTotals();
+    setTimeout(computeTotals, 180);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      scheduleCompute();
+    }, { once: true });
+  } else {
+    scheduleCompute();
+  }
+
+  if (typeof window !== 'undefined') {
+    window.addEventListener('resize', computeTotals, { passive: true });
+    window.addEventListener('beforeprint', clearNodesForPrint);
+    window.addEventListener('afterprint', () => {
+      restoreNodesAfterPrint();
+      scheduleCompute();
+    });
+    if (typeof window.matchMedia === 'function') {
+      const mediaQuery = window.matchMedia('print');
+      if (typeof mediaQuery.addEventListener === 'function') {
+        mediaQuery.addEventListener('change', (event) => {
+          if (event.matches) {
+            clearNodesForPrint();
+          } else {
+            restoreNodesAfterPrint();
+            scheduleCompute();
+          }
+        });
+      } else if (typeof mediaQuery.addListener === 'function') {
+        mediaQuery.addListener((event) => {
+          if (event.matches) {
+            clearNodesForPrint();
+          } else {
+            restoreNodesAfterPrint();
+            scheduleCompute();
+          }
+        });
+      }
+    }
+  }
+})();
+</script>
+"""
+            script_block = script_template.replace("__NR_METRICS__", metrics_json)
+            if '</body>' in updated:
+                updated = updated.replace('</body>', script_block + '</body>', 1)
+            else:
+                updated = updated + script_block
+        return updated
 
     def _blank_known_tokens_text(text: str, tokens) -> str:
         for t in tokens:
@@ -1586,58 +1898,9 @@ def fill_and_print(
     def blank_known_tokens(html_in: str, tokens) -> str:
         return _apply_outside_styles_scripts(html_in, lambda txt: _blank_known_tokens_text(txt, tokens))
 
-    def _inject_page_counter_spans(
-        html_in: str,
-        page_tokens: Iterable[str],
-        count_tokens: Iterable[str],
-        label_tokens: Iterable[str],
-    ) -> str:
-        page_tokens = {tok for tok in page_tokens if tok}
-        count_tokens = {tok for tok in count_tokens if tok}
-        label_tokens = {tok for tok in label_tokens if tok}
-        if not (page_tokens or count_tokens or label_tokens):
-            return html_in
-
-        page_markup = (
-            '<span class="nr-page-number" data-nr-counter="page" aria-label="Current page number" '
-            'data-nr-screen="1" data-nr-page-estimate="1">1</span>'
-        )
-        count_markup = (
-            '<span class="nr-page-count" data-nr-counter="pages" aria-label="Total page count" '
-            'data-nr-screen="1" data-nr-total-pages="1">1</span>'
-        )
-
-        updated = html_in
-        for tok in page_tokens:
-            updated = sub_token(updated, tok, page_markup)
-        for tok in count_tokens:
-            updated = sub_token(updated, tok, count_markup)
-        for tok in label_tokens:
-            if count_tokens:
-                label_markup = (
-                    f'<span class="nr-page-label" data-nr-counter-label="1">Page {page_markup} of {count_markup}</span>'
-                )
-            else:
-                label_markup = f'<span class="nr-page-label" data-nr-counter-label="1">Page {page_markup}</span>'
-            updated = sub_token(updated, tok, label_markup)
-
-        if (page_tokens or count_tokens or label_tokens) and "nr-page-counter-style" not in updated:
-            style_block = """
-<style id="nr-page-counter-style">
-  .nr-page-number,
-  .nr-page-count { white-space: nowrap; font-variant-numeric: tabular-nums; }
-  .nr-page-label { white-space: nowrap; }
-</style>
-"""
-            if "</head>" in updated:
-                updated = updated.replace("</head>", style_block + "</head>", 1)
-            else:
-                updated = style_block + updated
-        return updated
-
     # ---- Helpers to find tbody / row template (improved) ----
     def best_rows_tbody(inner_html: str, allowed_tokens: set):
-        tbodys = list(re.finditer(r"(?is)<tbody\b[^>]*>(.*?)</tbody>", inner_html))
+        tbodys = list(re.finditer(r'(?is)<tbody\b[^>]*>(.*?)</tbody>', inner_html))
         best = (None, None, -1)  # (match, inner, hits)
         for m in tbodys:
             tin = m.group(1)
@@ -1659,10 +1922,8 @@ def fill_and_print(
             toks = re.findall(r"\{\{\s*([^}\n]+?)\s*\}\}|\{\s*([^}\n]+?)\s*\}", tr_html)
             flat = []
             for a, b in toks:
-                if a:
-                    flat.append(a.strip())
-                if b:
-                    flat.append(b.strip())
+                if a: flat.append(a.strip())
+                if b: flat.append(b.strip())
             flat = [t for t in flat if t in allowed_tokens]
             if flat:
                 return tr_html, (m.start(0), m.end(0)), sorted(set(flat), key=len, reverse=True)
@@ -1670,7 +1931,6 @@ def fill_and_print(
 
     def majority_table_for_tokens(tokens, mapping):
         from collections import Counter
-
         tbls = []
         for t in tokens:
             tc = mapping.get(t, "")
@@ -1687,8 +1947,22 @@ def fill_and_print(
             return None
         return target.split(".", 1)[1].strip() or None
 
-    header_cols = sorted({col for t in HEADER_TOKENS for col in [_extract_col_name(PLACEHOLDER_TO_COL.get(t))] if col})
-    row_cols = sorted({col for t in ROW_TOKENS for col in [_extract_col_name(PLACEHOLDER_TO_COL.get(t))] if col})
+    header_cols = sorted(
+        {
+            col
+            for t in HEADER_TOKENS
+            for col in [_extract_col_name(PLACEHOLDER_TO_COL.get(t))]
+            if col
+        }
+    )
+    row_cols = sorted(
+        {
+            col
+            for t in ROW_TOKENS
+            for col in [_extract_col_name(PLACEHOLDER_TO_COL.get(t))]
+            if col
+        }
+    )
 
     totals_by_table = defaultdict(lambda: defaultdict(list))
     total_token_to_target = {}
@@ -1742,7 +2016,8 @@ def fill_and_print(
                 row_template, row_span, row_tokens_in_template = find_row_template(tbody_inner, allowed_row_tokens)
                 if row_template and row_tokens_in_template:
                     row_columns_template = [
-                        _extract_col_name(PLACEHOLDER_TO_COL.get(tok)) or "" for tok in row_tokens_in_template
+                        _extract_col_name(PLACEHOLDER_TO_COL.get(tok)) or ""
+                        for tok in row_tokens_in_template
                     ]
                     filtered_rows = _filter_rows_for_render(
                         rows_data,
@@ -1751,39 +2026,26 @@ def fill_and_print(
                         treat_all_as_data=bool(__force_single),
                     )
                     filtered_rows = _prune_placeholder_rows(filtered_rows, row_tokens_in_template)
-                    _reindex_serial_fields(filtered_rows, row_tokens_in_template, row_columns_template)
-                    if filtered_rows:
-                        _log_debug(
-                            "[multi-debug] reindexed rows (tbody)",
-                            {"first_sl": filtered_rows[0].get("sl_no"), "count": len(filtered_rows)},
-                        )
                     if __force_single:
-                        _log_debug(
-                            f"[multi-debug] generator rows: total={len(rows_data)}, filtered={len(filtered_rows)}, key_values={KEY_VALUES}"
-                        )
+                        _log_debug(f"[multi-debug] generator rows: total={len(rows_data)}, filtered={len(filtered_rows)}, key_values={KEY_VALUES}")
                     if filtered_rows:
-                        serial_token_set = {tok for tok in row_tokens_in_template if _is_serial_label(tok)}
                         parts: list[str] = []
-                        for idx, row in enumerate(filtered_rows, start=1):
+                        for row in filtered_rows:
                             tr = row_template
                             for tok in row_tokens_in_template:
-                                if tok in serial_token_set:
-                                    val = idx
-                                else:
-                                    val = _value_for_token(row, tok)
+                                val = _value_for_token(row, tok)
                                 tr = sub_token(tr, tok, format_token_value(tok, val))
                             parts.append(tr)
-                        new_tbody_inner = tbody_inner[: row_span[0]] + "\n".join(parts) + tbody_inner[row_span[1] :]
-                        block_html = block_html[: tbody_m.start(1)] + new_tbody_inner + block_html[tbody_m.end(1) :]
+                        new_tbody_inner = tbody_inner[:row_span[0]] + "\n".join(parts) + tbody_inner[row_span[1]:]
+                        block_html = block_html[:tbody_m.start(1)] + new_tbody_inner + block_html[tbody_m.end(1):]
             else:
-                tr_tokens = [
-                    m.group(1) or m.group(2)
-                    for m in re.finditer(r"\{\{\s*([^}\n]+?)\s*\}\}|\{\s*([^}\n]+?)\s*\}", block_html)
-                ]
+                tr_tokens = [m.group(1) or m.group(2)
+                             for m in re.finditer(r"\{\{\s*([^}\n]+?)\s*\}\}|\{\s*([^}\n]+?)\s*\}", block_html)]
                 row_tokens_in_template = [t.strip() for t in tr_tokens if t and t.strip() in allowed_row_tokens]
                 if row_tokens_in_template:
                     row_columns_template = [
-                        _extract_col_name(PLACEHOLDER_TO_COL.get(tok)) or "" for tok in row_tokens_in_template
+                        _extract_col_name(PLACEHOLDER_TO_COL.get(tok)) or ""
+                        for tok in row_tokens_in_template
                     ]
                     filtered_rows = _filter_rows_for_render(
                         rows_data,
@@ -1792,26 +2054,14 @@ def fill_and_print(
                         treat_all_as_data=bool(__force_single),
                     )
                     filtered_rows = _prune_placeholder_rows(filtered_rows, row_tokens_in_template)
-                    _reindex_serial_fields(filtered_rows, row_tokens_in_template, row_columns_template)
-                    if filtered_rows:
-                        _log_debug(
-                            "[multi-debug] reindexed rows (no tbody)",
-                            {"first_sl": filtered_rows[0].get("sl_no"), "count": len(filtered_rows)},
-                        )
                     if __force_single:
-                        _log_debug(
-                            f"[multi-debug] generator rows (no tbody): total={len(rows_data)}, filtered={len(filtered_rows)}, key_values={KEY_VALUES}"
-                        )
+                        _log_debug(f"[multi-debug] generator rows (no tbody): total={len(rows_data)}, filtered={len(filtered_rows)}, key_values={KEY_VALUES}")
                     if filtered_rows:
-                        serial_token_set = {tok for tok in row_tokens_in_template if _is_serial_label(tok)}
                         parts = []
-                        for idx, row in enumerate(filtered_rows, start=1):
+                        for row in filtered_rows:
                             tr = prototype_block
                             for tok in row_tokens_in_template:
-                                if tok in serial_token_set:
-                                    val = idx
-                                else:
-                                    val = _value_for_token(row, tok)
+                                val = _value_for_token(row, tok)
                                 tr = sub_token(tr, tok, format_token_value(tok, val))
                             parts.append(tr)
                         block_html = "\n".join(parts)
@@ -1833,319 +2083,277 @@ def fill_and_print(
         else:
             print("Generator SQL produced no usable row data after filtering; skipping block.")
     else:
-        for batch_id in BATCH_IDS or []:
-            block_html = prototype_block
+            for batch_id in (BATCH_IDS or []):
+                block_html = prototype_block
 
-            # (a) Header fill (parent row)
-            if header_cols:
-                if len(pcols) == 1:
-                    sql = (
-                        f"SELECT {', '.join(qident(c) for c in header_cols)} "
-                        f"FROM {qident(parent_table)} "
-                        f"WHERE {qident(pcols[0])} = ? AND {parent_where_clause} "
-                        f"LIMIT 1"
-                    )
-                    hdr_params = (batch_id,) + tuple(PDATE) + parent_filter_values_tuple
+                # (a) Header fill (parent row)
+                if header_cols:
+                    if len(pcols) == 1:
+                        sql = (
+                            f"SELECT {', '.join(qident(c) for c in header_cols)} "
+                            f"FROM {qident(parent_table)} "
+                            f"WHERE {qident(pcols[0])} = ? AND {parent_where_clause} "
+                            f"LIMIT 1"
+                        )
+                        hdr_params = (batch_id,) + tuple(PDATE) + parent_filter_values_tuple
+                    else:
+                        where = " AND ".join([f"{qident(c)} = ?" for c in pcols])
+                        sql = (
+                            f"SELECT {', '.join(qident(c) for c in header_cols)} "
+                            f"FROM {qident(parent_table)} "
+                            f"WHERE {where} AND {parent_where_clause} "
+                            f"LIMIT 1"
+                        )
+                        hdr_parts = _split_bid(batch_id, len(pcols))
+                        hdr_params = tuple(hdr_parts) + tuple(PDATE) + parent_filter_values_tuple
+
+                    con = sqlite3.connect(str(DB_PATH)); con.row_factory = sqlite3.Row
+                    cur = con.cursor(); cur.execute(sql, hdr_params)
+                    row = cur.fetchone(); con.close()
+                    if row:
+                        r = dict(row)
+                        for t in HEADER_TOKENS:
+                            if t in PLACEHOLDER_TO_COL:
+                                col = _extract_col_name(PLACEHOLDER_TO_COL.get(t))
+                                if not col:
+                                    continue
+                                val = r.get(col, "")
+                                block_html = sub_token(block_html, t, format_token_value(t, val))
+
+                # (b) Row repeater (child rows)
+                allowed_row_tokens = {t for t in PLACEHOLDER_TO_COL.keys() if t not in TOTALS} - set(HEADER_TOKENS)
+
+                # Try standard tbody-based path first
+                tbody_m, tbody_inner = best_rows_tbody(block_html, allowed_row_tokens)
+                if tbody_m and tbody_inner:
+                    row_template, row_span, row_tokens_in_template = find_row_template(tbody_inner, allowed_row_tokens)
+                    if row_template and row_tokens_in_template:
+                        row_cols_needed = sorted(
+                            {
+                                col
+                                for t in row_tokens_in_template
+                                for col in [_extract_col_name(PLACEHOLDER_TO_COL.get(t))]
+                                if col
+                            }
+                        )
+
+                        if order_col.upper() != "ROWID" and order_col not in row_cols_needed:
+                            row_cols_needed.append(order_col)
+
+                        order_clause = f"ORDER BY ROWID" if order_col.upper() == "ROWID" else f"ORDER BY {qident(order_col)}, ROWID"
+
+                        if len(ccols) == 1:
+                            sql = (
+                                f"SELECT {', '.join(qident(c) for c in row_cols_needed)} "
+                                f"FROM {qident(child_table)} "
+                                f"WHERE {qident(ccols[0])} = ? AND {child_where_clause} "
+                                f"{order_clause}"
+                            )
+                            row_params = (batch_id,) + tuple(CDATE) + child_filter_values_tuple
+                        else:
+                            where = " AND ".join([f"{qident(c)} = ?" for c in ccols])
+                            sql = (
+                                f"SELECT {', '.join(qident(c) for c in row_cols_needed)} "
+                                f"FROM {qident(child_table)} "
+                                f"WHERE {where} AND {child_where_clause} "
+                                f"{order_clause}"
+                            )
+                            row_parts = _split_bid(batch_id, len(ccols))
+                            row_params = tuple(row_parts) + tuple(CDATE) + child_filter_values_tuple
+
+                        con = sqlite3.connect(str(DB_PATH)); con.row_factory = sqlite3.Row
+                        cur = con.cursor(); cur.execute(sql, row_params)
+                        rows = [dict(r) for r in cur.fetchall()]
+                        con.close()
+
+                        # Fallback: date-only by majority table if needed
+                        if not rows:
+                            maj_table = majority_table_for_tokens(row_tokens_in_template, PLACEHOLDER_TO_COL)
+                            if maj_table:
+                                date_col = DATE_COLUMNS.get(maj_table, "")
+                                if date_col:
+                                    cols_needed = sorted(
+                                        {
+                                            col
+                                            for t in row_tokens_in_template
+                                            for col in [_extract_col_name(PLACEHOLDER_TO_COL.get(t))]
+                                            if col
+                                        }
+                                    )
+                                    if date_col not in cols_needed:
+                                        cols_needed.append(date_col)
+                                    sql_fb = (
+                                        f"SELECT {', '.join(qident(c) for c in cols_needed)} "
+                                        f"FROM {qident(maj_table)} "
+                                        f"WHERE datetime({qident(date_col)}) BETWEEN datetime(?) AND datetime(?) "
+                                        f"ORDER BY {qident(date_col)} ASC, ROWID ASC"
+                                    )
+                                    con = sqlite3.connect(str(DB_PATH)); con.row_factory = sqlite3.Row
+                                    cur = con.cursor(); cur.execute(sql_fb, (START_DATE, END_DATE))
+                                    rows = [dict(r) for r in cur.fetchall()]
+                                    con.close()
+                                    print(f"Row fallback used: table={maj_table}, rows={len(rows)}")
+
+                        if not rows:
+                            print(f"No child rows found for batch {batch_id}; skipping block.")
+                            continue
+
+                        significant_cols = [
+                            col
+                            for col in row_cols_needed
+                            if col and not any(keyword in col.lower() for keyword in ("row", "serial", "sl"))
+                        ]
+                        filtered_rows = []
+                        for r in rows:
+                            if significant_cols and not _row_has_significant_data(r, significant_cols):
+                                continue
+                            filtered_rows.append(dict(r))
+
+                        if not filtered_rows and rows:
+                            filtered_rows = [dict(r) for r in rows]
+                        filtered_rows = _prune_placeholder_rows(filtered_rows, row_tokens_in_template)
+                        if __force_single:
+                            _log_debug(f"[multi-debug] sql rows: total={len(rows)}, filtered={len(filtered_rows)}, key_values={KEY_VALUES}")
+                        if not filtered_rows:
+                            print(f"No significant child rows for batch {batch_id}; skipping block.")
+                            continue
+
+                        _reindex_serial_fields(filtered_rows, row_tokens_in_template, row_cols_needed)
+
+                        parts: list[str] = []
+                        for r in filtered_rows:
+                            tr = row_template
+                            for t in row_tokens_in_template:
+                                col = _extract_col_name(PLACEHOLDER_TO_COL.get(t))
+                                if not col:
+                                    continue
+                                tr = sub_token(tr, t, format_token_value(t, r.get(col)))
+                            parts.append(tr)
+
+                        new_tbody_inner = tbody_inner[:row_span[0]] + "\n".join(parts) + tbody_inner[row_span[1]:]
+                        block_html = block_html[:tbody_m.start(1)] + new_tbody_inner + block_html[tbody_m.end(1):]
+
                 else:
-                    where = " AND ".join([f"{qident(c)} = ?" for c in pcols])
-                    sql = (
-                        f"SELECT {', '.join(qident(c) for c in header_cols)} "
-                        f"FROM {qident(parent_table)} "
-                        f"WHERE {where} AND {parent_where_clause} "
-                        f"LIMIT 1"
-                    )
-                    hdr_parts = _split_bid(batch_id, len(pcols))
-                    hdr_params = tuple(hdr_parts) + tuple(PDATE) + parent_filter_values_tuple
+                    # Inferred single-<tr> block (no <tbody> path) ΓÇö duplicate the <tr> itself
+                    tr_tokens = [m.group(1) or m.group(2)
+                                 for m in re.finditer(r"\{\{\s*([^}\n]+?)\s*\}\}|\{\s*([^}\n]+?)\s*\}", block_html)]
+                    tr_tokens = sorted({t.strip() for t in tr_tokens if t}, key=len, reverse=True)
 
-                con = sqlite3.connect(str(DB_PATH))
-                con.row_factory = sqlite3.Row
-                cur = con.cursor()
-                cur.execute(sql, hdr_params)
-                row = cur.fetchone()
-                con.close()
-                if row:
-                    r = dict(row)
-                    for t in HEADER_TOKENS:
-                        if t in PLACEHOLDER_TO_COL:
-                            col = _extract_col_name(PLACEHOLDER_TO_COL.get(t))
-                            if not col:
-                                continue
-                            val = r.get(col, "")
-                            block_html = sub_token(block_html, t, format_token_value(t, val))
+                    row_tokens_in_template = [t for t in tr_tokens if t in allowed_row_tokens]
+                    if row_tokens_in_template:
+                        row_cols_needed = sorted(
+                            {
+                                col
+                                for t in row_tokens_in_template
+                                for col in [_extract_col_name(PLACEHOLDER_TO_COL.get(t))]
+                                if col
+                            }
+                        )
+                        if order_col.upper() != "ROWID" and order_col not in row_cols_needed:
+                            row_cols_needed.append(order_col)
+                        order_clause = f"ORDER BY ROWID" if order_col.upper() == "ROWID" else f"ORDER BY {qident(order_col)}, ROWID"
 
-            # (b) Row repeater (child rows)
-            allowed_row_tokens = {t for t in PLACEHOLDER_TO_COL.keys() if t not in TOTALS} - set(HEADER_TOKENS)
+                        if len(ccols) == 1:
+                            sql = (
+                                f"SELECT {', '.join(qident(c) for c in row_cols_needed)} "
+                                f"FROM {qident(child_table)} "
+                                f"WHERE {qident(ccols[0])} = ? AND {child_where_clause} "
+                                f"{order_clause}"
+                            )
+                            row_params = (batch_id,) + tuple(CDATE) + child_filter_values_tuple
+                        else:
+                            where = " AND ".join([f"{qident(c)} = ?" for c in ccols])
+                            sql = (
+                                f"SELECT {', '.join(qident(c) for c in row_cols_needed)} "
+                                f"FROM {qident(child_table)} "
+                                f"WHERE {where} AND {child_where_clause} "
+                                f"{order_clause}"
+                            )
+                            row_parts = _split_bid(batch_id, len(ccols))
+                            row_params = tuple(row_parts) + tuple(CDATE) + child_filter_values_tuple
 
-            # Try standard tbody-based path first
-            tbody_m, tbody_inner = best_rows_tbody(block_html, allowed_row_tokens)
-            if tbody_m and tbody_inner:
-                row_template, row_span, row_tokens_in_template = find_row_template(tbody_inner, allowed_row_tokens)
-                if row_template and row_tokens_in_template:
-                    row_cols_needed = sorted(
-                        {
+                        con = sqlite3.connect(str(DB_PATH)); con.row_factory = sqlite3.Row
+                        cur = con.cursor(); cur.execute(sql, row_params)
+                        rows = [dict(r) for r in cur.fetchall()]
+                        con.close()
+
+                        significant_cols = [
                             col
-                            for t in row_tokens_in_template
-                            for col in [_extract_col_name(PLACEHOLDER_TO_COL.get(t))]
-                            if col
-                        }
-                    )
-
-                    if order_col.upper() != "ROWID" and order_col not in row_cols_needed:
-                        row_cols_needed.append(order_col)
-
-                    order_clause = (
-                        "ORDER BY ROWID" if order_col.upper() == "ROWID" else f"ORDER BY {qident(order_col)}, ROWID"
-                    )
-
-                    if len(ccols) == 1:
-                        sql = (
-                            f"SELECT {', '.join(qident(c) for c in row_cols_needed)} "
-                            f"FROM {qident(child_table)} "
-                            f"WHERE {qident(ccols[0])} = ? AND {child_where_clause} "
-                            f"{order_clause}"
-                        )
-                        row_params = (batch_id,) + tuple(CDATE) + child_filter_values_tuple
-                    else:
-                        where = " AND ".join([f"{qident(c)} = ?" for c in ccols])
-                        sql = (
-                            f"SELECT {', '.join(qident(c) for c in row_cols_needed)} "
-                            f"FROM {qident(child_table)} "
-                            f"WHERE {where} AND {child_where_clause} "
-                            f"{order_clause}"
-                        )
-                        row_parts = _split_bid(batch_id, len(ccols))
-                        row_params = tuple(row_parts) + tuple(CDATE) + child_filter_values_tuple
-
-                    con = sqlite3.connect(str(DB_PATH))
-                    con.row_factory = sqlite3.Row
-                    cur = con.cursor()
-                    cur.execute(sql, row_params)
-                    rows = [dict(r) for r in cur.fetchall()]
-                    con.close()
-
-                    # Fallback: date-only by majority table if needed
-                    if not rows:
-                        maj_table = majority_table_for_tokens(row_tokens_in_template, PLACEHOLDER_TO_COL)
-                        if maj_table:
-                            date_col = DATE_COLUMNS.get(maj_table, "")
-                            if date_col:
-                                cols_needed = sorted(
-                                    {
-                                        col
-                                        for t in row_tokens_in_template
-                                        for col in [_extract_col_name(PLACEHOLDER_TO_COL.get(t))]
-                                        if col
-                                    }
-                                )
-                                if date_col not in cols_needed:
-                                    cols_needed.append(date_col)
-                                sql_fb = (
-                                    f"SELECT {', '.join(qident(c) for c in cols_needed)} "
-                                    f"FROM {qident(maj_table)} "
-                                    f"WHERE datetime({qident(date_col)}) BETWEEN datetime(?) AND datetime(?) "
-                                    f"ORDER BY {qident(date_col)} ASC, ROWID ASC"
-                                )
-                                con = sqlite3.connect(str(DB_PATH))
-                                con.row_factory = sqlite3.Row
-                                cur = con.cursor()
-                                cur.execute(sql_fb, (START_DATE, END_DATE))
-                                rows = [dict(r) for r in cur.fetchall()]
-                                con.close()
-                                print(f"Row fallback used: table={maj_table}, rows={len(rows)}")
-
-                    if not rows:
-                        print(f"No child rows found for batch {batch_id}; skipping block.")
-                        continue
-
-                    significant_cols = [
-                        col
-                        for col in row_cols_needed
-                        if col and not any(keyword in col.lower() for keyword in ("row", "serial", "sl"))
-                    ]
-                    filtered_rows = []
-                    for r in rows:
-                        if significant_cols and not _row_has_significant_data(r, significant_cols):
-                            continue
-                        filtered_rows.append(dict(r))
-
-                    if not filtered_rows and rows:
-                        filtered_rows = [dict(r) for r in rows]
-                    filtered_rows = _prune_placeholder_rows(filtered_rows, row_tokens_in_template)
-                    if __force_single:
-                        _log_debug(
-                            f"[multi-debug] sql rows: total={len(rows)}, filtered={len(filtered_rows)}, key_values={KEY_VALUES}"
-                        )
-                    if not filtered_rows:
-                        print(f"No significant child rows for batch {batch_id}; skipping block.")
-                        continue
-
-                    _reindex_serial_fields(filtered_rows, row_tokens_in_template, row_cols_needed)
-                    if filtered_rows:
-                        _log_debug(
-                            "[multi-debug] reindexed rows sql (tbody)",
-                            {"first_sl": filtered_rows[0].get("sl_no"), "count": len(filtered_rows)},
-                        )
-
-                    serial_token_set = {t for t in row_tokens_in_template if _is_serial_label(t)}
-                    serial_column_set = {c for c in row_cols_needed if _is_serial_label(c)}
-                    parts: list[str] = []
-                    for idx, r in enumerate(filtered_rows, start=1):
-                        tr = row_template
-                        for t in row_tokens_in_template:
-                            col = _extract_col_name(PLACEHOLDER_TO_COL.get(t))
-                            if not col:
+                            for col in row_cols_needed
+                            if col and not any(keyword in col.lower() for keyword in ("row", "serial", "sl"))
+                        ]
+                        filtered_rows = []
+                        for r in rows:
+                            if significant_cols and not _row_has_significant_data(r, significant_cols):
                                 continue
-                            if t in serial_token_set or col in serial_column_set:
-                                value = idx
-                            else:
-                                value = r.get(col)
-                            tr = sub_token(tr, t, format_token_value(t, value))
-                        parts.append(tr)
+                            filtered_rows.append(dict(r))
 
-                    new_tbody_inner = tbody_inner[: row_span[0]] + "\n".join(parts) + tbody_inner[row_span[1] :]
-                    block_html = block_html[: tbody_m.start(1)] + new_tbody_inner + block_html[tbody_m.end(1) :]
-
-            else:
-                # Inferred single-<tr> block (no <tbody> path) ΓÇö duplicate the <tr> itself
-                tr_tokens = [
-                    m.group(1) or m.group(2)
-                    for m in re.finditer(r"\{\{\s*([^}\n]+?)\s*\}\}|\{\s*([^}\n]+?)\s*\}", block_html)
-                ]
-                tr_tokens = sorted({t.strip() for t in tr_tokens if t}, key=len, reverse=True)
-
-                row_tokens_in_template = [t for t in tr_tokens if t in allowed_row_tokens]
-                if row_tokens_in_template:
-                    row_cols_needed = sorted(
-                        {
-                            col
-                            for t in row_tokens_in_template
-                            for col in [_extract_col_name(PLACEHOLDER_TO_COL.get(t))]
-                            if col
-                        }
-                    )
-                    if order_col.upper() != "ROWID" and order_col not in row_cols_needed:
-                        row_cols_needed.append(order_col)
-                    order_clause = (
-                        "ORDER BY ROWID" if order_col.upper() == "ROWID" else f"ORDER BY {qident(order_col)}, ROWID"
-                    )
-
-                    if len(ccols) == 1:
-                        sql = (
-                            f"SELECT {', '.join(qident(c) for c in row_cols_needed)} "
-                            f"FROM {qident(child_table)} "
-                            f"WHERE {qident(ccols[0])} = ? AND {child_where_clause} "
-                            f"{order_clause}"
-                        )
-                        row_params = (batch_id,) + tuple(CDATE) + child_filter_values_tuple
-                    else:
-                        where = " AND ".join([f"{qident(c)} = ?" for c in ccols])
-                        sql = (
-                            f"SELECT {', '.join(qident(c) for c in row_cols_needed)} "
-                            f"FROM {qident(child_table)} "
-                            f"WHERE {where} AND {child_where_clause} "
-                            f"{order_clause}"
-                        )
-                        row_parts = _split_bid(batch_id, len(ccols))
-                        row_params = tuple(row_parts) + tuple(CDATE) + child_filter_values_tuple
-
-                    con = sqlite3.connect(str(DB_PATH))
-                    con.row_factory = sqlite3.Row
-                    cur = con.cursor()
-                    cur.execute(sql, row_params)
-                    rows = [dict(r) for r in cur.fetchall()]
-                    con.close()
-
-                    significant_cols = [
-                        col
-                        for col in row_cols_needed
-                        if col and not any(keyword in col.lower() for keyword in ("row", "serial", "sl"))
-                    ]
-                    filtered_rows = []
-                    for r in rows:
-                        if significant_cols and not _row_has_significant_data(r, significant_cols):
+                        if not filtered_rows and rows:
+                            filtered_rows = [dict(r) for r in rows]
+                        filtered_rows = _prune_placeholder_rows(filtered_rows, row_tokens_in_template)
+                        if __force_single:
+                            _log_debug(f"[multi-debug] sql rows (no tbody): total={len(rows)}, filtered={len(filtered_rows)}, key_values={KEY_VALUES}")
+                        if not filtered_rows:
+                            print(f"No significant child rows (no tbody path) for batch {batch_id}; skipping block.")
                             continue
-                        filtered_rows.append(dict(r))
 
-                    if not filtered_rows and rows:
-                        filtered_rows = [dict(r) for r in rows]
-                    filtered_rows = _prune_placeholder_rows(filtered_rows, row_tokens_in_template)
-                    if __force_single:
-                        _log_debug(
-                            f"[multi-debug] sql rows (no tbody): total={len(rows)}, filtered={len(filtered_rows)}, key_values={KEY_VALUES}"
-                        )
-                    if not filtered_rows:
-                        print(f"No significant child rows (no tbody path) for batch {batch_id}; skipping block.")
-                        continue
+                        _reindex_serial_fields(filtered_rows, row_tokens_in_template, row_cols_needed)
 
-                    _reindex_serial_fields(filtered_rows, row_tokens_in_template, row_cols_needed)
-                    if filtered_rows:
-                        _log_debug(
-                            "[multi-debug] reindexed rows sql (no tbody)",
-                            {"first_sl": filtered_rows[0].get("sl_no"), "count": len(filtered_rows)},
-                        )
+                        parts = []
+                        for r in filtered_rows:
+                            tr = prototype_block  # the <tr> itself
+                            for t in row_tokens_in_template:
+                                col = _extract_col_name(PLACEHOLDER_TO_COL.get(t))
+                                if not col:
+                                    continue
+                                tr = sub_token(tr, t, format_token_value(t, r.get(col)))
+                            parts.append(tr)
 
-                    serial_token_set = {t for t in row_tokens_in_template if _is_serial_label(t)}
-                    serial_column_set = {c for c in row_cols_needed if _is_serial_label(c)}
-                    parts = []
-                    for idx, r in enumerate(filtered_rows, start=1):
-                        tr = prototype_block  # the <tr> itself
-                        for t in row_tokens_in_template:
-                            col = _extract_col_name(PLACEHOLDER_TO_COL.get(t))
-                            if not col:
-                                continue
-                            if t in serial_token_set or col in serial_column_set:
-                                value = idx
-                            else:
-                                value = r.get(col)
-                            tr = sub_token(tr, t, format_token_value(t, value))
-                        parts.append(tr)
+                        block_html = "\n".join(parts)
 
-                    block_html = "\n".join(parts)
+                # (c) Per-batch totals
+                batch_total_values = {token: "0" for token in TOTALS}
 
-            # (c) Per-batch totals
-            batch_total_values = {token: "0" for token in TOTALS}
+                if child_totals_cols:
+                    child_cols = sorted(child_totals_cols.keys())
+                    if child_cols:
+                        exprs = ", ".join([f"COALESCE(SUM({qident(c)}),0) AS {qident(c)}" for c in child_cols])
 
-            if child_totals_cols:
-                child_cols = sorted(child_totals_cols.keys())
-                if child_cols:
-                    exprs = ", ".join([f"COALESCE(SUM({qident(c)}),0) AS {qident(c)}" for c in child_cols])
+                        if len(ccols) == 1:
+                            sql = (
+                                f"SELECT {exprs} "
+                                f"FROM {qident(child_table)} "
+                                f"WHERE {qident(ccols[0])} = ? AND {child_where_clause}"
+                            )
+                            tot_params = (batch_id,) + tuple(CDATE) + child_filter_values_tuple
+                        else:
+                            where = " AND ".join([f"{qident(c)} = ?" for c in ccols])
+                            sql = (
+                                f"SELECT {exprs} "
+                                f"FROM {qident(child_table)} "
+                                f"WHERE {where} AND {child_where_clause}"
+                            )
+                            tot_parts = _split_bid(batch_id, len(ccols))
+                            tot_params = tuple(tot_parts) + tuple(CDATE) + child_filter_values_tuple
 
-                    if len(ccols) == 1:
-                        sql = (
-                            f"SELECT {exprs} "
-                            f"FROM {qident(child_table)} "
-                            f"WHERE {qident(ccols[0])} = ? AND {child_where_clause}"
-                        )
-                        tot_params = (batch_id,) + tuple(CDATE) + child_filter_values_tuple
-                    else:
-                        where = " AND ".join([f"{qident(c)} = ?" for c in ccols])
-                        sql = (
-                            f"SELECT {exprs} " f"FROM {qident(child_table)} " f"WHERE {where} AND {child_where_clause}"
-                        )
-                        tot_parts = _split_bid(batch_id, len(ccols))
-                        tot_params = tuple(tot_parts) + tuple(CDATE) + child_filter_values_tuple
+                        con = sqlite3.connect(str(DB_PATH)); con.row_factory = sqlite3.Row
+                        cur = con.cursor(); cur.execute(sql, tot_params)
+                        sums = dict(cur.fetchone() or {}); con.close()
 
-                    con = sqlite3.connect(str(DB_PATH))
-                    con.row_factory = sqlite3.Row
-                    cur = con.cursor()
-                    cur.execute(sql, tot_params)
-                    sums = dict(cur.fetchone() or {})
-                    con.close()
+                        for col in child_cols:
+                            raw_val = sums.get(col, 0)
+                            fv, formatted = _coerce_total_value(raw_val)
+                            if fv is not None:
+                                key = (child_table, col)
+                                totals_accum[key] = totals_accum.get(key, 0.0) + fv
+                            for token in child_totals_cols[col]:
+                                batch_total_values[token] = formatted
 
-                    for col in child_cols:
-                        raw_val = sums.get(col, 0)
-                        fv, formatted = _coerce_total_value(raw_val)
-                        if fv is not None:
-                            key = (child_table, col)
-                            totals_accum[key] = totals_accum.get(key, 0.0) + fv
-                        for token in child_totals_cols[col]:
-                            batch_total_values[token] = formatted
+                for token, value in batch_total_values.items():
+                    block_html = sub_token(block_html, token, value)
+                    last_totals_per_token[token] = value
 
-            for token, value in batch_total_values.items():
-                block_html = sub_token(block_html, token, value)
-                last_totals_per_token[token] = value
-
-            rendered_blocks.append(block_html)
+                rendered_blocks.append(block_html)
 
     # ---- Assemble full document ----
     rows_rendered = bool(rendered_blocks)
@@ -2155,7 +2363,10 @@ def fill_and_print(
     html_multi = shell_prefix + "\n".join(rendered_blocks) + shell_suffix
 
     for tok, val in post_literal_specials.items():
-        html_multi = sub_token(html_multi, tok, val if val is not None else "")
+        html_multi = sub_token(html_multi, tok, val if val is not None else '')
+
+    if page_number_tokens or page_count_tokens or page_label_tokens:
+        html_multi = _inject_page_counter_spans(html_multi, page_number_tokens, page_count_tokens, page_label_tokens)
 
     if total_token_to_target:
         overall_formatted = {}
@@ -2172,15 +2383,9 @@ def fill_and_print(
     for t, s in LITERALS.items():
         html_multi = sub_token(html_multi, t, s)
 
-    html_multi = _inject_page_counter_spans(html_multi, page_number_tokens, page_count_tokens, page_label_tokens)
-
     # Blank any remaining known tokens
     ALL_KNOWN_TOKENS = set(HEADER_TOKENS) | set(ROW_TOKENS) | set(TOTALS.keys()) | set(LITERALS.keys())
     html_multi = blank_known_tokens(html_multi, ALL_KNOWN_TOKENS)
-
-    html_multi = _set_static_footer_numbers(html_multi)
-
-    html_multi = _ensure_footer_static_preview(html_multi)
 
     # write to the path requested by the API
     OUT_HTML.write_text(html_multi, encoding="utf-8")
@@ -2197,3 +2402,4 @@ def fill_and_print(
 # keep CLI usage (unchanged)
 if __name__ == "__main__":
     print("Module ready for API integration. Call fill_and_print(...) from your FastAPI endpoint.")
+
