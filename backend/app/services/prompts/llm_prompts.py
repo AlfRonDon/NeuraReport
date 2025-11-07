@@ -1,4 +1,4 @@
-﻿# mypy: ignore-errors
+# mypy: ignore-errors
 from __future__ import annotations
 
 import base64
@@ -162,6 +162,7 @@ ENUMERATED/AGGREGATE HEADERS
 CONSTANT PLACEHOLDERS (UPDATED)
 - Report ONLY tokens that are truly constant across runs (e.g., page titles, company name/logo text, static captions).
 - NEVER mark tokens that are per-run or DB-driven: dates, row values, totals, page numbers, or anything under schema.row_tokens/totals/date-like fields.
+- You may ONLY record a constant when that placeholder actually exists in the provided HTML. If the schema lists a token but you do not see its placeholder in the template, leave it unmapped (and call it out under `meta.unresolved`/`meta.unresolved_missing_tokens`) instead of inventing a constant entry.
 - Remove constant tokens from the "mapping" object so downstream steps treat them as literals.
 TOKEN SNAPSHOT (UPDATED)
 - Emit a "token_samples" object that enumerates EVERY placeholder token from the HTML (exact token name, no braces).
@@ -650,7 +651,7 @@ LLM_CALL_5_PROMPT: Dict[str, str] = {
         * Copy tokens, mappings, reshape rules, row_computed, totals_math, formatters, filters, date_columns, join, and notes from the Step-4 contract. Ensure every SQL expression matches between `mapping`, `row_computed`, and `totals_math`.
         * Mapping values must use only `TABLE.COLUMN`, `PARAM:name`, dataset aliases, or SQL expressions built from catalog/dataset columns (no prefixes or prose).
         * Populate any missing optional sections (e.g., empty objects/arrays) so the JSON validates against `contract_v2.schema.json`.
-        * Join block must remain present with non-empty `parent_table`, `parent_key`, `child_table`, `child_key`. If there is no logical child table, set `child_table` equal to the parent and reuse the same key; never leave keys blank.
+        * Join block must remain present with non-empty `parent_table`, `parent_key`, `child_table`, `child_key`. If there is no logical child table, set `child_table` equal to the parent and reuse the same key; never leave keys blank or null.
         * Every token listed in `contract.tokens` must appear exactly once across the header/rows/totals SELECTs (no duplicate aliases or alternate spellings).
 
         SQL pack requirements:
@@ -667,10 +668,14 @@ LLM_CALL_5_PROMPT: Dict[str, str] = {
         * Reflect the contract join keys and filters in the SQL. Header, rows, and totals must reference the parent key columns in their FROM/JOIN clauses, respecting optional filter semantics.
         * Ensure `params.required/optional` aligns with the contract bindings and Step-4 requirements. Optional filters only apply when the parameter is non-null/non-empty.
         * Treat `key_tokens` (see payload) as mandatory equality filters. Add them to `params.required`, keep their mappings as `PARAM:<name>`, and ensure each entrypoint's WHERE clause applies `= :token` tests on the correct table aliases.
+        * Header entrypoints must return exactly one row. If you only project parameters or literals, emit `SELECT ...` with no FROM clause (or aggregate) rather than scanning base tables.
+        * When reshape_rules specify `UNION_ALL`, emit one SELECT per source entry in `columns[*].from`, referencing each catalog column directly and aliasing it with the provided `as` name. Do not replace this pattern with CASE expressions or references to columns that are not enumerated.
+        * Ensure `output_schemas.header`, `output_schemas.rows`, and `output_schemas.totals` list tokens in the exact order defined by the contract; resolve any mismatch yourself instead of flagging schema issues.
 
         Quality gating before returning:
         * Ensure SQL aliases align 1:1 with the contract token order for header, rows, and totals sections.
-        * If something cannot be satisfied (missing columns, ambiguous logic, etc.), leave the contract unchanged and set `"invalid": true`.
+        * Verify `contract.join.parent_table`, `contract.join.parent_key`, `contract.join.child_table`, and `contract.join.child_key` are non-empty strings (reuse the parent table/key for the child when no separate child exists).
+        * Do not emit `needs_user_fix` entries or set `"invalid": true`; resolve the underlying mismatch before responding so the bundle is production ready.
 
         Reference HTML/image:
         * Use only for sanity checks (naming consistency, visual ordering). Do NOT alter tokens or data logic based on appearance alone.
