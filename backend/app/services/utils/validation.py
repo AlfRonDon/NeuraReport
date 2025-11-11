@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from collections.abc import Iterable, Mapping
 from copy import deepcopy
 from itertools import zip_longest
@@ -20,6 +21,24 @@ class SchemaValidationError(ValueError):
     pass
 
 
+_DIRECT_COLUMN_RE = re.compile(r"^\s*(?P<table>[A-Za-z_][\w]*)\s*\.\s*(?P<column>[A-Za-z_][\w]*)\s*$")
+
+
+def _infer_parent_table_from_mapping(mapping: Mapping[str, Any] | None) -> str | None:
+    if not isinstance(mapping, Mapping):
+        return None
+    for expr in mapping.values():
+        if not isinstance(expr, str):
+            continue
+        match = _DIRECT_COLUMN_RE.match(expr.strip())
+        if not match:
+            continue
+        table_name = match.group("table").strip(' "`[]')
+        if table_name and not table_name.lower().startswith("params"):
+            return table_name
+    return None
+
+
 def _load_schema(name: str) -> dict:
     path = SCHEMA_DIR / name
     return json.loads(path.read_text(encoding="utf-8"))
@@ -27,6 +46,34 @@ def _load_schema(name: str) -> dict:
 
 MAPPING_SCHEMA = _load_schema("mapping_pdf_labels.schema.json")
 CONTRACT_SCHEMA = _load_schema("contract.schema.json")
+
+
+def _coerce_join_block(data: Mapping[str, Any]) -> dict[str, Any] | None:
+    if not isinstance(data, Mapping):
+        return None
+    join_raw = data.get("join")
+    join = dict(join_raw) if isinstance(join_raw, Mapping) else {}
+    parent_table = str(join.get("parent_table") or "").strip()
+    parent_key = str(join.get("parent_key") or "").strip()
+    if not parent_table:
+        inferred = _infer_parent_table_from_mapping(data.get("mapping"))
+        if inferred:
+            parent_table = inferred
+    if not parent_table:
+        return None
+    if not parent_key:
+        parent_key = "__rowid__"
+    child_table = str(join.get("child_table") or "").strip()
+    child_key = str(join.get("child_key") or "").strip()
+    join.update(
+        {
+            "parent_table": parent_table,
+            "parent_key": parent_key,
+            "child_table": child_table,
+            "child_key": child_key,
+        }
+    )
+    return join
 
 if Draft7Validator is not None:
     _MAPPING_INLINE_V4_SCHEMA = json.loads(
@@ -228,6 +275,9 @@ def validate_contract_schema(data: Any) -> None:
         raise SchemaValidationError("contract must be an object")
     if "literals" not in data:
         data["literals"] = {}
+    coerced_join = _coerce_join_block(data)
+    if coerced_join is not None:
+        data["join"] = coerced_join
     required = CONTRACT_SCHEMA["required"]
     for key in required:
         if key not in data:

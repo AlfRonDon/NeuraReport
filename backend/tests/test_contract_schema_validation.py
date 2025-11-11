@@ -51,3 +51,13 @@ def test_contract_schema_requires_child_key_when_table_present():
     payload["join"]["child_key"] = ""
     with pytest.raises(SchemaValidationError):
         validate_contract_schema(payload)
+
+
+def test_contract_schema_infers_join_from_mapping_when_missing():
+    payload = _base_contract()
+    payload.pop("join")
+    payload["mapping"] = {"row_value": "flowmeters.value"}
+    validate_contract_schema(payload)
+    join = payload.get("join") or {}
+    assert join.get("parent_table") == "flowmeters"
+    assert join.get("parent_key") == "__rowid__"

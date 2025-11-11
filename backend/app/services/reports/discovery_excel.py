@@ -41,6 +41,26 @@ _DATE_INPUT_FORMATS = (
     "%m/%d/%Y",
 )
 
+_DIRECT_COLUMN_RE = re.compile(r"^\s*(?P<table>[A-Za-z_][\w]*)\s*\.\s*(?P<column>[A-Za-z_][\w]*)\s*$")
+
+
+def _infer_primary_table(mapping_section: Mapping[str, str] | None) -> str | None:
+    if not isinstance(mapping_section, Mapping):
+        return None
+    seen: list[str] = []
+    for expr in mapping_section.values():
+        if not isinstance(expr, str):
+            continue
+        match = _DIRECT_COLUMN_RE.match(expr.strip())
+        if not match:
+            continue
+        table_name = match.group("table").strip(' "`[]')
+        if not table_name or table_name.lower().startswith("params"):
+            continue
+        if table_name not in seen:
+            seen.append(table_name)
+    return seen[0] if seen else None
+
 
 def _parse_date_like(value) -> datetime | None:
     if value is None:
@@ -126,11 +146,17 @@ def discover_batches_and_counts(
     adapter = ContractAdapter(contract)
     join_cfg = contract.get("join") or {}
     date_columns = adapter.date_columns or (contract.get("date_columns") or {})
+    mapping_section = adapter.mapping or (contract.get("mapping") or {})
 
     parent_table = adapter.parent_table or (join_cfg.get("parent_table") or "").strip()
     child_table = adapter.child_table or (join_cfg.get("child_table") or "").strip()
     parent_key = adapter.parent_key if adapter.parent_key is not None else join_cfg.get("parent_key")
     child_key = adapter.child_key if adapter.child_key is not None else join_cfg.get("child_key")
+
+    if not parent_table:
+        inferred_parent = _infer_primary_table(mapping_section)
+        if inferred_parent:
+            parent_table = inferred_parent
 
     if not parent_table:
         raise ValueError("contract.join.parent_table is required for discovery")
@@ -195,7 +221,6 @@ def discover_batches_and_counts(
 
     if not isinstance(key_values, Mapping):
         key_values = {}
-    mapping_section = adapter.mapping or (contract.get("mapping") or {})
     parent_filters: list[tuple[str, Any]] = []
     child_filters: list[tuple[str, Any]] = []
 

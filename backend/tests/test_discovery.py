@@ -190,3 +190,30 @@ def test_discover_falls_back_to_rowid_when_no_keys(tmp_path: Path):
     }
     assert summary["batches_count"] == 2
     assert summary["rows_total"] == 2
+
+
+def test_discover_infers_parent_table_from_mapping_when_join_missing(tmp_path: Path):
+    db_path = tmp_path / "db.sqlite"
+    _build_db(
+        db_path,
+        schema_statements=["CREATE TABLE readings (start_ts TEXT, metric REAL)"],
+        data_statements=[
+            ("INSERT INTO readings VALUES (?, ?)", ("2025-05-01", 1.1)),
+            ("INSERT INTO readings VALUES (?, ?)", ("2025-05-15", 2.2)),
+        ],
+    )
+
+    contract = {
+        "mapping": {"row_metric": "readings.metric"},
+        "date_columns": {"readings": "start_ts"},
+    }
+
+    summary = discover_batches_and_counts(
+        db_path=db_path,
+        contract=contract,
+        start_date="2025-05-01",
+        end_date="2025-05-31",
+    )
+
+    assert summary["batches_count"] == 2
+    assert summary["rows_total"] == 2

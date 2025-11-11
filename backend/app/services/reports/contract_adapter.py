@@ -7,6 +7,7 @@ from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
 
 _PARAM_RE = re.compile(r"PARAM:([A-Za-z0-9_]+)")
 _AGG_FN_RE = re.compile(r"\b(SUM|COUNT|AVG|MIN|MAX)\s*\(", re.IGNORECASE)
+_DIRECT_COLUMN_RE = re.compile(r"^\s*(?P<table>[A-Za-z_][\w]*)\s*\.\s*(?P<column>[A-Za-z_][\w]*)\s*$")
 
 
 def _ensure_mapping(value: Any) -> Dict[str, str]:
@@ -150,6 +151,10 @@ class ContractAdapter:
 
         self._totals_mapping = _ensure_mapping(self._raw.get("totals"))
         self._mapping = _ensure_mapping(self._raw.get("mapping"))
+        if not self._parent_table:
+            inferred_parent = self._infer_parent_table(self._mapping)
+            if inferred_parent:
+                self._parent_table = inferred_parent
 
         self._param_tokens = self._discover_param_tokens()
         self._formatter_cache: Dict[str, FormatterSpec | None] = {}
@@ -324,6 +329,19 @@ class ContractAdapter:
         }
         pattern = fmt_map.get(fmt.upper(), "%Y-%m-%d")
         return dt.strftime(pattern)
+
+    @staticmethod
+    def _infer_parent_table(mapping: Mapping[str, str]) -> Optional[str]:
+        for expr in mapping.values():
+            if not isinstance(expr, str):
+                continue
+            match = _DIRECT_COLUMN_RE.match(expr.strip())
+            if not match:
+                continue
+            table_name = match.group("table").strip(' "`[]')
+            if table_name and not table_name.lower().startswith("params"):
+                return table_name
+        return None
 
     # ------------------------------------------------------------------ #
     # SQL builders
