@@ -101,6 +101,45 @@ def test_llm_call_3_allows_missing_tokens_when_enabled(monkeypatch):
     assert result_allowed.mapping == {"date": "neuract__Flowmeters.timestamp_utc"}
 
 
+def test_llm_call_3_remaps_row_prefix_tokens(monkeypatch):
+    html = "<html><body><table><tbody><tr><td>{row_date}</td><td>{row_volume}</td></tr></tbody></table></body></html>"
+    catalog = ["neuract__Flowmeters.timestamp_utc", "neuract__Flowmeters.volume"]
+    schema = {
+        "scalars": [],
+        "row_tokens": ["row_date", "row_volume"],
+        "totals": [],
+    }
+
+    payload = {
+        "mapping": {
+            "date": "neuract__Flowmeters.timestamp_utc",
+            "volume": "neuract__Flowmeters.volume",
+        },
+        "token_samples": {
+            "row_date": "2025-01-01",
+            "row_volume": "123.4",
+        },
+        "meta": {"unresolved": [], "hints": {}},
+    }
+
+    monkeypatch.setattr(AutoMapInline, "call_chat_completion", lambda *args, **kwargs: _dummy_response(payload))
+    monkeypatch.setattr(AutoMapInline, "get_openai_client", lambda: object())
+
+    result = AutoMapInline.run_llm_call_3(
+        html,
+        catalog,
+        schema,
+        llm_prompts.PROMPT_VERSION,
+        png_path="",
+        cache_key="cache-key-row-remap",
+    )
+
+    assert result.mapping == {
+        "row_date": "neuract__Flowmeters.timestamp_utc",
+        "row_volume": "neuract__Flowmeters.volume",
+    }
+
+
 def test_llm_call_3_allows_extra_token_samples_when_flag_set(monkeypatch):
     html = "<html><body><table><tr><td>DATE</td></tr></table></body></html>"
     catalog = ["neuract__Flowmeters.timestamp_utc"]

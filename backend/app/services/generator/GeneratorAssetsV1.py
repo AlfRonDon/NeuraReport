@@ -48,11 +48,46 @@ def _normalized_tokens(tokens: Iterable[str] | None) -> list[str]:
     return cleaned
 
 
+_SQL_PLACEHOLDER_PATTERNS = (
+    r"\.\.\.",
+    r"\bTBD\b",
+    r"\bTODO\b",
+    r"ADD_SQL_HERE",
+    r"<add_sql_here>",
+)
+
+
 def _extract_aliases(sql: str | None) -> list[str]:
     if not sql:
         return []
     pattern = re.compile(r"\bAS\s+([A-Za-z_][\w]*)", re.IGNORECASE)
     return pattern.findall(sql)
+
+
+def _sql_contains_keyword(sql: str, keyword: str) -> bool:
+    return bool(re.search(rf"\b{re.escape(keyword)}\b", sql, re.IGNORECASE))
+
+
+def _sql_uses_table_reference(sql: str) -> bool:
+    return bool(re.search(r"[A-Za-z_][\w]*\.[A-Za-z_][\w]*", sql))
+
+
+def _validate_entrypoint_sql_shape(entrypoints: Mapping[str, str]) -> list[str]:
+    issues: list[str] = []
+    for section in ("header", "rows", "totals"):
+        sql = (entrypoints.get(section) or "").strip()
+        if not sql:
+            issues.append(f"missing_sql:{section}")
+            continue
+        if not _sql_contains_keyword(sql, "select"):
+            issues.append(f"missing_select:{section}")
+        needs_from = section in {"rows", "totals"} or _sql_uses_table_reference(sql)
+        if needs_from and not _sql_contains_keyword(sql, "from"):
+            issues.append(f"missing_from:{section}")
+        lowered = sql.lower()
+        if any(re.search(pattern, lowered) for pattern in _SQL_PLACEHOLDER_PATTERNS):
+            issues.append(f"incomplete_sql:{section}")
+    return issues
 
 
 def _derive_output_schemas(contract: Mapping[str, Any] | None) -> dict[str, list[str]]:
@@ -546,13 +581,19 @@ def build_generator_assets_from_payload(
         raise GeneratorAssetsError(f"Invalid SQL pack: {exc}") from exc
 
     schema_issues = _validate_entrypoints_against_schema(entrypoints, output_schemas)
+    shape_issues = _validate_entrypoint_sql_shape(entrypoints)
     if schema_issues:
         logger.warning(
             "generator_assets_schema_issues", extra={"event": "generator_assets_schema_issues", "issues": schema_issues}
         )
+    if shape_issues:
+        logger.warning(
+            "generator_assets_sql_shape_issues",
+            extra={"event": "generator_assets_sql_shape_issues", "issues": shape_issues},
+        )
 
-    needs_user_fix = _ensure_iter(response_payload.get("needs_user_fix")) + schema_issues
-    invalid = bool(response_payload.get("invalid")) or bool(schema_issues)
+    needs_user_fix = _ensure_iter(response_payload.get("needs_user_fix")) + schema_issues + shape_issues
+    invalid = bool(response_payload.get("invalid")) or bool(schema_issues) or bool(shape_issues)
     summary = response_payload.get("summary") or {}
     selected_dialect = response_payload.get("dialect") or dialect or "sqlite"
 

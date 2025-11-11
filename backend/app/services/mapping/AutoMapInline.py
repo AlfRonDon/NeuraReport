@@ -203,6 +203,77 @@ def _mapping_allowlist_errors(mapping: dict[str, str], catalog: Iterable[str]) -
     return errors
 
 
+def _alias_lookup_keys(lowered_key: str) -> list[str]:
+    candidates: list[str] = []
+    if not lowered_key:
+        return candidates
+
+    if lowered_key.endswith("_wt_kg"):
+        base = lowered_key[: -len("_wt_kg")]
+        if base:
+            candidates.append(f"{base}_wt")
+
+    if lowered_key.endswith("_kg"):
+        base = lowered_key[: -len("_kg")].rstrip("_")
+        if base:
+            candidates.append(base)
+
+    filtered: list[str] = []
+    for candidate in candidates:
+        candidate = candidate.strip("_")
+        if candidate and candidate != lowered_key:
+            filtered.append(candidate)
+    return filtered
+
+
+def _align_mapping_to_template_tokens(
+    mapping: Mapping[str, str],
+    template_tokens: Iterable[str],
+) -> tuple[dict[str, str], dict[str, str]]:
+    """
+    Remap LLM-provided mapping keys onto the actual placeholders that exist in the template.
+    Returns (aligned_mapping, remapped_aliases) where remapped_aliases maps original keys -> template tokens.
+    """
+    token_lookup: dict[str, str] = {}
+    row_suffix_lookup: dict[str, str] = {}
+    for raw_token in template_tokens:
+        token = str(raw_token or "")
+        if not token:
+            continue
+        lowered = token.lower()
+        token_lookup.setdefault(lowered, token)
+        if lowered.startswith("row_") and len(token) > 4:
+            suffix = lowered[4:]
+            if suffix:
+                row_suffix_lookup.setdefault(suffix, token)
+
+    aligned: dict[str, str] = {}
+    remapped: dict[str, str] = {}
+    for raw_key, value in mapping.items():
+        key = str(raw_key or "")
+        lowered = key.lower()
+        target = token_lookup.get(lowered) or row_suffix_lookup.get(lowered)
+        if target is None:
+            alias_target = None
+            for alias_key in _alias_lookup_keys(lowered):
+                alias_target = token_lookup.get(alias_key) or row_suffix_lookup.get(alias_key)
+                if alias_target:
+                    break
+            target = alias_target
+
+        if target is None:
+            if key not in aligned:
+                aligned[key] = value
+            continue
+        if target in aligned:
+            continue
+        aligned[target] = value
+        if target != key:
+            remapped[key] = target
+
+    return aligned, remapped
+
+
 def _validate_constant_replacements(
     template_html: str,
     replacements: Mapping[str, Any],
@@ -460,11 +531,24 @@ def run_llm_call_3(
             mapping = {str(k): str(v) for k, v in mapping_raw.items()}
             _normalize_report_date_mapping(mapping)
 
+            original_tokens = set(extract_tokens(template_html))
+            mapping, remapped_aliases = _align_mapping_to_template_tokens(mapping, original_tokens)
+            if remapped_aliases:
+                logger.info(
+                    "mapping_inline_row_token_aligned",
+                    extra={
+                        "event": "mapping_inline_row_token_aligned",
+                        "attempt": attempt,
+                        "aliases": remapped_aliases,
+                        "prompt_version": prompt_version,
+                        "cache_key": cache_key,
+                    },
+                )
+
             allowlist_errors = _mapping_allowlist_errors(mapping, catalog)
             if allowlist_errors:
                 raise MappingInlineValidationError("Mapping values outside allow-list: " + ", ".join(allowlist_errors))
 
-            original_tokens = set(extract_tokens(template_html))
             # Excel templates often use row-level placeholders like `row_<token>` in the tbody
             # while the mapping keys use header labels (e.g., `material_name`). Those row_* tokens
             # are dynamic by design and must never be treated as constants even when they are not

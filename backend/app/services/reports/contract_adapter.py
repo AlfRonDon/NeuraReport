@@ -374,6 +374,12 @@ class ContractAdapter:
             if include_date_range and token in used_tokens:
                 continue
             translated, tokens = self._translate_expression(expr)
+            if not tokens:
+                param_name = str(token or "").strip()
+                if param_name:
+                    placeholder = f":{param_name}"
+                    translated = f"{translated} = {placeholder}"
+                    tokens = [param_name]
             if "DATE(" in expr.upper():
                 translated = _wrap_date_param(translated, "from_date")
                 translated = _wrap_date_param(translated, "to_date")
@@ -458,7 +464,7 @@ class ContractAdapter:
         long_cte_name: str,
         union_columns: Sequence[str],
         rows_alias: str = "rows",
-    ) -> Tuple[List[str], List[str]]:
+    ) -> Tuple[List[str], List[str], str]:
         """
         Build row-level CTEs (aggregated dataset and ordered dataset) from the long-form data.
         Returns ([cte_sql_strings], available_row_tokens).
@@ -469,6 +475,19 @@ class ContractAdapter:
         select_clauses: List[str] = []
         group_by_exprs: List[str] = []
         handled_tokens: set[str] = set()
+
+        def _sanitize_order_clause(raw_order: Sequence[str]) -> str:
+            cleaned: List[str] = []
+            for clause in raw_order:
+                text = str(clause or "").strip()
+                if not text:
+                    continue
+                if "rowid" in text.replace(" ", "").lower():
+                    continue
+                cleaned.append(text)
+            if not cleaned:
+                return "material_name ASC"
+            return ", ".join(cleaned)
 
         def _normalise_expr(expr: str) -> str:
             translated, _ = self._translate_expression(expr)
@@ -560,7 +579,7 @@ class ContractAdapter:
             f"  {group_by_clause}\n)"
         )
 
-        order_clause = ", ".join(self._row_order or ["material_name ASC"])
+        order_clause = _sanitize_order_clause(self._row_order or ["material_name ASC"])
         ordered_cte = (
             f"{rows_alias} AS (\n"
             f"  SELECT\n"
@@ -570,7 +589,7 @@ class ContractAdapter:
         )
 
         available_tokens = ["sl_no"] + [clause.split(" AS ")[1] for clause in select_clauses]
-        return [aggregated_cte, ordered_cte], available_tokens
+        return [aggregated_cte, ordered_cte], available_tokens, order_clause
 
     def build_totals_sql(self, rows_alias: str = "rows", totals_alias: str = "totals") -> Tuple[str, List[str]]:
         """
@@ -613,7 +632,7 @@ class ContractAdapter:
 
         base_cte = f"base AS (\n  SELECT *\n  FROM {self._parent_table}\n  {where_clause}\n)"
         long_cte, long_columns = self.build_union_cte(base_alias="base")
-        row_ctes, available_row_tokens = self.build_row_aggregate_sql(
+        row_ctes, available_row_tokens, row_order_clause = self.build_row_aggregate_sql(
             long_cte_name="long_bins", union_columns=long_columns
         )
         totals_cte, _ = self.build_totals_sql(rows_alias="rows")
@@ -633,6 +652,11 @@ class ContractAdapter:
             else:
                 header_select_parts.append(f"{target} AS {token}")
         header_sql = "SELECT " + ", ".join(header_select_parts)
+        if self._parent_table:
+            header_from = f"\nFROM {self._parent_table}"
+            if where_clause:
+                header_from += f"\n  {where_clause}"
+            header_sql += f"{header_from}\nLIMIT 1"
 
         row_tokens_to_use = [token for token in self._row_tokens if token in available_row_tokens]
         if not row_tokens_to_use:
@@ -640,8 +664,8 @@ class ContractAdapter:
 
         rows_select = "SELECT " + ", ".join([f"{token}" for token in row_tokens_to_use])
         rows_select += " FROM rows"
-        if self._row_order:
-            rows_select += "\nORDER BY " + ", ".join(self._row_order)
+        if row_order_clause:
+            rows_select += f"\nORDER BY {row_order_clause}"
 
         totals_select = "SELECT " + ", ".join([f"{token}" for token in self._total_tokens]) + " FROM totals"
 

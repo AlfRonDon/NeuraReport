@@ -147,7 +147,7 @@ CORE RULES (unchanged)
 - Do not invent headers, tokens, tables, columns, or duplicate mappings.
 - Prefer concise, human-visible labels (strip punctuation/colons) for header keys.
 HEADER KEYING (same as before)
-- If a <th> has data-label, use that value (lowercase snake_case) as the header key; otherwise normalize the visible header text (trim, lowercase, spaces/punctuation->underscore).
+- If a <th> has data-label, only use that value (converted to lowercase snake_case) when the same token name also appears as a {placeholder} in the HTML or is listed in SCHEMA. Otherwise treat the data-label as decorative and fall back to the visible header text.
 SYNONYMS/SHORTHANDS TO NORMALIZE
 - set/set_wt -> set_weight
 - ach/achieved -> achieved_weight
@@ -267,6 +267,25 @@ def _format_schema(schema: Dict[str, Any] | None) -> str:
     return json.dumps(normalized, ensure_ascii=False, indent=2, sort_keys=True)
 
 
+def _row_token_hint(schema: Mapping[str, Any] | None) -> str:
+    normalized = _normalize_schema_payload(schema)
+    row_tokens = [tok for tok in normalized.get("row_tokens", []) if str(tok).lower().startswith("row_")]
+    if not row_tokens:
+        return ""
+
+    preview = ", ".join(row_tokens[:8])
+    if len(row_tokens) > 8:
+        preview += ", ..."
+
+    hint_lines = [
+        "ROW TOKEN NAMING",
+        "- The HTML template exposes repeating-row placeholders that already include the `row_` prefix.",
+        "- When producing the mapping, reference those tokens verbatim (including the prefix and casing).",
+        f"- Example row tokens: {preview}",
+    ]
+    return "\n".join(hint_lines)
+
+
 def build_llm_call_3_prompt(
     html: str,
     catalog: Iterable[str],
@@ -286,6 +305,7 @@ def build_llm_call_3_prompt(
     html_block = _sanitize_html(html)
     catalog_block = _format_catalog(catalog)
     schema_block = _format_schema(schema_json)
+    row_hint = _row_token_hint(schema_json)
 
     user_payload = user_template
     for placeholder, value in (
@@ -294,6 +314,9 @@ def build_llm_call_3_prompt(
         ("{schema_json_if_any}", schema_block),
     ):
         user_payload = user_payload.replace(placeholder, value)
+
+    if row_hint:
+        user_payload = f"{user_payload.strip()}\n\n{row_hint}"
 
     attachments: list[dict[str, Any]] = []
     if "[REFERENCE_PNG_HINT]" not in user_payload:
@@ -670,6 +693,10 @@ LLM_CALL_5_PROMPT: Dict[str, str] = {
         * Whenever you aggregate the detail rows, materialize that result as a named CTE (e.g., `WITH long_bins AS (...), rows AS (...)`) and reuse it everywhere. Window functions must order by the CTE column names (never aliases defined later in the same SELECT), and the totals SELECT must read directly from that shared `rows` CTE rather than referencing an undefined table.
         * Provide an `entrypoints` object where each SELECT projects aliases exactly matching the contract token order (header → scalars, rows → row tokens, totals → totals tokens).
         * Reflect the contract join keys and filters in the SQL. Header, rows, and totals must reference the parent key columns in their FROM/JOIN clauses, respecting optional filter semantics.
+        * Every entrypoint SQL must compile as-is. Return a single finalized SELECT per section; do not leave dangling `WITH` clauses, ellipses, comments like `-- TODO`, or placeholder text.
+        * The header SELECT must read from the parent table (or a CTE derived from it) and apply the same predicates used by the row/totals datasets. `SELECT ...` without `FROM` is only acceptable when you project literals/params exclusively; otherwise include the table reference.
+        * Rows entrypoints must select directly from the aggregated dataset defined in the reshape rules (e.g., the `rows` CTE) and end with a concrete `ORDER BY` that matches `row_order`.
+        * Totals entrypoints must select from a concrete dataset (`rows`, `totals`, etc.) and may not reference undefined aliases or rely on spreadsheet math outside SQL.
         * Ensure `params.required/optional` aligns with the contract bindings and Step-4 requirements. Optional filters only apply when the parameter is non-null/non-empty.
         * Treat `key_tokens` (see payload) as mandatory equality filters. Add them to `params.required`, keep their mappings as `PARAM:<name>`, and ensure each entrypoint's WHERE clause applies `= :token` tests on the correct table aliases.
         * Header entrypoints must return exactly one row. If you only project parameters or literals, emit `SELECT ...` with no FROM clause (or aggregate) rather than scanning base tables.
