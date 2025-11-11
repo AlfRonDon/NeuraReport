@@ -1782,6 +1782,7 @@ def fill_and_print(
             return text
 
         return _remove_blocks(html_in)
+
     def _blank_known_tokens_text(text: str, tokens) -> str:
         for t in tokens:
             text = re.sub(r"\{\{\s*" + re.escape(t) + r"\s*\}\}", "", text)
