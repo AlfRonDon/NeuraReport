@@ -2302,6 +2302,7 @@ def _mapping_approve_route(
     )
 
     template_dir = _template_dir(template_id, kind=kind)
+    require_contract_join = (kind or "pdf").lower() != "excel"
     base_template_path = template_dir / "template_p1.html"
     final_html_path = template_dir / "report_final.html"
     mapping_path = template_dir / "mapping_pdf_labels.json"
@@ -2629,6 +2630,7 @@ def _mapping_approve_route(
                     sample_params=payload.sample_params,
                     force_rebuild=payload.force_generator_rebuild,
                     key_tokens=keys_clean,
+                    require_contract_join=require_contract_join,
                 )
                 generator_artifacts_urls = _normalize_artifact_map(generator_result.get("artifacts"))
                 generator_stage_summary = {
@@ -3415,6 +3417,7 @@ def _generator_assets_route(
     )
 
     template_dir = _template_dir(template_id, kind=kind)
+    require_contract_join = (kind or "pdf").lower() != "excel"
     base_template_path = template_dir / "template_p1.html"
     final_template_path = template_dir / "report_final.html"
     contract_path = template_dir / "contract.json"
@@ -3518,6 +3521,7 @@ def _generator_assets_route(
                     sample_params=sample_params,
                     force_rebuild=payload.force_rebuild,
                     key_tokens=incoming_key_tokens,
+                    require_contract_join=require_contract_join,
                 )
             except GeneratorAssetsError as exc:
                 logger.warning(

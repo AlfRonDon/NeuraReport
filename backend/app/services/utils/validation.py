@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Iterable, Mapping
+from copy import deepcopy
 from itertools import zip_longest
 from pathlib import Path
 from typing import Any
@@ -36,6 +37,16 @@ if Draft7Validator is not None:
     _LLM_CALL_3_5_VALIDATOR = Draft7Validator(_LLM_CALL_3_5_SCHEMA)
     _CONTRACT_V2_SCHEMA = json.loads((JSON_SCHEMA_DIR / "contract_v2.schema.json").read_text(encoding="utf-8"))
     _CONTRACT_V2_VALIDATOR = Draft7Validator(_CONTRACT_V2_SCHEMA)
+    _CONTRACT_V2_OPTIONAL_JOIN_SCHEMA = deepcopy(_CONTRACT_V2_SCHEMA)
+    required_fields = _CONTRACT_V2_OPTIONAL_JOIN_SCHEMA.get("required")
+    if isinstance(required_fields, list) and "join" in required_fields:
+        _CONTRACT_V2_OPTIONAL_JOIN_SCHEMA["required"] = [field for field in required_fields if field != "join"]
+    join_schema = _CONTRACT_V2_OPTIONAL_JOIN_SCHEMA.get("properties", {}).get("join")
+    if isinstance(join_schema, dict):
+        join_required = join_schema.get("required")
+        if isinstance(join_required, list):
+            join_schema["required"] = [field for field in join_required if field in ("parent_table", "parent_key")]
+    _CONTRACT_V2_OPTIONAL_JOIN_VALIDATOR = Draft7Validator(_CONTRACT_V2_OPTIONAL_JOIN_SCHEMA)
     _STEP5_REQUIREMENTS_SCHEMA = json.loads(
         (JSON_SCHEMA_DIR / "step5_requirements.schema.json").read_text(encoding="utf-8")
     )
@@ -59,6 +70,8 @@ else:  # pragma: no cover - optional dependency missing
     _LLM_CALL_3_5_VALIDATOR = None
     _CONTRACT_V2_SCHEMA = None
     _CONTRACT_V2_VALIDATOR = None
+    _CONTRACT_V2_OPTIONAL_JOIN_SCHEMA = None
+    _CONTRACT_V2_OPTIONAL_JOIN_VALIDATOR = None
     _STEP5_REQUIREMENTS_SCHEMA = None
     _STEP5_REQUIREMENTS_VALIDATOR = None
     _GENERATOR_SQL_PACK_SCHEMA = None
@@ -285,7 +298,7 @@ def validate_llm_call_3_5(data: Any) -> None:
         raise SchemaValidationError(f"llm_call_3_5 validation error{location}: {err.message}")
 
 
-def validate_contract_v2(data: Any) -> None:
+def validate_contract_v2(data: Any, *, require_join: bool = True) -> None:
     """
     Validate contract.json produced by LLM Call 4.
     """
@@ -293,7 +306,13 @@ def validate_contract_v2(data: Any) -> None:
         raise RuntimeError(
             "jsonschema is required to validate contract v2 payloads. Install the 'jsonschema' dependency."
         )
-    errors = sorted(_CONTRACT_V2_VALIDATOR.iter_errors(data), key=lambda err: list(err.path))
+
+    if require_join or _CONTRACT_V2_OPTIONAL_JOIN_VALIDATOR is None:
+        validator = _CONTRACT_V2_VALIDATOR
+    else:
+        validator = _CONTRACT_V2_OPTIONAL_JOIN_VALIDATOR
+
+    errors = sorted(validator.iter_errors(data), key=lambda err: list(err.path))
     if errors:
         err = errors[0]
         path = ".".join(str(p) for p in err.path)

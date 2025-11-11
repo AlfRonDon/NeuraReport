@@ -41,10 +41,16 @@ def main() -> int:
                 validate_mapping_inline_v4(payload)
             elif "call_4" in call_name:
                 contract = payload.get("contract")
-                validate_contract_v2(contract)
+                if contract is None:
+                    raise ValueError("call_4 payload missing contract")
+                require_join = bool(contract.get("join"))
+                validate_contract_v2(contract, require_join=require_join)
             elif "call_5" in call_name:
                 contract = payload.get("contract")
-                validate_contract_v2(contract)
+                if contract is None:
+                    raise ValueError("call_5 payload missing contract")
+                require_join = bool(contract.get("join"))
+                validate_contract_v2(contract, require_join=require_join)
             else:
                 continue
         except Exception as exc:  # pragma: no cover - test harness

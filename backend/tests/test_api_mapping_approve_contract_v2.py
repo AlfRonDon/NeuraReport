@@ -203,6 +203,7 @@ def test_mapping_approve_emits_contract_stage(monkeypatch, tmp_path, client):
         sample_params=None,
         force_rebuild: bool = False,
         key_tokens=None,
+        require_contract_join: bool = True,
     ):
         generator_dir = template_dir / "generator"
         generator_dir.mkdir(parents=True, exist_ok=True)

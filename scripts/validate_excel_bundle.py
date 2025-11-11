@@ -33,7 +33,7 @@ def _validate_contract(contract_path: Path) -> list[str]:
     data = _load_json(contract_path)
     issues: list[str] = []
     try:
-        validate_contract_v2(data)
+        validate_contract_v2(data, require_join=False)
     except SchemaValidationError as exc:
         issues.append(f"{contract_path.name}: {exc}")
         return issues

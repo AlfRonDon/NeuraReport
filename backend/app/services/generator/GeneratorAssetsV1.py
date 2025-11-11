@@ -449,6 +449,7 @@ def build_generator_assets_from_payload(
     dialect: str | None = None,
     key_tokens: Iterable[str] | None = None,
     prompt_getter: Optional[Callable[[], dict[str, str]]] = None,
+    require_contract_join: bool = True,
 ) -> dict[str, Any]:
     template_dir = Path(template_dir)
     template_dir.mkdir(parents=True, exist_ok=True)
@@ -506,7 +507,7 @@ def build_generator_assets_from_payload(
         _ensure_reshape_rule_purpose(contract)
         _ensure_row_order(contract)
         _normalize_contract_join(contract)
-        validate_contract_v2(contract)
+        validate_contract_v2(contract, require_join=require_contract_join)
     except Exception as exc:
         raise GeneratorAssetsError(f"Generator contract failed validation: {exc}") from exc
 
