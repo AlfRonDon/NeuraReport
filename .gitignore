@@ -59,6 +59,10 @@ _latest_gen.txt
 test_all.*
 test_counter.html
 
+# Local state snapshots / diagnostics
+backend/state/state.json
+backend/llm_raw_outputs.md
+
 # Build artifacts
 build/
 dist/
