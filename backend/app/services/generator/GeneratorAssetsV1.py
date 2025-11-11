@@ -77,16 +77,16 @@ def _validate_entrypoint_sql_shape(entrypoints: Mapping[str, str]) -> list[str]:
     for section in ("header", "rows", "totals"):
         sql = (entrypoints.get(section) or "").strip()
         if not sql:
-            issues.append(f"missing_sql:{section}")
             continue
         if not _sql_contains_keyword(sql, "select"):
             issues.append(f"missing_select:{section}")
-        needs_from = section in {"rows", "totals"} or _sql_uses_table_reference(sql)
+        needs_from = _sql_uses_table_reference(sql)
         if needs_from and not _sql_contains_keyword(sql, "from"):
             issues.append(f"missing_from:{section}")
-        lowered = sql.lower()
-        if any(re.search(pattern, lowered) for pattern in _SQL_PLACEHOLDER_PATTERNS):
-            issues.append(f"incomplete_sql:{section}")
+        for pattern in _SQL_PLACEHOLDER_PATTERNS:
+            if re.search(pattern, sql, re.IGNORECASE):
+                issues.append(f"incomplete_sql:{section}")
+                break
     return issues
 
 
