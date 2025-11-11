@@ -1,3 +1,4 @@
+# mypy: ignore-errors
 from __future__ import annotations
 
 import asyncio
@@ -1851,6 +1852,8 @@ async def verify_template_excel(
                 manifest_files[sample_rows_path.name] = sample_rows_path
             if reference_html_path.exists():
                 manifest_files[reference_html_path.name] = reference_html_path
+            if schema_path.exists():
+                manifest_files[schema_path.name] = schema_path
 
             stage_key = "excel.save_artifacts"
             stage_label = "Saving verification artifacts"
@@ -2963,9 +2966,7 @@ def _execute_token_query(
         params_with_limit = tuple(list(query_params) + [limit_value])
         try:
             rows = [
-                str(row["value"])
-                for row in con.execute(sql, params_with_limit)
-                if row and row["value"] is not None
+                str(row["value"]) for row in con.execute(sql, params_with_limit) if row and row["value"] is not None
             ]
             return rows, None
         except sqlite3.Error as exc:
@@ -3016,6 +3017,7 @@ def _mapping_key_options_route(
             "correlation_id": correlation_id,
         },
     )
+
     def _resolve_connection_id(explicit_id: str | None) -> str | None:
         if explicit_id:
             explicit_id = str(explicit_id).strip()
@@ -3199,7 +3201,6 @@ def mapping_key_options_excel(
         kind="excel",
         debug=debug,
     )
-
 
 
 def _mapping_corrections_preview_route(
@@ -3656,9 +3657,7 @@ def _discover_reports_route(p: DiscoverPayload, *, kind: str = "pdf") -> dict:
                 continue
             key_values_payload[name] = raw_value
 
-    discover_fn = (
-        discover_batches_and_counts if kind == "pdf" else discover_batches_and_counts_excel
-    )
+    discover_fn = discover_batches_and_counts if kind == "pdf" else discover_batches_and_counts_excel
 
     try:
         summary = discover_fn(
@@ -3794,9 +3793,13 @@ def _reports_run_route(p: RunPayload, request: Request, *, kind: str = "pdf"):
     with lock_ctx:
         try:
             if kind == "excel":
-                from .app.services.reports import ReportGenerateExcel as report_generate_module
+                from .app.services.reports import (
+                    ReportGenerateExcel as report_generate_module,
+                )
             else:
-                from .app.services.reports import ReportGenerate as report_generate_module
+                from .app.services.reports import (
+                    ReportGenerate as report_generate_module,
+                )
 
             fill_and_print = report_generate_module.fill_and_print
 

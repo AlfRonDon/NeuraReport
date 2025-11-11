@@ -8,7 +8,6 @@ from pathlib import Path
 from typing import Any, Collection, Mapping, Sequence
 
 from ..prompts.llm_prompts import PROMPT_VERSION_3_5, build_llm_call_3_5_prompt
-from ..prompts.llm_prompts_excel import EXCEL_PROMPT_VERSION_3_5, build_excel_llm_call_3_5_prompt
 from ..templates.TemplateVerify import MODEL, get_openai_client
 from ..utils import (
     call_chat_completion,

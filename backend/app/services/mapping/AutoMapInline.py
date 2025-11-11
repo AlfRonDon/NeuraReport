@@ -480,7 +480,9 @@ def run_llm_call_3(
 
             missing_tokens = [token for token in list(mapping.keys()) if token not in original_tokens]
             if missing_tokens:
-                log_event = "mapping_inline_missing_tokens_allowed" if allow_missing_tokens else "mapping_inline_missing_tokens"
+                log_event = (
+                    "mapping_inline_missing_tokens_allowed" if allow_missing_tokens else "mapping_inline_missing_tokens"
+                )
                 log_level = logger.info if allow_missing_tokens else logger.warning
                 log_level(
                     log_event,

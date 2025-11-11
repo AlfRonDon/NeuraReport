@@ -78,7 +78,6 @@ def get_parent_child_info(db_path: Path) -> Dict[str, object]:
             if not measurement_cols:
                 cur.execute(f"PRAGMA table_info('{measurement_table}')")
                 measurement_cols = [row[1] for row in cur.fetchall()]
-            lower_cols = [c.lower() for c in measurement_cols]
             timestamp_cols = [c for c in measurement_cols if "timestamp" in c.lower() or c.lower().endswith("_utc")]
             if not timestamp_cols and measurement_cols:
                 timestamp_cols = [measurement_cols[0]]

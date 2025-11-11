@@ -29,7 +29,8 @@ try:  # pragma: no cover - optional dependency for PDF conversion
 except ImportError:  # pragma: no cover
     Converter = None  # type: ignore
 
-from lxml import etree, html as lxml_html  # type: ignore
+from lxml import etree
+from lxml import html as lxml_html  # type: ignore
 
 from .html_table_parser import extract_tables
 
@@ -61,7 +62,7 @@ def _inject_body_style(html_text: str, style_rule: str) -> str:
     def _style_repl(style_match: re.Match[str]) -> str:
         existing = (style_match.group("value") or "").strip().rstrip(";")
         merged = "; ".join(filter(None, [existing, style_rule]))
-        return f'{style_match.group(1)}{style_match.group(2)}{merged}{style_match.group(2)}'
+        return f"{style_match.group(1)}{style_match.group(2)}{merged}{style_match.group(2)}"
 
     if _STYLE_ATTR_RE.search(attrs):
         new_attrs = _STYLE_ATTR_RE.sub(_style_repl, attrs, count=1)
@@ -107,19 +108,44 @@ def _inline_report_styles(html_text: str) -> str:
         for node in document.xpath(xpath):
             _append_inline_style(node, style)
 
-    _set_style("//body", "font-family: 'Times New Roman', serif; font-size: 12px; color: #000; line-height: 1.2; margin: 0;")
+    _set_style(
+        "//body", "font-family: 'Times New Roman', serif; font-size: 12px; color: #000; line-height: 1.2; margin: 0;"
+    )
     _set_style("//div[@id='report-header']", "margin-top: 0; page-break-inside: avoid;")
-    _set_style("//div[@id='report-header']//table", "width: 100%; border: 1px solid #000; border-collapse: collapse; table-layout: fixed;")
+    _set_style(
+        "//div[@id='report-header']//table",
+        "width: 100%; border: 1px solid #000; border-collapse: collapse; table-layout: fixed;",
+    )
     _set_style("//div[@id='report-header']//td", "vertical-align: top; padding: 1.6mm 2.4mm; border: 1px solid #000;")
-    _set_style("//div[contains(concat(' ', normalize-space(@class), ' '), ' title-wrap ')]", "margin: 3mm 0 2.5mm 0; text-align: center; font-weight: bold; font-size: 18px; border-top: 1px solid #000; border-bottom: 1px solid #000; padding: 2mm 0;")
+    _set_style(
+        "//div[contains(concat(' ', normalize-space(@class), ' '), ' title-wrap ')]",
+        "margin: 3mm 0 2.5mm 0; text-align: center; font-weight: bold; font-size: 18px; border-top: 1px solid #000; border-bottom: 1px solid #000; padding: 2mm 0;",
+    )
     _set_style("//table[@id='data-table']", "width: 100%; border-collapse: collapse; table-layout: fixed;")
-    _set_style("//table[@id='data-table']//th | //table[@id='data-table']//td", "border: 1px solid #000; padding: 1mm 2.2mm;")
-    _set_style("//table[@id='data-table']//thead//th", "text-align: center; font-weight: bold; white-space: nowrap; padding: 1.6mm 2.4mm;")
-    _set_style("//table[@id='data-table']//td[contains(concat(' ', normalize-space(@class), ' '), ' num ')]", "text-align: right;")
+    _set_style(
+        "//table[@id='data-table']//th | //table[@id='data-table']//td", "border: 1px solid #000; padding: 1mm 2.2mm;"
+    )
+    _set_style(
+        "//table[@id='data-table']//thead//th",
+        "text-align: center; font-weight: bold; white-space: nowrap; padding: 1.6mm 2.4mm;",
+    )
+    _set_style(
+        "//table[@id='data-table']//td[contains(concat(' ', normalize-space(@class), ' '), ' num ')]",
+        "text-align: right;",
+    )
     _set_style("//tfoot[@id='report-totals']//td", "font-weight: bold; border-top: 1.2px solid #000;")
-    _set_style("//tfoot[@id='report-totals']//td[contains(concat(' ', normalize-space(@class), ' '), ' label ')]", "text-align: left;")
-    _set_style("//footer[@id='report-footer']", "font-size: 11px; color: #000; display: flex; justify-content: space-between; align-items: center;")
-    _set_style("//footer[@id='report-footer']//div[contains(concat(' ', normalize-space(@class), ' '), ' page ')]", "text-align: center;")
+    _set_style(
+        "//tfoot[@id='report-totals']//td[contains(concat(' ', normalize-space(@class), ' '), ' label ')]",
+        "text-align: left;",
+    )
+    _set_style(
+        "//footer[@id='report-footer']",
+        "font-size: 11px; color: #000; display: flex; justify-content: space-between; align-items: center;",
+    )
+    _set_style(
+        "//footer[@id='report-footer']//div[contains(concat(' ', normalize-space(@class), ' '), ' page ')]",
+        "text-align: center;",
+    )
 
     return etree.tostring(document, encoding="unicode", method="html")
 
@@ -144,7 +170,9 @@ def _extract_footer_brand(html_text: str) -> str:
         document = lxml_html.fromstring(html_text)
     except Exception:
         return ""
-    brand_nodes = document.xpath("//footer[@id='report-footer']//div[contains(concat(' ', normalize-space(@class), ' '), ' brand ')]")
+    brand_nodes = document.xpath(
+        "//footer[@id='report-footer']//div[contains(concat(' ', normalize-space(@class), ' '), ' brand ')]"
+    )
     if brand_nodes:
         return _normalize_whitespace(brand_nodes[0].text_content())
     return ""
@@ -321,7 +349,7 @@ def _fallback_docx_from_tables(html_text: str, output_path: Path, *, body_font_s
         extra_tables = tables[2:] if len(tables) > 2 else []
 
         if header_rows:
-            capped_header = header_rows[: _MAX_FALLBACK_ROWS]
+            capped_header = header_rows[:_MAX_FALLBACK_ROWS]
             _write_docx_table(
                 document,
                 capped_header,
@@ -331,7 +359,7 @@ def _fallback_docx_from_tables(html_text: str, output_path: Path, *, body_font_s
             document.add_paragraph("")
 
         if data_rows:
-            capped_rows = data_rows[: _MAX_FALLBACK_ROWS]
+            capped_rows = data_rows[:_MAX_FALLBACK_ROWS]
             numeric_columns = _infer_numeric_columns(capped_rows[0] if capped_rows else [])
             _write_docx_table(
                 document,
@@ -344,7 +372,7 @@ def _fallback_docx_from_tables(html_text: str, output_path: Path, *, body_font_s
         for rows in extra_tables:
             if not rows:
                 continue
-            capped_rows = rows[: _MAX_FALLBACK_ROWS]
+            capped_rows = rows[:_MAX_FALLBACK_ROWS]
             _write_docx_table(document, capped_rows, header_rows=1)
             document.add_paragraph("")
 

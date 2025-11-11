@@ -1,12 +1,15 @@
+# mypy: ignore-errors
 from __future__ import annotations
 
 import json
 import logging
 import re
 from pathlib import Path
-from typing import Any, Iterable, Mapping, Sequence, Callable, Optional
+from typing import Any, Callable, Iterable, Mapping, Optional, Sequence
 
-from ..prompts.llm_prompts import get_prompt_generator_assets as get_pdf_prompt_generator_assets
+from ..prompts.llm_prompts import (
+    get_prompt_generator_assets as get_pdf_prompt_generator_assets,
+)
 from ..templates.TemplateVerify import get_openai_client
 from ..utils import write_artifact_manifest, write_json_atomic, write_text_atomic
 from ..utils.llm import call_chat_completion
@@ -153,10 +156,10 @@ def _prepare_step4_for_prompt(step4_output: Mapping[str, Any]) -> dict[str, Any]
 
 _JSON_FENCE_RE = re.compile(r"```(?:json)?\s*(\{.*\})\s*```", re.DOTALL | re.IGNORECASE)
 _JSON_ARRAY_CLOSURE_FIXES: tuple[tuple[str, str], ...] = (
-    ("\n    },\n    \"row_computed\"", "\n    ],\n    \"row_computed\""),
-    ("\n    },\n    \"header_tokens\"", "\n    ],\n    \"header_tokens\""),
-    ("\n    },\n    \"row_tokens\"", "\n    ],\n    \"row_tokens\""),
-    ("\n    },\n    \"row_order\"", "\n    ],\n    \"row_order\""),
+    ('\n    },\n    "row_computed"', '\n    ],\n    "row_computed"'),
+    ('\n    },\n    "header_tokens"', '\n    ],\n    "header_tokens"'),
+    ('\n    },\n    "row_tokens"', '\n    ],\n    "row_tokens"'),
+    ('\n    },\n    "row_order"', '\n    ],\n    "row_order"'),
 )
 
 

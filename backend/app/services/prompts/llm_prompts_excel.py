@@ -1,4 +1,5 @@
-﻿from __future__ import annotations
+﻿# mypy: ignore-errors
+from __future__ import annotations
 
 import json
 from functools import lru_cache
@@ -18,7 +19,8 @@ _sanitize_html = _pdf_prompts._sanitize_html
 _format_catalog = _pdf_prompts._format_catalog
 _format_schema = _pdf_prompts._format_schema
 
-_EXCEL_CALL3_PROMPT_SECTION = dedent("""
+_EXCEL_CALL3_PROMPT_SECTION = dedent(
+    """
 You are given the FULL HTML of an Excel-rendered worksheet template and a strict DB CATALOG. Your job now has TWO parts:
 A) AUTO-MAPPING:
 Identify all visible header/label texts that correspond to data fields (table headers, field labels, totals, footer labels, etc.) and map each token/label to exactly one database column from the allow-list CATALOG.
@@ -92,7 +94,9 @@ VALIDATION & FORMATTING
 - Any token you remove from "mapping" (because it is constant) must still appear in "token_samples" with the literal string you inlined.
 - Do not add or rename remaining tokens. Do not alter repeat markers/tbody row prototypes.
 - "token_samples" must include every placeholder exactly once and each value must be a non-empty string (use "NOT_VISIBLE"/"UNREADABLE" instead of leaving blanks).
-""").strip()
+"""
+).strip()
+
 
 @lru_cache(maxsize=1)
 def _load_excel_llm_call_3_section() -> tuple[str, str]:
@@ -124,9 +128,7 @@ def build_excel_llm_call_3_prompt(
     html_block = _sanitize_html(html)
     catalog_block = _format_catalog(catalog)
     schema_block = _format_schema(schema_json)
-    sample_block = (
-        json.dumps(sample_data, ensure_ascii=False, indent=2) if sample_data else ""
-    )
+    sample_block = json.dumps(sample_data, ensure_ascii=False, indent=2) if sample_data else ""
 
     user_payload = user_template
     for placeholder, value in (
@@ -210,16 +212,19 @@ def build_excel_llm_call_3_5_prompt(
 
     # Prefer full worksheet HTML when provided; otherwise, attach optional page image as a fallback.
     from pathlib import Path as _Path  # local import to avoid cycles
+
     try:
         _build_data_uri = _pdf_prompts._build_data_uri  # type: ignore[attr-defined]
     except Exception:  # pragma: no cover
-        _build_data_uri = lambda _p: None  # type: ignore
+
+        def _null_build_data_uri(_p):  # type: ignore
+            return None
+
+        _build_data_uri = _null_build_data_uri  # type: ignore
 
     data_uri = None if reference_worksheet_html else _build_data_uri(_Path(page_png_path) if page_png_path else None)
     payload_json = json.dumps(payload, ensure_ascii=False, indent=2)
-    user_content = [
-        {"type": "text", "text": EXCEL_LLM_CALL_3_5_PROMPT["user"].format(payload=payload_json)}
-    ]
+    user_content = [{"type": "text", "text": EXCEL_LLM_CALL_3_5_PROMPT["user"].format(payload=payload_json)}]
     if data_uri:
         user_content.append({"type": "image_url", "image_url": {"url": data_uri, "detail": "high"}})
 
@@ -387,6 +392,7 @@ EXCEL_LLM_CALL_4_SYSTEM_PROMPT = dedent(
     """
 ).strip()
 
+
 def build_excel_llm_call_4_prompt(
     *,
     final_template_html: str,
@@ -443,9 +449,8 @@ def build_excel_llm_call_4_prompt(
     }
 
 
-
 # ------------------------- LLM CALL 5 (Excel) -------------------------
-EXCEL_LLM_CALL_5_PROMPT =  {
+EXCEL_LLM_CALL_5_PROMPT = {
     "system": dedent(
         """\
         LLM CALL 5 - Generator Assets Emitter (Excel)

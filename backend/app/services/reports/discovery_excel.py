@@ -1,17 +1,20 @@
 ﻿# mypy: ignore-errors
-from __future__ import annotations
-
 """Excel-specific batch discovery helpers mirroring the base pipeline.
 
 Future Excel-only behavior (e.g., workbook metadata filters) can live
 here without touching the PDF-focused discovery module.
 """
 
+from __future__ import annotations
+
 import re
 import sqlite3
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Mapping
+
+from .contract_adapter import ContractAdapter
+from .date_utils import get_col_type, mk_between_pred_for_date
 
 try:  # pragma: no cover - compatibility shim
     from ..mapping.auto_fill import build_or_load_contract  # type: ignore
@@ -25,9 +28,6 @@ except Exception:  # pragma: no cover
                 "build_or_load_contract unavailable. Ensure mapping.auto_fill.build_or_load_contract exists."
             ) from _exc
 
-
-from .contract_adapter import ContractAdapter
-from .date_utils import get_col_type, mk_between_pred_for_date
 
 _DATE_INPUT_FORMATS = (
     "%Y-%m-%d %H:%M:%S",

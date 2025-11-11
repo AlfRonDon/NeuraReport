@@ -176,13 +176,14 @@ def test_reports_run_uses_persisted_connection(client: TestClient, fresh_state, 
 
     def fake_fill_and_print(**kwargs):
         kwargs["OUT_HTML"].write_text(
-            "<html><head><style id=\"excel-print-sizing\">:root { --excel-print-scale: 0.67; }</style></head>"
+            '<html><head><style id="excel-print-sizing">:root { --excel-print-scale: 0.67; }</style></head>'
             "<body>filled</body></html>",
             encoding="utf-8",
         )
         kwargs["OUT_PDF"].write_bytes(b"%PDF-1.4\n%fake\n")
 
     monkeypatch.setattr(report_generate, "fill_and_print", fake_fill_and_print)
+
     def fake_html_to_docx(html_path, output_path, **kwargs):
         output_path.write_bytes(b"DOCX")
         return output_path
@@ -217,7 +218,7 @@ def test_reports_run_uses_persisted_connection(client: TestClient, fresh_state, 
 def test_extract_excel_print_scale_from_html(tmp_path):
     html_path = tmp_path / "excel.html"
     html_path.write_text(
-        "<html><head><style id=\"excel-print-sizing\">:root { --excel-print-scale: 0.63; }</style></head><body></body></html>",
+        '<html><head><style id="excel-print-sizing">:root { --excel-print-scale: 0.63; }</style></head><body></body></html>',
         encoding="utf-8",
     )
     value = api._extract_excel_print_scale_from_html(html_path)

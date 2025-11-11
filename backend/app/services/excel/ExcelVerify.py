@@ -1,12 +1,12 @@
 ﻿from __future__ import annotations
 
 import html
-import logging
-from dataclasses import dataclass
 import json
+import logging
 import os
-from pathlib import Path
 import re
+from dataclasses import dataclass
+from pathlib import Path
 from typing import Optional
 
 try:
@@ -74,7 +74,6 @@ def _sheet_to_html(
 
     Returns HTML plus a dict of placeholder tokens mapped to sample values from the first data row.
     """
-    rows_html: list[str] = []
 
     def _ensure_label(value: object, idx: int) -> str:
         if value not in (None, ""):
@@ -105,7 +104,7 @@ def _sheet_to_html(
         placeholder_cells: list[str] = []
         for idx, label in enumerate(header_labels):
             token = _token_for(label, idx)
-            th_cells.append(f"<th data-label=\"{html.escape(token)}\">{html.escape(label)}</th>")
+            th_cells.append(f'<th data-label="{html.escape(token)}">{html.escape(label)}</th>')
             placeholder_cells.append("<td>{" + f"row_{token}" + "}</td>")
             placeholder_tokens.append(token)
         thead_html = f"<thead><tr>{''.join(th_cells)}</tr></thead>"
@@ -132,7 +131,7 @@ def _sheet_to_html(
     head = f"<head><meta charset='utf-8'>{styles}</head>"
     title = html.escape(str(sheet.title or "Sheet1"))
     caption = f"<caption style='caption-side:top;font-weight:700;text-align:left;margin:6px 0'>{title}</caption>"
-    table = f"<table id=\"data-table\">{caption}{thead_html}{tbody_html}</table>"
+    table = f'<table id="data-table">{caption}{thead_html}{tbody_html}</table>'
     sample_payload = _build_placeholder_samples(placeholder_tokens, data_row)
     return f"<html>{head}<body>{table}</body></html>", sample_payload
 
@@ -203,7 +202,7 @@ def _sheet_to_reference_html(sheet, *, max_rows: int = 5) -> str:
         body_rows.append("<tr></tr>")
     tbody_html = "<tbody>" + "".join(body_rows) + "</tbody>"
 
-    table = f"<table id=\"data-table\">{caption}{thead_html}{tbody_html}</table>"
+    table = f'<table id="data-table">{caption}{thead_html}{tbody_html}</table>'
     return f"<html>{head}<body>{table}</body></html>"
 
 
@@ -270,6 +269,3 @@ def xlsx_to_html_preview(
         png_path = None
 
     return ExcelInitialResult(html_path=html_path, png_path=png_path)
-
-
-

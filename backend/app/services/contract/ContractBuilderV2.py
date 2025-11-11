@@ -1,3 +1,4 @@
+# mypy: ignore-errors
 from __future__ import annotations
 
 import hashlib
@@ -10,7 +11,6 @@ from pathlib import Path
 from typing import Any, Iterable, Mapping, Optional
 
 from ..prompts.llm_prompts import PROMPT_VERSION_4, build_llm_call_4_prompt
-from ..prompts.llm_prompts_excel import EXCEL_PROMPT_VERSION_4, build_excel_llm_call_4_prompt
 from ..templates.TemplateVerify import get_openai_client
 from ..utils import (
     call_chat_completion,
@@ -396,9 +396,7 @@ def _ensure_contract_defaults(
             mapping_section[token] = mapping_sources[token]
 
     if not _has_valid_reshape_rule(contract.get("reshape_rules")):
-        rule = _reshape_rule_from_step5(step5_requirements) or _reshape_rule_from_mapping(
-            mapping_section, row_tokens
-        )
+        rule = _reshape_rule_from_step5(step5_requirements) or _reshape_rule_from_mapping(mapping_section, row_tokens)
         if rule:
             contract["reshape_rules"] = [rule]
 

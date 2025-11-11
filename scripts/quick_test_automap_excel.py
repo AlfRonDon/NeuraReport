@@ -13,7 +13,7 @@ def _fake_builder(html: str, catalog, schema):
 def main() -> None:
     html = (
         "<html><table><thead><tr>"
-        "<th data-label=\"material_name\">Material Name</th>"
+        '<th data-label="material_name">Material Name</th>'
         "</tr></thead><tbody><tr>"
         "<td>{row_material_name}</td>"
         "</tr></tbody></table></html>"
@@ -28,13 +28,7 @@ def main() -> None:
     }
 
     def _fake_llm_response(*args, **kwargs):
-        return SimpleNamespace(
-            choices=[
-                SimpleNamespace(
-                    message=SimpleNamespace(content=json.dumps(mapping_payload))
-                )
-            ]
-        )
+        return SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(content=json.dumps(mapping_payload)))])
 
     # Monkeypatch the LLM call inside the module
     AMI.call_chat_completion = _fake_llm_response  # type: ignore
@@ -58,4 +52,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

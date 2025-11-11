@@ -5,10 +5,10 @@ from pathlib import Path
 
 import pytest
 
-openpyxl = pytest.importorskip("openpyxl")
-
 from backend.app.services.excel import ExcelVerify as excel_verify_module
 from backend.app.services.excel.ExcelVerify import xlsx_to_html_preview
+
+openpyxl = pytest.importorskip("openpyxl")
 
 
 def _make_sample_db(db_path: Path) -> None:
