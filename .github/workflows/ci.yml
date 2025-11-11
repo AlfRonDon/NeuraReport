@@ -28,6 +28,9 @@ jobs:
           pip install -r backend/requirements.txt
           pip install pytest pre-commit
 
+      - name: Install Playwright browsers
+        run: python -m playwright install chromium
+
       - name: Run pre-commit
         run: pre-commit run --all-files
 

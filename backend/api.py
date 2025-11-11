@@ -204,10 +204,21 @@ EXCEL_UPLOAD_ROOT_BASE = EXCEL_UPLOAD_ROOT.resolve()
 APP_VERSION = SETTINGS.version
 APP_COMMIT = SETTINGS.commit
 
-_UPLOAD_KIND_BASES: dict[str, tuple[Path, str]] = {
-    "pdf": (UPLOAD_ROOT_BASE, "/uploads"),
-    "excel": (EXCEL_UPLOAD_ROOT_BASE, "/excel-uploads"),
+_UPLOAD_KIND_PREFIXES: dict[str, str] = {
+    "pdf": "/uploads",
+    "excel": "/excel-uploads",
 }
+
+
+def _build_upload_kind_bases() -> dict[str, tuple[Path, str]]:
+    return {
+        "pdf": (UPLOAD_ROOT_BASE, _UPLOAD_KIND_PREFIXES["pdf"]),
+        "excel": (EXCEL_UPLOAD_ROOT_BASE, _UPLOAD_KIND_PREFIXES["excel"]),
+    }
+
+
+# Legacy dict kept for compatibility with existing tests that monkeypatch these paths.
+_UPLOAD_KIND_BASES: dict[str, tuple[Path, str]] = _build_upload_kind_bases()
 
 
 _DEFAULT_VERIFY_PDF_BYTES: int | None = None
@@ -468,7 +479,7 @@ def _normalize_template_id(template_id: str) -> str:
 def _resolve_template_kind(template_id: str) -> str:
     record = state_store.get_template_record(template_id) or {}
     kind = str(record.get("kind") or "").lower()
-    if kind in _UPLOAD_KIND_BASES:
+    if kind in _UPLOAD_KIND_PREFIXES:
         return kind
     tid = _normalize_template_id(template_id)
     excel_dir = EXCEL_UPLOAD_ROOT_BASE / tid
@@ -507,11 +518,11 @@ def _template_dir(
     """Resolve the uploads directory for a template_id within the selected kind root."""
 
     normalized_kind = (kind or "pdf").lower()
-    if normalized_kind not in _UPLOAD_KIND_BASES:
+    if normalized_kind not in _UPLOAD_KIND_PREFIXES:
         raise _http_error(400, "invalid_template_kind", f"Unsupported template kind: {kind}")
 
+    base_dir = UPLOAD_ROOT_BASE if normalized_kind == "pdf" else EXCEL_UPLOAD_ROOT_BASE
     tid = _normalize_template_id(template_id)
-    base_dir, _ = _UPLOAD_KIND_BASES[normalized_kind]
 
     tdir = (base_dir / tid).resolve()
     if base_dir not in tdir.parents:
@@ -628,6 +639,16 @@ def _artifact_url(path: Path | None) -> Optional[str]:
     if not resolved.exists():
         return None
     for kind, (base_dir, prefix) in _UPLOAD_KIND_BASES.items():
+        try:
+            rel = resolved.relative_to(base_dir)
+        except ValueError:
+            continue
+        return f"{prefix}/{rel.as_posix()}"
+    fallback_pairs = [
+        (UPLOAD_ROOT_BASE, _UPLOAD_KIND_PREFIXES["pdf"]),
+        (EXCEL_UPLOAD_ROOT_BASE, _UPLOAD_KIND_PREFIXES["excel"]),
+    ]
+    for base_dir, prefix in fallback_pairs:
         try:
             rel = resolved.relative_to(base_dir)
         except ValueError:

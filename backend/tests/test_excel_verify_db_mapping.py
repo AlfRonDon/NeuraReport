@@ -66,10 +66,10 @@ def test_excel_preview_injects_db_placeholders(tmp_path, monkeypatch):
     assert result.png_path and result.png_path.exists()
     html_text = result.html_path.read_text(encoding="utf-8")
 
-    assert "<td>DATE</td>" in html_text
-    assert "<td>DI_RAW_INLET_FM_3</td>" in html_text
-    assert "{flows.di_raw_inlet_fm_3}" in html_text
-    assert "{DATE}" in html_text
+    assert '<th data-label="date">DATE</th>' in html_text
+    assert '<th data-label="di_raw_inlet_fm_3">DI_RAW_INLET_FM_3</th>' in html_text
+    assert "{row_date}" in html_text
+    assert "{row_di_raw_inlet_fm_3}" in html_text
     assert "2024-01-01" not in html_text
     assert html_text.count("<tr>") == 2
     assert render_calls, "Expected preview PNG render to be invoked"
