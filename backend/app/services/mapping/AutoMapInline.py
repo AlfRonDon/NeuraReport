@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import base64
 import copy
@@ -18,7 +18,7 @@ from ..utils import (
     strip_code_fences,
     validate_mapping_inline_v4,
 )
-from ..utils.validation import normalize_mapping_inline_payload
+from ..utils.validation import SchemaValidationError, normalize_mapping_inline_payload
 from .HeaderMapping import REPORT_SELECTED_VALUE
 
 logger = logging.getLogger("neura.mapping.inline")
@@ -452,7 +452,10 @@ def run_llm_call_3(
         raw_payload = copy.deepcopy(payload)
 
         try:
-            validate_mapping_inline_v4(payload)
+            try:
+                validate_mapping_inline_v4(payload)
+            except SchemaValidationError as exc:
+                raise MappingInlineValidationError(str(exc)) from exc
             mapping_raw = _ensure_dict(payload.get("mapping"), "mapping")
             mapping = {str(k): str(v) for k, v in mapping_raw.items()}
             _normalize_report_date_mapping(mapping)
