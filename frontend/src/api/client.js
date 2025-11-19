@@ -1,11 +1,14 @@
 import axios from 'axios'
 import * as mock from './mock'
 
-
+const runtimeEnv = {
+  ...(typeof import.meta !== 'undefined' && import.meta?.env ? import.meta.env : {}),
+  ...(globalThis.__NEURA_TEST_ENVIRONMENT__ || {}),
+}
 
 // base URL from env, with fallback
 
-export const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000'
+export const API_BASE = runtimeEnv.VITE_API_BASE_URL || 'http://127.0.0.1:8000'
 
 
 
@@ -23,7 +26,7 @@ export const sleep = (ms = 400) => new Promise(r => setTimeout(r, ms))
 
 // whether to use mock API
 
-export const isMock = (import.meta.env.VITE_USE_MOCK || 'true') === 'true'
+export const isMock = (runtimeEnv.VITE_USE_MOCK || 'true') === 'true'
 
 const normalizeKind = (kind) => (kind === 'excel' ? 'excel' : 'pdf')
 
@@ -34,12 +37,15 @@ const TEMPLATE_ROUTES = {
     corrections: (id) => `${API_BASE}/templates/${encodeURIComponent(id)}/mapping/corrections-preview`,
     approve: (id) => `${API_BASE}/templates/${encodeURIComponent(id)}/mapping/approve`,
     generator: (id) => `${API_BASE}/templates/${encodeURIComponent(id)}/generator-assets/v1`,
+    chartSuggest: (id) => `${API_BASE}/templates/${encodeURIComponent(id)}/charts/suggest`,
+    savedCharts: (id) => `${API_BASE}/templates/${encodeURIComponent(id)}/charts/saved`,
     manifest: (id) => `${API_BASE}/templates/${encodeURIComponent(id)}/artifacts/manifest`,
     head: (id, name) =>
       `${API_BASE}/templates/${encodeURIComponent(id)}/artifacts/head?name=${encodeURIComponent(name)}`,
     keys: (id) => `${API_BASE}/templates/${encodeURIComponent(id)}/keys/options`,
     discover: () => `${API_BASE}/reports/discover`,
     run: () => `${API_BASE}/reports/run`,
+    runJob: () => `${API_BASE}/jobs/run-report`,
     uploadsBase: '/uploads',
     manifestBase: '/templates',
   },
@@ -49,12 +55,15 @@ const TEMPLATE_ROUTES = {
     corrections: (id) => `${API_BASE}/excel/${encodeURIComponent(id)}/mapping/corrections-preview`,
     approve: (id) => `${API_BASE}/excel/${encodeURIComponent(id)}/mapping/approve`,
     generator: (id) => `${API_BASE}/excel/${encodeURIComponent(id)}/generator-assets/v1`,
+    chartSuggest: (id) => `${API_BASE}/excel/${encodeURIComponent(id)}/charts/suggest`,
+    savedCharts: (id) => `${API_BASE}/excel/${encodeURIComponent(id)}/charts/saved`,
     manifest: (id) => `${API_BASE}/excel/${encodeURIComponent(id)}/artifacts/manifest`,
     head: (id, name) =>
       `${API_BASE}/excel/${encodeURIComponent(id)}/artifacts/head?name=${encodeURIComponent(name)}`,
     keys: (id) => `${API_BASE}/excel/${encodeURIComponent(id)}/keys/options`,
     discover: () => `${API_BASE}/excel/reports/discover`,
     run: () => `${API_BASE}/excel/reports/run`,
+    runJob: () => `${API_BASE}/excel/jobs/run-report`,
     uploadsBase: '/excel-uploads',
     manifestBase: '/excel',
   },
@@ -93,7 +102,7 @@ const prepareKeyValues = (values) => {
 
 
 
-// Build absolute URLs for artifacts the API returns (e.g. /uploads/…)
+// Build absolute URLs for artifacts the API returns (e.g. /uploads/GǪ)
 
 export const withBase = (pathOrUrl) =>
   /^https?:\/\//.test(pathOrUrl) ? pathOrUrl : `${API_BASE}${pathOrUrl}`
@@ -351,7 +360,7 @@ export async function verifyTemplate({ file, connectionId, refineIters = 0, onPr
 
 
 
-// 3) Auto-generate header→column mapping
+// 3) Auto-generate headerG��column mapping
 
 export async function mappingPreview(templateId, connectionId, options = {}) {
   const kind = options.kind || 'pdf'
@@ -1165,6 +1174,188 @@ export function normalizeArtifacts(artifacts) {
 
 /* ------------------------ NEW: Generate-page helpers ------------------------ */
 
+const normalizeChartSuggestion = (chart, idx) => {
+  if (!chart || typeof chart !== 'object') return null
+  const type = typeof chart.type === 'string' ? chart.type.toLowerCase().trim() : ''
+  const xField = typeof chart.xField === 'string' ? chart.xField.trim() : ''
+  let yFields = chart.yFields
+  if (typeof yFields === 'string') {
+    yFields = [yFields]
+  }
+  if (!Array.isArray(yFields)) {
+    yFields = []
+  }
+  const normalizedY = yFields
+    .map((value) => (typeof value === 'string' ? value.trim() : String(value)))
+    .filter(Boolean)
+  if (!type || !xField || !normalizedY.length) return null
+  return {
+    id: chart.id ? String(chart.id) : `chart_${idx + 1}`,
+    type,
+    xField,
+    yFields: normalizedY,
+    groupField:
+      typeof chart.groupField === 'string'
+        ? chart.groupField
+        : chart.groupField != null
+          ? String(chart.groupField)
+          : null,
+    aggregation:
+      typeof chart.aggregation === 'string'
+        ? chart.aggregation
+        : chart.aggregation != null
+          ? String(chart.aggregation)
+          : null,
+    chartTemplateId:
+      typeof chart.chartTemplateId === 'string'
+        ? chart.chartTemplateId
+        : chart.chartTemplateId != null
+          ? String(chart.chartTemplateId)
+          : null,
+    title: typeof chart.title === 'string' ? chart.title : null,
+    description: typeof chart.description === 'string' ? chart.description : null,
+  }
+}
+
+const normalizeSuggestChartsResponse = (data) => {
+  const rawCharts = Array.isArray(data?.charts) ? data.charts : []
+  const charts = rawCharts.map((chart, idx) => normalizeChartSuggestion(chart, idx)).filter(Boolean)
+  const sampleData = Array.isArray(data?.sample_data) ? data.sample_data : null
+  return { charts, sampleData }
+}
+
+export async function suggestCharts({
+  templateId,
+  connectionId,
+  startDate,
+  endDate,
+  keyValues,
+  question,
+  kind = 'pdf',
+}) {
+  if (!templateId) throw new Error('templateId is required for suggestCharts')
+  if (isMock) {
+    const mockResponse = await mock.suggestChartsMock({
+      templateId,
+      connectionId,
+      startDate,
+      endDate,
+      keyValues,
+      question,
+      kind,
+    })
+    return normalizeSuggestChartsResponse(mockResponse)
+  }
+  const payload = {
+    start_date: startDate,
+    end_date: endDate,
+    question: question || '',
+    include_sample_data: true,
+  }
+  if (connectionId) payload.connection_id = connectionId
+  const preparedKeyValues = prepareKeyValues(keyValues)
+  if (preparedKeyValues) {
+    payload.key_values = preparedKeyValues
+  }
+  const endpoint = getTemplateRoutes(kind).chartSuggest(templateId)
+  const { data } = await api.post(endpoint, payload)
+  return normalizeSuggestChartsResponse(data)
+}
+
+const normalizeSavedChart = (chart, idx = 0) => {
+  if (!chart || typeof chart !== 'object') return null
+  const templateId = chart.template_id || chart.templateId
+  const specPayload = chart.spec || {}
+  const normalizedSpec =
+    normalizeChartSuggestion(
+      {
+        ...specPayload,
+        id: specPayload.id || `saved_spec_${idx}`,
+      },
+      idx,
+    ) || null
+  return {
+    id: chart.id,
+    templateId,
+    name: chart.name,
+    spec: normalizedSpec,
+    createdAt: chart.created_at || chart.createdAt,
+    updatedAt: chart.updated_at || chart.updatedAt,
+  }
+}
+
+export async function listSavedCharts({ templateId, kind = 'pdf' }) {
+  if (!templateId) throw new Error('templateId is required for listSavedCharts')
+  if (isMock) {
+    const response = await mock.listSavedChartsMock({ templateId })
+    const charts = Array.isArray(response?.charts) ? response.charts : []
+    return charts.map((chart, idx) => normalizeSavedChart(chart, idx)).filter(Boolean)
+  }
+  const endpoint = getTemplateRoutes(kind).savedCharts(templateId)
+  const { data } = await api.get(endpoint)
+  const charts = Array.isArray(data?.charts) ? data.charts : []
+  return charts.map((chart, idx) => normalizeSavedChart(chart, idx)).filter(Boolean)
+}
+
+export async function createSavedChart({ templateId, name, spec, kind = 'pdf' }) {
+  if (!templateId) throw new Error('templateId is required for createSavedChart')
+  if (!name) throw new Error('name is required for createSavedChart')
+  if (!spec) throw new Error('spec is required for createSavedChart')
+  if (isMock) {
+    const response = await mock.createSavedChartMock({
+      templateId,
+      name,
+      spec,
+    })
+    return normalizeSavedChart(response, 0)
+  }
+  const endpoint = getTemplateRoutes(kind).savedCharts(templateId)
+  const { data } = await api.post(endpoint, {
+    template_id: templateId,
+    name,
+    spec,
+  })
+  return normalizeSavedChart(data, 0)
+}
+
+export async function updateSavedChart({ templateId, chartId, name, spec, kind = 'pdf' }) {
+  if (!templateId) throw new Error('templateId is required for updateSavedChart')
+  if (!chartId) throw new Error('chartId is required for updateSavedChart')
+  if (name == null && spec == null) {
+    return null
+  }
+  if (isMock) {
+    const response = await mock.updateSavedChartMock({
+      templateId,
+      chartId,
+      name,
+      spec,
+    })
+    return normalizeSavedChart(response, 0)
+  }
+  const endpoint = `${getTemplateRoutes(kind).savedCharts(templateId)}/${encodeURIComponent(chartId)}`
+  const payload = {}
+  if (name != null) payload.name = name
+  if (spec != null) payload.spec = spec
+  const { data } = await api.put(endpoint, payload)
+  return normalizeSavedChart(data, 0)
+}
+
+export async function deleteSavedChart({ templateId, chartId, kind = 'pdf' }) {
+  if (!templateId) throw new Error('templateId is required for deleteSavedChart')
+  if (!chartId) throw new Error('chartId is required for deleteSavedChart')
+  if (isMock) {
+    const response = await mock.deleteSavedChartMock({
+      templateId,
+      chartId,
+    })
+    return response
+  }
+  const endpoint = `${getTemplateRoutes(kind).savedCharts(templateId)}/${encodeURIComponent(chartId)}`
+  const { data } = await api.delete(endpoint)
+  return data
+}
+
 
 
 // A) List approved templates (adjust if your API differs)
@@ -1184,12 +1375,178 @@ export async function listApprovedTemplates({ kind = 'all' } = {}) {
   return templates
 }
 
+export async function getTemplateCatalog() {
+  if (isMock) {
+    if (typeof mock.getTemplateCatalog === 'function') {
+      return mock.getTemplateCatalog()
+    }
+    return []
+  }
+  const { data } = await api.get('/templates/catalog')
+  if (Array.isArray(data?.templates)) {
+    return data.templates
+  }
+  if (Array.isArray(data)) {
+    return data
+  }
+  return []
+}
+
+export async function recommendTemplates({ requirement, limit = 5, domains, kinds } = {}) {
+  const payload = {}
+  const trimmedRequirement = typeof requirement === 'string' ? requirement.trim() : ''
+  if (trimmedRequirement) {
+    payload.requirement = trimmedRequirement
+  }
+  if (Array.isArray(domains) && domains.length) {
+    payload.domains = domains
+  }
+  if (Array.isArray(kinds) && kinds.length) {
+    payload.kinds = kinds
+  }
+  if (limit != null) {
+    payload.limit = limit
+  }
+  if (isMock) {
+    if (typeof mock.recommendTemplates === 'function') {
+      return mock.recommendTemplates(payload)
+    }
+    return []
+  }
+  const { data } = await api.post('/templates/recommend', payload)
+  if (Array.isArray(data?.recommendations)) {
+    return data.recommendations
+  }
+  return data
+}
+
 export async function deleteTemplate(templateId) {
   if (!templateId) throw new Error('Missing template id')
   if (isMock) {
     return { status: 'ok', template_id: templateId }
   }
   const { data } = await api.delete(`/templates/${encodeURIComponent(templateId)}`)
+  return data
+}
+
+export const templateExportZipUrl = (templateId) =>
+  `${API_BASE}/templates/${encodeURIComponent(templateId)}/export.zip`
+
+export async function importTemplateZip({ file, name } = {}) {
+  if (!file) throw new Error('Select a template zip file')
+  if (isMock) {
+    await sleep(400)
+    return {
+      status: 'ok',
+      template_id: 'mock-template',
+      mock: true,
+      name: name || file.name,
+    }
+  }
+  const form = new FormData()
+  form.append('file', file)
+  if (name) {
+    form.append('name', name)
+  }
+  const { data } = await api.post('/templates/import-zip', form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+  return data
+}
+
+export async function listSchedules() {
+  if (isMock) {
+    if (typeof mock.listSchedules === 'function') {
+      return mock.listSchedules()
+    }
+    await sleep(200)
+    return []
+  }
+  const { data } = await api.get('/reports/schedules')
+  return Array.isArray(data?.schedules) ? data.schedules : []
+}
+
+export async function createSchedule(payload) {
+  const apiPayload = {
+    template_id: payload.templateId,
+    connection_id: payload.connectionId,
+    start_date: payload.startDate,
+    end_date: payload.endDate,
+    key_values: payload.keyValues,
+    batch_ids: payload.batchIds,
+    docx: !!payload.docx,
+    xlsx: !!payload.xlsx,
+    email_recipients: payload.emailRecipients,
+    email_subject: payload.emailSubject,
+    email_message: payload.emailMessage,
+    frequency: payload.frequency || 'daily',
+    interval_minutes: payload.intervalMinutes,
+    name: payload.name,
+  }
+  if (isMock) {
+    if (typeof mock.createSchedule === 'function') {
+      return mock.createSchedule(apiPayload)
+    }
+    await sleep(200)
+    return { schedule: { id: `mock-schedule-${Date.now()}`, ...apiPayload } }
+  }
+  const { data } = await api.post('/reports/schedules', apiPayload)
+  return data?.schedule || data
+}
+
+export async function deleteSchedule(scheduleId) {
+  if (!scheduleId) throw new Error('Missing schedule id')
+  if (isMock) {
+    if (typeof mock.deleteSchedule === 'function') {
+      return mock.deleteSchedule(scheduleId)
+    }
+    await sleep(200)
+    return { status: 'ok', schedule_id: scheduleId }
+  }
+  const { data } = await api.delete(`/reports/schedules/${encodeURIComponent(scheduleId)}`)
+  return data
+}
+
+export async function getTemplateHtml(templateId) {
+  if (!templateId) throw new Error('templateId is required')
+  if (isMock) {
+    return mock.getTemplateHtml(templateId)
+  }
+  const { data } = await api.get(`/templates/${encodeURIComponent(templateId)}/html`)
+  return data
+}
+
+export async function editTemplateManual(templateId, html) {
+  if (!templateId) throw new Error('templateId is required')
+  if (typeof html !== 'string') throw new Error('Provide HTML text to save')
+  if (isMock) {
+    return mock.editTemplateManual(templateId, html)
+  }
+  const { data } = await api.post(`/templates/${encodeURIComponent(templateId)}/edit-manual`, { html })
+  return data
+}
+
+export async function editTemplateAi(templateId, instructions, html) {
+  if (!templateId) throw new Error('templateId is required')
+  const text = typeof instructions === 'string' ? instructions.trim() : ''
+  if (!text) throw new Error('Provide AI instructions before applying')
+  if (isMock) {
+    return mock.editTemplateAi(templateId, text, html)
+  }
+  const payload = { instructions: text }
+  if (typeof html === 'string' && html.length) {
+    payload.html = html
+  }
+  const { data } = await api.post(`/templates/${encodeURIComponent(templateId)}/edit-ai`, payload)
+  return data
+}
+
+export async function undoTemplateEdit(templateId) {
+  if (!templateId) throw new Error('templateId is required')
+  if (isMock) {
+    return mock.undoTemplateEdit(templateId)
+  }
+  const { data } = await api.post(`/templates/${encodeURIComponent(templateId)}/undo-last-edit`)
   return data
 }
 
@@ -1231,10 +1588,52 @@ export async function runReport({
   return data
 }
 
+export async function runReportAsJob({
+  templateId,
+  templateName,
+  connectionId,
+  startDate,
+  endDate,
+  batchIds = null,
+  keyValues,
+  docx = false,
+  xlsx = false,
+  kind = 'pdf',
+  emailRecipients,
+  emailSubject,
+  emailMessage,
+  scheduleId,
+}) {
+  const payload = {
+    template_id: templateId,
+    template_name: templateName,
+    connection_id: connectionId,
+    start_date: startDate,
+    end_date: endDate,
+  }
+  if (Array.isArray(batchIds) && batchIds.length) {
+    payload.batch_ids = batchIds
+  }
+  const preparedKeyValues = prepareKeyValues(keyValues)
+  if (preparedKeyValues) {
+    payload.key_values = preparedKeyValues
+  }
+  if (docx) payload.docx = true
+  if (xlsx) payload.xlsx = true
+  if (Array.isArray(emailRecipients) && emailRecipients.length) {
+    payload.email_recipients = emailRecipients
+  }
+  if (emailSubject) payload.email_subject = emailSubject
+  if (emailMessage) payload.email_message = emailMessage
+  if (scheduleId) payload.schedule_id = scheduleId
+  if (isMock) {
+    return mock.runReportAsJobMock(payload)
+  }
+  const { data } = await api.post(getTemplateRoutes(kind).runJob(), payload)
+  return data
+}
 
-
-
-// C) Normalize a run response’s artifact URLs to absolute
+// C) Normalize a run responseG��s artifact URLs to absolute
 
 export function normalizeRunArtifacts(run) {
   return {
@@ -1425,6 +1824,40 @@ export async function recordLastUsed({ connectionId, templateId }) {
   return data?.last_used
 
 }
+
+export async function listJobs({ statuses, types, limit = 25, activeOnly = false } = {}) {
+  if (isMock) {
+    const mockResponse = await mock.listJobsMock({ statuses, types, limit, activeOnly })
+    return { jobs: Array.isArray(mockResponse?.jobs) ? mockResponse.jobs : [] }
+  }
+  const params = new URLSearchParams()
+  if (Array.isArray(statuses)) {
+    statuses.filter(Boolean).forEach((status) => params.append('status', status))
+  }
+  if (Array.isArray(types)) {
+    types.filter(Boolean).forEach((type) => params.append('type', type))
+  }
+  if (limit) {
+    params.set('limit', String(limit))
+  }
+  if (activeOnly) {
+    params.set('active_only', 'true')
+  }
+  const query = params.toString()
+  const endpoint = `/jobs${query ? `?${query}` : ''}`
+  const { data } = await api.get(endpoint)
+  return { jobs: Array.isArray(data?.jobs) ? data.jobs : [] }
+}
+
+export async function getJob(jobId) {
+  if (!jobId) throw new Error('Missing job id')
+  if (isMock) {
+    return mock.getJobMock(jobId)
+  }
+  const { data } = await api.get(`/jobs/${encodeURIComponent(jobId)}`)
+  return data?.job
+}
+
 
 
 

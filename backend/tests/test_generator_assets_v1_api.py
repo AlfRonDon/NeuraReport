@@ -138,7 +138,7 @@ def _request_payload() -> dict[str, Any]:
         "final_template_html": "<html>{h1}</html>",
         "reference_pdf_image": None,
         "catalog": ["batches.h1"],
-        "dialect": "sqlite",
+        "dialect": "duckdb",
         "params": ["from_date", "to_date"],
         "sample_params": {"from_date": "2025-01-01", "to_date": "2025-01-31"},
         "force_rebuild": False,
@@ -161,7 +161,7 @@ def test_generator_assets_v1_happy_path(tmp_path, client, monkeypatch):
     data = result_event
     assert data["invalid"] is False
     assert data["needs_user_fix"] == []
-    assert data["dialect"] == "sqlite"
+    assert data["dialect"] == "duckdb"
     assert data["params"]["required"] == ["from_date", "to_date"]
 
     assert data["artifacts"].get("contract")
@@ -180,7 +180,7 @@ def test_generator_assets_v1_happy_path(tmp_path, client, monkeypatch):
     assert tpl_record["artifacts"].get("contract_url")
     assert tpl_record["artifacts"].get("generator_sql_pack_url")
     generator_meta = tpl_record.get("generator") or {}
-    assert generator_meta.get("dialect") == "sqlite"
+    assert generator_meta.get("dialect") == "duckdb"
     assert generator_meta.get("invalid") is False
     assert generator_meta.get("needsUserFix") == []
 

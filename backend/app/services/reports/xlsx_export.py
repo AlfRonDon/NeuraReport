@@ -6,7 +6,7 @@ from typing import Optional
 
 try:
     import openpyxl  # type: ignore
-    from openpyxl.styles import Alignment, Border, Font, Side  # type: ignore
+    from openpyxl.styles import Alignment, Border, Font, PatternFill, Side  # type: ignore
     from openpyxl.utils import get_column_letter  # type: ignore
     from openpyxl.worksheet.table import Table, TableStyleInfo  # type: ignore
 except ImportError:  # pragma: no cover
@@ -14,12 +14,13 @@ except ImportError:  # pragma: no cover
     Alignment = None  # type: ignore
     Border = None  # type: ignore
     Font = None  # type: ignore
+    PatternFill = None  # type: ignore
     Side = None  # type: ignore
     get_column_letter = None  # type: ignore
     Table = None  # type: ignore
     TableStyleInfo = None  # type: ignore
 
-from .html_table_parser import extract_first_table
+from .html_table_parser import extract_first_table, extract_tables
 
 logger = logging.getLogger("neura.reports.xlsx")
 
@@ -40,6 +41,33 @@ def _auto_column_widths(worksheet) -> None:
         worksheet.column_dimensions[letter].width = width
 
 
+def _table_score(table: list[list[str]]) -> int:
+    if not table:
+        return 0
+    row_count = len(table)
+    max_cols = max((len(row) for row in table), default=0)
+    multi_col_rows = sum(1 for row in table if sum(1 for cell in row if cell.strip()) >= 2)
+    return (multi_col_rows or row_count) * max(1, max_cols)
+
+
+def _select_best_table_index(tables: list[list[list[str]]]) -> int:
+    best_idx = 0
+    best_score = -1
+    for idx, table in enumerate(tables):
+        score = _table_score(table)
+        if score > best_score:
+            best_idx = idx
+            best_score = score
+    return best_idx
+
+
+def _looks_like_total_row(row: list[str]) -> bool:
+    for cell in row:
+        if cell and cell.strip().lower() == "total":
+            return True
+    return False
+
+
 def html_file_to_xlsx(html_path: Path, output_path: Path) -> Optional[Path]:
     if openpyxl is None:  # pragma: no cover
         logger.warning(
@@ -53,11 +81,58 @@ def html_file_to_xlsx(html_path: Path, output_path: Path) -> Optional[Path]:
         return None
 
     html_text = html_path.read_text(encoding="utf-8", errors="ignore")
-    rows = extract_first_table(html_text)
-    if not rows:
+    tables = extract_tables(html_text)
+    rows: list[list[str]] = []
+    data_row_positions: list[int] = []
+    preface_ranges: list[tuple[int, int]] = []
+    data_header_row_idx: int | None = None
+
+    if tables:
+        best_idx = _select_best_table_index(tables)
+
+        for idx, table in enumerate(tables):
+            is_data_table = idx == best_idx
+            if not table:
+                continue
+            serial_counter = 0
+            table_start_idx = len(rows) + 1
+            for row_idx_in_table, row in enumerate(table):
+                clean_row = [(cell or "").strip() for cell in row]
+                if is_data_table and row_idx_in_table > 0:
+                    if _looks_like_total_row(clean_row):
+                        if clean_row:
+                            clean_row[0] = ""
+                    else:
+                        serial_counter += 1
+                        if not clean_row[0]:
+                            clean_row[0] = str(serial_counter)
+                elif is_data_table and row_idx_in_table == 0:
+                    data_header_row_idx = len(rows) + 1
+                rows.append(clean_row)
+                if is_data_table and row_idx_in_table > 0:
+                    data_row_positions.append(len(rows))
+            table_end_idx = len(rows)
+            if (not is_data_table) and table_end_idx >= table_start_idx:
+                preface_ranges.append((table_start_idx, table_end_idx))
+            # blank row between tables
+            rows.append([])
+
+        while rows and not rows[-1]:
+            rows.pop()
+    else:
         rows = [[line.strip()] for line in html_text.splitlines() if line.strip()]
         if not rows:
             rows = [["Report output unavailable"]]
+
+    data_start = data_row_positions[0] if data_row_positions else None
+    data_end = data_row_positions[-1] if data_row_positions else None
+    data_max_cols = (
+        max(len(rows[idx - 1]) for idx in data_row_positions)
+        if data_row_positions
+        else max((len(r) for r in rows if r), default=1)
+    )
+    data_max_cols = max(1, data_max_cols)
+    sheet_width = max((len(r) for r in rows if r), default=data_max_cols)
 
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -78,6 +153,50 @@ def html_file_to_xlsx(html_path: Path, output_path: Path) -> Optional[Path]:
             if Font is not None and r_idx == 1:
                 cell.font = Font(bold=True)
 
+        if len(row) == 0:
+            continue
+
+    if (
+        PatternFill is not None
+        and Alignment is not None
+        and Font is not None
+        and sheet_width > 0
+        and preface_ranges
+    ):
+        header_fill = PatternFill("solid", fgColor="D9E1F2")
+        title_fill = PatternFill("solid", fgColor="BDD7EE")
+        first_preface_row = preface_ranges[0][0]
+        for start_idx, end_idx in preface_ranges:
+            for row_idx in range(start_idx, end_idx + 1):
+                row_data = rows[row_idx - 1] if 0 <= row_idx - 1 < len(rows) else []
+                if not row_data or not any(cell for cell in row_data):
+                    continue
+                ws.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=sheet_width)
+                cell = ws.cell(row=row_idx, column=1)
+                cell_text = cell.value or ""
+                is_title_row = row_idx == first_preface_row and cell_text and cell_text.upper() == cell_text
+                cell.alignment = Alignment(
+                    horizontal="center" if is_title_row else "left",
+                    vertical="center",
+                    wrap_text=True,
+                )
+                cell.font = Font(bold=True, size=14 if is_title_row else 11)
+                cell.fill = title_fill if is_title_row else header_fill
+
+    if (
+        PatternFill is not None
+        and Alignment is not None
+        and Font is not None
+        and data_header_row_idx is not None
+        and data_max_cols > 0
+    ):
+        data_header_fill = PatternFill("solid", fgColor="2F75B5")
+        for col_idx in range(1, data_max_cols + 1):
+            cell = ws.cell(row=data_header_row_idx, column=col_idx)
+            cell.fill = data_header_fill
+            cell.font = Font(color="FFFFFF", bold=True)
+            cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+
     if Border is not None and Side is not None:
         thin = Side(style="thin", color="FFC0C0C0")
         border = Border(left=thin, right=thin, top=thin, bottom=thin)
@@ -90,19 +209,31 @@ def html_file_to_xlsx(html_path: Path, output_path: Path) -> Optional[Path]:
             for cell in row:
                 cell.border = border
 
-    if ws.max_row > 1:
+    if data_header_row_idx:
+        freeze_row = data_header_row_idx + 1
+    else:
+        freeze_row = (data_start + 1) if data_start else 2
+    if ws.max_row >= freeze_row:
+        ws.freeze_panes = f"A{freeze_row}"
+    elif ws.max_row > 1:
         ws.freeze_panes = "A2"
-    if Table is not None and TableStyleInfo is not None and ws.max_row > 1 and ws.max_column > 0:
-        ref = f"A1:{ws.cell(row=ws.max_row, column=ws.max_column).coordinate}"
-        table = Table(displayName="ReportTable", ref=ref)
-        table.tableStyleInfo = TableStyleInfo(
-            name="TableStyleMedium9",
-            showFirstColumn=False,
-            showLastColumn=False,
-            showRowStripes=True,
-            showColumnStripes=False,
-        )
-        ws.add_table(table)
+
+    if Table is not None and TableStyleInfo is not None and ws.max_column > 0 and data_end is not None:
+        table_cols = max(1, min(data_max_cols, ws.max_column))
+        table_top = data_header_row_idx if data_header_row_idx is not None else data_start
+        if table_top is not None and table_top <= data_end:
+            ref = f"A{table_top}:{ws.cell(row=data_end, column=table_cols).coordinate}"
+            table = Table(displayName="ReportTable", ref=ref)
+            table.tableStyleInfo = TableStyleInfo(
+                name="TableStyleMedium9",
+                showFirstColumn=False,
+                showLastColumn=False,
+                showRowStripes=True,
+                showColumnStripes=False,
+            )
+            ws.add_table(table)
+        else:
+            ws.auto_filter.ref = f"A1:{ws.cell(row=ws.max_row, column=ws.max_column).coordinate}"
     else:
         ws.auto_filter.ref = f"A1:{ws.cell(row=ws.max_row, column=ws.max_column).coordinate}"
 
@@ -131,3 +262,21 @@ def html_file_to_xlsx(html_path: Path, output_path: Path) -> Optional[Path]:
         },
     )
     return output_path
+def _table_score(table: list[list[str]]) -> int:
+    if not table:
+        return 0
+    row_count = len(table)
+    max_cols = max((len(row) for row in table), default=0)
+    multi_col_rows = sum(1 for row in table if sum(1 for cell in row if cell.strip()) >= 2)
+    return (multi_col_rows or row_count) * max(1, max_cols)
+
+
+def _select_best_table_index(tables: list[list[list[str]]]) -> int:
+    best_idx = 0
+    best_score = -1
+    for idx, table in enumerate(tables):
+        score = _table_score(table)
+        if score > best_score:
+            best_idx = idx
+            best_score = score
+    return best_idx

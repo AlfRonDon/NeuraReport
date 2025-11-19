@@ -195,7 +195,9 @@ def _mapping_allowlist_errors(mapping: dict[str, str], catalog: Iterable[str]) -
             f"{match.group('table')}.{match.group('column')}" for match in _COLUMN_REF_RE.finditer(normalized)
         ]
         if not referenced and not _SQL_EXPR_HINT_RE.search(normalized):
-            errors.append(f"{key!r} -> value is not a catalog column, params reference, or recognizable SQL expression")
+            errors.append(
+                f"{key!r} -> value is not a catalog column, params reference, or recognizable DuckDB SQL expression"
+            )
             continue
         invalid = [col for col in referenced if col not in allowed_catalog]
         if invalid:

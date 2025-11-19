@@ -52,9 +52,27 @@ class _SimpleTableParser(HTMLParser):
         return self.tables[0] if self.tables else []
 
 
+def _table_score(table: list[list[str]]) -> int:
+    if not table:
+        return 0
+    row_count = len(table)
+    max_cols = max((len(row) for row in table), default=0)
+    multi_col_rows = sum(1 for row in table if sum(1 for cell in row if cell) >= 2)
+    return (multi_col_rows or row_count) * max(1, max_cols)
+
+
 def extract_first_table(html_text: str) -> list[list[str]]:
-    tables = extract_tables(html_text, max_tables=1)
-    return tables[0] if tables else []
+    tables = extract_tables(html_text, max_tables=None)
+    if not tables:
+        return []
+    best_table = tables[0]
+    best_score = _table_score(best_table)
+    for table in tables[1:]:
+        score = _table_score(table)
+        if score > best_score:
+            best_table = table
+            best_score = score
+    return best_table
 
 
 def extract_tables(html_text: str, *, max_tables: int | None = None) -> list[list[list[str]]]:

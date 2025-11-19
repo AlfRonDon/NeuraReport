@@ -223,3 +223,18 @@ def test_extract_excel_print_scale_from_html(tmp_path):
     )
     value = api._extract_excel_print_scale_from_html(html_path)
     assert value == pytest.approx(0.63, rel=1e-2)
+
+
+def test_verify_sqlite_materializes_dataframe(tmp_path):
+    db_path = tmp_path / "verify.db"
+    with sqlite3.connect(db_path) as con:
+        con.execute("CREATE TABLE sample (value TEXT)")
+        con.execute("INSERT INTO sample (value) VALUES (?)", ("ok",))
+
+    # Should not raise once the SQLite file can be loaded into pandas frames.
+    db_conn_module.verify_sqlite(db_path)
+
+
+def test_verify_sqlite_missing_file(tmp_path):
+    with pytest.raises(FileNotFoundError):
+        db_conn_module.verify_sqlite(tmp_path / "missing.db")

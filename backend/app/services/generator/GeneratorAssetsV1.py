@@ -48,6 +48,19 @@ def _normalized_tokens(tokens: Iterable[str] | None) -> list[str]:
     return cleaned
 
 
+def _normalize_sql_dialect(value: str | None) -> str:
+    """
+    Normalize dialect names so the runtime consistently receives DuckDB-friendly SQL.
+    Treat legacy "sqlite" declarations as DuckDB since the DB is now backed by pandas DataFrames.
+    """
+    text = str(value or "").strip().lower()
+    if text in ("", "sqlite", "duckdb"):
+        return "duckdb"
+    if text in ("postgres", "postgresql"):
+        return "postgres"
+    return text or "duckdb"
+
+
 _SQL_PLACEHOLDER_PATTERNS = (
     r"\.\.\.",
     r"\bTBD\b",
@@ -570,7 +583,7 @@ def build_generator_assets_from_payload(
     params_normalized = {"required": required_params, "optional": optional_params}
 
     sql_pack_normalized = {
-        "dialect": sql_pack_raw.get("dialect") or response_payload.get("dialect") or dialect or "sqlite",
+        "dialect": _normalize_sql_dialect(sql_pack_raw.get("dialect") or response_payload.get("dialect") or dialect),
         "script": script_for_validation,
         "entrypoints": entrypoints,
         "params": params_normalized,
@@ -596,7 +609,7 @@ def build_generator_assets_from_payload(
     needs_user_fix = _ensure_iter(response_payload.get("needs_user_fix")) + schema_issues + shape_issues
     invalid = bool(response_payload.get("invalid")) or bool(schema_issues) or bool(shape_issues)
     summary = response_payload.get("summary") or {}
-    selected_dialect = response_payload.get("dialect") or dialect or "sqlite"
+    selected_dialect = _normalize_sql_dialect(response_payload.get("dialect") or dialect)
 
     artifacts = _write_outputs(
         template_dir=template_dir,

@@ -10,7 +10,7 @@ import asyncio
 import contextlib
 import json
 import re
-import sqlite3
+from ..dataframes import sqlite_shim as sqlite3
 from collections import defaultdict
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
@@ -50,6 +50,8 @@ except ImportError:  # pragma: no cover
 
 from .contract_adapter import ContractAdapter, format_decimal_str
 from .date_utils import get_col_type, mk_between_pred_for_date
+from .discovery_excel import discover_batches_and_counts as discover_batches_excel
+from ..dataframes import DuckDBDataFrameQuery, SQLiteDataFrameLoader
 
 # ------------------------------------------------------------------
 # Tolerant batch-block detection + stripping (explicit/implicit)
@@ -79,6 +81,48 @@ _MAX_EXCEL_PRINT_SCALE = 0.97
 _PAGE_HEIGHT_PX = 980
 _BASE_ROW_HEIGHT_PX = 28
 _EXCEL_STYLE_BLOCK_RE = re.compile(r'(?is)<style\b[^>]*id=["\']excel-print-sizing["\'][^>]*>.*?</style>')
+
+_DATE_PARAM_START_ALIASES = {
+    "start_ts_utc",
+    "start_ts",
+    "start_timestamp",
+    "start_datetime",
+    "start_date",
+    "start_dt",
+    "start_iso",
+    "start_date_utc",
+    "from_ts_utc",
+    "from_ts",
+    "from_timestamp",
+    "from_datetime",
+    "from_date",
+    "from_dt",
+    "from_iso",
+    "from_date_utc",
+    "range_start",
+    "period_start",
+}
+
+_DATE_PARAM_END_ALIASES = {
+    "end_ts_utc",
+    "end_ts",
+    "end_timestamp",
+    "end_datetime",
+    "end_date",
+    "end_dt",
+    "end_iso",
+    "end_date_utc",
+    "to_ts_utc",
+    "to_ts",
+    "to_timestamp",
+    "to_datetime",
+    "to_date",
+    "to_dt",
+    "to_iso",
+    "to_date_utc",
+    "range_end",
+    "period_end",
+}
 
 
 def _clamp_excel_print_scale(scale: float | None) -> float:
@@ -398,14 +442,16 @@ def fill_and_print(
     # ---- Load the final shell HTML (created during Approve) ----
     html = TEMPLATE_PATH.read_text(encoding="utf-8")
 
+    dataframe_loader = SQLiteDataFrameLoader(DB_PATH)
+
     TOKEN_RE = re.compile(r"\{\{?\s*([A-Za-z0-9_\-\.]+)\s*\}\}?")
     TEMPLATE_TOKENS = {m.group(1) for m in TOKEN_RE.finditer(html)}
 
     # ---- Unpack contract ----
     OBJ = OBJ or {}
     contract_adapter = ContractAdapter(OBJ)
-
     PLACEHOLDER_TO_COL = contract_adapter.mapping
+    param_token_set = {token for token in (contract_adapter.param_tokens or []) if token}
 
     join_raw = OBJ.get("join", {}) or {}
     JOIN = {
@@ -471,23 +517,34 @@ def fill_and_print(
         return None
 
     def _canonicalize_case(table: str, column: str, raw_value: str) -> str:
-        cache_key = (table.lower(), column.lower(), raw_value.lower())
+        normalized_table = str(table or "").strip().lower()
+        normalized_column = str(column or "").strip().lower()
+        normalized_value = str(raw_value or "").strip()
+        cache_key = (normalized_table, normalized_column, normalized_value.lower())
         if cache_key in _canonicalize_cache:
             return _canonicalize_cache[cache_key]
-        table_ident = _safe_ident(table)
-        column_ident = _safe_ident(column)
-        sql = f"SELECT {column_ident} FROM {table_ident} " f"WHERE {column_ident} = ? COLLATE NOCASE LIMIT 1"
-        canonical = raw_value
-        con = sqlite3.connect(str(DB_PATH))
+        canonical = normalized_value
+        if not normalized_table or not normalized_column or not normalized_value:
+            _canonicalize_cache[cache_key] = canonical
+            return canonical
         try:
-            cur = con.cursor()
-            row = cur.execute(sql, (raw_value,)).fetchone()
-            if row and row[0] is not None:
-                canonical = str(row[0])
-        except sqlite3.Error:
-            canonical = raw_value
-        finally:
-            con.close()
+            frame = dataframe_loader.frame(table)
+        except Exception:
+            _canonicalize_cache[cache_key] = canonical
+            return canonical
+        if column not in frame.columns:
+            _canonicalize_cache[cache_key] = canonical
+            return canonical
+        series = frame[column]
+        try:
+            matches = series.dropna().astype(str)
+        except Exception:
+            matches = series.dropna().apply(lambda v: str(v))
+        lower_target = normalized_value.lower()
+        mask = matches.str.lower() == lower_target
+        filtered = matches[mask]
+        if not filtered.empty:
+            canonical = str(filtered.iloc[0])
         _canonicalize_cache[cache_key] = canonical
         return canonical
 
@@ -516,7 +573,34 @@ def fill_and_print(
     for token, values in key_values_map.items():
         LITERALS[token] = ", ".join(values)
 
+    alias_link_map: dict[str, str] = {}
+    recipe_key_values = key_values_map.get("row_recipe_code")
+    if recipe_key_values:
+        alias_link_map = {
+            "recipe_code": "row_recipe_code",
+            "filter_recipe_code": "row_recipe_code",
+        }
+        literal_value = ", ".join(recipe_key_values)
+        for alias in alias_link_map.keys():
+            LITERALS[alias] = literal_value
+
     multi_key_selected = any(len(values) > 1 for values in key_values_map.values())
+
+    def _first_alias_value(token: str) -> str | None:
+        source = alias_link_map.get(token)
+        if not source:
+            return None
+        return _first_key_value(key_values_map.get(source, []))
+
+    def _apply_alias_params(target: dict[str, Any]) -> None:
+        if not alias_link_map:
+            return
+        for alias in alias_link_map:
+            if alias in target and str(target[alias] or "").strip():
+                continue
+            alias_value = _first_alias_value(alias)
+            if alias_value is not None:
+                target[alias] = alias_value
 
     _log_debug("Normalized key_values_map", key_values_map, "multi_key_selected", multi_key_selected)
 
@@ -665,13 +749,47 @@ def fill_and_print(
                 return True
         return False
 
+    def _is_counter_field(name: str | None) -> bool:
+        if not name:
+            return False
+        if not isinstance(name, str):
+            name = str(name)
+        normalized = re.sub(r"[^a-z0-9]", "", name.lower())
+        if not normalized:
+            return False
+        if normalized in {
+            "row",
+            "rowid",
+            "rowno",
+            "rownum",
+            "rownumber",
+            "rowindex",
+            "rowcounter",
+            "srno",
+            "sno",
+        }:
+            return True
+        counter_markers = ("serial", "sequence", "seq", "counter")
+        if any(marker in normalized for marker in counter_markers):
+            return True
+        counter_suffixes = (
+            "slno",
+            "srno",
+            "sno",
+            "snum",
+            "snumber",
+            "sl",
+            "no",
+            "num",
+            "number",
+            "idx",
+            "index",
+        )
+        return any(normalized.endswith(suffix) and normalized.startswith("row") for suffix in counter_suffixes)
+
     def _reindex_serial_fields(rows: list[dict], tokens: Sequence[str], columns: Sequence[str]) -> None:
-        serial_tokens = [
-            tok for tok in tokens if tok and any(keyword in tok.lower() for keyword in ("row", "serial", "sl"))
-        ]
-        serial_columns = [
-            col for col in columns if col and any(keyword in col.lower() for keyword in ("row", "serial", "sl"))
-        ]
+        serial_tokens = [tok for tok in tokens if tok and _is_counter_field(tok)]
+        serial_columns = [col for col in columns if col and _is_counter_field(col)]
         if not serial_tokens and not serial_columns:
             return
         for idx, row in enumerate(rows, start=1):
@@ -726,16 +844,8 @@ def fill_and_print(
         if treat_all_as_data:
             prepared = [dict(row) for row in rows]
         else:
-            significant_tokens = [
-                tok
-                for tok in row_tokens_template
-                if tok and not any(keyword in tok.lower() for keyword in ("row", "serial", "sl"))
-            ]
-            significant_columns = [
-                col
-                for col in row_columns
-                if col and not any(keyword in col.lower() for keyword in ("row", "serial", "sl"))
-            ]
+            significant_tokens = [tok for tok in row_tokens_template if tok and not _is_counter_field(tok)]
+            significant_columns = [col for col in row_columns if col and not _is_counter_field(col)]
             prepared: list[dict[str, Any]] = []
             for row in rows:
                 if significant_tokens or significant_columns:
@@ -753,6 +863,10 @@ def fill_and_print(
         try:
             for idx, combo in enumerate(_iter_key_combinations(key_values_map), start=1):
                 selection: dict[str, str] = {token: value for token, value in combo.items()}
+                if alias_link_map:
+                    for alias, source in alias_link_map.items():
+                        if alias not in selection and source in selection:
+                            selection[alias] = selection[source]
                 _log_debug("Fanout iteration", idx, "selection", selection)
                 tmp_html = OUT_HTML.with_name(f"{OUT_HTML.stem}__key{idx}.html")
                 tmp_pdf = OUT_PDF.with_name(f"{OUT_PDF.stem}__key{idx}.pdf")
@@ -1126,12 +1240,12 @@ def fill_and_print(
         return "" if raw_value is None else str(raw_value).strip()
 
     def _run_generator_entrypoints(
-        entrypoints: dict, sql_params: dict[str, object]
+        entrypoints: dict,
+        sql_params: dict[str, object],
+        df_loader: SQLiteDataFrameLoader,
     ) -> dict[str, list[dict[str, object]]]:
         if not entrypoints:
             return {}
-        con = sqlite3.connect(str(DB_PATH))
-        con.row_factory = sqlite3.Row
         alias_fix_patterns = [
             re.compile(r"\brows\.", re.IGNORECASE),
             re.compile(r"\brows_agg\.", re.IGNORECASE),
@@ -1169,6 +1283,8 @@ def fill_and_print(
                 fixed_sql = pattern.sub("", fixed_sql)
             return fixed_sql if fixed_sql != sql_text else None
 
+        frames = df_loader.frames()
+        query_engine = DuckDBDataFrameQuery(frames)
         try:
             results: dict[str, list[dict[str, object]]] = {}
             for name in ("header", "rows", "totals"):
@@ -1180,8 +1296,8 @@ def fill_and_print(
                 last_error: Exception | None = None
                 for attempt in range(2):
                     try:
-                        cur = con.execute(current_sql, sql_params)
-                    except sqlite3.OperationalError as exc:
+                        df_rows = query_engine.execute(current_sql, sql_params)
+                    except Exception as exc:
                         last_error = exc
                         fixed_sql = _attempt_sql_fix(current_sql, exc)
                         if fixed_sql is not None and fixed_sql != current_sql:
@@ -1190,15 +1306,14 @@ def fill_and_print(
                         raise
                     else:
                         last_error = None
-                        rows = [dict(row) for row in cur.fetchall()]
-                        results[name] = rows
+                        results[name] = df_rows.to_dict("records")
                         break
                 else:
                     assert last_error is not None
                     raise last_error
             return results
         finally:
-            con.close()
+            query_engine.close()
 
     start_dt = _parse_date_like(START_DATE)
     end_dt = _parse_date_like(END_DATE)
@@ -1454,12 +1569,41 @@ def fill_and_print(
             first_value = _first_key_value(key_values_map[token])
             if first_value is not None:
                 sql_params[token] = first_value
+        elif alias_link_map.get(token):
+            alias_value = _first_alias_value(token)
+            if alias_value is not None:
+                sql_params[token] = alias_value
         elif token in LITERALS:
             sql_params[token] = LITERALS[token]
         elif token in special_values:
             sql_params[token] = special_values[token]
         else:
             sql_params.setdefault(token, "")
+
+    _apply_alias_params(sql_params)
+
+    def _apply_date_param_defaults(target: dict[str, object]) -> None:
+        if not isinstance(target, dict):
+            return
+
+        def _inject(names: set[str], default_value: str) -> None:
+            if not default_value:
+                return
+            for alias in names:
+                if alias not in param_token_set and alias not in target:
+                    continue
+                current = target.get(alias)
+                if isinstance(current, str):
+                    if current.strip():
+                        continue
+                elif current not in (None, ""):
+                    continue
+                target[alias] = default_value
+
+        _inject(_DATE_PARAM_START_ALIASES, db_start)
+        _inject(_DATE_PARAM_END_ALIASES, db_end)
+
+    _apply_date_param_defaults(sql_params)
 
     if "recipe_code" in sql_params:
         _log_debug(
@@ -1519,8 +1663,10 @@ def fill_and_print(
                 for name, values in key_values_map.items():
                     sql_params[name] = _first_key_value(values)
 
+            _apply_alias_params(sql_params)
+
             try:
-                generator_results = _run_generator_entrypoints(entrypoints, sql_params)
+                generator_results = _run_generator_entrypoints(entrypoints, sql_params, dataframe_loader)
             except Exception as exc:  # pragma: no cover - defensive logging
                 print(f"Generator SQL execution failed; falling back to contract mapping: {exc}")
                 generator_results = None
@@ -1536,8 +1682,13 @@ def fill_and_print(
             optional_default = list(default_params.get("optional") or [])
             for name in required_default + optional_default:
                 sql_params.setdefault(name, None)
+            _apply_alias_params(sql_params)
             try:
-                fallback_results = _run_generator_entrypoints(default_sql_pack["entrypoints"], sql_params)
+                fallback_results = _run_generator_entrypoints(
+                    default_sql_pack["entrypoints"],
+                    sql_params,
+                    dataframe_loader,
+                )
             except Exception as exc:  # pragma: no cover - defensive logging
                 print(f"Contract SQL execution failed; continuing with discovery fallback: {exc}")
             else:
@@ -1565,68 +1716,14 @@ def fill_and_print(
                         need_discover = True
 
         if need_discover:
-            with sqlite3.connect(str(DB_PATH)) as con:
-                con.row_factory = sqlite3.Row
-                cur = con.cursor()
-
-                # Parent discovery
-                if len(pcols) == 1:
-                    parent_sql = f"""
-                        SELECT DISTINCT {qident(pcols[0])} AS bid
-                        FROM {qident(parent_table)}
-                        WHERE {parent_where_clause}
-                    """
-                    parent_ids = [r["bid"] for r in cur.execute(parent_sql, parent_params_all)]
-                else:
-                    parent_sql = f"""
-                        SELECT DISTINCT {_key_expr(pcols)} AS bid
-                        FROM {qident(parent_table)}
-                        WHERE {parent_where_clause}
-                    """
-                    parent_ids = [r["bid"] for r in cur.execute(parent_sql, parent_params_all)]
-
-                # Child discovery
-                if len(ccols) == 1:
-                    child_sql = f"""
-                        SELECT DISTINCT {qident(ccols[0])} AS bid
-                        FROM {qident(child_table)}
-                        WHERE {child_where_clause}
-                    """
-                    child_ids = [r["bid"] for r in cur.execute(child_sql, child_params_all)]
-                else:
-                    child_sql = f"""
-                        SELECT DISTINCT {_key_expr(ccols)} AS bid
-                        FROM {qident(child_table)}
-                        WHERE {child_where_clause}
-                    """
-                    child_ids = [r["bid"] for r in cur.execute(child_sql, child_params_all)]
-
-                all_ids = sorted({str(x) for x in (parent_ids + child_ids)})
-
-                if len(all_ids) <= 1:
-                    # Relax discovery if filtered too tightly by date (retain key filters)
-                    if len(pcols) == 1:
-                        p_all = f"SELECT DISTINCT {qident(pcols[0])} AS bid FROM {qident(parent_table)}"
-                    else:
-                        p_all = f"SELECT DISTINCT {_key_expr(pcols)} AS bid FROM {qident(parent_table)}"
-                    if parent_filter_sqls:
-                        p_all = f"{p_all} WHERE " + " AND ".join(parent_filter_sqls)
-                        parent_ids = [r["bid"] for r in cur.execute(p_all, parent_filter_values_tuple)]
-                    else:
-                        parent_ids = [r["bid"] for r in cur.execute(p_all)]
-
-                    if len(ccols) == 1:
-                        c_all = f"SELECT DISTINCT {qident(ccols[0])} AS bid FROM {qident(child_table)}"
-                    else:
-                        c_all = f"SELECT DISTINCT {_key_expr(ccols)} AS bid FROM {qident(child_table)}"
-                    if has_child and child_filter_sqls:
-                        c_all = f"{c_all} WHERE " + " AND ".join(child_filter_sqls)
-                        child_ids = [r["bid"] for r in cur.execute(c_all, child_filter_values_tuple)]
-                    else:
-                        child_ids = [r["bid"] for r in cur.execute(c_all)]
-                    all_ids = sorted({str(x) for x in (parent_ids + child_ids)})
-
-                BATCH_IDS = all_ids
+            discovery_summary = discover_batches_excel(
+                db_path=DB_PATH,
+                contract=OBJ,
+                start_date=START_DATE,
+                end_date=END_DATE,
+                key_values=key_values_map,
+            )
+            BATCH_IDS = [str(batch["id"]) for batch in discovery_summary.get("batches", [])]
         else:
             BATCH_IDS = existing
     else:
@@ -1894,15 +1991,21 @@ def fill_and_print(
     child_totals_cols = {col: list(tokens) for col, tokens in totals_by_table.get(child_table, {}).items()}
     # ---- Render all batches ----
     rendered_blocks = []
+    generator_header_replacements: dict[str, str] | None = None
     if generator_results is not None:
         block_html = prototype_block
 
         header_rows = generator_results.get("header") or []
         header_row = header_rows[0] if header_rows else {}
+        header_token_values: dict[str, str] = {}
         for t in HEADER_TOKENS:
             if t in header_row:
                 value = header_row[t]
-                block_html = sub_token(block_html, t, format_token_value(t, value))
+                formatted_value = format_token_value(t, value)
+                block_html = sub_token(block_html, t, formatted_value)
+                header_token_values[t] = formatted_value
+        if header_token_values:
+            generator_header_replacements = header_token_values
 
         allowed_row_tokens = {t for t in PLACEHOLDER_TO_COL.keys() if t not in TOTALS} - set(HEADER_TOKENS)
         rows_data = generator_results.get("rows") or []
@@ -1917,10 +2020,11 @@ def fill_and_print(
                     row_columns_template = [
                         _extract_col_name(PLACEHOLDER_TO_COL.get(tok)) or "" for tok in row_tokens_in_template
                     ]
+                    render_columns = list(row_tokens_in_template)
                     filtered_rows = _filter_rows_for_render(
                         rows_data,
                         row_tokens_in_template,
-                        row_columns_template,
+                        render_columns,
                         treat_all_as_data=bool(__force_single),
                     )
                     filtered_rows = _prune_placeholder_rows(filtered_rows, row_tokens_in_template)
@@ -1948,10 +2052,11 @@ def fill_and_print(
                     row_columns_template = [
                         _extract_col_name(PLACEHOLDER_TO_COL.get(tok)) or "" for tok in row_tokens_in_template
                     ]
+                    render_columns = list(row_tokens_in_template)
                     filtered_rows = _filter_rows_for_render(
                         rows_data,
                         row_tokens_in_template,
-                        row_columns_template,
+                        render_columns,
                         treat_all_as_data=bool(__force_single),
                     )
                     filtered_rows = _prune_placeholder_rows(filtered_rows, row_tokens_in_template)
@@ -2300,6 +2405,10 @@ def fill_and_print(
         for token, target in total_token_to_target.items():
             table_name, col_name = target
             value = overall_formatted.get((table_name, col_name), last_totals_per_token.get(token, "0"))
+            html_multi = sub_token(html_multi, token, value)
+
+    if generator_header_replacements:
+        for token, value in generator_header_replacements.items():
             html_multi = sub_token(html_multi, token, value)
 
     # Apply literals globally

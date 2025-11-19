@@ -68,7 +68,7 @@ class FakeResponse:
 
 def test_validate_generator_sql_pack_schema():
     valid_payload = {
-        "dialect": "sqlite",
+        "dialect": "duckdb",
         "script": "SELECT 1;",
         "entrypoints": {"header": "SELECT 1", "rows": "SELECT 1", "totals": "SELECT 1"},
         "params": {"required": ["from_date", "to_date"], "optional": []},
@@ -77,7 +77,13 @@ def test_validate_generator_sql_pack_schema():
     validate_generator_sql_pack(valid_payload)
 
     with pytest.raises(SchemaValidationError):
-        validate_generator_sql_pack({"dialect": "sqlite"})
+        validate_generator_sql_pack({"dialect": "duckdb"})
+
+    with pytest.raises(SchemaValidationError) as excinfo:
+        invalid = dict(valid_payload)
+        invalid["dialect"] = "sqlite"
+        validate_generator_sql_pack(invalid)
+    assert "duckdb" in str(excinfo.value).lower()
 
 
 def test_validate_generator_output_schemas_schema():
@@ -120,7 +126,7 @@ def test_build_generator_assets_detects_column_mismatch(monkeypatch, tmp_path):
         payload = {
             "contract": step4_output["contract"],
             "sql_pack": {
-                "dialect": "sqlite",
+                "dialect": "duckdb",
                 "script": "SELECT 1 AS h1;\nSELECT 1 AS r1;\nSELECT 1 AS t1;",
                 "entrypoints": {
                     "header": "SELECT 1 AS wrong_alias",
@@ -252,7 +258,7 @@ FROM agg;""",
 
     assert result["invalid"] is False
     assert result["needs_user_fix"] == []
-    assert result["dialect"] == "sqlite"
+    assert result["dialect"] == "duckdb"
     assert result["params"]["required"] == ["from_date", "to_date", "plant_name", "location", "recipe_code"]
     assert result["params"]["optional"] == []
 

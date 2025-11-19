@@ -410,7 +410,7 @@ def test_mapping_allowlist_allows_params_reference():
 def test_mapping_allowlist_rejects_unknown_format():
     errors = AutoMapInline._mapping_allowlist_errors({"weird": "some_value"}, ["recipes.bin1_sp"])
     assert errors
-    assert "recognizable SQL expression" in errors[0]
+    assert "DuckDB SQL expression" in errors[0]
 
 
 def test_mapping_allowlist_allows_sql_fragment_without_columns():

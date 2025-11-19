@@ -4,12 +4,12 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import sqlite3
 import tempfile
 import uuid
 from pathlib import Path
 from urllib.parse import urlparse
 
+from ..dataframes import SQLiteDataFrameLoader
 from ..state import state_store
 
 STORAGE = os.path.join(tempfile.gettempdir(), "neura_connections.jsonl")
@@ -79,15 +79,15 @@ def resolve_db_path(connection_id: str | None, db_url: str | None, db_path: str 
 
 
 def verify_sqlite(path: Path) -> None:
-    """Raise on missing file or connection failure."""
-    if not Path(path).exists():
+    """Raise when the backing SQLite file cannot be materialized into DataFrames."""
+    db_file = Path(path)
+    if not db_file.exists():
         raise FileNotFoundError(f"SQLite DB not found: {path}")
     try:
-        con = sqlite3.connect(str(path), timeout=2)
-        con.execute("SELECT name FROM sqlite_master WHERE type='table' LIMIT 1;").fetchone()
-        con.close()
-    except Exception as e:
-        raise RuntimeError(f"SQLite error: {e}")
+        loader = SQLiteDataFrameLoader(db_file)
+        loader.table_names()
+    except Exception as exc:  # pragma: no cover - surfaced to API caller
+        raise RuntimeError(f"SQLite->DataFrame load error: {exc}") from exc
 
 
 def save_connection(cfg: dict) -> str:

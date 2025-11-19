@@ -161,10 +161,34 @@ export const useAppStore = create((set, get) => ({
         lastApprovedTemplate: nextLastApproved,
       }
     }),
+  updateTemplate: (templateId, updater) =>
+    set((state) => {
+      if (!templateId || typeof updater !== 'function') return {}
+      let changed = false
+      const templates = state.templates.map((tpl) => {
+        if (tpl?.id !== templateId) {
+          return tpl
+        }
+        const next = updater(tpl) || tpl
+        if (next !== tpl) {
+          changed = true
+          return next
+        }
+        return tpl
+      })
+      return changed ? { templates } : {}
+    }),
 
   // Last approved template summary
   lastApprovedTemplate: null,
   setLastApprovedTemplate: (tpl) => set({ lastApprovedTemplate: tpl }),
+
+  // Unified template catalog (company + starter)
+  templateCatalog: [],
+  setTemplateCatalog: (items) =>
+    set({
+      templateCatalog: Array.isArray(items) ? items : [],
+    }),
 
   runs: [],
   setRuns: (runs) => set({ runs }),

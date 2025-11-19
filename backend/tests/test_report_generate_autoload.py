@@ -62,7 +62,7 @@ def _write_generator_bundle(
     meta = {
         "entrypoints": entrypoints,
         "params": {"required": ["from_date", "to_date"], "optional": ["recipe_code"]},
-        "dialect": "sqlite",
+        "dialect": "duckdb",
         "needs_user_fix": [],
         "invalid": False,
         "summary": {},

@@ -11,23 +11,31 @@ import {
   Chip,
   LinearProgress,
   Tooltip,
+  IconButton,
+  Badge,
 } from '@mui/material'
 import { QueryClient, QueryClientProvider, useIsFetching } from '@tanstack/react-query'
 import { ToastProvider } from './components/ToastProvider.jsx'
 import HeartbeatBadge from './components/HeartbeatBadge.jsx'
+import JobsPanel from './components/JobsPanel.jsx'
 import theme from './theme.js'
 import { useBootstrapState } from './hooks/useBootstrapState.js'
 import { useAppStore } from './store/useAppStore.js'
 import appLogo from './assets/app-logo.png'
+import WorkHistoryOutlinedIcon from '@mui/icons-material/WorkHistoryOutlined'
+import { useJobsList } from './hooks/useJobs.js'
 
 const SetupPage = lazy(() => import('./pages/Setup/SetupPage.jsx'))
 const GeneratePage = lazy(() => import('./pages/Generate/GeneratePage.jsx'))
+const TemplateEditorPage = lazy(() => import('./pages/Generate/TemplateEditor.jsx'))
 
-function AppHeader() {
+export function AppHeader({ onJobsOpen }) {
   const fetchCount = useIsFetching()
   const connection = useAppStore((state) => state.connection)
   const setupNav = useAppStore((state) => state.setupNav)
   const [logoFailed, setLogoFailed] = useState(false)
+  const { data: activeJobs } = useJobsList({ activeOnly: true, limit: 10 })
+  const activeJobCount = activeJobs?.jobs?.length || 0
 
   const status = connection?.status || 'unknown'
   const heartbeatStatus =
@@ -202,16 +210,13 @@ function AppHeader() {
             {connection?.name ? (
               <Chip
                 size="small"
-                label={connection.name}
+                color="primary"
                 variant="outlined"
+                label={connection.name}
                 sx={{
+                  maxWidth: 220,
                   fontWeight: 600,
-                  maxWidth: 180,
-                  '& .MuiChip-label': {
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                  },
+                  textTransform: 'none',
                 }}
               />
             ) : null}
@@ -219,9 +224,21 @@ function AppHeader() {
               size="small"
               color="primary"
               variant="outlined"
-              label={`Step · ${stepLabel}`}
+              label={`Step - ${stepLabel}`}
               sx={{ fontWeight: 600, textTransform: 'none' }}
             />
+            <Tooltip title="Background jobs" arrow placement="bottom">
+              <IconButton
+                color="primary"
+                onClick={onJobsOpen}
+                aria-label="Open jobs panel"
+                sx={{ border: '1px solid', borderColor: 'divider' }}
+              >
+                <Badge color="secondary" badgeContent={activeJobCount} max={9}>
+                  <WorkHistoryOutlinedIcon fontSize="small" />
+                </Badge>
+              </IconButton>
+            </Tooltip>
           </Box>
         </Container>
       </Toolbar>
@@ -254,11 +271,13 @@ function AppProviders({ children }) {
 
 export default function App() {
   useBootstrapState()
+  const [jobsOpen, setJobsOpen] = useState(false)
   return (
     <BrowserRouter>
       <AppProviders>
         <ToastProvider>
-          <AppHeader />
+          <AppHeader onJobsOpen={() => setJobsOpen(true)} />
+          <JobsPanel open={jobsOpen} onClose={() => setJobsOpen(false)} />
           <Box
             component="a"
             href="#main-content"
@@ -322,6 +341,7 @@ export default function App() {
                 <Routes>
                   <Route path="/" element={<SetupPage />} />
                   <Route path="/generate" element={<GeneratePage />} />
+                  <Route path="/templates/:templateId/edit" element={<TemplateEditorPage />} />
                   <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
               </Suspense>
@@ -332,3 +352,18 @@ export default function App() {
     </BrowserRouter>
   )
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

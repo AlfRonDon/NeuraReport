@@ -8,7 +8,7 @@ import threading
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, Iterable, Mapping, Optional
+from typing import Any, Dict, Iterable, Mapping, Optional, Sequence
 
 from cryptography.fernet import Fernet, InvalidToken
 
@@ -20,6 +20,20 @@ def _now_iso() -> str:
 
 
 def _normalize_mapping_keys(values: Optional[Iterable[str]]) -> list[str]:
+    if not values:
+        return []
+    seen: set[str] = set()
+    normalized: list[str] = []
+    for raw in values:
+        text = str(raw or "").strip()
+        if not text or text in seen:
+            continue
+        seen.add(text)
+        normalized.append(text)
+    return normalized
+
+
+def _normalize_email_list(values: Optional[Iterable[str]]) -> list[str]:
     if not values:
         return []
     seen: set[str] = set()
@@ -104,7 +118,14 @@ class StateStore:
     # state IO helpers
     # ------------------------------------------------------------------
     def _default_state(self) -> dict:
-        return {"connections": {}, "templates": {}, "last_used": {}}
+        return {
+            "connections": {},
+            "templates": {},
+            "last_used": {},
+            "schedules": {},
+            "jobs": {},
+            "saved_charts": {},
+        }
 
     def _read_state(self) -> dict:
         if not self._state_path.exists():
@@ -116,6 +137,9 @@ class StateStore:
         raw.setdefault("connections", {})
         raw.setdefault("templates", {})
         raw.setdefault("last_used", {})
+        raw.setdefault("schedules", {})
+        raw.setdefault("jobs", {})
+        raw.setdefault("saved_charts", {})
         return raw
 
     def _write_state(self, state: dict) -> None:
@@ -349,6 +373,10 @@ class StateStore:
                 last_used["template_id"] = None
                 last_used["updated_at"] = _now_iso()
                 state["last_used"] = last_used
+            saved_charts = state.get("saved_charts") or {}
+            drop_ids = [sid for sid, rec in saved_charts.items() if rec.get("template_id") == template_id]
+            for sid in drop_ids:
+                saved_charts.pop(sid, None)
             self._write_state(state)
             return True
 
@@ -434,6 +462,551 @@ class StateStore:
             "artifacts": {k: v for k, v in artifacts.items() if v},
             "generator": generator_meta,
         }
+
+    def _sanitize_saved_chart(self, rec: Optional[dict]) -> Optional[dict]:
+        if not rec:
+            return None
+        spec = rec.get("spec") or {}
+        sanitized_spec = json.loads(json.dumps(spec))
+        return {
+            "id": rec.get("id"),
+            "template_id": rec.get("template_id"),
+            "name": rec.get("name"),
+            "spec": sanitized_spec,
+            "created_at": rec.get("created_at"),
+            "updated_at": rec.get("updated_at"),
+        }
+
+    def list_saved_charts(self, template_id: str) -> list[dict]:
+        with self._lock:
+            state = self._read_state()
+            charts = [
+                self._sanitize_saved_chart(rec)
+                for rec in state.get("saved_charts", {}).values()
+                if rec and rec.get("template_id") == template_id
+            ]
+            return [rec for rec in charts if rec]
+
+    def get_saved_chart(self, chart_id: str) -> Optional[dict]:
+        with self._lock:
+            state = self._read_state()
+            rec = (state.get("saved_charts") or {}).get(chart_id)
+            return self._sanitize_saved_chart(rec)
+
+    def create_saved_chart(self, template_id: str, name: str, spec: Mapping[str, Any]) -> dict:
+        now = _now_iso()
+        chart_id = str(uuid.uuid4())
+        spec_payload = json.loads(json.dumps(spec))
+        with self._lock:
+            state = self._read_state()
+            record = {
+                "id": chart_id,
+                "template_id": template_id,
+                "name": name,
+                "spec": spec_payload,
+                "created_at": now,
+                "updated_at": now,
+            }
+            state.setdefault("saved_charts", {})
+            state["saved_charts"][chart_id] = record
+            self._write_state(state)
+            return self._sanitize_saved_chart(record)
+
+    def update_saved_chart(
+        self,
+        chart_id: str,
+        *,
+        name: Optional[str] = None,
+        spec: Optional[Mapping[str, Any]] = None,
+    ) -> Optional[dict]:
+        now = _now_iso()
+        with self._lock:
+            state = self._read_state()
+            record = (state.get("saved_charts") or {}).get(chart_id)
+            if not record:
+                return None
+            if name is not None:
+                record["name"] = name
+            if spec is not None:
+                record["spec"] = json.loads(json.dumps(spec))
+            record["updated_at"] = now
+            state["saved_charts"][chart_id] = record
+            self._write_state(state)
+            return self._sanitize_saved_chart(record)
+
+    def delete_saved_chart(self, chart_id: str) -> bool:
+        with self._lock:
+            state = self._read_state()
+            saved = state.get("saved_charts") or {}
+            removed = saved.pop(chart_id, None)
+            if not removed:
+                return False
+            self._write_state(state)
+            return True
+
+    def _sanitize_schedule(self, rec: Optional[dict]) -> Optional[dict]:
+        if not rec:
+            return None
+        sanitized = dict(rec)
+        sanitized["email_recipients"] = _normalize_email_list(rec.get("email_recipients"))
+        sanitized["email_subject"] = rec.get("email_subject")
+        sanitized["email_message"] = rec.get("email_message")
+        key_values = rec.get("key_values")
+        sanitized["key_values"] = dict(key_values or {})
+        batches = rec.get("batch_ids")
+        if isinstance(batches, (list, tuple)):
+            sanitized["batch_ids"] = [str(b) for b in batches if str(b).strip()]
+        else:
+            sanitized["batch_ids"] = []
+        sanitized["last_run_artifacts"] = dict(rec.get("last_run_artifacts") or {})
+        return sanitized
+
+    def list_schedules(self) -> list[dict]:
+        with self._lock:
+            state = self._read_state()
+            return [self._sanitize_schedule(rec) for rec in state["schedules"].values() if rec]
+
+    def get_schedule(self, schedule_id: str) -> Optional[dict]:
+        with self._lock:
+            state = self._read_state()
+            rec = state["schedules"].get(schedule_id)
+            return self._sanitize_schedule(rec)
+
+    def create_schedule(
+        self,
+        *,
+        name: Optional[str],
+        template_id: str,
+        template_name: str,
+        template_kind: str,
+        connection_id: Optional[str],
+        connection_name: Optional[str],
+        start_date: str,
+        end_date: str,
+        key_values: Optional[Mapping[str, Any]],
+        batch_ids: Optional[Iterable[str]],
+        docx: bool,
+        xlsx: bool,
+        email_recipients: Optional[Iterable[str]],
+        email_subject: Optional[str],
+        email_message: Optional[str],
+        frequency: str,
+        interval_minutes: int,
+        next_run_at: str,
+        first_run_at: str,
+        active: bool = True,
+    ) -> dict:
+        schedule_id = str(uuid.uuid4())
+        now = _now_iso()
+        with self._lock:
+            state = self._read_state()
+            record = {
+                "id": schedule_id,
+                "name": (name or "").strip() or template_name,
+                "template_id": template_id,
+                "template_name": template_name,
+                "template_kind": template_kind,
+                "connection_id": connection_id,
+                "connection_name": connection_name,
+                "start_date": start_date,
+                "end_date": end_date,
+                "key_values": dict(key_values or {}),
+                "batch_ids": [str(b) for b in (batch_ids or []) if str(b).strip()],
+                "docx": bool(docx),
+                "xlsx": bool(xlsx),
+                "email_recipients": _normalize_email_list(email_recipients),
+                "email_subject": (email_subject or "").strip() or None,
+                "email_message": (email_message or "").strip() or None,
+                "frequency": frequency,
+                "interval_minutes": max(int(interval_minutes or 0), 1),
+                "next_run_at": next_run_at,
+                "first_run_at": first_run_at,
+                "last_run_at": None,
+                "last_run_status": None,
+                "last_run_error": None,
+                "last_run_artifacts": {},
+                "active": bool(active),
+                "created_at": now,
+                "updated_at": now,
+            }
+            state["schedules"][schedule_id] = record
+            self._write_state(state)
+            return self._sanitize_schedule(record)
+
+    def delete_schedule(self, schedule_id: str) -> bool:
+        with self._lock:
+            state = self._read_state()
+            removed = state["schedules"].pop(schedule_id, None)
+            if not removed:
+                return False
+            self._write_state(state)
+            return True
+
+    def update_schedule(self, schedule_id: str, **changes: Any) -> Optional[dict]:
+        with self._lock:
+            state = self._read_state()
+            record = state["schedules"].get(schedule_id)
+            if not record:
+                return None
+            for key, value in changes.items():
+                if key == "email_recipients":
+                    record[key] = _normalize_email_list(value)
+                elif key in {"email_subject", "email_message"}:
+                    record[key] = (value or "").strip() or None
+                elif key == "key_values":
+                    record[key] = dict(value or {})
+                elif key == "batch_ids":
+                    record[key] = [str(b) for b in (value or []) if str(b).strip()]
+                else:
+                    record[key] = value
+            record["updated_at"] = _now_iso()
+            state["schedules"][schedule_id] = record
+            self._write_state(state)
+            return self._sanitize_schedule(record)
+
+    def record_schedule_run(
+        self,
+        schedule_id: str,
+        *,
+        started_at: str,
+        finished_at: str,
+        status: str,
+        next_run_at: Optional[str],
+        artifacts: Optional[Mapping[str, Any]] = None,
+        error: Optional[str] = None,
+    ) -> Optional[dict]:
+        with self._lock:
+            state = self._read_state()
+            record = state["schedules"].get(schedule_id)
+            if not record:
+                return None
+            record["last_run_at"] = finished_at
+            record["last_run_status"] = status
+            record["last_run_error"] = error
+            record["last_run_artifacts"] = dict(artifacts or {})
+            if next_run_at:
+                record["next_run_at"] = next_run_at
+            record["updated_at"] = _now_iso()
+            state["schedules"][schedule_id] = record
+            self._write_state(state)
+            return self._sanitize_schedule(record)
+
+    # ------------------------------------------------------------------
+    # last-used helpers
+    # ------------------------------------------------------------------
+    # Jobs helpers
+    # ------------------------------------------------------------------
+    def _sanitize_job_step(self, step: Optional[dict]) -> Optional[dict]:
+        if not step:
+            return None
+        return {
+            "id": step.get("id"),
+            "name": step.get("name"),
+            "label": step.get("label") or step.get("name"),
+            "status": step.get("status") or "queued",
+            "progress": step.get("progress"),
+            "createdAt": step.get("created_at"),
+            "startedAt": step.get("started_at"),
+            "finishedAt": step.get("finished_at"),
+            "error": step.get("error"),
+        }
+
+    def _sanitize_job(self, rec: Optional[dict]) -> Optional[dict]:
+        if not rec:
+            return None
+        steps_raw = rec.get("steps") or []
+        steps: list[dict] = []
+        for step in steps_raw:
+            sanitized = self._sanitize_job_step(step)
+            if sanitized:
+                steps.append(sanitized)
+        return {
+            "id": rec.get("id"),
+            "type": rec.get("type") or "run_report",
+            "status": rec.get("status") or "queued",
+            "templateId": rec.get("template_id"),
+            "templateName": rec.get("template_name"),
+            "templateKind": rec.get("template_kind") or "pdf",
+            "connectionId": rec.get("connection_id"),
+            "scheduleId": rec.get("schedule_id"),
+            "correlationId": rec.get("correlation_id"),
+            "progress": rec.get("progress") or 0,
+            "error": rec.get("error"),
+            "result": dict(rec.get("result") or {}),
+            "createdAt": rec.get("created_at"),
+            "queuedAt": rec.get("queued_at"),
+            "startedAt": rec.get("started_at"),
+            "finishedAt": rec.get("finished_at"),
+            "updatedAt": rec.get("updated_at"),
+            "steps": steps,
+        }
+
+    def create_job(
+        self,
+        *,
+        job_type: str,
+        template_id: Optional[str] = None,
+        connection_id: Optional[str] = None,
+        template_name: Optional[str] = None,
+        template_kind: Optional[str] = None,
+        schedule_id: Optional[str] = None,
+        correlation_id: Optional[str] = None,
+        steps: Optional[Iterable[Mapping[str, Any]]] = None,
+        meta: Optional[Mapping[str, Any]] = None,
+    ) -> dict:
+        job_id = str(uuid.uuid4())
+        now = _now_iso()
+        with self._lock:
+            state = self._read_state()
+            templates = state.get("templates") or {}
+            tpl_record = templates.get(template_id) or {}
+            tpl_name = template_name or tpl_record.get("name") or template_id
+            tpl_kind = template_kind or tpl_record.get("kind") or "pdf"
+            step_records: list[dict] = []
+            for raw in steps or []:
+                name_raw = raw.get("name") if isinstance(raw, Mapping) else None
+                name = str(name_raw or "").strip()
+                if not name:
+                    continue
+                step_id = str(raw.get("id") or uuid.uuid4())
+                label_raw = raw.get("label") if isinstance(raw, Mapping) else None
+                label = str(label_raw or "").strip() or name
+                status_raw = raw.get("status") if isinstance(raw, Mapping) else None
+                status = (str(status_raw or "") or "queued").strip().lower() or "queued"
+                progress_raw = raw.get("progress") if isinstance(raw, Mapping) else None
+                try:
+                    progress_val = float(progress_raw)
+                except (TypeError, ValueError):
+                    progress_val = 0.0
+                step_records.append(
+                    {
+                        "id": step_id,
+                        "name": name,
+                        "label": label,
+                        "status": status,
+                        "progress": max(0.0, min(progress_val, 100.0)),
+                        "created_at": now,
+                        "started_at": None,
+                        "finished_at": None,
+                        "error": None,
+                    }
+                )
+            jobs = state.get("jobs") or {}
+            record = {
+                "id": job_id,
+                "type": str(job_type or "run_report"),
+                "template_id": template_id,
+                "template_name": tpl_name,
+                "template_kind": tpl_kind,
+                "connection_id": connection_id,
+                "schedule_id": schedule_id,
+                "correlation_id": correlation_id,
+                "status": "queued",
+                "progress": 0.0,
+                "error": None,
+                "result": {},
+                "steps": step_records,
+                "created_at": now,
+                "queued_at": now,
+                "started_at": None,
+                "finished_at": None,
+                "updated_at": now,
+                "meta": dict(meta or {}),
+            }
+            jobs[job_id] = record
+            state["jobs"] = jobs
+            self._write_state(state)
+            sanitized = self._sanitize_job(record)
+            assert sanitized is not None
+            return sanitized
+
+    def list_jobs(
+        self,
+        *,
+        statuses: Optional[Iterable[str]] = None,
+        types: Optional[Iterable[str]] = None,
+        limit: int = 50,
+        active_only: bool = False,
+    ) -> list[dict]:
+        with self._lock:
+            state = self._read_state()
+            jobs = list((state.get("jobs") or {}).values())
+            # newest first
+            jobs.sort(key=lambda rec: rec.get("created_at") or "", reverse=True)
+            status_filter = {str(s).strip().lower() for s in (statuses or []) if str(s).strip()}
+            type_filter = {str(t).strip() for t in (types or []) if str(t).strip()}
+            out: list[dict] = []
+            for rec in jobs:
+                status_raw = rec.get("status") or ""
+                status_norm = str(status_raw).strip().lower()
+                if active_only and status_norm in {"succeeded", "failed", "cancelled"}:
+                    continue
+                if status_filter and status_norm not in status_filter:
+                    continue
+                type_raw = rec.get("type") or ""
+                if type_filter and str(type_raw) not in type_filter:
+                    continue
+                sanitized = self._sanitize_job(rec)
+                if sanitized:
+                    out.append(sanitized)
+                if limit and len(out) >= limit:
+                    break
+            return out
+
+    def get_job(self, job_id: str) -> Optional[dict]:
+        with self._lock:
+            state = self._read_state()
+            rec = (state.get("jobs") or {}).get(job_id)
+            return self._sanitize_job(rec)
+
+    def _update_job_record(self, job_id: str, mutator) -> Optional[dict]:
+        with self._lock:
+            state = self._read_state()
+            jobs = state.get("jobs") or {}
+            record = jobs.get(job_id)
+            if not record:
+                return None
+            changed = mutator(record)
+            if not changed:
+                # still touch updated_at for visibility
+                record["updated_at"] = _now_iso()
+            jobs[job_id] = record
+            state["jobs"] = jobs
+            self._write_state(state)
+            return self._sanitize_job(record)
+
+    def record_job_start(self, job_id: str) -> Optional[dict]:
+        def mutator(rec: dict) -> bool:
+            now = _now_iso()
+            updated = False
+            if not rec.get("started_at"):
+                rec["started_at"] = now
+                updated = True
+            if rec.get("status") != "running":
+                rec["status"] = "running"
+                updated = True
+            if rec.get("progress") is None:
+                rec["progress"] = 0.0
+            rec["updated_at"] = now
+            return updated
+
+        return self._update_job_record(job_id, mutator)
+
+    def record_job_progress(self, job_id: str, progress: float) -> Optional[dict]:
+        try:
+            value = float(progress)
+        except (TypeError, ValueError):
+            value = 0.0
+        clamped = max(0.0, min(value, 100.0))
+
+        def mutator(rec: dict) -> bool:
+            now = _now_iso()
+            prev = rec.get("progress")
+            if prev is not None and float(prev) == clamped:
+                rec["updated_at"] = now
+                return False
+            rec["progress"] = clamped
+            rec["updated_at"] = now
+            return True
+
+        return self._update_job_record(job_id, mutator)
+
+    def record_job_completion(
+        self,
+        job_id: str,
+        *,
+        status: str,
+        error: Optional[str] = None,
+        result: Optional[Mapping[str, Any]] = None,
+    ) -> Optional[dict]:
+        status_norm = (status or "").strip().lower()
+        if status_norm not in {"succeeded", "failed", "cancelled"}:
+            status_norm = "failed"
+
+        def mutator(rec: dict) -> bool:
+            now = _now_iso()
+            changed = False
+            if rec.get("status") != status_norm:
+                rec["status"] = status_norm
+                changed = True
+            if not rec.get("finished_at"):
+                rec["finished_at"] = now
+                changed = True
+            if status_norm == "succeeded" and (rec.get("progress") or 0) < 100:
+                rec["progress"] = 100.0
+                changed = True
+            if error is not None:
+                rec["error"] = str(error)
+                changed = True
+            if result is not None:
+                rec["result"] = dict(result)
+                changed = True
+            rec["updated_at"] = now
+            return changed
+
+        return self._update_job_record(job_id, mutator)
+
+    def record_job_step(
+        self,
+        job_id: str,
+        name: str,
+        *,
+        status: Optional[str] = None,
+        error: Optional[str] = None,
+        progress: Optional[float] = None,
+        label: Optional[str] = None,
+    ) -> Optional[dict]:
+        step_name = (name or "").strip()
+        if not step_name:
+            return None
+        status_norm = (status or "").strip().lower() if status is not None else None
+
+        def mutator(rec: dict) -> bool:
+            now = _now_iso()
+            steps = list(rec.get("steps") or [])
+            target = None
+            for step in steps:
+                if step.get("name") == step_name:
+                    target = step
+                    break
+            if target is None:
+                target = {
+                    "id": str(uuid.uuid4()),
+                    "name": step_name,
+                    "label": label or step_name,
+                    "status": status_norm or "queued",
+                    "progress": 0.0,
+                    "created_at": now,
+                    "started_at": None,
+                    "finished_at": None,
+                    "error": None,
+                }
+                steps.append(target)
+            else:
+                if label is not None:
+                    target["label"] = label
+                if status_norm is not None:
+                    previous_status = str(target.get("status") or "").strip().lower()
+                    target["status"] = status_norm
+                    if status_norm == "running" and not target.get("started_at"):
+                        target["started_at"] = now
+                    if status_norm in {"succeeded", "failed", "cancelled"} and not target.get(
+                        "finished_at"
+                    ):
+                        target["finished_at"] = now
+                if error is not None:
+                    target["error"] = str(error)
+                if progress is not None:
+                    try:
+                        value = float(progress)
+                    except (TypeError, ValueError):
+                        value = 0.0
+                    target["progress"] = max(0.0, min(value, 100.0))
+            rec["steps"] = steps
+            rec["updated_at"] = now
+            return True
+
+        return self._update_job_record(job_id, mutator)
 
     # ------------------------------------------------------------------
     # last-used helpers

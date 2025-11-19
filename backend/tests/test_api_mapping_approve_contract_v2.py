@@ -198,7 +198,7 @@ def test_mapping_approve_emits_contract_stage(monkeypatch, tmp_path, client):
         final_template_html: str,
         reference_pdf_image,
         catalog_allowlist,
-        dialect: str = "sqlite",
+        dialect: str = "duckdb",
         params_spec=None,
         sample_params=None,
         force_rebuild: bool = False,

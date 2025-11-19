@@ -706,7 +706,7 @@ class ContractAdapter:
         params_optional = sorted(set(self._optional_filters.keys()) | set(self._param_tokens))
 
         return {
-            "dialect": "sqlite",
+            "dialect": "duckdb",
             "script": script,
             "entrypoints": entrypoints,
             "params": {

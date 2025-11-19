@@ -481,23 +481,6 @@ def html_file_to_docx(
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    structured = _fallback_docx_from_tables(html_text, output_path, body_font_scale=body_font_scale)
-    if structured:
-        if landscape:
-            _enforce_landscape_layout(output_path)
-        logger.info(
-            "docx_export_success",
-            extra={
-                "event": "docx_export_success",
-                "html_path": str(html_path),
-                "docx_path": str(output_path),
-                "landscape": landscape,
-                "font_scale": body_font_scale,
-                "strategy": "structured",
-            },
-        )
-        return output_path
-
     html_with_inline = _inline_report_styles(html_text)
     html_for_docx = _apply_body_font_scale(_strip_style_blocks(html_with_inline), body_font_scale)
 
@@ -532,6 +515,23 @@ def html_file_to_docx(
                 },
             )
             return output_path
+
+    structured = _fallback_docx_from_tables(html_text, output_path, body_font_scale=body_font_scale)
+    if structured:
+        if landscape:
+            _enforce_landscape_layout(output_path)
+        logger.info(
+            "docx_export_success",
+            extra={
+                "event": "docx_export_success",
+                "html_path": str(html_path),
+                "docx_path": str(output_path),
+                "landscape": landscape,
+                "font_scale": body_font_scale,
+                "strategy": "structured",
+            },
+        )
+        return output_path
 
     logger.warning(
         "docx_export_unavailable",

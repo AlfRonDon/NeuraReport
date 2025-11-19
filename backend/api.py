@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+import concurrent.futures
 import contextlib
 import hashlib
 import json
@@ -9,22 +10,24 @@ import logging
 import os
 import re
 import shutil
-import sqlite3
+from .app.services.dataframes import sqlite_shim as sqlite3
 import tempfile
 import time
 import uuid
 from email.utils import formatdate
 from pathlib import Path
-from typing import Any, ContextManager, Iterable, Iterator, Mapping, Optional
+from datetime import datetime, timezone
+from typing import Any, ContextManager, Iterable, Iterator, Mapping, Optional, Callable
 from urllib.parse import parse_qs, quote
 
-from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from .app.config import load_settings, log_settings
+from .app.env_loader import load_env_file
 
 # DB helpers
 from .app.services.connections.db_connection import (
@@ -40,6 +43,7 @@ from .app.services.contract.ContractBuilderV2 import (
 from .app.services.generator.GeneratorAssetsV1 import (
     GeneratorAssetsError,
     build_generator_assets_from_payload,
+    load_generator_assets_bundle,
 )
 from .app.services.mapping.auto_fill import (
     _compute_db_signature as _compute_db_signature_impl,
@@ -69,17 +73,29 @@ from .app.services.prompts.llm_prompts import (
 
 # Discovery helpers
 from .app.services.reports.discovery import discover_batches_and_counts
+from .app.services.dataframes.sqlite_loader import get_loader
 from .app.services.reports.discovery_excel import (
     discover_batches_and_counts as discover_batches_and_counts_excel,
+)
+from .app.services.reports.discovery_metrics import (
+    build_batch_field_catalog_and_stats,
+    build_batch_metrics,
 )
 from .app.services.reports.docx_export import html_file_to_docx, pdf_file_to_docx
 from .app.services.reports.xlsx_export import html_file_to_xlsx
 from .app.services.state import state_store
+from .app.services.templates.catalog import build_unified_template_catalog
 from .app.services.templates.layout_hints import get_layout_hints
+from .app.services.prompts.llm_prompts_templates import recommend_templates_from_catalog
+from .app.services.prompts.llm_prompts_charts import (
+    CHART_SUGGEST_PROMPT_VERSION,
+    build_chart_suggestions_prompt,
+)
 
 # Template building helpers (TemplateVerify.py)
 # isort: off
 from .app.services.templates.TemplateVerify import (
+    MODEL,
     pdf_to_pngs,
     rasterize_html_to_png as _template_rasterize_html_to_png,
     render_html_to_png,
@@ -88,6 +104,7 @@ from .app.services.templates.TemplateVerify import (
     request_initial_html,
     save_html,
     save_png as _template_save_png,
+    get_openai_client,
 )
 from .app.services.excel.ExcelVerify import xlsx_to_html_preview
 
@@ -103,17 +120,66 @@ from .app.services.utils import (
     write_artifact_manifest,
     write_json_atomic,
     write_text_atomic,
+    call_chat_completion,
+    strip_code_fences,
 )
+from .app.services.jobs.report_scheduler import ReportScheduler
 from .app.services.utils.artifacts import load_manifest
+from .app.services.utils.mailer import send_report_email
+from .app.services.utils.zip_tools import (
+    create_zip_from_dir,
+    extract_zip_to_dir,
+    detect_zip_root,
+)
+from .app.services.prompts.llm_prompts_template_edit import (
+    TEMPLATE_EDIT_PROMPT_VERSION,
+    build_template_edit_prompt,
+)
 
 # Keep a public alias so tests can monkeypatch api.rasterize_html_to_png.
+def _configure_error_log_handler(target_logger: logging.Logger | None = None) -> Path | None:
+    """
+    Attach a file handler that records backend errors for desktop/frontend debugging.
+    Path defaults to backend/logs/backend_errors.log but can be overridden via NEURA_ERROR_LOG.
+    """
+    target_logger = target_logger or logging.getLogger("neura.api")
+    log_target = os.getenv("NEURA_ERROR_LOG")
+    if log_target:
+        log_file = Path(log_target).expanduser()
+    else:
+        backend_dir = Path(__file__).resolve().parent
+        logs_dir = backend_dir / "logs"
+        logs_dir.mkdir(parents=True, exist_ok=True)
+        log_file = logs_dir / "backend_errors.log"
+
+    log_file.parent.mkdir(parents=True, exist_ok=True)
+    log_file.touch(exist_ok=True)
+
+    for handler in target_logger.handlers:
+        if isinstance(handler, logging.FileHandler) and getattr(handler, "baseFilename", "") == str(log_file):
+            return log_file
+
+    try:
+        handler = logging.FileHandler(log_file, encoding="utf-8")
+    except OSError:
+        return None
+
+    handler.setLevel(logging.ERROR)
+    handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s %(message)s"))
+    target_logger.addHandler(handler)
+    return log_file
+
+
 rasterize_html_to_png = _template_rasterize_html_to_png
 save_png = _template_save_png
 
 # ---------- App & CORS ----------
+load_env_file()
+
 logger = logging.getLogger("neura.api")
 SETTINGS = load_settings()
 log_settings(logger, SETTINGS)
+ERROR_LOG_PATH: Path | None = None
 app = FastAPI(title="NeuraReport API")
 
 app.add_middleware(
@@ -124,6 +190,292 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+SCHEDULER: ReportScheduler | None = None
+SCHEDULER_DISABLED = os.getenv("NEURA_SCHEDULER_DISABLED", "false").lower() == "true"
+
+_JOB_MAX_WORKERS = max(int(os.getenv("NEURA_JOB_MAX_WORKERS", "4") or "4"), 1)
+REPORT_JOB_EXECUTOR = concurrent.futures.ThreadPoolExecutor(
+    max_workers=_JOB_MAX_WORKERS,
+    thread_name_prefix="nr-job",
+)
+_JOB_TASKS: set[asyncio.Task] = set()
+
+
+def _track_background_task(task: asyncio.Task) -> None:
+    _JOB_TASKS.add(task)
+
+    def _cleanup(t: asyncio.Task) -> None:
+        _JOB_TASKS.discard(t)
+
+    task.add_done_callback(_cleanup)
+
+
+DEFAULT_JOB_STEP_PROGRESS = {
+    "dataLoad": 5.0,
+    "contractCheck": 15.0,
+    "renderPdf": 60.0,
+    "renderDocx": 75.0,
+    "renderXlsx": 85.0,
+    "finalize": 95.0,
+    "email": 100.0,
+}
+
+
+def _job_error_message(detail: Any) -> str:
+    if isinstance(detail, Mapping):
+        message = detail.get("message") or detail.get("detail")
+        if message:
+            return str(message)
+        return json.dumps(detail, ensure_ascii=False)
+    return str(detail)
+
+
+def _build_job_steps(payload: RunPayload, *, kind: str) -> list[dict[str, str]]:
+    steps: list[dict[str, str]] = [
+        {"name": "dataLoad", "label": "Load database"},
+        {"name": "contractCheck", "label": "Prepare contract"},
+        {"name": "renderPdf", "label": "Render PDF"},
+    ]
+    # DOCX rendering is effectively always attempted for PDF/Excel runs.
+    steps.append({"name": "renderDocx", "label": "Render DOCX"})
+    if kind == "excel" or bool(payload.xlsx):
+        steps.append({"name": "renderXlsx", "label": "Render XLSX"})
+    steps.append({"name": "finalize", "label": "Finalize artifacts"})
+    if _normalize_email_targets(payload.email_recipients):
+        steps.append({"name": "email", "label": "Send email"})
+    return steps
+
+
+def _step_progress_from_steps(steps: Iterable[Mapping[str, Any]]) -> dict[str, float]:
+    progress: dict[str, float] = {}
+    for step in steps:
+        name = str(step.get("name") or "").strip()
+        if not name:
+            continue
+        progress[name] = DEFAULT_JOB_STEP_PROGRESS.get(name, 0.0)
+    return progress
+
+
+class JobRunTracker:
+    def __init__(
+        self,
+        job_id: str | None,
+        *,
+        correlation_id: str | None = None,
+        step_progress: Optional[Mapping[str, float]] = None,
+    ) -> None:
+        self.job_id = job_id
+        self.correlation_id = correlation_id
+        self.step_progress = {k: float(v) for k, v in (step_progress or {}).items()}
+        self._step_names = set(self.step_progress.keys()) if self.step_progress else None
+
+    def _should_track(self, name: str) -> bool:
+        if not name:
+            return False
+        if self._step_names is None:
+            return True
+        return name in self._step_names
+
+    def has_step(self, name: str) -> bool:
+        return self._should_track(name)
+
+    def start(self) -> None:
+        if not self.job_id:
+            return
+        try:
+            state_store.record_job_start(self.job_id)
+        except Exception:
+            logger.exception(
+                "job_start_record_failed",
+                extra={"event": "job_start_record_failed", "job_id": self.job_id, "correlation_id": self.correlation_id},
+            )
+
+    def progress(self, value: float) -> None:
+        if not self.job_id:
+            return
+        try:
+            state_store.record_job_progress(self.job_id, value)
+        except Exception:
+            logger.exception(
+                "job_progress_record_failed",
+                extra={"event": "job_progress_record_failed", "job_id": self.job_id, "correlation_id": self.correlation_id},
+            )
+
+    def _record_step(
+        self,
+        name: str,
+        status: str,
+        *,
+        error: Optional[str] = None,
+        progress: Optional[float] = None,
+        label: Optional[str] = None,
+    ) -> None:
+        if not self.job_id or not self._should_track(name):
+            return
+        try:
+            state_store.record_job_step(
+                self.job_id,
+                name,
+                status=status,
+                error=error,
+                progress=progress,
+                label=label,
+            )
+        except Exception:
+            logger.exception(
+                "job_step_record_failed",
+                extra={
+                    "event": "job_step_record_failed",
+                    "job_id": self.job_id,
+                    "step": name,
+                    "correlation_id": self.correlation_id,
+                },
+            )
+
+    def step_running(self, name: str, *, label: Optional[str] = None) -> None:
+        self._record_step(name, "running", label=label)
+
+    def step_succeeded(self, name: str, *, progress: Optional[float] = None) -> None:
+        progress_value = progress if progress is not None else self.step_progress.get(name)
+        self._record_step(name, "succeeded")
+        if progress_value is not None:
+            self.progress(progress_value)
+
+    def step_failed(self, name: str, error: str) -> None:
+        self._record_step(name, "failed", error=str(error))
+
+    def succeed(self, result: Optional[Mapping[str, Any]]) -> None:
+        if not self.job_id:
+            return
+        self.progress(100.0)
+        try:
+            state_store.record_job_completion(self.job_id, status="succeeded", error=None, result=result)
+        except Exception:
+            logger.exception(
+                "job_completion_record_failed",
+                extra={"event": "job_completion_record_failed", "job_id": self.job_id, "correlation_id": self.correlation_id},
+            )
+
+    def fail(self, error: str, *, status: str = "failed") -> None:
+        if not self.job_id:
+            return
+        try:
+            state_store.record_job_completion(self.job_id, status=status, error=str(error), result=None)
+        except Exception:
+            logger.exception(
+                "job_completion_record_failed",
+                extra={"event": "job_completion_record_failed", "job_id": self.job_id, "correlation_id": self.correlation_id},
+            )
+
+
+def _run_report_job_sync(
+    job_id: str,
+    payload_data: Mapping[str, Any],
+    kind: str,
+    correlation_id: str,
+    step_progress: Mapping[str, float],
+) -> None:
+    tracker = JobRunTracker(job_id, correlation_id=correlation_id, step_progress=step_progress)
+    tracker.start()
+    try:
+        run_payload = RunPayload(**payload_data)
+    except Exception as exc:
+        tracker.fail(f"Invalid payload: {exc}")
+        logger.exception(
+            "report_job_payload_invalid",
+            extra={"event": "report_job_payload_invalid", "job_id": job_id, "error": str(exc)},
+        )
+        return
+    try:
+        result = _run_report_with_email(run_payload, kind=kind, correlation_id=correlation_id, job_tracker=tracker)
+    except HTTPException as exc:
+        tracker.fail(_job_error_message(exc.detail))
+        logger.exception(
+            "report_job_http_error",
+            extra={
+                "event": "report_job_http_error",
+                "job_id": job_id,
+                "template_id": run_payload.template_id,
+                "correlation_id": correlation_id,
+            },
+        )
+    except Exception as exc:
+        tracker.fail(str(exc))
+        logger.exception(
+            "report_job_failed",
+            extra={
+                "event": "report_job_failed",
+                "job_id": job_id,
+                "template_id": run_payload.template_id,
+                "correlation_id": correlation_id,
+            },
+        )
+    else:
+        tracker.succeed(result)
+
+
+def _schedule_report_job(
+    job_id: str,
+    payload_data: Mapping[str, Any],
+    kind: str,
+    correlation_id: str,
+    step_progress: Mapping[str, float],
+) -> None:
+    async def runner() -> None:
+        try:
+            await asyncio.get_running_loop().run_in_executor(
+                REPORT_JOB_EXECUTOR,
+                _run_report_job_sync,
+                job_id,
+                payload_data,
+                kind,
+                correlation_id,
+                step_progress,
+            )
+        except Exception:
+            logger.exception(
+                "report_job_task_failed",
+                extra={"event": "report_job_task_failed", "job_id": job_id, "correlation_id": correlation_id},
+            )
+
+    task = asyncio.create_task(runner())
+    _track_background_task(task)
+
+
+async def _queue_report_job(p: RunPayload, request: Request, *, kind: str) -> dict:
+    correlation_id = getattr(request.state, "correlation_id", None) or f"job-{uuid.uuid4().hex[:10]}"
+    steps = _build_job_steps(p, kind=kind)
+    template_rec = state_store.get_template_record(p.template_id) or {}
+    job_record = state_store.create_job(
+        job_type="run_report",
+        template_id=p.template_id,
+        connection_id=p.connection_id,
+        template_name=template_rec.get("name") or f"Template {p.template_id[:8]}",
+        template_kind=template_rec.get("kind") or kind,
+        schedule_id=p.schedule_id,
+        correlation_id=correlation_id,
+        steps=steps,
+        meta={
+            "start_date": p.start_date,
+            "end_date": p.end_date,
+            "docx": bool(p.docx),
+            "xlsx": bool(p.xlsx),
+        },
+    )
+    payload_data = p.dict()
+    step_progress = _step_progress_from_steps(steps)
+    _schedule_report_job(job_record["id"], payload_data, kind, correlation_id, step_progress)
+    logger.info(
+        "job_enqueued",
+        extra={
+            "event": "job_enqueued",
+            "job_id": job_record["id"],
+            "template_id": p.template_id,
+            "template_kind": kind,
+            "correlation_id": correlation_id,
+        },
+    )
+    return {"job_id": job_record["id"]}
 
 @app.middleware("http")
 async def correlation_middleware(request: Request, call_next):
@@ -176,6 +528,46 @@ async def correlation_middleware(request: Request, call_next):
         response.headers.setdefault("Cache-Control", "no-store")
     set_correlation_id(None)
     return response
+
+
+@app.on_event("startup")
+async def configure_error_logging():
+    global ERROR_LOG_PATH
+    if ERROR_LOG_PATH:
+        return
+    ERROR_LOG_PATH = _configure_error_log_handler(logging.getLogger())
+    if ERROR_LOG_PATH:
+        logger.info(
+            "error_log_configured",
+            extra={"event": "error_log_configured", "path": str(ERROR_LOG_PATH)},
+        )
+
+
+@app.on_event("startup")
+async def start_scheduler_loop():
+    global SCHEDULER
+    if SCHEDULER_DISABLED:
+        logger.info(
+            "scheduler_disabled",
+            extra={"event": "scheduler_disabled"},
+        )
+        return
+    if SCHEDULER is None:
+        poll_seconds = max(int(os.getenv("NEURA_SCHEDULER_INTERVAL", "60") or "60"), 15)
+        SCHEDULER = ReportScheduler(_scheduler_runner, poll_seconds=poll_seconds)
+    await SCHEDULER.start()
+
+
+@app.on_event("shutdown")
+async def stop_scheduler_loop():
+    global SCHEDULER
+    if SCHEDULER and not SCHEDULER_DISABLED:
+        await SCHEDULER.stop()
+
+
+@app.on_event("shutdown")
+async def shutdown_job_executor():
+    REPORT_JOB_EXECUTOR.shutdown(wait=False)
 
 
 @app.exception_handler(HTTPException)
@@ -311,6 +703,15 @@ class TestPayload(BaseModel):
     database: Optional[str] = None
 
 
+class TemplateManualEditPayload(BaseModel):
+    html: str
+
+
+class TemplateAiEditPayload(BaseModel):
+    instructions: str
+    html: Optional[str] = None
+
+
 class MappingPayload(BaseModel):
     # UI currently posts { "<header or token>": "table.col" | "params.value" | "UNRESOLVED" | "INPUT_SAMPLE" | "To Be Selected in report generator" | "SQL fragment", ... }
     mapping: dict[str, str]
@@ -336,7 +737,7 @@ class GeneratorAssetsPayload(BaseModel):
     final_template_html: Optional[str] = None
     reference_pdf_image: Optional[str] = None
     catalog: Optional[list[str]] = None
-    dialect: Optional[str] = "sqlite"
+    dialect: Optional[str] = "duckdb"
     params: Optional[list[str]] = None
     sample_params: Optional[dict[str, Any]] = None
     force_rebuild: bool = False
@@ -382,6 +783,11 @@ class RunPayload(BaseModel):
     key_values: Optional[dict[str, Any]] = None
     docx: bool = False
     xlsx: bool = False
+    email_recipients: Optional[list[str]] = None
+    email_subject: Optional[str] = None
+    email_message: Optional[str] = None
+    schedule_id: Optional[str] = None
+    schedule_name: Optional[str] = None
 
 
 class DiscoverPayload(BaseModel):
@@ -390,6 +796,150 @@ class DiscoverPayload(BaseModel):
     start_date: str
     end_date: str
     key_values: Optional[dict[str, Any]] = None
+
+
+class ScheduleCreatePayload(BaseModel):
+    template_id: str
+    connection_id: str
+    start_date: str
+    end_date: str
+    key_values: Optional[dict[str, Any]] = None
+    batch_ids: Optional[list[str]] = None
+    docx: bool = False
+    xlsx: bool = False
+    email_recipients: Optional[list[str]] = None
+    email_subject: Optional[str] = None
+    email_message: Optional[str] = None
+    frequency: str = "daily"
+    interval_minutes: Optional[int] = None
+    name: Optional[str] = None
+    active: bool = True
+
+
+class TemplateRecommendPayload(BaseModel):
+    requirement: str
+    kind: Optional[str] = None
+    domain: Optional[str] = None
+    schema_snapshot: Optional[dict[str, Any]] = None
+    tables: Optional[list[str]] = None
+
+    class Config:
+        extra = "allow"
+
+
+class TemplateRecommendation(BaseModel):
+    template: dict[str, Any]
+    explanation: str
+    score: float
+
+
+class TemplateRecommendResponse(BaseModel):
+    recommendations: list[TemplateRecommendation]
+
+
+class ChartField(BaseModel):
+    name: str
+    type: str
+    description: Optional[str] = None
+
+
+class ChartSpec(BaseModel):
+    id: Optional[str] = None
+    type: str  # "bar", "line", "pie", "scatter"
+    xField: str
+    yFields: list[str]
+    groupField: Optional[str] = None
+    aggregation: Optional[str] = None
+    chartTemplateId: Optional[str] = None
+    title: Optional[str] = None
+    description: Optional[str] = None
+
+
+class ChartSuggestPayload(BaseModel):
+    connection_id: Optional[str] = None
+    start_date: str
+    end_date: str
+    key_values: Optional[dict[str, Any]] = None
+    question: str
+    include_sample_data: bool = False
+
+
+class ChartSuggestResponse(BaseModel):
+    charts: list[ChartSpec]
+    sample_data: Optional[list[dict[str, Any]]] = None
+
+
+class SavedChartSpec(BaseModel):
+    id: str
+    template_id: str
+    name: str
+    spec: ChartSpec
+    created_at: str
+    updated_at: str
+
+
+class SavedChartCreatePayload(BaseModel):
+    template_id: str
+    name: str
+    spec: ChartSpec
+
+
+class SavedChartUpdatePayload(BaseModel):
+    name: Optional[str] = None
+    spec: Optional[ChartSpec] = None
+
+
+_SCHEDULE_INTERVALS = {
+    "hourly": 60,
+    "six_hours": 360,
+    "daily": 1440,
+    "weekly": 10080,
+}
+
+
+def _utcnow_iso() -> str:
+    return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+
+
+def _normalize_email_targets(raw: Optional[Iterable[str] | str]) -> list[str]:
+    if raw is None:
+        return []
+    if isinstance(raw, str):
+        candidates = re.split(r"[;,]", raw)
+    else:
+        candidates = raw
+    normalized: list[str] = []
+    seen: set[str] = set()
+    for value in candidates:
+        text = str(value or "").strip()
+        if not text:
+            continue
+        lower = text.lower()
+        if lower in seen:
+            continue
+        seen.add(lower)
+        normalized.append(text)
+    return normalized
+
+
+def _clean_key_values(raw: Optional[Mapping[str, Any]]) -> dict[str, Any]:
+    cleaned: dict[str, Any] = {}
+    if isinstance(raw, dict):
+        for token, value in raw.items():
+            name = str(token or "").strip()
+            if not name or value is None:
+                continue
+            cleaned[name] = value
+    return cleaned
+
+
+def _resolve_schedule_interval(frequency: str, override: Optional[int]) -> int:
+    if override and override > 0:
+        return max(int(override), 5)
+    if not frequency:
+        return 60
+    key = frequency.strip().lower()
+    return _SCHEDULE_INTERVALS.get(key, 60)
 
 
 # ---------- Helpers for connections ----------
@@ -467,11 +1017,28 @@ _REPORT_DATE_KEYWORDS = {
     "year",
 }
 _PARAM_REF_RE = re.compile(r"^params\.[A-Za-z_][\w]*$")
+_TEMPLATE_ID_SAFE_RE = re.compile(r"^[a-z0-9][a-z0-9_-]{2,180}$")
+
+
+def _slugify_template_name(value: str | None) -> str:
+    """
+    Build a filesystem-safe slug for template folders from user-provided names.
+    """
+    raw = str(value or "").lower()
+    slug = re.sub(r"[^a-z0-9]+", "-", raw).strip("-")
+    return slug[:60].strip("-")
 
 
 def _normalize_template_id(template_id: str) -> str:
+    raw = str(template_id or "").strip()
+    candidate = raw.replace("\\", "/").split("/")[-1].strip()
+    if not candidate or candidate in {".", ".."}:
+        raise _http_error(400, "invalid_template_id", "Invalid template_id format")
+    normalized = candidate.lower()
+    if _TEMPLATE_ID_SAFE_RE.fullmatch(normalized):
+        return normalized
     try:
-        return str(uuid.UUID(str(template_id)))
+        return str(uuid.UUID(candidate))
     except (ValueError, TypeError):
         raise _http_error(400, "invalid_template_id", "Invalid template_id format")
 
@@ -535,6 +1102,50 @@ def _template_dir(
         tdir.mkdir(parents=True, exist_ok=True)
 
     return tdir
+
+
+def _template_id_exists(template_id: str, *, kind: str = "pdf") -> bool:
+    """Check both state and filesystem for an existing template id."""
+    try:
+        if state_store.get_template_record(template_id):
+            return True
+    except Exception:
+        pass
+    try:
+        tdir = _template_dir(template_id, must_exist=False, create=False, kind=kind)
+    except HTTPException:
+        return False
+    return tdir.exists()
+
+
+def _maybe_reuse_template_id(raw_id: str | None, *, kind: str = "pdf") -> str | None:
+    if not raw_id:
+        return None
+    try:
+        normalized = _normalize_template_id(raw_id)
+    except HTTPException:
+        return None
+    if _template_id_exists(normalized, kind=kind):
+        return None
+    return normalized
+
+
+def _generate_template_id(base_name: str | None = None, *, kind: str = "pdf") -> str:
+    """
+    Generate a readable template id derived from a user-facing name.
+    """
+    slug = _slugify_template_name(base_name)
+    if not slug:
+        slug = "template"
+    for _ in range(10):
+        suffix = uuid.uuid4().hex[:6]
+        candidate = f"{slug}-{suffix}"
+        if _TEMPLATE_ID_SAFE_RE.fullmatch(candidate) and not _template_id_exists(candidate, kind=kind):
+            return candidate
+    fallback = f"{slug}-{uuid.uuid4().hex[:10]}"
+    if _TEMPLATE_ID_SAFE_RE.fullmatch(fallback) and not _template_id_exists(fallback, kind=kind):
+        return fallback
+    return uuid.uuid4().hex
 
 
 def _http_error(status_code: int, code: str, message: str, details: str | None = None) -> HTTPException:
@@ -705,6 +1316,57 @@ def _normalize_artifact_map(artifacts: Mapping[str, Any] | None) -> dict[str, st
     return normalized
 
 
+def _ensure_template_mapping_keys(records: list[dict]) -> list[dict]:
+    hydrated: list[dict] = []
+    for record in records:
+        mapping_keys = record.get("mappingKeys") or []
+        if mapping_keys:
+            hydrated.append(record)
+            continue
+        template_id = record.get("id")
+        if not template_id:
+            hydrated.append(record)
+            continue
+
+        kind = record.get("kind") or "pdf"
+        try:
+            tdir = _template_dir(template_id, must_exist=False, create=False, kind=kind)
+        except HTTPException:
+            hydrated.append(record)
+            continue
+
+        keys = _load_mapping_keys(tdir)
+        if not keys:
+            hydrated.append(record)
+            continue
+
+        new_record = dict(record)
+        new_record["mappingKeys"] = keys
+        hydrated.append(new_record)
+
+        try:
+            state_store.upsert_template(
+                template_id,
+                name=record.get("name") or f"Template {template_id[:8]}",
+                status=record.get("status") or "unknown",
+                artifacts=record.get("artifacts") or {},
+                tags=record.get("tags") or [],
+                connection_id=record.get("lastConnectionId"),
+                mapping_keys=keys,
+                template_type=kind,
+            )
+        except Exception:
+            logger.exception(
+                "mapping_keys_state_update_failed",
+                extra={
+                    "event": "mapping_keys_state_update_failed",
+                    "template_id": template_id,
+                    "template_kind": kind,
+                },
+            )
+    return hydrated
+
+
 def _write_debug_log(template_id: str, *, kind: str, event: str, payload: Mapping[str, Any]) -> None:
     try:
         tdir = _template_dir(template_id, kind=kind, must_exist=False, create=True)
@@ -773,21 +1435,13 @@ def _load_schema_ext(template_dir: Path) -> Optional[dict[str, Any]]:
 def _build_catalog_from_db(db_path: Path) -> list[str]:
     catalog: list[str] = []
     try:
-        with sqlite3.connect(str(db_path)) as con:
-            cur = con.cursor()
-            cur.execute(
-                "SELECT name FROM sqlite_master " "WHERE type='table' AND name NOT LIKE 'sqlite_%' " "ORDER BY name;"
-            )
-            tables = [row[0] for row in cur.fetchall()]
-            for table in tables:
-                try:
-                    cur.execute(f"PRAGMA table_info('{table}')")
-                    for col in cur.fetchall():
-                        col_name = str(col[1] or "").strip()
-                        if col_name:
-                            catalog.append(f"{table}.{col_name}")
-                except Exception:
-                    continue
+        loader = get_loader(db_path)
+        for table in loader.table_names():
+            frame = loader.frame(table)
+            for col in frame.columns:
+                col_name = str(col or "").strip()
+                if col_name:
+                    catalog.append(f"{table}.{col_name}")
     except Exception as exc:
         logger.exception(
             "catalog_build_failed",
@@ -1059,6 +1713,378 @@ def get_artifact_head_excel(template_id: str, request: Request, name: str):
     return _artifact_head_response(template_id, request, name, kind="excel")
 
 
+def _template_history_path(template_dir: Path) -> Path:
+    return template_dir / "template_history.json"
+
+
+def _read_template_history(template_dir: Path) -> list[dict]:
+    path = _template_history_path(template_dir)
+    if not path.exists():
+        return []
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return []
+    if isinstance(raw, list):
+        return [entry for entry in raw if isinstance(entry, dict)]
+    return []
+
+
+def _append_template_history_entry(template_dir: Path, entry: dict) -> list[dict]:
+    history = _read_template_history(template_dir)
+    history.append(entry)
+    write_json_atomic(
+        _template_history_path(template_dir),
+        history,
+        ensure_ascii=False,
+        indent=2,
+        step="template_history",
+    )
+    return history
+
+
+def _load_template_generator_summary(template_id: str) -> dict[str, Any]:
+    record = state_store.get_template_record(template_id) or {}
+    generator = record.get("generator") or {}
+    raw_summary = generator.get("summary") or {}
+    if isinstance(raw_summary, dict):
+        return dict(raw_summary)
+    return {}
+
+
+def _update_template_generator_summary_for_edit(
+    template_id: str,
+    *,
+    edit_type: str,
+    notes: str | None = None,
+) -> dict[str, Any]:
+    summary = _load_template_generator_summary(template_id)
+    now_iso = _utcnow_iso()
+    summary["lastEditType"] = edit_type
+    summary["lastEditAt"] = now_iso
+    if notes is not None:
+        summary["lastEditNotes"] = notes
+    state_store.update_template_generator(template_id, summary=summary)
+    return summary
+
+
+def _build_template_html_response(
+    *,
+    template_id: str,
+    kind: str,
+    html: str,
+    source: str,
+    template_dir: Path,
+    history: Optional[list[dict]] = None,
+    summary: Optional[Mapping[str, Any]] = None,
+    ai_summary: Optional[list[str]] = None,
+    correlation_id: str | None = None,
+) -> dict:
+    prev_path = template_dir / "report_final_prev.html"
+    effective_history = history if history is not None else _read_template_history(template_dir)
+    summary_payload = dict(summary or {})
+    metadata = {
+        "lastEditType": summary_payload.get("lastEditType"),
+        "lastEditAt": summary_payload.get("lastEditAt"),
+        "lastEditNotes": summary_payload.get("lastEditNotes"),
+        "historyCount": len(effective_history),
+    }
+    result: dict[str, Any] = {
+        "status": "ok",
+        "template_id": template_id,
+        "kind": kind,
+        "html": html,
+        "source": source,
+        "can_undo": prev_path.exists(),
+        "metadata": metadata,
+        "history": effective_history,
+    }
+    if ai_summary:
+        result["summary"] = ai_summary
+    if correlation_id:
+        result["correlation_id"] = correlation_id
+    return result
+
+
+def _resolve_template_html_paths(template_id: str, *, kind: str) -> tuple[Path, Path, Path, str]:
+    template_dir = _template_dir(template_id, kind=kind)
+    final_path = template_dir / "report_final.html"
+    base_path = template_dir / "template_p1.html"
+    if final_path.exists():
+        return template_dir, final_path, base_path, "report_final"
+    if base_path.exists():
+        return template_dir, final_path, base_path, "template_p1"
+    raise _http_error(
+        404,
+        "template_html_missing",
+        "Template HTML not found (report_final.html or template_p1.html). Run template verification first.",
+    )
+
+
+def _run_template_edit_llm(template_html: str, instructions: str) -> tuple[str, list[str]]:
+    if not instructions or not str(instructions).strip():
+        raise _http_error(400, "missing_instructions", "instructions is required for AI template edit.")
+    prompt_payload = build_template_edit_prompt(template_html, instructions)
+    messages = prompt_payload.get("messages") or []
+    if not messages:
+        raise _http_error(500, "prompt_build_failed", "Failed to build template edit prompt.")
+    try:
+        client = get_openai_client()
+    except Exception as exc:
+        logger.exception(
+            "template_edit_llm_client_unavailable",
+            extra={"event": "template_edit_llm_client_unavailable"},
+        )
+        raise _http_error(503, "llm_unavailable", f"LLM client is unavailable: {exc}")
+
+    try:
+        response = call_chat_completion(
+            client,
+            model=MODEL,
+            messages=messages,
+            description=TEMPLATE_EDIT_PROMPT_VERSION,
+        )
+    except Exception as exc:
+        logger.exception(
+            "template_edit_llm_failed",
+            extra={"event": "template_edit_llm_failed"},
+        )
+        raise _http_error(502, "llm_call_failed", f"Template edit LLM call failed: {exc}")
+
+    raw_text = (response.choices[0].message.content or "").strip()
+    parsed_text = strip_code_fences(raw_text)
+    try:
+        payload = json.loads(parsed_text)
+    except Exception as exc:
+        logger.warning(
+            "template_edit_llm_invalid_json",
+            extra={"event": "template_edit_llm_invalid_json"},
+        )
+        raise _http_error(502, "llm_invalid_response", f"LLM did not return valid JSON: {exc}")
+
+    if not isinstance(payload, dict):
+        raise _http_error(502, "llm_invalid_response", "LLM response was not a JSON object.")
+
+    updated_html = payload.get("updated_html")
+    if not isinstance(updated_html, str) or not updated_html.strip():
+        raise _http_error(502, "llm_invalid_response", "LLM response missing 'updated_html' string.")
+
+    summary_raw = payload.get("summary")
+    summary: list[str] = []
+    if isinstance(summary_raw, list):
+        for item in summary_raw:
+            text = str(item).strip()
+            if text:
+                summary.append(text)
+    elif isinstance(summary_raw, str):
+        text = summary_raw.strip()
+        if text:
+            summary.append(text)
+
+    return updated_html, summary
+
+
+@app.get("/templates/{template_id}/html")
+def get_template_html(template_id: str, request: Request):
+    template_kind = _resolve_template_kind(template_id)
+    correlation_id = getattr(request.state, "correlation_id", None) or get_correlation_id()
+    template_dir, final_path, base_path, source = _resolve_template_html_paths(template_id, kind=template_kind)
+    if source == "report_final":
+        active_path = final_path
+    else:
+        active_path = base_path
+    html_text = active_path.read_text(encoding="utf-8", errors="ignore")
+    history = _read_template_history(template_dir)
+    summary = _load_template_generator_summary(template_id)
+    return _build_template_html_response(
+        template_id=template_id,
+        kind=template_kind,
+        html=html_text,
+        source=source,
+        template_dir=template_dir,
+        history=history,
+        summary=summary,
+        correlation_id=correlation_id,
+    )
+
+
+@app.post("/templates/{template_id}/edit-manual")
+def edit_template_manual(template_id: str, payload: TemplateManualEditPayload, request: Request):
+    template_kind = _resolve_template_kind(template_id)
+    correlation_id = getattr(request.state, "correlation_id", None) or get_correlation_id()
+    template_dir, final_path, base_path, source = _resolve_template_html_paths(template_id, kind=template_kind)
+    try:
+        lock_ctx = acquire_template_lock(template_dir, "template_edit_manual", correlation_id)
+    except TemplateLockError:
+        raise _http_error(
+            409,
+            "template_locked",
+            "Template is currently processing another request.",
+        )
+
+    with lock_ctx:
+        current_path = final_path if final_path.exists() else base_path
+        if not current_path.exists():
+            raise _http_error(
+                404,
+                "template_html_missing",
+                "Template HTML not found (report_final.html or template_p1.html).",
+            )
+        current_html = current_path.read_text(encoding="utf-8", errors="ignore")
+        prev_path = template_dir / "report_final_prev.html"
+        write_text_atomic(prev_path, current_html, encoding="utf-8", step="template_edit_prev")
+
+        new_html = payload.html or ""
+        write_text_atomic(final_path, new_html, encoding="utf-8", step="template_edit_manual")
+
+        notes = "Manual HTML edit via template editor"
+        summary = _update_template_generator_summary_for_edit(
+            template_id,
+            edit_type="manual",
+            notes=notes,
+        )
+        history_entry = {
+            "timestamp": summary.get("lastEditAt") or _utcnow_iso(),
+            "type": "manual",
+            "notes": notes,
+        }
+        history = _append_template_history_entry(template_dir, history_entry)
+
+    return _build_template_html_response(
+        template_id=template_id,
+        kind=template_kind,
+        html=new_html,
+        source="report_final",
+        template_dir=template_dir,
+        history=history,
+        summary=summary,
+        correlation_id=correlation_id,
+    )
+
+
+@app.post("/templates/{template_id}/edit-ai")
+def edit_template_ai(template_id: str, payload: TemplateAiEditPayload, request: Request):
+    template_kind = _resolve_template_kind(template_id)
+    correlation_id = getattr(request.state, "correlation_id", None) or get_correlation_id()
+    template_dir, final_path, base_path, source = _resolve_template_html_paths(template_id, kind=template_kind)
+    try:
+        lock_ctx = acquire_template_lock(template_dir, "template_edit_ai", correlation_id)
+    except TemplateLockError:
+        raise _http_error(
+            409,
+            "template_locked",
+            "Template is currently processing another request.",
+        )
+
+    with lock_ctx:
+        current_path = final_path if final_path.exists() else base_path
+        if not current_path.exists():
+            raise _http_error(
+                404,
+                "template_html_missing",
+                "Template HTML not found (report_final.html or template_p1.html).",
+            )
+
+        # Versioning: persist the on-disk current HTML as the previous version.
+        current_disk_html = current_path.read_text(encoding="utf-8", errors="ignore")
+        prev_path = template_dir / "report_final_prev.html"
+        write_text_atomic(prev_path, current_disk_html, encoding="utf-8", step="template_edit_prev")
+
+        # Base HTML for the LLM can come from the request payload (unsaved edits) or disk.
+        if isinstance(payload.html, str) and payload.html.strip():
+            llm_input_html = payload.html
+        else:
+            llm_input_html = current_disk_html
+
+        updated_html, change_summary = _run_template_edit_llm(llm_input_html, payload.instructions or "")
+        write_text_atomic(final_path, updated_html, encoding="utf-8", step="template_edit_ai")
+
+        notes = "AI-assisted HTML edit via template editor"
+        summary = _update_template_generator_summary_for_edit(
+            template_id,
+            edit_type="ai",
+            notes=notes,
+        )
+        history_entry = {
+            "timestamp": summary.get("lastEditAt") or _utcnow_iso(),
+            "type": "ai",
+            "notes": notes,
+            "instructions": payload.instructions or "",
+            "summary": change_summary,
+        }
+        history = _append_template_history_entry(template_dir, history_entry)
+
+    return _build_template_html_response(
+        template_id=template_id,
+        kind=template_kind,
+        html=updated_html,
+        source="report_final",
+        template_dir=template_dir,
+        history=history,
+        summary=summary,
+        ai_summary=change_summary,
+        correlation_id=correlation_id,
+    )
+
+
+@app.post("/templates/{template_id}/undo-last-edit")
+def undo_last_template_edit(template_id: str, request: Request):
+    template_kind = _resolve_template_kind(template_id)
+    correlation_id = getattr(request.state, "correlation_id", None) or get_correlation_id()
+    template_dir = _template_dir(template_id, kind=template_kind)
+    final_path = template_dir / "report_final.html"
+    prev_path = template_dir / "report_final_prev.html"
+
+    if not prev_path.exists():
+        raise _http_error(400, "no_previous_version", "No previous template version found to undo.")
+    if not final_path.exists():
+        raise _http_error(404, "template_html_missing", "Current template HTML not found for undo.")
+
+    try:
+        lock_ctx = acquire_template_lock(template_dir, "template_edit_undo", correlation_id)
+    except TemplateLockError:
+        raise _http_error(
+            409,
+            "template_locked",
+            "Template is currently processing another request.",
+        )
+
+    with lock_ctx:
+        tmp_path = template_dir / "report_final_undo_tmp.html"
+        with contextlib.suppress(FileNotFoundError):
+            tmp_path.unlink()
+
+        final_path.rename(tmp_path)
+        prev_path.rename(final_path)
+        tmp_path.rename(prev_path)
+
+        restored_html = final_path.read_text(encoding="utf-8", errors="ignore")
+
+        notes = "Undo last template HTML edit"
+        summary = _update_template_generator_summary_for_edit(
+            template_id,
+            edit_type="undo",
+            notes=notes,
+        )
+        history_entry = {
+            "timestamp": summary.get("lastEditAt") or _utcnow_iso(),
+            "type": "undo",
+            "notes": notes,
+        }
+        history = _append_template_history_entry(template_dir, history_entry)
+
+    return _build_template_html_response(
+        template_id=template_id,
+        kind=template_kind,
+        html=restored_html,
+        source="report_final",
+        template_dir=template_dir,
+        history=history,
+        summary=summary,
+        correlation_id=correlation_id,
+    )
+
+
 # ---------- Routes ----------
 @app.post("/connections/test")
 def test_connection(p: TestPayload, request: Request):
@@ -1227,11 +2253,28 @@ def healthcheck_connection(connection_id: str, request: Request):
 @app.get("/state/bootstrap")
 def bootstrap_state(request: Request):
     correlation_id = getattr(request.state, "correlation_id", None) or get_correlation_id()
+    templates = state_store.list_templates()
+    hydrated_templates = _ensure_template_mapping_keys(templates)
     return {
         "status": "ok",
         "connections": state_store.list_connections(),
-        "templates": state_store.list_templates(),
+        "templates": hydrated_templates,
         "last_used": state_store.get_last_used(),
+        "correlation_id": correlation_id,
+    }
+
+
+@app.get("/templates/catalog")
+def templates_catalog(request: Request):
+    """
+    Return a unified catalog of company + starter templates with lightweight metadata
+    suitable for recommendation and UI browsing.
+    """
+    correlation_id = getattr(request.state, "correlation_id", None) or get_correlation_id()
+    catalog = build_unified_template_catalog()
+    return {
+        "status": "ok",
+        "templates": catalog,
         "correlation_id": correlation_id,
     }
 
@@ -1250,7 +2293,65 @@ def list_templates_endpoint(request: Request, status: Optional[str] = None):
         status_lower = status.lower()
         templates = [t for t in templates if (t.get("status") or "").lower() == status_lower]
     correlation_id = getattr(request.state, "correlation_id", None) or get_correlation_id()
-    return {"status": "ok", "templates": templates, "correlation_id": correlation_id}
+    hydrated = _ensure_template_mapping_keys(templates)
+    return {"status": "ok", "templates": hydrated, "correlation_id": correlation_id}
+
+
+@app.post("/templates/recommend", response_model=TemplateRecommendResponse)
+def recommend_templates_endpoint(payload: TemplateRecommendPayload, request: Request):
+    """
+    LLM-backed template recommender. Accepts a free-text requirement and optional
+    context hints, returning a ranked list of templates with explanations.
+    """
+    correlation_id = getattr(request.state, "correlation_id", None) or get_correlation_id()
+    catalog = build_unified_template_catalog()
+
+    hints: dict[str, Any] = {}
+    if payload.kind:
+        hints["kind"] = payload.kind
+    if payload.domain:
+        hints["domain"] = payload.domain
+    if payload.schema_snapshot:
+        hints["schema_snapshot"] = payload.schema_snapshot
+    if payload.tables:
+        hints["tables"] = payload.tables
+
+    raw_recs = recommend_templates_from_catalog(
+        catalog,
+        requirement=payload.requirement,
+        hints=hints,
+        max_results=6,
+    )
+
+    catalog_by_id: dict[str, dict[str, Any]] = {}
+    for item in catalog:
+        if isinstance(item, dict):
+            tid = str(item.get("id") or "").strip()
+            if tid and tid not in catalog_by_id:
+                catalog_by_id[tid] = item
+
+    recommendations: list[TemplateRecommendation] = []
+    for rec in raw_recs:
+        tid = str(rec.get("id") or "").strip()
+        if not tid:
+            continue
+        template = catalog_by_id.get(tid)
+        if not template:
+            continue
+        explanation = str(rec.get("explanation") or "").strip()
+        try:
+            score = float(rec.get("score") or 0.0)
+        except Exception:
+            score = 0.0
+        recommendations.append(
+            TemplateRecommendation(
+                template=template,
+                explanation=explanation,
+                score=score,
+            )
+        )
+
+    return TemplateRecommendResponse(recommendations=recommendations)
 
 
 @app.delete("/templates/{template_id}")
@@ -1319,6 +2420,209 @@ def delete_template_endpoint(template_id: str, request: Request):
     }
 
 
+# ----------------------------
+# Template ZIP export/import
+# ----------------------------
+
+
+@app.get("/templates/{template_id}/export.zip")
+def export_template_zip(template_id: str, request: Request):
+    """Export the entire template folder under uploads as a zip (includes previews by default)."""
+    correlation_id = getattr(request.state, "correlation_id", None) or get_correlation_id()
+    tdir = _template_dir(template_id, must_exist=True, create=False, kind="pdf")
+
+    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".zip")
+    tmp_path = Path(tmp.name)
+    tmp.close()
+    try:
+        create_zip_from_dir(tdir, tmp_path, include_root=True)
+    except Exception as exc:
+        try:
+            tmp_path.unlink(missing_ok=True)
+        except Exception:
+            pass
+        raise _http_error(500, "export_failed", f"Failed to create zip: {exc}")
+
+    filename = f"template-{template_id[:8]}.zip"
+
+    def iterfile():
+        with open(tmp_path, "rb") as fh:
+            while True:
+                chunk = fh.read(64 * 1024)
+                if not chunk:
+                    break
+                yield chunk
+        try:
+            tmp_path.unlink(missing_ok=True)
+        except Exception:
+            pass
+
+    headers = {
+        "Content-Disposition": f"attachment; filename=\"{filename}\"",
+        "x-correlation-id": correlation_id or "",
+    }
+    return StreamingResponse(iterfile(), media_type="application/zip", headers=headers)
+
+
+@app.post("/templates/import-zip")
+async def import_template_zip(
+    file: UploadFile = File(...),
+    name: Optional[str] = Form(None),
+    request: Request = None,
+):
+    """Import a zip previously exported (or a replica of an uploads folder). No encryption or password expected."""
+    request_state = getattr(request, "state", None)
+    correlation_id = getattr(request_state, "correlation_id", None) or get_correlation_id()
+
+    # Persist incoming upload to a temp file
+    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".zip")
+    tmp_path = Path(tmp.name)
+    try:
+        content = await file.read()
+        tmp.write(content)
+    finally:
+        tmp.close()
+
+    # Decide template_id from zip root folder if possible; otherwise generate one
+    zip_contains_excel = False
+    try:
+        import zipfile
+
+        with zipfile.ZipFile(tmp_path, mode="r") as zf:
+            members = list(zf.infolist())
+            root_name = detect_zip_root(m.filename for m in members)
+            for member in members:
+                member_name = Path(member.filename).name.lower()
+                if member_name == "source.xlsx":
+                    zip_contains_excel = True
+                    break
+    except Exception:
+        root_name = None
+
+    template_kind = "excel" if zip_contains_excel else "pdf"
+    candidate_id = _maybe_reuse_template_id(root_name, kind=template_kind)
+    name_hint = name or root_name or getattr(file, "filename", "")
+    template_id = candidate_id or _generate_template_id(name_hint, kind=template_kind)
+    if _template_id_exists(template_id, kind=template_kind):
+        template_id = _generate_template_id(name_hint, kind=template_kind)
+
+    tdir = _template_dir(template_id, must_exist=False, create=True, kind=template_kind)
+
+    try:
+        # Extract the zip safely; strip a single root folder if present
+        extract_zip_to_dir(tmp_path, tdir, strip_root=True)
+    except Exception as exc:
+        try:
+            shutil.rmtree(tdir, ignore_errors=True)
+        except Exception:
+            pass
+        raise _http_error(400, "import_failed", f"Failed to extract zip: {exc}")
+    finally:
+        try:
+            tmp_path.unlink(missing_ok=True)
+        except Exception:
+            pass
+
+    # Build artifact URLs for state
+    html_path = tdir / "template_p1.html"
+    if template_kind == "excel":
+        thumb_path = None
+        for candidate in ("reference_p1.png", "report_final.png", "render_p1.png"):
+            candidate_path = tdir / candidate
+            if candidate_path.exists():
+                thumb_path = candidate_path
+                break
+    else:
+        thumb_path = (tdir / "render_p1.png") if (tdir / "render_p1.png").exists() else (
+            (tdir / "report_final.png") if (tdir / "report_final.png").exists() else None
+        )
+    contract_path = tdir / "contract.json"
+    gen_dir = tdir / "generator"
+    sql_pack_path = gen_dir / "sql_pack.sql"
+    gen_meta_path = gen_dir / "generator_assets.json"
+    out_schemas_path = gen_dir / "output_schemas.json"
+
+    manifest_url = _manifest_endpoint(template_id, kind=template_kind)
+    if template_kind == "excel":
+        sample_rows_path = tdir / "sample_rows.json"
+        reference_html_path = tdir / "reference_p1.html"
+        xlsx_path = tdir / "source.xlsx"
+        artifacts_payload = {
+            "template_html_url": _artifact_url(html_path) if html_path.exists() else None,
+            "thumbnail_url": _artifact_url(thumb_path) if thumb_path else None,
+            "contract_url": _artifact_url(contract_path) if contract_path.exists() else None,
+            "generator_sql_pack_url": _artifact_url(sql_pack_path) if sql_pack_path.exists() else None,
+            "generator_output_schemas_url": _artifact_url(out_schemas_path) if out_schemas_path.exists() else None,
+            "generator_assets_url": _artifact_url(gen_meta_path) if gen_meta_path.exists() else None,
+            "sample_rows_url": _artifact_url(sample_rows_path) if sample_rows_path.exists() else None,
+            "reference_html_url": _artifact_url(reference_html_path) if reference_html_path.exists() else None,
+            "xlsx_url": _artifact_url(xlsx_path) if xlsx_path.exists() else None,
+            "manifest_url": manifest_url,
+        }
+    else:
+        artifacts_payload = {
+            "template_html_url": _artifact_url(html_path) if html_path.exists() else None,
+            "thumbnail_url": _artifact_url(thumb_path) if thumb_path else None,
+            "contract_url": _artifact_url(contract_path) if contract_path.exists() else None,
+            "generator_sql_pack_url": _artifact_url(sql_pack_path) if sql_pack_path.exists() else None,
+            "generator_output_schemas_url": _artifact_url(out_schemas_path) if out_schemas_path.exists() else None,
+            "generator_assets_url": _artifact_url(gen_meta_path) if gen_meta_path.exists() else None,
+            "manifest_url": manifest_url,
+        }
+
+    # Decide a name
+    display_name = (name or "").strip()
+    if not display_name:
+        overview_path = tdir / "overview.md"
+        if overview_path.exists():
+            try:
+                first = (overview_path.read_text(encoding="utf-8", errors="ignore").splitlines() or [""])[0]
+                display_name = first.strip() or display_name
+            except Exception:
+                pass
+    if not display_name:
+        display_name = f"Template {template_id[:8]}"
+
+    status = "approved" if contract_path.exists() else "draft"
+
+    mapping_keys = _load_mapping_keys(tdir)
+    state_store.upsert_template(
+        template_id,
+        name=display_name,
+        status=status,
+        artifacts={k: v for k, v in artifacts_payload.items() if v},
+        connection_id=None,
+        mapping_keys=mapping_keys,
+        template_type=template_kind,
+    )
+
+    # If generator bundle present, update generator metadata for UI
+    try:
+        bundle = load_generator_assets_bundle(tdir)
+        if bundle:
+            state_store.update_template_generator(
+                template_id,
+                dialect=bundle.get("dialect"),
+                params=bundle.get("params"),
+                invalid=bool(bundle.get("invalid")),
+                needs_user_fix=bundle.get("needs_user_fix") or [],
+                summary=bundle.get("summary"),
+                dry_run=bundle.get("dry_run"),
+                cached=bundle.get("cached"),
+            )
+    except Exception:
+        # Non-fatal: importing should succeed even if generator meta parse fails
+        pass
+
+    return {
+        "status": "ok",
+        "template_id": template_id,
+        "name": display_name,
+        "artifacts": {k: v for k, v in artifacts_payload.items() if v},
+        "correlation_id": correlation_id,
+    }
+
+
 @app.post("/templates/verify")
 async def verify_template(
     file: UploadFile = File(...),
@@ -1326,7 +2630,9 @@ async def verify_template(
     refine_iters: int = Form(0),  # retained for compatibility (unused)
     request: Request = None,
 ):
-    tid = str(uuid.uuid4())
+    original_filename = getattr(file, "filename", "") or ""
+    template_name_hint = Path(original_filename).stem if original_filename else ""
+    tid = _generate_template_id(template_name_hint, kind="pdf")
     tdir = _template_dir(tid, must_exist=False, create=True)
     pdf_path = tdir / "source.pdf"
     html_path = tdir / "template_p1.html"
@@ -1339,7 +2645,7 @@ async def verify_template(
         extra={
             "event": "verify_template_start",
             "template_id": tid,
-            "filename": getattr(file, "filename", None),
+            "upload_filename": getattr(file, "filename", None),
             "correlation_id": correlation_id,
         },
     )
@@ -1662,7 +2968,7 @@ async def verify_template(
                     metrics_url=metrics_url,
                 )
 
-            template_name = Path(getattr(file, "filename", "") or "").stem or f"Template {tid[:8]}"
+            template_name = template_name_hint or f"Template {tid[:8]}"
             artifacts_for_state = {
                 "template_html_url": _artifact_url(html_path),
                 "thumbnail_url": _artifact_url(png_path),
@@ -1749,7 +3055,9 @@ async def verify_template_excel(
     request: Request = None,
 ):
     template_kind = "excel"
-    tid = str(uuid.uuid4())
+    original_filename = getattr(file, "filename", "") or ""
+    template_name_hint = Path(original_filename).stem if original_filename else ""
+    tid = _generate_template_id(template_name_hint or "Workbook", kind=template_kind)
     tdir = _template_dir(tid, must_exist=False, create=True, kind=template_kind)
     xlsx_path = tdir / "source.xlsx"
 
@@ -1761,7 +3069,7 @@ async def verify_template_excel(
         extra={
             "event": "excel_verify_start",
             "template_id": tid,
-            "filename": getattr(file, "filename", None),
+            "upload_filename": getattr(file, "filename", None),
             "correlation_id": correlation_id,
         },
     )
@@ -1866,9 +3174,12 @@ async def verify_template_excel(
             schema_path = tdir / "schema_ext.json"
             sample_rows_path = tdir / "sample_rows.json"
             reference_html_path = tdir / "reference_p1.html"
+            reference_png_path = tdir / "reference_p1.png"
             manifest_files: dict[str, Path] = {"source.xlsx": xlsx_path, "template_p1.html": html_path}
             if png_path and png_path.exists():
                 manifest_files[png_path.name] = png_path
+            if reference_png_path.exists():
+                manifest_files[reference_png_path.name] = reference_png_path
             if sample_rows_path.exists():
                 manifest_files[sample_rows_path.name] = sample_rows_path
             if reference_html_path.exists():
@@ -1899,10 +3210,15 @@ async def verify_template_excel(
             xlsx_url = _artifact_url(xlsx_path)
             sample_rows_url = _artifact_url(sample_rows_path) if sample_rows_path.exists() else None
             reference_html_url = _artifact_url(reference_html_path) if reference_html_path.exists() else None
+            reference_png_url = _artifact_url(reference_png_path) if reference_png_path.exists() else None
+            schema_url = _artifact_url(schema_path) if schema_path.exists() else None
 
+            template_display_name = template_name_hint or "Workbook"
+            if not template_display_name:
+                template_display_name = f"Template {tid[:8]}"
             state_store.upsert_template(
                 tid,
-                name=Path(getattr(file, "filename", "") or "Workbook").stem or f"Template {tid[:8]}",
+                name=template_display_name,
                 status="draft",
                 artifacts={
                     "template_html_url": html_url,
@@ -1911,6 +3227,8 @@ async def verify_template_excel(
                     "manifest_url": manifest_url,
                     **({"sample_rows_url": sample_rows_url} if sample_rows_url else {}),
                     **({"reference_html_url": reference_html_url} if reference_html_url else {}),
+                    **({"reference_png_url": reference_png_url} if reference_png_url else {}),
+                    **({"schema_ext_url": schema_url} if schema_url else {}),
                 },
                 connection_id=connection_id or None,
                 template_type=template_kind,
@@ -1933,6 +3251,8 @@ async def verify_template_excel(
                     "manifest_url": manifest_url,
                     **({"sample_rows_url": sample_rows_url} if sample_rows_url else {}),
                     **({"reference_html_url": reference_html_url} if reference_html_url else {}),
+                    **({"reference_png_url": reference_png_url} if reference_png_url else {}),
+                    **({"schema_ext_url": schema_url} if schema_url else {}),
                 },
             )
             logger.info(
@@ -2616,7 +3936,7 @@ def _mapping_approve_route(
             stage_key = "generator_assets_v1"
             stage_label = "Creating generator assets"
             stage_started = time.time()
-            generator_dialect = payload.generator_dialect or payload.dialect_hint or "sqlite"
+            generator_dialect = payload.generator_dialect or payload.dialect_hint or "duckdb"
             yield start_stage(stage_key, stage_label, progress=80, dialect=generator_dialect)
             try:
                 generator_result = build_generator_assets_from_payload(
@@ -3072,8 +4392,8 @@ def _mapping_key_options_route(
     try:
         limit_value = int(limit)
     except (TypeError, ValueError):
-        limit_value = 50
-    limit_value = max(1, min(limit_value, 500))
+        limit_value = 500
+    limit_value = max(500, min(limit_value, 2000))
 
     mapping_path = template_dir / "mapping_pdf_labels.json"
     if not mapping_path.exists():
@@ -3184,7 +4504,7 @@ def mapping_key_options(
     request: Request,
     connection_id: str | None = None,
     tokens: str | None = None,
-    limit: int = 50,
+    limit: int = 500,
     start_date: str | None = None,
     end_date: str | None = None,
     debug: bool = False,
@@ -3208,7 +4528,7 @@ def mapping_key_options_excel(
     request: Request,
     connection_id: str | None = None,
     tokens: str | None = None,
-    limit: int = 50,
+    limit: int = 500,
     start_date: str | None = None,
     end_date: str | None = None,
     debug: bool = False,
@@ -3479,7 +4799,7 @@ def _generator_assets_route(
     catalog_allowlist = payload.catalog or None
     params_spec = payload.params or None
     sample_params = payload.sample_params or None
-    dialect = payload.dialect or "sqlite"
+    dialect = payload.dialect or "duckdb"
     if payload.key_tokens is not None:
         incoming_key_tokens = _normalize_key_tokens(payload.key_tokens)
     else:
@@ -3644,6 +4964,343 @@ def generator_assets_v1_excel(template_id: str, payload: GeneratorAssetsPayload,
     return _generator_assets_route(template_id, payload, request, kind="excel")
 
 
+def _chart_suggest_route(
+    template_id: str,
+    payload: ChartSuggestPayload,
+    request: Request,
+    *,
+    kind: str = "pdf",
+) -> ChartSuggestResponse:
+    correlation_id = getattr(request.state, "correlation_id", None) or get_correlation_id()
+    logger.info(
+        "chart_suggest_start",
+        extra={
+            "event": "chart_suggest_start",
+            "template_id": template_id,
+            "template_kind": kind,
+            "correlation_id": correlation_id,
+        },
+    )
+
+    template_dir = _template_dir(template_id, kind=kind)
+    db_path = _db_path_from_payload_or_default(payload.connection_id)
+    if not db_path.exists():
+        raise _http_error(400, "db_not_found", f"DB not found: {db_path}")
+
+    try:
+        load_contract_v2(template_dir)
+    except Exception as exc:
+        logger.exception(
+            "chart_suggest_contract_load_failed",
+            extra={
+                "event": "chart_suggest_contract_load_failed",
+                "template_id": template_id,
+                "template_kind": kind,
+                "correlation_id": correlation_id,
+            },
+        )
+        raise _http_error(500, "contract_load_failed", f"Failed to load contract artifacts: {exc}")
+
+    contract_path = template_dir / "contract.json"
+    if not contract_path.exists():
+        raise _http_error(
+            400,
+            "contract_not_ready",
+            "Contract artifacts missing. Approve mapping first.",
+        )
+    try:
+        contract_payload = json.loads(contract_path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        raise _http_error(500, "contract_invalid", f"Invalid contract.json: {exc}")
+
+    key_values_payload = _clean_key_values(payload.key_values)
+
+    discover_fn = discover_batches_and_counts if kind == "pdf" else discover_batches_and_counts_excel
+
+    try:
+        summary = discover_fn(
+            db_path=db_path,
+            contract=contract_payload,
+            start_date=payload.start_date,
+            end_date=payload.end_date,
+            key_values=key_values_payload,
+        )
+    except Exception as exc:
+        logger.exception(
+            "chart_suggest_discovery_failed",
+            extra={
+                "event": "chart_suggest_discovery_failed",
+                "template_id": template_id,
+                "template_kind": kind,
+                "correlation_id": correlation_id,
+            },
+        )
+        raise _http_error(500, "discovery_failed", f"Discovery failed: {exc}")
+
+    batches = summary.get("batches") or []
+    if not isinstance(batches, list):
+        batches = []
+    batch_metadata = summary.get("batch_metadata") or {}
+
+    sample_data: list[dict[str, Any]] | None = None
+    if payload.include_sample_data:
+        try:
+            sample_data = build_batch_metrics(batches, batch_metadata, limit=100)
+        except Exception:
+            sample_data = None
+            logger.exception(
+                "chart_suggest_sample_data_failed",
+                extra={
+                    "event": "chart_suggest_sample_data_failed",
+                    "template_id": template_id,
+                    "template_kind": kind,
+                    "correlation_id": correlation_id,
+                },
+            )
+
+    if not batches:
+        logger.info(
+            "chart_suggest_no_data",
+            extra={
+                "event": "chart_suggest_no_data",
+                "template_id": template_id,
+                "template_kind": kind,
+                "correlation_id": correlation_id,
+            },
+        )
+        sample_payload = sample_data if payload.include_sample_data else None
+        if sample_payload is None and payload.include_sample_data:
+            sample_payload = []
+        return ChartSuggestResponse(charts=[], sample_data=sample_payload)
+
+    field_catalog, stats = build_batch_field_catalog_and_stats(batches)
+
+    prompt = build_chart_suggestions_prompt(
+        template_id=template_id,
+        kind=kind,
+        start_date=payload.start_date,
+        end_date=payload.end_date,
+        key_values=key_values_payload,
+        field_catalog=field_catalog,
+        data_stats=stats,
+        question=payload.question,
+    )
+
+    client = get_openai_client()
+    try:
+        response = call_chat_completion(
+            client,
+            model=MODEL,
+            messages=[{"role": "user", "content": prompt}],
+            description=CHART_SUGGEST_PROMPT_VERSION,
+        )
+    except Exception as exc:
+        logger.exception(
+            "chart_suggest_llm_failed",
+            extra={
+                "event": "chart_suggest_llm_failed",
+                "template_id": template_id,
+                "template_kind": kind,
+                "correlation_id": correlation_id,
+            },
+        )
+        raise _http_error(500, "chart_suggest_llm_failed", str(exc))
+
+    raw_text = (response.choices[0].message.content or "").strip()
+    parsed_text = strip_code_fences(raw_text)
+
+    charts: list[ChartSpec] = []
+    try:
+        payload_json = json.loads(parsed_text)
+    except Exception:
+        logger.warning(
+            "chart_suggest_json_parse_failed",
+            extra={
+                "event": "chart_suggest_json_parse_failed",
+                "template_id": template_id,
+                "template_kind": kind,
+                "correlation_id": correlation_id,
+            },
+        )
+        payload_json = {}
+
+    raw_charts = payload_json.get("charts") if isinstance(payload_json, dict) else None
+    if isinstance(raw_charts, list):
+        for idx, item in enumerate(raw_charts):
+            if not isinstance(item, Mapping):
+                continue
+            normalized: dict[str, Any] = dict(item)
+            y_fields_raw = normalized.get("yFields")
+            if isinstance(y_fields_raw, str):
+                normalized["yFields"] = [y_fields_raw]
+            elif isinstance(y_fields_raw, list):
+                normalized["yFields"] = [str(v).strip() for v in y_fields_raw if str(v or "").strip()]
+            else:
+                single = normalized.get("yField")
+                if isinstance(single, str) and single.strip():
+                    normalized["yFields"] = [single.strip()]
+                else:
+                    continue
+
+            type_raw = str(normalized.get("type") or "").strip().lower()
+            x_field_raw = str(normalized.get("xField") or "").strip()
+            y_fields_clean = [f for f in normalized.get("yFields", []) if isinstance(f, str) and f.strip()]
+            if not type_raw or not x_field_raw or not y_fields_clean:
+                continue
+            normalized["type"] = type_raw
+            normalized["xField"] = x_field_raw
+            normalized["yFields"] = y_fields_clean
+
+            if not normalized.get("id"):
+                normalized["id"] = f"chart_{idx + 1}"
+
+            try:
+                charts.append(ChartSpec(**normalized))
+            except Exception:
+                continue
+
+    state_store.set_last_used(payload.connection_id, template_id)
+
+    logger.info(
+        "chart_suggest_complete",
+        extra={
+            "event": "chart_suggest_complete",
+            "template_id": template_id,
+            "template_kind": kind,
+            "charts_returned": len(charts),
+            "correlation_id": correlation_id,
+        },
+    )
+    return ChartSuggestResponse(
+        charts=charts,
+        sample_data=sample_data if payload.include_sample_data else None,
+    )
+
+
+def _serialize_saved_chart(record: dict) -> SavedChartSpec:
+    if not record:
+        raise ValueError("Invalid saved chart record")
+    spec_payload = record.get("spec") or {}
+    spec = ChartSpec(**spec_payload)
+    return SavedChartSpec(
+        id=record.get("id"),
+        template_id=record.get("template_id"),
+        name=record.get("name"),
+        spec=spec,
+        created_at=record.get("created_at"),
+        updated_at=record.get("updated_at"),
+    )
+
+
+def _ensure_template_exists(template_id: str) -> tuple[str, dict]:
+    normalized = _normalize_template_id(template_id)
+    record = state_store.get_template_record(normalized)
+    if not record:
+        raise _http_error(404, "template_not_found", f"Template {template_id} not found")
+    return normalized, record
+
+
+@app.post("/templates/{template_id}/charts/suggest")
+def suggest_charts(template_id: str, payload: ChartSuggestPayload, request: Request):
+    return _chart_suggest_route(template_id, payload, request, kind="pdf")
+
+
+@app.post("/excel/{template_id}/charts/suggest")
+def suggest_charts_excel(template_id: str, payload: ChartSuggestPayload, request: Request):
+    return _chart_suggest_route(template_id, payload, request, kind="excel")
+
+
+def _list_saved_charts_route(template_id: str):
+    normalized, _ = _ensure_template_exists(template_id)
+    records = state_store.list_saved_charts(normalized)
+    charts = [_serialize_saved_chart(rec) for rec in records]
+    return {"charts": charts}
+
+
+def _create_saved_chart_route(template_id: str, payload: SavedChartCreatePayload):
+    path_template, _ = _ensure_template_exists(template_id)
+    body_template = _normalize_template_id(payload.template_id)
+    if body_template != path_template:
+        raise _http_error(400, "template_mismatch", "template_id in path and payload must match")
+    name = (payload.name or "").strip()
+    if not name:
+        raise _http_error(400, "name_required", "Saved chart name is required.")
+    record = state_store.create_saved_chart(path_template, name, payload.spec.dict())
+    return _serialize_saved_chart(record)
+
+
+def _update_saved_chart_route(template_id: str, chart_id: str, payload: SavedChartUpdatePayload):
+    path_template, _ = _ensure_template_exists(template_id)
+    existing = state_store.get_saved_chart(chart_id)
+    if not existing or existing.get("template_id") != path_template:
+        raise _http_error(404, "chart_not_found", "Saved chart not found.")
+    updates: dict[str, Any] = {}
+    if payload.name is not None:
+        name = payload.name.strip()
+        if not name:
+            raise _http_error(400, "name_required", "Saved chart name cannot be empty.")
+        updates["name"] = name
+    if payload.spec is not None:
+        updates["spec"] = payload.spec.dict()
+    if not updates:
+        return _serialize_saved_chart(existing)
+    record = state_store.update_saved_chart(chart_id, name=updates.get("name"), spec=updates.get("spec"))
+    if not record:
+        raise _http_error(404, "chart_not_found", "Saved chart not found.")
+    return _serialize_saved_chart(record)
+
+
+def _delete_saved_chart_route(template_id: str, chart_id: str):
+    path_template, _ = _ensure_template_exists(template_id)
+    existing = state_store.get_saved_chart(chart_id)
+    if not existing or existing.get("template_id") != path_template:
+        raise _http_error(404, "chart_not_found", "Saved chart not found.")
+    removed = state_store.delete_saved_chart(chart_id)
+    if not removed:
+        raise _http_error(404, "chart_not_found", "Saved chart not found.")
+    return {"status": "ok"}
+
+
+@app.get("/templates/{template_id}/charts/saved")
+def list_saved_charts(template_id: str):
+    return _list_saved_charts_route(template_id)
+
+
+@app.post("/templates/{template_id}/charts/saved")
+def create_saved_chart(template_id: str, payload: SavedChartCreatePayload):
+    return _create_saved_chart_route(template_id, payload)
+
+
+@app.put("/templates/{template_id}/charts/saved/{chart_id}")
+def update_saved_chart(template_id: str, chart_id: str, payload: SavedChartUpdatePayload):
+    return _update_saved_chart_route(template_id, chart_id, payload)
+
+
+@app.delete("/templates/{template_id}/charts/saved/{chart_id}")
+def delete_saved_chart(template_id: str, chart_id: str):
+    return _delete_saved_chart_route(template_id, chart_id)
+
+
+@app.get("/excel/{template_id}/charts/saved")
+def list_saved_charts_excel(template_id: str):
+    return _list_saved_charts_route(template_id)
+
+
+@app.post("/excel/{template_id}/charts/saved")
+def create_saved_chart_excel(template_id: str, payload: SavedChartCreatePayload):
+    return _create_saved_chart_route(template_id, payload)
+
+
+@app.put("/excel/{template_id}/charts/saved/{chart_id}")
+def update_saved_chart_excel(template_id: str, chart_id: str, payload: SavedChartUpdatePayload):
+    return _update_saved_chart_route(template_id, chart_id, payload)
+
+
+@app.delete("/excel/{template_id}/charts/saved/{chart_id}")
+def delete_saved_chart_excel(template_id: str, chart_id: str):
+    return _delete_saved_chart_route(template_id, chart_id)
+
+
 def _discover_reports_route(p: DiscoverPayload, *, kind: str = "pdf") -> dict:
     template_dir = _template_dir(p.template_id, kind=kind)
     db_path = _db_path_from_payload_or_default(p.connection_id)
@@ -3674,13 +5331,7 @@ def _discover_reports_route(p: DiscoverPayload, *, kind: str = "pdf") -> dict:
     except Exception as exc:
         raise _http_error(500, "contract_invalid", f"Invalid contract.json: {exc}")
 
-    key_values_payload: dict[str, Any] = {}
-    if isinstance(p.key_values, dict):
-        for token, raw_value in p.key_values.items():
-            name = str(token or "").strip()
-            if not name or raw_value is None:
-                continue
-            key_values_payload[name] = raw_value
+    key_values_payload = _clean_key_values(p.key_values)
 
     discover_fn = discover_batches_and_counts if kind == "pdf" else discover_batches_and_counts_excel
 
@@ -3701,6 +5352,20 @@ def _discover_reports_route(p: DiscoverPayload, *, kind: str = "pdf") -> dict:
     tpl_name = tpl_record.get("name") or f"Template {p.template_id[:8]}"
     state_store.set_last_used(p.connection_id, p.template_id)
 
+    batches_raw = summary.get("batches") or []
+    if not isinstance(batches_raw, list):
+        batches_raw = []
+
+    batch_metadata: dict[str, dict[str, object]] = summary.get("batch_metadata") or {}
+
+    field_catalog = summary.get("field_catalog")
+    if not isinstance(field_catalog, list):
+        field_catalog, _ = build_batch_field_catalog_and_stats(batches_raw)
+
+    batch_metrics = summary.get("batch_metrics")
+    if not isinstance(batch_metrics, list):
+        batch_metrics = build_batch_metrics(batches_raw, batch_metadata)
+
     return {
         "template_id": p.template_id,
         "name": tpl_name,
@@ -3710,13 +5375,17 @@ def _discover_reports_route(p: DiscoverPayload, *, kind: str = "pdf") -> dict:
                 "rows": b["rows"],
                 "parent": b["parent"],
                 "selected": True,
+                "time": (batch_metadata.get(str(b["id"])) or {}).get("time"),
+                "category": (batch_metadata.get(str(b["id"])) or {}).get("category"),
             }
-            for b in summary["batches"]
+            for b in batches_raw
         ],
         "batches_count": summary["batches_count"],
         "rows_total": summary["rows_total"],
         "manifest_url": manifest_url,
         "manifest_produced_at": manifest_data.get("produced_at"),
+        "field_catalog": field_catalog,
+        "batch_metrics": batch_metrics,
     }
 
 
@@ -3753,8 +5422,13 @@ def _ensure_contract_files(template_id: str, *, kind: str = "pdf") -> tuple[Path
     return template_html_path, contract_path
 
 
-def _reports_run_route(p: RunPayload, request: Request, *, kind: str = "pdf"):
-    correlation_id = getattr(request.state, "correlation_id", None)
+def _run_report_internal(
+    p: RunPayload,
+    *,
+    kind: str = "pdf",
+    correlation_id: str | None = None,
+    job_tracker: JobRunTracker | None = None,
+):
     run_started = time.time()
     logger.info(
         "reports_run_start",
@@ -3766,30 +5440,43 @@ def _reports_run_route(p: RunPayload, request: Request, *, kind: str = "pdf"):
             "correlation_id": correlation_id,
         },
     )
+    if job_tracker:
+        job_tracker.step_running("dataLoad", label="Load database connection")
     db_path = _db_path_from_payload_or_default(p.connection_id)
     if not db_path.exists():
+        if job_tracker:
+            job_tracker.step_failed("dataLoad", f"DB not found: {db_path}")
         raise _http_error(400, "db_not_found", f"DB not found: {db_path}")
+    if job_tracker:
+        job_tracker.step_succeeded("dataLoad")
 
-    template_html_path, contract_path = _ensure_contract_files(p.template_id, kind=kind)
+    if job_tracker:
+        job_tracker.step_running("contractCheck", label="Prepare contract")
+    try:
+        template_html_path, contract_path = _ensure_contract_files(p.template_id, kind=kind)
+    except HTTPException as exc:
+        if job_tracker:
+            job_tracker.step_failed("contractCheck", _job_error_message(exc.detail))
+        raise
     tdir = template_html_path.parent
 
     try:
         OBJ = json.loads(contract_path.read_text(encoding="utf-8"))
     except Exception as e:
+        if job_tracker:
+            job_tracker.step_failed("contractCheck", f"Invalid contract.json: {e}")
         raise _http_error(500, "invalid_contract", f"Invalid contract.json: {e}")
     else:
         try:
             validate_contract_schema(OBJ)
         except Exception as exc:
+            if job_tracker:
+                job_tracker.step_failed("contractCheck", str(exc))
             raise _http_error(500, "invalid_contract", str(exc))
+    if job_tracker:
+        job_tracker.step_succeeded("contractCheck")
 
-    key_values_payload: dict[str, Any] = {}
-    if isinstance(p.key_values, dict):
-        for token, raw_value in p.key_values.items():
-            name = str(token or "").strip()
-            if not name or raw_value is None:
-                continue
-            key_values_payload[name] = raw_value
+    key_values_payload = _clean_key_values(p.key_values)
 
     docx_requested = bool(p.docx)
     xlsx_requested = bool(p.xlsx)
@@ -3817,6 +5504,8 @@ def _reports_run_route(p: RunPayload, request: Request, *, kind: str = "pdf"):
 
     with lock_ctx:
         try:
+            if job_tracker:
+                job_tracker.step_running("renderPdf", label="Render PDF artifacts")
             if kind == "excel":
                 from .app.services.reports import (
                     ReportGenerateExcel as report_generate_module,
@@ -3843,12 +5532,16 @@ def _reports_run_route(p: RunPayload, request: Request, *, kind: str = "pdf"):
                 tmp_html.replace(out_html)
             if tmp_pdf.exists():
                 tmp_pdf.replace(out_pdf)
+            docx_step_tracked = bool(job_tracker and job_tracker.has_step("renderDocx"))
             if docx_enabled and out_docx and tmp_docx:
+                if docx_step_tracked:
+                    job_tracker.step_running("renderDocx", label="Render DOCX")
                 docx_tmp_result: Path | None = None
-                if kind == "pdf":
+                docx_error: str | None = None
+                if out_pdf and Path(out_pdf).exists():
                     try:
                         docx_tmp_result = pdf_file_to_docx(out_pdf, tmp_docx)
-                    except Exception:
+                    except Exception as exc:
                         with contextlib.suppress(FileNotFoundError):
                             tmp_docx.unlink(missing_ok=True)
                         logger.exception(
@@ -3860,6 +5553,8 @@ def _reports_run_route(p: RunPayload, request: Request, *, kind: str = "pdf"):
                                 "correlation_id": correlation_id,
                             },
                         )
+                        if docx_step_tracked:
+                            docx_error = f"DOCX conversion failed: {exc}"
                 if docx_tmp_result is None:
                     if docx_landscape:
                         docx_font_scale = _extract_excel_print_scale_from_html(out_html) or docx_font_scale
@@ -3870,7 +5565,7 @@ def _reports_run_route(p: RunPayload, request: Request, *, kind: str = "pdf"):
                             landscape=docx_landscape,
                             body_font_scale=docx_font_scale or (0.82 if docx_landscape else None),
                         )
-                    except Exception:
+                    except Exception as exc:
                         with contextlib.suppress(FileNotFoundError):
                             tmp_docx.unlink(missing_ok=True)
                         logger.exception(
@@ -3882,6 +5577,8 @@ def _reports_run_route(p: RunPayload, request: Request, *, kind: str = "pdf"):
                                 "correlation_id": correlation_id,
                             },
                         )
+                        if docx_step_tracked:
+                            docx_error = f"DOCX export failed: {exc}"
                     else:
                         if docx_tmp_result:
                             docx_tmp_path = Path(docx_tmp_result)
@@ -3895,10 +5592,19 @@ def _reports_run_route(p: RunPayload, request: Request, *, kind: str = "pdf"):
                     if docx_tmp_result and docx_tmp_result != out_docx:
                         Path(docx_tmp_result).replace(out_docx)
                     docx_path = out_docx
+                if docx_step_tracked:
+                    if docx_error:
+                        job_tracker.step_failed("renderDocx", docx_error)
+                    else:
+                        job_tracker.step_succeeded("renderDocx")
+            xlsx_step_tracked = bool(job_tracker and job_tracker.has_step("renderXlsx"))
             if xlsx_enabled and out_xlsx and tmp_xlsx:
+                if xlsx_step_tracked:
+                    job_tracker.step_running("renderXlsx", label="Render XLSX")
+                xlsx_error: str | None = None
                 try:
                     xlsx_tmp_result = html_file_to_xlsx(out_html, tmp_xlsx)
-                except Exception:
+                except Exception as exc:
                     with contextlib.suppress(FileNotFoundError):
                         tmp_xlsx.unlink(missing_ok=True)
                     logger.exception(
@@ -3910,6 +5616,8 @@ def _reports_run_route(p: RunPayload, request: Request, *, kind: str = "pdf"):
                             "correlation_id": correlation_id,
                         },
                     )
+                    if xlsx_step_tracked:
+                        xlsx_error = f"XLSX export failed: {exc}"
                 else:
                     if xlsx_tmp_result:
                         xlsx_tmp_path = Path(xlsx_tmp_result)
@@ -3919,6 +5627,11 @@ def _reports_run_route(p: RunPayload, request: Request, *, kind: str = "pdf"):
                     else:
                         with contextlib.suppress(FileNotFoundError):
                             tmp_xlsx.unlink(missing_ok=True)
+                if xlsx_step_tracked:
+                    if xlsx_error:
+                        job_tracker.step_failed("renderXlsx", xlsx_error)
+                    else:
+                        job_tracker.step_succeeded("renderXlsx")
         except ImportError:
             raise _http_error(
                 501,
@@ -3936,11 +5649,15 @@ def _reports_run_route(p: RunPayload, request: Request, *, kind: str = "pdf"):
                 tmp_pdf.unlink(missing_ok=True)
             if tmp_docx is not None:
                 with contextlib.suppress(FileNotFoundError):
-                    tmp_docx.unlink(missing_ok=True)
+                        tmp_docx.unlink(missing_ok=True)
             if tmp_xlsx is not None:
                 with contextlib.suppress(FileNotFoundError):
                     tmp_xlsx.unlink(missing_ok=True)
+            if job_tracker:
+                job_tracker.step_failed("renderPdf", f"Report generation failed: {e}")
             raise _http_error(500, "report_generation_failed", f"Report generation failed: {e}")
+    if job_tracker:
+        job_tracker.step_succeeded("renderPdf")
 
     artifact_files = {
         out_html.name: out_html,
@@ -3951,6 +5668,8 @@ def _reports_run_route(p: RunPayload, request: Request, *, kind: str = "pdf"):
     if xlsx_path and out_xlsx:
         artifact_files[out_xlsx.name] = out_xlsx
 
+    if job_tracker and job_tracker.has_step("finalize"):
+        job_tracker.step_running("finalize", label="Finalize artifacts")
     write_artifact_manifest(
         tdir,
         step="reports_run",
@@ -3958,6 +5677,8 @@ def _reports_run_route(p: RunPayload, request: Request, *, kind: str = "pdf"):
         inputs=[str(contract_path), str(db_path)],
         correlation_id=correlation_id,
     )
+    if job_tracker and job_tracker.has_step("finalize"):
+        job_tracker.step_succeeded("finalize")
 
     manifest_data = load_manifest(tdir) or {}
     manifest_url = _manifest_endpoint(p.template_id, kind=kind)
@@ -3978,7 +5699,7 @@ def _reports_run_route(p: RunPayload, request: Request, *, kind: str = "pdf"):
         },
     )
 
-    return {
+    result = {
         "ok": True,
         "run_id": str(uuid.uuid4()),
         "template_id": p.template_id,
@@ -3992,6 +5713,132 @@ def _reports_run_route(p: RunPayload, request: Request, *, kind: str = "pdf"):
         "manifest_produced_at": manifest_data.get("produced_at"),
         "correlation_id": correlation_id,
     }
+    artifact_paths = {
+        "html": out_html if out_html.exists() else None,
+        "pdf": out_pdf if out_pdf.exists() else None,
+        "docx": docx_path if docx_path and docx_path.exists() else None,
+        "xlsx": xlsx_path if xlsx_path and xlsx_path.exists() else None,
+    }
+    return result, artifact_paths
+
+
+def _maybe_send_email(
+    p: RunPayload,
+    artifact_paths: Mapping[str, Optional[Path]],
+    run_result: Mapping[str, Any],
+    *,
+    kind: str,
+    correlation_id: str | None,
+    job_tracker: JobRunTracker | None = None,
+) -> None:
+    recipients = _normalize_email_targets(p.email_recipients)
+    email_step_tracked = bool(job_tracker and job_tracker.has_step("email"))
+    if not recipients:
+        if email_step_tracked:
+            job_tracker.step_succeeded("email")
+        return
+    if email_step_tracked:
+        job_tracker.step_running("email", label="Send notification email")
+    attachments: list[Path] = []
+    for key in ("pdf", "docx", "xlsx"):
+        path = artifact_paths.get(key)
+        if isinstance(path, Path) and path.exists():
+            attachments.append(path)
+    if not attachments:
+        fallback = artifact_paths.get("html")
+        if isinstance(fallback, Path) and fallback.exists():
+            attachments.append(fallback)
+    if not attachments:
+        return
+    template_record = state_store.get_template_record(p.template_id) or {}
+    template_name = template_record.get("name") or p.template_id
+    default_subject = f"Report run for {template_name}"
+    subject = (p.email_subject or default_subject).strip()
+    if not subject:
+        subject = default_subject
+    if p.email_message:
+        body = p.email_message.strip()
+    else:
+        artifact_lines = []
+        for key in ("pdf_url", "docx_url", "xlsx_url", "html_url"):
+            url = run_result.get(key)
+            if url:
+                label = key.replace("_url", "").upper()
+                artifact_lines.append(f"{label}: {url}")
+        lines = [
+            f"Template: {template_name} ({p.template_id})",
+            f"Run kind: {kind}",
+            f"Range: {p.start_date} \u2192 {p.end_date}",
+        ]
+        if artifact_lines:
+            lines.append("")
+            lines.append("Artifacts:")
+            lines.extend(artifact_lines)
+        lines.append("")
+        lines.append("This notification was generated automatically by NeuraReport.")
+        body = "\n".join(lines)
+
+    success = send_report_email(
+        to_addresses=recipients,
+        subject=subject,
+        body=body,
+        attachments=attachments,
+    )
+    if email_step_tracked:
+        if success:
+            job_tracker.step_succeeded("email")
+        else:
+            job_tracker.step_failed("email", "Email delivery failed")
+    logger.info(
+        "report_email_attempt",
+        extra={
+            "event": "report_email_attempt",
+            "template_id": p.template_id,
+            "recipients": len(recipients),
+            "correlation_id": correlation_id,
+            "status": "sent" if success else "skipped",
+        },
+    )
+
+
+def _run_report_with_email(
+    p: RunPayload,
+    *,
+    kind: str,
+    correlation_id: str | None = None,
+    job_tracker: JobRunTracker | None = None,
+) -> dict:
+    result, artifact_paths = _run_report_internal(p, kind=kind, correlation_id=correlation_id, job_tracker=job_tracker)
+    _maybe_send_email(
+        p,
+        artifact_paths,
+        result,
+        kind=kind,
+        correlation_id=correlation_id,
+        job_tracker=job_tracker,
+    )
+    return result
+
+
+def _scheduler_runner(payload: dict, kind: str) -> dict:
+    run_payload = RunPayload(**payload)
+    correlation_id = payload.get("correlation_id") or f"sched-{payload.get('schedule_id') or uuid.uuid4()}"
+    return _run_report_with_email(run_payload, kind=kind, correlation_id=correlation_id)
+
+
+@app.post("/jobs/run-report")
+async def enqueue_report_job(p: RunPayload, request: Request):
+    return await _queue_report_job(p, request, kind="pdf")
+
+
+@app.post("/excel/jobs/run-report")
+async def enqueue_report_job_excel(p: RunPayload, request: Request):
+    return await _queue_report_job(p, request, kind="excel")
+
+
+def _reports_run_route(p: RunPayload, request: Request, *, kind: str = "pdf"):
+    correlation_id = getattr(request.state, "correlation_id", None)
+    return _run_report_with_email(p, kind=kind, correlation_id=correlation_id)
 
 
 @app.post("/reports/run")
@@ -4002,3 +5849,81 @@ def start_run(p: RunPayload, request: Request):
 @app.post("/excel/reports/run")
 def start_run_excel(p: RunPayload, request: Request):
     return _reports_run_route(p, request, kind="excel")
+
+
+@app.get("/jobs")
+def list_jobs_route(
+    status: list[str] | None = Query(None),
+    job_type: list[str] | None = Query(None, alias="type"),
+    limit: int = Query(50, ge=1, le=200),
+    active_only: bool = Query(False),
+):
+    jobs = state_store.list_jobs(statuses=status, types=job_type, limit=limit, active_only=active_only)
+    return {"jobs": jobs}
+
+
+@app.get("/jobs/active")
+def list_active_jobs(limit: int = Query(20, ge=1, le=200)):
+    jobs = state_store.list_jobs(limit=limit, active_only=True)
+    return {"jobs": jobs}
+
+
+@app.get("/jobs/{job_id}")
+def get_job_route(job_id: str):
+    job = state_store.get_job(job_id)
+    if not job:
+        raise _http_error(404, "job_not_found", "Job not found.")
+    return {"job": job}
+
+
+# ---------- Schedules ----------
+@app.get("/reports/schedules")
+def list_report_schedules():
+    return {"schedules": state_store.list_schedules()}
+
+
+@app.post("/reports/schedules")
+def create_report_schedule(payload: ScheduleCreatePayload):
+    template = state_store.get_template_record(payload.template_id) or {}
+    if not template:
+        raise _http_error(404, "template_not_found", "Template not found.")
+    if str(template.get("status")).lower() != "approved":
+        raise _http_error(400, "template_not_ready", "Template must be approved before scheduling runs.")
+    connection = state_store.get_connection_record(payload.connection_id)
+    if not connection:
+        raise _http_error(404, "connection_not_found", "Connection not found.")
+    if not payload.start_date or not payload.end_date:
+        raise _http_error(400, "invalid_schedule_range", "Provide both start_date and end_date.")
+    interval_minutes = _resolve_schedule_interval(payload.frequency, payload.interval_minutes)
+    now_iso = _utcnow_iso()
+    schedule = state_store.create_schedule(
+        name=(payload.name or template.get("name") or f"Schedule {payload.template_id}")[:120],
+        template_id=payload.template_id,
+        template_name=template.get("name") or payload.template_id,
+        template_kind=template.get("kind") or "pdf",
+        connection_id=payload.connection_id,
+        connection_name=connection.get("name") or connection.get("connection_name") or payload.connection_id,
+        start_date=payload.start_date,
+        end_date=payload.end_date,
+        key_values=_clean_key_values(payload.key_values),
+        batch_ids=payload.batch_ids,
+        docx=payload.docx,
+        xlsx=payload.xlsx,
+        email_recipients=_normalize_email_targets(payload.email_recipients or []),
+        email_subject=payload.email_subject,
+        email_message=payload.email_message,
+        frequency=payload.frequency,
+        interval_minutes=interval_minutes,
+        next_run_at=now_iso,
+        first_run_at=now_iso,
+        active=payload.active,
+    )
+    return {"schedule": schedule}
+
+
+@app.delete("/reports/schedules/{schedule_id}")
+def delete_report_schedule(schedule_id: str):
+    removed = state_store.delete_schedule(schedule_id)
+    if not removed:
+        raise _http_error(404, "schedule_not_found", "Schedule not found.")
+    return {"status": "ok", "schedule_id": schedule_id}

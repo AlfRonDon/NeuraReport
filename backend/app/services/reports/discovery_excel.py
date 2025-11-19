@@ -7,14 +7,21 @@ here without touching the PDF-focused discovery module.
 
 from __future__ import annotations
 
+import math
 import re
-import sqlite3
+from collections import Counter
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Mapping
 
+import pandas as pd
+
 from .contract_adapter import ContractAdapter
-from .date_utils import get_col_type, mk_between_pred_for_date
+from .discovery_metrics import (
+    build_batch_field_catalog_and_stats,
+    build_batch_metrics,
+)
+from ..dataframes import SQLiteDataFrameLoader
 
 try:  # pragma: no cover - compatibility shim
     from ..mapping.auto_fill import build_or_load_contract  # type: ignore
@@ -83,45 +90,195 @@ def _parse_date_like(value) -> datetime | None:
     return None
 
 
-def _normalize_for_between(value) -> str:
+def _stringify_value(value: Any) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, float) and math.isnan(value):
+        return ""
+    text = str(value)
+    return text.strip()
+
+
+def _coerce_datetime_series(series: pd.Series) -> pd.Series:
+    if pd.api.types.is_datetime64_any_dtype(series):
+        result = series
+    elif pd.api.types.is_numeric_dtype(series):
+        numeric = pd.to_numeric(series, errors="coerce")
+        finite = numeric[~pd.isna(numeric)]
+        max_abs = finite.abs().max() if not finite.empty else None
+        if max_abs is not None and max_abs > 32503680000:
+            numeric = numeric / 1000.0
+        result = pd.to_datetime(numeric, unit="s", errors="coerce")
+    else:
+        text = series.astype(str).str.strip()
+        result = pd.to_datetime(text, errors="coerce")
+    if hasattr(result, "dt"):
+        try:
+            return result.dt.tz_localize(None)
+        except (AttributeError, TypeError):
+            return result
+    return result
+
+
+def _apply_date_filter(df: pd.DataFrame, column: str, start: str, end: str) -> pd.DataFrame:
+    if df is None or df.empty or not column or column not in df.columns:
+        return df
+    start_dt = _parse_date_like(start)
+    end_dt = _parse_date_like(end)
+    if start_dt is None or end_dt is None:
+        return df
+    dt_series = _coerce_datetime_series(df[column])
+    mask = (dt_series >= start_dt) & (dt_series <= end_dt)
+    return df.loc[mask.fillna(False)]
+
+
+def _normalize_key_value(raw_value: Any) -> list[str]:
+    if isinstance(raw_value, (list, tuple, set)):
+        values: list[str] = []
+        for item in raw_value:
+            text = str(item or "").strip()
+            if text and text not in values:
+                values.append(text)
+        return values
+    text = str(raw_value or "").strip()
+    return [text] if text else []
+
+
+def _apply_value_filters(df: pd.DataFrame, filters: list[tuple[str, list[str]]]) -> pd.DataFrame:
+    if df is None or df.empty or not filters:
+        return df
+    mask = pd.Series(True, index=df.index)
+    for column, values in filters:
+        if column not in df.columns:
+            continue
+        normalized = [str(val).strip() for val in values if str(val or "").strip()]
+        if not normalized:
+            continue
+        series = df[column]
+        if pd.api.types.is_numeric_dtype(series):
+            try:
+                numeric_values = [float(val) for val in normalized]
+            except ValueError:
+                numeric_values = None
+            if numeric_values is not None:
+                cmp = pd.to_numeric(series, errors="coerce").isin(numeric_values)
+                mask &= cmp.fillna(False)
+                continue
+        cmp = series.astype(str).str.strip().isin(normalized)
+        mask &= cmp.fillna(False)
+    return df.loc[mask]
+
+
+def _build_batch_index(df: pd.DataFrame, key_columns: List[str], *, use_rowid: bool = False) -> tuple[list[str], Counter[str]]:
+    if df is None or df.empty:
+        return [], Counter()
+    working = df.reset_index(drop=True).copy()
+    columns = list(key_columns)
+    if use_rowid:
+        working["__rowid__"] = working.index + 1
+        columns = ["__rowid__"]
+    if not columns:
+        working["__bid__"] = ""
+    elif len(columns) == 1:
+        col = columns[0]
+        if col not in working.columns:
+            working[col] = None
+        working["__bid__"] = working[col].apply(_stringify_value)
+    else:
+        for col in columns:
+            if col not in working.columns:
+                working[col] = None
+        working["__bid__"] = working[columns].apply(lambda row: "|".join(_stringify_value(v) for v in row), axis=1)
+    sort_cols = columns or ["__bid__"]
+    working_sorted = working.sort_values(sort_cols, kind="mergesort")
+    ordered_ids: list[str] = []
+    seen: set[str] = set()
+    for bid in working_sorted["__bid__"]:
+        if bid not in seen:
+            seen.add(bid)
+            ordered_ids.append(bid)
+    counts = Counter(working["__bid__"])
+    return ordered_ids, counts
+
+
+def _build_batch_metadata(
+    df: pd.DataFrame,
+    key_columns: List[str],
+    *,
+    date_column: str | None = None,
+    use_rowid: bool = False,
+) -> Dict[str, Dict[str, object]]:
     """
-    Produce an ISO-like string that SQLite's datetime() understands.
-    Falls back to the trimmed raw value when parsing fails.
+    Derive lightweight per-batch metadata for resampling and charting.
+
+    For each batch id we compute:
+      - time:  representative timestamp (earliest in the batch) when a date
+               column is available.
+      - category: a human-readable label based on the first key column.
+
+    The returned mapping is keyed by batch id (the same id produced by
+    _build_batch_index).
     """
-    dt = _parse_date_like(value)
-    if dt is None:
-        return "" if value is None else str(value).strip()
-    if dt.tzinfo is not None:
-        return dt.isoformat(sep=" ")
-    if dt.hour or dt.minute or dt.second or dt.microsecond:
-        return dt.strftime("%Y-%m-%d %H:%M:%S")
-    return dt.strftime("%Y-%m-%d")
+    if df is None or df.empty:
+        return {}
 
+    working = df.reset_index(drop=True).copy()
+    columns = list(key_columns)
 
-def _concat_key_expr(cols: List[str]) -> str:
-    parts = [f"COALESCE(CAST({c} AS TEXT),'')" for c in cols]
-    expr = parts[0]
-    for part in parts[1:]:
-        expr = f"{expr} || '|' || {part}"
-    return expr
+    if use_rowid:
+        working["__rowid__"] = working.index + 1
+        columns = ["__rowid__"]
 
+    if not columns:
+        working["__bid__"] = ""
+    elif len(columns) == 1:
+        col = columns[0]
+        if col not in working.columns:
+            working[col] = None
+        working["__bid__"] = working[col].apply(_stringify_value)
+    else:
+        for col in columns:
+            if col not in working.columns:
+                working[col] = None
+        working["__bid__"] = working[columns].apply(
+            lambda row: "|".join(_stringify_value(v) for v in row),
+            axis=1,
+        )
 
-def _split_bid_parts(bid: object, expected_len: int) -> List[str]:
-    """
-    Split a composite batch identifier that was generated by _concat_key_expr.
-    Handles non-string identifiers gracefully and pads/truncates the result
-    so callers always receive exactly expected_len parts.
-    """
-    if expected_len <= 1:
-        return ["" if bid is None else str(bid)]
+    metadata: Dict[str, Dict[str, object]] = {}
 
-    text = "" if bid is None else str(bid)
-    parts = text.split("|")
-    if len(parts) < expected_len:
-        parts.extend([""] * (expected_len - len(parts)))
-    elif len(parts) > expected_len:
-        parts = parts[:expected_len]
-    return parts
+    # Time dimension: earliest timestamp per batch, if a usable column exists.
+    if date_column and date_column in working.columns:
+        try:
+            dt_series = _coerce_datetime_series(working[date_column])
+        except Exception:  # pragma: no cover - defensive
+            dt_series = None
+        if dt_series is not None:
+            working["_nr_time"] = dt_series
+            grouped_time = working.groupby("__bid__")["_nr_time"].min()
+            for bid, ts in grouped_time.items():
+                # pandas uses NaT for missing values; treat as absent.
+                if ts is None or pd.isna(ts):
+                    continue
+                try:
+                    # Both pandas.Timestamp and datetime.datetime implement isoformat.
+                    iso_value = ts.isoformat()
+                except Exception:  # pragma: no cover - defensive
+                    continue
+                metadata.setdefault(bid, {})["time"] = iso_value
+
+    # Category dimension: first non-empty value from the first key column.
+    category_source = columns[0] if columns else None
+    if category_source and category_source in working.columns:
+        working["_nr_category"] = working[category_source].apply(_stringify_value)
+        grouped_cat = working.groupby("__bid__")["_nr_category"].first()
+        for bid, cat in grouped_cat.items():
+            text = _stringify_value(cat)
+            if not text:
+                continue
+            metadata.setdefault(bid, {})["category"] = text
+
+    return metadata
 
 
 def discover_batches_and_counts(
@@ -206,18 +363,7 @@ def discover_batches_and_counts(
 
     has_child = bool(child_table and ccols)
 
-    # Type-aware BETWEEN predicates (gracefully handle missing/invalid date columns)
-    parent_type = get_col_type(db_path, parent_table, parent_date)
-    child_type = get_col_type(db_path, child_table, child_date) if has_child else ""
-    parent_pred, adapt_parent = mk_between_pred_for_date(parent_date, parent_type)
-    child_pred, adapt_child = (
-        mk_between_pred_for_date(child_date, child_type) if has_child else ("1=1", lambda *_: tuple())
-    )
-
-    db_start = _normalize_for_between(start_date)
-    db_end = _normalize_for_between(end_date)
-    parent_params = tuple(adapt_parent(db_start, db_end))
-    child_params = tuple(adapt_child(db_start, db_end)) if has_child else tuple()
+    loader = SQLiteDataFrameLoader(db_path)
 
     if not isinstance(key_values, Mapping):
         key_values = {}
@@ -233,25 +379,6 @@ def discover_batches_and_counts(
         table_name = table_name.strip(' "`[]').lower()
         column_name = column_name.strip(' "`[]')
         return table_name, column_name
-
-    def _normalize_key_value(raw_value: Any) -> list[str]:
-        if isinstance(raw_value, (list, tuple, set)):
-            values: list[str] = []
-            for item in raw_value:
-                text = str(item or "").strip()
-                if text and text not in values:
-                    values.append(text)
-            return values
-        text = str(raw_value or "").strip()
-        return [text] if text else []
-
-    _IDENT_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
-
-    def qident(name: str) -> str:
-        if _IDENT_RE.match(name):
-            return name
-        safe = name.replace('"', '""')
-        return f'"{safe}"'
 
     def _append_filter_target(expr_text: str, value: Any, collection: list[tuple[str, Any]], expected_table: str):
         if not expr_text or not expected_table:
@@ -317,128 +444,92 @@ def discover_batches_and_counts(
             _append_filter_target(expr, value, parent_filters, parent_table)
             if has_child:
                 _append_filter_target(expr, value, child_filters, child_table)
-    parent_filter_sqls: list[str] = []
-    parent_filter_values: list[str] = []
-    for col, raw_values in parent_filters:
-        values = _normalize_key_value(raw_values)
-        if not values:
-            continue
-        unique_values: list[str] = []
-        for val in values:
-            text = str(val or "").strip()
-            if text and text not in unique_values:
-                unique_values.append(text)
-        if not unique_values:
-            continue
-        column_sql = qident(col)
-        if len(unique_values) == 1:
-            parent_filter_sqls.append(f"{column_sql} = ?")
+    parent_filter_pairs: list[tuple[str, list[str]]] = [
+        (col, _normalize_key_value(values)) for col, values in parent_filters
+    ]
+    child_filter_pairs: list[tuple[str, list[str]]] = [
+        (col, _normalize_key_value(values)) for col, values in child_filters
+    ]
+    try:
+        parent_df = loader.frame(parent_table).copy()
+    except Exception as exc:  # pragma: no cover - surfaced to caller
+        raise RuntimeError(f"Failed to load parent table {parent_table!r}: {exc}") from exc
+
+    child_df = None
+    if has_child:
+        try:
+            child_df = loader.frame(child_table).copy()
+        except Exception as exc:  # pragma: no cover - surfaced to caller
+            raise RuntimeError(f"Failed to load child table {child_table!r}: {exc}") from exc
+
+    parent_df = _apply_date_filter(parent_df, parent_date, start_date, end_date)
+    parent_df = _apply_value_filters(parent_df, parent_filter_pairs)
+
+    if has_child and child_df is not None:
+        child_df = _apply_date_filter(child_df, child_date, start_date, end_date)
+        child_df = _apply_value_filters(child_df, child_filter_pairs)
+
+    parent_ids, parent_counts = _build_batch_index(parent_df, pcols, use_rowid=use_rowid)
+    if has_child and child_df is not None:
+        child_ids, child_counts = _build_batch_index(child_df, ccols)
+    else:
+        child_ids, child_counts = [], Counter()
+
+    if not parent_ids and child_ids:
+        parent_ids = list(child_ids)
+
+    # Lightweight metadata for resampling (time/category per batch id).
+    batch_metadata: Dict[str, Dict[str, object]] = {}
+    try:
+        parent_meta = _build_batch_metadata(
+            parent_df,
+            pcols,
+            date_column=parent_date or None,
+            use_rowid=use_rowid,
+        )
+        for bid, meta in parent_meta.items():
+            batch_metadata.setdefault(bid, {}).update(meta)
+    except Exception:  # pragma: no cover - defensive
+        batch_metadata = {}
+
+    if has_child and child_df is not None:
+        try:
+            child_meta = _build_batch_metadata(
+                child_df,
+                ccols,
+                date_column=child_date or None,
+                use_rowid=False,
+            )
+            for bid, meta in child_meta.items():
+                target = batch_metadata.setdefault(bid, {})
+                if "time" not in target and "time" in meta:
+                    target["time"] = meta["time"]
+                if "category" not in target and "category" in meta:
+                    target["category"] = meta["category"]
+        except Exception:  # pragma: no cover - defensive
+            # If metadata from child fails, keep whatever we have from parent.
+            pass
+
+    batches: List[Dict[str, object]] = []
+    rows_total = 0
+
+    for bid in parent_ids:
+        parent_cnt = int(parent_counts.get(bid, 0))
+        if has_child:
+            child_cnt = int(child_counts.get(bid, 0))
         else:
-            placeholders = ", ".join("?" for _ in unique_values)
-            parent_filter_sqls.append(f"{column_sql} IN ({placeholders})")
-        parent_filter_values.extend(unique_values)
+            child_cnt = parent_cnt
+        rows_total += child_cnt
+        batches.append({"id": bid, "parent": parent_cnt, "rows": child_cnt})
 
-    child_filter_sqls: list[str] = []
-    child_filter_values: list[str] = []
-    for col, raw_values in child_filters:
-        values = _normalize_key_value(raw_values)
-        if not values:
-            continue
-        unique_values: list[str] = []
-        for val in values:
-            text = str(val or "").strip()
-            if text and text not in unique_values:
-                unique_values.append(text)
-        if not unique_values:
-            continue
-        column_sql = qident(col)
-        if len(unique_values) == 1:
-            child_filter_sqls.append(f"{column_sql} = ?")
-        else:
-            placeholders = ", ".join("?" for _ in unique_values)
-            child_filter_sqls.append(f"{column_sql} IN ({placeholders})")
-        child_filter_values.extend(unique_values)
-
-    def _merge_predicate(base: str, extras: list[str]) -> str:
-        if not extras:
-            return base
-        extras_joined = " AND ".join(extras)
-        base = base or "1=1"
-        return f"({base}) AND {extras_joined}"
-
-    parent_where_clause = _merge_predicate(parent_pred, parent_filter_sqls)
-    child_where_clause = _merge_predicate(child_pred, child_filter_sqls) if has_child else child_pred
-    parent_filter_values_tuple = tuple(parent_filter_values)
-    child_filter_values_tuple = tuple(child_filter_values)
-    parent_params_all = tuple(parent_params) + parent_filter_values_tuple
-    child_params_all = tuple(child_params) + child_filter_values_tuple if has_child else tuple()
-    with sqlite3.connect(str(db_path)) as con:
-        con.row_factory = sqlite3.Row
-        cur = con.cursor()
-
-        # 1) Distinct parent ids in range (this is our batch list)
-        if use_rowid:
-            sql = f"SELECT rowid AS bid FROM {parent_table} WHERE {parent_where_clause}"
-            parent_ids = [row["bid"] for row in cur.execute(sql, parent_params_all)]
-        elif len(pcols) == 1:
-            sql = f"SELECT DISTINCT {pcols[0]} AS bid FROM {parent_table} WHERE {parent_where_clause}"
-            parent_ids = [row["bid"] for row in cur.execute(sql, parent_params_all)]
-        else:
-            sql = f"SELECT DISTINCT {_concat_key_expr(pcols)} AS bid FROM {parent_table} WHERE {parent_where_clause}"
-            parent_ids = [row["bid"] for row in cur.execute(sql, parent_params_all)]
-
-        # Fallback to child ids if parent had none
-        if not parent_ids and has_child:
-            if len(ccols) == 1:
-                sql = f"SELECT DISTINCT {ccols[0]} AS bid FROM {child_table} WHERE {child_where_clause}"
-                parent_ids = [row["bid"] for row in cur.execute(sql, child_params_all)]
-            else:
-                sql = f"SELECT DISTINCT {_concat_key_expr(ccols)} AS bid FROM {child_table} WHERE {child_where_clause}"
-                parent_ids = [row["bid"] for row in cur.execute(sql, child_params_all)]
-
-        # 2) Per-batch counts: parent (batches) + child (rows)
-        batches: List[Dict[str, object]] = []
-        rows_total = 0
-
-        for bid in parent_ids:
-            bid_str = "" if bid is None else str(bid)
-            # parent count
-            if use_rowid:
-                sql_parent = f"SELECT COUNT(*) AS n FROM {parent_table} WHERE rowid = ? AND {parent_where_clause}"
-                params_parent = (bid,) + tuple(parent_params) + parent_filter_values_tuple
-                parent_cnt = cur.execute(sql_parent, params_parent).fetchone()["n"]
-            elif len(pcols) == 1:
-                sql_parent = f"SELECT COUNT(*) AS n FROM {parent_table} WHERE {pcols[0]} = ? AND {parent_where_clause}"
-                params_parent = (bid,) + tuple(parent_params) + parent_filter_values_tuple
-                parent_cnt = cur.execute(sql_parent, params_parent).fetchone()["n"]
-            else:
-                parts = _split_bid_parts(bid, len(pcols))
-                where_parent = " AND ".join([f"{col} = ?" for col in pcols])
-                sql_parent = f"SELECT COUNT(*) AS n FROM {parent_table} WHERE {where_parent} AND {parent_where_clause}"
-                params_parent = tuple(parts) + tuple(parent_params) + parent_filter_values_tuple
-                parent_cnt = cur.execute(sql_parent, params_parent).fetchone()["n"]
-
-            # child rows
-            if has_child:
-                if len(ccols) == 1:
-                    sql_child = f"SELECT COUNT(*) AS n FROM {child_table} WHERE {ccols[0]} = ? AND {child_where_clause}"
-                    params_child = (bid,) + tuple(child_params) + child_filter_values_tuple
-                    child_cnt = cur.execute(sql_child, params_child).fetchone()["n"]
-                else:
-                    parts_child = _split_bid_parts(bid, len(ccols))
-                    where_child = " AND ".join([f"{col} = ?" for col in ccols])
-                    sql_child = f"SELECT COUNT(*) AS n FROM {child_table} WHERE {where_child} AND {child_where_clause}"
-                    params_child = tuple(parts_child) + tuple(child_params) + child_filter_values_tuple
-                    child_cnt = cur.execute(sql_child, params_child).fetchone()["n"]
-            else:
-                # No child table available; use parent count.
-                child_cnt = parent_cnt
-
-            rows_total += int(child_cnt)
-            batches.append({"id": bid_str, "parent": int(parent_cnt), "rows": int(child_cnt)})
+    field_catalog, _ = build_batch_field_catalog_and_stats(batches)
+    batch_metrics = build_batch_metrics(batches, batch_metadata)
 
     return {
         "batches": batches,
         "batches_count": len(batches),
         "rows_total": rows_total,
+        "batch_metadata": batch_metadata,
+        "field_catalog": field_catalog,
+        "batch_metrics": batch_metrics,
     }

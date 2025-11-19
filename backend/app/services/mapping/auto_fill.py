@@ -3,7 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
-import sqlite3
+from ..dataframes.sqlite_loader import get_loader
 from pathlib import Path
 from typing import Optional
 
@@ -16,9 +16,8 @@ def _compute_db_signature(db_path: Path) -> Optional[str]:
     Captures table columns and foreign keys to detect schema drift.
     """
     schema: dict[str, dict[str, list[dict[str, object]]]] = {}
-    con: Optional[sqlite3.Connection] = None
     try:
-        con = sqlite3.connect(str(db_path))
+        loader = get_loader(db_path)
     except Exception as exc:
         logger.warning(
             "db_signature_connect_failed",
@@ -31,43 +30,35 @@ def _compute_db_signature(db_path: Path) -> Optional[str]:
         return None
 
     try:
-        cur = con.cursor()
-        cur.execute(
-            "SELECT name FROM sqlite_master " "WHERE type='table' AND name NOT LIKE 'sqlite_%' " "ORDER BY name;"
-        )
-        tables = [row[0] for row in cur.fetchall()]
-
+        tables = loader.table_names()
         for table in tables:
             table_entry: dict[str, list[dict[str, object]]] = {"columns": [], "foreign_keys": []}
-
             try:
-                cur.execute(f"PRAGMA table_info('{table}')")
-                columns = [
+                columns = loader.pragma_table_info(table)
+                table_entry["columns"] = [
                     {
-                        "name": str(col[1]),
-                        "type": str(col[2] or ""),
-                        "notnull": int(col[3] or 0),
-                        "pk": int(col[5] or 0),
+                        "name": str(col.get("name") or ""),
+                        "type": str(col.get("type") or ""),
+                        "notnull": int(col.get("notnull") or 0),
+                        "pk": int(col.get("pk") or 0),
                     }
-                    for col in cur.fetchall()
+                    for col in columns
                 ]
-                table_entry["columns"] = columns
             except Exception:
                 table_entry["columns"] = []
 
             try:
-                cur.execute(f"PRAGMA foreign_key_list('{table}')")
-                fks = [
+                fks = loader.foreign_keys(table)
+                table_entry["foreign_keys"] = [
                     {
-                        "id": int(fk[0]),
-                        "seq": int(fk[1]),
-                        "table": str(fk[2] or ""),
-                        "from": str(fk[3] or ""),
-                        "to": str(fk[4] or ""),
+                        "id": int(fk.get("id", 0)),
+                        "seq": int(fk.get("seq", 0)),
+                        "table": str(fk.get("table") or ""),
+                        "from": str(fk.get("from") or ""),
+                        "to": str(fk.get("to") or ""),
                     }
-                    for fk in cur.fetchall()
+                    for fk in fks
                 ]
-                table_entry["foreign_keys"] = fks
             except Exception:
                 table_entry["foreign_keys"] = []
 
@@ -82,12 +73,6 @@ def _compute_db_signature(db_path: Path) -> Optional[str]:
             exc_info=exc,
         )
         return None
-    finally:
-        if con is not None:
-            try:
-                con.close()
-            except Exception:
-                pass
 
     payload = json.dumps(schema, sort_keys=True, separators=(",", ":")).encode("utf-8")
     return hashlib.sha256(payload).hexdigest()

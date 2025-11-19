@@ -44,7 +44,7 @@ function detectFormat(file) {
 
 const ACCEPTED_FORMATS = new Set(['PDF', 'Excel'])
 const ACCEPTED_EXTENSIONS = '.pdf,.xls,.xlsx'
-const EXCEL_MAX_DATA_ROWS = Number(import.meta.env?.VITE_EXCEL_MAX_DATA_ROWS ?? '5') || 5
+const EXCEL_MAX_DATA_ROWS = Number(import.meta.env?.VITE_EXCEL_MAX_DATA_ROWS ?? '30') || 30
 
 const formatFileSize = (bytes) => {
   if (!Number.isFinite(bytes) || bytes <= 0) return '0 KB'

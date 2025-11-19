@@ -75,6 +75,7 @@ def _coerce_join_block(data: Mapping[str, Any]) -> dict[str, Any] | None:
     )
     return join
 
+
 if Draft7Validator is not None:
     _MAPPING_INLINE_V4_SCHEMA = json.loads(
         (JSON_SCHEMA_DIR / "mapping_inline_v4.schema.json").read_text(encoding="utf-8")
@@ -442,6 +443,13 @@ def validate_generator_sql_pack(data: Any) -> None:
         path = ".".join(str(p) for p in err.path)
         location = f" at {path}" if path else ""
         raise SchemaValidationError(f"generator_sql_pack validation error{location}: {err.message}")
+    dialect = str(data.get("dialect") or "").strip().lower()
+    if not dialect or dialect == "sqlite":
+        raise SchemaValidationError(
+            "generator_sql_pack.dialect must be 'duckdb' or 'postgres' (SQLite SQL is no longer supported)"
+        )
+    if dialect not in {"duckdb", "postgres"}:
+        raise SchemaValidationError(f"generator_sql_pack.dialect '{data.get('dialect')}' is not supported")
 
 
 def validate_generator_output_schemas(data: Any) -> None:

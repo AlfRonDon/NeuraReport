@@ -61,7 +61,7 @@ def _sample_step5() -> dict:
 
 def _sample_generator_meta() -> dict:
     return {
-        "dialect": "sqlite",
+        "dialect": "duckdb",
         "entrypoints": {
             "header": "SELECT 1",
             "rows": "SELECT 1 AS row_value",

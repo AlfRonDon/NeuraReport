@@ -68,3 +68,13 @@ build/
 dist/
 tmp/
 temp/
+
+# Local tauri sync workspace
+NeuraReport-tauri-sync/
+_tauri_sync_pr/
+
+# Large local artifacts / data
+Coastal feeds/
+uploads_excel/
+debug_tmp_root/
+NeuraReport/

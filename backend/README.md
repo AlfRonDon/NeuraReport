@@ -33,6 +33,15 @@ uvicorn backend.api:app --reload
 
 Static artifacts such as verified templates and mapping results are written to `uploads/`.
 
+## DataFrame-First Query Engine
+
+The API never talks to a live SQL database. Instead, every uploaded SQLite file is
+immediately materialized into pandas DataFrames (`SQLiteDataFrameLoader`) and all
+legacy SQL statements run through DuckDB (`sqlite_shim`) on top of those in-memory
+frames. Verifiers such as `verify_sqlite` now validate that a DB can be hydrated
+into DataFrames rather than that sqlite3 can execute a query. This keeps the
+existing SQL assets usable while guaranteeing the backend is "DataFrame ready".
+
 ## Persistent State
 
 Database connection metadata, template records, and the last-used selections live in `backend/state/state.json`. Secrets (e.g., connection strings) are encrypted with Fernet; provide `NEURA_STATE_SECRET` for deterministic keys or keep the generated secret safe.

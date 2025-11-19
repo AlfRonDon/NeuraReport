@@ -142,7 +142,8 @@ CORE RULES (unchanged)
 - If the value should be passed through from request parameters, return params.param_name (lower snake_case).
 - For report filter or paging tokens (e.g., from_date, to_date, start_date, end_date, date_from, date_to, range_start, range_end, page_info, page_number, page_no), return the literal string "To Be Selected..." in the mapping so the report generator can populate them later (these surface to users as "To Be Selected in Report generator"). Treat any similar date-range or page metadata fields the same. Do NOT map these to params.* or table columns.
 - If no clear source exists, set the mapping value to UNRESOLVED.
-- If a header requires combining multiple columns, return a SQL expression that references only catalog columns (standard SQL syntax).
+- RUNTIME CONTEXT: Every SQL fragment you output is executed by DuckDB against pandas DataFrames (each catalog table is already materialised as a DataFrame). Use portable DuckDB-compatible SQL only; reference columns exactly as they appear in the catalog and avoid engine-specific extensions.
+- If a header requires combining multiple columns, return a DuckDB-compatible SQL expression that references only catalog columns.
 - Never emit legacy wrappers such as DERIVED:, TABLE_COLUMNS[…], or COLUMN_EXP[…]; the raw SQL fragment itself is required.
 - Do not invent headers, tokens, tables, columns, or duplicate mappings.
 - Prefer concise, human-visible labels (strip punctuation/colons) for header keys.
@@ -156,7 +157,7 @@ SYNONYMS/SHORTHANDS TO NORMALIZE
 - sl/serial -> sl_no
 - name/material -> material_name
 ENUMERATED/AGGREGATE HEADERS
-- If a header clearly represents an aggregate across enumerated columns (e.g., bin1_sp..bin12_sp, bin1_act..bin12_act), do NOT guess a single column. Return a valid SQL expression that sums/averages/etc. using only catalog columns (e.g., `SUM(recipes.bin1_sp + ... + recipes.bin12_sp)` or a CASE expression). Record the contributing columns under meta.hints[header], for example:
+- If a header clearly represents an aggregate across enumerated columns (e.g., bin1_sp..bin12_sp, bin1_act..bin12_act), do NOT guess a single column. Return a valid DuckDB-compatible SQL expression that sums/averages/etc. using only catalog columns (e.g., `SUM(recipes.bin1_sp + ... + recipes.bin12_sp)` or a CASE expression). Record the contributing columns under meta.hints[header], for example:
   { "op": "SUM", "over": ["qualified col1","qualified col2","..."] } derived from CATALOG.
 - If you cannot confidently enumerate the contributing columns, keep it UNRESOLVED.
 CONSTANT PLACEHOLDERS (UPDATED)
@@ -181,7 +182,7 @@ Optional:
 OUTPUT -- STRICT JSON ONLY (v7)
 {
   "mapping": {
-    "<header_or_token>": "<table.column | params.param_name | UNRESOLVED | SQL expression using only catalog columns>"
+    "<header_or_token>": "<table.column | params.param_name | UNRESOLVED | DuckDB SQL expression using only catalog columns>"
   },
   "token_samples": {
     "<token>": "<literal string>"
@@ -195,7 +196,7 @@ OUTPUT -- STRICT JSON ONLY (v7)
 }
 VALIDATION & FORMATTING
 - Output ONE JSON object only. No markdown, no commentary.
-- Every mapping value must either (a) match a catalog entry exactly, (b) use the params.param_name form for request parameters, (c) be the literal UNRESOLVED, or (d) be a SQL expression that references only catalog columns and uses standard SQL syntax.
+- Every mapping value must either (a) match a catalog entry exactly, (b) use the params.param_name form for request parameters, (c) be the literal UNRESOLVED, or (d) be a DuckDB-compatible SQL expression that references only catalog columns.
 - Reject / avoid legacy wrappers such as DERIVED:, TABLE_COLUMNS[…], COLUMN_EXP[…]; if you detect that pattern, resolve it into the raw SQL or fall back to UNRESOLVED.
 - Any token you remove from "mapping" (because it is constant) must still appear in "token_samples" with the literal string you inlined.
 - Do not add or rename remaining tokens. Do not alter repeat markers/tbody row prototypes.
@@ -354,7 +355,7 @@ LLM_CALL_3_5_PROMPT: Dict[str, str] = {
         3) Keep the HTML self-contained (no external resources or <script> tags). Maintain semantic structure.
 
         Hints:
-        - The `mapping_context.mapping` object reflects the latest binding state after Step 3 and any overrides. Tokens mapped to "INPUT_SAMPLE" must be inlined; leave tokens mapped to SQL expressions or table columns untouched unless instructed otherwise.
+        - The `mapping_context.mapping` object reflects the latest binding state after Step 3 and any overrides. Tokens mapped to "INPUT_SAMPLE" must be inlined; leave tokens mapped to DuckDB SQL expressions or table columns untouched unless instructed otherwise.
         - The `mapping_context.token_samples` dictionary lists the literal strings extracted in Step 3 for every placeholder. Inline tokens using these values exactly.
         - `mapping_context.sample_tokens` / `mapping_context.inline_tokens` highlight placeholders the user wants to double-check; use these cues when reporting lingering uncertainties in the page summary.
         - A reference PNG is attached via `image_url`. Treat it as general context while following all other instructions.
@@ -481,13 +482,14 @@ LLM_CALL_4_SYSTEM_PROMPT = dedent(
     3. Emit a fully mapped contract object so Call 5 can compile SQL without guessing.
     You must:
     * Use only columns from the provided CATALOG allow-list. If a necessary column is absent, surface it via validation; never invent table/column names.
+    * RUNTIME CONTEXT: Every SQL fragment you emit (mappings, reshape rules, entrypoints) runs through DuckDB against pandas DataFrames that mirror the catalog tables. Stick to portable DuckDB SQL and reference dataset/table aliases exactly as defined.
     * Preserve every dynamic token from the schema. Do not add, remove, or rename tokens; constants already inlined in HTML are not tokens.
     * Map every token with exactly one of:
         - `TABLE.COLUMN` (direct source, obeying the catalog allow-list),
         - `DATASET.COLUMN` (use dataset aliases produced by Step-5, e.g., `rows.row_token`, `totals.total_token`),
         - `PARAM:name` (header/parameter passthrough),
-        - a SQL expression that is valid in the target dialect and references only catalog columns or dataset aliases (no `DERIVED:` prefix).
-    * When you emit a SQL expression, reuse the identical expression inside `row_computed` / `totals_math` so the runtime stays consistent.
+        - a DuckDB SQL expression that references only catalog columns or dataset aliases (no `DERIVED:` prefix).
+    * When you emit a DuckDB SQL expression, reuse the identical expression inside `row_computed` / `totals_math` so the runtime stays consistent.
     * The auto_mapping_proposal.mapping and mapping_override values may contain SQL expressions; treat them as guidance (mapping_override is authoritative when provided).
     * Describe reshape rules with exact column ordering, filters to apply before aggregation, and any dedup or ordering requirements. Ensure `step5_requirements.datasets.rows.grouping` / `ordering` mirror those expectations. Every reshape rule must include a non-empty `"purpose"` sentence (plain-English summary, <= 15 words) so downstream validators understand its intent.
     * Guarantee `order_by.rows` and `row_order` are non-empty arrays. Mirror the stable ordering you describe (typically timestamp ASC) and default to `["ROWID"]` only when no explicit ordering exists. Never leave `row_order` missing or blank.
@@ -599,7 +601,7 @@ LLM_CALL_4_SYSTEM_PROMPT = dedent(
           "print_date": "date(YYYY-MM-DD)"
         },
         "order_by": {"rows": ["row_material_name ASC"]},
-        "notes": "Domain notes from the user that matter in SQL"
+        "notes": "Domain notes from the user that matter in the DuckDB/DataFrame runtime"
       },
       "validation": {
         "unknown_tokens": [],
@@ -614,11 +616,11 @@ LLM_CALL_4_SYSTEM_PROMPT = dedent(
     Guidance for overview_md:
     * Executive Summary: what the user wants; special reshaping, grouping, totals.
     * Token Inventory: list tokens that remain dynamic.
-    * Mapping Table: Markdown table Token -> source (TABLE.COLUMN / PARAM / SQL expression).
+    * Mapping Table: Markdown table Token -> source (TABLE.COLUMN / PARAM / DuckDB SQL expression).
     * Join & Date Rules: tables, joins, filter semantics.
     * Transformations: explicit unpivot/union shapes, computed fields, totals rationale.
     * Parameters: required/optional, semantics, examples (note pass-through vs. filter behaviour).
-    * Checklist for Step 5: bullet list of SQL requirements (column orders, filters, grouping, NULLIF guards, optional filter behaviour).
+    * Checklist for Step 5: bullet list of DuckDB SQL requirements (column orders, filters, grouping, NULLIF guards, optional filter behaviour on the DataFrame backend).
     Model self-check expectations:
     * `unknown_tokens` must be [] because every token is mapped.
     * `unknown_columns` must be [] because every column reference is in the catalog allow-list.
@@ -637,50 +639,51 @@ LLM_CALL_5_PROMPT: Dict[str, str] = {
         * Treat `step4_output.contract` as the authoritative blueprint for tokens, bindings, reshape rules, joins, filters, and math. Do not add/drop/rename tokens.
         * Mirror the contract exactly in your `contract` output (same ordering, same expressions). If you cannot satisfy a requirement, leave data unchanged and set `"invalid": true`.
         * When SQL entrypoints produce dataset aliases (`header`, `rows`, `totals`), reference those explicitly in the contract mapping (e.g., `rows.row_token`, `totals.total_token`) so the runtime can hydrate values without re-deriving them.
+        * RUNTIME CONTEXT: The generated SQL runs through DuckDB on top of pandas DataFrames that mirror every catalog table. Stay within DuckDB-compatible syntax even when the dialect hint is "sqlite"; reference dataset/table aliases exactly as emitted.
 
         Required output structure (output exactly this object shape; no extra keys, no missing keys):
         {
           "contract": {
             "tokens": { "scalars": [...], "row_tokens": [...], "totals": [...] },
-            "mapping": { "<token>": "TABLE.COLUMN|DATASET.COLUMN|PARAM:name|<sql expression>" },
+            "mapping": { "<token>": "TABLE.COLUMN|DATASET.COLUMN|PARAM:name|<DuckDB sql expression>" },
             "join": { "parent_table": "...", "parent_key": "...", "child_table": "...", "child_key": "..." },
             "date_columns": { "<table>": "<date column>" },
             "filters": { ...copy of Step-4 filters object... },
             "reshape_rules": [...],
-            "row_computed": { "<token>": "<sql expression>" },
-            "totals_math": { "<token>": "<sql expression>" },
+            "row_computed": { "<token>": "<DuckDB sql expression>" },
+            "totals_math": { "<token>": "<DuckDB sql expression>" },
             "formatters": { "<token>": "<formatter spec>" },
             "order_by": { "rows": ["<order clause>", ...] },
             "header_tokens": ["<scalar token>", ...],
             "row_tokens": ["<row token>", ...],
-            "totals": { "<total token>": "DATASET.COLUMN|<sql expression>" },
+            "totals": { "<total token>": "DATASET.COLUMN|<DuckDB sql expression>" },
             "row_order": ["<order clause>", ...]
           },
           "sql_pack": {
-            "dialect": "sqlite|postgres",
+            "dialect": "duckdb|postgres",
             "script": "-- HEADER SELECT --\n<SQL>\n-- ROWS SELECT --\n<SQL>\n-- TOTALS SELECT --\n<SQL>",
             "entrypoints": { "header": "<SQL>", "rows": "<SQL>", "totals": "<SQL>" },
             "params": { "required": ["<param>", ...], "optional": ["<param>", ...] }
           },
-          "dialect": "sqlite|postgres",
+          "dialect": "duckdb|postgres",
           "invalid": false
         }
         Use [] for empty arrays, {} for empty objects, and "" for empty strings.
 
-        Dialect rules:
-        * sqlite: named params (:param); use NULLIF(x, 0) to prevent division by zero; FILTER not supported.
-        * postgres: named params allowed; NULLIF/COALESCE allowed; FILTER allowed.
+        Dialect rules (executed via DuckDB in all cases):
+        * sqlite: treat this as the DuckDB subset that mimics SQLite; use named params (:param), avoid FILTER, prefer NULLIF(x, 0) guards.
+        * postgres: DuckDB supports most Postgres syntax; named params allowed; NULLIF/COALESCE allowed; FILTER allowed.
 
         Contract requirements:
-        * Copy tokens, mappings, reshape rules, row_computed, totals_math, formatters, filters, date_columns, join, `order_by`, `row_order`, and notes from the Step-4 contract. Ensure every SQL expression matches between `mapping`, `row_computed`, and `totals_math`.
-        * Mapping values must use only `TABLE.COLUMN`, `PARAM:name`, dataset aliases, or SQL expressions built from catalog/dataset columns (no prefixes or prose).
+        * Copy tokens, mappings, reshape rules, row_computed, totals_math, formatters, filters, date_columns, join, `order_by`, `row_order`, and notes from the Step-4 contract. Ensure every DuckDB SQL expression matches between `mapping`, `row_computed`, and `totals_math`.
+        * Mapping values must use only `TABLE.COLUMN`, `PARAM:name`, dataset aliases, or DuckDB SQL expressions built from catalog/dataset columns (no prefixes or prose).
         * Populate any missing optional sections (e.g., empty objects/arrays) so the JSON validates against `contract_v2.schema.json`.
         * Join block must remain present with non-empty `parent_table`, `parent_key`, `child_table`, `child_key`. If there is no logical child table, set `child_table` equal to the parent and reuse the same key; never leave keys blank or null.
         * Mirror Step-4 `reshape_rules` exactly (strategy, datasets, alias ordering) and guarantee every rule carries a non-empty `"purpose"` summary. If Step-4 omitted it, synthesize a concise description (<= 15 words) before returning.
         * Ensure `order_by.rows` and `row_order` remain aligned (both arrays). If Step-4 provided only one of them, copy it to the other; if neither exists, emit `["ROWID"]` for both instead of leaving blanks.
         * Every token listed in `contract.tokens` must appear exactly once across the header/rows/totals SELECTs (no duplicate aliases or alternate spellings).
 
-        SQL pack requirements:
+        SQL pack requirements (DuckDB over pandas DataFrames):
         * Implement `reshape_rules`, joins, filters, parameter semantics, and math exactly as described by the contract and `step5_requirements`.
         * Provide a single consolidated `script` string that contains the header, rows, and totals SELECT statements in order. Include clear section markers such as:
           -- HEADER SELECT --

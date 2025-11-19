@@ -1,27 +1,23 @@
 from __future__ import annotations
 
-import sqlite3
 from pathlib import Path
 from typing import Callable, Tuple
+
+from ..dataframes.sqlite_loader import get_loader
 
 
 def get_col_type(db_path: Path, table: str, col: str) -> str:
     """
-    Return the SQLite column type string (uppercased) for table.col or '' when unavailable.
-    Matches the tolerant behaviour previously duplicated across report modules.
+    Return the inferred column type (uppercased) for table.col or '' when unavailable.
+    Uses the shared DataFrame loader's dtype map instead of SQLite PRAGMA calls.
     """
-    if not col:
+    if not col or not table:
         return ""
     try:
-        with sqlite3.connect(str(db_path)) as con:
-            cur = con.cursor()
-            cur.execute(f"PRAGMA table_info('{table}')")
-            for _, name, ctype, *_ in cur.fetchall():
-                if str(name).lower() == str(col).lower():
-                    return (ctype or "").upper()
+        loader = get_loader(db_path)
+        return (loader.column_type(table, col) or "").upper()
     except Exception:
         return ""
-    return ""
 
 
 def mk_between_pred_for_date(col: str, col_type: str) -> Tuple[str, Callable[[str, str], tuple]]:

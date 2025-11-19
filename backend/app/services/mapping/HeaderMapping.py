@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import logging
-import sqlite3
+from ..dataframes.sqlite_loader import get_loader
 from collections import defaultdict
 from pathlib import Path
 from typing import Dict, Iterable
@@ -40,68 +40,77 @@ def get_parent_child_info(db_path: Path) -> Dict[str, object]:
       - Else, pick the first table that declares a foreign key as child and its referenced table as parent.
       - If none of the above applies, raise a clear error.
     """
-    with sqlite3.connect(str(db_path)) as con:
-        cur = con.cursor()
+    loader = get_loader(db_path)
+    tables = loader.table_names()
 
-        cur.execute(
-            "SELECT name FROM sqlite_master " "WHERE type='table' AND name NOT LIKE 'sqlite_%' " "ORDER BY name;"
-        )
-        tables = [r[0] for r in cur.fetchall()]
+    if not tables:
+        raise RuntimeError("No user tables found in database.")
 
-        if not tables:
-            raise RuntimeError("No user tables found in database.")
+    # --- NEW: single-table fallback ---
+    if len(tables) == 1:
+        t = tables[0]
+        cols = [
+            row.get("name", "")
+            for row in loader.pragma_table_info(t)
+            if isinstance(row, dict) and row.get("name")
+        ]
+        return {
+            "child table": t,
+            "parent table": t,
+            "child_columns": cols,
+            "parent_columns": cols,
+            "common_names": sorted(set(cols)),  # same table on both sides
+        }
 
-        # --- NEW: single-table fallback ---
-        if len(tables) == 1:
-            t = tables[0]
-            # fetch columns once
-            cur.execute(f"PRAGMA table_info('{t}')")
-            cols = [row[1] for row in cur.fetchall()]
-            return {
-                "child table": t,
-                "parent table": t,
-                "child_columns": cols,
-                "parent_columns": cols,
-                "common_names": sorted(set(cols)),  # same table on both sides
-            }
+    # collect columns for all tables
+    cols: Dict[str, list[str]] = {}
+    for table in tables:
+        try:
+            cols[table] = [
+                row.get("name", "")
+                for row in loader.pragma_table_info(table)
+                if isinstance(row, dict) and row.get("name")
+            ]
+        except Exception:
+            cols[table] = []
 
-        # collect columns for all tables
-        cols: Dict[str, list[str]] = {}
+    # Additional case: wide measurement tables (e.g., neuract__Flowmeters)
+    measurement_table = _detect_measurement_table(tables, cols)
+    if measurement_table:
+        measurement_cols = cols.get(measurement_table, [])
+        if not measurement_cols:
+            measurement_cols = [
+                row.get("name", "")
+                for row in loader.pragma_table_info(measurement_table)
+                if isinstance(row, dict) and row.get("name")
+            ]
+        timestamp_cols = [c for c in measurement_cols if "timestamp" in c.lower() or c.lower().endswith("_utc")]
+        if not timestamp_cols and measurement_cols:
+            timestamp_cols = [measurement_cols[0]]
+        return {
+            "child table": measurement_table,
+            "parent table": measurement_table,
+            "child_columns": measurement_cols,
+            "parent_columns": measurement_cols,
+            "common_names": sorted(set(timestamp_cols) if timestamp_cols else set(measurement_cols)),
+        }
+
+    # preferred pair by name
+    preferred_child, preferred_parent = "batch_lines", "batches"
+    if preferred_child in tables and preferred_parent in tables:
+        child, parent = preferred_child, preferred_parent
+    else:
+        # first-FK-wins fallback
+        child = parent = None
         for table in tables:
-            cur.execute(f"PRAGMA table_info('{table}')")
-            cols[table] = [row[1] for row in cur.fetchall()]
-
-        # Additional case: wide measurement tables (e.g., neuract__Flowmeters)
-        measurement_table = _detect_measurement_table(tables, cols)
-        if measurement_table:
-            measurement_cols = cols.get(measurement_table, [])
-            if not measurement_cols:
-                cur.execute(f"PRAGMA table_info('{measurement_table}')")
-                measurement_cols = [row[1] for row in cur.fetchall()]
-            timestamp_cols = [c for c in measurement_cols if "timestamp" in c.lower() or c.lower().endswith("_utc")]
-            if not timestamp_cols and measurement_cols:
-                timestamp_cols = [measurement_cols[0]]
-            return {
-                "child table": measurement_table,
-                "parent table": measurement_table,
-                "child_columns": measurement_cols,
-                "parent_columns": measurement_cols,
-                "common_names": sorted(set(timestamp_cols) if timestamp_cols else set(measurement_cols)),
-            }
-
-        # preferred pair by name
-        preferred_child, preferred_parent = "batch_lines", "batches"
-        if preferred_child in tables and preferred_parent in tables:
-            child, parent = preferred_child, preferred_parent
-        else:
-            # first-FK-wins fallback
-            child = parent = None
-            for table in tables:
-                cur.execute(f"PRAGMA foreign_key_list('{table}')")
-                rows = cur.fetchall()
-                if rows:
-                    child = table
-                    parent = rows[0][2]  # referenced table name
+            try:
+                rows = loader.foreign_keys(table)
+            except Exception:
+                rows = []
+            if rows:
+                child = table
+                parent = rows[0].get("table") or None
+                if parent:
                     break
 
     if not child or not parent:
