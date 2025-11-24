@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { getScopedBatchEntries, normalizeBatchId } from '../../src/pages/Generate/selectionUtils.js'
+import { getScopedBatchEntries, normalizeBatchId } from '../../src/features/generate/utils/selectionUtils.js'
 
 const templateId = 'tpl-1'
 const baseBatches = [

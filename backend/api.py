@@ -14,11 +14,17 @@ from .app.services.dataframes import sqlite_shim as sqlite3
 import tempfile
 import time
 import uuid
+import warnings
 from email.utils import formatdate
 from pathlib import Path
 from datetime import datetime, timezone
 from typing import Any, ContextManager, Iterable, Iterator, Mapping, Optional, Callable
 from urllib.parse import parse_qs, quote
+
+# Silence noisy deprecations from dependencies during import/test
+warnings.filterwarnings("ignore", message=".*on_event is deprecated.*", category=DeprecationWarning)
+warnings.filterwarnings("ignore", message=".*Support for class-based `config` is deprecated.*", category=DeprecationWarning)
+warnings.filterwarnings("ignore", message=".*SwigPy.*has no __module__ attribute", category=DeprecationWarning)
 
 from fastapi import FastAPI, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
@@ -60,6 +66,14 @@ from .app.services.mapping.CorrectionsPreview import (
 )
 
 # Header-mapping helpers
+from .app.features.generate.schemas.charts import ChartSuggestPayload, ChartSuggestResponse
+from .app.features.generate.schemas.reports import DiscoverPayload, RunPayload
+from .app.features.generate.routes.saved_charts_routes import build_saved_charts_router
+from .app.features.generate.routes.chart_suggest_routes import build_chart_suggest_router
+from .app.features.generate.routes.discover_routes import build_discover_router
+from .app.features.generate.routes.run_routes import build_run_router
+from .app.features.generate.services.chart_suggestions_service import suggest_charts as suggest_charts_service
+from .app.features.generate.services.discovery_service import discover_reports as discover_reports_service
 from .app.services.mapping.HeaderMapping import (
     REPORT_SELECTED_VALUE,
     approval_errors,
@@ -80,6 +94,11 @@ from .app.services.reports.discovery_excel import (
 from .app.services.reports.discovery_metrics import (
     build_batch_field_catalog_and_stats,
     build_batch_metrics,
+)
+_build_sample_data_rows = lambda batches, metadata=None, limit=100: build_batch_metrics(  # noqa: E731
+    batches,
+    metadata or {},
+    limit=limit,
 )
 from .app.services.reports.docx_export import html_file_to_docx, pdf_file_to_docx
 from .app.services.reports.xlsx_export import html_file_to_xlsx
@@ -774,30 +793,6 @@ class LastUsedPayload(BaseModel):
     template_id: Optional[str] = None
 
 
-class RunPayload(BaseModel):
-    template_id: str
-    connection_id: Optional[str] = None
-    start_date: str
-    end_date: str
-    batch_ids: Optional[list[str]] = None
-    key_values: Optional[dict[str, Any]] = None
-    docx: bool = False
-    xlsx: bool = False
-    email_recipients: Optional[list[str]] = None
-    email_subject: Optional[str] = None
-    email_message: Optional[str] = None
-    schedule_id: Optional[str] = None
-    schedule_name: Optional[str] = None
-
-
-class DiscoverPayload(BaseModel):
-    template_id: str
-    connection_id: Optional[str] = None
-    start_date: str
-    end_date: str
-    key_values: Optional[dict[str, Any]] = None
-
-
 class ScheduleCreatePayload(BaseModel):
     template_id: str
     connection_id: str
@@ -843,50 +838,6 @@ class ChartField(BaseModel):
     description: Optional[str] = None
 
 
-class ChartSpec(BaseModel):
-    id: Optional[str] = None
-    type: str  # "bar", "line", "pie", "scatter"
-    xField: str
-    yFields: list[str]
-    groupField: Optional[str] = None
-    aggregation: Optional[str] = None
-    chartTemplateId: Optional[str] = None
-    title: Optional[str] = None
-    description: Optional[str] = None
-
-
-class ChartSuggestPayload(BaseModel):
-    connection_id: Optional[str] = None
-    start_date: str
-    end_date: str
-    key_values: Optional[dict[str, Any]] = None
-    question: str
-    include_sample_data: bool = False
-
-
-class ChartSuggestResponse(BaseModel):
-    charts: list[ChartSpec]
-    sample_data: Optional[list[dict[str, Any]]] = None
-
-
-class SavedChartSpec(BaseModel):
-    id: str
-    template_id: str
-    name: str
-    spec: ChartSpec
-    created_at: str
-    updated_at: str
-
-
-class SavedChartCreatePayload(BaseModel):
-    template_id: str
-    name: str
-    spec: ChartSpec
-
-
-class SavedChartUpdatePayload(BaseModel):
-    name: Optional[str] = None
-    spec: Optional[ChartSpec] = None
 
 
 _SCHEDULE_INTERVALS = {
@@ -4972,223 +4923,29 @@ def _chart_suggest_route(
     kind: str = "pdf",
 ) -> ChartSuggestResponse:
     correlation_id = getattr(request.state, "correlation_id", None) or get_correlation_id()
-    logger.info(
-        "chart_suggest_start",
-        extra={
-            "event": "chart_suggest_start",
-            "template_id": template_id,
-            "template_kind": kind,
-            "correlation_id": correlation_id,
-        },
-    )
-
-    template_dir = _template_dir(template_id, kind=kind)
-    db_path = _db_path_from_payload_or_default(payload.connection_id)
-    if not db_path.exists():
-        raise _http_error(400, "db_not_found", f"DB not found: {db_path}")
-
-    try:
-        load_contract_v2(template_dir)
-    except Exception as exc:
-        logger.exception(
-            "chart_suggest_contract_load_failed",
-            extra={
-                "event": "chart_suggest_contract_load_failed",
-                "template_id": template_id,
-                "template_kind": kind,
-                "correlation_id": correlation_id,
-            },
-        )
-        raise _http_error(500, "contract_load_failed", f"Failed to load contract artifacts: {exc}")
-
-    contract_path = template_dir / "contract.json"
-    if not contract_path.exists():
-        raise _http_error(
-            400,
-            "contract_not_ready",
-            "Contract artifacts missing. Approve mapping first.",
-        )
-    try:
-        contract_payload = json.loads(contract_path.read_text(encoding="utf-8"))
-    except Exception as exc:
-        raise _http_error(500, "contract_invalid", f"Invalid contract.json: {exc}")
-
-    key_values_payload = _clean_key_values(payload.key_values)
-
-    discover_fn = discover_batches_and_counts if kind == "pdf" else discover_batches_and_counts_excel
-
-    try:
-        summary = discover_fn(
-            db_path=db_path,
-            contract=contract_payload,
-            start_date=payload.start_date,
-            end_date=payload.end_date,
-            key_values=key_values_payload,
-        )
-    except Exception as exc:
-        logger.exception(
-            "chart_suggest_discovery_failed",
-            extra={
-                "event": "chart_suggest_discovery_failed",
-                "template_id": template_id,
-                "template_kind": kind,
-                "correlation_id": correlation_id,
-            },
-        )
-        raise _http_error(500, "discovery_failed", f"Discovery failed: {exc}")
-
-    batches = summary.get("batches") or []
-    if not isinstance(batches, list):
-        batches = []
-    batch_metadata = summary.get("batch_metadata") or {}
-
-    sample_data: list[dict[str, Any]] | None = None
-    if payload.include_sample_data:
-        try:
-            sample_data = build_batch_metrics(batches, batch_metadata, limit=100)
-        except Exception:
-            sample_data = None
-            logger.exception(
-                "chart_suggest_sample_data_failed",
-                extra={
-                    "event": "chart_suggest_sample_data_failed",
-                    "template_id": template_id,
-                    "template_kind": kind,
-                    "correlation_id": correlation_id,
-                },
-            )
-
-    if not batches:
-        logger.info(
-            "chart_suggest_no_data",
-            extra={
-                "event": "chart_suggest_no_data",
-                "template_id": template_id,
-                "template_kind": kind,
-                "correlation_id": correlation_id,
-            },
-        )
-        sample_payload = sample_data if payload.include_sample_data else None
-        if sample_payload is None and payload.include_sample_data:
-            sample_payload = []
-        return ChartSuggestResponse(charts=[], sample_data=sample_payload)
-
-    field_catalog, stats = build_batch_field_catalog_and_stats(batches)
-
-    prompt = build_chart_suggestions_prompt(
-        template_id=template_id,
+    return suggest_charts_service(
+        template_id,
+        payload,
         kind=kind,
-        start_date=payload.start_date,
-        end_date=payload.end_date,
-        key_values=key_values_payload,
-        field_catalog=field_catalog,
-        data_stats=stats,
-        question=payload.question,
-    )
-
-    client = get_openai_client()
-    try:
-        response = call_chat_completion(
-            client,
-            model=MODEL,
-            messages=[{"role": "user", "content": prompt}],
+        correlation_id=correlation_id,
+        template_dir_fn=lambda tpl: _template_dir(tpl, kind=kind),
+        db_path_fn=_db_path_from_payload_or_default,
+        load_contract_fn=load_contract_v2,
+        clean_key_values_fn=_clean_key_values,
+        discover_fn=discover_batches_and_counts if kind == "pdf" else discover_batches_and_counts_excel,
+        build_field_catalog_fn=build_batch_field_catalog_and_stats,
+        build_metrics_fn=lambda batches, batch_metadata, limit=100: _build_sample_data_rows(
+            batches, batch_metadata, limit=limit
+        ),
+        build_prompt_fn=build_chart_suggestions_prompt,
+        call_chat_completion_fn=lambda **kwargs: call_chat_completion(
+            get_openai_client(),
             description=CHART_SUGGEST_PROMPT_VERSION,
-        )
-    except Exception as exc:
-        logger.exception(
-            "chart_suggest_llm_failed",
-            extra={
-                "event": "chart_suggest_llm_failed",
-                "template_id": template_id,
-                "template_kind": kind,
-                "correlation_id": correlation_id,
-            },
-        )
-        raise _http_error(500, "chart_suggest_llm_failed", str(exc))
-
-    raw_text = (response.choices[0].message.content or "").strip()
-    parsed_text = strip_code_fences(raw_text)
-
-    charts: list[ChartSpec] = []
-    try:
-        payload_json = json.loads(parsed_text)
-    except Exception:
-        logger.warning(
-            "chart_suggest_json_parse_failed",
-            extra={
-                "event": "chart_suggest_json_parse_failed",
-                "template_id": template_id,
-                "template_kind": kind,
-                "correlation_id": correlation_id,
-            },
-        )
-        payload_json = {}
-
-    raw_charts = payload_json.get("charts") if isinstance(payload_json, dict) else None
-    if isinstance(raw_charts, list):
-        for idx, item in enumerate(raw_charts):
-            if not isinstance(item, Mapping):
-                continue
-            normalized: dict[str, Any] = dict(item)
-            y_fields_raw = normalized.get("yFields")
-            if isinstance(y_fields_raw, str):
-                normalized["yFields"] = [y_fields_raw]
-            elif isinstance(y_fields_raw, list):
-                normalized["yFields"] = [str(v).strip() for v in y_fields_raw if str(v or "").strip()]
-            else:
-                single = normalized.get("yField")
-                if isinstance(single, str) and single.strip():
-                    normalized["yFields"] = [single.strip()]
-                else:
-                    continue
-
-            type_raw = str(normalized.get("type") or "").strip().lower()
-            x_field_raw = str(normalized.get("xField") or "").strip()
-            y_fields_clean = [f for f in normalized.get("yFields", []) if isinstance(f, str) and f.strip()]
-            if not type_raw or not x_field_raw or not y_fields_clean:
-                continue
-            normalized["type"] = type_raw
-            normalized["xField"] = x_field_raw
-            normalized["yFields"] = y_fields_clean
-
-            if not normalized.get("id"):
-                normalized["id"] = f"chart_{idx + 1}"
-
-            try:
-                charts.append(ChartSpec(**normalized))
-            except Exception:
-                continue
-
-    state_store.set_last_used(payload.connection_id, template_id)
-
-    logger.info(
-        "chart_suggest_complete",
-        extra={
-            "event": "chart_suggest_complete",
-            "template_id": template_id,
-            "template_kind": kind,
-            "charts_returned": len(charts),
-            "correlation_id": correlation_id,
-        },
-    )
-    return ChartSuggestResponse(
-        charts=charts,
-        sample_data=sample_data if payload.include_sample_data else None,
-    )
-
-
-def _serialize_saved_chart(record: dict) -> SavedChartSpec:
-    if not record:
-        raise ValueError("Invalid saved chart record")
-    spec_payload = record.get("spec") or {}
-    spec = ChartSpec(**spec_payload)
-    return SavedChartSpec(
-        id=record.get("id"),
-        template_id=record.get("template_id"),
-        name=record.get("name"),
-        spec=spec,
-        created_at=record.get("created_at"),
-        updated_at=record.get("updated_at"),
+            **kwargs,
+        ),
+        model=MODEL,
+        strip_code_fences_fn=strip_code_fences,
+        logger=logger,
     )
 
 
@@ -5200,193 +4957,60 @@ def _ensure_template_exists(template_id: str) -> tuple[str, dict]:
     return normalized, record
 
 
-@app.post("/templates/{template_id}/charts/suggest")
-def suggest_charts(template_id: str, payload: ChartSuggestPayload, request: Request):
-    return _chart_suggest_route(template_id, payload, request, kind="pdf")
+# Include feature routers
+saved_charts_router = build_saved_charts_router(_ensure_template_exists, _normalize_template_id)
+app.include_router(saved_charts_router)
 
+chart_suggest_router = build_chart_suggest_router(
+    template_dir_fn=_template_dir,
+    db_path_fn=_db_path_from_payload_or_default,
+    load_contract_fn=load_contract_v2,
+    clean_key_values_fn=_clean_key_values,
+    discover_pdf_fn=discover_batches_and_counts,
+    discover_excel_fn=discover_batches_and_counts_excel,
+    build_field_catalog_fn=build_batch_field_catalog_and_stats,
+    build_metrics_fn=build_batch_metrics,
+    build_prompt_fn=build_chart_suggestions_prompt,
+    call_chat_completion_fn=lambda **kwargs: call_chat_completion(get_openai_client(), **kwargs, description=CHART_SUGGEST_PROMPT_VERSION),
+    model=MODEL,
+    strip_code_fences_fn=strip_code_fences,
+    get_correlation_id_fn=get_correlation_id,
+    logger=logger,
+)
+app.include_router(chart_suggest_router)
 
-@app.post("/excel/{template_id}/charts/suggest")
-def suggest_charts_excel(template_id: str, payload: ChartSuggestPayload, request: Request):
-    return _chart_suggest_route(template_id, payload, request, kind="excel")
-
-
-def _list_saved_charts_route(template_id: str):
-    normalized, _ = _ensure_template_exists(template_id)
-    records = state_store.list_saved_charts(normalized)
-    charts = [_serialize_saved_chart(rec) for rec in records]
-    return {"charts": charts}
-
-
-def _create_saved_chart_route(template_id: str, payload: SavedChartCreatePayload):
-    path_template, _ = _ensure_template_exists(template_id)
-    body_template = _normalize_template_id(payload.template_id)
-    if body_template != path_template:
-        raise _http_error(400, "template_mismatch", "template_id in path and payload must match")
-    name = (payload.name or "").strip()
-    if not name:
-        raise _http_error(400, "name_required", "Saved chart name is required.")
-    record = state_store.create_saved_chart(path_template, name, payload.spec.dict())
-    return _serialize_saved_chart(record)
-
-
-def _update_saved_chart_route(template_id: str, chart_id: str, payload: SavedChartUpdatePayload):
-    path_template, _ = _ensure_template_exists(template_id)
-    existing = state_store.get_saved_chart(chart_id)
-    if not existing or existing.get("template_id") != path_template:
-        raise _http_error(404, "chart_not_found", "Saved chart not found.")
-    updates: dict[str, Any] = {}
-    if payload.name is not None:
-        name = payload.name.strip()
-        if not name:
-            raise _http_error(400, "name_required", "Saved chart name cannot be empty.")
-        updates["name"] = name
-    if payload.spec is not None:
-        updates["spec"] = payload.spec.dict()
-    if not updates:
-        return _serialize_saved_chart(existing)
-    record = state_store.update_saved_chart(chart_id, name=updates.get("name"), spec=updates.get("spec"))
-    if not record:
-        raise _http_error(404, "chart_not_found", "Saved chart not found.")
-    return _serialize_saved_chart(record)
-
-
-def _delete_saved_chart_route(template_id: str, chart_id: str):
-    path_template, _ = _ensure_template_exists(template_id)
-    existing = state_store.get_saved_chart(chart_id)
-    if not existing or existing.get("template_id") != path_template:
-        raise _http_error(404, "chart_not_found", "Saved chart not found.")
-    removed = state_store.delete_saved_chart(chart_id)
-    if not removed:
-        raise _http_error(404, "chart_not_found", "Saved chart not found.")
-    return {"status": "ok"}
-
-
-@app.get("/templates/{template_id}/charts/saved")
-def list_saved_charts(template_id: str):
-    return _list_saved_charts_route(template_id)
-
-
-@app.post("/templates/{template_id}/charts/saved")
-def create_saved_chart(template_id: str, payload: SavedChartCreatePayload):
-    return _create_saved_chart_route(template_id, payload)
-
-
-@app.put("/templates/{template_id}/charts/saved/{chart_id}")
-def update_saved_chart(template_id: str, chart_id: str, payload: SavedChartUpdatePayload):
-    return _update_saved_chart_route(template_id, chart_id, payload)
-
-
-@app.delete("/templates/{template_id}/charts/saved/{chart_id}")
-def delete_saved_chart(template_id: str, chart_id: str):
-    return _delete_saved_chart_route(template_id, chart_id)
-
-
-@app.get("/excel/{template_id}/charts/saved")
-def list_saved_charts_excel(template_id: str):
-    return _list_saved_charts_route(template_id)
-
-
-@app.post("/excel/{template_id}/charts/saved")
-def create_saved_chart_excel(template_id: str, payload: SavedChartCreatePayload):
-    return _create_saved_chart_route(template_id, payload)
-
-
-@app.put("/excel/{template_id}/charts/saved/{chart_id}")
-def update_saved_chart_excel(template_id: str, chart_id: str, payload: SavedChartUpdatePayload):
-    return _update_saved_chart_route(template_id, chart_id, payload)
-
-
-@app.delete("/excel/{template_id}/charts/saved/{chart_id}")
-def delete_saved_chart_excel(template_id: str, chart_id: str):
-    return _delete_saved_chart_route(template_id, chart_id)
+discover_router = build_discover_router(
+    template_dir_fn=_template_dir,
+    db_path_fn=_db_path_from_payload_or_default,
+    load_contract_fn=load_contract_v2,
+    clean_key_values_fn=_clean_key_values,
+    discover_pdf_fn=discover_batches_and_counts,
+    discover_excel_fn=discover_batches_and_counts_excel,
+    build_field_catalog_fn=build_batch_field_catalog_and_stats,
+    build_batch_metrics_fn=build_batch_metrics,
+    load_manifest_fn=load_manifest,
+    manifest_endpoint_fn_pdf=lambda tpl_id, kind="pdf": _manifest_endpoint(tpl_id, kind=kind),
+    manifest_endpoint_fn_excel=lambda tpl_id, kind="excel": _manifest_endpoint(tpl_id, kind=kind),
+    logger=logger,
+)
+app.include_router(discover_router)
 
 
 def _discover_reports_route(p: DiscoverPayload, *, kind: str = "pdf") -> dict:
-    template_dir = _template_dir(p.template_id, kind=kind)
-    db_path = _db_path_from_payload_or_default(p.connection_id)
-    if not db_path.exists():
-        raise _http_error(400, "db_not_found", f"DB not found: {db_path}")
-
-    try:
-        load_contract_v2(template_dir)
-    except Exception as exc:
-        logger.exception(
-            "contract_artifacts_load_failed",
-            extra={
-                "event": "contract_artifacts_load_failed",
-                "template_id": p.template_id,
-            },
-        )
-        raise _http_error(500, "contract_load_failed", f"Failed to load contract artifacts: {exc}")
-
-    contract_path = template_dir / "contract.json"
-    if not contract_path.exists():
-        raise _http_error(
-            400,
-            "contract_not_ready",
-            "Contract artifacts missing. Approve mapping first.",
-        )
-    try:
-        contract_payload = json.loads(contract_path.read_text(encoding="utf-8"))
-    except Exception as exc:
-        raise _http_error(500, "contract_invalid", f"Invalid contract.json: {exc}")
-
-    key_values_payload = _clean_key_values(p.key_values)
-
-    discover_fn = discover_batches_and_counts if kind == "pdf" else discover_batches_and_counts_excel
-
-    try:
-        summary = discover_fn(
-            db_path=db_path,
-            contract=contract_payload,
-            start_date=p.start_date,
-            end_date=p.end_date,
-            key_values=key_values_payload,
-        )
-    except Exception as exc:
-        raise _http_error(500, "discovery_failed", f"Discovery failed: {exc}")
-
-    manifest_data = load_manifest(template_dir) or {}
-    manifest_url = _manifest_endpoint(p.template_id, kind=kind)
-    tpl_record = state_store.get_template_record(p.template_id) or {}
-    tpl_name = tpl_record.get("name") or f"Template {p.template_id[:8]}"
-    state_store.set_last_used(p.connection_id, p.template_id)
-
-    batches_raw = summary.get("batches") or []
-    if not isinstance(batches_raw, list):
-        batches_raw = []
-
-    batch_metadata: dict[str, dict[str, object]] = summary.get("batch_metadata") or {}
-
-    field_catalog = summary.get("field_catalog")
-    if not isinstance(field_catalog, list):
-        field_catalog, _ = build_batch_field_catalog_and_stats(batches_raw)
-
-    batch_metrics = summary.get("batch_metrics")
-    if not isinstance(batch_metrics, list):
-        batch_metrics = build_batch_metrics(batches_raw, batch_metadata)
-
-    return {
-        "template_id": p.template_id,
-        "name": tpl_name,
-        "batches": [
-            {
-                "id": b["id"],
-                "rows": b["rows"],
-                "parent": b["parent"],
-                "selected": True,
-                "time": (batch_metadata.get(str(b["id"])) or {}).get("time"),
-                "category": (batch_metadata.get(str(b["id"])) or {}).get("category"),
-            }
-            for b in batches_raw
-        ],
-        "batches_count": summary["batches_count"],
-        "rows_total": summary["rows_total"],
-        "manifest_url": manifest_url,
-        "manifest_produced_at": manifest_data.get("produced_at"),
-        "field_catalog": field_catalog,
-        "batch_metrics": batch_metrics,
-    }
+    return discover_reports_service(
+        p,
+        kind=kind,
+        template_dir_fn=lambda tpl: _template_dir(tpl, kind=kind),
+        db_path_fn=_db_path_from_payload_or_default,
+        load_contract_fn=load_contract_v2,
+        clean_key_values_fn=_clean_key_values,
+        discover_fn=discover_batches_and_counts if kind == "pdf" else discover_batches_and_counts_excel,
+        build_field_catalog_fn=build_batch_field_catalog_and_stats,
+        build_batch_metrics_fn=build_batch_metrics,
+        load_manifest_fn=load_manifest,
+        manifest_endpoint_fn=lambda tpl_id: _manifest_endpoint(tpl_id, kind=kind),
+        logger=logger,
+    )
 
 
 @app.post("/reports/discover")
@@ -5826,29 +5450,16 @@ def _scheduler_runner(payload: dict, kind: str) -> dict:
     return _run_report_with_email(run_payload, kind=kind, correlation_id=correlation_id)
 
 
-@app.post("/jobs/run-report")
-async def enqueue_report_job(p: RunPayload, request: Request):
-    return await _queue_report_job(p, request, kind="pdf")
-
-
-@app.post("/excel/jobs/run-report")
-async def enqueue_report_job_excel(p: RunPayload, request: Request):
-    return await _queue_report_job(p, request, kind="excel")
-
-
 def _reports_run_route(p: RunPayload, request: Request, *, kind: str = "pdf"):
     correlation_id = getattr(request.state, "correlation_id", None)
     return _run_report_with_email(p, kind=kind, correlation_id=correlation_id)
 
 
-@app.post("/reports/run")
-def start_run(p: RunPayload, request: Request):
-    return _reports_run_route(p, request, kind="pdf")
-
-
-@app.post("/excel/reports/run")
-def start_run_excel(p: RunPayload, request: Request):
-    return _reports_run_route(p, request, kind="excel")
+run_router = build_run_router(
+    reports_run_fn=_reports_run_route,
+    enqueue_job_fn=_queue_report_job,
+)
+app.include_router(run_router)
 
 
 @app.get("/jobs")

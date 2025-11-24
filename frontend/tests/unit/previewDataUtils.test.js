@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
-import { resolveChartPreviewDataset } from '../../src/pages/Generate/previewDataUtils.js'
+import { resolveChartPreviewDataset } from '../../src/features/generate/utils/previewDataUtils.js'
 
 test('resolveChartPreviewDataset prefers active discovery data', () => {
   const active = [{ batch_index: 1 }]

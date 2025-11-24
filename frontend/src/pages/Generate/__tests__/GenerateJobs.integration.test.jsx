@@ -50,7 +50,7 @@ beforeEach(
     JobsPanel = (await import('../../../components/JobsPanel.jsx')).default
     const clientModule = await import('../../../api/client.js')
     const realRunReportAsJob = clientModule.runReportAsJob
-    ;({ GenerateAndDownload } = await import('../GeneratePage.jsx'))
+    GenerateAndDownload = (await import('../../../features/generate/components/GenerateAndDownload.jsx')).default
     runReportAsJobSpy = vi
       .spyOn(clientModule, 'runReportAsJob')
       .mockImplementation((payload) => realRunReportAsJob(payload))

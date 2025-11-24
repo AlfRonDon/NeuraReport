@@ -2,7 +2,7 @@ import { describe, expect, beforeEach, afterEach, vi, it } from 'vitest'
 import { render, screen, within } from '@testing-library/react'
 import { ThemeProvider } from '@mui/material/styles'
 
-import { TemplatePicker } from '../GeneratePage.jsx'
+import TemplatePicker from '../../../features/generate/components/TemplatePicker.jsx'
 import theme from '../../../theme.js'
 import { ToastProvider } from '../../../components/ToastProvider.jsx'
 import { useAppStore } from '../../../store/useAppStore.js'

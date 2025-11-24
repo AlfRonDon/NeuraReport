@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 
-import { getSourceMeta } from '../templateSourceMeta.js'
+import { getSourceMeta } from '../../../features/generate/utils/templateSourceMeta.js'
 
 describe('getSourceMeta', () => {
   it('returns company meta for company source', () => {
