@@ -2,20 +2,20 @@ import os
 import unittest
 from unittest import mock
 
-from backend import api as api_module
 from backend.app.services.templates import TemplateVerify
+from src.services.mapping import helpers as mapping_helpers
 
 
 class NormalizeMappingTests(unittest.TestCase):
     def test_norm_placeholder_wraps_plain_labels(self):
         """Plain headers should be wrapped in curly braces for placeholders."""
-        self.assertEqual(api_module._norm_placeholder("Amount Due"), "{Amount Due}")
-        self.assertEqual(api_module._norm_placeholder(" amount "), "{amount}")
+        self.assertEqual(mapping_helpers.norm_placeholder("Amount Due"), "{Amount Due}")
+        self.assertEqual(mapping_helpers.norm_placeholder(" amount "), "{amount}")
 
     def test_norm_placeholder_preserves_existing_tokens(self):
         """Existing {token} or {{token}} placeholders are left untouched."""
-        self.assertEqual(api_module._norm_placeholder("{Total}"), "{Total}")
-        self.assertEqual(api_module._norm_placeholder("{{GrandTotal}}"), "{{GrandTotal}}")
+        self.assertEqual(mapping_helpers.norm_placeholder("{Total}"), "{Total}")
+        self.assertEqual(mapping_helpers.norm_placeholder("{{GrandTotal}}"), "{{GrandTotal}}")
 
     def test_normalize_mapping_for_autofill_builds_expected_list(self):
         mapping = {
@@ -23,7 +23,7 @@ class NormalizeMappingTests(unittest.TestCase):
             "   {Name}  ": "UNRESOLVED",
             "Notes": "INPUT_SAMPLE",
         }
-        normalized = api_module._normalize_mapping_for_autofill(mapping)
+        normalized = mapping_helpers.normalize_mapping_for_autofill(mapping)
         self.assertEqual(
             normalized,
             [

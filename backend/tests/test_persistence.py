@@ -39,6 +39,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from .. import api  # noqa: E402
 from ..app.services.connections import db_connection as db_conn_module  # noqa: E402
 from ..app.services.state import store as state_store_module  # noqa: E402
+from src.services.report_service import _extract_excel_print_scale_from_html
 
 
 @pytest.fixture
@@ -221,7 +222,7 @@ def test_extract_excel_print_scale_from_html(tmp_path):
         '<html><head><style id="excel-print-sizing">:root { --excel-print-scale: 0.63; }</style></head><body></body></html>',
         encoding="utf-8",
     )
-    value = api._extract_excel_print_scale_from_html(html_path)
+    value = _extract_excel_print_scale_from_html(html_path)
     assert value == pytest.approx(0.63, rel=1e-2)
 
 

@@ -1,0 +1,54 @@
+from __future__ import annotations
+
+from fastapi import APIRouter, Depends, Request
+
+from src.core.config import get_settings
+from src.schemas.connection_schema import ConnectionUpsertPayload, TestPayload
+from src.services.connection_service import (
+    delete_connection,
+    healthcheck_connection,
+    list_connections,
+    test_connection,
+    upsert_connection,
+)
+
+router = APIRouter()
+
+
+def _correlation(request: Request) -> str | None:
+    return getattr(request.state, "correlation_id", None)
+
+
+@router.post("/connections/test")
+def test_connection_route(payload: TestPayload, request: Request, settings=Depends(get_settings)):
+    result = test_connection(payload)
+    result["correlation_id"] = _correlation(request)
+    return result
+
+
+@router.get("/connections")
+def list_connections_route(request: Request):
+    return {"status": "ok", "connections": list_connections(), "correlation_id": _correlation(request)}
+
+
+@router.post("/connections")
+def upsert_connection_route(payload: ConnectionUpsertPayload, request: Request):
+    record = upsert_connection(payload)
+    return {"status": "ok", "connection": record, "correlation_id": _correlation(request)}
+
+
+@router.delete("/connections/{connection_id}")
+def delete_connection_route(connection_id: str, request: Request):
+    removed = delete_connection(connection_id)
+    if not removed:
+        from fastapi import HTTPException
+
+        raise HTTPException(status_code=404, detail={"status": "error", "code": "connection_not_found", "message": "Connection not found."})
+    return {"status": "ok", "connection_id": connection_id, "correlation_id": _correlation(request)}
+
+
+@router.post("/connections/{connection_id}/health")
+def healthcheck_connection_route(connection_id: str, request: Request):
+    result = healthcheck_connection(connection_id)
+    result["correlation_id"] = _correlation(request)
+    return result
