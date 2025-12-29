@@ -32,7 +32,6 @@ def _summarise_catalog(catalog: Sequence[Mapping[str, Any]]) -> list[dict]:
                 "tags": list(item.get("tags") or []),
                 "useCases": list(item.get("useCases") or []),
                 "primaryMetrics": list(item.get("primaryMetrics") or []),
-                "description": item.get("description") or "",
                 "source": item.get("source") or "",
             }
         )
@@ -62,7 +61,8 @@ def _build_messages(
         "}\n\n"
         "- score must be a number between 0 and 1 where higher means better match.\n"
         "- explanation must be a short, user-facing sentence fragment (no markdown).\n"
-        "- Only use template IDs that appear in the catalog."
+        "- Only use template IDs that appear in the catalog.\n"
+        "- Use HINTS_JSON (domains, kinds, schema_snapshot, tables, etc.) to bias the ranking when relevant."
     )
 
     user_text = (
@@ -193,4 +193,3 @@ def recommend_templates_from_catalog(
 
     # Preserve ordering from the LLM and cap to max_results.
     return recommendations[:max_results]
-

@@ -63,6 +63,8 @@ class TemplateRecommendPayload(BaseModel):
     requirement: str
     kind: Optional[str] = None
     domain: Optional[str] = None
+    kinds: Optional[list[str]] = None
+    domains: Optional[list[str]] = None
     schema_snapshot: Optional[dict[str, Any]] = None
     tables: Optional[list[str]] = None
 

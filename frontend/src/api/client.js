@@ -1858,6 +1858,17 @@ export async function getJob(jobId) {
   return data?.job
 }
 
+export async function cancelJob(jobId, options = {}) {
+  if (!jobId) throw new Error('Missing job id')
+  const force = Boolean(options?.force)
+  if (isMock) {
+    return { status: 'cancelled', job_id: jobId, force }
+  }
+  const endpoint = `/jobs/${encodeURIComponent(jobId)}/cancel${force ? '?force=true' : ''}`
+  const { data } = await api.post(endpoint)
+  return data?.job || data
+}
+
 
 
 

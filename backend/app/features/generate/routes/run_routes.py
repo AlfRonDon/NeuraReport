@@ -24,11 +24,11 @@ def build_run_router(
         return reports_run_fn(payload, request, kind="excel")
 
     @router.post("/jobs/run-report")
-    async def enqueue_report_job(payload: RunPayload, request: Request):
+    async def enqueue_report_job(payload: RunPayload | list[RunPayload], request: Request):
         return await enqueue_job_fn(payload, request, kind="pdf")
 
     @router.post("/excel/jobs/run-report")
-    async def enqueue_report_job_excel(payload: RunPayload, request: Request):
+    async def enqueue_report_job_excel(payload: RunPayload | list[RunPayload], request: Request):
         return await enqueue_job_fn(payload, request, kind="excel")
 
     return router

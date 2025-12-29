@@ -1,0 +1,29 @@
+{
+  "correlation_id": "0d2ff493-4173-46c8-b119-0b094ded8d15",
+  "schema_version": "1.0",
+  "step": "reports_assets_build",
+  "produced_at": "2025-11-13T10:49:07.794951+00:00",
+  "input_refs": [
+    "C:\\Users\\alfre\\Downloads\\NeuraReport\\Coastal feeds\\test - Copy.db"
+  ],
+  "files": {
+    "contract.json": "contract.json",
+    "contract_v2_meta.json": "contract_v2_meta.json",
+    "generator/generator_assets.json": "generator/generator_assets.json",
+    "generator/output_schemas.json": "generator/output_schemas.json",
+    "mapping_keys.json": "mapping_keys.json",
+    "mapping_pdf_labels.json": "mapping_pdf_labels.json",
+    "overview.md": "overview.md",
+    "report_final.html": "report_final.html"
+  },
+  "file_checksums": {
+    "contract.json": "20ee5b7a470b6aeefcebe5a6b4b6230f3e16cc6fff09d59fdfdf7428b087bb1a",
+    "contract_v2_meta.json": "8bf80b669b2d538cf5c796a13c85a1f3d61b4ce415c800b5da8a1a871aa447fc",
+    "generator/generator_assets.json": "b06dbb7c96f878fb6b7917373b31a513e2300c278d640881b2ae50cee190fb84",
+    "generator/output_schemas.json": "0c70bc21b27e23e7b4ef87f2493c96717f38cc145dddc15e392712dd71f7bab7",
+    "mapping_keys.json": "960926bcab0bc7624bf90f79b4295fd59b3e168c9e4a0582b60e0b88a7052dd9",
+    "mapping_pdf_labels.json": "64669239d7a0532c71d92462eec02d3cc075fb900403a59fb84ada88fe499a29",
+    "overview.md": "886640e21cad5c9eac58ee3f0c0aca493b35893bf7b7ae26874c0103135acfb0",
+    "report_final.html": "e2f1aba56f204a165bcf261274f6fc75807993040e122250649f877b52a5a6ad"
+  }
+}

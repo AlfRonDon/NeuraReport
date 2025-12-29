@@ -40,6 +40,12 @@ const MOCK_JOBS = [
     status: 'running',
   }),
   createMockJob({
+    id: 'job_mock_generate',
+    templateId: 'tpl_generate_job',
+    templateName: 'Quarterly Revenue (Mock)',
+    status: 'queued',
+  }),
+  createMockJob({
     id: 'job_mock_succeeded',
     templateId: 'tpl_success_mock',
     templateName: 'Completed mock run',

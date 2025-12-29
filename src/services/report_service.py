@@ -2,15 +2,20 @@ from __future__ import annotations
 
 import asyncio
 import concurrent.futures
+import ctypes
 import contextlib
+import importlib
 import json
 import logging
 import os
 import re
+import signal
+import subprocess
 import time
+import threading
 import uuid
 from pathlib import Path
-from typing import Any, Iterable, Mapping, Optional
+from typing import Any, Iterable, Mapping, Optional, Sequence
 
 from fastapi import HTTPException, Request
 
@@ -45,6 +50,36 @@ REPORT_JOB_EXECUTOR = concurrent.futures.ThreadPoolExecutor(
     thread_name_prefix="nr-job",
 )
 _JOB_TASKS: set[asyncio.Task] = set()
+_JOB_FUTURES: dict[str, concurrent.futures.Future] = {}
+_JOB_THREADS: dict[str, int] = {}
+_JOB_PROCESSES: dict[str, set[int]] = {}
+_JOB_PROCESS_LOCK = threading.RLock()
+_SUBPROCESS_POPEN = subprocess.Popen
+
+
+def _state_store():
+    try:
+        api_mod = importlib.import_module("backend.api")
+        return getattr(api_mod, "state_store", state_store)
+    except Exception:
+        return state_store
+
+
+def _is_job_cancelled(job_id: str | None) -> bool:
+    if not job_id:
+        return False
+    try:
+        record = _state_store().get_job(job_id) or {}
+    except Exception:
+        logger.exception("job_status_check_failed", extra={"event": "job_status_check_failed", "job_id": job_id})
+        return False
+    status = str(record.get("status") or "").lower()
+    return status == "cancelled"
+
+
+def _raise_if_cancelled(job_tracker: "JobRunTracker" | None) -> None:
+    if _is_job_cancelled(job_tracker.job_id if job_tracker else None):
+        raise _http_error(409, "job_cancelled", "Job was cancelled.")
 
 
 def _http_error(status_code: int, code: str, message: str, details: str | None = None) -> HTTPException:
@@ -61,6 +96,111 @@ def _track_background_task(task: asyncio.Task) -> None:
         _JOB_TASKS.discard(t)
 
     task.add_done_callback(_cleanup)
+
+
+def _track_job_future(job_id: str, future: concurrent.futures.Future) -> None:
+    if not job_id or future is None:
+        return
+    _JOB_FUTURES[job_id] = future
+
+    def _cleanup(_: concurrent.futures.Future) -> None:
+        _JOB_FUTURES.pop(job_id, None)
+
+    future.add_done_callback(_cleanup)
+
+
+def _register_job_thread(job_id: str) -> None:
+    if not job_id:
+        return
+    try:
+        _JOB_THREADS[job_id] = threading.get_ident()
+    except Exception:
+        logger.exception("job_thread_register_failed", extra={"event": "job_thread_register_failed", "job_id": job_id})
+
+
+def _clear_job_thread(job_id: str) -> None:
+    if not job_id:
+        return
+    _JOB_THREADS.pop(job_id, None)
+
+
+def _register_job_process(job_id: str, pid: int) -> None:
+    if not job_id or not pid:
+        return
+    with _JOB_PROCESS_LOCK:
+        _JOB_PROCESSES.setdefault(job_id, set()).add(pid)
+
+
+def _clear_job_processes(job_id: str) -> None:
+    if not job_id:
+        return
+    with _JOB_PROCESS_LOCK:
+        _JOB_PROCESSES.pop(job_id, None)
+
+
+def _terminate_pid(pid: int, *, kill_tree: bool = True) -> bool:
+    if not pid:
+        return False
+    try:
+        if os.name == "nt" and kill_tree:
+            # Use the real Popen to avoid recursive tracking.
+            _SUBPROCESS_POPEN(["taskkill", "/PID", str(pid), "/T", "/F"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            return True
+        os.kill(pid, signal.SIGTERM)
+        return True
+    except Exception:
+        return False
+
+
+def _kill_job_processes(job_id: str, *, kill_tree: bool = True) -> None:
+    if not job_id:
+        return
+    with _JOB_PROCESS_LOCK:
+        pids = list(_JOB_PROCESSES.get(job_id) or [])
+    for pid in pids:
+        _terminate_pid(pid, kill_tree=kill_tree)
+    _clear_job_processes(job_id)
+
+
+def _inject_thread_cancel(thread_id: int) -> bool:
+    """
+    Best-effort cancellation for a running thread by injecting CancelledError.
+    """
+    if not thread_id:
+        return False
+    try:
+        res = ctypes.pythonapi.PyThreadState_SetAsyncExc(
+            ctypes.c_long(thread_id), ctypes.py_object(asyncio.CancelledError)
+        )
+        if res > 1:
+            ctypes.pythonapi.PyThreadState_SetAsyncExc(ctypes.c_long(thread_id), 0)
+            return False
+        return res == 1
+    except Exception:
+        logger.exception(
+            "job_force_cancel_injection_failed",
+            extra={"event": "job_force_cancel_injection_failed", "thread_id": thread_id},
+        )
+        return False
+
+
+def force_cancel_job(job_id: str, *, force: bool = False) -> bool:
+    """
+    Attempt to cancel a running or queued job. When force=True, injects a CancelledError
+    into the worker thread if it is already running and terminates tracked child processes.
+    """
+    if not job_id:
+        return False
+    future = _JOB_FUTURES.get(job_id)
+    cancelled = False
+    if future and not future.done():
+        cancelled = future.cancel()
+    if force and not cancelled:
+        thread_id = _JOB_THREADS.get(job_id)
+        if thread_id:
+            cancelled = _inject_thread_cancel(thread_id)
+        _kill_job_processes(job_id, kill_tree=True)
+    return cancelled
 
 
 def _publish_event_safe(event: Event) -> None:
@@ -157,7 +297,7 @@ class JobRunTracker:
         if not self.job_id:
             return
         try:
-            state_store.record_job_start(self.job_id)
+            _state_store().record_job_start(self.job_id)
         except Exception:
             logger.exception(
                 "job_start_record_failed",
@@ -172,7 +312,7 @@ class JobRunTracker:
         if not self.job_id:
             return
         try:
-            state_store.record_job_progress(self.job_id, value)
+            _state_store().record_job_progress(self.job_id, value)
         except Exception:
             logger.exception(
                 "job_progress_record_failed",
@@ -195,7 +335,7 @@ class JobRunTracker:
         if not self.job_id or not self._should_track(name):
             return
         try:
-            state_store.record_job_step(
+            _state_store().record_job_step(
                 self.job_id,
                 name,
                 status=status,
@@ -231,7 +371,7 @@ class JobRunTracker:
             return
         self.progress(100.0)
         try:
-            state_store.record_job_completion(self.job_id, status="succeeded", error=None, result=result)
+            _state_store().record_job_completion(self.job_id, status="succeeded", error=None, result=result)
         except Exception:
             logger.exception(
                 "job_completion_record_failed",
@@ -246,7 +386,7 @@ class JobRunTracker:
         if not self.job_id:
             return
         try:
-            state_store.record_job_completion(self.job_id, status=status, error=str(error), result=None)
+            _state_store().record_job_completion(self.job_id, status=status, error=str(error), result=None)
         except Exception:
             logger.exception(
                 "job_completion_record_failed",
@@ -286,7 +426,12 @@ def _template_dir(
     if normalized_kind not in _UPLOAD_KIND_PREFIXES:
         raise _http_error(400, "invalid_template_kind", f"Unsupported template kind: {kind}")
 
-    base_dir = UPLOAD_ROOT_BASE if normalized_kind == "pdf" else EXCEL_UPLOAD_ROOT_BASE
+    try:
+        api_mod = importlib.import_module("backend.api")
+        base_dir = getattr(api_mod, "UPLOAD_ROOT_BASE" if normalized_kind == "pdf" else "EXCEL_UPLOAD_ROOT_BASE")
+    except Exception:
+        base_dir = UPLOAD_ROOT_BASE if normalized_kind == "pdf" else EXCEL_UPLOAD_ROOT_BASE
+
     tid = _normalize_template_id(template_id)
     tdir = (base_dir / tid).resolve()
     if base_dir not in tdir.parents:
@@ -387,6 +532,9 @@ def _run_report_internal(
     correlation_id: str | None = None,
     job_tracker: JobRunTracker | None = None,
 ):
+    def _ensure_not_cancelled():
+        _raise_if_cancelled(job_tracker)
+
     run_started = time.time()
     logger.info(
         "reports_run_start",
@@ -398,6 +546,7 @@ def _run_report_internal(
             "correlation_id": correlation_id,
         },
     )
+    _ensure_not_cancelled()
     if job_tracker:
         job_tracker.step_running("dataLoad", label="Load database connection")
     db_path = db_path_from_payload_or_default(p.connection_id)
@@ -407,6 +556,8 @@ def _run_report_internal(
         raise _http_error(400, "db_not_found", f"DB not found: {db_path}")
     if job_tracker:
         job_tracker.step_succeeded("dataLoad")
+
+    _ensure_not_cancelled()
 
     if job_tracker:
         job_tracker.step_running("contractCheck", label="Prepare contract")
@@ -442,6 +593,7 @@ def _run_report_internal(
     docx_enabled = docx_requested or docx_landscape or kind == "pdf"
     xlsx_enabled = xlsx_requested or kind == "excel"
     render_strategy = RENDER_STRATEGIES.resolve("excel" if docx_landscape or xlsx_enabled else "pdf")
+    _ensure_not_cancelled()
 
     ts = str(int(time.time()))
     out_html = tdir / f"filled_{ts}.html"
@@ -463,6 +615,7 @@ def _run_report_internal(
 
     with lock_ctx:
         try:
+            _ensure_not_cancelled()
             if job_tracker:
                 job_tracker.step_running("renderPdf", label="Render PDF artifacts")
             if kind == "excel":
@@ -483,12 +636,14 @@ def _run_report_internal(
                 batch_ids=p.batch_ids,
                 KEY_VALUES=key_values_payload,
             )
+            _ensure_not_cancelled()
             if tmp_html.exists():
                 tmp_html.replace(out_html)
             if tmp_pdf.exists():
                 tmp_pdf.replace(out_pdf)
             docx_step_tracked = bool(job_tracker and job_tracker.has_step("renderDocx"))
             if docx_enabled and out_docx and tmp_docx:
+                _ensure_not_cancelled()
                 if docx_step_tracked:
                     job_tracker.step_running("renderDocx", label="Render DOCX")
                 docx_tmp_result: Path | None = None
@@ -540,6 +695,7 @@ def _run_report_internal(
                     )
             xlsx_step_tracked = bool(job_tracker and job_tracker.has_step("renderXlsx"))
             if xlsx_enabled and out_xlsx and tmp_xlsx:
+                _ensure_not_cancelled()
                 if xlsx_step_tracked:
                     job_tracker.step_running("renderXlsx", label="Render XLSX")
                 xlsx_error: str | None = None
@@ -607,6 +763,8 @@ def _run_report_internal(
     if job_tracker:
         job_tracker.step_succeeded("renderPdf")
 
+    _ensure_not_cancelled()
+
     artifact_files = _artifact_map_from_paths(out_html, out_pdf, out_docx, out_xlsx)
 
     if job_tracker and job_tracker.has_step("finalize"):
@@ -623,8 +781,8 @@ def _run_report_internal(
 
     manifest_data = load_manifest(tdir) or {}
     manifest_url = _manifest_endpoint(p.template_id, kind=kind)
-    state_store.record_template_run(p.template_id, p.connection_id)
-    state_store.set_last_used(p.connection_id, p.template_id)
+    _state_store().record_template_run(p.template_id, p.connection_id)
+    _state_store().set_last_used(p.connection_id, p.template_id)
 
     logger.info(
         "reports_run_complete",
@@ -673,6 +831,7 @@ def _maybe_send_email(
     job_tracker: JobRunTracker | None = None,
 ) -> None:
     notification_strategy = NOTIFICATION_STRATEGIES.resolve("email")
+    _raise_if_cancelled(job_tracker)
     recipients = normalize_email_targets(p.email_recipients)
     email_step_tracked = bool(job_tracker and job_tracker.has_step("email"))
     if not recipients:
@@ -692,7 +851,7 @@ def _maybe_send_email(
             attachments.append(fallback)
     if not attachments:
         return
-    template_record = state_store.get_template_record(p.template_id) or {}
+    template_record = _state_store().get_template_record(p.template_id) or {}
     template_name = template_record.get("name") or p.template_id
     default_subject = f"Report run for {template_name}"
     subject = (p.email_subject or default_subject).strip()
@@ -780,9 +939,36 @@ def _run_report_job_sync(
     correlation_id: str,
     step_progress: Mapping[str, float],
 ) -> None:
+    # If job was cancelled before starting, short-circuit.
+    if _is_job_cancelled(job_id):
+        logger.info("report_job_skipped_cancelled", extra={"event": "report_job_skipped_cancelled", "job_id": job_id})
+        return
+    _register_job_thread(job_id)
     tracker = JobRunTracker(job_id, correlation_id=correlation_id, step_progress=step_progress)
     tracker.start()
     _publish_event_safe(Event(name="job.started", payload={"job_id": job_id, "kind": kind}, correlation_id=correlation_id))
+    @contextlib.contextmanager
+    def _patch_subprocess_tracking():
+        if not job_id:
+            yield
+            return
+        original = subprocess.Popen
+        def _job_popen(*args, **kwargs):
+            proc = _SUBPROCESS_POPEN(*args, **kwargs)
+            if proc and getattr(proc, "pid", None):
+                _register_job_process(job_id, proc.pid)
+            return proc
+        subprocess.Popen = _job_popen  # type: ignore[assignment]
+        try:
+            yield
+        finally:
+            subprocess.Popen = original  # type: ignore[assignment]
+
+    try:
+        api_mod = importlib.import_module("backend.api")
+        run_fn = getattr(api_mod, "_run_report_with_email", _run_report_with_email)
+    except Exception:
+        run_fn = _run_report_with_email
     try:
         run_payload = RunPayload(**payload_data)
     except Exception as exc:
@@ -793,22 +979,53 @@ def _run_report_job_sync(
         )
         return
     try:
-        result = _run_report_with_email(run_payload, kind=kind, correlation_id=correlation_id, job_tracker=tracker)
+        with _patch_subprocess_tracking():
+            result = run_fn(run_payload, kind=kind, correlation_id=correlation_id, job_tracker=tracker)
     except HTTPException as exc:
-        tracker.fail(_job_error_message(exc.detail))
-        logger.exception(
-            "report_job_http_error",
+        error_message = _job_error_message(exc.detail)
+        error_code = str(exc.detail.get("code") or "").lower() if isinstance(exc.detail, Mapping) else ""
+        is_cancelled = error_code == "job_cancelled"
+        tracker.fail(error_message, status="cancelled" if is_cancelled else "failed")
+        log_extra = {
+            "event": "report_job_cancelled" if is_cancelled else "report_job_http_error",
+            "job_id": job_id,
+            "template_id": run_payload.template_id,
+            "correlation_id": correlation_id,
+        }
+        if is_cancelled:
+            logger.info("report_job_cancelled", extra=log_extra)
+            _publish_event_safe(
+                Event(
+                    name="job.cancelled",
+                    payload={"job_id": job_id, "kind": kind, "status": "cancelled"},
+                    correlation_id=correlation_id,
+                )
+            )
+        else:
+            logger.exception("report_job_http_error", extra=log_extra)
+            _publish_event_safe(
+                Event(
+                    name="job.failed",
+                    payload={"job_id": job_id, "kind": kind, "error": error_message},
+                    correlation_id=correlation_id,
+                )
+            )
+    except (asyncio.CancelledError, KeyboardInterrupt, SystemExit) as exc:
+        tracker.fail("Job cancelled", status="cancelled")
+        logger.info(
+            "report_job_force_cancelled",
             extra={
-                "event": "report_job_http_error",
+                "event": "report_job_force_cancelled",
                 "job_id": job_id,
                 "template_id": run_payload.template_id,
                 "correlation_id": correlation_id,
+                "exc": str(exc),
             },
         )
         _publish_event_safe(
             Event(
-                name="job.failed",
-                payload={"job_id": job_id, "kind": kind, "error": _job_error_message(exc.detail)},
+                name="job.cancelled",
+                payload={"job_id": job_id, "kind": kind, "status": "cancelled"},
                 correlation_id=correlation_id,
             )
         )
@@ -839,6 +1056,9 @@ def _run_report_job_sync(
                 correlation_id=correlation_id,
             )
         )
+    finally:
+        _clear_job_thread(job_id)
+        _clear_job_processes(job_id)
 
 
 def _schedule_report_job(
@@ -858,7 +1078,7 @@ def _schedule_report_job(
 
     async def runner() -> None:
         try:
-            await asyncio.get_running_loop().run_in_executor(
+            future = asyncio.get_running_loop().run_in_executor(
                 REPORT_JOB_EXECUTOR,
                 _run_report_job_sync,
                 job_id,
@@ -867,6 +1087,8 @@ def _schedule_report_job(
                 correlation_id,
                 step_progress,
             )
+            _track_job_future(job_id, future)
+            await future
         except Exception:
             logger.exception(
                 "report_job_task_failed",
@@ -877,46 +1099,101 @@ def _schedule_report_job(
     _track_background_task(task)
 
 
-async def queue_report_job(p: RunPayload, request: Request, *, kind: str) -> dict:
-    correlation_id = getattr(request.state, "correlation_id", None) or f"job-{uuid.uuid4().hex[:10]}"
-    steps = _build_job_steps(p, kind=kind)
-    template_rec = state_store.get_template_record(p.template_id) or {}
-    job_record = state_store.create_job(
-        job_type="run_report",
-        template_id=p.template_id,
-        connection_id=p.connection_id,
-        template_name=template_rec.get("name") or f"Template {p.template_id[:8]}",
-        template_kind=template_rec.get("kind") or kind,
-        schedule_id=p.schedule_id,
-        correlation_id=correlation_id,
-        steps=steps,
-        meta={
-            "start_date": p.start_date,
-            "end_date": p.end_date,
-            "docx": bool(p.docx),
-            "xlsx": bool(p.xlsx),
-        },
-    )
-    payload_data = p.dict()
-    step_progress = _step_progress_from_steps(steps)
-    _schedule_report_job(job_record["id"], payload_data, kind, correlation_id, step_progress)
-    logger.info(
-        "job_enqueued",
-        extra={
-            "event": "job_enqueued",
-            "job_id": job_record["id"],
-            "template_id": p.template_id,
-            "template_kind": kind,
-            "correlation_id": correlation_id,
-        },
-    )
-    return {"job_id": job_record["id"]}
+def _normalize_run_payloads(raw: RunPayload | Sequence[Any]) -> list[RunPayload]:
+    """
+    Accept a single run payload or a sequence of payloads and normalize to RunPayload instances.
+    """
+    if isinstance(raw, RunPayload):
+        return [raw]
+    if isinstance(raw, Mapping) and "runs" in raw:
+        return _normalize_run_payloads(raw.get("runs") or [])
+    if isinstance(raw, Iterable) and not isinstance(raw, (str, bytes)):
+        normalized: list[RunPayload] = []
+        for idx, item in enumerate(raw):
+            if isinstance(item, RunPayload):
+                normalized.append(item)
+                continue
+            if isinstance(item, Mapping):
+                try:
+                    normalized.append(RunPayload(**item))
+                    continue
+                except Exception as exc:
+                    raise _http_error(400, "invalid_payload", f"Invalid run payload at index {idx}: {exc}")
+            raise _http_error(400, "invalid_payload", "Payload entries must be run payload objects or mappings")
+        if not normalized:
+            raise _http_error(400, "invalid_payload", "At least one run payload is required")
+        return normalized
+    raise _http_error(400, "invalid_payload", "Payload must be a run payload or a list of run payloads")
 
 
-def scheduler_runner(payload: dict, kind: str) -> dict:
+async def queue_report_job(p: RunPayload | Sequence[Any], request: Request, *, kind: str) -> dict:
+    correlation_base = getattr(request.state, "correlation_id", None) or f"job-{uuid.uuid4().hex[:10]}"
+    payloads = _normalize_run_payloads(p)
+    try:
+        api_mod = importlib.import_module("backend.api")
+        schedule_fn = getattr(api_mod, "_schedule_report_job", _schedule_report_job)
+    except Exception:
+        schedule_fn = _schedule_report_job
+
+    scheduled_jobs: list[dict[str, Any]] = []
+    for idx, payload in enumerate(payloads):
+        correlation_id = correlation_base if len(payloads) == 1 else f"{correlation_base}-{idx + 1}"
+        steps = _build_job_steps(payload, kind=kind)
+        template_rec = _state_store().get_template_record(payload.template_id) or {}
+        job_record = _state_store().create_job(
+            job_type="run_report",
+            template_id=payload.template_id,
+            connection_id=payload.connection_id,
+            template_name=template_rec.get("name") or f"Template {payload.template_id[:8]}",
+            template_kind=template_rec.get("kind") or kind,
+            schedule_id=payload.schedule_id,
+            correlation_id=correlation_id,
+            steps=steps,
+            meta={
+                "start_date": payload.start_date,
+                "end_date": payload.end_date,
+                "docx": bool(payload.docx),
+                "xlsx": bool(payload.xlsx),
+            },
+        )
+        payload_data = payload.dict()
+        step_progress = _step_progress_from_steps(steps)
+        schedule_fn(job_record["id"], payload_data, kind, correlation_id, step_progress)
+        logger.info(
+            "job_enqueued",
+            extra={
+                "event": "job_enqueued",
+                "job_id": job_record["id"],
+                "template_id": payload.template_id,
+                "template_kind": kind,
+                "correlation_id": correlation_id,
+            },
+        )
+        scheduled_jobs.append(
+            {
+                "job_id": job_record["id"],
+                "template_id": payload.template_id,
+                "correlation_id": correlation_id,
+                "kind": kind,
+            }
+        )
+
+    job_ids = [job["job_id"] for job in scheduled_jobs]
+    response: dict[str, Any] = {
+        "job_id": job_ids[0],
+        "job_ids": job_ids,
+        "jobs": scheduled_jobs,
+        "count": len(job_ids),
+    }
+    if len(job_ids) == 1:
+        return {"job_id": job_ids[0]}
+    return response
+
+
+def scheduler_runner(payload: dict, kind: str, *, job_tracker: JobRunTracker | None = None) -> dict:
     run_payload = RunPayload(**payload)
     correlation_id = payload.get("correlation_id") or f"sched-{payload.get('schedule_id') or uuid.uuid4()}"
-    return _run_report_with_email(run_payload, kind=kind, correlation_id=correlation_id)
+    return _run_report_with_email(run_payload, kind=kind, correlation_id=correlation_id, job_tracker=job_tracker)
 
 
 def run_report(p: RunPayload, request: Request, *, kind: str = "pdf"):

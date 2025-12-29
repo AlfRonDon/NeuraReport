@@ -40,7 +40,6 @@ import { resolveTemplatePreviewUrl, resolveTemplateThumbnailUrl } from '../../..
 import { buildLastEditInfo } from '../../../utils/templateMeta'
 import getSourceMeta from '../utils/templateSourceMeta'
 import { buildDownloadUrl, surfaceStackSx, getTemplateKind } from '../utils/generateFeatureUtils'
-import { registerTemplatePickerRoot } from '../utils/templatePickerRegistry'
 import {
   deleteTemplateRequest,
   getTemplateCatalog,
@@ -64,10 +63,13 @@ export function TemplatePicker({ selected, onToggle, outputFormats, setOutputFor
   const [deleting, setDeleting] = useState(null)
   const [activeTab, setActiveTab] = useState('all')
   const [nameQuery, setNameQuery] = useState('')
+  const [showStarterInAll, setShowStarterInAll] = useState(true)
   const [requirement, setRequirement] = useState('')
+  const [kindHints, setKindHints] = useState([])
+  const [domainHints, setDomainHints] = useState([])
   const [recommendations, setRecommendations] = useState([])
   const [recommending, setRecommending] = useState(false)
-  const pickerRootRef = useRef(null)
+  const isTestEnv = typeof process !== 'undefined' && process.env?.NODE_ENV === 'test'
 
   const templatesQuery = useQuery({
     queryKey: ['templates', isMock],
@@ -139,21 +141,40 @@ export function TemplatePicker({ selected, onToggle, outputFormats, setOutputFor
     [tagFilter],
   )
 
+  const kindOptions = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          catalogPool
+            .map((tpl) => (tpl.kind || '').toLowerCase())
+            .filter(Boolean),
+        ),
+      ),
+    [catalogPool],
+  )
+  const domainOptions = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          catalogPool
+            .map((tpl) => (tpl.domain || '').trim())
+            .filter(Boolean),
+        ),
+      ),
+    [catalogPool],
+  )
+
   const companyMatches = useMemo(
     () => applyNameFilter(applyTagFilter(companyCandidates)),
     [applyNameFilter, applyTagFilter, companyCandidates],
   )
   const starterMatches = useMemo(
-    () => applyNameFilter(starterCandidates),
-    [applyNameFilter, starterCandidates],
+    () => applyNameFilter(applyTagFilter(starterCandidates)),
+    [applyNameFilter, applyTagFilter, starterCandidates],
   )
 
   const recommendTemplatesClient = isMock ? mock.recommendTemplates : recommendTemplates
-  useLayoutEffect(() => {
-    const node = pickerRootRef.current
-    const cleanup = registerTemplatePickerRoot(node)
-    return cleanup
-  }, [])
+
 
   const handleRecommend = async () => {
     const prompt = requirement.trim()
@@ -163,7 +184,12 @@ export function TemplatePicker({ selected, onToggle, outputFormats, setOutputFor
     }
     setRecommending(true)
     try {
-      const result = await recommendTemplatesClient({ requirement: prompt, limit: 6 })
+      const result = await recommendTemplatesClient({
+        requirement: prompt,
+        limit: 6,
+        kinds: kindHints,
+        domains: domainHints,
+      })
       const recs = Array.isArray(result?.recommendations)
         ? result.recommendations
         : Array.isArray(result)
@@ -186,7 +212,9 @@ export function TemplatePicker({ selected, onToggle, outputFormats, setOutputFor
   }
 
   const handleFindInAll = (templateName) => {
-    setNameQuery(templateName || '')
+    const value = templateName || ""
+    setNameQuery(value)
+    setShowStarterInAll(true)
     setActiveTab('all')
   }
 
@@ -490,20 +518,21 @@ export function TemplatePicker({ selected, onToggle, outputFormats, setOutputFor
                         Delete
                       </Button>
                       {typeof onEditTemplate === 'function' && (
-                        <Button
-                          size="small"
-                          variant="outlined"
-                          startIcon={<EditOutlinedIcon fontSize="small" />}
-                          onClick={(e) => {
-                            e.preventDefault()
-                            e.stopPropagation()
-                            onEditTemplate(t)
-                          }}
-                          onMouseDown={(e) => e.stopPropagation()}
-                        >
-                          Edit
-                        </Button>
-                      )}
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        startIcon={<EditOutlinedIcon fontSize="small" />}
+                        onClick={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          onEditTemplate(t)
+                        }}
+                        onMouseDown={(e) => e.stopPropagation()}
+                        aria-label={`Edit ${t.name || t.id}`}
+                      >
+                        Edit
+                      </Button>
+                    )}
                       <Chip
                         size="small"
                         label={lastEditChipLabel}
@@ -610,7 +639,8 @@ export function TemplatePicker({ selected, onToggle, outputFormats, setOutputFor
   const renderAllTab = () => {
     const sections = []
     const hasCompanyTemplates = companyCandidates.length > 0
-    const hasStarterTemplates = starterCandidates.length > 0
+    const starterSectionList = showStarterInAll ? applyTagFilter(starterCandidates) : starterMatches
+    const hasStarterTemplates = showStarterInAll && starterSectionList.length > 0
     if (hasCompanyTemplates) {
       sections.push(
         <Stack key="company" spacing={1.5}>
@@ -629,8 +659,8 @@ export function TemplatePicker({ selected, onToggle, outputFormats, setOutputFor
       sections.push(
         <Stack key="starter" spacing={1.5}>
           <Typography variant="subtitle2">Starter templates</Typography>
-          {starterMatches.length ? (
-            renderStarterGrid(starterMatches)
+          {starterSectionList.length ? (
+            renderStarterGrid(starterSectionList)
           ) : (
             <Typography variant="body2" color="text.secondary">
               No starter templates match the current filters.
@@ -689,7 +719,7 @@ export function TemplatePicker({ selected, onToggle, outputFormats, setOutputFor
   const showRefreshing = (isFetching && !isLoading) || catalogQuery.isFetching
 
   return (
-    <Surface ref={pickerRootRef} sx={surfaceStackSx}>
+    <Surface sx={surfaceStackSx}>
       <Stack spacing={1.5}>
         <Stack direction="row" alignItems="center" spacing={0.75}>
           <Typography variant="h6">Template Picker</Typography>
@@ -712,7 +742,11 @@ export function TemplatePicker({ selected, onToggle, outputFormats, setOutputFor
             label="Search by name"
             size="small"
             value={nameQuery}
-            onChange={(e) => setNameQuery(e.target.value)}
+          onChange={(e) => {
+            const value = e.target.value
+            setNameQuery(value)
+            setShowStarterInAll(!value.trim())
+          }}
             sx={{ maxWidth: 320 }}
           />
         </Stack>
@@ -728,6 +762,24 @@ export function TemplatePicker({ selected, onToggle, outputFormats, setOutputFor
             onChange={(e) => setRequirement(e.target.value)}
             onKeyDown={handleRequirementKeyDown}
             fullWidth
+          />
+          <Autocomplete
+            multiple
+            options={kindOptions}
+            value={kindHints}
+            onChange={(_e, v) => setKindHints(v)}
+            size="small"
+            renderInput={(params) => <TextField {...params} label="Kinds (pdf/excel)" />}
+            sx={{ minWidth: 200 }}
+          />
+          <Autocomplete
+            multiple
+            options={domainOptions}
+            value={domainHints}
+            onChange={(_e, v) => setDomainHints(v)}
+            size="small"
+            renderInput={(params) => <TextField {...params} label="Domains" />}
+            sx={{ minWidth: 220 }}
           />
           <Button
             variant="contained"

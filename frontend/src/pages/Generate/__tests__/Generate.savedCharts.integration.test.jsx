@@ -36,10 +36,13 @@ const {
     batches_count: 2,
     rows_total: 215,
     field_catalog: [
-      { name: 'batch_index', type: 'number' },
-      { name: 'rows', type: 'number' },
-      { name: 'parent', type: 'number' },
-      { name: 'rows_per_parent', type: 'number' },
+      { name: 'batch_index', type: 'numeric', source: 'computed' },
+      { name: 'batch_id', type: 'categorical', source: 'computed' },
+      { name: 'rows', type: 'numeric', source: 'child_rows' },
+      { name: 'parent', type: 'numeric', source: 'parent_rows' },
+      { name: 'rows_per_parent', type: 'numeric', source: 'computed' },
+      { name: 'time', type: 'time', source: 'computed' },
+      { name: 'category', type: 'categorical', source: 'computed' },
     ],
     batch_metrics: [
       { batch_index: 1, batch_id: 'b1', rows: 120, parent: 12, rows_per_parent: 10 },

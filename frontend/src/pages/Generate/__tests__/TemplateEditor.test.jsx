@@ -1,5 +1,5 @@
 import { describe, expect, beforeEach, afterEach, beforeAll, afterAll, it, vi } from 'vitest'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { ThemeProvider } from '@mui/material/styles'
 
@@ -147,5 +147,20 @@ describe('TemplateEditor metadata sync', () => {
     )
     const template = useAppStore.getState().templates.find((t) => t.id === 'tpl-1')
     expect(template.generator.summary.lastEditType).toBe('undo')
+  })
+
+  it('opens diff modal with before and after HTML', async () => {
+    getTemplateHtml.mockResolvedValue({ html: '<div>Old HTML</div>', metadata: null })
+    renderEditor()
+
+    const htmlField = await screen.findByLabelText(/Template HTML/i)
+    fireEvent.change(htmlField, { target: { value: '<div>New HTML</div>' } })
+
+    fireEvent.click(screen.getByRole('button', { name: /View diff/i }))
+
+    const dialog = await screen.findByRole('dialog')
+    expect(within(dialog).getByText('HTML diff (before vs current)')).toBeInTheDocument()
+    expect(within(dialog).getByText((content) => content.includes('Old HTML'))).toBeInTheDocument()
+    expect(within(dialog).getByText((content) => content.includes('New HTML'))).toBeInTheDocument()
   })
 })

@@ -91,6 +91,7 @@ CHART_SUGGEST_PROMPT_TEMPLATE = dedent(
 
     RULES
     - Propose between 2 and 5 charts that best answer the user's question while remaining faithful to the available fields.
+    - Prefer highlighting metrics that show strong variation (e.g., largest numeric totals, widest min/max range) using DATA_STATS_JSON.
     - Use only field names that appear in FIELD_CATALOG_JSON for xField, yFields, and groupField.
     - Prefer using chartTemplateId values as follows when they fit:
         * "time_series_basic": xField is an ordered index (e.g. "batch_index") and yFields are numeric metrics such as "rows".
@@ -155,4 +156,3 @@ def build_chart_suggestions_prompt(
     prompt = prompt.replace("{template_catalog_json}", template_catalog_json)
     prompt = prompt.replace("{user_question}", user_question)
     return prompt
-

@@ -1,5 +1,6 @@
 import { describe, expect, beforeEach, afterEach, vi, it } from 'vitest'
 import { render, screen, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { ThemeProvider } from '@mui/material/styles'
 
 import TemplatePicker from '../../../features/generate/components/TemplatePicker.jsx'
@@ -35,7 +36,7 @@ const baseTemplate = {
   tags: [],
 }
 
-const renderPicker = () =>
+const renderPicker = (props = {}) =>
   render(
     <ThemeProvider theme={theme}>
       <ToastProvider>
@@ -47,6 +48,7 @@ const renderPicker = () =>
           tagFilter={[]}
           setTagFilter={() => {}}
           onEditTemplate={() => {}}
+          {...props}
         />
       </ToastProvider>
     </ThemeProvider>,
@@ -119,5 +121,19 @@ describe('TemplatePicker last-edit chips', () => {
     if (starterCard) {
       expect(within(starterCard).queryByText(/edit/i)).toBeNull()
     }
+  })
+
+  it('invokes onEditTemplate when Edit is clicked', async () => {
+    const user = userEvent.setup()
+    const spy = vi.fn()
+    renderPicker({ onEditTemplate: spy })
+    const aiHeading = screen.getByText('AI Template')
+    const card = aiHeading.closest('.MuiCard-root')
+    expect(card).not.toBeNull()
+    if (!card) return
+    const editButton = within(card).getByLabelText(/Edit AI Template/i)
+    await user.click(editButton)
+    expect(spy).toHaveBeenCalledTimes(1)
+    expect(spy.mock.calls[0][0]?.id).toBe('tpl-ai')
   })
 })

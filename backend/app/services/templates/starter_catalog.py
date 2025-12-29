@@ -35,6 +35,10 @@ STARTER_TEMPLATES: List[StarterTemplate] = [
             "Board-ready monthly sales summary with revenue, volume, and margin "
             "breakdowns by product line and region."
         ),
+        "artifacts": {
+            "thumbnail_url": "/starter/starter_monthly_sales_performance.png",
+            "template_html_url": "/starter/starter_monthly_sales_performance.html",
+        },
     },
     {
         "id": "starter_ops_throughput_quality",
@@ -56,6 +60,10 @@ STARTER_TEMPLATES: List[StarterTemplate] = [
             "Operations dashboard summarising throughput, quality, and downtime "
             "with trend charts and top root-cause categories."
         ),
+        "artifacts": {
+            "thumbnail_url": "/starter/starter_ops_throughput_quality.png",
+            "template_html_url": "/starter/starter_ops_throughput_quality.html",
+        },
     },
     {
         "id": "starter_marketing_campaign_roas",
@@ -77,6 +85,10 @@ STARTER_TEMPLATES: List[StarterTemplate] = [
             "Channel-level campaign report highlighting spend, conversions, "
             "and return on ad spend (ROAS) across key marketing channels."
         ),
+        "artifacts": {
+            "thumbnail_url": "/starter/starter_marketing_campaign_roas.png",
+            "template_html_url": "/starter/starter_marketing_campaign_roas.html",
+        },
     },
     {
         "id": "starter_finance_cashflow_projection",
@@ -97,6 +109,51 @@ STARTER_TEMPLATES: List[StarterTemplate] = [
             "Tabular cashflow projection with monthly actuals, forecasts, and "
             "variance analysis for finance teams."
         ),
+        "artifacts": {
+            "thumbnail_url": "/starter/starter_finance_cashflow_projection.png",
+            "template_html_url": "/starter/starter_finance_cashflow_projection.html",
+        },
+    },
+    {
+        "id": "starter_product_cohort_retention",
+        "name": "Product Cohort Retention",
+        "kind": "pdf",
+        "domain": "Product",
+        "tags": ["product", "cohort", "retention", "engagement"],
+        "useCases": [
+            "Track user retention across signup cohorts",
+            "Identify churn inflection points by lifecycle stage",
+        ],
+        "primaryMetrics": [
+            "Week N retention %",
+            "DAU/WAU/MAU",
+            "Churned users",
+        ],
+        "description": "Visual cohort grids and charts for retention/engagement by signup date.",
+        "artifacts": {
+            "thumbnail_url": "/starter/starter_product_cohort_retention.png",
+            "template_html_url": "/starter/starter_product_cohort_retention.html",
+        },
+    },
+    {
+        "id": "starter_supply_chain_fill_rate",
+        "name": "Supply Chain Fill Rate & Stockouts",
+        "kind": "pdf",
+        "domain": "Operations",
+        "tags": ["supply chain", "inventory", "fill rate", "logistics"],
+        "useCases": [
+            "Monitor fill rates and backorders by DC/region",
+            "Spot recurring stockouts and lead-time slippage",
+        ],
+        "primaryMetrics": [
+            "Fill rate %",
+            "Stockout count",
+            "Average lead time",
+        ],
+        "description": "Operational scorecard for fulfillment performance and inventory health.",
+        "artifacts": {
+            "thumbnail_url": "/starter/starter_supply_chain_fill_rate.png",
+            "template_html_url": "/starter/starter_supply_chain_fill_rate.html",
+        },
     },
 ]
-

@@ -4,7 +4,7 @@ import json
 import logging
 import time
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 from fastapi import Request
 from fastapi.responses import StreamingResponse
@@ -162,7 +162,3 @@ def run_corrections_preview(
 
     headers = {"Content-Type": "application/x-ndjson"}
     return StreamingResponse(event_stream(), headers=headers, media_type="application/x-ndjson")
-
-
-def _normalize_tokens_request(tokens: str | None, keys_available: list[str]) -> list[str]:
-

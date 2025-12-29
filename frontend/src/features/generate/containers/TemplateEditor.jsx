@@ -8,21 +8,24 @@ import {
   CircularProgress,
   Divider,
   Alert,
+  Dialog,
+  DialogTitle,
+  DialogContent,
 } from '@mui/material'
 import { forwardRef, useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 
-import ScaledIframePreview from '../../components/ScaledIframePreview.jsx'
-import Surface from '../../components/layout/Surface.jsx'
-import { useToast } from '../../components/ToastProvider.jsx'
-import { useAppStore } from '../../store/useAppStore.js'
-import { buildLastEditInfo } from '../../utils/templateMeta'
+import ScaledIframePreview from '../../../components/ScaledIframePreview.jsx'
+import Surface from '../../../components/layout/Surface.jsx'
+import { useToast } from '../../../components/ToastProvider.jsx'
+import { useAppStore } from '../../../store/useAppStore.js'
+import { buildLastEditInfo } from '../../../utils/templateMeta'
 import {
   getTemplateHtml,
   editTemplateManual,
   editTemplateAi,
   undoTemplateEdit,
-} from '../../api/client'
+} from '../../../api/client'
 
 const surfaceStackSx = {
   gap: { xs: 2, md: 2.5 },
@@ -53,7 +56,10 @@ export default function TemplateEditor() {
   const [aiBusy, setAiBusy] = useState(false)
   const [undoBusy, setUndoBusy] = useState(false)
   const [serverMeta, setServerMeta] = useState(null)
+  const [diffSummary, setDiffSummary] = useState(null)
+  const [history, setHistory] = useState([])
   const [error, setError] = useState(null)
+  const [diffOpen, setDiffOpen] = useState(false)
 
   const dirty = html !== initialHtml
 
@@ -100,6 +106,8 @@ export default function TemplateEditor() {
       setHtml(nextHtml)
       setInitialHtml(nextHtml)
       setServerMeta(data?.metadata || null)
+      setDiffSummary(data?.diff_summary || null)
+      setHistory(Array.isArray(data?.history) ? data.history : [])
       if (data?.metadata) {
         syncTemplateMetadata(data.metadata)
       }
@@ -150,6 +158,8 @@ export default function TemplateEditor() {
       setHtml(nextHtml)
       setInitialHtml(nextHtml)
       setServerMeta(data?.metadata || null)
+      setDiffSummary(data?.diff_summary || null)
+      setHistory(Array.isArray(data?.history) ? data.history : history)
       if (data?.metadata) {
         syncTemplateMetadata(data.metadata)
       }
@@ -175,6 +185,8 @@ export default function TemplateEditor() {
       setHtml(nextHtml)
       setInitialHtml(nextHtml)
       setServerMeta(data?.metadata || null)
+      setDiffSummary(data?.diff_summary || null)
+      setHistory(Array.isArray(data?.history) ? data.history : history)
       if (data?.metadata) {
         syncTemplateMetadata(data.metadata)
       }
@@ -201,6 +213,8 @@ export default function TemplateEditor() {
       setHtml(nextHtml)
       setInitialHtml(nextHtml)
       setServerMeta(data?.metadata || null)
+      setDiffSummary(data?.diff_summary || null)
+      setHistory(Array.isArray(data?.history) ? data.history : history)
       if (data?.metadata) {
         syncTemplateMetadata(data.metadata)
       }
@@ -224,7 +238,63 @@ export default function TemplateEditor() {
 
   const lastEditInfo = buildLastEditInfo(serverMeta)
 
+  const renderDiff = () => {
+    const beforeLines = (initialHtml || '').split('\n')
+    const afterLines = (html || '').split('\n')
+    const maxLen = Math.max(beforeLines.length, afterLines.length)
+    const rows = []
+    for (let i = 0; i < maxLen; i += 1) {
+      rows.push({
+        before: beforeLines[i] ?? '',
+        after: afterLines[i] ?? '',
+      })
+    }
+    return (
+      <Stack spacing={1} sx={{ maxHeight: '60vh', overflow: 'auto' }}>
+        {rows.map((row, idx) => {
+          const changed = row.before !== row.after
+          return (
+            <Box
+              key={`diff-${idx}`}
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: 1,
+                bgcolor: changed ? 'rgba(255,229,100,0.12)' : 'transparent',
+                borderBottom: '1px solid',
+                borderColor: 'divider',
+                p: 0.5,
+              }}
+            >
+              <Typography
+                variant="caption"
+                sx={{
+                  whiteSpace: 'pre-wrap',
+                  fontFamily: 'monospace',
+                  color: changed ? 'warning.main' : 'text.secondary',
+                }}
+              >
+                {row.before}
+              </Typography>
+              <Typography
+                variant="caption"
+                sx={{
+                  whiteSpace: 'pre-wrap',
+                  fontFamily: 'monospace',
+                  color: changed ? 'success.main' : 'text.secondary',
+                }}
+              >
+                {row.after}
+              </Typography>
+            </Box>
+          )
+        })}
+      </Stack>
+    )
+  }
+
   return (
+    <>
     <Surface sx={surfaceStackSx}>
       <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={1.5}>
         <Box>
@@ -239,6 +309,11 @@ export default function TemplateEditor() {
           <Typography variant="caption" color="text.secondary">
             {lastEditInfo ? `Last edit: ${lastEditInfo.chipLabel}` : 'This template has not been edited yet.'}
           </Typography>
+          {diffSummary && (
+            <Typography variant="caption" color="text.secondary">
+              Last change: {diffSummary}
+            </Typography>
+          )}
         </Box>
         <Stack direction="row" spacing={1}>
           <Button variant="outlined" onClick={handleBack}>
@@ -375,15 +450,53 @@ export default function TemplateEditor() {
                   >
                     {undoBusy ? 'Undoing…' : 'Undo last change'}
                   </Button>
+                  <Button
+                    variant="text"
+                    color="primary"
+                    onClick={() => setDiffOpen(true)}
+                    disabled={loading}
+                  >
+                    View diff
+                  </Button>
                 </Stack>
                 <Typography variant="caption" color="text.secondary">
                   AI edits are generated and may need review before use in production runs.
                 </Typography>
+                <Stack spacing={0.75}>
+                  <Typography variant="subtitle2">History</Typography>
+                  {Array.isArray(history) && history.length ? (
+                    <Stack spacing={0.5}>
+                      {history
+                        .slice(-5)
+                        .reverse()
+                        .map((entry, idx) => (
+                          <Typography key={`hist-${idx}`} variant="caption" color="text.secondary">
+                            {entry.timestamp || 'Unknown time'} — {entry.type || 'edit'}
+                            {entry.notes ? `: ${entry.notes}` : ''}
+                          </Typography>
+                        ))}
+                    </Stack>
+                  ) : (
+                    <Typography variant="caption" color="text.secondary">
+                      No edit history recorded yet.
+                    </Typography>
+                  )}
+                </Stack>
               </Stack>
             </Grid>
           </Grid>
         </>
       )}
     </Surface>
+    <Dialog
+      open={diffOpen}
+      onClose={() => setDiffOpen(false)}
+      maxWidth="lg"
+      fullWidth
+    >
+      <DialogTitle>HTML diff (before vs current)</DialogTitle>
+      <DialogContent dividers>{renderDiff()}</DialogContent>
+    </Dialog>
+    </>
   )
 }

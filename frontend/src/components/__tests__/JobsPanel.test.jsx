@@ -8,6 +8,15 @@ import JobsPanel from '../JobsPanel.jsx'
 
 const mockUseJobsList = vi.fn()
 const mockNavigate = vi.fn()
+const setQueryData = vi.fn()
+const getQueriesData = vi.fn(() => [])
+
+vi.mock('@tanstack/react-query', () => ({
+  useQueryClient: () => ({
+    getQueriesData,
+    setQueryData,
+  }),
+}))
 
 vi.mock('../../hooks/useJobs.js', () => ({
   useJobsList: (...args) => mockUseJobsList(...args),
@@ -97,6 +106,9 @@ describe('JobsPanel', () => {
   beforeEach(() => {
     mockUseJobsList.mockReset()
     mockNavigate.mockReset()
+    setQueryData.mockReset()
+    getQueriesData.mockReset()
+    getQueriesData.mockReturnValue([])
     useAppStore.setState({
       savedConnections: [
         { id: 'conn-1', name: 'Primary Warehouse' },
@@ -119,9 +131,9 @@ describe('JobsPanel', () => {
     expect(screen.getByText('conn-missing')).toBeTruthy()
     expect(screen.getByText('2025-01-01 -> 2025-01-07')).toBeTruthy()
     expect(screen.getByText('2025-01-01 -> 2025-01-15')).toBeTruthy()
-    expect(screen.getByText(/Meta:.*Missing filter token/i)).toBeTruthy()
-    expect(screen.getByText(/Result:.*PDF renderer warning/i)).toBeTruthy()
-    expect(screen.getByText(/Meta:.*Meta validation failed/i)).toBeTruthy()
+    expect(screen.getByText((text) => text.includes('Missing filter token'))).toBeTruthy()
+    expect(screen.getByText((text) => text.includes('PDF renderer warning'))).toBeTruthy()
+    expect(screen.getByText((text) => text.includes('Meta validation failed'))).toBeTruthy()
   })
 
   it('shows individual job steps for inspection', () => {
@@ -175,5 +187,29 @@ describe('JobsPanel', () => {
 
     renderJobsPanel({ jobs: [] })
     expect(screen.getByText('No jobs to display')).toBeTruthy()
+  })
+
+  it('shows scheduled jobs with steps and cancel option', () => {
+    const scheduledJob = {
+      id: 'job-scheduled',
+      templateId: 'tpl-scheduled',
+      templateName: 'Scheduled Template',
+      status: 'running',
+      type: 'schedule_run',
+      templateKind: 'pdf',
+      connectionId: 'conn-1',
+      progress: 40,
+      steps: [
+        { id: 'step-1', name: 'queue', label: 'Queue', status: 'running' },
+        { id: 'step-2', name: 'render', label: 'Render', status: 'queued' },
+      ],
+    }
+    renderJobsPanel({ jobs: [scheduledJob] })
+
+    const [card] = screen.getAllByTestId('job-card')
+    expect(within(card).getByText(/Scheduled Template/i)).toBeTruthy()
+    expect(within(card).getByText(/schedule run/i)).toBeTruthy()
+    expect(within(card).getByText('Queue')).toBeTruthy()
+    expect(within(card).getByRole('button', { name: /Cancel/i })).toBeTruthy()
   })
 })

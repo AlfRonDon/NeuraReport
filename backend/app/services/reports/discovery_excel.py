@@ -12,7 +12,7 @@ import re
 from collections import Counter
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Mapping
+from typing import Any, Dict, List, Mapping, Sequence
 
 import pandas as pd
 
@@ -20,6 +20,8 @@ from .contract_adapter import ContractAdapter
 from .discovery_metrics import (
     build_batch_field_catalog_and_stats,
     build_batch_metrics,
+    build_discovery_schema,
+    build_resample_support,
 )
 from ..dataframes import SQLiteDataFrameLoader
 
@@ -201,12 +203,47 @@ def _build_batch_index(df: pd.DataFrame, key_columns: List[str], *, use_rowid: b
     return ordered_ids, counts
 
 
+def _attach_batch_id(df: pd.DataFrame, key_columns: List[str], *, use_rowid: bool = False) -> pd.DataFrame:
+    """
+    Attach a "__bid__" column to the DataFrame using the join key columns.
+
+    The logic mirrors _build_batch_index so later aggregations can group
+    by the same batch ids without recomputing them.
+    """
+    if df is None or df.empty:
+        return df
+
+    working = df.reset_index(drop=True).copy()
+    columns = list(key_columns)
+
+    if use_rowid:
+        working["__rowid__"] = working.index + 1
+        columns = ["__rowid__"]
+
+    if not columns:
+        working["__bid__"] = ""
+        return working
+
+    for col in columns:
+        if col not in working.columns:
+            working[col] = None
+
+    if len(columns) == 1:
+        col = columns[0]
+        working["__bid__"] = working[col].apply(_stringify_value)
+    else:
+        working["__bid__"] = working[columns].apply(lambda row: "|".join(_stringify_value(v) for v in row), axis=1)
+
+    return working
+
+
 def _build_batch_metadata(
     df: pd.DataFrame,
     key_columns: List[str],
     *,
     date_column: str | None = None,
     use_rowid: bool = False,
+    label_columns: Sequence[str] | None = None,
 ) -> Dict[str, Dict[str, object]]:
     """
     Derive lightweight per-batch metadata for resampling and charting.
@@ -215,6 +252,7 @@ def _build_batch_metadata(
       - time:  representative timestamp (earliest in the batch) when a date
                column is available.
       - category: a human-readable label based on the first key column.
+      - labels for each key column (first non-empty value per batch).
 
     The returned mapping is keyed by batch id (the same id produced by
     _build_batch_index).
@@ -267,8 +305,26 @@ def _build_batch_metadata(
                     continue
                 metadata.setdefault(bid, {})["time"] = iso_value
 
-    # Category dimension: first non-empty value from the first key column.
-    category_source = columns[0] if columns else None
+    label_cols = [col for col in (label_columns or key_columns or []) if col and not str(col).startswith("__")]
+    category_source = label_cols[0] if label_cols else None
+    if category_source is None and columns and not str(columns[0]).startswith("__"):
+        category_source = columns[0]
+
+    for col in label_cols:
+        if col not in working.columns:
+            continue
+        label_field = f"_nr_label_{col}"
+        working[label_field] = working[col].apply(_stringify_value)
+        grouped = working.groupby("__bid__")[label_field].first()
+        for bid, raw_val in grouped.items():
+            text = _stringify_value(raw_val)
+            if not text:
+                continue
+            meta = metadata.setdefault(bid, {})
+            meta[col] = text
+            if category_source == col and "category" not in meta:
+                meta["category"] = text
+
     if category_source and category_source in working.columns:
         working["_nr_category"] = working[category_source].apply(_stringify_value)
         grouped_cat = working.groupby("__bid__")["_nr_category"].first()
@@ -276,7 +332,7 @@ def _build_batch_metadata(
             text = _stringify_value(cat)
             if not text:
                 continue
-            metadata.setdefault(bid, {})["category"] = text
+            metadata.setdefault(bid, {}).setdefault("category", text)
 
     return metadata
 
@@ -362,6 +418,17 @@ def discover_batches_and_counts(
             pcols = ["__rowid__"]
 
     has_child = bool(child_table and ccols)
+
+    categorical_fields: list[str] = []
+    for col in pcols:
+        col_text = str(col or "").strip()
+        if col_text and not col_text.startswith("__") and col_text not in categorical_fields:
+            categorical_fields.append(col_text)
+    if has_child:
+        for col in ccols:
+            col_text = str(col or "").strip()
+            if col_text and not col_text.startswith("__") and col_text not in categorical_fields:
+                categorical_fields.append(col_text)
 
     loader = SQLiteDataFrameLoader(db_path)
 
@@ -469,8 +536,10 @@ def discover_batches_and_counts(
         child_df = _apply_date_filter(child_df, child_date, start_date, end_date)
         child_df = _apply_value_filters(child_df, child_filter_pairs)
 
+    parent_df = _attach_batch_id(parent_df, pcols, use_rowid=use_rowid)
     parent_ids, parent_counts = _build_batch_index(parent_df, pcols, use_rowid=use_rowid)
     if has_child and child_df is not None:
+        child_df = _attach_batch_id(child_df, ccols, use_rowid=False)
         child_ids, child_counts = _build_batch_index(child_df, ccols)
     else:
         child_ids, child_counts = [], Counter()
@@ -486,6 +555,7 @@ def discover_batches_and_counts(
             pcols,
             date_column=parent_date or None,
             use_rowid=use_rowid,
+            label_columns=pcols,
         )
         for bid, meta in parent_meta.items():
             batch_metadata.setdefault(bid, {}).update(meta)
@@ -499,16 +569,91 @@ def discover_batches_and_counts(
                 ccols,
                 date_column=child_date or None,
                 use_rowid=False,
+                label_columns=ccols,
             )
             for bid, meta in child_meta.items():
                 target = batch_metadata.setdefault(bid, {})
-                if "time" not in target and "time" in meta:
-                    target["time"] = meta["time"]
-                if "category" not in target and "category" in meta:
-                    target["category"] = meta["category"]
+                if not isinstance(meta, Mapping):
+                    continue
+                for key, value in meta.items():
+                    if value is None or (isinstance(value, str) and not str(value).strip()):
+                        continue
+                    if key == "time":
+                        if "time" not in target:
+                            target["time"] = value
+                        continue
+                    if key not in target:
+                        target[key] = value
         except Exception:  # pragma: no cover - defensive
             # If metadata from child fails, keep whatever we have from parent.
             pass
+
+    def _aggregate_numeric(df: pd.DataFrame | None, prefix: str) -> dict[str, dict[str, float]]:
+        if df is None or df.empty or "__bid__" not in df.columns:
+            return {}
+        skip_cols = {"__bid__", "__rowid__"} | set(pcols) | set(ccols) | {parent_date, child_date}
+        numeric_cols = [
+            col for col in df.columns if col not in skip_cols and pd.api.types.is_numeric_dtype(df[col])
+        ]
+        aggregates: dict[str, dict[str, float]] = {}
+        if not numeric_cols:
+            return aggregates
+        grouped = df.groupby("__bid__")
+        for bid, group in grouped:
+            entry: dict[str, float] = {}
+            for col in numeric_cols:
+                try:
+                    entry[f"{prefix}{col}"] = float(pd.to_numeric(group[col], errors="coerce").sum())
+                except Exception:
+                    continue
+            if entry:
+                aggregates[str(bid)] = entry
+        return aggregates
+
+    def _aggregate_business_metrics(df: pd.DataFrame | None) -> dict[str, dict[str, float]]:
+        if df is None or df.empty or "__bid__" not in df.columns:
+            return {}
+        metric_sources = {
+            "revenue": "total_amount",
+            "margin": "margin_amount",
+            "cost": "cost_amount",
+        }
+        aggregates: dict[str, dict[str, float]] = {}
+        grouped = df.groupby("__bid__")
+        for bid, group in grouped:
+            entry: dict[str, float] = {}
+            for metric_name, column in metric_sources.items():
+                if column not in group.columns:
+                    continue
+                numeric_series = pd.to_numeric(group[column], errors="coerce")
+                entry[metric_name] = float(numeric_series.sum(skipna=True))
+            revenue_col = metric_sources["revenue"]
+            if revenue_col in group.columns:
+                revenue_series = pd.to_numeric(group[revenue_col], errors="coerce")
+                if revenue_series.count():
+                    entry["avg_order_value"] = float(revenue_series.mean(skipna=True))
+                else:
+                    entry["avg_order_value"] = 0.0
+            if entry:
+                aggregates[str(bid)] = entry
+        return aggregates
+
+    aggregated_metrics: dict[str, dict[str, float]] = {}
+    parent_aggs = _aggregate_numeric(parent_df, "parent_")
+    for bid, vals in parent_aggs.items():
+        aggregated_metrics.setdefault(bid, {}).update(vals)
+    if has_child and child_df is not None:
+        child_aggs = _aggregate_numeric(child_df, "child_")
+        for bid, vals in child_aggs.items():
+            aggregated_metrics.setdefault(bid, {}).update(vals)
+        business_aggs = _aggregate_business_metrics(child_df)
+        for bid, vals in business_aggs.items():
+            aggregated_metrics.setdefault(bid, {}).update(vals)
+
+    for bid, metrics_map in aggregated_metrics.items():
+        target = batch_metadata.setdefault(bid, {})
+        for key, value in metrics_map.items():
+            target[key] = value
 
     batches: List[Dict[str, object]] = []
     rows_total = 0
@@ -522,8 +667,117 @@ def discover_batches_and_counts(
         rows_total += child_cnt
         batches.append({"id": bid, "parent": parent_cnt, "rows": child_cnt})
 
-    field_catalog, _ = build_batch_field_catalog_and_stats(batches)
-    batch_metrics = build_batch_metrics(batches, batch_metadata)
+    if parent_date:
+        time_source = f"{parent_table}.{parent_date}" if parent_table else parent_date
+    elif child_date:
+        time_source = f"{child_table}.{child_date}" if child_table else child_date
+    else:
+        time_source = None
+
+    business_metric_names = {"revenue", "margin", "avg_order_value", "cost"}
+    present_business_metrics: set[str] = set()
+    for metrics_map in aggregated_metrics.values():
+        for key in metrics_map:
+            if key in business_metric_names:
+                present_business_metrics.add(key)
+
+    field_sources: dict[str, str] = {
+        "batch_index": "discovery_order",
+        "batch_id": "composite_key",
+        "rows_per_parent": "computed",
+    }
+    if parent_table:
+        field_sources["parent"] = parent_table
+    if child_table:
+        field_sources["rows"] = child_table
+    elif parent_table:
+        field_sources["rows"] = parent_table
+    if time_source:
+        field_sources["time"] = time_source
+    if categorical_fields:
+        for col in categorical_fields:
+            if col in pcols and parent_table:
+                field_sources.setdefault(col, f"{parent_table}.{col}")
+            elif col in ccols and child_table:
+                field_sources.setdefault(col, f"{child_table}.{col}")
+        primary = categorical_fields[0]
+        if primary in field_sources:
+            field_sources.setdefault("category", field_sources.get(primary, "computed"))
+    if child_table:
+        child_source_map = {
+            "revenue": f"{child_table}.total_amount",
+            "margin": f"{child_table}.margin_amount",
+            "avg_order_value": f"{child_table}.total_amount",
+            "cost": f"{child_table}.cost_amount",
+        }
+        for metric_name, source in child_source_map.items():
+            if metric_name in present_business_metrics:
+                field_sources.setdefault(metric_name, source)
+
+    # Collect extra numeric fields for metrics/catalog.
+    extra_numeric_fields: list[str] = []
+    for metric_fields in aggregated_metrics.values():
+        for field_name in metric_fields.keys():
+            if field_name not in extra_numeric_fields:
+                extra_numeric_fields.append(field_name)
+
+    field_catalog, stats = build_batch_field_catalog_and_stats(
+        batches,
+        time_source=time_source,
+        categorical_fields=categorical_fields,
+        numeric_fields=["rows", "parent", "rows_per_parent", *extra_numeric_fields],
+        field_sources=field_sources,
+    )
+
+    def _collect_metric_stats(metric_name: str) -> dict[str, float] | None:
+        values: list[float] = []
+        for metrics_map in aggregated_metrics.values():
+            if metric_name not in metrics_map:
+                continue
+            try:
+                values.append(float(metrics_map[metric_name]))
+            except Exception:
+                continue
+        if not values:
+            return None
+        total_val = float(sum(values))
+        return {
+            "min": float(min(values)),
+            "max": float(max(values)),
+            "avg": float(total_val / len(values)),
+            "total": total_val,
+        }
+
+    business_metric_stats: dict[str, dict[str, float]] = {}
+    for metric_name in sorted(present_business_metrics):
+        metric_stat = _collect_metric_stats(metric_name)
+        if metric_stat:
+            business_metric_stats[metric_name] = metric_stat
+    if business_metric_stats:
+        stats.setdefault("metrics_stats", {}).update(business_metric_stats)
+
+    discovery_schema = build_discovery_schema(field_catalog)
+    if isinstance(discovery_schema, dict):
+        default_metric_candidates = ["revenue", "margin", "avg_order_value", "cost"]
+        metrics_list = discovery_schema.get("metrics") or []
+        defaults = discovery_schema.setdefault("defaults", {})
+        for candidate in default_metric_candidates:
+            if any(m.get("name") == candidate for m in metrics_list):
+                defaults["metric"] = candidate
+                break
+
+    batch_metrics = build_batch_metrics(
+        batches,
+        batch_metadata,
+        extra_fields=[*categorical_fields, *extra_numeric_fields],
+    )
+    resample_support = build_resample_support(
+        field_catalog,
+        batch_metrics,
+        schema=discovery_schema,
+        default_metric=discovery_schema.get("defaults", {}).get("metric"),
+        bucket_count=10,
+    )
 
     return {
         "batches": batches,
@@ -532,4 +786,8 @@ def discover_batches_and_counts(
         "batch_metadata": batch_metadata,
         "field_catalog": field_catalog,
         "batch_metrics": batch_metrics,
+        "discovery_schema": discovery_schema,
+        "numeric_bins": resample_support["numeric_bins"],
+        "category_groups": resample_support["category_groups"],
+        "data_stats": stats,
     }

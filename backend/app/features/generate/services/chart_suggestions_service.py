@@ -1,12 +1,206 @@
 from __future__ import annotations
 
 import json
-from typing import Any, Callable, Mapping, Optional
+from typing import Any, Callable, Mapping, Optional, Sequence
 
 from fastapi import HTTPException
 
+from ....services.prompts.llm_prompts_charts import CHART_TEMPLATE_CATALOG
 from ....services.state import state_store
 from ..schemas.charts import ChartSpec, ChartSuggestPayload, ChartSuggestResponse
+
+VALID_CHART_TYPES = {"bar", "line", "pie", "scatter"}
+VALID_AGGREGATIONS = {"sum", "avg", "count", "none"}
+NUMERIC_TYPES = {"number", "numeric", "float", "int", "integer", "decimal"}
+DATETIME_TYPES = {"datetime", "date", "timestamp", "time"}
+CATEGORICAL_TYPES = {"string", "category", "categorical", "text"}
+
+
+def _field_category(raw_type: Any) -> str:
+    normalized = str(raw_type or "").strip().lower()
+    if normalized in NUMERIC_TYPES:
+        return "numeric"
+    if normalized in DATETIME_TYPES:
+        return "datetime"
+    return "categorical"
+
+
+def _build_field_lookup(field_catalog: Sequence[Mapping[str, Any]] | None) -> dict[str, tuple[str, str]]:
+    lookup: dict[str, tuple[str, str]] = {}
+    for field in field_catalog or []:
+        if not isinstance(field, Mapping):
+            continue
+        name = str(field.get("name") or "").strip()
+        if not name:
+            continue
+        field_type = str(field.get("type") or "").strip().lower() or "string"
+        lookup[name.lower()] = (name, field_type)
+    return lookup
+
+
+def _normalize_chart_type(raw: Any) -> str | None:
+    text = str(raw or "").strip().lower()
+    if not text:
+        return None
+    alias_map = {
+        "barchart": "bar",
+        "bar chart": "bar",
+        "column": "bar",
+        "columnchart": "bar",
+        "linechart": "line",
+        "line chart": "line",
+        "piechart": "pie",
+        "scatterplot": "scatter",
+        "scatter plot": "scatter",
+    }
+    candidates = {
+        text,
+        text.replace("_", " "),
+        text.replace("-", " "),
+        text.replace("chart", "").strip(),
+        text.replace("chart", "").replace("_", " ").replace("-", " ").strip(),
+    }
+    for candidate in candidates:
+        candidate_clean = candidate.replace(" ", "")
+        if candidate in VALID_CHART_TYPES:
+            return candidate
+        if candidate_clean in VALID_CHART_TYPES:
+            return candidate_clean
+        if candidate_clean in alias_map:
+            return alias_map[candidate_clean]
+    return None
+
+
+def _normalize_aggregation(raw: Any) -> str | None:
+    if raw is None:
+        return None
+    text = str(raw).strip().lower()
+    if not text:
+        return None
+    return text if text in VALID_AGGREGATIONS else None
+
+
+def _normalize_field_name(raw: Any, field_lookup: Mapping[str, tuple[str, str]]) -> tuple[str | None, str | None]:
+    text = str(raw or "").strip()
+    if not text:
+        return None, None
+    match = field_lookup.get(text.lower())
+    if not match:
+        return None, None
+    return match
+
+
+def _normalize_template_id(raw: Any, *, chart_type: str, x_category: str, y_fields: Sequence[str]) -> str | None:
+    template_id = str(raw or "").strip()
+    if not template_id or template_id not in CHART_TEMPLATE_CATALOG:
+        return None
+    if template_id == "time_series_basic":
+        if x_category not in {"numeric", "datetime"} or not y_fields or chart_type not in {"line", "bar"}:
+            return None
+    elif template_id == "top_n_categories":
+        if x_category != "categorical" or len(y_fields) != 1:
+            return None
+    elif template_id == "distribution_histogram":
+        if x_category != "numeric" or chart_type not in {"bar", "line"}:
+            return None
+    return template_id
+
+
+def _normalize_chart_suggestion(
+    item: Mapping[str, Any],
+    *,
+    idx: int,
+    field_lookup: Mapping[str, tuple[str, str]],
+) -> ChartSpec | None:
+    if not isinstance(item, Mapping):
+        return None
+
+    chart_type = _normalize_chart_type(item.get("type"))
+    if not chart_type:
+        return None
+
+    x_field, x_type = _normalize_field_name(item.get("xField"), field_lookup)
+    if not x_field:
+        return None
+
+    y_fields_raw = item.get("yFields")
+    y_candidates: Sequence[Any] | None
+    if isinstance(y_fields_raw, str):
+        y_candidates = [y_fields_raw]
+    elif isinstance(y_fields_raw, Sequence):
+        y_candidates = y_fields_raw
+    else:
+        single = item.get("yField") or item.get("y")
+        if isinstance(single, str) and single.strip():
+            y_candidates = [single]
+        else:
+            return None
+
+    y_field_info: list[tuple[str, str]] = []
+    seen_y: set[str] = set()
+    for raw_y in y_candidates:
+        name, ftype = _normalize_field_name(raw_y, field_lookup)
+        if not name or name in seen_y:
+            continue
+        y_field_info.append((name, ftype or "string"))
+        seen_y.add(name)
+    if not y_field_info:
+        return None
+
+    group_field, group_type = _normalize_field_name(item.get("groupField"), field_lookup)
+    if group_field and _field_category(group_type) != "categorical":
+        group_field = None
+
+    x_category = _field_category(x_type)
+    numeric_y_fields = [name for name, ftype in y_field_info if _field_category(ftype) == "numeric"]
+
+    if chart_type == "pie":
+        if x_category != "categorical":
+            return None
+        if not numeric_y_fields:
+            return None
+        y_fields = [numeric_y_fields[0]]
+    else:
+        if chart_type in ("line", "scatter") and x_category not in {"numeric", "datetime"}:
+            return None
+        if chart_type == "bar" and x_category not in {"numeric", "datetime", "categorical"}:
+            return None
+        if not numeric_y_fields:
+            return None
+        y_fields = numeric_y_fields
+
+    aggregation = _normalize_aggregation(item.get("aggregation"))
+    chart_template_id = _normalize_template_id(
+        item.get("chartTemplateId"),
+        chart_type=chart_type,
+        x_category=x_category,
+        y_fields=y_fields,
+    )
+
+    style = item.get("style")
+    style_payload = dict(style) if isinstance(style, Mapping) else None
+
+    normalized: dict[str, Any] = {
+        "id": str(item.get("id") or f"chart_{idx + 1}"),
+        "type": chart_type,
+        "xField": x_field,
+        "yFields": y_fields,
+        "groupField": group_field,
+        "aggregation": aggregation,
+        "chartTemplateId": chart_template_id,
+        "style": style_payload,
+    }
+    title = item.get("title")
+    description = item.get("description")
+    if isinstance(title, str) and title.strip():
+        normalized["title"] = title.strip()
+    if isinstance(description, str) and description.strip():
+        normalized["description"] = description.strip()
+
+    try:
+        return ChartSpec(**normalized)
+    except Exception:
+        return None
 
 
 def suggest_charts(
@@ -150,6 +344,7 @@ def suggest_charts(
     parsed_text = strip_code_fences_fn(raw_text)
 
     charts: list[ChartSpec] = []
+    field_lookup = _build_field_lookup(field_catalog)
     try:
         payload_json = json.loads(parsed_text)
     except Exception:
@@ -167,37 +362,61 @@ def suggest_charts(
     raw_charts = payload_json.get("charts") if isinstance(payload_json, dict) else None
     if isinstance(raw_charts, list):
         for idx, item in enumerate(raw_charts):
-            if not isinstance(item, Mapping):
-                continue
-            normalized: dict[str, Any] = dict(item)
-            y_fields_raw = normalized.get("yFields")
-            if isinstance(y_fields_raw, str):
-                normalized["yFields"] = [y_fields_raw]
-            elif isinstance(y_fields_raw, list):
-                normalized["yFields"] = [str(v).strip() for v in y_fields_raw if str(v or "").strip()]
-            else:
-                single = normalized.get("yField")
-                if isinstance(single, str) and single.strip():
-                    normalized["yFields"] = [single.strip()]
-                else:
-                    continue
+            chart = _normalize_chart_suggestion(item, idx=idx, field_lookup=field_lookup)
+            if chart:
+                charts.append(chart)
 
-            type_raw = str(normalized.get("type") or "").strip().lower()
-            x_field_raw = str(normalized.get("xField") or "").strip()
-            y_fields_clean = [f for f in normalized.get("yFields", []) if isinstance(f, str) and f.strip()]
-            if not type_raw or not x_field_raw or not y_fields_clean:
-                continue
-            normalized["type"] = type_raw
-            normalized["xField"] = x_field_raw
-            normalized["yFields"] = y_fields_clean
+    # Auto-correct: if no charts parsed, fall back to a simple default set based on available fields.
+    if not charts:
+        numeric_fields = [name for name, ftype in field_lookup.values() if _field_category(ftype) == "numeric"]
+        time_like = [name for name, ftype in field_lookup.values() if _field_category(ftype) == "datetime"]
+        categorical_fields = [name for name, ftype in field_lookup.values() if _field_category(ftype) == "categorical"]
+        fallback_id = 0
 
-            if not normalized.get("id"):
-                normalized["id"] = f"chart_{idx + 1}"
+        def _next_id():
+            nonlocal fallback_id
+            fallback_id += 1
+            return f"fallback_{fallback_id}"
 
-            try:
-                charts.append(ChartSpec(**normalized))
-            except Exception:
-                continue
+        if time_like and numeric_fields:
+            charts.append(
+                ChartSpec(
+                    id=_next_id(),
+                    type="line",
+                    xField=time_like[0],
+                    yFields=[numeric_fields[0]],
+                    groupField=None,
+                    aggregation="sum",
+                    chartTemplateId="time_series_basic",
+                    title=f"{numeric_fields[0]} over time",
+                )
+            )
+        if categorical_fields and numeric_fields:
+            charts.append(
+                ChartSpec(
+                    id=_next_id(),
+                    type="bar",
+                    xField=categorical_fields[0],
+                    yFields=[numeric_fields[0]],
+                    groupField=None,
+                    aggregation="sum",
+                    chartTemplateId="top_n_categories",
+                    title=f"Top categories by {numeric_fields[0]}",
+                )
+            )
+        if numeric_fields:
+            charts.append(
+                ChartSpec(
+                    id=_next_id(),
+                    type="bar",
+                    xField=numeric_fields[0],
+                    yFields=[numeric_fields[0]],
+                    groupField=None,
+                    aggregation="count",
+                    chartTemplateId="distribution_histogram",
+                    title=f"{numeric_fields[0]} distribution",
+                )
+            )
 
     state_store.set_last_used(payload.connection_id, template_id)
 

@@ -13,6 +13,7 @@ class ChartSpec(BaseModel):
     groupField: Optional[str] = None
     aggregation: Optional[str] = None
     chartTemplateId: Optional[str] = None
+    style: Optional[dict[str, Any]] = None
     title: Optional[str] = None
     description: Optional[str] = None
 

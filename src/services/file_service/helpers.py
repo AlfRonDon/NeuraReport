@@ -93,6 +93,14 @@ def template_history_path(template_dir_path: Path) -> Path:
     return template_dir_path / "template_history.json"
 
 
+def _truncate_history(entries: list[dict], limit: int = 2) -> list[dict]:
+    if limit <= 0:
+        return []
+    if len(entries) <= limit:
+        return entries
+    return entries[-limit:]
+
+
 def read_template_history(template_dir_path: Path) -> list[dict]:
     path = template_history_path(template_dir_path)
     if not path.exists():
@@ -101,14 +109,16 @@ def read_template_history(template_dir_path: Path) -> list[dict]:
         raw = json.loads(path.read_text(encoding="utf-8"))
     except Exception:
         return []
-    if isinstance(raw, list):
-        return [entry for entry in raw if isinstance(entry, dict)]
-    return []
+    if not isinstance(raw, list):
+        return []
+    cleaned = [entry for entry in raw if isinstance(entry, dict)]
+    return _truncate_history(cleaned)
 
 
 def append_template_history_entry(template_dir_path: Path, entry: dict) -> list[dict]:
     history = read_template_history(template_dir_path)
     history.append(entry)
+    history = _truncate_history(history)
     write_json_atomic(
         template_history_path(template_dir_path),
         history,

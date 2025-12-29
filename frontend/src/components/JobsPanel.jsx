@@ -17,10 +17,13 @@ import RefreshIcon from '@mui/icons-material/Refresh'
 import TaskAltIcon from '@mui/icons-material/TaskAlt'
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline'
 import WorkHistoryOutlinedIcon from '@mui/icons-material/WorkHistoryOutlined'
+import CancelIcon from '@mui/icons-material/Cancel'
 import { useNavigate } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import { useJobsList } from '../hooks/useJobs'
 import { useAppStore } from '../store/useAppStore'
 import EmptyState from './feedback/EmptyState.jsx'
+import { cancelJob as cancelJobRequest } from '../api/client'
 
 const STATUS_FILTERS = [
   { value: 'all', label: 'All' },
@@ -183,7 +186,7 @@ function JobDetailField({ label, value }) {
   )
 }
 
-function JobCard({ job, onNavigate, onSetupNavigate, connectionName }) {
+function JobCard({ job, onNavigate, onSetupNavigate, connectionName, onCancel, onForceCancel }) {
   const status = (job?.status || 'queued').toLowerCase()
   const chip = STATUS_CHIP_PROPS[status] || STATUS_CHIP_PROPS.queued
   const progressValue = job?.progress == null ? (status === 'succeeded' ? 100 : 0) : job.progress
@@ -195,6 +198,7 @@ function JobCard({ job, onNavigate, onSetupNavigate, connectionName }) {
   const connectionLabel =
     connectionName || meta.connection_name || meta.connectionName || job?.connectionId || 'No connection selected'
   const jobIssues = extractJobIssues(job)
+  const isActive = ACTIVE_STATUS_SET.has(status)
   const canOpenGenerate = Boolean(job?.templateId && onNavigate)
   const canOpenSetup = Boolean(job?.connectionId && onSetupNavigate)
   return (
@@ -298,6 +302,27 @@ function JobCard({ job, onNavigate, onSetupNavigate, connectionName }) {
                 Go to Setup
               </Button>
             )}
+            {isActive && (
+              <Stack direction="row" spacing={1}>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  color="error"
+                  startIcon={<CancelIcon fontSize="small" />}
+                  onClick={() => onCancel?.(job.id)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  size="small"
+                  variant="text"
+                  color="error"
+                  onClick={() => onForceCancel?.(job.id)}
+                >
+                  Force stop
+                </Button>
+              </Stack>
+            )}
           </Stack>
         )}
       </Stack>
@@ -307,6 +332,7 @@ function JobCard({ job, onNavigate, onSetupNavigate, connectionName }) {
 
 export default function JobsPanel({ open, onClose }) {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const savedConnections = useAppStore((state) => state.savedConnections)
   const setActiveConnectionId = useAppStore((state) => state.setActiveConnectionId)
   const setSetupNav = useAppStore((state) => state.setSetupNav)
@@ -314,6 +340,45 @@ export default function JobsPanel({ open, onClose }) {
   const { data, isLoading, isFetching, error, refetch } = jobsQuery
   const [statusFilter, setStatusFilter] = useState('all')
   const jobs = data?.jobs || []
+
+  const markJobCancelled = (jobId) => {
+    if (!jobId || !queryClient) return
+    const queries = queryClient.getQueriesData({ queryKey: ['jobs'] }) || []
+    queries.forEach(([queryKey, value]) => {
+      if (!value) return
+      if (Array.isArray(value.jobs)) {
+        const updatedJobs = value.jobs.map((job) => {
+          if (job.id !== jobId) return job
+          const steps = Array.isArray(job.steps)
+            ? job.steps.map((step) => {
+                const status = (step?.status || '').toLowerCase()
+                if (status === 'succeeded' || status === 'failed' || status === 'cancelled') {
+                  return step
+                }
+                return { ...step, status: 'cancelled' }
+              })
+            : job.steps
+          return { ...job, status: 'cancelled', steps }
+        })
+        queryClient.setQueryData(queryKey, { ...value, jobs: updatedJobs })
+      } else if (value.id === jobId) {
+        queryClient.setQueryData(queryKey, { ...value, status: 'cancelled' })
+      }
+    })
+  }
+
+  const handleCancelJob = async (jobId, options = {}) => {
+    if (!jobId) return
+    const force = Boolean(options?.force)
+    try {
+      await cancelJobRequest(jobId, { force })
+      markJobCancelled(jobId)
+      refetch?.()
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error(err)
+    }
+  }
 
   const filteredJobs = useMemo(() => {
     if (statusFilter === 'all') {
@@ -447,11 +512,13 @@ export default function JobsPanel({ open, onClose }) {
               <JobCard
                 key={job.id}
                 job={job}
-                onNavigate={onJobNavigate}
-                onSetupNavigate={onSetupNavigate}
-                connectionName={connectionLookup.get(job.connectionId)}
-              />
-            ))}
+            onNavigate={onJobNavigate}
+            onSetupNavigate={onSetupNavigate}
+            connectionName={connectionLookup.get(job.connectionId)}
+            onCancel={(jobId) => handleCancelJob(jobId)}
+            onForceCancel={(jobId) => handleCancelJob(jobId, { force: true })}
+          />
+        ))}
             {!filteredJobs.length && (
               <Tooltip title="Jobs refresh automatically every few seconds" arrow>
                 <Typography variant="body2" color="text.secondary" textAlign="center">

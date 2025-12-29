@@ -34,7 +34,6 @@ def build_unified_template_catalog() -> List[TemplateCatalogItem]:
         - tags
         - useCases
         - primaryMetrics
-        - description
         - source: \"company\" | \"starter\"
     """
     catalog: list[TemplateCatalogItem] = []
@@ -58,7 +57,7 @@ def build_unified_template_catalog() -> List[TemplateCatalogItem]:
             "tags": _normalize_str_list(rec.get("tags") or []),
             "useCases": _normalize_str_list(rec.get("useCases") or []),
             "primaryMetrics": _normalize_str_list(rec.get("primaryMetrics") or []),
-            "description": str(rec.get("description") or "").strip(),
+            "description": (rec.get("description") or "").strip() or None,
             "source": "company",
         }
         catalog.append(item)
@@ -80,11 +79,10 @@ def build_unified_template_catalog() -> List[TemplateCatalogItem]:
             "tags": _normalize_str_list(starter.get("tags") or []),
             "useCases": _normalize_str_list(starter.get("useCases") or []),
             "primaryMetrics": _normalize_str_list(starter.get("primaryMetrics") or []),
-            "description": str(starter.get("description") or "").strip(),
+            "description": (starter.get("description") or "").strip() or None,
             "source": "starter",
         }
         catalog.append(item)
         seen_ids.add(template_id)
 
     return catalog
-

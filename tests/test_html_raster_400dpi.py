@@ -5,7 +5,8 @@ import pytest
 
 pytest.importorskip("playwright.sync_api")
 pil_image_module = pytest.importorskip("PIL.Image")
-Image = pil_image_module.Image
+# Keep the module alias so helpers like `open` are available (mirrors `from PIL import Image`).
+Image = pil_image_module
 
 render_module = importlib.import_module("backend.app.services.render.html_raster")
 rasterize_html_to_png = render_module.rasterize_html_to_png

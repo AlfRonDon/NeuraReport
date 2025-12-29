@@ -20,27 +20,23 @@ def _wrap(payload: dict, correlation_id: str | None) -> dict:
 
 @router.get("/templates/{template_id}/artifacts/manifest")
 def get_artifact_manifest(template_id: str, request: Request):
-    data = artifact_manifest_response(template_id, kind="pdf", template_dir_fn=_template_dir)
+    data = artifact_manifest_response(template_id, kind="pdf")
     return _wrap(data, _correlation(request))
 
 
 @router.get("/excel/{template_id}/artifacts/manifest")
 def get_artifact_manifest_excel(template_id: str, request: Request):
-    data = artifact_manifest_response(template_id, kind="excel", template_dir_fn=_template_dir)
+    data = artifact_manifest_response(template_id, kind="excel")
     return _wrap(data, _correlation(request))
 
 
 @router.get("/templates/{template_id}/artifacts/head")
 def get_artifact_head(template_id: str, request: Request, name: str):
-    data = artifact_head_response(template_id, name, kind="pdf", template_dir_fn=_template_dir)
+    data = artifact_head_response(template_id, name, kind="pdf")
     return _wrap(data, _correlation(request))
 
 
 @router.get("/excel/{template_id}/artifacts/head")
 def get_artifact_head_excel(template_id: str, request: Request, name: str):
-    data = artifact_head_response(template_id, name, kind="excel", template_dir_fn=_template_dir)
+    data = artifact_head_response(template_id, name, kind="excel")
     return _wrap(data, _correlation(request))
-
-
-# Import late to avoid circular dependency during module load
-from backend.api import _template_dir  # noqa: E402  # type: ignore

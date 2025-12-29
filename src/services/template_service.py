@@ -1,29 +1,39 @@
 from __future__ import annotations
 
 import contextlib
+import os
 import shutil
+import tempfile
 from pathlib import Path
 from typing import Any, Optional
 
 from fastapi import HTTPException, Request, UploadFile
+from fastapi.responses import FileResponse
+from starlette.background import BackgroundTask
 
+from backend.app.core.config import get_settings as get_api_settings
+from backend.app.domain.templates.errors import TemplateImportError
+from backend.app.domain.templates.service import TemplateService
 from backend.app.services.utils import TemplateLockError, acquire_template_lock
 from backend.app.services.templates.catalog import build_unified_template_catalog
-from backend.app.services.utils import get_correlation_id, set_correlation_id
+from backend.app.services.utils import get_correlation_id
 from backend.app.services.state import state_store
 from backend.app.services.prompts.llm_prompts_templates import recommend_templates_from_catalog
+from backend.app.services.utils.zip_tools import create_zip_from_dir
 from src.services.file_service import (
     edit_template_ai as edit_template_ai_service,
     edit_template_manual as edit_template_manual_service,
+    generator_assets as generator_assets_service,
     get_template_html as get_template_html_service,
     undo_last_template_edit as undo_last_template_edit_service,
     verify_excel as verify_excel_service,
     verify_template as verify_template_service,
-    generator_assets as generator_assets_service,
 )
-from src.services.file_service.helpers import load_template_generator_summary as _load_template_generator_summary
-from src.services.file_service.helpers import update_template_generator_summary_for_edit as _update_template_generator_summary_for_edit
-from src.utils.template_utils import resolve_template_kind as _resolve_template_kind
+from src.services.file_service.helpers import (
+    load_template_generator_summary as _load_template_generator_summary,
+    resolve_template_kind as _resolve_template_kind,
+    update_template_generator_summary_for_edit as _update_template_generator_summary_for_edit,
+)
 from src.schemas.template_schema import (
     GeneratorAssetsPayload,
     TemplateAiEditPayload,
@@ -36,6 +46,20 @@ from src.utils.schedule_utils import utcnow_iso
 from src.utils.template_utils import template_dir
 from src.utils.mapping_utils import load_mapping_keys
 
+_TEMPLATE_SERVICE: TemplateService | None = None
+
+
+def _get_template_service() -> TemplateService:
+    global _TEMPLATE_SERVICE
+    if _TEMPLATE_SERVICE is None:
+        settings = get_api_settings()
+        _TEMPLATE_SERVICE = TemplateService(
+            uploads_root=settings.uploads_dir,
+            excel_uploads_root=settings.excel_uploads_dir,
+            max_bytes=settings.max_upload_bytes,
+        )
+    return _TEMPLATE_SERVICE
+
 
 def _http_error(status_code: int, code: str, message: str, details: str | None = None) -> HTTPException:
     payload = {"status": "error", "code": code, "message": message}
@@ -45,23 +69,67 @@ def _http_error(status_code: int, code: str, message: str, details: str | None =
 
 
 def export_template_zip(template_id: str, request: Request):
-    from backend.api import export_template_zip as _export  # type: ignore
+    correlation_id = getattr(request.state, "correlation_id", None) or get_correlation_id()
+    kind = _resolve_template_kind(template_id)
+    tdir = template_dir(template_id, must_exist=True, create=False, kind=kind)
+    try:
+        lock_ctx = acquire_template_lock(tdir, "template_export", correlation_id)
+    except TemplateLockError:
+        raise _http_error(
+            409,
+            "template_locked",
+            "Template is currently processing another request.",
+        )
 
-    return _export(template_id, request)
+    fd, tmp_name = tempfile.mkstemp(prefix=f"{template_id}-", suffix=".zip")
+    os.close(fd)
+    zip_path = Path(tmp_name)
+
+    def _cleanup(path: Path = zip_path) -> None:
+        with contextlib.suppress(FileNotFoundError):
+            path.unlink(missing_ok=True)
+
+    with lock_ctx:
+        create_zip_from_dir(tdir, zip_path, include_root=True)
+
+    headers = {"X-Correlation-ID": correlation_id} if correlation_id else None
+    return FileResponse(
+        zip_path,
+        media_type="application/zip",
+        filename=f"{template_id}.zip",
+        background=BackgroundTask(_cleanup),
+        headers=headers,
+    )
 
 
 async def import_template_zip(file: UploadFile, request: Request, name: str | None = None):
-    from backend.api import import_template_zip as _import  # type: ignore
+    if not file:
+        raise _http_error(400, "file_missing", "No file provided for import.")
 
-    return await _import(file=file, name=name, request=request)
+    correlation_id = getattr(request.state, "correlation_id", None) or get_correlation_id()
+    service = _get_template_service()
+    try:
+        result = await service.import_zip(file, name, correlation_id)
+    except TemplateImportError as exc:
+        detail = {"status": "error", "code": exc.code, "message": exc.message}
+        if exc.detail:
+            detail["detail"] = exc.detail
+        if correlation_id:
+            detail["correlation_id"] = correlation_id
+        raise HTTPException(status_code=exc.status_code, detail=detail)
+
+    normalized = dict(result or {})
+    normalized.setdefault("status", "ok")
+    normalized.setdefault("correlation_id", correlation_id)
+    return normalized
 
 
 def verify_template(file: UploadFile, connection_id: str, request: Request, refine_iters: int = 0):
     return verify_template_service(file=file, connection_id=connection_id, request=request)
 
 
-def verify_excel(file: UploadFile, request: Request):
-    return verify_excel_service(file=file, request=request)
+def verify_excel(file: UploadFile, request: Request, connection_id: str | None = None):
+    return verify_excel_service(file=file, request=request, connection_id=connection_id)
 
 
 def get_template_html(template_id: str, request: Request):
@@ -117,15 +185,52 @@ def recommend_templates(payload: TemplateRecommendPayload, request: Request):
     correlation_id = getattr(request.state, "correlation_id", None) or get_correlation_id()
     catalog = build_unified_template_catalog()
 
+    def _dedupe_str_list(values: list[str] | None) -> list[str]:
+        if not values:
+            return []
+        seen: set[str] = set()
+        cleaned: list[str] = []
+        for raw in values:
+            text = str(raw or "").strip()
+            if not text or text in seen:
+                continue
+            seen.add(text)
+            cleaned.append(text)
+        return cleaned
+
     hints: dict[str, Any] = {}
+
+    kind_values: list[str] = []
     if payload.kind:
-        hints["kind"] = payload.kind
+        kind_values.append(payload.kind)
+    if getattr(payload, "kinds", None):
+        kind_values.extend(payload.kinds or [])
+    kinds = _dedupe_str_list(kind_values)
+    if payload.kind:
+        kind = str(payload.kind or "").strip()
+        if kind:
+            hints["kind"] = kind
+    if kinds:
+        hints["kinds"] = kinds
+
+    domain_values: list[str] = []
     if payload.domain:
-        hints["domain"] = payload.domain
-    if payload.schema_snapshot:
+        domain_values.append(payload.domain)
+    if getattr(payload, "domains", None):
+        domain_values.extend(payload.domains or [])
+    domains = _dedupe_str_list(domain_values)
+    if payload.domain:
+        domain = str(payload.domain or "").strip()
+        if domain:
+            hints["domain"] = domain
+    if domains:
+        hints["domains"] = domains
+
+    if payload.schema_snapshot is not None:
         hints["schema_snapshot"] = payload.schema_snapshot
-    if payload.tables:
-        hints["tables"] = payload.tables
+    tables = _dedupe_str_list(payload.tables)
+    if tables:
+        hints["tables"] = tables
 
     raw_recs = recommend_templates_from_catalog(
         catalog,

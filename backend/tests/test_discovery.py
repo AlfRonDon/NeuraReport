@@ -101,6 +101,20 @@ def test_discover_supports_list_keys_and_child_table(tmp_path: Path):
     }
     assert summary["batches_count"] == 2
     assert summary["rows_total"] == 3
+    metadata = summary["batch_metadata"]
+    assert metadata["101|A"]["category"] == "101"
+    assert metadata["101|A"]["plant_id"] == "101"
+    assert metadata["101|A"]["batch_no"] == "A"
+    assert str(metadata["101|A"]["time"]).startswith("2025-03-01")
+    metric_map = {entry["batch_id"]: entry for entry in summary["batch_metrics"]}
+    assert metric_map["101|A"]["plant_id"] == "101"
+    assert metric_map["101|A"]["batch_no"] == "A"
+    catalog = {field["name"]: field for field in summary["field_catalog"]}
+    assert catalog["time"]["source"] == "orders.start_ts"
+    assert catalog["plant_id"]["type"] == "categorical"
+    assert catalog["plant_id"]["source"] == "orders.plant_id"
+    assert "numeric_bins" in summary
+    assert isinstance(summary["numeric_bins"].get("rows"), list)
 
 
 def test_discover_infers_parent_key_from_child_when_missing(tmp_path: Path):

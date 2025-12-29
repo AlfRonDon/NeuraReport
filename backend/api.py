@@ -18,6 +18,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from src.utils.static_files import UploadsStaticFiles
+from src.utils.connection_utils import db_path_from_payload_or_default as _db_path_from_payload_or_default
 
 from .app.core.event_bus import EventBus, logging_middleware, metrics_middleware
 from src.routes import router as v1_router
@@ -28,6 +29,12 @@ from .app.env_loader import load_env_file
 
 from .app.services.utils import get_correlation_id, set_correlation_id
 from .app.services.jobs.report_scheduler import ReportScheduler
+from backend.app.services.mapping.HeaderMapping import get_parent_child_info
+from src.services.mapping.helpers import compute_db_signature
+from backend.app.services.contract.ContractBuilderV2 import build_or_load_contract_v2
+from backend.app.services.templates.TemplateVerify import render_html_to_png, render_panel_preview
+from backend.app.services.generator.GeneratorAssetsV1 import build_generator_assets_from_payload
+from src.services.report_service import _schedule_report_job, _run_report_with_email, _run_report_job_sync
 
 
 def _configure_error_log_handler(target_logger: logging.Logger | None = None) -> Path | None:
@@ -179,6 +186,12 @@ UPLOAD_ROOT = SETTINGS.uploads_root
 UPLOAD_ROOT.mkdir(parents=True, exist_ok=True)
 EXCEL_UPLOAD_ROOT = SETTINGS.excel_uploads_root
 EXCEL_UPLOAD_ROOT.mkdir(parents=True, exist_ok=True)
+UPLOAD_ROOT_BASE = UPLOAD_ROOT.resolve()
+EXCEL_UPLOAD_ROOT_BASE = EXCEL_UPLOAD_ROOT.resolve()
+_UPLOAD_KIND_BASES: dict[str, tuple[Path, str]] = {
+    "pdf": (UPLOAD_ROOT_BASE, "/uploads"),
+    "excel": (EXCEL_UPLOAD_ROOT_BASE, "/excel-uploads"),
+}
 APP_VERSION = SETTINGS.version
 APP_COMMIT = SETTINGS.commit
 

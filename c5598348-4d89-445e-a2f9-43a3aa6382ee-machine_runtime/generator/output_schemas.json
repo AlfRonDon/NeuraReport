@@ -1,0 +1,22 @@
+{
+  "header": [
+    "company_title",
+    "print_date",
+    "range_start",
+    "range_end"
+  ],
+  "rows": [
+    "machine_name",
+    "run_date",
+    "start_time",
+    "end_time",
+    "duration_sec",
+    "shift_no",
+    "total_time"
+  ],
+  "totals": [
+    "total_duration_sec",
+    "total_duration_hms",
+    "machines_covered"
+  ]
+}

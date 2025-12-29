@@ -5,6 +5,7 @@ from typing import Any, Callable, Mapping, Optional
 
 from fastapi import HTTPException
 
+from ....services.reports.discovery_metrics import build_discovery_schema, build_resample_support
 from ....services.state import state_store
 
 
@@ -23,6 +24,29 @@ def discover_reports(
     manifest_endpoint_fn: Callable[[str], str],
     logger,
 ):
+    def _normalize_field_catalog(raw_catalog) -> list[dict[str, str]]:
+        normalized: list[dict[str, str]] = []
+        if not isinstance(raw_catalog, list):
+            return normalized
+        for entry in raw_catalog:
+            if not isinstance(entry, Mapping):
+                continue
+            name = str(entry.get("name") or "").strip()
+            if not name:
+                continue
+            field_type = str(entry.get("type") or "unknown").strip()
+            description = str(entry.get("description") or "").strip()
+            source = str(entry.get("source") or entry.get("table") or "computed").strip() or "computed"
+            normalized.append(
+                {
+                    "name": name,
+                    "type": field_type,
+                    "description": description,
+                    "source": source,
+                }
+            )
+        return normalized
+
     template_dir = template_dir_fn(payload.template_id)
     db_path = db_path_fn(payload.connection_id)
     if not db_path.exists():
@@ -73,15 +97,57 @@ def discover_reports(
     if not isinstance(batches_raw, list):
         batches_raw = []
 
-    batch_metadata: dict[str, dict[str, object]] = summary.get("batch_metadata") or {}
+    raw_batch_metadata = summary.get("batch_metadata")
+    batch_metadata: dict[str, dict[str, object]] = raw_batch_metadata if isinstance(raw_batch_metadata, Mapping) else {}
 
-    field_catalog = summary.get("field_catalog")
-    if not isinstance(field_catalog, list):
-        field_catalog, _ = build_field_catalog_fn(batches_raw)
+    raw_field_catalog = summary.get("field_catalog")
+    raw_stats = summary.get("data_stats")
+    if not isinstance(raw_field_catalog, list):
+        raw_field_catalog, raw_stats = build_field_catalog_fn(batches_raw)
+    field_catalog = _normalize_field_catalog(raw_field_catalog)
+    if not field_catalog:
+        fallback_catalog, raw_stats = build_field_catalog_fn(batches_raw)
+        field_catalog = _normalize_field_catalog(fallback_catalog)
+    data_stats = raw_stats if isinstance(raw_stats, Mapping) else {}
+
+    discovery_schema = summary.get("discovery_schema")
+    if not isinstance(discovery_schema, Mapping):
+        discovery_schema = build_discovery_schema(field_catalog)
 
     batch_metrics = summary.get("batch_metrics")
     if not isinstance(batch_metrics, list):
         batch_metrics = build_batch_metrics_fn(batches_raw, batch_metadata)
+    batch_metrics = batch_metrics if isinstance(batch_metrics, list) else []
+
+    numeric_bins = summary.get("numeric_bins")
+    category_groups = summary.get("category_groups")
+    if not isinstance(numeric_bins, Mapping) or not isinstance(category_groups, Mapping):
+        resample_support = build_resample_support(
+            field_catalog,
+            batch_metrics,
+            schema=discovery_schema,
+            default_metric=(discovery_schema or {}).get("defaults", {}).get("metric"),
+        )
+        numeric_bins = resample_support.get("numeric_bins", {})
+        category_groups = resample_support.get("category_groups", {})
+
+    def _time_bounds() -> tuple[str | None, str | None]:
+        timestamps = []
+        for meta in batch_metadata.values():
+            if not isinstance(meta, Mapping):
+                continue
+            ts = meta.get("time")
+            if ts:
+                timestamps.append(ts)
+        if not timestamps:
+            return None, None
+        try:
+            ts_sorted = sorted(timestamps)
+            return ts_sorted[0], ts_sorted[-1]
+        except Exception:
+            return None, None
+
+    time_start, time_end = _time_bounds()
 
     return {
         "template_id": payload.template_id,
@@ -103,4 +169,14 @@ def discover_reports(
         "manifest_produced_at": manifest_data.get("produced_at"),
         "field_catalog": field_catalog,
         "batch_metrics": batch_metrics,
+        "discovery_schema": discovery_schema,
+        "numeric_bins": numeric_bins,
+        "category_groups": category_groups,
+        "date_range": {
+            "start": payload.start_date,
+            "end": payload.end_date,
+            "time_start": time_start,
+            "time_end": time_end,
+        },
+        "data_stats": data_stats,
     }

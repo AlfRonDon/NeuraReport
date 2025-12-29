@@ -4,7 +4,17 @@ from functools import lru_cache
 from pathlib import Path
 from typing import List, Optional
 
-from pydantic import BaseSettings, Field
+try:
+    # Pydantic v2+
+    from pydantic_settings import BaseSettings, SettingsConfigDict
+
+    _V2_SETTINGS = True
+except ImportError:  # pragma: no cover - fallback for Pydantic v1
+    from pydantic import BaseSettings
+
+    SettingsConfigDict = None
+    _V2_SETTINGS = False
+from pydantic import Field
 
 
 class Settings(BaseSettings):
@@ -25,11 +35,15 @@ class Settings(BaseSettings):
 
     openai_api_key: Optional[str] = Field(default=None, env="OPENAI_API_KEY")
 
-    class Config:
-        env_file = ".env"
+    if _V2_SETTINGS:
+        # Pydantic Settings v2
+        model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    else:  # pragma: no cover - Pydantic v1 fallback
+        class Config:
+            env_file = ".env"
+            extra = "ignore"
 
 
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
-

@@ -4,12 +4,20 @@ from typing import Optional
 
 from fastapi import APIRouter, Request
 
-from src.schemas.template_schema import CorrectionsPreviewPayload, MappingPayload, TemplateRecommendPayload, TemplateRecommendResponse
+from src.schemas.template_schema import (
+    CorrectionsPreviewPayload,
+    MappingPayload,
+    TemplateAiEditPayload,
+    TemplateManualEditPayload,
+    TemplateRecommendPayload,
+    TemplateRecommendResponse,
+)
 from src.services.mapping.approve import run_mapping_approve
 from src.services.mapping.corrections import run_corrections_preview
 from src.services.mapping.key_options import mapping_key_options as mapping_key_options_service
 from src.services.mapping.preview import mapping_preview_internal, run_mapping_preview
 from src.services.template_service import (
+    get_template_html,
     edit_template_ai,
     edit_template_manual,
     export_template_zip,
@@ -78,17 +86,22 @@ async def verify_template_route(file, request: Request, connection_id: str, refi
 
 
 @router.post("/excel/verify")
-async def verify_excel_route(file, request: Request):
-    return await verify_excel(file=file, request=request)
+async def verify_excel_route(file, request: Request, connection_id: str | None = None):
+    return await verify_excel(file=file, request=request, connection_id=connection_id)
+
+
+@router.get("/templates/{template_id}/html")
+def get_template_html_route(template_id: str, request: Request):
+    return get_template_html(template_id, request)
 
 
 @router.post("/templates/{template_id}/edit-manual")
-def edit_template_manual_route(template_id: str, payload, request: Request):
+def edit_template_manual_route(template_id: str, payload: TemplateManualEditPayload, request: Request):
     return edit_template_manual(template_id, payload, request)
 
 
 @router.post("/templates/{template_id}/edit-ai")
-def edit_template_ai_route(template_id: str, payload, request: Request):
+def edit_template_ai_route(template_id: str, payload: TemplateAiEditPayload, request: Request):
     return edit_template_ai(template_id, payload, request)
 
 

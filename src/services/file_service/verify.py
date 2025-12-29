@@ -7,7 +7,7 @@ import time
 import uuid
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 from fastapi import HTTPException, Request, UploadFile
 from fastapi.responses import StreamingResponse
@@ -348,7 +348,7 @@ def verify_template(file: UploadFile, connection_id: str, request: Request, refi
     return StreamingResponse(event_stream(), headers=headers, media_type="application/x-ndjson")
 
 
-def verify_excel(file: UploadFile, request: Request):
+def verify_excel(file: UploadFile, request: Request, connection_id: str | None = None):
     template_kind = "excel"
     original_filename = getattr(file, "filename", "") or ""
     template_name_hint = Path(original_filename).stem if original_filename else ""

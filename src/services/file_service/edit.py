@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import contextlib
+import difflib
 import json
 from pathlib import Path
 from typing import Any, Mapping, Optional
@@ -28,6 +30,49 @@ from .helpers import (
 )
 
 
+def _summarize_html_diff(before: str, after: str) -> str:
+    before_lines = (before or "").splitlines()
+    after_lines = (after or "").splitlines()
+    matcher = difflib.SequenceMatcher(None, before_lines, after_lines, autojunk=False)
+    added = 0
+    removed = 0
+    for tag, i1, i2, j1, j2 in matcher.get_opcodes():
+        if tag in ("replace", "delete"):
+            removed += i2 - i1
+        if tag in ("replace", "insert"):
+            added += j2 - j1
+    parts: list[str] = []
+    if added:
+        parts.append(f"+{added} line{'s' if added != 1 else ''}")
+    if removed:
+        parts.append(f"-{removed} line{'s' if removed != 1 else ''}")
+    if not parts:
+        return "no line changes"
+    return ", ".join(parts)
+
+
+def _snapshot_final_html(template_dir_path: Path, final_path: Path, base_path: Path) -> str:
+    if final_path.exists():
+        source_path = final_path
+    elif base_path.exists():
+        source_path = base_path
+    else:
+        raise http_error(
+            404,
+            "template_html_missing",
+            "Template HTML not found (report_final.html or template_p1.html).",
+        )
+
+    current_html = source_path.read_text(encoding="utf-8", errors="ignore")
+
+    if source_path is base_path and not final_path.exists():
+        write_text_atomic(final_path, current_html, encoding="utf-8", step="template_edit_seed_final")
+
+    prev_path = template_dir_path / "report_final_prev.html"
+    write_text_atomic(prev_path, current_html, encoding="utf-8", step="template_edit_prev")
+    return current_html
+
+
 def _build_template_html_response(
     *,
     template_id: str,
@@ -39,6 +84,7 @@ def _build_template_html_response(
     summary: Optional[Mapping[str, Any]] = None,
     ai_summary: Optional[list[str]] = None,
     correlation_id: str | None = None,
+    diff_summary: str | None = None,
 ) -> dict:
     prev_path = template_dir_path / "report_final_prev.html"
     effective_history = history if history is not None else read_template_history(template_dir_path)
@@ -59,6 +105,8 @@ def _build_template_html_response(
         "metadata": metadata,
         "history": effective_history,
     }
+    if diff_summary is not None:
+        result["diff_summary"] = diff_summary
     if ai_summary:
         result["summary"] = ai_summary
     if correlation_id:
@@ -162,15 +210,11 @@ def edit_template_manual(template_id: str, payload: TemplateManualEditPayload, r
         raise http_error(409, "template_locked", "Template is currently processing another request.")
 
     with lock_ctx:
-        current_path = final_path if final_path.exists() else base_path
-        if not current_path.exists():
-            raise http_error(404, "template_html_missing", "Template HTML not found (report_final.html or template_p1.html).")
-        current_html = current_path.read_text(encoding="utf-8", errors="ignore")
-        prev_path = template_dir_path / "report_final_prev.html"
-        write_text_atomic(prev_path, current_html, encoding="utf-8", step="template_edit_prev")
+        current_html = _snapshot_final_html(template_dir_path, final_path, base_path)
 
         new_html = payload.html or ""
         write_text_atomic(final_path, new_html, encoding="utf-8", step="template_edit_manual")
+        diff_summary = _summarize_html_diff(current_html, new_html)
 
         notes = "Manual HTML edit via template editor"
         summary = update_template_generator_summary_for_edit(template_id, edit_type="manual", notes=notes)
@@ -186,6 +230,7 @@ def edit_template_manual(template_id: str, payload: TemplateManualEditPayload, r
         history=history,
         summary=summary,
         correlation_id=correlation_id,
+        diff_summary=diff_summary,
     )
 
 
@@ -199,17 +244,12 @@ def edit_template_ai(template_id: str, payload: TemplateAiEditPayload, request: 
         raise http_error(409, "template_locked", "Template is currently processing another request.")
 
     with lock_ctx:
-        current_path = final_path if final_path.exists() else base_path
-        if not current_path.exists():
-            raise http_error(404, "template_html_missing", "Template HTML not found (report_final.html or template_p1.html).")
+        current_html = _snapshot_final_html(template_dir_path, final_path, base_path)
 
-        current_disk_html = current_path.read_text(encoding="utf-8", errors="ignore")
-        prev_path = template_dir_path / "report_final_prev.html"
-        write_text_atomic(prev_path, current_disk_html, encoding="utf-8", step="template_edit_prev")
-
-        llm_input_html = payload.html.strip() if isinstance(payload.html, str) and payload.html.strip() else current_disk_html
+        llm_input_html = payload.html.strip() if isinstance(payload.html, str) and payload.html.strip() else current_html
         updated_html, change_summary = _run_template_edit_llm(llm_input_html, payload.instructions or "")
         write_text_atomic(final_path, updated_html, encoding="utf-8", step="template_edit_ai")
+        diff_summary = _summarize_html_diff(current_html, updated_html)
 
         notes = "AI-assisted HTML edit via template editor"
         summary = update_template_generator_summary_for_edit(template_id, edit_type="ai", notes=notes)
@@ -232,6 +272,7 @@ def edit_template_ai(template_id: str, payload: TemplateAiEditPayload, request: 
         summary=summary,
         ai_summary=change_summary,
         correlation_id=correlation_id,
+        diff_summary=diff_summary,
     )
 
 
@@ -242,9 +283,9 @@ def undo_last_template_edit(template_id: str, request: Request):
     final_path = template_dir_path / "report_final.html"
     prev_path = template_dir_path / "report_final_prev.html"
 
-    if not prev_path.exists():
+    if not prev_path.exists() or not prev_path.is_file():
         raise http_error(400, "no_previous_version", "No previous template version found to undo.")
-    if not final_path.exists():
+    if not final_path.exists() or not final_path.is_file():
         raise http_error(404, "template_html_missing", "Current template HTML not found for undo.")
 
     try:
@@ -256,11 +297,19 @@ def undo_last_template_edit(template_id: str, request: Request):
         tmp_path = template_dir_path / "report_final_undo_tmp.html"
         tmp_path.unlink(missing_ok=True)
 
-        final_path.rename(tmp_path)
-        prev_path.rename(final_path)
-        tmp_path.rename(prev_path)
+        current_html = final_path.read_text(encoding="utf-8", errors="ignore")
+        try:
+            final_path.rename(tmp_path)
+            prev_path.rename(final_path)
+            tmp_path.rename(prev_path)
+        except Exception as exc:
+            with contextlib.suppress(Exception):
+                if tmp_path.exists() and not final_path.exists():
+                    tmp_path.rename(final_path)
+            raise http_error(500, "undo_failed", f"Failed to restore previous template version: {exc}")
 
         restored_html = final_path.read_text(encoding="utf-8", errors="ignore")
+        diff_summary = _summarize_html_diff(current_html, restored_html)
 
         notes = "Undo last template HTML edit"
         summary = update_template_generator_summary_for_edit(template_id, edit_type="undo", notes=notes)
@@ -276,4 +325,5 @@ def undo_last_template_edit(template_id: str, request: Request):
         history=history,
         summary=summary,
         correlation_id=correlation_id,
+        diff_summary=diff_summary,
     )

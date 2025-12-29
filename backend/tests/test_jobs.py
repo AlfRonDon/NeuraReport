@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import sys
 import types
 from pathlib import Path
@@ -210,3 +211,226 @@ def test_job_listing_filters_respect_status_and_type(client: TestClient, fresh_s
 
     active_only = client.get("/jobs", params={"active_only": "true"}).json()["jobs"]
     assert {job["id"] for job in active_only} == {queued["id"], running["id"]}
+
+
+def test_batch_job_creation_and_active_listing(client: TestClient, fresh_state, monkeypatch):
+    _seed_template(fresh_state, template_id="tpl-batch-1", name="Batch 1")
+    _seed_template(fresh_state, template_id="tpl-batch-2", name="Batch 2")
+
+    scheduled: list[dict] = []
+
+    def immediate_schedule(job_id, payload_data, kind, correlation_id, step_progress):
+        scheduled.append(
+            {
+                "job_id": job_id,
+                "payload": payload_data,
+                "correlation_id": correlation_id,
+                "kind": kind,
+                "step_progress": step_progress,
+            }
+        )
+
+    monkeypatch.setattr(api, "_schedule_report_job", immediate_schedule)
+
+    payloads = [
+        {"template_id": "tpl-batch-1", "start_date": "2024-04-01 00:00:00", "end_date": "2024-04-02 00:00:00"},
+        {"template_id": "tpl-batch-2", "start_date": "2024-04-03 00:00:00", "end_date": "2024-04-04 00:00:00"},
+    ]
+    resp = client.post("/jobs/run-report", json=payloads)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert set(data["job_ids"]) == {entry["job_id"] for entry in scheduled}
+    assert data["job_id"] == data["job_ids"][0]
+    assert data["count"] == 2
+
+    active_jobs = client.get("/jobs", params={"active_only": "true"}).json()["jobs"]
+    active_ids = {job["id"] for job in active_jobs}
+    for entry in scheduled:
+        assert entry["job_id"] in active_ids
+        job = fresh_state.get_job(entry["job_id"])
+        assert job["templateId"] in {"tpl-batch-1", "tpl-batch-2"}
+        assert len(job["steps"]) > 0
+        assert job["status"] in {"queued", "running"}
+
+
+def test_batch_jobs_record_steps_per_template(client: TestClient, fresh_state, monkeypatch):
+    _seed_template(fresh_state, template_id="tpl-batch-a", name="Batch A")
+    _seed_template(fresh_state, template_id="tpl-batch-b", name="Batch B")
+
+    def fake_run_report_with_email(payload, *, kind, correlation_id=None, job_tracker=None):
+        if job_tracker:
+            job_tracker.step_running("dataLoad", label=f"Load DB for {payload.template_id}")
+        if payload.template_id.endswith("a"):
+            if job_tracker:
+                job_tracker.step_succeeded("dataLoad", progress=20)
+                job_tracker.step_running("renderPdf", label="Render PDF artifacts")
+                job_tracker.step_succeeded("renderPdf", progress=90)
+            return {"ok": True, "template_id": payload.template_id}
+        if job_tracker:
+            job_tracker.step_failed("dataLoad", f"DB missing for {payload.template_id}")
+        raise HTTPException(status_code=400, detail={"message": f"DB missing {payload.template_id}"})
+
+    def immediate_schedule(job_id, payload_data, kind, correlation_id, step_progress):
+        api._run_report_job_sync(job_id, payload_data, kind, correlation_id, step_progress)
+
+    monkeypatch.setattr(api, "_run_report_with_email", fake_run_report_with_email)
+    monkeypatch.setattr(api, "_schedule_report_job", immediate_schedule)
+
+    payloads = [
+        {"template_id": "tpl-batch-a", "start_date": "2024-05-01 00:00:00", "end_date": "2024-05-02 00:00:00"},
+        {"template_id": "tpl-batch-b", "start_date": "2024-05-03 00:00:00", "end_date": "2024-05-04 00:00:00"},
+    ]
+    resp = client.post("/jobs/run-report", json=payloads)
+    assert resp.status_code == 200
+    job_ids = resp.json()["job_ids"]
+    assert len(job_ids) == 2
+
+    jobs = {fresh_state.get_job(job_id)["templateId"]: fresh_state.get_job(job_id) for job_id in job_ids}
+    success_job = jobs["tpl-batch-a"]
+    failure_job = jobs["tpl-batch-b"]
+
+    assert success_job["status"] == "succeeded"
+    success_steps = {step["name"]: step for step in success_job["steps"]}
+    assert success_steps["dataLoad"]["status"] == "succeeded"
+    assert success_steps["renderPdf"]["status"] == "succeeded"
+    assert success_job["progress"] == 100
+
+    assert failure_job["status"] == "failed"
+    failure_steps = {step["name"]: step for step in failure_job["steps"]}
+    assert failure_steps["dataLoad"]["status"] == "failed"
+    assert "DB missing" in (failure_job["error"] or "")
+
+
+def test_cancel_job_force_invokes_force_cancel(monkeypatch, client: TestClient, fresh_state):
+    _seed_template(fresh_state, template_id="tpl-cancel")
+    job = fresh_state.create_job(job_type="run_report", template_id="tpl-cancel", template_name="Cancelable")
+    called = {}
+
+    class _FakeReportService:
+        @staticmethod
+        def force_cancel_job(job_id, *, force=False):
+            called["job_id"] = job_id
+            called["force"] = force
+            return True
+
+    api.report_service = _FakeReportService()
+
+    resp = client.post(f"/jobs/{job['id']}/cancel", params={"force": "true"})
+    assert resp.status_code == 200
+    assert called == {"job_id": job["id"], "force": True}
+    assert fresh_state.get_job(job["id"])["status"] == "cancelled"
+
+
+def test_cancel_job_route_marks_cancelled_without_force(monkeypatch, client: TestClient, fresh_state):
+    _seed_template(fresh_state, template_id="tpl-cancel-soft")
+    job = fresh_state.create_job(job_type="run_report", template_id="tpl-cancel-soft", template_name="Cancelable")
+    called = {}
+
+    class _FakeReportService:
+        @staticmethod
+        def force_cancel_job(job_id, *, force=False):
+            called["job_id"] = job_id
+            called["force"] = force
+            return True
+
+    api.report_service = _FakeReportService()
+
+    resp = client.post(f"/jobs/{job['id']}/cancel")
+    assert resp.status_code == 200
+    assert called == {"job_id": job["id"], "force": False}
+    job_record = fresh_state.get_job(job["id"])
+    assert job_record["status"] == "cancelled"
+    assert (job_record.get("error") or "").lower().startswith("cancelled")
+
+
+def test_report_scheduler_creates_job_for_schedule(monkeypatch, fresh_state, tmp_path):
+    from backend.app.services.jobs import report_scheduler as scheduler_module
+
+    scheduler_module.state_store = fresh_state
+    _seed_template(fresh_state, template_id="tpl-schedule", name="Scheduled Template")
+    fresh_state.upsert_connection(
+        conn_id="conn-1",
+        name="Connection 1",
+        db_type="sqlite",
+        database_path=str(tmp_path / "db.sqlite"),
+        secret_payload={"token": "secret"},
+    )
+    schedule = fresh_state.create_schedule(
+        name="Nightly run",
+        template_id="tpl-schedule",
+        template_name="Scheduled Template",
+        template_kind="pdf",
+        connection_id="conn-1",
+        connection_name="Connection 1",
+        start_date="2024-01-01 00:00:00",
+        end_date="2024-01-02 00:00:00",
+        key_values=None,
+        batch_ids=None,
+        docx=True,
+        xlsx=False,
+        email_recipients=[],
+        email_subject=None,
+        email_message=None,
+        frequency="daily",
+        interval_minutes=60,
+        next_run_at="2024-01-01T00:00:00Z",
+        first_run_at="2024-01-01T00:00:00Z",
+        active=True,
+    )
+
+    recorded: list[dict] = []
+
+    def runner(payload, kind, job_tracker=None):
+        recorded.append({"payload": payload, "kind": kind, "job_id": getattr(job_tracker, "job_id", None)})
+        return {"html_url": "/reports/r.html"}
+
+    scheduler = scheduler_module.ReportScheduler(runner, poll_seconds=1)
+    asyncio.run(scheduler._run_schedule(schedule))
+
+    jobs = fresh_state.list_jobs(limit=5)
+    assert len(jobs) == 1
+    job = jobs[0]
+    assert job["scheduleId"] == schedule["id"]
+    assert job["status"] == "succeeded"
+    assert recorded and recorded[0]["job_id"] == job["id"]
+
+
+def test_job_retry_flow_allows_second_success(monkeypatch, client: TestClient, fresh_state):
+    _seed_template(fresh_state, template_id="tpl-retry", name="Retry Template")
+
+    attempts: list[str] = []
+
+    def fake_run_report_with_email(payload, *, kind, correlation_id=None, job_tracker=None):
+        attempts.append(payload.template_id)
+        if len(attempts) == 1:
+            if job_tracker:
+                job_tracker.step_failed("renderPdf", "boom")
+            raise HTTPException(status_code=500, detail={"message": "boom"})
+        if job_tracker:
+            job_tracker.step_succeeded("dataLoad")
+            job_tracker.step_succeeded("renderPdf")
+        return {"ok": True}
+
+    def immediate_schedule(job_id, payload_data, kind, correlation_id, step_progress):
+        api._run_report_job_sync(job_id, payload_data, kind, correlation_id, step_progress)
+
+    monkeypatch.setattr(api, "_run_report_with_email", fake_run_report_with_email)
+    monkeypatch.setattr(api, "_schedule_report_job", immediate_schedule)
+
+    payload = {
+        "template_id": "tpl-retry",
+        "start_date": "2024-06-01 00:00:00",
+        "end_date": "2024-06-02 00:00:00",
+    }
+
+    first_resp = client.post("/jobs/run-report", json=payload)
+    first_job_id = first_resp.json()["job_id"]
+    first_job = fresh_state.get_job(first_job_id)
+    assert first_job["status"] == "failed"
+    assert attempts == ["tpl-retry"]
+
+    second_resp = client.post("/jobs/run-report", json=payload)
+    second_job_id = second_resp.json()["job_id"]
+    second_job = fresh_state.get_job(second_job_id)
+    assert second_job["status"] == "succeeded"
+    assert attempts == ["tpl-retry", "tpl-retry"]

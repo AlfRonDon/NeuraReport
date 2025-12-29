@@ -57,6 +57,7 @@ import {
   JOB_STATUS_COLORS,
   RESAMPLE_AGGREGATION_OPTIONS,
   RESAMPLE_BUCKET_OPTIONS,
+  RESAMPLE_NUMERIC_BUCKET_OPTIONS,
   RESAMPLE_DIMENSION_OPTIONS,
   RESAMPLE_METRIC_OPTIONS,
   buildDownloadUrl,
@@ -73,6 +74,45 @@ import {
   withBase,
 } from '../services/generateApi'
 import { useSavedCharts } from '../hooks/useSavedCharts'
+
+const buildFallbackChartsFromSample = (sampleData) => {
+  if (!Array.isArray(sampleData) || !sampleData.length) return []
+  const firstEntry = sampleData.find((item) => item && typeof item === 'object') || {}
+  const keys = Object.keys(firstEntry)
+  if (!keys.length) return []
+  const preferredX =
+    keys.find((key) =>
+      ['label', 'bucket', 'bucket_label', 'bucketLabel', 'batch_index', 'batch_id', 'category'].includes(key),
+    ) || keys[0]
+  const numericKeys = keys.filter((key) => Number.isFinite(Number(firstEntry[key])))
+  const preferredY =
+    numericKeys.find((key) => key !== preferredX) ||
+    numericKeys[0] ||
+    keys.find((key) => key !== preferredX) ||
+    preferredX
+  return [
+    {
+      id: 'fallback-line',
+      type: 'line',
+      xField: preferredX,
+      yFields: [preferredY],
+      title: 'Line distribution',
+      description: 'Auto-generated from sample data',
+      chartTemplateId: 'sample_line',
+      source: 'fallback',
+    },
+    {
+      id: 'fallback-bar',
+      type: 'bar',
+      xField: preferredX,
+      yFields: [preferredY],
+      title: 'Bar distribution',
+      description: 'Auto-generated from sample data',
+      chartTemplateId: 'sample_bar',
+      source: 'fallback',
+    },
+  ]
+}
 
 function GenerateAndDownload({
   selected,
@@ -157,6 +197,8 @@ function GenerateAndDownload({
     deleteSavedChart,
   } = useSavedCharts({ templateId: activeTemplateId, templateKind: activeTemplateKind })
   const activeTemplateResult = activeTemplateId ? results?.[activeTemplateId] : null
+  const activeNumericBins = activeTemplateResult?.numericBins
+  const activeDateRange = activeTemplateResult?.dateRange
   const activeBatchData = useMemo(() => {
     if (!activeTemplateId || !activeTemplateResult || !Array.isArray(activeTemplateResult.batches)) {
       return []
@@ -178,7 +220,14 @@ function GenerateAndDownload({
       }
     })
   }, [activeTemplateId, activeTemplateResult])
+  const fallbackChartsActive = useMemo(
+    () => chartSuggestions.some((chart) => chart?.source === 'fallback'),
+    [chartSuggestions],
+  )
   const { data: previewData, usingSampleData } = useMemo(() => {
+    if (fallbackChartsActive && Array.isArray(chartSampleData) && chartSampleData.length) {
+      return { data: chartSampleData, usingSampleData: true }
+    }
     if (activeBatchData.length) {
       return { data: activeBatchData, usingSampleData: false }
     }
@@ -186,11 +235,25 @@ function GenerateAndDownload({
       return { data: chartSampleData, usingSampleData: true }
     }
     return { data: [], usingSampleData: false }
-  }, [activeBatchData, chartSampleData])
+  }, [activeBatchData, chartSampleData, fallbackChartsActive])
   const activeFieldCatalog = Array.isArray(activeTemplateResult?.fieldCatalog)
     ? activeTemplateResult.fieldCatalog
     : []
+  const activeDiscoverySchema = useMemo(
+    () => (activeTemplateResult?.discoverySchema && typeof activeTemplateResult.discoverySchema === 'object'
+      ? activeTemplateResult.discoverySchema
+      : null),
+    [activeTemplateResult],
+  )
   const dimensionOptions = useMemo(() => {
+    if (activeDiscoverySchema?.dimensions && Array.isArray(activeDiscoverySchema.dimensions)) {
+      return activeDiscoverySchema.dimensions.map((dim) => ({
+        value: dim.name,
+        label: dim.name,
+        kind: dim.kind || dim.type || 'categorical',
+        bucketable: Boolean(dim.bucketable),
+      }))
+    }
     const names = new Set(activeFieldCatalog.map((field) => field?.name))
     const base = RESAMPLE_DIMENSION_OPTIONS.filter((option) => {
       if (option.value === 'time') return names.has('time')
@@ -202,20 +265,39 @@ function GenerateAndDownload({
       if (fallback) base.push(fallback)
     }
     return base
-  }, [activeFieldCatalog])
+  }, [activeDiscoverySchema, activeFieldCatalog])
   const metricOptions = useMemo(() => {
+    if (activeDiscoverySchema?.metrics && Array.isArray(activeDiscoverySchema.metrics)) {
+      return activeDiscoverySchema.metrics.map((metric) => ({
+        value: metric.name,
+        label: metric.name,
+      }))
+    }
     const names = new Set(activeFieldCatalog.map((field) => field?.name))
     const base = RESAMPLE_METRIC_OPTIONS.filter((option) => names.has(option.value))
     if (!base.length) {
       return [...RESAMPLE_METRIC_OPTIONS]
     }
     return base
-  }, [activeFieldCatalog])
+  }, [activeDiscoverySchema, activeFieldCatalog])
   const resampleConfig = activeTemplateResult?.resample?.config || DEFAULT_RESAMPLE_CONFIG
   const safeResampleConfig = useMemo(() => {
     const next = { ...DEFAULT_RESAMPLE_CONFIG, ...resampleConfig }
-    if (!dimensionOptions.some((opt) => opt.value === next.dimension)) {
-      next.dimension = dimensionOptions[0]?.value || DEFAULT_RESAMPLE_CONFIG.dimension
+    const activeDim = dimensionOptions.find((opt) => opt.value === next.dimension) || dimensionOptions[0]
+    if (!activeDim) {
+      next.dimension = DEFAULT_RESAMPLE_CONFIG.dimension
+      next.dimensionKind = DEFAULT_RESAMPLE_CONFIG.dimensionKind
+    } else {
+      next.dimension = activeDim.value
+      const rawKind = activeDim.kind || activeDim.type || DEFAULT_RESAMPLE_CONFIG.dimensionKind
+      const kindText = (rawKind || '').toString().toLowerCase()
+      if (kindText.includes('time') || kindText.includes('date')) {
+        next.dimensionKind = 'temporal'
+      } else if (kindText.includes('num')) {
+        next.dimensionKind = 'numeric'
+      } else {
+        next.dimensionKind = 'categorical'
+      }
     }
     if (!metricOptions.some((opt) => opt.value === next.metric)) {
       next.metric = metricOptions[0]?.value || DEFAULT_RESAMPLE_CONFIG.metric
@@ -223,8 +305,13 @@ function GenerateAndDownload({
     return next
   }, [resampleConfig, dimensionOptions, metricOptions])
   const resampleState = useMemo(
-    () => buildResampleComputation(activeTemplateResult?.batchMetrics, safeResampleConfig),
-    [activeTemplateId, activeTemplateResult?.batchMetrics, safeResampleConfig],
+    () => buildResampleComputation(
+      activeTemplateResult?.batchMetrics,
+      safeResampleConfig,
+      activeNumericBins,
+      activeTemplateResult?.categoryGroups,
+    ),
+    [activeTemplateId, activeTemplateResult?.batchMetrics, safeResampleConfig, activeNumericBins, activeTemplateResult?.categoryGroups],
   )
   const totalBatchCount =
     activeTemplateResult?.allBatches?.length ?? activeTemplateResult?.batches?.length ?? 0
@@ -234,13 +321,23 @@ function GenerateAndDownload({
     [metricOptions, safeResampleConfig.metric],
   )
   const resampleBucketHelper =
-    safeResampleConfig.dimension === 'time' && safeResampleConfig.bucket === 'auto'
+    (safeResampleConfig.dimensionKind === 'temporal' || safeResampleConfig.dimension === 'time') &&
+    safeResampleConfig.bucket === 'auto'
       ? `Auto bucket: ${resampleState.resolvedBucket}`
-      : ''
+      : safeResampleConfig.dimensionKind === 'numeric'
+        ? 'Buckets group numeric values into ranges'
+        : ''
+  const bucketOptions =
+    safeResampleConfig.dimensionKind === 'numeric' ? RESAMPLE_NUMERIC_BUCKET_OPTIONS : RESAMPLE_BUCKET_OPTIONS
   const applyResampleConfig = useCallback(
     (nextConfig) => {
       if (!activeTemplateId) return
-      const computation = buildResampleComputation(activeTemplateResult?.batchMetrics, nextConfig)
+      const computation = buildResampleComputation(
+        activeTemplateResult?.batchMetrics,
+        nextConfig,
+        activeNumericBins,
+        activeTemplateResult?.categoryGroups,
+      )
       onResampleFilter(activeTemplateId, {
         config: {
           ...nextConfig,
@@ -249,13 +346,25 @@ function GenerateAndDownload({
         allowedBatchIds: computation.allowedIds ? Array.from(computation.allowedIds) : null,
       })
     },
-    [activeTemplateId, activeTemplateResult?.batchMetrics, onResampleFilter],
+    [activeTemplateId, activeTemplateResult?.batchMetrics, activeNumericBins, activeTemplateResult?.categoryGroups, onResampleFilter],
   )
   const handleResampleSelectorChange = useCallback(
     (field) => (event) => {
       const { value } = event?.target || {}
       if (value == null) return
       const nextConfig = { ...safeResampleConfig, [field]: value }
+      if (field === 'dimension') {
+        const selectedDim = dimensionOptions.find((opt) => opt.value === value)
+        const rawKind = selectedDim?.kind || selectedDim?.type || DEFAULT_RESAMPLE_CONFIG.dimensionKind
+        const kindText = (rawKind || '').toString().toLowerCase()
+        if (kindText.includes('time') || kindText.includes('date')) {
+          nextConfig.dimensionKind = 'temporal'
+        } else if (kindText.includes('num')) {
+          nextConfig.dimensionKind = 'numeric'
+        } else {
+          nextConfig.dimensionKind = 'categorical'
+        }
+      }
       if (field !== 'range') {
         nextConfig.range = null
       }
@@ -338,14 +447,16 @@ function GenerateAndDownload({
     },
     onSuccess: (data) => {
       const charts = Array.isArray(data?.charts) ? data.charts : []
-      setChartSuggestions(charts)
+      const sampleData = Array.isArray(data?.sampleData) ? data.sampleData : null
+      const fallbackCharts = charts.length === 0 ? buildFallbackChartsFromSample(sampleData) : []
+      const nextCharts = fallbackCharts.length ? fallbackCharts : charts
+      setChartSuggestions(nextCharts)
       setSelectedChartId((prev) => {
-        if (prev && charts.some((chart) => chart.id === prev)) return prev
-        return charts[0]?.id || null
+        if (prev && nextCharts.some((chart) => chart.id === prev)) return prev
+        return nextCharts[0]?.id || null
       })
       setSelectedSavedChartId(null)
       setSelectedChartSource('suggestion')
-      const sampleData = Array.isArray(data?.sampleData) ? data.sampleData : null
       setChartSampleData(sampleData && sampleData.length ? sampleData : null)
     },
     onError: (error) => {
@@ -596,6 +707,14 @@ function GenerateAndDownload({
               />
             </Stack>
             {!!subline && <Typography variant="caption" color="text.secondary">{subline}</Typography>}
+            {activeDateRange && (
+              <Typography variant="caption" color="text.secondary">
+                Range: {activeDateRange.start} → {activeDateRange.end}
+                {activeDateRange.time_start && activeDateRange.time_end
+                  ? ` • data ${activeDateRange.time_start} → ${activeDateRange.time_end}`
+                  : ''}
+              </Typography>
+            )}
           </Stack>
           <Stack
             direction={{ xs: 'column', sm: 'row' }}
@@ -879,15 +998,17 @@ function GenerateAndDownload({
                     label="Time bucket"
                     value={safeResampleConfig.bucket}
                     onChange={handleResampleSelectorChange('bucket')}
-                    disabled={safeResampleConfig.dimension !== 'time'}
+                    disabled={!bucketOptions.length || safeResampleConfig.dimensionKind === 'categorical'}
                     helperText={
-                      safeResampleConfig.dimension === 'time'
+                      safeResampleConfig.dimensionKind === 'temporal'
                         ? resampleBucketHelper
-                        : 'Only applies to time dimension'
+                        : safeResampleConfig.dimensionKind === 'numeric'
+                          ? 'Applies to numeric bucketing'
+                          : 'Not applicable to this dimension'
                     }
                     sx={{ minWidth: { xs: '100%', lg: 180 } }}
                   >
-                    {RESAMPLE_BUCKET_OPTIONS.map((option) => (
+                    {bucketOptions.map((option) => (
                       <MenuItem key={option.value} value={option.value}>
                         {option.label}
                       </MenuItem>

@@ -6,6 +6,8 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Callable
 
 from ..state import state_store
+from src.services.report_service import JobRunTracker, _build_job_steps, _step_progress_from_steps
+from backend.app.features.generate.schemas.reports import RunPayload
 
 logger = logging.getLogger("neura.scheduler")
 
@@ -96,6 +98,8 @@ class ReportScheduler:
     async def _run_schedule(self, schedule: dict) -> None:
         schedule_id = schedule.get("id")
         started = _now_utc()
+        correlation_id = f"sched-{schedule_id or 'job'}-{started.timestamp():.0f}"
+        job_tracker: JobRunTracker | None = None
         try:
             payload = {
                 "template_id": schedule.get("template_id"),
@@ -118,7 +122,35 @@ class ReportScheduler:
                 "schedule_name": schedule.get("name"),
             }
             kind = schedule.get("template_kind") or "pdf"
-            result = await asyncio.to_thread(self._runner, payload, kind)
+            try:
+                run_payload = RunPayload(**payload)
+            except Exception:
+                run_payload = None
+            if run_payload is not None:
+                steps = _build_job_steps(run_payload, kind=kind)
+                meta = {
+                    "start_date": payload.get("start_date"),
+                    "end_date": payload.get("end_date"),
+                    "schedule_id": schedule_id,
+                    "schedule_name": schedule.get("name"),
+                    "docx": bool(payload.get("docx")),
+                    "xlsx": bool(payload.get("xlsx")),
+                }
+                job_record = state_store.create_job(
+                    job_type="run_report",
+                    template_id=run_payload.template_id,
+                    connection_id=run_payload.connection_id,
+                    template_name=schedule.get("template_name") or run_payload.template_id,
+                    template_kind=kind,
+                    schedule_id=schedule_id,
+                    correlation_id=correlation_id,
+                    steps=steps,
+                    meta=meta,
+                )
+                step_progress = _step_progress_from_steps(steps)
+                job_tracker = JobRunTracker(job_record.get("id"), correlation_id=correlation_id, step_progress=step_progress)
+                job_tracker.start()
+            result = await asyncio.to_thread(self._runner, payload, kind, job_tracker=job_tracker)
         except Exception as exc:
             finished = _now_utc()
             next_run = _next_run_datetime(schedule, finished).isoformat()
@@ -139,6 +171,8 @@ class ReportScheduler:
                     "error": str(exc),
                 },
             )
+            if job_tracker:
+                job_tracker.fail(str(exc))
         else:
             finished = _now_utc()
             next_run = _next_run_datetime(schedule, finished).isoformat()
@@ -166,6 +200,8 @@ class ReportScheduler:
                     "pdf": artifacts.get("pdf_url"),
                 },
             )
+            if job_tracker:
+                job_tracker.succeed(result)
         finally:
             if schedule_id in self._inflight:
                 self._inflight.remove(schedule_id)

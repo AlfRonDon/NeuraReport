@@ -340,16 +340,20 @@ export default function GeneratePage() {
           }
         })
         const fieldCatalog = Array.isArray(data.field_catalog) ? data.field_catalog : []
-        const defaultDimension = fieldCatalog.some((field) => field?.name === 'time')
-          ? 'time'
-          : fieldCatalog.some((field) => field?.name === 'category')
-            ? 'category'
-            : 'batch_index'
-        const defaultMetric = fieldCatalog.some((field) => field?.name === 'rows')
-          ? 'rows'
-          : fieldCatalog.some((field) => field?.name === 'rows_per_parent')
-            ? 'rows_per_parent'
-            : 'parent'
+        const discoverySchema = data.discovery_schema && typeof data.discovery_schema === 'object' ? data.discovery_schema : null
+        const defaultDimension = discoverySchema?.defaults?.dimension
+          || (fieldCatalog.some((field) => field?.name === 'time')
+            ? 'time'
+            : fieldCatalog.some((field) => field?.name === 'category')
+              ? 'category'
+              : 'batch_index')
+        const defaultMetric = discoverySchema?.defaults?.metric
+          || (fieldCatalog.some((field) => field?.name === 'rows')
+            ? 'rows'
+            : fieldCatalog.some((field) => field?.name === 'rows_per_parent')
+              ? 'rows_per_parent'
+              : 'parent')
+        const dimensionKind = discoverySchema?.dimensions?.find?.((dim) => dim?.name === defaultDimension)?.kind || 'categorical'
         const rawMetrics = Array.isArray(data.batch_metrics) ? data.batch_metrics : null
         const batchMetricsSource = rawMetrics && rawMetrics.length ? rawMetrics : normalizedBatches
         const batchMetrics = batchMetricsSource.map((entry, index) => {
@@ -379,11 +383,15 @@ export default function GeneratePage() {
             normalizedBatches.reduce((acc, batch) => acc + (batch.rows || 0), 0),
           fieldCatalog,
           batchMetrics,
+          discoverySchema,
+          numericBins: data.numeric_bins && typeof data.numeric_bins === 'object' ? data.numeric_bins : {},
+          categoryGroups: data.category_groups && typeof data.category_groups === 'object' ? data.category_groups : {},
           resample: {
             config: {
               ...DEFAULT_RESAMPLE_CONFIG,
               dimension: defaultDimension,
               metric: defaultMetric,
+              dimensionKind,
             },
             filteredIds: null,
           },
@@ -579,6 +587,10 @@ export default function GeneratePage() {
           setOutputFormats={setOutputFormats}
           tagFilter={tagFilter}
           setTagFilter={setTagFilter}
+          onEditTemplate={(tpl) => {
+            if (!tpl?.id) return
+            navigate(`/templates/${tpl.id}/edit`)
+          }}
         />
         </Grid>
         <Grid size={12} sx={{ minWidth: 0 }}>

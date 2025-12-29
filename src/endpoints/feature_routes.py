@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import os
 
 from fastapi import HTTPException
 
@@ -10,17 +11,12 @@ from backend.app.features.generate.routes.saved_charts_routes import build_saved
 from backend.app.features.generate.schemas.reports import DiscoverPayload
 from backend.app.features.generate.services.chart_suggestions_service import suggest_charts as suggest_charts_service
 from backend.app.features.generate.services.discovery_service import discover_reports as discover_reports_service
-from backend.app.features.prompts.llm_prompts_charts import (
+from backend.app.services.prompts.llm_prompts_charts import (
     CHART_SUGGEST_PROMPT_VERSION,
     build_chart_suggestions_prompt,
 )
-from backend.app.features.prompts.llm_prompts import (
-    PROMPT_VERSION,
-    PROMPT_VERSION_3_5,
-    PROMPT_VERSION_4,
-)
+from backend.app.services.prompts.llm_prompts import PROMPT_VERSION, PROMPT_VERSION_3_5, PROMPT_VERSION_4
 from backend.app.services.contract.ContractBuilderV2 import load_contract_v2
-from backend.app.services.prompts.llm_prompts import MODEL
 from backend.app.services.state import state_store
 from backend.app.services.utils import call_chat_completion, get_correlation_id, strip_code_fences
 from backend.app.services.utils.artifacts import load_manifest
@@ -37,6 +33,8 @@ _build_sample_data_rows = lambda batches, metadata=None, limit=100: build_batch_
     metadata or {},
     limit=limit,
 )
+
+DEFAULT_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
 
 
 def _ensure_template_exists(template_id: str) -> tuple[str, dict]:
@@ -64,7 +62,7 @@ def build_feature_routers():
         call_chat_completion_fn=lambda **kwargs: call_chat_completion(
             get_openai_client(), **kwargs, description=CHART_SUGGEST_PROMPT_VERSION
         ),
-        model=MODEL,
+        model=DEFAULT_MODEL,
         strip_code_fences_fn=strip_code_fences,
         get_correlation_id_fn=get_correlation_id,
         logger=logger,

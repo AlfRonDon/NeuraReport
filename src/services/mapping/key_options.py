@@ -102,6 +102,7 @@ def mapping_key_options(
     contract_filters_required: dict[str, str] = {}
     contract_filters_optional: dict[str, str] = {}
     contract_date_columns: dict[str, str] = {}
+    contract_join: dict[str, Any] = {}
     contract_path = template_dir_path / "contract.json"
     if contract_path.exists():
         try:
@@ -113,6 +114,10 @@ def mapping_key_options(
             contract_filters_optional,
             contract_date_columns,
         ) = extract_contract_metadata(contract_data)
+        if isinstance(contract_data, dict):
+            join_section = contract_data.get("join")
+            if isinstance(join_section, dict):
+                contract_join = join_section
 
     db_path = db_path_from_payload_or_default(effective_connection_id)
     verify_sqlite(db_path)
@@ -125,6 +130,10 @@ def mapping_key_options(
         "tokens_available": keys_available,
         "token_details": {},
     }
+
+    # Optional local fallback DB for templates that ship auxiliary lookup tables
+    # (e.g., runtime_machine_keys.db) alongside their artifacts.
+    fallback_db_path = template_dir_path / "runtime_machine_keys.db"
 
     with sqlite3.connect(str(db_path)) as con:
         con.row_factory = sqlite3.Row
@@ -139,16 +148,89 @@ def mapping_key_options(
                 options[token] = []
                 continue
             date_column_name = contract_date_columns.get(table_clean.lower())
-            rows, token_debug = execute_token_query(
-                con,
-                token=token,
-                table_clean=table_clean,
-                column_clean=column_clean,
-                date_column_name=date_column_name,
-                start_date=start_date,
-                end_date=end_date,
-                limit_value=limit_value,
+
+            def _schema_machine_columns(connection):
+                parent_table = str(contract_join.get("parent_table") or "").strip() or "neuract__RUNHOURS"
+                try:
+                    pragma_rows = list(
+                        connection.execute(f"PRAGMA table_info('{parent_table.replace(\"'\", \"''\")}')")
+                    )
+                    columns = [row[1] for row in pragma_rows if len(row) > 1]
+                except Exception as exc:  # pragma: no cover - defensive
+                    return [], {"error": str(exc), "table": parent_table}
+
+                filtered = [col for col in columns if "hrs" in str(col or "").lower()]
+                filtered.sort()
+                limited = filtered[:limit_value]
+                return limited, {
+                    "table": parent_table,
+                    "column_source": "schema_columns",
+                    "row_count": len(limited),
+                }
+
+            # Primary logic: derive machine names from runtime schema columns containing "HRS".
+            if token == "machine_name":
+                rows, token_debug = _schema_machine_columns(con)
+                if binding_source:
+                    token_debug["binding_source"] = binding_source
+                options[token] = rows
+                debug_payload["token_details"][token] = token_debug
+                continue
+
+            def _run_query(connection, *, mark_fallback: bool = False):
+                rows_inner, debug_inner = execute_token_query(
+                    connection,
+                    token=token,
+                    table_clean=table_clean,
+                    column_clean=column_clean,
+                    date_column_name=date_column_name,
+                    start_date=start_date,
+                    end_date=end_date,
+                    limit_value=limit_value,
+                )
+                if mark_fallback:
+                    debug_inner["fallback_db"] = str(fallback_db_path)
+                return rows_inner, debug_inner
+
+            rows, token_debug = _run_query(con)
+
+            def _fallback_schema_columns(con_ref):
+                fallback_table = str(contract_join.get("parent_table") or "").strip()
+                if not fallback_table:
+                    fallback_table = "neuract__RUNHOURS"
+                try:
+                    pragma_rows = list(
+                        con_ref.execute(f"PRAGMA table_info('{fallback_table.replace(\"'\", \"''\")}')")
+                    )
+                    columns = [row[1] for row in pragma_rows if len(row) > 1]
+                except Exception as exc:  # pragma: no cover - defensive
+                    return [], {"fallback_error": str(exc), "fallback_table": fallback_table}
+
+                filtered = [col for col in columns if "hrs" in str(col or "").lower()]
+                filtered.sort()
+                return filtered[:limit_value], {"fallback_table": fallback_table}
+
+            needs_fallback = (
+                not rows
+                and fallback_db_path.exists()
+                and isinstance(token_debug.get("error"), str)
+                and "no such table" in token_debug["error"].lower()
             )
+            if needs_fallback:
+                with sqlite3.connect(str(fallback_db_path)) as fallback_con:
+                    fallback_con.row_factory = sqlite3.Row
+                    rows, token_debug = _run_query(fallback_con, mark_fallback=True)
+            elif not rows and isinstance(token_debug.get("error"), str):
+                err_text = token_debug.get("error", "").lower()
+                if "no such table" in err_text or "no such column" in err_text:
+                    fallback_rows, fallback_meta = _fallback_schema_columns(con)
+                    if fallback_rows:
+                        rows = fallback_rows
+                        token_debug["fallback_used"] = True
+                        token_debug["fallback_source"] = "schema_columns"
+                        token_debug["row_count"] = len(rows)
+                    token_debug.update(fallback_meta)
+
             if binding_source:
                 token_debug["binding_source"] = binding_source
             options[token] = rows

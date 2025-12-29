@@ -1008,6 +1008,9 @@ class StateStore:
 
         return self._update_job_record(job_id, mutator)
 
+    def cancel_job(self, job_id: str) -> Optional[dict]:
+        return self.record_job_completion(job_id, status="cancelled", error="Cancelled by user", result=None)
+
     # ------------------------------------------------------------------
     # last-used helpers
     # ------------------------------------------------------------------

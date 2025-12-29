@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import importlib
 import json
 import logging
 import time
@@ -14,7 +15,7 @@ from backend.app.services.contract.ContractBuilderV2 import ContractBuilderError
 from backend.app.services.generator.GeneratorAssetsV1 import GeneratorAssetsError, build_generator_assets_from_payload
 from backend.app.services.prompts.llm_prompts import PROMPT_VERSION, PROMPT_VERSION_3_5, PROMPT_VERSION_4
 from backend.app.services.state import state_store
-from backend.app.services.templates.TemplateVerify import render_html_to_png
+from backend.app.services.templates.TemplateVerify import render_html_to_png, render_panel_preview
 from backend.app.services.utils import (
     TemplateLockError,
     acquire_template_lock,
@@ -28,6 +29,7 @@ from src.utils.connection_utils import db_path_from_payload_or_default
 from src.utils.template_utils import artifact_url, manifest_endpoint, template_dir
 from src.utils.mapping_utils import mapping_keys_path, normalize_key_tokens, write_mapping_keys
 from src.services.mapping.helpers import (
+    build_catalog_from_db as _build_catalog_from_db,
     compute_db_signature,
     http_error as _http_error,
     load_mapping_step3 as _load_mapping_step3,
@@ -46,6 +48,14 @@ async def run_mapping_approve(
     kind: str = "pdf",
 ):
     correlation_id = getattr(request.state, "correlation_id", None)
+    try:
+        api_mod = importlib.import_module("backend.api")
+    except Exception:
+        api_mod = None
+    contract_builder = getattr(api_mod, "build_or_load_contract_v2", build_or_load_contract_v2)
+    generator_builder = getattr(api_mod, "build_generator_assets_from_payload", build_generator_assets_from_payload)
+    render_html_fn = getattr(api_mod, "render_html_to_png", render_html_to_png)
+    render_panel_fn = getattr(api_mod, "render_panel_preview", render_panel_preview)
     logger.info(
         "mapping_approve_start",
         extra={
@@ -229,7 +239,7 @@ async def run_mapping_approve(
             )
             try:
                 final_html_text = final_html_path.read_text(encoding="utf-8", errors="ignore")
-                contract_result = build_or_load_contract_v2(
+                contract_result = contract_builder(
                     template_dir=template_dir_path,
                     catalog=catalog,
                     final_template_html=final_html_text,
@@ -322,7 +332,7 @@ async def run_mapping_approve(
             generator_dialect = payload.generator_dialect or payload.dialect_hint or "duckdb"
             yield start_stage(stage_key, stage_label, progress=80, dialect=generator_dialect)
             try:
-                generator_result = build_generator_assets_from_payload(
+                generator_result = generator_builder(
                     template_dir=template_dir_path,
                     step4_output=contract_result,
                     final_template_html=final_html_path.read_text(encoding="utf-8", errors="ignore"),
@@ -396,7 +406,7 @@ async def run_mapping_approve(
             try:
                 yield start_stage(stage_key, stage_label, progress=95)
                 thumb_path = final_html_path.parent / "report_final.png"
-                asyncio.run(render_html_to_png(final_html_path, thumb_path))
+                asyncio.run(render_html_fn(final_html_path, thumb_path))
                 thumbnail_url = artifact_url(thumb_path)
                 write_artifact_manifest(
                     template_dir_path,
@@ -517,6 +527,3 @@ async def run_mapping_approve(
 
     headers = {"Content-Type": "application/x-ndjson"}
     return StreamingResponse(event_stream(), headers=headers, media_type="application/x-ndjson")
-
-def run_corrections_preview(
-
