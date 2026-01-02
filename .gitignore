@@ -49,7 +49,12 @@ frontend/.eslintcache
 frontend/.cache/
 
 # Generated runtime data
-uploads/
+uploads/*
+!uploads/.gitkeep
+backend/uploads/*
+!backend/uploads/.gitkeep
+backend/uploads_excel/*
+!backend/uploads_excel/.gitkeep
 NeuraReport-backup-no-venv.zip
 __tmp_*.py
 __tmp_*.pdf
@@ -61,6 +66,7 @@ test_counter.html
 
 # Local state snapshots / diagnostics
 backend/state/state.json
+backend/state/.secret
 backend/llm_raw_outputs.md
 
 # Build artifacts
@@ -75,6 +81,7 @@ _tauri_sync_pr/
 
 # Large local artifacts / data
 Coastal feeds/
-uploads_excel/
+uploads_excel/*
+!uploads_excel/.gitkeep
 debug_tmp_root/
 NeuraReport/
