@@ -1,0 +1,247 @@
+{
+  "parameters": {
+    "required": [
+      {
+        "name": "from_date",
+        "type": "date",
+        "description": "Inclusive lower-bound for neuract__Flowmeters.timestamp_utc when aggregating daily usage. Use YYYY-MM-DD.",
+        "example": "2025-01-01"
+      },
+      {
+        "name": "to_date",
+        "type": "date",
+        "description": "Inclusive upper-bound for neuract__Flowmeters.timestamp_utc when aggregating daily usage. Use YYYY-MM-DD.",
+        "example": "2025-01-31"
+      }
+    ],
+    "optional": []
+  },
+  "datasets": [
+    {
+      "alias": "rows",
+      "source_table": "neuract__Flowmeters",
+      "description": "Time-series rows of flowmeter readings filtered by timestamp range.",
+      "columns": [
+        {
+          "as": "row_date",
+          "from": "neuract__Flowmeters.timestamp_utc"
+        },
+        {
+          "as": "row_basement_to_tob_raw_water_fm_1",
+          "from": "neuract__Flowmeters.BASEMENT_TO_TOB_RAW_WATER_FM_1"
+        },
+        {
+          "as": "row_limeplant_to_etp_fm_2",
+          "from": "neuract__Flowmeters.LIMEPLANT_TO_ETP_FM_2"
+        },
+        {
+          "as": "row_di_raw_inlet_fm_3",
+          "from": "neuract__Flowmeters.DI_RAW_INLET_FM_3"
+        },
+        {
+          "as": "row_di_scrubbers_fm_4",
+          "from": "neuract__Flowmeters.DI_SCRUBBERS_FM_4"
+        },
+        {
+          "as": "row_phase_2_raw_water_fm_5",
+          "from": "neuract__Flowmeters.PHASE_2_RAW_WATER_FM_5"
+        },
+        {
+          "as": "row_tw_to_earth_pits_fm_6",
+          "from": "neuract__Flowmeters.TW_TO_EARTH_PITS_FM_6"
+        },
+        {
+          "as": "row_rw_phase_2_scrubber_line_fm_7",
+          "from": "neuract__Flowmeters.RW_PHASE_2_SCRUBBER_LINE_FM_7"
+        },
+        {
+          "as": "row_tw_admin_fm_8",
+          "from": "neuract__Flowmeters.TW_ADMIN_FM_8"
+        },
+        {
+          "as": "row_soft_to_cooling_towers_fm_9",
+          "from": "neuract__Flowmeters.SOFT_TO_COOLING_TOWERS_FM_9"
+        },
+        {
+          "as": "row_rw_admin_fm_10",
+          "from": "neuract__Flowmeters.RW_ADMIN_FM_10"
+        },
+        {
+          "as": "row_rw_utility_toilets_fm_11",
+          "from": "neuract__Flowmeters.RW_UTILITY_TOILETS_FM_11"
+        },
+        {
+          "as": "row_tw_utility_toilets_fm_12",
+          "from": "neuract__Flowmeters.TW_UTILITY_TOILETS_FM_12"
+        },
+        {
+          "as": "row_storage_to_phase_1_fm_13",
+          "from": "neuract__Flowmeters.STORAGE_TO_PHASE_1_FM_13"
+        },
+        {
+          "as": "row_hmwssb_phase_1_fm_14",
+          "from": "neuract__Flowmeters.HMWSSB_PHASE_1_FM_14"
+        },
+        {
+          "as": "row_pond_to_topcon_fm_15",
+          "from": "neuract__Flowmeters.POND_TO_TOPCON_FM_15"
+        },
+        {
+          "as": "row_hmwssb_to_topcon_fm_16",
+          "from": "neuract__Flowmeters.HMWSSB_TO_TOPCON_FM_16"
+        },
+        {
+          "as": "row_basement_to_tob_treated_water_fm_17",
+          "from": "neuract__Flowmeters.BASEMENT_TO_TOB_TREATED_WATER_FM_17"
+        },
+        {
+          "as": "row_raw_to_utility_toilets_2_fm_18",
+          "from": "neuract__Flowmeters.RAW_TO_UTILITY_TOILETS_2_FM_18"
+        },
+        {
+          "as": "row_condensed_line_fm_19",
+          "from": "neuract__Flowmeters.CONDENSED_LINE_FM_19"
+        },
+        {
+          "as": "row_tw_shed_b_toilets_fm_20",
+          "from": "neuract__Flowmeters.TW_SHED_B_TOILETS_FM_20"
+        },
+        {
+          "as": "row_rw_to_shed_b_toilets_fm_21",
+          "from": "neuract__Flowmeters.RW_TO_SHED_B_TOILETS_FM_21"
+        },
+        {
+          "as": "row_cooling_towers_to_ro_fm_22",
+          "from": "neuract__Flowmeters.COOLING_TOWERS_TO_RO_FM_22"
+        },
+        {
+          "as": "row_p2_zld_to_topcon_zld_fm_23",
+          "from": "neuract__Flowmeters.P2_ZLD_TO_TOPCON_ZLD_FM_23"
+        }
+      ],
+      "filters": [
+        "neuract__Flowmeters.timestamp_utc >= PARAM:from_date",
+        "neuract__Flowmeters.timestamp_utc <= PARAM:to_date"
+      ],
+      "order_by": [
+        "neuract__Flowmeters.timestamp_utc ASC"
+      ]
+    }
+  ],
+  "reshape_rules": [
+    {
+      "strategy": "select",
+      "alias": "rows",
+      "from": "neuract__Flowmeters",
+      "columns": [
+        {
+          "as": "row_date",
+          "from": "neuract__Flowmeters.timestamp_utc"
+        },
+        {
+          "as": "row_basement_to_tob_raw_water_fm_1",
+          "from": "neuract__Flowmeters.BASEMENT_TO_TOB_RAW_WATER_FM_1"
+        },
+        {
+          "as": "row_limeplant_to_etp_fm_2",
+          "from": "neuract__Flowmeters.LIMEPLANT_TO_ETP_FM_2"
+        },
+        {
+          "as": "row_di_raw_inlet_fm_3",
+          "from": "neuract__Flowmeters.DI_RAW_INLET_FM_3"
+        },
+        {
+          "as": "row_di_scrubbers_fm_4",
+          "from": "neuract__Flowmeters.DI_SCRUBBERS_FM_4"
+        },
+        {
+          "as": "row_phase_2_raw_water_fm_5",
+          "from": "neuract__Flowmeters.PHASE_2_RAW_WATER_FM_5"
+        },
+        {
+          "as": "row_tw_to_earth_pits_fm_6",
+          "from": "neuract__Flowmeters.TW_TO_EARTH_PITS_FM_6"
+        },
+        {
+          "as": "row_rw_phase_2_scrubber_line_fm_7",
+          "from": "neuract__Flowmeters.RW_PHASE_2_SCRUBBER_LINE_FM_7"
+        },
+        {
+          "as": "row_tw_admin_fm_8",
+          "from": "neuract__Flowmeters.TW_ADMIN_FM_8"
+        },
+        {
+          "as": "row_soft_to_cooling_towers_fm_9",
+          "from": "neuract__Flowmeters.SOFT_TO_COOLING_TOWERS_FM_9"
+        },
+        {
+          "as": "row_rw_admin_fm_10",
+          "from": "neuract__Flowmeters.RW_ADMIN_FM_10"
+        },
+        {
+          "as": "row_rw_utility_toilets_fm_11",
+          "from": "neuract__Flowmeters.RW_UTILITY_TOILETS_FM_11"
+        },
+        {
+          "as": "row_tw_utility_toilets_fm_12",
+          "from": "neuract__Flowmeters.TW_UTILITY_TOILETS_FM_12"
+        },
+        {
+          "as": "row_storage_to_phase_1_fm_13",
+          "from": "neuract__Flowmeters.STORAGE_TO_PHASE_1_FM_13"
+        },
+        {
+          "as": "row_hmwssb_phase_1_fm_14",
+          "from": "neuract__Flowmeters.HMWSSB_PHASE_1_FM_14"
+        },
+        {
+          "as": "row_pond_to_topcon_fm_15",
+          "from": "neuract__Flowmeters.POND_TO_TOPCON_FM_15"
+        },
+        {
+          "as": "row_hmwssb_to_topcon_fm_16",
+          "from": "neuract__Flowmeters.HMWSSB_TO_TOPCON_FM_16"
+        },
+        {
+          "as": "row_basement_to_tob_treated_water_fm_17",
+          "from": "neuract__Flowmeters.BASEMENT_TO_TOB_TREATED_WATER_FM_17"
+        },
+        {
+          "as": "row_raw_to_utility_toilets_2_fm_18",
+          "from": "neuract__Flowmeters.RAW_TO_UTILITY_TOILETS_2_FM_18"
+        },
+        {
+          "as": "row_condensed_line_fm_19",
+          "from": "neuract__Flowmeters.CONDENSED_LINE_FM_19"
+        },
+        {
+          "as": "row_tw_shed_b_toilets_fm_20",
+          "from": "neuract__Flowmeters.TW_SHED_B_TOILETS_FM_20"
+        },
+        {
+          "as": "row_rw_to_shed_b_toilets_fm_21",
+          "from": "neuract__Flowmeters.RW_TO_SHED_B_TOILETS_FM_21"
+        },
+        {
+          "as": "row_cooling_towers_to_ro_fm_22",
+          "from": "neuract__Flowmeters.COOLING_TOWERS_TO_RO_FM_22"
+        },
+        {
+          "as": "row_p2_zld_to_topcon_zld_fm_23",
+          "from": "neuract__Flowmeters.P2_ZLD_TO_TOPCON_ZLD_FM_23"
+        }
+      ],
+      "filters": [
+        "neuract__Flowmeters.timestamp_utc >= PARAM:from_date",
+        "neuract__Flowmeters.timestamp_utc <= PARAM:to_date"
+      ],
+      "order_by": [
+        "neuract__Flowmeters.timestamp_utc ASC"
+      ]
+    }
+  ],
+  "order_by": {
+    "rows": "rows.timestamp_utc ASC"
+  },
+  "row_order": "ASC"
+}

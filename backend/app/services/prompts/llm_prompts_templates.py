@@ -81,15 +81,63 @@ def _build_messages(
 
 
 def _coerce_score(value: Any) -> float:
+    """Coerce a value to a score between 0.0 and 1.0."""
     try:
         score = float(value)
-    except Exception:
+    except (TypeError, ValueError):
+        return 0.0
+    # Handle NaN and inf
+    if score != score or score == float('inf') or score == float('-inf'):
         return 0.0
     if score < 0.0:
         return 0.0
     if score > 1.0:
         return 1.0
     return score
+
+
+def _extract_json_object(text: str) -> str | None:
+    """
+    Extract the first complete JSON object from text.
+    Uses bracket counting to find matching braces.
+    """
+    if not text:
+        return None
+
+    # Find the first opening brace
+    start = text.find('{')
+    if start == -1:
+        return None
+
+    # Count braces to find matching close
+    depth = 0
+    in_string = False
+    escape_next = False
+
+    for i, char in enumerate(text[start:], start):
+        if escape_next:
+            escape_next = False
+            continue
+
+        if char == '\\' and in_string:
+            escape_next = True
+            continue
+
+        if char == '"' and not escape_next:
+            in_string = not in_string
+            continue
+
+        if in_string:
+            continue
+
+        if char == '{':
+            depth += 1
+        elif char == '}':
+            depth -= 1
+            if depth == 0:
+                return text[start:i + 1]
+
+    return None
 
 
 def _parse_recommendations(raw_text: str) -> list[dict]:
@@ -101,15 +149,14 @@ def _parse_recommendations(raw_text: str) -> list[dict]:
     try:
         payload = json.loads(text)
     except json.JSONDecodeError:
-        # Attempt to salvage the first JSON object in the text.
-        start = text.find("{")
-        end = text.rfind("}")
-        if start == -1 or end == -1 or end <= start:
+        # Attempt to extract the first complete JSON object
+        json_str = _extract_json_object(text)
+        if not json_str:
             return []
-        snippet = text[start : end + 1]
         try:
-            payload = json.loads(snippet)
-        except Exception:
+            payload = json.loads(json_str)
+        except json.JSONDecodeError:
+            logger.warning("Failed to parse template recommendation JSON")
             return []
 
     if not isinstance(payload, dict):
@@ -118,6 +165,7 @@ def _parse_recommendations(raw_text: str) -> list[dict]:
     if not isinstance(raw_recs, Iterable):
         return []
 
+    # Get catalog IDs for validation (if available)
     results: list[dict] = []
     for item in raw_recs:
         if not isinstance(item, Mapping):

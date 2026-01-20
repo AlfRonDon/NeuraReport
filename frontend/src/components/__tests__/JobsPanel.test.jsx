@@ -123,7 +123,7 @@ describe('JobsPanel', () => {
     expect(screen.getAllByText('Template Beta').length).toBeGreaterThan(0)
     expect(screen.getAllByText('Template Gamma').length).toBeGreaterThan(0)
     expect(screen.getAllByText('Running').length).toBeGreaterThan(0)
-    expect(screen.getAllByText('Succeeded').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('Completed').length).toBeGreaterThan(0)
     expect(screen.getAllByText('Failed').length).toBeGreaterThan(0)
     expect(screen.getByText('Disk failure')).toBeTruthy()
     expect(screen.getByText('Primary Warehouse')).toBeTruthy()
@@ -141,15 +141,15 @@ describe('JobsPanel', () => {
     expect(screen.getAllByText('DB load').length).toBeGreaterThan(0)
     expect(screen.getAllByText('Render PDF').length).toBeGreaterThan(0)
     // chip text for succeeded step should be visible alongside label
-    expect(screen.getAllByText('Succeeded').length).toBeGreaterThan(1)
+    expect(screen.getAllByText('Completed').length).toBeGreaterThan(1)
   })
 
-  it('navigates back to Generate when requested', () => {
+  it('navigates to Reports when requested', () => {
     const { onClose } = renderJobsPanel()
     const card = screen.getByText('Template Beta').closest('[data-testid="job-card"]')
     expect(card).toBeTruthy()
-    fireEvent.click(within(card).getByRole('button', { name: /Open Generate/i }))
-    expect(mockNavigate).toHaveBeenCalledWith('/generate', { state: { focusTemplateId: 'tpl-2' } })
+    fireEvent.click(within(card).getByRole('button', { name: /Open Report/i }))
+    expect(mockNavigate).toHaveBeenCalledWith('/reports?template=tpl-2')
     expect(onClose).toHaveBeenCalled()
   })
 
@@ -158,7 +158,7 @@ describe('JobsPanel', () => {
     const card = screen.getByText('Template Alpha').closest('[data-testid="job-card"]')
     expect(card).toBeTruthy()
     fireEvent.click(within(card).getByRole('button', { name: /Go to Setup/i }))
-    expect(mockNavigate).toHaveBeenCalledWith('/', { state: { focusConnectionId: 'conn-1' } })
+    expect(mockNavigate).toHaveBeenCalledWith('/setup/wizard')
     expect(onClose).toHaveBeenCalled()
   })
 

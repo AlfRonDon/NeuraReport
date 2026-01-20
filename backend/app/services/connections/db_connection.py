@@ -61,9 +61,14 @@ def resolve_db_path(connection_id: str | None, db_url: str | None, db_path: str 
     # b) db_url (preferred)
     db_url = _strip_quotes(db_url)
     if db_url:
-        if not db_url.startswith("sqlite:"):
+        parsed = urlparse(db_url)
+        if parsed.scheme:
+            if parsed.scheme.lower() == "sqlite":
+                return Path(_sqlite_path_from_url(db_url))
+            if len(parsed.scheme) == 1 and db_url[1:3] in (":\\", ":/"):
+                return Path(db_url)
             raise RuntimeError("Only sqlite URLs are supported for now")
-        return Path(_sqlite_path_from_url(db_url))
+        return Path(db_url)
 
     # c) db_path (legacy)
     db_path = _strip_quotes(db_path)

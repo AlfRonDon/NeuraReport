@@ -80,3 +80,8 @@ class TemplateRecommendation(BaseModel):
 
 class TemplateRecommendResponse(BaseModel):
     recommendations: list[TemplateRecommendation]
+
+
+class LastUsedPayload(BaseModel):
+    connection_id: Optional[str] = None
+    template_id: Optional[str] = None

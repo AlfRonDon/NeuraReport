@@ -372,6 +372,15 @@ def xlsx_to_html_preview(
         html_text, schema_payload = sheet_prototype_html, None
     else:
         html_text, schema_payload = _request_excel_llm_template(snapshot, sheet_prototype_html)
+        tokens_expected = set(placeholder_tokens)
+        tokens_present = set(extract_tokens(normalize_token_braces(html_text)))
+        missing_tokens = sorted(tokens_expected - tokens_present)
+        if missing_tokens:
+            logger.warning(
+                "excel_llm_missing_tokens",
+                extra={"event": "excel_llm_missing_tokens", "missing": missing_tokens},
+            )
+            html_text, schema_payload = sheet_prototype_html, None
     html_path = out_dir / "template_p1.html"
     html_path.write_text(html_text, encoding="utf-8")
 

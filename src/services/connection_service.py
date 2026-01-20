@@ -7,13 +7,17 @@ from typing import Any, Optional
 from fastapi import HTTPException
 
 from backend.app.services.connections.db_connection import resolve_db_path, save_connection, verify_sqlite
-from backend.app.services.state import state_store
+from backend.app.services.state import store as state_store_module
 from src.schemas.connection_schema import ConnectionUpsertPayload, TestPayload
 from src.utils.connection_utils import display_name_for_path
 
 
 def _http_error(status_code: int, code: str, message: str) -> HTTPException:
     return HTTPException(status_code=status_code, detail={"status": "error", "code": code, "message": message})
+
+
+def _state_store():
+    return state_store_module.state_store
 
 
 def test_connection(payload: TestPayload) -> dict[str, Any]:
@@ -40,7 +44,7 @@ def test_connection(payload: TestPayload) -> dict[str, Any]:
         "latency_ms": latency_ms,
     }
     cid = save_connection(cfg)
-    state_store.record_connection_ping(
+    _state_store().record_connection_ping(
         cid,
         status="connected",
         detail=f"Connected ({display_name})",
@@ -60,14 +64,14 @@ def test_connection(payload: TestPayload) -> dict[str, Any]:
 
 
 def list_connections() -> list[dict]:
-    return state_store.list_connections()
+    return _state_store().list_connections()
 
 
 def upsert_connection(payload: ConnectionUpsertPayload) -> dict[str, Any]:
     if not payload.db_url and not payload.database and not payload.id:
         raise _http_error(400, "invalid_payload", "Provide db_url or database when creating a connection.")
 
-    existing = state_store.get_connection_record(payload.id) if payload.id else None
+    existing = _state_store().get_connection_record(payload.id) if payload.id else None
     try:
         if payload.db_url:
             db_path = resolve_db_path(connection_id=None, db_url=payload.db_url, db_path=None)
@@ -91,7 +95,7 @@ def upsert_connection(payload: ConnectionUpsertPayload) -> dict[str, Any]:
             "database": str(db_path),
         }
 
-    record = state_store.upsert_connection(
+    record = _state_store().upsert_connection(
         conn_id=payload.id,
         name=payload.name or display_name_for_path(Path(db_path), db_type),
         db_type=db_type,
@@ -103,7 +107,7 @@ def upsert_connection(payload: ConnectionUpsertPayload) -> dict[str, Any]:
     )
 
     if payload.status:
-        state_store.record_connection_ping(
+        _state_store().record_connection_ping(
             record["id"],
             status=payload.status,
             detail=None,
@@ -113,7 +117,7 @@ def upsert_connection(payload: ConnectionUpsertPayload) -> dict[str, Any]:
 
 
 def delete_connection(connection_id: str) -> bool:
-    return state_store.delete_connection(connection_id)
+    return _state_store().delete_connection(connection_id)
 
 
 def healthcheck_connection(connection_id: str) -> dict[str, Any]:
@@ -122,7 +126,7 @@ def healthcheck_connection(connection_id: str) -> dict[str, Any]:
         db_path = resolve_db_path(connection_id=connection_id, db_url=None, db_path=None)
         verify_sqlite(db_path)
     except Exception as exc:
-        state_store.record_connection_ping(
+        _state_store().record_connection_ping(
             connection_id,
             status="failed",
             detail=str(exc),
@@ -131,7 +135,7 @@ def healthcheck_connection(connection_id: str) -> dict[str, Any]:
         raise _http_error(400, "connection_unhealthy", str(exc))
 
     latency_ms = int((time.time() - t0) * 1000)
-    state_store.record_connection_ping(
+    _state_store().record_connection_ping(
         connection_id,
         status="connected",
         detail="Healthcheck succeeded",

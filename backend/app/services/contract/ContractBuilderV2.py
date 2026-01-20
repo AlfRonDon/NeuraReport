@@ -261,16 +261,43 @@ def _prepare_messages(system_text: str, payload_messages: list[dict[str, Any]]) 
 def _normalize_contract_payload(contract: Mapping[str, Any] | None) -> dict[str, Any]:
     """
     Ensure the contract payload meets schema expectations before validation.
+    Validates required fields and logs warnings for incomplete data.
     """
     normalized: dict[str, Any] = json.loads(json.dumps(contract or {}, ensure_ascii=False))
     join = normalized.get("join")
     if isinstance(join, dict):
-        for key in ("parent_table", "parent_key", "child_table", "child_key"):
+        required_keys = ("parent_table", "parent_key", "child_table", "child_key")
+        missing_keys = []
+
+        for key in required_keys:
             value = join.get(key)
             if value is None:
                 join[key] = ""
+                missing_keys.append(key)
             elif not isinstance(value, str):
                 join[key] = str(value)
+
+        # Warn if parent keys are missing (these are required for a valid join)
+        if missing_keys:
+            logger.warning(
+                "contract_join_incomplete",
+                extra={
+                    "event": "contract_join_incomplete",
+                    "missing_keys": missing_keys,
+                },
+            )
+
+        # Validate that if a join exists, parent keys are present
+        if join.get("parent_table") or join.get("child_table"):
+            if not join.get("parent_table") or not join.get("parent_key"):
+                logger.warning(
+                    "contract_join_invalid",
+                    extra={
+                        "event": "contract_join_invalid",
+                        "reason": "parent_table and parent_key are required for a valid join",
+                    },
+                )
+
     return normalized
 
 
@@ -339,15 +366,54 @@ def _reshape_rule_from_mapping(mapping: Mapping[str, str], row_tokens: list[str]
     }
 
 
+def _validate_reshape_column(column: Any) -> bool:
+    """
+    Validate a single reshape column entry.
+    A valid column must have:
+    - 'as' or 'alias': non-empty string (the output column name)
+    - 'from': non-empty string or non-empty list of strings (source expressions)
+    """
+    if not isinstance(column, Mapping):
+        return False
+
+    # Check alias
+    alias = column.get("as") or column.get("alias")
+    if not alias or not str(alias).strip():
+        return False
+
+    # Check source
+    from_raw = column.get("from")
+    if not from_raw:
+        return False
+
+    if isinstance(from_raw, str):
+        return bool(from_raw.strip())
+    elif isinstance(from_raw, list):
+        return any(str(item).strip() for item in from_raw if item)
+
+    return False
+
+
 def _has_valid_reshape_rule(rules: Any) -> bool:
+    """
+    Check if reshape rules contain at least one valid rule with valid columns.
+    """
     if not isinstance(rules, list):
         return False
+
     for rule in rules:
         if not isinstance(rule, Mapping):
             continue
+
         columns = rule.get("columns")
-        if isinstance(columns, list) and columns:
+        if not isinstance(columns, list) or not columns:
+            continue
+
+        # Check that at least one column is valid
+        valid_columns = [col for col in columns if _validate_reshape_column(col)]
+        if valid_columns:
             return True
+
     return False
 
 

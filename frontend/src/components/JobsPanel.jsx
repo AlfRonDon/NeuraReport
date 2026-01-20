@@ -28,24 +28,28 @@ import { cancelJob as cancelJobRequest } from '../api/client'
 const STATUS_FILTERS = [
   { value: 'all', label: 'All' },
   { value: 'active', label: 'Active' },
-  { value: 'succeeded', label: 'Succeeded' },
+  { value: 'completed', label: 'Completed' },
   { value: 'failed', label: 'Failed' },
 ]
 
-const ACTIVE_STATUS_SET = new Set(['queued', 'running'])
+const ACTIVE_STATUS_SET = new Set(['queued', 'pending', 'running'])
 const FAILURE_STATUS_SET = new Set(['failed', 'cancelled'])
 
 const STATUS_CHIP_PROPS = {
   queued: { label: 'Queued', color: 'default', icon: <WorkHistoryOutlinedIcon fontSize="inherit" /> },
+  pending: { label: 'Pending', color: 'default', icon: <WorkHistoryOutlinedIcon fontSize="inherit" /> },
   running: { label: 'Running', color: 'info', icon: <RefreshIcon fontSize="inherit" /> },
-  succeeded: { label: 'Succeeded', color: 'success', icon: <TaskAltIcon fontSize="inherit" /> },
+  completed: { label: 'Completed', color: 'success', icon: <TaskAltIcon fontSize="inherit" /> },
+  succeeded: { label: 'Completed', color: 'success', icon: <TaskAltIcon fontSize="inherit" /> },
   failed: { label: 'Failed', color: 'error', icon: <ErrorOutlineIcon fontSize="inherit" /> },
   cancelled: { label: 'Cancelled', color: 'warning', icon: <ErrorOutlineIcon fontSize="inherit" /> },
 }
 
 const STEP_STATUS_COLORS = {
   queued: 'default',
+  pending: 'default',
   running: 'info',
+  completed: 'success',
   succeeded: 'success',
   failed: 'error',
   cancelled: 'warning',
@@ -114,6 +118,28 @@ const normalizeErrorText = (raw) => {
   return String(raw)
 }
 
+const normalizeJobStatus = (status) => {
+  const value = (status || '').toString().toLowerCase()
+  if (value === 'succeeded') return 'completed'
+  if (value === 'queued') return 'pending'
+  return value || 'pending'
+}
+
+const normalizeJob = (job = {}) => {
+  const status = normalizeJobStatus(job.status || job.state)
+  return {
+    ...job,
+    status,
+    templateId: job.templateId || job.template_id || job.template,
+    templateName: job.templateName || job.template_name || job.templateTitle,
+    templateKind: job.templateKind || job.template_kind || job.kind,
+    connectionId: job.connectionId || job.connection_id,
+    startedAt: job.startedAt || job.started_at || job.created_at || job.queuedAt || job.queued_at,
+    finishedAt: job.finishedAt || job.finished_at || job.completed_at || job.completedAt,
+    meta: job.meta || job.metadata || {},
+  }
+}
+
 const toArray = (value) => {
   if (value == null) return []
   return Array.isArray(value) ? value : [value]
@@ -150,7 +176,7 @@ const extractJobIssues = (job) => {
 }
 
 function StepBadge({ step }) {
-  const status = (step?.status || 'queued').toLowerCase()
+  const status = normalizeJobStatus(step?.status || 'queued')
   const color = STEP_STATUS_COLORS[status] || 'default'
   const label = step?.label || step?.name || 'Step'
   return (
@@ -187,16 +213,21 @@ function JobDetailField({ label, value }) {
 }
 
 function JobCard({ job, onNavigate, onSetupNavigate, connectionName, onCancel, onForceCancel }) {
-  const status = (job?.status || 'queued').toLowerCase()
-  const chip = STATUS_CHIP_PROPS[status] || STATUS_CHIP_PROPS.queued
-  const progressValue = job?.progress == null ? (status === 'succeeded' ? 100 : 0) : job.progress
+  const status = normalizeJobStatus(job?.status || 'queued')
+  const chip = STATUS_CHIP_PROPS[status] || STATUS_CHIP_PROPS.pending
+  const progressValue = job?.progress == null ? (status === 'completed' ? 100 : 0) : job.progress
   const steps = Array.isArray(job?.steps) ? job.steps : []
-  const readableType = (job?.type || 'run_report').replace(/_/g, ' ')
+  const readableType = (job?.type || job?.job_type || 'run_report').replace(/_/g, ' ')
   const meta = job?.meta || job?.metadata || {}
-  const startDate = pickMetaValue(meta, 'start_date', 'startDate')
-  const endDate = pickMetaValue(meta, 'end_date', 'endDate')
+  const startDate = pickMetaValue(meta, 'start_date', 'startDate') || job?.start_date || job?.startDate
+  const endDate = pickMetaValue(meta, 'end_date', 'endDate') || job?.end_date || job?.endDate
   const connectionLabel =
-    connectionName || meta.connection_name || meta.connectionName || job?.connectionId || 'No connection selected'
+    connectionName
+    || meta.connection_name
+    || meta.connectionName
+    || job?.connectionId
+    || job?.connection_id
+    || 'No connection selected'
   const jobIssues = extractJobIssues(job)
   const isActive = ACTIVE_STATUS_SET.has(status)
   const canOpenGenerate = Boolean(job?.templateId && onNavigate)
@@ -220,7 +251,7 @@ function JobCard({ job, onNavigate, onSetupNavigate, connectionName, onCancel, o
               {job?.templateName || job?.templateId || 'Job'}
             </Typography>
             <Typography variant="caption" color="text.secondary">
-              {readableType} {' \u00b7 '}{(job?.templateKind || 'pdf').toUpperCase()}
+              {readableType} {' \u00b7 '}{(job?.templateKind || job?.kind || 'pdf').toUpperCase()}
             </Typography>
             {job?.templateId && (
               <Typography variant="caption" color="text.secondary">
@@ -276,7 +307,7 @@ function JobCard({ job, onNavigate, onSetupNavigate, connectionName, onCancel, o
           ))}
           {!steps.length && (
             <Typography variant="body2" color="text.secondary">
-              Awaiting updates…
+              Awaiting updates...
             </Typography>
           )}
         </Stack>
@@ -289,7 +320,7 @@ function JobCard({ job, onNavigate, onSetupNavigate, connectionName, onCancel, o
                 color="primary"
                 onClick={() => onNavigate(job.templateId)}
               >
-                Open Generate
+                Open Report
               </Button>
             )}
             {canOpenSetup && (
@@ -340,6 +371,10 @@ export default function JobsPanel({ open, onClose }) {
   const { data, isLoading, isFetching, error, refetch } = jobsQuery
   const [statusFilter, setStatusFilter] = useState('all')
   const jobs = data?.jobs || []
+  const normalizedJobs = useMemo(
+    () => jobs.map((job) => normalizeJob(job)),
+    [jobs],
+  )
 
   const markJobCancelled = (jobId) => {
     if (!jobId || !queryClient) return
@@ -382,23 +417,23 @@ export default function JobsPanel({ open, onClose }) {
 
   const filteredJobs = useMemo(() => {
     if (statusFilter === 'all') {
-      return jobs
+      return normalizedJobs
     }
     if (statusFilter === 'active') {
-      return jobs.filter((job) => ACTIVE_STATUS_SET.has((job.status || '').toLowerCase()))
+      return normalizedJobs.filter((job) => ACTIVE_STATUS_SET.has(job.status))
     }
-    if (statusFilter === 'succeeded') {
-      return jobs.filter((job) => (job.status || '').toLowerCase() === 'succeeded')
+    if (statusFilter === 'completed') {
+      return normalizedJobs.filter((job) => job.status === 'completed')
     }
     if (statusFilter === 'failed') {
-      return jobs.filter((job) => FAILURE_STATUS_SET.has((job.status || '').toLowerCase()))
+      return normalizedJobs.filter((job) => FAILURE_STATUS_SET.has(job.status))
     }
-    return jobs
-  }, [jobs, statusFilter])
+    return normalizedJobs
+  }, [normalizedJobs, statusFilter])
 
   const activeCount = useMemo(
-    () => jobs.filter((job) => ACTIVE_STATUS_SET.has((job.status || '').toLowerCase())).length,
-    [jobs],
+    () => normalizedJobs.filter((job) => ACTIVE_STATUS_SET.has(job.status)).length,
+    [normalizedJobs],
   )
   const showEmptyState = !filteredJobs.length && !isLoading && !isFetching && !error
 
@@ -412,7 +447,8 @@ export default function JobsPanel({ open, onClose }) {
   }, [savedConnections])
 
   const onJobNavigate = (templateId) => {
-    navigate('/generate', { state: { focusTemplateId: templateId } })
+    if (!templateId) return
+    navigate(`/reports?template=${encodeURIComponent(templateId)}`)
     onClose?.()
   }
 
@@ -420,13 +456,13 @@ export default function JobsPanel({ open, onClose }) {
     if (!connectionId) return
     setSetupNav('connect')
     setActiveConnectionId(connectionId)
-    navigate('/', { state: { focusConnectionId: connectionId } })
+    navigate('/setup/wizard')
     onClose?.()
   }
 
   const emptyDescription =
     statusFilter === 'all'
-      ? 'Jobs launched from the Generate page will appear here so you can check progress without leaving your work.'
+      ? 'Jobs launched from the Reports page will appear here so you can check progress without leaving your work.'
       : 'No jobs match the selected filter. Try another status or start a new run.'
 
   return (

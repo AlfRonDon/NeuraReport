@@ -29,11 +29,35 @@ class Settings(BaseSettings):
 
     max_upload_bytes: int = 50 * 1024 * 1024
     max_verify_pdf_bytes: int = 50 * 1024 * 1024
+    max_zip_entries: int = 2000
+    max_zip_uncompressed_bytes: int = 200 * 1024 * 1024
 
     job_workers: int = 4
     job_queue_size: int = 32
+    template_import_max_concurrency: int = 4
 
     openai_api_key: Optional[str] = Field(default=None, env="OPENAI_API_KEY")
+
+    # Rate limiting configuration
+    rate_limit_enabled: bool = True
+    rate_limit_requests: int = 100  # requests per window
+    rate_limit_window_seconds: int = 60  # time window in seconds
+    rate_limit_burst: int = 20  # burst allowance for temporary spikes
+
+    # Security configuration
+    trusted_hosts: List[str] = Field(default_factory=lambda: ["localhost", "127.0.0.1"])
+    allowed_hosts_all: bool = True  # Set to False in production with specific hosts
+
+    # Request timeout
+    request_timeout_seconds: int = 300  # 5 minutes max for long-running operations
+
+    # Analysis cache configuration
+    analysis_cache_max_items: int = 100
+    analysis_cache_ttl_seconds: int = 3600  # 1 hour
+    analysis_max_concurrency: int = 4
+
+    # Debug/development mode
+    debug_mode: bool = Field(default=False, env="NEURA_DEBUG")
 
     if _V2_SETTINGS:
         # Pydantic Settings v2

@@ -36,3 +36,9 @@ async def delete_connection(connection_id: str, request: Request, svc: Connectio
     svc.delete(connection_id)
     return {"status": "ok", "connection_id": connection_id, "correlation_id": getattr(request.state, "correlation_id", None)}
 
+
+@router.post("/{connection_id}/health")
+async def healthcheck_connection(connection_id: str, request: Request, svc: ConnectionService = Depends(get_service)):
+    """Verify a saved connection is still accessible."""
+    return svc.healthcheck(connection_id, getattr(request.state, "correlation_id", None))
+

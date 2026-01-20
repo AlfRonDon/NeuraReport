@@ -3,17 +3,18 @@ import {
   Box,
   Typography,
   Stack,
-  List,
-  ListItemButton,
-  ListItemIcon,
-  ListItemText,
   Chip,
   Button,
   Collapse,
+  Alert,
+  ToggleButton,
+  ToggleButtonGroup,
+  alpha,
 } from '@mui/material'
 import StorageIcon from '@mui/icons-material/Storage'
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
 import ArticleIcon from '@mui/icons-material/Article'
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline'
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
 import ConnectDB from './ConnectDB'
 import UploadVerify from './UploadVerify'
@@ -21,244 +22,268 @@ import TemplatesPane from './TemplatesPane.jsx'
 import { useAppStore } from '../../store/useAppStore'
 import { useToast } from '../../components/ToastProvider.jsx'
 import Surface from '../../components/layout/Surface.jsx'
-import PageHeader from '../../components/layout/PageHeader.jsx'
-
-const NavItem = ({ icon, label, active, onClick }) => (
-  <ListItemButton
-    selected={active}
-    onClick={onClick}
-    aria-current={active ? 'page' : undefined}
-    role="tab"
-    aria-selected={active}
-    sx={{
-      color: 'text.primary',
-      borderRadius: 1,
-      px: 2,
-      py: 1.5,
-      gap: 1.5,
-      alignItems: 'center',
-      minHeight: 48,
-      transition: 'background-color 160ms ease, box-shadow 160ms ease, transform 160ms ease',
-      '&.Mui-selected': {
-        bgcolor: 'primary.main !important',
-        color: 'primary.contrastText !important',
-        boxShadow: '0 2px 6px rgba(79, 70, 229, 0.2)',
-        transform: 'translateX(4px)',
-        '& .MuiListItemIcon-root': {
-          color: 'inherit',
-        },
-        '& .MuiListItemText-primary': {
-          color: 'inherit',
-        },
-      },
-      '&:hover': {
-        bgcolor: active ? 'primary.main' : 'action.hover',
-      },
-    }}
-  >
-    <ListItemIcon
-      sx={{
-        minWidth: 32,
-        color: active ? 'primary.contrastText' : 'text.secondary',
-        transition: 'color 160ms ease',
-      }}
-    >
-      {icon}
-    </ListItemIcon>
-    <ListItemText
-      primaryTypographyProps={{ fontWeight: active ? 700 : 500, sx: { color: 'inherit' } }}
-      primary={label}
-    />
-  </ListItemButton>
-)
 
 export default function SetupPage() {
-  // pull everything the pane will need from the store
   const {
     setupNav, setSetupNav,
-    activeConnection,    // { connection_id, normalized, ... } ← ensure ConnectDB sets this after /connections/test
-    addDownload,         // used by TemplatesPane when a run completes
+    activeConnection,
+    addDownload,
+    templates,
   } = useAppStore()
 
   const toast = useToast()
 
-  // pass API base so the pane can build absolute URLs
   const apiBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/+$/,'')
-  // pass just the id (TemplatesPane should guard if falsy)
   const connectionId = activeConnection?.connection_id || null
 
-  const setupProgress = [
-    { key: 'connect', label: 'Connect', active: setupNav === 'connect' },
-    { key: 'generate', label: 'Upload & Verify', active: setupNav === 'generate' },
-    { key: 'templates', label: 'Run Reports', active: setupNav === 'templates' },
+  // Track completion status
+  const hasConnection = !!connectionId
+  const hasTemplates = templates?.length > 0
+
+  const setupSteps = [
+    {
+      key: 'connect',
+      label: 'Connect',
+      fullLabel: 'Connect Database',
+      icon: <StorageIcon fontSize="small" />,
+      completed: hasConnection,
+    },
+    {
+      key: 'generate',
+      label: 'Templates',
+      fullLabel: 'Upload Templates',
+      icon: <AutoAwesomeIcon fontSize="small" />,
+      completed: hasTemplates,
+    },
+    {
+      key: 'templates',
+      label: 'Reports',
+      fullLabel: 'Run Reports',
+      icon: <ArticleIcon fontSize="small" />,
+      completed: false,
+    },
   ]
 
-  const sectionSummaries = {
-    connect: [
-      'Add a new database or pick an existing one, then choose its engine (Postgres, MySQL, SQL Server, or SQLite).',
-      'Fill in host, database, and credential details and run Test Connection until it succeeds.',
-      'Save the connection and click Select Connection so this data source becomes the active one for the rest of the setup.',
-    ],
-    generate: [
-      'Drop in a PDF or Excel template, keep the intended data source selected, then hit Verify Template to generate the photocopy preview.',
-      'Open Review Mapping, work through each token, inspect its requirements, bind it to the appropriate mapping in the dropdown, and provide SQL expressions.',
-      'Before approval, supply correction notes in the Preview dialog and verify the template looks right. Then provide narrative instructions and Approve Template.',
-    ],
-    templates: [
-      'Choose one or more approved templates and, if needed, filter them by tags or name.',
-      'Set the start and end date, fill in any required key token values, and click Find Reports to confirm which batches are available.',
-      'Run Reports to generate output, monitor progress, and download the PDF or HTML canvases once each run finishes.',
-    ],
+  const sectionInfo = {
+    connect: {
+      title: 'Connect Your Data Source',
+      description: 'Configure your database connection to enable report generation.',
+      steps: [
+        'Choose your database engine (PostgreSQL, MySQL, SQL Server, or SQLite)',
+        'Enter connection details and test the connection',
+        'Save and select the connection as your active data source',
+      ],
+    },
+    generate: {
+      title: 'Upload & Verify Templates',
+      description: 'Upload PDF or Excel templates and configure field mappings.',
+      steps: [
+        'Drop a template file and verify it generates a preview',
+        'Review and configure field mappings for each data token',
+        'Approve the template when mappings are complete',
+      ],
+    },
+    templates: {
+      title: 'Generate Reports',
+      description: 'Select templates, configure parameters, and run reports.',
+      steps: [
+        'Choose one or more approved templates',
+        'Set date range and fill in required parameters',
+        'Click Run Reports and download the generated output',
+      ],
+    },
   }
 
-  const sectionHeadings = {
-    connect: 'Connect Your Data Source',
-    generate: 'Upload & Verify Templates',
-    templates: 'Run & Download Reports',
-  }
-
-  const activeSummary = sectionSummaries[setupNav] || [
-    'Select a setup step to view the focused checklist for that part of the pipeline.',
-  ]
-  const activeHeading = sectionHeadings[setupNav] || 'Get Started'
+  const currentSection = sectionInfo[setupNav] || sectionInfo.connect
   const [detailsOpen, setDetailsOpen] = useState(false)
 
   return (
-    <Stack spacing={{ xs: 3, md: 4 }}>
-      <PageHeader
-        title={activeHeading}
-        description={null}
-        disablePadding
-        sx={{ pb: { xs: 0.5, sm: 0.75 } }}
-        actions={(
-          <Button
-            type="button"
+    <Box sx={{ py: 3, px: 3 }}>
+      {/* Page Header */}
+      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 3 }}>
+        <Box>
+          <Typography variant="h5" fontWeight={700}>
+            Setup
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Configure your database connection and upload report templates.
+          </Typography>
+        </Box>
+        {hasConnection && (
+          <Chip
             size="small"
+            label={activeConnection?.name || 'Connected'}
+            color="success"
             variant="outlined"
-            onClick={() => setDetailsOpen((prev) => !prev)}
-            aria-expanded={detailsOpen}
-            aria-controls="setup-step-details"
-            sx={{
-              fontWeight: 600,
-              textTransform: 'none',
-              fontSize: '0.95rem',
-              py: 0.75,
-              px: 1.75,
-            }}
+          />
+        )}
+      </Stack>
+
+      <Stack spacing={3}>
+        {/* Step Navigation Tabs */}
+        <Surface sx={{ p: 2 }}>
+          <Stack
+            direction={{ xs: 'column', sm: 'row' }}
+            alignItems={{ xs: 'stretch', sm: 'center' }}
+            justifyContent="space-between"
+            spacing={2}
           >
-            {detailsOpen ? 'Hide Section Info' : 'About This Section'}
-          </Button>
-        )}>
-        <Stack spacing={2} sx={{ width: '100%' }}>
+            <ToggleButtonGroup
+              value={setupNav}
+              exclusive
+              onChange={(e, val) => val && setSetupNav(val)}
+              aria-label="Setup steps"
+              size="small"
+              sx={{
+                bgcolor: 'action.hover',
+                borderRadius: 2,
+                p: 0.5,
+                '& .MuiToggleButton-root': {
+                  border: 'none',
+                  borderRadius: 1.5,
+                  px: 2,
+                  py: 0.75,
+                  textTransform: 'none',
+                  fontWeight: 500,
+                  gap: 1,
+                  '&.Mui-selected': {
+                    bgcolor: 'background.paper',
+                    color: 'primary.main',
+                    fontWeight: 600,
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                    '&:hover': {
+                      bgcolor: 'background.paper',
+                    },
+                  },
+                },
+              }}
+            >
+              {setupSteps.map((step, idx) => (
+                <ToggleButton key={step.key} value={step.key}>
+                  <Box
+                    sx={{
+                      width: 20,
+                      height: 20,
+                      borderRadius: '50%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      bgcolor: step.completed ? 'success.main' : 'action.selected',
+                      color: step.completed ? 'success.contrastText' : 'text.secondary',
+                      fontSize: '0.7rem',
+                      fontWeight: 700,
+                    }}
+                  >
+                    {step.completed ? <CheckCircleOutlineIcon sx={{ fontSize: 14 }} /> : idx + 1}
+                  </Box>
+                  <Typography variant="body2" sx={{ display: { xs: 'none', sm: 'block' } }}>
+                    {step.label}
+                  </Typography>
+                </ToggleButton>
+              ))}
+            </ToggleButtonGroup>
+
+            <Stack direction="row" spacing={1} alignItems="center">
+              {/* Status Chips */}
+              <Chip
+                size="small"
+                label={hasConnection ? 'DB Connected' : 'No Connection'}
+                color={hasConnection ? 'success' : 'default'}
+                variant="outlined"
+              />
+              <Chip
+                size="small"
+                label={`${templates?.length || 0} templates`}
+                color={hasTemplates ? 'success' : 'default'}
+                variant="outlined"
+              />
+              <Button
+                size="small"
+                variant="text"
+                onClick={() => setDetailsOpen((prev) => !prev)}
+                startIcon={<InfoOutlinedIcon />}
+                sx={{ textTransform: 'none', fontWeight: 500, ml: 1 }}
+              >
+                {detailsOpen ? 'Hide' : 'Tips'}
+              </Button>
+            </Stack>
+          </Stack>
+
+          {/* Section Description */}
+          <Box sx={{ mt: 2 }}>
+            <Typography variant="h6" fontWeight={600}>
+              {currentSection.title}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              {currentSection.description}
+            </Typography>
+          </Box>
+
+          {/* Collapsible Tips */}
           <Collapse in={detailsOpen} timeout="auto" unmountOnExit>
             <Box
-              id="setup-step-details"
-              component="section"
-              aria-label="Step instructions"
-              sx={{ color: 'text.secondary' }}
+              sx={{
+                mt: 2,
+                p: 2,
+                bgcolor: (theme) => alpha(theme.palette.primary.main, 0.04),
+                borderRadius: 2,
+                border: '1px solid',
+                borderColor: (theme) => alpha(theme.palette.primary.main, 0.1),
+              }}
             >
-              <Typography variant="subtitle1" sx={{ fontWeight: 700, color: 'text.primary', fontSize: '1rem' }}>
-                What to do in this step
+              <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>
+                Steps for this section:
               </Typography>
-              <Box
-                component="ol"
-                sx={{
-                  mt: 1,
-                  pl: 3,
-                  display: 'grid',
-                  gap: 0.75,
-                }}
-              >
-                {activeSummary.map((item, index) => (
+              <Box component="ol" sx={{ m: 0, pl: 2.5 }}>
+                {currentSection.steps.map((step, idx) => (
                   <Typography
-                    key={`${setupNav || 'setup'}-summary-${index}`}
+                    key={idx}
                     component="li"
-                    variant="body1"
-                    sx={{ display: 'list-item', color: 'text.secondary', lineHeight: 1.55 }}
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{ mb: 0.5 }}
                   >
-                    {item}
+                    {step}
                   </Typography>
                 ))}
               </Box>
             </Box>
           </Collapse>
-          <Stack direction="row" spacing={1} flexWrap="wrap" aria-label="Setup progress">
-            {setupProgress.map((step) => (
-              <Chip
-                key={step.key}
-                label={step.label}
-                variant={step.active ? 'filled' : 'outlined'}
-                color={step.active ? 'primary' : 'default'}
-                size="small"
-                sx={{ fontWeight: step.active ? 600 : 500 }}
-              />
-            ))}
-          </Stack>
-          <Stack
-            direction="row"
-            alignItems="center"
-            spacing={0.75}
-            sx={{ mt: 0.5, color: 'text.secondary' }}
-          >
-            <InfoOutlinedIcon fontSize="small" color="info" />
-            <Typography variant="caption" color="inherit">
-              Blue info icons on each panel share detailed instructions and tips.
-            </Typography>
-          </Stack>
-        </Stack>
-      </PageHeader>
-
-      <Box
-        sx={{
-          display: 'grid',
-          gap: { xs: 3, md: 4 },
-          gridTemplateColumns: { xs: '1fr', md: 'minmax(260px, 1fr) minmax(0, 2.5fr)' },
-          alignItems: 'flex-start',
-        }}
-      >
-        <Surface
-          component="nav"
-          aria-label="Setup navigation"
-          sx={{
-            position: { sm: 'sticky' },
-            top: { sm: 32 },
-            alignSelf: 'flex-start',
-            gap: 3,
-          }}
-        >
-          <Typography variant="overline" sx={{ color: 'text.secondary' }}>Setup</Typography>
-          <List dense disablePadding role="tablist" aria-label="Setup flow" sx={{ display: 'grid', gap: 1 }}>
-            <NavItem icon={<StorageIcon fontSize="small" />} label="Connect" active={setupNav === 'connect'} onClick={() => setSetupNav('connect')} />
-            <NavItem icon={<AutoAwesomeIcon fontSize="small" />} label="Upload & Verify" active={setupNav === 'generate'} onClick={() => setSetupNav('generate')} />
-            <NavItem icon={<ArticleIcon fontSize="small" />} label="Run Reports" active={setupNav === 'templates'} onClick={() => setSetupNav('templates')} />
-          </List>
         </Surface>
 
-        <Box sx={{ minWidth: 0, display: 'grid', gap: { xs: 2.5, md: 3 } }}>
-          {setupNav === 'connect' && <ConnectDB />}
+        {/* Connection Required Warning */}
+        {setupNav !== 'connect' && !hasConnection && (
+          <Alert
+            severity="warning"
+            action={
+              <Button
+                color="inherit"
+                size="small"
+                onClick={() => setSetupNav('connect')}
+              >
+                Go to Connect
+              </Button>
+            }
+          >
+            Please connect to a database first to use this feature.
+          </Alert>
+        )}
 
-          {setupNav === 'generate' && <UploadVerify />}
+        {/* Tab Content */}
+        {setupNav === 'connect' && <ConnectDB />}
 
-          {setupNav === 'templates' && (
-            <TemplatesPane
-              apiBase={apiBase}
-              connectionId={connectionId}
-              notify={(msg, sev = 'info') => toast.show(msg, sev)}
-              onAddDownload={(d) => addDownload(d)}
-              disabled={!apiBase || !connectionId}
-            />
-          )}
-        </Box>
-      </Box>
-    </Stack>
+        {setupNav === 'generate' && <UploadVerify />}
+
+        {setupNav === 'templates' && (
+          <TemplatesPane
+            apiBase={apiBase}
+            connectionId={connectionId}
+            notify={(msg, sev = 'info') => toast.show(msg, sev)}
+            onAddDownload={(d) => addDownload(d)}
+            disabled={!apiBase || !connectionId}
+          />
+        )}
+      </Stack>
+    </Box>
   )
 }
-
-
-
-
-
-
-
-
-

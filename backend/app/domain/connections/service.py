@@ -12,10 +12,18 @@ class ConnectionService:
     def __init__(self, repo: ConnectionRepository):
         self.repo = repo
 
-    def _resolve_and_verify(self, *, connection_id: str | None, db_url: str | None, db_path: str | None) -> Path:
+    def _resolve_and_verify(
+        self,
+        *,
+        connection_id: str | None,
+        db_url: str | None,
+        db_path: str | None,
+        verify: bool = True,
+    ) -> Path:
         try:
             path = self.repo.resolve_path(connection_id=connection_id, db_url=db_url, db_path=db_path)
-            self.repo.verify(path)
+            if verify:
+                self.repo.verify(path)
             return path
         except Exception as exc:
             raise AppError(
@@ -51,7 +59,10 @@ class ConnectionService:
 
     def upsert(self, payload: ConnectionUpsertRequest, correlation_id: str | None = None) -> ConnectionResponse:
         db_path = self._resolve_and_verify(
-            connection_id=payload.id, db_url=payload.db_url, db_path=payload.database
+            connection_id=payload.id,
+            db_url=payload.db_url,
+            db_path=payload.database,
+            verify=False,
         )
         record = self.repo.upsert(
             conn_id=payload.id,
@@ -77,3 +88,40 @@ class ConnectionService:
     def delete(self, connection_id: str) -> None:
         if not self.repo.delete(connection_id):
             raise AppError(code="connection_not_found", message="Connection not found", status_code=404)
+
+    def healthcheck(self, connection_id: str, correlation_id: str | None = None) -> dict:
+        """Verify a saved connection is still accessible and record the ping."""
+        connections = self.repo.list()
+        conn = next((c for c in connections if c.get("id") == connection_id), None)
+        if not conn:
+            raise AppError(code="connection_not_found", message="Connection not found", status_code=404)
+
+        db_path = conn.get("database_path")
+        if not db_path:
+            raise AppError(
+                code="invalid_connection",
+                message="Connection has no database path",
+                status_code=400,
+            )
+
+        started = time.time()
+        try:
+            self.repo.verify(Path(db_path))
+        except Exception as exc:
+            latency_ms = int((time.time() - started) * 1000)
+            self.repo.record_ping(connection_id, status="error", detail=str(exc), latency_ms=latency_ms)
+            raise AppError(
+                code="connection_failed",
+                message="Database connection failed",
+                detail=str(exc),
+                status_code=503,
+            )
+
+        latency_ms = int((time.time() - started) * 1000)
+        self.repo.record_ping(connection_id, status="connected", detail="Health check passed", latency_ms=latency_ms)
+        return {
+            "status": "connected",
+            "latency_ms": latency_ms,
+            "connection_id": connection_id,
+            "correlation_id": correlation_id,
+        }

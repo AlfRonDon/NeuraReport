@@ -1,6 +1,8 @@
 import { create } from 'zustand'
 
 const DISCOVERY_STORAGE_KEY = 'neura.discovery.v1'
+const DISCOVERY_MAX_SIZE_BYTES = 2 * 1024 * 1024 // 2MB limit
+const DISCOVERY_MAX_TEMPLATES = 50 // Max number of template results to keep
 
 const defaultDiscoveryState = { results: {}, meta: null }
 
@@ -19,19 +21,98 @@ const loadDiscoveryFromStorage = () => {
   }
 }
 
+/**
+ * Evict oldest template results if size exceeds limit (LRU eviction).
+ * Each template result should have a `_accessedAt` timestamp for ordering.
+ */
+const evictOldestResults = (results, maxSize, maxTemplates) => {
+  if (!results || typeof results !== 'object') return {}
+
+  const entries = Object.entries(results)
+  if (entries.length <= 1) return results
+
+  // Sort by access time (oldest first), falling back to template ID
+  entries.sort((a, b) => {
+    const timeA = a[1]?._accessedAt || 0
+    const timeB = b[1]?._accessedAt || 0
+    return timeA - timeB
+  })
+
+  // Keep only the most recent templates up to maxTemplates
+  const trimmed = entries.slice(-maxTemplates)
+
+  // Convert back to object
+  const evicted = Object.fromEntries(trimmed)
+
+  // Check size and continue evicting if still too large
+  const serialized = JSON.stringify(evicted)
+  if (serialized.length > maxSize && trimmed.length > 1) {
+    // Remove oldest entry and recurse
+    const [, ...rest] = trimmed
+    return evictOldestResults(Object.fromEntries(rest), maxSize, maxTemplates)
+  }
+
+  return evicted
+}
+
 const persistDiscoveryToStorage = (results, meta) => {
   if (typeof window === 'undefined') return
   try {
-    window.localStorage.setItem(
-      DISCOVERY_STORAGE_KEY,
-      JSON.stringify({
-        results: results && typeof results === 'object' ? results : {},
-        meta: meta && typeof meta === 'object' ? meta : null,
-        ts: Date.now(),
-      }),
+    // Add access timestamp for LRU tracking
+    const timestampedResults = {}
+    if (results && typeof results === 'object') {
+      Object.entries(results).forEach(([key, value]) => {
+        timestampedResults[key] = {
+          ...value,
+          _accessedAt: value?._accessedAt || Date.now(),
+        }
+      })
+    }
+
+    // Apply LRU eviction if needed
+    const evictedResults = evictOldestResults(
+      timestampedResults,
+      DISCOVERY_MAX_SIZE_BYTES,
+      DISCOVERY_MAX_TEMPLATES
     )
-  } catch {
-    // swallow storage errors (private mode, quota, etc.)
+
+    const payload = JSON.stringify({
+      results: evictedResults,
+      meta: meta && typeof meta === 'object' ? meta : null,
+      ts: Date.now(),
+    })
+
+    // Final size check before writing
+    if (payload.length > DISCOVERY_MAX_SIZE_BYTES) {
+      console.warn('[useAppStore] Discovery data exceeds size limit after eviction, clearing old data')
+      // Clear all but most recent template
+      const entries = Object.entries(evictedResults)
+      if (entries.length > 1) {
+        const newest = entries[entries.length - 1]
+        window.localStorage.setItem(
+          DISCOVERY_STORAGE_KEY,
+          JSON.stringify({
+            results: { [newest[0]]: newest[1] },
+            meta: meta && typeof meta === 'object' ? meta : null,
+            ts: Date.now(),
+          })
+        )
+        return
+      }
+    }
+
+    window.localStorage.setItem(DISCOVERY_STORAGE_KEY, payload)
+  } catch (err) {
+    // Handle quota exceeded error gracefully
+    if (err?.name === 'QuotaExceededError' || err?.code === 22) {
+      console.warn('[useAppStore] localStorage quota exceeded, clearing discovery cache')
+      try {
+        window.localStorage.removeItem(DISCOVERY_STORAGE_KEY)
+      } catch {
+        // swallow
+      }
+    }
+    // swallow other storage errors (private mode, etc.)
   }
 }
 
@@ -189,6 +270,17 @@ export const useAppStore = create((set, get) => ({
     set({
       templateCatalog: Array.isArray(items) ? items : [],
     }),
+
+  // Jobs for background processing
+  jobs: [],
+  setJobs: (jobs) => set({ jobs: Array.isArray(jobs) ? jobs : [] }),
+  addJob: (job) => set((state) => ({ jobs: [job, ...state.jobs] })),
+  updateJob: (jobId, updates) =>
+    set((state) => ({
+      jobs: state.jobs.map((j) => (j.id === jobId ? { ...j, ...updates } : j)),
+    })),
+  removeJob: (jobId) =>
+    set((state) => ({ jobs: state.jobs.filter((j) => j.id !== jobId) })),
 
   runs: [],
   setRuns: (runs) => set({ runs }),

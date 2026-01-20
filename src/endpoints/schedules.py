@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, HTTPException, Request
 
-from src.schemas.report_schema import ScheduleCreatePayload
-from src.services.scheduler_service import create_schedule, delete_schedule, list_schedules
+from src.schemas.report_schema import ScheduleCreatePayload, ScheduleUpdatePayload
+from src.services.scheduler_service import create_schedule, delete_schedule, list_schedules, update_schedule
 
 router = APIRouter()
 
@@ -23,11 +23,15 @@ def create_report_schedule(payload: ScheduleCreatePayload, request: Request):
     return {"schedule": schedule, "correlation_id": _correlation(request)}
 
 
+@router.put("/reports/schedules/{schedule_id}")
+def update_report_schedule(schedule_id: str, payload: ScheduleUpdatePayload, request: Request):
+    schedule = update_schedule(schedule_id, payload)
+    return {"schedule": schedule, "correlation_id": _correlation(request)}
+
+
 @router.delete("/reports/schedules/{schedule_id}")
 def delete_report_schedule(schedule_id: str, request: Request):
     removed = delete_schedule(schedule_id)
     if not removed:
-        from fastapi import HTTPException
-
         raise HTTPException(status_code=404, detail={"status": "error", "code": "schedule_not_found", "message": "Schedule not found."})
     return {"status": "ok", "schedule_id": schedule_id, "correlation_id": _correlation(request)}

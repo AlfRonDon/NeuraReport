@@ -1,7 +1,11 @@
 from __future__ import annotations
 
+import logging
+
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
+
+logger = logging.getLogger("neura.api.errors")
 
 
 class AppError(Exception):
@@ -33,9 +37,39 @@ async def http_error_handler(request: Request, exc):
     return JSONResponse(status_code=status_code, content=body)
 
 
+async def generic_error_handler(request: Request, exc: Exception):
+    """Handle any unhandled exceptions with proper logging."""
+    correlation_id = getattr(getattr(request, "state", None), "correlation_id", None)
+
+    # Log the full exception with traceback
+    logger.exception(
+        "unhandled_exception",
+        extra={
+            "event": "unhandled_exception",
+            "path": request.url.path,
+            "method": request.method,
+            "exception_type": type(exc).__name__,
+            "exception_message": str(exc),
+            "correlation_id": correlation_id,
+        },
+    )
+
+    # Return generic error to client (don't expose internal details)
+    body = {
+        "status": "error",
+        "code": "internal_error",
+        "message": "An unexpected error occurred. Please try again later.",
+    }
+    if correlation_id:
+        body["correlation_id"] = correlation_id
+
+    return JSONResponse(status_code=500, content=body)
+
+
 def add_exception_handlers(app: FastAPI) -> None:
     from fastapi import HTTPException
 
     app.add_exception_handler(AppError, app_error_handler)
     app.add_exception_handler(HTTPException, http_error_handler)
+    app.add_exception_handler(Exception, generic_error_handler)
 

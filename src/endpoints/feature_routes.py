@@ -17,7 +17,7 @@ from backend.app.services.prompts.llm_prompts_charts import (
 )
 from backend.app.services.prompts.llm_prompts import PROMPT_VERSION, PROMPT_VERSION_3_5, PROMPT_VERSION_4
 from backend.app.services.contract.ContractBuilderV2 import load_contract_v2
-from backend.app.services.state import state_store
+from backend.app.services.state import store as state_store_module
 from backend.app.services.utils import call_chat_completion, get_correlation_id, strip_code_fences
 from backend.app.services.utils.artifacts import load_manifest
 from backend.app.services.reports.discovery import discover_batches_and_counts
@@ -37,9 +37,13 @@ _build_sample_data_rows = lambda batches, metadata=None, limit=100: build_batch_
 DEFAULT_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
 
 
+def _state_store():
+    return state_store_module.state_store
+
+
 def _ensure_template_exists(template_id: str) -> tuple[str, dict]:
     normalized = normalize_template_id(template_id)
-    record = state_store.get_template_record(normalized)
+    record = _state_store().get_template_record(normalized)
     if not record:
         raise HTTPException(status_code=404, detail="template_not_found")
     return normalized, record

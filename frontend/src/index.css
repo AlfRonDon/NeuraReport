@@ -1,24 +1,221 @@
-/* Reset Vite demo styles to avoid layout conflicts with MUI */
+/* Supabase-inspired Global Styles */
+
+/* Import Inter font from Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap');
+
 :root {
-  --font-ui: 'Outfit', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
-  --font-secondary: 'Work Sans', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
-  --font-brand: 'Oxanium', 'Outfit', 'Segoe UI', sans-serif;
+  /* Font families */
+  --font-ui: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', Monaco, 'Cascadia Code', Consolas, monospace;
+
+  /* Colors - Dark mode */
+  --color-bg-primary: #111111;
+  --color-bg-secondary: #1A1A1A;
+  --color-bg-tertiary: #1F1F1F;
+  --color-border: rgba(255, 255, 255, 0.08);
+  --color-border-hover: rgba(255, 255, 255, 0.15);
+
+  --color-text-primary: #EDEDED;
+  --color-text-secondary: #999999;
+  --color-text-muted: #656565;
+
+  --color-brand: #3ECF8E;
+  --color-brand-hover: #6EDAA6;
+
+  /* Transitions */
+  --transition-fast: 150ms ease;
+  --transition-normal: 200ms ease;
+
+  /* Border radius */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+
   font-family: var(--font-ui);
-  line-height: 1.55;
+  line-height: 1.6;
   font-weight: 400;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Let MUI's CssBaseline control colors and background */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+}
+
 body {
   margin: 0;
   min-width: 320px;
+  min-height: 100vh;
   font-family: var(--font-ui);
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-primary);
 }
 
-/* Keep anchors neutral; MUI theme will style components */
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Links */
 a {
   color: inherit;
   text-decoration: none;
+  transition: color var(--transition-fast);
+}
+
+a:hover {
+  color: var(--color-brand);
+}
+
+/* Code */
+code, pre {
+  font-family: var(--font-mono);
+  font-size: 0.875em;
+}
+
+pre {
+  overflow-x: auto;
+  padding: 1rem;
+  border-radius: var(--radius-md);
+  background-color: var(--color-bg-tertiary);
+}
+
+code {
+  padding: 0.125em 0.375em;
+  border-radius: var(--radius-sm);
+  background-color: var(--color-bg-tertiary);
+}
+
+/* Selection */
+::selection {
+  background-color: rgba(62, 207, 142, 0.3);
+  color: inherit;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(255, 255, 255, 0.25);
+}
+
+/* Focus states */
+:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* Utility classes */
+.animate-fadeIn {
+  animation: fadeIn 200ms ease;
+}
+
+.animate-slideUp {
+  animation: slideUp 200ms ease;
+}
+
+.animate-pulse {
+  animation: pulse 2s infinite;
+}
+
+/* Typography utilities */
+.text-mono {
+  font-family: var(--font-mono);
+}
+
+.text-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Layout utilities */
+.flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.flex-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Hide scrollbar but keep functionality */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Print styles */
+@media print {
+  body {
+    background-color: white;
+    color: black;
+  }
+
+  .no-print {
+    display: none !important;
+  }
 }

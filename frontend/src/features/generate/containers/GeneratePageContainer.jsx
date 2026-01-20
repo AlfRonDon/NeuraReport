@@ -1,4 +1,6 @@
 import Grid from '@mui/material/Grid2'
+import { Box, Typography, Stack, Chip, Alert, Button } from '@mui/material'
+import PlayArrowIcon from '@mui/icons-material/PlayArrow'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
@@ -577,50 +579,99 @@ export default function GeneratePage() {
     }
   }
 
+  const hasConnection = useAppStore((state) => !!state.activeConnection?.connection_id)
+
   return (
-    <Grid container spacing={{ xs: 3, md: 4 }}>
-        <Grid size={12} sx={{ minWidth: 0 }}>
-        <TemplatePicker
-          selected={selected}
-          onToggle={onToggle}
-          outputFormats={outputFormats}
-          setOutputFormats={setOutputFormats}
-          tagFilter={tagFilter}
-          setTagFilter={setTagFilter}
-          onEditTemplate={(tpl) => {
-            if (!tpl?.id) return
-            navigate(`/templates/${tpl.id}/edit`)
-          }}
-        />
+    <Box sx={{ py: 3, px: 3 }}>
+      {/* Page Header */}
+      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 3 }}>
+        <Box>
+          <Typography variant="h5" fontWeight={700}>
+            Generate Reports
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Select templates, configure parameters, and generate reports from your data.
+          </Typography>
+        </Box>
+        <Stack direction="row" spacing={1}>
+          {selected.length > 0 && (
+            <Chip
+              size="small"
+              label={`${selected.length} selected`}
+              color="primary"
+            />
+          )}
+          <Chip
+            size="small"
+            label={`${approved.length} available`}
+            color={approved.length > 0 ? 'success' : 'default'}
+            variant="outlined"
+          />
+        </Stack>
+      </Stack>
+
+      <Stack spacing={3}>
+
+        {/* Connection Warning */}
+        {!hasConnection && (
+          <Alert
+            severity="warning"
+            action={
+              <Button color="inherit" size="small" onClick={() => navigate('/')}>
+                Go to Setup
+              </Button>
+            }
+          >
+            Connect to a database in Setup to generate reports with real data.
+          </Alert>
+        )}
+
+        {/* Main Content */}
+        <Grid container spacing={3}>
+          <Grid size={12}>
+            <TemplatePicker
+              selected={selected}
+              onToggle={onToggle}
+              outputFormats={outputFormats}
+              setOutputFormats={setOutputFormats}
+              tagFilter={tagFilter}
+              setTagFilter={setTagFilter}
+              onEditTemplate={(tpl) => {
+                if (!tpl?.id) return
+                navigate(`/templates/${tpl.id}/edit`, { state: { from: '/generate' } })
+              }}
+            />
+          </Grid>
+          <Grid size={12} sx={{ minWidth: 0 }}>
+            <GenerateAndDownload
+              selected={selectedTemplates.map((t) => t.id)}
+              selectedTemplates={selectedTemplates}
+              autoType={autoType}
+              start={start}
+              end={end}
+              setStart={setStart}
+              setEnd={setEnd}
+              onFind={onFind}
+              findDisabled={finding}
+              finding={finding}
+              results={results}
+              onToggleBatch={onToggleBatch}
+              onGenerate={onGenerate}
+              canGenerate={canGenerate}
+              generateLabel={generateLabel}
+              generation={generation}
+              generatorReady={generatorSummary.ready}
+              generatorIssues={generatorSummary}
+              keyValues={keyValues}
+              onKeyValueChange={handleKeyValueChange}
+              keysReady={keysReady}
+              keyOptions={keyOptions}
+              keyOptionsLoading={keyOptionsLoading}
+              onResampleFilter={handleResampleFilter}
+            />
+          </Grid>
         </Grid>
-        <Grid size={12} sx={{ minWidth: 0 }}>
-        <GenerateAndDownload
-          selected={selectedTemplates.map((t) => t.id)}
-          selectedTemplates={selectedTemplates}
-          autoType={autoType}
-          start={start}
-          end={end}
-          setStart={setStart}
-          setEnd={setEnd}
-          onFind={onFind}
-          findDisabled={finding}
-          finding={finding}
-          results={results}
-          onToggleBatch={onToggleBatch}
-          onGenerate={onGenerate}
-          canGenerate={canGenerate}
-          generateLabel={generateLabel}
-          generation={generation}
-          generatorReady={generatorSummary.ready}
-          generatorIssues={generatorSummary}
-          keyValues={keyValues}
-          onKeyValueChange={handleKeyValueChange}
-          keysReady={keysReady}
-          keyOptions={keyOptions}
-          keyOptionsLoading={keyOptionsLoading}
-          onResampleFilter={handleResampleFilter}
-        />
-        </Grid>
-    </Grid>
+      </Stack>
+    </Box>
   )
 }

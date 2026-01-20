@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python:*)",
+      "Bash(node --check:*)",
+      "Bash(find:*)",
+      "Bash(npx acorn:*)",
+      "Bash(pip install:*)",
+      "Bash(npm test:*)",
+      "Bash(npx vitest:*)",
+      "Bash(npm install)",
+      "Bash(git checkout:*)",
+      "Bash(grep:*)",
+      "Bash(npm run test:*)",
+      "Bash(taskkill:*)",
+      "Bash(timeout /t 2 /nobreak)",
+      "Bash(curl:*)",
+      "Bash(tree:*)",
+      "Bash(npm run lint)",
+      "Bash(timeout 10 npm run dev)",
+      "Bash(npx eslint:*)",
+      "Bash(timeout 8 npm run dev:*)",
+      "Bash(npm run build:*)"
+    ],
+    "defaultMode": "bypassPermissions"
+  }
+}

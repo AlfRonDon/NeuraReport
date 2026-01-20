@@ -6,12 +6,15 @@ from fastapi import APIRouter, Request
 
 from src.schemas.template_schema import (
     CorrectionsPreviewPayload,
+    GeneratorAssetsPayload,
+    LastUsedPayload,
     MappingPayload,
     TemplateAiEditPayload,
     TemplateManualEditPayload,
     TemplateRecommendPayload,
     TemplateRecommendResponse,
 )
+from backend.app.services.state import store as state_store_module
 from src.services.mapping.approve import run_mapping_approve
 from src.services.mapping.corrections import run_corrections_preview
 from src.services.mapping.key_options import mapping_key_options as mapping_key_options_service
@@ -20,8 +23,8 @@ from src.services.template_service import (
     get_template_html,
     edit_template_ai,
     edit_template_manual,
-    export_template_zip,
-    import_template_zip,
+    export_template_zip as export_template_zip_service,
+    import_template_zip as import_template_zip_service,
     undo_last_template_edit,
     verify_excel,
     verify_template,
@@ -38,6 +41,10 @@ router = APIRouter()
 
 def _correlation(request: Request) -> str | None:
     return getattr(request.state, "correlation_id", None)
+
+
+def _state_store():
+    return state_store_module.state_store
 
 
 @router.post("/templates/{template_id}/mapping/preview")
@@ -71,13 +78,17 @@ def mapping_corrections_preview_excel(template_id: str, payload: CorrectionsPrev
 
 
 @router.get("/templates/{template_id}/export.zip")
-def export_template_zip(template_id: str, request: Request):
-    return export_template_zip(template_id, request)
+def export_template_zip_route(template_id: str, request: Request):
+    return export_template_zip_service(template_id, request)
+
+
+# Backwards-compatible alias to avoid naming regression in tests/clients.
+export_template_zip = export_template_zip_route
 
 
 @router.post("/templates/import-zip")
-async def import_template_zip(file, request: Request, name: str | None = None):
-    return await import_template_zip(file=file, name=name, request=request)
+async def import_template_zip_route(file, request: Request, name: str | None = None):
+    return await import_template_zip_service(file=file, name=name, request=request)
 
 
 @router.post("/templates/verify")
@@ -115,6 +126,20 @@ def bootstrap_state_route(request: Request):
     return bootstrap_state(request)
 
 
+@router.post("/state/last-used")
+def set_last_used_route(payload: LastUsedPayload, request: Request):
+    """Record the last-used connection and template IDs for session persistence."""
+    last_used = _state_store().set_last_used(
+        connection_id=payload.connection_id,
+        template_id=payload.template_id,
+    )
+    return {
+        "status": "ok",
+        "last_used": last_used,
+        "correlation_id": _correlation(request),
+    }
+
+
 @router.get("/templates/catalog")
 def templates_catalog_route(request: Request):
     return templates_catalog(request)
@@ -136,12 +161,12 @@ def delete_template_route(template_id: str, request: Request):
 
 
 @router.post("/templates/{template_id}/generator-assets/v1")
-def generator_assets_route(template_id: str, payload, request: Request):
+def generator_assets_route(template_id: str, payload: GeneratorAssetsPayload, request: Request):
     return generator_assets(template_id, payload, request, kind="pdf")
 
 
 @router.post("/excel/{template_id}/generator-assets/v1")
-def generator_assets_excel_route(template_id: str, payload, request: Request):
+def generator_assets_excel_route(template_id: str, payload: GeneratorAssetsPayload, request: Request):
     return generator_assets(template_id, payload, request, kind="excel")
 
 

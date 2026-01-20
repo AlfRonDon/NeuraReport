@@ -24,9 +24,9 @@ export const sleep = (ms = 400) => new Promise(r => setTimeout(r, ms))
 
 
 
-// whether to use mock API
+// whether to use mock API (defaults to false for production safety)
 
-export const isMock = (runtimeEnv.VITE_USE_MOCK || 'true') === 'true'
+export const isMock = runtimeEnv.VITE_USE_MOCK === 'true'
 
 const normalizeKind = (kind) => (kind === 'excel' ? 'excel' : 'pdf')
 
@@ -102,10 +102,104 @@ const prepareKeyValues = (values) => {
 
 
 
-// Build absolute URLs for artifacts the API returns (e.g. /uploads/GǪ)
+// Build absolute URLs for artifacts the API returns (e.g. /uploads/...)
 
 export const withBase = (pathOrUrl) =>
   /^https?:\/\//.test(pathOrUrl) ? pathOrUrl : `${API_BASE}${pathOrUrl}`
+
+
+/**
+ * Shared utility for handling NDJSON streaming responses.
+ * Use this for new streaming endpoints to avoid code duplication.
+ *
+ * @param {Response} res - Fetch response with streaming body
+ * @param {Object} options - Options object
+ * @param {Function} options.onEvent - Called for each parsed event
+ * @param {string} options.errorMessage - Error message prefix for failures
+ * @returns {Promise<Object>} The final result event payload
+ *
+ * @example
+ * const result = await handleStreamingResponse(res, {
+ *   onEvent: (event) => console.log(event),
+ *   errorMessage: 'Operation failed',
+ * })
+ */
+export async function handleStreamingResponse(res, { onEvent, errorMessage = 'Request failed' } = {}) {
+  if (!res.ok || !res.body) {
+    let detail
+    try {
+      const data = await res.json()
+      detail = data?.detail
+    } catch {
+      detail = await res.text().catch(() => null)
+    }
+    throw new Error(detail || errorMessage)
+  }
+
+  const reader = res.body.getReader()
+  const decoder = new TextDecoder()
+  let buffer = ''
+  let finalEvent = null
+
+  while (true) {
+    const { value, done } = await reader.read()
+    if (done) break
+
+    buffer += decoder.decode(value, { stream: true })
+
+    let newlineIndex
+    while ((newlineIndex = buffer.indexOf('\n')) >= 0) {
+      const line = buffer.slice(0, newlineIndex).trim()
+      buffer = buffer.slice(newlineIndex + 1)
+      if (!line) continue
+
+      let payload
+      try {
+        payload = JSON.parse(line)
+      } catch {
+        continue
+      }
+
+      onEvent?.(payload)
+
+      if (payload.event === 'result') {
+        finalEvent = payload
+      } else if (payload.event === 'error') {
+        try {
+          await reader.cancel()
+        } catch {
+          /* ignore */
+        }
+        const err = new Error(payload.detail || errorMessage)
+        err.detail = payload.detail
+        throw err
+      }
+    }
+  }
+
+  // Handle any remaining data in buffer
+  if (buffer.trim()) {
+    try {
+      const payload = JSON.parse(buffer.trim())
+      onEvent?.(payload)
+      if (payload.event === 'result') {
+        finalEvent = payload
+      } else if (payload.event === 'error') {
+        const err = new Error(payload.detail || errorMessage)
+        err.detail = payload.detail
+        throw err
+      }
+    } catch {
+      // ignore trailing junk
+    }
+  }
+
+  if (!finalEvent) {
+    throw new Error(`${errorMessage}: no result payload received`)
+  }
+
+  return finalEvent
+}
 
 
 // Optional: turn server errors into nice messages
@@ -1429,8 +1523,47 @@ export async function deleteTemplate(templateId) {
   return data
 }
 
+export async function duplicateTemplate(templateId, newName = null) {
+  if (!templateId) throw new Error('Missing template id')
+  if (isMock) {
+    await sleep(400)
+    return {
+      template_id: `${templateId}-copy-${Date.now()}`,
+      name: newName || 'Template (Copy)',
+      kind: 'pdf',
+      status: 'approved',
+      source_id: templateId,
+    }
+  }
+  const form = new FormData()
+  if (newName) {
+    form.append('name', newName)
+  }
+  const { data } = await api.post(`/templates/${encodeURIComponent(templateId)}/duplicate`, form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+  return data
+}
+
 export const templateExportZipUrl = (templateId) =>
-  `${API_BASE}/templates/${encodeURIComponent(templateId)}/export.zip`
+  `${API_BASE}/templates/${encodeURIComponent(templateId)}/export`
+
+export async function exportTemplateZip(templateId) {
+  if (!templateId) throw new Error('Template ID is required')
+  if (isMock) {
+    await sleep(400)
+    return { status: 'ok', mock: true }
+  }
+  // Trigger download via browser
+  const url = templateExportZipUrl(templateId)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = `${templateId}.zip`
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  return { status: 'ok' }
+}
 
 export async function importTemplateZip({ file, name } = {}) {
   if (!file) throw new Error('Select a template zip file')
@@ -1491,6 +1624,34 @@ export async function createSchedule(payload) {
     return { schedule: { id: `mock-schedule-${Date.now()}`, ...apiPayload } }
   }
   const { data } = await api.post('/reports/schedules', apiPayload)
+  return data?.schedule || data
+}
+
+export async function updateSchedule(scheduleId, payload) {
+  if (!scheduleId) throw new Error('Missing schedule id')
+  const apiPayload = {}
+  if (payload.name !== undefined) apiPayload.name = payload.name
+  if (payload.startDate !== undefined) apiPayload.start_date = payload.startDate
+  if (payload.endDate !== undefined) apiPayload.end_date = payload.endDate
+  if (payload.keyValues !== undefined) apiPayload.key_values = payload.keyValues
+  if (payload.batchIds !== undefined) apiPayload.batch_ids = payload.batchIds
+  if (payload.docx !== undefined) apiPayload.docx = !!payload.docx
+  if (payload.xlsx !== undefined) apiPayload.xlsx = !!payload.xlsx
+  if (payload.emailRecipients !== undefined) apiPayload.email_recipients = payload.emailRecipients
+  if (payload.emailSubject !== undefined) apiPayload.email_subject = payload.emailSubject
+  if (payload.emailMessage !== undefined) apiPayload.email_message = payload.emailMessage
+  if (payload.frequency !== undefined) apiPayload.frequency = payload.frequency
+  if (payload.intervalMinutes !== undefined) apiPayload.interval_minutes = payload.intervalMinutes
+  if (payload.active !== undefined) apiPayload.active = payload.active
+
+  if (isMock) {
+    if (typeof mock.updateSchedule === 'function') {
+      return mock.updateSchedule(scheduleId, apiPayload)
+    }
+    await sleep(200)
+    return { schedule: { id: scheduleId, ...apiPayload } }
+  }
+  const { data } = await api.put(`/reports/schedules/${encodeURIComponent(scheduleId)}`, apiPayload)
   return data?.schedule || data
 }
 
@@ -1645,28 +1806,25 @@ export function normalizeRunArtifacts(run) {
   }
 }
 
-// D) Optional: placeholder for a future discovery endpoint
+// D) Discovery helper - delegates to discoverReports with simplified interface
 
-export async function discoverBatches() {
-
-  // Implement when backend adds /reports/discover
-
-  // const { data } = await api.post('/reports/discover', {
-
-  //   template_id: templateId,
-
-  //   connection_id: connectionId,
-
-  //   start_date: startDate,
-
-  //   end_date: endDate,
-
-  // })
-
-  // return data // { batches: [{ id, rows }, ...] }
-
-  throw new Error('Discovery endpoint not implemented on backend yet.')
-
+export async function discoverBatches({
+  templateId,
+  connectionId,
+  startDate,
+  endDate,
+  kind = 'pdf',
+} = {}) {
+  // Delegate to the working discoverReports implementation
+  const result = await discoverReports({
+    templateId,
+    connectionId,
+    startDate,
+    endDate,
+    kind,
+  })
+  // Return just the batches array for simplified API compatibility
+  return { batches: result?.batches || [] }
 }
 
 export async function discoverReports({
@@ -1807,7 +1965,31 @@ export async function healthcheckConnection(connectionId) {
 
 }
 
-
+export async function getSystemHealth() {
+  if (isMock) {
+    return {
+      status: 'healthy',
+      version: '4.0',
+      timestamp: new Date().toISOString(),
+      response_time_ms: 15,
+      checks: {
+        uploads_dir: { status: 'healthy', writable: true },
+        state_dir: { status: 'healthy', writable: true },
+        openai: { status: 'configured', message: 'OpenAI client initialized' },
+        configuration: {
+          api_key_configured: true,
+          rate_limiting_enabled: true,
+          rate_limit: '100/60s',
+          request_timeout: 300,
+          max_upload_size_mb: 50,
+          debug_mode: false,
+        },
+      },
+    }
+  }
+  const { data } = await api.get('/health/detailed')
+  return data
+}
 
 export async function recordLastUsed({ connectionId, templateId }) {
 
@@ -1867,6 +2049,117 @@ export async function cancelJob(jobId, options = {}) {
   const endpoint = `/jobs/${encodeURIComponent(jobId)}/cancel${force ? '?force=true' : ''}`
   const { data } = await api.post(endpoint)
   return data?.job || data
+}
+
+
+/* ------------------------ Document Analysis API ------------------------ */
+
+/**
+ * Upload and analyze a document (PDF or Excel) using AI.
+ * Returns extracted tables, data points, and chart suggestions.
+ *
+ * @param {Object} options - Analysis options
+ * @param {File} options.file - The file to analyze
+ * @param {string} [options.connectionId] - Optional database connection for context
+ * @param {string} [options.analysisType] - Type of analysis: 'comprehensive', 'tables', 'summary'
+ * @param {Function} [options.onProgress] - Progress callback for streaming events
+ * @param {AbortSignal} [options.signal] - AbortController signal for cancellation
+ * @returns {Promise<Object>} Analysis result with tables, dataPoints, charts, summary
+ */
+export async function analyzeDocument({
+  file,
+  connectionId,
+  analysisType = 'comprehensive',
+  onProgress,
+  signal,
+} = {}) {
+  if (!file) throw new Error('File is required for document analysis')
+
+  if (signal?.aborted) {
+    throw new DOMException('Aborted', 'AbortError')
+  }
+
+  const form = new FormData()
+  form.append('file', file)
+  if (connectionId) form.append('connection_id', connectionId)
+  form.append('analysis_type', analysisType)
+
+  const res = await fetch(`${API_BASE}/analyze/upload`, {
+    method: 'POST',
+    body: form,
+    signal,
+  })
+
+  return handleStreamingResponse(res, {
+    onEvent: onProgress,
+    errorMessage: 'Document analysis failed',
+  })
+}
+
+/**
+ * Get a previously completed analysis by ID.
+ *
+ * @param {string} analysisId - The analysis ID
+ * @returns {Promise<Object>} The analysis result
+ */
+export async function getAnalysis(analysisId) {
+  if (!analysisId) throw new Error('analysisId is required')
+  const { data } = await api.get(`/analyze/${encodeURIComponent(analysisId)}`)
+  return data
+}
+
+/**
+ * Get extracted data from an analysis in a specific format.
+ *
+ * @param {string} analysisId - The analysis ID
+ * @param {Object} options - Options
+ * @param {string} [options.format] - Output format: 'json', 'csv', 'dataframe'
+ * @param {string} [options.tableId] - Specific table ID to export
+ * @returns {Promise<Object>} The extracted data
+ */
+export async function getAnalysisData(analysisId, { format = 'json', tableId } = {}) {
+  if (!analysisId) throw new Error('analysisId is required')
+  const params = new URLSearchParams()
+  params.set('format', format)
+  if (tableId) params.set('table_id', tableId)
+  const { data } = await api.get(`/analyze/${encodeURIComponent(analysisId)}/data?${params}`)
+  return data
+}
+
+/**
+ * Get AI-suggested charts for an analysis.
+ *
+ * @param {string} analysisId - The analysis ID
+ * @param {Object} options - Options
+ * @param {string} [options.question] - Natural language question for chart focus
+ * @param {number} [options.limit] - Maximum number of chart suggestions
+ * @returns {Promise<Object>} Chart suggestions
+ */
+export async function getAnalysisChartSuggestions(analysisId, { question, limit = 5 } = {}) {
+  if (!analysisId) throw new Error('analysisId is required')
+  const payload = {}
+  if (question) payload.question = question
+  if (limit) payload.limit = limit
+  const { data } = await api.post(`/analyze/${encodeURIComponent(analysisId)}/charts/suggest`, payload)
+  return data
+}
+
+/**
+ * Quick document extraction without full AI analysis.
+ * Faster but returns only raw extracted tables.
+ *
+ * @param {Object} options - Extraction options
+ * @param {File} options.file - The file to extract from
+ * @returns {Promise<Object>} Extracted tables and metadata
+ */
+export async function extractDocument({ file } = {}) {
+  if (!file) throw new Error('File is required for extraction')
+  const form = new FormData()
+  form.append('file', file)
+  const { data } = await api.post('/analyze/extract', form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+  return data
 }
 
 

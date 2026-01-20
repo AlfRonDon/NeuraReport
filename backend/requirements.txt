@@ -10,7 +10,11 @@ cryptography
 
 jsonschema>=4.18.0
 
+# LLM Providers (install based on your needs)
 openai>=1.0.0
+# anthropic>=0.18.0  # Optional: For Claude models
+# google-generativeai>=0.4.0  # Optional: For Gemini models
+
 pillow
 numpy
 pandas
@@ -22,3 +26,8 @@ openpyxl
 html2docx
 python-docx
 pdf2docx
+
+# Enhanced LLM features (all optional)
+# httpx>=0.24.0  # For async HTTP requests
+# tiktoken>=0.5.0  # For token counting
+# sentence-transformers>=2.2.0  # For local embeddings

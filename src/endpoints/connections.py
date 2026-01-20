@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 
 from src.core.config import get_settings
 from src.schemas.connection_schema import ConnectionUpsertPayload, TestPayload
@@ -41,8 +41,6 @@ def upsert_connection_route(payload: ConnectionUpsertPayload, request: Request):
 def delete_connection_route(connection_id: str, request: Request):
     removed = delete_connection(connection_id)
     if not removed:
-        from fastapi import HTTPException
-
         raise HTTPException(status_code=404, detail={"status": "error", "code": "connection_not_found", "message": "Connection not found."})
     return {"status": "ok", "connection_id": connection_id, "correlation_id": _correlation(request)}
 

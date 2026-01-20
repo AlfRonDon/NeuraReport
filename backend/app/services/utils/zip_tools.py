@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import io
 import os
+import shutil
 import zipfile
 from pathlib import Path
 from typing import Iterable, Optional, Tuple
@@ -9,10 +10,22 @@ from typing import Iterable, Optional, Tuple
 
 def _is_safe_member(member: zipfile.ZipInfo) -> bool:
     name = member.filename.replace("\\", "/")
-    if name.startswith("/"):
+    if name.startswith(("/", "\\")):
         return False
     parts = [p for p in name.split("/") if p and p not in (".", "..")]
-    return len(parts) > 0 and not any(p in ("..",) for p in parts)
+    if not parts:
+        return False
+    if ":" in parts[0]:
+        return False
+    return not any(p in ("..",) for p in parts)
+
+
+def _is_within_dir(base_dir: Path, target: Path) -> bool:
+    try:
+        target.resolve().relative_to(base_dir)
+        return True
+    except Exception:
+        return False
 
 
 def detect_zip_root(members: Iterable[str]) -> Optional[str]:
@@ -52,7 +65,15 @@ def create_zip_from_dir(src_dir: Path, dest_zip: Path, *, include_root: bool = T
     return dest_zip
 
 
-def extract_zip_to_dir(zip_path: Path, dest_dir: Path, *, strip_root: bool = True) -> Tuple[Path, str]:
+def extract_zip_to_dir(
+    zip_path: Path,
+    dest_dir: Path,
+    *,
+    strip_root: bool = True,
+    max_entries: int | None = None,
+    max_uncompressed_bytes: int | None = None,
+    max_file_bytes: int | None = None,
+) -> Tuple[Path, str]:
     """
     Extract zip into dest_dir safely. Returns (extracted_root, root_name_in_zip).
     If strip_root is True and the zip has a single top-level folder, the contents of that
@@ -61,10 +82,31 @@ def extract_zip_to_dir(zip_path: Path, dest_dir: Path, *, strip_root: bool = Tru
     """
     dest_dir = Path(dest_dir).resolve()
     dest_dir.mkdir(parents=True, exist_ok=True)
+    base_dir = dest_dir.resolve()
 
     with zipfile.ZipFile(zip_path, mode="r") as zf:
-        root = detect_zip_root(m.filename for m in zf.infolist())
-        for member in zf.infolist():
+        members = list(zf.infolist())
+        file_members = [member for member in members if not member.is_dir()]
+
+        if max_entries is not None and len(file_members) > max_entries:
+            raise ValueError(f"Zip contains {len(file_members)} files, exceeds limit {max_entries}")
+
+        if max_uncompressed_bytes is not None:
+            total_uncompressed = sum(member.file_size for member in file_members)
+            if total_uncompressed > max_uncompressed_bytes:
+                raise ValueError(
+                    f"Zip uncompressed size {total_uncompressed} bytes exceeds limit {max_uncompressed_bytes}"
+                )
+
+        if max_file_bytes is not None:
+            for member in file_members:
+                if member.file_size > max_file_bytes:
+                    raise ValueError(
+                        f"Zip member {member.filename} size {member.file_size} exceeds limit {max_file_bytes}"
+                    )
+
+        root = detect_zip_root(m.filename for m in members)
+        for member in members:
             if not _is_safe_member(member):
                 continue
             name = member.filename.replace("\\", "/")
@@ -75,11 +117,12 @@ def extract_zip_to_dir(zip_path: Path, dest_dir: Path, *, strip_root: bool = Tru
             if not rel:
                 continue
             target = dest_dir / rel
+            if not _is_within_dir(base_dir, target):
+                raise ValueError(f"Zip member {member.filename} would extract outside {base_dir}")
             if member.is_dir():
                 target.mkdir(parents=True, exist_ok=True)
                 continue
             target.parent.mkdir(parents=True, exist_ok=True)
             with zf.open(member, "r") as src, open(target, "wb") as dst:
-                dst.write(src.read())
+                shutil.copyfileobj(src, dst, length=1024 * 1024)
     return dest_dir, (root or "")
-

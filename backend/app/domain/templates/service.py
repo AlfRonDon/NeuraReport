@@ -23,6 +23,7 @@ from backend.app.domain.templates.errors import (
     TemplateZipInvalidError,
 )
 from backend.app.domain.templates.strategies import TemplateKindStrategy, build_template_kind_registry
+from backend.app.core.validation import sanitize_filename
 from backend.app.services.state import state_store
 from backend.app.services.utils import TemplateLockError, acquire_template_lock
 from backend.app.services.utils.artifacts import load_manifest
@@ -45,6 +46,13 @@ class TemplateImportContext:
     manifest: dict = field(default_factory=dict)
 
 
+def _create_temp_path(*, suffix: str) -> Path:
+    handle = tempfile.NamedTemporaryFile(suffix=suffix, delete=False)
+    tmp_path = Path(handle.name)
+    handle.close()
+    return tmp_path
+
+
 class TemplateService:
     def __init__(
         self,
@@ -52,13 +60,18 @@ class TemplateService:
         excel_uploads_root: Path,
         max_bytes: int,
         *,
+        max_zip_entries: int | None = None,
+        max_zip_uncompressed_bytes: int | None = None,
+        max_concurrency: int = 4,
         event_bus: Optional[EventBus] = None,
         kind_registry: Optional[StrategyRegistry[TemplateKindStrategy] | dict[str, TemplateKindStrategy]] = None,
     ) -> None:
         self.uploads_root = uploads_root
         self.excel_uploads_root = excel_uploads_root
         self.max_bytes = max_bytes
-        self._semaphore = asyncio.Semaphore(4)
+        self.max_zip_entries = max_zip_entries
+        self.max_zip_uncompressed_bytes = max_zip_uncompressed_bytes
+        self._semaphore = asyncio.Semaphore(max(1, int(max_concurrency or 1)))
         self.logger = logging.getLogger("neura.templates")
         self.event_bus = event_bus or EventBus(
             middlewares=[logging_middleware(logging.getLogger("neura.events")), metrics_middleware(logging.getLogger("neura.events"))]
@@ -70,6 +83,20 @@ class TemplateService:
             if kind_registry:
                 for key, strategy in kind_registry.items():
                     self.kind_registry.register(key, strategy)
+
+    def _normalize_display_name(
+        self,
+        display_name: Optional[str],
+        root_name: Optional[str],
+        upload_name: Optional[str],
+    ) -> str:
+        raw = (display_name or "").strip() or (root_name or "").strip() or (upload_name or "").strip() or "template"
+        base = Path(raw).name
+        base = Path(base).stem or base
+        safe = sanitize_filename(base)
+        if len(safe) > 100:
+            safe = safe[:100].rstrip()
+        return safe or "template"
 
     async def _write_upload(self, upload, dest: Path) -> int:
         size = 0
@@ -103,7 +130,7 @@ class TemplateService:
         tmp_paths: list[Path] = []
 
         async def _write(ctx: TemplateImportContext) -> Result[TemplateImportContext, TemplateImportError | Exception]:
-            tmp_path = Path(tempfile.mktemp(suffix=".zip"))
+            tmp_path = _create_temp_path(suffix=".zip")
             try:
                 await self._write_upload(ctx.upload, tmp_path)
             except TemplateImportError as exc:
@@ -119,12 +146,31 @@ class TemplateService:
             try:
                 with zipfile.ZipFile(ctx.tmp_path, "r") as zf:
                     members = list(zf.infolist())
+                    file_members = [member for member in members if not member.is_dir()]
+                    if self.max_zip_entries is not None and len(file_members) > self.max_zip_entries:
+                        return err(
+                            TemplateImportError(
+                                code="zip_too_many_files",
+                                message="Zip contains too many files",
+                                detail=f"max_entries={self.max_zip_entries}",
+                            )
+                        )
+                    if self.max_zip_uncompressed_bytes is not None:
+                        total_uncompressed = sum(member.file_size for member in file_members)
+                        if total_uncompressed > self.max_zip_uncompressed_bytes:
+                            return err(
+                                TemplateImportError(
+                                    code="zip_too_large",
+                                    message="Zip expands beyond allowed size",
+                                    detail=f"max_uncompressed_bytes={self.max_zip_uncompressed_bytes}",
+                                )
+                            )
                     root = detect_zip_root(m.filename for m in members)
                     contains_excel = any(Path(m.filename).name.lower() == "source.xlsx" for m in members)
             except Exception as exc:
                 return err(TemplateZipInvalidError(detail=str(exc)))
             kind = "excel" if contains_excel else "pdf"
-            name = display_name or root or (upload.filename or "template")
+            name = self._normalize_display_name(display_name, root, upload.filename)
             return ok(
                 replace(
                     ctx,
@@ -153,8 +199,18 @@ class TemplateService:
 
             with lock_ctx:
                 try:
-                    extract_zip_to_dir(ctx.tmp_path, ctx.template_dir, strip_root=True)
+                    extract_zip_to_dir(
+                        ctx.tmp_path,
+                        ctx.template_dir,
+                        strip_root=True,
+                        max_entries=self.max_zip_entries,
+                        max_uncompressed_bytes=self.max_zip_uncompressed_bytes,
+                    )
                 except Exception as exc:
+                    with contextlib.suppress(Exception):
+                        for path in ctx.template_dir.rglob("*"):
+                            if path.is_file():
+                                path.unlink()
                     return err(TemplateExtractionError(detail=str(exc)))
 
                 manifest = load_manifest(ctx.template_dir) or {}
@@ -232,3 +288,152 @@ class TemplateService:
             "artifacts": final_ctx.artifacts,
             "correlation_id": correlation_id,
         }
+
+    async def export_zip(
+        self,
+        template_id: str,
+        correlation_id: Optional[str],
+    ) -> dict:
+        """Export a template directory as a zip file."""
+        from fastapi import HTTPException
+
+        # Find the template in state
+        template_record = state_store.get_template_record(template_id)
+        if not template_record:
+            raise HTTPException(status_code=404, detail=f"Template '{template_id}' not found")
+
+        template_kind = template_record.get("kind") or template_record.get("template_type") or "pdf"
+        template_name = template_record.get("name") or template_id
+
+        # Resolve template directory
+        if template_kind == "excel":
+            template_dir = self.excel_uploads_root / template_id
+        else:
+            template_dir = self.uploads_root / template_id
+
+        if not template_dir.exists():
+            raise HTTPException(status_code=404, detail=f"Template directory not found for '{template_id}'")
+
+        # Create a temporary zip file
+        safe_name = "".join(c if c.isalnum() or c in "-_" else "_" for c in template_name)
+        zip_filename = f"{safe_name}-{template_id[:8]}.zip"
+        tmp_zip_path = _create_temp_path(suffix=".zip")
+
+        try:
+            with zipfile.ZipFile(tmp_zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
+                for file_path in template_dir.rglob("*"):
+                    if file_path.is_file():
+                        # Skip lock files and temp files
+                        if file_path.name.startswith(".") or file_path.suffix == ".lock":
+                            continue
+                        arcname = file_path.relative_to(template_dir)
+                        zf.write(file_path, arcname)
+        except Exception as exc:
+            with contextlib.suppress(Exception):
+                tmp_zip_path.unlink(missing_ok=True)
+            raise HTTPException(status_code=500, detail=f"Failed to create export zip: {exc}")
+
+        self.logger.info(
+            "template_exported",
+            extra={
+                "event": "template_exported",
+                "template_id": template_id,
+                "kind": template_kind,
+                "zip_path": str(tmp_zip_path),
+                "correlation_id": correlation_id,
+            },
+        )
+
+        return {
+            "zip_path": str(tmp_zip_path),
+            "filename": zip_filename,
+            "template_id": template_id,
+            "kind": template_kind,
+        }
+
+    async def duplicate(
+        self,
+        template_id: str,
+        new_name: Optional[str],
+        correlation_id: Optional[str],
+    ) -> dict:
+        """Duplicate a template by copying its directory to a new ID."""
+        import shutil
+        from fastapi import HTTPException
+
+        # Find the source template
+        template_record = state_store.get_template_record(template_id)
+        if not template_record:
+            raise HTTPException(status_code=404, detail=f"Template '{template_id}' not found")
+
+        template_kind = template_record.get("kind") or template_record.get("template_type") or "pdf"
+        original_name = template_record.get("name") or template_id
+
+        # Determine source directory
+        if template_kind == "excel":
+            source_dir = self.excel_uploads_root / template_id
+        else:
+            source_dir = self.uploads_root / template_id
+
+        if not source_dir.exists():
+            raise HTTPException(status_code=404, detail=f"Template directory not found for '{template_id}'")
+
+        # Generate new template info
+        strategy = self.kind_registry.resolve(template_kind)
+        display_name = new_name or f"{original_name} (Copy)"
+        new_template_id = strategy.generate_id(display_name)
+        target_dir = strategy.ensure_target_dir(new_template_id)
+
+        try:
+            # Copy all files from source to target
+            for file_path in source_dir.rglob("*"):
+                if file_path.is_file():
+                    # Skip lock files and temp files
+                    if file_path.name.startswith(".") or file_path.suffix == ".lock":
+                        continue
+                    rel_path = file_path.relative_to(source_dir)
+                    dest_path = target_dir / rel_path
+                    dest_path.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(file_path, dest_path)
+
+            # Load manifest and artifacts
+            manifest = load_manifest(target_dir) or {}
+            artifacts = manifest.get("artifacts") or {}
+            status = "approved" if (target_dir / "contract.json").exists() else "draft"
+
+            # Register the new template in state
+            state_store.upsert_template(
+                new_template_id,
+                name=display_name,
+                status=status,
+                artifacts=artifacts,
+                connection_id=None,
+                mapping_keys=[],
+                template_type=template_kind,
+            )
+
+            self.logger.info(
+                "template_duplicated",
+                extra={
+                    "event": "template_duplicated",
+                    "source_id": template_id,
+                    "new_id": new_template_id,
+                    "kind": template_kind,
+                    "correlation_id": correlation_id,
+                },
+            )
+
+            return {
+                "template_id": new_template_id,
+                "name": display_name,
+                "kind": template_kind,
+                "status": status,
+                "artifacts": artifacts,
+                "source_id": template_id,
+            }
+        except Exception as exc:
+            # Clean up on failure
+            with contextlib.suppress(Exception):
+                if target_dir.exists():
+                    shutil.rmtree(target_dir)
+            raise HTTPException(status_code=500, detail=f"Failed to duplicate template: {exc}")

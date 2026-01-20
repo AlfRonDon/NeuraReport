@@ -17,7 +17,7 @@ from backend.app.domain.templates.service import TemplateService
 from backend.app.services.utils import TemplateLockError, acquire_template_lock
 from backend.app.services.templates.catalog import build_unified_template_catalog
 from backend.app.services.utils import get_correlation_id
-from backend.app.services.state import state_store
+from backend.app.services.state import store as state_store_module
 from backend.app.services.prompts.llm_prompts_templates import recommend_templates_from_catalog
 from backend.app.services.utils.zip_tools import create_zip_from_dir
 from src.services.file_service import (
@@ -57,6 +57,9 @@ def _get_template_service() -> TemplateService:
             uploads_root=settings.uploads_dir,
             excel_uploads_root=settings.excel_uploads_dir,
             max_bytes=settings.max_upload_bytes,
+            max_zip_entries=settings.max_zip_entries,
+            max_zip_uncompressed_bytes=settings.max_zip_uncompressed_bytes,
+            max_concurrency=settings.template_import_max_concurrency,
         )
     return _TEMPLATE_SERVICE
 
@@ -66,6 +69,10 @@ def _http_error(status_code: int, code: str, message: str, details: str | None =
     if details:
         payload["details"] = details
     return HTTPException(status_code=status_code, detail=payload)
+
+
+def _state_store():
+    return state_store_module.state_store
 
 
 def export_template_zip(template_id: str, request: Request):
@@ -154,13 +161,13 @@ def generator_assets(template_id: str, payload: GeneratorAssetsPayload, request:
 
 def bootstrap_state(request: Request):
     correlation_id = getattr(request.state, "correlation_id", None) or get_correlation_id()
-    templates = state_store.list_templates()
+    templates = _state_store().list_templates()
     hydrated_templates = _ensure_template_mapping_keys(templates)
     return {
         "status": "ok",
-        "connections": state_store.list_connections(),
+        "connections": _state_store().list_connections(),
         "templates": hydrated_templates,
-        "last_used": state_store.get_last_used(),
+        "last_used": _state_store().get_last_used(),
         "correlation_id": correlation_id,
     }
 
@@ -172,7 +179,7 @@ def templates_catalog(request: Request):
 
 
 def list_templates(status: Optional[str], request: Request):
-    templates = state_store.list_templates()
+    templates = _state_store().list_templates()
     if status:
         status_lower = status.lower()
         templates = [t for t in templates if (t.get("status") or "").lower() == status_lower]
@@ -272,7 +279,7 @@ def recommend_templates(payload: TemplateRecommendPayload, request: Request):
 
 def delete_template(template_id: str, request: Request):
     correlation_id = getattr(request.state, "correlation_id", None) or get_correlation_id()
-    existing_record = state_store.get_template_record(template_id)
+    existing_record = _state_store().get_template_record(template_id)
     template_kind = _resolve_template_kind(template_id)
     tdir = template_dir(template_id, must_exist=False, create=False, kind=template_kind)
 
@@ -302,7 +309,7 @@ def delete_template(template_id: str, request: Request):
                     f"Failed to remove template files: {exc}",
                 )
 
-        removed_state = state_store.delete_template(template_id)
+        removed_state = _state_store().delete_template(template_id)
 
     if not removed_state and not removed_dir and existing_record is None:
         raise _http_error(404, "template_not_found", "template_id not found")
@@ -343,7 +350,7 @@ def _ensure_template_mapping_keys(records: list[dict]) -> list[dict]:
         hydrated.append(new_record)
 
         try:
-            state_store.upsert_template(
+            _state_store().upsert_template(
                 template_id,
                 name=record.get("name") or f"Template {template_id[:8]}",
                 status=record.get("status") or "unknown",

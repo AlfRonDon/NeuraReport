@@ -1,0 +1,38 @@
+{
+  "header": [
+    "report_title",
+    "report_subtitle",
+    "report_from_date",
+    "report_to_date",
+    "print_date"
+  ],
+  "rows": [
+    "row_column_1",
+    "row_column_2",
+    "row_column_3",
+    "row_column_4",
+    "row_column_5",
+    "row_column_6",
+    "row_costal_feeds",
+    "row_column_8",
+    "row_column_9",
+    "row_column_10",
+    "row_column_11",
+    "row_column_12",
+    "row_column_13"
+  ],
+  "totals": [
+    "total_max_m1a_2",
+    "total_max_m1a_3",
+    "total_max_p3a",
+    "total_max_p4a",
+    "total_max_p5a",
+    "total_max_p6a",
+    "total_max_p8a",
+    "total_max_p8a_3",
+    "total_max_p8a_4",
+    "total_max_p8a_dry",
+    "total_max_p9a_dry",
+    "total_max_room"
+  ]
+}

@@ -68,8 +68,6 @@ import {
   toSqlDateTime,
 } from '../utils/generateFeatureUtils'
 import {
-  createSavedChart,
-  deleteSavedChart,
   suggestCharts,
   withBase,
 } from '../services/generateApi'
@@ -1336,7 +1334,7 @@ function GenerateAndDownload({
           <Typography variant="subtitle1">Progress</Typography>
           {generation.items.length > 0 && (
             <Alert severity="info" sx={{ mt: 1 }}>
-              Reports continue running in the background. Open the Jobs panel (clock icon in the header) to monitor status and download results.
+              Reports continue running in the background. Open the Jobs panel from Notifications in the header to monitor status and download results.
             </Alert>
           )}
           <Stack spacing={1.5} sx={{ mt: 1.5 }}>

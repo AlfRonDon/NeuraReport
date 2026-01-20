@@ -152,8 +152,9 @@ def mapping_key_options(
             def _schema_machine_columns(connection):
                 parent_table = str(contract_join.get("parent_table") or "").strip() or "neuract__RUNHOURS"
                 try:
+                    safe_table = parent_table.replace("'", "''")
                     pragma_rows = list(
-                        connection.execute(f"PRAGMA table_info('{parent_table.replace(\"'\", \"''\")}')")
+                        connection.execute(f"PRAGMA table_info('{safe_table}')")
                     )
                     columns = [row[1] for row in pragma_rows if len(row) > 1]
                 except Exception as exc:  # pragma: no cover - defensive
@@ -199,8 +200,9 @@ def mapping_key_options(
                 if not fallback_table:
                     fallback_table = "neuract__RUNHOURS"
                 try:
+                    safe_fallback_table = fallback_table.replace("'", "''")
                     pragma_rows = list(
-                        con_ref.execute(f"PRAGMA table_info('{fallback_table.replace(\"'\", \"''\")}')")
+                        con_ref.execute(f"PRAGMA table_info('{safe_fallback_table}')")
                     )
                     columns = [row[1] for row in pragma_rows if len(row) > 1]
                 except Exception as exc:  # pragma: no cover - defensive

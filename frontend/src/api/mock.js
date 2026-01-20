@@ -169,6 +169,22 @@ export async function createSchedule(payload = {}) {
   return { schedule: cloneSchedule(schedule) }
 }
 
+export async function updateSchedule(scheduleId, updates = {}) {
+  await sleep(150)
+  const index = MOCK_SCHEDULES.findIndex((item) => item.id === scheduleId)
+  if (index < 0) {
+    return { status: 'not_found', schedule_id: scheduleId }
+  }
+  const existing = MOCK_SCHEDULES[index]
+  const updated = {
+    ...existing,
+    ...updates,
+    updated_at: new Date().toISOString(),
+  }
+  MOCK_SCHEDULES[index] = updated
+  return { schedule: cloneSchedule(updated) }
+}
+
 export async function deleteSchedule(scheduleId) {
   await sleep(120)
   const index = MOCK_SCHEDULES.findIndex((item) => item.id === scheduleId)

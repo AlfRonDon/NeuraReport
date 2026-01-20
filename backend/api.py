@@ -22,6 +22,7 @@ from src.utils.connection_utils import db_path_from_payload_or_default as _db_pa
 
 from .app.core.event_bus import EventBus, logging_middleware, metrics_middleware
 from src.routes import router as v1_router
+from backend.app.api.router import register_routes
 from src.services.report_service import scheduler_runner as report_scheduler_runner
 
 from .app.config import load_settings, log_settings
@@ -32,9 +33,10 @@ from .app.services.jobs.report_scheduler import ReportScheduler
 from backend.app.services.mapping.HeaderMapping import get_parent_child_info
 from src.services.mapping.helpers import compute_db_signature
 from backend.app.services.contract.ContractBuilderV2 import build_or_load_contract_v2
-from backend.app.services.templates.TemplateVerify import render_html_to_png, render_panel_preview
+from backend.app.services.templates.TemplateVerify import pdf_to_pngs, render_html_to_png, render_panel_preview
 from backend.app.services.generator.GeneratorAssetsV1 import build_generator_assets_from_payload
 from src.services.report_service import _schedule_report_job, _run_report_with_email, _run_report_job_sync
+from backend.app.services.connections.db_connection import resolve_db_path
 
 
 def _configure_error_log_handler(target_logger: logging.Logger | None = None) -> Path | None:
@@ -201,6 +203,9 @@ app.mount("/excel-uploads", UploadsStaticFiles(directory=str(EXCEL_UPLOAD_ROOT))
 
 
 app.include_router(v1_router)
+
+# Register routes from backend/app/api/routes (health, connections, templates, analyze)
+register_routes(app)
 
 def _scheduler_runner(payload: dict, kind: str) -> dict:
     return report_scheduler_runner(payload, kind)

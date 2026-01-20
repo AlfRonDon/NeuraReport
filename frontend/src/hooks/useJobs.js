@@ -30,7 +30,7 @@ export function useTrackedJobs(jobIds = [], { refetchInterval = 4000 } = {}) {
       refetchOnWindowFocus: false,
       refetchInterval: (data) => {
         const status = (data?.status || '').toLowerCase()
-        if (status === 'succeeded' || status === 'failed' || status === 'cancelled') {
+        if (status === 'succeeded' || status === 'completed' || status === 'failed' || status === 'cancelled') {
           return false
         }
         return refetchInterval

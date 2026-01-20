@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+
+logger = logging.getLogger("neura.config")
 
 
 @dataclass(frozen=True)
@@ -25,7 +28,8 @@ def _load_version_info() -> dict[str, Any]:
         return {"version": "dev", "commit": "unknown"}
     try:
         return json.loads(version_path.read_text(encoding="utf-8"))
-    except Exception:
+    except Exception as exc:
+        logger.warning(f"Failed to load version.json: {exc}")
         return {"version": "dev", "commit": "unknown"}
 
 
