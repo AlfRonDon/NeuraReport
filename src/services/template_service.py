@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import contextlib
 import os
+import re
 import shutil
 import tempfile
 from pathlib import Path
@@ -20,7 +21,10 @@ from backend.app.services.utils import get_correlation_id
 from backend.app.services.state import store as state_store_module
 from backend.app.services.prompts.llm_prompts_templates import recommend_templates_from_catalog
 from backend.app.services.utils.zip_tools import create_zip_from_dir
+from backend.app.core.validation import is_safe_name
 from src.services.file_service import (
+    apply_chat_template_edit as apply_chat_template_edit_service,
+    chat_template_edit as chat_template_edit_service,
     edit_template_ai as edit_template_ai_service,
     edit_template_manual as edit_template_manual_service,
     generator_assets as generator_assets_service,
@@ -37,10 +41,12 @@ from src.services.file_service.helpers import (
 from src.schemas.template_schema import (
     GeneratorAssetsPayload,
     TemplateAiEditPayload,
+    TemplateChatPayload,
     TemplateManualEditPayload,
     TemplateRecommendPayload,
     TemplateRecommendResponse,
     TemplateRecommendation,
+    TemplateUpdatePayload,
 )
 from src.utils.schedule_utils import utcnow_iso
 from src.utils.template_utils import template_dir
@@ -73,6 +79,25 @@ def _http_error(status_code: int, code: str, message: str, details: str | None =
 
 def _state_store():
     return state_store_module.state_store
+
+
+def _normalize_tags(values: Optional[list[str]]) -> list[str]:
+    if not values:
+        return []
+    seen: set[str] = set()
+    normalized: list[str] = []
+    for raw in values:
+        text = re.sub(r"[^A-Za-z0-9 _-]", "", str(raw or "")).strip()
+        if not text:
+            continue
+        key = text.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        normalized.append(text[:32])
+        if len(normalized) >= 12:
+            break
+    return normalized
 
 
 def export_template_zip(template_id: str, request: Request):
@@ -153,6 +178,14 @@ def edit_template_ai(template_id: str, payload: TemplateAiEditPayload, request: 
 
 def undo_last_template_edit(template_id: str, request: Request):
     return undo_last_template_edit_service(template_id, request)
+
+
+def chat_template_edit(template_id: str, payload: TemplateChatPayload, request: Request):
+    return chat_template_edit_service(template_id, payload, request)
+
+
+def apply_chat_template_edit(template_id: str, html: str, request: Request):
+    return apply_chat_template_edit_service(template_id, html, request)
 
 
 def generator_assets(template_id: str, payload: GeneratorAssetsPayload, request: Request, *, kind: str = "pdf"):
@@ -317,6 +350,47 @@ def delete_template(template_id: str, request: Request):
     return {
         "status": "ok",
         "template_id": template_id,
+        "correlation_id": correlation_id,
+    }
+
+
+def update_template_metadata(template_id: str, payload: TemplateUpdatePayload, request: Request):
+    correlation_id = getattr(request.state, "correlation_id", None) or get_correlation_id()
+    record = _state_store().get_template_record(template_id)
+    if not record:
+        raise _http_error(404, "template_not_found", "template_id not found")
+
+    name = payload.name if payload.name is not None else record.get("name") or template_id
+    if payload.name is not None and not is_safe_name(name):
+        raise _http_error(400, "invalid_name", "Template name contains invalid characters")
+
+    description = payload.description if payload.description is not None else record.get("description")
+    if description is not None:
+        description = str(description).strip()
+        if len(description) > 280:
+            raise _http_error(400, "description_too_long", "Description is limited to 280 characters")
+
+    tags = _normalize_tags(payload.tags) if payload.tags is not None else list(record.get("tags") or [])
+    status = payload.status if payload.status is not None else record.get("status") or "draft"
+    status_norm = str(status or "").strip().lower()
+    if status_norm not in {"draft", "pending", "approved", "archived"}:
+        raise _http_error(400, "invalid_status", "Status must be draft, pending, approved, or archived")
+
+    updated = _state_store().upsert_template(
+        template_id,
+        name=name,
+        status=status_norm,
+        description=description,
+        artifacts=record.get("artifacts") or {},
+        tags=tags,
+        connection_id=record.get("last_connection_id"),
+        mapping_keys=record.get("mapping_keys"),
+        template_type=record.get("kind") or "pdf",
+    )
+
+    return {
+        "status": "ok",
+        "template": updated,
         "correlation_id": correlation_id,
     }
 

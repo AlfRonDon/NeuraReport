@@ -16,6 +16,84 @@ export const API_BASE = runtimeEnv.VITE_API_BASE_URL || 'http://127.0.0.1:8000'
 
 export const api = axios.create({ baseURL: API_BASE })
 
+// User-friendly error message mapping
+const USER_FRIENDLY_ERRORS = {
+  // Authentication
+  401: 'Authentication required. Please check your API key.',
+  403: 'Access denied. You do not have permission for this action.',
+
+  // Network/Server
+  'Network Error': 'Unable to connect to the server. Please check your internet connection.',
+  'timeout': 'Request timed out. Please try again.',
+  502: 'Server is temporarily unavailable. Please try again in a moment.',
+  503: 'Service is temporarily unavailable. Please try again later.',
+  504: 'Server took too long to respond. Please try again.',
+}
+
+// Error message patterns to make user-friendly
+const ERROR_PATTERNS = [
+  { pattern: /invalid content type/i, message: 'Please upload a valid file type.' },
+  { pattern: /context.*(length|window|exceeded|too long)/i, message: 'The document is too large to process. Please try a smaller file.' },
+  { pattern: /quota.*exceeded/i, message: 'AI service quota exceeded. Please try again later or check your API plan.' },
+  { pattern: /rate.?limit/i, message: 'Too many requests. Please wait a moment and try again.' },
+  { pattern: /circuit.?breaker/i, message: 'AI service is temporarily unavailable. Please try again in a few minutes.' },
+  { pattern: /invalid.?api.?key/i, message: 'Invalid API key. Please check your configuration.' },
+  { pattern: /connection.*refused/i, message: 'Unable to connect to database. Please verify connection settings.' },
+  { pattern: /template.*not.*found/i, message: 'Template not found. It may have been deleted.' },
+  { pattern: /job.*not.*found/i, message: 'Job not found. It may have been deleted or expired.' },
+]
+
+function getUserFriendlyError(error) {
+  // Handle axios errors
+  if (error.response) {
+    const status = error.response.status
+    const detail = error.response.data?.detail
+
+    // Check for status code messages
+    if (USER_FRIENDLY_ERRORS[status]) {
+      return USER_FRIENDLY_ERRORS[status]
+    }
+
+    // Check detail message patterns
+    if (detail && typeof detail === 'string') {
+      for (const { pattern, message } of ERROR_PATTERNS) {
+        if (pattern.test(detail)) {
+          return message
+        }
+      }
+      return detail // Return original if no pattern matches
+    }
+  }
+
+  // Handle network errors
+  if (error.message) {
+    for (const [key, message] of Object.entries(USER_FRIENDLY_ERRORS)) {
+      if (error.message.includes(key)) {
+        return message
+      }
+    }
+
+    // Check message patterns
+    for (const { pattern, message } of ERROR_PATTERNS) {
+      if (pattern.test(error.message)) {
+        return message
+      }
+    }
+  }
+
+  return error.message || 'An unexpected error occurred. Please try again.'
+}
+
+// Add response interceptor for error handling
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    // Preserve original error but add user-friendly message
+    error.userMessage = getUserFriendlyError(error)
+    return Promise.reject(error)
+  }
+)
+
 
 
 // helper: simulate latency in mock mode
@@ -45,7 +123,7 @@ const TEMPLATE_ROUTES = {
     keys: (id) => `${API_BASE}/templates/${encodeURIComponent(id)}/keys/options`,
     discover: () => `${API_BASE}/reports/discover`,
     run: () => `${API_BASE}/reports/run`,
-    runJob: () => `${API_BASE}/jobs/run-report`,
+    runJob: () => `${API_BASE}/reports/jobs/run-report`,
     uploadsBase: '/uploads',
     manifestBase: '/templates',
   },
@@ -244,16 +322,154 @@ export async function testConnection({ db_url, db_type, database }) {
 
 
 
-// 2) Upload + verify a PDF template (streaming progress)
+// 2) Upload + verify a PDF template (streaming progress or background queue)
 
-export async function verifyTemplate({ file, connectionId, refineIters = 0, onProgress, kind = 'pdf' } = {}) {
+export async function verifyTemplate({
+  file,
+  connectionId,
+  refineIters = 0,
+  onProgress,
+  onUploadProgress,
+  kind = 'pdf',
+  background = false,
+} = {}) {
   const form = new FormData()
   form.append('file', file)
   const normalizedConnectionId = connectionId ?? ''
   form.append('connection_id', normalizedConnectionId)
   form.append('refine_iters', String(refineIters ?? 0))
 
-  const res = await fetch(getTemplateRoutes(kind).verify(), {
+  const url = background
+    ? `${getTemplateRoutes(kind).verify()}?background=true`
+    : getTemplateRoutes(kind).verify()
+
+  // Use XMLHttpRequest for upload progress tracking if onUploadProgress is provided
+  if (onUploadProgress || background) {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest()
+
+      // Track upload progress
+      xhr.upload.addEventListener('progress', (event) => {
+        if (event.lengthComputable) {
+          const percent = Math.round((event.loaded / event.total) * 100)
+          onUploadProgress?.(percent, event.loaded, event.total)
+          // Also emit as a stage event for unified progress handling
+          onProgress?.({
+            event: 'stage',
+            stage: 'upload',
+            label: `Uploading file... ${percent}%`,
+            progress: Math.min(percent * 0.2, 20), // Upload is 0-20% of total
+            status: percent >= 100 ? 'complete' : 'started',
+          })
+        }
+      })
+
+      xhr.upload.addEventListener('load', () => {
+        onUploadProgress?.(100, file.size, file.size)
+        onProgress?.({
+          event: 'stage',
+          stage: 'upload',
+          label: 'Upload complete, processing...',
+          progress: 20,
+          status: 'complete',
+        })
+      })
+
+      xhr.addEventListener('load', async () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          if (background) {
+            // Background mode returns JSON directly
+            try {
+              const data = JSON.parse(xhr.responseText)
+              resolve(data)
+            } catch (e) {
+              reject(new Error('Failed to parse response'))
+            }
+          } else {
+            // Streaming mode: process NDJSON from response
+            // For XHR we get the full response at once, so parse all lines
+            const lines = xhr.responseText.split('\n').filter(Boolean)
+            let finalEvent = null
+
+            for (const line of lines) {
+              try {
+                const payload = JSON.parse(line.trim())
+                if (payload.event === 'stage') {
+                  // Adjust progress to 20-100% range for processing stages
+                  if (typeof payload.progress === 'number') {
+                    payload.progress = 20 + (payload.progress * 0.8)
+                  }
+                  onProgress?.(payload)
+                } else if (payload.event === 'result') {
+                  finalEvent = payload
+                  onProgress?.(payload)
+                } else if (payload.event === 'error') {
+                  const err = new Error(payload.detail || 'Verification failed')
+                  err.detail = payload.detail
+                  reject(err)
+                  return
+                }
+              } catch {
+                // Skip unparseable lines
+              }
+            }
+
+            if (!finalEvent) {
+              reject(new Error('Verification did not return a result payload'))
+              return
+            }
+
+            const { template_id, schema, artifacts, schema_ext_url } = finalEvent
+            const schemaExtRel = schema_ext_url || artifacts?.schema_ext_url || null
+            const schemaExtUrl = schemaExtRel ? withBase(schemaExtRel) : null
+            const llm2Rel = artifacts?.llm2_html_url || null
+            const llm2Url = llm2Rel ? withBase(llm2Rel) : null
+
+            resolve({
+              template_id,
+              schema,
+              schema_ext_url: schemaExtUrl,
+              llm2_html_url: llm2Url,
+              artifacts: artifacts
+                ? {
+                    pdf_url: artifacts.pdf_url ? withBase(artifacts.pdf_url) : null,
+                    png_url: artifacts.png_url ? withBase(artifacts.png_url) : null,
+                    html_url: artifacts.html_url ? withBase(artifacts.html_url) : null,
+                    llm2_html_url: llm2Url,
+                    schema_ext_url: schemaExtUrl,
+                  }
+                : null,
+            })
+          }
+        } else {
+          let detail
+          try {
+            const data = JSON.parse(xhr.responseText)
+            detail = data?.detail
+          } catch {
+            detail = xhr.responseText || null
+          }
+          reject(new Error(detail || 'Verify template failed'))
+        }
+      })
+
+      xhr.addEventListener('error', () => {
+        reject(new Error('Network error during upload'))
+      })
+
+      xhr.addEventListener('abort', () => {
+        const err = new Error('Upload cancelled')
+        err.cancelled = true
+        reject(err)
+      })
+
+      xhr.open('POST', url)
+      xhr.send(form)
+    })
+  }
+
+  // Original fetch-based implementation for streaming without upload progress
+  const res = await fetch(url, {
     method: 'POST',
     body: form,
   })
@@ -1523,6 +1739,40 @@ export async function deleteTemplate(templateId) {
   return data
 }
 
+export async function getSimilarTemplates(templateId, limit = 3) {
+  if (!templateId) throw new Error('Missing template id')
+  if (isMock) {
+    await sleep(300)
+    return {
+      similar: [
+        { id: 'similar-1', name: 'Similar Template 1', kind: 'pdf', similarity_score: 0.85 },
+        { id: 'similar-2', name: 'Similar Template 2', kind: 'excel', similarity_score: 0.72 },
+      ],
+    }
+  }
+  const { data } = await api.get(`/recommendations/templates/${encodeURIComponent(templateId)}/similar`, {
+    params: { limit },
+  })
+  return data
+}
+
+export async function updateTemplateMetadata(templateId, payload = {}) {
+  if (!templateId) throw new Error('Missing template id')
+  const body = {}
+  if (payload.name !== undefined) body.name = payload.name
+  if (payload.description !== undefined) body.description = payload.description
+  if (payload.tags !== undefined) body.tags = payload.tags
+  if (payload.status !== undefined) body.status = payload.status
+  if (isMock) {
+    if (typeof mock.updateTemplateMetadata === 'function') {
+      return mock.updateTemplateMetadata({ templateId, ...body })
+    }
+    return { status: 'ok', template: { id: templateId, ...body } }
+  }
+  const { data } = await api.patch(`/templates/${encodeURIComponent(templateId)}`, body)
+  return data
+}
+
 export async function duplicateTemplate(templateId, newName = null) {
   if (!templateId) throw new Error('Missing template id')
   if (isMock) {
@@ -1565,7 +1815,7 @@ export async function exportTemplateZip(templateId) {
   return { status: 'ok' }
 }
 
-export async function importTemplateZip({ file, name } = {}) {
+export async function importTemplateZip({ file, name, onUploadProgress } = {}) {
   if (!file) throw new Error('Select a template zip file')
   if (isMock) {
     await sleep(400)
@@ -1583,6 +1833,14 @@ export async function importTemplateZip({ file, name } = {}) {
   }
   const { data } = await api.post('/templates/import-zip', form, {
     headers: { 'Content-Type': 'multipart/form-data' },
+    onUploadProgress: onUploadProgress
+      ? (progressEvent) => {
+          const percentCompleted = progressEvent.total
+            ? Math.round((progressEvent.loaded * 100) / progressEvent.total)
+            : 0
+          onUploadProgress(percentCompleted)
+        }
+      : undefined,
   })
   return data
 }
@@ -1711,6 +1969,77 @@ export async function undoTemplateEdit(templateId) {
   return data
 }
 
+/**
+ * Send a chat message for conversational template editing.
+ * The AI will ask clarifying questions if needed before proposing changes.
+ *
+ * @param {string} templateId - The template ID
+ * @param {Array<{role: string, content: string}>} messages - Conversation history
+ * @param {string} [html] - Optional current HTML state
+ * @returns {Promise<Object>} Chat response with message, ready_to_apply, proposed_changes, etc.
+ */
+export async function chatTemplateEdit(templateId, messages, html = null) {
+  if (!templateId) throw new Error('templateId is required')
+  if (!Array.isArray(messages) || messages.length === 0) {
+    throw new Error('messages array is required')
+  }
+  if (isMock) {
+    // Mock implementation
+    await sleep(800)
+    const lastMessage = messages[messages.length - 1]?.content || ''
+    const isSimpleRequest = lastMessage.length > 50 || lastMessage.includes('change') || lastMessage.includes('update')
+    return {
+      status: 'ok',
+      template_id: templateId,
+      message: isSimpleRequest
+        ? "I understand you want to make changes. Let me propose the following modifications..."
+        : "Could you please provide more details about what changes you'd like to make to the template?",
+      ready_to_apply: false,
+      proposed_changes: null,
+      follow_up_questions: isSimpleRequest ? null : [
+        "What specific elements would you like to modify?",
+        "What style changes do you have in mind?",
+      ],
+    }
+  }
+  const payload = { messages }
+  if (html) {
+    payload.html = html
+  }
+  const { data } = await api.post(`/templates/${encodeURIComponent(templateId)}/chat`, payload)
+  return data
+}
+
+/**
+ * Apply the HTML changes from a chat conversation.
+ * Call this after the user confirms they want to apply the proposed changes.
+ *
+ * @param {string} templateId - The template ID
+ * @param {string} html - The updated HTML to apply
+ * @returns {Promise<Object>} Response with updated template info
+ */
+export async function applyChatTemplateEdit(templateId, html) {
+  if (!templateId) throw new Error('templateId is required')
+  if (typeof html !== 'string') throw new Error('html is required')
+  if (isMock) {
+    await sleep(400)
+    return {
+      status: 'ok',
+      template_id: templateId,
+      html,
+      metadata: {
+        lastEditType: 'chat',
+        lastEditAt: new Date().toISOString(),
+        lastEditNotes: 'AI chat-assisted HTML edit via template editor',
+      },
+      history: [],
+      diff_summary: 'Changes applied via chat',
+    }
+  }
+  const { data } = await api.post(`/templates/${encodeURIComponent(templateId)}/chat/apply`, { html })
+  return data
+}
+
 
 
 // B) Run a report for a date range (returns artifact URLs)
@@ -1804,6 +2133,35 @@ export function normalizeRunArtifacts(run) {
     docx_url: run.docx_url ? withBase(run.docx_url) : null,
     xlsx_url: run.xlsx_url ? withBase(run.xlsx_url) : null,
   }
+}
+
+export async function listReportRuns({ templateId, connectionId, scheduleId, limit = 20 } = {}) {
+  if (isMock) {
+    if (typeof mock.listReportRuns === 'function') {
+      return mock.listReportRuns({ templateId, connectionId, scheduleId, limit })
+    }
+    return []
+  }
+  const params = new URLSearchParams()
+  if (templateId) params.set('template_id', templateId)
+  if (connectionId) params.set('connection_id', connectionId)
+  if (scheduleId) params.set('schedule_id', scheduleId)
+  if (limit) params.set('limit', String(limit))
+  const endpoint = `/reports/runs${params.toString() ? `?${params.toString()}` : ''}`
+  const { data } = await api.get(endpoint)
+  return Array.isArray(data?.runs) ? data.runs : []
+}
+
+export async function getReportRun(runId) {
+  if (!runId) throw new Error('Missing run id')
+  if (isMock) {
+    if (typeof mock.getReportRun === 'function') {
+      return mock.getReportRun(runId)
+    }
+    return null
+  }
+  const { data } = await api.get(`/reports/runs/${encodeURIComponent(runId)}`)
+  return data?.run || data
 }
 
 // D) Discovery helper - delegates to discoverReports with simplified interface
@@ -1965,6 +2323,53 @@ export async function healthcheckConnection(connectionId) {
 
 }
 
+export async function getConnectionSchema(
+  connectionId,
+  { includeRowCounts = true, includeForeignKeys = true, sampleRows = 0 } = {},
+) {
+  if (!connectionId) throw new Error('Missing connection id')
+  if (isMock) {
+    if (typeof mock.getConnectionSchema === 'function') {
+      return mock.getConnectionSchema({
+        connectionId,
+        includeRowCounts,
+        includeForeignKeys,
+        sampleRows,
+      })
+    }
+    return { connection_id: connectionId, tables: [] }
+  }
+  const params = new URLSearchParams()
+  if (includeRowCounts) params.set('include_row_counts', 'true')
+  if (!includeForeignKeys) params.set('include_foreign_keys', 'false')
+  if (sampleRows) params.set('sample_rows', String(sampleRows))
+  const query = params.toString()
+  const endpoint = `/connections/${encodeURIComponent(connectionId)}/schema${query ? `?${query}` : ''}`
+  const { data } = await api.get(endpoint)
+  return data
+}
+
+export async function getConnectionTablePreview(
+  connectionId,
+  { table, limit = 10, offset = 0 } = {},
+) {
+  if (!connectionId) throw new Error('Missing connection id')
+  if (!table) throw new Error('Table name is required')
+  if (isMock) {
+    if (typeof mock.getConnectionTablePreview === 'function') {
+      return mock.getConnectionTablePreview({ connectionId, table, limit, offset })
+    }
+    return { connection_id: connectionId, table, columns: [], rows: [] }
+  }
+  const params = new URLSearchParams()
+  params.set('table', table)
+  if (limit) params.set('limit', String(limit))
+  if (offset) params.set('offset', String(offset))
+  const endpoint = `/connections/${encodeURIComponent(connectionId)}/preview?${params.toString()}`
+  const { data } = await api.get(endpoint)
+  return data
+}
+
 export async function getSystemHealth() {
   if (isMock) {
     return {
@@ -1988,6 +2393,40 @@ export async function getSystemHealth() {
     }
   }
   const { data } = await api.get('/health/detailed')
+  return data
+}
+
+export async function getTokenUsage() {
+  if (isMock) {
+    return {
+      status: 'ok',
+      usage: {
+        total_input_tokens: 125000,
+        total_output_tokens: 45000,
+        total_tokens: 170000,
+        estimated_cost_usd: 2.85,
+        request_count: 156,
+      },
+    }
+  }
+  const { data } = await api.get('/health/token-usage')
+  return data
+}
+
+export async function exportConfiguration() {
+  if (isMock) {
+    return {
+      status: 'ok',
+      config: {
+        version: '4.0',
+        exported_at: new Date().toISOString(),
+        connections: [],
+        templates: [],
+        preferences: {},
+      },
+    }
+  }
+  const { data } = await api.get('/config/export')
   return data
 }
 
@@ -2049,6 +2488,21 @@ export async function cancelJob(jobId, options = {}) {
   const endpoint = `/jobs/${encodeURIComponent(jobId)}/cancel${force ? '?force=true' : ''}`
   const { data } = await api.post(endpoint)
   return data?.job || data
+}
+
+export async function retryJob(jobId) {
+  if (!jobId) throw new Error('Missing job id')
+  if (isMock) {
+    await sleep(400)
+    return {
+      status: 'ok',
+      message: 'Job retry queued successfully',
+      original_job_id: jobId,
+      new_job: { id: `job-retry-${Date.now()}`, status: 'pending' },
+    }
+  }
+  const { data } = await api.post(`/jobs/${encodeURIComponent(jobId)}/retry`)
+  return data
 }
 
 
@@ -2163,12 +2617,537 @@ export async function extractDocument({ file } = {}) {
 }
 
 
+/* ------------------------ Analytics API ------------------------ */
+
+/**
+ * Get dashboard analytics data including metrics, trends, and recent activity.
+ * @returns {Promise<Object>} Dashboard analytics data
+ */
+export async function getDashboardAnalytics() {
+  if (isMock) {
+    await sleep(300)
+    return {
+      summary: {
+        totalConnections: 3,
+        activeConnections: 2,
+        totalTemplates: 8,
+        approvedTemplates: 6,
+        pdfTemplates: 5,
+        excelTemplates: 3,
+        totalJobs: 45,
+        activeJobs: 2,
+        completedJobs: 38,
+        failedJobs: 5,
+        totalSchedules: 4,
+        activeSchedules: 3,
+      },
+      metrics: {
+        successRate: 88.4,
+        avgConnectionLatency: 45.2,
+        jobsToday: 5,
+        jobsThisWeek: 23,
+        jobsThisMonth: 45,
+      },
+      topTemplates: [
+        { id: 'tpl-1', name: 'Sales Report', kind: 'pdf', runCount: 15 },
+        { id: 'tpl-2', name: 'Inventory', kind: 'excel', runCount: 12 },
+      ],
+      jobsTrend: [
+        { date: '2024-01-14', label: 'Sun', total: 3, completed: 3, failed: 0 },
+        { date: '2024-01-15', label: 'Mon', total: 8, completed: 7, failed: 1 },
+        { date: '2024-01-16', label: 'Tue', total: 5, completed: 5, failed: 0 },
+        { date: '2024-01-17', label: 'Wed', total: 6, completed: 5, failed: 1 },
+        { date: '2024-01-18', label: 'Thu', total: 4, completed: 4, failed: 0 },
+        { date: '2024-01-19', label: 'Fri', total: 7, completed: 6, failed: 1 },
+        { date: '2024-01-20', label: 'Sat', total: 2, completed: 2, failed: 0 },
+      ],
+      recentActivity: [],
+      timestamp: new Date().toISOString(),
+    }
+  }
+  const { data } = await api.get('/analytics/dashboard')
+  return data
+}
+
+/**
+ * Get usage statistics over a time period.
+ * @param {string} period - Time period: 'day', 'week', or 'month'
+ * @returns {Promise<Object>} Usage statistics
+ */
+export async function getUsageStatistics(period = 'week') {
+  if (isMock) {
+    await sleep(200)
+    return {
+      period,
+      totalJobs: 23,
+      byStatus: { completed: 20, failed: 2, cancelled: 1 },
+      byKind: { pdf: 15, excel: 8 },
+      templateBreakdown: [],
+    }
+  }
+  const { data } = await api.get(`/analytics/usage?period=${period}`)
+  return data
+}
+
+/**
+ * Get report generation history with filtering.
+ * @param {Object} options - Filter options
+ * @returns {Promise<Object>} Report history with pagination
+ */
+export async function getReportHistory({ limit = 50, offset = 0, status, templateId } = {}) {
+  if (isMock) {
+    await sleep(200)
+    return { history: [], total: 0, limit, offset, hasMore: false }
+  }
+  const params = new URLSearchParams()
+  params.set('limit', String(limit))
+  params.set('offset', String(offset))
+  if (status) params.set('status', status)
+  if (templateId) params.set('template_id', templateId)
+  const { data } = await api.get(`/analytics/reports/history?${params}`)
+  return data
+}
 
 
+/* ------------------------ Activity Log API ------------------------ */
+
+/**
+ * Get activity log with optional filtering.
+ * @param {Object} options - Filter options
+ * @returns {Promise<Object>} Activity log entries
+ */
+export async function getActivityLog({ limit = 50, offset = 0, entityType, action } = {}) {
+  if (isMock) {
+    await sleep(200)
+    return { activities: [], limit, offset }
+  }
+  const params = new URLSearchParams()
+  params.set('limit', String(limit))
+  params.set('offset', String(offset))
+  if (entityType) params.set('entity_type', entityType)
+  if (action) params.set('action', action)
+  const { data } = await api.get(`/analytics/activity?${params}`)
+  return data
+}
+
+/**
+ * Log an activity event.
+ * @param {Object} activity - Activity data
+ * @returns {Promise<Object>} Created activity entry
+ */
+export async function logActivity({ action, entityType, entityId, entityName, details } = {}) {
+  if (isMock) {
+    await sleep(100)
+    return { activity: { id: `act-${Date.now()}`, action, entityType, entityId, timestamp: new Date().toISOString() } }
+  }
+  const params = new URLSearchParams()
+  params.set('action', action)
+  params.set('entity_type', entityType)
+  if (entityId) params.set('entity_id', entityId)
+  if (entityName) params.set('entity_name', entityName)
+  const { data } = await api.post(`/analytics/activity?${params}`, details || {})
+  return data
+}
+
+/**
+ * Clear all activity log entries.
+ * @returns {Promise<Object>} Number of entries cleared
+ */
+export async function clearActivityLog() {
+  if (isMock) {
+    await sleep(100)
+    return { cleared: 0 }
+  }
+  const { data } = await api.delete('/analytics/activity')
+  return data
+}
 
 
+/* ------------------------ Favorites API ------------------------ */
+
+/**
+ * Get all favorites with enriched details.
+ * @returns {Promise<Object>} Favorites with template and connection details
+ */
+export async function getFavorites() {
+  if (isMock) {
+    await sleep(200)
+    return { templates: [], connections: [] }
+  }
+  const { data } = await api.get('/analytics/favorites')
+  return data
+}
+
+/**
+ * Add an item to favorites.
+ * @param {string} entityType - 'templates' or 'connections'
+ * @param {string} entityId - ID of the item
+ * @returns {Promise<Object>} Result
+ */
+export async function addFavorite(entityType, entityId) {
+  if (isMock) {
+    await sleep(100)
+    return { added: true, entityType, entityId }
+  }
+  const { data } = await api.post(`/analytics/favorites/${entityType}/${encodeURIComponent(entityId)}`)
+  return data
+}
+
+/**
+ * Remove an item from favorites.
+ * @param {string} entityType - 'templates' or 'connections'
+ * @param {string} entityId - ID of the item
+ * @returns {Promise<Object>} Result
+ */
+export async function removeFavorite(entityType, entityId) {
+  if (isMock) {
+    await sleep(100)
+    return { removed: true, entityType, entityId }
+  }
+  const { data } = await api.delete(`/analytics/favorites/${entityType}/${encodeURIComponent(entityId)}`)
+  return data
+}
+
+/**
+ * Check if an item is a favorite.
+ * @param {string} entityType - 'templates' or 'connections'
+ * @param {string} entityId - ID of the item
+ * @returns {Promise<Object>} Result with isFavorite boolean
+ */
+export async function checkFavorite(entityType, entityId) {
+  if (isMock) {
+    await sleep(50)
+    return { isFavorite: false, entityType, entityId }
+  }
+  const { data } = await api.get(`/analytics/favorites/${entityType}/${encodeURIComponent(entityId)}`)
+  return data
+}
 
 
+/* ------------------------ User Preferences API ------------------------ */
+
+/**
+ * Get user preferences from server.
+ * @returns {Promise<Object>} User preferences
+ */
+export async function getUserPreferences() {
+  if (isMock) {
+    await sleep(100)
+    return { preferences: {} }
+  }
+  const { data } = await api.get('/analytics/preferences')
+  return data
+}
+
+/**
+ * Update user preferences.
+ * @param {Object} updates - Preference updates
+ * @returns {Promise<Object>} Updated preferences
+ */
+export async function updateUserPreferences(updates) {
+  if (isMock) {
+    await sleep(100)
+    return { preferences: updates }
+  }
+  const { data } = await api.put('/analytics/preferences', updates)
+  return data
+}
+
+/**
+ * Set a single user preference.
+ * @param {string} key - Preference key
+ * @param {any} value - Preference value
+ * @returns {Promise<Object>} Updated preferences
+ */
+export async function setUserPreference(key, value) {
+  if (isMock) {
+    await sleep(100)
+    return { preferences: { [key]: value } }
+  }
+  const { data } = await api.put(`/analytics/preferences/${encodeURIComponent(key)}`, { value })
+  return data
+}
 
 
+/* ------------------------ Export/Backup API ------------------------ */
+
+/**
+ * Export all configuration as JSON.
+ * @returns {Promise<Object>} Exported configuration
+ */
+export async function exportConfiguration() {
+  if (isMock) {
+    await sleep(200)
+    return {
+      version: '1.0',
+      exportedAt: new Date().toISOString(),
+      data: {
+        connections: [],
+        templates: [],
+        schedules: [],
+        favorites: { templates: [], connections: [] },
+        preferences: {},
+      },
+    }
+  }
+  const { data } = await api.get('/analytics/export/config')
+  return data
+}
+
+/**
+ * Download configuration as a JSON file.
+ */
+export async function downloadConfiguration() {
+  const config = await exportConfiguration()
+  const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = `neurareport-config-${Date.now()}.json`
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  URL.revokeObjectURL(url)
+  return config
+}
+
+
+/* ------------------------ Global Search API ------------------------ */
+
+/**
+ * Search across templates, connections, and jobs.
+ * @param {string} query - Search query
+ * @param {Object} options - Search options
+ * @returns {Promise<Object>} Search results
+ */
+export async function globalSearch(query, { types, limit = 20 } = {}) {
+  if (!query || query.trim().length < 1) {
+    return { query: '', results: [], total: 0 }
+  }
+  if (isMock) {
+    await sleep(150)
+    return { query, results: [], total: 0 }
+  }
+  const params = new URLSearchParams()
+  params.set('q', query)
+  if (types) params.set('types', types)
+  if (limit) params.set('limit', String(limit))
+  const { data } = await api.get(`/analytics/search?${params}`)
+  return data
+}
+
+
+// ==================== Notifications API ====================
+
+/**
+ * Get notifications.
+ * @param {Object} options - Options
+ * @returns {Promise<Object>} Notifications data
+ */
+export async function getNotifications({ limit = 50, unreadOnly = false } = {}) {
+  if (isMock) {
+    await sleep(100)
+    return { notifications: [], unreadCount: 0, total: 0 }
+  }
+  const params = new URLSearchParams()
+  params.set('limit', String(limit))
+  if (unreadOnly) params.set('unread_only', 'true')
+  const { data } = await api.get(`/analytics/notifications?${params}`)
+  return data
+}
+
+/**
+ * Get unread notification count.
+ * @returns {Promise<Object>} Unread count
+ */
+export async function getUnreadNotificationCount() {
+  if (isMock) {
+    return { unreadCount: 0 }
+  }
+  const { data } = await api.get('/analytics/notifications/unread-count')
+  return data
+}
+
+/**
+ * Create a notification.
+ * @param {Object} notification - Notification data
+ * @returns {Promise<Object>} Created notification
+ */
+export async function createNotification({ title, message, type = 'info', link, entityType, entityId }) {
+  if (isMock) {
+    await sleep(100)
+    return { notification: { id: Date.now(), title, message, type, read: false } }
+  }
+  const { data } = await api.post('/analytics/notifications', {
+    title,
+    message,
+    type,
+    link,
+    entityType,
+    entityId,
+  })
+  return data
+}
+
+/**
+ * Mark a notification as read.
+ * @param {string} notificationId - Notification ID
+ * @returns {Promise<Object>} Result
+ */
+export async function markNotificationRead(notificationId) {
+  if (isMock) {
+    await sleep(50)
+    return { marked: true }
+  }
+  const { data } = await api.put(`/analytics/notifications/${notificationId}/read`)
+  return data
+}
+
+/**
+ * Mark all notifications as read.
+ * @returns {Promise<Object>} Result with count
+ */
+export async function markAllNotificationsRead() {
+  if (isMock) {
+    await sleep(50)
+    return { markedCount: 0 }
+  }
+  const { data } = await api.put('/analytics/notifications/read-all')
+  return data
+}
+
+/**
+ * Delete a notification.
+ * @param {string} notificationId - Notification ID
+ * @returns {Promise<Object>} Result
+ */
+export async function deleteNotification(notificationId) {
+  if (isMock) {
+    await sleep(50)
+    return { deleted: true }
+  }
+  const { data } = await api.delete(`/analytics/notifications/${notificationId}`)
+  return data
+}
+
+/**
+ * Clear all notifications.
+ * @returns {Promise<Object>} Result with count
+ */
+export async function clearAllNotifications() {
+  if (isMock) {
+    await sleep(50)
+    return { clearedCount: 0 }
+  }
+  const { data } = await api.delete('/analytics/notifications')
+  return data
+}
+
+
+// ==================== Template Tags API ====================
+
+/**
+ * Update tags for a template.
+ * @param {string} templateId - Template ID
+ * @param {string[]} tags - Array of tags
+ * @returns {Promise<Object>} Updated tags
+ */
+export async function updateTemplateTags(templateId, tags) {
+  if (isMock) {
+    await sleep(100)
+    return { template_id: templateId, tags }
+  }
+  const { data } = await api.put(`/templates/${encodeURIComponent(templateId)}/tags`, { tags })
+  return data
+}
+
+/**
+ * Get all unique tags across all templates.
+ * @returns {Promise<Object>} Tags data with counts
+ */
+export async function getAllTemplateTags() {
+  if (isMock) {
+    await sleep(100)
+    return { tags: [], tagCounts: {}, total: 0 }
+  }
+  const { data } = await api.get('/templates/tags/all')
+  return data
+}
+
+
+// ==================== Bulk Operations API ====================
+
+/**
+ * Bulk delete templates.
+ * @param {string[]} templateIds - Template IDs to delete
+ * @returns {Promise<Object>} Result with deleted and failed counts
+ */
+export async function bulkDeleteTemplates(templateIds) {
+  if (isMock) {
+    await sleep(200)
+    return { deleted: templateIds, deletedCount: templateIds.length, failed: [], failedCount: 0 }
+  }
+  const { data } = await api.post('/analytics/bulk/templates/delete', { templateIds })
+  return data
+}
+
+/**
+ * Bulk update template status.
+ * @param {string[]} templateIds - Template IDs
+ * @param {string} status - New status
+ * @returns {Promise<Object>} Result with updated and failed counts
+ */
+export async function bulkUpdateTemplateStatus(templateIds, status) {
+  if (isMock) {
+    await sleep(200)
+    return { updated: templateIds, updatedCount: templateIds.length, failed: [], failedCount: 0 }
+  }
+  const { data } = await api.post('/analytics/bulk/templates/update-status', { templateIds, status })
+  return data
+}
+
+/**
+ * Bulk add tags to templates.
+ * @param {string[]} templateIds - Template IDs
+ * @param {string[]} tags - Tags to add
+ * @returns {Promise<Object>} Result with updated and failed counts
+ */
+export async function bulkAddTemplateTags(templateIds, tags) {
+  if (isMock) {
+    await sleep(200)
+    return { updated: templateIds, updatedCount: templateIds.length, failed: [], failedCount: 0 }
+  }
+  const { data } = await api.post('/analytics/bulk/templates/add-tags', { templateIds, tags })
+  return data
+}
+
+/**
+ * Bulk cancel jobs.
+ * @param {string[]} jobIds - Job IDs to cancel
+ * @returns {Promise<Object>} Result with cancelled and failed counts
+ */
+export async function bulkCancelJobs(jobIds) {
+  if (isMock) {
+    await sleep(200)
+    return { cancelled: jobIds, cancelledCount: jobIds.length, failed: [], failedCount: 0 }
+  }
+  const { data } = await api.post('/analytics/bulk/jobs/cancel', { jobIds })
+  return data
+}
+
+/**
+ * Bulk delete jobs from history.
+ * @param {string[]} jobIds - Job IDs to delete
+ * @returns {Promise<Object>} Result with deleted and failed counts
+ */
+export async function bulkDeleteJobs(jobIds) {
+  if (isMock) {
+    await sleep(200)
+    return { deleted: jobIds, deletedCount: jobIds.length, failed: [], failedCount: 0 }
+  }
+  const { data } = await api.post('/analytics/bulk/jobs/delete', { jobIds })
+  return data
+}
+
+export default api
 

@@ -1,14 +1,65 @@
-"""Input validation and sanitization utilities."""
+"""Input validation and sanitization utilities.
+
+Provides comprehensive validation for:
+- IDs and names
+- File paths and filenames
+- SQL identifiers
+- Email addresses
+- URLs
+- JSON content
+- Numeric ranges
+- Date/time values
+"""
 from __future__ import annotations
 
 import re
+import unicodedata
+from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
-from typing import Optional
+from typing import Any, Callable, List, Optional, Tuple, TypeVar, Union
+from urllib.parse import urlparse
+
+T = TypeVar("T")
+
+
+# =============================================================================
+# Validation Result
+# =============================================================================
+
+@dataclass
+class ValidationResult:
+    """Result of a validation operation."""
+    valid: bool
+    value: Any = None
+    error: Optional[str] = None
+    field: Optional[str] = None
+
+    @staticmethod
+    def success(value: Any = None) -> "ValidationResult":
+        return ValidationResult(valid=True, value=value)
+
+    @staticmethod
+    def failure(error: str, field: Optional[str] = None) -> "ValidationResult":
+        return ValidationResult(valid=False, error=error, field=field)
+
+
+# =============================================================================
+# Patterns
+# =============================================================================
 
 # Patterns for validation
 SAFE_ID_PATTERN = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9_-]{0,62}$")
 SAFE_NAME_PATTERN = re.compile(r"^[\w\s\-\.()]{1,100}$", re.UNICODE)
 SAFE_FILENAME_PATTERN = re.compile(r"^[\w\-\.()]+$", re.UNICODE)
+EMAIL_PATTERN = re.compile(
+    r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
+)
+UUID_PATTERN = re.compile(
+    r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+    re.IGNORECASE
+)
+SLUG_PATTERN = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 
 # Dangerous path patterns to block
 DANGEROUS_PATH_PATTERNS = [
@@ -19,6 +70,28 @@ DANGEROUS_PATH_PATTERNS = [
     r"\$",  # Environment variable expansion
     r"%",  # Windows environment variables
     r"\x00",  # Null byte injection
+]
+
+# Common SQL injection patterns
+SQL_INJECTION_PATTERNS = [
+    r";\s*--",
+    r";\s*drop\s",
+    r";\s*delete\s",
+    r";\s*update\s",
+    r";\s*insert\s",
+    r"union\s+select",
+    r"or\s+1\s*=\s*1",
+    r"'\s*or\s*'",
+]
+
+# Common XSS patterns
+XSS_PATTERNS = [
+    r"<script",
+    r"javascript:",
+    r"on\w+\s*=",
+    r"<iframe",
+    r"<object",
+    r"<embed",
 ]
 
 
@@ -136,3 +209,348 @@ def validate_json_string_length(value: str, max_length: int = 10000) -> tuple[bo
     if len(value) > max_length:
         return False, f"Value too long (max {max_length} characters)"
     return True, None
+
+
+# =============================================================================
+# Additional Validation Functions
+# =============================================================================
+
+def is_valid_email(value: str) -> bool:
+    """Check if a string is a valid email address."""
+    if not value or not isinstance(value, str):
+        return False
+    return bool(EMAIL_PATTERN.match(value.strip()))
+
+
+def is_valid_uuid(value: str) -> bool:
+    """Check if a string is a valid UUID."""
+    if not value or not isinstance(value, str):
+        return False
+    return bool(UUID_PATTERN.match(value.strip()))
+
+
+def is_valid_slug(value: str) -> bool:
+    """Check if a string is a valid URL slug."""
+    if not value or not isinstance(value, str):
+        return False
+    return bool(SLUG_PATTERN.match(value.strip()))
+
+
+def is_valid_url(value: str, require_https: bool = False) -> bool:
+    """Check if a string is a valid URL."""
+    if not value or not isinstance(value, str):
+        return False
+
+    try:
+        parsed = urlparse(value.strip())
+        if not parsed.scheme or not parsed.netloc:
+            return False
+        if require_https and parsed.scheme != "https":
+            return False
+        if parsed.scheme not in ("http", "https"):
+            return False
+        return True
+    except Exception:
+        return False
+
+
+def contains_sql_injection(value: str) -> bool:
+    """Check if a string contains potential SQL injection patterns."""
+    if not value:
+        return False
+
+    lower_value = value.lower()
+    for pattern in SQL_INJECTION_PATTERNS:
+        if re.search(pattern, lower_value, re.IGNORECASE):
+            return True
+    return False
+
+
+def contains_xss(value: str) -> bool:
+    """Check if a string contains potential XSS patterns."""
+    if not value:
+        return False
+
+    lower_value = value.lower()
+    for pattern in XSS_PATTERNS:
+        if re.search(pattern, lower_value, re.IGNORECASE):
+            return True
+    return False
+
+
+def sanitize_html(value: str) -> str:
+    """Remove potentially dangerous HTML content."""
+    if not value:
+        return ""
+
+    # Remove script tags and content
+    result = re.sub(r"<script[^>]*>.*?</script>", "", value, flags=re.IGNORECASE | re.DOTALL)
+
+    # Remove event handlers
+    result = re.sub(r"\s*on\w+\s*=\s*[\"'][^\"']*[\"']", "", result, flags=re.IGNORECASE)
+
+    # Remove javascript: URLs
+    result = re.sub(r"javascript:", "", result, flags=re.IGNORECASE)
+
+    return result
+
+
+def normalize_string(value: str) -> str:
+    """Normalize a string by removing control characters and normalizing unicode."""
+    if not value:
+        return ""
+
+    # Normalize unicode
+    normalized = unicodedata.normalize("NFC", value)
+
+    # Remove control characters except newline and tab
+    normalized = "".join(
+        char for char in normalized
+        if char == "\n" or char == "\t" or not unicodedata.category(char).startswith("C")
+    )
+
+    return normalized.strip()
+
+
+def validate_numeric_range(
+    value: Union[int, float],
+    min_value: Optional[Union[int, float]] = None,
+    max_value: Optional[Union[int, float]] = None,
+    field_name: str = "value",
+) -> tuple[bool, Optional[str]]:
+    """Validate that a numeric value is within a range."""
+    if min_value is not None and value < min_value:
+        return False, f"{field_name} must be at least {min_value}"
+    if max_value is not None and value > max_value:
+        return False, f"{field_name} must be at most {max_value}"
+    return True, None
+
+
+def validate_date_string(
+    value: str,
+    formats: Optional[List[str]] = None,
+) -> tuple[bool, Optional[datetime]]:
+    """
+    Validate that a string is a valid date.
+    Returns (is_valid, parsed_datetime or None).
+    """
+    if not value:
+        return False, None
+
+    formats = formats or [
+        "%Y-%m-%d",
+        "%Y/%m/%d",
+        "%d/%m/%Y",
+        "%m/%d/%Y",
+        "%Y-%m-%dT%H:%M:%S",
+        "%Y-%m-%dT%H:%M:%SZ",
+        "%Y-%m-%d %H:%M:%S",
+    ]
+
+    for fmt in formats:
+        try:
+            parsed = datetime.strptime(value.strip(), fmt)
+            return True, parsed
+        except ValueError:
+            continue
+
+    return False, None
+
+
+def validate_required_fields(
+    data: dict,
+    required_fields: List[str],
+) -> tuple[bool, List[str]]:
+    """
+    Validate that all required fields are present and non-empty.
+    Returns (is_valid, list of missing fields).
+    """
+    missing = []
+    for field in required_fields:
+        value = data.get(field)
+        if value is None or (isinstance(value, str) and not value.strip()):
+            missing.append(field)
+
+    return len(missing) == 0, missing
+
+
+def validate_field_type(
+    value: Any,
+    expected_type: type,
+    field_name: str = "value",
+) -> tuple[bool, Optional[str]]:
+    """Validate that a value is of the expected type."""
+    if not isinstance(value, expected_type):
+        return False, f"{field_name} must be of type {expected_type.__name__}"
+    return True, None
+
+
+def truncate_string(value: str, max_length: int, suffix: str = "...") -> str:
+    """Truncate a string to max length, adding suffix if truncated."""
+    if not value or len(value) <= max_length:
+        return value
+    return value[:max_length - len(suffix)] + suffix
+
+
+def generate_safe_id(value: str, max_length: int = 63) -> str:
+    """Generate a safe ID from a string."""
+    if not value:
+        return ""
+
+    # Normalize and lowercase
+    safe = normalize_string(value).lower()
+
+    # Replace spaces and special chars with hyphens
+    safe = re.sub(r"[^a-z0-9]+", "-", safe)
+
+    # Remove leading/trailing hyphens
+    safe = safe.strip("-")
+
+    # Ensure starts with alphanumeric
+    if safe and not safe[0].isalnum():
+        safe = "x" + safe
+
+    return safe[:max_length]
+
+
+# =============================================================================
+# Validator Chain
+# =============================================================================
+
+class Validator:
+    """
+    Chainable validator for building complex validation rules.
+
+    Usage:
+        result = Validator(value).required().min_length(3).max_length(50).validate()
+        if not result.valid:
+            print(result.error)
+    """
+
+    def __init__(self, value: Any, field_name: str = "value"):
+        self._value = value
+        self._field = field_name
+        self._errors: List[str] = []
+        self._stop_on_first_error = False
+
+    def stop_on_first_error(self) -> "Validator":
+        """Stop validation after first error."""
+        self._stop_on_first_error = True
+        return self
+
+    def _add_error(self, error: str) -> None:
+        self._errors.append(error)
+
+    def _should_continue(self) -> bool:
+        return not self._stop_on_first_error or not self._errors
+
+    def required(self, message: Optional[str] = None) -> "Validator":
+        """Validate that the value is not None or empty."""
+        if not self._should_continue():
+            return self
+
+        if self._value is None:
+            self._add_error(message or f"{self._field} is required")
+        elif isinstance(self._value, str) and not self._value.strip():
+            self._add_error(message or f"{self._field} cannot be empty")
+
+        return self
+
+    def min_length(self, length: int, message: Optional[str] = None) -> "Validator":
+        """Validate minimum length."""
+        if not self._should_continue():
+            return self
+
+        if isinstance(self._value, (str, list, dict)) and len(self._value) < length:
+            self._add_error(message or f"{self._field} must be at least {length} characters")
+
+        return self
+
+    def max_length(self, length: int, message: Optional[str] = None) -> "Validator":
+        """Validate maximum length."""
+        if not self._should_continue():
+            return self
+
+        if isinstance(self._value, (str, list, dict)) and len(self._value) > length:
+            self._add_error(message or f"{self._field} must be at most {length} characters")
+
+        return self
+
+    def pattern(self, regex: str, message: Optional[str] = None) -> "Validator":
+        """Validate against a regex pattern."""
+        if not self._should_continue():
+            return self
+
+        if isinstance(self._value, str) and not re.match(regex, self._value):
+            self._add_error(message or f"{self._field} has invalid format")
+
+        return self
+
+    def email(self, message: Optional[str] = None) -> "Validator":
+        """Validate as email address."""
+        if not self._should_continue():
+            return self
+
+        if isinstance(self._value, str) and not is_valid_email(self._value):
+            self._add_error(message or f"{self._field} must be a valid email address")
+
+        return self
+
+    def url(self, require_https: bool = False, message: Optional[str] = None) -> "Validator":
+        """Validate as URL."""
+        if not self._should_continue():
+            return self
+
+        if isinstance(self._value, str) and not is_valid_url(self._value, require_https):
+            self._add_error(message or f"{self._field} must be a valid URL")
+
+        return self
+
+    def safe_id(self, message: Optional[str] = None) -> "Validator":
+        """Validate as safe ID."""
+        if not self._should_continue():
+            return self
+
+        if isinstance(self._value, str) and not is_safe_id(self._value):
+            self._add_error(message or f"{self._field} contains invalid characters")
+
+        return self
+
+    def no_sql_injection(self, message: Optional[str] = None) -> "Validator":
+        """Validate against SQL injection patterns."""
+        if not self._should_continue():
+            return self
+
+        if isinstance(self._value, str) and contains_sql_injection(self._value):
+            self._add_error(message or f"{self._field} contains potentially dangerous content")
+
+        return self
+
+    def no_xss(self, message: Optional[str] = None) -> "Validator":
+        """Validate against XSS patterns."""
+        if not self._should_continue():
+            return self
+
+        if isinstance(self._value, str) and contains_xss(self._value):
+            self._add_error(message or f"{self._field} contains potentially dangerous content")
+
+        return self
+
+    def custom(self, validator: Callable[[Any], bool], message: str) -> "Validator":
+        """Apply a custom validation function."""
+        if not self._should_continue():
+            return self
+
+        if not validator(self._value):
+            self._add_error(message)
+
+        return self
+
+    def validate(self) -> ValidationResult:
+        """Execute validation and return result."""
+        if self._errors:
+            return ValidationResult.failure(
+                error="; ".join(self._errors),
+                field=self._field,
+            )
+        return ValidationResult.success(value=self._value)

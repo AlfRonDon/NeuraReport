@@ -24,7 +24,6 @@ import {
 } from '@mui/material'
 import MenuIcon from '@mui/icons-material/Menu'
 import SearchIcon from '@mui/icons-material/Search'
-import NotificationsNoneIcon from '@mui/icons-material/NotificationsNone'
 import PersonOutlineIcon from '@mui/icons-material/PersonOutline'
 import KeyboardIcon from '@mui/icons-material/Keyboard'
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline'
@@ -39,6 +38,8 @@ import { useAppStore } from '../store/useAppStore'
 import { useJobsList } from '../hooks/useJobs'
 import { getShortcutDisplay, SHORTCUTS } from '../hooks/useKeyboardShortcuts'
 import { withBase } from '../api/client'
+import GlobalSearch from '../components/GlobalSearch'
+import NotificationCenter from '../components/notifications/NotificationCenter'
 import { palette } from '../theme'
 
 export default function TopNav({ onMenuClick, showMenuButton, connection }) {
@@ -174,9 +175,14 @@ export default function TopNav({ onMenuClick, showMenuButton, connection }) {
           </IconButton>
         )}
 
-        {/* Breadcrumbs */}
-        <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Breadcrumbs />
+        {/* Breadcrumbs + Global Search */}
+        <Box sx={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            <Breadcrumbs />
+          </Box>
+          <Box sx={{ display: { xs: 'none', md: 'block' } }}>
+            <GlobalSearch variant="compact" enableShortcut={false} showShortcutHint={false} />
+          </Box>
         </Box>
 
         {/* Connection Status */}
@@ -251,7 +257,9 @@ export default function TopNav({ onMenuClick, showMenuButton, connection }) {
             </IconButton>
           </Tooltip>
 
-          <Tooltip title="Notifications" arrow>
+          <NotificationCenter />
+
+          <Tooltip title="Jobs & downloads" arrow>
             <IconButton
               size="small"
               onClick={handleOpenNotifications}
@@ -279,7 +287,7 @@ export default function TopNav({ onMenuClick, showMenuButton, connection }) {
                   },
                 }}
               >
-                <NotificationsNoneIcon sx={{ fontSize: 18 }} />
+                <WorkIcon sx={{ fontSize: 18 }} />
               </Badge>
             </IconButton>
           </Tooltip>

@@ -83,6 +83,40 @@ const MOCK_SCHEDULES = [
     last_run_at: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
   }),
 ]
+const MOCK_RUNS = [
+  {
+    id: 'run_mock_001',
+    templateId: 'tpl_1',
+    templateName: 'Invoice v1',
+    templateKind: 'pdf',
+    connectionId: 'conn_mock',
+    connectionName: 'Mock SQLite',
+    startDate: '2024-01-01',
+    endDate: '2024-01-31',
+    status: 'succeeded',
+    artifacts: {
+      html_url: '/uploads/mock/report_1.html',
+      pdf_url: '/uploads/mock/report_1.pdf',
+    },
+    createdAt: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
+  },
+  {
+    id: 'run_mock_002',
+    templateId: 'tpl_1',
+    templateName: 'Invoice v1',
+    templateKind: 'pdf',
+    connectionId: 'conn_mock',
+    connectionName: 'Mock SQLite',
+    startDate: '2024-02-01',
+    endDate: '2024-02-29',
+    status: 'succeeded',
+    artifacts: {
+      html_url: '/uploads/mock/report_2.html',
+      pdf_url: '/uploads/mock/report_2.pdf',
+    },
+    createdAt: new Date(Date.now() - 26 * 60 * 60 * 1000).toISOString(),
+  },
+]
 
 export async function testConnection(payload) {
   await sleep()
@@ -98,8 +132,22 @@ export async function testConnection(payload) {
 export async function listTemplates() {
   await sleep()
   return [
-    { id: 'tpl_1', name: 'Invoice v1', status: 'approved', tags: ['invoice', 'v1'], kind: 'pdf' },
-    { id: 'tpl_2', name: 'Receipt v2', status: 'draft', tags: ['receipt'], kind: 'pdf' },
+    {
+      id: 'tpl_1',
+      name: 'Invoice v1',
+      status: 'approved',
+      tags: ['invoice', 'v1'],
+      description: 'Monthly invoice rollup for billing teams.',
+      kind: 'pdf',
+    },
+    {
+      id: 'tpl_2',
+      name: 'Receipt v2',
+      status: 'draft',
+      tags: ['receipt'],
+      description: 'Receipt summary template in draft.',
+      kind: 'pdf',
+    },
   ]
 }
 
@@ -144,6 +192,92 @@ export async function listRuns() {
     { id: 'run_ab12', name: 'Batch 2024-01', status: 'complete', progress: 100 },
     { id: 'run_cd34', name: 'Batch 2024-02', status: 'failed', progress: 42 },
   ]
+}
+
+export async function listReportRuns({ templateId, connectionId, scheduleId, limit = 20 } = {}) {
+  await sleep(120)
+  let runs = MOCK_RUNS.slice()
+  if (templateId) runs = runs.filter((run) => run.templateId === templateId)
+  if (connectionId) runs = runs.filter((run) => run.connectionId === connectionId)
+  if (scheduleId) runs = runs.filter((run) => run.scheduleId === scheduleId)
+  if (limit) runs = runs.slice(0, limit)
+  return runs
+}
+
+export async function getReportRun(runId) {
+  await sleep(120)
+  return MOCK_RUNS.find((run) => run.id === runId) || null
+}
+
+export async function updateTemplateMetadata({ templateId, name, description, tags, status } = {}) {
+  await sleep(120)
+  return {
+    status: 'ok',
+    template: {
+      id: templateId,
+      name,
+      description,
+      tags,
+      status,
+      kind: 'pdf',
+      updatedAt: new Date().toISOString(),
+    },
+  }
+}
+
+export async function getConnectionSchema({ connectionId, includeRowCounts, includeForeignKeys, sampleRows } = {}) {
+  await sleep(120)
+  return {
+    connection_id: connectionId,
+    connection_name: 'Mock SQLite',
+    database: 'mock.db',
+    table_count: 2,
+    tables: [
+      {
+        name: 'invoices',
+        columns: [
+          { name: 'invoice_id', type: 'TEXT', notnull: true, pk: true },
+          { name: 'customer', type: 'TEXT', notnull: false, pk: false },
+          { name: 'amount', type: 'REAL', notnull: false, pk: false },
+        ],
+        row_count: includeRowCounts ? 128 : undefined,
+        foreign_keys: includeForeignKeys ? [] : undefined,
+        sample_rows:
+          sampleRows && sampleRows > 0
+            ? [
+                { invoice_id: 'INV-001', customer: 'Acme Corp', amount: 1200.0 },
+                { invoice_id: 'INV-002', customer: 'Globex', amount: 540.5 },
+              ]
+            : undefined,
+      },
+      {
+        name: 'payments',
+        columns: [
+          { name: 'payment_id', type: 'TEXT', notnull: true, pk: true },
+          { name: 'invoice_id', type: 'TEXT', notnull: false, pk: false },
+          { name: 'paid_on', type: 'TEXT', notnull: false, pk: false },
+        ],
+        row_count: includeRowCounts ? 256 : undefined,
+        foreign_keys: includeForeignKeys ? [] : undefined,
+      },
+    ],
+  }
+}
+
+export async function getConnectionTablePreview({ connectionId, table, limit = 10, offset = 0 } = {}) {
+  await sleep(120)
+  return {
+    connection_id: connectionId,
+    table,
+    columns: ['invoice_id', 'customer', 'amount'],
+    rows: [
+      { invoice_id: 'INV-001', customer: 'Acme Corp', amount: 1200.0 },
+      { invoice_id: 'INV-002', customer: 'Globex', amount: 540.5 },
+    ].slice(offset, offset + limit),
+    row_count: 128,
+    limit,
+    offset,
+  }
 }
 
 export async function listSchedules() {

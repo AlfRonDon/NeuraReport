@@ -30,11 +30,13 @@ def db_path_from_payload_or_default(conn_id: Optional[str]) -> Path:
     """
     Resolve a database path using the same precedence as the legacy api.py helper.
     """
+    resolve_db_path_fn = resolve_db_path
     try:
         api_mod = importlib.import_module("backend.api")
         override = getattr(api_mod, "_db_path_from_payload_or_default", None)
         if override and override is not db_path_from_payload_or_default:
             return override(conn_id)
+        resolve_db_path_fn = getattr(api_mod, "resolve_db_path", resolve_db_path)
     except Exception:
         pass
 
@@ -42,8 +44,11 @@ def db_path_from_payload_or_default(conn_id: Optional[str]) -> Path:
         secrets = _state_store().get_connection_secrets(conn_id)
         if secrets and secrets.get("database_path"):
             return Path(secrets["database_path"])
+        record = _state_store().get_connection_record(conn_id)
+        if record and record.get("database_path"):
+            return Path(record["database_path"])
         try:
-            return resolve_db_path(connection_id=conn_id, db_url=None, db_path=None)
+            return resolve_db_path_fn(connection_id=conn_id, db_url=None, db_path=None)
         except Exception:
             pass
 
@@ -52,6 +57,9 @@ def db_path_from_payload_or_default(conn_id: Optional[str]) -> Path:
         secrets = _state_store().get_connection_secrets(last_used["connection_id"])
         if secrets and secrets.get("database_path"):
             return Path(secrets["database_path"])
+        record = _state_store().get_connection_record(last_used["connection_id"])
+        if record and record.get("database_path"):
+            return Path(record["database_path"])
 
     env_db = os.getenv("NR_DEFAULT_DB") or os.getenv("DB_PATH")
     if env_db:

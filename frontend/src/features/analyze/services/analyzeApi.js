@@ -9,9 +9,10 @@ import { API_BASE, handleStreamingResponse } from '../../../api/client'
  * @param {string} [options.templateId] - Optional template ID to link
  * @param {string} [options.connectionId] - Optional connection ID
  * @param {Function} [options.onProgress] - Callback for progress events
+ * @param {boolean} [options.background=false] - Queue analysis as a background job
  * @returns {Promise<Object>} The final analysis result
  */
-export async function uploadAndAnalyze({ file, templateId, connectionId, onProgress }) {
+export async function uploadAndAnalyze({ file, templateId, connectionId, onProgress, background = false }) {
   if (!file) {
     throw new Error('No file provided for analysis')
   }
@@ -20,6 +21,18 @@ export async function uploadAndAnalyze({ file, templateId, connectionId, onProgr
   form.append('file', file)
   if (templateId) form.append('template_id', templateId)
   if (connectionId) form.append('connection_id', connectionId)
+
+  if (background) {
+    const res = await fetch(`${API_BASE}/analyze/upload?background=true`, {
+      method: 'POST',
+      body: form,
+    })
+    if (!res.ok) {
+      const text = await res.text().catch(() => '')
+      throw new Error(text || `Failed to queue analysis (${res.status})`)
+    }
+    return res.json()
+  }
 
   const res = await fetch(`${API_BASE}/analyze/upload`, {
     method: 'POST',

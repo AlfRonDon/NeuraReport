@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
 import {
   Box,
   Table,
@@ -45,6 +45,8 @@ export default function DataTable({
   searchPlaceholder = 'Search...',
   onSearch,
   actions,
+  bulkActions = [],
+  onBulkDelete,
   title,
   subtitle,
   defaultSortField,
@@ -98,6 +100,21 @@ export default function DataTable({
     setSelected(newSelected)
     onSelectionChange?.(newSelected)
   }, [selected, onSelectionChange])
+
+  useEffect(() => {
+    if (!selectable) return
+    const idSet = new Set()
+    data.forEach((row) => {
+      if (row?.id != null) {
+        idSet.add(row.id)
+      }
+    })
+    const nextSelected = selected.filter((id) => idSet.has(id))
+    if (nextSelected.length !== selected.length) {
+      setSelected(nextSelected)
+      onSelectionChange?.(nextSelected)
+    }
+  }, [data, selectable, selected, onSelectionChange])
 
   const handleChangePage = useCallback((_, newPage) => {
     setPage(newPage)
@@ -167,6 +184,8 @@ export default function DataTable({
           onSearch={handleSearch}
           filters={filters}
           actions={actions}
+          bulkActions={bulkActions}
+          onBulkDelete={onBulkDelete}
           numSelected={numSelected}
           onFiltersChange={setActiveFilters}
         />
@@ -187,6 +206,8 @@ export default function DataTable({
         onSearch={handleSearch}
         filters={filters}
         actions={actions}
+        bulkActions={bulkActions}
+        onBulkDelete={onBulkDelete}
         numSelected={numSelected}
         onFiltersChange={setActiveFilters}
       />

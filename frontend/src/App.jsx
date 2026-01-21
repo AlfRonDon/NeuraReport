@@ -10,6 +10,7 @@ import {
 } from '@mui/material'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ToastProvider } from './components/ToastProvider.jsx'
+import ErrorBoundary from './components/ErrorBoundary.jsx'
 import JobsPanel from './components/JobsPanel.jsx'
 import { CommandPalette } from './components/shell'
 import theme from './theme.js'
@@ -26,6 +27,17 @@ const ReportsPage = lazy(() => import('./pages/reports/ReportsPage.jsx'))
 const SchedulesPage = lazy(() => import('./pages/schedules/SchedulesPage.jsx'))
 const AnalyzePage = lazy(() => import('./features/analyze/containers/AnalyzePageContainer.jsx'))
 const SettingsPage = lazy(() => import('./pages/settings/SettingsPage.jsx'))
+const ActivityPage = lazy(() => import('./pages/activity/ActivityPage.jsx'))
+const HistoryPage = lazy(() => import('./pages/history/HistoryPage.jsx'))
+const UsageStatsPage = lazy(() => import('./pages/stats/UsageStatsPage.jsx'))
+
+// AI Features
+const QueryBuilderPage = lazy(() => import('./pages/query/QueryBuilderPage.jsx'))
+const EnrichmentConfigPage = lazy(() => import('./pages/enrichment/EnrichmentConfigPage.jsx'))
+const SchemaBuilderPage = lazy(() => import('./pages/federation/SchemaBuilderPage.jsx'))
+const SynthesisPage = lazy(() => import('./pages/synthesis/SynthesisPage.jsx'))
+const DocumentQAPage = lazy(() => import('./pages/docqa/DocumentQAPage.jsx'))
+const SummaryPage = lazy(() => import('./pages/summary/SummaryPage.jsx'))
 
 // Lazy-loaded pages - Setup and editing
 const SetupWizard = lazy(() => import('./pages/Setup/SetupWizard.jsx'))
@@ -188,6 +200,16 @@ function AppContent() {
               <Route path="/schedules" element={<SchedulesPage />} />
               <Route path="/analyze" element={<AnalyzePage />} />
               <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/activity" element={<ActivityPage />} />
+              <Route path="/history" element={<HistoryPage />} />
+              <Route path="/stats" element={<UsageStatsPage />} />
+              {/* AI Features */}
+              <Route path="/query" element={<QueryBuilderPage />} />
+              <Route path="/enrichment" element={<EnrichmentConfigPage />} />
+              <Route path="/federation" element={<SchemaBuilderPage />} />
+              <Route path="/synthesis" element={<SynthesisPage />} />
+              <Route path="/docqa" element={<DocumentQAPage />} />
+              <Route path="/summary" element={<SummaryPage />} />
             </Route>
 
             <Route path="*" element={<Navigate to="/" replace />} />
@@ -205,12 +227,14 @@ function AppContent() {
 // Root App component
 export default function App() {
   return (
-    <BrowserRouter>
-      <AppProviders>
-        <ToastProvider>
-          <AppContent />
-        </ToastProvider>
-      </AppProviders>
-    </BrowserRouter>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <AppProviders>
+          <ToastProvider>
+            <AppContent />
+          </ToastProvider>
+        </AppProviders>
+      </BrowserRouter>
+    </ErrorBoundary>
   )
 }

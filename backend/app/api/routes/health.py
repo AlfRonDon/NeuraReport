@@ -127,6 +127,32 @@ async def readyz() -> Dict[str, Any]:
     return await ready()
 
 
+@router.get("/health/token-usage")
+async def token_usage(request: Request) -> Dict[str, Any]:
+    """Get LLM token usage statistics."""
+    try:
+        from backend.app.services.llm.client import get_global_usage_stats
+        stats = get_global_usage_stats()
+        return {
+            "status": "ok",
+            "usage": stats,
+            "correlation_id": getattr(request.state, "correlation_id", None),
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": str(e),
+            "usage": {
+                "total_input_tokens": 0,
+                "total_output_tokens": 0,
+                "total_tokens": 0,
+                "estimated_cost_usd": 0.0,
+                "request_count": 0,
+            },
+            "correlation_id": getattr(request.state, "correlation_id", None),
+        }
+
+
 @router.get("/health/detailed")
 async def health_detailed(request: Request) -> Dict[str, Any]:
     """Comprehensive health check with all dependencies."""

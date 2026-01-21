@@ -8,6 +8,7 @@ import threading
 import time
 from datetime import datetime
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any, Callable, Dict, Iterable, Tuple
 
 try:
@@ -120,6 +121,133 @@ def _resolve_create(client: Any, timeout: float | None) -> Tuple[Callable[..., A
     raise AttributeError("OpenAI client does not expose chat completions API")
 
 
+def _resolve_responses_create(client: Any, timeout: float | None) -> Tuple[Callable[..., Any], Dict[str, Any]]:
+    target = client
+    extra_kwargs: Dict[str, Any] = {}
+
+    if timeout is not None and hasattr(client, "with_options"):
+        target = client.with_options(timeout=timeout)
+    elif timeout is not None:
+        extra_kwargs["timeout"] = timeout
+
+    responses = getattr(target, "responses", None)
+    if responses is not None and hasattr(responses, "create"):
+        return responses.create, extra_kwargs
+
+    raise AttributeError("OpenAI client does not expose responses API")
+
+
+def _messages_to_responses_input(messages: Iterable[Dict[str, Any]]) -> list[Dict[str, Any]]:
+    converted: list[Dict[str, Any]] = []
+    for message in messages:
+        if not isinstance(message, dict):
+            continue
+        role = message.get("role") or "user"
+        content = message.get("content", "")
+        if isinstance(content, list):
+            parts: list[Dict[str, Any]] = []
+            for part in content:
+                if isinstance(part, dict):
+                    part_type = part.get("type")
+                    if part_type == "text":
+                        parts.append({"type": "input_text", "text": part.get("text", "")})
+                        continue
+                    if part_type == "image_url":
+                        image_url = part.get("image_url")
+                        if isinstance(image_url, dict):
+                            image_url = image_url.get("url") or image_url.get("image_url")
+                        parts.append({"type": "input_image", "image_url": image_url})
+                        continue
+                    parts.append(part)
+                else:
+                    parts.append({"type": "input_text", "text": str(part)})
+            content = parts
+        converted.append({"role": role, "content": content})
+    return converted
+
+
+def _response_output_text(response: Any) -> str:
+    if isinstance(response, dict):
+        output_text = response.get("output_text")
+        if isinstance(output_text, str) and output_text.strip():
+            return output_text
+        output = response.get("output")
+    else:
+        output_text = getattr(response, "output_text", None)
+        if isinstance(output_text, str) and output_text.strip():
+            return output_text
+        output = getattr(response, "output", None)
+
+    if isinstance(output, list):
+        texts: list[str] = []
+        for item in output:
+            if isinstance(item, dict):
+                item_type = item.get("type")
+                content = item.get("content") or []
+            else:
+                item_type = getattr(item, "type", None)
+                content = getattr(item, "content", None) or []
+            if item_type != "message":
+                continue
+            for segment in content:
+                if isinstance(segment, dict):
+                    seg_type = segment.get("type")
+                    text = segment.get("text")
+                else:
+                    seg_type = getattr(segment, "type", None)
+                    text = getattr(segment, "text", None)
+                if seg_type in {"output_text", "text"} and isinstance(text, str):
+                    texts.append(text)
+        if texts:
+            return "\n".join(texts)
+    return ""
+
+
+def _response_usage_to_chat_usage(response: Any) -> SimpleNamespace | None:
+    usage = response.get("usage") if isinstance(response, dict) else getattr(response, "usage", None)
+    if usage is None:
+        return None
+    if isinstance(usage, dict):
+        input_tokens = usage.get("input_tokens") or usage.get("prompt_tokens") or 0
+        output_tokens = usage.get("output_tokens") or usage.get("completion_tokens") or 0
+    else:
+        input_tokens = getattr(usage, "input_tokens", None)
+        if input_tokens is None:
+            input_tokens = getattr(usage, "prompt_tokens", 0)
+        output_tokens = getattr(usage, "output_tokens", None)
+        if output_tokens is None:
+            output_tokens = getattr(usage, "completion_tokens", 0)
+    total_tokens = (input_tokens or 0) + (output_tokens or 0)
+    return SimpleNamespace(
+        prompt_tokens=int(input_tokens or 0),
+        completion_tokens=int(output_tokens or 0),
+        total_tokens=int(total_tokens or 0),
+    )
+
+
+def _responses_to_chat_completion(response: Any) -> Any:
+    output_text = _response_output_text(response)
+    message = SimpleNamespace(content=output_text, role="assistant")
+    choice = SimpleNamespace(message=message)
+    model = response.get("model") if isinstance(response, dict) else getattr(response, "model", None)
+    response_id = response.get("id") if isinstance(response, dict) else getattr(response, "id", None)
+    usage = _response_usage_to_chat_usage(response)
+    return SimpleNamespace(
+        id=response_id,
+        model=model,
+        choices=[choice],
+        usage=usage,
+    )
+
+
+def _is_responses_required_error(exc: BaseException) -> bool:
+    message, code, _, _ = _extract_openai_error_info(exc)
+    detail = (message or str(exc)).lower()
+    if (code or "").lower() == "unsupported_endpoint":
+        return True
+    return "responses api" in detail or "responses endpoint" in detail or "use the responses" in detail
+
+
 def _is_temperature_unsupported_error(exc: BaseException) -> bool:
     """Return True when the error indicates temperature overrides are not allowed."""
     body = getattr(exc, "body", None)
@@ -169,6 +297,53 @@ def _is_quota_exceeded_error(exc: BaseException) -> bool:
     return "exceeded your current quota" in detail_lower
 
 
+def _extract_openai_error_info(exc: BaseException) -> tuple[str, Optional[str], Optional[str], Optional[str]]:
+    """Return (message, code, type, param) from an OpenAI exception when available."""
+    body = getattr(exc, "body", None)
+    if isinstance(body, dict):
+        error = body.get("error")
+        if isinstance(error, dict):
+            message = error.get("message")
+            code = error.get("code")
+            err_type = error.get("type")
+            param = error.get("param")
+            return (
+                str(message or "").strip(),
+                str(code or "").strip() or None,
+                str(err_type or "").strip() or None,
+                str(param or "").strip() or None,
+            )
+    message = getattr(exc, "message", None)
+    if isinstance(message, str) and message.strip():
+        return message.strip(), None, None, None
+    return str(exc), None, None, None
+
+
+def _is_model_not_found_error(exc: BaseException) -> bool:
+    """Return True when the error indicates an invalid or unavailable model."""
+    message, code, _, _ = _extract_openai_error_info(exc)
+    if (code or "").lower() == "model_not_found":
+        return True
+    detail = (message or str(exc)).lower()
+    return "model" in detail and ("not found" in detail or "does not exist" in detail or "do not have access" in detail)
+
+
+def _get_fallback_models(primary_model: str) -> list[str]:
+    raw = os.getenv("OPENAI_FALLBACK_MODELS", "")
+    if raw.strip():
+        candidates = [m.strip() for m in raw.split(",") if m.strip()]
+    else:
+        candidates = []
+    out: list[str] = []
+    seen: set[str] = set()
+    for model in candidates:
+        if model == primary_model or model in seen:
+            continue
+        seen.add(model)
+        out.append(model)
+    return out
+
+
 def _extract_openai_error_message(exc: BaseException) -> str:
     """Return the most meaningful error message we can extract from an OpenAI exception."""
     body = getattr(exc, "body", None)
@@ -208,18 +383,66 @@ def call_chat_completion(
     timeout = timeout if timeout is not None else _DEFAULT_TIMEOUT
     delay = _BACKOFF_INITIAL
     last_exc: BaseException | None = None
+    fallback_models = _get_fallback_models(model)
+    force_responses = os.getenv("OPENAI_USE_RESPONSES", "").lower() in {"1", "true", "yes"}
+
+    def _wants_responses(model_name: str) -> bool:
+        return force_responses or str(model_name or "").lower().startswith("gpt-5")
+
+    prefer_responses = _wants_responses(model)
 
     attempt = 1
     while attempt <= _MAX_ATTEMPTS:
-        create_fn, extra_kwargs = _resolve_create(client, timeout)
-        payload = {
-            "model": model,
-            "messages": list(messages),
-            **kwargs,
-            **extra_kwargs,
-        }
         quota_exceeded = False
+        using_responses = False
         try:
+            if prefer_responses:
+                try:
+                    create_fn, extra_kwargs = _resolve_responses_create(client, timeout)
+                except AttributeError:
+                    prefer_responses = False
+                else:
+                    payload = {
+                        "model": model,
+                        "input": _messages_to_responses_input(messages),
+                        **kwargs,
+                        **extra_kwargs,
+                    }
+                    if "max_tokens" in payload and "max_output_tokens" not in payload:
+                        payload["max_output_tokens"] = payload.pop("max_tokens")
+
+                    logger.info(
+                        "llm_call_start",
+                        extra={
+                            "event": "llm_call_start",
+                            "description": description,
+                            "attempt": attempt,
+                            "model": model,
+                            "endpoint": "responses",
+                        },
+                    )
+                    using_responses = True
+                    response = create_fn(**payload)
+                    _append_raw_output(description, response)
+                    logger.info(
+                        "llm_call_success",
+                        extra={
+                            "event": "llm_call_success",
+                            "description": description,
+                            "attempt": attempt,
+                            "model": model,
+                            "endpoint": "responses",
+                        },
+                    )
+                    return _responses_to_chat_completion(response)
+
+            create_fn, extra_kwargs = _resolve_create(client, timeout)
+            payload = {
+                "model": model,
+                "messages": list(messages),
+                **kwargs,
+                **extra_kwargs,
+            }
             logger.info(
                 "llm_call_start",
                 extra={
@@ -258,7 +481,7 @@ def call_chat_completion(
                             "timeout_dropped": True,
                         },
                     )
-                    return response
+                    return _responses_to_chat_completion(response) if using_responses else response
                 except Exception as inner_exc:
                     last_exc = inner_exc
                     quota_exceeded = _is_quota_exceeded_error(inner_exc)
@@ -266,6 +489,25 @@ def call_chat_completion(
                 last_exc = exc
                 quota_exceeded = _is_quota_exceeded_error(exc)
         except Exception as exc:
+            if not prefer_responses and _is_responses_required_error(exc):
+                prefer_responses = True
+                last_exc = exc
+                continue
+            if _is_model_not_found_error(exc) and fallback_models:
+                next_model = fallback_models.pop(0)
+                logger.warning(
+                    "llm_model_fallback",
+                    extra={
+                        "event": "llm_model_fallback",
+                        "description": description,
+                        "from_model": model,
+                        "to_model": next_model,
+                    },
+                )
+                model = next_model
+                prefer_responses = _wants_responses(model)
+                last_exc = exc
+                continue
             if "temperature" in kwargs and _is_temperature_unsupported_error(exc):
                 logger.info(
                     "llm_temperature_override_removed",
@@ -322,4 +564,11 @@ def call_chat_completion(
             f"{description} failed because the OpenAI API quota was exceeded. "
             f"{message or 'Please review your API plan and billing details.'}"
         ) from last_exc
-    raise RuntimeError(f"{description} failed after {_MAX_ATTEMPTS} attempts") from last_exc
+    if _is_model_not_found_error(last_exc):
+        message, code, _, _ = _extract_openai_error_info(last_exc)
+        raise RuntimeError(
+            f"{description} failed because the OpenAI model '{model}' is not available. "
+            f"Set OPENAI_MODEL to a valid model you have access to. {message or code or ''}".strip()
+        ) from last_exc
+    message = _extract_openai_error_message(last_exc)
+    raise RuntimeError(f"{description} failed after {_MAX_ATTEMPTS} attempts. {message}".strip()) from last_exc

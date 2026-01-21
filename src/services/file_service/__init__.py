@@ -1,4 +1,6 @@
 from .edit import (
+    apply_chat_template_edit,
+    chat_template_edit,
     edit_template_ai,
     edit_template_manual,
     get_template_html,
@@ -14,8 +16,10 @@ from .helpers import (
 )
 
 __all__ = [
+    "apply_chat_template_edit",
     "artifact_head_response",
     "artifact_manifest_response",
+    "chat_template_edit",
     "edit_template_ai",
     "edit_template_manual",
     "get_template_html",

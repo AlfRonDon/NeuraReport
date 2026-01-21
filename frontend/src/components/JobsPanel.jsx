@@ -24,6 +24,16 @@ import { useJobsList } from '../hooks/useJobs'
 import { useAppStore } from '../store/useAppStore'
 import EmptyState from './feedback/EmptyState.jsx'
 import { cancelJob as cancelJobRequest } from '../api/client'
+import {
+  normalizeJob,
+  normalizeJobStatus,
+  normalizeStepStatus,
+  isActiveStatus,
+  isFailureStatus,
+  JobStatus,
+  ACTIVE_STATUSES,
+  FAILURE_STATUSES,
+} from '../utils/jobStatus'
 
 const STATUS_FILTERS = [
   { value: 'all', label: 'All' },
@@ -31,9 +41,6 @@ const STATUS_FILTERS = [
   { value: 'completed', label: 'Completed' },
   { value: 'failed', label: 'Failed' },
 ]
-
-const ACTIVE_STATUS_SET = new Set(['queued', 'pending', 'running'])
-const FAILURE_STATUS_SET = new Set(['failed', 'cancelled'])
 
 const STATUS_CHIP_PROPS = {
   queued: { label: 'Queued', color: 'default', icon: <WorkHistoryOutlinedIcon fontSize="inherit" /> },
@@ -116,28 +123,6 @@ const normalizeErrorText = (raw) => {
     }
   }
   return String(raw)
-}
-
-const normalizeJobStatus = (status) => {
-  const value = (status || '').toString().toLowerCase()
-  if (value === 'succeeded') return 'completed'
-  if (value === 'queued') return 'pending'
-  return value || 'pending'
-}
-
-const normalizeJob = (job = {}) => {
-  const status = normalizeJobStatus(job.status || job.state)
-  return {
-    ...job,
-    status,
-    templateId: job.templateId || job.template_id || job.template,
-    templateName: job.templateName || job.template_name || job.templateTitle,
-    templateKind: job.templateKind || job.template_kind || job.kind,
-    connectionId: job.connectionId || job.connection_id,
-    startedAt: job.startedAt || job.started_at || job.created_at || job.queuedAt || job.queued_at,
-    finishedAt: job.finishedAt || job.finished_at || job.completed_at || job.completedAt,
-    meta: job.meta || job.metadata || {},
-  }
 }
 
 const toArray = (value) => {
@@ -229,7 +214,7 @@ function JobCard({ job, onNavigate, onSetupNavigate, connectionName, onCancel, o
     || job?.connection_id
     || 'No connection selected'
   const jobIssues = extractJobIssues(job)
-  const isActive = ACTIVE_STATUS_SET.has(status)
+  const isActive = isActiveStatus(status)
   const canOpenGenerate = Boolean(job?.templateId && onNavigate)
   const canOpenSetup = Boolean(job?.connectionId && onSetupNavigate)
   return (
@@ -420,19 +405,19 @@ export default function JobsPanel({ open, onClose }) {
       return normalizedJobs
     }
     if (statusFilter === 'active') {
-      return normalizedJobs.filter((job) => ACTIVE_STATUS_SET.has(job.status))
+      return normalizedJobs.filter((job) => isActiveStatus(job.status))
     }
     if (statusFilter === 'completed') {
-      return normalizedJobs.filter((job) => job.status === 'completed')
+      return normalizedJobs.filter((job) => job.status === JobStatus.COMPLETED)
     }
     if (statusFilter === 'failed') {
-      return normalizedJobs.filter((job) => FAILURE_STATUS_SET.has(job.status))
+      return normalizedJobs.filter((job) => isFailureStatus(job.status))
     }
     return normalizedJobs
   }, [normalizedJobs, statusFilter])
 
   const activeCount = useMemo(
-    () => normalizedJobs.filter((job) => ACTIVE_STATUS_SET.has(job.status)).length,
+    () => normalizedJobs.filter((job) => isActiveStatus(job.status)).length,
     [normalizedJobs],
   )
   const showEmptyState = !filteredJobs.length && !isLoading && !isFetching && !error

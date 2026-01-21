@@ -1,0 +1,168 @@
+"""Jobs API Routes.
+
+This module contains endpoints for job management:
+- List jobs with filtering
+- Get job details
+- Cancel jobs
+- Retry failed jobs
+"""
+from __future__ import annotations
+
+from typing import Any, Dict, List, Optional
+
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
+
+from backend.app.core.security import require_api_key
+from src.services.scheduler_service import get_job, list_active_jobs, list_jobs, cancel_job
+
+router = APIRouter(dependencies=[Depends(require_api_key)])
+
+
+def _normalize_job_status(status: Optional[str]) -> str:
+    """Normalize job status to consistent UI-friendly values.
+
+    Maps backend status values (succeeded, queued, in_progress, etc.)
+    to canonical frontend values (completed, pending, running, etc.).
+    """
+    value = (status or "").strip().lower()
+    if value in {"succeeded", "success", "done"}:
+        return "completed"
+    if value in {"queued"}:
+        return "pending"
+    if value in {"in_progress", "started"}:
+        return "running"
+    if value in {"error"}:
+        return "failed"
+    if value in {"canceled"}:
+        return "cancelled"
+    # Return as-is for known statuses
+    if value in {"pending", "running", "completed", "failed", "cancelled", "cancelling"}:
+        return value
+    return value or "pending"
+
+
+def _normalize_job(job: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    """Normalize a job record for consistent API responses."""
+    if not job:
+        return job
+    normalized = dict(job)
+    if "status" in normalized:
+        normalized["status"] = _normalize_job_status(normalized["status"])
+    if "state" in normalized and "status" not in normalized:
+        normalized["status"] = _normalize_job_status(normalized["state"])
+    return normalized
+
+
+def _correlation(request: Request) -> str | None:
+    return getattr(request.state, "correlation_id", None)
+
+
+@router.get("")
+def list_jobs_route(
+    request: Request,
+    status: Optional[List[str]] = Query(None),
+    job_type: Optional[List[str]] = Query(None, alias="type"),
+    limit: int = Query(50, ge=1, le=200),
+    active_only: bool = Query(False),
+):
+    """List jobs with optional filtering by status and type."""
+    jobs = list_jobs(status, job_type, limit, active_only)
+    normalized_jobs = [_normalize_job(job) for job in jobs] if jobs else []
+    return {"jobs": normalized_jobs, "correlation_id": _correlation(request)}
+
+
+@router.get("/active")
+def list_active_jobs_route(request: Request, limit: int = Query(20, ge=1, le=200)):
+    """List only active (non-completed) jobs."""
+    jobs = list_active_jobs(limit)
+    normalized_jobs = [_normalize_job(job) for job in jobs] if jobs else []
+    return {"jobs": normalized_jobs, "correlation_id": _correlation(request)}
+
+
+@router.get("/{job_id}")
+def get_job_route(job_id: str, request: Request):
+    """Get details for a specific job."""
+    job = get_job(job_id)
+    return {"job": _normalize_job(job), "correlation_id": _correlation(request)}
+
+
+@router.post("/{job_id}/cancel")
+def cancel_job_route(job_id: str, request: Request, force: bool = Query(False)):
+    """Cancel a running job."""
+    job = cancel_job(job_id, force=force)
+    return {"job": _normalize_job(job), "correlation_id": _correlation(request)}
+
+
+@router.post("/{job_id}/retry")
+async def retry_job_route(job_id: str, request: Request):
+    """Retry a failed job by re-queuing it with the same parameters.
+
+    Only jobs with status 'failed' can be retried.
+    """
+    from src.services.report_service import queue_report_job
+    from backend.app.features.generate.schemas.reports import RunPayload
+
+    original_job = get_job(job_id)
+    if not original_job:
+        raise HTTPException(
+            status_code=404,
+            detail={"status": "error", "code": "job_not_found", "message": "Job not found"}
+        )
+
+    normalized_status = _normalize_job_status(original_job.get("status"))
+    if normalized_status != "failed":
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "status": "error",
+                "code": "invalid_job_status",
+                "message": f"Only failed jobs can be retried. Current status: {normalized_status}"
+            }
+        )
+
+    # Extract job parameters from meta or direct fields
+    meta = original_job.get("meta") or original_job.get("metadata") or {}
+    template_id = original_job.get("template_id") or meta.get("template_id")
+    connection_id = original_job.get("connection_id") or meta.get("connection_id")
+    start_date = meta.get("start_date") or original_job.get("start_date")
+    end_date = meta.get("end_date") or original_job.get("end_date")
+    key_values = meta.get("key_values") or original_job.get("key_values")
+    batch_ids = meta.get("batch_ids") or original_job.get("batch_ids")
+    docx = meta.get("docx", False)
+    xlsx = meta.get("xlsx", False)
+    template_name = original_job.get("template_name") or meta.get("template_name")
+    kind = original_job.get("template_kind") or meta.get("kind") or "pdf"
+
+    if not template_id:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "status": "error",
+                "code": "missing_template_id",
+                "message": "Cannot retry job: missing template_id"
+            }
+        )
+
+    # Create payload for new job
+    payload = RunPayload(
+        template_id=template_id,
+        connection_id=connection_id,
+        start_date=start_date,
+        end_date=end_date,
+        key_values=key_values,
+        batch_ids=batch_ids,
+        docx=docx,
+        xlsx=xlsx,
+        template_name=template_name,
+    )
+
+    # Queue the new job
+    result = await queue_report_job(payload, request, kind=kind)
+
+    return {
+        "status": "ok",
+        "message": "Job retry queued successfully",
+        "original_job_id": job_id,
+        "new_job": result,
+        "correlation_id": _correlation(request),
+    }

@@ -1,0 +1,517 @@
+/**
+ * Data Enrichment Configuration Page
+ */
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+  Box,
+  Paper,
+  Typography,
+  Button,
+  TextField,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Chip,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Alert,
+  CircularProgress,
+  Grid,
+  Card,
+  CardContent,
+  IconButton,
+  Tooltip,
+  Divider,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Tabs,
+  Tab,
+  LinearProgress,
+} from '@mui/material';
+import {
+  Add as AddIcon,
+  Delete as DeleteIcon,
+  Preview as PreviewIcon,
+  PlayArrow as RunIcon,
+  AutoFixHigh as EnrichIcon,
+  Cached as CacheIcon,
+  Refresh as RefreshIcon,
+} from '@mui/icons-material';
+import useEnrichmentStore from '../../stores/enrichmentStore';
+
+// Fallback sources in case API is unavailable
+const FALLBACK_SOURCES = [
+  { id: 'company', name: 'Company Information', description: 'Enrich with company details (industry, size, revenue)' },
+  { id: 'address', name: 'Address Standardization', description: 'Standardize and validate addresses' },
+  { id: 'exchange', name: 'Currency Exchange', description: 'Convert currencies to target currency' },
+];
+
+const SOURCE_TYPES = [
+  { value: 'company_info', label: 'Company Information' },
+  { value: 'address', label: 'Address Standardization' },
+  { value: 'exchange_rate', label: 'Currency Exchange' },
+];
+
+export default function EnrichmentConfigPage() {
+  const {
+    sources,
+    customSources,
+    cacheStats,
+    previewResult,
+    enrichmentResult,
+    loading,
+    error,
+    fetchSources,
+    createSource,
+    deleteSource,
+    fetchCacheStats,
+    clearCache,
+    previewEnrichment,
+    enrichData,
+    reset,
+  } = useEnrichmentStore();
+
+  const [activeTab, setActiveTab] = useState(0);
+  const [inputData, setInputData] = useState('');
+  const [selectedSources, setSelectedSources] = useState([]);
+  const [parsedData, setParsedData] = useState(null);
+
+  // Create Source Dialog
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [newSourceName, setNewSourceName] = useState('');
+  const [newSourceType, setNewSourceType] = useState('company_info');
+  const [newSourceDescription, setNewSourceDescription] = useState('');
+  const [newSourceCacheTtl, setNewSourceCacheTtl] = useState(24);
+
+  // Use API sources if available, fallback to static list
+  const availableSources = sources.length > 0 ? sources : FALLBACK_SOURCES;
+  const allSources = [...availableSources, ...customSources];
+
+  const [initialLoading, setInitialLoading] = useState(true);
+
+  useEffect(() => {
+    const init = async () => {
+      setInitialLoading(true);
+      await Promise.all([fetchSources(), fetchCacheStats()]);
+      setInitialLoading(false);
+    };
+    init();
+    return () => reset();
+  }, [fetchSources, fetchCacheStats, reset]);
+
+  // Show loading during initial fetch
+  if (initialLoading) {
+    return (
+      <Box sx={{ p: 3, maxWidth: 1400, mx: 'auto' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
+          <EnrichIcon />
+          <Typography variant="h4">Data Enrichment</Typography>
+        </Box>
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 300 }}>
+          <CircularProgress />
+        </Box>
+      </Box>
+    );
+  }
+
+  const handleParseData = useCallback(() => {
+    try {
+      // Try to parse as JSON array
+      const data = JSON.parse(inputData);
+      if (Array.isArray(data)) {
+        setParsedData(data);
+      } else {
+        setParsedData([data]);
+      }
+    } catch (err) {
+      // Try to parse as CSV
+      const lines = inputData.trim().split('\n');
+      if (lines.length > 1) {
+        const headers = lines[0].split(',').map(h => h.trim());
+        const data = lines.slice(1).map(line => {
+          const values = line.split(',');
+          const obj = {};
+          headers.forEach((h, i) => {
+            obj[h] = values[i]?.trim() || '';
+          });
+          return obj;
+        });
+        setParsedData(data);
+      }
+    }
+  }, [inputData]);
+
+  const handlePreview = async () => {
+    if (!parsedData || selectedSources.length === 0) return;
+    await previewEnrichment(parsedData, selectedSources, 3);
+  };
+
+  const handleEnrich = async () => {
+    if (!parsedData || selectedSources.length === 0) return;
+    await enrichData(parsedData, selectedSources);
+  };
+
+  const toggleSource = (sourceId) => {
+    setSelectedSources(prev =>
+      prev.includes(sourceId)
+        ? prev.filter(s => s !== sourceId)
+        : [...prev, sourceId]
+    );
+  };
+
+  const handleCreateSource = async () => {
+    if (!newSourceName.trim()) return;
+
+    const result = await createSource({
+      name: newSourceName,
+      type: newSourceType,
+      description: newSourceDescription,
+      config: {},
+      cacheTtlHours: newSourceCacheTtl,
+    });
+
+    if (result) {
+      setCreateDialogOpen(false);
+      setNewSourceName('');
+      setNewSourceType('company_info');
+      setNewSourceDescription('');
+      setNewSourceCacheTtl(24);
+    }
+  };
+
+  const handleClearCache = async () => {
+    await clearCache();
+  };
+
+  return (
+    <Box sx={{ p: 3, maxWidth: 1400, mx: 'auto' }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Box>
+          <Typography variant="h4" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <EnrichIcon /> Data Enrichment
+          </Typography>
+          <Typography variant="body1" color="text.secondary">
+            Enrich your data with external information sources using AI
+          </Typography>
+        </Box>
+        <Button
+          variant="outlined"
+          startIcon={<AddIcon />}
+          onClick={() => setCreateDialogOpen(true)}
+        >
+          Add Custom Source
+        </Button>
+      </Box>
+
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }} onClose={() => reset()}>
+          {error}
+        </Alert>
+      )}
+
+      <Tabs value={activeTab} onChange={(e, v) => setActiveTab(v)} sx={{ mb: 3 }}>
+        <Tab label="Enrich Data" />
+        <Tab label="Cache Admin" icon={<CacheIcon />} iconPosition="start" />
+      </Tabs>
+
+      {activeTab === 0 && (
+        <Grid container spacing={3}>
+          {/* Input Section */}
+          <Grid item xs={12} md={6}>
+            <Paper sx={{ p: 3, height: '100%' }}>
+              <Typography variant="h6" gutterBottom>
+                Input Data
+              </Typography>
+              <TextField
+                fullWidth
+                multiline
+                rows={10}
+                placeholder={'Paste JSON array or CSV data:\n\n[\n  {"name": "Acme Corp", "address": "123 Main St"},\n  {"name": "Tech Inc", "address": "456 Oak Ave"}\n]\n\nOr CSV:\nname,address\nAcme Corp,123 Main St\nTech Inc,456 Oak Ave'}
+                value={inputData}
+                onChange={(e) => setInputData(e.target.value)}
+                sx={{ mb: 2, fontFamily: 'monospace' }}
+              />
+              <Button
+                variant="outlined"
+                onClick={handleParseData}
+                disabled={!inputData.trim()}
+              >
+                Parse Data
+              </Button>
+
+              {parsedData && (
+                <Alert severity="success" sx={{ mt: 2 }}>
+                  Parsed {parsedData.length} records with columns: {Object.keys(parsedData[0] || {}).join(', ')}
+                </Alert>
+              )}
+            </Paper>
+          </Grid>
+
+          {/* Sources Section */}
+          <Grid item xs={12} md={6}>
+            <Paper sx={{ p: 3, height: '100%' }}>
+              <Typography variant="h6" gutterBottom>
+                Enrichment Sources
+              </Typography>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                {allSources.map((source) => (
+                  <Card
+                    key={source.id}
+                    variant="outlined"
+                    sx={{
+                      cursor: 'pointer',
+                      borderColor: selectedSources.includes(source.id) ? 'primary.main' : 'divider',
+                      bgcolor: selectedSources.includes(source.id) ? 'action.selected' : 'background.paper',
+                    }}
+                    onClick={() => toggleSource(source.id)}
+                  >
+                    <CardContent sx={{ py: 1.5, '&:last-child': { pb: 1.5 } }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <Box>
+                          <Typography variant="subtitle1">{source.name}</Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            {source.description}
+                          </Typography>
+                        </Box>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          {customSources.some(cs => cs.id === source.id) && (
+                            <Chip label="Custom" size="small" color="secondary" />
+                          )}
+                          {selectedSources.includes(source.id) && (
+                            <Chip label="Selected" color="primary" size="small" />
+                          )}
+                          {customSources.some(cs => cs.id === source.id) && (
+                            <IconButton
+                              size="small"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                deleteSource(source.id);
+                              }}
+                            >
+                              <DeleteIcon fontSize="small" />
+                            </IconButton>
+                          )}
+                        </Box>
+                      </Box>
+                    </CardContent>
+                  </Card>
+                ))}
+              </Box>
+
+              <Box sx={{ mt: 3, display: 'flex', gap: 2 }}>
+                <Button
+                  variant="outlined"
+                  startIcon={loading ? <CircularProgress size={20} /> : <PreviewIcon />}
+                  onClick={handlePreview}
+                  disabled={!parsedData || selectedSources.length === 0 || loading}
+                >
+                  Preview
+                </Button>
+                <Button
+                  variant="contained"
+                  startIcon={loading ? <CircularProgress size={20} /> : <RunIcon />}
+                  onClick={handleEnrich}
+                  disabled={!parsedData || selectedSources.length === 0 || loading}
+                >
+                  Enrich All
+                </Button>
+              </Box>
+            </Paper>
+          </Grid>
+
+          {/* Results Section */}
+          {(previewResult || enrichmentResult) && (
+            <Grid item xs={12}>
+              <Paper sx={{ p: 3 }}>
+                <Typography variant="h6" gutterBottom>
+                  {enrichmentResult ? 'Enrichment Results' : 'Preview Results'}
+                </Typography>
+                <TableContainer sx={{ maxHeight: 400 }}>
+                  <Table stickyHeader size="small">
+                    <TableHead>
+                      <TableRow>
+                        {Object.keys((enrichmentResult?.enriched_data || previewResult?.preview)?.[0] || {}).map((col) => (
+                          <TableCell key={col}>{col}</TableCell>
+                        ))}
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {(enrichmentResult?.enriched_data || previewResult?.preview || []).map((row, idx) => (
+                        <TableRow key={idx}>
+                          {Object.values(row).map((val, cidx) => (
+                            <TableCell key={cidx}>
+                              {typeof val === 'object' ? JSON.stringify(val) : String(val)}
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </Paper>
+            </Grid>
+          )}
+        </Grid>
+      )}
+
+      {activeTab === 1 && (
+        <Grid container spacing={3}>
+          {/* Cache Stats */}
+          <Grid item xs={12} md={6}>
+            <Paper sx={{ p: 3 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography variant="h6">Cache Statistics</Typography>
+                <IconButton onClick={fetchCacheStats} size="small">
+                  <RefreshIcon />
+                </IconButton>
+              </Box>
+
+              {cacheStats ? (
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <Box>
+                    <Typography variant="body2" color="text.secondary">Total Entries</Typography>
+                    <Typography variant="h4">{cacheStats.total_entries || 0}</Typography>
+                  </Box>
+                  <Box>
+                    <Typography variant="body2" color="text.secondary">Hit Rate</Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <LinearProgress
+                        variant="determinate"
+                        value={(cacheStats.hit_rate || 0) * 100}
+                        sx={{ flex: 1, height: 10, borderRadius: 1 }}
+                      />
+                      <Typography variant="body1">
+                        {((cacheStats.hit_rate || 0) * 100).toFixed(1)}%
+                      </Typography>
+                    </Box>
+                  </Box>
+                  <Box>
+                    <Typography variant="body2" color="text.secondary">Cache Hits / Misses</Typography>
+                    <Typography variant="body1">
+                      {cacheStats.hits || 0} hits / {cacheStats.misses || 0} misses
+                    </Typography>
+                  </Box>
+                  {cacheStats.size_bytes && (
+                    <Box>
+                      <Typography variant="body2" color="text.secondary">Cache Size</Typography>
+                      <Typography variant="body1">
+                        {(cacheStats.size_bytes / 1024).toFixed(2)} KB
+                      </Typography>
+                    </Box>
+                  )}
+                </Box>
+              ) : (
+                <Typography color="text.secondary">No cache stats available</Typography>
+              )}
+            </Paper>
+          </Grid>
+
+          {/* Cache Actions */}
+          <Grid item xs={12} md={6}>
+            <Paper sx={{ p: 3 }}>
+              <Typography variant="h6" gutterBottom>Cache Management</Typography>
+
+              <Alert severity="info" sx={{ mb: 3 }}>
+                Clearing the cache will remove all cached enrichment results.
+                New enrichment requests will fetch fresh data from sources.
+              </Alert>
+
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <Button
+                  variant="outlined"
+                  color="warning"
+                  startIcon={loading ? <CircularProgress size={20} /> : <DeleteIcon />}
+                  onClick={handleClearCache}
+                  disabled={loading}
+                >
+                  Clear All Cache
+                </Button>
+
+                <Divider sx={{ my: 1 }} />
+
+                <Typography variant="subtitle2" color="text.secondary">
+                  Clear cache for specific source:
+                </Typography>
+
+                {allSources.map((source) => (
+                  <Box key={source.id} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <Typography variant="body2">{source.name}</Typography>
+                    <Button
+                      size="small"
+                      onClick={() => clearCache(source.id)}
+                      disabled={loading}
+                    >
+                      Clear
+                    </Button>
+                  </Box>
+                ))}
+              </Box>
+            </Paper>
+          </Grid>
+        </Grid>
+      )}
+
+      {/* Create Source Dialog */}
+      <Dialog open={createDialogOpen} onClose={() => setCreateDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Create Custom Enrichment Source</DialogTitle>
+        <DialogContent>
+          <TextField
+            fullWidth
+            label="Source Name"
+            value={newSourceName}
+            onChange={(e) => setNewSourceName(e.target.value)}
+            sx={{ mt: 2, mb: 2 }}
+          />
+          <FormControl fullWidth sx={{ mb: 2 }}>
+            <InputLabel>Source Type</InputLabel>
+            <Select
+              value={newSourceType}
+              label="Source Type"
+              onChange={(e) => setNewSourceType(e.target.value)}
+            >
+              {SOURCE_TYPES.map((type) => (
+                <MenuItem key={type.value} value={type.value}>
+                  {type.label}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <TextField
+            fullWidth
+            label="Description"
+            value={newSourceDescription}
+            onChange={(e) => setNewSourceDescription(e.target.value)}
+            multiline
+            rows={2}
+            sx={{ mb: 2 }}
+          />
+          <TextField
+            fullWidth
+            label="Cache TTL (hours)"
+            type="number"
+            value={newSourceCacheTtl}
+            onChange={(e) => setNewSourceCacheTtl(parseInt(e.target.value) || 24)}
+            inputProps={{ min: 1, max: 720 }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setCreateDialogOpen(false)}>Cancel</Button>
+          <Button
+            variant="contained"
+            onClick={handleCreateSource}
+            disabled={!newSourceName.trim() || loading}
+          >
+            Create
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Box>
+  );
+}

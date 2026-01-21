@@ -19,6 +19,8 @@ import FilterListIcon from '@mui/icons-material/FilterList'
 import RefreshIcon from '@mui/icons-material/Refresh'
 import MoreVertIcon from '@mui/icons-material/MoreVert'
 import DeleteIcon from '@mui/icons-material/Delete'
+import ArchiveIcon from '@mui/icons-material/Archive'
+import LabelIcon from '@mui/icons-material/Label'
 import { palette } from '../../theme'
 
 export default function DataTableToolbar({
@@ -31,6 +33,7 @@ export default function DataTableToolbar({
   numSelected = 0,
   onRefresh,
   onBulkDelete,
+  bulkActions = [],
   onFiltersChange,
 }) {
   const [searchValue, setSearchValue] = useState('')
@@ -170,24 +173,48 @@ export default function DataTableToolbar({
           <Typography sx={{ fontSize: '0.8125rem', fontWeight: 500 }}>
             {numSelected} item{numSelected > 1 ? 's' : ''} selected
           </Typography>
-          {onBulkDelete && (
-            <Button
-              size="small"
-              variant="outlined"
-              startIcon={<DeleteIcon sx={{ fontSize: 16 }} />}
-              onClick={onBulkDelete}
-              sx={{
-                color: palette.red[400],
-                borderColor: alpha(palette.red[400], 0.5),
-                '&:hover': {
-                  bgcolor: alpha(palette.red[400], 0.1),
-                  borderColor: palette.red[400],
-                },
-              }}
-            >
-              Delete
-            </Button>
-          )}
+          <Stack direction="row" spacing={1}>
+            {bulkActions.map((action, index) => (
+              <Button
+                key={index}
+                size="small"
+                variant="outlined"
+                startIcon={action.icon}
+                onClick={action.onClick}
+                disabled={action.disabled}
+                sx={{
+                  color: action.color || palette.scale[300],
+                  borderColor: alpha(action.color || palette.scale[300], 0.5),
+                  fontSize: '0.75rem',
+                  '&:hover': {
+                    bgcolor: alpha(action.color || palette.scale[300], 0.1),
+                    borderColor: action.color || palette.scale[300],
+                  },
+                }}
+              >
+                {action.label}
+              </Button>
+            ))}
+            {onBulkDelete && (
+              <Button
+                size="small"
+                variant="outlined"
+                startIcon={<DeleteIcon sx={{ fontSize: 16 }} />}
+                onClick={onBulkDelete}
+                sx={{
+                  color: palette.red[400],
+                  borderColor: alpha(palette.red[400], 0.5),
+                  fontSize: '0.75rem',
+                  '&:hover': {
+                    bgcolor: alpha(palette.red[400], 0.1),
+                    borderColor: palette.red[400],
+                  },
+                }}
+              >
+                Delete
+              </Button>
+            )}
+          </Stack>
         </Box>
       )}
 

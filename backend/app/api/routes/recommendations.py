@@ -1,0 +1,119 @@
+"""API routes for Template Recommendations."""
+from __future__ import annotations
+
+from typing import List, Optional
+from pydantic import BaseModel, Field
+from fastapi import APIRouter, Depends, Query, Request
+
+from backend.app.core.security import require_api_key
+from backend.app.domain.recommendations.service import RecommendationService
+from backend.app.services.state import store as state_store_module
+
+router = APIRouter(dependencies=[Depends(require_api_key)])
+
+
+class TemplateRecommendRequest(BaseModel):
+    """Request payload for template recommendations (frontend format)."""
+    data_description: Optional[str] = Field(None, max_length=1000)
+    data_columns: Optional[List[str]] = Field(None, max_items=100)
+    industry: Optional[str] = Field(None, max_length=100)
+    output_format: Optional[str] = Field(None, max_length=50)
+
+
+def get_service() -> RecommendationService:
+    return RecommendationService()
+
+
+def _state_store():
+    return state_store_module.state_store
+
+
+@router.post("/templates")
+async def recommend_templates_post(
+    payload: TemplateRecommendRequest,
+    request: Request,
+    svc: RecommendationService = Depends(get_service),
+):
+    """Get template recommendations based on data description and columns."""
+    correlation_id = getattr(request.state, "correlation_id", None)
+
+    # Build context from frontend payload
+    context_parts = []
+    if payload.data_description:
+        context_parts.append(f"Data description: {payload.data_description}")
+    if payload.data_columns:
+        context_parts.append(f"Data columns: {', '.join(payload.data_columns)}")
+    if payload.industry:
+        context_parts.append(f"Industry: {payload.industry}")
+    if payload.output_format:
+        context_parts.append(f"Output format: {payload.output_format}")
+
+    context = " | ".join(context_parts) if context_parts else None
+
+    recommendations = svc.recommend_templates(
+        context=context,
+        limit=5,
+        correlation_id=correlation_id,
+    )
+    return {"status": "ok", "recommendations": recommendations, "correlation_id": correlation_id}
+
+
+@router.get("/templates")
+async def recommend_templates_get(
+    request: Request,
+    connection_id: Optional[str] = Query(None),
+    context: Optional[str] = Query(None, max_length=500),
+    limit: int = Query(5, ge=1, le=20),
+    svc: RecommendationService = Depends(get_service),
+):
+    """Get template recommendations based on context (query params)."""
+    correlation_id = getattr(request.state, "correlation_id", None)
+    recommendations = svc.recommend_templates(
+        connection_id=connection_id,
+        context=context,
+        limit=limit,
+        correlation_id=correlation_id,
+    )
+    return {"status": "ok", "recommendations": recommendations, "correlation_id": correlation_id}
+
+
+@router.get("/catalog")
+async def get_template_catalog(
+    request: Request,
+):
+    """Get template catalog for browsing."""
+    correlation_id = getattr(request.state, "correlation_id", None)
+
+    store = _state_store()
+    templates = store._read_state().get("templates", {})
+
+    # Build catalog with summary info
+    catalog = []
+    for tid, t in templates.items():
+        if t.get("status") == "approved":
+            catalog.append({
+                "id": t.get("id"),
+                "name": t.get("name"),
+                "kind": t.get("kind"),
+                "description": t.get("description", ""),
+                "tags": t.get("tags", []),
+                "created_at": t.get("created_at"),
+            })
+
+    # Sort by name
+    catalog.sort(key=lambda x: x.get("name", "").lower())
+
+    return {"status": "ok", "catalog": catalog, "total": len(catalog), "correlation_id": correlation_id}
+
+
+@router.get("/templates/{template_id}/similar")
+async def get_similar_templates(
+    template_id: str,
+    request: Request,
+    limit: int = Query(3, ge=1, le=10),
+    svc: RecommendationService = Depends(get_service),
+):
+    """Get templates similar to a given template."""
+    correlation_id = getattr(request.state, "correlation_id", None)
+    similar = svc.get_similar_templates(template_id, limit)
+    return {"status": "ok", "similar": similar, "correlation_id": correlation_id}

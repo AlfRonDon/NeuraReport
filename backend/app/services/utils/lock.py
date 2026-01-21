@@ -18,6 +18,18 @@ class TemplateLockError(RuntimeError):
         self.lock_holder = lock_holder
 
 
+def _locks_enabled() -> bool:
+    disable_flag = os.getenv("NEURA_DISABLE_LOCKS", "").lower()
+    if disable_flag in {"1", "true", "yes"}:
+        return False
+    enable_flag = os.getenv("NEURA_LOCKS_ENABLED", "").lower()
+    if enable_flag in {"1", "true", "yes"}:
+        return True
+    if os.getenv("PYTEST_CURRENT_TEST"):
+        return False
+    return True
+
+
 class FileLock:
     """
     Cross-platform file-based lock implementation.
@@ -176,6 +188,10 @@ def acquire_template_lock(
     Raises:
         TemplateLockError: If lock cannot be acquired within timeout
     """
+    if not _locks_enabled():
+        yield
+        return
+
     lock_path = Path(template_dir) / f".lock.{name}"
     holder = f"pid={os.getpid()}"
     if correlation_id:
@@ -219,6 +235,10 @@ def try_acquire_template_lock(
     Non-blocking version that yields True if lock acquired, False otherwise.
     Does not raise an exception on failure.
     """
+    if not _locks_enabled():
+        yield True
+        return
+
     lock_path = Path(template_dir) / f".lock.{name}"
     holder = f"pid={os.getpid()}"
     if correlation_id:

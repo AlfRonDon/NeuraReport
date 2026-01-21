@@ -20,7 +20,10 @@
       "Bash(timeout 10 npm run dev)",
       "Bash(npx eslint:*)",
       "Bash(timeout 8 npm run dev:*)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "Bash(dir /b *.toml *.cfg setup.py)",
+      "Bash(dir:*)",
+      "Bash(ls:*)"
     ],
     "defaultMode": "bypassPermissions"
   }

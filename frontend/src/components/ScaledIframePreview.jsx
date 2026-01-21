@@ -303,7 +303,7 @@ export default function ScaledIframePreview({
   const containerStyles = {
     position: 'relative',
     width: '100%',
-    overflow: 'visible',
+    overflow: 'hidden',
     ...sx,
   }
   if (aspect?.css) {

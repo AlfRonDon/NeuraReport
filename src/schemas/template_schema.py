@@ -85,3 +85,37 @@ class TemplateRecommendResponse(BaseModel):
 class LastUsedPayload(BaseModel):
     connection_id: Optional[str] = None
     template_id: Optional[str] = None
+
+
+class TemplateUpdatePayload(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    tags: Optional[list[str]] = None
+    status: Optional[str] = None
+
+    class Config:
+        extra = "allow"
+
+
+class TemplateChatMessage(BaseModel):
+    """A single message in the template editing chat conversation."""
+    role: str  # 'user' | 'assistant'
+    content: str
+
+
+class TemplateChatPayload(BaseModel):
+    """Payload for conversational template editing."""
+    messages: list[TemplateChatMessage]
+    html: Optional[str] = None  # Current HTML state (optional, uses saved if not provided)
+
+    class Config:
+        extra = "allow"
+
+
+class TemplateChatResponse(BaseModel):
+    """Response from conversational template editing."""
+    message: str  # Assistant's response message
+    ready_to_apply: bool  # Whether LLM has gathered enough info to apply changes
+    proposed_changes: Optional[list[str]] = None  # List of proposed changes when ready
+    updated_html: Optional[str] = None  # The updated HTML if ready_to_apply is True
+    follow_up_questions: Optional[list[str]] = None  # Questions to ask user if not ready

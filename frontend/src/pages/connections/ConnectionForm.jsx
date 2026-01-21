@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo, useRef } from 'react'
 import {
   Box,
   TextField,
@@ -14,9 +14,20 @@ import {
   Switch,
   FormControlLabel,
   Divider,
+  FormHelperText,
+  CircularProgress,
 } from '@mui/material'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import ExpandLessIcon from '@mui/icons-material/ExpandLess'
+import CheckCircleIcon from '@mui/icons-material/CheckCircle'
+import ErrorIcon from '@mui/icons-material/Error'
+import { testConnection } from '../../api/client'
+import {
+  validateRequired,
+  validateMinLength,
+  validateMaxLength,
+  combineValidators,
+} from '../../utils/validation'
 
 const DB_TYPES = [
   { value: 'postgresql', label: 'PostgreSQL', port: 5432 },
@@ -24,6 +35,33 @@ const DB_TYPES = [
   { value: 'mssql', label: 'SQL Server', port: 1433 },
   { value: 'sqlite', label: 'SQLite', port: null },
 ]
+
+// Field validators
+const validators = {
+  name: combineValidators(
+    (v) => validateRequired(v, 'Connection name'),
+    (v) => validateMinLength(v, 2, 'Connection name'),
+    (v) => validateMaxLength(v, 100, 'Connection name')
+  ),
+  host: (value, allValues) => {
+    if (allValues.db_type === 'sqlite') return { valid: true, error: null }
+    return combineValidators(
+      (v) => validateRequired(v, 'Host'),
+      (v) => validateMaxLength(v, 255, 'Host')
+    )(value)
+  },
+  database: combineValidators(
+    (v) => validateRequired(v, 'Database name'),
+    (v) => validateMaxLength(v, 255, 'Database name')
+  ),
+  port: (value) => {
+    const port = parseInt(value, 10)
+    if (isNaN(port) || port < 1 || port > 65535) {
+      return { valid: false, error: 'Port must be between 1 and 65535' }
+    }
+    return { valid: true, error: null }
+  },
+}
 
 export default function ConnectionForm({ connection, onSave, onCancel, loading }) {
   const [formData, setFormData] = useState({
@@ -38,12 +76,33 @@ export default function ConnectionForm({ connection, onSave, onCancel, loading }
   })
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [error, setError] = useState(null)
+  const [touched, setTouched] = useState({})
+  const [fieldErrors, setFieldErrors] = useState({})
+  const [testing, setTesting] = useState(false)
+  const [testResult, setTestResult] = useState(null) // 'success' | 'error' | null
+  const submitDebounceRef = useRef(false)
 
   const handleChange = useCallback((field) => (event) => {
     const value = event.target.type === 'checkbox' ? event.target.checked : event.target.value
-    setFormData((prev) => ({ ...prev, [field]: value }))
+    setFormData((prev) => {
+      const newData = { ...prev, [field]: value }
+      // Validate on change if field was already touched
+      if (touched[field] && validators[field]) {
+        const result = validators[field](value, newData)
+        setFieldErrors((e) => ({ ...e, [field]: result.error }))
+      }
+      return newData
+    })
     setError(null)
-  }, [])
+  }, [touched])
+
+  const handleBlur = useCallback((field) => () => {
+    setTouched((prev) => ({ ...prev, [field]: true }))
+    if (validators[field]) {
+      const result = validators[field](formData[field], formData)
+      setFieldErrors((prev) => ({ ...prev, [field]: result.error }))
+    }
+  }, [formData])
 
   const handleDbTypeChange = useCallback((event) => {
     const dbType = event.target.value
@@ -53,42 +112,95 @@ export default function ConnectionForm({ connection, onSave, onCancel, loading }
       db_type: dbType,
       port: typeConfig?.port || prev.port,
     }))
+    setTestResult(null)
   }, [])
+
+  const buildConnectionUrl = useCallback(() => {
+    if (formData.db_type === 'sqlite') {
+      return `sqlite:///${formData.database}`
+    }
+    const auth = formData.username
+      ? `${formData.username}${formData.password ? `:${formData.password}` : ''}@`
+      : ''
+    return `${formData.db_type}://${auth}${formData.host}:${formData.port}/${formData.database}`
+  }, [formData])
+
+  const handleTestConnection = useCallback(async () => {
+    // Validate required fields first
+    const requiredErrors = {}
+    if (!formData.database.trim()) {
+      requiredErrors.database = 'Database is required to test'
+    }
+    if (formData.db_type !== 'sqlite' && !formData.host.trim()) {
+      requiredErrors.host = 'Host is required to test'
+    }
+
+    if (Object.keys(requiredErrors).length > 0) {
+      setFieldErrors((prev) => ({ ...prev, ...requiredErrors }))
+      setTouched((prev) => ({ ...prev, database: true, host: true }))
+      return
+    }
+
+    setTesting(true)
+    setTestResult(null)
+    setError(null)
+
+    try {
+      const db_url = buildConnectionUrl()
+      const result = await testConnection({ db_url })
+      if (result?.status === 'healthy' || result?.healthy) {
+        setTestResult('success')
+      } else {
+        setTestResult('error')
+        setError(result?.message || result?.error || 'Connection test failed')
+      }
+    } catch (err) {
+      setTestResult('error')
+      setError(err.message || 'Connection test failed')
+    } finally {
+      setTesting(false)
+    }
+  }, [formData, buildConnectionUrl])
 
   const handleSubmit = useCallback((e) => {
     e.preventDefault()
 
-    if (!formData.name.trim()) {
-      setError('Connection name is required')
+    // Debounce protection against double-submit
+    if (submitDebounceRef.current) return
+    submitDebounceRef.current = true
+    setTimeout(() => { submitDebounceRef.current = false }, 1000)
+
+    // Mark all fields as touched
+    const allTouched = { name: true, host: true, database: true, port: true }
+    setTouched(allTouched)
+
+    // Validate all fields
+    const errors = {}
+    let hasErrors = false
+
+    for (const [field, validator] of Object.entries(validators)) {
+      const result = validator(formData[field], formData)
+      if (!result.valid) {
+        errors[field] = result.error
+        hasErrors = true
+      }
+    }
+
+    setFieldErrors(errors)
+
+    if (hasErrors) {
+      const firstError = Object.values(errors).find(Boolean)
+      setError(firstError || 'Please fix the errors above')
       return
     }
 
-    if (formData.db_type !== 'sqlite' && !formData.host.trim()) {
-      setError('Host is required')
-      return
-    }
-
-    if (!formData.database.trim()) {
-      setError('Database name is required')
-      return
-    }
-
-    // Build connection URL
-    let db_url
-    if (formData.db_type === 'sqlite') {
-      db_url = `sqlite:///${formData.database}`
-    } else {
-      const auth = formData.username
-        ? `${formData.username}${formData.password ? `:${formData.password}` : ''}@`
-        : ''
-      db_url = `${formData.db_type}://${auth}${formData.host}:${formData.port}/${formData.database}`
-    }
+    const db_url = buildConnectionUrl()
 
     onSave({
       ...formData,
       db_url,
     })
-  }, [formData, onSave])
+  }, [formData, onSave, buildConnectionUrl])
 
   const isSqlite = formData.db_type === 'sqlite'
 
@@ -105,9 +217,12 @@ export default function ConnectionForm({ connection, onSave, onCancel, loading }
           label="Connection Name"
           value={formData.name}
           onChange={handleChange('name')}
+          onBlur={handleBlur('name')}
           placeholder="My Database"
           required
           fullWidth
+          error={touched.name && Boolean(fieldErrors.name)}
+          helperText={touched.name && fieldErrors.name}
         />
 
         <FormControl fullWidth>
@@ -131,16 +246,22 @@ export default function ConnectionForm({ connection, onSave, onCancel, loading }
               label="Host"
               value={formData.host}
               onChange={handleChange('host')}
+              onBlur={handleBlur('host')}
               placeholder="localhost"
               required
               sx={{ flex: 2 }}
+              error={touched.host && Boolean(fieldErrors.host)}
+              helperText={touched.host && fieldErrors.host}
             />
             <TextField
               label="Port"
               type="number"
               value={formData.port}
               onChange={handleChange('port')}
+              onBlur={handleBlur('port')}
               sx={{ flex: 1 }}
+              error={touched.port && Boolean(fieldErrors.port)}
+              helperText={touched.port && fieldErrors.port}
             />
           </Stack>
         )}
@@ -149,9 +270,12 @@ export default function ConnectionForm({ connection, onSave, onCancel, loading }
           label={isSqlite ? 'Database Path' : 'Database Name'}
           value={formData.database}
           onChange={handleChange('database')}
+          onBlur={handleBlur('database')}
           placeholder={isSqlite ? '/path/to/database.db' : 'mydatabase'}
           required
           fullWidth
+          error={touched.database && Boolean(fieldErrors.database)}
+          helperText={touched.database && fieldErrors.database}
         />
 
         {!isSqlite && (
@@ -211,8 +335,29 @@ export default function ConnectionForm({ connection, onSave, onCancel, loading }
 
         <Divider />
 
+        {/* Test Connection Result */}
+        {testResult && (
+          <Alert
+            severity={testResult === 'success' ? 'success' : 'error'}
+            icon={testResult === 'success' ? <CheckCircleIcon /> : <ErrorIcon />}
+            onClose={() => setTestResult(null)}
+          >
+            {testResult === 'success'
+              ? 'Connection successful! Database is reachable.'
+              : error || 'Connection failed'}
+          </Alert>
+        )}
+
         {/* Actions */}
         <Stack direction="row" spacing={2} justifyContent="flex-end">
+          <Button
+            variant="text"
+            onClick={handleTestConnection}
+            disabled={loading || testing}
+            startIcon={testing ? <CircularProgress size={16} /> : null}
+          >
+            {testing ? 'Testing...' : 'Test Connection'}
+          </Button>
           <Button
             variant="outlined"
             onClick={onCancel}

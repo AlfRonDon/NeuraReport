@@ -17,7 +17,12 @@ from backend.app.services.utils import (
     call_chat_completion,
     strip_code_fences,
 )
-from src.schemas.template_schema import TemplateAiEditPayload, TemplateManualEditPayload
+from src.schemas.template_schema import (
+    TemplateAiEditPayload,
+    TemplateManualEditPayload,
+    TemplateChatPayload,
+    TemplateChatResponse,
+)
 from src.utils.template_utils import template_dir
 
 from .helpers import (
@@ -320,6 +325,161 @@ def undo_last_template_edit(template_id: str, request: Request):
         template_id=template_id,
         kind=template_kind,
         html=restored_html,
+        source="report_final",
+        template_dir_path=template_dir_path,
+        history=history,
+        summary=summary,
+        correlation_id=correlation_id,
+        diff_summary=diff_summary,
+    )
+
+
+def _run_template_chat_llm(template_html: str, conversation_history: list[dict]) -> dict:
+    """
+    Run the conversational template editing LLM.
+
+    Returns a dict with:
+        - message: str
+        - ready_to_apply: bool
+        - proposed_changes: list[str] | None
+        - follow_up_questions: list[str] | None
+        - updated_html: str | None
+    """
+    from backend.app.services.prompts.llm_prompts_template_chat import (
+        TEMPLATE_CHAT_PROMPT_VERSION,
+        build_template_chat_prompt,
+    )
+
+    prompt_payload = build_template_chat_prompt(template_html, conversation_history)
+    messages = prompt_payload.get("messages") or []
+    if not messages:
+        raise http_error(500, "prompt_build_failed", "Failed to build template chat prompt.")
+
+    try:
+        client = get_openai_client()
+    except Exception as exc:
+        raise http_error(503, "llm_unavailable", f"LLM client is unavailable: {exc}")
+
+    try:
+        response = call_chat_completion(
+            client, model=MODEL, messages=messages, description=TEMPLATE_CHAT_PROMPT_VERSION
+        )
+    except Exception as exc:
+        raise http_error(502, "llm_call_failed", f"Template chat LLM call failed: {exc}")
+
+    raw_text = (response.choices[0].message.content or "").strip()
+    parsed_text = strip_code_fences(raw_text)
+
+    try:
+        payload = json.loads(parsed_text)
+    except Exception as exc:
+        # If JSON parsing fails, return a friendly error response
+        return {
+            "message": "I apologize, but I encountered an issue processing your request. Could you please rephrase or try again?",
+            "ready_to_apply": False,
+            "proposed_changes": None,
+            "follow_up_questions": ["Could you describe what changes you'd like to make to the template?"],
+            "updated_html": None,
+        }
+
+    if not isinstance(payload, dict):
+        return {
+            "message": "I apologize, but I encountered an issue. Could you please try again?",
+            "ready_to_apply": False,
+            "proposed_changes": None,
+            "follow_up_questions": None,
+            "updated_html": None,
+        }
+
+    return {
+        "message": payload.get("message", ""),
+        "ready_to_apply": bool(payload.get("ready_to_apply", False)),
+        "proposed_changes": payload.get("proposed_changes"),
+        "follow_up_questions": payload.get("follow_up_questions"),
+        "updated_html": payload.get("updated_html"),
+    }
+
+
+def chat_template_edit(template_id: str, payload: TemplateChatPayload, request: Request):
+    """
+    Handle a conversational template editing request.
+
+    This endpoint maintains a conversation with the user to gather requirements
+    before applying changes to the template. The LLM will ask clarifying questions
+    if needed, and only apply changes when it has enough information.
+    """
+    template_kind = resolve_template_kind(template_id)
+    correlation_id = getattr(request.state, "correlation_id", None) or get_correlation_id()
+    template_dir_path, final_path, base_path, _ = _resolve_template_html_paths(template_id, kind=template_kind)
+
+    # Get current HTML - use provided HTML or load from disk
+    if payload.html and payload.html.strip():
+        current_html = payload.html.strip()
+    else:
+        active_path = final_path if final_path.exists() else base_path
+        current_html = active_path.read_text(encoding="utf-8", errors="ignore")
+
+    # Convert messages to the format expected by the prompt builder
+    conversation_history = [
+        {"role": msg.role, "content": msg.content}
+        for msg in payload.messages
+    ]
+
+    # Call the LLM
+    llm_response = _run_template_chat_llm(current_html, conversation_history)
+
+    result = {
+        "status": "ok",
+        "template_id": template_id,
+        "message": llm_response["message"],
+        "ready_to_apply": llm_response["ready_to_apply"],
+        "proposed_changes": llm_response.get("proposed_changes"),
+        "follow_up_questions": llm_response.get("follow_up_questions"),
+        "correlation_id": correlation_id,
+    }
+
+    # If ready to apply, include the updated HTML
+    if llm_response["ready_to_apply"] and llm_response.get("updated_html"):
+        result["updated_html"] = llm_response["updated_html"]
+
+    return result
+
+
+def apply_chat_template_edit(template_id: str, html: str, request: Request):
+    """
+    Apply the HTML changes from a chat conversation.
+
+    This is called after the user confirms they want to apply the proposed changes.
+    """
+    template_kind = resolve_template_kind(template_id)
+    correlation_id = getattr(request.state, "correlation_id", None) or get_correlation_id()
+    template_dir_path, final_path, base_path, _ = _resolve_template_html_paths(template_id, kind=template_kind)
+
+    try:
+        lock_ctx = acquire_template_lock(template_dir_path, "template_edit_chat_apply", correlation_id)
+    except TemplateLockError:
+        raise http_error(409, "template_locked", "Template is currently processing another request.")
+
+    with lock_ctx:
+        current_html = _snapshot_final_html(template_dir_path, final_path, base_path)
+
+        new_html = html or ""
+        write_text_atomic(final_path, new_html, encoding="utf-8", step="template_edit_chat_apply")
+        diff_summary = _summarize_html_diff(current_html, new_html)
+
+        notes = "AI chat-assisted HTML edit via template editor"
+        summary = update_template_generator_summary_for_edit(template_id, edit_type="chat", notes=notes)
+        history_entry = {
+            "timestamp": summary.get("lastEditAt") or None,
+            "type": "chat",
+            "notes": notes,
+        }
+        history = append_template_history_entry(template_dir_path, history_entry)
+
+    return _build_template_html_response(
+        template_id=template_id,
+        kind=template_kind,
+        html=new_html,
         source="report_final",
         template_dir_path=template_dir_path,
         history=history,

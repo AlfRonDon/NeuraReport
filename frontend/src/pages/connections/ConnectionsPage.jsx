@@ -8,6 +8,7 @@ import RefreshIcon from '@mui/icons-material/Refresh'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import ErrorIcon from '@mui/icons-material/Error'
 import StorageIcon from '@mui/icons-material/Storage'
+import TableViewIcon from '@mui/icons-material/TableView'
 import { DataTable } from '../../ui/DataTable'
 import { ConfirmModal } from '../../ui/Modal'
 import { Drawer } from '../../ui/Drawer'
@@ -15,6 +16,7 @@ import { useAppStore } from '../../store/useAppStore'
 import { useToast } from '../../components/ToastProvider'
 import * as api from '../../api/client'
 import ConnectionForm from './ConnectionForm'
+import ConnectionSchemaDrawer from './ConnectionSchemaDrawer'
 import { palette } from '../../theme'
 
 export default function ConnectionsPage() {
@@ -33,6 +35,8 @@ export default function ConnectionsPage() {
   const [deletingConnection, setDeletingConnection] = useState(null)
   const [menuAnchor, setMenuAnchor] = useState(null)
   const [menuConnection, setMenuConnection] = useState(null)
+  const [schemaOpen, setSchemaOpen] = useState(false)
+  const [schemaConnection, setSchemaConnection] = useState(null)
 
   const handleOpenMenu = useCallback((event, connection) => {
     event.stopPropagation()
@@ -61,6 +65,30 @@ export default function ConnectionsPage() {
     setDeleteConfirmOpen(true)
     handleCloseMenu()
   }, [menuConnection, handleCloseMenu])
+
+  const handleSchemaInspect = useCallback(async () => {
+    if (!menuConnection) return
+    handleCloseMenu()
+
+    // Check connection health before opening schema drawer
+    try {
+      setLoading(true)
+      const result = await api.healthcheckConnection(menuConnection.id)
+      if (result.status !== 'ok') {
+        toast.show('Connection is unavailable. Please verify connection settings.', 'error')
+        return
+      }
+      setSchemaConnection(menuConnection)
+      setSchemaOpen(true)
+    } catch (err) {
+      toast.show(
+        err.message || 'Unable to connect to database. Please verify the connection is active.',
+        'error'
+      )
+    } finally {
+      setLoading(false)
+    }
+  }, [menuConnection, handleCloseMenu, toast])
 
   const handleDeleteConfirm = useCallback(async () => {
     if (!deletingConnection) return
@@ -298,6 +326,10 @@ export default function ConnectionsPage() {
           <ListItemIcon><RefreshIcon sx={{ fontSize: 16, color: palette.scale[500] }} /></ListItemIcon>
           <ListItemText primaryTypographyProps={{ fontSize: '0.8125rem' }}>Test Connection</ListItemText>
         </MenuItem>
+        <MenuItem onClick={handleSchemaInspect} sx={{ color: palette.scale[200] }}>
+          <ListItemIcon><TableViewIcon sx={{ fontSize: 16, color: palette.scale[500] }} /></ListItemIcon>
+          <ListItemText primaryTypographyProps={{ fontSize: '0.8125rem' }}>Inspect Schema</ListItemText>
+        </MenuItem>
         <MenuItem onClick={handleEditConnection} sx={{ color: palette.scale[200] }}>
           <ListItemIcon><EditIcon sx={{ fontSize: 16, color: palette.scale[500] }} /></ListItemIcon>
           <ListItemText primaryTypographyProps={{ fontSize: '0.8125rem' }}>Edit</ListItemText>
@@ -334,6 +366,12 @@ export default function ConnectionsPage() {
         confirmLabel="Delete"
         severity="error"
         loading={loading}
+      />
+
+      <ConnectionSchemaDrawer
+        open={schemaOpen}
+        onClose={() => setSchemaOpen(false)}
+        connection={schemaConnection}
       />
     </Box>
   )

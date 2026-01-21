@@ -12,6 +12,8 @@ import {
   Typography,
   InputAdornment,
   Divider,
+  CircularProgress,
+  Chip,
   alpha,
 } from '@mui/material'
 import SearchIcon from '@mui/icons-material/Search'
@@ -22,26 +24,68 @@ import AddIcon from '@mui/icons-material/Add'
 import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined'
 import HistoryIcon from '@mui/icons-material/History'
 import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined'
+import WorkOutlineIcon from '@mui/icons-material/WorkOutline'
+import ScheduleIcon from '@mui/icons-material/Schedule'
+import DashboardOutlinedIcon from '@mui/icons-material/DashboardOutlined'
+import TimelineIcon from '@mui/icons-material/Timeline'
+import AssessmentOutlinedIcon from '@mui/icons-material/AssessmentOutlined'
 import { useAppStore } from '../../store/useAppStore'
 import { Kbd } from '../ui'
+import { globalSearch } from '../../api/client'
 
 const COMMANDS = [
   {
-    id: 'nav-setup',
-    label: 'Go to Setup',
-    description: 'Configure database and templates',
-    icon: StorageOutlinedIcon,
+    id: 'nav-dashboard',
+    label: 'Go to Dashboard',
+    description: 'View overview and analytics',
+    icon: DashboardOutlinedIcon,
     action: 'navigate',
     path: '/',
     group: 'Navigation',
   },
   {
-    id: 'nav-generate',
-    label: 'Go to Generate',
-    description: 'Create new reports',
-    icon: PlayArrowOutlinedIcon,
+    id: 'nav-connections',
+    label: 'Go to Connections',
+    description: 'Manage database connections',
+    icon: StorageOutlinedIcon,
     action: 'navigate',
-    path: '/generate',
+    path: '/connections',
+    group: 'Navigation',
+  },
+  {
+    id: 'nav-templates',
+    label: 'Go to Templates',
+    description: 'Browse and manage templates',
+    icon: DescriptionOutlinedIcon,
+    action: 'navigate',
+    path: '/templates',
+    group: 'Navigation',
+  },
+  {
+    id: 'nav-reports',
+    label: 'Go to Reports',
+    description: 'Generate reports',
+    icon: AssessmentOutlinedIcon,
+    action: 'navigate',
+    path: '/reports',
+    group: 'Navigation',
+  },
+  {
+    id: 'nav-jobs',
+    label: 'Go to Jobs',
+    description: 'View job status',
+    icon: WorkOutlineIcon,
+    action: 'navigate',
+    path: '/jobs',
+    group: 'Navigation',
+  },
+  {
+    id: 'nav-schedules',
+    label: 'Go to Schedules',
+    description: 'Manage scheduled reports',
+    icon: ScheduleIcon,
+    action: 'navigate',
+    path: '/schedules',
     group: 'Navigation',
   },
   {
@@ -54,28 +98,117 @@ const COMMANDS = [
     group: 'Navigation',
   },
   {
+    id: 'nav-history',
+    label: 'Go to History',
+    description: 'View report history',
+    icon: HistoryIcon,
+    action: 'navigate',
+    path: '/history',
+    group: 'Navigation',
+  },
+  {
+    id: 'nav-activity',
+    label: 'Go to Activity',
+    description: 'View activity log',
+    icon: TimelineIcon,
+    action: 'navigate',
+    path: '/activity',
+    group: 'Navigation',
+  },
+  {
+    id: 'nav-settings',
+    label: 'Go to Settings',
+    description: 'Application settings',
+    icon: SettingsOutlinedIcon,
+    action: 'navigate',
+    path: '/settings',
+    group: 'Navigation',
+  },
+  {
     id: 'new-report',
     label: 'New Report',
     description: 'Start a new report generation',
     icon: AddIcon,
     action: 'navigate',
-    path: '/generate',
+    path: '/setup/wizard',
     group: 'Actions',
     shortcut: '⌘N',
   },
 ]
 
+// Map search result types to icons and paths
+const SEARCH_TYPE_CONFIG = {
+  template: {
+    icon: DescriptionOutlinedIcon,
+    pathBuilder: (item) => `/templates/${item.id}/edit`,
+    label: 'Template',
+  },
+  connection: {
+    icon: StorageOutlinedIcon,
+    pathBuilder: (item) => `/connections/${item.id}`,
+    label: 'Connection',
+  },
+  job: {
+    icon: WorkOutlineIcon,
+    pathBuilder: () => '/jobs',
+    label: 'Job',
+  },
+  schedule: {
+    icon: ScheduleIcon,
+    pathBuilder: () => '/schedules',
+    label: 'Schedule',
+  },
+}
+
 export default function CommandPalette({ open, onClose }) {
   const navigate = useNavigate()
   const [query, setQuery] = useState('')
   const [selectedIndex, setSelectedIndex] = useState(0)
+  const [searchResults, setSearchResults] = useState([])
+  const [isSearching, setIsSearching] = useState(false)
   const inputRef = useRef(null)
   const listRef = useRef(null)
+  const searchTimeoutRef = useRef(null)
 
   const templates = useAppStore((s) => s.templates)
   const approvedTemplates = templates.filter((t) => t.status === 'approved')
 
-  // Build full command list including templates
+  // Debounced search effect
+  useEffect(() => {
+    if (!query.trim() || query.length < 2) {
+      setSearchResults([])
+      setIsSearching(false)
+      return
+    }
+
+    setIsSearching(true)
+
+    // Clear previous timeout
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current)
+    }
+
+    // Debounce search
+    searchTimeoutRef.current = setTimeout(async () => {
+      try {
+        const result = await globalSearch(query, { limit: 10 })
+        setSearchResults(result.results || [])
+      } catch (err) {
+        console.error('Search failed:', err)
+        setSearchResults([])
+      } finally {
+        setIsSearching(false)
+      }
+    }, 200)
+
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current)
+      }
+    }
+  }, [query])
+
+  // Build full command list including templates and search results
   const allCommands = useMemo(() => {
     const templateCommands = approvedTemplates.slice(0, 5).map((t) => ({
       id: `template-${t.id}`,
@@ -87,11 +220,44 @@ export default function CommandPalette({ open, onClose }) {
       group: 'Recent Templates',
     }))
 
-    return [...COMMANDS, ...templateCommands]
-  }, [approvedTemplates])
+    // Convert search results to command format
+    const searchCommands = searchResults.map((result) => {
+      const config = SEARCH_TYPE_CONFIG[result.type] || {
+        icon: DescriptionOutlinedIcon,
+        pathBuilder: () => '/',
+        label: 'Item',
+      }
+      return {
+        id: `search-${result.type}-${result.id}`,
+        label: result.name,
+        description: result.description || `${config.label}`,
+        icon: config.icon,
+        action: 'navigate',
+        path: config.pathBuilder(result),
+        group: 'Search Results',
+        type: result.type,
+        score: result.score,
+      }
+    })
+
+    return [...searchCommands, ...COMMANDS, ...templateCommands]
+  }, [approvedTemplates, searchResults])
 
   // Filter commands based on query
   const filteredCommands = useMemo(() => {
+    // If we have search results, show them first without additional filtering
+    if (searchResults.length > 0) {
+      const searchCommands = allCommands.filter((cmd) => cmd.group === 'Search Results')
+      const otherCommands = allCommands.filter((cmd) => cmd.group !== 'Search Results')
+      const q = query.toLowerCase()
+      const filteredOthers = otherCommands.filter(
+        (cmd) =>
+          cmd.label.toLowerCase().includes(q) ||
+          cmd.description?.toLowerCase().includes(q)
+      )
+      return [...searchCommands, ...filteredOthers.slice(0, 5)]
+    }
+
     if (!query.trim()) return allCommands
 
     const q = query.toLowerCase()
@@ -101,7 +267,7 @@ export default function CommandPalette({ open, onClose }) {
         cmd.description?.toLowerCase().includes(q) ||
         cmd.group?.toLowerCase().includes(q)
     )
-  }, [allCommands, query])
+  }, [allCommands, query, searchResults])
 
   // Group commands
   const groupedCommands = useMemo(() => {
@@ -119,6 +285,8 @@ export default function CommandPalette({ open, onClose }) {
     if (open) {
       setQuery('')
       setSelectedIndex(0)
+      setSearchResults([])
+      setIsSearching(false)
       setTimeout(() => inputRef.current?.focus(), 50)
     }
   }, [open])
@@ -207,7 +375,7 @@ export default function CommandPalette({ open, onClose }) {
         <TextField
           ref={inputRef}
           fullWidth
-          placeholder="Search commands..."
+          placeholder="Search commands, templates, connections..."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={handleKeyDown}
@@ -215,7 +383,11 @@ export default function CommandPalette({ open, onClose }) {
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
-                <SearchIcon sx={{ color: 'text.secondary' }} />
+                {isSearching ? (
+                  <CircularProgress size={20} sx={{ color: 'text.secondary' }} />
+                ) : (
+                  <SearchIcon sx={{ color: 'text.secondary' }} />
+                )}
               </InputAdornment>
             ),
             sx: {
@@ -287,6 +459,19 @@ export default function CommandPalette({ open, onClose }) {
                           sx: { opacity: isSelected ? 0.8 : 0.6 },
                         }}
                       />
+                      {cmd.type && (
+                        <Chip
+                          label={cmd.type}
+                          size="small"
+                          sx={{
+                            ml: 1,
+                            height: 20,
+                            fontSize: '0.65rem',
+                            textTransform: 'capitalize',
+                            bgcolor: isSelected ? alpha('#fff', 0.2) : 'action.selected',
+                          }}
+                        />
+                      )}
                       {cmd.shortcut && (
                         <Kbd size="small" sx={{ opacity: isSelected ? 1 : 0.5 }}>
                           {cmd.shortcut}
@@ -300,9 +485,19 @@ export default function CommandPalette({ open, onClose }) {
           </Box>
         ))}
 
-        {filteredCommands.length === 0 && (
+        {filteredCommands.length === 0 && !isSearching && (
           <Box sx={{ p: 4, textAlign: 'center' }}>
-            <Typography color="text.secondary">No commands found</Typography>
+            <Typography color="text.secondary">
+              {query.trim() ? 'No results found' : 'Type to search commands, templates, and connections'}
+            </Typography>
+          </Box>
+        )}
+        {isSearching && filteredCommands.length === 0 && (
+          <Box sx={{ p: 4, textAlign: 'center' }}>
+            <CircularProgress size={24} />
+            <Typography color="text.secondary" sx={{ mt: 1 }}>
+              Searching...
+            </Typography>
           </Box>
         )}
       </Box>

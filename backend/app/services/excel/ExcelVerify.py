@@ -381,6 +381,32 @@ def xlsx_to_html_preview(
                 extra={"event": "excel_llm_missing_tokens", "missing": missing_tokens},
             )
             html_text, schema_payload = sheet_prototype_html, None
+        else:
+            html_lower = html_text.lower()
+            expected_labels = [
+                token.replace("row_", "", 1)
+                for token in placeholder_tokens
+                if token.startswith("row_")
+            ]
+            missing_labels = [
+                label for label in expected_labels if f'data-label="{label}"' not in html_lower
+            ]
+            if missing_labels:
+                logger.warning(
+                    "excel_llm_missing_data_labels",
+                    extra={"event": "excel_llm_missing_data_labels", "missing": missing_labels},
+                )
+                html_text, schema_payload = sheet_prototype_html, None
+            else:
+                missing_exact = [
+                    label for label in expected_labels if f'<th data-label="{label}">' not in html_text
+                ]
+                if missing_exact:
+                    logger.warning(
+                        "excel_llm_data_label_order",
+                        extra={"event": "excel_llm_data_label_order", "missing": missing_exact},
+                    )
+                    html_text, schema_payload = sheet_prototype_html, None
     html_path = out_dir / "template_p1.html"
     html_path.write_text(html_text, encoding="utf-8")
 

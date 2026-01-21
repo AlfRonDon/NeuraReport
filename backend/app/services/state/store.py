@@ -3,20 +3,62 @@
 import base64
 import hashlib
 import json
+import logging
 import os
+import shutil
 import threading
+import time
 import uuid
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, Iterable, Mapping, Optional, Sequence
+from typing import Any, Dict, Generator, Iterable, Mapping, Optional, Sequence
 
 from cryptography.fernet import Fernet, InvalidToken
 
 from ..utils import write_json_atomic
 
+logger = logging.getLogger("neura.state.store")
+
+# Configuration constants
+STATE_VERSION = 2
+MAX_BACKUP_COUNT = 5
+MAX_ACTIVITY_LOG_SIZE = 500
+MAX_RUN_HISTORY = max(int(os.getenv("NR_RUN_HISTORY_LIMIT", "200") or "200"), 25)
+
 
 def _now_iso() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+
+
+def _compute_checksum(data: dict) -> str:
+    """Compute SHA256 checksum of state data."""
+    content = json.dumps(data, sort_keys=True, default=str)
+    return hashlib.sha256(content.encode()).hexdigest()[:16]
+
+
+def _normalize_job_status(status: Optional[str]) -> str:
+    """Normalize job status to consistent UI-friendly values.
+
+    Maps internal/variant statuses to standard frontend statuses:
+    - queued/pending → pending
+    - running/in_progress → running
+    - succeeded/completed → completed
+    - failed/error → failed
+    - cancelled/canceled → cancelled
+    """
+    value = (status or "").strip().lower()
+    if value in {"succeeded", "completed"}:
+        return "completed"
+    if value in {"queued", "pending"}:
+        return "pending"
+    if value in {"running", "in_progress"}:
+        return "running"
+    if value in {"failed", "error"}:
+        return "failed"
+    if value in {"cancelled", "canceled"}:
+        return "cancelled"
+    return value or "pending"
 
 
 def _normalize_mapping_keys(values: Optional[Iterable[str]]) -> list[str]:
@@ -67,6 +109,15 @@ class StateStore:
         self._key_path = self._base_dir / self._KEY_FILENAME
         self._fernet: Optional[Fernet] = None
         self._lock = threading.RLock()
+        self._cache: Optional[dict] = None
+        self._cache_mtime: float = 0.0
+        self._cache_enabled = os.getenv("NEURA_STATE_CACHE_ENABLED", "true").lower() in {"1", "true", "yes"}
+        self._backups_enabled = os.getenv("NEURA_STATE_BACKUPS_ENABLED", "true").lower() in {"1", "true", "yes"}
+        self._backup_interval_seconds = max(
+            int(os.getenv("NEURA_STATE_BACKUP_INTERVAL_SECONDS", "60") or "60"),
+            0,
+        )
+        self._last_backup_at = 0.0
 
     # ------------------------------------------------------------------
     # key management / encryption helpers
@@ -125,25 +176,242 @@ class StateStore:
             "schedules": {},
             "jobs": {},
             "saved_charts": {},
+            "runs": {},
+            "activity_log": [],
+            "favorites": {"templates": [], "connections": []},
+            "user_preferences": {},
+            "notifications": [],
+            # AI Features
+            "saved_queries": {},
+            "query_history": [],
+            "enrichment_sources": {},
+            "enrichment_cache": {},
+            "virtual_schemas": {},
+            "docqa_sessions": {},
+            "synthesis_sessions": {},
+            "summaries": {},
         }
 
+    def _apply_defaults(self, state: dict) -> dict:
+        state.setdefault("connections", {})
+        state.setdefault("templates", {})
+        state.setdefault("last_used", {})
+        state.setdefault("schedules", {})
+        state.setdefault("jobs", {})
+        state.setdefault("saved_charts", {})
+        state.setdefault("runs", {})
+        state.setdefault("activity_log", [])
+        state.setdefault("favorites", {"templates": [], "connections": []})
+        state.setdefault("user_preferences", {})
+        state.setdefault("notifications", [])
+        # AI Features
+        state.setdefault("saved_queries", {})
+        state.setdefault("query_history", [])
+        state.setdefault("enrichment_sources", {})
+        state.setdefault("enrichment_cache", {})
+        state.setdefault("virtual_schemas", {})
+        state.setdefault("docqa_sessions", {})
+        state.setdefault("synthesis_sessions", {})
+        state.setdefault("summaries", {})
+        return state
+
     def _read_state(self) -> dict:
+        if self._cache_enabled and self._cache is not None:
+            if not self._state_path.exists():
+                return self._cache
+            try:
+                mtime = self._state_path.stat().st_mtime
+            except OSError:
+                return self._cache
+            if mtime == self._cache_mtime:
+                return self._cache
+
         if not self._state_path.exists():
-            return self._default_state()
+            state = self._default_state()
+            if self._cache_enabled:
+                self._cache = state
+                self._cache_mtime = 0.0
+            return state
         try:
             raw = json.loads(self._state_path.read_text(encoding="utf-8"))
         except Exception:
-            return self._default_state()
-        raw.setdefault("connections", {})
-        raw.setdefault("templates", {})
-        raw.setdefault("last_used", {})
-        raw.setdefault("schedules", {})
-        raw.setdefault("jobs", {})
-        raw.setdefault("saved_charts", {})
-        return raw
+            state = self._default_state()
+            if self._cache_enabled:
+                self._cache = state
+                self._cache_mtime = 0.0
+            return state
+        if not isinstance(raw, dict):
+            state = self._default_state()
+            if self._cache_enabled:
+                self._cache = state
+                self._cache_mtime = 0.0
+            return state
+        state = self._apply_defaults(raw)
+        if self._cache_enabled:
+            self._cache = state
+            try:
+                self._cache_mtime = self._state_path.stat().st_mtime
+            except OSError:
+                self._cache_mtime = time.time()
+        return state
 
     def _write_state(self, state: dict) -> None:
+        # Create backup before write
+        self._create_backup()
+        # Add metadata
+        state["_metadata"] = {
+            "version": STATE_VERSION,
+            "updated_at": _now_iso(),
+            "checksum": _compute_checksum(state),
+        }
         write_json_atomic(self._state_path, state, ensure_ascii=False, indent=2, step="state_store")
+        if self._cache_enabled:
+            self._cache = state
+            try:
+                self._cache_mtime = self._state_path.stat().st_mtime
+            except OSError:
+                self._cache_mtime = time.time()
+
+    def _create_backup(self) -> None:
+        """Create a backup of the current state file."""
+        if not self._backups_enabled or self._backup_interval_seconds <= 0:
+            return
+        if not self._state_path.exists():
+            return
+
+        now = time.time()
+        if self._last_backup_at and (now - self._last_backup_at) < self._backup_interval_seconds:
+            return
+
+        backup_dir = self._base_dir / "backups"
+        backup_dir.mkdir(exist_ok=True)
+
+        # Create timestamped backup
+        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+        backup_path = backup_dir / f"state_{timestamp}.json"
+
+        try:
+            shutil.copy2(self._state_path, backup_path)
+            self._last_backup_at = now
+        except Exception as e:
+            logger.warning(f"Failed to create backup: {e}")
+
+        # Clean up old backups
+        self._cleanup_old_backups(backup_dir)
+
+    def _cleanup_old_backups(self, backup_dir: Path) -> None:
+        """Remove old backup files, keeping only MAX_BACKUP_COUNT."""
+        try:
+            backups = sorted(
+                backup_dir.glob("state_*.json"),
+                key=lambda p: p.stat().st_mtime,
+                reverse=True
+            )
+            for old_backup in backups[MAX_BACKUP_COUNT:]:
+                try:
+                    old_backup.unlink()
+                except Exception:
+                    pass
+        except Exception as e:
+            logger.warning(f"Failed to cleanup old backups: {e}")
+
+    def restore_from_backup(self, backup_name: Optional[str] = None) -> bool:
+        """Restore state from a backup file."""
+        backup_dir = self._base_dir / "backups"
+        if not backup_dir.exists():
+            return False
+
+        with self._lock:
+            try:
+                if backup_name:
+                    backup_path = backup_dir / backup_name
+                else:
+                    backups = sorted(
+                        backup_dir.glob("state_*.json"),
+                        key=lambda p: p.stat().st_mtime,
+                        reverse=True
+                    )
+                    if not backups:
+                        return False
+                    backup_path = backups[0]
+
+                if not backup_path.exists():
+                    return False
+
+                backup_data = json.loads(backup_path.read_text(encoding="utf-8"))
+                if not isinstance(backup_data, dict):
+                    return False
+
+                shutil.copy2(backup_path, self._state_path)
+                logger.info(f"Restored state from backup: {backup_path.name}")
+                return True
+
+            except Exception as e:
+                logger.error(f"Failed to restore from backup: {e}")
+                return False
+
+    def list_backups(self) -> list[dict]:
+        """List available backup files."""
+        backup_dir = self._base_dir / "backups"
+        if not backup_dir.exists():
+            return []
+
+        backups = []
+        for backup_path in backup_dir.glob("state_*.json"):
+            try:
+                stat = backup_path.stat()
+                backups.append({
+                    "name": backup_path.name,
+                    "size_bytes": stat.st_size,
+                    "created_at": datetime.fromtimestamp(
+                        stat.st_mtime, tz=timezone.utc
+                    ).isoformat(),
+                })
+            except Exception:
+                pass
+
+        return sorted(backups, key=lambda b: b["created_at"], reverse=True)
+
+    @contextmanager
+    def transaction(self) -> Generator[dict, None, None]:
+        """Context manager for atomic state transactions."""
+        with self._lock:
+            state = self._read_state()
+            try:
+                yield state
+                self._write_state(state)
+            except Exception as e:
+                logger.error(f"Transaction failed: {e}")
+                raise
+
+    def validate_state(self) -> tuple[bool, list[str]]:
+        """Validate state file integrity."""
+        errors = []
+        with self._lock:
+            try:
+                state = self._read_state()
+            except Exception as e:
+                return False, [f"Failed to read state: {e}"]
+
+            required = ["connections", "templates", "schedules", "jobs"]
+            for section in required:
+                if section not in state:
+                    errors.append(f"Missing section: {section}")
+
+        return len(errors) == 0, errors
+
+    def get_stats(self) -> dict:
+        """Get state store statistics."""
+        with self._lock:
+            state = self._read_state()
+            return {
+                "connections_count": len(state.get("connections", {})),
+                "templates_count": len(state.get("templates", {})),
+                "schedules_count": len(state.get("schedules", {})),
+                "jobs_count": len(state.get("jobs", {})),
+                "backups_count": len(self.list_backups()),
+                "state_file_exists": self._state_path.exists(),
+            }
 
     # ------------------------------------------------------------------
     # connection helpers
@@ -180,8 +448,13 @@ class StateStore:
             if not rec:
                 return None
             secrets = self._decrypt(rec.get("secret") or "")
+            fallback = {
+                "database_path": rec.get("database_path"),
+                "db_type": rec.get("db_type"),
+                "name": rec.get("name"),
+            }
             if not secrets:
-                return None
+                return fallback if fallback.get("database_path") else None
             secrets["database_path"] = rec.get("database_path")
             secrets["db_type"] = rec.get("db_type")
             secrets["name"] = rec.get("name")
@@ -317,6 +590,7 @@ class StateStore:
         connection_id: Optional[str] = None,
         mapping_keys: Optional[Iterable[str]] = None,
         template_type: Optional[str] = None,
+        description: Optional[str] = None,
     ) -> dict:
         tid = template_id
         now = _now_iso()
@@ -332,6 +606,7 @@ class StateStore:
                     "id": tid,
                     "name": name,
                     "status": status,
+                    "description": description if description is not None else record.get("description"),
                     "artifacts": {k: v for k, v in merged_artifacts.items() if v},
                     "updated_at": now,
                     "created_at": created_at,
@@ -451,6 +726,7 @@ class StateStore:
         return {
             "id": rec.get("id"),
             "name": rec.get("name"),
+            "description": rec.get("description"),
             "status": rec.get("status"),
             "kind": rec.get("kind") or "pdf",
             "tags": list(rec.get("tags") or []),
@@ -692,6 +968,115 @@ class StateStore:
             return self._sanitize_schedule(record)
 
     # ------------------------------------------------------------------
+    # report run history helpers
+    # ------------------------------------------------------------------
+    def _sanitize_report_run(self, rec: Optional[dict]) -> Optional[dict]:
+        if not rec:
+            return None
+        return {
+            "id": rec.get("id"),
+            "templateId": rec.get("template_id"),
+            "templateName": rec.get("template_name"),
+            "templateKind": rec.get("template_kind") or "pdf",
+            "connectionId": rec.get("connection_id"),
+            "connectionName": rec.get("connection_name"),
+            "startDate": rec.get("start_date"),
+            "endDate": rec.get("end_date"),
+            "batchIds": list(rec.get("batch_ids") or []),
+            "keyValues": dict(rec.get("key_values") or {}),
+            "status": rec.get("status") or "succeeded",
+            "artifacts": dict(rec.get("artifacts") or {}),
+            "scheduleId": rec.get("schedule_id"),
+            "scheduleName": rec.get("schedule_name"),
+            "createdAt": rec.get("created_at"),
+        }
+
+    def record_report_run(
+        self,
+        run_id: str,
+        *,
+        template_id: str,
+        template_name: Optional[str],
+        template_kind: str,
+        connection_id: Optional[str],
+        connection_name: Optional[str],
+        start_date: str,
+        end_date: str,
+        batch_ids: Optional[Iterable[str]],
+        key_values: Optional[Mapping[str, Any]],
+        status: str,
+        artifacts: Optional[Mapping[str, Any]] = None,
+        schedule_id: Optional[str] = None,
+        schedule_name: Optional[str] = None,
+    ) -> Optional[dict]:
+        if not run_id or not template_id:
+            return None
+        now = _now_iso()
+        record = {
+            "id": run_id,
+            "template_id": template_id,
+            "template_name": template_name or template_id,
+            "template_kind": template_kind or "pdf",
+            "connection_id": connection_id,
+            "connection_name": connection_name,
+            "start_date": start_date,
+            "end_date": end_date,
+            "batch_ids": [str(b) for b in (batch_ids or []) if str(b).strip()],
+            "key_values": dict(key_values or {}),
+            "status": status or "succeeded",
+            "artifacts": dict(artifacts or {}),
+            "schedule_id": schedule_id,
+            "schedule_name": schedule_name,
+            "created_at": now,
+        }
+        with self._lock:
+            state = self._read_state()
+            runs = state.get("runs") or {}
+            runs[run_id] = record
+            if len(runs) > MAX_RUN_HISTORY:
+                ordered = sorted(runs.values(), key=lambda item: item.get("created_at") or "", reverse=True)
+                keep_ids = {item.get("id") for item in ordered[:MAX_RUN_HISTORY] if item.get("id")}
+                runs = {rid: rec for rid, rec in runs.items() if rid in keep_ids}
+            state["runs"] = runs
+            self._write_state(state)
+            return self._sanitize_report_run(record)
+
+    def list_report_runs(
+        self,
+        *,
+        template_id: Optional[str] = None,
+        connection_id: Optional[str] = None,
+        schedule_id: Optional[str] = None,
+        limit: int = 50,
+    ) -> list[dict]:
+        with self._lock:
+            state = self._read_state()
+            runs = list((state.get("runs") or {}).values())
+            runs.sort(key=lambda rec: rec.get("created_at") or "", reverse=True)
+            filtered: list[dict] = []
+            for rec in runs:
+                if template_id and rec.get("template_id") != template_id:
+                    continue
+                if connection_id and rec.get("connection_id") != connection_id:
+                    continue
+                if schedule_id and rec.get("schedule_id") != schedule_id:
+                    continue
+                sanitized = self._sanitize_report_run(rec)
+                if sanitized:
+                    filtered.append(sanitized)
+                if limit and len(filtered) >= limit:
+                    break
+            return filtered
+
+    def get_report_run(self, run_id: str) -> Optional[dict]:
+        if not run_id:
+            return None
+        with self._lock:
+            state = self._read_state()
+            rec = (state.get("runs") or {}).get(run_id)
+            return self._sanitize_report_run(rec)
+
+    # ------------------------------------------------------------------
     # last-used helpers
     # ------------------------------------------------------------------
     # Jobs helpers
@@ -703,7 +1088,7 @@ class StateStore:
             "id": step.get("id"),
             "name": step.get("name"),
             "label": step.get("label") or step.get("name"),
-            "status": step.get("status") or "queued",
+            "status": _normalize_job_status(step.get("status")),
             "progress": step.get("progress"),
             "createdAt": step.get("created_at"),
             "startedAt": step.get("started_at"),
@@ -723,7 +1108,7 @@ class StateStore:
         return {
             "id": rec.get("id"),
             "type": rec.get("type") or "run_report",
-            "status": rec.get("status") or "queued",
+            "status": _normalize_job_status(rec.get("status")),
             "templateId": rec.get("template_id"),
             "templateName": rec.get("template_name"),
             "templateKind": rec.get("template_kind") or "pdf",
@@ -1035,6 +1420,357 @@ class StateStore:
             }
             self._write_state(state)
             return state["last_used"]
+
+    # ------------------------------------------------------------------
+    # activity log helpers
+    # ------------------------------------------------------------------
+    def log_activity(
+        self,
+        *,
+        action: str,
+        entity_type: str,
+        entity_id: Optional[str] = None,
+        entity_name: Optional[str] = None,
+        details: Optional[Dict[str, Any]] = None,
+        user_id: Optional[str] = None,
+    ) -> dict:
+        """Log an activity event."""
+        now = _now_iso()
+        activity_id = str(uuid.uuid4())
+        entry = {
+            "id": activity_id,
+            "action": action,
+            "entity_type": entity_type,
+            "entity_id": entity_id,
+            "entity_name": entity_name,
+            "details": dict(details or {}),
+            "user_id": user_id,
+            "timestamp": now,
+        }
+        with self._lock:
+            state = self._read_state()
+            log = state.get("activity_log") or []
+            log.insert(0, entry)
+            # Keep only last 500 entries
+            if len(log) > 500:
+                log = log[:500]
+            state["activity_log"] = log
+            self._write_state(state)
+            return entry
+
+    def get_activity_log(
+        self,
+        *,
+        limit: int = 50,
+        offset: int = 0,
+        entity_type: Optional[str] = None,
+        action: Optional[str] = None,
+    ) -> list[dict]:
+        """Get activity log with optional filtering."""
+        with self._lock:
+            state = self._read_state()
+            log = state.get("activity_log") or []
+
+            # Filter
+            if entity_type:
+                log = [e for e in log if e.get("entity_type") == entity_type]
+            if action:
+                log = [e for e in log if e.get("action") == action]
+
+            # Paginate
+            return log[offset : offset + limit]
+
+    def clear_activity_log(self) -> int:
+        """Clear all activity log entries. Returns count of entries cleared."""
+        with self._lock:
+            state = self._read_state()
+            count = len(state.get("activity_log") or [])
+            state["activity_log"] = []
+            self._write_state(state)
+            return count
+
+    # ------------------------------------------------------------------
+    # favorites helpers
+    # ------------------------------------------------------------------
+    def get_favorites(self) -> dict:
+        """Get all favorites."""
+        with self._lock:
+            state = self._read_state()
+            favorites = state.get("favorites") or {"templates": [], "connections": []}
+            return {
+                "templates": list(favorites.get("templates") or []),
+                "connections": list(favorites.get("connections") or []),
+            }
+
+    def add_favorite(self, entity_type: str, entity_id: str) -> bool:
+        """Add an item to favorites. Returns True if added, False if already exists."""
+        if entity_type not in ("templates", "connections"):
+            return False
+        with self._lock:
+            state = self._read_state()
+            favorites = state.get("favorites") or {"templates": [], "connections": []}
+            items = list(favorites.get(entity_type) or [])
+            if entity_id in items:
+                return False
+            items.append(entity_id)
+            favorites[entity_type] = items
+            state["favorites"] = favorites
+            self._write_state(state)
+            return True
+
+    def remove_favorite(self, entity_type: str, entity_id: str) -> bool:
+        """Remove an item from favorites. Returns True if removed, False if not found."""
+        if entity_type not in ("templates", "connections"):
+            return False
+        with self._lock:
+            state = self._read_state()
+            favorites = state.get("favorites") or {"templates": [], "connections": []}
+            items = list(favorites.get(entity_type) or [])
+            if entity_id not in items:
+                return False
+            items.remove(entity_id)
+            favorites[entity_type] = items
+            state["favorites"] = favorites
+            self._write_state(state)
+            return True
+
+    def is_favorite(self, entity_type: str, entity_id: str) -> bool:
+        """Check if an item is a favorite."""
+        if entity_type not in ("templates", "connections"):
+            return False
+        with self._lock:
+            state = self._read_state()
+            favorites = state.get("favorites") or {"templates": [], "connections": []}
+            items = favorites.get(entity_type) or []
+            return entity_id in items
+
+    # ------------------------------------------------------------------
+    # user preferences helpers
+    # ------------------------------------------------------------------
+    def get_user_preferences(self) -> dict:
+        """Get user preferences."""
+        with self._lock:
+            state = self._read_state()
+            return dict(state.get("user_preferences") or {})
+
+    def set_user_preference(self, key: str, value: Any) -> dict:
+        """Set a single user preference."""
+        with self._lock:
+            state = self._read_state()
+            prefs = dict(state.get("user_preferences") or {})
+            prefs[key] = value
+            prefs["updated_at"] = _now_iso()
+            state["user_preferences"] = prefs
+            self._write_state(state)
+            return prefs
+
+    def update_user_preferences(self, updates: Dict[str, Any]) -> dict:
+        """Update multiple user preferences."""
+        with self._lock:
+            state = self._read_state()
+            prefs = dict(state.get("user_preferences") or {})
+            prefs.update(updates)
+            prefs["updated_at"] = _now_iso()
+            state["user_preferences"] = prefs
+            self._write_state(state)
+            return prefs
+
+    # ------------------------------------------------------------------
+    # notifications helpers
+    # ------------------------------------------------------------------
+    MAX_NOTIFICATIONS = 100
+
+    def add_notification(
+        self,
+        title: str,
+        message: str,
+        notification_type: str = "info",
+        link: Optional[str] = None,
+        entity_type: Optional[str] = None,
+        entity_id: Optional[str] = None,
+    ) -> dict:
+        """Add a notification. Returns the created notification."""
+        notif = {
+            "id": str(uuid.uuid4()),
+            "title": title,
+            "message": message,
+            "type": notification_type,  # info, success, warning, error
+            "link": link,
+            "entity_type": entity_type,
+            "entity_id": entity_id,
+            "read": False,
+            "created_at": _now_iso(),
+        }
+        with self._lock:
+            state = self._read_state()
+            notifications = list(state.get("notifications") or [])
+            notifications.insert(0, notif)
+            # Trim to max size
+            state["notifications"] = notifications[: self.MAX_NOTIFICATIONS]
+            self._write_state(state)
+        return notif
+
+    def get_notifications(
+        self,
+        limit: int = 50,
+        unread_only: bool = False,
+    ) -> list:
+        """Get notifications, optionally filtered to unread only."""
+        with self._lock:
+            state = self._read_state()
+            notifications = list(state.get("notifications") or [])
+            if unread_only:
+                notifications = [n for n in notifications if not n.get("read")]
+            return notifications[:limit]
+
+    def mark_notification_read(self, notification_id: str) -> bool:
+        """Mark a single notification as read. Returns True if found."""
+        with self._lock:
+            state = self._read_state()
+            notifications = list(state.get("notifications") or [])
+            found = False
+            for n in notifications:
+                if n.get("id") == notification_id:
+                    n["read"] = True
+                    found = True
+                    break
+            if found:
+                state["notifications"] = notifications
+                self._write_state(state)
+            return found
+
+    def mark_all_notifications_read(self) -> int:
+        """Mark all notifications as read. Returns count of notifications marked."""
+        with self._lock:
+            state = self._read_state()
+            notifications = list(state.get("notifications") or [])
+            count = 0
+            for n in notifications:
+                if not n.get("read"):
+                    n["read"] = True
+                    count += 1
+            state["notifications"] = notifications
+            self._write_state(state)
+            return count
+
+    def delete_notification(self, notification_id: str) -> bool:
+        """Delete a notification. Returns True if found and deleted."""
+        with self._lock:
+            state = self._read_state()
+            notifications = list(state.get("notifications") or [])
+            original_count = len(notifications)
+            notifications = [n for n in notifications if n.get("id") != notification_id]
+            if len(notifications) < original_count:
+                state["notifications"] = notifications
+                self._write_state(state)
+                return True
+            return False
+
+    def clear_notifications(self) -> int:
+        """Clear all notifications. Returns count of notifications cleared."""
+        with self._lock:
+            state = self._read_state()
+            count = len(state.get("notifications") or [])
+            state["notifications"] = []
+            self._write_state(state)
+            return count
+
+    def get_unread_count(self) -> int:
+        """Get count of unread notifications."""
+        with self._lock:
+            state = self._read_state()
+            notifications = list(state.get("notifications") or [])
+            return sum(1 for n in notifications if not n.get("read"))
+
+    # ------------------------------------------------------------------
+    # NL2SQL: Saved Queries
+    # ------------------------------------------------------------------
+    def save_query(self, query: dict) -> str:
+        """Save a query. Returns the query ID."""
+        with self._lock:
+            state = self._read_state()
+            query_id = query.get("id") or str(uuid.uuid4())[:8]
+            query["id"] = query_id
+            state.setdefault("saved_queries", {})[query_id] = query
+            self._write_state(state)
+            return query_id
+
+    def list_saved_queries(self) -> list[dict]:
+        """List all saved queries."""
+        with self._lock:
+            state = self._read_state()
+            queries = list((state.get("saved_queries") or {}).values())
+            return sorted(queries, key=lambda q: q.get("created_at", ""), reverse=True)
+
+    def get_saved_query(self, query_id: str) -> Optional[dict]:
+        """Get a saved query by ID."""
+        with self._lock:
+            state = self._read_state()
+            return (state.get("saved_queries") or {}).get(query_id)
+
+    def update_saved_query(self, query_id: str, updates: dict) -> Optional[dict]:
+        """Update a saved query."""
+        with self._lock:
+            state = self._read_state()
+            queries = state.get("saved_queries") or {}
+            if query_id not in queries:
+                return None
+            queries[query_id].update(updates)
+            queries[query_id]["updated_at"] = _now_iso()
+            self._write_state(state)
+            return queries[query_id]
+
+    def delete_saved_query(self, query_id: str) -> bool:
+        """Delete a saved query. Returns True if deleted."""
+        with self._lock:
+            state = self._read_state()
+            queries = state.get("saved_queries") or {}
+            if query_id not in queries:
+                return False
+            del queries[query_id]
+            self._write_state(state)
+            return True
+
+    def increment_query_run_count(self, query_id: str) -> None:
+        """Increment the run count for a saved query."""
+        with self._lock:
+            state = self._read_state()
+            queries = state.get("saved_queries") or {}
+            if query_id in queries:
+                queries[query_id]["run_count"] = queries[query_id].get("run_count", 0) + 1
+                queries[query_id]["last_run_at"] = _now_iso()
+                self._write_state(state)
+
+    # ------------------------------------------------------------------
+    # NL2SQL: Query History
+    # ------------------------------------------------------------------
+    MAX_QUERY_HISTORY = 200
+
+    def add_query_history(self, entry: dict) -> None:
+        """Add an entry to query history."""
+        with self._lock:
+            state = self._read_state()
+            history = list(state.get("query_history") or [])
+            history.insert(0, entry)
+            # Trim to max size
+            state["query_history"] = history[: self.MAX_QUERY_HISTORY]
+            self._write_state(state)
+
+    def get_query_history(self, limit: int = 50) -> list[dict]:
+        """Get query history entries."""
+        with self._lock:
+            state = self._read_state()
+            history = list(state.get("query_history") or [])
+            return history[:limit]
+
+    def clear_query_history(self) -> int:
+        """Clear all query history. Returns count cleared."""
+        with self._lock:
+            state = self._read_state()
+            count = len(state.get("query_history") or [])
+            state["query_history"] = []
+            self._write_state(state)
+            return count
 
 
 state_store = StateStore()

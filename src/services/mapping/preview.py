@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import importlib
 import json
 import logging
 from typing import Any, Iterator, Optional
@@ -12,6 +13,7 @@ from backend.app.services.mapping.AutoMapInline import MappingInlineValidationEr
 from backend.app.services.mapping.CorrectionsPreview import run_corrections_preview as corrections_preview_fn
 from backend.app.services.mapping.HeaderMapping import approval_errors, get_parent_child_info
 from backend.app.services.prompts.llm_prompts import PROMPT_VERSION
+from backend.app.services.state import store as state_store_module
 from backend.app.services.utils import TemplateLockError, acquire_template_lock, write_artifact_manifest, write_json_atomic, write_text_atomic
 from src.utils.connection_utils import db_path_from_payload_or_default
 from src.utils.mapping_utils import load_mapping_keys, mapping_keys_path
@@ -39,6 +41,16 @@ def _mapping_preview_pipeline(
     force_refresh: bool = False,
     kind: str = "pdf",
 ) -> Iterator[dict[str, Any]]:
+    try:
+        api_mod = importlib.import_module("backend.api")
+    except Exception:
+        api_mod = None
+    verify_sqlite_fn = getattr(api_mod, "verify_sqlite", verify_sqlite)
+    run_llm_call_3_fn = getattr(api_mod, "run_llm_call_3", run_llm_call_3)
+    build_catalog_fn = getattr(api_mod, "_build_catalog_from_db", build_catalog_from_db)
+    get_parent_child_info_fn = getattr(api_mod, "get_parent_child_info", get_parent_child_info)
+    state_store_ref = getattr(api_mod, "state_store", state_store_module.state_store)
+
     correlation_id = correlation_id or (getattr(request.state, "correlation_id", None) if request else None)
     yield {
         "event": "stage",
@@ -58,10 +70,10 @@ def _mapping_preview_pipeline(
 
     schema_ext = load_schema_ext(template_dir_path) or {}
     db_path = db_path_from_payload_or_default(connection_id)
-    verify_sqlite(db_path)
+    verify_sqlite_fn(db_path)
 
     try:
-        schema_info = get_parent_child_info(db_path)
+        schema_info = get_parent_child_info_fn(db_path)
     except Exception as exc:
         logger.exception(
             "mapping_preview_schema_probe_failed",
@@ -69,7 +81,7 @@ def _mapping_preview_pipeline(
         )
         raise http_error(500, "db_introspection_failed", f"DB introspection failed: {exc}")
 
-    catalog = list(dict.fromkeys(build_catalog_from_db(db_path)))
+    catalog = list(dict.fromkeys(build_catalog_fn(db_path)))
     pdf_sha = sha256_path(find_reference_pdf(template_dir_path)) or ""
     png_path = find_reference_png(template_dir_path)
     db_sig = compute_db_signature(db_path) or ""
@@ -138,7 +150,7 @@ def _mapping_preview_pipeline(
 
     with lock_ctx:
         try:
-            result = run_llm_call_3(
+            result = run_llm_call_3_fn(
                 template_html,
                 catalog,
                 schema_ext,
@@ -205,7 +217,7 @@ def _mapping_preview_pipeline(
     errors = approval_errors(result.mapping)
     constant_replacements = result.constant_replacements
 
-    record = state_store.get_template_record(template_id) or {}
+    record = state_store_ref.get_template_record(template_id) or {}
     template_name = record.get("name") or f"Template {template_id[:8]}"
     artifacts = {
         "template_html_url": artifact_url(html_path),
@@ -220,7 +232,7 @@ def _mapping_preview_pipeline(
     schema_url = artifact_url(schema_path) if schema_path.exists() else None
     if schema_url:
         artifacts["schema_ext_url"] = schema_url
-    state_store.upsert_template(
+    state_store_ref.upsert_template(
         template_id,
         name=template_name,
         status="mapping_previewed",

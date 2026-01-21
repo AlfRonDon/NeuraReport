@@ -11,11 +11,27 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
+  DialogActions,
   Breadcrumbs,
   Link,
+  ToggleButton,
+  ToggleButtonGroup,
+  Tooltip,
+  IconButton,
+  Collapse,
 } from '@mui/material'
 import NavigateNextIcon from '@mui/icons-material/NavigateNext'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
+import CodeIcon from '@mui/icons-material/Code'
+import ChatIcon from '@mui/icons-material/Chat'
+import SaveIcon from '@mui/icons-material/Save'
+import UndoIcon from '@mui/icons-material/Undo'
+import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh'
+import CompareArrowsIcon from '@mui/icons-material/CompareArrows'
+import FullscreenIcon from '@mui/icons-material/Fullscreen'
+import FullscreenExitIcon from '@mui/icons-material/FullscreenExit'
+import KeyboardIcon from '@mui/icons-material/Keyboard'
+import CloseIcon from '@mui/icons-material/Close'
 import { forwardRef, useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams, useLocation, Link as RouterLink } from 'react-router-dom'
 
@@ -30,6 +46,18 @@ import {
   editTemplateAi,
   undoTemplateEdit,
 } from '../../../api/client'
+
+// New components
+import TemplateChatEditor from './TemplateChatEditor.jsx'
+import EnhancedDiffViewer from '../components/EnhancedDiffViewer.jsx'
+import EditHistoryTimeline from '../components/EditHistoryTimeline.jsx'
+import EditorSkeleton from '../components/EditorSkeleton.jsx'
+import KeyboardShortcutsPanel from '../components/KeyboardShortcutsPanel.jsx'
+import DraftRecoveryBanner, { AutoSaveIndicator } from '../components/DraftRecoveryBanner.jsx'
+
+// Hooks
+import { useEditorKeyboardShortcuts, getShortcutDisplay } from '../hooks/useEditorKeyboardShortcuts.js'
+import { useEditorDraft } from '../hooks/useEditorDraft.js'
 
 const surfaceStackSx = {
   gap: { xs: 2, md: 2.5 },
@@ -55,6 +83,7 @@ export default function TemplateEditor() {
     [templates, templateId],
   )
 
+  // Core editor state
   const [loading, setLoading] = useState(true)
   const [html, setHtml] = useState('')
   const [initialHtml, setInitialHtml] = useState('')
@@ -67,9 +96,32 @@ export default function TemplateEditor() {
   const [diffSummary, setDiffSummary] = useState(null)
   const [history, setHistory] = useState([])
   const [error, setError] = useState(null)
+
+  // UI state
+  const [editMode, setEditMode] = useState('manual') // 'manual' | 'chat'
   const [diffOpen, setDiffOpen] = useState(false)
+  const [shortcutsOpen, setShortcutsOpen] = useState(false)
+  const [previewFullscreen, setPreviewFullscreen] = useState(false)
 
   const dirty = html !== initialHtml
+  const hasInstructions = (instructions || '').trim().length > 0
+
+  // Draft auto-save
+  const {
+    hasDraft,
+    draftData,
+    lastSaved,
+    scheduleAutoSave,
+    discardDraft,
+    clearDraftAfterSave,
+  } = useEditorDraft(templateId, { enabled: editMode === 'manual' })
+
+  // Auto-save when content changes
+  useEffect(() => {
+    if (dirty && editMode === 'manual') {
+      scheduleAutoSave(html, instructions)
+    }
+  }, [html, instructions, dirty, editMode, scheduleAutoSave])
 
   const syncTemplateMetadata = useCallback(
     (metadata) => {
@@ -148,7 +200,6 @@ export default function TemplateEditor() {
     const handleBeforeUnload = (event) => {
       if (!dirty) return
       event.preventDefault()
-      // eslint-disable-next-line no-param-reassign
       event.returnValue = ''
     }
     window.addEventListener('beforeunload', handleBeforeUnload)
@@ -171,13 +222,14 @@ export default function TemplateEditor() {
       if (data?.metadata) {
         syncTemplateMetadata(data.metadata)
       }
+      clearDraftAfterSave()
       toast.show('Template HTML saved.', 'success')
     } catch (err) {
       toast.show(String(err), 'error')
     } finally {
       setSaving(false)
     }
-  }, [templateId, html, toast, syncTemplateMetadata])
+  }, [templateId, html, toast, syncTemplateMetadata, clearDraftAfterSave, history])
 
   const handleApplyAi = useCallback(async () => {
     if (!templateId) return
@@ -199,6 +251,7 @@ export default function TemplateEditor() {
         syncTemplateMetadata(data.metadata)
       }
       setInstructions('')
+      clearDraftAfterSave()
       const changes = Array.isArray(data?.summary) ? data.summary : []
       if (changes.length) {
         toast.show(`AI updated template: ${changes.join('; ')}`, 'success')
@@ -210,7 +263,7 @@ export default function TemplateEditor() {
     } finally {
       setAiBusy(false)
     }
-  }, [templateId, html, instructions, toast, syncTemplateMetadata])
+  }, [templateId, html, instructions, toast, syncTemplateMetadata, clearDraftAfterSave, history])
 
   const handleUndo = useCallback(async () => {
     if (!templateId) return
@@ -232,7 +285,7 @@ export default function TemplateEditor() {
     } finally {
       setUndoBusy(false)
     }
-  }, [templateId, html, toast, syncTemplateMetadata])
+  }, [templateId, html, toast, syncTemplateMetadata, history])
 
   const handleBack = () => {
     if (dirty && typeof window !== 'undefined') {
@@ -244,294 +297,481 @@ export default function TemplateEditor() {
     navigate(referrer)
   }
 
-  const lastEditInfo = buildLastEditInfo(serverMeta)
-
-  const renderDiff = () => {
-    const beforeLines = (initialHtml || '').split('\n')
-    const afterLines = (html || '').split('\n')
-    const maxLen = Math.max(beforeLines.length, afterLines.length)
-    const rows = []
-    for (let i = 0; i < maxLen; i += 1) {
-      rows.push({
-        before: beforeLines[i] ?? '',
-        after: afterLines[i] ?? '',
-      })
+  const handleEditModeChange = (event, newMode) => {
+    if (newMode !== null) {
+      if (dirty && newMode === 'chat') {
+        const confirmed = window.confirm(
+          'You have unsaved changes. Switch to chat mode and discard them?',
+        )
+        if (!confirmed) return
+        setHtml(initialHtml)
+      }
+      setEditMode(newMode)
     }
-    return (
-      <Stack spacing={1} sx={{ maxHeight: '60vh', overflow: 'auto' }}>
-        {rows.map((row, idx) => {
-          const changed = row.before !== row.after
-          return (
-            <Box
-              key={`diff-${idx}`}
-              sx={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
-                gap: 1,
-                bgcolor: changed ? 'rgba(255,229,100,0.12)' : 'transparent',
-                borderBottom: '1px solid',
-                borderColor: 'divider',
-                p: 0.5,
-              }}
-            >
-              <Typography
-                variant="caption"
-                sx={{
-                  whiteSpace: 'pre-wrap',
-                  fontFamily: 'monospace',
-                  color: changed ? 'warning.main' : 'text.secondary',
-                }}
-              >
-                {row.before}
-              </Typography>
-              <Typography
-                variant="caption"
-                sx={{
-                  whiteSpace: 'pre-wrap',
-                  fontFamily: 'monospace',
-                  color: changed ? 'success.main' : 'text.secondary',
-                }}
-              >
-                {row.after}
-              </Typography>
-            </Box>
-          )
-        })}
-      </Stack>
-    )
   }
 
+  const handleChatHtmlUpdate = useCallback((newHtml) => {
+    setHtml(newHtml)
+    setInitialHtml(newHtml)
+  }, [])
+
+  const handleChatApplySuccess = useCallback((result) => {
+    if (result?.metadata) {
+      setServerMeta(result.metadata)
+      syncTemplateMetadata(result.metadata)
+    }
+    if (result?.diff_summary) {
+      setDiffSummary(result.diff_summary)
+    }
+    if (Array.isArray(result?.history)) {
+      setHistory(result.history)
+    }
+  }, [syncTemplateMetadata])
+
+  const handleRestoreDraft = useCallback(() => {
+    if (draftData) {
+      setHtml(draftData.html || '')
+      if (draftData.instructions) {
+        setInstructions(draftData.instructions)
+      }
+      discardDraft()
+      toast.show('Draft restored successfully.', 'success')
+    }
+  }, [draftData, discardDraft, toast])
+
+  // Keyboard shortcuts
+  useEditorKeyboardShortcuts({
+    onSave: handleSave,
+    onUndo: handleUndo,
+    onApplyAi: handleApplyAi,
+    onEscape: () => {
+      if (diffOpen) setDiffOpen(false)
+      if (shortcutsOpen) setShortcutsOpen(false)
+    },
+    enabled: editMode === 'manual' && !loading,
+    dirty,
+    hasInstructions,
+  })
+
+  const lastEditInfo = buildLastEditInfo(serverMeta)
   const breadcrumbLabel = referrer === '/' ? 'Setup' : 'Generate'
 
   return (
     <>
-    {/* Breadcrumb Navigation */}
-    <Box sx={{ mb: 2 }}>
-      <Breadcrumbs
-        separator={<NavigateNextIcon fontSize="small" />}
-        aria-label="breadcrumb"
-      >
-        <Link
-          component={RouterLink}
-          to={referrer}
-          underline="hover"
-          color="text.secondary"
-          sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}
+      {/* Breadcrumb Navigation */}
+      <Box sx={{ mb: 2 }}>
+        <Breadcrumbs
+          separator={<NavigateNextIcon fontSize="small" />}
+          aria-label="breadcrumb"
         >
-          {breadcrumbLabel}
-        </Link>
-        <Typography color="text.primary" fontWeight={600}>
-          Edit Template
-        </Typography>
-      </Breadcrumbs>
-    </Box>
-
-    <Surface sx={surfaceStackSx}>
-      <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={1.5}>
-        <Box>
-          <Typography variant="h5" fontWeight={700} gutterBottom>
-            {template?.name || 'Template Editor'}
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            {templateId ? `ID: ${templateId}` : 'No template selected'}
-          </Typography>
-          {lastEditInfo && (
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
-              Last edit: {lastEditInfo.chipLabel}
-            </Typography>
-          )}
-          {diffSummary && (
-            <Typography variant="caption" color="info.main" sx={{ display: 'block' }}>
-              Recent change: {diffSummary}
-            </Typography>
-          )}
-        </Box>
-        <Button
-          variant="outlined"
-          onClick={handleBack}
-          startIcon={<ArrowBackIcon />}
-          sx={{ textTransform: 'none', fontWeight: 600 }}
-        >
-          Back to {breadcrumbLabel}
-        </Button>
-      </Stack>
-
-      {error && (
-        <Alert severity="error">
-          {error}
-        </Alert>
-      )}
-
-      {loading ? (
-        <Box
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            minHeight: 240,
-          }}
-        >
-          <CircularProgress size={32} />
-        </Box>
-      ) : (
-        <>
-          <Divider />
-          <Grid
-            container
-            spacing={2.5}
-            sx={{ alignItems: 'stretch' }}
+          <Link
+            component={RouterLink}
+            to={referrer}
+            underline="hover"
+            color="text.secondary"
+            sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}
           >
-            <Grid size={{ xs: 12, md: 6 }} sx={{ minWidth: 0 }}>
-              <Stack spacing={1.5} sx={{ height: '100%' }}>
-                <Typography variant="subtitle1">Preview</Typography>
-                {previewUrl ? (
-                  <Box
-                    sx={{
-                      borderRadius: 1.5,
-                      border: '1px solid',
-                      borderColor: 'divider',
-                      bgcolor: 'background.paper',
-                      p: 1.5,
-                      minHeight: 200,
-                    }}
-                  >
-                    <ScaledIframePreview
-                      src={previewUrl}
-                      title={`Template preview for ${templateId}`}
-                      fit="contain"
-                      pageShadow
-                      frameAspectRatio="210 / 297"
-                      clampToParentHeight
-                    />
-                  </Box>
-                ) : (
-                  <Box
-                    sx={{
-                      borderRadius: 1.5,
-                      border: '1px dashed',
-                      borderColor: 'divider',
-                      bgcolor: 'background.default',
-                      p: 2,
-                      minHeight: 200,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    <Typography variant="body2" color="text.secondary">
-                      No HTML loaded yet.
+            {breadcrumbLabel}
+          </Link>
+          <Typography color="text.primary" fontWeight={600}>
+            Edit Template
+          </Typography>
+        </Breadcrumbs>
+      </Box>
+
+      <Surface sx={surfaceStackSx}>
+        {/* Header */}
+        <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={1.5} flexWrap="wrap">
+          <Box sx={{ minWidth: 0, flex: 1 }}>
+            <Stack direction="row" spacing={1.5} alignItems="center" flexWrap="wrap">
+              <Typography variant="h5" fontWeight={700}>
+                {template?.name || 'Template Editor'}
+              </Typography>
+              <AutoSaveIndicator lastSaved={lastSaved} dirty={dirty} />
+            </Stack>
+            <Typography variant="body2" color="text.secondary">
+              {templateId ? `ID: ${templateId}` : 'No template selected'}
+            </Typography>
+            {lastEditInfo && (
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+                Last edit: {lastEditInfo.chipLabel}
+              </Typography>
+            )}
+            {diffSummary && (
+              <Typography variant="caption" color="info.main" sx={{ display: 'block' }}>
+                Recent change: {diffSummary}
+              </Typography>
+            )}
+          </Box>
+
+          <Stack direction="row" spacing={1.5} alignItems="center" flexWrap="wrap">
+            {/* Edit mode toggle */}
+            <ToggleButtonGroup
+              value={editMode}
+              exclusive
+              onChange={handleEditModeChange}
+              size="small"
+              aria-label="Edit mode"
+            >
+              <ToggleButton value="manual" aria-label="Manual edit mode">
+                <Tooltip title="Code Editor - Edit HTML directly with AI assistance">
+                  <Stack direction="row" spacing={0.5} alignItems="center">
+                    <CodeIcon fontSize="small" />
+                    <Typography variant="body2" sx={{ display: { xs: 'none', sm: 'block' } }}>
+                      Code
                     </Typography>
-                  </Box>
-                )}
-                {lastEditInfo && (
-                  <Typography variant="caption" color="text.secondary">
-                    {lastEditInfo.chipLabel}
-                  </Typography>
-                )}
-              </Stack>
-            </Grid>
-            <Grid size={{ xs: 12, md: 6 }} sx={{ minWidth: 0 }}>
-              <Stack spacing={1.5} sx={{ height: '100%' }}>
-                <Typography variant="subtitle1">HTML &amp; AI guidance</Typography>
-                <TextField
-                  label="Template HTML"
-                  value={html}
-                  onChange={(e) => setHtml(e.target.value)}
-                  multiline
-                  minRows={10}
-                  maxRows={24}
-                  fullWidth
-                  variant="outlined"
-                  size="small"
-                  helperText={dirty ? 'You have unsaved changes.' : 'HTML is in sync with the saved template.'}
-                  InputLabelProps={{ shrink: true }}
-                />
-                <TextField
-                  label="AI instructions"
-                  value={instructions}
-                  onChange={(e) => setInstructions(e.target.value)}
-                  multiline
-                  rows={4}
-                  InputProps={{ inputComponent: FixedTextarea }}
-                  fullWidth
-                  variant="outlined"
-                  size="small"
-                  helperText="Describe how the template should change. AI will preserve tokens and structure unless you ask otherwise."
-                  InputLabelProps={{ shrink: true }}
-                />
-                <Stack direction="row" spacing={1.5}>
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    onClick={handleSave}
-                    disabled={saving || loading}
-                  >
-                    {saving ? 'Saving...' : 'Save HTML'}
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    color="secondary"
-                    onClick={handleApplyAi}
-                    disabled={aiBusy || loading}
-                  >
-                    {aiBusy ? 'Applying AI...' : 'Apply via AI'}
-                  </Button>
-                  <Button
-                    variant="text"
-                    color="inherit"
-                    onClick={handleUndo}
-                    disabled={undoBusy || loading}
-                  >
-                    {undoBusy ? 'Undoing...' : 'Undo last change'}
-                  </Button>
-                  <Button
-                    variant="text"
-                    color="primary"
-                    onClick={() => setDiffOpen(true)}
-                    disabled={loading}
-                  >
-                    View diff
-                  </Button>
-                </Stack>
-                <Typography variant="caption" color="text.secondary">
-                  AI edits are generated and may need review before use in production runs.
-                </Typography>
-                <Stack spacing={0.75}>
-                  <Typography variant="subtitle2">History</Typography>
-                  {Array.isArray(history) && history.length ? (
-                    <Stack spacing={0.5}>
-                      {history
-                        .slice(-5)
-                        .reverse()
-                        .map((entry, idx) => (
-                          <Typography key={`hist-${idx}`} variant="caption" color="text.secondary">
-                            {entry.timestamp || 'Unknown time'} — {entry.type || 'edit'}
-                            {entry.notes ? `: ${entry.notes}` : ''}
-                          </Typography>
-                        ))}
-                    </Stack>
+                  </Stack>
+                </Tooltip>
+              </ToggleButton>
+              <ToggleButton value="chat" aria-label="Chat edit mode">
+                <Tooltip title="Chat Editor - Conversational AI editing">
+                  <Stack direction="row" spacing={0.5} alignItems="center">
+                    <ChatIcon fontSize="small" />
+                    <Typography variant="body2" sx={{ display: { xs: 'none', sm: 'block' } }}>
+                      Chat
+                    </Typography>
+                  </Stack>
+                </Tooltip>
+              </ToggleButton>
+            </ToggleButtonGroup>
+
+            {/* Keyboard shortcuts button */}
+            <Tooltip title="Keyboard shortcuts">
+              <IconButton size="small" onClick={() => setShortcutsOpen(true)}>
+                <KeyboardIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+
+            <Button
+              variant="outlined"
+              onClick={handleBack}
+              startIcon={<ArrowBackIcon />}
+              sx={{ textTransform: 'none', fontWeight: 600 }}
+            >
+              Back to {breadcrumbLabel}
+            </Button>
+          </Stack>
+        </Stack>
+
+        {/* Draft recovery banner */}
+        <DraftRecoveryBanner
+          show={hasDraft && !loading && editMode === 'manual'}
+          draftData={draftData}
+          onRestore={handleRestoreDraft}
+          onDiscard={discardDraft}
+        />
+
+        {/* Error display */}
+        {error && (
+          <Alert severity="error">{error}</Alert>
+        )}
+
+        {/* Main content */}
+        {loading ? (
+          <>
+            <Divider />
+            <EditorSkeleton mode={editMode} />
+          </>
+        ) : editMode === 'chat' ? (
+          <>
+            <Divider />
+            <Grid container spacing={2.5} sx={{ alignItems: 'stretch' }}>
+              {/* Preview Panel */}
+              <Grid size={{ xs: 12, md: previewFullscreen ? 12 : 5 }} sx={{ minWidth: 0 }}>
+                <Stack spacing={1.5} sx={{ height: '100%' }}>
+                  <Stack direction="row" justifyContent="space-between" alignItems="center">
+                    <Typography variant="subtitle1">Preview</Typography>
+                    <Tooltip title={previewFullscreen ? 'Exit fullscreen' : 'Fullscreen preview'}>
+                      <IconButton size="small" onClick={() => setPreviewFullscreen(!previewFullscreen)}>
+                        {previewFullscreen ? <FullscreenExitIcon fontSize="small" /> : <FullscreenIcon fontSize="small" />}
+                      </IconButton>
+                    </Tooltip>
+                  </Stack>
+                  {previewUrl ? (
+                    <Box
+                      sx={{
+                        borderRadius: 1.5,
+                        border: '1px solid',
+                        borderColor: 'divider',
+                        bgcolor: 'background.paper',
+                        p: 1.5,
+                        minHeight: previewFullscreen ? 600 : 400,
+                        transition: 'min-height 0.2s ease',
+                      }}
+                    >
+                      <ScaledIframePreview
+                        src={previewUrl}
+                        title={`Template preview for ${templateId}`}
+                        fit="contain"
+                        pageShadow
+                        frameAspectRatio="210 / 297"
+                        clampToParentHeight
+                      />
+                    </Box>
                   ) : (
-                    <Typography variant="caption" color="text.secondary">
-                      No edit history recorded yet.
-                    </Typography>
+                    <Box
+                      sx={{
+                        borderRadius: 1.5,
+                        border: '1px dashed',
+                        borderColor: 'divider',
+                        bgcolor: 'background.default',
+                        p: 2,
+                        minHeight: 400,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Typography variant="body2" color="text.secondary">
+                        No HTML loaded yet.
+                      </Typography>
+                    </Box>
                   )}
                 </Stack>
-              </Stack>
+              </Grid>
+
+              {/* Chat Editor */}
+              {!previewFullscreen && (
+                <Grid size={{ xs: 12, md: 7 }} sx={{ minWidth: 0 }}>
+                  <Box sx={{ height: 600 }}>
+                    <TemplateChatEditor
+                      templateId={templateId}
+                      templateName={template?.name || 'Template'}
+                      currentHtml={html}
+                      onHtmlUpdate={handleChatHtmlUpdate}
+                      onApplySuccess={handleChatApplySuccess}
+                    />
+                  </Box>
+                </Grid>
+              )}
             </Grid>
-          </Grid>
-        </>
-      )}
-    </Surface>
-    <Dialog
-      open={diffOpen}
-      onClose={() => setDiffOpen(false)}
-      maxWidth="lg"
-      fullWidth
-    >
-      <DialogTitle>HTML diff (before vs current)</DialogTitle>
-      <DialogContent dividers>{renderDiff()}</DialogContent>
-    </Dialog>
+          </>
+        ) : (
+          <>
+            <Divider />
+            <Grid container spacing={2.5} sx={{ alignItems: 'stretch' }}>
+              {/* Preview Panel */}
+              <Grid size={{ xs: 12, md: previewFullscreen ? 12 : 6 }} sx={{ minWidth: 0 }}>
+                <Stack spacing={1.5} sx={{ height: '100%' }}>
+                  <Stack direction="row" justifyContent="space-between" alignItems="center">
+                    <Typography variant="subtitle1">Preview</Typography>
+                    <Tooltip title={previewFullscreen ? 'Exit fullscreen' : 'Fullscreen preview'}>
+                      <IconButton size="small" onClick={() => setPreviewFullscreen(!previewFullscreen)}>
+                        {previewFullscreen ? <FullscreenExitIcon fontSize="small" /> : <FullscreenIcon fontSize="small" />}
+                      </IconButton>
+                    </Tooltip>
+                  </Stack>
+                  {previewUrl ? (
+                    <Box
+                      sx={{
+                        borderRadius: 1.5,
+                        border: '1px solid',
+                        borderColor: 'divider',
+                        bgcolor: 'background.paper',
+                        p: 1.5,
+                        minHeight: previewFullscreen ? 500 : 200,
+                        flex: 1,
+                        transition: 'min-height 0.2s ease',
+                      }}
+                    >
+                      <ScaledIframePreview
+                        src={previewUrl}
+                        title={`Template preview for ${templateId}`}
+                        fit="contain"
+                        pageShadow
+                        frameAspectRatio="210 / 297"
+                        clampToParentHeight
+                      />
+                    </Box>
+                  ) : (
+                    <Box
+                      sx={{
+                        borderRadius: 1.5,
+                        border: '1px dashed',
+                        borderColor: 'divider',
+                        bgcolor: 'background.default',
+                        p: 2,
+                        minHeight: 200,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Typography variant="body2" color="text.secondary">
+                        No HTML loaded yet.
+                      </Typography>
+                    </Box>
+                  )}
+                </Stack>
+              </Grid>
+
+              {/* Editor Panel */}
+              {!previewFullscreen && (
+                <Grid size={{ xs: 12, md: 6 }} sx={{ minWidth: 0 }}>
+                  <Stack spacing={1.5} sx={{ height: '100%' }}>
+                    <Typography variant="subtitle1">HTML &amp; AI Guidance</Typography>
+
+                    {/* HTML Editor */}
+                    <TextField
+                      label="Template HTML"
+                      value={html}
+                      onChange={(e) => setHtml(e.target.value)}
+                      multiline
+                      minRows={10}
+                      maxRows={24}
+                      fullWidth
+                      variant="outlined"
+                      size="small"
+                      error={dirty}
+                      helperText={
+                        dirty
+                          ? `Unsaved changes. Press ${getShortcutDisplay('save')} to save.`
+                          : 'HTML is in sync with the saved template.'
+                      }
+                      InputLabelProps={{ shrink: true }}
+                      sx={{
+                        '& .MuiInputBase-input': {
+                          fontFamily: 'monospace',
+                          fontSize: '0.85rem',
+                        },
+                      }}
+                    />
+
+                    {/* AI Instructions */}
+                    <TextField
+                      label="AI Instructions"
+                      value={instructions}
+                      onChange={(e) => setInstructions(e.target.value)}
+                      multiline
+                      rows={3}
+                      InputProps={{ inputComponent: FixedTextarea }}
+                      fullWidth
+                      variant="outlined"
+                      size="small"
+                      placeholder="Describe how the template should change. AI will preserve tokens and structure unless you ask otherwise."
+                      helperText={
+                        hasInstructions
+                          ? `Press ${getShortcutDisplay('applyAi')} or click Apply to run AI.`
+                          : 'Enter instructions to enable AI editing.'
+                      }
+                      InputLabelProps={{ shrink: true }}
+                    />
+
+                    {/* Action Buttons */}
+                    <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ gap: 1 }}>
+                      <Button
+                        variant="contained"
+                        color="primary"
+                        onClick={handleSave}
+                        disabled={saving || loading || !dirty || aiBusy}
+                        startIcon={saving ? <CircularProgress size={16} /> : <SaveIcon />}
+                        sx={{ minWidth: 110 }}
+                      >
+                        {saving ? 'Saving...' : 'Save'}
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        color="secondary"
+                        onClick={handleApplyAi}
+                        disabled={aiBusy || loading || !hasInstructions}
+                        startIcon={aiBusy ? <CircularProgress size={16} /> : <AutoFixHighIcon />}
+                        sx={{ minWidth: 130 }}
+                      >
+                        {aiBusy ? 'Applying...' : 'Apply AI'}
+                      </Button>
+                      <Button
+                        variant="text"
+                        color="inherit"
+                        onClick={handleUndo}
+                        disabled={undoBusy || loading}
+                        startIcon={undoBusy ? <CircularProgress size={16} /> : <UndoIcon />}
+                      >
+                        {undoBusy ? 'Undoing...' : 'Undo'}
+                      </Button>
+                      <Button
+                        variant="text"
+                        color="primary"
+                        onClick={() => setDiffOpen(true)}
+                        disabled={loading || !dirty}
+                        startIcon={<CompareArrowsIcon />}
+                      >
+                        View Diff
+                      </Button>
+                    </Stack>
+
+                    <Typography variant="caption" color="text.secondary">
+                      AI edits are generated and may need review before use in production runs.
+                    </Typography>
+
+                    {/* Keyboard shortcuts hint */}
+                    <KeyboardShortcutsPanel compact />
+
+                    {/* Edit History */}
+                    <EditHistoryTimeline history={history} maxVisible={5} />
+                  </Stack>
+                </Grid>
+              )}
+            </Grid>
+          </>
+        )}
+      </Surface>
+
+      {/* Enhanced Diff Dialog */}
+      <Dialog
+        open={diffOpen}
+        onClose={() => setDiffOpen(false)}
+        maxWidth="lg"
+        fullWidth
+        PaperProps={{
+          sx: { height: '80vh', maxHeight: 800 },
+        }}
+      >
+        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Box>
+            <Typography variant="h6">HTML Changes</Typography>
+            <Typography variant="caption" color="text.secondary">
+              Compare saved version with current edits
+            </Typography>
+          </Box>
+          <IconButton onClick={() => setDiffOpen(false)}>
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers sx={{ p: 0, display: 'flex', flexDirection: 'column' }}>
+          <EnhancedDiffViewer beforeText={initialHtml} afterText={html} contextLines={3} />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDiffOpen(false)}>Close</Button>
+          <Button
+            variant="contained"
+            onClick={() => {
+              handleSave()
+              setDiffOpen(false)
+            }}
+            disabled={saving || !dirty}
+          >
+            Save Changes
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Keyboard Shortcuts Dialog */}
+      <Dialog
+        open={shortcutsOpen}
+        onClose={() => setShortcutsOpen(false)}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          Keyboard Shortcuts
+          <IconButton onClick={() => setShortcutsOpen(false)}>
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent>
+          <KeyboardShortcutsPanel />
+        </DialogContent>
+      </Dialog>
     </>
   )
 }
-

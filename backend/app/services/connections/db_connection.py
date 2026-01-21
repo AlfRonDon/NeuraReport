@@ -36,6 +36,9 @@ def resolve_db_path(connection_id: str | None, db_url: str | None, db_path: str 
         secrets = state_store.get_connection_secrets(connection_id)
         if secrets and secrets.get("database_path"):
             return Path(secrets["database_path"])
+        record = state_store.get_connection_record(connection_id)
+        if record and record.get("database_path"):
+            return Path(record["database_path"])
         if os.path.exists(STORAGE):
             with open(STORAGE, "r", encoding="utf-8") as f:
                 for line in f:

@@ -9,9 +9,11 @@ import SchemaIcon from '@mui/icons-material/Schema'
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz'
 import CheckRoundedIcon from '@mui/icons-material/CheckRounded'
 import CloudUploadOutlinedIcon from '@mui/icons-material/CloudUploadOutlined'
+import ScheduleIcon from '@mui/icons-material/Schedule'
 import { alpha } from '@mui/material/styles'
 import { useAppStore } from '../../store/useAppStore'
 import { useToast } from '../../components/ToastProvider.jsx'
+import { useNavigate } from 'react-router-dom'
 import {
   withBase,
   fetchArtifactManifest,
@@ -129,8 +131,11 @@ export default function UploadVerify() {
 
   const [verified, setVerified] = useState(false)
   const [verifying, setVerifying] = useState(false)
+  const [queueingVerify, setQueueingVerify] = useState(false)
+  const [queuedJobId, setQueuedJobId] = useState(null)
   const [verifyModalOpen, setVerifyModalOpen] = useState(false)
   const [verifyProgress, setVerifyProgress] = useState(0)
+  const [uploadProgress, setUploadProgress] = useState(0)
   const [verifyStage, setVerifyStage] = useState('Idle')
   const [verifyLog, setVerifyLog] = useState([])
   const [preview, setPreview] = useState(null) // { templateId, schema, htmlUrl, llm2HtmlUrl, pngUrl, pdfUrl }
@@ -150,6 +155,7 @@ export default function UploadVerify() {
   const [tplTags, setTplTags] = useState('')
 
   const toast = useToast()
+  const navigate = useNavigate()
   const inputRef = useRef()
   const verifyBtnRef = useRef(null)
   const mappingBtnRef = useRef(null)
@@ -174,6 +180,8 @@ export default function UploadVerify() {
       setHtmlUrls({ template: null, final: null, llm2: null })
       setTemplateId(null)
       setCacheKey(Date.now())
+      setQueuedJobId(null)
+      setQueueingVerify(false)
       if (options.clearFile) {
         setFile(null)
         if (inputRef.current) {
@@ -181,7 +189,7 @@ export default function UploadVerify() {
         }
       }
     },
-    [inputRef, setCacheKey, setHtmlUrls, setTemplateId, setVerifyArtifacts],
+    [inputRef, setCacheKey, setHtmlUrls, setTemplateId, setVerifyArtifacts, setQueuedJobId, setQueueingVerify],
   )
 
   const applySelectedFile = useCallback(
@@ -239,7 +247,7 @@ export default function UploadVerify() {
     return `Estimated remaining time: ${prefix}${formatDuration(verifyEta.ms)}${suffix}`
   }, [verifyEta])
   const verifyStageLabel = verifyStage && verifyStage !== 'Idle' ? verifyStage : 'Preparing verification...'
-  const dropDisabled = verifying
+  const dropDisabled = verifying || queueingVerify
 
 
   const connectionId = connection?.connectionId || activeConnectionId || null
@@ -305,14 +313,16 @@ export default function UploadVerify() {
       return
     }
 
+    setQueuedJobId(null)
     setVerifyModalOpen(true)
     setVerifying(true)
     setVerified(false)
     setVerifyProgress(0)
-    setVerifyStage('Starting verification...')
+    setUploadProgress(0)
+    setVerifyStage('Uploading file...')
     setVerifyLog([])
     beginVerifyTiming()
-    trackVerifyStage('Starting verification...')
+    trackVerifyStage('upload')
 
     const handleProgress = (evt) => {
       if (!evt) return;
@@ -432,11 +442,21 @@ export default function UploadVerify() {
       }
     };
 
+    const handleUploadProgress = (percent, loaded, total) => {
+      setUploadProgress(percent)
+      if (percent < 100) {
+        const fileSizeMB = (total / (1024 * 1024)).toFixed(1)
+        const uploadedMB = (loaded / (1024 * 1024)).toFixed(1)
+        setVerifyStage(`Uploading file... ${uploadedMB}MB / ${fileSizeMB}MB (${percent}%)`)
+      }
+    }
+
     try {
       const res = await apiVerifyTemplate({
         file,
         connectionId,
         onProgress: handleProgress,
+        onUploadProgress: handleUploadProgress,
         kind: templateKind,
       })
 
@@ -493,6 +513,35 @@ export default function UploadVerify() {
     } finally {
       finishVerifyTiming()
       setVerifying(false)
+    }
+  }
+
+  const queueVerify = async () => {
+    if (!file) return
+    if (isExcelFlow && !connectionId) {
+      toast.show('Please connect to a database before verifying Excel templates.', 'warning')
+      return
+    }
+
+    setQueueingVerify(true)
+    setQueuedJobId(null)
+
+    try {
+      const res = await apiVerifyTemplate({
+        file,
+        connectionId,
+        kind: templateKind,
+        background: true,
+      })
+
+      const jobId = res?.job_id || res?.jobId || null
+      setQueuedJobId(jobId)
+      toast.show('Verification queued in background', 'success')
+    } catch (err) {
+      console.error(err)
+      toast.show(err?.message || 'Failed to queue verification', 'error')
+    } finally {
+      setQueueingVerify(false)
     }
   }
 
@@ -891,22 +940,46 @@ export default function UploadVerify() {
           variant="contained" color="primary" disableElevation
           startIcon={verifying ? <CircularProgress size={18} /> : <TaskAltIcon />}
           sx={{ px: 2.5 }}
-          onClick={startVerify} disabled={!file || verifying}
+          onClick={startVerify} disabled={!file || verifying || queueingVerify}
           ref={verifyBtnRef}
         >
           {verifying ? 'Verifying...' : 'Verify Template'}
         </Button>
 
         <Button
+          variant="outlined" color="primary"
+          startIcon={queueingVerify ? <CircularProgress size={18} /> : <ScheduleIcon />}
+          sx={{ px: 2.5 }}
+          onClick={queueVerify}
+          disabled={!file || verifying || queueingVerify}
+        >
+          {queueingVerify ? 'Queueing...' : 'Queue in Background'}
+        </Button>
+
+        <Button
           variant="outlined" color="secondary"
           startIcon={<SchemaIcon />} sx={{ px: 2.5 }}
           onClick={startMapping}
-          disabled={!canGenerate || verifying}
+          disabled={!canGenerate || verifying || queueingVerify}
           ref={mappingBtnRef}
         >
           Review Mapping
         </Button>
       </Stack>
+
+      {queuedJobId && (
+        <Alert
+          severity="info"
+          sx={{ mt: 2, alignItems: 'center' }}
+          action={(
+            <Button size="small" onClick={() => navigate('/jobs')} sx={{ textTransform: 'none' }}>
+              View Jobs
+            </Button>
+          )}
+        >
+          Verification queued in background. Job ID: {queuedJobId}
+        </Alert>
+      )}
 
       {/* Preview (after verify) */}
       <Stack spacing={2.5} sx={{ mt: 3 }}>

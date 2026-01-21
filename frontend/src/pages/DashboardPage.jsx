@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Box,
@@ -10,6 +10,9 @@ import {
   ListItem,
   ListItemText,
   LinearProgress,
+  CircularProgress,
+  IconButton,
+  Tooltip,
   alpha,
 } from '@mui/material'
 import StorageIcon from '@mui/icons-material/Storage'
@@ -23,11 +26,17 @@ import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline'
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline'
 import HourglassEmptyIcon from '@mui/icons-material/HourglassEmpty'
 import PlayArrowIcon from '@mui/icons-material/PlayArrow'
+import RefreshIcon from '@mui/icons-material/Refresh'
+import TrendingUpIcon from '@mui/icons-material/TrendingUp'
+import StarIcon from '@mui/icons-material/Star'
+import StarBorderIcon from '@mui/icons-material/StarBorder'
+import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf'
+import TableChartIcon from '@mui/icons-material/TableChart'
 import { useAppStore } from '../store/useAppStore'
 import * as api from '../api/client'
 import { palette } from '../theme'
 
-function StatCard({ title, value, icon: Icon, color = 'primary', onClick }) {
+function StatCard({ title, value, subtitle, icon: Icon, color = 'primary', onClick, trend }) {
   const colorMap = {
     primary: palette.green[400],
     success: palette.green[400],
@@ -77,6 +86,19 @@ function StatCard({ title, value, icon: Icon, color = 'primary', onClick }) {
           >
             {value}
           </Typography>
+          {subtitle && (
+            <Typography sx={{ fontSize: '0.6875rem', color: palette.scale[500], mt: 0.5 }}>
+              {subtitle}
+            </Typography>
+          )}
+          {trend !== undefined && (
+            <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mt: 0.5 }}>
+              <TrendingUpIcon sx={{ fontSize: 12, color: trend >= 0 ? palette.green[400] : palette.red[400] }} />
+              <Typography sx={{ fontSize: '0.6875rem', color: trend >= 0 ? palette.green[400] : palette.red[400] }}>
+                {trend >= 0 ? '+' : ''}{trend}% this week
+              </Typography>
+            </Stack>
+          )}
         </Box>
         <Box
           sx={{
@@ -125,6 +147,35 @@ function QuickActionButton({ label, icon: Icon, onClick }) {
   )
 }
 
+function MiniBarChart({ data }) {
+  if (!data || !data.length) return null
+  const max = Math.max(...data.map(d => d.total || 0), 1)
+
+  return (
+    <Stack direction="row" spacing={0.5} alignItems="flex-end" sx={{ height: 60 }}>
+      {data.map((item, idx) => (
+        <Tooltip key={idx} title={`${item.label}: ${item.total} jobs`} arrow>
+          <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <Box
+              sx={{
+                width: '100%',
+                maxWidth: 24,
+                height: Math.max(4, (item.total / max) * 48),
+                bgcolor: item.failed > 0 ? alpha(palette.red[400], 0.6) : palette.green[400],
+                borderRadius: '2px 2px 0 0',
+                transition: 'height 300ms ease',
+              }}
+            />
+            <Typography sx={{ fontSize: '0.5rem', color: palette.scale[600], mt: 0.5 }}>
+              {item.label}
+            </Typography>
+          </Box>
+        </Tooltip>
+      ))}
+    </Stack>
+  )
+}
+
 function getStatusIcon(status) {
   switch (status) {
     case 'completed':
@@ -152,40 +203,61 @@ function getStatusColor(status) {
 
 export default function DashboardPage() {
   const navigate = useNavigate()
+  const didLoadRef = useRef(false)
 
   const templates = useAppStore((s) => s.templates)
   const savedConnections = useAppStore((s) => s.savedConnections)
   const activeConnection = useAppStore((s) => s.activeConnection)
 
   const [jobs, setJobs] = useState([])
+  const [analytics, setAnalytics] = useState(null)
+  const [favorites, setFavorites] = useState({ templates: [], connections: [] })
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [state, jobsData] = await Promise.all([
-          api.bootstrapState(),
-          api.listJobs({ limit: 5 }),
-        ])
+  const fetchData = useCallback(async (isRefresh = false) => {
+    if (isRefresh) setRefreshing(true)
+    else setLoading(true)
 
-        if (state?.templates) {
-          useAppStore.setState({ templates: state.templates })
-        }
-        if (state?.connections) {
-          useAppStore.setState({ savedConnections: state.connections })
-        }
-        setJobs(jobsData?.jobs || [])
-      } catch (err) {
-        console.error('Failed to fetch dashboard data:', err)
-      } finally {
-        setLoading(false)
+    try {
+      const [state, jobsData, analyticsData, favData] = await Promise.all([
+        api.bootstrapState(),
+        api.listJobs({ limit: 5 }),
+        api.getDashboardAnalytics().catch(() => null),
+        api.getFavorites().catch(() => ({ templates: [], connections: [] })),
+      ])
+
+      if (state?.templates) {
+        useAppStore.setState({ templates: state.templates })
       }
+      if (state?.connections) {
+        useAppStore.setState({ savedConnections: state.connections })
+      }
+      setJobs(jobsData?.jobs || [])
+      setAnalytics(analyticsData)
+      setFavorites(favData)
+    } catch (err) {
+      console.error('Failed to fetch dashboard data:', err)
+    } finally {
+      setLoading(false)
+      setRefreshing(false)
     }
-    fetchData()
   }, [])
 
-  const activeJobs = jobs.filter((j) => j.status === 'running' || j.status === 'pending').length
-  const completedJobs = jobs.filter((j) => j.status === 'completed').length
+  useEffect(() => {
+    if (didLoadRef.current) return
+    didLoadRef.current = true
+    fetchData()
+  }, [fetchData])
+
+  const handleRefresh = useCallback(() => {
+    fetchData(true)
+  }, [fetchData])
+
+  const summary = analytics?.summary || {}
+  const metrics = analytics?.metrics || {}
+  const topTemplates = analytics?.topTemplates || []
+  const jobsTrend = analytics?.jobsTrend || []
 
   return (
     <Box sx={{ p: 3, maxWidth: 1400, mx: 'auto', width: '100%' }}>
@@ -218,17 +290,23 @@ export default function DashboardPage() {
             Generate intelligent reports from your data
           </Typography>
         </Box>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon sx={{ fontSize: 18 }} />}
-          onClick={() => navigate('/setup/wizard')}
-          sx={{
-            px: 2.5,
-            py: 1,
-          }}
-        >
-          New Report
-        </Button>
+        <Stack direction="row" spacing={1}>
+          <IconButton
+            onClick={handleRefresh}
+            disabled={refreshing}
+            sx={{ color: palette.scale[400] }}
+          >
+            {refreshing ? <CircularProgress size={20} /> : <RefreshIcon />}
+          </IconButton>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon sx={{ fontSize: 18 }} />}
+            onClick={() => navigate('/setup/wizard')}
+            sx={{ px: 2.5, py: 1 }}
+          >
+            New Report
+          </Button>
+        </Stack>
       </Stack>
 
       {/* Stats Grid */}
@@ -238,7 +316,7 @@ export default function DashboardPage() {
           gridTemplateColumns: {
             xs: '1fr',
             sm: 'repeat(2, 1fr)',
-            md: 'repeat(4, 1fr)',
+            lg: 'repeat(5, 1fr)',
           },
           gap: 2,
           mb: 4,
@@ -246,38 +324,49 @@ export default function DashboardPage() {
       >
         <StatCard
           title="Connections"
-          value={savedConnections.length}
+          value={summary.totalConnections ?? savedConnections.length}
+          subtitle={`${summary.activeConnections ?? 0} active`}
           icon={StorageIcon}
           color="primary"
           onClick={() => navigate('/connections')}
         />
         <StatCard
           title="Templates"
-          value={templates.length}
+          value={summary.totalTemplates ?? templates.length}
+          subtitle={`${summary.pdfTemplates ?? 0} PDF, ${summary.excelTemplates ?? 0} Excel`}
           icon={DescriptionIcon}
           color="success"
           onClick={() => navigate('/templates')}
         />
         <StatCard
-          title="Active Jobs"
-          value={activeJobs}
+          title="Jobs Today"
+          value={metrics.jobsToday ?? 0}
+          subtitle={`${metrics.jobsThisWeek ?? 0} this week`}
           icon={WorkIcon}
           color="warning"
           onClick={() => navigate('/jobs')}
         />
         <StatCard
-          title="Completed"
-          value={completedJobs}
+          title="Success Rate"
+          value={`${metrics.successRate ?? 0}%`}
+          subtitle={`${summary.completedJobs ?? 0} completed`}
           icon={AssessmentIcon}
           color="info"
-          onClick={() => navigate('/jobs')}
+        />
+        <StatCard
+          title="Schedules"
+          value={summary.totalSchedules ?? 0}
+          subtitle={`${summary.activeSchedules ?? 0} active`}
+          icon={ScheduleIcon}
+          color="primary"
+          onClick={() => navigate('/schedules')}
         />
       </Box>
 
       <Box
         sx={{
           display: 'grid',
-          gridTemplateColumns: { xs: '1fr', md: '340px 1fr' },
+          gridTemplateColumns: { xs: '1fr', lg: '340px 1fr 280px' },
           gap: 3,
         }}
       >
@@ -318,11 +407,29 @@ export default function DashboardPage() {
               onClick={() => navigate('/reports')}
             />
             <QuickActionButton
-              label="View Jobs"
+              label="Manage Schedules"
               icon={ScheduleIcon}
-              onClick={() => navigate('/jobs')}
+              onClick={() => navigate('/schedules')}
             />
           </Stack>
+
+          {/* Job Trend Chart */}
+          {jobsTrend.length > 0 && (
+            <Box sx={{ mt: 3 }}>
+              <Typography
+                sx={{
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  color: palette.scale[400],
+                  mb: 1.5,
+                  textTransform: 'uppercase',
+                }}
+              >
+                Jobs This Week
+              </Typography>
+              <MiniBarChart data={jobsTrend} />
+            </Box>
+          )}
         </Box>
 
         {/* Recent Jobs */}
@@ -370,19 +477,9 @@ export default function DashboardPage() {
               }}
             />
           ) : jobs.length === 0 ? (
-            <Box
-              sx={{
-                py: 4,
-                textAlign: 'center',
-              }}
-            >
+            <Box sx={{ py: 4, textAlign: 'center' }}>
               <WorkIcon sx={{ fontSize: 32, color: palette.scale[700], mb: 1 }} />
-              <Typography
-                sx={{
-                  fontSize: '0.8125rem',
-                  color: palette.scale[500],
-                }}
-              >
+              <Typography sx={{ fontSize: '0.8125rem', color: palette.scale[500] }}>
                 No jobs yet. Generate your first report to get started.
               </Typography>
             </Box>
@@ -401,8 +498,8 @@ export default function DashboardPage() {
                     {getStatusIcon(job.status)}
                   </Box>
                   <ListItemText
-                    primary={job.template_name || job.template_id?.slice(0, 12)}
-                    secondary={new Date(job.created_at).toLocaleString()}
+                    primary={job.template_name || job.templateName || job.template_id?.slice(0, 12)}
+                    secondary={new Date(job.created_at || job.createdAt).toLocaleString()}
                     primaryTypographyProps={{
                       fontSize: '0.8125rem',
                       fontWeight: 500,
@@ -428,6 +525,141 @@ export default function DashboardPage() {
               ))}
             </List>
           )}
+        </Box>
+
+        {/* Top Templates & Favorites */}
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+          {/* Top Templates */}
+          <Box
+            sx={{
+              p: 2.5,
+              bgcolor: palette.scale[1000],
+              borderRadius: '8px',
+              border: `1px solid ${alpha(palette.scale[100], 0.08)}`,
+            }}
+          >
+            <Typography
+              sx={{
+                fontSize: '0.875rem',
+                fontWeight: 600,
+                color: palette.scale[100],
+                mb: 2,
+              }}
+            >
+              Top Templates
+            </Typography>
+            {topTemplates.length === 0 ? (
+              <Typography sx={{ fontSize: '0.8125rem', color: palette.scale[500] }}>
+                No template usage data yet
+              </Typography>
+            ) : (
+              <Stack spacing={1.5}>
+                {topTemplates.slice(0, 4).map((tpl) => (
+                  <Stack
+                    key={tpl.id}
+                    direction="row"
+                    alignItems="center"
+                    spacing={1.5}
+                    sx={{
+                      cursor: 'pointer',
+                      '&:hover': { opacity: 0.8 },
+                    }}
+                    onClick={() => navigate(`/reports?template=${tpl.id}`)}
+                  >
+                    <Box
+                      sx={{
+                        width: 28,
+                        height: 28,
+                        borderRadius: '6px',
+                        bgcolor: alpha(tpl.kind === 'excel' ? palette.green[400] : palette.red[400], 0.15),
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      {tpl.kind === 'excel' ? (
+                        <TableChartIcon sx={{ fontSize: 14, color: palette.green[400] }} />
+                      ) : (
+                        <PictureAsPdfIcon sx={{ fontSize: 14, color: palette.red[400] }} />
+                      )}
+                    </Box>
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                      <Typography
+                        noWrap
+                        sx={{ fontSize: '0.8125rem', fontWeight: 500, color: palette.scale[200] }}
+                      >
+                        {tpl.name}
+                      </Typography>
+                      <Typography sx={{ fontSize: '0.6875rem', color: palette.scale[500] }}>
+                        {tpl.runCount} runs
+                      </Typography>
+                    </Box>
+                  </Stack>
+                ))}
+              </Stack>
+            )}
+          </Box>
+
+          {/* Favorites */}
+          <Box
+            sx={{
+              p: 2.5,
+              bgcolor: palette.scale[1000],
+              borderRadius: '8px',
+              border: `1px solid ${alpha(palette.scale[100], 0.08)}`,
+            }}
+          >
+            <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
+              <StarIcon sx={{ fontSize: 16, color: palette.yellow[400] }} />
+              <Typography
+                sx={{
+                  fontSize: '0.875rem',
+                  fontWeight: 600,
+                  color: palette.scale[100],
+                }}
+              >
+                Favorites
+              </Typography>
+            </Stack>
+            {favorites.templates.length === 0 && favorites.connections.length === 0 ? (
+              <Typography sx={{ fontSize: '0.8125rem', color: palette.scale[500] }}>
+                No favorites yet. Star templates or connections for quick access.
+              </Typography>
+            ) : (
+              <Stack spacing={1}>
+                {favorites.templates.slice(0, 3).map((tpl) => (
+                  <Stack
+                    key={tpl.id}
+                    direction="row"
+                    alignItems="center"
+                    spacing={1}
+                    sx={{ cursor: 'pointer', '&:hover': { opacity: 0.8 } }}
+                    onClick={() => navigate(`/reports?template=${tpl.id}`)}
+                  >
+                    <DescriptionIcon sx={{ fontSize: 14, color: palette.scale[500] }} />
+                    <Typography noWrap sx={{ fontSize: '0.8125rem', color: palette.scale[300] }}>
+                      {tpl.name}
+                    </Typography>
+                  </Stack>
+                ))}
+                {favorites.connections.slice(0, 2).map((conn) => (
+                  <Stack
+                    key={conn.id}
+                    direction="row"
+                    alignItems="center"
+                    spacing={1}
+                    sx={{ cursor: 'pointer', '&:hover': { opacity: 0.8 } }}
+                    onClick={() => navigate('/connections')}
+                  >
+                    <StorageIcon sx={{ fontSize: 14, color: palette.scale[500] }} />
+                    <Typography noWrap sx={{ fontSize: '0.8125rem', color: palette.scale[300] }}>
+                      {conn.name}
+                    </Typography>
+                  </Stack>
+                ))}
+              </Stack>
+            )}
+          </Box>
         </Box>
       </Box>
 
@@ -472,7 +704,7 @@ export default function DashboardPage() {
                   color: palette.scale[500],
                 }}
               >
-                {activeConnection.db_type} {activeConnection.summary && `• ${activeConnection.summary}`}
+                {activeConnection.db_type} {activeConnection.summary && `\u2022 ${activeConnection.summary}`}
               </Typography>
             </Box>
             <Chip

@@ -271,7 +271,7 @@ describe('Template Routes', () => {
     const expectedPdfRoutes = {
       verify: `${API_BASE}/templates/verify`,
       run: `${API_BASE}/reports/run`,
-      runJob: `${API_BASE}/jobs/run-report`,
+      runJob: `${API_BASE}/reports/jobs/run-report`,
       discover: `${API_BASE}/reports/discover`,
     }
 

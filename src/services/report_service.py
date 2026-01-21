@@ -448,9 +448,16 @@ def _artifact_url(path: Path | None) -> Optional[str]:
         return None
     path = Path(path)
     resolved = path.resolve()
+    try:
+        api_mod = importlib.import_module("backend.api")
+        upload_root_base = getattr(api_mod, "UPLOAD_ROOT_BASE", UPLOAD_ROOT_BASE)
+        excel_root_base = getattr(api_mod, "EXCEL_UPLOAD_ROOT_BASE", EXCEL_UPLOAD_ROOT_BASE)
+    except Exception:
+        upload_root_base = UPLOAD_ROOT_BASE
+        excel_root_base = EXCEL_UPLOAD_ROOT_BASE
     mapping: dict[Path, str] = {
-        UPLOAD_ROOT_BASE: f"/{_UPLOAD_KIND_PREFIXES['pdf']}",
-        EXCEL_UPLOAD_ROOT_BASE: f"/{_UPLOAD_KIND_PREFIXES['excel']}",
+        upload_root_base: f"/{_UPLOAD_KIND_PREFIXES['pdf']}",
+        excel_root_base: f"/{_UPLOAD_KIND_PREFIXES['excel']}",
     }
     for base, prefix in mapping.items():
         try:
@@ -577,7 +584,12 @@ def _run_report_internal(
         raise _http_error(500, "invalid_contract", f"Invalid contract.json: {exc}")
     else:
         try:
-            validate_contract_schema(contract_data)
+            api_mod = importlib.import_module("backend.api")
+            validate_fn = getattr(api_mod, "validate_contract_schema", validate_contract_schema)
+        except Exception:
+            validate_fn = validate_contract_schema
+        try:
+            validate_fn(contract_data)
         except Exception as exc:
             if job_tracker:
                 job_tracker.step_failed("contractCheck", str(exc))
@@ -798,9 +810,10 @@ def _run_report_internal(
         },
     )
 
+    run_id = str(uuid.uuid4())
     result = {
         "ok": True,
-        "run_id": str(uuid.uuid4()),
+        "run_id": run_id,
         "template_id": p.template_id,
         "start_date": p.start_date,
         "end_date": p.end_date,
@@ -812,6 +825,40 @@ def _run_report_internal(
         "manifest_produced_at": manifest_data.get("produced_at"),
         "correlation_id": correlation_id,
     }
+    try:
+        template_record = _state_store().get_template_record(p.template_id) or {}
+        connection_record = _state_store().get_connection_record(p.connection_id) if p.connection_id else {}
+        _state_store().record_report_run(
+            run_id,
+            template_id=p.template_id,
+            template_name=template_record.get("name") or p.template_id,
+            template_kind=kind,
+            connection_id=p.connection_id,
+            connection_name=(connection_record or {}).get("name"),
+            start_date=p.start_date,
+            end_date=p.end_date,
+            batch_ids=p.batch_ids,
+            key_values=key_values_payload,
+            status="succeeded",
+            artifacts={
+                "html_url": result.get("html_url"),
+                "pdf_url": result.get("pdf_url"),
+                "docx_url": result.get("docx_url"),
+                "xlsx_url": result.get("xlsx_url"),
+                "manifest_url": result.get("manifest_url"),
+            },
+            schedule_id=p.schedule_id,
+            schedule_name=p.schedule_name,
+        )
+    except Exception:
+        logger.exception(
+            "report_run_history_record_failed",
+            extra={
+                "event": "report_run_history_record_failed",
+                "template_id": p.template_id,
+                "correlation_id": correlation_id,
+            },
+        )
     artifact_paths = {
         "html": out_html if out_html.exists() else None,
         "pdf": out_pdf if out_pdf.exists() else None,
@@ -1188,6 +1235,25 @@ async def queue_report_job(p: RunPayload | Sequence[Any], request: Request, *, k
     if len(job_ids) == 1:
         return {"job_id": job_ids[0]}
     return response
+
+
+def list_report_runs(
+    *,
+    template_id: str | None = None,
+    connection_id: str | None = None,
+    schedule_id: str | None = None,
+    limit: int = 50,
+) -> list[dict]:
+    return _state_store().list_report_runs(
+        template_id=template_id,
+        connection_id=connection_id,
+        schedule_id=schedule_id,
+        limit=limit,
+    )
+
+
+def get_report_run(run_id: str) -> dict | None:
+    return _state_store().get_report_run(run_id)
 
 
 def scheduler_runner(payload: dict, kind: str, *, job_tracker: JobRunTracker | None = None) -> dict:

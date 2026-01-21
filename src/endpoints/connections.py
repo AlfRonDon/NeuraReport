@@ -11,6 +11,7 @@ from src.services.connection_service import (
     test_connection,
     upsert_connection,
 )
+from src.services.connection_inspector import get_connection_schema, get_connection_table_preview
 
 router = APIRouter()
 
@@ -48,5 +49,41 @@ def delete_connection_route(connection_id: str, request: Request):
 @router.post("/connections/{connection_id}/health")
 def healthcheck_connection_route(connection_id: str, request: Request):
     result = healthcheck_connection(connection_id)
+    result["correlation_id"] = _correlation(request)
+    return result
+
+
+@router.get("/connections/{connection_id}/schema")
+def connection_schema_route(
+    connection_id: str,
+    request: Request,
+    include_row_counts: bool = True,
+    include_foreign_keys: bool = True,
+    sample_rows: int = 0,
+):
+    result = get_connection_schema(
+        connection_id,
+        include_row_counts=include_row_counts,
+        include_foreign_keys=include_foreign_keys,
+        sample_rows=sample_rows,
+    )
+    result["correlation_id"] = _correlation(request)
+    return result
+
+
+@router.get("/connections/{connection_id}/preview")
+def connection_preview_route(
+    connection_id: str,
+    request: Request,
+    table: str,
+    limit: int = 10,
+    offset: int = 0,
+):
+    result = get_connection_table_preview(
+        connection_id,
+        table=table,
+        limit=limit,
+        offset=offset,
+    )
     result["correlation_id"] = _correlation(request)
     return result

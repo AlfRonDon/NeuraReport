@@ -14,14 +14,13 @@ warnings.filterwarnings("ignore", message=".*on_event is deprecated.*", category
 warnings.filterwarnings("ignore", message=".*Support for class-based `config` is deprecated.*", category=DeprecationWarning)
 warnings.filterwarnings("ignore", message=".*SwigPy.*has no __module__ attribute", category=DeprecationWarning)
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from src.utils.static_files import UploadsStaticFiles
 from src.utils.connection_utils import db_path_from_payload_or_default as _db_path_from_payload_or_default
 
 from .app.core.event_bus import EventBus, logging_middleware, metrics_middleware
-from src.routes import router as v1_router
 from backend.app.api.router import register_routes
 from src.services.report_service import scheduler_runner as report_scheduler_runner
 
@@ -31,12 +30,34 @@ from .app.env_loader import load_env_file
 from .app.services.utils import get_correlation_id, set_correlation_id
 from .app.services.jobs.report_scheduler import ReportScheduler
 from backend.app.services.mapping.HeaderMapping import get_parent_child_info
-from src.services.mapping.helpers import compute_db_signature
+from src.services.mapping.helpers import build_catalog_from_db as _build_catalog_from_db, compute_db_signature
 from backend.app.services.contract.ContractBuilderV2 import build_or_load_contract_v2
-from backend.app.services.templates.TemplateVerify import pdf_to_pngs, render_html_to_png, render_panel_preview
+from backend.app.services.templates.TemplateVerify import (
+    pdf_to_pngs,
+    render_html_to_png,
+    render_panel_preview,
+    request_initial_html,
+    request_fix_html,
+    save_html,
+)
+from backend.app.services.render.html_raster import rasterize_html_to_png, save_png
+from backend.app.services.mapping.AutoMapInline import run_llm_call_3
+from src.services.mapping.preview import _mapping_preview_pipeline
+from src.endpoints.templates import verify_template_route as verify_template
+from backend.app.services.templates.layout_hints import get_layout_hints
 from backend.app.services.generator.GeneratorAssetsV1 import build_generator_assets_from_payload
-from src.services.report_service import _schedule_report_job, _run_report_with_email, _run_report_job_sync
-from backend.app.services.connections.db_connection import resolve_db_path
+from backend.app.services.reports.docx_export import html_file_to_docx
+from backend.app.services.reports.xlsx_export import html_file_to_xlsx
+from backend.app.services.utils.artifacts import write_artifact_manifest
+from backend.app.services.utils.validation import validate_contract_schema
+from backend.app.services.state import state_store
+from src.services.report_service import (
+    JobRunTracker,
+    _schedule_report_job,
+    _run_report_with_email,
+    _run_report_job_sync,
+)
+from backend.app.services.connections.db_connection import resolve_db_path, verify_sqlite
 
 
 def _configure_error_log_handler(target_logger: logging.Logger | None = None) -> Path | None:
@@ -201,10 +222,7 @@ APP_COMMIT = SETTINGS.commit
 app.mount("/uploads", UploadsStaticFiles(directory=str(UPLOAD_ROOT)), name="uploads")
 app.mount("/excel-uploads", UploadsStaticFiles(directory=str(EXCEL_UPLOAD_ROOT)), name="excel-uploads")
 
-
-app.include_router(v1_router)
-
-# Register routes from backend/app/api/routes (health, connections, templates, analyze)
+# Register all API routes from consolidated router
 register_routes(app)
 
 def _scheduler_runner(payload: dict, kind: str) -> dict:

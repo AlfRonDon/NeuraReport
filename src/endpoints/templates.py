@@ -2,7 +2,12 @@ from __future__ import annotations
 
 from typing import Optional
 
-from fastapi import APIRouter, Request
+import contextlib
+import tempfile
+from pathlib import Path
+from types import SimpleNamespace
+
+from fastapi import APIRouter, File, Form, Query, Request, UploadFile
 
 from src.schemas.template_schema import (
     CorrectionsPreviewPayload,
@@ -10,9 +15,11 @@ from src.schemas.template_schema import (
     LastUsedPayload,
     MappingPayload,
     TemplateAiEditPayload,
+    TemplateChatPayload,
     TemplateManualEditPayload,
     TemplateRecommendPayload,
     TemplateRecommendResponse,
+    TemplateUpdatePayload,
 )
 from backend.app.services.state import store as state_store_module
 from src.services.mapping.approve import run_mapping_approve
@@ -23,6 +30,8 @@ from src.services.template_service import (
     get_template_html,
     edit_template_ai,
     edit_template_manual,
+    chat_template_edit,
+    apply_chat_template_edit,
     export_template_zip as export_template_zip_service,
     import_template_zip as import_template_zip_service,
     undo_last_template_edit,
@@ -33,7 +42,13 @@ from src.services.template_service import (
     recommend_templates,
     bootstrap_state,
     delete_template,
+    update_template_metadata,
     generator_assets,
+)
+from backend.app.services.background_tasks import (
+    enqueue_background_job,
+    iter_ndjson_events_async,
+    run_event_stream_async,
 )
 
 router = APIRouter()
@@ -45,6 +60,27 @@ def _correlation(request: Request) -> str | None:
 
 def _state_store():
     return state_store_module.state_store
+
+
+def _request_with_correlation(correlation_id: str | None) -> SimpleNamespace:
+    return SimpleNamespace(state=SimpleNamespace(correlation_id=correlation_id))
+
+
+async def _persist_upload(file: UploadFile, suffix: str) -> tuple[Path, str]:
+    filename = Path(file.filename or f"upload{suffix}").name
+    tmp = tempfile.NamedTemporaryFile(prefix="nr-upload-", suffix=suffix, delete=False)
+    try:
+        with tmp:
+            file.file.seek(0)
+            while True:
+                chunk = file.file.read(1024 * 1024)
+                if not chunk:
+                    break
+                tmp.write(chunk)
+    finally:
+        with contextlib.suppress(Exception):
+            await file.close()
+    return Path(tmp.name), filename
 
 
 @router.post("/templates/{template_id}/mapping/preview")
@@ -87,18 +123,109 @@ export_template_zip = export_template_zip_route
 
 
 @router.post("/templates/import-zip")
-async def import_template_zip_route(file, request: Request, name: str | None = None):
+async def import_template_zip_route(
+    request: Request,
+    file: UploadFile = File(...),
+    name: str | None = Form(None),
+):
     return await import_template_zip_service(file=file, name=name, request=request)
 
 
 @router.post("/templates/verify")
-async def verify_template_route(file, request: Request, connection_id: str, refine_iters: int = 0):
-    return await verify_template(file=file, connection_id=connection_id, refine_iters=refine_iters, request=request)
+async def verify_template_route(
+    request: Request,
+    file: UploadFile = File(...),
+    connection_id: str = Form(...),
+    refine_iters: int = Form(0),
+    background: bool = Query(False),
+):
+    if not background:
+        return verify_template(file=file, connection_id=connection_id, refine_iters=refine_iters, request=request)
+
+    upload_path, filename = await _persist_upload(file, suffix=".pdf")
+    correlation_id = _correlation(request)
+    template_name = Path(filename).stem or filename
+
+    async def runner(job_id: str) -> None:
+        upload = UploadFile(filename=filename, file=upload_path.open("rb"))
+        try:
+            response = verify_template(
+                file=upload,
+                connection_id=connection_id,
+                refine_iters=refine_iters,
+                request=_request_with_correlation(correlation_id),
+            )
+            await run_event_stream_async(
+                job_id,
+                iter_ndjson_events_async(response.body_iterator),
+            )
+        finally:
+            with contextlib.suppress(Exception):
+                await upload.close()
+            with contextlib.suppress(FileNotFoundError):
+                upload_path.unlink(missing_ok=True)
+
+    job = await enqueue_background_job(
+        job_type="verify_template",
+        connection_id=connection_id,
+        template_name=template_name,
+        template_kind="pdf",
+        meta={
+            "filename": filename,
+            "background": True,
+            "refine_iters": refine_iters,
+        },
+        runner=runner,
+    )
+
+    return {"status": "queued", "job_id": job["id"], "correlation_id": correlation_id}
 
 
 @router.post("/excel/verify")
-async def verify_excel_route(file, request: Request, connection_id: str | None = None):
-    return await verify_excel(file=file, request=request, connection_id=connection_id)
+async def verify_excel_route(
+    request: Request,
+    file: UploadFile = File(...),
+    connection_id: str | None = Form(None),
+    background: bool = Query(False),
+):
+    if not background:
+        return verify_excel(file=file, request=request, connection_id=connection_id)
+
+    upload_path, filename = await _persist_upload(file, suffix=".xlsx")
+    correlation_id = _correlation(request)
+    template_name = Path(filename).stem or filename
+
+    async def runner(job_id: str) -> None:
+        upload = UploadFile(filename=filename, file=upload_path.open("rb"))
+        try:
+            response = verify_excel(
+                file=upload,
+                request=_request_with_correlation(correlation_id),
+                connection_id=connection_id,
+            )
+            await run_event_stream_async(
+                job_id,
+                iter_ndjson_events_async(response.body_iterator),
+            )
+        finally:
+            with contextlib.suppress(Exception):
+                await upload.close()
+            with contextlib.suppress(FileNotFoundError):
+                upload_path.unlink(missing_ok=True)
+
+    job = await enqueue_background_job(
+        job_type="verify_excel",
+        connection_id=connection_id,
+        template_name=template_name,
+        template_kind="excel",
+        meta={
+            "filename": filename,
+            "background": True,
+        },
+        runner=runner,
+    )
+
+    return {"status": "queued", "job_id": job["id"], "correlation_id": correlation_id}
 
 
 @router.get("/templates/{template_id}/html")
@@ -119,6 +246,29 @@ def edit_template_ai_route(template_id: str, payload: TemplateAiEditPayload, req
 @router.post("/templates/{template_id}/undo-last-edit")
 def undo_last_edit_route(template_id: str, request: Request):
     return undo_last_template_edit(template_id, request)
+
+
+@router.post("/templates/{template_id}/chat")
+def chat_template_edit_route(template_id: str, payload: TemplateChatPayload, request: Request):
+    """
+    Conversational template editing endpoint.
+
+    Send a conversation history to have an interactive chat session with the AI
+    to gather requirements and make template edits. The AI will ask clarifying
+    questions if needed before proposing changes.
+    """
+    return chat_template_edit(template_id, payload, request)
+
+
+@router.post("/templates/{template_id}/chat/apply")
+def apply_chat_template_edit_route(template_id: str, payload: TemplateManualEditPayload, request: Request):
+    """
+    Apply the HTML changes from a chat conversation.
+
+    Call this endpoint after the user confirms they want to apply the proposed
+    changes from the chat conversation.
+    """
+    return apply_chat_template_edit(template_id, payload.html, request)
 
 
 @router.get("/state/bootstrap")
@@ -158,6 +308,11 @@ def recommend_templates_route(payload: TemplateRecommendPayload, request: Reques
 @router.delete("/templates/{template_id}")
 def delete_template_route(template_id: str, request: Request):
     return delete_template(template_id, request)
+
+
+@router.patch("/templates/{template_id}")
+def update_template_metadata_route(template_id: str, payload: TemplateUpdatePayload, request: Request):
+    return update_template_metadata(template_id, payload, request)
 
 
 @router.post("/templates/{template_id}/generator-assets/v1")

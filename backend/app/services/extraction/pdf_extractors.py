@@ -9,19 +9,55 @@ Supports:
 - pdfplumber: Detailed layout analysis
 - Marker: PDF to markdown conversion
 
+Features:
+- Multiple extraction methods with automatic fallback
+- OCR support for scanned PDFs (via Tesseract/EasyOCR)
+- Intelligent table detection and confidence scoring
+- Layout-aware text extraction
+- Parallel processing for multi-page documents
+- Smart header detection
+
 Each extractor has different strengths - use compare_extractors() to find the best one.
 """
 from __future__ import annotations
 
+import concurrent.futures
+import hashlib
 import json
 import logging
+import os
+import re
 import tempfile
+import threading
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 logger = logging.getLogger("neura.extraction.pdf")
+
+
+# =============================================================================
+# Configuration
+# =============================================================================
+
+@dataclass
+class ExtractionConfig:
+    """Configuration for PDF extraction."""
+    max_pages: int = 100
+    max_tables_per_page: int = 10
+    min_rows_for_table: int = 2
+    min_cols_for_table: int = 2
+    ocr_enabled: bool = True
+    ocr_language: str = "eng"
+    parallel_pages: bool = True
+    max_workers: int = 4
+    confidence_threshold: float = 0.5
+    detect_headers: bool = True
+    preserve_layout: bool = True
+
+
+DEFAULT_CONFIG = ExtractionConfig()
 
 
 @dataclass
@@ -36,6 +72,49 @@ class ExtractedTable:
     bbox: Optional[Tuple[float, float, float, float]] = None  # x0, y0, x1, y1
     metadata: Dict[str, Any] = field(default_factory=dict)
 
+    def __post_init__(self):
+        """Validate and clean up table data."""
+        # Ensure headers are strings
+        self.headers = [str(h).strip() if h else "" for h in self.headers]
+        # Ensure rows are list of string lists
+        self.rows = [
+            [str(cell).strip() if cell else "" for cell in row]
+            for row in self.rows
+        ]
+
+    @property
+    def row_count(self) -> int:
+        """Number of data rows."""
+        return len(self.rows)
+
+    @property
+    def col_count(self) -> int:
+        """Number of columns."""
+        return len(self.headers) if self.headers else (len(self.rows[0]) if self.rows else 0)
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary."""
+        return {
+            "id": self.id,
+            "page": self.page,
+            "headers": self.headers,
+            "rows": self.rows,
+            "confidence": self.confidence,
+            "method": self.method,
+            "bbox": self.bbox,
+            "metadata": self.metadata,
+            "row_count": self.row_count,
+            "col_count": self.col_count,
+        }
+
+    def get_column(self, col_name: str) -> List[str]:
+        """Get all values from a column by header name."""
+        try:
+            idx = self.headers.index(col_name)
+            return [row[idx] if idx < len(row) else "" for row in self.rows]
+        except ValueError:
+            return []
+
 
 @dataclass
 class ExtractionResult:
@@ -46,6 +125,269 @@ class ExtractionResult:
     method: str
     errors: List[str] = field(default_factory=list)
     metadata: Dict[str, Any] = field(default_factory=dict)
+    extraction_time_ms: float = 0.0
+    ocr_used: bool = False
+
+    @property
+    def has_tables(self) -> bool:
+        """Check if any tables were extracted."""
+        return len(self.tables) > 0
+
+    @property
+    def total_rows(self) -> int:
+        """Total number of rows across all tables."""
+        return sum(t.row_count for t in self.tables)
+
+    def get_table_by_page(self, page: int) -> List[ExtractedTable]:
+        """Get all tables from a specific page."""
+        return [t for t in self.tables if t.page == page]
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary."""
+        return {
+            "tables": [t.to_dict() for t in self.tables],
+            "text": self.text,
+            "page_count": self.page_count,
+            "method": self.method,
+            "errors": self.errors,
+            "metadata": self.metadata,
+            "extraction_time_ms": self.extraction_time_ms,
+            "ocr_used": self.ocr_used,
+            "has_tables": self.has_tables,
+            "total_rows": self.total_rows,
+        }
+
+
+# =============================================================================
+# OCR Support
+# =============================================================================
+
+class OCREngine:
+    """OCR engine abstraction supporting multiple backends."""
+
+    def __init__(self, language: str = "eng"):
+        self.language = language
+        self._engine: Optional[str] = None
+        self._lock = threading.Lock()
+
+    def _detect_engine(self) -> str:
+        """Detect available OCR engine."""
+        if self._engine:
+            return self._engine
+
+        with self._lock:
+            # Try EasyOCR first (better accuracy)
+            try:
+                import easyocr
+                self._engine = "easyocr"
+                return self._engine
+            except ImportError:
+                pass
+
+            # Try Tesseract
+            try:
+                import pytesseract
+                # Check if tesseract binary is available
+                pytesseract.get_tesseract_version()
+                self._engine = "tesseract"
+                return self._engine
+            except Exception:
+                pass
+
+            self._engine = "none"
+            return self._engine
+
+    def extract_text(self, image_bytes: bytes) -> str:
+        """Extract text from image bytes using OCR."""
+        engine = self._detect_engine()
+
+        if engine == "none":
+            return ""
+
+        try:
+            if engine == "easyocr":
+                return self._ocr_easyocr(image_bytes)
+            elif engine == "tesseract":
+                return self._ocr_tesseract(image_bytes)
+        except Exception as e:
+            logger.warning(f"OCR extraction failed: {e}")
+            return ""
+
+        return ""
+
+    def _ocr_easyocr(self, image_bytes: bytes) -> str:
+        """Extract text using EasyOCR."""
+        import easyocr
+        import numpy as np
+        from PIL import Image
+        import io
+
+        # Convert bytes to image
+        image = Image.open(io.BytesIO(image_bytes))
+        image_array = np.array(image)
+
+        # Initialize reader (cached)
+        reader = easyocr.Reader([self.language[:2]], gpu=False)
+        results = reader.readtext(image_array)
+
+        # Extract text
+        return " ".join([text for _, text, _ in results])
+
+    def _ocr_tesseract(self, image_bytes: bytes) -> str:
+        """Extract text using Tesseract."""
+        import pytesseract
+        from PIL import Image
+        import io
+
+        image = Image.open(io.BytesIO(image_bytes))
+        return pytesseract.image_to_string(image, lang=self.language)
+
+    def is_available(self) -> bool:
+        """Check if OCR is available."""
+        return self._detect_engine() != "none"
+
+
+# Global OCR engine instance
+_ocr_engine: Optional[OCREngine] = None
+
+
+def get_ocr_engine(language: str = "eng") -> OCREngine:
+    """Get or create OCR engine."""
+    global _ocr_engine
+    if _ocr_engine is None:
+        _ocr_engine = OCREngine(language)
+    return _ocr_engine
+
+
+# =============================================================================
+# Helper Functions
+# =============================================================================
+
+def _is_header_row(row: List[str], all_rows: List[List[str]]) -> bool:
+    """
+    Detect if a row is likely a header row.
+
+    Uses heuristics:
+    - Headers are often shorter than data
+    - Headers contain fewer numbers
+    - Headers have distinct patterns (all caps, title case)
+    """
+    if not row or not all_rows:
+        return False
+
+    # Count numeric values in the row
+    num_numeric = sum(1 for cell in row if _is_numeric(cell))
+    num_total = len([c for c in row if c.strip()])
+
+    if num_total == 0:
+        return False
+
+    numeric_ratio = num_numeric / num_total
+
+    # Headers usually have fewer numeric values
+    if numeric_ratio < 0.3:
+        # Check if other rows have more numeric values
+        if len(all_rows) > 1:
+            other_numeric_ratios = []
+            for other_row in all_rows[1:min(5, len(all_rows))]:
+                other_num = sum(1 for cell in other_row if _is_numeric(cell))
+                other_total = len([c for c in other_row if c.strip()])
+                if other_total > 0:
+                    other_numeric_ratios.append(other_num / other_total)
+
+            if other_numeric_ratios:
+                avg_other_ratio = sum(other_numeric_ratios) / len(other_numeric_ratios)
+                if avg_other_ratio > numeric_ratio + 0.2:
+                    return True
+
+    # Check for common header patterns
+    header_patterns = [
+        lambda c: c.isupper(),  # ALL CAPS
+        lambda c: c.istitle(),  # Title Case
+        lambda c: c.lower() in ("id", "name", "date", "amount", "total", "qty", "price", "description"),
+    ]
+
+    pattern_matches = sum(
+        1 for cell in row
+        if cell.strip() and any(p(cell.strip()) for p in header_patterns)
+    )
+
+    return pattern_matches >= len(row) // 2
+
+
+def _is_numeric(value: str) -> bool:
+    """Check if a string represents a numeric value."""
+    if not value or not value.strip():
+        return False
+
+    cleaned = value.strip().replace(",", "").replace("$", "").replace("%", "")
+    cleaned = cleaned.lstrip("-+")
+
+    try:
+        float(cleaned)
+        return True
+    except ValueError:
+        return False
+
+
+def _clean_cell_value(value: Any) -> str:
+    """Clean and normalize a cell value."""
+    if value is None:
+        return ""
+
+    text = str(value).strip()
+
+    # Remove excessive whitespace
+    text = re.sub(r'\s+', ' ', text)
+
+    # Remove null characters
+    text = text.replace('\x00', '')
+
+    return text
+
+
+def _calculate_table_confidence(
+    table: ExtractedTable,
+    config: ExtractionConfig,
+) -> float:
+    """Calculate confidence score for extracted table."""
+    confidence = 1.0
+
+    # Penalize tables with few rows
+    if table.row_count < config.min_rows_for_table:
+        confidence *= 0.5
+
+    # Penalize tables with few columns
+    if table.col_count < config.min_cols_for_table:
+        confidence *= 0.5
+
+    # Penalize tables with many empty cells
+    empty_cells = sum(
+        1 for row in table.rows
+        for cell in row
+        if not cell.strip()
+    )
+    total_cells = table.row_count * table.col_count
+    if total_cells > 0:
+        empty_ratio = empty_cells / total_cells
+        if empty_ratio > 0.5:
+            confidence *= (1 - empty_ratio)
+
+    # Penalize tables with inconsistent row lengths
+    expected_cols = table.col_count
+    inconsistent_rows = sum(
+        1 for row in table.rows
+        if len(row) != expected_cols
+    )
+    if table.row_count > 0:
+        inconsistent_ratio = inconsistent_rows / table.row_count
+        confidence *= (1 - inconsistent_ratio * 0.5)
+
+    # Boost confidence if headers look valid
+    if table.headers and all(h.strip() for h in table.headers):
+        confidence *= 1.1
+
+    return min(1.0, max(0.0, confidence))
 
 
 class PDFExtractor(ABC):

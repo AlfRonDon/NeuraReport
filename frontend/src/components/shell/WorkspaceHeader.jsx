@@ -16,6 +16,7 @@ import RefreshIcon from '@mui/icons-material/Refresh'
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline'
 import KeyboardCommandKeyIcon from '@mui/icons-material/KeyboardCommandKey'
 import { useAppStore } from '../../store/useAppStore'
+import NotificationCenter from '../notifications/NotificationCenter'
 
 const WORKSPACE_META = {
   setup: {
@@ -181,6 +182,8 @@ export default function WorkspaceHeader({
             </IconButton>
           </Tooltip>
         )}
+
+        <NotificationCenter />
 
         <Tooltip title="Keyboard shortcuts (⌘K)">
           <IconButton size="small">

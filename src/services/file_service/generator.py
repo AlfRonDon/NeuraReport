@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib
 import json
 import time
 from pathlib import Path
@@ -9,7 +10,7 @@ from fastapi import HTTPException, Request
 from fastapi.responses import StreamingResponse
 
 from backend.app.services.generator.GeneratorAssetsV1 import GeneratorAssetsError, build_generator_assets_from_payload
-from backend.app.services.state import state_store
+from backend.app.services.state import store as state_store_module
 from backend.app.services.utils import TemplateLockError, acquire_template_lock, get_correlation_id
 from backend.app.services.utils.artifacts import load_manifest
 from src.schemas.template_schema import GeneratorAssetsPayload
@@ -20,6 +21,10 @@ from .helpers import http_error, normalize_artifact_map, resolve_template_kind
 import logging
 
 logger = logging.getLogger(__name__)
+
+
+def _state_store():
+    return state_store_module.state_store
 
 
 def generator_assets(template_id: str, payload: GeneratorAssetsPayload, request: Request, *, kind: str = "pdf"):
@@ -99,6 +104,12 @@ def generator_assets(template_id: str, payload: GeneratorAssetsPayload, request:
     except TemplateLockError:
         raise http_error(status_code=409, code="template_locked", message="Template is currently processing another request.")
 
+    try:
+        api_mod = importlib.import_module("backend.api")
+    except Exception:
+        api_mod = None
+    builder = getattr(api_mod, "build_generator_assets_from_payload", build_generator_assets_from_payload)
+
     def event_stream():
         started = time.time()
 
@@ -115,7 +126,7 @@ def generator_assets(template_id: str, payload: GeneratorAssetsPayload, request:
                 correlation_id=correlation_id,
             )
             try:
-                result = build_generator_assets_from_payload(
+                result = builder(
                     template_dir=template_dir_path,
                     step4_output=step4_output,
                     final_template_html=final_template_html,
@@ -164,7 +175,7 @@ def generator_assets(template_id: str, payload: GeneratorAssetsPayload, request:
             manifest = load_manifest(template_dir_path) or {}
             manifest_url = manifest_endpoint(template_id, kind=resolved_kind)
 
-            existing_tpl = state_store.get_template_record(template_id) or {}
+            existing_tpl = _state_store().get_template_record(template_id) or {}
             artifacts_payload = {
                 "contract_url": artifacts_urls.get("contract"),
                 "generator_sql_pack_url": artifacts_urls.get("sql_pack"),
@@ -172,7 +183,7 @@ def generator_assets(template_id: str, payload: GeneratorAssetsPayload, request:
                 "generator_assets_url": artifacts_urls.get("generator_assets"),
                 "manifest_url": manifest_url,
             }
-            state_store.upsert_template(
+            _state_store().upsert_template(
                 template_id,
                 name=existing_tpl.get("name") or f"Template {template_id[:8]}",
                 status=existing_tpl.get("status") or "approved",
@@ -180,7 +191,7 @@ def generator_assets(template_id: str, payload: GeneratorAssetsPayload, request:
                 connection_id=existing_tpl.get("last_connection_id"),
                 template_type=resolved_kind,
             )
-            state_store.update_template_generator(
+            _state_store().update_template_generator(
                 template_id,
                 dialect=result.get("dialect"),
                 params=result.get("params"),

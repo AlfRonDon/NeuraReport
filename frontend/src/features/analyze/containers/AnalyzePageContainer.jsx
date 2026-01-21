@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useState, useRef } from 'react'
 import {
   Box,
   Typography,
@@ -10,6 +10,8 @@ import {
   Stack,
   Divider,
   Alert,
+  FormControlLabel,
+  Switch,
   TextField,
   CircularProgress,
   Chip,
@@ -20,11 +22,14 @@ import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
 import UploadFileOutlinedIcon from '@mui/icons-material/UploadFileOutlined'
 import InsightsOutlinedIcon from '@mui/icons-material/InsightsOutlined'
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline'
+import CancelIcon from '@mui/icons-material/Cancel'
 
 import DocumentUpload from '../components/DocumentUpload'
 import AnalysisResults from '../components/AnalysisResults'
 import { uploadAndAnalyze, suggestAnalysisCharts, normalizeChartSpec } from '../services/analyzeApi'
 import Surface from '../../../components/layout/Surface'
+import { useToast } from '../../../components/ToastProvider'
+import { useNavigate } from 'react-router-dom'
 
 const STEPS = [
   { label: 'Upload Document', icon: <UploadFileOutlinedIcon fontSize="small" /> },
@@ -42,11 +47,17 @@ export default function AnalyzePageContainer() {
   const [error, setError] = useState(null)
   const [chartQuestion, setChartQuestion] = useState('')
   const [isLoadingCharts, setIsLoadingCharts] = useState(false)
+  const [runInBackground, setRunInBackground] = useState(false)
+  const [queuedJobId, setQueuedJobId] = useState(null)
+  const abortControllerRef = useRef(null)
+  const toast = useToast()
+  const navigate = useNavigate()
 
   const handleFileSelect = useCallback((file) => {
     setSelectedFile(file)
     setError(null)
     setAnalysisResult(null)
+    setQueuedJobId(null)
     if (file) {
       setActiveStep(0)
     }
@@ -55,15 +66,45 @@ export default function AnalyzePageContainer() {
   const handleAnalyze = useCallback(async () => {
     if (!selectedFile) return
 
+    // Create abort controller for cancellation
+    abortControllerRef.current = new AbortController()
+
     setIsAnalyzing(true)
     setAnalysisProgress(0)
     setProgressStage('Starting analysis...')
     setError(null)
+    setQueuedJobId(null)
+
+    if (runInBackground) {
+      try {
+        const queued = await uploadAndAnalyze({
+          file: selectedFile,
+          background: true,
+        })
+        const jobId = queued?.job_id || queued?.jobId || null
+        setQueuedJobId(jobId)
+        setAnalysisResult(null)
+        setActiveStep(0)
+        toast.show('Analysis queued in background', 'success')
+      } catch (err) {
+        if (err.name !== 'AbortError') {
+          setError(err.message || 'Failed to queue analysis')
+        }
+      } finally {
+        setIsAnalyzing(false)
+        setAnalysisProgress(0)
+        setProgressStage('')
+        abortControllerRef.current = null
+      }
+      return
+    }
+
     setActiveStep(1)
 
     try {
       const result = await uploadAndAnalyze({
         file: selectedFile,
+        signal: abortControllerRef.current?.signal,
         onProgress: (event) => {
           if (event.event === 'stage') {
             setAnalysisProgress(event.progress || 0)
@@ -77,13 +118,30 @@ export default function AnalyzePageContainer() {
         setActiveStep(2)
       }
     } catch (err) {
-      setError(err.message || 'Analysis failed')
-      setActiveStep(0)
+      if (err.name === 'AbortError') {
+        toast.show('Analysis cancelled', 'info')
+        setActiveStep(0)
+      } else {
+        setError(err.message || 'Analysis failed')
+        setActiveStep(0)
+      }
     } finally {
       setIsAnalyzing(false)
       setAnalysisProgress(100)
+      abortControllerRef.current = null
     }
-  }, [selectedFile])
+  }, [selectedFile, runInBackground, toast])
+
+  const handleCancelAnalysis = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
+      setIsAnalyzing(false)
+      setActiveStep(0)
+      setAnalysisProgress(0)
+      setProgressStage('')
+      toast.show('Analysis cancelled', 'info')
+    }
+  }, [toast])
 
   const handleAskCharts = useCallback(async () => {
     if (!analysisResult?.analysis_id || !chartQuestion.trim()) return
@@ -122,6 +180,7 @@ export default function AnalyzePageContainer() {
     setError(null)
     setActiveStep(0)
     setChartQuestion('')
+    setQueuedJobId(null)
   }, [])
 
   // Compute status chips
@@ -184,6 +243,20 @@ export default function AnalyzePageContainer() {
           </Stack>
         )}
 
+        {queuedJobId && (
+          <Alert
+            severity="info"
+            action={(
+              <Button size="small" onClick={() => navigate('/jobs')} sx={{ textTransform: 'none' }}>
+                View Jobs
+              </Button>
+            )}
+            sx={{ alignItems: 'center' }}
+          >
+            Analysis queued in background. Job ID: {queuedJobId}
+          </Alert>
+        )}
+
         {/* Progress Stepper */}
       <Surface sx={{ p: 3 }}>
         <Stepper
@@ -235,27 +308,40 @@ export default function AnalyzePageContainer() {
             />
 
             {selectedFile && !isAnalyzing && (
-              <Stack direction="row" justifyContent="center" sx={{ mt: 3 }}>
-                <Button
-                  variant="contained"
-                  size="large"
-                  onClick={handleAnalyze}
-                  startIcon={<AutoAwesomeIcon />}
-                  sx={{
-                    px: 4,
-                    py: 1.5,
-                    fontWeight: 700,
-                    fontSize: '1rem',
-                    textTransform: 'none',
-                    borderRadius: 2,
-                    boxShadow: '0 4px 14px rgba(79, 70, 229, 0.25)',
-                    '&:hover': {
-                      boxShadow: '0 6px 20px rgba(79, 70, 229, 0.35)',
-                    },
-                  }}
-                >
-                  Analyze with AI
-                </Button>
+              <Stack spacing={2} sx={{ mt: 3 }}>
+                <FormControlLabel
+                  control={(
+                    <Switch
+                      checked={runInBackground}
+                      onChange={(e) => setRunInBackground(e.target.checked)}
+                      color="primary"
+                    />
+                  )}
+                  label="Run in background"
+                  sx={{ alignSelf: 'center' }}
+                />
+                <Stack direction="row" justifyContent="center">
+                  <Button
+                    variant="contained"
+                    size="large"
+                    onClick={handleAnalyze}
+                    startIcon={<AutoAwesomeIcon />}
+                    sx={{
+                      px: 4,
+                      py: 1.5,
+                      fontWeight: 700,
+                      fontSize: '1rem',
+                      textTransform: 'none',
+                      borderRadius: 2,
+                      boxShadow: '0 4px 14px rgba(79, 70, 229, 0.25)',
+                      '&:hover': {
+                        boxShadow: '0 6px 20px rgba(79, 70, 229, 0.35)',
+                      },
+                    }}
+                  >
+                    {runInBackground ? 'Queue Analysis' : 'Analyze with AI'}
+                  </Button>
+                </Stack>
               </Stack>
             )}
           </Box>
@@ -303,12 +389,25 @@ export default function AnalyzePageContainer() {
                 borderRadius: 3,
                 maxWidth: 400,
                 mx: 'auto',
+                mb: 3,
                 bgcolor: 'action.hover',
                 '& .MuiLinearProgress-bar': {
                   borderRadius: 3,
                 },
               }}
             />
+            <Button
+              variant="outlined"
+              color="inherit"
+              startIcon={<CancelIcon />}
+              onClick={handleCancelAnalysis}
+              sx={{
+                textTransform: 'none',
+                fontWeight: 500,
+              }}
+            >
+              Cancel Analysis
+            </Button>
           </Box>
         )}
 

@@ -437,3 +437,57 @@ class TemplateService:
                 if target_dir.exists():
                     shutil.rmtree(target_dir)
             raise HTTPException(status_code=500, detail=f"Failed to duplicate template: {exc}")
+
+    async def update_tags(
+        self,
+        template_id: str,
+        tags: list[str],
+    ) -> dict:
+        """Update tags for a template."""
+        from fastapi import HTTPException
+
+        template_record = state_store.get_template_record(template_id)
+        if not template_record:
+            raise HTTPException(status_code=404, detail=f"Template '{template_id}' not found")
+
+        # Clean and normalize tags
+        cleaned_tags = sorted(set(tag.strip().lower() for tag in tags if tag.strip()))
+
+        # Update the template
+        state_store.upsert_template(
+            template_id,
+            name=template_record.get("name") or template_id,
+            status=template_record.get("status") or "draft",
+            artifacts=template_record.get("artifacts"),
+            tags=cleaned_tags,
+            connection_id=template_record.get("last_connection_id"),
+            mapping_keys=template_record.get("mapping_keys"),
+            template_type=template_record.get("kind"),
+            description=template_record.get("description"),
+        )
+
+        return {
+            "template_id": template_id,
+            "tags": cleaned_tags,
+        }
+
+    async def get_all_tags(self) -> dict:
+        """Get all unique tags across all templates."""
+        templates = state_store.list_templates()
+        all_tags = set()
+        tag_counts = {}
+
+        for template in templates:
+            tags = template.get("tags") or []
+            for tag in tags:
+                all_tags.add(tag)
+                tag_counts[tag] = tag_counts.get(tag, 0) + 1
+
+        # Sort tags by count (most used first), then alphabetically
+        sorted_tags = sorted(all_tags, key=lambda t: (-tag_counts.get(t, 0), t))
+
+        return {
+            "tags": sorted_tags,
+            "tagCounts": tag_counts,
+            "total": len(sorted_tags),
+        }

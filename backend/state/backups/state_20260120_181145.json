@@ -1,0 +1,241 @@
+{
+  "connections": {
+    "557f2123-9e54-4b03-aa85-5e116335a6f2": {
+      "id": "557f2123-9e54-4b03-aa85-5e116335a6f2",
+      "name": "test.db",
+      "db_type": "sqlite",
+      "database_path": "C:\\Users\\Alfred\\AppData\\Local\\Temp\\pytest-of-Alfred\\pytest-1\\test_test_connection_valid_sql0\\test.db",
+      "secret": "{\"database\": \"C:\\\\Users\\\\Alfred\\\\AppData\\\\Local\\\\Temp\\\\pytest-of-Alfred\\\\pytest-1\\\\test_test_connection_valid_sql0\\\\test.db\", \"db_url\": \"C:\\\\Users\\\\Alfred\\\\AppData\\\\Local\\\\Temp\\\\pytest-of-Alfred\\\\pytest-1\\\\test_test_connection_valid_sql0\\\\test.db\"}",
+      "updated_at": "2026-01-20T15:49:05+00:00",
+      "created_at": "2026-01-20T15:49:05+00:00",
+      "status": "connected",
+      "last_connected_at": null,
+      "last_latency_ms": null,
+      "tags": []
+    },
+    "d68b5bdd-ccd0-4ad9-8624-8e7438e2e96c": {
+      "id": "d68b5bdd-ccd0-4ad9-8624-8e7438e2e96c",
+      "name": "test.db",
+      "db_type": "sqlite",
+      "database_path": "C:\\Users\\Alfred\\AppData\\Local\\Temp\\pytest-of-Alfred\\pytest-14\\test_test_connection_valid_sql0\\test.db",
+      "secret": "{\"database\": \"C:\\\\Users\\\\Alfred\\\\AppData\\\\Local\\\\Temp\\\\pytest-of-Alfred\\\\pytest-14\\\\test_test_connection_valid_sql0\\\\test.db\", \"db_url\": \"C:\\\\Users\\\\Alfred\\\\AppData\\\\Local\\\\Temp\\\\pytest-of-Alfred\\\\pytest-14\\\\test_test_connection_valid_sql0\\\\test.db\"}",
+      "updated_at": "2026-01-20T16:10:21+00:00",
+      "created_at": "2026-01-20T16:10:21+00:00",
+      "status": "connected",
+      "last_connected_at": null,
+      "last_latency_ms": null,
+      "tags": []
+    },
+    "1d1bbaa1-ef80-4b0b-a51a-2d1c2a73e3df": {
+      "id": "1d1bbaa1-ef80-4b0b-a51a-2d1c2a73e3df",
+      "name": "test.db",
+      "db_type": "sqlite",
+      "database_path": "C:\\Users\\Alfred\\AppData\\Local\\Temp\\pytest-of-Alfred\\pytest-16\\test_test_connection_valid_sql0\\test.db",
+      "secret": "{\"database\": \"C:\\\\Users\\\\Alfred\\\\AppData\\\\Local\\\\Temp\\\\pytest-of-Alfred\\\\pytest-16\\\\test_test_connection_valid_sql0\\\\test.db\", \"db_url\": \"C:\\\\Users\\\\Alfred\\\\AppData\\\\Local\\\\Temp\\\\pytest-of-Alfred\\\\pytest-16\\\\test_test_connection_valid_sql0\\\\test.db\"}",
+      "updated_at": "2026-01-20T16:12:23+00:00",
+      "created_at": "2026-01-20T16:12:23+00:00",
+      "status": "connected",
+      "last_connected_at": null,
+      "last_latency_ms": null,
+      "tags": []
+    },
+    "30c82f9f-410d-4c17-9047-dcc62babdc9d": {
+      "id": "30c82f9f-410d-4c17-9047-dcc62babdc9d",
+      "name": "test.db",
+      "db_type": "sqlite",
+      "database_path": "C:\\Users\\Alfred\\AppData\\Local\\Temp\\pytest-of-Alfred\\pytest-17\\test_test_connection_valid_sql0\\test.db",
+      "secret": "{\"database\": \"C:\\\\Users\\\\Alfred\\\\AppData\\\\Local\\\\Temp\\\\pytest-of-Alfred\\\\pytest-17\\\\test_test_connection_valid_sql0\\\\test.db\", \"db_url\": \"C:\\\\Users\\\\Alfred\\\\AppData\\\\Local\\\\Temp\\\\pytest-of-Alfred\\\\pytest-17\\\\test_test_connection_valid_sql0\\\\test.db\"}",
+      "updated_at": "2026-01-20T16:14:52+00:00",
+      "created_at": "2026-01-20T16:14:52+00:00",
+      "status": "connected",
+      "last_connected_at": null,
+      "last_latency_ms": null,
+      "tags": []
+    },
+    "b86364a2-5d35-4c75-a6d7-bf991dd9bbc7": {
+      "id": "b86364a2-5d35-4c75-a6d7-bf991dd9bbc7",
+      "name": "test.db",
+      "db_type": "sqlite",
+      "database_path": "C:\\Users\\Alfred\\AppData\\Local\\Temp\\pytest-of-Alfred\\pytest-19\\test_test_connection_valid_sql0\\test.db",
+      "secret": "{\"database\": \"C:\\\\Users\\\\Alfred\\\\AppData\\\\Local\\\\Temp\\\\pytest-of-Alfred\\\\pytest-19\\\\test_test_connection_valid_sql0\\\\test.db\", \"db_url\": \"C:\\\\Users\\\\Alfred\\\\AppData\\\\Local\\\\Temp\\\\pytest-of-Alfred\\\\pytest-19\\\\test_test_connection_valid_sql0\\\\test.db\"}",
+      "updated_at": "2026-01-20T16:16:37+00:00",
+      "created_at": "2026-01-20T16:16:37+00:00",
+      "status": "connected",
+      "last_connected_at": null,
+      "last_latency_ms": null,
+      "tags": []
+    },
+    "5e1f47cf-21e4-49f8-afda-569717f46091": {
+      "id": "5e1f47cf-21e4-49f8-afda-569717f46091",
+      "name": "test.db",
+      "db_type": "sqlite",
+      "database_path": "C:\\Users\\Alfred\\AppData\\Local\\Temp\\pytest-of-Alfred\\pytest-20\\test_test_connection_valid_sql0\\test.db",
+      "secret": "{\"database\": \"C:\\\\Users\\\\Alfred\\\\AppData\\\\Local\\\\Temp\\\\pytest-of-Alfred\\\\pytest-20\\\\test_test_connection_valid_sql0\\\\test.db\", \"db_url\": \"C:\\\\Users\\\\Alfred\\\\AppData\\\\Local\\\\Temp\\\\pytest-of-Alfred\\\\pytest-20\\\\test_test_connection_valid_sql0\\\\test.db\"}",
+      "updated_at": "2026-01-20T16:16:42+00:00",
+      "created_at": "2026-01-20T16:16:42+00:00",
+      "status": "connected",
+      "last_connected_at": null,
+      "last_latency_ms": null,
+      "tags": []
+    },
+    "6c461d85-c499-48ca-93cd-7f1a821d52c1": {
+      "id": "6c461d85-c499-48ca-93cd-7f1a821d52c1",
+      "name": "test.db",
+      "db_type": "sqlite",
+      "database_path": "C:\\Users\\Alfred\\AppData\\Local\\Temp\\pytest-of-Alfred\\pytest-22\\test_test_connection_valid_sql0\\test.db",
+      "secret": "{\"database\": \"C:\\\\Users\\\\Alfred\\\\AppData\\\\Local\\\\Temp\\\\pytest-of-Alfred\\\\pytest-22\\\\test_test_connection_valid_sql0\\\\test.db\", \"db_url\": \"C:\\\\Users\\\\Alfred\\\\AppData\\\\Local\\\\Temp\\\\pytest-of-Alfred\\\\pytest-22\\\\test_test_connection_valid_sql0\\\\test.db\"}",
+      "updated_at": "2026-01-20T16:19:37+00:00",
+      "created_at": "2026-01-20T16:19:37+00:00",
+      "status": "connected",
+      "last_connected_at": null,
+      "last_latency_ms": null,
+      "tags": []
+    },
+    "0747e6a2-c2fd-49b1-b7fa-5065aaadd78e": {
+      "id": "0747e6a2-c2fd-49b1-b7fa-5065aaadd78e",
+      "name": "test.db",
+      "db_type": "sqlite",
+      "database_path": "C:\\Users\\Alfred\\AppData\\Local\\Temp\\pytest-of-Alfred\\pytest-27\\test_test_connection_valid_sql0\\test.db",
+      "secret": "{\"database\": \"C:\\\\Users\\\\Alfred\\\\AppData\\\\Local\\\\Temp\\\\pytest-of-Alfred\\\\pytest-27\\\\test_test_connection_valid_sql0\\\\test.db\", \"db_url\": \"C:\\\\Users\\\\Alfred\\\\AppData\\\\Local\\\\Temp\\\\pytest-of-Alfred\\\\pytest-27\\\\test_test_connection_valid_sql0\\\\test.db\"}",
+      "updated_at": "2026-01-20T17:27:08+00:00",
+      "created_at": "2026-01-20T17:27:08+00:00",
+      "status": "connected",
+      "last_connected_at": null,
+      "last_latency_ms": null,
+      "tags": []
+    },
+    "2b099437-236e-44be-afe8-c3ffc7e46f71": {
+      "id": "2b099437-236e-44be-afe8-c3ffc7e46f71",
+      "name": "test.db",
+      "db_type": "sqlite",
+      "database_path": "C:\\Users\\Alfred\\AppData\\Local\\Temp\\pytest-of-Alfred\\pytest-29\\test_test_connection_valid_sql0\\test.db",
+      "secret": "{\"database\": \"C:\\\\Users\\\\Alfred\\\\AppData\\\\Local\\\\Temp\\\\pytest-of-Alfred\\\\pytest-29\\\\test_test_connection_valid_sql0\\\\test.db\", \"db_url\": \"C:\\\\Users\\\\Alfred\\\\AppData\\\\Local\\\\Temp\\\\pytest-of-Alfred\\\\pytest-29\\\\test_test_connection_valid_sql0\\\\test.db\"}",
+      "updated_at": "2026-01-20T17:28:17+00:00",
+      "created_at": "2026-01-20T17:28:17+00:00",
+      "status": "connected",
+      "last_connected_at": null,
+      "last_latency_ms": null,
+      "tags": []
+    },
+    "cb9ce5c2-f520-4aa7-ba4d-af84dfb221a9": {
+      "id": "cb9ce5c2-f520-4aa7-ba4d-af84dfb221a9",
+      "name": "test.db",
+      "db_type": "sqlite",
+      "database_path": "C:\\Users\\Alfred\\AppData\\Local\\Temp\\pytest-of-Alfred\\pytest-30\\test_test_connection_valid_sql0\\test.db",
+      "secret": "{\"database\": \"C:\\\\Users\\\\Alfred\\\\AppData\\\\Local\\\\Temp\\\\pytest-of-Alfred\\\\pytest-30\\\\test_test_connection_valid_sql0\\\\test.db\", \"db_url\": \"C:\\\\Users\\\\Alfred\\\\AppData\\\\Local\\\\Temp\\\\pytest-of-Alfred\\\\pytest-30\\\\test_test_connection_valid_sql0\\\\test.db\"}",
+      "updated_at": "2026-01-20T17:29:03+00:00",
+      "created_at": "2026-01-20T17:29:03+00:00",
+      "status": "connected",
+      "last_connected_at": null,
+      "last_latency_ms": null,
+      "tags": []
+    },
+    "d238127d-8b8c-40ec-9ad3-78a2621f9635": {
+      "id": "d238127d-8b8c-40ec-9ad3-78a2621f9635",
+      "name": "test.db",
+      "db_type": "sqlite",
+      "database_path": "C:\\Users\\Alfred\\AppData\\Local\\Temp\\pytest-of-Alfred\\pytest-31\\test_test_connection_valid_sql0\\test.db",
+      "secret": "{\"database\": \"C:\\\\Users\\\\Alfred\\\\AppData\\\\Local\\\\Temp\\\\pytest-of-Alfred\\\\pytest-31\\\\test_test_connection_valid_sql0\\\\test.db\", \"db_url\": \"C:\\\\Users\\\\Alfred\\\\AppData\\\\Local\\\\Temp\\\\pytest-of-Alfred\\\\pytest-31\\\\test_test_connection_valid_sql0\\\\test.db\"}",
+      "updated_at": "2026-01-20T18:08:32+00:00",
+      "created_at": "2026-01-20T18:08:32+00:00",
+      "status": "connected",
+      "last_connected_at": null,
+      "last_latency_ms": null,
+      "tags": []
+    },
+    "205004aa-5d90-4c66-9d1a-b919064cf2d5": {
+      "id": "205004aa-5d90-4c66-9d1a-b919064cf2d5",
+      "name": "test.db",
+      "db_type": "sqlite",
+      "database_path": "C:\\Users\\Alfred\\AppData\\Local\\Temp\\pytest-of-Alfred\\pytest-32\\test_test_connection_valid_sql0\\test.db",
+      "secret": "{\"database\": \"C:\\\\Users\\\\Alfred\\\\AppData\\\\Local\\\\Temp\\\\pytest-of-Alfred\\\\pytest-32\\\\test_test_connection_valid_sql0\\\\test.db\", \"db_url\": \"C:\\\\Users\\\\Alfred\\\\AppData\\\\Local\\\\Temp\\\\pytest-of-Alfred\\\\pytest-32\\\\test_test_connection_valid_sql0\\\\test.db\"}",
+      "updated_at": "2026-01-20T18:10:31+00:00",
+      "created_at": "2026-01-20T18:10:31+00:00",
+      "status": "connected",
+      "last_connected_at": null,
+      "last_latency_ms": null,
+      "tags": []
+    }
+  },
+  "templates": {
+    "00000000-0000-0000-0000-000000000001": {
+      "id": "00000000-0000-0000-0000-000000000001",
+      "name": "Template 00000000",
+      "status": "approved",
+      "artifacts": {
+        "template_html_url": "/uploads/00000000-0000-0000-0000-000000000001/report_final.html",
+        "final_html_url": "/uploads/00000000-0000-0000-0000-000000000001/report_final.html",
+        "manifest_url": "/templates/00000000-0000-0000-0000-000000000001/artifacts/manifest",
+        "contract_url": "/uploads/00000000-0000-0000-0000-000000000001/contract.json",
+        "overview_url": "/uploads/00000000-0000-0000-0000-000000000001/overview.md",
+        "step5_requirements_url": "/uploads/00000000-0000-0000-0000-000000000001/step5_requirements.json",
+        "generator_sql_pack_url": "/uploads/00000000-0000-0000-0000-000000000001/generator/sql_pack.sql",
+        "generator_output_schemas_url": "/uploads/00000000-0000-0000-0000-000000000001/generator/output_schemas.json",
+        "generator_assets_url": "/uploads/00000000-0000-0000-0000-000000000001/generator/generator_assets.json",
+        "mapping_keys_url": "/uploads/00000000-0000-0000-0000-000000000001/mapping_keys.json"
+      },
+      "updated_at": "2026-01-20T18:10:35+00:00",
+      "created_at": "2026-01-20T15:49:07+00:00",
+      "tags": [],
+      "last_connection_id": "test-connection",
+      "kind": "pdf",
+      "mapping_keys": [],
+      "generator": {
+        "dialect": "duckdb",
+        "params": {
+          "required": [],
+          "optional": []
+        },
+        "invalid": false,
+        "needs_user_fix": [],
+        "summary": {},
+        "dry_run": {
+          "sample_params": {}
+        },
+        "updated_at": "2026-01-20T18:10:35+00:00"
+      },
+      "description": null
+    },
+    "00000000-0000-0000-0000-000000000002": {
+      "id": "00000000-0000-0000-0000-000000000002",
+      "name": "Template 00000000",
+      "status": "pending",
+      "description": null,
+      "artifacts": {
+        "template_html_url": "/uploads/00000000-0000-0000-0000-000000000002/report_final.html",
+        "final_html_url": "/uploads/00000000-0000-0000-0000-000000000002/report_final.html",
+        "manifest_url": "/templates/00000000-0000-0000-0000-000000000002/artifacts/manifest",
+        "contract_url": "/uploads/00000000-0000-0000-0000-000000000002/contract.json",
+        "overview_url": "/uploads/00000000-0000-0000-0000-000000000002/overview.md",
+        "step5_requirements_url": "/uploads/00000000-0000-0000-0000-000000000002/step5_requirements.json",
+        "mapping_keys_url": "/uploads/00000000-0000-0000-0000-000000000002/mapping_keys.json"
+      },
+      "updated_at": "2026-01-20T18:11:45+00:00",
+      "created_at": "2026-01-20T16:17:57+00:00",
+      "tags": [],
+      "last_connection_id": "test-connection",
+      "kind": "pdf",
+      "mapping_keys": []
+    }
+  },
+  "last_used": {
+    "connection_id": null,
+    "template_id": "tpl-1",
+    "updated_at": "2026-01-20T18:10:35+00:00"
+  },
+  "schedules": {},
+  "jobs": {},
+  "saved_charts": {},
+  "activity_log": [],
+  "favorites": {
+    "templates": [],
+    "connections": []
+  },
+  "user_preferences": {},
+  "runs": {},
+  "_metadata": {
+    "version": 2,
+    "updated_at": "2026-01-20T18:11:45+00:00",
+    "checksum": "7c4fda89a753cdf5"
+  }
+}

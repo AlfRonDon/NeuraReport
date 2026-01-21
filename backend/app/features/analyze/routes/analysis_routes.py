@@ -2,8 +2,10 @@
 """API routes for document analysis."""
 from __future__ import annotations
 
+import contextlib
 import json
 import logging
+import tempfile
 from pathlib import Path
 from typing import Optional
 
@@ -19,6 +21,7 @@ from backend.app.features.analyze.services.document_analysis_service import (
     get_analysis_data,
     suggest_charts_for_analysis,
 )
+from backend.app.services.background_tasks import enqueue_background_job, run_event_stream_async
 
 logger = logging.getLogger("neura.analyze.routes")
 
@@ -71,6 +74,28 @@ async def _read_upload_with_limit(upload: UploadFile, max_bytes: int) -> bytes:
     return b"".join(chunks)
 
 
+async def _persist_upload_with_limit(upload: UploadFile, max_bytes: int, suffix: str) -> tuple[Path, int]:
+    size = 0
+    tmp = tempfile.NamedTemporaryFile(prefix="nr-analysis-", suffix=suffix, delete=False)
+    try:
+        with tmp:
+            while True:
+                chunk = await upload.read(READ_CHUNK_BYTES)
+                if not chunk:
+                    break
+                size += len(chunk)
+                if size > max_bytes:
+                    raise HTTPException(
+                        status_code=413,
+                        detail=f"File too large. Maximum size is {max_bytes} bytes.",
+                    )
+                tmp.write(chunk)
+    finally:
+        with contextlib.suppress(Exception):
+            await upload.close()
+    return Path(tmp.name), size
+
+
 async def _streaming_generator(
     file_bytes: bytes,
     file_name: str,
@@ -108,11 +133,13 @@ async def upload_and_analyze(
     file: UploadFile = File(...),
     template_id: Optional[str] = Form(None),
     connection_id: Optional[str] = Form(None),
+    background: bool = Query(False),
 ):
     """
     Upload a document (PDF or Excel) and analyze it with AI.
 
     Returns a streaming NDJSON response with progress updates and final results.
+    Use background=true to queue the analysis as a job.
 
     Events:
     - stage: Progress update with stage name and percentage
@@ -121,6 +148,60 @@ async def upload_and_analyze(
     """
     settings = get_settings()
     file_name = _validate_upload(file)
+    correlation_id = getattr(request.state, "correlation_id", None)
+
+    if background:
+        suffix = Path(file_name).suffix or ".bin"
+        upload_path, size_bytes = await _persist_upload_with_limit(file, settings.max_upload_bytes, suffix=suffix)
+
+        async def runner(job_id: str) -> None:
+            try:
+                file_bytes = upload_path.read_bytes()
+
+                async def _events():
+                    async for event in analyze_document_streaming(
+                        file_bytes=file_bytes,
+                        file_name=file_name,
+                        template_id=template_id,
+                        connection_id=connection_id,
+                        correlation_id=correlation_id,
+                    ):
+                        yield event
+
+                def _result_builder(event: dict) -> dict:
+                    if event.get("event") != "result":
+                        return {}
+                    tables = event.get("tables") or []
+                    charts = event.get("chart_suggestions") or []
+                    return {
+                        "analysis_id": event.get("analysis_id"),
+                        "document_name": event.get("document_name"),
+                        "summary": event.get("summary"),
+                        "table_count": len(tables),
+                        "chart_count": len(charts),
+                        "warnings": event.get("warnings") or [],
+                    }
+
+                await run_event_stream_async(job_id, _events(), result_builder=_result_builder)
+            finally:
+                with contextlib.suppress(FileNotFoundError):
+                    upload_path.unlink(missing_ok=True)
+
+        job = await enqueue_background_job(
+            job_type="analyze_document",
+            template_id=template_id,
+            connection_id=connection_id,
+            template_name=file_name,
+            meta={
+                "filename": file_name,
+                "size_bytes": size_bytes,
+                "background": True,
+            },
+            runner=runner,
+        )
+
+        return {"status": "queued", "job_id": job["id"], "correlation_id": correlation_id}
+
     try:
         file_bytes = await _read_upload_with_limit(file, settings.max_upload_bytes)
     finally:
@@ -132,7 +213,7 @@ async def upload_and_analyze(
             file_name,
             template_id,
             connection_id,
-            getattr(request.state, "correlation_id", None),
+            correlation_id,
         ),
         media_type="application/x-ndjson",
         headers={

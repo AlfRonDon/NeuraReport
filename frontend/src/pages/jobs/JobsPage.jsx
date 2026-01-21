@@ -36,6 +36,13 @@ import { ConfirmModal } from '../../ui/Modal'
 import { useToast } from '../../components/ToastProvider'
 import * as api from '../../api/client'
 import { palette } from '../../theme'
+import {
+  normalizeJob,
+  isActiveStatus,
+  canRetryJob,
+  canCancelJob,
+  JobStatus,
+} from '../../utils/jobStatus'
 
 const STATUS_CONFIG = {
   pending: {
@@ -68,6 +75,12 @@ const STATUS_CONFIG = {
     bgColor: alpha(palette.scale[100], 0.08),
     label: 'Cancelled',
   },
+  cancelling: {
+    icon: HourglassEmptyIcon,
+    color: palette.yellow[400],
+    bgColor: alpha(palette.yellow[400], 0.15),
+    label: 'Cancelling...',
+  },
 }
 
 export default function JobsPage() {
@@ -81,12 +94,17 @@ export default function JobsPage() {
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false)
   const [detailsJob, setDetailsJob] = useState(null)
   const [retrying, setRetrying] = useState(false)
+  const [selectedIds, setSelectedIds] = useState([])
+  const [bulkCancelOpen, setBulkCancelOpen] = useState(false)
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
+  const [bulkActionLoading, setBulkActionLoading] = useState(false)
   const pollIntervalRef = useRef(null)
 
   const fetchJobs = useCallback(async () => {
     try {
       const data = await api.listJobs({ limit: 50 })
-      setJobs(data.jobs || [])
+      const normalized = Array.isArray(data.jobs) ? data.jobs.map((job) => normalizeJob(job)) : []
+      setJobs(normalized)
     } catch (err) {
       console.error('Failed to fetch jobs:', err)
     }
@@ -131,14 +149,24 @@ export default function JobsPage() {
 
   const handleCancelConfirm = useCallback(async () => {
     if (!cancellingJob) return
+
+    // Immediately update local state to show "cancelling" status
+    setJobs((prev) =>
+      prev.map((job) =>
+        job.id === cancellingJob.id ? { ...job, status: JobStatus.CANCELLING } : job
+      )
+    )
+    setCancelConfirmOpen(false)
+
     try {
       await api.cancelJob(cancellingJob.id)
       toast.show('Job cancelled', 'success')
       fetchJobs()
     } catch (err) {
       toast.show(err.message || 'Failed to cancel job', 'error')
+      // Revert optimistic update on error
+      fetchJobs()
     } finally {
-      setCancelConfirmOpen(false)
       setCancellingJob(null)
     }
   }, [cancellingJob, toast, fetchJobs])
@@ -159,27 +187,106 @@ export default function JobsPage() {
   const handleRetry = useCallback(async () => {
     if (!menuJob) return
     setRetrying(true)
+    handleCloseMenu()
     try {
-      // Re-run the job with the same parameters
-      const kind = menuJob.template_kind || 'pdf'
-      await api.runReportAsJob({
-        templateId: menuJob.template_id,
-        templateName: menuJob.template_name,
-        connectionId: menuJob.connection_id,
-        startDate: menuJob.start_date,
-        endDate: menuJob.end_date,
-        keyValues: menuJob.key_values,
-        kind,
-      })
+      // Use the dedicated retry endpoint
+      await api.retryJob(menuJob.id)
       toast.show('Job restarted successfully', 'success')
       fetchJobs()
     } catch (err) {
       toast.show(err.message || 'Failed to retry job', 'error')
     } finally {
       setRetrying(false)
-      handleCloseMenu()
     }
   }, [menuJob, toast, fetchJobs, handleCloseMenu])
+
+  const handleBulkCancelOpen = useCallback(() => {
+    if (!selectedIds.length) return
+    const hasActive = selectedIds.some((id) => {
+      const job = jobs.find((item) => item.id === id)
+      return isActiveStatus(job?.status)
+    })
+    if (!hasActive) {
+      toast.show('Select running or pending jobs to cancel', 'warning')
+      return
+    }
+    setBulkCancelOpen(true)
+  }, [jobs, selectedIds, toast])
+
+  const handleBulkCancelConfirm = useCallback(async () => {
+    const activeIds = selectedIds.filter((id) => {
+      const job = jobs.find((item) => item.id === id)
+      return isActiveStatus(job?.status)
+    })
+    if (!activeIds.length) {
+      toast.show('Select running or pending jobs to cancel', 'warning')
+      setBulkCancelOpen(false)
+      return
+    }
+
+    // Immediately update local state to show "cancelling" status
+    const activeIdSet = new Set(activeIds)
+    setJobs((prev) =>
+      prev.map((job) =>
+        activeIdSet.has(job.id) ? { ...job, status: JobStatus.CANCELLING } : job
+      )
+    )
+    setBulkCancelOpen(false)
+    setBulkActionLoading(true)
+
+    try {
+      const result = await api.bulkCancelJobs(activeIds)
+      const cancelledCount = result?.cancelledCount ?? result?.cancelled?.length ?? 0
+      const failedCount = result?.failedCount ?? result?.failed?.length ?? 0
+      if (failedCount > 0) {
+        toast.show(
+          `Cancelled ${cancelledCount} job${cancelledCount !== 1 ? 's' : ''}, ${failedCount} failed`,
+          'warning'
+        )
+      } else {
+        toast.show(`Cancelled ${cancelledCount} job${cancelledCount !== 1 ? 's' : ''}`, 'success')
+      }
+      await fetchJobs()
+    } catch (err) {
+      toast.show(err.message || 'Failed to cancel jobs', 'error')
+      // Revert optimistic update on error
+      await fetchJobs()
+    } finally {
+      setBulkActionLoading(false)
+    }
+  }, [selectedIds, jobs, toast, fetchJobs])
+
+  const handleBulkDeleteOpen = useCallback(() => {
+    if (!selectedIds.length) return
+    setBulkDeleteOpen(true)
+  }, [selectedIds])
+
+  const handleBulkDeleteConfirm = useCallback(async () => {
+    if (!selectedIds.length) {
+      setBulkDeleteOpen(false)
+      return
+    }
+    setBulkActionLoading(true)
+    try {
+      const result = await api.bulkDeleteJobs(selectedIds)
+      const deletedCount = result?.deletedCount ?? result?.deleted?.length ?? 0
+      const failedCount = result?.failedCount ?? result?.failed?.length ?? 0
+      if (failedCount > 0) {
+        toast.show(
+          `Deleted ${deletedCount} job${deletedCount !== 1 ? 's' : ''}, ${failedCount} failed`,
+          'warning'
+        )
+      } else {
+        toast.show(`Deleted ${deletedCount} job${deletedCount !== 1 ? 's' : ''}`, 'success')
+      }
+      await fetchJobs()
+    } catch (err) {
+      toast.show(err.message || 'Failed to delete jobs', 'error')
+    } finally {
+      setBulkActionLoading(false)
+      setBulkDeleteOpen(false)
+    }
+  }, [selectedIds, toast, fetchJobs])
 
   const columns = useMemo(() => [
     {
@@ -216,11 +323,11 @@ export default function JobsPage() {
       ),
     },
     {
-      field: 'template_name',
+      field: 'templateName',
       headerName: 'Template',
       renderCell: (value, row) => (
         <Box sx={{ color: palette.scale[200], fontSize: '0.8125rem' }}>
-          {value || row.template_id?.slice(0, 12) || '-'}
+          {value || row.templateId?.slice(0, 12) || '-'}
         </Box>
       ),
     },
@@ -255,14 +362,14 @@ export default function JobsPage() {
       headerName: 'Progress',
       width: 150,
       renderCell: (value, row) => {
-        if (row.status === 'completed') {
+        if (row.status === JobStatus.COMPLETED) {
           return (
             <Typography sx={{ fontSize: '0.75rem', color: palette.green[400] }}>
               100%
             </Typography>
           )
         }
-        if (row.status === 'failed' || row.status === 'cancelled') {
+        if (row.status === JobStatus.FAILED || row.status === JobStatus.CANCELLED) {
           return (
             <Typography sx={{ fontSize: '0.75rem', color: palette.scale[600] }}>
               -
@@ -294,7 +401,7 @@ export default function JobsPage() {
       },
     },
     {
-      field: 'created_at',
+      field: 'createdAt',
       headerName: 'Started',
       width: 180,
       renderCell: (value) => (
@@ -304,7 +411,7 @@ export default function JobsPage() {
       ),
     },
     {
-      field: 'completed_at',
+      field: 'finishedAt',
       headerName: 'Completed',
       width: 180,
       renderCell: (value) => (
@@ -338,8 +445,23 @@ export default function JobsPage() {
     },
   ], [])
 
+  const activeSelectedCount = useMemo(() => {
+    const activeSet = new Set(['running', 'pending'])
+    const jobLookup = new Map(jobs.map((job) => [job.id, job.status]))
+    return selectedIds.filter((id) => activeSet.has(jobLookup.get(id))).length
+  }, [jobs, selectedIds])
+
+  const bulkActions = useMemo(() => ([
+    {
+      label: 'Cancel',
+      icon: <CancelIcon sx={{ fontSize: 16 }} />,
+      onClick: handleBulkCancelOpen,
+      disabled: bulkActionLoading,
+    },
+  ]), [bulkActionLoading, handleBulkCancelOpen])
+
   const activeJobsCount = useMemo(() =>
-    jobs.filter((j) => j.status === 'running' || j.status === 'pending').length
+    jobs.filter((j) => isActiveStatus(j.status)).length
   , [jobs])
 
   return (
@@ -352,6 +474,10 @@ export default function JobsPage() {
         loading={loading}
         searchPlaceholder="Search jobs..."
         filters={filters}
+        selectable
+        onSelectionChange={setSelectedIds}
+        bulkActions={bulkActions}
+        onBulkDelete={handleBulkDeleteOpen}
         actions={[
           {
             label: 'Refresh',
@@ -402,13 +528,13 @@ export default function JobsPage() {
           <ListItemIcon><VisibilityIcon sx={{ fontSize: 16, color: palette.scale[500] }} /></ListItemIcon>
           <ListItemText primaryTypographyProps={{ fontSize: '0.8125rem' }}>View Details</ListItemText>
         </MenuItem>
-        {menuJob?.status === 'completed' && menuJob?.artifacts?.html_url && (
+        {menuJob?.status === JobStatus.COMPLETED && menuJob?.artifacts?.html_url && (
           <MenuItem onClick={handleDownload} sx={{ color: palette.scale[200] }}>
             <ListItemIcon><DownloadIcon sx={{ fontSize: 16, color: palette.scale[500] }} /></ListItemIcon>
             <ListItemText primaryTypographyProps={{ fontSize: '0.8125rem' }}>Download</ListItemText>
           </MenuItem>
         )}
-        {menuJob?.status === 'failed' && (
+        {canRetryJob(menuJob?.status) && (
           <MenuItem onClick={handleRetry} disabled={retrying} sx={{ color: palette.scale[200] }}>
             <ListItemIcon><ReplayIcon sx={{ fontSize: 16, color: palette.scale[500] }} /></ListItemIcon>
             <ListItemText primaryTypographyProps={{ fontSize: '0.8125rem' }}>
@@ -416,7 +542,7 @@ export default function JobsPage() {
             </ListItemText>
           </MenuItem>
         )}
-        {(menuJob?.status === 'pending' || menuJob?.status === 'running') && (
+        {canCancelJob(menuJob?.status) && (
           <MenuItem onClick={handleCancelClick} sx={{ color: palette.red[400] }}>
             <ListItemIcon><CancelIcon sx={{ fontSize: 16, color: palette.red[400] }} /></ListItemIcon>
             <ListItemText primaryTypographyProps={{ fontSize: '0.8125rem' }}>Cancel</ListItemText>
@@ -433,6 +559,28 @@ export default function JobsPage() {
         message={`Are you sure you want to cancel this job? This action cannot be undone.`}
         confirmLabel="Cancel Job"
         severity="warning"
+      />
+
+      <ConfirmModal
+        open={bulkCancelOpen}
+        onClose={() => setBulkCancelOpen(false)}
+        onConfirm={handleBulkCancelConfirm}
+        title="Cancel Jobs"
+        message={`Cancel ${activeSelectedCount} running job${activeSelectedCount !== 1 ? 's' : ''}?`}
+        confirmLabel="Cancel Jobs"
+        severity="warning"
+        loading={bulkActionLoading}
+      />
+
+      <ConfirmModal
+        open={bulkDeleteOpen}
+        onClose={() => setBulkDeleteOpen(false)}
+        onConfirm={handleBulkDeleteConfirm}
+        title="Delete Jobs"
+        message={`Delete ${selectedIds.length} job${selectedIds.length !== 1 ? 's' : ''} from history? This action cannot be undone.`}
+        confirmLabel="Delete Jobs"
+        severity="error"
+        loading={bulkActionLoading}
       />
 
       {/* Job Details Dialog */}
@@ -490,16 +638,16 @@ export default function JobsPage() {
               <Box>
                 <Typography variant="caption" sx={{ color: palette.scale[500] }}>Template</Typography>
                 <Typography sx={{ fontSize: '0.8125rem', color: palette.scale[200] }}>
-                  {detailsJob.template_name || detailsJob.template_id || '-'}
+                  {detailsJob.templateName || detailsJob.templateId || detailsJob.template_id || '-'}
                 </Typography>
               </Box>
-              {detailsJob.connection_id && (
+              {(detailsJob.connectionId || detailsJob.connection_id) && (
                 <>
                   <Divider sx={{ borderColor: alpha(palette.scale[100], 0.08) }} />
                   <Box>
                     <Typography variant="caption" sx={{ color: palette.scale[500] }}>Connection ID</Typography>
                     <Typography sx={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: palette.scale[300] }}>
-                      {detailsJob.connection_id}
+                      {detailsJob.connectionId || detailsJob.connection_id}
                     </Typography>
                   </Box>
                 </>
@@ -508,16 +656,16 @@ export default function JobsPage() {
               <Box>
                 <Typography variant="caption" sx={{ color: palette.scale[500] }}>Created</Typography>
                 <Typography sx={{ fontSize: '0.8125rem', color: palette.scale[200] }}>
-                  {detailsJob.created_at ? new Date(detailsJob.created_at).toLocaleString() : '-'}
+                  {detailsJob.createdAt ? new Date(detailsJob.createdAt).toLocaleString() : '-'}
                 </Typography>
               </Box>
-              {detailsJob.completed_at && (
+              {(detailsJob.finishedAt || detailsJob.completed_at) && (
                 <>
                   <Divider sx={{ borderColor: alpha(palette.scale[100], 0.08) }} />
                   <Box>
                     <Typography variant="caption" sx={{ color: palette.scale[500] }}>Completed</Typography>
                     <Typography sx={{ fontSize: '0.8125rem', color: palette.scale[200] }}>
-                      {new Date(detailsJob.completed_at).toLocaleString()}
+                      {new Date(detailsJob.finishedAt || detailsJob.completed_at).toLocaleString()}
                     </Typography>
                   </Box>
                 </>
@@ -534,7 +682,7 @@ export default function JobsPage() {
           )}
         </DialogContent>
         <DialogActions sx={{ borderTop: `1px solid ${alpha(palette.scale[100], 0.08)}`, px: 2, py: 1.5 }}>
-          {detailsJob?.status === 'completed' && detailsJob?.artifacts?.html_url && (
+          {detailsJob?.status === JobStatus.COMPLETED && detailsJob?.artifacts?.html_url && (
             <Button
               variant="outlined"
               size="small"

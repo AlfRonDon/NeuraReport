@@ -13,6 +13,7 @@ import {
   CircularProgress,
   Alert,
   alpha,
+  Button,
 } from '@mui/material'
 import RefreshIcon from '@mui/icons-material/Refresh'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
@@ -23,6 +24,8 @@ import StorageIcon from '@mui/icons-material/Storage'
 import SecurityIcon from '@mui/icons-material/Security'
 import SpeedIcon from '@mui/icons-material/Speed'
 import CloudIcon from '@mui/icons-material/Cloud'
+import DownloadIcon from '@mui/icons-material/Download'
+import TokenIcon from '@mui/icons-material/Toll'
 import { useToast } from '../../components/ToastProvider'
 import * as api from '../../api/client'
 import { palette } from '../../theme'
@@ -129,19 +132,49 @@ export default function SettingsPage() {
   const [health, setHealth] = useState(null)
   const [error, setError] = useState(null)
   const [preferences, setPreferences] = useState(getPreferences)
+  const [tokenUsage, setTokenUsage] = useState(null)
+  const [exporting, setExporting] = useState(false)
 
   const fetchHealth = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
-      const data = await api.getSystemHealth()
-      setHealth(data)
+      const [healthData, usageData] = await Promise.all([
+        api.getSystemHealth(),
+        api.getTokenUsage().catch(() => null),
+      ])
+      setHealth(healthData)
+      setTokenUsage(usageData?.usage || null)
     } catch (err) {
       setError(err.message || 'Failed to fetch system health')
     } finally {
       setLoading(false)
     }
   }, [])
+
+  const handleExportConfig = useCallback(async () => {
+    setExporting(true)
+    try {
+      const data = await api.exportConfiguration()
+      // Download as JSON file
+      const blob = new Blob([JSON.stringify(data.config || data, null, 2)], {
+        type: 'application/json',
+      })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `neurareport-config-${new Date().toISOString().split('T')[0]}.json`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+      toast.show('Configuration exported successfully', 'success')
+    } catch (err) {
+      toast.show(err.message || 'Failed to export configuration', 'error')
+    } finally {
+      setExporting(false)
+    }
+  }, [toast])
 
   useEffect(() => {
     fetchHealth()
@@ -278,6 +311,67 @@ export default function SettingsPage() {
               <ConfigRow label="API Key" value={openai.key_prefix} mono />
             )}
           </Stack>
+        </SettingCard>
+
+        {/* Token Usage Statistics */}
+        <SettingCard icon={TokenIcon} title="Token Usage">
+          {tokenUsage ? (
+            <Stack spacing={1}>
+              <ConfigRow
+                label="Total Tokens"
+                value={(tokenUsage.total_tokens || 0).toLocaleString()}
+              />
+              <ConfigRow
+                label="Input Tokens"
+                value={(tokenUsage.total_input_tokens || 0).toLocaleString()}
+              />
+              <ConfigRow
+                label="Output Tokens"
+                value={(tokenUsage.total_output_tokens || 0).toLocaleString()}
+              />
+              <Divider sx={{ my: 1, borderColor: alpha(palette.scale[100], 0.08) }} />
+              <ConfigRow
+                label="Estimated Cost"
+                value={`$${(tokenUsage.estimated_cost_usd || 0).toFixed(4)}`}
+                mono
+              />
+              <ConfigRow
+                label="API Requests"
+                value={(tokenUsage.request_count || 0).toLocaleString()}
+              />
+              <Typography variant="caption" color={palette.scale[600]} sx={{ mt: 1 }}>
+                Usage statistics are tracked since server start.
+              </Typography>
+            </Stack>
+          ) : (
+            <Typography variant="body2" color={palette.scale[500]}>
+              Token usage data unavailable
+            </Typography>
+          )}
+        </SettingCard>
+
+        {/* Export Configuration */}
+        <SettingCard icon={DownloadIcon} title="Export & Backup">
+          <Typography variant="body2" color={palette.scale[500]} sx={{ mb: 2 }}>
+            Export your configuration for backup or migration purposes.
+          </Typography>
+          <Button
+            variant="outlined"
+            startIcon={exporting ? <CircularProgress size={16} /> : <DownloadIcon />}
+            onClick={handleExportConfig}
+            disabled={exporting}
+            sx={{
+              textTransform: 'none',
+              borderColor: alpha(palette.scale[100], 0.2),
+              color: palette.scale[200],
+              '&:hover': {
+                borderColor: palette.green[400],
+                bgcolor: alpha(palette.green[400], 0.08),
+              },
+            }}
+          >
+            {exporting ? 'Exporting...' : 'Export Configuration'}
+          </Button>
         </SettingCard>
 
         {/* User Preferences */}

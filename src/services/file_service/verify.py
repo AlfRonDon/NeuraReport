@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import contextlib
+import importlib
 import os
 import tempfile
 import time
@@ -52,6 +53,20 @@ def verify_template(file: UploadFile, connection_id: str, request: Request, refi
 
     request_state = getattr(request, "state", None)
     correlation_id = getattr(request_state, "correlation_id", None) or get_correlation_id()
+
+    try:
+        api_mod = importlib.import_module("backend.api")
+    except Exception:
+        api_mod = None
+    pdf_to_pngs_fn = getattr(api_mod, "pdf_to_pngs", pdf_to_pngs)
+    request_initial_html_fn = getattr(api_mod, "request_initial_html", request_initial_html)
+    save_html_fn = getattr(api_mod, "save_html", save_html)
+    render_html_to_png_fn = getattr(api_mod, "render_html_to_png", render_html_to_png)
+    render_panel_preview_fn = getattr(api_mod, "render_panel_preview", render_panel_preview)
+    request_fix_html_fn = getattr(api_mod, "request_fix_html", request_fix_html)
+    write_artifact_manifest_fn = getattr(api_mod, "write_artifact_manifest", write_artifact_manifest)
+    get_layout_hints_fn = getattr(api_mod, "get_layout_hints", get_layout_hints)
+    state_store_ref = getattr(api_mod, "state_store", state_store)
 
     def event_stream():
         pipeline_started = time.time()
@@ -148,11 +163,11 @@ def verify_template(file: UploadFile, connection_id: str, request: Request, refi
             png_path: Path | None = None
             layout_hints: dict[str, Any] | None = None
             try:
-                ref_pngs = pdf_to_pngs(pdf_path, tdir, dpi=int(os.getenv("PDF_DPI", "400")))
+                ref_pngs = pdf_to_pngs_fn(pdf_path, tdir, dpi=int(os.getenv("PDF_DPI", "400")))
                 if not ref_pngs:
                     raise RuntimeError("No pages rendered from PDF")
                 png_path = ref_pngs[0]
-                layout_hints = get_layout_hints(pdf_path, 0)
+                layout_hints = get_layout_hints_fn(pdf_path, 0)
             except Exception as exc:
                 yield finish_stage(stage_key, stage_label, progress=25, status="error", detail=str(exc))
                 raise
@@ -163,10 +178,10 @@ def verify_template(file: UploadFile, connection_id: str, request: Request, refi
             stage_label = "Converting preview to HTML"
             yield start_stage(stage_key, stage_label, progress=70)
             try:
-                initial_result = request_initial_html(png_path, None, layout_hints=layout_hints)
+                initial_result = request_initial_html_fn(png_path, None, layout_hints=layout_hints)
                 html_text = initial_result.html
                 schema_payload = initial_result.schema or {}
-                save_html(html_path, html_text)
+                save_html_fn(html_path, html_text)
             except Exception as exc:
                 yield finish_stage(stage_key, stage_label, progress=70, status="error", detail=str(exc))
                 raise
@@ -195,9 +210,9 @@ def verify_template(file: UploadFile, connection_id: str, request: Request, refi
             stage_label = "Rendering the HTML preview"
             yield start_stage(stage_key, stage_label, progress=80)
             try:
-                render_html_to_png(html_path, render_png_path)
+                render_html_to_png_fn(html_path, render_png_path)
                 panel_png_path = render_png_path.with_name("render_p1_llm.png")
-                render_panel_preview(html_path, panel_png_path, fallback_png=render_png_path)
+                render_panel_preview_fn(html_path, panel_png_path, fallback_png=render_png_path)
                 tight_render_png_path = panel_png_path if panel_png_path.exists() else render_png_path
                 yield finish_stage(stage_key, stage_label, progress=88)
             except Exception as exc:
@@ -222,12 +237,13 @@ def verify_template(file: UploadFile, connection_id: str, request: Request, refi
 
             fix_result: Optional[dict[str, Any]] = None
             render_after_path: Optional[Path] = None
+            render_after_full_path: Optional[Path] = None
             metrics_path: Optional[Path] = None
             fix_attempted = fix_enabled and max_fix_passes > 0
 
             if fix_attempted:
                 try:
-                    fix_result = request_fix_html(
+                    fix_result = request_fix_html_fn(
                         tdir,
                         html_path,
                         schema_path if schema_payload else None,
@@ -239,6 +255,7 @@ def verify_template(file: UploadFile, connection_id: str, request: Request, refi
                     pass
                 else:
                     render_after_path = fix_result.get("render_after_path")
+                    render_after_full_path = fix_result.get("render_after_full_path")
                     metrics_path = fix_result.get("metrics_path")
 
             yield finish_stage(
@@ -249,12 +266,14 @@ def verify_template(file: UploadFile, connection_id: str, request: Request, refi
                 fix_attempted=fix_attempted,
                 fix_accepted=bool(fix_result and fix_result.get("accepted")),
                 render_after=artifact_url(render_after_path) if render_after_path else None,
+                render_after_full=artifact_url(render_after_full_path) if render_after_full_path else None,
                 metrics=artifact_url(metrics_path) if metrics_path else None,
             )
 
             schema_url = artifact_url(schema_path) if schema_payload else None
             render_url = artifact_url(tight_render_png_path)
             render_after_url = artifact_url(render_after_path) if render_after_path else None
+            render_after_full_url = artifact_url(render_after_full_path) if render_after_full_path else None
             metrics_url = artifact_url(metrics_path) if metrics_path else None
 
             manifest_files: dict[str, Path] = {
@@ -269,6 +288,8 @@ def verify_template(file: UploadFile, connection_id: str, request: Request, refi
                 manifest_files["schema_ext.json"] = schema_path
             if render_after_path:
                 manifest_files["render_p1_after.png"] = render_after_path
+            if render_after_full_path:
+                manifest_files["render_p1_after_full.png"] = render_after_full_path
             if metrics_path:
                 manifest_files["fix_metrics.json"] = metrics_path
 
@@ -276,7 +297,7 @@ def verify_template(file: UploadFile, connection_id: str, request: Request, refi
             stage_label = "Saving verification artifacts"
             yield start_stage(stage_key, stage_label, progress=97)
             try:
-                write_artifact_manifest(
+                write_artifact_manifest_fn(
                     tdir,
                     step="templates_verify",
                     files=manifest_files,
@@ -294,6 +315,7 @@ def verify_template(file: UploadFile, connection_id: str, request: Request, refi
                     schema_url=schema_url,
                     render_url=render_url,
                     render_after_url=render_after_url,
+                    render_after_full_url=render_after_full_url,
                     metrics_url=metrics_url,
                 )
 
@@ -310,10 +332,12 @@ def verify_template(file: UploadFile, connection_id: str, request: Request, refi
                 artifacts_for_state["render_png_url"] = render_url
             if render_after_url:
                 artifacts_for_state["render_after_png_url"] = render_after_url
+            if render_after_full_url:
+                artifacts_for_state["render_after_full_png_url"] = render_after_full_url
             if metrics_url:
                 artifacts_for_state["fix_metrics_url"] = metrics_url
 
-            state_store.upsert_template(
+            state_store_ref.upsert_template(
                 tid,
                 name=template_name,
                 status="draft",
@@ -321,7 +345,7 @@ def verify_template(file: UploadFile, connection_id: str, request: Request, refi
                 connection_id=connection_id or None,
                 template_type="pdf",
             )
-            state_store.set_last_used(connection_id or None, tid)
+            state_store_ref.set_last_used(connection_id or None, tid)
 
             total_elapsed_ms = int((time.time() - pipeline_started) * 1000)
             yield emit(
@@ -358,6 +382,13 @@ def verify_excel(file: UploadFile, request: Request, connection_id: str | None =
 
     request_state = getattr(request, "state", None)
     correlation_id = getattr(request_state, "correlation_id", None) or get_correlation_id()
+
+    try:
+        api_mod = importlib.import_module("backend.api")
+    except Exception:
+        api_mod = None
+    write_artifact_manifest_fn = getattr(api_mod, "write_artifact_manifest", write_artifact_manifest)
+    state_store_ref = getattr(api_mod, "state_store", state_store)
 
     def event_stream():
         pipeline_started = time.time()
@@ -473,7 +504,7 @@ def verify_excel(file: UploadFile, request: Request, connection_id: str | None =
             stage_label = "Saving verification artifacts"
             yield start_stage(stage_key, stage_label, progress=90)
             try:
-                write_artifact_manifest(
+                write_artifact_manifest_fn(
                     tdir,
                     step="excel_verify",
                     files=manifest_files,
@@ -496,7 +527,7 @@ def verify_excel(file: UploadFile, request: Request, connection_id: str | None =
             schema_url = artifact_url(schema_path) if schema_path.exists() else None
 
             template_display_name = template_name_hint or "Workbook"
-            state_store.upsert_template(
+            state_store_ref.upsert_template(
                 tid,
                 name=template_display_name,
                 status="draft",
@@ -513,7 +544,7 @@ def verify_excel(file: UploadFile, request: Request, connection_id: str | None =
                 connection_id=connection_id or None,
                 template_type=template_kind,
             )
-            state_store.set_last_used(connection_id or None, tid)
+            state_store_ref.set_last_used(connection_id or None, tid)
 
             total_elapsed_ms = int((time.time() - pipeline_started) * 1000)
             yield emit(

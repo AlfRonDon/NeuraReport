@@ -23,11 +23,21 @@ import SettingsIcon from '@mui/icons-material/Settings'
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
 import DashboardIcon from '@mui/icons-material/Dashboard'
 import ScheduleIcon from '@mui/icons-material/Schedule'
+import HistoryIcon from '@mui/icons-material/History'
+import TimelineIcon from '@mui/icons-material/Timeline'
+import BarChartIcon from '@mui/icons-material/BarChart'
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
 import MenuIcon from '@mui/icons-material/Menu'
 import AddIcon from '@mui/icons-material/Add'
+import QuestionAnswerIcon from '@mui/icons-material/QuestionAnswer'
+import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh'
+import JoinInnerIcon from '@mui/icons-material/JoinInner'
+import MergeIcon from '@mui/icons-material/Merge'
+import ChatIcon from '@mui/icons-material/Chat'
+import SummarizeIcon from '@mui/icons-material/Summarize'
 import { useAppStore } from '../store/useAppStore'
 import { palette } from '../theme'
+import NotificationCenter from '../components/notifications/NotificationCenter'
 
 const NAV_ITEMS = [
   {
@@ -41,6 +51,17 @@ const NAV_ITEMS = [
     items: [
       { key: 'connections', label: 'Connections', icon: StorageIcon, path: '/connections' },
       { key: 'templates', label: 'Templates', icon: DescriptionIcon, path: '/templates' },
+      { key: 'query', label: 'Query Builder', icon: QuestionAnswerIcon, path: '/query' },
+      { key: 'enrichment', label: 'Enrichment', icon: AutoFixHighIcon, path: '/enrichment' },
+      { key: 'federation', label: 'Federation', icon: JoinInnerIcon, path: '/federation' },
+    ],
+  },
+  {
+    section: 'AI Tools',
+    items: [
+      { key: 'synthesis', label: 'Doc Synthesis', icon: MergeIcon, path: '/synthesis' },
+      { key: 'docqa', label: 'Doc Q&A', icon: ChatIcon, path: '/docqa' },
+      { key: 'summary', label: 'Summary', icon: SummarizeIcon, path: '/summary' },
     ],
   },
   {
@@ -50,11 +71,14 @@ const NAV_ITEMS = [
       { key: 'schedules', label: 'Schedules', icon: ScheduleIcon, path: '/schedules' },
       { key: 'jobs', label: 'Jobs', icon: WorkIcon, path: '/jobs', badge: true },
       { key: 'analyze', label: 'Analyze', icon: AutoAwesomeIcon, path: '/analyze' },
+      { key: 'history', label: 'History', icon: HistoryIcon, path: '/history' },
     ],
   },
   {
     section: 'System',
     items: [
+      { key: 'stats', label: 'Statistics', icon: BarChartIcon, path: '/stats' },
+      { key: 'activity', label: 'Activity', icon: TimelineIcon, path: '/activity' },
       { key: 'settings', label: 'Settings', icon: SettingsIcon, path: '/settings' },
     ],
   },
@@ -143,20 +167,23 @@ export default function Sidebar({ width, collapsed, mobileOpen, onClose, onToggl
             </Typography>
           </Box>
         )}
-        <IconButton
-          size="small"
-          onClick={onToggle}
-          sx={{
-            color: palette.scale[500],
-            p: 0.75,
-            '&:hover': {
-              color: palette.scale[100],
-              bgcolor: alpha(palette.scale[100], 0.08),
-            },
-          }}
-        >
-          {collapsed ? <MenuIcon sx={{ fontSize: 18 }} /> : <ChevronLeftIcon sx={{ fontSize: 18 }} />}
-        </IconButton>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+          {!collapsed && <NotificationCenter />}
+          <IconButton
+            size="small"
+            onClick={onToggle}
+            sx={{
+              color: palette.scale[500],
+              p: 0.75,
+              '&:hover': {
+                color: palette.scale[100],
+                bgcolor: alpha(palette.scale[100], 0.08),
+              },
+            }}
+          >
+            {collapsed ? <MenuIcon sx={{ fontSize: 18 }} /> : <ChevronLeftIcon sx={{ fontSize: 18 }} />}
+          </IconButton>
+        </Box>
       </Box>
 
       {/* Quick Actions */}

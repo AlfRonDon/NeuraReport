@@ -4,26 +4,457 @@ Unified LLM Client.
 
 Provides a single interface for all LLM providers with:
 - Automatic retry with exponential backoff
+- Circuit breaker pattern for fault tolerance
 - Fallback to secondary provider
-- Response caching
+- Response caching (memory and disk)
+- Token counting and cost estimation
+- Request/response validation
 - Logging and monitoring
 - Vision/multimodal support
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import os
 import threading
 import time
-from datetime import datetime
+from collections import deque
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
+from enum import Enum
 from pathlib import Path
-from typing import Any, Callable, Dict, Iterator, List, Optional, Union
+from typing import Any, Callable, Dict, Iterator, List, Optional, Tuple, Union
 
 from .config import LLMConfig, LLMProvider, get_llm_config
 from .providers import BaseProvider, get_provider
 
 logger = logging.getLogger("neura.llm.client")
+
+
+# =============================================================================
+# Circuit Breaker Pattern Implementation
+# =============================================================================
+
+class CircuitState(Enum):
+    """Circuit breaker states."""
+    CLOSED = "closed"  # Normal operation
+    OPEN = "open"  # Failing, reject requests
+    HALF_OPEN = "half_open"  # Testing if service recovered
+
+
+@dataclass
+class CircuitBreakerConfig:
+    """Configuration for circuit breaker."""
+    failure_threshold: int = 5  # Failures before opening
+    success_threshold: int = 2  # Successes in half-open before closing
+    timeout_seconds: float = 60.0  # Time before moving from open to half-open
+    failure_window_seconds: float = 120.0  # Window to count failures
+
+
+class CircuitBreaker:
+    """
+    Circuit breaker for fault tolerance.
+
+    Prevents cascading failures by stopping requests to failing services.
+    Based on the pattern from resilience4j and Netflix Hystrix.
+    """
+
+    def __init__(self, name: str, config: Optional[CircuitBreakerConfig] = None):
+        self.name = name
+        self.config = config or CircuitBreakerConfig()
+        self._state = CircuitState.CLOSED
+        self._failure_count = 0
+        self._success_count = 0
+        self._last_failure_time: Optional[float] = None
+        self._state_changed_at = time.time()
+        self._failure_timestamps: deque = deque()
+        self._lock = threading.Lock()
+
+    @property
+    def state(self) -> CircuitState:
+        """Get current circuit state, potentially transitioning from OPEN to HALF_OPEN."""
+        with self._lock:
+            if self._state == CircuitState.OPEN:
+                if time.time() - self._state_changed_at >= self.config.timeout_seconds:
+                    self._transition_to(CircuitState.HALF_OPEN)
+            return self._state
+
+    def _transition_to(self, new_state: CircuitState) -> None:
+        """Transition to a new state."""
+        old_state = self._state
+        self._state = new_state
+        self._state_changed_at = time.time()
+
+        if new_state == CircuitState.CLOSED:
+            self._failure_count = 0
+            self._success_count = 0
+            self._failure_timestamps.clear()
+        elif new_state == CircuitState.HALF_OPEN:
+            self._success_count = 0
+
+        logger.info(
+            "circuit_breaker_state_change",
+            extra={
+                "event": "circuit_breaker_state_change",
+                "name": self.name,
+                "old_state": old_state.value,
+                "new_state": new_state.value,
+            }
+        )
+
+    def allow_request(self) -> bool:
+        """Check if request should be allowed."""
+        current_state = self.state  # This may trigger OPEN -> HALF_OPEN
+
+        if current_state == CircuitState.CLOSED:
+            return True
+        elif current_state == CircuitState.OPEN:
+            return False
+        else:  # HALF_OPEN
+            return True  # Allow test requests
+
+    def record_success(self) -> None:
+        """Record a successful request."""
+        with self._lock:
+            if self._state == CircuitState.HALF_OPEN:
+                self._success_count += 1
+                if self._success_count >= self.config.success_threshold:
+                    self._transition_to(CircuitState.CLOSED)
+            elif self._state == CircuitState.CLOSED:
+                # Clean old failures from window
+                self._clean_old_failures()
+
+    def record_failure(self) -> None:
+        """Record a failed request."""
+        with self._lock:
+            now = time.time()
+            self._last_failure_time = now
+
+            if self._state == CircuitState.HALF_OPEN:
+                self._transition_to(CircuitState.OPEN)
+            elif self._state == CircuitState.CLOSED:
+                self._failure_timestamps.append(now)
+                self._clean_old_failures()
+
+                if len(self._failure_timestamps) >= self.config.failure_threshold:
+                    self._transition_to(CircuitState.OPEN)
+
+    def _clean_old_failures(self) -> None:
+        """Remove failures outside the failure window."""
+        cutoff = time.time() - self.config.failure_window_seconds
+        while self._failure_timestamps and self._failure_timestamps[0] < cutoff:
+            self._failure_timestamps.popleft()
+
+    def get_stats(self) -> Dict[str, Any]:
+        """Get circuit breaker statistics."""
+        with self._lock:
+            return {
+                "name": self.name,
+                "state": self._state.value,
+                "failure_count": len(self._failure_timestamps),
+                "success_count": self._success_count,
+                "last_failure": self._last_failure_time,
+                "state_changed_at": self._state_changed_at,
+            }
+
+
+# =============================================================================
+# Response Cache Implementation
+# =============================================================================
+
+@dataclass
+class CacheEntry:
+    """Cache entry with metadata."""
+    response: Dict[str, Any]
+    created_at: float
+    expires_at: float
+    hit_count: int = 0
+    request_hash: str = ""
+
+
+class ResponseCache:
+    """
+    LRU cache for LLM responses with disk persistence.
+
+    Features:
+    - Memory cache with LRU eviction
+    - Optional disk persistence for long-term caching
+    - TTL-based expiration
+    - Cache key based on request content hash
+    """
+
+    def __init__(
+        self,
+        max_memory_items: int = 100,
+        max_disk_items: int = 1000,
+        default_ttl_seconds: float = 3600.0,
+        cache_dir: Optional[Path] = None,
+    ):
+        self.max_memory_items = max_memory_items
+        self.max_disk_items = max_disk_items
+        self.default_ttl_seconds = default_ttl_seconds
+        self.cache_dir = cache_dir
+
+        self._memory_cache: Dict[str, CacheEntry] = {}
+        self._access_order: deque = deque()
+        self._lock = threading.Lock()
+        self._stats = {"hits": 0, "misses": 0, "evictions": 0}
+
+        if cache_dir:
+            cache_dir.mkdir(parents=True, exist_ok=True)
+
+    def _compute_key(
+        self,
+        messages: List[Dict[str, Any]],
+        model: str,
+        **kwargs: Any,
+    ) -> str:
+        """Compute cache key from request parameters."""
+        # Create deterministic hash of request
+        key_data = {
+            "messages": messages,
+            "model": model,
+            "kwargs": {k: v for k, v in sorted(kwargs.items()) if k not in ("stream",)},
+        }
+        key_json = json.dumps(key_data, sort_keys=True, default=str)
+        return hashlib.sha256(key_json.encode()).hexdigest()[:32]
+
+    def get(
+        self,
+        messages: List[Dict[str, Any]],
+        model: str,
+        **kwargs: Any,
+    ) -> Optional[Dict[str, Any]]:
+        """Get cached response if available."""
+        key = self._compute_key(messages, model, **kwargs)
+
+        with self._lock:
+            # Check memory cache
+            entry = self._memory_cache.get(key)
+            if entry:
+                if time.time() < entry.expires_at:
+                    entry.hit_count += 1
+                    self._stats["hits"] += 1
+                    # Move to end of access order (most recent)
+                    if key in self._access_order:
+                        self._access_order.remove(key)
+                    self._access_order.append(key)
+                    return entry.response
+                else:
+                    # Expired
+                    del self._memory_cache[key]
+                    if key in self._access_order:
+                        self._access_order.remove(key)
+
+            # Check disk cache
+            if self.cache_dir:
+                disk_response = self._read_from_disk(key)
+                if disk_response:
+                    self._stats["hits"] += 1
+                    # Promote to memory cache
+                    self._set_memory(key, disk_response)
+                    return disk_response
+
+            self._stats["misses"] += 1
+            return None
+
+    def set(
+        self,
+        messages: List[Dict[str, Any]],
+        model: str,
+        response: Dict[str, Any],
+        ttl_seconds: Optional[float] = None,
+        **kwargs: Any,
+    ) -> None:
+        """Cache a response."""
+        key = self._compute_key(messages, model, **kwargs)
+        ttl = ttl_seconds or self.default_ttl_seconds
+
+        with self._lock:
+            self._set_memory(key, response, ttl)
+
+            # Also write to disk for persistence
+            if self.cache_dir:
+                self._write_to_disk(key, response, ttl)
+
+    def _set_memory(
+        self,
+        key: str,
+        response: Dict[str, Any],
+        ttl_seconds: Optional[float] = None,
+    ) -> None:
+        """Set entry in memory cache."""
+        ttl = ttl_seconds or self.default_ttl_seconds
+        now = time.time()
+
+        # Evict if at capacity
+        while len(self._memory_cache) >= self.max_memory_items and self._access_order:
+            oldest_key = self._access_order.popleft()
+            if oldest_key in self._memory_cache:
+                del self._memory_cache[oldest_key]
+                self._stats["evictions"] += 1
+
+        self._memory_cache[key] = CacheEntry(
+            response=response,
+            created_at=now,
+            expires_at=now + ttl,
+            request_hash=key,
+        )
+        self._access_order.append(key)
+
+    def _read_from_disk(self, key: str) -> Optional[Dict[str, Any]]:
+        """Read cached response from disk."""
+        if not self.cache_dir:
+            return None
+
+        cache_file = self.cache_dir / f"{key}.json"
+        if not cache_file.exists():
+            return None
+
+        try:
+            data = json.loads(cache_file.read_text(encoding="utf-8"))
+            if time.time() < data.get("expires_at", 0):
+                return data.get("response")
+            else:
+                # Expired, delete file
+                cache_file.unlink(missing_ok=True)
+                return None
+        except Exception:
+            return None
+
+    def _write_to_disk(
+        self,
+        key: str,
+        response: Dict[str, Any],
+        ttl_seconds: float,
+    ) -> None:
+        """Write cached response to disk."""
+        if not self.cache_dir:
+            return
+
+        cache_file = self.cache_dir / f"{key}.json"
+        try:
+            data = {
+                "response": response,
+                "created_at": time.time(),
+                "expires_at": time.time() + ttl_seconds,
+            }
+            cache_file.write_text(json.dumps(data), encoding="utf-8")
+        except Exception as e:
+            logger.debug(f"Failed to write cache to disk: {e}")
+
+    def clear(self) -> None:
+        """Clear all cached entries."""
+        with self._lock:
+            self._memory_cache.clear()
+            self._access_order.clear()
+            self._stats = {"hits": 0, "misses": 0, "evictions": 0}
+
+            if self.cache_dir:
+                for f in self.cache_dir.glob("*.json"):
+                    try:
+                        f.unlink()
+                    except Exception:
+                        pass
+
+    def get_stats(self) -> Dict[str, Any]:
+        """Get cache statistics."""
+        with self._lock:
+            total = self._stats["hits"] + self._stats["misses"]
+            hit_rate = self._stats["hits"] / total if total > 0 else 0
+            return {
+                **self._stats,
+                "hit_rate": hit_rate,
+                "memory_size": len(self._memory_cache),
+            }
+
+
+# =============================================================================
+# Token Counter and Cost Estimator
+# =============================================================================
+
+# Approximate token costs per 1K tokens (as of early 2025)
+TOKEN_COSTS: Dict[str, Dict[str, float]] = {
+    "gpt-4o": {"input": 0.0025, "output": 0.01},
+    "gpt-4o-mini": {"input": 0.00015, "output": 0.0006},
+    "gpt-4-turbo": {"input": 0.01, "output": 0.03},
+    "gpt-3.5-turbo": {"input": 0.0005, "output": 0.0015},
+    "claude-3-5-sonnet-20241022": {"input": 0.003, "output": 0.015},
+    "claude-3-opus-20240229": {"input": 0.015, "output": 0.075},
+    "deepseek-chat": {"input": 0.00014, "output": 0.00028},
+    "deepseek-reasoner": {"input": 0.00055, "output": 0.00219},
+}
+
+
+def estimate_tokens(text: str) -> int:
+    """
+    Estimate token count for text.
+
+    Uses a simple heuristic: ~4 characters per token for English text.
+    For more accurate counting, use tiktoken library.
+    """
+    try:
+        import tiktoken
+        enc = tiktoken.get_encoding("cl100k_base")
+        return len(enc.encode(text))
+    except ImportError:
+        # Fallback to heuristic
+        return max(1, len(text) // 4)
+
+
+def estimate_cost(
+    model: str,
+    input_tokens: int,
+    output_tokens: int,
+) -> float:
+    """Estimate cost for a completion."""
+    costs = TOKEN_COSTS.get(model, TOKEN_COSTS.get("gpt-4o", {"input": 0.01, "output": 0.03}))
+    input_cost = (input_tokens / 1000) * costs["input"]
+    output_cost = (output_tokens / 1000) * costs["output"]
+    return input_cost + output_cost
+
+
+@dataclass
+class UsageTracker:
+    """Track token usage and costs."""
+    total_input_tokens: int = 0
+    total_output_tokens: int = 0
+    total_cost: float = 0.0
+    request_count: int = 0
+    _lock: threading.Lock = field(default_factory=threading.Lock)
+
+    def record(self, model: str, input_tokens: int, output_tokens: int) -> None:
+        """Record token usage from a request."""
+        with self._lock:
+            self.total_input_tokens += input_tokens
+            self.total_output_tokens += output_tokens
+            self.total_cost += estimate_cost(model, input_tokens, output_tokens)
+            self.request_count += 1
+
+    def get_stats(self) -> Dict[str, Any]:
+        """Get usage statistics."""
+        with self._lock:
+            return {
+                "total_input_tokens": self.total_input_tokens,
+                "total_output_tokens": self.total_output_tokens,
+                "total_tokens": self.total_input_tokens + self.total_output_tokens,
+                "estimated_cost_usd": round(self.total_cost, 4),
+                "request_count": self.request_count,
+            }
+
+    def reset(self) -> None:
+        """Reset usage statistics."""
+        with self._lock:
+            self.total_input_tokens = 0
+            self.total_output_tokens = 0
+            self.total_cost = 0.0
+            self.request_count = 0
+
+
+# Global usage tracker
+_usage_tracker = UsageTracker()
 
 # Raw output logging
 _LOG_PATH_ENV = os.getenv("LLM_RAW_OUTPUT_PATH")
@@ -38,6 +469,13 @@ class LLMClient:
     """
     Unified LLM client supporting multiple providers.
 
+    Features:
+    - Circuit breaker for fault tolerance
+    - Response caching (memory and disk)
+    - Token usage tracking
+    - Automatic retry with exponential backoff
+    - Fallback to secondary provider
+
     Usage:
         client = LLMClient()
         response = client.complete(
@@ -50,10 +488,39 @@ class LLMClient:
         self,
         config: Optional[LLMConfig] = None,
         provider: Optional[BaseProvider] = None,
+        enable_cache: bool = True,
+        enable_circuit_breaker: bool = True,
+        cache_dir: Optional[Path] = None,
     ):
         self.config = config or get_llm_config()
         self._provider = provider or get_provider(self.config)
         self._fallback_provider: Optional[BaseProvider] = None
+
+        # Initialize circuit breaker
+        self._circuit_breaker: Optional[CircuitBreaker] = None
+        if enable_circuit_breaker:
+            self._circuit_breaker = CircuitBreaker(
+                name=f"llm_{self.config.provider.value}",
+                config=CircuitBreakerConfig(
+                    failure_threshold=self.config.max_retries + 2,
+                    timeout_seconds=60.0,
+                )
+            )
+
+        # Initialize response cache
+        self._cache: Optional[ResponseCache] = None
+        if enable_cache:
+            default_cache_dir = cache_dir or Path(
+                os.getenv("LLM_CACHE_DIR", "")
+            ) if os.getenv("LLM_CACHE_DIR") else None
+            self._cache = ResponseCache(
+                max_memory_items=int(os.getenv("LLM_CACHE_MAX_ITEMS", "100")),
+                default_ttl_seconds=float(os.getenv("LLM_CACHE_TTL_SECONDS", "3600")),
+                cache_dir=default_cache_dir,
+            )
+
+        # Initialize usage tracker
+        self._usage_tracker = UsageTracker()
 
         if self.config.fallback_provider:
             fallback_config = LLMConfig(
@@ -80,15 +547,19 @@ class LLMClient:
         messages: List[Dict[str, Any]],
         model: Optional[str] = None,
         description: str = "llm_call",
+        use_cache: bool = True,
+        cache_ttl: Optional[float] = None,
         **kwargs: Any,
     ) -> Dict[str, Any]:
         """
-        Execute a chat completion with retries and fallback.
+        Execute a chat completion with retries, caching, and fallback.
 
         Args:
             messages: List of message dicts with role and content
             model: Optional model override
             description: Description for logging
+            use_cache: Whether to use response caching
+            cache_ttl: Optional cache TTL override in seconds
             **kwargs: Additional provider-specific options
 
         Returns:
@@ -97,6 +568,38 @@ class LLMClient:
         model = model or self.config.model
         delay = self.config.retry_delay
         last_exc: Optional[Exception] = None
+
+        # Check cache first
+        if use_cache and self._cache and not kwargs.get("stream"):
+            cached = self._cache.get(messages, model, **kwargs)
+            if cached:
+                logger.debug(
+                    "llm_cache_hit",
+                    extra={
+                        "event": "llm_cache_hit",
+                        "description": description,
+                        "model": model,
+                    }
+                )
+                return cached
+
+        # Check circuit breaker
+        if self._circuit_breaker and not self._circuit_breaker.allow_request():
+            logger.warning(
+                "llm_circuit_open",
+                extra={
+                    "event": "llm_circuit_open",
+                    "description": description,
+                    "provider": self.config.provider.value,
+                }
+            )
+            # Try fallback immediately if circuit is open
+            if self._fallback_provider:
+                return self._try_fallback(messages, model, description, **kwargs)
+            raise RuntimeError(
+                "AI service is temporarily unavailable due to repeated failures. "
+                "Please try again in a few minutes. If the problem persists, check your API configuration."
+            )
 
         for attempt in range(1, self.config.max_retries + 1):
             try:
@@ -111,13 +614,26 @@ class LLMClient:
                     }
                 )
 
+                start_time = time.time()
                 response = self._provider.chat_completion(
                     messages=messages,
                     model=model,
                     **kwargs
                 )
+                latency_ms = (time.time() - start_time) * 1000
 
                 _append_raw_output(description, response)
+
+                # Record success with circuit breaker
+                if self._circuit_breaker:
+                    self._circuit_breaker.record_success()
+
+                # Track usage
+                usage = response.get("usage", {})
+                input_tokens = usage.get("prompt_tokens", 0)
+                output_tokens = usage.get("completion_tokens", 0)
+                self._usage_tracker.record(model, input_tokens, output_tokens)
+                _usage_tracker.record(model, input_tokens, output_tokens)
 
                 logger.info(
                     "llm_call_success",
@@ -127,13 +643,24 @@ class LLMClient:
                         "attempt": attempt,
                         "model": model,
                         "provider": self.config.provider.value,
+                        "latency_ms": round(latency_ms, 2),
+                        "input_tokens": input_tokens,
+                        "output_tokens": output_tokens,
                     }
                 )
+
+                # Cache successful response
+                if use_cache and self._cache and not kwargs.get("stream"):
+                    self._cache.set(messages, model, response, cache_ttl, **kwargs)
 
                 return response
 
             except Exception as exc:
                 last_exc = exc
+
+                # Record failure with circuit breaker
+                if self._circuit_breaker:
+                    self._circuit_breaker.record_failure()
 
                 # Check for quota/rate limit errors
                 if _is_quota_exceeded_error(exc):
@@ -160,6 +687,18 @@ class LLMClient:
                     kwargs.pop("temperature", None)
                     continue
 
+                # Check for context length errors
+                if _is_context_length_error(exc):
+                    logger.warning(
+                        "llm_context_length_exceeded",
+                        extra={
+                            "event": "llm_context_length_exceeded",
+                            "description": description,
+                            "model": model,
+                        }
+                    )
+                    break  # Don't retry, won't help
+
                 logger.warning(
                     "llm_call_retry",
                     extra={
@@ -169,6 +708,7 @@ class LLMClient:
                         "max_attempts": self.config.max_retries,
                         "retry_in": delay if attempt < self.config.max_retries else None,
                         "error": str(exc),
+                        "error_type": type(exc).__name__,
                     }
                 )
 
@@ -180,31 +720,10 @@ class LLMClient:
 
         # Try fallback provider if available
         if self._fallback_provider and last_exc:
-            logger.info(
-                "llm_fallback_attempt",
-                extra={
-                    "event": "llm_fallback_attempt",
-                    "description": description,
-                    "fallback_provider": self.config.fallback_provider.value if self.config.fallback_provider else None,
-                }
-            )
             try:
-                response = self._fallback_provider.chat_completion(
-                    messages=messages,
-                    model=self.config.fallback_model,
-                    **kwargs
-                )
-                _append_raw_output(f"{description}_fallback", response)
-                return response
-            except Exception as fallback_exc:
-                logger.error(
-                    "llm_fallback_failed",
-                    extra={
-                        "event": "llm_fallback_failed",
-                        "description": description,
-                        "error": str(fallback_exc),
-                    }
-                )
+                return self._try_fallback(messages, model, description, **kwargs)
+            except Exception:
+                pass  # Fallback also failed, continue to error handling
 
         # All attempts failed
         assert last_exc is not None
@@ -215,19 +734,71 @@ class LLMClient:
                 "description": description,
                 "attempts": self.config.max_retries,
                 "model": model,
+                "error_type": type(last_exc).__name__,
             },
             exc_info=last_exc,
         )
 
         if _is_quota_exceeded_error(last_exc):
             raise RuntimeError(
-                f"{description} failed: API quota exceeded. "
-                "Please check your API plan and billing details."
+                "AI service quota exceeded. Please check your API plan and billing details, "
+                "or wait for the rate limit to reset."
+            ) from last_exc
+
+        if _is_context_length_error(last_exc):
+            raise RuntimeError(
+                "The document is too large for the AI to process. "
+                "Please try with a smaller document or fewer pages."
             ) from last_exc
 
         raise RuntimeError(
-            f"{description} failed after {self.config.max_retries} attempts"
+            "AI processing failed. Please try again. If the problem persists, "
+            "check your API configuration or contact support."
         ) from last_exc
+
+    def _try_fallback(
+        self,
+        messages: List[Dict[str, Any]],
+        model: str,
+        description: str,
+        **kwargs: Any,
+    ) -> Dict[str, Any]:
+        """Try fallback provider."""
+        logger.info(
+            "llm_fallback_attempt",
+            extra={
+                "event": "llm_fallback_attempt",
+                "description": description,
+                "fallback_provider": self.config.fallback_provider.value if self.config.fallback_provider else None,
+            }
+        )
+        try:
+            response = self._fallback_provider.chat_completion(
+                messages=messages,
+                model=self.config.fallback_model,
+                **kwargs
+            )
+            _append_raw_output(f"{description}_fallback", response)
+
+            # Track usage for fallback
+            usage = response.get("usage", {})
+            input_tokens = usage.get("prompt_tokens", 0)
+            output_tokens = usage.get("completion_tokens", 0)
+            fallback_model = self.config.fallback_model or model
+            self._usage_tracker.record(fallback_model, input_tokens, output_tokens)
+            _usage_tracker.record(fallback_model, input_tokens, output_tokens)
+
+            return response
+        except Exception as fallback_exc:
+            logger.error(
+                "llm_fallback_failed",
+                extra={
+                    "event": "llm_fallback_failed",
+                    "description": description,
+                    "error": str(fallback_exc),
+                }
+            )
+            raise
 
     def complete_with_vision(
         self,
@@ -557,3 +1128,46 @@ def _is_temperature_unsupported_error(exc: BaseException) -> bool:
     """Check if exception is about unsupported temperature."""
     detail = str(exc).lower()
     return "temperature" in detail and "unsupported" in detail
+
+
+def _is_context_length_error(exc: BaseException) -> bool:
+    """Check if exception is about context length exceeded."""
+    detail = str(exc).lower()
+
+    context_indicators = [
+        "context_length_exceeded",
+        "maximum context length",
+        "token limit",
+        "too many tokens",
+        "context window",
+        "max_tokens",
+        "input too long",
+    ]
+
+    return any(indicator in detail for indicator in context_indicators)
+
+
+def _is_invalid_request_error(exc: BaseException) -> bool:
+    """Check if exception is an invalid request error."""
+    detail = str(exc).lower()
+
+    invalid_indicators = [
+        "invalid_request",
+        "invalid request",
+        "bad request",
+        "malformed",
+        "invalid_api_key",
+        "invalid api key",
+    ]
+
+    return any(indicator in detail for indicator in invalid_indicators)
+
+
+def get_global_usage_stats() -> Dict[str, Any]:
+    """Get global token usage statistics."""
+    return _usage_tracker.get_stats()
+
+
+def reset_global_usage_stats() -> None:
+    """Reset global token usage statistics."""
+    _usage_tracker.reset()
