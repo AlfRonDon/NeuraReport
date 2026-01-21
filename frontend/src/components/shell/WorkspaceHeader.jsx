@@ -23,7 +23,7 @@ const WORKSPACE_META = {
     title: 'Setup',
     description: 'Configure database connection and templates',
   },
-  generate: {
+  reports: {
     title: 'Generate Reports',
     description: 'Select templates and create reports',
   },
@@ -57,12 +57,12 @@ export default function WorkspaceHeader({
 
     if (path === '/') {
       crumbs.push({ label: 'Setup', path: '/', active: true })
-    } else if (path === '/generate') {
-      crumbs.push({ label: 'Generate', path: '/generate', active: true })
+    } else if (path === '/reports') {
+      crumbs.push({ label: 'Reports', path: '/reports', active: true })
     } else if (path === '/analyze') {
       crumbs.push({ label: 'Analyze', path: '/analyze', active: true })
     } else if (path.startsWith('/templates/')) {
-      crumbs.push({ label: 'Generate', path: '/generate', active: false })
+      crumbs.push({ label: 'Reports', path: '/reports', active: false })
       crumbs.push({ label: 'Edit Template', path: path, active: true })
     }
 
@@ -177,7 +177,7 @@ export default function WorkspaceHeader({
         {/* Quick Actions */}
         {onRefresh && (
           <Tooltip title="Refresh">
-            <IconButton size="small" onClick={onRefresh}>
+            <IconButton size="small" onClick={onRefresh} aria-label="Refresh">
               <RefreshIcon fontSize="small" />
             </IconButton>
           </Tooltip>
@@ -186,7 +186,15 @@ export default function WorkspaceHeader({
         <NotificationCenter />
 
         <Tooltip title="Keyboard shortcuts (⌘K)">
-          <IconButton size="small">
+          <IconButton
+            size="small"
+            aria-label="Keyboard shortcuts"
+            onClick={() => {
+              if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent('neura:open-command-palette'))
+              }
+            }}
+          >
             <KeyboardCommandKeyIcon fontSize="small" />
           </IconButton>
         </Tooltip>

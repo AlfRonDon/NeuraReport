@@ -23,7 +23,8 @@
       "Bash(npm run build:*)",
       "Bash(dir /b *.toml *.cfg setup.py)",
       "Bash(dir:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(xargs basename:*)"
     ],
     "defaultMode": "bypassPermissions"
   }

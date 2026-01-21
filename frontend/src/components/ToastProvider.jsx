@@ -32,10 +32,37 @@ const SEVERITY_STYLES = {
 }
 
 export function ToastProvider({ children }) {
-  const [state, setState] = useState({ open: false, message: '', severity: 'info' })
-  const show = useCallback((message, severity = 'info') => setState({ open: true, message, severity }), [])
-  const onClose = () => setState((s) => ({ ...s, open: false }))
-  const contextValue = useMemo(() => ({ show }), [show])
+  const [state, setState] = useState({ open: false, message: '', severity: 'info', action: null })
+
+  const show = useCallback((message, severity = 'info') => {
+    setState({ open: true, message, severity, action: null })
+  }, [])
+
+  const showWithUndo = useCallback((message, onUndo, options = {}) => {
+    const { severity = 'info', undoLabel = 'Undo', duration = 5000 } = options
+    setState({
+      open: true,
+      message,
+      severity,
+      action: { onUndo, undoLabel },
+      duration,
+    })
+  }, [])
+
+  const onClose = (event, reason) => {
+    // Don't close on clickaway if there's an action
+    if (reason === 'clickaway' && state.action) return
+    setState((s) => ({ ...s, open: false, action: null }))
+  }
+
+  const handleUndo = useCallback(() => {
+    if (state.action?.onUndo) {
+      state.action.onUndo()
+    }
+    setState((s) => ({ ...s, open: false, action: null }))
+  }, [state.action])
+
+  const contextValue = useMemo(() => ({ show, showWithUndo }), [show, showWithUndo])
 
   const styles = SEVERITY_STYLES[state.severity] || SEVERITY_STYLES.info
 
@@ -44,7 +71,7 @@ export function ToastProvider({ children }) {
       {children}
       <Snackbar
         open={state.open}
-        autoHideDuration={3000}
+        autoHideDuration={state.duration || (state.action ? 5000 : 3000)}
         onClose={onClose}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
         sx={{
@@ -58,6 +85,22 @@ export function ToastProvider({ children }) {
           severity={state.severity}
           role="alert"
           aria-live={state.severity === 'error' ? 'assertive' : 'polite'}
+          action={
+            state.action ? (
+              <Button
+                color="inherit"
+                size="small"
+                onClick={handleUndo}
+                sx={{
+                  fontWeight: 600,
+                  textTransform: 'none',
+                  ml: 1,
+                }}
+              >
+                {state.action.undoLabel}
+              </Button>
+            ) : undefined
+          }
           sx={{
             ...styles,
             borderRadius: '8px',

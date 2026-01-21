@@ -16,11 +16,41 @@ import {
   Divider,
   FormHelperText,
   CircularProgress,
+  Tooltip,
+  InputAdornment,
+  IconButton,
 } from '@mui/material'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import ExpandLessIcon from '@mui/icons-material/ExpandLess'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import ErrorIcon from '@mui/icons-material/Error'
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline'
+
+// Help text for each field
+const FIELD_HELP = {
+  name: 'A friendly name to identify this connection. Example: "Production Database" or "Local Dev".',
+  db_type: 'The type of database you\'re connecting to. Contact your database administrator if you\'re unsure.',
+  host: 'The server address where your database is hosted. This could be a domain name (db.example.com) or an IP address (192.168.1.1). Use "localhost" for local databases.',
+  port: 'The port number your database listens on. Default ports: PostgreSQL (5432), MySQL (3306), SQL Server (1433). Usually you don\'t need to change this.',
+  database: 'The name of the specific database you want to connect to on the server. Ask your database administrator if you\'re not sure.',
+  database_sqlite: 'The file path to your SQLite database file. Example: /home/user/data/myapp.db',
+  username: 'Your database username. This is the account that will be used to run queries.',
+  password: 'Your database password. This will be stored securely and encrypted.',
+  ssl: 'Enable SSL/TLS encryption for secure connections. Recommended for production databases, especially over the internet.',
+}
+
+function HelpIcon({ field }) {
+  const helpText = FIELD_HELP[field]
+  if (!helpText) return null
+
+  return (
+    <Tooltip title={helpText} arrow placement="top">
+      <IconButton size="small" sx={{ p: 0.5 }} aria-label={helpText}>
+        <HelpOutlineIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
+      </IconButton>
+    </Tooltip>
+  )
+}
 import { testConnection } from '../../api/client'
 import {
   validateRequired,
@@ -30,9 +60,6 @@ import {
 } from '../../utils/validation'
 
 const DB_TYPES = [
-  { value: 'postgresql', label: 'PostgreSQL', port: 5432 },
-  { value: 'mysql', label: 'MySQL', port: 3306 },
-  { value: 'mssql', label: 'SQL Server', port: 1433 },
   { value: 'sqlite', label: 'SQLite', port: null },
 ]
 
@@ -66,7 +93,7 @@ const validators = {
 export default function ConnectionForm({ connection, onSave, onCancel, loading }) {
   const [formData, setFormData] = useState({
     name: connection?.name || '',
-    db_type: connection?.db_type || 'postgresql',
+    db_type: connection?.db_type || 'sqlite',
     host: connection?.host || 'localhost',
     port: connection?.port || 5432,
     database: connection?.database || '',
@@ -147,8 +174,17 @@ export default function ConnectionForm({ connection, onSave, onCancel, loading }
 
     try {
       const db_url = buildConnectionUrl()
-      const result = await testConnection({ db_url })
-      if (result?.status === 'healthy' || result?.healthy) {
+      const result = await testConnection({
+        db_url,
+        db_type: formData.db_type,
+        database: formData.database,
+      })
+      if (
+        result?.status === 'healthy'
+        || result?.healthy
+        || result?.status === 'ok'
+        || result?.ok
+      ) {
         setTestResult('success')
       } else {
         setTestResult('error')
@@ -208,17 +244,37 @@ export default function ConnectionForm({ connection, onSave, onCancel, loading }
     <Box component="form" onSubmit={handleSubmit}>
       <Stack spacing={3}>
         {error && (
-          <Alert severity="error" onClose={() => setError(null)}>
+          <Alert
+            severity="error"
+            onClose={() => setError(null)}
+            action={
+              testResult === 'error' && (
+                <Button
+                  color="inherit"
+                  size="small"
+                  onClick={handleTestConnection}
+                  disabled={testing}
+                >
+                  Try Again
+                </Button>
+              )
+            }
+          >
             {error}
           </Alert>
         )}
 
         <TextField
-          label="Connection Name"
+          label={
+            <Stack direction="row" alignItems="center" spacing={0.5} component="span">
+              <span>Connection Name</span>
+              <HelpIcon field="name" />
+            </Stack>
+          }
           value={formData.name}
           onChange={handleChange('name')}
           onBlur={handleBlur('name')}
-          placeholder="My Database"
+          placeholder="e.g., Production Database"
           required
           fullWidth
           error={touched.name && Boolean(fieldErrors.name)}
@@ -226,11 +282,16 @@ export default function ConnectionForm({ connection, onSave, onCancel, loading }
         />
 
         <FormControl fullWidth>
-          <InputLabel>Database Type</InputLabel>
+          <InputLabel>
+            <Stack direction="row" alignItems="center" spacing={0.5} component="span">
+              <span>Database Type</span>
+              <HelpIcon field="db_type" />
+            </Stack>
+          </InputLabel>
           <Select
             value={formData.db_type}
             onChange={handleDbTypeChange}
-            label="Database Type"
+            label="Database Type      "
           >
             {DB_TYPES.map((type) => (
               <MenuItem key={type.value} value={type.value}>
@@ -238,63 +299,91 @@ export default function ConnectionForm({ connection, onSave, onCancel, loading }
               </MenuItem>
             ))}
           </Select>
+          <FormHelperText>Not sure? Ask your database administrator</FormHelperText>
         </FormControl>
 
         {!isSqlite && (
           <Stack direction="row" spacing={2}>
             <TextField
-              label="Host"
+              label={
+                <Stack direction="row" alignItems="center" spacing={0.5} component="span">
+                  <span>Server Address</span>
+                  <HelpIcon field="host" />
+                </Stack>
+              }
               value={formData.host}
               onChange={handleChange('host')}
               onBlur={handleBlur('host')}
-              placeholder="localhost"
+              placeholder="e.g., db.example.com"
               required
               sx={{ flex: 2 }}
               error={touched.host && Boolean(fieldErrors.host)}
-              helperText={touched.host && fieldErrors.host}
+              helperText={touched.host ? fieldErrors.host : 'The URL or IP address of your database server'}
             />
             <TextField
-              label="Port"
+              label={
+                <Stack direction="row" alignItems="center" spacing={0.5} component="span">
+                  <span>Port</span>
+                  <HelpIcon field="port" />
+                </Stack>
+              }
               type="number"
               value={formData.port}
               onChange={handleChange('port')}
               onBlur={handleBlur('port')}
               sx={{ flex: 1 }}
               error={touched.port && Boolean(fieldErrors.port)}
-              helperText={touched.port && fieldErrors.port}
+              helperText={touched.port ? fieldErrors.port : 'Usually automatic'}
             />
           </Stack>
         )}
 
         <TextField
-          label={isSqlite ? 'Database Path' : 'Database Name'}
+          label={
+            <Stack direction="row" alignItems="center" spacing={0.5} component="span">
+              <span>{isSqlite ? 'Database Path' : 'Database Name'}</span>
+              <HelpIcon field={isSqlite ? 'database_sqlite' : 'database'} />
+            </Stack>
+          }
           value={formData.database}
           onChange={handleChange('database')}
           onBlur={handleBlur('database')}
-          placeholder={isSqlite ? '/path/to/database.db' : 'mydatabase'}
+          placeholder={isSqlite ? '/path/to/database.db' : 'e.g., my_database'}
           required
           fullWidth
           error={touched.database && Boolean(fieldErrors.database)}
-          helperText={touched.database && fieldErrors.database}
+          helperText={touched.database ? fieldErrors.database : (isSqlite ? 'Full path to your SQLite file' : 'The name of the database on the server')}
         />
 
         {!isSqlite && (
           <>
             <TextField
-              label="Username"
+              label={
+                <Stack direction="row" alignItems="center" spacing={0.5} component="span">
+                  <span>Username</span>
+                  <HelpIcon field="username" />
+                </Stack>
+              }
               value={formData.username}
               onChange={handleChange('username')}
-              placeholder="postgres"
+              placeholder="e.g., postgres"
               fullWidth
+              helperText="The database account to use"
             />
 
             <TextField
-              label="Password"
+              label={
+                <Stack direction="row" alignItems="center" spacing={0.5} component="span">
+                  <span>Password</span>
+                  <HelpIcon field="password" />
+                </Stack>
+              }
               type="password"
               value={formData.password}
               onChange={handleChange('password')}
               placeholder="Enter password"
               fullWidth
+              helperText="Stored securely and encrypted"
             />
           </>
         )}
@@ -322,7 +411,12 @@ export default function ConnectionForm({ connection, onSave, onCancel, loading }
                         onChange={handleChange('ssl')}
                       />
                     }
-                    label="Use SSL"
+                    label={
+                      <Stack direction="row" alignItems="center" spacing={0.5}>
+                        <span>Use Secure Connection (SSL)</span>
+                        <HelpIcon field="ssl" />
+                      </Stack>
+                    }
                   />
                 )}
                 <Typography variant="caption" color="text.secondary">
@@ -341,10 +435,22 @@ export default function ConnectionForm({ connection, onSave, onCancel, loading }
             severity={testResult === 'success' ? 'success' : 'error'}
             icon={testResult === 'success' ? <CheckCircleIcon /> : <ErrorIcon />}
             onClose={() => setTestResult(null)}
+            action={
+              testResult === 'error' && (
+                <Button
+                  color="inherit"
+                  size="small"
+                  onClick={handleTestConnection}
+                  disabled={testing}
+                >
+                  Retry
+                </Button>
+              )
+            }
           >
             {testResult === 'success'
               ? 'Connection successful! Database is reachable.'
-              : error || 'Connection failed'}
+              : error || 'Connection failed. Check your settings and try again.'}
           </Alert>
         )}
 

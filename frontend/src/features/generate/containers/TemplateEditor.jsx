@@ -437,7 +437,7 @@ export default function TemplateEditor() {
 
             {/* Keyboard shortcuts button */}
             <Tooltip title="Keyboard shortcuts">
-              <IconButton size="small" onClick={() => setShortcutsOpen(true)}>
+              <IconButton size="small" onClick={() => setShortcutsOpen(true)} aria-label="Keyboard shortcuts">
                 <KeyboardIcon fontSize="small" />
               </IconButton>
             </Tooltip>
@@ -482,7 +482,7 @@ export default function TemplateEditor() {
                   <Stack direction="row" justifyContent="space-between" alignItems="center">
                     <Typography variant="subtitle1">Preview</Typography>
                     <Tooltip title={previewFullscreen ? 'Exit fullscreen' : 'Fullscreen preview'}>
-                      <IconButton size="small" onClick={() => setPreviewFullscreen(!previewFullscreen)}>
+                      <IconButton size="small" onClick={() => setPreviewFullscreen(!previewFullscreen)} aria-label={previewFullscreen ? 'Exit fullscreen' : 'Fullscreen preview'}>
                         {previewFullscreen ? <FullscreenExitIcon fontSize="small" /> : <FullscreenIcon fontSize="small" />}
                       </IconButton>
                     </Tooltip>
@@ -556,7 +556,7 @@ export default function TemplateEditor() {
                   <Stack direction="row" justifyContent="space-between" alignItems="center">
                     <Typography variant="subtitle1">Preview</Typography>
                     <Tooltip title={previewFullscreen ? 'Exit fullscreen' : 'Fullscreen preview'}>
-                      <IconButton size="small" onClick={() => setPreviewFullscreen(!previewFullscreen)}>
+                      <IconButton size="small" onClick={() => setPreviewFullscreen(!previewFullscreen)} aria-label={previewFullscreen ? 'Exit fullscreen' : 'Fullscreen preview'}>
                         {previewFullscreen ? <FullscreenExitIcon fontSize="small" /> : <FullscreenIcon fontSize="small" />}
                       </IconButton>
                     </Tooltip>
@@ -733,9 +733,11 @@ export default function TemplateEditor() {
               Compare saved version with current edits
             </Typography>
           </Box>
-          <IconButton onClick={() => setDiffOpen(false)}>
-            <CloseIcon />
-          </IconButton>
+          <Tooltip title="Close">
+            <IconButton onClick={() => setDiffOpen(false)} aria-label="Close dialog">
+              <CloseIcon />
+            </IconButton>
+          </Tooltip>
         </DialogTitle>
         <DialogContent dividers sx={{ p: 0, display: 'flex', flexDirection: 'column' }}>
           <EnhancedDiffViewer beforeText={initialHtml} afterText={html} contextLines={3} />
@@ -764,9 +766,11 @@ export default function TemplateEditor() {
       >
         <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           Keyboard Shortcuts
-          <IconButton onClick={() => setShortcutsOpen(false)}>
-            <CloseIcon />
-          </IconButton>
+          <Tooltip title="Close">
+            <IconButton onClick={() => setShortcutsOpen(false)} aria-label="Close dialog">
+              <CloseIcon />
+            </IconButton>
+          </Tooltip>
         </DialogTitle>
         <DialogContent>
           <KeyboardShortcutsPanel />

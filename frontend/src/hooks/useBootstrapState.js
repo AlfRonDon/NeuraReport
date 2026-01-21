@@ -59,10 +59,14 @@ export function useBootstrapState() {
     setTemplates,
     setLastUsed,
     setConnection,
+    initDemoMode,
   } = useAppStore()
 
   useEffect(() => {
     if (hydrated) return
+
+    // Initialize demo mode from preferences
+    initDemoMode()
 
     const cached = loadPersistedCache()
     if (cached) {
@@ -139,5 +143,6 @@ export function useBootstrapState() {
     setTemplates,
     setLastUsed,
     setConnection,
+    initDemoMode,
   ])
 }

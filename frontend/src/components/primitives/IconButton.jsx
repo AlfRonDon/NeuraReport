@@ -8,6 +8,7 @@ const IconButton = forwardRef(function IconButton(
     size = 'medium',
     color = 'default',
     disabled = false,
+    'aria-label': ariaLabel,
     ...props
   },
   ref
@@ -18,6 +19,7 @@ const IconButton = forwardRef(function IconButton(
       size={size}
       color={color}
       disabled={disabled}
+      aria-label={ariaLabel || tooltip}
       sx={{
         borderRadius: 2,
         transition: 'all 150ms ease',

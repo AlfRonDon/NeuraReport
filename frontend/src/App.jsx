@@ -26,6 +26,7 @@ const JobsPage = lazy(() => import('./pages/jobs/JobsPage.jsx'))
 const ReportsPage = lazy(() => import('./pages/reports/ReportsPage.jsx'))
 const SchedulesPage = lazy(() => import('./pages/schedules/SchedulesPage.jsx'))
 const AnalyzePage = lazy(() => import('./features/analyze/containers/AnalyzePageContainer.jsx'))
+const EnhancedAnalyzePage = lazy(() => import('./features/analyze/containers/EnhancedAnalyzePageContainer.jsx'))
 const SettingsPage = lazy(() => import('./pages/settings/SettingsPage.jsx'))
 const ActivityPage = lazy(() => import('./pages/activity/ActivityPage.jsx'))
 const HistoryPage = lazy(() => import('./pages/history/HistoryPage.jsx'))
@@ -198,7 +199,8 @@ function AppContent() {
               <Route path="/jobs" element={<JobsPage />} />
               <Route path="/reports" element={<ReportsPage />} />
               <Route path="/schedules" element={<SchedulesPage />} />
-              <Route path="/analyze" element={<AnalyzePage />} />
+              <Route path="/analyze" element={<EnhancedAnalyzePage />} />
+              <Route path="/analyze/legacy" element={<AnalyzePage />} />
               <Route path="/settings" element={<SettingsPage />} />
               <Route path="/activity" element={<ActivityPage />} />
               <Route path="/history" element={<HistoryPage />} />

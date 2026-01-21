@@ -1,3 +1,7 @@
+/**
+ * Premium Modal Component
+ * Sophisticated dialog with glassmorphism and smooth animations
+ */
 import {
   Dialog,
   DialogTitle,
@@ -9,10 +13,181 @@ import {
   Button,
   Divider,
   CircularProgress,
+  Zoom,
+  Fade,
+  useTheme,
   alpha,
+  styled,
+  keyframes,
 } from '@mui/material'
-import CloseIcon from '@mui/icons-material/Close'
-import { palette } from '../../theme'
+import { Close as CloseIcon } from '@mui/icons-material'
+
+// =============================================================================
+// ANIMATIONS
+// =============================================================================
+
+const slideUp = keyframes`
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+`
+
+const fadeIn = keyframes`
+  from { opacity: 0; }
+  to { opacity: 1; }
+`
+
+const shimmer = keyframes`
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+`
+
+// =============================================================================
+// STYLED COMPONENTS
+// =============================================================================
+
+const StyledDialog = styled(Dialog)(({ theme }) => ({
+  '& .MuiBackdrop-root': {
+    backgroundColor: alpha(theme.palette.common.black, 0.6),
+    backdropFilter: 'blur(8px)',
+  },
+}))
+
+const DialogPaper = styled(Box)(({ theme }) => ({
+  backgroundColor: alpha(theme.palette.background.paper, 0.95),
+  backdropFilter: 'blur(20px)',
+  border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+  borderRadius: 20,
+  boxShadow: `
+    0 0 0 1px ${alpha(theme.palette.common.white, 0.05)} inset,
+    0 24px 64px ${alpha(theme.palette.common.black, 0.25)},
+    0 8px 32px ${alpha(theme.palette.common.black, 0.15)}
+  `,
+  animation: `${slideUp} 0.3s ease-out`,
+  overflow: 'hidden',
+  position: 'relative',
+  '&::before': {
+    content: '""',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 120,
+    background: `linear-gradient(180deg, ${alpha(theme.palette.primary.main, 0.03)} 0%, transparent 100%)`,
+    pointerEvents: 'none',
+  },
+}))
+
+const StyledDialogTitle = styled(DialogTitle)(({ theme }) => ({
+  display: 'flex',
+  alignItems: 'flex-start',
+  justifyContent: 'space-between',
+  padding: theme.spacing(3),
+  position: 'relative',
+  zIndex: 1,
+}))
+
+const TitleText = styled(Typography)(({ theme }) => ({
+  fontSize: '1.25rem',
+  fontWeight: 600,
+  color: theme.palette.text.primary,
+  letterSpacing: '-0.02em',
+}))
+
+const SubtitleText = styled(Typography)(({ theme }) => ({
+  fontSize: '0.875rem',
+  color: theme.palette.text.secondary,
+  marginTop: theme.spacing(0.5),
+}))
+
+const CloseButton = styled(IconButton)(({ theme }) => ({
+  width: 32,
+  height: 32,
+  borderRadius: 10,
+  color: theme.palette.text.secondary,
+  transition: 'all 0.2s ease',
+  '&:hover': {
+    backgroundColor: alpha(theme.palette.error.main, 0.1),
+    color: theme.palette.error.main,
+    transform: 'rotate(90deg)',
+  },
+}))
+
+const StyledDialogContent = styled(DialogContent)(({ theme }) => ({
+  padding: theme.spacing(0, 3, 3),
+  position: 'relative',
+  zIndex: 1,
+}))
+
+const StyledDivider = styled(Divider)(({ theme }) => ({
+  borderColor: alpha(theme.palette.divider, 0.08),
+  margin: theme.spacing(0, 3),
+}))
+
+const StyledDialogActions = styled(DialogActions)(({ theme }) => ({
+  padding: theme.spacing(2.5, 3),
+  gap: theme.spacing(1.5),
+  backgroundColor: alpha(theme.palette.background.paper, 0.3),
+  borderTop: `1px solid ${alpha(theme.palette.divider, 0.06)}`,
+}))
+
+const CancelButton = styled(Button)(({ theme }) => ({
+  borderRadius: 12,
+  textTransform: 'none',
+  fontWeight: 500,
+  fontSize: '0.875rem',
+  padding: theme.spacing(1, 2.5),
+  color: theme.palette.text.secondary,
+  borderColor: alpha(theme.palette.divider, 0.2),
+  transition: 'all 0.2s ease',
+  '&:hover': {
+    borderColor: alpha(theme.palette.text.primary, 0.3),
+    backgroundColor: alpha(theme.palette.text.primary, 0.04),
+  },
+}))
+
+const ConfirmButton = styled(Button)(({ theme }) => ({
+  borderRadius: 12,
+  textTransform: 'none',
+  fontWeight: 600,
+  fontSize: '0.875rem',
+  padding: theme.spacing(1, 2.5),
+  transition: 'all 0.2s ease',
+  '&.primary': {
+    background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
+    color: '#fff',
+    boxShadow: `0 4px 14px ${alpha(theme.palette.primary.main, 0.3)}`,
+    '&:hover': {
+      boxShadow: `0 6px 20px ${alpha(theme.palette.primary.main, 0.4)}`,
+      transform: 'translateY(-1px)',
+    },
+    '&:active': {
+      transform: 'translateY(0)',
+    },
+  },
+  '&.error': {
+    background: `linear-gradient(135deg, ${theme.palette.error.main}, ${theme.palette.error.dark})`,
+    color: '#fff',
+    boxShadow: `0 4px 14px ${alpha(theme.palette.error.main, 0.3)}`,
+    '&:hover': {
+      boxShadow: `0 6px 20px ${alpha(theme.palette.error.main, 0.4)}`,
+      transform: 'translateY(-1px)',
+    },
+  },
+}))
+
+const LoadingSpinner = styled(CircularProgress)(({ theme }) => ({
+  color: 'inherit',
+}))
+
+// =============================================================================
+// MAIN COMPONENT
+// =============================================================================
 
 export default function Modal({
   open,
@@ -34,138 +209,59 @@ export default function Modal({
   confirmColor = 'primary',
   confirmVariant = 'contained',
 }) {
+  const theme = useTheme()
+
   const handleCancel = () => {
     onCancel?.()
     onClose()
   }
 
   return (
-    <Dialog
+    <StyledDialog
       open={open}
       onClose={onClose}
       maxWidth={maxWidth}
       fullWidth={fullWidth}
-      PaperProps={{
-        sx: {
-          bgcolor: palette.scale[1000],
-          border: `1px solid ${alpha(palette.scale[100], 0.1)}`,
-          borderRadius: '12px',
-          boxShadow: '0 16px 48px rgba(0,0,0,0.4)',
-        },
-      }}
+      TransitionComponent={Fade}
+      TransitionProps={{ timeout: 200 }}
+      PaperComponent={DialogPaper}
     >
-      <DialogTitle
-        sx={{
-          display: 'flex',
-          alignItems: 'flex-start',
-          justifyContent: 'space-between',
-          p: 2.5,
-          pb: subtitle ? 1.5 : 2.5,
-        }}
-      >
+      <StyledDialogTitle>
         <Box>
-          <Typography
-            sx={{
-              fontSize: '1.125rem',
-              fontWeight: 600,
-              color: palette.scale[100],
-              letterSpacing: '-0.01em',
-            }}
-          >
-            {title}
-          </Typography>
-          {subtitle && (
-            <Typography
-              sx={{
-                fontSize: '0.8125rem',
-                color: palette.scale[500],
-                mt: 0.5,
-              }}
-            >
-              {subtitle}
-            </Typography>
-          )}
+          <TitleText>{title}</TitleText>
+          {subtitle && <SubtitleText>{subtitle}</SubtitleText>}
         </Box>
         {!hideCloseButton && (
-          <IconButton
-            onClick={onClose}
-            size="small"
-            sx={{
-              mt: -0.5,
-              mr: -0.5,
-              color: palette.scale[500],
-              '&:hover': {
-                bgcolor: alpha(palette.scale[100], 0.08),
-                color: palette.scale[100],
-              },
-            }}
-          >
+          <CloseButton onClick={onClose} size="small" aria-label="Close dialog">
             <CloseIcon sx={{ fontSize: 18 }} />
-          </IconButton>
+          </CloseButton>
         )}
-      </DialogTitle>
+      </StyledDialogTitle>
 
-      {dividers && (
-        <Divider sx={{ borderColor: alpha(palette.scale[100], 0.08) }} />
-      )}
+      {dividers && <StyledDivider />}
 
-      <DialogContent sx={{ p: 2.5 }}>
-        {children}
-      </DialogContent>
+      <StyledDialogContent>{children}</StyledDialogContent>
 
       {(actions || onConfirm) && (
-        <>
-          {dividers && (
-            <Divider sx={{ borderColor: alpha(palette.scale[100], 0.08) }} />
+        <StyledDialogActions>
+          {actions || (
+            <>
+              <CancelButton variant="outlined" onClick={handleCancel} disabled={loading}>
+                {cancelLabel}
+              </CancelButton>
+              <ConfirmButton
+                variant={confirmVariant}
+                className={confirmColor}
+                onClick={onConfirm}
+                disabled={confirmDisabled || loading}
+                startIcon={loading ? <LoadingSpinner size={16} /> : null}
+              >
+                {confirmLabel}
+              </ConfirmButton>
+            </>
           )}
-          <DialogActions sx={{ p: 2.5, gap: 1 }}>
-            {actions || (
-              <>
-                <Button
-                  variant="outlined"
-                  onClick={handleCancel}
-                  disabled={loading}
-                  sx={{
-                    color: palette.scale[300],
-                    borderColor: alpha(palette.scale[100], 0.15),
-                    '&:hover': {
-                      borderColor: alpha(palette.scale[100], 0.25),
-                      bgcolor: alpha(palette.scale[100], 0.05),
-                    },
-                  }}
-                >
-                  {cancelLabel}
-                </Button>
-                <Button
-                  variant={confirmVariant}
-                  color={confirmColor}
-                  onClick={onConfirm}
-                  disabled={confirmDisabled || loading}
-                  startIcon={loading ? <CircularProgress size={16} /> : null}
-                  sx={{
-                    ...(confirmVariant === 'contained' && confirmColor === 'primary' && {
-                      bgcolor: palette.green[400],
-                      color: palette.scale[1100],
-                      '&:hover': {
-                        bgcolor: palette.green[300],
-                      },
-                    }),
-                    ...(confirmColor === 'error' && {
-                      bgcolor: palette.red[500],
-                      color: '#FFFFFF',
-                      '&:hover': {
-                        bgcolor: palette.red[600],
-                      },
-                    }),
-                  }}
-                >
-                  {confirmLabel}
-                </Button>
-              </>
-            )}
-          </DialogActions>
-        </>
+        </StyledDialogActions>
       )}
-    </Dialog>
+    </StyledDialog>
   )
 }

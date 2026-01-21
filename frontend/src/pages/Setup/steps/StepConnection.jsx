@@ -43,12 +43,13 @@ export default function StepConnection({ wizardState, updateWizardState, onCompl
         }
       } catch (err) {
         console.error('Failed to fetch connections:', err)
+        toast.show('Failed to load saved connections', 'warning')
       }
     }
     if (savedConnections.length === 0) {
       fetchConnections()
     }
-  }, [savedConnections.length, setSavedConnections])
+  }, [savedConnections.length, setSavedConnections, toast])
 
   const handleSelect = useCallback((connectionId) => {
     setSelectedId(connectionId)

@@ -1,3 +1,8 @@
+/**
+ * Dashboard Page - Premium Analytics Dashboard
+ * Sophisticated UI with modern design patterns and micro-interactions
+ */
+
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
@@ -6,15 +11,20 @@ import {
   Stack,
   Button,
   Chip,
-  List,
-  ListItem,
-  ListItemText,
-  LinearProgress,
-  CircularProgress,
   IconButton,
+  Avatar,
+  AvatarGroup,
   Tooltip,
+  Fade,
+  Grow,
+  Collapse,
   alpha,
+  useTheme,
+  styled,
+  keyframes,
 } from '@mui/material'
+
+// Icons
 import StorageIcon from '@mui/icons-material/Storage'
 import DescriptionIcon from '@mui/icons-material/Description'
 import AssessmentIcon from '@mui/icons-material/Assessment'
@@ -23,189 +33,430 @@ import AddIcon from '@mui/icons-material/Add'
 import ScheduleIcon from '@mui/icons-material/Schedule'
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward'
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline'
+import CheckCircleIcon from '@mui/icons-material/CheckCircle'
+import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked'
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline'
+import RocketLaunchIcon from '@mui/icons-material/RocketLaunch'
 import HourglassEmptyIcon from '@mui/icons-material/HourglassEmpty'
 import PlayArrowIcon from '@mui/icons-material/PlayArrow'
 import RefreshIcon from '@mui/icons-material/Refresh'
 import TrendingUpIcon from '@mui/icons-material/TrendingUp'
+import TrendingDownIcon from '@mui/icons-material/TrendingDown'
 import StarIcon from '@mui/icons-material/Star'
-import StarBorderIcon from '@mui/icons-material/StarBorder'
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf'
 import TableChartIcon from '@mui/icons-material/TableChart'
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
 import LightbulbIcon from '@mui/icons-material/Lightbulb'
+import KeyboardCommandKeyIcon from '@mui/icons-material/KeyboardCommandKey'
+import WavingHandIcon from '@mui/icons-material/WavingHand'
+import BoltIcon from '@mui/icons-material/Bolt'
+import SpeedIcon from '@mui/icons-material/Speed'
+import InsightsIcon from '@mui/icons-material/Insights'
+
+// Store & API
 import { useAppStore } from '../store/useAppStore'
+import { useToast } from '../components/ToastProvider'
+import SuccessCelebration, { useCelebration } from '../components/SuccessCelebration'
 import * as api from '../api/client'
 import * as recommendationsApi from '../api/recommendations'
-import { palette } from '../theme'
 
-function StatCard({ title, value, subtitle, icon: Icon, color = 'primary', onClick, trend }) {
-  const colorMap = {
-    primary: palette.green[400],
-    success: palette.green[400],
-    warning: palette.yellow[400],
-    info: palette.blue[400],
-    error: palette.red[400],
+// =============================================================================
+// ANIMATIONS
+// =============================================================================
+
+const fadeInUp = keyframes`
+  from {
+    opacity: 0;
+    transform: translateY(20px);
   }
-  const accentColor = colorMap[color] || palette.green[400]
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+`
+
+const shimmer = keyframes`
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+`
+
+const pulse = keyframes`
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.02); opacity: 0.9; }
+`
+
+const glow = keyframes`
+  0%, 100% { box-shadow: 0 0 20px rgba(99, 102, 241, 0.2); }
+  50% { box-shadow: 0 0 40px rgba(99, 102, 241, 0.4); }
+`
+
+const spin = keyframes`
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+`
+
+const float = keyframes`
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-6px); }
+`
+
+// =============================================================================
+// STYLED COMPONENTS
+// =============================================================================
+
+const PageContainer = styled(Box)(({ theme }) => ({
+  padding: theme.spacing(3),
+  maxWidth: 1600,
+  margin: '0 auto',
+  width: '100%',
+  minHeight: '100vh',
+  position: 'relative',
+
+  // Subtle gradient background
+  '&::before': {
+    content: '""',
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    background: theme.palette.mode === 'dark'
+      ? `radial-gradient(ellipse at top left, ${alpha(theme.palette.primary.main, 0.08)} 0%, transparent 50%),
+         radial-gradient(ellipse at bottom right, ${alpha(theme.palette.secondary.main, 0.06)} 0%, transparent 50%)`
+      : 'none',
+    pointerEvents: 'none',
+    zIndex: -1,
+  },
+}))
+
+const GlassCard = styled(Box)(({ theme }) => ({
+  padding: theme.spacing(3),
+  borderRadius: theme.shape.borderRadius * 2,
+  backgroundColor: theme.palette.mode === 'dark'
+    ? alpha(theme.palette.background.paper, 0.6)
+    : theme.palette.background.paper,
+  backdropFilter: 'blur(20px)',
+  border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+  boxShadow: theme.palette.mode === 'dark'
+    ? `0 8px 32px ${alpha('#000', 0.2)}`
+    : `0 4px 20px ${alpha('#000', 0.05)}`,
+  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+  animation: `${fadeInUp} 0.4s ease-out`,
+
+  '&:hover': {
+    transform: 'translateY(-2px)',
+    boxShadow: theme.palette.mode === 'dark'
+      ? `0 12px 40px ${alpha('#000', 0.3)}`
+      : `0 8px 30px ${alpha('#000', 0.08)}`,
+    borderColor: alpha(theme.palette.primary.main, 0.15),
+  },
+}))
+
+const StatCardStyled = styled(Box, {
+  shouldForwardProp: (prop) => !['color', 'delay'].includes(prop),
+})(({ theme, color = 'primary', delay = 0 }) => ({
+  position: 'relative',
+  padding: theme.spacing(2.5),
+  borderRadius: theme.shape.borderRadius * 2,
+  backgroundColor: theme.palette.mode === 'dark'
+    ? alpha(theme.palette.background.paper, 0.6)
+    : theme.palette.background.paper,
+  backdropFilter: 'blur(12px)',
+  border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+  cursor: 'pointer',
+  overflow: 'hidden',
+  transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+  animation: `${fadeInUp} 0.5s ease-out ${delay}ms both`,
+
+  '&::before': {
+    content: '""',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 3,
+    background: `linear-gradient(90deg, ${theme.palette[color].main}, ${theme.palette[color].light})`,
+    opacity: 0,
+    transition: 'opacity 0.25s ease',
+  },
+
+  '&:hover': {
+    transform: 'translateY(-4px)',
+    boxShadow: `0 12px 32px ${alpha(theme.palette[color].main, 0.15)}`,
+    borderColor: alpha(theme.palette[color].main, 0.2),
+
+    '&::before': {
+      opacity: 1,
+    },
+
+    '& .stat-icon': {
+      transform: 'scale(1.1) rotate(5deg)',
+    },
+  },
+}))
+
+const QuickActionCard = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  alignItems: 'center',
+  gap: theme.spacing(1.5),
+  padding: theme.spacing(1.5, 2),
+  borderRadius: theme.shape.borderRadius * 1.5,
+  backgroundColor: 'transparent',
+  border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+  cursor: 'pointer',
+  transition: 'all 0.2s ease',
+
+  '&:hover': {
+    backgroundColor: alpha(theme.palette.primary.main, 0.05),
+    borderColor: alpha(theme.palette.primary.main, 0.2),
+    transform: 'translateX(4px)',
+
+    '& .action-arrow': {
+      transform: 'translateX(4px)',
+      opacity: 1,
+    },
+
+    '& .action-icon': {
+      color: theme.palette.primary.main,
+    },
+  },
+}))
+
+const OnboardingStep = styled(Box, {
+  shouldForwardProp: (prop) => !['completed', 'disabled'].includes(prop),
+})(({ theme, completed, disabled }) => ({
+  display: 'flex',
+  alignItems: 'center',
+  gap: theme.spacing(2),
+  padding: theme.spacing(2),
+  borderRadius: theme.shape.borderRadius * 1.5,
+  backgroundColor: completed
+    ? alpha(theme.palette.success.main, 0.08)
+    : alpha(theme.palette.action.hover, 0.3),
+  border: `1px solid ${completed
+    ? alpha(theme.palette.success.main, 0.2)
+    : alpha(theme.palette.divider, 0.1)}`,
+  cursor: disabled ? 'not-allowed' : 'pointer',
+  opacity: disabled ? 0.5 : 1,
+  transition: 'all 0.2s ease',
+
+  ...(!disabled && !completed && {
+    '&:hover': {
+      backgroundColor: alpha(theme.palette.primary.main, 0.05),
+      borderColor: alpha(theme.palette.primary.main, 0.2),
+      transform: 'translateX(4px)',
+    },
+  }),
+}))
+
+const JobListItem = styled(Box, {
+  shouldForwardProp: (prop) => prop !== 'status',
+})(({ theme, status }) => {
+  const statusColors = {
+    completed: theme.palette.success.main,
+    running: theme.palette.info.main,
+    pending: theme.palette.warning.main,
+    failed: theme.palette.error.main,
+  }
+
+  return {
+    display: 'flex',
+    alignItems: 'center',
+    gap: theme.spacing(2),
+    padding: theme.spacing(1.5, 0),
+    borderBottom: `1px solid ${alpha(theme.palette.divider, 0.08)}`,
+    transition: 'all 0.15s ease',
+    cursor: 'pointer',
+
+    '&:last-child': {
+      borderBottom: 'none',
+    },
+
+    '&:hover': {
+      backgroundColor: alpha(theme.palette.primary.main, 0.02),
+      paddingLeft: theme.spacing(1),
+      paddingRight: theme.spacing(1),
+      marginLeft: theme.spacing(-1),
+      marginRight: theme.spacing(-1),
+      borderRadius: theme.shape.borderRadius,
+
+      '& .job-arrow': {
+        opacity: 1,
+        transform: 'translateX(0)',
+      },
+    },
+
+    '& .status-dot': {
+      width: 8,
+      height: 8,
+      borderRadius: '50%',
+      backgroundColor: statusColors[status] || theme.palette.grey[500],
+      boxShadow: `0 0 8px ${alpha(statusColors[status] || theme.palette.grey[500], 0.5)}`,
+    },
+  }
+})
+
+const RecommendationCard = styled(Box)(({ theme }) => ({
+  padding: theme.spacing(2.5),
+  borderRadius: theme.shape.borderRadius * 1.5,
+  backgroundColor: theme.palette.mode === 'dark'
+    ? alpha(theme.palette.background.paper, 0.4)
+    : alpha(theme.palette.background.paper, 0.8),
+  border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+  cursor: 'pointer',
+  transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+  position: 'relative',
+  overflow: 'hidden',
+
+  '&::before': {
+    content: '""',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.05)} 0%, transparent 50%)`,
+    opacity: 0,
+    transition: 'opacity 0.3s ease',
+  },
+
+  '&:hover': {
+    transform: 'translateY(-4px) scale(1.02)',
+    boxShadow: `0 12px 24px ${alpha(theme.palette.primary.main, 0.12)}`,
+    borderColor: alpha(theme.palette.primary.main, 0.2),
+
+    '&::before': {
+      opacity: 1,
+    },
+  },
+}))
+
+const MiniChart = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  alignItems: 'flex-end',
+  gap: 4,
+  height: 50,
+  padding: theme.spacing(1, 0),
+}))
+
+const ChartBar = styled(Box, {
+  shouldForwardProp: (prop) => !['height', 'color', 'delay'].includes(prop),
+})(({ theme, height, color, delay = 0 }) => ({
+  flex: 1,
+  height: `${height}%`,
+  minHeight: 4,
+  backgroundColor: color || theme.palette.primary.main,
+  borderRadius: 2,
+  transition: 'height 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+  transitionDelay: `${delay}ms`,
+}))
+
+// =============================================================================
+// HELPER COMPONENTS
+// =============================================================================
+
+function StatCard({ title, value, subtitle, icon: Icon, color = 'primary', onClick, trend, delay = 0 }) {
+  const theme = useTheme()
 
   return (
-    <Box
-      onClick={onClick}
-      sx={{
-        p: 2.5,
-        bgcolor: palette.scale[1000],
-        borderRadius: '8px',
-        border: `1px solid ${alpha(palette.scale[100], 0.08)}`,
-        cursor: onClick ? 'pointer' : 'default',
-        transition: 'all 150ms ease',
-        '&:hover': onClick ? {
-          borderColor: alpha(palette.scale[100], 0.15),
-          bgcolor: palette.scale[900],
-        } : {},
-      }}
-    >
+    <StatCardStyled color={color} delay={delay} onClick={onClick}>
       <Stack direction="row" alignItems="flex-start" justifyContent="space-between">
-        <Box>
+        <Box sx={{ flex: 1 }}>
           <Typography
+            variant="caption"
             sx={{
-              fontSize: '0.75rem',
-              fontWeight: 500,
-              color: palette.scale[500],
-              mb: 0.5,
+              color: 'text.secondary',
+              fontWeight: 600,
               textTransform: 'uppercase',
               letterSpacing: '0.05em',
+              fontSize: '0.6875rem',
             }}
           >
             {title}
           </Typography>
           <Typography
+            variant="h4"
             sx={{
-              fontSize: '1.75rem',
-              fontWeight: 600,
-              color: palette.scale[100],
-              lineHeight: 1,
+              fontWeight: 700,
+              mt: 0.5,
+              mb: 0.5,
+              background: `linear-gradient(135deg, ${theme.palette.text.primary} 0%, ${theme.palette[color].main} 100%)`,
+              backgroundClip: 'text',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
             }}
           >
             {value}
           </Typography>
           {subtitle && (
-            <Typography sx={{ fontSize: '0.6875rem', color: palette.scale[500], mt: 0.5 }}>
+            <Typography variant="caption" color="text.tertiary" sx={{ fontSize: '0.6875rem' }}>
               {subtitle}
             </Typography>
           )}
           {trend !== undefined && (
             <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mt: 0.5 }}>
-              <TrendingUpIcon sx={{ fontSize: 12, color: trend >= 0 ? palette.green[400] : palette.red[400] }} />
-              <Typography sx={{ fontSize: '0.6875rem', color: trend >= 0 ? palette.green[400] : palette.red[400] }}>
-                {trend >= 0 ? '+' : ''}{trend}% this week
+              {trend >= 0 ? (
+                <TrendingUpIcon sx={{ fontSize: 14, color: 'success.main' }} />
+              ) : (
+                <TrendingDownIcon sx={{ fontSize: 14, color: 'error.main' }} />
+              )}
+              <Typography
+                variant="caption"
+                sx={{
+                  fontWeight: 600,
+                  color: trend >= 0 ? 'success.main' : 'error.main',
+                }}
+              >
+                {trend >= 0 ? '+' : ''}{trend}%
               </Typography>
             </Stack>
           )}
         </Box>
         <Box
+          className="stat-icon"
           sx={{
-            width: 36,
-            height: 36,
-            borderRadius: '8px',
-            bgcolor: alpha(accentColor, 0.15),
+            width: 48,
+            height: 48,
+            borderRadius: 2,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
+            bgcolor: alpha(theme.palette[color].main, 0.12),
+            color: `${color}.main`,
+            transition: 'transform 0.25s ease',
           }}
         >
-          <Icon sx={{ fontSize: 18, color: accentColor }} />
+          <Icon sx={{ fontSize: 24 }} />
         </Box>
       </Stack>
-    </Box>
-  )
-}
-
-function QuickActionButton({ label, icon: Icon, onClick }) {
-  return (
-    <Button
-      variant="outlined"
-      fullWidth
-      startIcon={<Icon sx={{ fontSize: 16 }} />}
-      endIcon={<ArrowForwardIcon sx={{ fontSize: 14, opacity: 0.5 }} />}
-      onClick={onClick}
-      sx={{
-        justifyContent: 'flex-start',
-        color: palette.scale[300],
-        borderColor: alpha(palette.scale[100], 0.1),
-        bgcolor: 'transparent',
-        py: 1.25,
-        px: 1.5,
-        '&:hover': {
-          borderColor: alpha(palette.scale[100], 0.2),
-          bgcolor: alpha(palette.scale[100], 0.03),
-        },
-        '& .MuiButton-endIcon': {
-          ml: 'auto',
-        },
-      }}
-    >
-      {label}
-    </Button>
-  )
-}
-
-function MiniBarChart({ data }) {
-  if (!data || !data.length) return null
-  const max = Math.max(...data.map(d => d.total || 0), 1)
-
-  return (
-    <Stack direction="row" spacing={0.5} alignItems="flex-end" sx={{ height: 60 }}>
-      {data.map((item, idx) => (
-        <Tooltip key={idx} title={`${item.label}: ${item.total} jobs`} arrow>
-          <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <Box
-              sx={{
-                width: '100%',
-                maxWidth: 24,
-                height: Math.max(4, (item.total / max) * 48),
-                bgcolor: item.failed > 0 ? alpha(palette.red[400], 0.6) : palette.green[400],
-                borderRadius: '2px 2px 0 0',
-                transition: 'height 300ms ease',
-              }}
-            />
-            <Typography sx={{ fontSize: '0.5rem', color: palette.scale[600], mt: 0.5 }}>
-              {item.label}
-            </Typography>
-          </Box>
-        </Tooltip>
-      ))}
-    </Stack>
+    </StatCardStyled>
   )
 }
 
 function getStatusIcon(status) {
+  const iconProps = { sx: { fontSize: 18 } }
   switch (status) {
     case 'completed':
-      return <CheckCircleOutlineIcon sx={{ fontSize: 16, color: palette.green[400] }} />
+      return <CheckCircleOutlineIcon {...iconProps} sx={{ ...iconProps.sx, color: 'success.main' }} />
     case 'running':
-      return <PlayArrowIcon sx={{ fontSize: 16, color: palette.blue[400] }} />
+      return <PlayArrowIcon {...iconProps} sx={{ ...iconProps.sx, color: 'info.main' }} />
     case 'pending':
-      return <HourglassEmptyIcon sx={{ fontSize: 16, color: palette.yellow[400] }} />
+      return <HourglassEmptyIcon {...iconProps} sx={{ ...iconProps.sx, color: 'warning.main' }} />
     case 'failed':
-      return <ErrorOutlineIcon sx={{ fontSize: 16, color: palette.red[400] }} />
+      return <ErrorOutlineIcon {...iconProps} sx={{ ...iconProps.sx, color: 'error.main' }} />
     default:
-      return <HourglassEmptyIcon sx={{ fontSize: 16, color: palette.scale[500] }} />
+      return <HourglassEmptyIcon {...iconProps} sx={{ ...iconProps.sx, color: 'text.secondary' }} />
   }
 }
 
-function getStatusColor(status) {
-  switch (status) {
-    case 'completed': return 'success'
-    case 'running': return 'info'
-    case 'pending': return 'warning'
-    case 'failed': return 'error'
-    default: return 'default'
-  }
-}
+// =============================================================================
+// MAIN COMPONENT
+// =============================================================================
 
 export default function DashboardPage() {
   const navigate = useNavigate()
+  const toast = useToast()
+  const theme = useTheme()
   const didLoadRef = useRef(false)
 
   const templates = useAppStore((s) => s.templates)
@@ -224,34 +475,37 @@ export default function DashboardPage() {
     return window.localStorage.getItem('neurareport_onboarding_dismissed') !== 'true'
   })
 
+  const { celebrating, celebrate, onComplete: onCelebrationComplete } = useCelebration()
+  const celebratedRef = useRef(false)
+
   const fetchData = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true)
     else setLoading(true)
 
     try {
       const [state, jobsData, analyticsData, favData] = await Promise.all([
-        api.bootstrapState(),
-        api.listJobs({ limit: 5 }),
+        api.bootstrapState().catch(() => null),
+        api.listJobs({ limit: 5 }).catch(() => ({ jobs: [] })),
         api.getDashboardAnalytics().catch(() => null),
         api.getFavorites().catch(() => ({ templates: [], connections: [] })),
       ])
 
-      if (state?.templates) {
-        useAppStore.setState({ templates: state.templates })
-      }
-      if (state?.connections) {
-        useAppStore.setState({ savedConnections: state.connections })
-      }
+      if (state?.templates) useAppStore.setState({ templates: state.templates })
+      if (state?.connections) useAppStore.setState({ savedConnections: state.connections })
+
       setJobs(jobsData?.jobs || [])
       setAnalytics(analyticsData)
       setFavorites(favData)
+
+      if (!state) toast.show('Failed to load some dashboard data. Try refreshing.', 'warning')
     } catch (err) {
       console.error('Failed to fetch dashboard data:', err)
+      toast.show('Failed to load dashboard data. Please try again.', 'error')
     } finally {
       setLoading(false)
       setRefreshing(false)
     }
-  }, [])
+  }, [toast])
 
   useEffect(() => {
     if (didLoadRef.current) return
@@ -259,20 +513,16 @@ export default function DashboardPage() {
     fetchData()
   }, [fetchData])
 
-  const handleRefresh = useCallback(() => {
-    fetchData(true)
-  }, [fetchData])
+  const handleRefresh = useCallback(() => fetchData(true), [fetchData])
 
   const fetchRecommendations = useCallback(async () => {
     if (recLoading) return
     setRecLoading(true)
     try {
       const catalog = await recommendationsApi.getCatalog()
-      // Get top recommendations from the catalog
-      const templates = catalog?.templates || catalog?.recommendations || []
-      setRecommendations(templates.slice(0, 4))
+      const tpls = catalog?.templates || catalog?.recommendations || []
+      setRecommendations(tpls.slice(0, 4))
     } catch {
-      // Fallback to existing templates as recommendations
       const topTpls = templates.slice(0, 4).map((t) => ({
         id: t.id,
         name: t.name,
@@ -298,6 +548,14 @@ export default function DashboardPage() {
   const jobsTrend = analytics?.jobsTrend || []
   const needsOnboarding = showOnboarding && (templates.length === 0 || savedConnections.length === 0)
 
+  const allStepsComplete = savedConnections.length > 0 && templates.length > 0 && (metrics.jobsToday ?? 0) > 0
+  useEffect(() => {
+    if (allStepsComplete && showOnboarding && !celebratedRef.current) {
+      celebratedRef.current = true
+      celebrate()
+    }
+  }, [allStepsComplete, showOnboarding, celebrate])
+
   const handleDismissOnboarding = () => {
     setShowOnboarding(false)
     if (typeof window !== 'undefined') {
@@ -305,101 +563,229 @@ export default function DashboardPage() {
     }
   }
 
+  const maxTrend = Math.max(...jobsTrend.map(d => d.total || 0), 1)
+
   return (
-    <Box sx={{ p: 3, maxWidth: 1400, mx: 'auto', width: '100%' }}>
-      {/* Header */}
+    <PageContainer>
+      <SuccessCelebration trigger={celebrating} onComplete={onCelebrationComplete} />
+
+      {/* ========== HEADER ========== */}
       <Stack
-        direction={{ xs: 'column', sm: 'row' }}
-        alignItems={{ xs: 'stretch', sm: 'center' }}
+        direction={{ xs: 'column', md: 'row' }}
+        alignItems={{ xs: 'stretch', md: 'center' }}
         justifyContent="space-between"
-        spacing={2}
+        spacing={3}
         sx={{ mb: 4 }}
       >
-        <Box>
-          <Typography
-            sx={{
-              fontSize: '1.5rem',
-              fontWeight: 600,
-              color: palette.scale[100],
-              letterSpacing: '-0.02em',
-              mb: 0.5,
-            }}
-          >
-            Welcome to NeuraReport
-          </Typography>
-          <Typography
-            sx={{
-              fontSize: '0.875rem',
-              color: palette.scale[500],
-            }}
-          >
-            Generate intelligent reports from your data
+        <Box sx={{ animation: `${fadeInUp} 0.4s ease-out` }}>
+          <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 0.5 }}>
+            <Typography
+              variant="h4"
+              sx={{
+                fontWeight: 700,
+                letterSpacing: '-0.02em',
+                background: `linear-gradient(135deg, ${theme.palette.text.primary} 0%, ${theme.palette.primary.main} 100%)`,
+                backgroundClip: 'text',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+              }}
+            >
+              Welcome back
+            </Typography>
+            <WavingHandIcon
+              sx={{
+                fontSize: 28,
+                color: 'warning.main',
+                animation: `${float} 2s ease-in-out infinite`,
+              }}
+            />
+          </Stack>
+          <Typography variant="body2" color="text.secondary">
+            Generate intelligent reports from your data with AI-powered insights
           </Typography>
         </Box>
-        <Stack direction="row" spacing={1}>
+
+        <Stack
+          direction="row"
+          spacing={1.5}
+          sx={{ animation: `${fadeInUp} 0.5s ease-out 100ms both` }}
+        >
+          <Tooltip title="Press ⌘K for quick actions">
+            <IconButton
+              sx={{
+                border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+                bgcolor: alpha(theme.palette.background.paper, 0.5),
+                backdropFilter: 'blur(8px)',
+              }}
+            >
+              <KeyboardCommandKeyIcon sx={{ fontSize: 18 }} />
+            </IconButton>
+          </Tooltip>
+
           <IconButton
             onClick={handleRefresh}
             disabled={refreshing}
-            sx={{ color: palette.scale[400] }}
+            sx={{
+              border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+              bgcolor: alpha(theme.palette.background.paper, 0.5),
+              backdropFilter: 'blur(8px)',
+            }}
           >
-            {refreshing ? <CircularProgress size={20} /> : <RefreshIcon />}
+            <RefreshIcon
+              sx={{
+                fontSize: 20,
+                animation: refreshing ? `${spin} 1s linear infinite` : 'none',
+              }}
+            />
           </IconButton>
+
           <Button
             variant="contained"
-            startIcon={<AddIcon sx={{ fontSize: 18 }} />}
+            startIcon={<AddIcon />}
             onClick={() => navigate('/setup/wizard')}
-            sx={{ px: 2.5, py: 1 }}
+            sx={{
+              px: 3,
+              py: 1.25,
+              borderRadius: 2,
+              fontWeight: 600,
+              boxShadow: `0 4px 14px ${alpha(theme.palette.primary.main, 0.3)}`,
+              '&:hover': {
+                boxShadow: `0 6px 20px ${alpha(theme.palette.primary.main, 0.4)}`,
+              },
+            }}
           >
             New Report
           </Button>
         </Stack>
       </Stack>
 
-      {needsOnboarding && (
-        <Box
+      {/* ========== ONBOARDING ========== */}
+      <Collapse in={needsOnboarding}>
+        <GlassCard
           sx={{
-            mb: 3,
-            p: 2.5,
-            bgcolor: palette.scale[1000],
-            borderRadius: '8px',
-            border: `1px solid ${alpha(palette.scale[100], 0.08)}`,
+            mb: 4,
+            background: theme.palette.mode === 'dark'
+              ? `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.1)} 0%, ${alpha(theme.palette.background.paper, 0.6)} 100%)`
+              : undefined,
+            animation: `${glow} 3s ease-in-out infinite`,
           }}
         >
-          <Stack spacing={1.5}>
-            <Typography sx={{ fontSize: '0.9375rem', fontWeight: 600, color: palette.scale[100] }}>
-              Get started with NeuraReport
-            </Typography>
-            <Typography sx={{ fontSize: '0.8125rem', color: palette.scale[500] }}>
-              Connect a data source, upload a template, then generate your first report.
-            </Typography>
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
-              <Button
-                variant="contained"
-                onClick={() => navigate('/setup/wizard')}
-                sx={{ textTransform: 'none' }}
-              >
-                Run setup wizard
-              </Button>
-              <Button
-                variant="outlined"
-                onClick={() => navigate('/connections')}
-                sx={{ textTransform: 'none' }}
-              >
-                Add a connection
-              </Button>
-              <Button
-                variant="text"
-                onClick={handleDismissOnboarding}
-                sx={{ textTransform: 'none', color: palette.scale[400] }}
-              >
-                Dismiss
-              </Button>
-            </Stack>
-          </Stack>
-        </Box>
-      )}
+          <Stack direction={{ xs: 'column', md: 'row' }} spacing={3}>
+            <Box
+              sx={{
+                width: { xs: '100%', md: 64 },
+                height: 64,
+                borderRadius: 3,
+                background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
+            >
+              <RocketLaunchIcon sx={{ fontSize: 32, color: 'white' }} />
+            </Box>
 
-      {/* Stats Grid */}
+            <Box sx={{ flex: 1 }}>
+              <Typography variant="h6" fontWeight={700} gutterBottom>
+                Welcome! Let's create your first report
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                Complete these quick steps to get started with NeuraReport
+              </Typography>
+
+              <Stack spacing={1.5}>
+                <OnboardingStep
+                  completed={savedConnections.length > 0}
+                  onClick={() => navigate('/connections')}
+                >
+                  {savedConnections.length > 0 ? (
+                    <CheckCircleIcon sx={{ fontSize: 24, color: 'success.main' }} />
+                  ) : (
+                    <RadioButtonUncheckedIcon sx={{ fontSize: 24, color: 'text.secondary' }} />
+                  )}
+                  <Box sx={{ flex: 1 }}>
+                    <Typography variant="subtitle2" fontWeight={600}>
+                      Add a data source
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Connect to where your data lives (database, spreadsheet)
+                    </Typography>
+                  </Box>
+                  {savedConnections.length > 0 && (
+                    <Chip label="Done" size="small" color="success" sx={{ fontWeight: 600 }} />
+                  )}
+                </OnboardingStep>
+
+                <OnboardingStep
+                  completed={templates.length > 0}
+                  onClick={() => navigate('/templates')}
+                >
+                  {templates.length > 0 ? (
+                    <CheckCircleIcon sx={{ fontSize: 24, color: 'success.main' }} />
+                  ) : (
+                    <RadioButtonUncheckedIcon sx={{ fontSize: 24, color: 'text.secondary' }} />
+                  )}
+                  <Box sx={{ flex: 1 }}>
+                    <Typography variant="subtitle2" fontWeight={600}>
+                      Add a report template
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Upload a PDF or Excel template that shows how reports should look
+                    </Typography>
+                  </Box>
+                  {templates.length > 0 && (
+                    <Chip label="Done" size="small" color="success" sx={{ fontWeight: 600 }} />
+                  )}
+                </OnboardingStep>
+
+                <OnboardingStep
+                  completed={(metrics.jobsToday ?? 0) > 0}
+                  disabled={savedConnections.length === 0 || templates.length === 0}
+                  onClick={() => savedConnections.length > 0 && templates.length > 0 && navigate('/reports')}
+                >
+                  {(metrics.jobsToday ?? 0) > 0 ? (
+                    <CheckCircleIcon sx={{ fontSize: 24, color: 'success.main' }} />
+                  ) : (
+                    <RadioButtonUncheckedIcon sx={{ fontSize: 24, color: 'text.secondary' }} />
+                  )}
+                  <Box sx={{ flex: 1 }}>
+                    <Typography variant="subtitle2" fontWeight={600}>
+                      Create your first report
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Generate a report using your data and template
+                    </Typography>
+                  </Box>
+                  {(metrics.jobsToday ?? 0) > 0 && (
+                    <Chip label="Done" size="small" color="success" sx={{ fontWeight: 600 }} />
+                  )}
+                </OnboardingStep>
+              </Stack>
+
+              <Stack direction="row" spacing={1.5} sx={{ mt: 3 }}>
+                <Button
+                  variant="contained"
+                  onClick={() => navigate('/setup/wizard')}
+                  startIcon={<BoltIcon />}
+                  sx={{ borderRadius: 2 }}
+                >
+                  Run Setup Wizard
+                </Button>
+                <Button
+                  variant="text"
+                  onClick={handleDismissOnboarding}
+                  sx={{ color: 'text.secondary' }}
+                >
+                  Dismiss
+                </Button>
+              </Stack>
+            </Box>
+          </Stack>
+        </GlassCard>
+      </Collapse>
+
+      {/* ========== STATS GRID ========== */}
       <Box
         sx={{
           display: 'grid',
@@ -408,7 +794,7 @@ export default function DashboardPage() {
             sm: 'repeat(2, 1fr)',
             lg: 'repeat(5, 1fr)',
           },
-          gap: 2,
+          gap: 2.5,
           mb: 4,
         }}
       >
@@ -419,14 +805,16 @@ export default function DashboardPage() {
           icon={StorageIcon}
           color="primary"
           onClick={() => navigate('/connections')}
+          delay={0}
         />
         <StatCard
           title="Templates"
           value={summary.totalTemplates ?? templates.length}
           subtitle={`${summary.pdfTemplates ?? 0} PDF, ${summary.excelTemplates ?? 0} Excel`}
           icon={DescriptionIcon}
-          color="success"
+          color="secondary"
           onClick={() => navigate('/templates')}
+          delay={50}
         />
         <StatCard
           title="Jobs Today"
@@ -435,253 +823,258 @@ export default function DashboardPage() {
           icon={WorkIcon}
           color="warning"
           onClick={() => navigate('/jobs')}
+          delay={100}
         />
         <StatCard
           title="Success Rate"
           value={`${metrics.successRate ?? 0}%`}
           subtitle={`${summary.completedJobs ?? 0} completed`}
-          icon={AssessmentIcon}
-          color="info"
+          icon={SpeedIcon}
+          color="success"
           onClick={() => navigate('/stats')}
+          trend={metrics.successRateTrend}
+          delay={150}
         />
         <StatCard
           title="Schedules"
           value={summary.totalSchedules ?? 0}
           subtitle={`${summary.activeSchedules ?? 0} active`}
           icon={ScheduleIcon}
-          color="primary"
+          color="info"
           onClick={() => navigate('/schedules')}
+          delay={200}
         />
       </Box>
 
+      {/* ========== MAIN CONTENT GRID ========== */}
       <Box
         sx={{
           display: 'grid',
-          gridTemplateColumns: { xs: '1fr', lg: '340px 1fr 280px' },
+          gridTemplateColumns: { xs: '1fr', lg: '320px 1fr 300px' },
           gap: 3,
         }}
       >
         {/* Quick Actions */}
-        <Box
-          sx={{
-            p: 2.5,
-            bgcolor: palette.scale[1000],
-            borderRadius: '8px',
-            border: `1px solid ${alpha(palette.scale[100], 0.08)}`,
-            height: 'fit-content',
-          }}
-        >
-          <Typography
-            sx={{
-              fontSize: '0.875rem',
-              fontWeight: 600,
-              color: palette.scale[100],
-              mb: 2,
-            }}
-          >
+        <GlassCard sx={{ animationDelay: '200ms' }}>
+          <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 2.5 }}>
             Quick Actions
           </Typography>
           <Stack spacing={1}>
-            <QuickActionButton
-              label="Manage Connections"
-              icon={StorageIcon}
-              onClick={() => navigate('/connections')}
-            />
-            <QuickActionButton
-              label="View Templates"
-              icon={DescriptionIcon}
-              onClick={() => navigate('/templates')}
-            />
-            <QuickActionButton
-              label="Generate Report"
-              icon={AssessmentIcon}
-              onClick={() => navigate('/reports')}
-            />
-            <QuickActionButton
-              label="Manage Schedules"
-              icon={ScheduleIcon}
-              onClick={() => navigate('/schedules')}
-            />
+            {[
+              { label: 'Manage Connections', icon: StorageIcon, path: '/connections' },
+              { label: 'View Templates', icon: DescriptionIcon, path: '/templates' },
+              { label: 'Generate Report', icon: AssessmentIcon, path: '/reports' },
+              { label: 'Manage Schedules', icon: ScheduleIcon, path: '/schedules' },
+            ].map((action) => (
+              <QuickActionCard key={action.path} onClick={() => navigate(action.path)}>
+                <action.icon className="action-icon" sx={{ fontSize: 20, color: 'text.secondary', transition: 'color 0.2s ease' }} />
+                <Typography variant="body2" fontWeight={500} sx={{ flex: 1 }}>
+                  {action.label}
+                </Typography>
+                <ArrowForwardIcon
+                  className="action-arrow"
+                  sx={{
+                    fontSize: 16,
+                    color: 'text.tertiary',
+                    opacity: 0,
+                    transform: 'translateX(-4px)',
+                    transition: 'all 0.2s ease',
+                  }}
+                />
+              </QuickActionCard>
+            ))}
           </Stack>
 
-          {/* Job Trend Chart */}
+          {/* Mini Chart */}
           {jobsTrend.length > 0 && (
-            <Box sx={{ mt: 3 }}>
-              <Typography
-                sx={{
-                  fontSize: '0.75rem',
-                  fontWeight: 600,
-                  color: palette.scale[400],
-                  mb: 1.5,
-                  textTransform: 'uppercase',
-                }}
-              >
+            <Box sx={{ mt: 4 }}>
+              <Typography variant="caption" fontWeight={600} color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 Jobs This Week
               </Typography>
-              <MiniBarChart data={jobsTrend} />
+              <MiniChart sx={{ mt: 1 }}>
+                {jobsTrend.map((item, idx) => (
+                  <Tooltip key={idx} title={`${item.label}: ${item.total} jobs`} arrow>
+                    <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                      <ChartBar
+                        height={Math.max(10, (item.total / maxTrend) * 100)}
+                        color={item.failed > 0
+                          ? alpha(theme.palette.error.main, 0.6)
+                          : theme.palette.primary.main}
+                        delay={idx * 50}
+                      />
+                      <Typography variant="caption" sx={{ fontSize: '0.55rem', color: 'text.tertiary', mt: 0.5 }}>
+                        {item.label}
+                      </Typography>
+                    </Box>
+                  </Tooltip>
+                ))}
+              </MiniChart>
             </Box>
           )}
-        </Box>
+        </GlassCard>
 
         {/* Recent Jobs */}
-        <Box
-          sx={{
-            p: 2.5,
-            bgcolor: palette.scale[1000],
-            borderRadius: '8px',
-            border: `1px solid ${alpha(palette.scale[100], 0.08)}`,
-          }}
-        >
+        <GlassCard sx={{ animationDelay: '250ms' }}>
           <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
-            <Typography
-              sx={{
-                fontSize: '0.875rem',
-                fontWeight: 600,
-                color: palette.scale[100],
-              }}
-            >
+            <Typography variant="subtitle1" fontWeight={700}>
               Recent Jobs
             </Typography>
             <Button
               size="small"
               onClick={() => navigate('/jobs')}
-              sx={{
-                color: palette.scale[400],
-                fontSize: '0.75rem',
-                '&:hover': {
-                  color: palette.scale[100],
-                  bgcolor: 'transparent',
-                },
-              }}
+              sx={{ fontWeight: 600, fontSize: '0.75rem' }}
             >
               View All
             </Button>
           </Stack>
 
           {loading ? (
-            <LinearProgress
-              sx={{
-                bgcolor: palette.scale[800],
-                '& .MuiLinearProgress-bar': {
-                  bgcolor: palette.green[400],
-                },
-              }}
-            />
+            <Stack spacing={1.5}>
+              {[1, 2, 3, 4, 5].map((i) => (
+                <Box
+                  key={i}
+                  sx={{
+                    height: 48,
+                    borderRadius: 1.5,
+                    background: `linear-gradient(90deg, ${alpha(theme.palette.action.hover, 0.5)} 25%, ${alpha(theme.palette.action.hover, 0.8)} 50%, ${alpha(theme.palette.action.hover, 0.5)} 75%)`,
+                    backgroundSize: '200% 100%',
+                    animation: `${shimmer} 1.5s ease-in-out infinite`,
+                  }}
+                />
+              ))}
+            </Stack>
           ) : jobs.length === 0 ? (
-            <Box sx={{ py: 4, textAlign: 'center' }}>
-              <WorkIcon sx={{ fontSize: 32, color: palette.scale[700], mb: 1 }} />
-              <Typography sx={{ fontSize: '0.8125rem', color: palette.scale[500] }}>
+            <Box sx={{ py: 6, textAlign: 'center' }}>
+              <Box
+                sx={{
+                  width: 64,
+                  height: 64,
+                  borderRadius: '50%',
+                  bgcolor: alpha(theme.palette.primary.main, 0.1),
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  mx: 'auto',
+                  mb: 2,
+                }}
+              >
+                <WorkIcon sx={{ fontSize: 28, color: 'text.secondary' }} />
+              </Box>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                 No jobs yet. Generate your first report to get started.
               </Typography>
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={() => navigate('/setup/wizard')}
+                sx={{ borderRadius: 2 }}
+              >
+                Create First Report
+              </Button>
             </Box>
           ) : (
-            <List disablePadding>
+            <Stack>
               {jobs.slice(0, 5).map((job, index) => (
-                <ListItem
-                  key={job.id}
-                  sx={{
-                    px: 0,
-                    py: 1.5,
-                    borderBottom: index < jobs.length - 1 ? `1px solid ${alpha(palette.scale[100], 0.06)}` : 'none',
-                  }}
-                >
-                  <Box sx={{ mr: 1.5 }}>
-                    {getStatusIcon(job.status)}
-                  </Box>
-                  <ListItemText
-                    primary={job.template_name || job.templateName || job.template_id?.slice(0, 12)}
-                    secondary={new Date(job.created_at || job.createdAt).toLocaleString()}
-                    primaryTypographyProps={{
-                      fontSize: '0.8125rem',
-                      fontWeight: 500,
-                      color: palette.scale[200],
-                    }}
-                    secondaryTypographyProps={{
-                      fontSize: '0.75rem',
-                      color: palette.scale[500],
-                    }}
-                  />
-                  <Chip
-                    label={job.status}
-                    size="small"
-                    color={getStatusColor(job.status)}
-                    sx={{
-                      height: 22,
-                      fontSize: '0.6875rem',
-                      fontWeight: 600,
-                      textTransform: 'capitalize',
-                    }}
-                  />
-                </ListItem>
+                <Grow key={job.id} in timeout={300 + index * 100}>
+                  <JobListItem status={job.status} onClick={() => navigate(`/jobs/${job.id}`)}>
+                    <Box className="status-dot" />
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                      <Typography variant="body2" fontWeight={600} noWrap>
+                        {job.template_name || job.templateName || job.template_id?.slice(0, 12)}
+                      </Typography>
+                      <Typography variant="caption" color="text.tertiary">
+                        {new Date(job.created_at || job.createdAt).toLocaleString()}
+                      </Typography>
+                    </Box>
+                    <Chip
+                      label={job.status}
+                      size="small"
+                      color={
+                        job.status === 'completed' ? 'success' :
+                        job.status === 'running' ? 'info' :
+                        job.status === 'failed' ? 'error' : 'warning'
+                      }
+                      sx={{
+                        height: 24,
+                        fontWeight: 600,
+                        textTransform: 'capitalize',
+                        fontSize: '0.7rem',
+                      }}
+                    />
+                    <ArrowForwardIcon
+                      className="job-arrow"
+                      sx={{
+                        fontSize: 16,
+                        color: 'text.tertiary',
+                        opacity: 0,
+                        transform: 'translateX(-4px)',
+                        transition: 'all 0.2s ease',
+                      }}
+                    />
+                  </JobListItem>
+                </Grow>
               ))}
-            </List>
+            </Stack>
           )}
-        </Box>
+        </GlassCard>
 
-        {/* Top Templates & Favorites */}
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+        {/* Right Sidebar */}
+        <Stack spacing={3}>
           {/* Top Templates */}
-          <Box
-            sx={{
-              p: 2.5,
-              bgcolor: palette.scale[1000],
-              borderRadius: '8px',
-              border: `1px solid ${alpha(palette.scale[100], 0.08)}`,
-            }}
-          >
-            <Typography
-              sx={{
-                fontSize: '0.875rem',
-                fontWeight: 600,
-                color: palette.scale[100],
-                mb: 2,
-              }}
-            >
-              Top Templates
-            </Typography>
+          <GlassCard sx={{ animationDelay: '300ms' }}>
+            <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
+              <InsightsIcon sx={{ fontSize: 18, color: 'primary.main' }} />
+              <Typography variant="subtitle2" fontWeight={700}>
+                Top Templates
+              </Typography>
+            </Stack>
+
             {topTemplates.length === 0 ? (
-              <Typography sx={{ fontSize: '0.8125rem', color: palette.scale[500] }}>
+              <Typography variant="body2" color="text.secondary">
                 No template usage data yet
               </Typography>
             ) : (
               <Stack spacing={1.5}>
-                {topTemplates.slice(0, 4).map((tpl) => (
+                {topTemplates.slice(0, 4).map((tpl, idx) => (
                   <Stack
                     key={tpl.id}
                     direction="row"
                     alignItems="center"
                     spacing={1.5}
+                    onClick={() => navigate(`/reports?template=${tpl.id}`)}
                     sx={{
                       cursor: 'pointer',
-                      '&:hover': { opacity: 0.8 },
+                      p: 1,
+                      mx: -1,
+                      borderRadius: 1.5,
+                      transition: 'all 0.15s ease',
+                      '&:hover': {
+                        bgcolor: alpha(theme.palette.primary.main, 0.05),
+                      },
                     }}
-                    onClick={() => navigate(`/reports?template=${tpl.id}`)}
                   >
-                    <Box
+                    <Avatar
                       sx={{
-                        width: 28,
-                        height: 28,
-                        borderRadius: '6px',
-                        bgcolor: alpha(tpl.kind === 'excel' ? palette.green[400] : palette.red[400], 0.15),
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
+                        width: 32,
+                        height: 32,
+                        bgcolor: alpha(
+                          tpl.kind === 'excel' ? theme.palette.success.main : theme.palette.error.main,
+                          0.15
+                        ),
+                        fontSize: '0.75rem',
                       }}
                     >
                       {tpl.kind === 'excel' ? (
-                        <TableChartIcon sx={{ fontSize: 14, color: palette.green[400] }} />
+                        <TableChartIcon sx={{ fontSize: 16, color: 'success.main' }} />
                       ) : (
-                        <PictureAsPdfIcon sx={{ fontSize: 14, color: palette.red[400] }} />
+                        <PictureAsPdfIcon sx={{ fontSize: 16, color: 'error.main' }} />
                       )}
-                    </Box>
+                    </Avatar>
                     <Box sx={{ flex: 1, minWidth: 0 }}>
-                      <Typography
-                        noWrap
-                        sx={{ fontSize: '0.8125rem', fontWeight: 500, color: palette.scale[200] }}
-                      >
+                      <Typography variant="body2" fontWeight={600} noWrap>
                         {tpl.name}
                       </Typography>
-                      <Typography sx={{ fontSize: '0.6875rem', color: palette.scale[500] }}>
+                      <Typography variant="caption" color="text.tertiary">
                         {tpl.runCount} runs
                       </Typography>
                     </Box>
@@ -689,31 +1082,19 @@ export default function DashboardPage() {
                 ))}
               </Stack>
             )}
-          </Box>
+          </GlassCard>
 
           {/* Favorites */}
-          <Box
-            sx={{
-              p: 2.5,
-              bgcolor: palette.scale[1000],
-              borderRadius: '8px',
-              border: `1px solid ${alpha(palette.scale[100], 0.08)}`,
-            }}
-          >
+          <GlassCard sx={{ animationDelay: '350ms' }}>
             <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
-              <StarIcon sx={{ fontSize: 16, color: palette.yellow[400] }} />
-              <Typography
-                sx={{
-                  fontSize: '0.875rem',
-                  fontWeight: 600,
-                  color: palette.scale[100],
-                }}
-              >
+              <StarIcon sx={{ fontSize: 18, color: 'warning.main' }} />
+              <Typography variant="subtitle2" fontWeight={700}>
                 Favorites
               </Typography>
             </Stack>
+
             {favorites.templates.length === 0 && favorites.connections.length === 0 ? (
-              <Typography sx={{ fontSize: '0.8125rem', color: palette.scale[500] }}>
+              <Typography variant="body2" color="text.secondary">
                 No favorites yet. Star templates or connections for quick access.
               </Typography>
             ) : (
@@ -724,11 +1105,17 @@ export default function DashboardPage() {
                     direction="row"
                     alignItems="center"
                     spacing={1}
-                    sx={{ cursor: 'pointer', '&:hover': { opacity: 0.8 } }}
+                    sx={{
+                      cursor: 'pointer',
+                      p: 0.75,
+                      mx: -0.75,
+                      borderRadius: 1,
+                      '&:hover': { bgcolor: alpha(theme.palette.action.hover, 0.5) },
+                    }}
                     onClick={() => navigate(`/reports?template=${tpl.id}`)}
                   >
-                    <DescriptionIcon sx={{ fontSize: 14, color: palette.scale[500] }} />
-                    <Typography noWrap sx={{ fontSize: '0.8125rem', color: palette.scale[300] }}>
+                    <DescriptionIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
+                    <Typography variant="body2" noWrap sx={{ flex: 1 }}>
                       {tpl.name}
                     </Typography>
                   </Stack>
@@ -739,94 +1126,107 @@ export default function DashboardPage() {
                     direction="row"
                     alignItems="center"
                     spacing={1}
-                    sx={{ cursor: 'pointer', '&:hover': { opacity: 0.8 } }}
+                    sx={{
+                      cursor: 'pointer',
+                      p: 0.75,
+                      mx: -0.75,
+                      borderRadius: 1,
+                      '&:hover': { bgcolor: alpha(theme.palette.action.hover, 0.5) },
+                    }}
                     onClick={() => navigate('/connections')}
                   >
-                    <StorageIcon sx={{ fontSize: 14, color: palette.scale[500] }} />
-                    <Typography noWrap sx={{ fontSize: '0.8125rem', color: palette.scale[300] }}>
+                    <StorageIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
+                    <Typography variant="body2" noWrap sx={{ flex: 1 }}>
                       {conn.name}
                     </Typography>
                   </Stack>
                 ))}
               </Stack>
             )}
-          </Box>
-        </Box>
+          </GlassCard>
+        </Stack>
       </Box>
 
-      {/* Recommendations Panel */}
-      <Box
+      {/* ========== AI RECOMMENDATIONS ========== */}
+      <GlassCard
         sx={{
-          mt: 3,
-          p: 2.5,
-          bgcolor: palette.scale[1000],
-          borderRadius: '8px',
-          border: `1px solid ${alpha(palette.scale[100], 0.08)}`,
+          mt: 4,
+          background: theme.palette.mode === 'dark'
+            ? `linear-gradient(135deg, ${alpha(theme.palette.secondary.main, 0.08)} 0%, ${alpha(theme.palette.background.paper, 0.6)} 100%)`
+            : undefined,
+          animationDelay: '400ms',
         }}
       >
-        <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
-          <Stack direction="row" alignItems="center" spacing={1.5}>
+        <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 3 }}>
+          <Stack direction="row" alignItems="center" spacing={2}>
             <Box
               sx={{
-                width: 32,
-                height: 32,
-                borderRadius: '8px',
-                bgcolor: alpha(palette.purple?.[400] || palette.blue[400], 0.15),
+                width: 44,
+                height: 44,
+                borderRadius: 2,
+                background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
               }}
             >
-              <AutoAwesomeIcon sx={{ fontSize: 16, color: palette.purple?.[400] || palette.blue[400] }} />
+              <AutoAwesomeIcon sx={{ fontSize: 22, color: 'white' }} />
             </Box>
             <Box>
-              <Typography
-                sx={{
-                  fontSize: '0.875rem',
-                  fontWeight: 600,
-                  color: palette.scale[100],
-                }}
-              >
+              <Typography variant="subtitle1" fontWeight={700}>
                 AI Recommendations
               </Typography>
-              <Typography sx={{ fontSize: '0.75rem', color: palette.scale[500] }}>
-                Smart template suggestions for your data
+              <Typography variant="caption" color="text.secondary">
+                Smart template suggestions based on your data
               </Typography>
             </Box>
           </Stack>
           <Button
             size="small"
-            startIcon={<LightbulbIcon sx={{ fontSize: 14 }} />}
+            startIcon={<LightbulbIcon sx={{ fontSize: 16 }} />}
             onClick={fetchRecommendations}
             disabled={recLoading}
-            sx={{
-              color: palette.scale[400],
-              fontSize: '0.75rem',
-              '&:hover': { color: palette.scale[100] },
-            }}
+            sx={{ fontWeight: 600 }}
           >
             {recLoading ? 'Loading...' : 'Get Suggestions'}
           </Button>
         </Stack>
 
         {recLoading ? (
-          <LinearProgress
+          <Box
             sx={{
-              bgcolor: palette.scale[800],
-              '& .MuiLinearProgress-bar': { bgcolor: palette.blue[400] },
+              height: 120,
+              borderRadius: 2,
+              background: `linear-gradient(90deg, ${alpha(theme.palette.action.hover, 0.5)} 25%, ${alpha(theme.palette.action.hover, 0.8)} 50%, ${alpha(theme.palette.action.hover, 0.5)} 75%)`,
+              backgroundSize: '200% 100%',
+              animation: `${shimmer} 1.5s ease-in-out infinite`,
             }}
           />
         ) : recommendations.length === 0 ? (
-          <Box sx={{ py: 3, textAlign: 'center' }}>
-            <LightbulbIcon sx={{ fontSize: 32, color: palette.scale[700], mb: 1 }} />
-            <Typography sx={{ fontSize: '0.8125rem', color: palette.scale[500], mb: 1 }}>
+          <Box sx={{ py: 4, textAlign: 'center' }}>
+            <Box
+              sx={{
+                width: 64,
+                height: 64,
+                borderRadius: '50%',
+                bgcolor: alpha(theme.palette.primary.main, 0.1),
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                mx: 'auto',
+                mb: 2,
+              }}
+            >
+              <LightbulbIcon sx={{ fontSize: 28, color: 'text.secondary' }} />
+            </Box>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
               No recommendations yet
             </Typography>
             <Button
               variant="outlined"
               size="small"
               onClick={fetchRecommendations}
-              sx={{ textTransform: 'none' }}
+              sx={{ borderRadius: 2 }}
             >
               Get AI Recommendations
             </Button>
@@ -839,136 +1239,99 @@ export default function DashboardPage() {
               gap: 2,
             }}
           >
-            {recommendations.map((rec) => (
-              <Box
-                key={rec.id}
-                onClick={() => navigate(`/reports?template=${rec.id}`)}
-                sx={{
-                  p: 2,
-                  borderRadius: '8px',
-                  border: `1px solid ${alpha(palette.scale[100], 0.08)}`,
-                  bgcolor: alpha(palette.scale[100], 0.02),
-                  cursor: 'pointer',
-                  transition: 'all 150ms ease',
-                  '&:hover': {
-                    borderColor: alpha(palette.scale[100], 0.15),
-                    bgcolor: alpha(palette.scale[100], 0.05),
-                  },
-                }}
-              >
-                <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
-                  <Box
+            {recommendations.map((rec, idx) => (
+              <Grow key={rec.id} in timeout={400 + idx * 100}>
+                <RecommendationCard onClick={() => navigate(`/reports?template=${rec.id}`)}>
+                  <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1.5 }}>
+                    <Avatar
+                      sx={{
+                        width: 28,
+                        height: 28,
+                        bgcolor: alpha(
+                          rec.kind === 'excel' ? theme.palette.success.main : theme.palette.error.main,
+                          0.15
+                        ),
+                      }}
+                    >
+                      {rec.kind === 'excel' ? (
+                        <TableChartIcon sx={{ fontSize: 14, color: 'success.main' }} />
+                      ) : (
+                        <PictureAsPdfIcon sx={{ fontSize: 14, color: 'error.main' }} />
+                      )}
+                    </Avatar>
+                    {rec.matchScore && (
+                      <Chip
+                        label={`${Math.round((rec.matchScore || 0) * 100)}% match`}
+                        size="small"
+                        sx={{
+                          height: 20,
+                          fontSize: '0.6rem',
+                          fontWeight: 600,
+                          bgcolor: alpha(theme.palette.success.main, 0.15),
+                          color: 'success.main',
+                        }}
+                      />
+                    )}
+                  </Stack>
+                  <Typography variant="body2" fontWeight={600} noWrap sx={{ mb: 0.5 }}>
+                    {rec.name}
+                  </Typography>
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
                     sx={{
-                      width: 24,
-                      height: 24,
-                      borderRadius: '6px',
-                      bgcolor: alpha(rec.kind === 'excel' ? palette.green[400] : palette.red[400], 0.15),
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
+                      display: '-webkit-box',
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: 'vertical',
+                      overflow: 'hidden',
+                      lineHeight: 1.4,
                     }}
                   >
-                    {rec.kind === 'excel' ? (
-                      <TableChartIcon sx={{ fontSize: 12, color: palette.green[400] }} />
-                    ) : (
-                      <PictureAsPdfIcon sx={{ fontSize: 12, color: palette.red[400] }} />
-                    )}
-                  </Box>
-                  {rec.matchScore && (
-                    <Chip
-                      label={`${Math.round((rec.matchScore || 0) * 100)}%`}
-                      size="small"
-                      sx={{
-                        height: 18,
-                        fontSize: '0.6rem',
-                        bgcolor: alpha(palette.green[400], 0.15),
-                        color: palette.green[400],
-                      }}
-                    />
-                  )}
-                </Stack>
-                <Typography
-                  noWrap
-                  sx={{ fontSize: '0.8125rem', fontWeight: 500, color: palette.scale[200] }}
-                >
-                  {rec.name}
-                </Typography>
-                <Typography
-                  sx={{
-                    fontSize: '0.6875rem',
-                    color: palette.scale[500],
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    display: '-webkit-box',
-                    WebkitLineClamp: 2,
-                    WebkitBoxOrient: 'vertical',
-                  }}
-                >
-                  {rec.description}
-                </Typography>
-              </Box>
+                    {rec.description}
+                  </Typography>
+                </RecommendationCard>
+              </Grow>
             ))}
           </Box>
         )}
-      </Box>
+      </GlassCard>
 
-      {/* Connection Status */}
+      {/* ========== ACTIVE CONNECTION ========== */}
       {activeConnection && (
-        <Box
-          sx={{
-            mt: 3,
-            p: 2.5,
-            bgcolor: palette.scale[1000],
-            borderRadius: '8px',
-            border: `1px solid ${alpha(palette.scale[100], 0.08)}`,
-          }}
-        >
-          <Stack direction="row" alignItems="center" spacing={2}>
-            <Box
-              sx={{
-                width: 40,
-                height: 40,
-                borderRadius: '8px',
-                bgcolor: alpha(palette.green[400], 0.15),
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <StorageIcon sx={{ fontSize: 20, color: palette.green[400] }} />
-            </Box>
-            <Box sx={{ flex: 1 }}>
-              <Typography
+        <Fade in>
+          <GlassCard sx={{ mt: 3, animationDelay: '450ms' }}>
+            <Stack direction="row" alignItems="center" spacing={2}>
+              <Avatar
                 sx={{
-                  fontSize: '0.875rem',
-                  fontWeight: 500,
-                  color: palette.scale[100],
+                  width: 48,
+                  height: 48,
+                  bgcolor: alpha(theme.palette.success.main, 0.15),
                 }}
               >
-                Connected to {activeConnection.name}
-              </Typography>
-              <Typography
+                <StorageIcon sx={{ color: 'success.main' }} />
+              </Avatar>
+              <Box sx={{ flex: 1 }}>
+                <Typography variant="subtitle2" fontWeight={700}>
+                  Connected to {activeConnection.name}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {activeConnection.db_type}
+                  {activeConnection.summary && ` • ${activeConnection.summary}`}
+                </Typography>
+              </Box>
+              <Chip
+                label="Active"
+                size="small"
+                color="success"
                 sx={{
-                  fontSize: '0.75rem',
-                  color: palette.scale[500],
+                  fontWeight: 600,
+                  animation: `${pulse} 2s ease-in-out infinite`,
                 }}
-              >
-                {activeConnection.db_type} {activeConnection.summary && `\u2022 ${activeConnection.summary}`}
-              </Typography>
-            </Box>
-            <Chip
-              label="Active"
-              size="small"
-              color="success"
-              sx={{
-                height: 22,
-                fontSize: '0.6875rem',
-                fontWeight: 600,
-              }}
-            />
-          </Stack>
-        </Box>
+              />
+            </Stack>
+          </GlassCard>
+        </Fade>
       )}
-    </Box>
+    </PageContainer>
   )
 }

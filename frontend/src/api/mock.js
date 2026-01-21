@@ -120,13 +120,23 @@ const MOCK_RUNS = [
 
 export async function testConnection(payload) {
   await sleep()
+  const dbType = payload?.db_type
+    || (typeof payload?.db_url === 'string' && payload.db_url.startsWith('sqlite') ? 'sqlite' : null)
+  if (dbType === 'sqlite') {
+    if (!payload?.db_url && !payload?.database) {
+      const error = new Error('Missing required fields')
+      error.response = { data: { detail: 'db_url or database is required for sqlite' } }
+      throw error
+    }
+    return { status: 'ok', ok: true, details: 'Connected (SQLite)', latency_ms: 12 }
+  }
   // naive mock: consider any host provided as success
-  if (!payload?.host || !payload?.db_type) {
+  if (!payload?.host || !dbType) {
     const error = new Error('Missing required fields')
     error.response = { data: { detail: 'db_type and host are required' } }
     throw error
   }
-  return { status: 'connected', details: `Connected to ${payload.db_type}@${payload.host}` }
+  return { status: 'ok', ok: true, details: `Connected to ${dbType}@${payload.host}` }
 }
 
 export async function listTemplates() {

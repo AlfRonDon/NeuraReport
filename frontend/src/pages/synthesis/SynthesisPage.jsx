@@ -230,7 +230,7 @@ export default function SynthesisPage() {
 
       <Grid container spacing={3}>
         {/* Sessions List */}
-        <Grid item xs={12} md={3}>
+        <Grid size={{ xs: 12, md: 3 }}>
           <Paper sx={{ p: 2 }}>
             <Typography variant="h6" gutterBottom>
               Sessions
@@ -274,7 +274,7 @@ export default function SynthesisPage() {
         </Grid>
 
         {/* Main Content */}
-        <Grid item xs={12} md={9}>
+        <Grid size={{ xs: 12, md: 9 }}>
           {currentSession ? (
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
               {/* Documents */}
@@ -299,7 +299,7 @@ export default function SynthesisPage() {
                 ) : (
                   <Grid container spacing={2}>
                     {currentSession.documents?.map((doc) => (
-                      <Grid item xs={12} sm={6} md={4} key={doc.id}>
+                      <Grid size={{ xs: 12, sm: 6, md: 4 }} key={doc.id}>
                         <Card variant="outlined">
                           <CardContent>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
@@ -340,7 +340,7 @@ export default function SynthesisPage() {
                     Analysis
                   </Typography>
                   <Grid container spacing={2} sx={{ mb: 2 }}>
-                    <Grid item xs={12} sm={6}>
+                    <Grid size={{ xs: 12, sm: 6 }}>
                       <FormControl fullWidth size="small">
                         <InputLabel>Output Format</InputLabel>
                         <Select
@@ -354,7 +354,7 @@ export default function SynthesisPage() {
                         </Select>
                       </FormControl>
                     </Grid>
-                    <Grid item xs={12} sm={6}>
+                    <Grid size={{ xs: 12, sm: 6 }}>
                       <TextField
                         fullWidth
                         size="small"

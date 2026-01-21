@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Box, Typography, Stack, Button, TextField, Chip, LinearProgress,
   MenuItem, Paper, Dialog, DialogTitle, DialogContent, DialogActions,
-  Tabs, Tab, Collapse, IconButton, Badge,
+  Tabs, Tab, Collapse, IconButton, Badge, Tooltip,
 } from '@mui/material'
 import CheckRoundedIcon from '@mui/icons-material/CheckRounded'
 import PlayArrowIcon from '@mui/icons-material/PlayArrow'
@@ -80,9 +80,15 @@ function CollapsibleSection({ title, icon, badge, defaultExpanded = false, child
             <Chip size="small" label={badge} color="primary" variant="outlined" />
           )}
         </Stack>
-        <IconButton size="small" onClick={(e) => { e.stopPropagation(); setExpanded(!expanded) }}>
-          {expanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-        </IconButton>
+        <Tooltip title={expanded ? 'Collapse' : 'Expand'}>
+          <IconButton
+            size="small"
+            onClick={(e) => { e.stopPropagation(); setExpanded(!expanded) }}
+            aria-label={expanded ? 'Collapse section' : 'Expand section'}
+          >
+            {expanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+          </IconButton>
+        </Tooltip>
       </Box>
       <Collapse in={expanded}>
         <Box sx={{ p: 2, borderTop: '1px solid', borderColor: 'divider' }}>

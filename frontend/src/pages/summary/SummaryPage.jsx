@@ -201,7 +201,7 @@ export default function SummaryPage() {
           </Box>
           <Grid container spacing={2}>
             {history.map((item) => (
-              <Grid item xs={12} md={6} key={item.id}>
+              <Grid size={{ xs: 12, md: 6 }} key={item.id}>
                 <Card variant="outlined" sx={{ cursor: 'pointer' }} onClick={() => handleLoadFromHistory(item)}>
                   <CardContent sx={{ py: 1.5 }}>
                     <Typography variant="caption" color="text.secondary">
@@ -220,7 +220,7 @@ export default function SummaryPage() {
 
       <Grid container spacing={3}>
         {/* Input Section */}
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Paper sx={{ p: 3, height: '100%' }}>
             <Typography variant="h6" gutterBottom>
               Content to Summarize
@@ -354,19 +354,19 @@ export default function SummaryPage() {
         </Grid>
 
         {/* Output Section */}
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Paper sx={{ p: 3, height: '100%', display: 'flex', flexDirection: 'column' }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
               <Typography variant="h6">Generated Summary</Typography>
               {summary && (
                 <Box sx={{ display: 'flex', gap: 1 }}>
                   <Tooltip title={copied ? 'Copied!' : 'Copy to clipboard'}>
-                    <IconButton size="small" onClick={handleCopy}>
+                    <IconButton size="small" onClick={handleCopy} aria-label="Copy to clipboard">
                       <CopyIcon fontSize="small" />
                     </IconButton>
                   </Tooltip>
                   <Tooltip title="Clear">
-                    <IconButton size="small" onClick={clearSummary}>
+                    <IconButton size="small" onClick={clearSummary} aria-label="Clear summary">
                       <DeleteIcon fontSize="small" />
                     </IconButton>
                   </Tooltip>

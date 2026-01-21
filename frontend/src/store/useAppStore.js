@@ -127,7 +127,57 @@ const clearDiscoveryStorage = () => {
 
 const discoveryInitial = loadDiscoveryFromStorage()
 
+// Demo data for demo mode
+const DEMO_CONNECTIONS = [
+  { id: 'demo_conn_1', name: 'Sample Sales Database', db_type: 'postgresql', status: 'connected', lastConnected: new Date().toISOString(), lastLatencyMs: 45, summary: 'Demo PostgreSQL connection' },
+  { id: 'demo_conn_2', name: 'Marketing Analytics', db_type: 'mysql', status: 'connected', lastConnected: new Date().toISOString(), lastLatencyMs: 32, summary: 'Demo MySQL connection' },
+]
+
+const DEMO_TEMPLATES = [
+  { id: 'demo_tpl_1', name: 'Monthly Sales Report', kind: 'pdf', status: 'approved', description: 'Comprehensive monthly sales overview', tags: ['sales', 'monthly'], createdAt: new Date().toISOString(), mappingKeys: ['date', 'region', 'product'] },
+  { id: 'demo_tpl_2', name: 'Quarterly Revenue Summary', kind: 'excel', status: 'approved', description: 'Revenue breakdown by quarter', tags: ['finance', 'quarterly'], createdAt: new Date().toISOString(), mappingKeys: ['quarter', 'department'] },
+  { id: 'demo_tpl_3', name: 'Customer Analytics Dashboard', kind: 'pdf', status: 'approved', description: 'Customer behavior and insights', tags: ['customers', 'analytics'], createdAt: new Date().toISOString(), mappingKeys: ['customer_segment', 'date_range'] },
+]
+
 export const useAppStore = create((set, get) => ({
+  // Demo mode
+  demoMode: false,
+  setDemoMode: (enabled) => {
+    if (enabled) {
+      // Populate demo data
+      set({
+        demoMode: true,
+        savedConnections: DEMO_CONNECTIONS,
+        activeConnectionId: DEMO_CONNECTIONS[0].id,
+        activeConnection: DEMO_CONNECTIONS[0],
+        templates: DEMO_TEMPLATES,
+      })
+    } else {
+      // Clear demo data
+      set({
+        demoMode: false,
+        savedConnections: [],
+        activeConnectionId: null,
+        activeConnection: null,
+        templates: [],
+      })
+    }
+  },
+  initDemoMode: () => {
+    // Check preferences for demo mode
+    try {
+      const prefs = localStorage.getItem('neurareport_preferences')
+      if (prefs) {
+        const parsed = JSON.parse(prefs)
+        if (parsed.demoMode) {
+          get().setDemoMode(true)
+        }
+      }
+    } catch {
+      // ignore
+    }
+  },
+
   // Setup nav (left navigation panes)
   setupNav: 'connect', // 'connect' | 'generate' | 'templates'
   setSetupNav: (pane) => set({ setupNav: pane }),

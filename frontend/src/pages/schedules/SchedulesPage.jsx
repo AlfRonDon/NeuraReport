@@ -1,3 +1,7 @@
+/**
+ * Premium Schedules Page
+ * Sophisticated scheduling interface with premium styling
+ */
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import {
@@ -22,19 +26,226 @@ import {
   Select,
   Switch,
   FormControlLabel,
+  Tooltip,
+  Fade,
+  Zoom,
+  useTheme,
+  alpha,
+  styled,
+  keyframes,
 } from '@mui/material'
-import AddIcon from '@mui/icons-material/Add'
-import MoreVertIcon from '@mui/icons-material/MoreVert'
-import EditIcon from '@mui/icons-material/Edit'
-import DeleteIcon from '@mui/icons-material/Delete'
-import PlayArrowIcon from '@mui/icons-material/PlayArrow'
-import PauseIcon from '@mui/icons-material/Pause'
-import ScheduleIcon from '@mui/icons-material/Schedule'
+import {
+  Add as AddIcon,
+  MoreVert as MoreVertIcon,
+  Edit as EditIcon,
+  Delete as DeleteIcon,
+  PlayArrow as PlayArrowIcon,
+  Pause as PauseIcon,
+  Schedule as ScheduleIcon,
+  CalendarMonth as CalendarIcon,
+  Email as EmailIcon,
+  AccessTime as TimeIcon,
+} from '@mui/icons-material'
 import { DataTable } from '../../ui/DataTable'
 import { ConfirmModal } from '../../ui/Modal'
 import { useAppStore } from '../../store/useAppStore'
 import { useToast } from '../../components/ToastProvider'
 import * as api from '../../api/client'
+
+// =============================================================================
+// ANIMATIONS
+// =============================================================================
+
+const fadeInUp = keyframes`
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+`
+
+const pulse = keyframes`
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+`
+
+// =============================================================================
+// STYLED COMPONENTS
+// =============================================================================
+
+const PageContainer = styled(Box)(({ theme }) => ({
+  padding: theme.spacing(3),
+  animation: `${fadeInUp} 0.4s ease-out`,
+}))
+
+const StyledDialog = styled(Dialog)(({ theme }) => ({
+  '& .MuiDialog-paper': {
+    backgroundColor: alpha(theme.palette.background.paper, 0.95),
+    backdropFilter: 'blur(20px)',
+    borderRadius: 20,
+    border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+    boxShadow: `0 24px 48px ${alpha(theme.palette.common.black, 0.2)}`,
+  },
+  '& .MuiBackdrop-root': {
+    backgroundColor: alpha(theme.palette.common.black, 0.5),
+    backdropFilter: 'blur(4px)',
+  },
+}))
+
+const DialogHeader = styled(DialogTitle)(({ theme }) => ({
+  display: 'flex',
+  alignItems: 'center',
+  gap: theme.spacing(2),
+  padding: theme.spacing(3),
+  borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+}))
+
+const DialogIconContainer = styled(Box)(({ theme }) => ({
+  width: 48,
+  height: 48,
+  borderRadius: 14,
+  background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.1)}, ${alpha(theme.palette.secondary.main, 0.1)})`,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  '& svg': {
+    fontSize: 24,
+    color: theme.palette.primary.main,
+  },
+}))
+
+const StyledDialogContent = styled(DialogContent)(({ theme }) => ({
+  padding: theme.spacing(3),
+}))
+
+const StyledDialogActions = styled(DialogActions)(({ theme }) => ({
+  padding: theme.spacing(2, 3),
+  borderTop: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+  backgroundColor: alpha(theme.palette.background.paper, 0.3),
+  gap: theme.spacing(1),
+}))
+
+const SectionLabel = styled(Typography)(({ theme }) => ({
+  fontSize: '0.75rem',
+  fontWeight: 600,
+  textTransform: 'uppercase',
+  letterSpacing: '0.05em',
+  color: theme.palette.text.disabled,
+  marginBottom: theme.spacing(2),
+  marginTop: theme.spacing(3),
+  display: 'flex',
+  alignItems: 'center',
+  gap: theme.spacing(1),
+  '&:first-of-type': {
+    marginTop: 0,
+  },
+}))
+
+const StyledTextField = styled(TextField)(({ theme }) => ({
+  '& .MuiOutlinedInput-root': {
+    borderRadius: 12,
+    transition: 'all 0.2s ease',
+    '&:hover .MuiOutlinedInput-notchedOutline': {
+      borderColor: alpha(theme.palette.primary.main, 0.5),
+    },
+    '&.Mui-focused': {
+      '& .MuiOutlinedInput-notchedOutline': {
+        borderColor: theme.palette.primary.main,
+        borderWidth: 2,
+      },
+    },
+  },
+}))
+
+const StyledFormControl = styled(FormControl)(({ theme }) => ({
+  '& .MuiOutlinedInput-root': {
+    borderRadius: 12,
+  },
+}))
+
+const StatusChip = styled(Chip, {
+  shouldForwardProp: (prop) => prop !== 'active',
+})(({ theme, active }) => ({
+  borderRadius: 8,
+  fontWeight: 500,
+  fontSize: '0.75rem',
+  backgroundColor: active
+    ? alpha(theme.palette.success.main, 0.1)
+    : alpha(theme.palette.text.secondary, 0.1),
+  color: active ? theme.palette.success.main : theme.palette.text.secondary,
+  border: `1px solid ${active
+    ? alpha(theme.palette.success.main, 0.2)
+    : alpha(theme.palette.text.secondary, 0.2)}`,
+}))
+
+const FrequencyChip = styled(Chip)(({ theme }) => ({
+  borderRadius: 8,
+  fontWeight: 500,
+  fontSize: '0.75rem',
+  backgroundColor: alpha(theme.palette.primary.main, 0.1),
+  color: theme.palette.primary.main,
+  border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
+}))
+
+const StyledSwitch = styled(Switch)(({ theme }) => ({
+  '& .MuiSwitch-switchBase.Mui-checked': {
+    color: theme.palette.success.main,
+    '& + .MuiSwitch-track': {
+      backgroundColor: theme.palette.success.main,
+    },
+  },
+}))
+
+const StyledMenu = styled(Menu)(({ theme }) => ({
+  '& .MuiPaper-root': {
+    backgroundColor: alpha(theme.palette.background.paper, 0.95),
+    backdropFilter: 'blur(20px)',
+    borderRadius: 12,
+    border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+    boxShadow: `0 8px 32px ${alpha(theme.palette.common.black, 0.15)}`,
+    minWidth: 180,
+  },
+}))
+
+const StyledMenuItem = styled(MenuItem)(({ theme }) => ({
+  borderRadius: 8,
+  margin: theme.spacing(0.5, 1),
+  padding: theme.spacing(1, 1.5),
+  transition: 'all 0.15s ease',
+  '&:hover': {
+    backgroundColor: alpha(theme.palette.primary.main, 0.08),
+  },
+}))
+
+const ActionButton = styled(Button)(({ theme }) => ({
+  borderRadius: 10,
+  textTransform: 'none',
+  fontWeight: 500,
+  padding: theme.spacing(1, 2.5),
+  transition: 'all 0.2s ease',
+}))
+
+const PrimaryButton = styled(ActionButton)(({ theme }) => ({
+  background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
+  color: '#fff',
+  boxShadow: `0 4px 14px ${alpha(theme.palette.primary.main, 0.3)}`,
+  '&:hover': {
+    boxShadow: `0 6px 20px ${alpha(theme.palette.primary.main, 0.4)}`,
+    transform: 'translateY(-1px)',
+  },
+  '&:disabled': {
+    background: alpha(theme.palette.text.primary, 0.1),
+    color: alpha(theme.palette.text.primary, 0.4),
+    boxShadow: 'none',
+  },
+}))
+
+// =============================================================================
+// CONSTANTS
+// =============================================================================
 
 const FREQUENCY_OPTIONS = [
   { value: 'daily', label: 'Daily' },
@@ -47,6 +258,10 @@ const FREQUENCY_INTERVALS = {
   weekly: 10080,
   monthly: 43200,
 }
+
+// =============================================================================
+// HELPERS
+// =============================================================================
 
 const extractDateOnly = (value) => {
   if (!value) return ''
@@ -78,6 +293,10 @@ const isValidEmail = (email) => {
   return emailRegex.test(email)
 }
 
+// =============================================================================
+// SCHEDULE DIALOG COMPONENT
+// =============================================================================
+
 function ScheduleDialog({
   open,
   onClose,
@@ -89,6 +308,7 @@ function ScheduleDialog({
   onSave,
   onError,
 }) {
+  const theme = useTheme()
   const [form, setForm] = useState({
     name: '',
     templateId: '',
@@ -147,13 +367,11 @@ function ScheduleDialog({
     const startDate = buildDateTime(form.startDate)
     const endDate = buildDateTime(form.endDate, true)
 
-    // Validate date range: end date must be >= start date
     if (form.startDate && form.endDate && form.endDate < form.startDate) {
       onError?.('End date must be on or after start date')
       return
     }
 
-    // Validate email format if recipients are provided
     if (emailRecipients.length > 0) {
       const invalidEmail = emailRecipients.find((email) => !isValidEmail(email))
       if (invalidEmail) {
@@ -183,43 +401,52 @@ function ScheduleDialog({
     }
   }
 
-  const disableSave = saving
-    || !form.name
-    || !form.templateId
-    || !form.connectionId
-    || !form.startDate
-    || !form.endDate
+  const disableSave =
+    saving || !form.name || !form.templateId || !form.connectionId || !form.startDate || !form.endDate
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>{editing ? 'Edit Schedule' : 'Create Schedule'}</DialogTitle>
-      <DialogContent>
-        <Stack spacing={3} sx={{ mt: 1 }}>
-          <TextField
+    <StyledDialog open={open} onClose={onClose} maxWidth="sm" fullWidth TransitionComponent={Fade}>
+      <DialogHeader>
+        <DialogIconContainer>
+          <ScheduleIcon />
+        </DialogIconContainer>
+        <Box>
+          <Typography variant="h6" sx={{ fontWeight: 600 }}>
+            {editing ? 'Edit Schedule' : 'Create Schedule'}
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            {editing ? 'Update the schedule configuration' : 'Set up automated report generation'}
+          </Typography>
+        </Box>
+      </DialogHeader>
+
+      <StyledDialogContent>
+        <SectionLabel>
+          <ScheduleIcon sx={{ fontSize: 16 }} />
+          Basic Information
+        </SectionLabel>
+        <Stack spacing={2.5}>
+          <StyledTextField
             label="Schedule Name"
             value={form.name}
             onChange={handleChange('name')}
             fullWidth
             required
+            placeholder="e.g., Weekly Sales Report"
           />
 
-          <FormControl fullWidth required>
+          <StyledFormControl fullWidth required>
             <InputLabel>Template</InputLabel>
-            <Select
-              value={form.templateId}
-              onChange={handleChange('templateId')}
-              label="Template"
-              disabled={editing}
-            >
+            <Select value={form.templateId} onChange={handleChange('templateId')} label="Template" disabled={editing}>
               {templates.map((t) => (
                 <MenuItem key={t.id} value={t.id}>
                   {t.name || t.id}
                 </MenuItem>
               ))}
             </Select>
-          </FormControl>
+          </StyledFormControl>
 
-          <FormControl fullWidth required>
+          <StyledFormControl fullWidth required>
             <InputLabel>Connection</InputLabel>
             <Select
               value={form.connectionId}
@@ -233,10 +460,16 @@ function ScheduleDialog({
                 </MenuItem>
               ))}
             </Select>
-          </FormControl>
+          </StyledFormControl>
+        </Stack>
 
+        <SectionLabel>
+          <CalendarIcon sx={{ fontSize: 16 }} />
+          Schedule Timing
+        </SectionLabel>
+        <Stack spacing={2.5}>
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-            <TextField
+            <StyledTextField
               label="Start Date"
               type="date"
               value={form.startDate}
@@ -245,7 +478,7 @@ function ScheduleDialog({
               fullWidth
               required
             />
-            <TextField
+            <StyledTextField
               label="End Date"
               type="date"
               value={form.endDate}
@@ -256,22 +489,24 @@ function ScheduleDialog({
             />
           </Stack>
 
-          <FormControl fullWidth>
+          <StyledFormControl fullWidth>
             <InputLabel>Frequency</InputLabel>
-            <Select
-              value={form.frequency}
-              onChange={handleChange('frequency')}
-              label="Frequency"
-            >
+            <Select value={form.frequency} onChange={handleChange('frequency')} label="Frequency">
               {FREQUENCY_OPTIONS.map((opt) => (
                 <MenuItem key={opt.value} value={opt.value}>
                   {opt.label}
                 </MenuItem>
               ))}
             </Select>
-          </FormControl>
+          </StyledFormControl>
+        </Stack>
 
-          <TextField
+        <SectionLabel>
+          <EmailIcon sx={{ fontSize: 16 }} />
+          Email Notifications (Optional)
+        </SectionLabel>
+        <Stack spacing={2.5}>
+          <StyledTextField
             label="Email recipients"
             value={form.emailRecipients}
             onChange={handleChange('emailRecipients')}
@@ -279,13 +514,13 @@ function ScheduleDialog({
             helperText="Comma or semicolon separated list"
             fullWidth
           />
-          <TextField
+          <StyledTextField
             label="Email subject"
             value={form.emailSubject}
             onChange={handleChange('emailSubject')}
             fullWidth
           />
-          <TextField
+          <StyledTextField
             label="Email message"
             value={form.emailMessage}
             onChange={handleChange('emailMessage')}
@@ -293,33 +528,41 @@ function ScheduleDialog({
             minRows={2}
             fullWidth
           />
-
-          <FormControlLabel
-            control={
-              <Switch
-                checked={form.active}
-                onChange={handleChange('active')}
-              />
-            }
-            label="Active"
-          />
         </Stack>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>Cancel</Button>
-        <Button
-          variant="contained"
-          onClick={handleSubmit}
-          disabled={disableSave}
-        >
-          {saving ? 'Saving...' : 'Save'}
-        </Button>
-      </DialogActions>
-    </Dialog>
+
+        <Box sx={{ mt: 3 }}>
+          <FormControlLabel
+            control={<StyledSwitch checked={form.active} onChange={handleChange('active')} />}
+            label={
+              <Box>
+                <Typography variant="body2" fontWeight={500}>
+                  Active
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  Enable this schedule to run automatically
+                </Typography>
+              </Box>
+            }
+          />
+        </Box>
+      </StyledDialogContent>
+
+      <StyledDialogActions>
+        <ActionButton onClick={onClose}>Cancel</ActionButton>
+        <PrimaryButton onClick={handleSubmit} disabled={disableSave}>
+          {saving ? 'Saving...' : editing ? 'Update Schedule' : 'Create Schedule'}
+        </PrimaryButton>
+      </StyledDialogActions>
+    </StyledDialog>
   )
 }
 
+// =============================================================================
+// MAIN COMPONENT
+// =============================================================================
+
 export default function SchedulesPage() {
+  const theme = useTheme()
   const toast = useToast()
   const [searchParams, setSearchParams] = useSearchParams()
   const templates = useAppStore((s) => s.templates)
@@ -481,13 +724,11 @@ export default function SchedulesPage() {
         headerName: 'Schedule',
         renderCell: (value, row) => (
           <Box>
-            <Typography variant="body2" fontWeight={500}>
+            <Typography variant="body2" fontWeight={600}>
               {value || row.id}
             </Typography>
             <Typography variant="caption" color="text.secondary">
-              {templates.find((t) => t.id === row.template_id)?.name
-                || row.template_name
-                || row.template_id}
+              {templates.find((t) => t.id === row.template_id)?.name || row.template_name || row.template_id}
             </Typography>
           </Box>
         ),
@@ -499,20 +740,18 @@ export default function SchedulesPage() {
         renderCell: (value) => {
           const option = FREQUENCY_OPTIONS.find((opt) => opt.value === value)
           const label = option?.label || value || 'daily'
-          return (
-            <Chip label={label} size="small" variant="outlined" />
-          )
+          return <FrequencyChip label={label} size="small" />
         },
       },
       {
         field: 'enabled',
         headerName: 'Status',
-        width: 100,
+        width: 140,
         renderCell: (value, row) => {
           const active = row.active ?? value ?? true
           return (
             <Stack direction="row" alignItems="center" spacing={1}>
-              <Switch
+              <StyledSwitch
                 size="small"
                 checked={active}
                 disabled={togglingId === row.id}
@@ -521,9 +760,7 @@ export default function SchedulesPage() {
                   handleToggleSchedule(row, e.target.checked)
                 }}
               />
-              <Typography variant="caption" color="text.secondary">
-                {active ? 'Active' : 'Paused'}
-              </Typography>
+              <StatusChip label={active ? 'Active' : 'Paused'} size="small" active={active} />
             </Stack>
           )
         },
@@ -534,7 +771,11 @@ export default function SchedulesPage() {
         width: 180,
         renderCell: (value, row) => {
           const lastRun = value || row.last_run_at
-          return lastRun ? new Date(lastRun).toLocaleString() : 'Never'
+          return (
+            <Typography variant="body2" color={lastRun ? 'text.primary' : 'text.secondary'}>
+              {lastRun ? new Date(lastRun).toLocaleString() : 'Never'}
+            </Typography>
+          )
         },
       },
       {
@@ -544,7 +785,11 @@ export default function SchedulesPage() {
         renderCell: (value, row) => {
           const active = row.active ?? row.enabled ?? true
           const nextRun = value || row.next_run_at
-          return active && nextRun ? new Date(nextRun).toLocaleString() : '-'
+          return (
+            <Typography variant="body2" color={active && nextRun ? 'text.primary' : 'text.secondary'}>
+              {active && nextRun ? new Date(nextRun).toLocaleString() : '-'}
+            </Typography>
+          )
         },
       },
     ],
@@ -573,7 +818,7 @@ export default function SchedulesPage() {
   const menuScheduleActive = menuSchedule?.active ?? menuSchedule?.enabled ?? true
 
   return (
-    <Box sx={{ py: 3 }}>
+    <PageContainer>
       <Container maxWidth="xl">
         <DataTable
           title="Scheduled Reports"
@@ -592,50 +837,41 @@ export default function SchedulesPage() {
             },
           ]}
           rowActions={(row) => (
-            <IconButton size="small" onClick={(e) => handleOpenMenu(e, row)}>
-              <MoreVertIcon />
-            </IconButton>
+            <Tooltip title="More actions" arrow TransitionComponent={Zoom}>
+              <IconButton size="small" onClick={(e) => handleOpenMenu(e, row)} aria-label="More actions">
+                <MoreVertIcon />
+              </IconButton>
+            </Tooltip>
           )}
           emptyState={{
             icon: ScheduleIcon,
             title: 'No schedules yet',
-            description:
-              'Create a schedule to automatically generate reports on a recurring basis.',
+            description: 'Create a schedule to automatically generate reports on a recurring basis.',
             actionLabel: 'Create Schedule',
             onAction: handleAddSchedule,
           }}
         />
 
-        <Menu
-          anchorEl={menuAnchor}
-          open={Boolean(menuAnchor)}
-          onClose={handleCloseMenu}
-        >
-          <MenuItem onClick={handleEditSchedule}>
+        <StyledMenu anchorEl={menuAnchor} open={Boolean(menuAnchor)} onClose={handleCloseMenu} TransitionComponent={Fade}>
+          <StyledMenuItem onClick={handleEditSchedule}>
             <ListItemIcon>
               <EditIcon fontSize="small" />
             </ListItemIcon>
             <ListItemText>Edit</ListItemText>
-          </MenuItem>
-          <MenuItem onClick={handleToggleEnabled}>
+          </StyledMenuItem>
+          <StyledMenuItem onClick={handleToggleEnabled}>
             <ListItemIcon>
-              {menuScheduleActive ? (
-                <PauseIcon fontSize="small" />
-              ) : (
-                <PlayArrowIcon fontSize="small" />
-              )}
+              {menuScheduleActive ? <PauseIcon fontSize="small" /> : <PlayArrowIcon fontSize="small" />}
             </ListItemIcon>
-            <ListItemText>
-              {menuScheduleActive ? 'Pause' : 'Enable'}
-            </ListItemText>
-          </MenuItem>
-          <MenuItem onClick={handleDeleteClick} sx={{ color: 'error.main' }}>
+            <ListItemText>{menuScheduleActive ? 'Pause' : 'Enable'}</ListItemText>
+          </StyledMenuItem>
+          <StyledMenuItem onClick={handleDeleteClick} sx={{ color: 'error.main' }}>
             <ListItemIcon>
               <DeleteIcon fontSize="small" color="error" />
             </ListItemIcon>
             <ListItemText>Delete</ListItemText>
-          </MenuItem>
-        </Menu>
+          </StyledMenuItem>
+        </StyledMenu>
 
         <ScheduleDialog
           open={dialogOpen}
@@ -659,6 +895,6 @@ export default function SchedulesPage() {
           severity="error"
         />
       </Container>
-    </Box>
+    </PageContainer>
   )
 }

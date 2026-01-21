@@ -13,6 +13,7 @@ import {
   Avatar,
   LinearProgress,
   Alert,
+  Tooltip,
 } from '@mui/material'
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
@@ -151,9 +152,11 @@ export default function TemplateRecommender({ onSelectTemplate }) {
             </Typography>
           </Box>
         </Stack>
-        <IconButton size="small">
-          {expanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-        </IconButton>
+        <Tooltip title={expanded ? 'Collapse' : 'Expand'}>
+          <IconButton size="small" aria-label={expanded ? 'Collapse' : 'Expand'}>
+            {expanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+          </IconButton>
+        </Tooltip>
       </Box>
 
       {/* Expanded Content */}

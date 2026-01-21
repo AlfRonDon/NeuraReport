@@ -99,10 +99,11 @@ export default function QueryBuilderPage() {
         useAppStore.getState().setSavedConnections(conns || [])
       } catch (err) {
         console.error('Failed to fetch connections:', err)
+        toast.show('Failed to load connections. Please refresh the page.', 'error')
       }
     }
     fetchConnections()
-  }, [])
+  }, [toast])
 
   // Fetch schema when connection changes
   useEffect(() => {
@@ -125,11 +126,12 @@ export default function QueryBuilderPage() {
         // Only log error if this is still the latest request
         if (requestId === schemaRequestIdRef.current) {
           console.error('Failed to fetch schema:', err)
+          toast.show('Failed to load database schema', 'warning')
         }
       }
     }
     fetchSchema()
-  }, [selectedConnectionId])
+  }, [selectedConnectionId, toast])
 
   // Fetch saved queries on mount
   useEffect(() => {
@@ -359,9 +361,15 @@ export default function QueryBuilderPage() {
                       </Typography>
                     )}
                   </Box>
-                  <IconButton size="small" onClick={() => setDeleteSavedConfirm({ open: true, queryId: q.id, queryName: q.name })}>
-                    <DeleteIcon fontSize="small" sx={{ color: palette.scale[500] }} />
-                  </IconButton>
+                  <Tooltip title="Delete saved query">
+                    <IconButton
+                      size="small"
+                      onClick={() => setDeleteSavedConfirm({ open: true, queryId: q.id, queryName: q.name })}
+                      aria-label="Delete saved query"
+                    >
+                      <DeleteIcon fontSize="small" sx={{ color: palette.scale[500] }} />
+                    </IconButton>
+                  </Tooltip>
                 </Stack>
               ))}
             </Stack>
@@ -570,12 +578,12 @@ export default function QueryBuilderPage() {
             </Stack>
             <Stack direction="row" spacing={1}>
               <Tooltip title="Copy SQL">
-                <IconButton size="small" onClick={handleCopySQL}>
+                <IconButton size="small" onClick={handleCopySQL} aria-label="Copy SQL">
                   <ContentCopyIcon fontSize="small" sx={{ color: palette.scale[400] }} />
                 </IconButton>
               </Tooltip>
               <Tooltip title="Save Query">
-                <IconButton size="small" onClick={() => setShowSaveDialog(true)}>
+                <IconButton size="small" onClick={() => setShowSaveDialog(true)} aria-label="Save Query">
                   <SaveIcon fontSize="small" sx={{ color: palette.scale[400] }} />
                 </IconButton>
               </Tooltip>

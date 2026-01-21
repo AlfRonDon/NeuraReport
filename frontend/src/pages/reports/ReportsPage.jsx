@@ -32,6 +32,7 @@ import DateRangeIcon from '@mui/icons-material/DateRange'
 import { useAppStore } from '../../store/useAppStore'
 import { useToast } from '../../components/ToastProvider'
 import TemplateRecommender from '../../components/TemplateRecommender'
+import SuccessCelebration, { useCelebration } from '../../components/SuccessCelebration'
 import * as api from '../../api/client'
 import * as summaryApi from '../../api/summary'
 
@@ -99,6 +100,9 @@ export default function ReportsPage() {
   const [summaryLoading, setSummaryLoading] = useState(false)
   const [queueingSummary, setQueueingSummary] = useState(false)
 
+  // Success celebration
+  const { celebrating, celebrate, onComplete: onCelebrationComplete } = useCelebration()
+
   // Refs to prevent race conditions
   const keyOptionsRequestIdRef = useRef(0)
   const summaryRequestIdRef = useRef(0)
@@ -113,7 +117,7 @@ export default function ReportsPage() {
           setSelectedTemplate(data[0].id)
         }
       } catch (err) {
-        toast.show(err.message || 'Failed to load templates', 'error')
+        toast.show(err.message || 'Failed to load designs', 'error')
       } finally {
         setLoading(false)
       }
@@ -166,7 +170,7 @@ export default function ReportsPage() {
       setSelectedTemplate(template.id)
       setKeyValues({})
       setResult(null)
-      toast.show(`Selected template: ${template.name || template.id}`, 'success')
+      toast.show(`Selected: ${template.name || template.id}`, 'success')
     }
   }, [toast])
 
@@ -203,7 +207,7 @@ export default function ReportsPage() {
 
   const handleGenerate = useCallback(async () => {
     if (!selectedTemplate || !activeConnection?.id) {
-      toast.show('Please select a template and ensure you have an active connection', 'error')
+      toast.show('Please select a design and connect to a data source first', 'error')
       return
     }
     if (discovery && selectedBatches.length === 0) {
@@ -240,6 +244,7 @@ export default function ReportsPage() {
 
       setResult(reportResult)
       toast.show('Report generation started!', 'success')
+      celebrate() // Trigger celebration animation
     } catch (err) {
       setError(err.message || 'Failed to generate report')
       toast.show(err.message || 'Failed to generate report', 'error')
@@ -252,7 +257,7 @@ export default function ReportsPage() {
 
   const handleDiscover = useCallback(async () => {
     if (!selectedTemplate || !activeConnection?.id) {
-      toast.show('Select a template and connection first', 'error')
+      toast.show('Select a design and data source first', 'error')
       return
     }
     if (!startDate || !endDate) {
@@ -297,10 +302,11 @@ export default function ReportsPage() {
       setRunHistory(runs)
     } catch (err) {
       console.error('Failed to load run history:', err)
+      toast.show('Failed to load run history', 'warning')
     } finally {
       setHistoryLoading(false)
     }
-  }, [selectedTemplate])
+  }, [selectedTemplate, toast])
 
   useEffect(() => {
     fetchRunHistory()
@@ -352,7 +358,7 @@ export default function ReportsPage() {
       const response = await summaryApi.queueReportSummary(selectedRun.id)
       const jobId = response?.job_id || response?.jobId || null
       if (jobId) {
-        toast.show('Summary queued. Track progress in Jobs.', 'success')
+        toast.show('Summary queued. Track progress in Report Progress.', 'success')
       } else {
         toast.show('Failed to queue summary.', 'error')
       }
@@ -374,17 +380,18 @@ export default function ReportsPage() {
 
   return (
     <Box sx={{ py: 3 }}>
+      <SuccessCelebration trigger={celebrating} onComplete={onCelebrationComplete} />
       <Container maxWidth="lg">
         <Typography variant="h5" fontWeight={600} sx={{ mb: 1 }}>
-          Generate Reports
+          Create a Report
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-          Select a template and configure parameters to generate your report.
+          Choose a design, set your date range, and generate a new report.
         </Typography>
 
         {!activeConnection && (
           <Alert severity="warning" sx={{ mb: 3 }}>
-            Please connect to a database first to generate reports.
+            Please add a data source first to create reports.
           </Alert>
         )}
 
@@ -395,20 +402,20 @@ export default function ReportsPage() {
 
         <Grid container spacing={3}>
           {/* Configuration Panel */}
-          <Grid item xs={12} md={8}>
+          <Grid size={{ xs: 12, md: 8 }}>
             <Paper sx={{ p: 3, border: 1, borderColor: 'divider' }}>
               <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 3 }}>
-                Report Configuration
+                Report Settings
               </Typography>
 
               <Stack spacing={3}>
-                {/* Template Selection */}
+                {/* Design Selection */}
                 <FormControl fullWidth>
-                  <InputLabel>Template</InputLabel>
+                  <InputLabel>Report Design</InputLabel>
                   <Select
                     value={selectedTemplate}
                     onChange={handleTemplateChange}
-                    label="Template"
+                    label="Report Design"
                   >
                     {templates.map((template) => (
                       <MenuItem key={template.id} value={template.id}>
@@ -513,7 +520,7 @@ export default function ReportsPage() {
                 <Divider />
                 <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between">
                   <Typography variant="subtitle2" fontWeight={600}>
-                    Discover Batches
+                    Find Data Batches
                   </Typography>
                   <Button
                     variant="outlined"
@@ -521,7 +528,7 @@ export default function ReportsPage() {
                     onClick={handleDiscover}
                     disabled={discovering || !selectedTemplate || !activeConnection}
                   >
-                    {discovering ? 'Discovering...' : 'Discover'}
+                    {discovering ? 'Searching...' : 'Find Batches'}
                   </Button>
                 </Stack>
 
@@ -562,7 +569,20 @@ export default function ReportsPage() {
                 )}
 
                 {error && (
-                  <Alert severity="error" onClose={() => setError(null)}>
+                  <Alert
+                    severity="error"
+                    onClose={() => setError(null)}
+                    action={
+                      <Button
+                        color="inherit"
+                        size="small"
+                        onClick={handleGenerate}
+                        disabled={generating}
+                      >
+                        Try Again
+                      </Button>
+                    }
+                  >
                     {error}
                   </Alert>
                 )}
@@ -600,7 +620,7 @@ export default function ReportsPage() {
           </Grid>
 
           {/* Result Panel */}
-          <Grid item xs={12} md={4}>
+          <Grid size={{ xs: 12, md: 4 }}>
             <Paper sx={{ p: 3, border: 1, borderColor: 'divider', height: '100%' }}>
               <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 2 }}>
                 Output
@@ -609,11 +629,19 @@ export default function ReportsPage() {
               {result ? (
                 <Stack spacing={2}>
                   <Alert severity="success">
-                    Report job created: {result.job_id?.slice(0, 8)}...
+                    Report started! ID: {result.job_id?.slice(0, 8)}...
                   </Alert>
                   <Typography variant="body2" color="text.secondary">
-                    Your report is being generated. Check the Jobs page for progress.
+                    Your report is being generated. Track it in Report Progress.
                   </Typography>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    onClick={() => navigate('/jobs')}
+                    sx={{ alignSelf: 'flex-start' }}
+                  >
+                    View Progress
+                  </Button>
                 </Stack>
               ) : (
                 <Typography variant="body2" color="text.secondary">

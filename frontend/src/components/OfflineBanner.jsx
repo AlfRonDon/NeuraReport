@@ -1,12 +1,165 @@
+/**
+ * Premium Offline Banner
+ * Elegant network status indicator with animations
+ */
 import { useEffect, useState, useCallback, useRef } from 'react'
-import { Box, Typography, Button, CircularProgress, Collapse, alpha } from '@mui/material'
-import SignalWifiOffIcon from '@mui/icons-material/SignalWifiOff'
-import RefreshIcon from '@mui/icons-material/Refresh'
-import CheckCircleIcon from '@mui/icons-material/CheckCircle'
+import {
+  Box,
+  Typography,
+  Button,
+  CircularProgress,
+  Collapse,
+  useTheme,
+  alpha,
+  styled,
+  keyframes,
+} from '@mui/material'
+import {
+  SignalWifiOff as OfflineIcon,
+  Refresh as RefreshIcon,
+  CheckCircle as CheckCircleIcon,
+  WifiTethering as OnlineIcon,
+} from '@mui/icons-material'
 import { useNetworkStatus } from '../hooks/useNetworkStatus'
-import { palette } from '../theme'
+
+// =============================================================================
+// ANIMATIONS
+// =============================================================================
+
+const slideDown = keyframes`
+  from {
+    opacity: 0;
+    transform: translateY(-100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+`
+
+const pulse = keyframes`
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.1); opacity: 0.8; }
+`
+
+const shimmer = keyframes`
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+`
+
+const spin = keyframes`
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+`
+
+// =============================================================================
+// STYLED COMPONENTS
+// =============================================================================
+
+const BannerBase = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: theme.spacing(2),
+  padding: theme.spacing(1, 3),
+  animation: `${slideDown} 0.3s ease-out`,
+  position: 'relative',
+  overflow: 'hidden',
+}))
+
+const OfflineBannerContainer = styled(BannerBase)(({ theme }) => ({
+  background: `linear-gradient(135deg, ${theme.palette.warning.main}, ${theme.palette.warning.dark})`,
+  color: '#fff',
+  '&::before': {
+    content: '""',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    background: `linear-gradient(
+      90deg,
+      transparent 0%,
+      ${alpha('#fff', 0.1)} 50%,
+      transparent 100%
+    )`,
+    backgroundSize: '200% 100%',
+    animation: `${shimmer} 3s infinite linear`,
+    pointerEvents: 'none',
+  },
+}))
+
+const ReconnectedBannerContainer = styled(BannerBase)(({ theme }) => ({
+  background: `linear-gradient(135deg, ${theme.palette.success.main}, ${theme.palette.success.dark})`,
+  color: '#fff',
+  justifyContent: 'center',
+}))
+
+const IconContainer = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  width: 28,
+  height: 28,
+  borderRadius: 8,
+  backgroundColor: alpha('#fff', 0.2),
+  flexShrink: 0,
+}))
+
+const PulsingIcon = styled(Box)(() => ({
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  animation: `${pulse} 2s infinite ease-in-out`,
+}))
+
+const StatusText = styled(Typography)(() => ({
+  fontSize: '0.8125rem',
+  fontWeight: 600,
+  letterSpacing: '-0.01em',
+}))
+
+const DescriptionText = styled(Typography)(() => ({
+  fontSize: '0.75rem',
+  opacity: 0.9,
+}))
+
+const RetryButton = styled(Button)(({ theme }) => ({
+  borderRadius: 8,
+  textTransform: 'none',
+  fontWeight: 600,
+  fontSize: '0.75rem',
+  padding: theme.spacing(0.5, 2),
+  minWidth: 90,
+  borderColor: alpha('#fff', 0.4),
+  color: '#fff',
+  backdropFilter: 'blur(4px)',
+  backgroundColor: alpha('#fff', 0.1),
+  transition: 'all 0.2s ease',
+  '&:hover': {
+    borderColor: '#fff',
+    backgroundColor: alpha('#fff', 0.2),
+    transform: 'translateY(-1px)',
+  },
+  '&:active': {
+    transform: 'translateY(0)',
+  },
+  '&:disabled': {
+    borderColor: alpha('#fff', 0.2),
+    color: alpha('#fff', 0.7),
+  },
+}))
+
+const SpinningLoader = styled(CircularProgress)(() => ({
+  color: 'inherit',
+}))
+
+// =============================================================================
+// MAIN COMPONENT
+// =============================================================================
 
 export default function OfflineBanner() {
+  const theme = useTheme()
   const { isOnline, checkConnectivity } = useNetworkStatus()
   const [isRetrying, setIsRetrying] = useState(false)
   const [showReconnected, setShowReconnected] = useState(false)
@@ -41,24 +194,14 @@ export default function OfflineBanner() {
   if (showReconnected && isOnline) {
     return (
       <Collapse in={showReconnected}>
-        <Box
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 1,
-            px: 2,
-            py: 1,
-            bgcolor: palette.green[600],
-            color: '#FFFFFF',
-            fontSize: '0.75rem',
-          }}
-        >
-          <CheckCircleIcon sx={{ fontSize: 16 }} />
-          <Typography sx={{ fontSize: '0.75rem', fontWeight: 600 }}>
-            Connection restored
-          </Typography>
-        </Box>
+        <ReconnectedBannerContainer>
+          <PulsingIcon>
+            <IconContainer>
+              <CheckCircleIcon sx={{ fontSize: 16 }} />
+            </IconContainer>
+          </PulsingIcon>
+          <StatusText sx={{ ml: 1 }}>Connection restored</StatusText>
+        </ReconnectedBannerContainer>
       </Collapse>
     )
   }
@@ -66,55 +209,36 @@ export default function OfflineBanner() {
   if (isOnline) return null
 
   return (
-    <Box
-      sx={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: 2,
-        px: 2,
-        py: 1,
-        bgcolor: palette.yellow[600],
-        color: palette.scale[1000],
-      }}
-    >
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-        <SignalWifiOffIcon sx={{ fontSize: 18 }} />
-        <Typography sx={{ fontSize: '0.8125rem', fontWeight: 600 }}>
-          You&apos;re offline
-        </Typography>
-        <Typography sx={{ fontSize: '0.75rem', opacity: 0.9 }}>
-          Some features may not work until connection is restored.
-        </Typography>
-      </Box>
-      <Button
-        size="small"
-        variant="outlined"
-        onClick={handleRetry}
-        disabled={isRetrying}
-        startIcon={
-          isRetrying ? (
-            <CircularProgress size={14} color="inherit" />
-          ) : (
-            <RefreshIcon sx={{ fontSize: 16 }} />
-          )
-        }
-        sx={{
-          textTransform: 'none',
-          fontWeight: 600,
-          fontSize: '0.75rem',
-          borderColor: alpha(palette.scale[1000], 0.4),
-          color: palette.scale[1000],
-          py: 0.25,
-          minWidth: 80,
-          '&:hover': {
-            borderColor: palette.scale[1000],
-            bgcolor: alpha(palette.scale[1000], 0.1),
-          },
-        }}
-      >
-        {isRetrying ? 'Checking' : 'Retry'}
-      </Button>
-    </Box>
+    <Collapse in={!isOnline}>
+      <OfflineBannerContainer>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <PulsingIcon>
+            <IconContainer>
+              <OfflineIcon sx={{ fontSize: 16 }} />
+            </IconContainer>
+          </PulsingIcon>
+          <Box>
+            <StatusText>You&apos;re offline</StatusText>
+            <DescriptionText>
+              Some features may not work until connection is restored.
+            </DescriptionText>
+          </Box>
+        </Box>
+        <RetryButton
+          variant="outlined"
+          onClick={handleRetry}
+          disabled={isRetrying}
+          startIcon={
+            isRetrying ? (
+              <SpinningLoader size={14} />
+            ) : (
+              <RefreshIcon sx={{ fontSize: 16 }} />
+            )
+          }
+        >
+          {isRetrying ? 'Checking...' : 'Retry'}
+        </RetryButton>
+      </OfflineBannerContainer>
+    </Collapse>
   )
 }

@@ -27,6 +27,7 @@ import CloudIcon from '@mui/icons-material/Cloud'
 import DownloadIcon from '@mui/icons-material/Download'
 import TokenIcon from '@mui/icons-material/Toll'
 import { useToast } from '../../components/ToastProvider'
+import { useAppStore } from '../../store/useAppStore'
 import * as api from '../../api/client'
 import { palette } from '../../theme'
 
@@ -129,6 +130,8 @@ function ConfigRow({ label, value, mono = false }) {
 
 export default function SettingsPage() {
   const toast = useToast()
+  const setDemoMode = useAppStore((s) => s.setDemoMode)
+  const demoMode = useAppStore((s) => s.demoMode)
   const [loading, setLoading] = useState(true)
   const [health, setHealth] = useState(null)
   const [error, setError] = useState(null)
@@ -385,6 +388,34 @@ export default function SettingsPage() {
             These preferences are stored locally in your browser.
           </Typography>
           <Stack spacing={1}>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={demoMode}
+                  onChange={(e) => {
+                    const enabled = e.target.checked
+                    setDemoMode(enabled)
+                    // Also persist to preferences
+                    const newPrefs = { ...preferences, demoMode: enabled }
+                    setPreferences(newPrefs)
+                    savePreferences(newPrefs)
+                    toast.show(enabled ? 'Demo mode enabled - sample data loaded' : 'Demo mode disabled', 'success')
+                  }}
+                  size="small"
+                />
+              }
+              label={
+                <Stack>
+                  <Typography variant="body2" color={palette.scale[200]}>
+                    Demo Mode
+                  </Typography>
+                  <Typography variant="caption" color={palette.scale[500]}>
+                    Explore with sample data (no real database required)
+                  </Typography>
+                </Stack>
+              }
+            />
+            <Divider sx={{ my: 1, borderColor: alpha(palette.scale[100], 0.06) }} />
             <FormControlLabel
               control={
                 <Switch

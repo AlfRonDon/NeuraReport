@@ -27,6 +27,7 @@ from .routes import (
     templates,
 )
 from backend.app.features.analyze.routes import router as analyze_router
+from backend.app.features.analyze.routes import enhanced_analysis_routes
 
 
 def register_routes(app: FastAPI) -> None:
@@ -64,6 +65,7 @@ def register_routes(app: FastAPI) -> None:
 
     # Document analysis
     app.include_router(analyze_router, prefix="/analyze", tags=["analyze"])
+    app.include_router(enhanced_analysis_routes.router)
 
     # Analytics and bulk operations
     app.include_router(analytics.router, prefix="/analytics", tags=["analytics"])

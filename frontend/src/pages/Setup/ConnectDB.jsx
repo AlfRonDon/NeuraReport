@@ -1844,7 +1844,7 @@ const lastHeartbeatLabel = useMemo(() => {
 
           {/* Row 1: Name, Host, Port */}
         <Grid container spacing={2} sx={{ mb: 2 }}>
-          <Grid item xs={12} sm={4} md={4} lg={4} sx={gridItemSx}>
+          <Grid size={{ xs: 12, sm: 4, md: 4, lg: 4 }} sx={gridItemSx}>
             <TextField
               label="Connection Name"
               placeholder="e.g. Reporting Warehouse"
@@ -1861,7 +1861,7 @@ const lastHeartbeatLabel = useMemo(() => {
               {...register('name')}
             />
           </Grid>
-          <Grid item xs={12} sm={4} md={4} lg={4} sx={gridItemSx}>
+          <Grid size={{ xs: 12, sm: 4, md: 4, lg: 4 }} sx={gridItemSx}>
             <TextField
               label="Host"
               fullWidth
@@ -1877,7 +1877,7 @@ const lastHeartbeatLabel = useMemo(() => {
               {...register('host')}
             />
           </Grid>
-          <Grid item xs={12} sm={4} md={4} lg={4} sx={gridItemSx}>
+          <Grid size={{ xs: 12, sm: 4, md: 4, lg: 4 }} sx={gridItemSx}>
             <TextField
               label="Port"
               fullWidth
@@ -1930,7 +1930,7 @@ const lastHeartbeatLabel = useMemo(() => {
         )}
 
         <Grid container spacing={2} alignItems="flex-start" sx={{ mb: 2 }}>
-          <Grid item xs={12} sm={4} md={4} sx={gridItemSx}>
+          <Grid size={{ xs: 12, sm: 4, md: 4 }} sx={gridItemSx}>
             <TextField
               label="Database"
               placeholder={isSQLite ? 'Path to .db file' : 'Database name'}
@@ -1945,7 +1945,7 @@ const lastHeartbeatLabel = useMemo(() => {
               {...register('db_name')}
             />
           </Grid>
-          <Grid item xs={12} sm={4} md={4} sx={gridItemSx}>
+          <Grid size={{ xs: 12, sm: 4, md: 4 }} sx={gridItemSx}>
             <TextField
               label="Username"
               fullWidth
@@ -1960,7 +1960,7 @@ const lastHeartbeatLabel = useMemo(() => {
               {...register('username')}
             />
           </Grid>
-          <Grid item xs={12} sm={4} md={4} sx={gridItemSx}>
+          <Grid size={{ xs: 12, sm: 4, md: 4 }} sx={gridItemSx}>
             <TextField
               label="Password"
               type={showPw ? 'text' : 'password'}

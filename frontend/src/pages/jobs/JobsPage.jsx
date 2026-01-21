@@ -11,6 +11,7 @@ import {
   LinearProgress,
   Typography,
   Stack,
+  Tooltip,
   alpha,
   Dialog,
   DialogTitle,
@@ -164,7 +165,7 @@ export default function JobsPage() {
     setLoading(true)
     await fetchJobs()
     setLoading(false)
-    toast.show('Jobs refreshed', 'info')
+    toast.show('Progress updated', 'info')
   }, [fetchJobs, toast])
 
   const handleCancelClick = useCallback(() => {
@@ -364,7 +365,7 @@ export default function JobsPage() {
     },
     {
       field: 'templateName',
-      headerName: 'Template',
+      headerName: 'Design',
       renderCell: (value, row) => (
         <Box sx={{ color: palette.scale[200], fontSize: '0.8125rem' }}>
           {value || row.templateId?.slice(0, 12) || '-'}
@@ -512,12 +513,12 @@ export default function JobsPage() {
   return (
     <Box sx={{ p: 3, maxWidth: 1400, mx: 'auto', width: '100%' }}>
       <DataTable
-        title="Jobs"
-        subtitle={activeJobsCount > 0 ? `${activeJobsCount} active job${activeJobsCount > 1 ? 's' : ''}` : 'All jobs completed'}
+        title="Report Progress"
+        subtitle={activeJobsCount > 0 ? `${activeJobsCount} report${activeJobsCount > 1 ? 's' : ''} generating` : 'All reports complete'}
         columns={columns}
         data={jobs}
         loading={loading}
-        searchPlaceholder="Search jobs..."
+        searchPlaceholder="Search reports..."
         filters={filters}
         selectable
         onSelectionChange={setSelectedIds}
@@ -534,25 +535,28 @@ export default function JobsPage() {
         ]}
         onRefresh={handleRefresh}
         rowActions={(row) => (
-          <IconButton
-            size="small"
-            onClick={(e) => handleOpenMenu(e, row)}
-            sx={{
-              color: palette.scale[500],
-              '&:hover': {
-                color: palette.scale[100],
-                bgcolor: alpha(palette.scale[100], 0.08),
-              },
-            }}
-          >
-            <MoreVertIcon sx={{ fontSize: 18 }} />
-          </IconButton>
+          <Tooltip title="More actions">
+            <IconButton
+              size="small"
+              onClick={(e) => handleOpenMenu(e, row)}
+              aria-label="More actions"
+              sx={{
+                color: palette.scale[500],
+                '&:hover': {
+                  color: palette.scale[100],
+                  bgcolor: alpha(palette.scale[100], 0.08),
+                },
+              }}
+            >
+              <MoreVertIcon sx={{ fontSize: 18 }} />
+            </IconButton>
+          </Tooltip>
         )}
         emptyState={{
           icon: WorkIcon,
-          title: 'No jobs yet',
-          description: 'Jobs will appear here when you generate reports.',
-          actionLabel: 'Generate Report',
+          title: 'No reports in progress',
+          description: 'When you create a report, you can track its progress here.',
+          actionLabel: 'Create Report',
           onAction: () => navigate('/reports'),
         }}
       />
@@ -653,9 +657,11 @@ export default function JobsPage() {
       >
         <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: palette.scale[100] }}>
           Job Details
-          <IconButton size="small" onClick={() => setDetailsDialogOpen(false)} sx={{ color: palette.scale[500] }}>
-            <CloseIcon sx={{ fontSize: 18 }} />
-          </IconButton>
+          <Tooltip title="Close">
+            <IconButton size="small" onClick={() => setDetailsDialogOpen(false)} aria-label="Close dialog" sx={{ color: palette.scale[500] }}>
+              <CloseIcon sx={{ fontSize: 18 }} />
+            </IconButton>
+          </Tooltip>
         </DialogTitle>
         <DialogContent dividers sx={{ borderColor: alpha(palette.scale[100], 0.1) }}>
           {detailsJob && (

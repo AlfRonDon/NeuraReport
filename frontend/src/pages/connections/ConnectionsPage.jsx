@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
-import { Box, Chip, IconButton, Menu, MenuItem, ListItemIcon, ListItemText, alpha } from '@mui/material'
+import { Box, Chip, IconButton, Menu, MenuItem, ListItemIcon, ListItemText, Tooltip, alpha } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
 import MoreVertIcon from '@mui/icons-material/MoreVert'
 import EditIcon from '@mui/icons-material/Edit'
@@ -121,19 +121,44 @@ export default function ConnectionsPage() {
 
   const handleDeleteConfirm = useCallback(async () => {
     if (!deletingConnection) return
-    setLoading(true)
-    try {
-      await api.deleteConnection(deletingConnection.id)
-      removeSavedConnection(deletingConnection.id)
-      toast.show('Connection deleted', 'success')
-    } catch (err) {
-      toast.show(err.message || 'Failed to delete connection', 'error')
-    } finally {
-      setLoading(false)
-      setDeleteConfirmOpen(false)
-      setDeletingConnection(null)
-    }
-  }, [deletingConnection, removeSavedConnection, toast])
+    const connectionToDelete = deletingConnection
+    const connectionData = savedConnections.find((c) => c.id === connectionToDelete.id)
+
+    // Optimistically remove from UI
+    removeSavedConnection(connectionToDelete.id)
+    setDeleteConfirmOpen(false)
+    setDeletingConnection(null)
+
+    // Set up delayed actual delete
+    let undone = false
+    const deleteTimeout = setTimeout(async () => {
+      if (undone) return
+      try {
+        await api.deleteConnection(connectionToDelete.id)
+      } catch (err) {
+        // If delete fails, restore the connection
+        if (connectionData) {
+          setSavedConnections((prev) => [...prev, connectionData])
+        }
+        toast.show(err.message || 'Failed to delete connection', 'error')
+      }
+    }, 5000)
+
+    // Show undo toast
+    toast.showWithUndo(
+      `"${connectionToDelete.name}" removed`,
+      () => {
+        undone = true
+        clearTimeout(deleteTimeout)
+        // Restore connection
+        if (connectionData) {
+          setSavedConnections((prev) => [...prev, connectionData])
+        }
+        toast.show('Data source restored', 'success')
+      },
+      { severity: 'info' }
+    )
+  }, [deletingConnection, savedConnections, removeSavedConnection, setSavedConnections, toast])
 
   const handleSaveConnection = useCallback(async (connectionData) => {
     setLoading(true)
@@ -154,7 +179,7 @@ export default function ConnectionsPage() {
       })
 
       addSavedConnection(savedConnection)
-      toast.show(editingConnection ? 'Connection updated' : 'Connection added', 'success')
+      toast.show(editingConnection ? 'Data source updated' : 'Data source added', 'success')
       setDrawerOpen(false)
     } catch (err) {
       toast.show(err.message || 'Failed to save connection', 'error')
@@ -299,8 +324,8 @@ export default function ConnectionsPage() {
   return (
     <Box sx={{ p: 3, maxWidth: 1400, mx: 'auto', width: '100%' }}>
       <DataTable
-        title="Connections"
-        subtitle="Manage your database connections"
+        title="Data Sources"
+        subtitle="Connect to your databases and data files"
         columns={columns}
         data={savedConnections}
         loading={loading}
@@ -308,7 +333,7 @@ export default function ConnectionsPage() {
         filters={filters}
         actions={[
           {
-            label: 'Add Connection',
+            label: 'Add Data Source',
             icon: <AddIcon sx={{ fontSize: 18 }} />,
             variant: 'contained',
             onClick: handleAddConnection,
@@ -316,25 +341,28 @@ export default function ConnectionsPage() {
         ]}
         onRowClick={handleRowClick}
         rowActions={(row) => (
-          <IconButton
-            size="small"
-            onClick={(e) => handleOpenMenu(e, row)}
-            sx={{
-              color: palette.scale[500],
-              '&:hover': {
-                color: palette.scale[100],
-                bgcolor: alpha(palette.scale[100], 0.08),
-              },
-            }}
-          >
-            <MoreVertIcon sx={{ fontSize: 18 }} />
-          </IconButton>
+          <Tooltip title="More actions">
+            <IconButton
+              size="small"
+              onClick={(e) => handleOpenMenu(e, row)}
+              aria-label="More actions"
+              sx={{
+                color: palette.scale[500],
+                '&:hover': {
+                  color: palette.scale[100],
+                  bgcolor: alpha(palette.scale[100], 0.08),
+                },
+              }}
+            >
+              <MoreVertIcon sx={{ fontSize: 18 }} />
+            </IconButton>
+          </Tooltip>
         )}
         emptyState={{
           icon: StorageIcon,
-          title: 'No connections yet',
-          description: 'Add a database connection to start generating reports.',
-          actionLabel: 'Add Connection',
+          title: 'No data sources yet',
+          description: 'Connect to a database to start pulling data for your reports.',
+          actionLabel: 'Add Data Source',
           onAction: handleAddConnection,
         }}
       />
@@ -379,8 +407,8 @@ export default function ConnectionsPage() {
       <Drawer
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
-        title={editingConnection ? 'Edit Connection' : 'New Connection'}
-        subtitle="Configure your database connection settings"
+        title={editingConnection ? 'Edit Data Source' : 'Add Data Source'}
+        subtitle="Enter your database details to connect"
         width={520}
       >
         <ConnectionForm
@@ -396,9 +424,9 @@ export default function ConnectionsPage() {
         open={deleteConfirmOpen}
         onClose={() => setDeleteConfirmOpen(false)}
         onConfirm={handleDeleteConfirm}
-        title="Delete Connection"
-        message={`Are you sure you want to delete "${deletingConnection?.name}"? This action cannot be undone.`}
-        confirmLabel="Delete"
+        title="Remove Data Source"
+        message={`Are you sure you want to remove "${deletingConnection?.name}"? You can undo this within a few seconds.`}
+        confirmLabel="Remove"
         severity="error"
         loading={loading}
       />

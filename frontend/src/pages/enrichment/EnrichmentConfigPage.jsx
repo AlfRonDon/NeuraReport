@@ -237,7 +237,7 @@ export default function EnrichmentConfigPage() {
       {activeTab === 0 && (
         <Grid container spacing={3}>
           {/* Input Section */}
-          <Grid item xs={12} md={6}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <Paper sx={{ p: 3, height: '100%' }}>
               <Typography variant="h6" gutterBottom>
                 Input Data
@@ -268,7 +268,7 @@ export default function EnrichmentConfigPage() {
           </Grid>
 
           {/* Sources Section */}
-          <Grid item xs={12} md={6}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <Paper sx={{ p: 3, height: '100%' }}>
               <Typography variant="h6" gutterBottom>
                 Enrichment Sources
@@ -346,7 +346,7 @@ export default function EnrichmentConfigPage() {
 
           {/* Results Section */}
           {(previewResult || enrichmentResult) && (
-            <Grid item xs={12}>
+            <Grid size={12}>
               <Paper sx={{ p: 3 }}>
                 <Typography variant="h6" gutterBottom>
                   {enrichmentResult ? 'Enrichment Results' : 'Preview Results'}
@@ -382,13 +382,15 @@ export default function EnrichmentConfigPage() {
       {activeTab === 1 && (
         <Grid container spacing={3}>
           {/* Cache Stats */}
-          <Grid item xs={12} md={6}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <Paper sx={{ p: 3 }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                 <Typography variant="h6">Cache Statistics</Typography>
-                <IconButton onClick={fetchCacheStats} size="small">
-                  <RefreshIcon />
-                </IconButton>
+                <Tooltip title="Refresh cache stats">
+                  <IconButton onClick={fetchCacheStats} size="small" aria-label="Refresh cache stats">
+                    <RefreshIcon />
+                  </IconButton>
+                </Tooltip>
               </Box>
 
               {cacheStats ? (
@@ -432,7 +434,7 @@ export default function EnrichmentConfigPage() {
           </Grid>
 
           {/* Cache Actions */}
-          <Grid item xs={12} md={6}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <Paper sx={{ p: 3 }}>
               <Typography variant="h6" gutterBottom>Cache Management</Typography>
 

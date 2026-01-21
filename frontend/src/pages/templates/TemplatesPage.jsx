@@ -8,6 +8,7 @@ import {
   MenuItem,
   ListItemIcon,
   ListItemText,
+  Tooltip,
   alpha,
   Dialog,
   DialogTitle,
@@ -130,7 +131,7 @@ export default function TemplatesPage() {
       const favIds = (favoritesData.templates || []).map((t) => t.id)
       setFavorites(new Set(favIds))
     } catch (err) {
-      toast.show(err.message || 'Failed to load templates', 'error')
+      toast.show(err.message || 'Failed to load designs', 'error')
     } finally {
       setLoading(false)
     }
@@ -184,27 +185,52 @@ export default function TemplatesPage() {
 
   const handleDeleteConfirm = useCallback(async () => {
     if (!deletingTemplate) return
-    setLoading(true)
-    try {
-      await api.deleteTemplate(deletingTemplate.id)
-      removeTemplate(deletingTemplate.id)
-      toast.show('Template deleted', 'success')
-    } catch (err) {
-      toast.show(err.message || 'Failed to delete template', 'error')
-    } finally {
-      setLoading(false)
-      setDeleteConfirmOpen(false)
-      setDeletingTemplate(null)
-    }
-  }, [deletingTemplate, removeTemplate, toast])
+    const templateToDelete = deletingTemplate
+    const templateData = templates.find((t) => t.id === templateToDelete.id)
+
+    // Optimistically remove from UI
+    removeTemplate(templateToDelete.id)
+    setDeleteConfirmOpen(false)
+    setDeletingTemplate(null)
+
+    // Set up delayed actual delete
+    let undone = false
+    const deleteTimeout = setTimeout(async () => {
+      if (undone) return
+      try {
+        await api.deleteTemplate(templateToDelete.id)
+      } catch (err) {
+        // If delete fails, restore the template
+        if (templateData) {
+          setTemplates((prev) => [...prev, templateData])
+        }
+        toast.show(err.message || 'Failed to delete template', 'error')
+      }
+    }, 5000)
+
+    // Show undo toast
+    toast.showWithUndo(
+      `"${templateToDelete.name || templateToDelete.id}" removed`,
+      () => {
+        undone = true
+        clearTimeout(deleteTimeout)
+        // Restore template
+        if (templateData) {
+          setTemplates((prev) => [...prev, templateData])
+        }
+        toast.show('Design restored', 'success')
+      },
+      { severity: 'info' }
+    )
+  }, [deletingTemplate, templates, removeTemplate, setTemplates, toast])
 
   const handleExport = useCallback(async () => {
     if (!menuTemplate) return
     try {
       await api.exportTemplateZip(menuTemplate.id)
-      toast.show('Template exported', 'success')
+      toast.show('Design exported', 'success')
     } catch (err) {
-      toast.show(err.message || 'Failed to export template', 'error')
+      toast.show(err.message || 'Failed to export design', 'error')
     }
     handleCloseMenu()
   }, [menuTemplate, toast, handleCloseMenu])
@@ -219,9 +245,9 @@ export default function TemplatesPage() {
       // Refresh templates list to include the new copy
       const data = await api.listApprovedTemplates()
       setTemplates(data)
-      toast.show(`Template duplicated as "${duplicatedName}"`, 'success')
+      toast.show(`Design copied as "${duplicatedName}"`, 'success')
     } catch (err) {
-      toast.show(err.message || 'Failed to duplicate template', 'error')
+      toast.show(err.message || 'Failed to copy design', 'error')
     } finally {
       setDuplicating(false)
     }
@@ -251,8 +277,8 @@ export default function TemplatesPage() {
       const response = await api.getSimilarTemplates(menuTemplate.id)
       setSimilarTemplates(response.similar || [])
     } catch (err) {
-      console.error('Failed to fetch similar templates:', err)
-      toast.show('Failed to load similar templates', 'error')
+      console.error('Failed to fetch similar designs:', err)
+      toast.show('Failed to load similar designs', 'error')
     } finally {
       setSimilarLoading(false)
     }
@@ -267,11 +293,11 @@ export default function TemplatesPage() {
     if (!metadataTemplate) return
     const trimmedName = metadataForm.name.trim()
     if (!trimmedName) {
-      toast.show('Template name is required', 'error')
+      toast.show('Design name is required', 'error')
       return
     }
     if (trimmedName.length > 200) {
-      toast.show('Template name must be 200 characters or less', 'error')
+      toast.show('Design name must be 200 characters or less', 'error')
       return
     }
     // Validate tags (max 50 chars each per backend requirement)
@@ -294,10 +320,10 @@ export default function TemplatesPage() {
       const result = await api.updateTemplateMetadata(metadataTemplate.id, payload)
       const updated = result?.template || { ...metadataTemplate, ...payload }
       updateTemplate(metadataTemplate.id, (tpl) => ({ ...tpl, ...updated }))
-      toast.show('Template details updated', 'success')
+      toast.show('Design details updated', 'success')
       setMetadataOpen(false)
     } catch (err) {
-      toast.show(err.message || 'Failed to update template details', 'error')
+      toast.show(err.message || 'Failed to update design details', 'error')
     } finally {
       setMetadataSaving(false)
     }
@@ -309,7 +335,7 @@ export default function TemplatesPage() {
 
   const handleImport = useCallback(async () => {
     if (!importFile) {
-      toast.show('Select a template zip file first', 'error')
+      toast.show('Select a design backup file first', 'error')
       return
     }
     // Validate file extension
@@ -335,12 +361,12 @@ export default function TemplatesPage() {
       })
       const data = await api.listApprovedTemplates()
       setTemplates(data)
-      toast.show('Template imported', 'success')
+      toast.show('Design imported', 'success')
       setImportOpen(false)
       setImportFile(null)
       setImportName('')
     } catch (err) {
-      toast.show(err.message || 'Failed to import template', 'error')
+      toast.show(err.message || 'Failed to import design', 'error')
     } finally {
       setImporting(false)
       setImportProgress(0)
@@ -364,15 +390,15 @@ export default function TemplatesPage() {
       const failedCount = result?.failedCount ?? result?.failed?.length ?? 0
       if (failedCount > 0) {
         toast.show(
-          `Deleted ${deletedCount} template${deletedCount !== 1 ? 's' : ''}, ${failedCount} failed`,
+          `Removed ${deletedCount} design${deletedCount !== 1 ? 's' : ''}, ${failedCount} failed`,
           'warning'
         )
       } else {
-        toast.show(`Deleted ${deletedCount} template${deletedCount !== 1 ? 's' : ''}`, 'success')
+        toast.show(`Removed ${deletedCount} design${deletedCount !== 1 ? 's' : ''}`, 'success')
       }
       await fetchTemplatesData()
     } catch (err) {
-      toast.show(err.message || 'Failed to delete templates', 'error')
+      toast.show(err.message || 'Failed to remove designs', 'error')
     } finally {
       setBulkActionLoading(false)
       setBulkDeleteOpen(false)
@@ -391,19 +417,19 @@ export default function TemplatesPage() {
       const failedCount = result?.failedCount ?? result?.failed?.length ?? 0
       if (failedCount > 0) {
         toast.show(
-          `Updated ${updatedCount} template${updatedCount !== 1 ? 's' : ''}, ${failedCount} failed`,
+          `Updated ${updatedCount} design${updatedCount !== 1 ? 's' : ''}, ${failedCount} failed`,
           'warning'
         )
       } else {
         toast.show(
-          `Updated ${updatedCount} template${updatedCount !== 1 ? 's' : ''}`,
+          `Updated ${updatedCount} design${updatedCount !== 1 ? 's' : ''}`,
           'success'
         )
       }
       await fetchTemplatesData()
       setBulkStatusOpen(false)
     } catch (err) {
-      toast.show(err.message || 'Failed to update template status', 'error')
+      toast.show(err.message || 'Failed to update status', 'error')
     } finally {
       setBulkActionLoading(false)
     }
@@ -435,12 +461,12 @@ export default function TemplatesPage() {
       const failedCount = result?.failedCount ?? result?.failed?.length ?? 0
       if (failedCount > 0) {
         toast.show(
-          `Updated ${updatedCount} template${updatedCount !== 1 ? 's' : ''}, ${failedCount} failed`,
+          `Tagged ${updatedCount} design${updatedCount !== 1 ? 's' : ''}, ${failedCount} failed`,
           'warning'
         )
       } else {
         toast.show(
-          `Updated ${updatedCount} template${updatedCount !== 1 ? 's' : ''}`,
+          `Tagged ${updatedCount} design${updatedCount !== 1 ? 's' : ''}`,
           'success'
         )
       }
@@ -692,22 +718,22 @@ export default function TemplatesPage() {
         </Stack>
       )}
       <DataTable
-        title="Templates"
-        subtitle="Manage your report templates"
+        title="Report Designs"
+        subtitle="Upload and manage your report layouts"
         columns={columns}
         data={filteredTemplates}
         loading={loading}
-        searchPlaceholder="Search templates..."
+        searchPlaceholder="Search designs..."
         filters={filters}
         actions={[
           {
-            label: 'Upload Template',
+            label: 'Upload Design',
             icon: <AddIcon sx={{ fontSize: 18 }} />,
             variant: 'contained',
             onClick: handleAddTemplate,
           },
           {
-            label: 'Import Zip',
+            label: 'Import Backup',
             icon: <UploadFileIcon sx={{ fontSize: 18 }} />,
             variant: 'outlined',
             onClick: handleOpenImport,
@@ -719,25 +745,28 @@ export default function TemplatesPage() {
         onBulkDelete={handleBulkDeleteOpen}
         onRowClick={handleRowClick}
         rowActions={(row) => (
-          <IconButton
-            size="small"
-            onClick={(e) => handleOpenMenu(e, row)}
-            sx={{
-              color: palette.scale[500],
-              '&:hover': {
-                color: palette.scale[100],
-                bgcolor: alpha(palette.scale[100], 0.08),
-              },
-            }}
-          >
-            <MoreVertIcon sx={{ fontSize: 18 }} />
-          </IconButton>
+          <Tooltip title="More actions">
+            <IconButton
+              size="small"
+              onClick={(e) => handleOpenMenu(e, row)}
+              aria-label="More actions"
+              sx={{
+                color: palette.scale[500],
+                '&:hover': {
+                  color: palette.scale[100],
+                  bgcolor: alpha(palette.scale[100], 0.08),
+                },
+              }}
+            >
+              <MoreVertIcon sx={{ fontSize: 18 }} />
+            </IconButton>
+          </Tooltip>
         )}
         emptyState={{
           icon: DescriptionIcon,
-          title: 'No templates yet',
-          description: 'Upload a PDF or Excel template to start generating reports.',
-          actionLabel: 'Upload Template',
+          title: 'No report designs yet',
+          description: 'Upload a PDF or Excel file as a template for your reports.',
+          actionLabel: 'Upload Design',
           onAction: handleAddTemplate,
         }}
       />
@@ -788,9 +817,9 @@ export default function TemplatesPage() {
         open={deleteConfirmOpen}
         onClose={() => setDeleteConfirmOpen(false)}
         onConfirm={handleDeleteConfirm}
-        title="Delete Template"
-        message={`Are you sure you want to delete "${deletingTemplate?.name || deletingTemplate?.id}"? This action cannot be undone.`}
-        confirmLabel="Delete"
+        title="Remove Design"
+        message={`Are you sure you want to remove "${deletingTemplate?.name || deletingTemplate?.id}"? You can undo this within a few seconds.`}
+        confirmLabel="Remove"
         severity="error"
         loading={loading}
       />
@@ -799,15 +828,15 @@ export default function TemplatesPage() {
         open={bulkDeleteOpen}
         onClose={() => setBulkDeleteOpen(false)}
         onConfirm={handleBulkDeleteConfirm}
-        title="Delete Templates"
-        message={`Delete ${selectedIds.length} template${selectedIds.length !== 1 ? 's' : ''}? This action cannot be undone.`}
-        confirmLabel="Delete"
+        title="Remove Designs"
+        message={`Remove ${selectedIds.length} design${selectedIds.length !== 1 ? 's' : ''}? This cannot be undone.`}
+        confirmLabel="Remove"
         severity="error"
         loading={bulkActionLoading}
       />
 
       <Dialog open={metadataOpen} onClose={() => setMetadataOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Edit Template Details</DialogTitle>
+        <DialogTitle>Edit Design Details</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
             <TextField
@@ -863,7 +892,7 @@ export default function TemplatesPage() {
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
             <Typography sx={{ fontSize: '0.8125rem', color: palette.scale[500] }}>
-              Update {selectedIds.length} template{selectedIds.length !== 1 ? 's' : ''} to:
+              Update {selectedIds.length} design{selectedIds.length !== 1 ? 's' : ''} to:
             </Typography>
             <FormControl fullWidth>
               <InputLabel>Status</InputLabel>
@@ -897,7 +926,7 @@ export default function TemplatesPage() {
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
             <Typography sx={{ fontSize: '0.8125rem', color: palette.scale[500] }}>
-              Add tags to {selectedIds.length} template{selectedIds.length !== 1 ? 's' : ''}.
+              Add tags to {selectedIds.length} design{selectedIds.length !== 1 ? 's' : ''}.
             </Typography>
             <TextField
               label="Tags"
@@ -921,11 +950,11 @@ export default function TemplatesPage() {
       </Dialog>
 
       <Dialog open={importOpen} onClose={() => !importing && setImportOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Import Template Zip</DialogTitle>
+        <DialogTitle>Import Design Backup</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
             <Button variant="outlined" component="label" disabled={importing}>
-              {importFile ? importFile.name : 'Choose zip file'}
+              {importFile ? importFile.name : 'Choose backup file (.zip)'}
               <input
                 type="file"
                 hidden
@@ -934,7 +963,7 @@ export default function TemplatesPage() {
               />
             </Button>
             <TextField
-              label="Template Name (optional)"
+              label="Design Name (optional)"
               value={importName}
               onChange={(e) => setImportName(e.target.value)}
               fullWidth
@@ -958,23 +987,23 @@ export default function TemplatesPage() {
         </DialogActions>
       </Dialog>
 
-      {/* Similar Templates Dialog */}
+      {/* Similar Designs Dialog */}
       <Dialog open={similarOpen} onClose={() => setSimilarOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <AutoAwesomeIcon color="primary" />
-          Similar Templates
+          Similar Designs
         </DialogTitle>
         <DialogContent>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            Templates similar to "{similarTemplate?.name || similarTemplate?.id}"
+            Designs similar to "{similarTemplate?.name || similarTemplate?.id}"
           </Typography>
           {similarLoading ? (
             <Box sx={{ py: 4, textAlign: 'center' }}>
-              <Typography color="text.secondary">Loading similar templates...</Typography>
+              <Typography color="text.secondary">Loading similar designs...</Typography>
             </Box>
           ) : similarTemplates.length === 0 ? (
             <Box sx={{ py: 4, textAlign: 'center' }}>
-              <Typography color="text.secondary">No similar templates found.</Typography>
+              <Typography color="text.secondary">No similar designs found.</Typography>
             </Box>
           ) : (
             <Stack spacing={1}>

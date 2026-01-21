@@ -393,12 +393,16 @@ export default function EnhancedDiffViewer({ beforeText, afterText, contextLines
               <Typography variant="caption" color="text.secondary">
                 {currentDiffIndex + 1} / {diffIndices.length}
               </Typography>
-              <IconButton size="small" onClick={() => navigateDiff(-1)}>
-                <KeyboardArrowUpIcon fontSize="small" />
-              </IconButton>
-              <IconButton size="small" onClick={() => navigateDiff(1)}>
-                <KeyboardArrowDownIcon fontSize="small" />
-              </IconButton>
+              <Tooltip title="Previous change">
+                <IconButton size="small" onClick={() => navigateDiff(-1)} aria-label="Previous change">
+                  <KeyboardArrowUpIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="Next change">
+                <IconButton size="small" onClick={() => navigateDiff(1)} aria-label="Next change">
+                  <KeyboardArrowDownIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
             </>
           )}
 

@@ -18,6 +18,7 @@ import {
 import RefreshIcon from '@mui/icons-material/Refresh'
 import HistoryIcon from '@mui/icons-material/History'
 import DownloadIcon from '@mui/icons-material/Download'
+import DeleteIcon from '@mui/icons-material/Delete'
 import VisibilityIcon from '@mui/icons-material/Visibility'
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf'
 import TableChartIcon from '@mui/icons-material/TableChart'
@@ -27,6 +28,7 @@ import ErrorIcon from '@mui/icons-material/Error'
 import HourglassEmptyIcon from '@mui/icons-material/HourglassEmpty'
 import CancelIcon from '@mui/icons-material/Cancel'
 import { DataTable } from '../../ui/DataTable'
+import { ConfirmModal } from '../../ui/Modal'
 import { useToast } from '../../components/ToastProvider'
 import { useAppStore } from '../../store/useAppStore'
 import * as api from '../../api/client'
@@ -62,6 +64,9 @@ export default function HistoryPage() {
   const [rowsPerPage, setRowsPerPage] = useState(25)
   const [statusFilter, setStatusFilter] = useState(initialStatus)
   const [templateFilter, setTemplateFilter] = useState(initialTemplate)
+  const [selectedIds, setSelectedIds] = useState([])
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
+  const [bulkDeleting, setBulkDeleting] = useState(false)
 
   const fetchHistory = useCallback(async () => {
     setLoading(true)
@@ -135,6 +140,40 @@ export default function HistoryPage() {
       navigate('/jobs')
     }
   }, [navigate])
+
+  const handleBulkDeleteConfirm = useCallback(async () => {
+    if (!selectedIds.length) return
+    setBulkDeleting(true)
+    try {
+      const result = await api.bulkDeleteJobs(selectedIds)
+      const deletedCount = result?.deletedCount ?? result?.deleted?.length ?? 0
+      const failedCount = result?.failedCount ?? result?.failed?.length ?? 0
+      if (failedCount > 0) {
+        toast.show(
+          `Deleted ${deletedCount} record${deletedCount !== 1 ? 's' : ''}, ${failedCount} failed`,
+          'warning'
+        )
+      } else {
+        toast.show(`Deleted ${deletedCount} history record${deletedCount !== 1 ? 's' : ''}`, 'success')
+      }
+      setSelectedIds([])
+      fetchHistory()
+    } catch (err) {
+      toast.show(err.message || 'Failed to delete history records', 'error')
+    } finally {
+      setBulkDeleting(false)
+      setBulkDeleteOpen(false)
+    }
+  }, [selectedIds, toast, fetchHistory])
+
+  const bulkActions = [
+    {
+      label: 'Delete Selected',
+      icon: <DeleteIcon sx={{ fontSize: 16 }} />,
+      color: 'error',
+      onClick: () => setBulkDeleteOpen(true),
+    },
+  ]
 
   const columns = [
     {
@@ -300,13 +339,18 @@ export default function HistoryPage() {
           </Typography>
         </Box>
         <Stack direction="row" spacing={1}>
-          <IconButton
-            onClick={fetchHistory}
-            disabled={loading}
-            sx={{ color: palette.scale[400] }}
-          >
-            {loading ? <CircularProgress size={20} /> : <RefreshIcon />}
-          </IconButton>
+          <Tooltip title="Refresh history">
+            <span>
+              <IconButton
+                onClick={fetchHistory}
+                disabled={loading}
+                aria-label="Refresh history"
+                sx={{ color: palette.scale[400] }}
+              >
+                {loading ? <CircularProgress size={20} /> : <RefreshIcon />}
+              </IconButton>
+            </span>
+          </Tooltip>
           <Button
             variant="contained"
             onClick={() => navigate('/reports')}
@@ -409,6 +453,9 @@ export default function HistoryPage() {
             loading={loading}
             searchPlaceholder="Search reports..."
             onRowClick={handleRowClick}
+            selectable
+            onSelectionChange={setSelectedIds}
+            bulkActions={bulkActions}
             pagination={{
               page,
               rowsPerPage,
@@ -419,6 +466,17 @@ export default function HistoryPage() {
           />
         )}
       </Box>
+
+      <ConfirmModal
+        open={bulkDeleteOpen}
+        onClose={() => setBulkDeleteOpen(false)}
+        onConfirm={handleBulkDeleteConfirm}
+        title="Delete History Records"
+        message={`Delete ${selectedIds.length} history record${selectedIds.length !== 1 ? 's' : ''}? This cannot be undone.`}
+        confirmLabel="Delete"
+        severity="error"
+        loading={bulkDeleting}
+      />
     </Box>
   )
 }

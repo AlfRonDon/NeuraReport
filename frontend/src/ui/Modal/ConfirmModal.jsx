@@ -1,28 +1,142 @@
+/**
+ * Premium Confirm Modal
+ * Beautiful confirmation dialog with animations and severity states
+ */
 import { useEffect, useRef } from 'react'
-import { Typography, Stack, Box, alpha } from '@mui/material'
-import WarningAmberIcon from '@mui/icons-material/WarningAmber'
-import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline'
-import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
+import {
+  Typography,
+  Stack,
+  Box,
+  useTheme,
+  alpha,
+  styled,
+  keyframes,
+} from '@mui/material'
+import {
+  WarningAmber as WarningIcon,
+  ErrorOutline as ErrorIcon,
+  InfoOutlined as InfoIcon,
+  CheckCircleOutline as SuccessIcon,
+  HelpOutline as QuestionIcon,
+} from '@mui/icons-material'
 import Modal from './Modal'
-import { palette } from '../../theme'
 
-const SEVERITY_CONFIG = {
-  warning: {
-    icon: WarningAmberIcon,
-    color: palette.yellow[400],
-    bgColor: alpha(palette.yellow[400], 0.15),
+// =============================================================================
+// ANIMATIONS
+// =============================================================================
+
+const bounce = keyframes`
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+`
+
+const shake = keyframes`
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
+  20%, 40%, 60%, 80% { transform: translateX(4px); }
+`
+
+const pulse = keyframes`
+  0%, 100% { transform: scale(1); opacity: 0.5; }
+  50% { transform: scale(1.2); opacity: 0.8; }
+`
+
+const fadeInUp = keyframes`
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+`
+
+// =============================================================================
+// STYLED COMPONENTS
+// =============================================================================
+
+const IconContainer = styled(Box, {
+  shouldForwardProp: (prop) => !['severity', 'bgColor'].includes(prop),
+})(({ theme, severity, bgColor }) => ({
+  width: 72,
+  height: 72,
+  borderRadius: 20,
+  backgroundColor: bgColor,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  position: 'relative',
+  animation: severity === 'error' ? `${shake} 0.5s ease-in-out` : `${bounce} 0.5s ease-in-out`,
+  '&::before': {
+    content: '""',
+    position: 'absolute',
+    inset: -8,
+    borderRadius: 28,
+    background: bgColor,
+    opacity: 0.3,
+    animation: `${pulse} 2s infinite ease-in-out`,
   },
-  error: {
-    icon: ErrorOutlineIcon,
-    color: palette.red[400],
-    bgColor: alpha(palette.red[400], 0.15),
+  '&::after': {
+    content: '""',
+    position: 'absolute',
+    inset: -1,
+    borderRadius: 21,
+    padding: 1,
+    background: `linear-gradient(135deg, ${alpha(theme.palette.common.white, 0.2)}, transparent)`,
+    WebkitMask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
+    WebkitMaskComposite: 'xor',
+    maskComposite: 'exclude',
+    pointerEvents: 'none',
   },
-  info: {
-    icon: InfoOutlinedIcon,
-    color: palette.blue[400],
-    bgColor: alpha(palette.blue[400], 0.15),
-  },
+}))
+
+const MessageText = styled(Typography)(({ theme }) => ({
+  fontSize: '0.9375rem',
+  color: theme.palette.text.secondary,
+  lineHeight: 1.6,
+  maxWidth: 320,
+  animation: `${fadeInUp} 0.4s ease-out 0.1s both`,
+}))
+
+// =============================================================================
+// SEVERITY CONFIGURATION
+// =============================================================================
+
+const getSeverityConfig = (theme, severity) => {
+  const configs = {
+    warning: {
+      icon: WarningIcon,
+      color: theme.palette.warning.main,
+      bgColor: alpha(theme.palette.warning.main, 0.12),
+    },
+    error: {
+      icon: ErrorIcon,
+      color: theme.palette.error.main,
+      bgColor: alpha(theme.palette.error.main, 0.12),
+    },
+    info: {
+      icon: InfoIcon,
+      color: theme.palette.info.main,
+      bgColor: alpha(theme.palette.info.main, 0.12),
+    },
+    success: {
+      icon: SuccessIcon,
+      color: theme.palette.success.main,
+      bgColor: alpha(theme.palette.success.main, 0.12),
+    },
+    question: {
+      icon: QuestionIcon,
+      color: theme.palette.primary.main,
+      bgColor: alpha(theme.palette.primary.main, 0.12),
+    },
+  }
+  return configs[severity] || configs.warning
 }
+
+// =============================================================================
+// HELPERS
+// =============================================================================
 
 const PREF_KEY = 'neurareport_preferences'
 
@@ -38,6 +152,10 @@ const getDeletePreference = () => {
   }
 }
 
+// =============================================================================
+// MAIN COMPONENT
+// =============================================================================
+
 export default function ConfirmModal({
   open,
   onClose,
@@ -49,7 +167,8 @@ export default function ConfirmModal({
   severity = 'warning',
   loading = false,
 }) {
-  const config = SEVERITY_CONFIG[severity] || SEVERITY_CONFIG.warning
+  const theme = useTheme()
+  const config = getSeverityConfig(theme, severity)
   const Icon = config.icon
   const confirmColor = severity === 'error' ? 'error' : 'primary'
   const autoConfirmRef = useRef(false)
@@ -82,30 +201,11 @@ export default function ConfirmModal({
       loading={loading}
       dividers={false}
     >
-      <Stack spacing={2.5} alignItems="center" textAlign="center" sx={{ py: 1 }}>
-        <Box
-          sx={{
-            width: 56,
-            height: 56,
-            borderRadius: '12px',
-            bgcolor: config.bgColor,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <Icon sx={{ fontSize: 28, color: config.color }} />
-        </Box>
-        <Typography
-          sx={{
-            fontSize: '0.875rem',
-            color: palette.scale[400],
-            lineHeight: 1.5,
-            maxWidth: 280,
-          }}
-        >
-          {message}
-        </Typography>
+      <Stack spacing={3} alignItems="center" textAlign="center" sx={{ py: 2 }}>
+        <IconContainer severity={severity} bgColor={config.bgColor}>
+          <Icon sx={{ fontSize: 32, color: config.color, position: 'relative', zIndex: 1 }} />
+        </IconContainer>
+        <MessageText>{message}</MessageText>
       </Stack>
     </Modal>
   )

@@ -179,6 +179,17 @@ class FormField(BaseModel):
     confidence: float = Field(ge=0.0, le=1.0, default=0.8)
 
 
+class ExtractedForm(BaseModel):
+    """Structured form data."""
+    id: str
+    title: Optional[str] = None
+    form_type: Optional[str] = None
+    fields: List[FormField] = Field(default_factory=list)
+    sections: List[Dict[str, Any]] = Field(default_factory=list)
+    submission_status: str = "incomplete"
+    confidence: float = Field(ge=0.0, le=1.0, default=0.8)
+
+
 class InvoiceLineItem(BaseModel):
     """A line item from an invoice."""
     id: str
@@ -215,6 +226,20 @@ class ExtractedInvoice(BaseModel):
     confidence: float = Field(ge=0.0, le=1.0, default=0.8)
 
 
+class ContractClause(BaseModel):
+    """A clause from a contract."""
+    id: str
+    clause_type: str  # "term", "obligation", "termination", "confidentiality", "liability", etc.
+    title: Optional[str] = None
+    content: str
+    section: Optional[str] = None
+    page: Optional[int] = None
+    obligations: List[str] = Field(default_factory=list)
+    risks: List[str] = Field(default_factory=list)
+    importance: str = "medium"  # low, medium, high, critical
+    confidence: float = Field(ge=0.0, le=1.0, default=0.8)
+
+
 class ExtractedContract(BaseModel):
     """Structured contract data."""
     id: str
@@ -225,6 +250,7 @@ class ExtractedContract(BaseModel):
     auto_renewal: bool = False
     renewal_terms: Optional[str] = None
     key_terms: List[str] = Field(default_factory=list)
+    clauses: List[ContractClause] = Field(default_factory=list)
     obligations: List[Dict[str, Any]] = Field(default_factory=list)
     termination_clauses: List[str] = Field(default_factory=list)
     governing_law: Optional[str] = None
@@ -526,10 +552,25 @@ class DataTransformation(BaseModel):
     description: str = ""
 
 
+class DataQualityIssue(BaseModel):
+    """A specific data quality issue."""
+    id: str
+    issue_type: str  # "missing", "duplicate", "invalid", "outlier", "inconsistent"
+    severity: str = "medium"  # low, medium, high, critical
+    column: Optional[str] = None
+    row_indices: List[int] = Field(default_factory=list)
+    description: str
+    suggested_fix: Optional[str] = None
+    affected_count: int = 0
+
+
 class DataQualityReport(BaseModel):
     """Data quality assessment."""
     total_rows: int = 0
     total_columns: int = 0
+
+    # Issues list
+    issues: List[DataQualityIssue] = Field(default_factory=list)
 
     # Completeness
     missing_values: Dict[str, int] = Field(default_factory=dict)
@@ -723,6 +764,17 @@ class QuestionResponse(BaseModel):
     confidence: float
     sources: List[Dict[str, Any]] = Field(default_factory=list)
     suggested_followups: List[str] = Field(default_factory=list)
+
+
+class QAResponse(BaseModel):
+    """Enhanced Q&A response with detailed source information."""
+    answer: str
+    confidence: float = Field(ge=0.0, le=1.0)
+    sources: List[Dict[str, Any]] = Field(default_factory=list)
+    context_used: List[str] = Field(default_factory=list)
+    suggested_followups: List[str] = Field(default_factory=list)
+    reasoning: Optional[str] = None
+    citations: List[Dict[str, Any]] = Field(default_factory=list)
 
 
 class TransformRequest(BaseModel):

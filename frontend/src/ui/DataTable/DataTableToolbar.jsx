@@ -1,3 +1,7 @@
+/**
+ * Premium Data Table Toolbar
+ * Sophisticated search, filters, and actions with glassmorphism effects
+ */
 import { useState, useCallback } from 'react'
 import {
   Box,
@@ -12,16 +16,300 @@ import {
   Divider,
   IconButton,
   Tooltip,
+  Badge,
+  Fade,
+  Zoom,
+  useTheme,
   alpha,
+  styled,
+  keyframes,
 } from '@mui/material'
-import SearchIcon from '@mui/icons-material/Search'
-import FilterListIcon from '@mui/icons-material/FilterList'
-import RefreshIcon from '@mui/icons-material/Refresh'
-import MoreVertIcon from '@mui/icons-material/MoreVert'
-import DeleteIcon from '@mui/icons-material/Delete'
-import ArchiveIcon from '@mui/icons-material/Archive'
-import LabelIcon from '@mui/icons-material/Label'
-import { palette } from '../../theme'
+import {
+  Search as SearchIcon,
+  FilterList as FilterListIcon,
+  Refresh as RefreshIcon,
+  MoreVert as MoreVertIcon,
+  Delete as DeleteIcon,
+  Archive as ArchiveIcon,
+  Label as LabelIcon,
+  Download as DownloadIcon,
+  ViewColumn as ColumnsIcon,
+  Close as CloseIcon,
+  Check as CheckIcon,
+  KeyboardArrowDown as ArrowDownIcon,
+} from '@mui/icons-material'
+
+// =============================================================================
+// ANIMATIONS
+// =============================================================================
+
+const slideIn = keyframes`
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+`
+
+const pulse = keyframes`
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+`
+
+// =============================================================================
+// STYLED COMPONENTS
+// =============================================================================
+
+const ToolbarContainer = styled(Box)(({ theme }) => ({
+  padding: theme.spacing(2.5, 3),
+  backgroundColor: alpha(theme.palette.background.paper, 0.4),
+  backdropFilter: 'blur(10px)',
+  borderBottom: `1px solid ${alpha(theme.palette.divider, 0.06)}`,
+}))
+
+const HeaderRow = styled(Stack)(({ theme }) => ({
+  marginBottom: theme.spacing(2),
+}))
+
+const TitleSection = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: theme.spacing(0.25),
+}))
+
+const Title = styled(Typography)(({ theme }) => ({
+  fontSize: '1.125rem',
+  fontWeight: 600,
+  color: theme.palette.text.primary,
+  letterSpacing: '-0.01em',
+}))
+
+const Subtitle = styled(Typography)(({ theme }) => ({
+  fontSize: '0.8125rem',
+  color: theme.palette.text.secondary,
+}))
+
+const ActionButton = styled(Button)(({ theme }) => ({
+  borderRadius: 10,
+  textTransform: 'none',
+  fontWeight: 500,
+  fontSize: '0.8125rem',
+  padding: theme.spacing(0.75, 2),
+  transition: 'all 0.2s ease',
+  '&.MuiButton-outlined': {
+    borderColor: alpha(theme.palette.divider, 0.2),
+    '&:hover': {
+      borderColor: theme.palette.primary.main,
+      backgroundColor: alpha(theme.palette.primary.main, 0.04),
+    },
+  },
+  '&.MuiButton-contained': {
+    background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
+    boxShadow: `0 4px 14px ${alpha(theme.palette.primary.main, 0.25)}`,
+    '&:hover': {
+      boxShadow: `0 6px 20px ${alpha(theme.palette.primary.main, 0.35)}`,
+      transform: 'translateY(-1px)',
+    },
+  },
+}))
+
+const SelectionBar = styled(Box)(({ theme }) => ({
+  marginBottom: theme.spacing(2),
+  padding: theme.spacing(1.5, 2),
+  background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.1)}, ${alpha(theme.palette.primary.main, 0.05)})`,
+  border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
+  borderRadius: 12,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  animation: `${slideIn} 0.3s ease-out`,
+}))
+
+const SelectionText = styled(Typography)(({ theme }) => ({
+  fontSize: '0.8125rem',
+  fontWeight: 500,
+  color: theme.palette.primary.main,
+  display: 'flex',
+  alignItems: 'center',
+  gap: theme.spacing(1),
+}))
+
+const SelectionBadge = styled(Box)(({ theme }) => ({
+  width: 24,
+  height: 24,
+  borderRadius: 8,
+  backgroundColor: theme.palette.primary.main,
+  color: '#fff',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  fontSize: '0.75rem',
+  fontWeight: 600,
+}))
+
+const SelectionAction = styled(Button)(({ theme }) => ({
+  borderRadius: 8,
+  textTransform: 'none',
+  fontSize: '0.75rem',
+  fontWeight: 500,
+  padding: theme.spacing(0.5, 1.5),
+  minWidth: 'auto',
+  color: theme.palette.text.secondary,
+  borderColor: alpha(theme.palette.text.primary, 0.1),
+  '&:hover': {
+    borderColor: alpha(theme.palette.text.primary, 0.2),
+    backgroundColor: alpha(theme.palette.text.primary, 0.04),
+  },
+}))
+
+const DeleteAction = styled(SelectionAction)(({ theme }) => ({
+  color: theme.palette.error.main,
+  borderColor: alpha(theme.palette.error.main, 0.3),
+  '&:hover': {
+    borderColor: theme.palette.error.main,
+    backgroundColor: alpha(theme.palette.error.main, 0.08),
+  },
+}))
+
+const SearchField = styled(TextField)(({ theme }) => ({
+  '& .MuiOutlinedInput-root': {
+    borderRadius: 12,
+    backgroundColor: alpha(theme.palette.background.paper, 0.6),
+    transition: 'all 0.2s ease',
+    '& fieldset': {
+      borderColor: alpha(theme.palette.divider, 0.1),
+      transition: 'all 0.2s ease',
+    },
+    '&:hover fieldset': {
+      borderColor: alpha(theme.palette.primary.main, 0.3),
+    },
+    '&.Mui-focused': {
+      backgroundColor: theme.palette.background.paper,
+      boxShadow: `0 0 0 3px ${alpha(theme.palette.primary.main, 0.1)}`,
+      '& fieldset': {
+        borderColor: theme.palette.primary.main,
+      },
+    },
+  },
+  '& .MuiInputBase-input': {
+    fontSize: '0.875rem',
+    padding: theme.spacing(1, 1.5),
+    '&::placeholder': {
+      color: theme.palette.text.disabled,
+      opacity: 1,
+    },
+  },
+}))
+
+const FilterButton = styled(Button)(({ theme }) => ({
+  borderRadius: 10,
+  textTransform: 'none',
+  fontWeight: 500,
+  fontSize: '0.8125rem',
+  padding: theme.spacing(0.75, 1.5),
+  color: theme.palette.text.secondary,
+  borderColor: alpha(theme.palette.divider, 0.2),
+  '&:hover': {
+    borderColor: alpha(theme.palette.primary.main, 0.3),
+    backgroundColor: alpha(theme.palette.primary.main, 0.04),
+  },
+  '&.active': {
+    color: theme.palette.primary.main,
+    borderColor: alpha(theme.palette.primary.main, 0.5),
+    backgroundColor: alpha(theme.palette.primary.main, 0.08),
+  },
+}))
+
+const FilterChip = styled(Chip)(({ theme }) => ({
+  borderRadius: 8,
+  height: 28,
+  backgroundColor: alpha(theme.palette.primary.main, 0.08),
+  border: `1px solid ${alpha(theme.palette.primary.main, 0.15)}`,
+  color: theme.palette.primary.main,
+  fontWeight: 500,
+  fontSize: '0.75rem',
+  animation: `${slideIn} 0.2s ease-out`,
+  '& .MuiChip-deleteIcon': {
+    color: alpha(theme.palette.primary.main, 0.5),
+    fontSize: 16,
+    '&:hover': {
+      color: theme.palette.primary.main,
+    },
+  },
+}))
+
+const IconButtonStyled = styled(IconButton)(({ theme }) => ({
+  borderRadius: 10,
+  color: theme.palette.text.secondary,
+  transition: 'all 0.2s ease',
+  '&:hover': {
+    color: theme.palette.primary.main,
+    backgroundColor: alpha(theme.palette.primary.main, 0.08),
+  },
+}))
+
+const StyledMenu = styled(Menu)(({ theme }) => ({
+  '& .MuiPaper-root': {
+    backgroundColor: alpha(theme.palette.background.paper, 0.95),
+    backdropFilter: 'blur(20px)',
+    borderRadius: 12,
+    border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+    boxShadow: `0 8px 32px ${alpha(theme.palette.common.black, 0.12)}`,
+    minWidth: 200,
+    marginTop: theme.spacing(0.5),
+  },
+}))
+
+const MenuSection = styled(Box)(({ theme }) => ({
+  padding: theme.spacing(1, 0),
+}))
+
+const MenuLabel = styled(Typography)(({ theme }) => ({
+  padding: theme.spacing(1, 2),
+  fontSize: '0.6875rem',
+  fontWeight: 600,
+  textTransform: 'uppercase',
+  letterSpacing: '0.05em',
+  color: theme.palette.text.disabled,
+}))
+
+const StyledMenuItem = styled(MenuItem)(({ theme }) => ({
+  fontSize: '0.8125rem',
+  padding: theme.spacing(1, 2),
+  borderRadius: 6,
+  margin: theme.spacing(0, 1),
+  transition: 'all 0.15s ease',
+  '&:hover': {
+    backgroundColor: alpha(theme.palette.primary.main, 0.08),
+  },
+  '&.Mui-selected': {
+    backgroundColor: alpha(theme.palette.primary.main, 0.12),
+    color: theme.palette.primary.main,
+    '&:hover': {
+      backgroundColor: alpha(theme.palette.primary.main, 0.16),
+    },
+  },
+}))
+
+const FilterBadge = styled(Badge)(({ theme }) => ({
+  '& .MuiBadge-badge': {
+    backgroundColor: theme.palette.primary.main,
+    color: '#fff',
+    fontSize: '0.65rem',
+    fontWeight: 600,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 6,
+    padding: '0 4px',
+  },
+}))
+
+// =============================================================================
+// MAIN COMPONENT
+// =============================================================================
 
 export default function DataTableToolbar({
   title,
@@ -36,6 +324,7 @@ export default function DataTableToolbar({
   bulkActions = [],
   onFiltersChange,
 }) {
+  const theme = useTheme()
   const [searchValue, setSearchValue] = useState('')
   const [filterAnchor, setFilterAnchor] = useState(null)
   const [activeFilters, setActiveFilters] = useState({})
@@ -57,10 +346,7 @@ export default function DataTableToolbar({
 
   const handleFilterSelect = useCallback((filterKey, value) => {
     setActiveFilters((prev) => {
-      const next = {
-        ...prev,
-        [filterKey]: value,
-      }
+      const next = { ...prev, [filterKey]: value }
       onFiltersChange?.(next)
       return next
     })
@@ -76,6 +362,11 @@ export default function DataTableToolbar({
     })
   }, [onFiltersChange])
 
+  const handleClearAllFilters = useCallback(() => {
+    setActiveFilters({})
+    onFiltersChange?.({})
+  }, [onFiltersChange])
+
   const handleMoreClick = useCallback((event) => {
     setMoreAnchor(event.currentTarget)
   }, [])
@@ -87,50 +378,22 @@ export default function DataTableToolbar({
   const activeFilterCount = Object.keys(activeFilters).length
 
   return (
-    <Box
-      sx={{
-        p: 2.5,
-        borderBottom: `1px solid ${alpha(palette.scale[100], 0.08)}`,
-        bgcolor: palette.scale[1000],
-      }}
-    >
+    <ToolbarContainer>
       {/* Header Row */}
-      <Stack
+      <HeaderRow
         direction={{ xs: 'column', sm: 'row' }}
         alignItems={{ xs: 'stretch', sm: 'center' }}
         justifyContent="space-between"
         spacing={2}
-        sx={{ mb: 2 }}
       >
-        <Box>
-          {title && (
-            <Typography
-              sx={{
-                fontSize: '1.125rem',
-                fontWeight: 600,
-                color: palette.scale[100],
-                letterSpacing: '-0.01em',
-              }}
-            >
-              {title}
-            </Typography>
-          )}
-          {subtitle && (
-            <Typography
-              sx={{
-                fontSize: '0.8125rem',
-                color: palette.scale[500],
-                mt: 0.25,
-              }}
-            >
-              {subtitle}
-            </Typography>
-          )}
-        </Box>
+        <TitleSection>
+          {title && <Title>{title}</Title>}
+          {subtitle && <Subtitle>{subtitle}</Subtitle>}
+        </TitleSection>
 
         <Stack direction="row" spacing={1}>
           {actions.map((action, index) => (
-            <Button
+            <ActionButton
               key={index}
               variant={action.variant || 'outlined'}
               color={action.color || 'primary'}
@@ -138,89 +401,56 @@ export default function DataTableToolbar({
               startIcon={action.icon}
               onClick={action.onClick}
               disabled={action.disabled}
-              sx={{
-                fontSize: '0.8125rem',
-                ...(action.variant === 'contained' && {
-                  bgcolor: palette.green[400],
-                  color: palette.scale[1100],
-                  '&:hover': {
-                    bgcolor: palette.green[300],
-                  },
-                }),
-              }}
             >
               {action.label}
-            </Button>
+            </ActionButton>
           ))}
         </Stack>
-      </Stack>
+      </HeaderRow>
 
       {/* Selection Bar */}
       {numSelected > 0 && (
-        <Box
-          sx={{
-            mb: 2,
-            p: 1.5,
-            bgcolor: alpha(palette.green[400], 0.15),
-            border: `1px solid ${alpha(palette.green[400], 0.3)}`,
-            color: palette.green[400],
-            borderRadius: '6px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}
-        >
-          <Typography sx={{ fontSize: '0.8125rem', fontWeight: 500 }}>
-            {numSelected} item{numSelected > 1 ? 's' : ''} selected
-          </Typography>
-          <Stack direction="row" spacing={1}>
-            {bulkActions.map((action, index) => (
-              <Button
-                key={index}
-                size="small"
-                variant="outlined"
-                startIcon={action.icon}
-                onClick={action.onClick}
-                disabled={action.disabled}
-                sx={{
-                  color: action.color || palette.scale[300],
-                  borderColor: alpha(action.color || palette.scale[300], 0.5),
-                  fontSize: '0.75rem',
-                  '&:hover': {
-                    bgcolor: alpha(action.color || palette.scale[300], 0.1),
-                    borderColor: action.color || palette.scale[300],
-                  },
-                }}
-              >
-                {action.label}
-              </Button>
-            ))}
-            {onBulkDelete && (
-              <Button
-                size="small"
-                variant="outlined"
-                startIcon={<DeleteIcon sx={{ fontSize: 16 }} />}
-                onClick={onBulkDelete}
-                sx={{
-                  color: palette.red[400],
-                  borderColor: alpha(palette.red[400], 0.5),
-                  fontSize: '0.75rem',
-                  '&:hover': {
-                    bgcolor: alpha(palette.red[400], 0.1),
-                    borderColor: palette.red[400],
-                  },
-                }}
-              >
-                Delete
-              </Button>
-            )}
-          </Stack>
-        </Box>
+        <Fade in>
+          <SelectionBar>
+            <SelectionText>
+              <SelectionBadge>{numSelected}</SelectionBadge>
+              item{numSelected > 1 ? 's' : ''} selected
+            </SelectionText>
+            <Stack direction="row" spacing={1}>
+              {bulkActions.map((action, index) => (
+                <SelectionAction
+                  key={index}
+                  variant="outlined"
+                  size="small"
+                  startIcon={action.icon}
+                  onClick={action.onClick}
+                  disabled={action.disabled}
+                >
+                  {action.label}
+                </SelectionAction>
+              ))}
+              {onBulkDelete && (
+                <DeleteAction
+                  variant="outlined"
+                  size="small"
+                  startIcon={<DeleteIcon sx={{ fontSize: 16 }} />}
+                  onClick={onBulkDelete}
+                >
+                  Delete
+                </DeleteAction>
+              )}
+            </Stack>
+          </SelectionBar>
+        </Fade>
       )}
 
       {/* Search and Filters Row */}
-      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems="center">
-        <TextField
+      <Stack
+        direction={{ xs: 'column', sm: 'row' }}
+        spacing={2}
+        alignItems={{ xs: 'stretch', sm: 'center' }}
+      >
+        <SearchField
           size="small"
           placeholder={searchPlaceholder}
           value={searchValue}
@@ -228,108 +458,92 @@ export default function DataTableToolbar({
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
-                <SearchIcon sx={{ fontSize: 18, color: palette.scale[500] }} />
+                <SearchIcon sx={{ fontSize: 18, color: 'text.disabled' }} />
+              </InputAdornment>
+            ),
+            endAdornment: searchValue && (
+              <InputAdornment position="end">
+                <IconButton
+                  size="small"
+                  onClick={() => {
+                    setSearchValue('')
+                    onSearch?.('')
+                  }}
+                  sx={{ p: 0.5 }}
+                >
+                  <CloseIcon sx={{ fontSize: 16 }} />
+                </IconButton>
               </InputAdornment>
             ),
           }}
-          sx={{
-            width: { xs: '100%', sm: 280 },
-            '& .MuiOutlinedInput-root': {
-              bgcolor: palette.scale[900],
-            },
-          }}
+          sx={{ width: { xs: '100%', sm: 280 } }}
         />
 
-        <Stack direction="row" spacing={1} sx={{ flex: 1 }} flexWrap="wrap">
+        <Stack
+          direction="row"
+          spacing={1}
+          sx={{ flex: 1, flexWrap: 'wrap', gap: 1 }}
+          alignItems="center"
+        >
           {filters.length > 0 && (
             <>
-              <Button
-                variant="outlined"
-                size="small"
-                startIcon={<FilterListIcon sx={{ fontSize: 16 }} />}
-                onClick={handleFilterClick}
-                sx={{
-                  color: activeFilterCount > 0 ? palette.green[400] : palette.scale[400],
-                  borderColor: activeFilterCount > 0
-                    ? alpha(palette.green[400], 0.5)
-                    : alpha(palette.scale[100], 0.15),
-                  '&:hover': {
-                    borderColor: activeFilterCount > 0
-                      ? palette.green[400]
-                      : alpha(palette.scale[100], 0.25),
-                  },
-                }}
-              >
-                Filters
-                {activeFilterCount > 0 && (
-                  <Chip
-                    label={activeFilterCount}
-                    size="small"
-                    sx={{
-                      ml: 1,
-                      height: 18,
-                      minWidth: 18,
-                      bgcolor: palette.green[400],
-                      color: palette.scale[1100],
-                      fontSize: '0.65rem',
-                      fontWeight: 600,
-                    }}
-                  />
-                )}
-              </Button>
+              <FilterBadge badgeContent={activeFilterCount} invisible={activeFilterCount === 0}>
+                <FilterButton
+                  variant="outlined"
+                  size="small"
+                  startIcon={<FilterListIcon sx={{ fontSize: 16 }} />}
+                  endIcon={<ArrowDownIcon sx={{ fontSize: 16 }} />}
+                  onClick={handleFilterClick}
+                  className={activeFilterCount > 0 ? 'active' : ''}
+                >
+                  Filters
+                </FilterButton>
+              </FilterBadge>
 
-              <Menu
+              <StyledMenu
                 anchorEl={filterAnchor}
                 open={Boolean(filterAnchor)}
                 onClose={handleFilterClose}
-                slotProps={{
-                  paper: {
-                    sx: {
-                      width: 220,
-                      bgcolor: palette.scale[900],
-                      border: `1px solid ${alpha(palette.scale[100], 0.1)}`,
-                    },
-                  },
-                }}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+                transformOrigin={{ vertical: 'top', horizontal: 'left' }}
               >
                 {filters.map((filter, idx) => (
-                  <Box key={filter.key}>
-                    <Typography
-                      sx={{
-                        px: 2,
-                        py: 1,
-                        fontSize: '0.6875rem',
-                        fontWeight: 600,
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.05em',
-                        color: palette.scale[500],
-                      }}
-                    >
-                      {filter.label}
-                    </Typography>
+                  <MenuSection key={filter.key}>
+                    <MenuLabel>{filter.label}</MenuLabel>
                     {filter.options.map((option) => (
-                      <MenuItem
+                      <StyledMenuItem
                         key={option.value}
                         selected={activeFilters[filter.key] === option.value}
                         onClick={() => handleFilterSelect(filter.key, option.value)}
-                        sx={{
-                          fontSize: '0.8125rem',
-                          color: palette.scale[200],
-                          '&.Mui-selected': {
-                            bgcolor: alpha(palette.green[400], 0.1),
-                            color: palette.green[400],
-                          },
-                        }}
                       >
-                        {option.label}
-                      </MenuItem>
+                        <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', justifyContent: 'space-between' }}>
+                          {option.label}
+                          {activeFilters[filter.key] === option.value && (
+                            <CheckIcon sx={{ fontSize: 16, color: 'primary.main', ml: 1 }} />
+                          )}
+                        </Box>
+                      </StyledMenuItem>
                     ))}
                     {idx < filters.length - 1 && (
-                      <Divider sx={{ my: 0.5, borderColor: alpha(palette.scale[100], 0.08) }} />
+                      <Divider sx={{ my: 1, mx: 2, borderColor: alpha(theme.palette.divider, 0.1) }} />
                     )}
-                  </Box>
+                  </MenuSection>
                 ))}
-              </Menu>
+                {activeFilterCount > 0 && (
+                  <>
+                    <Divider sx={{ my: 1, mx: 2, borderColor: alpha(theme.palette.divider, 0.1) }} />
+                    <Box sx={{ px: 2, pb: 1 }}>
+                      <Button
+                        size="small"
+                        onClick={handleClearAllFilters}
+                        sx={{ fontSize: '0.75rem', textTransform: 'none' }}
+                      >
+                        Clear all filters
+                      </Button>
+                    </Box>
+                  </>
+                )}
+              </StyledMenu>
             </>
           )}
 
@@ -338,21 +552,11 @@ export default function DataTableToolbar({
             const filter = filters.find((f) => f.key === key)
             const option = filter?.options.find((o) => o.value === value)
             return (
-              <Chip
+              <FilterChip
                 key={key}
                 label={`${filter?.label}: ${option?.label}`}
                 size="small"
                 onDelete={() => handleClearFilter(key)}
-                sx={{
-                  bgcolor: alpha(palette.scale[100], 0.08),
-                  color: palette.scale[200],
-                  '& .MuiChip-deleteIcon': {
-                    color: palette.scale[500],
-                    '&:hover': {
-                      color: palette.scale[100],
-                    },
-                  },
-                }}
               />
             )
           })}
@@ -360,72 +564,47 @@ export default function DataTableToolbar({
 
         <Stack direction="row" spacing={0.5}>
           {onRefresh && (
-            <Tooltip title="Refresh" arrow>
-              <IconButton
-                size="small"
-                onClick={onRefresh}
-                sx={{
-                  color: palette.scale[500],
-                  '&:hover': {
-                    color: palette.scale[100],
-                    bgcolor: alpha(palette.scale[100], 0.08),
-                  },
-                }}
-              >
+            <Tooltip title="Refresh data" arrow>
+              <IconButtonStyled size="small" onClick={onRefresh} aria-label="Refresh data">
                 <RefreshIcon sx={{ fontSize: 18 }} />
-              </IconButton>
+              </IconButtonStyled>
             </Tooltip>
           )}
-          <IconButton
-            size="small"
-            onClick={handleMoreClick}
-            sx={{
-              color: palette.scale[500],
-              '&:hover': {
-                color: palette.scale[100],
-                bgcolor: alpha(palette.scale[100], 0.08),
-              },
-            }}
-          >
-            <MoreVertIcon sx={{ fontSize: 18 }} />
-          </IconButton>
+          <Tooltip title="More options" arrow>
+            <IconButtonStyled size="small" onClick={handleMoreClick} aria-label="More options">
+              <MoreVertIcon sx={{ fontSize: 18 }} />
+            </IconButtonStyled>
+          </Tooltip>
         </Stack>
 
-        <Menu
+        <StyledMenu
           anchorEl={moreAnchor}
           open={Boolean(moreAnchor)}
           onClose={handleMoreClose}
-          slotProps={{
-            paper: {
-              sx: {
-                width: 180,
-                bgcolor: palette.scale[900],
-                border: `1px solid ${alpha(palette.scale[100], 0.1)}`,
-              },
-            },
-          }}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+          transformOrigin={{ vertical: 'top', horizontal: 'right' }}
         >
-          <MenuItem
-            onClick={handleMoreClose}
-            sx={{ fontSize: '0.8125rem', color: palette.scale[200] }}
-          >
-            Export CSV
-          </MenuItem>
-          <MenuItem
-            onClick={handleMoreClose}
-            sx={{ fontSize: '0.8125rem', color: palette.scale[200] }}
-          >
-            Export JSON
-          </MenuItem>
-          <Divider sx={{ my: 0.5, borderColor: alpha(palette.scale[100], 0.08) }} />
-          <MenuItem
-            onClick={handleMoreClose}
-            sx={{ fontSize: '0.8125rem', color: palette.scale[200] }}
-          >
-            Column Settings
-          </MenuItem>
-        </Menu>
+          <MenuSection>
+            <MenuLabel>Export</MenuLabel>
+            <StyledMenuItem onClick={handleMoreClose}>
+              <DownloadIcon sx={{ fontSize: 16, mr: 1.5, color: 'text.secondary' }} />
+              Export as CSV
+            </StyledMenuItem>
+            <StyledMenuItem onClick={handleMoreClose}>
+              <DownloadIcon sx={{ fontSize: 16, mr: 1.5, color: 'text.secondary' }} />
+              Export as JSON
+            </StyledMenuItem>
+          </MenuSection>
+          <Divider sx={{ my: 1, mx: 2, borderColor: alpha(theme.palette.divider, 0.1) }} />
+          <MenuSection>
+            <MenuLabel>View</MenuLabel>
+            <StyledMenuItem onClick={handleMoreClose}>
+              <ColumnsIcon sx={{ fontSize: 16, mr: 1.5, color: 'text.secondary' }} />
+              Column Settings
+            </StyledMenuItem>
+          </MenuSection>
+        </StyledMenu>
       </Stack>
-    </Box>
+    </ToolbarContainer>
   )
 }

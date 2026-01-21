@@ -1,4 +1,4 @@
-import { useCallback, useState, useRef, useEffect } from 'react'
+import { useCallback, useState, useRef, useMemo } from 'react'
 import {
   Box,
   Typography,
@@ -7,8 +7,6 @@ import {
   Tab,
   Button,
   Stack,
-  Divider,
-  Alert,
   TextField,
   CircularProgress,
   Chip,
@@ -20,28 +18,23 @@ import {
   Tooltip,
   Menu,
   MenuItem,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Select,
-  FormControl,
-  InputLabel,
   Accordion,
   AccordionSummary,
   AccordionDetails,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemIcon,
-  Badge,
   Avatar,
+  Fade,
+  Zoom,
+  Grow,
+  Skeleton,
+  alpha,
+  useTheme,
 } from '@mui/material'
+import { keyframes } from '@mui/system'
 import RefreshIcon from '@mui/icons-material/Refresh'
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
-import UploadFileOutlinedIcon from '@mui/icons-material/UploadFileOutlined'
+import CloudUploadIcon from '@mui/icons-material/CloudUpload'
 import InsightsOutlinedIcon from '@mui/icons-material/InsightsOutlined'
-import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline'
+import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import CancelIcon from '@mui/icons-material/Cancel'
 import QuestionAnswerIcon from '@mui/icons-material/QuestionAnswer'
 import BarChartIcon from '@mui/icons-material/BarChart'
@@ -50,156 +43,619 @@ import WarningAmberIcon from '@mui/icons-material/WarningAmber'
 import TrendingUpIcon from '@mui/icons-material/TrendingUp'
 import LightbulbIcon from '@mui/icons-material/Lightbulb'
 import DownloadIcon from '@mui/icons-material/Download'
-import ShareIcon from '@mui/icons-material/Share'
-import CommentIcon from '@mui/icons-material/Comment'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import SendIcon from '@mui/icons-material/Send'
-import ContentCopyIcon from '@mui/icons-material/ContentCopy'
 import AssessmentIcon from '@mui/icons-material/Assessment'
 import SecurityIcon from '@mui/icons-material/Security'
-import EmojiObjectsIcon from '@mui/icons-material/EmojiObjects'
 import PlaylistAddCheckIcon from '@mui/icons-material/PlaylistAddCheck'
-import SentimentSatisfiedIcon from '@mui/icons-material/SentimentSatisfied'
-import SentimentDissatisfiedIcon from '@mui/icons-material/SentimentDissatisfied'
+import SentimentSatisfiedAltIcon from '@mui/icons-material/SentimentSatisfiedAlt'
+import SentimentVeryDissatisfiedIcon from '@mui/icons-material/SentimentVeryDissatisfied'
 import SentimentNeutralIcon from '@mui/icons-material/SentimentNeutral'
+import DescriptionIcon from '@mui/icons-material/Description'
+import DataObjectIcon from '@mui/icons-material/DataObject'
+import ReceiptLongIcon from '@mui/icons-material/ReceiptLong'
+import GavelIcon from '@mui/icons-material/Gavel'
+import SpeedIcon from '@mui/icons-material/Speed'
+import BoltIcon from '@mui/icons-material/Bolt'
+import AutoGraphIcon from '@mui/icons-material/AutoGraph'
+import PsychologyIcon from '@mui/icons-material/Psychology'
+import SmartToyIcon from '@mui/icons-material/SmartToy'
+import RocketLaunchIcon from '@mui/icons-material/RocketLaunch'
+import ArticleIcon from '@mui/icons-material/Article'
 
-import DocumentUpload from '../components/DocumentUpload'
 import ZoomableChart from '../components/ZoomableChart'
-import Surface from '../../../components/layout/Surface'
 import { useToast } from '../../../components/ToastProvider'
 import {
   uploadAndAnalyzeEnhanced,
   askQuestion,
   generateCharts,
   exportAnalysis,
-  getSuggestedQuestions,
 } from '../services/enhancedAnalyzeApi'
 
-// Tab panel component
+// Animations
+const float = keyframes`
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+`
+
+const pulse = keyframes`
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+`
+
+const shimmer = keyframes`
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+`
+
+const gradientMove = keyframes`
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+`
+
+const scaleIn = keyframes`
+  0% { transform: scale(0.9); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+`
+
+// Glass morphism card component
+function GlassCard({ children, sx = {}, gradient = false, hover = true, ...props }) {
+  const theme = useTheme()
+  return (
+    <Paper
+      elevation={0}
+      sx={{
+        p: 3,
+        borderRadius: 4,
+        background: gradient
+          ? `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.1)} 0%, ${alpha(theme.palette.secondary.main, 0.1)} 100%)`
+          : alpha(theme.palette.background.paper, 0.8),
+        backdropFilter: 'blur(20px)',
+        border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+        ...(hover && {
+          '&:hover': {
+            transform: 'translateY(-4px)',
+            boxShadow: `0 20px 40px ${alpha(theme.palette.primary.main, 0.15)}`,
+            borderColor: alpha(theme.palette.primary.main, 0.3),
+          },
+        }),
+        ...sx,
+      }}
+      {...props}
+    >
+      {children}
+    </Paper>
+  )
+}
+
+// Animated stat card
+function StatCard({ icon, label, value, color = 'primary', delay = 0 }) {
+  const theme = useTheme()
+  return (
+    <Grow in timeout={500 + delay * 100}>
+      <Card
+        sx={{
+          minWidth: 140,
+          background: `linear-gradient(135deg, ${alpha(theme.palette[color].main, 0.15)} 0%, ${alpha(theme.palette[color].main, 0.05)} 100%)`,
+          border: `1px solid ${alpha(theme.palette[color].main, 0.2)}`,
+          borderRadius: 3,
+          transition: 'all 0.3s ease',
+          '&:hover': {
+            transform: 'scale(1.05)',
+            boxShadow: `0 8px 24px ${alpha(theme.palette[color].main, 0.25)}`,
+          },
+        }}
+      >
+        <CardContent sx={{ py: 2, px: 2.5, '&:last-child': { pb: 2 } }}>
+          <Stack direction="row" alignItems="center" spacing={1.5}>
+            <Avatar
+              sx={{
+                bgcolor: alpha(theme.palette[color].main, 0.2),
+                color: theme.palette[color].main,
+                width: 40,
+                height: 40,
+              }}
+            >
+              {icon}
+            </Avatar>
+            <Box>
+              <Typography variant="h5" fontWeight={800} color={`${color}.main`}>
+                {value}
+              </Typography>
+              <Typography variant="caption" color="text.secondary" fontWeight={500}>
+                {label}
+              </Typography>
+            </Box>
+          </Stack>
+        </CardContent>
+      </Card>
+    </Grow>
+  )
+}
+
+// Enhanced metric card
+function MetricCard({ metric, index }) {
+  const theme = useTheme()
+  const isPositive = metric.change > 0
+  const isNegative = metric.change < 0
+
+  return (
+    <Zoom in timeout={300 + index * 50}>
+      <Card
+        sx={{
+          minWidth: 220,
+          background: `linear-gradient(145deg, ${theme.palette.background.paper} 0%, ${alpha(theme.palette.primary.main, 0.03)} 100%)`,
+          border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+          borderRadius: 3,
+          overflow: 'hidden',
+          position: 'relative',
+          transition: 'all 0.3s ease',
+          '&:hover': {
+            transform: 'translateY(-6px)',
+            boxShadow: `0 12px 32px ${alpha(theme.palette.primary.main, 0.15)}`,
+            '& .metric-icon': {
+              transform: 'scale(1.2) rotate(10deg)',
+            },
+          },
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            height: 4,
+            background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+          },
+        }}
+      >
+        <CardContent sx={{ py: 2.5, px: 3 }}>
+          <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
+            <Box sx={{ flex: 1 }}>
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                fontWeight={600}
+                sx={{ textTransform: 'uppercase', letterSpacing: 0.5 }}
+              >
+                {metric.name}
+              </Typography>
+              <Typography
+                variant="h4"
+                fontWeight={800}
+                sx={{
+                  mt: 0.5,
+                  background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
+                  backgroundClip: 'text',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                }}
+              >
+                {metric.raw_value}
+              </Typography>
+              {metric.change !== undefined && metric.change !== null && (
+                <Chip
+                  size="small"
+                  icon={isPositive ? <TrendingUpIcon sx={{ fontSize: 14 }} /> : isNegative ? <TrendingUpIcon sx={{ fontSize: 14, transform: 'rotate(180deg)' }} /> : null}
+                  label={`${isPositive ? '+' : ''}${metric.change}%`}
+                  sx={{
+                    mt: 1,
+                    height: 24,
+                    fontWeight: 700,
+                    bgcolor: isPositive ? alpha(theme.palette.success.main, 0.15) : isNegative ? alpha(theme.palette.error.main, 0.15) : alpha(theme.palette.grey[500], 0.15),
+                    color: isPositive ? 'success.main' : isNegative ? 'error.main' : 'text.secondary',
+                    '& .MuiChip-icon': {
+                      color: 'inherit',
+                    },
+                  }}
+                />
+              )}
+            </Box>
+            <Box
+              className="metric-icon"
+              sx={{
+                transition: 'transform 0.3s ease',
+                color: alpha(theme.palette.primary.main, 0.2),
+              }}
+            >
+              <AutoGraphIcon sx={{ fontSize: 48 }} />
+            </Box>
+          </Stack>
+        </CardContent>
+      </Card>
+    </Zoom>
+  )
+}
+
+// Enhanced insight card
+function InsightCard({ insight, type = 'insight', index = 0 }) {
+  const theme = useTheme()
+
+  const config = {
+    insight: {
+      gradient: `linear-gradient(135deg, ${alpha('#3b82f6', 0.1)} 0%, ${alpha('#8b5cf6', 0.1)} 100%)`,
+      borderColor: '#3b82f6',
+      icon: <LightbulbIcon />,
+      iconBg: alpha('#3b82f6', 0.15),
+    },
+    risk: {
+      gradient: `linear-gradient(135deg, ${alpha('#ef4444', 0.1)} 0%, ${alpha('#f97316', 0.1)} 100%)`,
+      borderColor: '#ef4444',
+      icon: <SecurityIcon />,
+      iconBg: alpha('#ef4444', 0.15),
+    },
+    opportunity: {
+      gradient: `linear-gradient(135deg, ${alpha('#10b981', 0.1)} 0%, ${alpha('#06b6d4', 0.1)} 100%)`,
+      borderColor: '#10b981',
+      icon: <RocketLaunchIcon />,
+      iconBg: alpha('#10b981', 0.15),
+    },
+    action: {
+      gradient: `linear-gradient(135deg, ${alpha('#f59e0b', 0.1)} 0%, ${alpha('#eab308', 0.1)} 100%)`,
+      borderColor: '#f59e0b',
+      icon: <PlaylistAddCheckIcon />,
+      iconBg: alpha('#f59e0b', 0.15),
+    },
+  }
+
+  const { gradient, borderColor, icon, iconBg } = config[type] || config.insight
+
+  const priorityColors = {
+    critical: { bg: '#ef4444', text: '#fff' },
+    high: { bg: '#f97316', text: '#fff' },
+    medium: { bg: '#eab308', text: '#000' },
+    low: { bg: '#6b7280', text: '#fff' },
+  }
+
+  const priorityConfig = priorityColors[insight.priority?.toLowerCase()] || priorityColors.medium
+
+  return (
+    <Fade in timeout={400 + index * 100}>
+      <Card
+        sx={{
+          mb: 2,
+          background: gradient,
+          borderLeft: `4px solid ${borderColor}`,
+          borderRadius: 3,
+          overflow: 'hidden',
+          transition: 'all 0.3s ease',
+          '&:hover': {
+            transform: 'translateX(8px)',
+            boxShadow: `0 8px 24px ${alpha(borderColor, 0.2)}`,
+          },
+        }}
+      >
+        <CardContent sx={{ py: 2.5, px: 3 }}>
+          <Stack direction="row" spacing={2}>
+            <Avatar
+              sx={{
+                bgcolor: iconBg,
+                color: borderColor,
+                width: 48,
+                height: 48,
+              }}
+            >
+              {icon}
+            </Avatar>
+            <Box sx={{ flex: 1 }}>
+              <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 1 }}>
+                <Typography variant="subtitle1" fontWeight={700}>
+                  {insight.title}
+                </Typography>
+                {insight.priority && (
+                  <Chip
+                    label={insight.priority}
+                    size="small"
+                    sx={{
+                      height: 22,
+                      fontSize: 10,
+                      fontWeight: 700,
+                      textTransform: 'uppercase',
+                      bgcolor: priorityConfig.bg,
+                      color: priorityConfig.text,
+                    }}
+                  />
+                )}
+                {insight.confidence && (
+                  <Chip
+                    label={`${Math.round(insight.confidence * 100)}% confident`}
+                    size="small"
+                    variant="outlined"
+                    sx={{ height: 22, fontSize: 10 }}
+                  />
+                )}
+              </Stack>
+              <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.6 }}>
+                {insight.description}
+              </Typography>
+              {insight.suggested_actions?.length > 0 && (
+                <Box sx={{ mt: 2, p: 2, bgcolor: alpha(borderColor, 0.08), borderRadius: 2 }}>
+                  <Typography variant="caption" fontWeight={700} color={borderColor}>
+                    SUGGESTED ACTIONS
+                  </Typography>
+                  <Stack spacing={0.5} sx={{ mt: 1 }}>
+                    {insight.suggested_actions.map((action, i) => (
+                      <Stack key={i} direction="row" alignItems="center" spacing={1}>
+                        <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: borderColor }} />
+                        <Typography variant="body2">{action}</Typography>
+                      </Stack>
+                    ))}
+                  </Stack>
+                </Box>
+              )}
+            </Box>
+          </Stack>
+        </CardContent>
+      </Card>
+    </Fade>
+  )
+}
+
+// Sentiment display component
+function SentimentDisplay({ sentiment }) {
+  const theme = useTheme()
+  if (!sentiment) return null
+
+  const getSentimentConfig = (level) => {
+    if (level?.includes('positive')) {
+      return {
+        icon: <SentimentSatisfiedAltIcon sx={{ fontSize: 32 }} />,
+        color: '#10b981',
+        label: 'Positive',
+        gradient: `linear-gradient(135deg, ${alpha('#10b981', 0.2)} 0%, ${alpha('#06b6d4', 0.2)} 100%)`,
+      }
+    }
+    if (level?.includes('negative')) {
+      return {
+        icon: <SentimentVeryDissatisfiedIcon sx={{ fontSize: 32 }} />,
+        color: '#ef4444',
+        label: 'Negative',
+        gradient: `linear-gradient(135deg, ${alpha('#ef4444', 0.2)} 0%, ${alpha('#f97316', 0.2)} 100%)`,
+      }
+    }
+    return {
+      icon: <SentimentNeutralIcon sx={{ fontSize: 32 }} />,
+      color: '#f59e0b',
+      label: 'Neutral',
+      gradient: `linear-gradient(135deg, ${alpha('#f59e0b', 0.2)} 0%, ${alpha('#eab308', 0.2)} 100%)`,
+    }
+  }
+
+  const config = getSentimentConfig(sentiment.overall_sentiment)
+  const score = Math.round((sentiment.overall_score + 1) * 50) // Convert -1 to 1 → 0 to 100
+
+  return (
+    <GlassCard hover={false} sx={{ p: 2.5 }}>
+      <Stack spacing={2}>
+        <Stack direction="row" alignItems="center" spacing={2}>
+          <Avatar
+            sx={{
+              width: 56,
+              height: 56,
+              background: config.gradient,
+              color: config.color,
+            }}
+          >
+            {config.icon}
+          </Avatar>
+          <Box sx={{ flex: 1 }}>
+            <Typography variant="overline" color="text.secondary" fontWeight={600}>
+              Document Sentiment
+            </Typography>
+            <Typography variant="h5" fontWeight={800} color={config.color}>
+              {config.label}
+            </Typography>
+          </Box>
+          <Box sx={{ textAlign: 'center' }}>
+            <Box sx={{ position: 'relative', display: 'inline-flex' }}>
+              <CircularProgress
+                variant="determinate"
+                value={score}
+                size={60}
+                thickness={6}
+                sx={{ color: config.color }}
+              />
+              <Box
+                sx={{
+                  position: 'absolute',
+                  inset: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Typography variant="body2" fontWeight={800} color={config.color}>
+                  {score}%
+                </Typography>
+              </Box>
+            </Box>
+          </Box>
+        </Stack>
+        <Stack direction="row" spacing={2}>
+          <Chip
+            size="small"
+            label={`Tone: ${sentiment.emotional_tone || 'Neutral'}`}
+            sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1) }}
+          />
+          <Chip
+            size="small"
+            label={`Urgency: ${sentiment.urgency_level || 'Normal'}`}
+            sx={{ bgcolor: alpha(theme.palette.warning.main, 0.1) }}
+          />
+        </Stack>
+      </Stack>
+    </GlassCard>
+  )
+}
+
+// Data quality gauge
+function DataQualityGauge({ quality }) {
+  const theme = useTheme()
+  if (!quality) return null
+
+  const score = Math.round((quality.quality_score || 0) * 100)
+  const getColor = (s) => {
+    if (s >= 80) return '#10b981'
+    if (s >= 60) return '#f59e0b'
+    return '#ef4444'
+  }
+  const color = getColor(score)
+
+  return (
+    <GlassCard hover={false} sx={{ p: 2.5 }}>
+      <Stack spacing={2}>
+        <Stack direction="row" alignItems="center" spacing={2}>
+          <Box sx={{ position: 'relative', display: 'inline-flex' }}>
+            <CircularProgress
+              variant="determinate"
+              value={100}
+              size={80}
+              thickness={6}
+              sx={{ color: alpha(color, 0.2) }}
+            />
+            <CircularProgress
+              variant="determinate"
+              value={score}
+              size={80}
+              thickness={6}
+              sx={{
+                color: color,
+                position: 'absolute',
+                left: 0,
+                '& .MuiCircularProgress-circle': {
+                  strokeLinecap: 'round',
+                },
+              }}
+            />
+            <Box
+              sx={{
+                position: 'absolute',
+                inset: 0,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Typography variant="h5" fontWeight={800} color={color}>
+                {score}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Score
+              </Typography>
+            </Box>
+          </Box>
+          <Box sx={{ flex: 1 }}>
+            <Typography variant="overline" color="text.secondary" fontWeight={600}>
+              Data Quality
+            </Typography>
+            <Typography variant="h6" fontWeight={700}>
+              {score >= 80 ? 'Excellent' : score >= 60 ? 'Good' : 'Needs Attention'}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              {quality.total_rows} rows, {quality.total_columns} columns
+            </Typography>
+          </Box>
+        </Stack>
+        {quality.recommendations?.length > 0 && (
+          <Box sx={{ p: 1.5, bgcolor: alpha(color, 0.1), borderRadius: 2 }}>
+            <Typography variant="caption" color="text.secondary">
+              {quality.recommendations[0]}
+            </Typography>
+          </Box>
+        )}
+      </Stack>
+    </GlassCard>
+  )
+}
+
+// Tab panel
 function TabPanel({ children, value, index, ...other }) {
   return (
     <div role="tabpanel" hidden={value !== index} {...other}>
-      {value === index && <Box sx={{ py: 2 }}>{children}</Box>}
+      {value === index && <Fade in timeout={300}><Box sx={{ py: 3 }}>{children}</Box></Fade>}
     </div>
   )
 }
 
-// Metric card component
-function MetricCard({ metric }) {
+// Q&A Message bubble
+function QABubble({ qa, index }) {
+  const theme = useTheme()
   return (
-    <Card sx={{ minWidth: 200, bgcolor: 'background.paper' }}>
-      <CardContent sx={{ py: 2 }}>
-        <Typography variant="caption" color="text.secondary" gutterBottom>
-          {metric.name}
-        </Typography>
-        <Typography variant="h5" fontWeight={700} color="primary.main">
-          {metric.raw_value}
-        </Typography>
-        {metric.change && (
-          <Typography
-            variant="body2"
-            color={metric.change > 0 ? 'success.main' : 'error.main'}
+    <Fade in timeout={300 + index * 100}>
+      <Box sx={{ mb: 3 }}>
+        {/* Question */}
+        <Stack direction="row" justifyContent="flex-end" sx={{ mb: 1.5 }}>
+          <Paper
+            sx={{
+              maxWidth: '80%',
+              p: 2,
+              px: 3,
+              borderRadius: '20px 20px 4px 20px',
+              background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
+              color: '#fff',
+              boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.3)}`,
+            }}
           >
-            {metric.change > 0 ? '+' : ''}{metric.change}%
-            {metric.comparison_base && ` ${metric.comparison_base}`}
-          </Typography>
-        )}
-      </CardContent>
-    </Card>
-  )
-}
-
-// Insight card component
-function InsightCard({ insight, type = 'insight' }) {
-  const colorMap = {
-    insight: { bg: 'info.50', border: 'info.main', icon: <LightbulbIcon /> },
-    risk: { bg: 'error.50', border: 'error.main', icon: <WarningAmberIcon /> },
-    opportunity: { bg: 'success.50', border: 'success.main', icon: <TrendingUpIcon /> },
-    action: { bg: 'warning.50', border: 'warning.main', icon: <PlaylistAddCheckIcon /> },
-  }
-
-  const colors = colorMap[type] || colorMap.insight
-
-  return (
-    <Card
-      sx={{
-        bgcolor: colors.bg,
-        borderLeft: 4,
-        borderColor: colors.border,
-        mb: 1.5,
-      }}
-    >
-      <CardContent sx={{ py: 1.5 }}>
-        <Stack direction="row" alignItems="flex-start" spacing={1.5}>
-          <Box sx={{ color: colors.border, mt: 0.5 }}>{colors.icon}</Box>
-          <Box sx={{ flex: 1 }}>
-            <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 0.5 }}>
-              <Typography variant="subtitle2" fontWeight={600}>
-                {insight.title}
-              </Typography>
-              <Chip
-                label={insight.priority || 'medium'}
-                size="small"
-                color={
-                  insight.priority === 'critical' || insight.priority === 'high'
-                    ? 'error'
-                    : insight.priority === 'low'
-                    ? 'default'
-                    : 'warning'
-                }
-                sx={{ height: 20, fontSize: 10 }}
-              />
-            </Stack>
-            <Typography variant="body2" color="text.secondary">
-              {insight.description}
+            <Typography variant="body1" fontWeight={500}>
+              {qa.question}
             </Typography>
-            {insight.suggested_actions?.length > 0 && (
-              <Box sx={{ mt: 1 }}>
-                <Typography variant="caption" fontWeight={600}>
-                  Suggested Actions:
+          </Paper>
+        </Stack>
+
+        {/* Answer */}
+        <Stack direction="row" sx={{ mb: 1 }}>
+          <Avatar
+            sx={{
+              width: 36,
+              height: 36,
+              mr: 1.5,
+              bgcolor: alpha(theme.palette.secondary.main, 0.15),
+              color: theme.palette.secondary.main,
+            }}
+          >
+            <SmartToyIcon sx={{ fontSize: 20 }} />
+          </Avatar>
+          <Paper
+            sx={{
+              maxWidth: '80%',
+              p: 2,
+              px: 3,
+              borderRadius: '4px 20px 20px 20px',
+              bgcolor: alpha(theme.palette.background.paper, 0.8),
+              backdropFilter: 'blur(10px)',
+              border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+            }}
+          >
+            <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap', lineHeight: 1.7 }}>
+              {qa.answer}
+            </Typography>
+            {qa.sources?.length > 0 && (
+              <Box sx={{ mt: 2, pt: 2, borderTop: `1px solid ${alpha(theme.palette.divider, 0.1)}` }}>
+                <Typography variant="caption" fontWeight={700} color="text.secondary">
+                  Sources:
                 </Typography>
-                <ul style={{ margin: '4px 0', paddingLeft: 20 }}>
-                  {insight.suggested_actions.map((action, i) => (
-                    <li key={i}>
-                      <Typography variant="caption">{action}</Typography>
-                    </li>
-                  ))}
-                </ul>
+                {qa.sources.slice(0, 2).map((source, i) => (
+                  <Typography key={i} variant="caption" display="block" color="text.secondary" sx={{ mt: 0.5 }}>
+                    "{source.content_preview?.slice(0, 100)}..."
+                  </Typography>
+                ))}
               </Box>
             )}
-          </Box>
+          </Paper>
         </Stack>
-      </CardContent>
-    </Card>
+      </Box>
+    </Fade>
   )
 }
 
-// Sentiment indicator component
-function SentimentIndicator({ sentiment }) {
-  if (!sentiment) return null
-
-  const getSentimentIcon = (level) => {
-    if (level.includes('positive')) return <SentimentSatisfiedIcon color="success" />
-    if (level.includes('negative')) return <SentimentDissatisfiedIcon color="error" />
-    return <SentimentNeutralIcon color="warning" />
-  }
-
-  return (
-    <Stack direction="row" alignItems="center" spacing={1}>
-      {getSentimentIcon(sentiment.overall_sentiment)}
-      <Typography variant="body2">
-        {sentiment.overall_sentiment.replace('_', ' ')}
-      </Typography>
-      <Typography variant="caption" color="text.secondary">
-        (score: {(sentiment.overall_score * 100).toFixed(0)}%)
-      </Typography>
-    </Stack>
-  )
-}
-
+// Main component
 export default function EnhancedAnalyzePageContainer() {
+  const theme = useTheme()
   const [activeTab, setActiveTab] = useState(0)
   const [selectedFile, setSelectedFile] = useState(null)
+  const [isDragOver, setIsDragOver] = useState(false)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [analysisProgress, setAnalysisProgress] = useState(0)
   const [progressStage, setProgressStage] = useState('')
@@ -221,8 +677,8 @@ export default function EnhancedAnalyzePageContainer() {
   const [exportMenuAnchor, setExportMenuAnchor] = useState(null)
   const [isExporting, setIsExporting] = useState(false)
 
-  // Preferences state
-  const [preferences, setPreferences] = useState({
+  // Preferences
+  const [preferences] = useState({
     analysis_depth: 'standard',
     focus_areas: [],
     output_format: 'executive',
@@ -233,15 +689,37 @@ export default function EnhancedAnalyzePageContainer() {
   })
 
   const abortControllerRef = useRef(null)
+  const fileInputRef = useRef(null)
   const toast = useToast()
 
-  const handleFileSelect = useCallback((file) => {
-    setSelectedFile(file)
-    setError(null)
-    setAnalysisResult(null)
-    setSuggestedQuestions([])
-    setQaHistory([])
-    setGeneratedCharts([])
+  const handleDragOver = useCallback((e) => {
+    e.preventDefault()
+    setIsDragOver(true)
+  }, [])
+
+  const handleDragLeave = useCallback((e) => {
+    e.preventDefault()
+    setIsDragOver(false)
+  }, [])
+
+  const handleDrop = useCallback((e) => {
+    e.preventDefault()
+    setIsDragOver(false)
+    const file = e.dataTransfer.files[0]
+    if (file) {
+      setSelectedFile(file)
+      setError(null)
+      setAnalysisResult(null)
+    }
+  }, [])
+
+  const handleFileSelect = useCallback((e) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      setSelectedFile(file)
+      setError(null)
+      setAnalysisResult(null)
+    }
   }, [])
 
   const handleAnalyze = useCallback(async () => {
@@ -251,7 +729,7 @@ export default function EnhancedAnalyzePageContainer() {
 
     setIsAnalyzing(true)
     setAnalysisProgress(0)
-    setProgressStage('Starting analysis...')
+    setProgressStage('Initializing AI analysis...')
     setError(null)
 
     try {
@@ -272,7 +750,7 @@ export default function EnhancedAnalyzePageContainer() {
         setSuggestedQuestions(result.suggested_questions || [])
         setGeneratedCharts(result.chart_suggestions || [])
         setActiveTab(0)
-        toast.show('Analysis complete', 'success')
+        toast.show('Analysis complete!', 'success')
       }
     } catch (err) {
       if (err.name === 'AbortError') {
@@ -312,13 +790,11 @@ export default function EnhancedAnalyzePageContainer() {
           question: question.trim(),
           answer: response.answer,
           sources: response.sources,
-          suggested_followups: response.suggested_followups,
           timestamp: new Date(),
         },
       ])
       setQuestion('')
 
-      // Update suggested questions with follow-ups
       if (response.suggested_followups?.length) {
         setSuggestedQuestions(response.suggested_followups)
       }
@@ -386,641 +862,1048 @@ export default function EnhancedAnalyzePageContainer() {
     setActiveTab(0)
   }, [])
 
-  // Compute stats
-  const stats = analysisResult
-    ? {
-        tables: analysisResult.total_tables || analysisResult.tables?.length || 0,
-        metrics: analysisResult.total_metrics || analysisResult.metrics?.length || 0,
-        entities: analysisResult.total_entities || analysisResult.entities?.length || 0,
-        insights: analysisResult.insights?.length || 0,
-        risks: analysisResult.risks?.length || 0,
-        opportunities: analysisResult.opportunities?.length || 0,
-        charts: generatedCharts.length,
-      }
-    : null
+  // Stats
+  const stats = useMemo(() => {
+    if (!analysisResult) return null
+    return {
+      tables: analysisResult.total_tables || analysisResult.tables?.length || 0,
+      metrics: analysisResult.total_metrics || analysisResult.metrics?.length || 0,
+      entities: analysisResult.total_entities || analysisResult.entities?.length || 0,
+      insights: analysisResult.insights?.length || 0,
+      risks: analysisResult.risks?.length || 0,
+      opportunities: analysisResult.opportunities?.length || 0,
+      charts: generatedCharts.length,
+    }
+  }, [analysisResult, generatedCharts.length])
 
   return (
-    <Box sx={{ py: 3, px: 3 }}>
-      {/* Page Header */}
-      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 3 }}>
-        <Box>
-          <Typography variant="h5" fontWeight={700}>
-            Enhanced Document Analysis
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            AI-powered extraction, analysis, visualization, and insights
-          </Typography>
-        </Box>
-        <Stack direction="row" spacing={1}>
-          {analysisResult && (
-            <>
-              <Button
-                variant="outlined"
-                size="small"
-                startIcon={isExporting ? <CircularProgress size={16} /> : <DownloadIcon />}
-                onClick={(e) => setExportMenuAnchor(e.currentTarget)}
-                disabled={isExporting}
-                sx={{ textTransform: 'none' }}
+    <Box
+      sx={{
+        minHeight: '100vh',
+        background: `linear-gradient(180deg, ${alpha(theme.palette.primary.main, 0.03)} 0%, ${theme.palette.background.default} 50%)`,
+      }}
+    >
+      {/* Hero Header */}
+      <Box
+        sx={{
+          pt: 4,
+          pb: analysisResult ? 2 : 4,
+          px: 4,
+          background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.08)} 0%, ${alpha(theme.palette.secondary.main, 0.05)} 50%, transparent 100%)`,
+          borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+        }}
+      >
+        <Stack direction="row" alignItems="center" justifyContent="space-between">
+          <Stack direction="row" alignItems="center" spacing={2}>
+            <Avatar
+              sx={{
+                width: 56,
+                height: 56,
+                background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
+                boxShadow: `0 8px 24px ${alpha(theme.palette.primary.main, 0.3)}`,
+              }}
+            >
+              <PsychologyIcon sx={{ fontSize: 28 }} />
+            </Avatar>
+            <Box>
+              <Typography
+                variant="h4"
+                fontWeight={800}
+                sx={{
+                  background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
+                  backgroundClip: 'text',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                }}
               >
-                Export
-              </Button>
-              <Menu
-                anchorEl={exportMenuAnchor}
-                open={Boolean(exportMenuAnchor)}
-                onClose={() => setExportMenuAnchor(null)}
-              >
-                {['json', 'excel', 'pdf', 'csv', 'markdown', 'html'].map((fmt) => (
-                  <MenuItem key={fmt} onClick={() => handleExport(fmt)}>
-                    {fmt.toUpperCase()}
-                  </MenuItem>
-                ))}
-              </Menu>
-              <Button
-                variant="outlined"
-                size="small"
-                startIcon={<RefreshIcon />}
-                onClick={handleReset}
-                sx={{ textTransform: 'none' }}
-              >
-                New Analysis
-              </Button>
-            </>
-          )}
-        </Stack>
-      </Stack>
-
-      {/* Status Summary */}
-      {stats && (
-        <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ mb: 2 }}>
-          <Chip icon={<TableChartIcon />} label={`${stats.tables} Tables`} color="primary" variant="outlined" />
-          <Chip icon={<AssessmentIcon />} label={`${stats.metrics} Metrics`} color="success" variant="outlined" />
-          <Chip icon={<LightbulbIcon />} label={`${stats.insights} Insights`} color="info" variant="outlined" />
-          <Chip icon={<WarningAmberIcon />} label={`${stats.risks} Risks`} color="error" variant="outlined" />
-          <Chip icon={<TrendingUpIcon />} label={`${stats.opportunities} Opportunities`} color="warning" variant="outlined" />
-          <Chip icon={<BarChartIcon />} label={`${stats.charts} Charts`} color="secondary" variant="outlined" />
-        </Stack>
-      )}
-
-      {/* Upload Section */}
-      {!analysisResult && (
-        <Surface sx={{ p: 3, mb: 3 }}>
-          <DocumentUpload
-            onFileSelect={handleFileSelect}
-            isUploading={isAnalyzing}
-            progress={analysisProgress}
-            progressStage={progressStage}
-            error={error}
-            disabled={isAnalyzing}
-          />
-
-          {selectedFile && !isAnalyzing && (
-            <Stack spacing={2} sx={{ mt: 3 }}>
-              <Stack direction="row" justifyContent="center">
+                AI Document Analysis
+              </Typography>
+              <Typography variant="body2" color="text.secondary" fontWeight={500}>
+                Intelligent extraction, analysis, visualization & insights powered by AI
+              </Typography>
+            </Box>
+          </Stack>
+          <Stack direction="row" spacing={1.5}>
+            {analysisResult && (
+              <>
                 <Button
-                  variant="contained"
-                  size="large"
-                  onClick={handleAnalyze}
-                  startIcon={<AutoAwesomeIcon />}
+                  variant="outlined"
+                  startIcon={isExporting ? <CircularProgress size={16} /> : <DownloadIcon />}
+                  onClick={(e) => setExportMenuAnchor(e.currentTarget)}
+                  disabled={isExporting}
                   sx={{
-                    px: 4,
-                    py: 1.5,
-                    fontWeight: 700,
-                    textTransform: 'none',
                     borderRadius: 2,
-                    boxShadow: '0 4px 14px rgba(79, 70, 229, 0.25)',
+                    textTransform: 'none',
+                    fontWeight: 600,
+                    borderWidth: 2,
+                    '&:hover': { borderWidth: 2 },
                   }}
                 >
-                  Analyze with AI
+                  Export
                 </Button>
-              </Stack>
-            </Stack>
-          )}
+                <Menu
+                  anchorEl={exportMenuAnchor}
+                  open={Boolean(exportMenuAnchor)}
+                  onClose={() => setExportMenuAnchor(null)}
+                  PaperProps={{
+                    sx: { borderRadius: 2, minWidth: 140 },
+                  }}
+                >
+                  {['json', 'excel', 'pdf', 'csv', 'markdown', 'html'].map((fmt) => (
+                    <MenuItem key={fmt} onClick={() => handleExport(fmt)}>
+                      {fmt.toUpperCase()}
+                    </MenuItem>
+                  ))}
+                </Menu>
+                <Button
+                  variant="contained"
+                  startIcon={<RefreshIcon />}
+                  onClick={handleReset}
+                  sx={{
+                    borderRadius: 2,
+                    textTransform: 'none',
+                    fontWeight: 600,
+                    background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
+                    boxShadow: `0 4px 14px ${alpha(theme.palette.primary.main, 0.3)}`,
+                  }}
+                >
+                  New Analysis
+                </Button>
+              </>
+            )}
+          </Stack>
+        </Stack>
 
-          {isAnalyzing && (
-            <Stack alignItems="center" sx={{ mt: 4 }}>
-              <CircularProgress size={60} sx={{ mb: 2 }} />
-              <Typography variant="h6" fontWeight={600}>
-                {progressStage}
-              </Typography>
-              <LinearProgress
-                variant="determinate"
-                value={analysisProgress}
-                sx={{ width: '100%', maxWidth: 400, mt: 2, height: 8, borderRadius: 4 }}
-              />
-              <Button
-                variant="outlined"
-                color="inherit"
-                startIcon={<CancelIcon />}
-                onClick={handleCancelAnalysis}
-                sx={{ mt: 2, textTransform: 'none' }}
+        {/* Stats Bar */}
+        {stats && (
+          <Stack direction="row" spacing={2} sx={{ mt: 3, flexWrap: 'wrap' }} useFlexGap>
+            <StatCard icon={<TableChartIcon />} label="Tables" value={stats.tables} color="primary" delay={0} />
+            <StatCard icon={<AssessmentIcon />} label="Metrics" value={stats.metrics} color="success" delay={1} />
+            <StatCard icon={<DataObjectIcon />} label="Entities" value={stats.entities} color="info" delay={2} />
+            <StatCard icon={<LightbulbIcon />} label="Insights" value={stats.insights} color="secondary" delay={3} />
+            <StatCard icon={<WarningAmberIcon />} label="Risks" value={stats.risks} color="error" delay={4} />
+            <StatCard icon={<TrendingUpIcon />} label="Opportunities" value={stats.opportunities} color="warning" delay={5} />
+            <StatCard icon={<BarChartIcon />} label="Charts" value={stats.charts} color="primary" delay={6} />
+          </Stack>
+        )}
+      </Box>
+
+      {/* Main Content */}
+      <Box sx={{ px: 4, py: 3 }}>
+        {/* Upload Section */}
+        {!analysisResult && (
+          <Fade in>
+            <Box>
+              {/* Dropzone */}
+              <GlassCard
+                gradient
+                hover={false}
+                sx={{
+                  p: 6,
+                  textAlign: 'center',
+                  cursor: 'pointer',
+                  border: `2px dashed ${isDragOver ? theme.palette.primary.main : alpha(theme.palette.divider, 0.3)}`,
+                  bgcolor: isDragOver ? alpha(theme.palette.primary.main, 0.05) : undefined,
+                  transition: 'all 0.3s ease',
+                }}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                onClick={() => fileInputRef.current?.click()}
               >
-                Cancel
-              </Button>
-            </Stack>
-          )}
-        </Surface>
-      )}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  hidden
+                  accept=".pdf,.xlsx,.xls,.csv,.doc,.docx,.png,.jpg,.jpeg"
+                  onChange={handleFileSelect}
+                />
 
-      {/* Results Section */}
-      {analysisResult && (
-        <>
-          {/* Tabs */}
-          <Surface sx={{ mb: 2 }}>
-            <Tabs
-              value={activeTab}
-              onChange={(e, v) => setActiveTab(v)}
-              variant="scrollable"
-              scrollButtons="auto"
-            >
-              <Tab label="Overview" icon={<InsightsOutlinedIcon />} iconPosition="start" />
-              <Tab label="Q&A" icon={<QuestionAnswerIcon />} iconPosition="start" />
-              <Tab label="Charts" icon={<BarChartIcon />} iconPosition="start" />
-              <Tab label="Data" icon={<TableChartIcon />} iconPosition="start" />
-              <Tab label="Insights" icon={<LightbulbIcon />} iconPosition="start" />
-            </Tabs>
-          </Surface>
-
-          {/* Overview Tab */}
-          <TabPanel value={activeTab} index={0}>
-            <Grid container spacing={3}>
-              {/* Executive Summary */}
-              <Grid item xs={12} md={8}>
-                <Surface sx={{ p: 3, height: '100%' }}>
-                  <Typography variant="h6" fontWeight={600} gutterBottom>
-                    Executive Summary
-                  </Typography>
-                  <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}>
-                    {analysisResult.summaries?.executive?.content ||
-                      analysisResult.summaries?.comprehensive?.content ||
-                      'Summary not available'}
-                  </Typography>
-
-                  {analysisResult.summaries?.executive?.bullet_points?.length > 0 && (
-                    <Box sx={{ mt: 2 }}>
-                      <Typography variant="subtitle2" fontWeight={600} gutterBottom>
-                        Key Points
-                      </Typography>
-                      <ul style={{ margin: 0, paddingLeft: 20 }}>
-                        {analysisResult.summaries.executive.bullet_points.map((point, i) => (
-                          <li key={i}>
-                            <Typography variant="body2">{point}</Typography>
-                          </li>
-                        ))}
-                      </ul>
-                    </Box>
-                  )}
-                </Surface>
-              </Grid>
-
-              {/* Sentiment & Quick Stats */}
-              <Grid item xs={12} md={4}>
-                <Stack spacing={2}>
-                  {analysisResult.sentiment && (
-                    <Surface sx={{ p: 2 }}>
-                      <Typography variant="subtitle2" fontWeight={600} gutterBottom>
-                        Document Sentiment
-                      </Typography>
-                      <SentimentIndicator sentiment={analysisResult.sentiment} />
-                      <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
-                        Tone: {analysisResult.sentiment.emotional_tone}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary" display="block">
-                        Urgency: {analysisResult.sentiment.urgency_level}
-                      </Typography>
-                    </Surface>
-                  )}
-
-                  {analysisResult.data_quality && (
-                    <Surface sx={{ p: 2 }}>
-                      <Typography variant="subtitle2" fontWeight={600} gutterBottom>
-                        Data Quality
-                      </Typography>
-                      <Stack direction="row" alignItems="center" spacing={1}>
-                        <CircularProgress
-                          variant="determinate"
-                          value={analysisResult.data_quality.quality_score * 100}
-                          size={40}
-                          color={analysisResult.data_quality.quality_score > 0.8 ? 'success' : 'warning'}
+                {!selectedFile && !isAnalyzing && (
+                  <Box>
+                    <Avatar
+                      sx={{
+                        width: 100,
+                        height: 100,
+                        mx: 'auto',
+                        mb: 3,
+                        background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.2)} 0%, ${alpha(theme.palette.secondary.main, 0.2)} 100%)`,
+                        animation: `${float} 3s ease-in-out infinite`,
+                      }}
+                    >
+                      <CloudUploadIcon sx={{ fontSize: 48, color: theme.palette.primary.main }} />
+                    </Avatar>
+                    <Typography variant="h5" fontWeight={700} gutterBottom>
+                      Drop your document here
+                    </Typography>
+                    <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
+                      or click to browse files
+                    </Typography>
+                    <Stack direction="row" spacing={1} justifyContent="center" flexWrap="wrap">
+                      {['PDF', 'Excel', 'CSV', 'Word', 'Images'].map((type) => (
+                        <Chip
+                          key={type}
+                          label={type}
+                          size="small"
+                          sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1) }}
                         />
-                        <Typography variant="h6" fontWeight={600}>
-                          {(analysisResult.data_quality.quality_score * 100).toFixed(0)}%
+                      ))}
+                    </Stack>
+                  </Box>
+                )}
+
+                {selectedFile && !isAnalyzing && (
+                  <Box>
+                    <Avatar
+                      sx={{
+                        width: 80,
+                        height: 80,
+                        mx: 'auto',
+                        mb: 3,
+                        bgcolor: alpha(theme.palette.success.main, 0.15),
+                      }}
+                    >
+                      <CheckCircleIcon sx={{ fontSize: 40, color: 'success.main' }} />
+                    </Avatar>
+                    <Typography variant="h6" fontWeight={700} gutterBottom>
+                      {selectedFile.name}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                      {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                    </Typography>
+                    <Button
+                      variant="contained"
+                      size="large"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleAnalyze()
+                      }}
+                      startIcon={<BoltIcon />}
+                      sx={{
+                        px: 6,
+                        py: 2,
+                        borderRadius: 3,
+                        fontWeight: 700,
+                        fontSize: '1.1rem',
+                        textTransform: 'none',
+                        background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
+                        boxShadow: `0 8px 32px ${alpha(theme.palette.primary.main, 0.4)}`,
+                        transition: 'all 0.3s ease',
+                        '&:hover': {
+                          transform: 'scale(1.05)',
+                          boxShadow: `0 12px 40px ${alpha(theme.palette.primary.main, 0.5)}`,
+                        },
+                      }}
+                    >
+                      Analyze with AI
+                    </Button>
+                  </Box>
+                )}
+
+                {isAnalyzing && (
+                  <Box>
+                    <Box
+                      sx={{
+                        width: 120,
+                        height: 120,
+                        mx: 'auto',
+                        mb: 3,
+                        position: 'relative',
+                      }}
+                    >
+                      <CircularProgress
+                        variant="determinate"
+                        value={100}
+                        size={120}
+                        thickness={4}
+                        sx={{ color: alpha(theme.palette.primary.main, 0.2) }}
+                      />
+                      <CircularProgress
+                        variant="determinate"
+                        value={analysisProgress}
+                        size={120}
+                        thickness={4}
+                        sx={{
+                          position: 'absolute',
+                          left: 0,
+                          color: theme.palette.primary.main,
+                          '& .MuiCircularProgress-circle': { strokeLinecap: 'round' },
+                        }}
+                      />
+                      <Box
+                        sx={{
+                          position: 'absolute',
+                          inset: 0,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <Typography variant="h4" fontWeight={800} color="primary.main">
+                          {analysisProgress}%
+                        </Typography>
+                      </Box>
+                    </Box>
+                    <Typography variant="h6" fontWeight={600} gutterBottom>
+                      {progressStage}
+                    </Typography>
+                    <LinearProgress
+                      variant="determinate"
+                      value={analysisProgress}
+                      sx={{
+                        maxWidth: 400,
+                        mx: 'auto',
+                        mt: 2,
+                        height: 8,
+                        borderRadius: 4,
+                        bgcolor: alpha(theme.palette.primary.main, 0.1),
+                        '& .MuiLinearProgress-bar': {
+                          borderRadius: 4,
+                          background: `linear-gradient(90deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
+                        },
+                      }}
+                    />
+                    <Button
+                      variant="outlined"
+                      startIcon={<CancelIcon />}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleCancelAnalysis()
+                      }}
+                      sx={{ mt: 3, borderRadius: 2, textTransform: 'none' }}
+                    >
+                      Cancel
+                    </Button>
+                  </Box>
+                )}
+              </GlassCard>
+
+              {error && (
+                <Paper
+                  sx={{
+                    mt: 2,
+                    p: 2,
+                    bgcolor: alpha(theme.palette.error.main, 0.1),
+                    border: `1px solid ${alpha(theme.palette.error.main, 0.3)}`,
+                    borderRadius: 2,
+                  }}
+                >
+                  <Typography color="error.main">{error}</Typography>
+                </Paper>
+              )}
+            </Box>
+          </Fade>
+        )}
+
+        {/* Results Section */}
+        {analysisResult && (
+          <Fade in>
+            <Box>
+              {/* Tabs */}
+              <GlassCard hover={false} sx={{ p: 0, mb: 3 }}>
+                <Tabs
+                  value={activeTab}
+                  onChange={(e, v) => setActiveTab(v)}
+                  variant="scrollable"
+                  scrollButtons="auto"
+                  sx={{
+                    '& .MuiTab-root': {
+                      textTransform: 'none',
+                      fontWeight: 600,
+                      fontSize: '0.95rem',
+                      minHeight: 64,
+                      transition: 'all 0.2s ease',
+                      '&:hover': {
+                        bgcolor: alpha(theme.palette.primary.main, 0.05),
+                      },
+                      '&.Mui-selected': {
+                        color: theme.palette.primary.main,
+                      },
+                    },
+                    '& .MuiTabs-indicator': {
+                      height: 3,
+                      borderRadius: '3px 3px 0 0',
+                      background: `linear-gradient(90deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
+                    },
+                  }}
+                >
+                  <Tab icon={<InsightsOutlinedIcon />} iconPosition="start" label="Overview" />
+                  <Tab icon={<QuestionAnswerIcon />} iconPosition="start" label="Q&A" />
+                  <Tab icon={<BarChartIcon />} iconPosition="start" label="Charts" />
+                  <Tab icon={<TableChartIcon />} iconPosition="start" label="Data" />
+                  <Tab icon={<LightbulbIcon />} iconPosition="start" label="Insights" />
+                </Tabs>
+              </GlassCard>
+
+              {/* Overview Tab */}
+              <TabPanel value={activeTab} index={0}>
+                <Grid container spacing={3}>
+                  {/* Executive Summary */}
+                  <Grid size={{ xs: 12, lg: 8 }}>
+                    <GlassCard sx={{ height: '100%' }}>
+                      <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 2 }}>
+                        <Avatar sx={{ bgcolor: alpha(theme.palette.primary.main, 0.15), color: 'primary.main' }}>
+                          <ArticleIcon />
+                        </Avatar>
+                        <Typography variant="h6" fontWeight={700}>
+                          Executive Summary
                         </Typography>
                       </Stack>
-                      {analysisResult.data_quality.recommendations?.length > 0 && (
-                        <Typography variant="caption" color="text.secondary" sx={{ mt: 1 }}>
-                          {analysisResult.data_quality.recommendations[0]}
-                        </Typography>
+                      <Typography
+                        variant="body1"
+                        sx={{ whiteSpace: 'pre-wrap', lineHeight: 1.8, color: 'text.secondary' }}
+                      >
+                        {analysisResult.summaries?.executive?.content ||
+                          analysisResult.summaries?.comprehensive?.content ||
+                          'Summary not available'}
+                      </Typography>
+
+                      {analysisResult.summaries?.executive?.bullet_points?.length > 0 && (
+                        <Box
+                          sx={{
+                            mt: 3,
+                            p: 2.5,
+                            bgcolor: alpha(theme.palette.primary.main, 0.05),
+                            borderRadius: 3,
+                            border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
+                          }}
+                        >
+                          <Typography variant="subtitle2" fontWeight={700} gutterBottom>
+                            Key Points
+                          </Typography>
+                          <Stack spacing={1}>
+                            {analysisResult.summaries.executive.bullet_points.map((point, i) => (
+                              <Stack key={i} direction="row" alignItems="flex-start" spacing={1.5}>
+                                <Box
+                                  sx={{
+                                    width: 24,
+                                    height: 24,
+                                    borderRadius: '50%',
+                                    bgcolor: theme.palette.primary.main,
+                                    color: '#fff',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    fontSize: 12,
+                                    fontWeight: 700,
+                                    flexShrink: 0,
+                                    mt: 0.25,
+                                  }}
+                                >
+                                  {i + 1}
+                                </Box>
+                                <Typography variant="body2">{point}</Typography>
+                              </Stack>
+                            ))}
+                          </Stack>
+                        </Box>
                       )}
-                    </Surface>
-                  )}
-                </Stack>
-              </Grid>
+                    </GlassCard>
+                  </Grid>
 
-              {/* Key Metrics */}
-              <Grid item xs={12}>
-                <Surface sx={{ p: 3 }}>
-                  <Typography variant="h6" fontWeight={600} gutterBottom>
-                    Key Metrics
-                  </Typography>
-                  <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap>
-                    {analysisResult.metrics?.slice(0, 8).map((metric) => (
-                      <MetricCard key={metric.id} metric={metric} />
-                    ))}
+                  {/* Sidebar */}
+                  <Grid size={{ xs: 12, lg: 4 }}>
+                    <Stack spacing={3}>
+                      <SentimentDisplay sentiment={analysisResult.sentiment} />
+                      <DataQualityGauge quality={analysisResult.data_quality} />
+                    </Stack>
+                  </Grid>
+
+                  {/* Key Metrics */}
+                  <Grid size={12}>
+                    <GlassCard>
+                      <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 3 }}>
+                        <Avatar sx={{ bgcolor: alpha(theme.palette.success.main, 0.15), color: 'success.main' }}>
+                          <SpeedIcon />
+                        </Avatar>
+                        <Typography variant="h6" fontWeight={700}>
+                          Key Metrics
+                        </Typography>
+                      </Stack>
+                      <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap>
+                        {analysisResult.metrics?.slice(0, 8).map((metric, i) => (
+                          <MetricCard key={metric.id} metric={metric} index={i} />
+                        ))}
+                      </Stack>
+                    </GlassCard>
+                  </Grid>
+
+                  {/* Top Insights Preview */}
+                  <Grid size={{ xs: 12, md: 6 }}>
+                    <GlassCard>
+                      <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 3 }}>
+                        <Avatar sx={{ bgcolor: alpha('#3b82f6', 0.15), color: '#3b82f6' }}>
+                          <LightbulbIcon />
+                        </Avatar>
+                        <Typography variant="h6" fontWeight={700}>
+                          Top Insights
+                        </Typography>
+                      </Stack>
+                      {analysisResult.insights?.slice(0, 3).map((insight, i) => (
+                        <InsightCard key={insight.id} insight={insight} type="insight" index={i} />
+                      ))}
+                    </GlassCard>
+                  </Grid>
+
+                  {/* Risks & Opportunities Preview */}
+                  <Grid size={{ xs: 12, md: 6 }}>
+                    <GlassCard>
+                      <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 3 }}>
+                        <Avatar sx={{ bgcolor: alpha('#ef4444', 0.15), color: '#ef4444' }}>
+                          <SecurityIcon />
+                        </Avatar>
+                        <Typography variant="h6" fontWeight={700}>
+                          Risks & Opportunities
+                        </Typography>
+                      </Stack>
+                      {analysisResult.risks?.slice(0, 2).map((risk, i) => (
+                        <InsightCard key={risk.id} insight={risk} type="risk" index={i} />
+                      ))}
+                      {analysisResult.opportunities?.slice(0, 2).map((opp, i) => (
+                        <InsightCard key={opp.id} insight={opp} type="opportunity" index={i + 2} />
+                      ))}
+                    </GlassCard>
+                  </Grid>
+                </Grid>
+              </TabPanel>
+
+              {/* Q&A Tab */}
+              <TabPanel value={activeTab} index={1}>
+                <Grid container spacing={3}>
+                  <Grid size={{ xs: 12, lg: 8 }}>
+                    <GlassCard sx={{ minHeight: 500 }}>
+                      <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 3 }}>
+                        <Avatar sx={{ bgcolor: alpha(theme.palette.secondary.main, 0.15), color: 'secondary.main' }}>
+                          <SmartToyIcon />
+                        </Avatar>
+                        <Box>
+                          <Typography variant="h6" fontWeight={700}>
+                            Ask AI About Your Document
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            Get instant answers with source citations
+                          </Typography>
+                        </Box>
+                      </Stack>
+
+                      {/* Chat Area */}
+                      <Box
+                        sx={{
+                          minHeight: 300,
+                          maxHeight: 400,
+                          overflowY: 'auto',
+                          mb: 3,
+                          p: 2,
+                          bgcolor: alpha(theme.palette.background.default, 0.5),
+                          borderRadius: 3,
+                        }}
+                      >
+                        {qaHistory.length === 0 ? (
+                          <Box sx={{ textAlign: 'center', py: 6 }}>
+                            <Avatar
+                              sx={{
+                                width: 80,
+                                height: 80,
+                                mx: 'auto',
+                                mb: 2,
+                                bgcolor: alpha(theme.palette.secondary.main, 0.1),
+                              }}
+                            >
+                              <QuestionAnswerIcon sx={{ fontSize: 40, color: 'secondary.main' }} />
+                            </Avatar>
+                            <Typography variant="h6" color="text.secondary" gutterBottom>
+                              Start a conversation
+                            </Typography>
+                            <Typography variant="body2" color="text.disabled">
+                              Ask questions about the document content
+                            </Typography>
+                          </Box>
+                        ) : (
+                          qaHistory.map((qa, idx) => <QABubble key={idx} qa={qa} index={idx} />)
+                        )}
+                      </Box>
+
+                      {/* Input */}
+                      <Stack direction="row" spacing={2}>
+                        <TextField
+                          fullWidth
+                          placeholder="Ask a question about your document..."
+                          value={question}
+                          onChange={(e) => setQuestion(e.target.value)}
+                          onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleAskQuestion()}
+                          disabled={isAskingQuestion}
+                          sx={{
+                            '& .MuiOutlinedInput-root': {
+                              borderRadius: 3,
+                              bgcolor: alpha(theme.palette.background.paper, 0.8),
+                            },
+                          }}
+                        />
+                        <Button
+                          variant="contained"
+                          onClick={handleAskQuestion}
+                          disabled={!question.trim() || isAskingQuestion}
+                          sx={{
+                            minWidth: 56,
+                            borderRadius: 3,
+                            background: `linear-gradient(135deg, ${theme.palette.secondary.main} 0%, ${theme.palette.secondary.dark} 100%)`,
+                          }}
+                        >
+                          {isAskingQuestion ? <CircularProgress size={20} color="inherit" /> : <SendIcon />}
+                        </Button>
+                      </Stack>
+                    </GlassCard>
+                  </Grid>
+
+                  {/* Suggested Questions */}
+                  <Grid size={{ xs: 12, lg: 4 }}>
+                    <GlassCard>
+                      <Typography variant="subtitle1" fontWeight={700} gutterBottom>
+                        Suggested Questions
+                      </Typography>
+                      <Stack spacing={1.5}>
+                        {suggestedQuestions.map((q, idx) => (
+                          <Button
+                            key={idx}
+                            variant="outlined"
+                            onClick={() => setQuestion(q)}
+                            sx={{
+                              textTransform: 'none',
+                              justifyContent: 'flex-start',
+                              textAlign: 'left',
+                              borderRadius: 2,
+                              py: 1.5,
+                              px: 2,
+                              fontWeight: 500,
+                              borderColor: alpha(theme.palette.divider, 0.2),
+                              '&:hover': {
+                                bgcolor: alpha(theme.palette.primary.main, 0.05),
+                                borderColor: theme.palette.primary.main,
+                              },
+                            }}
+                          >
+                            {q}
+                          </Button>
+                        ))}
+                      </Stack>
+                    </GlassCard>
+                  </Grid>
+                </Grid>
+              </TabPanel>
+
+              {/* Charts Tab */}
+              <TabPanel value={activeTab} index={2}>
+                <GlassCard sx={{ mb: 3 }}>
+                  <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 3 }}>
+                    <Avatar sx={{ bgcolor: alpha(theme.palette.info.main, 0.15), color: 'info.main' }}>
+                      <AutoAwesomeIcon />
+                    </Avatar>
+                    <Box>
+                      <Typography variant="h6" fontWeight={700}>
+                        Generate Charts with Natural Language
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Describe the visualization you want and AI will create it
+                      </Typography>
+                    </Box>
                   </Stack>
-                </Surface>
-              </Grid>
-
-              {/* Top Insights Preview */}
-              <Grid item xs={12} md={6}>
-                <Surface sx={{ p: 3 }}>
-                  <Typography variant="h6" fontWeight={600} gutterBottom>
-                    Top Insights
-                  </Typography>
-                  {analysisResult.insights?.slice(0, 3).map((insight) => (
-                    <InsightCard key={insight.id} insight={insight} type="insight" />
-                  ))}
-                </Surface>
-              </Grid>
-
-              {/* Risks & Opportunities Preview */}
-              <Grid item xs={12} md={6}>
-                <Surface sx={{ p: 3 }}>
-                  <Typography variant="h6" fontWeight={600} gutterBottom>
-                    Risks & Opportunities
-                  </Typography>
-                  {analysisResult.risks?.slice(0, 2).map((risk) => (
-                    <InsightCard key={risk.id} insight={risk} type="risk" />
-                  ))}
-                  {analysisResult.opportunities?.slice(0, 2).map((opp) => (
-                    <InsightCard key={opp.id} insight={opp} type="opportunity" />
-                  ))}
-                </Surface>
-              </Grid>
-            </Grid>
-          </TabPanel>
-
-          {/* Q&A Tab */}
-          <TabPanel value={activeTab} index={1}>
-            <Grid container spacing={3}>
-              <Grid item xs={12} md={8}>
-                <Surface sx={{ p: 3 }}>
-                  <Typography variant="h6" fontWeight={600} gutterBottom>
-                    Ask Questions About Your Document
-                  </Typography>
-
-                  {/* Question Input */}
-                  <Stack direction="row" spacing={2} sx={{ mb: 3 }}>
+                  <Stack direction="row" spacing={2}>
                     <TextField
                       fullWidth
-                      placeholder="e.g., What was the total revenue? What risks are mentioned?"
-                      value={question}
-                      onChange={(e) => setQuestion(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleAskQuestion()}
-                      disabled={isAskingQuestion}
+                      placeholder='e.g., "Show revenue by quarter as a line chart" or "Compare categories in a pie chart"'
+                      value={chartQuery}
+                      onChange={(e) => setChartQuery(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleGenerateCharts()}
+                      disabled={isGeneratingCharts}
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          borderRadius: 3,
+                        },
+                      }}
                     />
                     <Button
                       variant="contained"
-                      onClick={handleAskQuestion}
-                      disabled={!question.trim() || isAskingQuestion}
-                      startIcon={isAskingQuestion ? <CircularProgress size={16} color="inherit" /> : <SendIcon />}
-                      sx={{ minWidth: 120, textTransform: 'none' }}
+                      onClick={handleGenerateCharts}
+                      disabled={!chartQuery.trim() || isGeneratingCharts}
+                      startIcon={isGeneratingCharts ? <CircularProgress size={16} color="inherit" /> : <BarChartIcon />}
+                      sx={{
+                        minWidth: 160,
+                        borderRadius: 3,
+                        textTransform: 'none',
+                        fontWeight: 600,
+                        background: `linear-gradient(135deg, ${theme.palette.info.main} 0%, ${theme.palette.info.dark} 100%)`,
+                      }}
                     >
-                      Ask
+                      Generate
                     </Button>
                   </Stack>
+                </GlassCard>
 
-                  {/* Q&A History */}
-                  <Stack spacing={2}>
-                    {qaHistory.map((qa, idx) => (
-                      <Box key={idx}>
-                        <Paper sx={{ p: 2, bgcolor: 'primary.50', borderRadius: 2, mb: 1 }}>
-                          <Typography variant="subtitle2" fontWeight={600} color="primary.main">
-                            Q: {qa.question}
-                          </Typography>
-                        </Paper>
-                        <Paper sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 2, ml: 2 }}>
-                          <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
-                            {qa.answer}
-                          </Typography>
-                          {qa.sources?.length > 0 && (
-                            <Box sx={{ mt: 2 }}>
-                              <Typography variant="caption" fontWeight={600}>
-                                Sources:
-                              </Typography>
-                              {qa.sources.map((source, i) => (
-                                <Typography key={i} variant="caption" display="block" color="text.secondary">
-                                  - {source.content_preview}
-                                </Typography>
-                              ))}
-                            </Box>
-                          )}
-                        </Paper>
-                      </Box>
-                    ))}
-                  </Stack>
-                </Surface>
-              </Grid>
-
-              {/* Suggested Questions */}
-              <Grid item xs={12} md={4}>
-                <Surface sx={{ p: 3 }}>
-                  <Typography variant="subtitle1" fontWeight={600} gutterBottom>
-                    Suggested Questions
-                  </Typography>
-                  <Stack spacing={1}>
-                    {suggestedQuestions.map((q, idx) => (
-                      <Button
-                        key={idx}
-                        variant="outlined"
-                        size="small"
-                        onClick={() => setQuestion(q)}
-                        sx={{
-                          textTransform: 'none',
-                          justifyContent: 'flex-start',
-                          textAlign: 'left',
-                        }}
-                      >
-                        {q}
-                      </Button>
-                    ))}
-                  </Stack>
-                </Surface>
-              </Grid>
-            </Grid>
-          </TabPanel>
-
-          {/* Charts Tab */}
-          <TabPanel value={activeTab} index={2}>
-            <Surface sx={{ p: 3, mb: 3 }}>
-              <Typography variant="h6" fontWeight={600} gutterBottom>
-                Generate Charts with Natural Language
-              </Typography>
-              <Stack direction="row" spacing={2}>
-                <TextField
-                  fullWidth
-                  placeholder="e.g., Show revenue by quarter as a line chart, Compare categories..."
-                  value={chartQuery}
-                  onChange={(e) => setChartQuery(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleGenerateCharts()}
-                  disabled={isGeneratingCharts}
-                />
-                <Button
-                  variant="contained"
-                  onClick={handleGenerateCharts}
-                  disabled={!chartQuery.trim() || isGeneratingCharts}
-                  startIcon={isGeneratingCharts ? <CircularProgress size={16} color="inherit" /> : <BarChartIcon />}
-                  sx={{ minWidth: 160, textTransform: 'none' }}
-                >
-                  Generate
-                </Button>
-              </Stack>
-            </Surface>
-
-            <Grid container spacing={3}>
-              {generatedCharts.map((chart, idx) => (
-                <Grid item xs={12} md={6} key={chart.id || idx}>
-                  <Surface sx={{ p: 2 }}>
-                    <Typography variant="subtitle1" fontWeight={600} gutterBottom>
-                      {chart.title}
-                    </Typography>
-                    {chart.description && (
-                      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                        {chart.description}
-                      </Typography>
-                    )}
-                    <ZoomableChart chart={chart} data={chart.data} height={300} />
-                    {chart.ai_insights?.length > 0 && (
-                      <Box sx={{ mt: 2, p: 1, bgcolor: 'info.50', borderRadius: 1 }}>
-                        <Typography variant="caption" fontWeight={600}>
-                          AI Insights:
-                        </Typography>
-                        {chart.ai_insights.map((insight, i) => (
-                          <Typography key={i} variant="caption" display="block">
-                            • {insight}
-                          </Typography>
-                        ))}
-                      </Box>
-                    )}
-                  </Surface>
-                </Grid>
-              ))}
-            </Grid>
-          </TabPanel>
-
-          {/* Data Tab */}
-          <TabPanel value={activeTab} index={3}>
-            <Grid container spacing={3}>
-              {/* Tables */}
-              <Grid item xs={12}>
-                <Surface sx={{ p: 3 }}>
-                  <Typography variant="h6" fontWeight={600} gutterBottom>
-                    Extracted Tables ({analysisResult.tables?.length || 0})
-                  </Typography>
-                  {analysisResult.tables?.map((table) => (
-                    <Accordion key={table.id} sx={{ mb: 1 }}>
-                      <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                        <Stack direction="row" alignItems="center" spacing={2}>
-                          <TableChartIcon color="primary" />
-                          <Typography fontWeight={600}>{table.title || table.id}</Typography>
-                          <Chip label={`${table.row_count} rows`} size="small" />
-                          <Chip label={`${table.column_count} cols`} size="small" />
-                        </Stack>
-                      </AccordionSummary>
-                      <AccordionDetails>
-                        <Box sx={{ overflowX: 'auto' }}>
-                          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                            <thead>
-                              <tr>
-                                {table.headers.map((header, i) => (
-                                  <th
-                                    key={i}
-                                    style={{
-                                      padding: '8px 12px',
-                                      textAlign: 'left',
-                                      borderBottom: '2px solid #e0e0e0',
-                                      backgroundColor: '#f5f5f5',
-                                    }}
-                                  >
-                                    {header}
-                                  </th>
-                                ))}
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {table.rows.slice(0, 10).map((row, i) => (
-                                <tr key={i}>
-                                  {row.map((cell, j) => (
-                                    <td
-                                      key={j}
-                                      style={{
-                                        padding: '8px 12px',
-                                        borderBottom: '1px solid #e0e0e0',
-                                      }}
-                                    >
-                                      {cell}
-                                    </td>
-                                  ))}
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                          {table.rows.length > 10 && (
-                            <Typography variant="caption" color="text.secondary" sx={{ mt: 1 }}>
-                              Showing 10 of {table.rows.length} rows
+                <Grid container spacing={3}>
+                  {generatedCharts.map((chart, idx) => (
+                    <Grid size={{ xs: 12, md: 6 }} key={chart.id || idx}>
+                      <Zoom in timeout={300 + idx * 100}>
+                        <Box>
+                          <GlassCard>
+                            <Typography variant="h6" fontWeight={700} gutterBottom>
+                              {chart.title}
                             </Typography>
-                          )}
+                            {chart.description && (
+                              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                                {chart.description}
+                              </Typography>
+                            )}
+                            <Box sx={{ height: 320 }}>
+                              <ZoomableChart chart={chart} data={chart.data} height={300} />
+                            </Box>
+                            {chart.ai_insights?.length > 0 && (
+                              <Box
+                                sx={{
+                                  mt: 2,
+                                  p: 2,
+                                  bgcolor: alpha(theme.palette.info.main, 0.08),
+                                  borderRadius: 2,
+                                  border: `1px solid ${alpha(theme.palette.info.main, 0.2)}`,
+                                }}
+                              >
+                                <Typography variant="caption" fontWeight={700} color="info.main">
+                                  AI INSIGHTS
+                                </Typography>
+                                {chart.ai_insights.map((insight, i) => (
+                                  <Typography key={i} variant="body2" sx={{ mt: 0.5 }}>
+                                    • {insight}
+                                  </Typography>
+                                ))}
+                              </Box>
+                            )}
+                          </GlassCard>
                         </Box>
-                      </AccordionDetails>
-                    </Accordion>
+                      </Zoom>
+                    </Grid>
                   ))}
-                </Surface>
-              </Grid>
+                </Grid>
+              </TabPanel>
 
-              {/* Entities */}
-              <Grid item xs={12} md={6}>
-                <Surface sx={{ p: 3 }}>
-                  <Typography variant="h6" fontWeight={600} gutterBottom>
-                    Extracted Entities ({analysisResult.entities?.length || 0})
-                  </Typography>
-                  <Stack spacing={1}>
-                    {analysisResult.entities?.slice(0, 20).map((entity) => (
-                      <Stack key={entity.id} direction="row" alignItems="center" spacing={1}>
-                        <Chip
-                          label={entity.type}
-                          size="small"
-                          color={
-                            entity.type === 'money'
-                              ? 'success'
-                              : entity.type === 'date'
-                              ? 'primary'
-                              : 'default'
-                          }
-                        />
-                        <Typography variant="body2">{entity.value}</Typography>
-                        {entity.normalized_value && entity.normalized_value !== entity.value && (
-                          <Typography variant="caption" color="text.secondary">
-                            ({entity.normalized_value})
-                          </Typography>
-                        )}
+              {/* Data Tab */}
+              <TabPanel value={activeTab} index={3}>
+                <Grid container spacing={3}>
+                  {/* Tables */}
+                  <Grid size={12}>
+                    <GlassCard>
+                      <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 3 }}>
+                        <Avatar sx={{ bgcolor: alpha(theme.palette.primary.main, 0.15), color: 'primary.main' }}>
+                          <TableChartIcon />
+                        </Avatar>
+                        <Typography variant="h6" fontWeight={700}>
+                          Extracted Tables ({analysisResult.tables?.length || 0})
+                        </Typography>
                       </Stack>
-                    ))}
-                  </Stack>
-                </Surface>
-              </Grid>
+                      {analysisResult.tables?.map((table) => (
+                        <Accordion
+                          key={table.id}
+                          sx={{
+                            mb: 2,
+                            borderRadius: '12px !important',
+                            overflow: 'hidden',
+                            '&:before': { display: 'none' },
+                            boxShadow: 'none',
+                            border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+                          }}
+                        >
+                          <AccordionSummary
+                            expandIcon={<ExpandMoreIcon />}
+                            sx={{
+                              bgcolor: alpha(theme.palette.primary.main, 0.03),
+                              '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.06) },
+                            }}
+                          >
+                            <Stack direction="row" alignItems="center" spacing={2}>
+                              <TableChartIcon color="primary" />
+                              <Typography fontWeight={600}>{table.title || table.id}</Typography>
+                              <Chip label={`${table.row_count} rows`} size="small" color="primary" variant="outlined" />
+                              <Chip label={`${table.column_count} cols`} size="small" variant="outlined" />
+                            </Stack>
+                          </AccordionSummary>
+                          <AccordionDetails sx={{ p: 0 }}>
+                            <Box sx={{ overflowX: 'auto' }}>
+                              <Box
+                                component="table"
+                                sx={{
+                                  width: '100%',
+                                  borderCollapse: 'collapse',
+                                  '& th': {
+                                    p: 1.5,
+                                    textAlign: 'left',
+                                    fontWeight: 700,
+                                    fontSize: '0.8rem',
+                                    textTransform: 'uppercase',
+                                    bgcolor: alpha(theme.palette.primary.main, 0.08),
+                                    borderBottom: `2px solid ${theme.palette.primary.main}`,
+                                  },
+                                  '& td': {
+                                    p: 1.5,
+                                    fontSize: '0.875rem',
+                                    borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+                                  },
+                                  '& tr:hover td': {
+                                    bgcolor: alpha(theme.palette.primary.main, 0.02),
+                                  },
+                                }}
+                              >
+                                <thead>
+                                  <tr>
+                                    {table.headers.map((header, i) => (
+                                      <th key={i}>{header}</th>
+                                    ))}
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {table.rows.slice(0, 10).map((row, i) => (
+                                    <tr key={i}>
+                                      {row.map((cell, j) => (
+                                        <td key={j}>{cell}</td>
+                                      ))}
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </Box>
+                              {table.rows.length > 10 && (
+                                <Box sx={{ p: 2, textAlign: 'center', bgcolor: alpha(theme.palette.grey[500], 0.05) }}>
+                                  <Typography variant="caption" color="text.secondary">
+                                    Showing 10 of {table.rows.length} rows
+                                  </Typography>
+                                </Box>
+                              )}
+                            </Box>
+                          </AccordionDetails>
+                        </Accordion>
+                      ))}
+                    </GlassCard>
+                  </Grid>
 
-              {/* Invoices & Contracts */}
-              <Grid item xs={12} md={6}>
-                {analysisResult.invoices?.length > 0 && (
-                  <Surface sx={{ p: 3, mb: 2 }}>
-                    <Typography variant="h6" fontWeight={600} gutterBottom>
-                      Invoices Detected
-                    </Typography>
-                    {analysisResult.invoices.map((invoice) => (
-                      <Box key={invoice.id} sx={{ mb: 2 }}>
-                        <Typography variant="subtitle2">{invoice.vendor_name}</Typography>
-                        <Typography variant="body2">
-                          Invoice #{invoice.invoice_number} | {invoice.invoice_date}
+                  {/* Entities */}
+                  <Grid size={{ xs: 12, md: 6 }}>
+                    <GlassCard>
+                      <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 3 }}>
+                        <Avatar sx={{ bgcolor: alpha(theme.palette.info.main, 0.15), color: 'info.main' }}>
+                          <DataObjectIcon />
+                        </Avatar>
+                        <Typography variant="h6" fontWeight={700}>
+                          Entities ({analysisResult.entities?.length || 0})
                         </Typography>
-                        <Typography variant="h6" color="success.main">
-                          {invoice.currency} {invoice.grand_total}
+                      </Stack>
+                      <Stack spacing={1.5}>
+                        {analysisResult.entities?.slice(0, 20).map((entity) => (
+                          <Stack
+                            key={entity.id}
+                            direction="row"
+                            alignItems="center"
+                            spacing={1.5}
+                            sx={{
+                              p: 1.5,
+                              borderRadius: 2,
+                              bgcolor: alpha(theme.palette.background.default, 0.5),
+                              transition: 'all 0.2s ease',
+                              '&:hover': {
+                                bgcolor: alpha(theme.palette.primary.main, 0.05),
+                              },
+                            }}
+                          >
+                            <Chip
+                              label={entity.type}
+                              size="small"
+                              sx={{
+                                minWidth: 80,
+                                fontWeight: 600,
+                                bgcolor:
+                                  entity.type === 'money'
+                                    ? alpha('#10b981', 0.15)
+                                    : entity.type === 'date'
+                                    ? alpha('#3b82f6', 0.15)
+                                    : entity.type === 'percentage'
+                                    ? alpha('#8b5cf6', 0.15)
+                                    : alpha(theme.palette.grey[500], 0.15),
+                                color:
+                                  entity.type === 'money'
+                                    ? '#10b981'
+                                    : entity.type === 'date'
+                                    ? '#3b82f6'
+                                    : entity.type === 'percentage'
+                                    ? '#8b5cf6'
+                                    : theme.palette.text.secondary,
+                              }}
+                            />
+                            <Typography variant="body2" fontWeight={500}>
+                              {entity.value}
+                            </Typography>
+                            {entity.normalized_value && entity.normalized_value !== entity.value && (
+                              <Typography variant="caption" color="text.secondary">
+                                → {entity.normalized_value}
+                              </Typography>
+                            )}
+                          </Stack>
+                        ))}
+                      </Stack>
+                    </GlassCard>
+                  </Grid>
+
+                  {/* Invoices & Contracts */}
+                  <Grid size={{ xs: 12, md: 6 }}>
+                    <Stack spacing={3}>
+                      {analysisResult.invoices?.length > 0 && (
+                        <GlassCard>
+                          <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 3 }}>
+                            <Avatar sx={{ bgcolor: alpha('#10b981', 0.15), color: '#10b981' }}>
+                              <ReceiptLongIcon />
+                            </Avatar>
+                            <Typography variant="h6" fontWeight={700}>
+                              Invoices Detected
+                            </Typography>
+                          </Stack>
+                          {analysisResult.invoices.map((invoice) => (
+                            <Box
+                              key={invoice.id}
+                              sx={{
+                                p: 2,
+                                mb: 2,
+                                borderRadius: 2,
+                                bgcolor: alpha('#10b981', 0.05),
+                                border: `1px solid ${alpha('#10b981', 0.2)}`,
+                              }}
+                            >
+                              <Typography variant="subtitle2" fontWeight={700}>
+                                {invoice.vendor_name}
+                              </Typography>
+                              <Typography variant="body2" color="text.secondary">
+                                Invoice #{invoice.invoice_number} • {invoice.invoice_date}
+                              </Typography>
+                              <Typography variant="h5" fontWeight={800} color="#10b981" sx={{ mt: 1 }}>
+                                {invoice.currency} {invoice.grand_total}
+                              </Typography>
+                            </Box>
+                          ))}
+                        </GlassCard>
+                      )}
+
+                      {analysisResult.contracts?.length > 0 && (
+                        <GlassCard>
+                          <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 3 }}>
+                            <Avatar sx={{ bgcolor: alpha('#8b5cf6', 0.15), color: '#8b5cf6' }}>
+                              <GavelIcon />
+                            </Avatar>
+                            <Typography variant="h6" fontWeight={700}>
+                              Contracts Detected
+                            </Typography>
+                          </Stack>
+                          {analysisResult.contracts.map((contract) => (
+                            <Box
+                              key={contract.id}
+                              sx={{
+                                p: 2,
+                                borderRadius: 2,
+                                bgcolor: alpha('#8b5cf6', 0.05),
+                                border: `1px solid ${alpha('#8b5cf6', 0.2)}`,
+                              }}
+                            >
+                              <Typography variant="subtitle2" fontWeight={700}>
+                                {contract.contract_type}
+                              </Typography>
+                              <Typography variant="body2" color="text.secondary">
+                                {contract.effective_date} → {contract.expiration_date}
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                Parties: {contract.parties?.map((p) => p.name).join(', ')}
+                              </Typography>
+                            </Box>
+                          ))}
+                        </GlassCard>
+                      )}
+                    </Stack>
+                  </Grid>
+                </Grid>
+              </TabPanel>
+
+              {/* Insights Tab */}
+              <TabPanel value={activeTab} index={4}>
+                <Grid container spacing={3}>
+                  <Grid size={{ xs: 12, md: 6 }}>
+                    <GlassCard>
+                      <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 3 }}>
+                        <Avatar sx={{ bgcolor: alpha('#3b82f6', 0.15), color: '#3b82f6' }}>
+                          <LightbulbIcon />
+                        </Avatar>
+                        <Typography variant="h6" fontWeight={700}>
+                          Key Insights ({analysisResult.insights?.length || 0})
                         </Typography>
-                      </Box>
-                    ))}
-                  </Surface>
-                )}
+                      </Stack>
+                      {analysisResult.insights?.map((insight, i) => (
+                        <InsightCard key={insight.id} insight={insight} type="insight" index={i} />
+                      ))}
+                    </GlassCard>
+                  </Grid>
 
-                {analysisResult.contracts?.length > 0 && (
-                  <Surface sx={{ p: 3 }}>
-                    <Typography variant="h6" fontWeight={600} gutterBottom>
-                      Contracts Detected
-                    </Typography>
-                    {analysisResult.contracts.map((contract) => (
-                      <Box key={contract.id}>
-                        <Typography variant="subtitle2">{contract.contract_type}</Typography>
-                        <Typography variant="body2">
-                          {contract.effective_date} - {contract.expiration_date}
+                  <Grid size={{ xs: 12, md: 6 }}>
+                    <GlassCard>
+                      <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 3 }}>
+                        <Avatar sx={{ bgcolor: alpha('#ef4444', 0.15), color: '#ef4444' }}>
+                          <SecurityIcon />
+                        </Avatar>
+                        <Typography variant="h6" fontWeight={700}>
+                          Risks ({analysisResult.risks?.length || 0})
                         </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          Parties: {contract.parties?.map((p) => p.name).join(', ')}
+                      </Stack>
+                      {analysisResult.risks?.map((risk, i) => (
+                        <InsightCard key={risk.id} insight={risk} type="risk" index={i} />
+                      ))}
+                    </GlassCard>
+                  </Grid>
+
+                  <Grid size={{ xs: 12, md: 6 }}>
+                    <GlassCard>
+                      <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 3 }}>
+                        <Avatar sx={{ bgcolor: alpha('#10b981', 0.15), color: '#10b981' }}>
+                          <RocketLaunchIcon />
+                        </Avatar>
+                        <Typography variant="h6" fontWeight={700}>
+                          Opportunities ({analysisResult.opportunities?.length || 0})
                         </Typography>
-                      </Box>
-                    ))}
-                  </Surface>
-                )}
-              </Grid>
-            </Grid>
-          </TabPanel>
+                      </Stack>
+                      {analysisResult.opportunities?.map((opp, i) => (
+                        <InsightCard key={opp.id} insight={opp} type="opportunity" index={i} />
+                      ))}
+                    </GlassCard>
+                  </Grid>
 
-          {/* Insights Tab */}
-          <TabPanel value={activeTab} index={4}>
-            <Grid container spacing={3}>
-              {/* Insights */}
-              <Grid item xs={12} md={6}>
-                <Surface sx={{ p: 3 }}>
-                  <Typography variant="h6" fontWeight={600} gutterBottom>
-                    Key Insights ({analysisResult.insights?.length || 0})
-                  </Typography>
-                  {analysisResult.insights?.map((insight) => (
-                    <InsightCard key={insight.id} insight={insight} type="insight" />
-                  ))}
-                </Surface>
-              </Grid>
+                  <Grid size={{ xs: 12, md: 6 }}>
+                    <GlassCard>
+                      <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 3 }}>
+                        <Avatar sx={{ bgcolor: alpha('#f59e0b', 0.15), color: '#f59e0b' }}>
+                          <PlaylistAddCheckIcon />
+                        </Avatar>
+                        <Typography variant="h6" fontWeight={700}>
+                          Action Items ({analysisResult.action_items?.length || 0})
+                        </Typography>
+                      </Stack>
+                      {analysisResult.action_items?.map((action, i) => (
+                        <InsightCard key={action.id} insight={action} type="action" index={i} />
+                      ))}
+                    </GlassCard>
+                  </Grid>
+                </Grid>
+              </TabPanel>
+            </Box>
+          </Fade>
+        )}
 
-              {/* Risks */}
-              <Grid item xs={12} md={6}>
-                <Surface sx={{ p: 3 }}>
-                  <Typography variant="h6" fontWeight={600} gutterBottom>
-                    Risks ({analysisResult.risks?.length || 0})
-                  </Typography>
-                  {analysisResult.risks?.map((risk) => (
-                    <InsightCard key={risk.id} insight={risk} type="risk" />
-                  ))}
-                </Surface>
-              </Grid>
-
-              {/* Opportunities */}
-              <Grid item xs={12} md={6}>
-                <Surface sx={{ p: 3 }}>
-                  <Typography variant="h6" fontWeight={600} gutterBottom>
-                    Opportunities ({analysisResult.opportunities?.length || 0})
-                  </Typography>
-                  {analysisResult.opportunities?.map((opp) => (
-                    <InsightCard key={opp.id} insight={opp} type="opportunity" />
-                  ))}
-                </Surface>
-              </Grid>
-
-              {/* Action Items */}
-              <Grid item xs={12} md={6}>
-                <Surface sx={{ p: 3 }}>
-                  <Typography variant="h6" fontWeight={600} gutterBottom>
-                    Action Items ({analysisResult.action_items?.length || 0})
-                  </Typography>
-                  {analysisResult.action_items?.map((action) => (
-                    <InsightCard key={action.id} insight={action} type="action" />
-                  ))}
-                </Surface>
-              </Grid>
-            </Grid>
-          </TabPanel>
-        </>
-      )}
-
-      {/* Error Display */}
-      {error && !isAnalyzing && (
-        <Alert severity="error" sx={{ mt: 2 }}>
-          {error}
-        </Alert>
-      )}
-
-      {/* Help Text */}
-      <Box sx={{ textAlign: 'center', py: 2, mt: 2 }}>
-        <Typography variant="body2" color="text.secondary">
-          Supported formats: PDF, Excel (XLSX, XLS), CSV, Images • Max file size: 50MB
-        </Typography>
-        <Typography variant="caption" color="text.disabled">
-          AI-powered extraction with intelligent analysis, Q&A, and visualization
-        </Typography>
+        {/* Footer */}
+        <Box sx={{ textAlign: 'center', py: 4, mt: 4 }}>
+          <Typography variant="body2" color="text.secondary">
+            Supported formats: PDF, Excel (XLSX, XLS), CSV, Word, Images
+          </Typography>
+          <Typography variant="caption" color="text.disabled" sx={{ mt: 0.5, display: 'block' }}>
+            AI-powered analysis with intelligent extraction, multi-mode summaries, Q&A, and visualization
+          </Typography>
+        </Box>
       </Box>
     </Box>
   )

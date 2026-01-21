@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from 'react'
-import { Box, Typography, Stack, Chip, IconButton } from '@mui/material'
+import { Box, Typography, Stack, Chip, IconButton, Tooltip } from '@mui/material'
 import ZoomInIcon from '@mui/icons-material/ZoomIn'
 import ZoomOutIcon from '@mui/icons-material/ZoomOut'
 import RefreshIcon from '@mui/icons-material/Refresh'
@@ -219,12 +219,18 @@ export default function ChartBlock({ data }) {
           />
         </Stack>
         <Stack direction="row" spacing={0.5}>
-          <IconButton size="small" onClick={handleResetZoom} disabled={!zoomDomain}>
-            <RefreshIcon fontSize="small" />
-          </IconButton>
-          <IconButton size="small" onClick={handleDownload} title="Download chart as PNG">
-            <DownloadIcon fontSize="small" />
-          </IconButton>
+          <Tooltip title="Reset zoom">
+            <span>
+              <IconButton size="small" onClick={handleResetZoom} disabled={!zoomDomain} aria-label="Reset zoom">
+                <RefreshIcon fontSize="small" />
+              </IconButton>
+            </span>
+          </Tooltip>
+          <Tooltip title="Download chart as PNG">
+            <IconButton size="small" onClick={handleDownload} aria-label="Download chart as PNG">
+              <DownloadIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
         </Stack>
       </Stack>
 

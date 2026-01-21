@@ -13,6 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .dependencies import create_dependencies, set_dependencies, Dependencies
 from .routes import templates, connections, reports, jobs, health
+from backend.app.features.analyze.routes import enhanced_analysis_routes
 
 logger = logging.getLogger("neura.api")
 
@@ -95,5 +96,7 @@ def create_app(
     app.include_router(connections.router, prefix="/api/connections", tags=["Connections"])
     app.include_router(reports.router, prefix="/api/reports", tags=["Reports"])
     app.include_router(jobs.router, prefix="/api/jobs", tags=["Jobs"])
+    # Enhanced analysis routes (router already has /analyze/v2 prefix)
+    app.include_router(enhanced_analysis_routes.router, tags=["Enhanced Analysis"])
 
     return app

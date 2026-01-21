@@ -1,3 +1,7 @@
+/**
+ * Premium Top Navigation
+ * Sophisticated header with glassmorphism, animations, and refined interactions
+ */
 import { useState, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
@@ -20,19 +24,27 @@ import {
   Tooltip,
   Typography,
   Button,
+  Zoom,
+  Fade,
+  useTheme,
   alpha,
+  styled,
+  keyframes,
 } from '@mui/material'
-import MenuIcon from '@mui/icons-material/Menu'
-import SearchIcon from '@mui/icons-material/Search'
-import PersonOutlineIcon from '@mui/icons-material/PersonOutline'
-import KeyboardIcon from '@mui/icons-material/Keyboard'
-import HelpOutlineIcon from '@mui/icons-material/HelpOutline'
-import WorkIcon from '@mui/icons-material/Work'
-import DownloadIcon from '@mui/icons-material/Download'
-import SettingsIcon from '@mui/icons-material/Settings'
-import LogoutIcon from '@mui/icons-material/Logout'
-import CheckCircleIcon from '@mui/icons-material/CheckCircle'
-import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline'
+import {
+  Menu as MenuIcon,
+  Search as SearchIcon,
+  PersonOutline as PersonOutlineIcon,
+  Keyboard as KeyboardIcon,
+  HelpOutline as HelpOutlineIcon,
+  Work as WorkIcon,
+  Download as DownloadIcon,
+  Settings as SettingsIcon,
+  Logout as LogoutIcon,
+  CheckCircle as CheckCircleIcon,
+  ErrorOutline as ErrorOutlineIcon,
+  OpenInNew as OpenInNewIcon,
+} from '@mui/icons-material'
 import Breadcrumbs from './Breadcrumbs'
 import { useAppStore } from '../store/useAppStore'
 import { useJobsList } from '../hooks/useJobs'
@@ -40,9 +52,192 @@ import { getShortcutDisplay, SHORTCUTS } from '../hooks/useKeyboardShortcuts'
 import { withBase } from '../api/client'
 import GlobalSearch from '../components/GlobalSearch'
 import NotificationCenter from '../components/notifications/NotificationCenter'
-import { palette } from '../theme'
+
+// =============================================================================
+// ANIMATIONS
+// =============================================================================
+
+const pulse = keyframes`
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+`
+
+const fadeIn = keyframes`
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+`
+
+const shimmer = keyframes`
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+`
+
+// =============================================================================
+// STYLED COMPONENTS
+// =============================================================================
+
+const StyledAppBar = styled(AppBar)(({ theme }) => ({
+  backgroundColor: alpha(theme.palette.background.paper, 0.7),
+  backdropFilter: 'blur(20px)',
+  borderBottom: `1px solid ${alpha(theme.palette.divider, 0.08)}`,
+  boxShadow: 'none',
+}))
+
+const StyledToolbar = styled(Toolbar)(({ theme }) => ({
+  gap: theme.spacing(2),
+  minHeight: 60,
+  padding: theme.spacing(0, 3),
+  [theme.breakpoints.down('sm')]: {
+    padding: theme.spacing(0, 2),
+  },
+}))
+
+const NavIconButton = styled(IconButton)(({ theme }) => ({
+  width: 36,
+  height: 36,
+  borderRadius: 10,
+  color: theme.palette.text.secondary,
+  transition: 'all 0.2s ease',
+  '&:hover': {
+    backgroundColor: alpha(theme.palette.primary.main, 0.08),
+    color: theme.palette.primary.main,
+    transform: 'translateY(-1px)',
+  },
+  '&:active': {
+    transform: 'translateY(0)',
+  },
+}))
+
+const ConnectionChip = styled(Chip, {
+  shouldForwardProp: (prop) => prop !== 'connected',
+})(({ theme, connected }) => ({
+  height: 30,
+  borderRadius: 10,
+  backgroundColor: connected
+    ? alpha(theme.palette.success.main, 0.1)
+    : alpha(theme.palette.warning.main, 0.1),
+  border: `1px solid ${connected
+    ? alpha(theme.palette.success.main, 0.2)
+    : alpha(theme.palette.warning.main, 0.2)}`,
+  color: connected ? theme.palette.success.main : theme.palette.warning.main,
+  fontWeight: 500,
+  fontSize: '0.75rem',
+  transition: 'all 0.2s ease',
+  '& .MuiChip-icon': {
+    marginLeft: 6,
+  },
+  '&:hover': {
+    backgroundColor: connected
+      ? alpha(theme.palette.success.main, 0.15)
+      : alpha(theme.palette.warning.main, 0.15),
+  },
+}))
+
+const StatusDot = styled(Box, {
+  shouldForwardProp: (prop) => prop !== 'connected',
+})(({ theme, connected }) => ({
+  width: 8,
+  height: 8,
+  borderRadius: '50%',
+  backgroundColor: connected ? theme.palette.success.main : theme.palette.warning.main,
+  boxShadow: `0 0 0 3px ${alpha(connected ? theme.palette.success.main : theme.palette.warning.main, 0.2)}`,
+  animation: connected ? `${pulse} 2s infinite ease-in-out` : 'none',
+}))
+
+const StyledBadge = styled(Badge)(({ theme }) => ({
+  '& .MuiBadge-badge': {
+    backgroundColor: theme.palette.primary.main,
+    color: '#fff',
+    fontSize: '0.65rem',
+    fontWeight: 600,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    boxShadow: `0 2px 8px ${alpha(theme.palette.primary.main, 0.4)}`,
+    animation: `${fadeIn} 0.3s ease-out`,
+  },
+}))
+
+const StyledMenu = styled(Menu)(({ theme }) => ({
+  '& .MuiPaper-root': {
+    backgroundColor: alpha(theme.palette.background.paper, 0.95),
+    backdropFilter: 'blur(20px)',
+    borderRadius: 14,
+    border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+    boxShadow: `0 12px 40px ${alpha(theme.palette.common.black, 0.15)}`,
+    marginTop: theme.spacing(1),
+    minWidth: 200,
+  },
+}))
+
+const StyledMenuItem = styled(MenuItem)(({ theme }) => ({
+  borderRadius: 8,
+  margin: theme.spacing(0.5, 1),
+  padding: theme.spacing(1, 1.5),
+  transition: 'all 0.15s ease',
+  '&:hover': {
+    backgroundColor: alpha(theme.palette.primary.main, 0.08),
+  },
+}))
+
+const MenuHeader = styled(Box)(({ theme }) => ({
+  padding: theme.spacing(1.5, 2, 1),
+}))
+
+const MenuLabel = styled(Typography)(({ theme }) => ({
+  fontSize: '0.6875rem',
+  fontWeight: 600,
+  textTransform: 'uppercase',
+  letterSpacing: '0.05em',
+  color: theme.palette.text.disabled,
+}))
+
+const ShortcutChip = styled(Chip)(({ theme }) => ({
+  height: 24,
+  fontSize: '0.6875rem',
+  fontFamily: 'var(--font-mono, monospace)',
+  fontWeight: 500,
+  backgroundColor: alpha(theme.palette.text.primary, 0.06),
+  color: theme.palette.text.secondary,
+  border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+  borderRadius: 6,
+}))
+
+const HelpCard = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: theme.spacing(2),
+  padding: theme.spacing(2),
+  borderRadius: 12,
+  backgroundColor: alpha(theme.palette.background.paper, 0.5),
+  border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+  transition: 'all 0.2s ease',
+  '&:hover': {
+    backgroundColor: alpha(theme.palette.primary.main, 0.04),
+    borderColor: alpha(theme.palette.primary.main, 0.15),
+  },
+}))
+
+const StyledDialog = styled(Dialog)(({ theme }) => ({
+  '& .MuiDialog-paper': {
+    backgroundColor: alpha(theme.palette.background.paper, 0.95),
+    backdropFilter: 'blur(20px)',
+    borderRadius: 20,
+    border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+  },
+  '& .MuiBackdrop-root': {
+    backgroundColor: alpha(theme.palette.common.black, 0.5),
+    backdropFilter: 'blur(4px)',
+  },
+}))
+
+// =============================================================================
+// MAIN COMPONENT
+// =============================================================================
 
 export default function TopNav({ onMenuClick, showMenuButton, connection }) {
+  const theme = useTheme()
   const navigate = useNavigate()
   const [anchorEl, setAnchorEl] = useState(null)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
@@ -140,39 +335,16 @@ export default function TopNav({ onMenuClick, showMenuButton, connection }) {
     { label: 'System Settings', description: 'View health checks and preferences.', path: '/settings' },
   ]
 
+  const isConnected = connection?.status === 'connected'
+
   return (
-    <AppBar
-      position="sticky"
-      elevation={0}
-      sx={{
-        bgcolor: palette.scale[1100],
-        borderBottom: `1px solid ${alpha(palette.scale[100], 0.08)}`,
-        backdropFilter: 'blur(8px)',
-      }}
-    >
-      <Toolbar
-        sx={{
-          gap: 2,
-          minHeight: 56,
-          px: { xs: 2, sm: 3 },
-        }}
-      >
+    <StyledAppBar position="sticky" elevation={0}>
+      <StyledToolbar>
         {/* Menu Button (Mobile) */}
         {showMenuButton && (
-          <IconButton
-            edge="start"
-            onClick={onMenuClick}
-            sx={{
-              color: palette.scale[400],
-              mr: 1,
-              '&:hover': {
-                bgcolor: alpha(palette.scale[100], 0.08),
-                color: palette.scale[100],
-              },
-            }}
-          >
+          <NavIconButton edge="start" onClick={onMenuClick} aria-label="Open menu">
             <MenuIcon sx={{ fontSize: 20 }} />
-          </IconButton>
+          </NavIconButton>
         )}
 
         {/* Breadcrumbs + Global Search */}
@@ -187,402 +359,231 @@ export default function TopNav({ onMenuClick, showMenuButton, connection }) {
 
         {/* Connection Status */}
         {connection && (
-          <Chip
-            icon={
-              connection.status === 'connected' ? (
-                <CheckCircleIcon sx={{ fontSize: 14, color: palette.green[400] }} />
-              ) : (
-                <ErrorOutlineIcon sx={{ fontSize: 14, color: palette.yellow[400] }} />
-              )
-            }
-            label={
-              <Typography sx={{ fontSize: '0.75rem', fontWeight: 500 }}>
-                {connection.name || 'Connected'}
-              </Typography>
-            }
-            size="small"
-            sx={{
-              height: 26,
-              bgcolor: connection.status === 'connected'
-                ? alpha(palette.green[400], 0.1)
-                : alpha(palette.yellow[400], 0.1),
-              border: `1px solid ${
-                connection.status === 'connected'
-                  ? alpha(palette.green[400], 0.2)
-                  : alpha(palette.yellow[400], 0.2)
-              }`,
-              color: connection.status === 'connected'
-                ? palette.green[400]
-                : palette.yellow[400],
-              '& .MuiChip-icon': {
-                ml: 0.5,
-              },
-            }}
-          />
+          <Tooltip
+            title={isConnected ? 'Database connected' : 'Connection issue'}
+            arrow
+            TransitionComponent={Zoom}
+          >
+            <ConnectionChip
+              connected={isConnected}
+              icon={<StatusDot connected={isConnected} />}
+              label={connection.name || (isConnected ? 'Connected' : 'Disconnected')}
+              size="small"
+            />
+          </Tooltip>
         )}
 
         {/* Actions */}
-        <Stack direction="row" spacing={0.5}>
-          <Tooltip title={`Search (${getShortcutDisplay(SHORTCUTS.COMMAND_PALETTE).join(' + ')})`} arrow>
-            <IconButton
-              size="small"
-              onClick={handleOpenCommandPalette}
-              sx={{
-                color: palette.scale[500],
-                p: 1,
-                '&:hover': {
-                  bgcolor: alpha(palette.scale[100], 0.08),
-                  color: palette.scale[100],
-                },
-              }}
-            >
+        <Stack direction="row" spacing={0.5} alignItems="center">
+          <Tooltip
+            title={`Search (${getShortcutDisplay(SHORTCUTS.COMMAND_PALETTE).join(' + ')})`}
+            arrow
+            TransitionComponent={Zoom}
+          >
+            <NavIconButton size="small" onClick={handleOpenCommandPalette} aria-label="Open search">
               <SearchIcon sx={{ fontSize: 18 }} />
-            </IconButton>
+            </NavIconButton>
           </Tooltip>
 
-          <Tooltip title="Keyboard Shortcuts" arrow>
-            <IconButton
-              size="small"
-              onClick={handleOpenShortcuts}
-              sx={{
-                color: palette.scale[500],
-                p: 1,
-                '&:hover': {
-                  bgcolor: alpha(palette.scale[100], 0.08),
-                  color: palette.scale[100],
-                },
-              }}
-            >
+          <Tooltip title="Keyboard Shortcuts" arrow TransitionComponent={Zoom}>
+            <NavIconButton size="small" onClick={handleOpenShortcuts} aria-label="View shortcuts">
               <KeyboardIcon sx={{ fontSize: 18 }} />
-            </IconButton>
+            </NavIconButton>
           </Tooltip>
 
           <NotificationCenter />
 
-          <Tooltip title="Jobs & downloads" arrow>
-            <IconButton
-              size="small"
-              onClick={handleOpenNotifications}
-              sx={{
-                color: palette.scale[500],
-                p: 1,
-                '&:hover': {
-                  bgcolor: alpha(palette.scale[100], 0.08),
-                  color: palette.scale[100],
-                },
-              }}
-            >
-              <Badge
-                badgeContent={notificationsCount}
-                color="primary"
-                invisible={!notificationsCount}
-                sx={{
-                  '& .MuiBadge-badge': {
-                    bgcolor: palette.green[400],
-                    color: palette.scale[1100],
-                    fontSize: '0.65rem',
-                    fontWeight: 600,
-                    minWidth: 16,
-                    height: 16,
-                  },
-                }}
-              >
+          <Tooltip title="Jobs & downloads" arrow TransitionComponent={Zoom}>
+            <NavIconButton size="small" onClick={handleOpenNotifications} aria-label="View notifications">
+              <StyledBadge badgeContent={notificationsCount} invisible={!notificationsCount}>
                 <WorkIcon sx={{ fontSize: 18 }} />
-              </Badge>
-            </IconButton>
+              </StyledBadge>
+            </NavIconButton>
           </Tooltip>
 
-          <Tooltip title="Help" arrow>
-            <IconButton
-              size="small"
-              onClick={handleOpenHelp}
-              sx={{
-                color: palette.scale[500],
-                p: 1,
-                '&:hover': {
-                  bgcolor: alpha(palette.scale[100], 0.08),
-                  color: palette.scale[100],
-                },
-              }}
-            >
+          <Tooltip title="Help" arrow TransitionComponent={Zoom}>
+            <NavIconButton size="small" onClick={handleOpenHelp} aria-label="Open help">
               <HelpOutlineIcon sx={{ fontSize: 18 }} />
-            </IconButton>
+            </NavIconButton>
           </Tooltip>
 
-          <IconButton
+          <NavIconButton
             size="small"
             onClick={handleOpenMenu}
-            sx={{
-              color: palette.scale[500],
-              p: 1,
-              ml: 0.5,
-              '&:hover': {
-                bgcolor: alpha(palette.scale[100], 0.08),
-                color: palette.scale[100],
-              },
-            }}
+            aria-label="User menu"
+            sx={{ ml: 0.5 }}
           >
             <PersonOutlineIcon sx={{ fontSize: 18 }} />
-          </IconButton>
+          </NavIconButton>
         </Stack>
 
         {/* User Menu */}
-        <Menu
+        <StyledMenu
           anchorEl={anchorEl}
           open={Boolean(anchorEl)}
           onClose={handleCloseMenu}
           anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
           transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-          slotProps={{
-            paper: {
-              sx: {
-                width: 200,
-                mt: 1,
-                bgcolor: palette.scale[900],
-                border: `1px solid ${alpha(palette.scale[100], 0.1)}`,
-                boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
-              },
-            },
-          }}
+          TransitionComponent={Fade}
         >
-          <MenuItem
-            onClick={() => handleNavigate('/settings')}
-            sx={{
-              color: palette.scale[200],
-              '&:hover': {
-                bgcolor: alpha(palette.scale[100], 0.05),
-              },
-            }}
-          >
+          <StyledMenuItem onClick={() => handleNavigate('/settings')}>
             <ListItemIcon>
-              <SettingsIcon sx={{ fontSize: 16, color: palette.scale[500] }} />
+              <SettingsIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
             </ListItemIcon>
             <ListItemText
               primary="Settings"
-              primaryTypographyProps={{
-                fontSize: '0.8125rem',
-                fontWeight: 500,
-              }}
+              primaryTypographyProps={{ fontSize: '0.875rem', fontWeight: 500 }}
             />
-          </MenuItem>
-          <Divider sx={{ my: 0.5, borderColor: alpha(palette.scale[100], 0.08) }} />
-          <MenuItem
-            onClick={handleSignOut}
-            sx={{
-              color: palette.scale[200],
-              '&:hover': {
-                bgcolor: alpha(palette.scale[100], 0.05),
-              },
-            }}
-          >
+          </StyledMenuItem>
+          <Divider sx={{ my: 0.5, mx: 1, borderColor: alpha(theme.palette.divider, 0.1) }} />
+          <StyledMenuItem onClick={handleSignOut}>
             <ListItemIcon>
-              <LogoutIcon sx={{ fontSize: 16, color: palette.scale[500] }} />
+              <LogoutIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
             </ListItemIcon>
             <ListItemText
               primary="Sign Out"
-              primaryTypographyProps={{
-                fontSize: '0.8125rem',
-                fontWeight: 500,
-              }}
+              primaryTypographyProps={{ fontSize: '0.875rem', fontWeight: 500 }}
             />
-          </MenuItem>
-        </Menu>
+          </StyledMenuItem>
+        </StyledMenu>
 
         {/* Notifications Menu */}
-        <Menu
+        <StyledMenu
           anchorEl={notificationsAnchorEl}
           open={Boolean(notificationsAnchorEl)}
           onClose={handleCloseNotifications}
           anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
           transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-          slotProps={{
-            paper: {
-              sx: {
-                width: 300,
-                mt: 1,
-                bgcolor: palette.scale[900],
-                border: `1px solid ${alpha(palette.scale[100], 0.1)}`,
-                boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
-              },
-            },
-          }}
+          TransitionComponent={Fade}
+          slotProps={{ paper: { sx: { width: 320 } } }}
         >
-          <Box sx={{ px: 2, pt: 1, pb: 0.5 }}>
-            <Typography
-              sx={{
-                fontSize: '0.6875rem',
-                fontWeight: 600,
-                textTransform: 'uppercase',
-                letterSpacing: '0.08em',
-                color: palette.scale[600],
-              }}
-            >
-              Jobs
-            </Typography>
-          </Box>
+          <MenuHeader>
+            <MenuLabel>Jobs</MenuLabel>
+          </MenuHeader>
           {jobNotifications.length ? jobNotifications.map((job) => (
-            <MenuItem
+            <StyledMenuItem
               key={job.id}
               onClick={() => {
                 handleCloseNotifications()
                 navigate('/jobs')
               }}
-              sx={{ color: palette.scale[200] }}
             >
               <ListItemIcon>
-                <WorkIcon sx={{ fontSize: 16, color: palette.scale[500] }} />
+                <WorkIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
               </ListItemIcon>
               <ListItemText
                 primary={job.template_name || job.template_id || job.id}
                 secondary={`Status: ${(job.status || 'unknown').toString()}`}
                 primaryTypographyProps={{ fontSize: '0.8125rem' }}
-                secondaryTypographyProps={{ fontSize: '0.75rem', color: palette.scale[500] }}
+                secondaryTypographyProps={{ fontSize: '0.75rem' }}
               />
-            </MenuItem>
+            </StyledMenuItem>
           )) : (
-            <MenuItem disabled sx={{ opacity: 0.6 }}>
+            <MenuItem disabled sx={{ opacity: 0.5, mx: 1 }}>
               <ListItemText
                 primary="No job updates yet"
-                primaryTypographyProps={{ fontSize: '0.8125rem' }}
+                primaryTypographyProps={{ fontSize: '0.8125rem', color: 'text.secondary' }}
               />
             </MenuItem>
           )}
 
-          <Divider sx={{ my: 0.5, borderColor: alpha(palette.scale[100], 0.08) }} />
+          <Divider sx={{ my: 1, mx: 1, borderColor: alpha(theme.palette.divider, 0.1) }} />
 
-          <Box sx={{ px: 2, pt: 0.5, pb: 0.5 }}>
-            <Typography
-              sx={{
-                fontSize: '0.6875rem',
-                fontWeight: 600,
-                textTransform: 'uppercase',
-                letterSpacing: '0.08em',
-                color: palette.scale[600],
-              }}
-            >
-              Downloads
-            </Typography>
-          </Box>
+          <MenuHeader>
+            <MenuLabel>Downloads</MenuLabel>
+          </MenuHeader>
           {downloadNotifications.length ? downloadNotifications.map((download, index) => (
-            <MenuItem
+            <StyledMenuItem
               key={`${download.filename || download.template || 'download'}-${index}`}
               onClick={() => handleOpenDownload(download)}
-              sx={{ color: palette.scale[200] }}
             >
               <ListItemIcon>
-                <DownloadIcon sx={{ fontSize: 16, color: palette.scale[500] }} />
+                <DownloadIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
               </ListItemIcon>
               <ListItemText
                 primary={download.filename || download.template || 'Recent download'}
                 secondary={download.format ? download.format.toUpperCase() : 'Open file'}
                 primaryTypographyProps={{ fontSize: '0.8125rem' }}
-                secondaryTypographyProps={{ fontSize: '0.75rem', color: palette.scale[500] }}
+                secondaryTypographyProps={{ fontSize: '0.75rem' }}
               />
-            </MenuItem>
+            </StyledMenuItem>
           )) : (
-            <MenuItem disabled sx={{ opacity: 0.6 }}>
+            <MenuItem disabled sx={{ opacity: 0.5, mx: 1 }}>
               <ListItemText
                 primary="No downloads yet"
-                primaryTypographyProps={{ fontSize: '0.8125rem' }}
+                primaryTypographyProps={{ fontSize: '0.8125rem', color: 'text.secondary' }}
               />
             </MenuItem>
           )}
 
-          <Divider sx={{ my: 0.5, borderColor: alpha(palette.scale[100], 0.08) }} />
+          <Divider sx={{ my: 1, mx: 1, borderColor: alpha(theme.palette.divider, 0.1) }} />
 
-          <MenuItem onClick={handleOpenJobsPanel} sx={{ color: palette.scale[200] }}>
+          <StyledMenuItem onClick={handleOpenJobsPanel}>
             <ListItemIcon>
-              <WorkIcon sx={{ fontSize: 16, color: palette.scale[500] }} />
+              <OpenInNewIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
             </ListItemIcon>
             <ListItemText
               primary="Open Jobs Panel"
               primaryTypographyProps={{ fontSize: '0.8125rem', fontWeight: 500 }}
             />
-          </MenuItem>
-        </Menu>
+          </StyledMenuItem>
+        </StyledMenu>
 
         {/* Keyboard Shortcuts Dialog */}
-        <Dialog
+        <StyledDialog
           open={shortcutsOpen}
           onClose={handleCloseShortcuts}
           maxWidth="xs"
           fullWidth
-          PaperProps={{
-            sx: {
-              bgcolor: palette.scale[900],
-              border: `1px solid ${alpha(palette.scale[100], 0.1)}`,
-            },
-          }}
+          TransitionComponent={Fade}
         >
-          <DialogTitle sx={{ color: palette.scale[100] }}>Keyboard Shortcuts</DialogTitle>
-          <DialogContent dividers sx={{ borderColor: alpha(palette.scale[100], 0.1) }}>
-            <Stack spacing={1.5}>
+          <DialogTitle sx={{ fontWeight: 600 }}>Keyboard Shortcuts</DialogTitle>
+          <DialogContent dividers sx={{ borderColor: alpha(theme.palette.divider, 0.1) }}>
+            <Stack spacing={2}>
               {shortcutItems.map((item) => (
                 <Box
                   key={item.label}
                   sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
                 >
-                  <Typography sx={{ fontSize: '0.8125rem', color: palette.scale[200] }}>
+                  <Typography sx={{ fontSize: '0.875rem' }}>
                     {item.label}
                   </Typography>
-                  <Chip
-                    label={item.keys}
-                    size="small"
-                    sx={{
-                      fontFamily: 'var(--font-mono)',
-                      bgcolor: alpha(palette.scale[100], 0.08),
-                      color: palette.scale[200],
-                    }}
-                  />
+                  <ShortcutChip label={item.keys} size="small" />
                 </Box>
               ))}
             </Stack>
           </DialogContent>
-          <DialogActions sx={{ borderTop: `1px solid ${alpha(palette.scale[100], 0.08)}` }}>
-            <Button onClick={handleCloseShortcuts} sx={{ textTransform: 'none' }}>
+          <DialogActions sx={{ borderTop: `1px solid ${alpha(theme.palette.divider, 0.1)}`, p: 2 }}>
+            <Button
+              onClick={handleCloseShortcuts}
+              sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 500 }}
+            >
               Close
             </Button>
           </DialogActions>
-        </Dialog>
+        </StyledDialog>
 
         {/* Help Dialog */}
-        <Dialog
+        <StyledDialog
           open={helpOpen}
           onClose={handleCloseHelp}
           maxWidth="sm"
           fullWidth
-          PaperProps={{
-            sx: {
-              bgcolor: palette.scale[900],
-              border: `1px solid ${alpha(palette.scale[100], 0.1)}`,
-            },
-          }}
+          TransitionComponent={Fade}
         >
-          <DialogTitle sx={{ color: palette.scale[100] }}>Help Center</DialogTitle>
-          <DialogContent dividers sx={{ borderColor: alpha(palette.scale[100], 0.1) }}>
-            <Typography sx={{ fontSize: '0.8125rem', color: palette.scale[400], mb: 2 }}>
+          <DialogTitle sx={{ fontWeight: 600 }}>Help Center</DialogTitle>
+          <DialogContent dividers sx={{ borderColor: alpha(theme.palette.divider, 0.1) }}>
+            <Typography sx={{ fontSize: '0.875rem', color: 'text.secondary', mb: 3 }}>
               Jump to common workflows or explore system settings.
             </Typography>
-            <Stack spacing={1.25}>
+            <Stack spacing={1.5}>
               {helpActions.map((action) => (
-                <Box
-                  key={action.label}
-                  sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: 2,
-                    p: 1.5,
-                    borderRadius: 1.5,
-                    border: `1px solid ${alpha(palette.scale[100], 0.08)}`,
-                    bgcolor: alpha(palette.scale[100], 0.02),
-                  }}
-                >
+                <HelpCard key={action.label}>
                   <Box sx={{ minWidth: 0 }}>
-                    <Typography sx={{ fontSize: '0.8125rem', color: palette.scale[200], fontWeight: 600 }}>
+                    <Typography sx={{ fontSize: '0.875rem', fontWeight: 600, mb: 0.25 }}>
                       {action.label}
                     </Typography>
-                    <Typography sx={{ fontSize: '0.75rem', color: palette.scale[500] }}>
+                    <Typography sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>
                       {action.description}
                     </Typography>
                   </Box>
@@ -593,21 +594,30 @@ export default function TopNav({ onMenuClick, showMenuButton, connection }) {
                       handleCloseHelp()
                       navigate(action.path)
                     }}
-                    sx={{ textTransform: 'none', whiteSpace: 'nowrap' }}
+                    sx={{
+                      borderRadius: 2,
+                      textTransform: 'none',
+                      fontWeight: 500,
+                      whiteSpace: 'nowrap',
+                      minWidth: 64,
+                    }}
                   >
                     Open
                   </Button>
-                </Box>
+                </HelpCard>
               ))}
             </Stack>
           </DialogContent>
-          <DialogActions sx={{ borderTop: `1px solid ${alpha(palette.scale[100], 0.08)}` }}>
-            <Button onClick={handleCloseHelp} sx={{ textTransform: 'none' }}>
+          <DialogActions sx={{ borderTop: `1px solid ${alpha(theme.palette.divider, 0.1)}`, p: 2 }}>
+            <Button
+              onClick={handleCloseHelp}
+              sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 500 }}
+            >
               Close
             </Button>
           </DialogActions>
-        </Dialog>
-      </Toolbar>
-    </AppBar>
+        </StyledDialog>
+      </StyledToolbar>
+    </StyledAppBar>
   )
 }

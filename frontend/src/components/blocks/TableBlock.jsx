@@ -12,6 +12,7 @@ import {
   TableRow,
   TablePagination,
   IconButton,
+  Tooltip,
   alpha,
 } from '@mui/material'
 import DownloadIcon from '@mui/icons-material/Download'
@@ -91,9 +92,11 @@ export default function TableBlock({ data }) {
             variant="outlined"
           />
         </Stack>
-        <IconButton size="small" onClick={handleDownloadCSV} title="Download as CSV">
-          <DownloadIcon fontSize="small" />
-        </IconButton>
+        <Tooltip title="Download as CSV">
+          <IconButton size="small" onClick={handleDownloadCSV} aria-label="Download as CSV">
+            <DownloadIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
       </Stack>
 
       {/* Table */}

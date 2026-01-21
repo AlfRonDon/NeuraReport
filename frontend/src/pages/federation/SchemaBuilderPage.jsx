@@ -156,7 +156,7 @@ export default function SchemaBuilderPage() {
 
       <Grid container spacing={3}>
         {/* Schema List */}
-        <Grid item xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }}>
           <Paper sx={{ p: 2 }}>
             <Typography variant="h6" gutterBottom>
               Virtual Schemas
@@ -200,7 +200,7 @@ export default function SchemaBuilderPage() {
         </Grid>
 
         {/* Schema Details & Query */}
-        <Grid item xs={12} md={8}>
+        <Grid size={{ xs: 12, md: 8 }}>
           {currentSchema ? (
             <Paper sx={{ p: 3 }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
@@ -240,7 +240,7 @@ export default function SchemaBuilderPage() {
                   </Typography>
                   <Grid container spacing={2}>
                     {joinSuggestions.map((suggestion, idx) => (
-                      <Grid item xs={12} sm={6} key={idx}>
+                      <Grid size={{ xs: 12, sm: 6 }} key={idx}>
                         <Card variant="outlined">
                           <CardContent sx={{ py: 1.5 }}>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>

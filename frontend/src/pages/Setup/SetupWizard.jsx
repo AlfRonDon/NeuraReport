@@ -109,6 +109,7 @@ export default function SetupWizard() {
   }, [currentStep])
 
   const handleComplete = useCallback(() => {
+    clearWizardState()
     toast.show('Template setup complete!', 'success')
     navigate('/reports')
   }, [navigate, toast])

@@ -15,6 +15,7 @@ from backend.core.errors import NeuraError, NotFoundError, ValidationError
 from backend.core.events import Event, publish_sync
 from .dependencies import AppConfig, init_dependencies, get_dependencies
 from .routes import health, templates, connections, reports, jobs
+from backend.app.features.analyze.routes import enhanced_analysis_routes
 
 logger = logging.getLogger("neura.api")
 
@@ -130,6 +131,7 @@ def create_app(
     app.include_router(connections.router, prefix="/connections", tags=["connections"])
     app.include_router(reports.router, prefix="/reports", tags=["reports"])
     app.include_router(jobs.router, prefix="/jobs", tags=["jobs"])
+    app.include_router(enhanced_analysis_routes.router, tags=["enhanced_analysis"])
 
     logger.info(
         "app_created",

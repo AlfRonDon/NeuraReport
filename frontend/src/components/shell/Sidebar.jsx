@@ -36,9 +36,9 @@ const NAV_ITEMS = [
     description: 'Connect database & templates',
   },
   {
-    id: 'generate',
-    path: '/generate',
-    label: 'Generate',
+    id: 'reports',
+    path: '/reports',
+    label: 'Reports',
     icon: PlayArrowOutlinedIcon,
     description: 'Create reports',
   },
@@ -174,9 +174,9 @@ export default function Sidebar({ collapsed, onToggleCollapse }) {
   const getActiveNavItem = () => {
     const path = location.pathname
     if (path === '/') return 'setup'
-    if (path.startsWith('/generate')) return 'generate'
+    if (path.startsWith('/reports')) return 'reports'
     if (path.startsWith('/analyze')) return 'analyze'
-    if (path.startsWith('/templates')) return 'generate'
+    if (path.startsWith('/templates')) return 'reports'
     return 'setup'
   }
 
@@ -257,14 +257,14 @@ export default function Sidebar({ collapsed, onToggleCollapse }) {
                   bgcolor: (theme) => alpha(theme.palette.primary.main, 0.2),
                 },
               }}
-              onClick={() => navigate('/generate')}
+              onClick={() => navigate('/reports')}
             >
               <AddIcon />
             </IconButton>
           </Tooltip>
         ) : (
           <ListItemButton
-            onClick={() => navigate('/generate')}
+            onClick={() => navigate('/reports')}
             sx={{
               borderRadius: 2,
               border: 1,
@@ -350,7 +350,7 @@ export default function Sidebar({ collapsed, onToggleCollapse }) {
         {collapsed ? (
           <Stack spacing={1} alignItems="center">
             <Tooltip title="Settings" placement="right">
-              <IconButton size="small">
+              <IconButton size="small" onClick={() => navigate('/settings')} aria-label="Settings">
                 <SettingsOutlinedIcon fontSize="small" />
               </IconButton>
             </Tooltip>
@@ -382,9 +382,11 @@ export default function Sidebar({ collapsed, onToggleCollapse }) {
                 </Typography>
               </Box>
             </Stack>
-            <IconButton size="small">
-              <SettingsOutlinedIcon fontSize="small" />
-            </IconButton>
+            <Tooltip title="Settings">
+              <IconButton size="small" onClick={() => navigate('/settings')} aria-label="Settings">
+                <SettingsOutlinedIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
           </Stack>
         )}
       </Box>

@@ -435,7 +435,7 @@ export default function UsageStatsPage() {
 
       {/* Overview Stats */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <StatCard
             title="Total Jobs"
             value={summary.totalJobs || 0}
@@ -445,7 +445,7 @@ export default function UsageStatsPage() {
             onClick={() => navigate('/jobs')}
           />
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <StatCard
             title="Success Rate"
             value={`${(metrics.successRate || 0).toFixed(1)}%`}
@@ -455,7 +455,7 @@ export default function UsageStatsPage() {
             onClick={() => navigate('/history')}
           />
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <StatCard
             title="Templates"
             value={summary.totalTemplates || 0}
@@ -465,7 +465,7 @@ export default function UsageStatsPage() {
             onClick={() => navigate('/templates')}
           />
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <StatCard
             title="Connections"
             value={summary.totalConnections || 0}
@@ -510,7 +510,7 @@ export default function UsageStatsPage() {
       {activeTab === 0 && (
         <Grid container spacing={2}>
           {/* Jobs Trend Chart */}
-          <Grid item xs={12} lg={8}>
+          <Grid size={{ xs: 12, lg: 8 }}>
             <ChartCard title="Jobs Trend" subtitle="Daily job completions over the past week">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={jobsTrend}>
@@ -533,7 +533,7 @@ export default function UsageStatsPage() {
           </Grid>
 
           {/* Status Distribution */}
-          <Grid item xs={12} lg={4}>
+          <Grid size={{ xs: 12, lg: 4 }}>
             <ChartCard title="Job Status" subtitle="Distribution by status">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -564,7 +564,7 @@ export default function UsageStatsPage() {
           </Grid>
 
           {/* Template Type Distribution */}
-          <Grid item xs={12} md={6}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <ChartCard title="Template Types" subtitle="PDF vs Excel usage">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -588,7 +588,7 @@ export default function UsageStatsPage() {
           </Grid>
 
           {/* Top Templates */}
-          <Grid item xs={12} md={6}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <ChartCard title="Top Templates" subtitle="Most used templates">
               {templateBreakdown.length === 0 ? (
                 <Box sx={{ py: 6, textAlign: 'center' }}>
@@ -652,7 +652,7 @@ export default function UsageStatsPage() {
       {activeTab === 1 && (
         <Grid container spacing={2}>
           {/* Jobs Over Time */}
-          <Grid item xs={12}>
+          <Grid size={12}>
             <ChartCard title="Jobs History" subtitle="Job executions over the past 2 weeks" height={320}>
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={historyByDay}>
@@ -707,7 +707,7 @@ export default function UsageStatsPage() {
           </Grid>
 
           {/* Job Stats Cards */}
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <StatCard
               title="Jobs Today"
               value={metrics.jobsToday || 0}
@@ -716,7 +716,7 @@ export default function UsageStatsPage() {
               onClick={() => navigate('/jobs')}
             />
           </Grid>
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <StatCard
               title="Jobs This Week"
               value={metrics.jobsThisWeek || 0}
@@ -725,7 +725,7 @@ export default function UsageStatsPage() {
               onClick={() => navigate('/jobs')}
             />
           </Grid>
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <StatCard
               title="Jobs This Month"
               value={metrics.jobsThisMonth || 0}
@@ -734,7 +734,7 @@ export default function UsageStatsPage() {
               onClick={() => navigate('/jobs')}
             />
           </Grid>
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <StatCard
               title="Failed Jobs"
               value={summary.failedJobs || 0}
@@ -749,7 +749,7 @@ export default function UsageStatsPage() {
       {activeTab === 2 && (
         <Grid container spacing={2}>
           {/* Template Stats */}
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <StatCard
               title="Total Templates"
               value={summary.totalTemplates || 0}
@@ -758,7 +758,7 @@ export default function UsageStatsPage() {
               onClick={() => navigate('/templates')}
             />
           </Grid>
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <StatCard
               title="PDF Templates"
               value={summary.pdfTemplates || 0}
@@ -767,7 +767,7 @@ export default function UsageStatsPage() {
               onClick={() => navigate('/templates?kind=pdf')}
             />
           </Grid>
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <StatCard
               title="Excel Templates"
               value={summary.excelTemplates || 0}
@@ -776,7 +776,7 @@ export default function UsageStatsPage() {
               onClick={() => navigate('/templates?kind=excel')}
             />
           </Grid>
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <StatCard
               title="Active Schedules"
               value={summary.activeSchedules || 0}
@@ -787,7 +787,7 @@ export default function UsageStatsPage() {
           </Grid>
 
           {/* Template Usage */}
-          <Grid item xs={12}>
+          <Grid size={12}>
             <ChartCard title="Template Usage Breakdown" subtitle="Jobs per template" height={400}>
               {templateBreakdown.length === 0 ? (
                 <Box sx={{ py: 8, textAlign: 'center' }}>

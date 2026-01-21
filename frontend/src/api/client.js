@@ -2259,6 +2259,20 @@ export async function bootstrapState() {
 
 }
 
+export async function listConnections() {
+
+  if (isMock) {
+
+    return { status: 'ok', connections: [] }
+
+  }
+
+  const { data } = await api.get('/connections')
+
+  return data
+
+}
+
 
 
 export async function upsertConnection({ id, name, dbType, dbUrl, database, status, latencyMs, tags }) {

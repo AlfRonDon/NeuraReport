@@ -211,7 +211,7 @@ export default function AnalysisResults({ result }) {
           </Typography>
           <Grid container spacing={2}>
             {data_points.slice(0, 8).map((metric, idx) => (
-              <Grid item xs={6} sm={4} md={3} key={idx}>
+              <Grid size={{ xs: 6, sm: 4, md: 3 }} key={idx}>
                 <MetricCard metric={metric} />
               </Grid>
             ))}

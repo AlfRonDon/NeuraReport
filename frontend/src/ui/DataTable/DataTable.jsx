@@ -1,4 +1,8 @@
-import { useState, useMemo, useCallback, useEffect } from 'react'
+/**
+ * Premium Data Table Component
+ * Sophisticated table with glassmorphism, animations, and advanced interactions
+ */
+import { Fragment, useState, useMemo, useCallback, useEffect } from 'react'
 import {
   Box,
   Table,
@@ -12,13 +16,246 @@ import {
   Checkbox,
   IconButton,
   Typography,
-  Paper,
   Skeleton,
+  Tooltip,
+  Fade,
+  Collapse,
+  useTheme,
   alpha,
+  styled,
+  keyframes,
 } from '@mui/material'
-import MoreVertIcon from '@mui/icons-material/MoreVert'
+import {
+  MoreVert as MoreVertIcon,
+  KeyboardArrowDown as ExpandIcon,
+  KeyboardArrowUp as CollapseIcon,
+  ArrowUpward as SortAscIcon,
+  ArrowDownward as SortDescIcon,
+} from '@mui/icons-material'
 import DataTableToolbar from './DataTableToolbar'
 import DataTableEmptyState from './DataTableEmptyState'
+
+// =============================================================================
+// ANIMATIONS
+// =============================================================================
+
+const fadeInUp = keyframes`
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+`
+
+const shimmer = keyframes`
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+`
+
+const pulse = keyframes`
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+`
+
+const slideIn = keyframes`
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+`
+
+// =============================================================================
+// STYLED COMPONENTS
+// =============================================================================
+
+const TableWrapper = styled(Box)(({ theme }) => ({
+  backgroundColor: alpha(theme.palette.background.paper, 0.7),
+  backdropFilter: 'blur(20px)',
+  borderRadius: 16,
+  border: `1px solid ${alpha(theme.palette.divider, 0.08)}`,
+  overflow: 'hidden',
+  boxShadow: `0 4px 24px ${alpha(theme.palette.common.black, 0.06)}`,
+  transition: 'all 0.3s ease',
+  '&:hover': {
+    boxShadow: `0 8px 32px ${alpha(theme.palette.common.black, 0.08)}`,
+  },
+}))
+
+const StyledTableContainer = styled(TableContainer)(({ theme }) => ({
+  '&::-webkit-scrollbar': {
+    width: 8,
+    height: 8,
+  },
+  '&::-webkit-scrollbar-track': {
+    backgroundColor: 'transparent',
+  },
+  '&::-webkit-scrollbar-thumb': {
+    backgroundColor: alpha(theme.palette.text.primary, 0.1),
+    borderRadius: 4,
+    '&:hover': {
+      backgroundColor: alpha(theme.palette.text.primary, 0.2),
+    },
+  },
+}))
+
+const StyledTableHead = styled(TableHead)(({ theme }) => ({
+  '& .MuiTableCell-head': {
+    backgroundColor: alpha(theme.palette.background.paper, 0.5),
+    backdropFilter: 'blur(10px)',
+    fontWeight: 600,
+    fontSize: 12,
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em',
+    color: theme.palette.text.secondary,
+    borderBottom: `1px solid ${alpha(theme.palette.divider, 0.08)}`,
+    padding: theme.spacing(1.5, 2),
+    transition: 'background-color 0.2s ease',
+    '&:hover': {
+      backgroundColor: alpha(theme.palette.primary.main, 0.04),
+    },
+  },
+}))
+
+const StyledTableRow = styled(TableRow, {
+  shouldForwardProp: (prop) => !['rowIndex', 'isClickable'].includes(prop),
+})(({ theme, rowIndex, isClickable }) => ({
+  animation: `${fadeInUp} 0.4s ease-out`,
+  animationDelay: `${rowIndex * 0.03}s`,
+  animationFillMode: 'both',
+  transition: 'all 0.2s ease',
+  cursor: isClickable ? 'pointer' : 'default',
+  '& .MuiTableCell-body': {
+    borderBottom: `1px solid ${alpha(theme.palette.divider, 0.05)}`,
+    padding: theme.spacing(1.5, 2),
+    fontSize: 14,
+    transition: 'all 0.2s ease',
+  },
+  '&:hover': {
+    backgroundColor: alpha(theme.palette.primary.main, 0.04),
+    '& .MuiTableCell-body': {
+      color: theme.palette.text.primary,
+    },
+    '& .row-actions': {
+      opacity: 1,
+      transform: 'translateX(0)',
+    },
+  },
+  '&.Mui-selected': {
+    backgroundColor: alpha(theme.palette.primary.main, 0.08),
+    '&:hover': {
+      backgroundColor: alpha(theme.palette.primary.main, 0.12),
+    },
+  },
+  '&:last-child .MuiTableCell-body': {
+    borderBottom: 'none',
+  },
+}))
+
+const RowActionsContainer = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'flex-end',
+  gap: theme.spacing(0.5),
+  opacity: 0.5,
+  transform: 'translateX(4px)',
+  transition: 'all 0.2s ease',
+}))
+
+const StyledCheckbox = styled(Checkbox)(({ theme }) => ({
+  color: alpha(theme.palette.text.primary, 0.3),
+  padding: theme.spacing(0.5),
+  transition: 'all 0.2s ease',
+  '&:hover': {
+    backgroundColor: alpha(theme.palette.primary.main, 0.1),
+  },
+  '&.Mui-checked': {
+    color: theme.palette.primary.main,
+  },
+  '&.MuiCheckbox-indeterminate': {
+    color: theme.palette.primary.main,
+  },
+}))
+
+const StyledTableSortLabel = styled(TableSortLabel)(({ theme }) => ({
+  color: theme.palette.text.secondary,
+  '&:hover': {
+    color: theme.palette.primary.main,
+  },
+  '&.Mui-active': {
+    color: theme.palette.primary.main,
+    '& .MuiTableSortLabel-icon': {
+      color: theme.palette.primary.main,
+    },
+  },
+  '& .MuiTableSortLabel-icon': {
+    fontSize: 16,
+    transition: 'all 0.2s ease',
+  },
+}))
+
+const SkeletonRow = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  alignItems: 'center',
+  padding: theme.spacing(1.5, 2),
+  gap: theme.spacing(2),
+  borderBottom: `1px solid ${alpha(theme.palette.divider, 0.05)}`,
+  animation: `${pulse} 1.5s infinite ease-in-out`,
+}))
+
+const ShimmerSkeleton = styled(Skeleton)(({ theme }) => ({
+  background: `linear-gradient(
+    90deg,
+    ${alpha(theme.palette.text.primary, 0.06)} 0%,
+    ${alpha(theme.palette.text.primary, 0.12)} 50%,
+    ${alpha(theme.palette.text.primary, 0.06)} 100%
+  )`,
+  backgroundSize: '200% 100%',
+  animation: `${shimmer} 1.5s infinite`,
+  borderRadius: 6,
+}))
+
+const StyledPagination = styled(TablePagination)(({ theme }) => ({
+  borderTop: `1px solid ${alpha(theme.palette.divider, 0.08)}`,
+  backgroundColor: alpha(theme.palette.background.paper, 0.3),
+  '& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows': {
+    fontSize: 13,
+    color: theme.palette.text.secondary,
+  },
+  '& .MuiTablePagination-select': {
+    borderRadius: 8,
+    fontSize: 13,
+  },
+  '& .MuiTablePagination-actions': {
+    '& .MuiIconButton-root': {
+      color: theme.palette.text.secondary,
+      '&:hover': {
+        backgroundColor: alpha(theme.palette.primary.main, 0.08),
+        color: theme.palette.primary.main,
+      },
+      '&.Mui-disabled': {
+        color: alpha(theme.palette.text.primary, 0.2),
+      },
+    },
+  },
+}))
+
+const ExpandableRow = styled(TableRow)(({ theme }) => ({
+  backgroundColor: alpha(theme.palette.background.paper, 0.3),
+  '& .MuiTableCell-body': {
+    borderBottom: `1px solid ${alpha(theme.palette.divider, 0.05)}`,
+  },
+}))
+
+// =============================================================================
+// HELPERS
+// =============================================================================
 
 function descendingComparator(a, b, orderBy) {
   if (b[orderBy] < a[orderBy]) return -1
@@ -32,7 +269,6 @@ function getComparator(order, orderBy) {
     : (a, b) => -descendingComparator(a, b, orderBy)
 }
 
-// Helpers for localStorage persistence
 const STORAGE_PREFIX = 'neurareport_table_'
 
 function loadPersistedState(key) {
@@ -54,11 +290,17 @@ function savePersistedState(key, state) {
   }
 }
 
+// =============================================================================
+// MAIN COMPONENT
+// =============================================================================
+
 export default function DataTable({
   columns,
   data = [],
   loading = false,
   selectable = false,
+  expandable = false,
+  renderExpandedRow,
   onRowClick,
   onSelectionChange,
   rowActions,
@@ -76,9 +318,10 @@ export default function DataTable({
   pageSize = 10,
   pageSizeOptions = [10, 25, 50, 100],
   stickyHeader = false,
-  persistKey = null, // Unique key to persist table state to localStorage
+  persistKey = null,
+  rowHeight = 'medium', // 'compact', 'medium', 'comfortable'
 }) {
-  // Load persisted state if available
+  const theme = useTheme()
   const persisted = loadPersistedState(persistKey)
 
   const [order, setOrder] = useState(persisted?.order || defaultSortOrder)
@@ -88,8 +331,9 @@ export default function DataTable({
   const [rowsPerPage, setRowsPerPage] = useState(persisted?.rowsPerPage || pageSize)
   const [searchQuery, setSearchQuery] = useState('')
   const [activeFilters, setActiveFilters] = useState(persisted?.filters || {})
+  const [expandedRows, setExpandedRows] = useState(new Set())
 
-  // Persist state to localStorage when it changes
+  // Persist state
   useEffect(() => {
     if (!persistKey) return
     savePersistedState(persistKey, {
@@ -122,30 +366,30 @@ export default function DataTable({
     let newSelected = []
 
     if (selectedIndex === -1) {
-      newSelected = newSelected.concat(selected, id)
-    } else if (selectedIndex === 0) {
-      newSelected = newSelected.concat(selected.slice(1))
-    } else if (selectedIndex === selected.length - 1) {
-      newSelected = newSelected.concat(selected.slice(0, -1))
-    } else if (selectedIndex > 0) {
-      newSelected = newSelected.concat(
-        selected.slice(0, selectedIndex),
-        selected.slice(selectedIndex + 1)
-      )
+      newSelected = [...selected, id]
+    } else {
+      newSelected = selected.filter((item) => item !== id)
     }
 
     setSelected(newSelected)
     onSelectionChange?.(newSelected)
   }, [selected, onSelectionChange])
 
+  const handleToggleExpand = useCallback((id) => {
+    setExpandedRows((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) {
+        next.delete(id)
+      } else {
+        next.add(id)
+      }
+      return next
+    })
+  }, [])
+
   useEffect(() => {
     if (!selectable) return
-    const idSet = new Set()
-    data.forEach((row) => {
-      if (row?.id != null) {
-        idSet.add(row.id)
-      }
-    })
+    const idSet = new Set(data.map((row) => row?.id).filter(Boolean))
     const nextSelected = selected.filter((id) => idSet.has(id))
     if (nextSelected.length !== selected.length) {
       setSelected(nextSelected)
@@ -184,9 +428,7 @@ export default function DataTable({
       const dir = event.key === 'ArrowDown' ? 1 : -1
       const rows = event.currentTarget.parentElement?.querySelectorAll('tr[data-row-index]')
       const next = rows?.[rowIndex + dir]
-      if (next && typeof next.focus === 'function') {
-        next.focus()
-      }
+      if (next?.focus) next.focus()
     }
   }, [onRowClick, selectable, handleSelect])
 
@@ -194,18 +436,16 @@ export default function DataTable({
     const filterEntries = Object.entries(activeFilters)
     const baseData = filterEntries.length
       ? data.filter((row) =>
-        filterEntries.every(([key, filterValue]) => {
-          const cellValue = row[key]
-          if (cellValue == null) return false
-          if (Array.isArray(cellValue)) {
-            return cellValue.includes(filterValue)
-          }
-          if (typeof cellValue === 'string') {
-            return cellValue.toLowerCase() === String(filterValue).toLowerCase()
-          }
-          return cellValue === filterValue
-        })
-      )
+          filterEntries.every(([key, filterValue]) => {
+            const cellValue = row[key]
+            if (cellValue == null) return false
+            if (Array.isArray(cellValue)) return cellValue.includes(filterValue)
+            if (typeof cellValue === 'string') {
+              return cellValue.toLowerCase() === String(filterValue).toLowerCase()
+            }
+            return cellValue === filterValue
+          })
+        )
       : data
 
     if (!searchQuery) return baseData
@@ -226,16 +466,20 @@ export default function DataTable({
     return sortedData.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
   }, [sortedData, page, rowsPerPage])
 
-  const isSelected = (id) => selected.indexOf(id) !== -1
+  const isSelected = (id) => selected.includes(id)
   const numSelected = selected.length
   const rowCount = filteredData.length
 
+  const cellPadding = {
+    compact: 1,
+    medium: 1.5,
+    comfortable: 2,
+  }[rowHeight] || 1.5
+
+  // Empty state
   if (!loading && data.length === 0 && emptyState) {
     return (
-      <Paper
-        elevation={0}
-        sx={{ border: 1, borderColor: 'divider', borderRadius: 2 }}
-      >
+      <TableWrapper>
         <DataTableToolbar
           title={title}
           subtitle={subtitle}
@@ -249,15 +493,12 @@ export default function DataTable({
           onFiltersChange={setActiveFilters}
         />
         <DataTableEmptyState {...emptyState} />
-      </Paper>
+      </TableWrapper>
     )
   }
 
   return (
-    <Paper
-      elevation={0}
-      sx={{ border: 1, borderColor: 'divider', borderRadius: 2, overflow: 'hidden' }}
-    >
+    <TableWrapper>
       <DataTableToolbar
         title={title}
         subtitle={subtitle}
@@ -271,16 +512,18 @@ export default function DataTable({
         onFiltersChange={setActiveFilters}
       />
 
-      <TableContainer sx={{ maxHeight: stickyHeader ? 600 : 'none' }}>
-        <Table stickyHeader={stickyHeader}>
-          <TableHead>
+      <StyledTableContainer sx={{ maxHeight: stickyHeader ? 600 : 'none' }}>
+        <Table stickyHeader={stickyHeader} size={rowHeight === 'compact' ? 'small' : 'medium'}>
+          <StyledTableHead>
             <TableRow>
+              {expandable && <TableCell sx={{ width: 48 }} />}
               {selectable && (
-                <TableCell padding="checkbox">
-                  <Checkbox
+                <TableCell padding="checkbox" sx={{ width: 48 }}>
+                  <StyledCheckbox
                     indeterminate={numSelected > 0 && numSelected < rowCount}
                     checked={rowCount > 0 && numSelected === rowCount}
                     onChange={handleSelectAll}
+                    inputProps={{ 'aria-label': 'Select all rows' }}
                   />
                 </TableCell>
               )}
@@ -289,45 +532,55 @@ export default function DataTable({
                   key={column.field}
                   align={column.align || 'left'}
                   sx={{
-                    fontWeight: 600,
                     width: column.width,
                     minWidth: column.minWidth,
                   }}
                   sortDirection={orderBy === column.field ? order : false}
                 >
                   {column.sortable !== false ? (
-                    <TableSortLabel
+                    <StyledTableSortLabel
                       active={orderBy === column.field}
                       direction={orderBy === column.field ? order : 'asc'}
                       onClick={() => handleRequestSort(column.field)}
                     >
                       {column.headerName}
-                    </TableSortLabel>
+                    </StyledTableSortLabel>
                   ) : (
                     column.headerName
                   )}
                 </TableCell>
               ))}
-              {rowActions && <TableCell align="right" sx={{ width: 60 }} />}
+              {rowActions && <TableCell align="right" sx={{ width: 80 }} />}
             </TableRow>
-          </TableHead>
+          </StyledTableHead>
+
           <TableBody>
             {loading ? (
+              // Loading skeleton
               Array.from({ length: rowsPerPage }).map((_, index) => (
                 <TableRow key={index}>
+                  {expandable && (
+                    <TableCell sx={{ p: cellPadding }}>
+                      <ShimmerSkeleton variant="circular" width={24} height={24} />
+                    </TableCell>
+                  )}
                   {selectable && (
                     <TableCell padding="checkbox">
-                      <Skeleton variant="rectangular" width={20} height={20} />
+                      <ShimmerSkeleton variant="rectangular" width={18} height={18} sx={{ borderRadius: 0.5 }} />
                     </TableCell>
                   )}
                   {columns.map((column) => (
-                    <TableCell key={column.field}>
-                      <Skeleton variant="text" />
+                    <TableCell key={column.field} sx={{ p: cellPadding }}>
+                      <ShimmerSkeleton
+                        variant="text"
+                        width={column.width || '80%'}
+                        height={20}
+                      />
                     </TableCell>
                   ))}
                   {rowActions && (
-                    <TableCell>
-                      <Skeleton variant="circular" width={24} height={24} />
+                    <TableCell sx={{ p: cellPadding }}>
+                      <ShimmerSkeleton variant="circular" width={24} height={24} />
                     </TableCell>
                   )}
                 </TableRow>
@@ -335,57 +588,91 @@ export default function DataTable({
             ) : (
               paginatedData.map((row, rowIndex) => {
                 const isItemSelected = isSelected(row.id)
+                const isExpanded = expandedRows.has(row.id)
+                const rowKey = row.id ?? rowIndex
 
                 return (
-                  <TableRow
-                    key={row.id}
-                    hover
-                    onClick={() => onRowClick?.(row)}
-                    onKeyDown={(event) => handleRowKeyDown(event, row, rowIndex)}
-                    selected={isItemSelected}
-                    data-row-index={rowIndex}
-                    tabIndex={onRowClick || selectable ? 0 : -1}
-                    role={onRowClick ? 'button' : undefined}
-                    aria-selected={isItemSelected}
-                    sx={{
-                      cursor: onRowClick ? 'pointer' : 'default',
-                      '&.Mui-selected': {
-                        bgcolor: (theme) => alpha(theme.palette.primary.main, 0.08),
-                      },
-                    }}
-                  >
-                    {selectable && (
-                      <TableCell padding="checkbox">
-                        <Checkbox
-                          checked={isItemSelected}
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleSelect(row.id)
-                          }}
-                        />
-                      </TableCell>
+                  <Fragment key={rowKey}>
+                    <StyledTableRow
+                      hover
+                      onClick={() => onRowClick?.(row)}
+                      onKeyDown={(event) => handleRowKeyDown(event, row, rowIndex)}
+                      selected={isItemSelected}
+                      data-row-index={rowIndex}
+                      rowIndex={rowIndex}
+                      isClickable={!!onRowClick}
+                      tabIndex={onRowClick || selectable ? 0 : -1}
+                      role={onRowClick ? 'button' : undefined}
+                      aria-selected={selectable ? isItemSelected : undefined}
+                    >
+                      {expandable && (
+                        <TableCell sx={{ p: cellPadding }}>
+                          <IconButton
+                            size="small"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleToggleExpand(row.id)
+                            }}
+                            sx={{
+                              transition: 'all 0.2s ease',
+                              transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                              color: isExpanded ? 'primary.main' : 'text.secondary',
+                            }}
+                          >
+                            <ExpandIcon fontSize="small" />
+                          </IconButton>
+                        </TableCell>
+                      )}
+                      {selectable && (
+                        <TableCell padding="checkbox">
+                          <StyledCheckbox
+                            checked={isItemSelected}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleSelect(row.id)
+                            }}
+                            inputProps={{ 'aria-label': `Select row ${row.id}` }}
+                          />
+                        </TableCell>
+                      )}
+                      {columns.map((column) => (
+                        <TableCell key={column.field} align={column.align || 'left'} sx={{ p: cellPadding }}>
+                          {column.renderCell
+                            ? column.renderCell(row[column.field], row)
+                            : row[column.field]}
+                        </TableCell>
+                      ))}
+                      {rowActions && (
+                        <TableCell align="right" onClick={(e) => e.stopPropagation()} sx={{ p: cellPadding }}>
+                          <RowActionsContainer className="row-actions">
+                            {rowActions(row)}
+                          </RowActionsContainer>
+                        </TableCell>
+                      )}
+                    </StyledTableRow>
+
+                    {/* Expandable row content */}
+                    {expandable && renderExpandedRow && (
+                      <ExpandableRow>
+                        <TableCell
+                          colSpan={columns.length + (selectable ? 2 : 1) + (rowActions ? 1 : 0)}
+                          sx={{ p: 0 }}
+                        >
+                          <Collapse in={isExpanded} timeout="auto" unmountOnExit>
+                            <Box sx={{ p: 3 }}>{renderExpandedRow(row)}</Box>
+                          </Collapse>
+                        </TableCell>
+                      </ExpandableRow>
                     )}
-                    {columns.map((column) => (
-                      <TableCell key={column.field} align={column.align || 'left'}>
-                        {column.renderCell
-                          ? column.renderCell(row[column.field], row)
-                          : row[column.field]}
-                      </TableCell>
-                    ))}
-                    {rowActions && (
-                      <TableCell align="right" onClick={(e) => e.stopPropagation()}>
-                        {rowActions(row)}
-                      </TableCell>
-                    )}
-                  </TableRow>
+                  </>
                 )
               })
             )}
           </TableBody>
         </Table>
-      </TableContainer>
+      </StyledTableContainer>
 
-      <TablePagination
+      <StyledPagination
         rowsPerPageOptions={pageSizeOptions}
         component="div"
         count={rowCount}
@@ -393,8 +680,9 @@ export default function DataTable({
         page={page}
         onPageChange={handleChangePage}
         onRowsPerPageChange={handleChangeRowsPerPage}
-        sx={{ borderTop: 1, borderColor: 'divider' }}
+        labelRowsPerPage="Rows per page:"
+        labelDisplayedRows={({ from, to, count }) => `${from}-${to} of ${count}`}
       />
-    </Paper>
+    </TableWrapper>
   )
 }
