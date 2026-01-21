@@ -9,6 +9,8 @@ This module contains endpoints for Excel template operations:
 from __future__ import annotations
 
 import contextlib
+import logging
+import os
 import tempfile
 from pathlib import Path
 from types import SimpleNamespace
@@ -17,11 +19,37 @@ from typing import Optional
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile
 
 from backend.app.core.security import require_api_key
+from backend.app.features.generate.schemas.charts import (
+    ChartSuggestPayload,
+    SavedChartCreatePayload,
+    SavedChartUpdatePayload,
+)
+from backend.app.features.generate.schemas.reports import RunPayload, DiscoverPayload
+from backend.app.features.generate.services.chart_suggestions_service import suggest_charts as suggest_charts_service
+from backend.app.features.generate.services.saved_charts_service import (
+    create_saved_chart as create_saved_chart_service,
+    delete_saved_chart as delete_saved_chart_service,
+    list_saved_charts as list_saved_charts_service,
+    update_saved_chart as update_saved_chart_service,
+)
 from backend.app.services.background_tasks import (
     enqueue_background_job,
     iter_ndjson_events_async,
     run_event_stream_async,
 )
+from backend.app.services.contract.ContractBuilderV2 import load_contract_v2
+from backend.app.services.prompts.llm_prompts_charts import (
+    CHART_SUGGEST_PROMPT_VERSION,
+    build_chart_suggestions_prompt,
+)
+from backend.app.services.reports.discovery_excel import discover_batches_and_counts as discover_batches_and_counts_excel
+from backend.app.services.reports.discovery_metrics import (
+    build_batch_field_catalog_and_stats,
+    build_batch_metrics,
+)
+from backend.app.services.state import state_store
+from backend.app.services.templates.TemplateVerify import get_openai_client
+from backend.app.services.utils import call_chat_completion, get_correlation_id, strip_code_fences
 
 from src.services.template_service import verify_excel, generator_assets
 from src.services.mapping.approve import run_mapping_approve
@@ -31,7 +59,9 @@ from src.services.mapping.preview import run_mapping_preview
 from src.services.file_service import artifact_head_response, artifact_manifest_response
 from src.services.report_service import queue_report_job, run_report as run_report_service
 from src.schemas.template_schema import CorrectionsPreviewPayload, GeneratorAssetsPayload, MappingPayload
-from backend.app.features.generate.schemas.reports import RunPayload, DiscoverPayload
+from src.utils.connection_utils import db_path_from_payload_or_default
+from src.utils.schedule_utils import clean_key_values
+from src.utils.template_utils import normalize_template_id, template_dir
 
 router = APIRouter(dependencies=[Depends(require_api_key)])
 
@@ -49,6 +79,14 @@ def _wrap(payload: dict, correlation_id: str | None) -> dict:
     if correlation_id is not None:
         payload["correlation_id"] = correlation_id
     return payload
+
+
+def _ensure_template_exists(template_id: str) -> tuple[str, dict]:
+    normalized = normalize_template_id(template_id)
+    record = state_store.get_template_record(normalized)
+    if not record:
+        raise HTTPException(status_code=404, detail="template_not_found")
+    return normalized, record
 
 
 async def _persist_upload(file: UploadFile, suffix: str) -> tuple[Path, str]:
@@ -193,6 +231,85 @@ def get_artifact_head_excel(template_id: str, request: Request, name: str):
 
 
 # =============================================================================
+# Charts
+# =============================================================================
+
+@router.post("/{template_id}/charts/suggest")
+def suggest_charts_excel_route(template_id: str, payload: ChartSuggestPayload, request: Request):
+    """Get chart suggestions for an Excel template."""
+    correlation_id = _correlation(request) or get_correlation_id()
+    logger = logging.getLogger("neura.api")
+    return suggest_charts_service(
+        template_id,
+        payload,
+        kind="excel",
+        correlation_id=correlation_id,
+        template_dir_fn=lambda tpl: template_dir(tpl, kind="excel"),
+        db_path_fn=db_path_from_payload_or_default,
+        load_contract_fn=load_contract_v2,
+        clean_key_values_fn=clean_key_values,
+        discover_fn=discover_batches_and_counts_excel,
+        build_field_catalog_fn=build_batch_field_catalog_and_stats,
+        build_metrics_fn=build_batch_metrics,
+        build_prompt_fn=build_chart_suggestions_prompt,
+        call_chat_completion_fn=lambda **kwargs: call_chat_completion(
+            get_openai_client(), **kwargs, description=CHART_SUGGEST_PROMPT_VERSION
+        ),
+        model=os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
+        strip_code_fences_fn=strip_code_fences,
+        logger=logger,
+    )
+
+
+@router.get("/{template_id}/charts/saved")
+def list_saved_charts_excel_route(template_id: str, request: Request):
+    """List saved charts for an Excel template."""
+    payload = list_saved_charts_service(template_id, _ensure_template_exists)
+    return _wrap(payload, _correlation(request))
+
+
+@router.post("/{template_id}/charts/saved")
+def create_saved_chart_excel_route(
+    template_id: str,
+    payload: SavedChartCreatePayload,
+    request: Request,
+):
+    """Create a saved chart for an Excel template."""
+    chart = create_saved_chart_service(
+        template_id,
+        payload,
+        ensure_template_exists=_ensure_template_exists,
+        normalize_template_id=normalize_template_id,
+    )
+    chart_payload = chart.model_dump(mode="json") if hasattr(chart, "model_dump") else chart
+    return _wrap(chart_payload, _correlation(request))
+
+
+@router.put("/{template_id}/charts/saved/{chart_id}")
+def update_saved_chart_excel_route(
+    template_id: str,
+    chart_id: str,
+    payload: SavedChartUpdatePayload,
+    request: Request,
+):
+    """Update a saved chart for an Excel template."""
+    chart = update_saved_chart_service(template_id, chart_id, payload, _ensure_template_exists)
+    chart_payload = chart.model_dump(mode="json") if hasattr(chart, "model_dump") else chart
+    return _wrap(chart_payload, _correlation(request))
+
+
+@router.delete("/{template_id}/charts/saved/{chart_id}")
+def delete_saved_chart_excel_route(
+    template_id: str,
+    chart_id: str,
+    request: Request,
+):
+    """Delete a saved chart for an Excel template."""
+    payload = delete_saved_chart_service(template_id, chart_id, _ensure_template_exists)
+    return _wrap(payload, _correlation(request))
+
+
+# =============================================================================
 # Excel Report Generation
 # =============================================================================
 
@@ -216,15 +333,8 @@ async def enqueue_report_job_excel(payload: RunPayload | list[RunPayload], reque
 def discover_reports_excel(payload: DiscoverPayload, request: Request):
     """Discover available batches for Excel report generation."""
     from backend.app.features.generate.services.discovery_service import discover_reports as discover_reports_service
-    from src.utils.template_utils import template_dir
-    from src.utils.connection_utils import db_path_from_payload_or_default
-    from backend.app.services.contract.ContractBuilderV2 import load_contract_v2
-    from src.utils.schedule_utils import clean_key_values
-    from backend.app.services.reports.discovery_excel import discover_batches_and_counts as discover_batches_and_counts_excel
-    from backend.app.services.reports.discovery_metrics import build_batch_field_catalog_and_stats, build_batch_metrics
     from backend.app.services.utils.artifacts import load_manifest
     from src.utils.template_utils import manifest_endpoint
-    import logging
 
     logger = logging.getLogger("neura.api")
     return discover_reports_service(

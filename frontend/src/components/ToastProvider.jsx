@@ -1,34 +1,80 @@
+/**
+ * Premium Toast Provider
+ * Notification system with theme-based styling
+ */
 import { createContext, useCallback, useContext, useMemo, useState } from 'react'
-import { Snackbar, Alert, Button, alpha } from '@mui/material'
-import { palette } from '../theme'
+import { Snackbar, Alert, Button, useTheme, alpha } from '@mui/material'
 
 const ToastCtx = createContext({ show: () => {}, showWithUndo: () => {} })
 
-const SEVERITY_STYLES = {
-  success: {
-    bgcolor: alpha(palette.green[400], 0.15),
-    color: palette.green[400],
-    border: `1px solid ${alpha(palette.green[400], 0.3)}`,
-    iconColor: palette.green[400],
-  },
-  error: {
-    bgcolor: alpha(palette.red[400], 0.15),
-    color: palette.red[400],
-    border: `1px solid ${alpha(palette.red[400], 0.3)}`,
-    iconColor: palette.red[400],
-  },
-  warning: {
-    bgcolor: alpha(palette.yellow[400], 0.15),
-    color: palette.yellow[400],
-    border: `1px solid ${alpha(palette.yellow[400], 0.3)}`,
-    iconColor: palette.yellow[400],
-  },
-  info: {
-    bgcolor: alpha(palette.blue[400], 0.15),
-    color: palette.blue[400],
-    border: `1px solid ${alpha(palette.blue[400], 0.3)}`,
-    iconColor: palette.blue[400],
-  },
+// Internal component that uses theme
+function ToastContent({ state, onClose, onUndo }) {
+  const theme = useTheme()
+
+  const getSeverityStyles = () => {
+    const severityColors = {
+      success: theme.palette.success.main,
+      error: theme.palette.error.main,
+      warning: theme.palette.warning.main,
+      info: theme.palette.info.main,
+    }
+    const color = severityColors[state.severity] || severityColors.info
+
+    return {
+      bgcolor: alpha(color, 0.15),
+      color: color,
+      border: `1px solid ${alpha(color, 0.3)}`,
+      iconColor: color,
+    }
+  }
+
+  const styles = getSeverityStyles()
+
+  return (
+    <Alert
+      onClose={onClose}
+      severity={state.severity}
+      role="alert"
+      aria-live={state.severity === 'error' ? 'assertive' : 'polite'}
+      action={
+        state.action ? (
+          <Button
+            color="inherit"
+            size="small"
+            onClick={onUndo}
+            sx={{
+              fontWeight: 600,
+              textTransform: 'none',
+              ml: 1,
+            }}
+          >
+            {state.action.undoLabel}
+          </Button>
+        ) : undefined
+      }
+      sx={{
+        ...styles,
+        borderRadius: '12px',
+        fontSize: '0.8125rem',
+        fontWeight: 500,
+        boxShadow: `0 8px 32px ${alpha(theme.palette.common.black, 0.3)}`,
+        backdropFilter: 'blur(8px)',
+        '& .MuiAlert-icon': {
+          color: styles.iconColor,
+        },
+        '& .MuiAlert-action': {
+          '& .MuiIconButton-root': {
+            color: styles.color,
+            '&:hover': {
+              bgcolor: alpha(styles.color, 0.1),
+            },
+          },
+        },
+      }}
+    >
+      {state.message}
+    </Alert>
+  )
 }
 
 export function ToastProvider({ children }) {
@@ -64,8 +110,6 @@ export function ToastProvider({ children }) {
 
   const contextValue = useMemo(() => ({ show, showWithUndo }), [show, showWithUndo])
 
-  const styles = SEVERITY_STYLES[state.severity] || SEVERITY_STYLES.info
-
   return (
     <ToastCtx.Provider value={contextValue}>
       {children}
@@ -80,48 +124,9 @@ export function ToastProvider({ children }) {
           },
         }}
       >
-        <Alert
-          onClose={onClose}
-          severity={state.severity}
-          role="alert"
-          aria-live={state.severity === 'error' ? 'assertive' : 'polite'}
-          action={
-            state.action ? (
-              <Button
-                color="inherit"
-                size="small"
-                onClick={handleUndo}
-                sx={{
-                  fontWeight: 600,
-                  textTransform: 'none',
-                  ml: 1,
-                }}
-              >
-                {state.action.undoLabel}
-              </Button>
-            ) : undefined
-          }
-          sx={{
-            ...styles,
-            borderRadius: '8px',
-            fontSize: '0.8125rem',
-            fontWeight: 500,
-            boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
-            '& .MuiAlert-icon': {
-              color: styles.iconColor,
-            },
-            '& .MuiAlert-action': {
-              '& .MuiIconButton-root': {
-                color: styles.color,
-                '&:hover': {
-                  bgcolor: alpha(styles.color, 0.1),
-                },
-              },
-            },
-          }}
-        >
-          {state.message}
-        </Alert>
+        <div>
+          <ToastContent state={state} onClose={onClose} onUndo={handleUndo} />
+        </div>
       </Snackbar>
     </ToastCtx.Provider>
   )

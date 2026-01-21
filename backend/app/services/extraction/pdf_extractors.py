@@ -191,8 +191,10 @@ class OCREngine:
                 pytesseract.get_tesseract_version()
                 self._engine = "tesseract"
                 return self._engine
-            except Exception:
-                pass
+            except ImportError:
+                logger.debug("pytesseract not installed")
+            except Exception as e:
+                logger.debug(f"Tesseract not available: {e}")
 
             self._engine = "none"
             return self._engine
@@ -510,7 +512,11 @@ class TabulaExtractor(PDFExtractor):
                 doc = fitz.open(pdf_path)
                 page_count = doc.page_count
                 doc.close()
-            except Exception:
+            except ImportError:
+                logger.debug("PyMuPDF not available for page count, using table count estimate")
+                page_count = len(dfs) if dfs else 0
+            except Exception as e:
+                logger.debug(f"Could not get page count via PyMuPDF: {e}")
                 page_count = len(dfs) if dfs else 0
 
             return ExtractionResult(
@@ -632,7 +638,11 @@ class CamelotExtractor(PDFExtractor):
                 doc = fitz.open(pdf_path)
                 page_count = doc.page_count
                 doc.close()
-            except Exception:
+            except ImportError:
+                logger.debug("PyMuPDF not available for page count in Camelot extractor")
+                page_count = 0
+            except Exception as e:
+                logger.debug(f"Could not get page count in Camelot extractor: {e}")
                 page_count = 0
 
             return ExtractionResult(
@@ -893,8 +903,8 @@ def get_available_extractors() -> List[str]:
             extractor = cls()
             if extractor.is_available():
                 available.append(name)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"Extractor '{name}' not available: {e}")
     return available
 
 

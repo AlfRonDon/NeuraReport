@@ -3,7 +3,8 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Body, Depends, HTTPException, Query
+from pydantic import BaseModel
 
 from backend.app.core.config import get_settings
 from backend.app.core.security import require_api_key
@@ -460,6 +461,10 @@ async def check_favorite(entity_type: str, entity_id: str) -> Dict[str, Any]:
 # User Preferences Endpoints
 # ------------------------------------------------------------------
 
+class PreferenceValue(BaseModel):
+    value: Any
+
+
 @router.get("/preferences")
 async def get_preferences() -> Dict[str, Any]:
     """Get user preferences."""
@@ -475,9 +480,19 @@ async def update_preferences(updates: Dict[str, Any]) -> Dict[str, Any]:
 
 
 @router.put("/preferences/{key}")
-async def set_preference(key: str, value: Any) -> Dict[str, Any]:
+async def set_preference(
+    key: str,
+    payload: PreferenceValue | None = Body(default=None),
+    value: Any = Query(default=None),
+) -> Dict[str, Any]:
     """Set a single user preference."""
-    prefs = state_store.set_user_preference(key, value)
+    if payload is not None and payload.value is not None:
+        pref_value = payload.value
+    elif value is not None:
+        pref_value = value
+    else:
+        raise HTTPException(status_code=422, detail="Preference value is required.")
+    prefs = state_store.set_user_preference(key, pref_value)
     return {"preferences": prefs}
 
 

@@ -104,6 +104,7 @@ export default function EnrichmentConfigPage() {
   const [clearCacheConfirm, setClearCacheConfirm] = useState({ open: false, sourceId: null, sourceName: '' });
 
   // Use API sources if available, fallback to static list
+  const usingFallbackSources = sources.length === 0 && !initialLoading;
   const availableSources = sources.length > 0 ? sources : FALLBACK_SOURCES;
   const allSources = [...availableSources, ...customSources];
 
@@ -226,6 +227,12 @@ export default function EnrichmentConfigPage() {
       {error && (
         <Alert severity="error" sx={{ mb: 2 }} onClose={() => reset()}>
           {error}
+        </Alert>
+      )}
+
+      {usingFallbackSources && (
+        <Alert severity="info" sx={{ mb: 2 }}>
+          Using default enrichment sources. Create custom sources below to configure specific enrichment behavior.
         </Alert>
       )}
 

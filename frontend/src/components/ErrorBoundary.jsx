@@ -1,10 +1,15 @@
+/**
+ * Premium Error Boundary
+ * Graceful error handling with theme-aware styling
+ */
 import { Component } from 'react'
 import { Box, Typography, Button, Stack, alpha } from '@mui/material'
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline'
 import RefreshIcon from '@mui/icons-material/Refresh'
 import HomeIcon from '@mui/icons-material/Home'
-import { palette } from '../theme'
 
+// Note: Class components cannot use hooks, so we use inline styles
+// that work well with both light and dark themes
 class ErrorBoundary extends Component {
   constructor(props) {
     super(props)
@@ -49,7 +54,7 @@ class ErrorBoundary extends Component {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            bgcolor: palette.scale[1000],
+            bgcolor: 'background.default',
             p: 3,
           }}
         >
@@ -58,17 +63,19 @@ class ErrorBoundary extends Component {
               maxWidth: 480,
               textAlign: 'center',
               p: 4,
-              bgcolor: palette.scale[900],
-              borderRadius: 2,
-              border: `1px solid ${alpha(palette.scale[100], 0.1)}`,
+              bgcolor: 'background.paper',
+              borderRadius: 4,
+              border: 1,
+              borderColor: 'divider',
+              boxShadow: (theme) => `0 8px 32px ${alpha(theme.palette.common.black, 0.15)}`,
             }}
           >
             <Box
               sx={{
-                width: 64,
-                height: 64,
+                width: 72,
+                height: 72,
                 borderRadius: '50%',
-                bgcolor: alpha(palette.red[400], 0.15),
+                bgcolor: (theme) => alpha(theme.palette.error.main, 0.15),
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -76,18 +83,18 @@ class ErrorBoundary extends Component {
                 mb: 3,
               }}
             >
-              <ErrorOutlineIcon sx={{ fontSize: 32, color: palette.red[400] }} />
+              <ErrorOutlineIcon sx={{ fontSize: 36, color: 'error.main' }} />
             </Box>
 
             <Typography
               variant="h5"
-              sx={{ fontWeight: 600, color: palette.scale[100], mb: 1.5 }}
+              sx={{ fontWeight: 600, color: 'text.primary', mb: 1.5 }}
             >
               Something went wrong
             </Typography>
 
             <Typography
-              sx={{ color: palette.scale[400], mb: 3, fontSize: '0.875rem' }}
+              sx={{ color: 'text.secondary', mb: 3, fontSize: '0.875rem' }}
             >
               An unexpected error occurred. You can try refreshing the page or go back to the dashboard.
             </Typography>
@@ -95,9 +102,10 @@ class ErrorBoundary extends Component {
             {process.env.NODE_ENV === 'development' && this.state.error && (
               <Box
                 sx={{
-                  bgcolor: alpha(palette.red[400], 0.1),
-                  border: `1px solid ${alpha(palette.red[400], 0.2)}`,
-                  borderRadius: 1,
+                  bgcolor: (theme) => alpha(theme.palette.error.main, 0.1),
+                  border: 1,
+                  borderColor: (theme) => alpha(theme.palette.error.main, 0.2),
+                  borderRadius: 2,
                   p: 2,
                   mb: 3,
                   textAlign: 'left',
@@ -109,7 +117,7 @@ class ErrorBoundary extends Component {
                   sx={{
                     fontFamily: 'monospace',
                     fontSize: '0.75rem',
-                    color: palette.red[300],
+                    color: 'error.main',
                     whiteSpace: 'pre-wrap',
                     wordBreak: 'break-all',
                   }}
@@ -131,11 +139,14 @@ class ErrorBoundary extends Component {
                 startIcon={<HomeIcon />}
                 onClick={this.handleGoHome}
                 sx={{
-                  borderColor: alpha(palette.scale[100], 0.2),
-                  color: palette.scale[300],
+                  borderRadius: 3,
+                  textTransform: 'none',
+                  fontWeight: 500,
+                  borderColor: 'divider',
+                  color: 'text.secondary',
                   '&:hover': {
-                    borderColor: alpha(palette.scale[100], 0.4),
-                    bgcolor: alpha(palette.scale[100], 0.05),
+                    borderColor: 'text.primary',
+                    bgcolor: (theme) => alpha(theme.palette.text.primary, 0.05),
                   },
                 }}
               >
@@ -145,9 +156,15 @@ class ErrorBoundary extends Component {
                 variant="contained"
                 startIcon={<RefreshIcon />}
                 onClick={this.handleReload}
+                color="primary"
                 sx={{
-                  bgcolor: palette.green[500],
-                  '&:hover': { bgcolor: palette.green[600] },
+                  borderRadius: 3,
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  boxShadow: (theme) => `0 4px 14px ${alpha(theme.palette.primary.main, 0.3)}`,
+                  '&:hover': {
+                    boxShadow: (theme) => `0 6px 20px ${alpha(theme.palette.primary.main, 0.4)}`,
+                  },
                 }}
               >
                 Refresh Page

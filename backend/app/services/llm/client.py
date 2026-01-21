@@ -719,14 +719,25 @@ class LLMClient:
                 delay *= self.config.retry_multiplier
 
         # Try fallback provider if available
+        fallback_exc: Optional[Exception] = None
         if self._fallback_provider and last_exc:
             try:
                 return self._try_fallback(messages, model, description, **kwargs)
-            except Exception:
-                pass  # Fallback also failed, continue to error handling
+            except Exception as fb_exc:
+                fallback_exc = fb_exc
+                logger.warning(
+                    "llm_fallback_also_failed",
+                    extra={
+                        "event": "llm_fallback_also_failed",
+                        "description": description,
+                        "primary_error": str(last_exc),
+                        "fallback_error": str(fb_exc),
+                    }
+                )
 
         # All attempts failed
         assert last_exc is not None
+        fallback_attempted = self._fallback_provider is not None
         logger.error(
             "llm_call_failed",
             extra={
@@ -735,6 +746,8 @@ class LLMClient:
                 "attempts": self.config.max_retries,
                 "model": model,
                 "error_type": type(last_exc).__name__,
+                "fallback_attempted": fallback_attempted,
+                "fallback_error": str(fallback_exc) if fallback_exc else None,
             },
             exc_info=last_exc,
         )
@@ -751,10 +764,12 @@ class LLMClient:
                 "Please try with a smaller document or fewer pages."
             ) from last_exc
 
-        raise RuntimeError(
-            "AI processing failed. Please try again. If the problem persists, "
-            "check your API configuration or contact support."
-        ) from last_exc
+        # Include fallback info in error message if fallback was attempted
+        error_msg = "AI processing failed. Please try again. If the problem persists, check your API configuration or contact support."
+        if fallback_exc:
+            error_msg = f"AI processing failed (primary and fallback providers both failed). Please try again. If the problem persists, check your API configuration or contact support."
+
+        raise RuntimeError(error_msg) from last_exc
 
     def _try_fallback(
         self,

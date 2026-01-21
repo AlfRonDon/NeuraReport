@@ -11,6 +11,13 @@ import {
   Stack,
   Typography,
   Chip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  FormGroup,
+  FormControlLabel,
+  Checkbox,
   Menu,
   MenuItem,
   Divider,
@@ -323,12 +330,26 @@ export default function DataTableToolbar({
   onBulkDelete,
   bulkActions = [],
   onFiltersChange,
+  columns = [],
+  hiddenColumns = [],
+  onToggleColumn,
+  onResetColumns,
+  onExportCsv,
+  onExportJson,
+  exportCsvDisabled = false,
+  exportJsonDisabled = false,
 }) {
   const theme = useTheme()
   const [searchValue, setSearchValue] = useState('')
   const [filterAnchor, setFilterAnchor] = useState(null)
   const [activeFilters, setActiveFilters] = useState({})
   const [moreAnchor, setMoreAnchor] = useState(null)
+  const [columnSettingsOpen, setColumnSettingsOpen] = useState(false)
+
+  const visibleColumnCount = columns.filter(
+    (column) => column?.field && !hiddenColumns.includes(column.field)
+  ).length
+  const canConfigureColumns = columns.some((column) => column?.field) && typeof onToggleColumn === 'function'
 
   const handleSearchChange = useCallback((e) => {
     const value = e.target.value
@@ -374,6 +395,28 @@ export default function DataTableToolbar({
   const handleMoreClose = useCallback(() => {
     setMoreAnchor(null)
   }, [])
+
+  const handleOpenColumnSettings = useCallback(() => {
+    if (!canConfigureColumns) return
+    setColumnSettingsOpen(true)
+    handleMoreClose()
+  }, [canConfigureColumns, handleMoreClose])
+
+  const handleCloseColumnSettings = useCallback(() => {
+    setColumnSettingsOpen(false)
+  }, [])
+
+  const handleExportCsv = useCallback(() => {
+    if (exportCsvDisabled || !onExportCsv) return
+    onExportCsv()
+    handleMoreClose()
+  }, [exportCsvDisabled, onExportCsv, handleMoreClose])
+
+  const handleExportJson = useCallback(() => {
+    if (exportJsonDisabled || !onExportJson) return
+    onExportJson()
+    handleMoreClose()
+  }, [exportJsonDisabled, onExportJson, handleMoreClose])
 
   const activeFilterCount = Object.keys(activeFilters).length
 
@@ -586,11 +629,17 @@ export default function DataTableToolbar({
         >
           <MenuSection>
             <MenuLabel>Export</MenuLabel>
-            <StyledMenuItem onClick={handleMoreClose}>
+            <StyledMenuItem
+              onClick={handleExportCsv}
+              disabled={exportCsvDisabled || !onExportCsv}
+            >
               <DownloadIcon sx={{ fontSize: 16, mr: 1.5, color: 'text.secondary' }} />
               Export as CSV
             </StyledMenuItem>
-            <StyledMenuItem onClick={handleMoreClose}>
+            <StyledMenuItem
+              onClick={handleExportJson}
+              disabled={exportJsonDisabled || !onExportJson}
+            >
               <DownloadIcon sx={{ fontSize: 16, mr: 1.5, color: 'text.secondary' }} />
               Export as JSON
             </StyledMenuItem>
@@ -598,13 +647,57 @@ export default function DataTableToolbar({
           <Divider sx={{ my: 1, mx: 2, borderColor: alpha(theme.palette.divider, 0.1) }} />
           <MenuSection>
             <MenuLabel>View</MenuLabel>
-            <StyledMenuItem onClick={handleMoreClose}>
+            <StyledMenuItem onClick={handleOpenColumnSettings} disabled={!canConfigureColumns}>
               <ColumnsIcon sx={{ fontSize: 16, mr: 1.5, color: 'text.secondary' }} />
               Column Settings
             </StyledMenuItem>
           </MenuSection>
         </StyledMenu>
       </Stack>
+
+      <Dialog open={columnSettingsOpen} onClose={handleCloseColumnSettings} maxWidth="xs" fullWidth>
+        <DialogTitle>Column Settings</DialogTitle>
+        <DialogContent dividers>
+          <Stack spacing={1.5}>
+            <Typography variant="body2" color="text.secondary">
+              Choose which columns are visible in the table.
+            </Typography>
+            <FormGroup>
+              {columns.map((column) => {
+                if (!column?.field) return null
+                const isVisible = !hiddenColumns.includes(column.field)
+                const disableToggle = isVisible && visibleColumnCount <= 1
+                return (
+                  <FormControlLabel
+                    key={column.field}
+                    control={
+                      <Checkbox
+                        checked={isVisible}
+                        onChange={() => onToggleColumn?.(column.field)}
+                        disabled={disableToggle}
+                      />
+                    }
+                    label={column.headerName || column.field}
+                  />
+                )
+              })}
+            </FormGroup>
+            {visibleColumnCount <= 1 && (
+              <Typography variant="caption" color="text.secondary">
+                At least one column must remain visible.
+              </Typography>
+            )}
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => onResetColumns?.()} disabled={!hiddenColumns.length || !onResetColumns}>
+            Reset
+          </Button>
+          <Button onClick={handleCloseColumnSettings} variant="contained">
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
     </ToolbarContainer>
   )
 }

@@ -1,3 +1,7 @@
+/**
+ * Premium Connection Schema Drawer
+ * Database schema inspector with theme-based styling
+ */
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   Box,
@@ -16,6 +20,7 @@ import {
   TableBody,
   Alert,
   LinearProgress,
+  useTheme,
   alpha,
 } from '@mui/material'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
@@ -23,7 +28,6 @@ import RefreshIcon from '@mui/icons-material/Refresh'
 import VisibilityIcon from '@mui/icons-material/Visibility'
 import { Drawer } from '../../ui/Drawer'
 import * as api from '../../api/client'
-import { palette } from '../../theme'
 
 const formatRowCount = (value) => {
   if (value == null) return 'n/a'
@@ -31,6 +35,7 @@ const formatRowCount = (value) => {
 }
 
 export default function ConnectionSchemaDrawer({ open, onClose, connection }) {
+  const theme = useTheme()
   const [schema, setSchema] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
@@ -104,7 +109,21 @@ export default function ConnectionSchemaDrawer({ open, onClose, connection }) {
       width={680}
       actions={(
         <Stack direction="row" spacing={1} justifyContent="flex-end">
-          <Button variant="outlined" onClick={fetchSchema} startIcon={<RefreshIcon />}>
+          <Button
+            variant="outlined"
+            onClick={fetchSchema}
+            startIcon={<RefreshIcon />}
+            sx={{
+              borderRadius: 2,
+              textTransform: 'none',
+              borderColor: alpha(theme.palette.divider, 0.2),
+              color: theme.palette.text.secondary,
+              '&:hover': {
+                borderColor: theme.palette.primary.main,
+                bgcolor: alpha(theme.palette.primary.main, 0.08),
+              },
+            }}
+          >
             Refresh
           </Button>
         </Stack>
@@ -117,11 +136,27 @@ export default function ConnectionSchemaDrawer({ open, onClose, connection }) {
           onChange={(e) => setFilter(e.target.value)}
           size="small"
           fullWidth
+          sx={{
+            '& .MuiOutlinedInput-root': {
+              borderRadius: 2,
+              bgcolor: alpha(theme.palette.background.paper, 0.5),
+              '& .MuiOutlinedInput-notchedOutline': {
+                borderColor: alpha(theme.palette.divider, 0.15),
+              },
+              '&:hover .MuiOutlinedInput-notchedOutline': {
+                borderColor: alpha(theme.palette.divider, 0.3),
+              },
+              '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                borderColor: theme.palette.primary.main,
+              },
+            },
+          }}
         />
-        {loading && <LinearProgress />}
+        {loading && <LinearProgress sx={{ borderRadius: 1 }} />}
         {error && (
           <Alert
             severity="error"
+            sx={{ borderRadius: 2 }}
             action={
               <Button color="inherit" size="small" onClick={fetchSchema}>
                 Retry
@@ -134,23 +169,48 @@ export default function ConnectionSchemaDrawer({ open, onClose, connection }) {
           </Alert>
         )}
         {!loading && !error && (
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
             {schema?.table_count || 0} tables found
           </Typography>
         )}
         {filteredTables.map((table) => {
           const preview = previewState[table.name] || {}
           return (
-            <Accordion key={table.name} disableGutters sx={{ bgcolor: palette.scale[1000] }}>
-              <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: palette.scale[500] }} />}>
+            <Accordion
+              key={table.name}
+              disableGutters
+              sx={{
+                bgcolor: alpha(theme.palette.background.paper, 0.5),
+                border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+                borderRadius: '12px !important',
+                '&:before': { display: 'none' },
+                '&.Mui-expanded': {
+                  margin: 0,
+                },
+              }}
+            >
+              <AccordionSummary
+                expandIcon={<ExpandMoreIcon sx={{ color: theme.palette.text.secondary }} />}
+                sx={{
+                  borderRadius: 3,
+                  '&:hover': {
+                    bgcolor: alpha(theme.palette.primary.main, 0.05),
+                  },
+                }}
+              >
                 <Stack direction="row" spacing={1} alignItems="center">
-                  <Typography sx={{ fontWeight: 600 }}>{table.name}</Typography>
+                  <Typography sx={{ fontWeight: 600, color: theme.palette.text.primary }}>
+                    {table.name}
+                  </Typography>
                   <Chip
                     size="small"
                     label={`${formatRowCount(table.row_count)} rows`}
                     sx={{
-                      bgcolor: alpha(palette.scale[100], 0.08),
-                      color: palette.scale[300],
+                      bgcolor: alpha(theme.palette.primary.main, 0.1),
+                      color: theme.palette.text.secondary,
+                      fontSize: '0.7rem',
+                      height: 22,
+                      borderRadius: 1.5,
                     }}
                   />
                 </Stack>
@@ -158,10 +218,27 @@ export default function ConnectionSchemaDrawer({ open, onClose, connection }) {
               <AccordionDetails>
                 <Stack spacing={1.5}>
                   <Box>
-                    <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                    <Typography
+                      variant="subtitle2"
+                      sx={{ mb: 1, color: theme.palette.text.primary }}
+                    >
                       Columns
                     </Typography>
-                    <Table size="small">
+                    <Table
+                      size="small"
+                      sx={{
+                        '& .MuiTableCell-head': {
+                          bgcolor: alpha(theme.palette.primary.main, 0.05),
+                          fontWeight: 600,
+                          fontSize: '0.75rem',
+                          color: theme.palette.text.secondary,
+                        },
+                        '& .MuiTableCell-body': {
+                          fontSize: '0.8125rem',
+                          color: theme.palette.text.primary,
+                        },
+                      }}
+                    >
                       <TableHead>
                         <TableRow>
                           <TableCell>Name</TableCell>
@@ -185,24 +262,54 @@ export default function ConnectionSchemaDrawer({ open, onClose, connection }) {
 
                   <Box>
                     <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between">
-                      <Typography variant="subtitle2">Preview</Typography>
+                      <Typography
+                        variant="subtitle2"
+                        sx={{ color: theme.palette.text.primary }}
+                      >
+                        Preview
+                      </Typography>
                       <Button
                         size="small"
                         variant="outlined"
                         startIcon={<VisibilityIcon />}
                         onClick={() => handlePreview(table.name)}
+                        sx={{
+                          borderRadius: 2,
+                          textTransform: 'none',
+                          fontSize: '0.75rem',
+                          borderColor: alpha(theme.palette.divider, 0.2),
+                          '&:hover': {
+                            borderColor: theme.palette.primary.main,
+                            bgcolor: alpha(theme.palette.primary.main, 0.08),
+                          },
+                        }}
                       >
                         Load preview
                       </Button>
                     </Stack>
-                    {preview.loading && <LinearProgress sx={{ mt: 1 }} />}
+                    {preview.loading && <LinearProgress sx={{ mt: 1, borderRadius: 1 }} />}
                     {preview.error && (
-                      <Alert severity="error" sx={{ mt: 1 }}>
+                      <Alert severity="error" sx={{ mt: 1, borderRadius: 2 }}>
                         {preview.error}
                       </Alert>
                     )}
                     {preview.rows && preview.rows.length > 0 && (
-                      <Table size="small" sx={{ mt: 1 }}>
+                      <Table
+                        size="small"
+                        sx={{
+                          mt: 1,
+                          '& .MuiTableCell-head': {
+                            bgcolor: alpha(theme.palette.info.main, 0.05),
+                            fontWeight: 600,
+                            fontSize: '0.75rem',
+                            color: theme.palette.text.secondary,
+                          },
+                          '& .MuiTableCell-body': {
+                            fontSize: '0.75rem',
+                            color: theme.palette.text.primary,
+                          },
+                        }}
+                      >
                         <TableHead>
                           <TableRow>
                             {(preview.columns || []).map((col) => (
@@ -224,7 +331,10 @@ export default function ConnectionSchemaDrawer({ open, onClose, connection }) {
                       </Table>
                     )}
                     {!preview.loading && preview.rows && preview.rows.length === 0 && (
-                      <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                      <Typography
+                        variant="body2"
+                        sx={{ mt: 1, color: theme.palette.text.secondary }}
+                      >
                         No rows returned.
                       </Typography>
                     )}

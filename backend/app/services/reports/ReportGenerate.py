@@ -116,7 +116,6 @@ def fill_and_print(
     START_DATE: str,
     END_DATE: str,
     batch_ids: list[str] | None = None,
-    IMAGE_CONTENTS: list[dict] | None = None,  # kept for signature compat; unused
     KEY_VALUES: dict | None = None,
     GENERATOR_BUNDLE: dict | None = None,
     __force_single: bool = False,
@@ -618,7 +617,6 @@ def fill_and_print(
                     START_DATE=START_DATE,
                     END_DATE=END_DATE,
                     batch_ids=None,
-                    IMAGE_CONTENTS=IMAGE_CONTENTS,
                     KEY_VALUES=selection or None,
                     GENERATOR_BUNDLE=GENERATOR_BUNDLE,
                     __force_single=True,

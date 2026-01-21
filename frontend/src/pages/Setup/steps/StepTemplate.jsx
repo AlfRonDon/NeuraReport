@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Box,
@@ -38,6 +38,76 @@ export default function StepTemplate({ wizardState, updateWizardState, onComplet
   const [error, setError] = useState(null)
   const [queueInBackground, setQueueInBackground] = useState(false)
   const [queuedJobId, setQueuedJobId] = useState(null)
+
+  useEffect(() => {
+    if (!queuedJobId) return
+    let cancelled = false
+
+    const pollJob = async () => {
+      try {
+        const job = await api.getJob(queuedJobId)
+        if (cancelled || !job) return
+
+        if (typeof job.progress === 'number') {
+          setUploadProgress(Math.round(job.progress))
+        }
+
+        if (job.status === 'completed') {
+          const result = job.result || {}
+          const templateId = result.template_id || result.templateId
+          if (!templateId) {
+            setError('Template verification completed but no template ID was returned.')
+            toast.show('Template verification completed without a template ID.', 'error')
+            setQueuedJobId(null)
+            return
+          }
+
+          setVerifyResult(result)
+          setTemplateId(templateId)
+          setVerifyArtifacts(result.artifacts)
+          updateWizardState({ templateId })
+
+          addTemplate({
+            id: templateId,
+            name: uploadedFile?.name || `Template ${templateId}`,
+            kind: templateKind,
+            status: 'pending',
+            created_at: new Date().toISOString(),
+          })
+
+          toast.show('Template verified successfully', 'success')
+          setQueuedJobId(null)
+        } else if (job.status === 'failed' || job.status === 'cancelled') {
+          const message = job.error || 'Template verification failed'
+          setError(message)
+          toast.show(message, 'error')
+          setQueuedJobId(null)
+        }
+      } catch (err) {
+        if (cancelled) return
+        const message = err.message || 'Failed to load queued job status'
+        setError(message)
+        toast.show(message, 'error')
+        setQueuedJobId(null)
+      }
+    }
+
+    pollJob()
+    const intervalId = setInterval(pollJob, 3000)
+    return () => {
+      cancelled = true
+      clearInterval(intervalId)
+    }
+  }, [
+    queuedJobId,
+    templateKind,
+    uploadedFile,
+    setTemplateId,
+    setVerifyArtifacts,
+    updateWizardState,
+    addTemplate,
+    toast,
+  ])
 
   const handleKindChange = useCallback((_, newKind) => {
     if (newKind) {

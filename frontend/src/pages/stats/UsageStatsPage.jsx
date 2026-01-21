@@ -1,3 +1,7 @@
+/**
+ * Premium Usage Statistics Page
+ * Beautiful analytics dashboard with charts and theme-based styling
+ */
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
@@ -13,12 +17,15 @@ import {
   InputLabel,
   CircularProgress,
   Grid,
-  alpha,
   Chip,
   LinearProgress,
   Tabs,
   Tab,
   Button,
+  useTheme,
+  alpha,
+  styled,
+  keyframes,
 } from '@mui/material'
 import RefreshIcon from '@mui/icons-material/Refresh'
 import TrendingUpIcon from '@mui/icons-material/TrendingUp'
@@ -51,24 +58,140 @@ import {
 } from 'recharts'
 import { useToast } from '../../components/ToastProvider'
 import * as api from '../../api/client'
-import { palette } from '../../theme'
 
-const CHART_COLORS = [
-  palette.green[400],
-  palette.blue[400],
-  palette.yellow[400],
-  palette.red[400],
-  palette.purple?.[400] || '#a855f7',
-  palette.scale[400],
-]
+// =============================================================================
+// ANIMATIONS
+// =============================================================================
 
-const STATUS_COLORS = {
-  completed: palette.green[400],
-  failed: palette.red[400],
-  pending: palette.yellow[400],
-  running: palette.blue[400],
-  cancelled: palette.scale[500],
-}
+const fadeInUp = keyframes`
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+`
+
+const pulse = keyframes`
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.02); }
+`
+
+// =============================================================================
+// STYLED COMPONENTS
+// =============================================================================
+
+const PageContainer = styled(Box)(({ theme }) => ({
+  padding: theme.spacing(3),
+  maxWidth: 1400,
+  margin: '0 auto',
+  width: '100%',
+  minHeight: '100vh',
+  background: theme.palette.mode === 'dark'
+    ? `radial-gradient(ellipse at 20% 0%, ${alpha(theme.palette.primary.dark, 0.15)} 0%, transparent 50%),
+       radial-gradient(ellipse at 80% 100%, ${alpha(theme.palette.secondary.dark, 0.1)} 0%, transparent 50%),
+       ${theme.palette.background.default}`
+    : `radial-gradient(ellipse at 20% 0%, ${alpha(theme.palette.primary.light, 0.08)} 0%, transparent 50%),
+       radial-gradient(ellipse at 80% 100%, ${alpha(theme.palette.secondary.light, 0.05)} 0%, transparent 50%),
+       ${theme.palette.background.default}`,
+}))
+
+const HeaderContainer = styled(Stack)(({ theme }) => ({
+  marginBottom: theme.spacing(3),
+  animation: `${fadeInUp} 0.5s ease-out`,
+}))
+
+const StyledFormControl = styled(FormControl)(({ theme }) => ({
+  minWidth: 160,
+  '& .MuiOutlinedInput-root': {
+    borderRadius: 12,
+    backgroundColor: alpha(theme.palette.background.paper, 0.6),
+    backdropFilter: 'blur(8px)',
+    transition: 'all 0.2s ease',
+    '&:hover': {
+      backgroundColor: alpha(theme.palette.background.paper, 0.8),
+    },
+    '&.Mui-focused': {
+      backgroundColor: theme.palette.background.paper,
+      boxShadow: `0 0 0 3px ${alpha(theme.palette.primary.main, 0.1)}`,
+    },
+    '& .MuiOutlinedInput-notchedOutline': {
+      borderColor: alpha(theme.palette.divider, 0.15),
+    },
+  },
+  '& .MuiInputLabel-root': {
+    color: theme.palette.text.secondary,
+  },
+}))
+
+const ExportButton = styled(Button)(({ theme }) => ({
+  borderRadius: 12,
+  textTransform: 'none',
+  fontWeight: 500,
+  borderColor: alpha(theme.palette.divider, 0.2),
+  transition: 'all 0.2s ease',
+  '&:hover': {
+    borderColor: theme.palette.primary.main,
+    backgroundColor: alpha(theme.palette.primary.main, 0.08),
+  },
+}))
+
+const RefreshButton = styled(IconButton)(({ theme }) => ({
+  borderRadius: 12,
+  transition: 'all 0.2s ease',
+  '&:hover': {
+    backgroundColor: alpha(theme.palette.primary.main, 0.1),
+    transform: 'rotate(180deg)',
+  },
+}))
+
+const StyledTabs = styled(Tabs)(({ theme }) => ({
+  marginBottom: theme.spacing(3),
+  '& .MuiTab-root': {
+    color: theme.palette.text.secondary,
+    textTransform: 'none',
+    minWidth: 100,
+    fontWeight: 500,
+    transition: 'all 0.2s ease',
+    '&.Mui-selected': {
+      color: theme.palette.primary.main,
+    },
+    '&:hover': {
+      color: theme.palette.text.primary,
+    },
+  },
+  '& .MuiTabs-indicator': {
+    backgroundColor: theme.palette.primary.main,
+    borderRadius: 2,
+    height: 3,
+  },
+}))
+
+const GlassCard = styled(Card)(({ theme }) => ({
+  backgroundColor: alpha(theme.palette.background.paper, 0.8),
+  backdropFilter: 'blur(20px)',
+  border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+  borderRadius: 16,
+  boxShadow: `0 8px 32px ${alpha(theme.palette.common.black, 0.08)}`,
+  transition: 'all 0.3s ease',
+  '&:hover': {
+    boxShadow: `0 12px 48px ${alpha(theme.palette.common.black, 0.12)}`,
+    transform: 'translateY(-2px)',
+  },
+}))
+
+const StatCardContent = styled(CardContent)(({ theme }) => ({
+  padding: theme.spacing(2.5),
+  '&:last-child': {
+    paddingBottom: theme.spacing(2.5),
+  },
+}))
+
+// =============================================================================
+// HELPERS
+// =============================================================================
 
 const PERIOD_OPTIONS = [
   { value: 'day', label: 'Last 24 hours' },
@@ -76,35 +199,52 @@ const PERIOD_OPTIONS = [
   { value: 'month', label: 'Last 30 days' },
 ]
 
+const getChartColors = (theme) => [
+  theme.palette.success.main,
+  theme.palette.info.main,
+  theme.palette.warning.main,
+  theme.palette.error.main,
+  theme.palette.secondary.main,
+  theme.palette.text.secondary,
+]
+
+const getStatusColors = (theme) => ({
+  completed: theme.palette.success.main,
+  failed: theme.palette.error.main,
+  pending: theme.palette.warning.main,
+  running: theme.palette.info.main,
+  cancelled: theme.palette.text.secondary,
+})
+
+// =============================================================================
+// STAT CARD COMPONENT
+// =============================================================================
+
 function StatCard({ title, value, subtitle, icon: Icon, trend, color, onClick }) {
+  const theme = useTheme()
   const trendPositive = trend > 0
   const TrendIcon = trendPositive ? TrendingUpIcon : TrendingDownIcon
-  const trendColor = trendPositive ? palette.green[400] : palette.red[400]
+  const trendColor = trendPositive ? theme.palette.success.main : theme.palette.error.main
+  const accentColor = color || theme.palette.primary.main
 
   return (
-    <Card
+    <GlassCard
       onClick={onClick}
       sx={{
-        bgcolor: palette.scale[1000],
-        border: `1px solid ${alpha(palette.scale[100], 0.08)}`,
-        borderRadius: '12px',
         height: '100%',
         cursor: onClick ? 'pointer' : 'default',
-        transition: 'all 150ms ease',
-        '&:hover': onClick ? {
-          borderColor: alpha(palette.scale[100], 0.15),
-          bgcolor: palette.scale[900],
-        } : {},
+        animation: `${fadeInUp} 0.5s ease-out`,
+        '&:active': onClick ? { transform: 'scale(0.98)' } : {},
       }}
     >
-      <CardContent sx={{ p: 2.5 }}>
+      <StatCardContent>
         <Stack direction="row" alignItems="flex-start" justifyContent="space-between">
           <Box>
             <Typography
               sx={{
                 fontSize: '0.75rem',
                 fontWeight: 500,
-                color: palette.scale[500],
+                color: theme.palette.text.secondary,
                 textTransform: 'uppercase',
                 letterSpacing: '0.05em',
                 mb: 0.5,
@@ -116,7 +256,7 @@ function StatCard({ title, value, subtitle, icon: Icon, trend, color, onClick })
               sx={{
                 fontSize: '1.75rem',
                 fontWeight: 600,
-                color: color || palette.scale[100],
+                color: theme.palette.text.primary,
                 lineHeight: 1.2,
               }}
             >
@@ -126,7 +266,7 @@ function StatCard({ title, value, subtitle, icon: Icon, trend, color, onClick })
               <Typography
                 sx={{
                   fontSize: '0.75rem',
-                  color: palette.scale[500],
+                  color: theme.palette.text.secondary,
                   mt: 0.5,
                 }}
               >
@@ -138,14 +278,14 @@ function StatCard({ title, value, subtitle, icon: Icon, trend, color, onClick })
             sx={{
               width: 40,
               height: 40,
-              borderRadius: '10px',
-              bgcolor: alpha(color || palette.scale[400], 0.15),
+              borderRadius: 2.5,
+              bgcolor: alpha(accentColor, 0.15),
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
             }}
           >
-            <Icon sx={{ fontSize: 20, color: color || palette.scale[400] }} />
+            <Icon sx={{ fontSize: 20, color: accentColor }} />
           </Box>
         </Stack>
         {trend !== undefined && trend !== null && (
@@ -154,26 +294,25 @@ function StatCard({ title, value, subtitle, icon: Icon, trend, color, onClick })
             <Typography sx={{ fontSize: '0.75rem', color: trendColor, fontWeight: 500 }}>
               {Math.abs(trend)}%
             </Typography>
-            <Typography sx={{ fontSize: '0.75rem', color: palette.scale[500] }}>
+            <Typography sx={{ fontSize: '0.75rem', color: theme.palette.text.secondary }}>
               vs previous period
             </Typography>
           </Stack>
         )}
-      </CardContent>
-    </Card>
+      </StatCardContent>
+    </GlassCard>
   )
 }
 
+// =============================================================================
+// CHART CARD COMPONENT
+// =============================================================================
+
 function ChartCard({ title, subtitle, children, height = 280, actions }) {
+  const theme = useTheme()
+
   return (
-    <Card
-      sx={{
-        bgcolor: palette.scale[1000],
-        border: `1px solid ${alpha(palette.scale[100], 0.08)}`,
-        borderRadius: '12px',
-        height: '100%',
-      }}
-    >
+    <GlassCard sx={{ height: '100%', animation: `${fadeInUp} 0.5s ease-out 0.2s both` }}>
       <CardContent sx={{ p: 2.5, height: '100%', display: 'flex', flexDirection: 'column' }}>
         <Stack direction="row" justifyContent="space-between" alignItems="flex-start" sx={{ mb: 2 }}>
           <Box>
@@ -181,7 +320,7 @@ function ChartCard({ title, subtitle, children, height = 280, actions }) {
               sx={{
                 fontSize: '0.875rem',
                 fontWeight: 600,
-                color: palette.scale[200],
+                color: theme.palette.text.primary,
               }}
             >
               {title}
@@ -190,7 +329,7 @@ function ChartCard({ title, subtitle, children, height = 280, actions }) {
               <Typography
                 sx={{
                   fontSize: '0.75rem',
-                  color: palette.scale[500],
+                  color: theme.palette.text.secondary,
                   mt: 0.25,
                 }}
               >
@@ -204,23 +343,30 @@ function ChartCard({ title, subtitle, children, height = 280, actions }) {
           {children}
         </Box>
       </CardContent>
-    </Card>
+    </GlassCard>
   )
 }
 
+// =============================================================================
+// CUSTOM TOOLTIP COMPONENT
+// =============================================================================
+
 function CustomTooltip({ active, payload, label }) {
+  const theme = useTheme()
   if (!active || !payload?.length) return null
+
   return (
     <Box
       sx={{
-        bgcolor: palette.scale[900],
-        border: `1px solid ${alpha(palette.scale[100], 0.1)}`,
-        borderRadius: '6px',
+        bgcolor: alpha(theme.palette.background.paper, 0.95),
+        backdropFilter: 'blur(8px)',
+        border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+        borderRadius: 2,
         p: 1.5,
-        boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+        boxShadow: `0 4px 12px ${alpha(theme.palette.common.black, 0.15)}`,
       }}
     >
-      <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, color: palette.scale[200], mb: 0.5 }}>
+      <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, color: theme.palette.text.primary, mb: 0.5 }}>
         {label}
       </Typography>
       {payload.map((entry, index) => (
@@ -233,7 +379,7 @@ function CustomTooltip({ active, payload, label }) {
               bgcolor: entry.color,
             }}
           />
-          <Typography sx={{ fontSize: '0.6875rem', color: palette.scale[400] }}>
+          <Typography sx={{ fontSize: '0.6875rem', color: theme.palette.text.secondary }}>
             {entry.name}: {entry.value}
           </Typography>
         </Stack>
@@ -242,10 +388,15 @@ function CustomTooltip({ active, payload, label }) {
   )
 }
 
+// =============================================================================
+// MAIN COMPONENT
+// =============================================================================
+
 const TAB_MAP = { overview: 0, jobs: 1, templates: 2 }
 const TAB_NAMES = ['overview', 'jobs', 'templates']
 
 export default function UsageStatsPage() {
+  const theme = useTheme()
   const toast = useToast()
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -261,6 +412,10 @@ export default function UsageStatsPage() {
   const [dashboardData, setDashboardData] = useState(null)
   const [usageData, setUsageData] = useState(null)
   const [historyData, setHistoryData] = useState(null)
+
+  // Chart colors based on theme
+  const CHART_COLORS = useMemo(() => getChartColors(theme), [theme])
+  const STATUS_COLORS = useMemo(() => getStatusColors(theme), [theme])
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -301,18 +456,18 @@ export default function UsageStatsPage() {
     return Object.entries(byStatus).map(([name, value]) => ({
       name: name.charAt(0).toUpperCase() + name.slice(1),
       value,
-      color: STATUS_COLORS[name] || palette.scale[400],
+      color: STATUS_COLORS[name] || theme.palette.text.secondary,
     }))
-  }, [usageData])
+  }, [usageData, STATUS_COLORS, theme])
 
   const kindData = useMemo(() => {
     const byKind = usageData?.byKind || {}
     return Object.entries(byKind).map(([name, value]) => ({
       name: name.toUpperCase(),
       value,
-      color: name === 'pdf' ? palette.red[400] : palette.green[400],
+      color: name === 'pdf' ? theme.palette.error.main : theme.palette.success.main,
     }))
-  }, [usageData])
+  }, [usageData, theme])
 
   const templateBreakdown = useMemo(() => {
     const breakdown = usageData?.templateBreakdown || []
@@ -368,28 +523,32 @@ export default function UsageStatsPage() {
 
   if (loading && !dashboardData) {
     return (
-      <Box sx={{ p: 4, textAlign: 'center' }}>
-        <CircularProgress size={40} />
-        <Typography sx={{ mt: 2, color: palette.scale[500] }}>Loading statistics...</Typography>
-      </Box>
+      <PageContainer>
+        <Box sx={{ py: 8, textAlign: 'center' }}>
+          <CircularProgress size={40} />
+          <Typography sx={{ mt: 2, color: theme.palette.text.secondary }}>
+            Loading statistics...
+          </Typography>
+        </Box>
+      </PageContainer>
     )
   }
 
   return (
-    <Box sx={{ p: 3, maxWidth: 1400, mx: 'auto', width: '100%' }}>
+    <PageContainer>
       {/* Header */}
-      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
+      <HeaderContainer direction="row" justifyContent="space-between" alignItems="center">
         <Box>
-          <Typography variant="h5" fontWeight={600} color={palette.scale[100]}>
+          <Typography variant="h5" fontWeight={600} sx={{ color: theme.palette.text.primary }}>
             Usage Statistics
           </Typography>
-          <Typography variant="body2" color={palette.scale[500]}>
+          <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
             Detailed analytics and insights for your workspace
           </Typography>
         </Box>
         <Stack direction="row" spacing={2} alignItems="center">
-          <FormControl size="small" sx={{ minWidth: 160 }}>
-            <InputLabel sx={{ color: palette.scale[500] }}>Time Period</InputLabel>
+          <StyledFormControl size="small">
+            <InputLabel>Time Period</InputLabel>
             <Select
               value={period}
               onChange={(e) => {
@@ -400,12 +559,6 @@ export default function UsageStatsPage() {
                 setSearchParams(newParams, { replace: true })
               }}
               label="Time Period"
-              sx={{
-                color: palette.scale[200],
-                '.MuiOutlinedInput-notchedOutline': {
-                  borderColor: alpha(palette.scale[100], 0.15),
-                },
-              }}
             >
               {PERIOD_OPTIONS.map((opt) => (
                 <MenuItem key={opt.value} value={opt.value}>
@@ -413,25 +566,24 @@ export default function UsageStatsPage() {
                 </MenuItem>
               ))}
             </Select>
-          </FormControl>
-          <Button
+          </StyledFormControl>
+          <ExportButton
             variant="outlined"
             size="small"
             startIcon={<DownloadIcon sx={{ fontSize: 16 }} />}
             onClick={handleExportStats}
-            sx={{ textTransform: 'none' }}
           >
             Export
-          </Button>
-          <IconButton
+          </ExportButton>
+          <RefreshButton
             onClick={fetchData}
             disabled={loading}
-            sx={{ color: palette.scale[400] }}
+            sx={{ color: theme.palette.text.secondary }}
           >
             {loading ? <CircularProgress size={20} /> : <RefreshIcon />}
-          </IconButton>
+          </RefreshButton>
         </Stack>
-      </Stack>
+      </HeaderContainer>
 
       {/* Overview Stats */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
@@ -441,7 +593,7 @@ export default function UsageStatsPage() {
             value={summary.totalJobs || 0}
             subtitle={`${metrics.jobsThisWeek || 0} this week`}
             icon={WorkIcon}
-            color={palette.blue[400]}
+            color={theme.palette.info.main}
             onClick={() => navigate('/jobs')}
           />
         </Grid>
@@ -451,7 +603,7 @@ export default function UsageStatsPage() {
             value={`${(metrics.successRate || 0).toFixed(1)}%`}
             subtitle={`${summary.completedJobs || 0} completed`}
             icon={CheckCircleIcon}
-            color={palette.green[400]}
+            color={theme.palette.success.main}
             onClick={() => navigate('/history')}
           />
         </Grid>
@@ -461,7 +613,7 @@ export default function UsageStatsPage() {
             value={summary.totalTemplates || 0}
             subtitle={`${summary.approvedTemplates || 0} approved`}
             icon={DescriptionIcon}
-            color={palette.yellow[400]}
+            color={theme.palette.warning.main}
             onClick={() => navigate('/templates')}
           />
         </Grid>
@@ -471,40 +623,25 @@ export default function UsageStatsPage() {
             value={summary.totalConnections || 0}
             subtitle={`${summary.activeConnections || 0} active`}
             icon={StorageIcon}
-            color={palette.purple?.[400] || '#a855f7'}
+            color={theme.palette.secondary.main}
             onClick={() => navigate('/connections')}
           />
         </Grid>
       </Grid>
 
       {/* Tabs */}
-      <Box sx={{ mb: 3 }}>
-        <Tabs
-          value={activeTab}
-          onChange={(e, v) => {
-            const newParams = new URLSearchParams(searchParams)
-            newParams.set('tab', TAB_NAMES[v])
-            setSearchParams(newParams, { replace: true })
-          }}
-          sx={{
-            '& .MuiTab-root': {
-              color: palette.scale[500],
-              textTransform: 'none',
-              minWidth: 100,
-              '&.Mui-selected': {
-                color: palette.green[400],
-              },
-            },
-            '& .MuiTabs-indicator': {
-              bgcolor: palette.green[400],
-            },
-          }}
-        >
-          <Tab label="Overview" icon={<BarChartIcon sx={{ fontSize: 18 }} />} iconPosition="start" />
-          <Tab label="Jobs" icon={<WorkIcon sx={{ fontSize: 18 }} />} iconPosition="start" />
-          <Tab label="Templates" icon={<DescriptionIcon sx={{ fontSize: 18 }} />} iconPosition="start" />
-        </Tabs>
-      </Box>
+      <StyledTabs
+        value={activeTab}
+        onChange={(e, v) => {
+          const newParams = new URLSearchParams(searchParams)
+          newParams.set('tab', TAB_NAMES[v])
+          setSearchParams(newParams, { replace: true })
+        }}
+      >
+        <Tab label="Overview" icon={<BarChartIcon sx={{ fontSize: 18 }} />} iconPosition="start" />
+        <Tab label="Jobs" icon={<WorkIcon sx={{ fontSize: 18 }} />} iconPosition="start" />
+        <Tab label="Templates" icon={<DescriptionIcon sx={{ fontSize: 18 }} />} iconPosition="start" />
+      </StyledTabs>
 
       {/* Tab Content */}
       {activeTab === 0 && (
@@ -514,19 +651,19 @@ export default function UsageStatsPage() {
             <ChartCard title="Jobs Trend" subtitle="Daily job completions over the past week">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={jobsTrend}>
-                  <CartesianGrid strokeDasharray="3 3" stroke={alpha(palette.scale[100], 0.1)} />
+                  <CartesianGrid strokeDasharray="3 3" stroke={alpha(theme.palette.divider, 0.3)} />
                   <XAxis
                     dataKey="label"
-                    tick={{ fill: palette.scale[500], fontSize: 11 }}
-                    axisLine={{ stroke: alpha(palette.scale[100], 0.1) }}
+                    tick={{ fill: theme.palette.text.secondary, fontSize: 11 }}
+                    axisLine={{ stroke: alpha(theme.palette.divider, 0.3) }}
                   />
                   <YAxis
-                    tick={{ fill: palette.scale[500], fontSize: 11 }}
-                    axisLine={{ stroke: alpha(palette.scale[100], 0.1) }}
+                    tick={{ fill: theme.palette.text.secondary, fontSize: 11 }}
+                    axisLine={{ stroke: alpha(theme.palette.divider, 0.3) }}
                   />
                   <Tooltip content={<CustomTooltip />} />
-                  <Bar dataKey="completed" name="Completed" fill={palette.green[400]} radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="failed" name="Failed" fill={palette.red[400]} radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="completed" name="Completed" fill={theme.palette.success.main} radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="failed" name="Failed" fill={theme.palette.error.main} radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </ChartCard>
@@ -555,7 +692,7 @@ export default function UsageStatsPage() {
                     verticalAlign="bottom"
                     height={36}
                     formatter={(value) => (
-                      <span style={{ color: palette.scale[300], fontSize: '0.75rem' }}>{value}</span>
+                      <span style={{ color: theme.palette.text.secondary, fontSize: '0.75rem' }}>{value}</span>
                     )}
                   />
                 </PieChart>
@@ -575,7 +712,7 @@ export default function UsageStatsPage() {
                     outerRadius={80}
                     dataKey="value"
                     label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                    labelLine={{ stroke: palette.scale[500] }}
+                    labelLine={{ stroke: theme.palette.text.secondary }}
                   >
                     {kindData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
@@ -592,7 +729,7 @@ export default function UsageStatsPage() {
             <ChartCard title="Top Templates" subtitle="Most used templates">
               {templateBreakdown.length === 0 ? (
                 <Box sx={{ py: 6, textAlign: 'center' }}>
-                  <Typography sx={{ color: palette.scale[500], fontSize: '0.875rem' }}>
+                  <Typography sx={{ color: theme.palette.text.secondary, fontSize: '0.875rem' }}>
                     No template usage data
                   </Typography>
                 </Box>
@@ -602,7 +739,7 @@ export default function UsageStatsPage() {
                     <Box key={index}>
                       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 0.5 }}>
                         <Stack direction="row" alignItems="center" spacing={1}>
-                          <Typography sx={{ fontSize: '0.8125rem', color: palette.scale[200] }}>
+                          <Typography sx={{ fontSize: '0.8125rem', color: theme.palette.text.primary }}>
                             {template.name}
                           </Typography>
                           <Chip
@@ -612,14 +749,15 @@ export default function UsageStatsPage() {
                               height: 18,
                               fontSize: '0.5625rem',
                               bgcolor: alpha(
-                                template.kind === 'excel' ? palette.green[400] : palette.red[400],
+                                template.kind === 'excel' ? theme.palette.success.main : theme.palette.error.main,
                                 0.15
                               ),
-                              color: template.kind === 'excel' ? palette.green[400] : palette.red[400],
+                              color: template.kind === 'excel' ? theme.palette.success.main : theme.palette.error.main,
+                              borderRadius: 1,
                             }}
                           />
                         </Stack>
-                        <Typography sx={{ fontSize: '0.75rem', color: palette.scale[400] }}>
+                        <Typography sx={{ fontSize: '0.75rem', color: theme.palette.text.secondary }}>
                           {template.count} runs
                         </Typography>
                       </Stack>
@@ -633,7 +771,7 @@ export default function UsageStatsPage() {
                         sx={{
                           height: 6,
                           borderRadius: 3,
-                          bgcolor: alpha(palette.scale[100], 0.08),
+                          bgcolor: alpha(theme.palette.divider, 0.15),
                           '& .MuiLinearProgress-bar': {
                             bgcolor: CHART_COLORS[index % CHART_COLORS.length],
                             borderRadius: 3,
@@ -658,31 +796,31 @@ export default function UsageStatsPage() {
                 <AreaChart data={historyByDay}>
                   <defs>
                     <linearGradient id="colorCompleted" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={palette.green[400]} stopOpacity={0.3} />
-                      <stop offset="95%" stopColor={palette.green[400]} stopOpacity={0} />
+                      <stop offset="5%" stopColor={theme.palette.success.main} stopOpacity={0.3} />
+                      <stop offset="95%" stopColor={theme.palette.success.main} stopOpacity={0} />
                     </linearGradient>
                     <linearGradient id="colorFailed" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={palette.red[400]} stopOpacity={0.3} />
-                      <stop offset="95%" stopColor={palette.red[400]} stopOpacity={0} />
+                      <stop offset="5%" stopColor={theme.palette.error.main} stopOpacity={0.3} />
+                      <stop offset="95%" stopColor={theme.palette.error.main} stopOpacity={0} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke={alpha(palette.scale[100], 0.1)} />
+                  <CartesianGrid strokeDasharray="3 3" stroke={alpha(theme.palette.divider, 0.3)} />
                   <XAxis
                     dataKey="date"
-                    tick={{ fill: palette.scale[500], fontSize: 10 }}
-                    axisLine={{ stroke: alpha(palette.scale[100], 0.1) }}
+                    tick={{ fill: theme.palette.text.secondary, fontSize: 10 }}
+                    axisLine={{ stroke: alpha(theme.palette.divider, 0.3) }}
                     tickFormatter={(v) => v.slice(5)}
                   />
                   <YAxis
-                    tick={{ fill: palette.scale[500], fontSize: 11 }}
-                    axisLine={{ stroke: alpha(palette.scale[100], 0.1) }}
+                    tick={{ fill: theme.palette.text.secondary, fontSize: 11 }}
+                    axisLine={{ stroke: alpha(theme.palette.divider, 0.3) }}
                   />
                   <Tooltip content={<CustomTooltip />} />
                   <Area
                     type="monotone"
                     dataKey="completed"
                     name="Completed"
-                    stroke={palette.green[400]}
+                    stroke={theme.palette.success.main}
                     fill="url(#colorCompleted)"
                     strokeWidth={2}
                   />
@@ -690,7 +828,7 @@ export default function UsageStatsPage() {
                     type="monotone"
                     dataKey="failed"
                     name="Failed"
-                    stroke={palette.red[400]}
+                    stroke={theme.palette.error.main}
                     fill="url(#colorFailed)"
                     strokeWidth={2}
                   />
@@ -698,7 +836,7 @@ export default function UsageStatsPage() {
                     verticalAlign="top"
                     height={36}
                     formatter={(value) => (
-                      <span style={{ color: palette.scale[300], fontSize: '0.75rem' }}>{value}</span>
+                      <span style={{ color: theme.palette.text.secondary, fontSize: '0.75rem' }}>{value}</span>
                     )}
                   />
                 </AreaChart>
@@ -712,7 +850,7 @@ export default function UsageStatsPage() {
               title="Jobs Today"
               value={metrics.jobsToday || 0}
               icon={ScheduleIcon}
-              color={palette.blue[400]}
+              color={theme.palette.info.main}
               onClick={() => navigate('/jobs')}
             />
           </Grid>
@@ -721,7 +859,7 @@ export default function UsageStatsPage() {
               title="Jobs This Week"
               value={metrics.jobsThisWeek || 0}
               icon={WorkIcon}
-              color={palette.green[400]}
+              color={theme.palette.success.main}
               onClick={() => navigate('/jobs')}
             />
           </Grid>
@@ -730,7 +868,7 @@ export default function UsageStatsPage() {
               title="Jobs This Month"
               value={metrics.jobsThisMonth || 0}
               icon={BarChartIcon}
-              color={palette.yellow[400]}
+              color={theme.palette.warning.main}
               onClick={() => navigate('/jobs')}
             />
           </Grid>
@@ -739,7 +877,7 @@ export default function UsageStatsPage() {
               title="Failed Jobs"
               value={summary.failedJobs || 0}
               icon={ErrorIcon}
-              color={palette.red[400]}
+              color={theme.palette.error.main}
               onClick={() => navigate('/history?status=failed')}
             />
           </Grid>
@@ -754,7 +892,7 @@ export default function UsageStatsPage() {
               title="Total Templates"
               value={summary.totalTemplates || 0}
               icon={DescriptionIcon}
-              color={palette.blue[400]}
+              color={theme.palette.info.main}
               onClick={() => navigate('/templates')}
             />
           </Grid>
@@ -763,7 +901,7 @@ export default function UsageStatsPage() {
               title="PDF Templates"
               value={summary.pdfTemplates || 0}
               icon={DescriptionIcon}
-              color={palette.red[400]}
+              color={theme.palette.error.main}
               onClick={() => navigate('/templates?kind=pdf')}
             />
           </Grid>
@@ -772,7 +910,7 @@ export default function UsageStatsPage() {
               title="Excel Templates"
               value={summary.excelTemplates || 0}
               icon={DescriptionIcon}
-              color={palette.green[400]}
+              color={theme.palette.success.main}
               onClick={() => navigate('/templates?kind=excel')}
             />
           </Grid>
@@ -781,7 +919,7 @@ export default function UsageStatsPage() {
               title="Active Schedules"
               value={summary.activeSchedules || 0}
               icon={ScheduleIcon}
-              color={palette.yellow[400]}
+              color={theme.palette.warning.main}
               onClick={() => navigate('/schedules')}
             />
           </Grid>
@@ -791,29 +929,29 @@ export default function UsageStatsPage() {
             <ChartCard title="Template Usage Breakdown" subtitle="Jobs per template" height={400}>
               {templateBreakdown.length === 0 ? (
                 <Box sx={{ py: 8, textAlign: 'center' }}>
-                  <DescriptionIcon sx={{ fontSize: 48, color: palette.scale[700], mb: 2 }} />
-                  <Typography sx={{ color: palette.scale[500], fontSize: '0.875rem' }}>
+                  <DescriptionIcon sx={{ fontSize: 48, color: theme.palette.text.disabled, mb: 2 }} />
+                  <Typography sx={{ color: theme.palette.text.secondary, fontSize: '0.875rem' }}>
                     No template usage data available
                   </Typography>
                 </Box>
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={templateBreakdown} layout="vertical">
-                    <CartesianGrid strokeDasharray="3 3" stroke={alpha(palette.scale[100], 0.1)} />
+                    <CartesianGrid strokeDasharray="3 3" stroke={alpha(theme.palette.divider, 0.3)} />
                     <XAxis
                       type="number"
-                      tick={{ fill: palette.scale[500], fontSize: 11 }}
-                      axisLine={{ stroke: alpha(palette.scale[100], 0.1) }}
+                      tick={{ fill: theme.palette.text.secondary, fontSize: 11 }}
+                      axisLine={{ stroke: alpha(theme.palette.divider, 0.3) }}
                     />
                     <YAxis
                       type="category"
                       dataKey="name"
-                      tick={{ fill: palette.scale[400], fontSize: 11 }}
-                      axisLine={{ stroke: alpha(palette.scale[100], 0.1) }}
+                      tick={{ fill: theme.palette.text.secondary, fontSize: 11 }}
+                      axisLine={{ stroke: alpha(theme.palette.divider, 0.3) }}
                       width={120}
                     />
                     <Tooltip content={<CustomTooltip />} />
-                    <Bar dataKey="count" name="Jobs" fill={palette.green[400]} radius={[0, 4, 4, 0]} />
+                    <Bar dataKey="count" name="Jobs" fill={theme.palette.success.main} radius={[0, 4, 4, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               )}
@@ -821,6 +959,6 @@ export default function UsageStatsPage() {
           </Grid>
         </Grid>
       )}
-    </Box>
+    </PageContainer>
   )
 }

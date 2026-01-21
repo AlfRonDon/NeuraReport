@@ -1,3 +1,7 @@
+/**
+ * Premium Jobs Page
+ * Sophisticated job progress tracking with glassmorphism and animations
+ */
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
@@ -12,7 +16,6 @@ import {
   Typography,
   Stack,
   Tooltip,
-  alpha,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -20,6 +23,10 @@ import {
   Button,
   Divider,
   Alert,
+  useTheme,
+  alpha,
+  styled,
+  keyframes,
 } from '@mui/material'
 import CloseIcon from '@mui/icons-material/Close'
 import RefreshIcon from '@mui/icons-material/Refresh'
@@ -37,7 +44,6 @@ import { DataTable } from '../../ui/DataTable'
 import { ConfirmModal } from '../../ui/Modal'
 import { useToast } from '../../components/ToastProvider'
 import * as api from '../../api/client'
-import { palette } from '../../theme'
 import {
   normalizeJob,
   isActiveStatus,
@@ -46,46 +52,300 @@ import {
   JobStatus,
 } from '../../utils/jobStatus'
 
-const STATUS_CONFIG = {
-  pending: {
-    icon: HourglassEmptyIcon,
-    color: palette.yellow[400],
-    bgColor: alpha(palette.yellow[400], 0.15),
-    label: 'Pending',
+// =============================================================================
+// ANIMATIONS
+// =============================================================================
+
+const fadeInUp = keyframes`
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+`
+
+const pulse = keyframes`
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.05); opacity: 0.8; }
+`
+
+const spin = keyframes`
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+`
+
+const shimmer = keyframes`
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+`
+
+// =============================================================================
+// STYLED COMPONENTS
+// =============================================================================
+
+const PageContainer = styled(Box)(({ theme }) => ({
+  padding: theme.spacing(3),
+  maxWidth: 1400,
+  margin: '0 auto',
+  width: '100%',
+  minHeight: '100vh',
+  background: theme.palette.mode === 'dark'
+    ? `radial-gradient(ellipse at 20% 0%, ${alpha(theme.palette.primary.dark, 0.15)} 0%, transparent 50%),
+       radial-gradient(ellipse at 80% 100%, ${alpha(theme.palette.secondary.dark, 0.1)} 0%, transparent 50%),
+       ${theme.palette.background.default}`
+    : `radial-gradient(ellipse at 20% 0%, ${alpha(theme.palette.primary.light, 0.08)} 0%, transparent 50%),
+       radial-gradient(ellipse at 80% 100%, ${alpha(theme.palette.secondary.light, 0.05)} 0%, transparent 50%),
+       ${theme.palette.background.default}`,
+}))
+
+const StyledMenu = styled(Menu)(({ theme }) => ({
+  '& .MuiPaper-root': {
+    backgroundColor: alpha(theme.palette.background.paper, 0.95),
+    backdropFilter: 'blur(20px)',
+    border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+    borderRadius: 12,
+    boxShadow: `0 8px 32px ${alpha(theme.palette.common.black, 0.15)}`,
+    minWidth: 180,
+    animation: `${fadeInUp} 0.2s ease-out`,
   },
-  running: {
-    icon: PlayArrowIcon,
-    color: palette.blue[400],
-    bgColor: alpha(palette.blue[400], 0.15),
-    label: 'Running',
+}))
+
+const StyledMenuItem = styled(MenuItem)(({ theme }) => ({
+  borderRadius: 8,
+  margin: theme.spacing(0.5, 1),
+  padding: theme.spacing(1, 1.5),
+  fontSize: '0.8125rem',
+  transition: 'all 0.15s ease',
+  '&:hover': {
+    backgroundColor: alpha(theme.palette.primary.main, 0.08),
   },
-  completed: {
-    icon: CheckCircleIcon,
-    color: palette.green[400],
-    bgColor: alpha(palette.green[400], 0.15),
-    label: 'Completed',
+  '& .MuiListItemIcon-root': {
+    minWidth: 32,
   },
-  failed: {
-    icon: ErrorIcon,
-    color: palette.red[400],
-    bgColor: alpha(palette.red[400], 0.15),
-    label: 'Failed',
+}))
+
+const StyledDialog = styled(Dialog)(({ theme }) => ({
+  '& .MuiBackdrop-root': {
+    backgroundColor: alpha(theme.palette.common.black, 0.6),
+    backdropFilter: 'blur(8px)',
   },
-  cancelled: {
-    icon: CancelIcon,
-    color: palette.scale[500],
-    bgColor: alpha(palette.scale[100], 0.08),
-    label: 'Cancelled',
+  '& .MuiDialog-paper': {
+    backgroundColor: alpha(theme.palette.background.paper, 0.95),
+    backdropFilter: 'blur(20px)',
+    border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+    borderRadius: 20,
+    boxShadow: `0 24px 64px ${alpha(theme.palette.common.black, 0.25)}`,
+    animation: `${fadeInUp} 0.3s ease-out`,
   },
-  cancelling: {
-    icon: HourglassEmptyIcon,
-    color: palette.yellow[400],
-    bgColor: alpha(palette.yellow[400], 0.15),
-    label: 'Cancelling...',
+}))
+
+const DialogHeader = styled(DialogTitle)(({ theme }) => ({
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  padding: theme.spacing(2.5, 3),
+  fontSize: '1.125rem',
+  fontWeight: 600,
+}))
+
+const CloseButton = styled(IconButton)(({ theme }) => ({
+  width: 32,
+  height: 32,
+  borderRadius: 10,
+  color: theme.palette.text.secondary,
+  transition: 'all 0.2s ease',
+  '&:hover': {
+    backgroundColor: alpha(theme.palette.error.main, 0.1),
+    color: theme.palette.error.main,
+    transform: 'rotate(90deg)',
   },
+}))
+
+const StyledDialogContent = styled(DialogContent)(({ theme }) => ({
+  padding: theme.spacing(0, 3, 3),
+  borderTop: `1px solid ${alpha(theme.palette.divider, 0.08)}`,
+  borderBottom: `1px solid ${alpha(theme.palette.divider, 0.08)}`,
+}))
+
+const StyledDialogActions = styled(DialogActions)(({ theme }) => ({
+  padding: theme.spacing(2, 3),
+  gap: theme.spacing(1),
+}))
+
+const DetailLabel = styled(Typography)(({ theme }) => ({
+  fontSize: '0.6875rem',
+  fontWeight: 600,
+  textTransform: 'uppercase',
+  letterSpacing: '0.05em',
+  color: theme.palette.text.secondary,
+  marginBottom: theme.spacing(0.5),
+}))
+
+const DetailValue = styled(Typography)(({ theme }) => ({
+  fontSize: '0.8125rem',
+  color: theme.palette.text.primary,
+}))
+
+const MonoText = styled(Typography)(({ theme }) => ({
+  fontFamily: 'var(--font-mono, monospace)',
+  fontSize: '0.75rem',
+  color: theme.palette.text.secondary,
+}))
+
+const StatusChip = styled(Chip, {
+  shouldForwardProp: (prop) => !['statusColor', 'statusBg'].includes(prop),
+})(({ theme, statusColor, statusBg }) => ({
+  borderRadius: 8,
+  fontWeight: 600,
+  fontSize: '0.6875rem',
+  backgroundColor: statusBg,
+  color: statusColor,
+  '& .MuiChip-icon': {
+    marginLeft: theme.spacing(0.5),
+    color: statusColor,
+  },
+}))
+
+const TypeChip = styled(Chip)(({ theme }) => ({
+  borderRadius: 8,
+  fontWeight: 500,
+  fontSize: '0.6875rem',
+  textTransform: 'capitalize',
+  backgroundColor: alpha(theme.palette.text.primary, 0.08),
+  color: theme.palette.text.secondary,
+}))
+
+const StyledLinearProgress = styled(LinearProgress)(({ theme }) => ({
+  borderRadius: 4,
+  height: 6,
+  backgroundColor: alpha(theme.palette.primary.main, 0.1),
+  '& .MuiLinearProgress-bar': {
+    borderRadius: 4,
+    background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.success.main})`,
+  },
+}))
+
+const ActionButton = styled(Button)(({ theme }) => ({
+  borderRadius: 10,
+  textTransform: 'none',
+  fontWeight: 500,
+  fontSize: '0.8125rem',
+  padding: theme.spacing(0.75, 2),
+  transition: 'all 0.2s ease',
+}))
+
+const PrimaryButton = styled(ActionButton)(({ theme }) => ({
+  background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
+  color: '#fff',
+  boxShadow: `0 4px 14px ${alpha(theme.palette.primary.main, 0.3)}`,
+  '&:hover': {
+    boxShadow: `0 6px 20px ${alpha(theme.palette.primary.main, 0.4)}`,
+    transform: 'translateY(-1px)',
+  },
+}))
+
+const ResultBox = styled(Box)(({ theme }) => ({
+  marginTop: theme.spacing(1),
+  padding: theme.spacing(1.5),
+  backgroundColor: alpha(theme.palette.background.paper, 0.4),
+  borderRadius: 12,
+  border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+  fontFamily: 'var(--font-mono, monospace)',
+  fontSize: '0.75rem',
+  whiteSpace: 'pre-wrap',
+  color: theme.palette.text.secondary,
+  maxHeight: 260,
+  overflow: 'auto',
+  '&::-webkit-scrollbar': {
+    width: 6,
+  },
+  '&::-webkit-scrollbar-track': {
+    background: 'transparent',
+  },
+  '&::-webkit-scrollbar-thumb': {
+    background: alpha(theme.palette.text.primary, 0.2),
+    borderRadius: 3,
+  },
+}))
+
+const StyledDivider = styled(Divider)(({ theme }) => ({
+  borderColor: alpha(theme.palette.divider, 0.08),
+  margin: theme.spacing(2, 0),
+}))
+
+const ErrorAlert = styled(Alert)(({ theme }) => ({
+  borderRadius: 12,
+  backgroundColor: alpha(theme.palette.error.main, 0.1),
+  border: `1px solid ${alpha(theme.palette.error.main, 0.2)}`,
+  '& .MuiAlert-icon': {
+    color: theme.palette.error.main,
+  },
+}))
+
+const MoreActionsButton = styled(IconButton)(({ theme }) => ({
+  color: theme.palette.text.secondary,
+  transition: 'all 0.2s ease',
+  '&:hover': {
+    color: theme.palette.text.primary,
+    backgroundColor: alpha(theme.palette.primary.main, 0.08),
+  },
+}))
+
+// =============================================================================
+// STATUS CONFIG HELPER
+// =============================================================================
+
+const getStatusConfig = (theme, status) => {
+  const configs = {
+    pending: {
+      icon: HourglassEmptyIcon,
+      color: theme.palette.warning.main,
+      bgColor: alpha(theme.palette.warning.main, 0.12),
+      label: 'Pending',
+    },
+    running: {
+      icon: PlayArrowIcon,
+      color: theme.palette.info.main,
+      bgColor: alpha(theme.palette.info.main, 0.12),
+      label: 'Running',
+    },
+    completed: {
+      icon: CheckCircleIcon,
+      color: theme.palette.success.main,
+      bgColor: alpha(theme.palette.success.main, 0.12),
+      label: 'Completed',
+    },
+    failed: {
+      icon: ErrorIcon,
+      color: theme.palette.error.main,
+      bgColor: alpha(theme.palette.error.main, 0.12),
+      label: 'Failed',
+    },
+    cancelled: {
+      icon: CancelIcon,
+      color: theme.palette.text.secondary,
+      bgColor: alpha(theme.palette.text.secondary, 0.08),
+      label: 'Cancelled',
+    },
+    cancelling: {
+      icon: HourglassEmptyIcon,
+      color: theme.palette.warning.main,
+      bgColor: alpha(theme.palette.warning.main, 0.12),
+      label: 'Cancelling...',
+    },
+  }
+  return configs[status] || configs.pending
 }
 
+// =============================================================================
+// MAIN COMPONENT
+// =============================================================================
+
 export default function JobsPage() {
+  const theme = useTheme()
   const toast = useToast()
   const navigate = useNavigate()
   const [jobs, setJobs] = useState([])
@@ -107,12 +367,10 @@ export default function JobsPage() {
   const abortControllerRef = useRef(null)
 
   const fetchJobs = useCallback(async (force = false) => {
-    // Skip polling if a user action is in progress (unless forced)
     if (!force && isUserActionInProgressRef.current) {
       return
     }
 
-    // Cancel any pending fetch
     if (abortControllerRef.current) {
       abortControllerRef.current.abort()
     }
@@ -120,7 +378,6 @@ export default function JobsPage() {
 
     try {
       const data = await api.listJobs({ limit: 50 })
-      // Only update state if component is still mounted and no user action started
       if (isMountedRef.current && (force || !isUserActionInProgressRef.current)) {
         const normalized = Array.isArray(data.jobs) ? data.jobs.map((job) => normalizeJob(job)) : []
         setJobs(normalized)
@@ -177,10 +434,8 @@ export default function JobsPage() {
   const handleCancelConfirm = useCallback(async () => {
     if (!cancellingJob) return
 
-    // Prevent polling from overwriting our optimistic update
     isUserActionInProgressRef.current = true
 
-    // Immediately update local state to show "cancelling" status
     setJobs((prev) =>
       prev.map((job) =>
         job.id === cancellingJob.id ? { ...job, status: JobStatus.CANCELLING } : job
@@ -196,14 +451,13 @@ export default function JobsPage() {
     } finally {
       setCancellingJob(null)
       isUserActionInProgressRef.current = false
-      // Force refresh after action completes
       fetchJobs(true)
     }
   }, [cancellingJob, toast, fetchJobs])
 
   const handleDownload = useCallback(() => {
     if (menuJob?.artifacts?.html_url) {
-      window.open(menuJob.artifacts.html_url, '_blank')
+      window.open(api.withBase(menuJob.artifacts.html_url), '_blank')
     }
     handleCloseMenu()
   }, [menuJob, handleCloseMenu])
@@ -225,7 +479,6 @@ export default function JobsPage() {
     setRetrying(true)
     handleCloseMenu()
     try {
-      // Use the dedicated retry endpoint
       await api.retryJob(menuJob.id)
       toast.show('Job restarted successfully', 'success')
     } catch (err) {
@@ -261,10 +514,8 @@ export default function JobsPage() {
       return
     }
 
-    // Prevent polling from overwriting our optimistic update
     isUserActionInProgressRef.current = true
 
-    // Immediately update local state to show "cancelling" status
     const activeIdSet = new Set(activeIds)
     setJobs((prev) =>
       prev.map((job) =>
@@ -335,15 +586,9 @@ export default function JobsPage() {
       headerName: 'Job ID',
       width: 160,
       renderCell: (value) => (
-        <Typography
-          sx={{
-            fontFamily: 'var(--font-mono)',
-            fontSize: '0.75rem',
-            color: palette.scale[300],
-          }}
-        >
+        <MonoText>
           {value?.slice(0, 12)}...
-        </Typography>
+        </MonoText>
       ),
     },
     {
@@ -351,15 +596,9 @@ export default function JobsPage() {
       headerName: 'Type',
       width: 120,
       renderCell: (value) => (
-        <Chip
+        <TypeChip
           label={value || 'report'}
           size="small"
-          sx={{
-            bgcolor: alpha(palette.scale[100], 0.08),
-            color: palette.scale[300],
-            fontSize: '0.6875rem',
-            textTransform: 'capitalize',
-          }}
         />
       ),
     },
@@ -367,9 +606,9 @@ export default function JobsPage() {
       field: 'templateName',
       headerName: 'Design',
       renderCell: (value, row) => (
-        <Box sx={{ color: palette.scale[200], fontSize: '0.8125rem' }}>
+        <Typography sx={{ fontSize: '0.8125rem', color: 'text.secondary' }}>
           {value || row.templateId?.slice(0, 12) || '-'}
-        </Box>
+        </Typography>
       ),
     },
     {
@@ -377,23 +616,16 @@ export default function JobsPage() {
       headerName: 'Status',
       width: 140,
       renderCell: (value) => {
-        const config = STATUS_CONFIG[value] || STATUS_CONFIG.pending
+        const config = getStatusConfig(theme, value)
         const Icon = config.icon
 
         return (
-          <Chip
-            icon={<Icon sx={{ fontSize: 14, color: config.color }} />}
+          <StatusChip
+            icon={<Icon sx={{ fontSize: 14 }} />}
             label={config.label}
             size="small"
-            sx={{
-              bgcolor: config.bgColor,
-              color: config.color,
-              fontSize: '0.6875rem',
-              fontWeight: 600,
-              '& .MuiChip-icon': {
-                ml: 0.5,
-              },
-            }}
+            statusColor={config.color}
+            statusBg={config.bgColor}
           />
         )
       },
@@ -405,14 +637,14 @@ export default function JobsPage() {
       renderCell: (value, row) => {
         if (row.status === JobStatus.COMPLETED) {
           return (
-            <Typography sx={{ fontSize: '0.75rem', color: palette.green[400] }}>
+            <Typography sx={{ fontSize: '0.75rem', color: 'success.main', fontWeight: 600 }}>
               100%
             </Typography>
           )
         }
         if (row.status === JobStatus.FAILED || row.status === JobStatus.CANCELLED) {
           return (
-            <Typography sx={{ fontSize: '0.75rem', color: palette.scale[600] }}>
+            <Typography sx={{ fontSize: '0.75rem', color: 'text.disabled' }}>
               -
             </Typography>
           )
@@ -420,21 +652,12 @@ export default function JobsPage() {
         const progress = value || 0
         return (
           <Box sx={{ width: '100%', display: 'flex', alignItems: 'center', gap: 1 }}>
-            <LinearProgress
+            <StyledLinearProgress
               variant="determinate"
               value={progress}
-              sx={{
-                flex: 1,
-                height: 4,
-                borderRadius: 2,
-                bgcolor: palette.scale[800],
-                '& .MuiLinearProgress-bar': {
-                  bgcolor: palette.green[400],
-                  borderRadius: 2,
-                },
-              }}
+              sx={{ flex: 1 }}
             />
-            <Typography sx={{ fontSize: '0.75rem', color: palette.scale[400], minWidth: 32 }}>
+            <Typography sx={{ fontSize: '0.75rem', color: 'text.secondary', minWidth: 32 }}>
               {progress}%
             </Typography>
           </Box>
@@ -446,9 +669,9 @@ export default function JobsPage() {
       headerName: 'Started',
       width: 180,
       renderCell: (value) => (
-        <Box sx={{ color: palette.scale[400], fontSize: '0.8125rem' }}>
+        <Typography sx={{ fontSize: '0.8125rem', color: 'text.secondary' }}>
           {value ? new Date(value).toLocaleString() : '-'}
-        </Box>
+        </Typography>
       ),
     },
     {
@@ -456,12 +679,12 @@ export default function JobsPage() {
       headerName: 'Completed',
       width: 180,
       renderCell: (value) => (
-        <Box sx={{ color: palette.scale[400], fontSize: '0.8125rem' }}>
+        <Typography sx={{ fontSize: '0.8125rem', color: 'text.secondary' }}>
           {value ? new Date(value).toLocaleString() : '-'}
-        </Box>
+        </Typography>
       ),
     },
-  ], [])
+  ], [theme])
 
   const filters = useMemo(() => [
     {
@@ -511,7 +734,7 @@ export default function JobsPage() {
   , [jobs])
 
   return (
-    <Box sx={{ p: 3, maxWidth: 1400, mx: 'auto', width: '100%' }}>
+    <PageContainer>
       <DataTable
         title="Report Progress"
         subtitle={activeJobsCount > 0 ? `${activeJobsCount} report${activeJobsCount > 1 ? 's' : ''} generating` : 'All reports complete'}
@@ -536,20 +759,13 @@ export default function JobsPage() {
         onRefresh={handleRefresh}
         rowActions={(row) => (
           <Tooltip title="More actions">
-            <IconButton
+            <MoreActionsButton
               size="small"
               onClick={(e) => handleOpenMenu(e, row)}
               aria-label="More actions"
-              sx={{
-                color: palette.scale[500],
-                '&:hover': {
-                  color: palette.scale[100],
-                  bgcolor: alpha(palette.scale[100], 0.08),
-                },
-              }}
             >
               <MoreVertIcon sx={{ fontSize: 18 }} />
-            </IconButton>
+            </MoreActionsButton>
           </Tooltip>
         )}
         emptyState={{
@@ -562,45 +778,36 @@ export default function JobsPage() {
       />
 
       {/* Row Actions Menu */}
-      <Menu
+      <StyledMenu
         anchorEl={menuAnchor}
         open={Boolean(menuAnchor)}
         onClose={handleCloseMenu}
-        slotProps={{
-          paper: {
-            sx: {
-              bgcolor: palette.scale[900],
-              border: `1px solid ${alpha(palette.scale[100], 0.1)}`,
-              minWidth: 160,
-            },
-          },
-        }}
       >
-        <MenuItem onClick={handleViewDetails} sx={{ color: palette.scale[200] }}>
-          <ListItemIcon><VisibilityIcon sx={{ fontSize: 16, color: palette.scale[500] }} /></ListItemIcon>
+        <StyledMenuItem onClick={handleViewDetails}>
+          <ListItemIcon><VisibilityIcon sx={{ fontSize: 16 }} /></ListItemIcon>
           <ListItemText primaryTypographyProps={{ fontSize: '0.8125rem' }}>View Details</ListItemText>
-        </MenuItem>
+        </StyledMenuItem>
         {menuJob?.status === JobStatus.COMPLETED && menuJob?.artifacts?.html_url && (
-          <MenuItem onClick={handleDownload} sx={{ color: palette.scale[200] }}>
-            <ListItemIcon><DownloadIcon sx={{ fontSize: 16, color: palette.scale[500] }} /></ListItemIcon>
+          <StyledMenuItem onClick={handleDownload}>
+            <ListItemIcon><DownloadIcon sx={{ fontSize: 16 }} /></ListItemIcon>
             <ListItemText primaryTypographyProps={{ fontSize: '0.8125rem' }}>Download</ListItemText>
-          </MenuItem>
+          </StyledMenuItem>
         )}
         {canRetryJob(menuJob?.status) && (
-          <MenuItem onClick={handleRetry} disabled={retrying} sx={{ color: palette.scale[200] }}>
-            <ListItemIcon><ReplayIcon sx={{ fontSize: 16, color: palette.scale[500] }} /></ListItemIcon>
+          <StyledMenuItem onClick={handleRetry} disabled={retrying}>
+            <ListItemIcon><ReplayIcon sx={{ fontSize: 16 }} /></ListItemIcon>
             <ListItemText primaryTypographyProps={{ fontSize: '0.8125rem' }}>
               {retrying ? 'Retrying...' : 'Retry'}
             </ListItemText>
-          </MenuItem>
+          </StyledMenuItem>
         )}
         {canCancelJob(menuJob?.status) && (
-          <MenuItem onClick={handleCancelClick} sx={{ color: palette.red[400] }}>
-            <ListItemIcon><CancelIcon sx={{ fontSize: 16, color: palette.red[400] }} /></ListItemIcon>
+          <StyledMenuItem onClick={handleCancelClick} sx={{ color: 'error.main' }}>
+            <ListItemIcon><CancelIcon sx={{ fontSize: 16, color: 'error.main' }} /></ListItemIcon>
             <ListItemText primaryTypographyProps={{ fontSize: '0.8125rem' }}>Cancel</ListItemText>
-          </MenuItem>
+          </StyledMenuItem>
         )}
-      </Menu>
+      </StyledMenu>
 
       {/* Cancel Confirmation */}
       <ConfirmModal
@@ -608,7 +815,7 @@ export default function JobsPage() {
         onClose={() => setCancelConfirmOpen(false)}
         onConfirm={handleCancelConfirm}
         title="Cancel Job"
-        message={`Are you sure you want to cancel this job? This action cannot be undone.`}
+        message="Are you sure you want to cancel this job? This action cannot be undone."
         confirmLabel="Cancel Job"
         severity="warning"
       />
@@ -643,100 +850,90 @@ export default function JobsPage() {
       />
 
       {/* Job Details Dialog */}
-      <Dialog
+      <StyledDialog
         open={detailsDialogOpen}
         onClose={() => setDetailsDialogOpen(false)}
         maxWidth="sm"
         fullWidth
-        PaperProps={{
-          sx: {
-            bgcolor: palette.scale[900],
-            border: `1px solid ${alpha(palette.scale[100], 0.1)}`,
-          },
-        }}
       >
-        <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: palette.scale[100] }}>
+        <DialogHeader>
           Job Details
           <Tooltip title="Close">
-            <IconButton size="small" onClick={() => setDetailsDialogOpen(false)} aria-label="Close dialog" sx={{ color: palette.scale[500] }}>
+            <CloseButton size="small" onClick={() => setDetailsDialogOpen(false)} aria-label="Close dialog">
               <CloseIcon sx={{ fontSize: 18 }} />
-            </IconButton>
+            </CloseButton>
           </Tooltip>
-        </DialogTitle>
-        <DialogContent dividers sx={{ borderColor: alpha(palette.scale[100], 0.1) }}>
+        </DialogHeader>
+        <StyledDialogContent>
           {detailsJob && (
-            <Stack spacing={2}>
+            <Stack spacing={2} sx={{ pt: 2 }}>
               <Box>
-                <Typography variant="caption" sx={{ color: palette.scale[500] }}>Job ID</Typography>
-                <Typography sx={{ fontFamily: 'var(--font-mono)', fontSize: '0.8125rem', color: palette.scale[200] }}>
+                <DetailLabel>Job ID</DetailLabel>
+                <MonoText sx={{ fontSize: '0.8125rem' }}>
                   {detailsJob.id}
-                </Typography>
+                </MonoText>
               </Box>
-              <Divider sx={{ borderColor: alpha(palette.scale[100], 0.08) }} />
+              <StyledDivider />
               <Box>
-                <Typography variant="caption" sx={{ color: palette.scale[500] }}>Status</Typography>
+                <DetailLabel>Status</DetailLabel>
                 <Box sx={{ mt: 0.5 }}>
                   {(() => {
-                    const config = STATUS_CONFIG[detailsJob.status] || STATUS_CONFIG.pending
+                    const config = getStatusConfig(theme, detailsJob.status)
                     const Icon = config.icon
                     return (
-                      <Chip
-                        icon={<Icon sx={{ fontSize: 14, color: config.color }} />}
+                      <StatusChip
+                        icon={<Icon sx={{ fontSize: 14 }} />}
                         label={config.label}
                         size="small"
-                        sx={{
-                          bgcolor: config.bgColor,
-                          color: config.color,
-                          fontSize: '0.6875rem',
-                          fontWeight: 600,
-                        }}
+                        statusColor={config.color}
+                        statusBg={config.bgColor}
                       />
                     )
                   })()}
                 </Box>
               </Box>
-              <Divider sx={{ borderColor: alpha(palette.scale[100], 0.08) }} />
+              <StyledDivider />
               <Box>
-                <Typography variant="caption" sx={{ color: palette.scale[500] }}>Template</Typography>
-                <Typography sx={{ fontSize: '0.8125rem', color: palette.scale[200] }}>
+                <DetailLabel>Template</DetailLabel>
+                <DetailValue>
                   {detailsJob.templateName || detailsJob.templateId || detailsJob.template_id || '-'}
-                </Typography>
+                </DetailValue>
               </Box>
               {(detailsJob.connectionId || detailsJob.connection_id) && (
                 <>
-                  <Divider sx={{ borderColor: alpha(palette.scale[100], 0.08) }} />
+                  <StyledDivider />
                   <Box>
-                    <Typography variant="caption" sx={{ color: palette.scale[500] }}>Connection ID</Typography>
-                    <Typography sx={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: palette.scale[300] }}>
+                    <DetailLabel>Connection ID</DetailLabel>
+                    <MonoText>
                       {detailsJob.connectionId || detailsJob.connection_id}
-                    </Typography>
+                    </MonoText>
                   </Box>
                 </>
               )}
-              <Divider sx={{ borderColor: alpha(palette.scale[100], 0.08) }} />
+              <StyledDivider />
               <Box>
-                <Typography variant="caption" sx={{ color: palette.scale[500] }}>Created</Typography>
-                <Typography sx={{ fontSize: '0.8125rem', color: palette.scale[200] }}>
+                <DetailLabel>Created</DetailLabel>
+                <DetailValue>
                   {detailsJob.createdAt ? new Date(detailsJob.createdAt).toLocaleString() : '-'}
-                </Typography>
+                </DetailValue>
               </Box>
               {(detailsJob.finishedAt || detailsJob.completed_at) && (
                 <>
-                  <Divider sx={{ borderColor: alpha(palette.scale[100], 0.08) }} />
+                  <StyledDivider />
                   <Box>
-                    <Typography variant="caption" sx={{ color: palette.scale[500] }}>Completed</Typography>
-                    <Typography sx={{ fontSize: '0.8125rem', color: palette.scale[200] }}>
+                    <DetailLabel>Completed</DetailLabel>
+                    <DetailValue>
                       {new Date(detailsJob.finishedAt || detailsJob.completed_at).toLocaleString()}
-                    </Typography>
+                    </DetailValue>
                   </Box>
                 </>
               )}
               {detailsJob.error && (
                 <>
-                  <Divider sx={{ borderColor: alpha(palette.scale[100], 0.08) }} />
-                  <Alert severity="error" sx={{ bgcolor: alpha(palette.red[400], 0.1), color: palette.red[300] }}>
+                  <StyledDivider />
+                  <ErrorAlert severity="error">
                     {detailsJob.error}
-                  </Alert>
+                  </ErrorAlert>
                 </>
               )}
               {(() => {
@@ -748,46 +945,32 @@ export default function JobsPage() {
                 const bodyText = summaryText || JSON.stringify(resultPayload, null, 2)
                 return (
                   <>
-                    <Divider sx={{ borderColor: alpha(palette.scale[100], 0.08) }} />
+                    <StyledDivider />
                     <Box>
-                      <Typography variant="caption" sx={{ color: palette.scale[500] }}>Result</Typography>
-                      <Box
-                        component="pre"
-                        sx={{
-                          mt: 1,
-                          p: 1.5,
-                          bgcolor: alpha(palette.scale[100], 0.06),
-                          borderRadius: 1,
-                          fontSize: '0.75rem',
-                          whiteSpace: 'pre-wrap',
-                          color: palette.scale[200],
-                          maxHeight: 260,
-                          overflow: 'auto',
-                        }}
-                      >
+                      <DetailLabel>Result</DetailLabel>
+                      <ResultBox component="pre">
                         {bodyText}
-                      </Box>
+                      </ResultBox>
                     </Box>
                   </>
                 )
               })()}
             </Stack>
           )}
-        </DialogContent>
-        <DialogActions sx={{ borderTop: `1px solid ${alpha(palette.scale[100], 0.08)}`, px: 2, py: 1.5 }}>
+        </StyledDialogContent>
+        <StyledDialogActions>
           {detailsJob?.status === JobStatus.COMPLETED && detailsJob?.artifacts?.html_url && (
-            <Button
+            <ActionButton
               variant="outlined"
               size="small"
               startIcon={<DownloadIcon sx={{ fontSize: 16 }} />}
-              onClick={() => window.open(detailsJob.artifacts.html_url, '_blank')}
-              sx={{ textTransform: 'none' }}
+              onClick={() => window.open(api.withBase(detailsJob.artifacts.html_url), '_blank')}
             >
               Download
-            </Button>
+            </ActionButton>
           )}
           {canRetryJob(detailsJob?.status) && (
-            <Button
+            <ActionButton
               variant="outlined"
               size="small"
               startIcon={<ReplayIcon sx={{ fontSize: 16 }} />}
@@ -805,16 +988,15 @@ export default function JobsPage() {
                   setRetrying(false)
                 }
               }}
-              sx={{ textTransform: 'none' }}
             >
               {retrying ? 'Retrying...' : 'Retry'}
-            </Button>
+            </ActionButton>
           )}
-          <Button onClick={() => setDetailsDialogOpen(false)} sx={{ textTransform: 'none' }}>
+          <ActionButton onClick={() => setDetailsDialogOpen(false)}>
             Close
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Box>
+          </ActionButton>
+        </StyledDialogActions>
+      </StyledDialog>
+    </PageContainer>
   )
 }

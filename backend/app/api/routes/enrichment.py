@@ -53,12 +53,14 @@ AVAILABLE_SOURCES = [
 @router.get("/sources")
 async def list_available_sources(
     request: Request,
+    svc: EnrichmentService = Depends(get_service),
 ):
     """List available enrichment source types."""
     correlation_id = getattr(request.state, "correlation_id", None)
+    custom_sources = [source.dict() for source in svc.list_sources()]
     return {
         "status": "ok",
-        "sources": AVAILABLE_SOURCES,
+        "sources": [*AVAILABLE_SOURCES, *custom_sources],
         "correlation_id": correlation_id,
     }
 

@@ -24,7 +24,11 @@
       "Bash(dir /b *.toml *.cfg setup.py)",
       "Bash(dir:*)",
       "Bash(ls:*)",
-      "Bash(xargs basename:*)"
+      "Bash(xargs basename:*)",
+      "Bash(findstr:*)",
+      "Bash(powershell -Command:*)",
+      "Bash(npm run lint:*)",
+      "Bash(git -C /c/Users/Alfred/NeuraReport log --oneline -20)"
     ],
     "defaultMode": "bypassPermissions"
   }

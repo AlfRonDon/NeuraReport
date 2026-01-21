@@ -27,6 +27,8 @@ class EnrichmentCache:
 
     def __init__(self, state_store):
         self._store = state_store
+        self._hits = 0
+        self._misses = 0
 
     def get(
         self,
@@ -52,6 +54,7 @@ class EnrichmentCache:
             entry = cache.get(cache_key)
 
             if not entry:
+                self._misses += 1
                 return None
 
             # Check expiration
@@ -63,12 +66,15 @@ class EnrichmentCache:
 
                 if age_hours > max_age_hours:
                     logger.debug(f"Cache expired for key {cache_key}")
+                    self._misses += 1
                     return None
 
+            self._hits += 1
             return entry.get("data")
 
         except Exception as exc:
             logger.warning(f"Cache read error: {exc}")
+            self._misses += 1
             return None
 
     def set(
@@ -156,10 +162,17 @@ class EnrichmentCache:
             now = datetime.now(timezone.utc)
             expired_count = 0
             sources = {}
+            size_bytes = 0
 
             for entry in cache.values():
                 source_id = entry.get("source_id", "unknown")
                 sources[source_id] = sources.get(source_id, 0) + 1
+
+                # Estimate size of entry
+                try:
+                    size_bytes += len(json.dumps(entry, default=str))
+                except Exception:
+                    size_bytes += 100  # Estimate if serialization fails
 
                 cached_at = entry.get("cached_at")
                 ttl_hours = entry.get("ttl_hours", 24)
@@ -169,12 +182,20 @@ class EnrichmentCache:
                     if age_hours > ttl_hours:
                         expired_count += 1
 
+            # Calculate hit rate
+            total_requests = self._hits + self._misses
+            hit_rate = self._hits / total_requests if total_requests > 0 else 0.0
+
             return {
                 "total_entries": len(cache),
                 "expired_entries": expired_count,
                 "entries_by_source": sources,
+                "hits": self._hits,
+                "misses": self._misses,
+                "hit_rate": hit_rate,
+                "size_bytes": size_bytes,
             }
 
         except Exception as exc:
             logger.warning(f"Cache stats error: {exc}")
-            return {"error": str(exc)}
+            return {"error": str(exc), "hits": 0, "misses": 0, "hit_rate": 0.0, "size_bytes": 0}

@@ -96,7 +96,27 @@ Return ONLY the JSON object, no other text."""
             return None
 
         except Exception as exc:
-            logger.warning(f"Company lookup failed for '{company_name}': {exc}")
+            # Check for critical errors that should be re-raised
+            exc_str = str(exc).lower()
+            is_critical = any(indicator in exc_str for indicator in [
+                "authentication", "api_key", "invalid_api_key", "unauthorized",
+                "quota", "rate_limit", "insufficient_quota",
+            ])
+
+            if is_critical:
+                logger.error(
+                    f"Company lookup critical error for '{company_name}': {exc}",
+                    exc_info=True,
+                    extra={"event": "company_enrichment_critical_error", "company_name": company_name},
+                )
+                raise  # Re-raise critical errors (auth, quota, rate limit)
+
+            # Non-critical errors: log with details but return None
+            logger.warning(
+                f"Company lookup failed for '{company_name}': {exc}",
+                exc_info=True,  # Include stack trace for debugging
+                extra={"event": "company_enrichment_failed", "company_name": company_name, "error_type": type(exc).__name__},
+            )
             return None
 
     def get_supported_fields(self) -> List[str]:

@@ -12,7 +12,7 @@ from .base import BaseLLMClient, LLMMessage, LLMResponse
 
 logger = logging.getLogger("neura.adapters.llm.openai")
 
-_FORCE_GPT5 = os.getenv("NEURA_FORCE_GPT5", "true").lower() in {"1", "true", "yes"}
+_FORCE_GPT5 = os.getenv("NEURA_FORCE_GPT5", "false").lower() in {"1", "true", "yes"}
 
 
 class OpenAIClient(BaseLLMClient):
@@ -44,6 +44,17 @@ class OpenAIClient(BaseLLMClient):
             except ImportError:
                 raise ImportError(
                     "openai package is required. Install with: pip install openai"
+                )
+
+            # Validate API key format
+            if not self._api_key:
+                raise ValueError(
+                    "OpenAI API key is required. Set OPENAI_API_KEY environment variable."
+                )
+            if not self._api_key.startswith(("sk-", "sess-")):
+                logger.warning(
+                    "OpenAI API key may be invalid (expected 'sk-' or 'sess-' prefix)",
+                    extra={"event": "api_key_format_warning"},
                 )
 
             kwargs: Dict[str, Any] = {

@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, Request, HTTPException
 
 from backend.app.core.security import require_api_key
 from backend.app.domain.docqa.service import DocumentQAService
-from backend.app.domain.docqa.schemas import AskRequest
+from backend.app.domain.docqa.schemas import AskRequest, FeedbackRequest, RegenerateRequest
 
 router = APIRouter(dependencies=[Depends(require_api_key)])
 
@@ -146,6 +146,73 @@ async def ask_question(
 
     if not response:
         raise HTTPException(status_code=500, detail="Failed to process question")
+
+    return {
+        "status": "ok",
+        "response": response.model_dump(mode="json"),
+        "correlation_id": correlation_id,
+    }
+
+
+@router.post("/sessions/{session_id}/messages/{message_id}/feedback")
+async def submit_feedback(
+    session_id: str,
+    message_id: str,
+    payload: FeedbackRequest,
+    request: Request,
+    svc: DocumentQAService = Depends(get_service),
+):
+    """Submit feedback for a chat message."""
+    correlation_id = getattr(request.state, "correlation_id", None)
+
+    session = svc.get_session(session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    message = svc.submit_feedback(
+        session_id,
+        message_id,
+        payload,
+        correlation_id,
+    )
+
+    if not message:
+        raise HTTPException(status_code=404, detail="Message not found")
+
+    return {
+        "status": "ok",
+        "message": message.model_dump(mode="json"),
+        "correlation_id": correlation_id,
+    }
+
+
+@router.post("/sessions/{session_id}/messages/{message_id}/regenerate")
+async def regenerate_response(
+    session_id: str,
+    message_id: str,
+    payload: RegenerateRequest,
+    request: Request,
+    svc: DocumentQAService = Depends(get_service),
+):
+    """Regenerate a response for a message."""
+    correlation_id = getattr(request.state, "correlation_id", None)
+
+    session = svc.get_session(session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    try:
+        response = svc.regenerate_response(
+            session_id,
+            message_id,
+            payload,
+            correlation_id,
+        )
+    except RuntimeError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    if not response:
+        raise HTTPException(status_code=404, detail="Message not found")
 
     return {
         "status": "ok",

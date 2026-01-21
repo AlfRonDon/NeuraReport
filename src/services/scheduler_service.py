@@ -48,6 +48,11 @@ def list_schedules():
     return _state_store().list_schedules()
 
 
+def get_schedule(schedule_id: str) -> dict[str, Any] | None:
+    """Get a specific schedule by ID."""
+    return _state_store().get_schedule(schedule_id)
+
+
 def cancel_job(job_id: str, *, force: bool = False) -> dict[str, Any]:
     job = _state_store().cancel_job(job_id)
     if not job:

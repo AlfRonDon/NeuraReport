@@ -19,7 +19,11 @@ from .schemas import (
     Citation,
     DocQASession,
     DocumentReference,
+    FeedbackRequest,
+    FeedbackType,
+    MessageFeedback,
     MessageRole,
+    RegenerateRequest,
 )
 
 logger = logging.getLogger("neura.domain.docqa")
@@ -305,6 +309,208 @@ Return ONLY the JSON object."""
             )
 
         return None
+
+    def submit_feedback(
+        self,
+        session_id: str,
+        message_id: str,
+        request: FeedbackRequest,
+        correlation_id: Optional[str] = None,
+    ) -> Optional[ChatMessage]:
+        """Submit feedback for a message."""
+        logger.info(
+            "docqa_feedback_recorded",
+            extra={
+                "correlation_id": correlation_id,
+                "session_id": session_id,
+                "message_id": message_id,
+                "feedback_type": request.feedback_type,
+            },
+        )
+
+        session = self.get_session(session_id)
+        if not session:
+            return None
+
+        target = next((msg for msg in session.messages if msg.id == message_id), None)
+        if not target:
+            return None
+
+        feedback = MessageFeedback(
+            feedback_type=request.feedback_type,
+            timestamp=datetime.utcnow(),
+            comment=request.comment,
+        )
+        target.feedback = feedback
+        meta = dict(target.metadata or {})
+        meta["feedback"] = feedback.model_dump(mode="json")
+        target.metadata = meta
+        session.updated_at = datetime.utcnow()
+
+        store = _state_store()
+        state = store._read_state()
+        sessions = state.get("docqa_sessions", {})
+        sessions[session_id] = session.model_dump(mode="json")
+        store._write_state({**state, "docqa_sessions": sessions})
+
+        return target
+
+    def regenerate_response(
+        self,
+        session_id: str,
+        message_id: str,
+        request: RegenerateRequest,
+        correlation_id: Optional[str] = None,
+    ) -> Optional[AskResponse]:
+        """Regenerate the assistant response for a given message."""
+        start_time = time.time()
+
+        session = self.get_session(session_id)
+        if not session:
+            return None
+
+        message_index = None
+        for idx, msg in enumerate(session.messages):
+            if msg.id == message_id:
+                message_index = idx
+                break
+        if message_index is None:
+            return None
+
+        question_message = None
+        question_index = None
+        for idx in range(message_index - 1, -1, -1):
+            candidate = session.messages[idx]
+            if candidate.role == MessageRole.USER:
+                question_message = candidate
+                question_index = idx
+                break
+        if not question_message:
+            return None
+
+        question = question_message.content
+
+        if not session.documents:
+            return None
+
+        doc_context = []
+        for doc in session.documents:
+            doc_context.append(f"[Document: {doc.name} (ID: {doc.id})]\n{doc.full_content[:15000]}")
+
+        history_window = session.context_window * 2
+        history_start = max(0, (question_index or 0) - history_window)
+        history_messages = session.messages[history_start:question_index]
+        history_text = ""
+        if history_messages:
+            history_parts = []
+            for msg in history_messages:
+                role = "User" if msg.role == MessageRole.USER else "Assistant"
+                history_parts.append(f"{role}: {msg.content}")
+            history_text = "\nPREVIOUS CONVERSATION:\n" + "\n".join(history_parts)
+
+        citation_instruction = ""
+        if request.include_citations:
+            citation_instruction = """
+For each statement, provide citations in this format:
+Include a "citations" array in your response with:
+- document_id: The document ID
+- document_name: The document name
+- quote: The relevant quote from the document
+- relevance_score: How relevant (0-1)
+"""
+
+        prompt = f"""You are a helpful document Q&A assistant. Answer questions based ONLY on the provided documents.
+
+DOCUMENTS:
+{chr(10).join(doc_context)}
+{history_text}
+
+CURRENT QUESTION: {question}
+
+INSTRUCTIONS:
+1. Answer based ONLY on information in the documents
+2. If the information is not in the documents, say so clearly
+3. Be concise but thorough (max {request.max_response_length} characters)
+4. Reference specific documents when appropriate
+5. Provide a DIFFERENT perspective or additional details compared to previous answers
+{citation_instruction}
+
+Return a JSON object:
+{{
+  "answer": "Your comprehensive answer here",
+  "citations": [
+    {{
+      "document_id": "doc_id",
+      "document_name": "doc_name",
+      "quote": "relevant quote",
+      "relevance_score": 0.9
+    }}
+  ],
+  "confidence": 0.9,
+  "follow_up_questions": ["Suggested follow-up 1", "Suggested follow-up 2"]
+}}
+
+Return ONLY the JSON object."""
+
+        try:
+            client = self._get_llm_client()
+            response = client.complete(
+                messages=[{"role": "user", "content": prompt}],
+                description="docqa_regenerate",
+                temperature=0.5,
+            )
+
+            content = response["choices"][0]["message"]["content"]
+            json_match = re.search(r"\{[\s\S]*\}", content)
+
+            if not json_match:
+                raise ValueError("No JSON payload returned from LLM")
+
+            response_data = json.loads(json_match.group())
+
+            citations = []
+            for cit in response_data.get("citations", []):
+                citations.append(Citation(
+                    document_id=cit.get("document_id", ""),
+                    document_name=cit.get("document_name", ""),
+                    quote=cit.get("quote", ""),
+                    relevance_score=cit.get("relevance_score", 1.0),
+                ))
+
+            assistant_message = ChatMessage(
+                id=message_id,
+                role=MessageRole.ASSISTANT,
+                content=response_data.get("answer", "I couldn't generate an answer."),
+                citations=citations,
+                timestamp=datetime.utcnow(),
+                metadata={
+                    "confidence": response_data.get("confidence", 0.8),
+                    "follow_up_questions": response_data.get("follow_up_questions", []),
+                    "regenerated": True,
+                },
+                feedback=None,
+            )
+
+            session.messages[message_index] = assistant_message
+            session.updated_at = datetime.utcnow()
+
+            store = _state_store()
+            state = store._read_state()
+            sessions = state.get("docqa_sessions", {})
+            sessions[session_id] = session.model_dump(mode="json")
+            store._write_state({**state, "docqa_sessions": sessions})
+
+            processing_time = int((time.time() - start_time) * 1000)
+
+            return AskResponse(
+                message=assistant_message,
+                processing_time_ms=processing_time,
+                tokens_used=response.get("usage", {}).get("total_tokens"),
+            )
+
+        except Exception as exc:
+            logger.error(f"DocQA regenerate failed: {exc}")
+            raise RuntimeError("Failed to regenerate response") from exc
 
     def get_chat_history(
         self,

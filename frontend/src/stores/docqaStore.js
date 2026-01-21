@@ -52,9 +52,18 @@ const useDocQAStore = create((set, get) => ({
     set({ loading: true, error: null });
     try {
       const response = await docqaApi.getSession(sessionId);
+      let messages = response.session?.messages || [];
+      try {
+        const history = await docqaApi.getChatHistory(sessionId, 0);
+        if (Array.isArray(history?.messages)) {
+          messages = history.messages;
+        }
+      } catch {
+        // Fall back to session messages if history lookup fails.
+      }
       set({
         currentSession: response.session,
-        messages: response.session?.messages || [],
+        messages,
         loading: false,
       });
       return response.session;
@@ -164,6 +173,51 @@ const useDocQAStore = create((set, get) => ({
     } catch (err) {
       set({ error: err.message, loading: false });
       return false;
+    }
+  },
+
+  // Submit feedback for a message
+  submitFeedback: async (sessionId, messageId, feedbackType, comment = null) => {
+    try {
+      const response = await docqaApi.submitFeedback(sessionId, messageId, {
+        feedbackType,
+        comment,
+      });
+
+      // Update the message in state with feedback
+      set((state) => ({
+        messages: state.messages.map((msg) =>
+          msg.id === messageId
+            ? { ...msg, feedback: response.message?.feedback }
+            : msg
+        ),
+      }));
+
+      return response.message;
+    } catch (err) {
+      set({ error: err.message });
+      return null;
+    }
+  },
+
+  // Regenerate a response
+  regenerateResponse: async (sessionId, messageId, options = {}) => {
+    set({ asking: true, error: null });
+    try {
+      const response = await docqaApi.regenerateResponse(sessionId, messageId, options);
+
+      // Update the message in state with regenerated content
+      set((state) => ({
+        messages: state.messages.map((msg) =>
+          msg.id === messageId ? response.response?.message : msg
+        ),
+        asking: false,
+      }));
+
+      return response.response;
+    } catch (err) {
+      set({ error: err.message, asking: false });
+      return null;
     }
   },
 

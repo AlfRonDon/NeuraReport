@@ -1,6 +1,9 @@
-import { Stack, Typography, Box, alpha } from '@mui/material'
+/**
+ * Premium Empty State
+ * Placeholder for empty lists with theme-based styling
+ */
+import { Stack, Typography, Box, useTheme, alpha } from '@mui/material'
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
-import { palette } from '../../theme'
 
 export default function EmptyState({
   icon: Icon = InfoOutlinedIcon,
@@ -13,13 +16,14 @@ export default function EmptyState({
   sx = [],
   ...props
 }) {
+  const theme = useTheme()
   const IconComponent = Icon
   const iconSize = size === 'large' ? 56 : size === 'small' ? 36 : 48
   const spacing = size === 'large' ? 2.5 : size === 'small' ? 1.5 : 2
   const px = size === 'large' ? 4 : size === 'small' ? 2 : 3
   const py = size === 'large' ? 5 : size === 'small' ? 3 : 4
   const sxArray = Array.isArray(sx) ? sx : [sx]
-  const resolvedIconColor = iconColor || palette.scale[500]
+  const resolvedIconColor = iconColor || theme.palette.text.secondary
 
   return (
     <Stack
@@ -30,9 +34,9 @@ export default function EmptyState({
         {
           px,
           py,
-          borderRadius: '12px',
-          bgcolor: palette.scale[1000],
-          border: `1px dashed ${alpha(palette.scale[100], 0.15)}`,
+          borderRadius: '16px',
+          bgcolor: alpha(theme.palette.background.paper, 0.5),
+          border: `1px dashed ${alpha(theme.palette.divider, 0.2)}`,
         },
         ...sxArray,
       ]}
@@ -47,8 +51,8 @@ export default function EmptyState({
           width: iconSize,
           height: iconSize,
           borderRadius: '12px',
-          bgcolor: alpha(palette.scale[100], 0.05),
-          border: `1px solid ${alpha(palette.scale[100], 0.08)}`,
+          bgcolor: alpha(theme.palette.primary.main, 0.08),
+          border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
           color: resolvedIconColor,
         }}
       >
@@ -59,7 +63,7 @@ export default function EmptyState({
           sx={{
             fontSize: size === 'large' ? '1.125rem' : size === 'small' ? '0.875rem' : '1rem',
             fontWeight: 600,
-            color: palette.scale[100],
+            color: theme.palette.text.primary,
           }}
         >
           {title}
@@ -69,7 +73,7 @@ export default function EmptyState({
         <Typography
           sx={{
             fontSize: size === 'large' ? '0.875rem' : '0.8125rem',
-            color: palette.scale[500],
+            color: theme.palette.text.secondary,
             maxWidth: 380,
             lineHeight: 1.5,
           }}

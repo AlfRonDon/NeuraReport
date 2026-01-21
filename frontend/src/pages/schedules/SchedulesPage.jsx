@@ -45,6 +45,9 @@ import {
   CalendarMonth as CalendarIcon,
   Email as EmailIcon,
   AccessTime as TimeIcon,
+  CheckCircle as CheckCircleIcon,
+  Warning as WarningIcon,
+  Info as InfoIcon,
 } from '@mui/icons-material'
 import { DataTable } from '../../ui/DataTable'
 import { ConfirmModal } from '../../ui/Modal'
@@ -219,6 +222,29 @@ const StyledMenuItem = styled(MenuItem)(({ theme }) => ({
     backgroundColor: alpha(theme.palette.primary.main, 0.08),
   },
 }))
+
+const SchedulerStatusBanner = styled(Box, {
+  shouldForwardProp: (prop) => prop !== 'status',
+})(({ theme, status }) => {
+  const colors = {
+    ok: { bg: theme.palette.success.main, text: '#fff' },
+    warning: { bg: theme.palette.warning.main, text: theme.palette.warning.contrastText },
+    disabled: { bg: theme.palette.grey[500], text: '#fff' },
+    error: { bg: theme.palette.error.main, text: '#fff' },
+  }
+  const colorScheme = colors[status] || colors.warning
+  return {
+    display: 'flex',
+    alignItems: 'center',
+    gap: theme.spacing(1.5),
+    padding: theme.spacing(1.5, 2),
+    marginBottom: theme.spacing(2),
+    borderRadius: 12,
+    backgroundColor: alpha(colorScheme.bg, 0.1),
+    border: `1px solid ${alpha(colorScheme.bg, 0.3)}`,
+    color: colorScheme.bg,
+  }
+})
 
 const ActionButton = styled(Button)(({ theme }) => ({
   borderRadius: 10,
@@ -579,6 +605,7 @@ export default function SchedulesPage() {
   const [menuAnchor, setMenuAnchor] = useState(null)
   const [menuSchedule, setMenuSchedule] = useState(null)
   const [togglingId, setTogglingId] = useState(null)
+  const [schedulerStatus, setSchedulerStatus] = useState(null)
   const didLoadSchedulesRef = useRef(false)
   const didLoadTemplatesRef = useRef(false)
 
@@ -594,11 +621,22 @@ export default function SchedulesPage() {
     }
   }, [toast])
 
+  const fetchSchedulerStatus = useCallback(async () => {
+    try {
+      const status = await api.getSchedulerStatus()
+      setSchedulerStatus(status)
+    } catch (err) {
+      // Silently fail - scheduler status is optional
+      console.warn('Failed to fetch scheduler status:', err)
+    }
+  }, [])
+
   useEffect(() => {
     if (didLoadSchedulesRef.current) return
     didLoadSchedulesRef.current = true
     fetchSchedules()
-  }, [fetchSchedules])
+    fetchSchedulerStatus()
+  }, [fetchSchedules, fetchSchedulerStatus])
 
   const fetchTemplates = useCallback(async () => {
     if (templates.length > 0) return
@@ -817,9 +855,50 @@ export default function SchedulesPage() {
 
   const menuScheduleActive = menuSchedule?.active ?? menuSchedule?.enabled ?? true
 
+  const renderSchedulerStatusBanner = () => {
+    if (!schedulerStatus) return null
+
+    const { scheduler, schedules: schedInfo } = schedulerStatus
+    const isRunning = scheduler?.running
+    const isEnabled = scheduler?.enabled
+
+    let statusIcon = <InfoIcon />
+    let statusText = ''
+    let bannerStatus = 'warning'
+
+    if (!isEnabled) {
+      statusIcon = <WarningIcon />
+      statusText = 'Scheduler is disabled. Schedules will not run automatically.'
+      bannerStatus = 'disabled'
+    } else if (!isRunning) {
+      statusIcon = <WarningIcon />
+      statusText = 'Scheduler is not running. Restart the server to enable automatic scheduling.'
+      bannerStatus = 'warning'
+    } else {
+      statusIcon = <CheckCircleIcon />
+      bannerStatus = 'ok'
+      if (schedInfo?.next_run) {
+        const nextRunTime = new Date(schedInfo.next_run.next_run_at).toLocaleString()
+        statusText = `Scheduler running. Next: "${schedInfo.next_run.schedule_name}" at ${nextRunTime}`
+      } else {
+        statusText = `Scheduler running (polling every ${scheduler?.poll_interval_seconds || 60}s). ${schedInfo?.active || 0} active schedule(s).`
+      }
+    }
+
+    return (
+      <SchedulerStatusBanner status={bannerStatus}>
+        {statusIcon}
+        <Typography variant="body2" fontWeight={500}>
+          {statusText}
+        </Typography>
+      </SchedulerStatusBanner>
+    )
+  }
+
   return (
     <PageContainer>
       <Container maxWidth="xl">
+        {renderSchedulerStatusBanner()}
         <DataTable
           title="Scheduled Reports"
           subtitle="Automate report generation on a schedule"

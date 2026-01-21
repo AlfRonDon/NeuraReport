@@ -1,3 +1,7 @@
+/**
+ * Premium Notification Center
+ * Real-time notifications with theme-based styling
+ */
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
@@ -15,7 +19,9 @@ import {
   Button,
   CircularProgress,
   Tooltip,
+  useTheme,
   alpha,
+  keyframes,
 } from '@mui/material'
 import NotificationsIcon from '@mui/icons-material/Notifications'
 import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive'
@@ -26,7 +32,6 @@ import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline'
 import DoneAllIcon from '@mui/icons-material/DoneAll'
 import DeleteSweepIcon from '@mui/icons-material/DeleteSweep'
 import CloseIcon from '@mui/icons-material/Close'
-import { palette } from '../../theme'
 import {
   getNotifications,
   markNotificationRead,
@@ -35,23 +40,45 @@ import {
   clearAllNotifications,
 } from '../../api/client'
 
-const TYPE_CONFIG = {
-  info: {
-    icon: InfoOutlinedIcon,
-    color: palette.blue[400],
-  },
-  success: {
-    icon: CheckCircleOutlinedIcon,
-    color: palette.green[400],
-  },
-  warning: {
-    icon: WarningAmberOutlinedIcon,
-    color: palette.yellow[400],
-  },
-  error: {
-    icon: ErrorOutlineIcon,
-    color: palette.red[400],
-  },
+// =============================================================================
+// ANIMATIONS
+// =============================================================================
+
+const fadeInUp = keyframes`
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+`
+
+// =============================================================================
+// HELPERS
+// =============================================================================
+
+const getTypeConfig = (theme, type) => {
+  const configs = {
+    info: {
+      icon: InfoOutlinedIcon,
+      color: theme.palette.info.main,
+    },
+    success: {
+      icon: CheckCircleOutlinedIcon,
+      color: theme.palette.success.main,
+    },
+    warning: {
+      icon: WarningAmberOutlinedIcon,
+      color: theme.palette.warning.main,
+    },
+    error: {
+      icon: ErrorOutlineIcon,
+      color: theme.palette.error.main,
+    },
+  }
+  return configs[type] || configs.info
 }
 
 const ENTITY_ROUTES = {
@@ -75,7 +102,12 @@ function formatTimeAgo(dateString) {
   return date.toLocaleDateString()
 }
 
+// =============================================================================
+// MAIN COMPONENT
+// =============================================================================
+
 export default function NotificationCenter() {
+  const theme = useTheme()
   const navigate = useNavigate()
   const [anchorEl, setAnchorEl] = useState(null)
   const [notifications, setNotifications] = useState([])
@@ -107,7 +139,6 @@ export default function NotificationCenter() {
 
     const startPolling = () => {
       if (interval) return
-      // Poll for new notifications every 30 seconds when tab is visible
       interval = setInterval(() => {
         if (!polling && isVisible) {
           setPolling(true)
@@ -126,11 +157,9 @@ export default function NotificationCenter() {
     const handleVisibilityChange = () => {
       isVisible = !document.hidden
       if (isVisible) {
-        // Fetch immediately when tab becomes visible, then resume polling
         fetchNotifications(false)
         startPolling()
       } else {
-        // Stop polling when tab is hidden to save resources
         stopPolling()
       }
     }
@@ -163,7 +192,6 @@ export default function NotificationCenter() {
         : '/activity'
     const targetRoute = notification.link || fallbackRoute
 
-    // Mark as read if unread
     if (!notification.read) {
       try {
         await markNotificationRead(notification.id)
@@ -176,7 +204,6 @@ export default function NotificationCenter() {
       }
     }
 
-    // Navigate if link provided
     if (targetRoute) {
       navigate(targetRoute)
       handleClose()
@@ -225,10 +252,11 @@ export default function NotificationCenter() {
         <IconButton
           onClick={handleClick}
           sx={{
-            color: palette.scale[400],
+            color: theme.palette.text.secondary,
+            transition: 'all 0.2s ease',
             '&:hover': {
-              color: palette.scale[100],
-              bgcolor: alpha(palette.scale[100], 0.08),
+              color: theme.palette.text.primary,
+              bgcolor: alpha(theme.palette.primary.main, 0.08),
             },
           }}
         >
@@ -238,7 +266,7 @@ export default function NotificationCenter() {
             max={99}
             sx={{
               '& .MuiBadge-badge': {
-                bgcolor: palette.red[500],
+                bgcolor: theme.palette.error.main,
                 color: '#fff',
                 fontSize: '0.65rem',
                 fontWeight: 600,
@@ -272,10 +300,13 @@ export default function NotificationCenter() {
           sx: {
             width: 380,
             maxHeight: 480,
-            bgcolor: palette.scale[900],
-            border: `1px solid ${alpha(palette.scale[100], 0.1)}`,
-            borderRadius: 2,
+            bgcolor: alpha(theme.palette.background.paper, 0.98),
+            backdropFilter: 'blur(20px)',
+            border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+            borderRadius: 3,
             overflow: 'hidden',
+            boxShadow: `0 8px 32px ${alpha(theme.palette.common.black, 0.2)}`,
+            animation: `${fadeInUp} 0.2s ease-out`,
           },
         }}
       >
@@ -287,14 +318,14 @@ export default function NotificationCenter() {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            borderBottom: `1px solid ${alpha(palette.scale[100], 0.08)}`,
+            borderBottom: `1px solid ${alpha(theme.palette.divider, 0.08)}`,
           }}
         >
           <Typography
             sx={{
               fontSize: '0.875rem',
               fontWeight: 600,
-              color: palette.scale[100],
+              color: theme.palette.text.primary,
             }}
           >
             Notifications
@@ -304,7 +335,7 @@ export default function NotificationCenter() {
                 sx={{
                   ml: 1,
                   fontSize: '0.75rem',
-                  color: palette.scale[500],
+                  color: theme.palette.text.secondary,
                 }}
               >
                 {unreadCount} unread
@@ -318,8 +349,8 @@ export default function NotificationCenter() {
                 onClick={handleMarkAllRead}
                 disabled={unreadCount === 0}
                 sx={{
-                  color: palette.scale[500],
-                  '&:hover': { color: palette.scale[100] },
+                  color: theme.palette.text.secondary,
+                  '&:hover': { color: theme.palette.text.primary },
                 }}
               >
                 <DoneAllIcon sx={{ fontSize: 18 }} />
@@ -331,8 +362,8 @@ export default function NotificationCenter() {
                 onClick={handleClearAll}
                 disabled={notifications.length === 0}
                 sx={{
-                  color: palette.scale[500],
-                  '&:hover': { color: palette.red[400] },
+                  color: theme.palette.text.secondary,
+                  '&:hover': { color: theme.palette.error.main },
                 }}
               >
                 <DeleteSweepIcon sx={{ fontSize: 18 }} />
@@ -350,22 +381,22 @@ export default function NotificationCenter() {
           ) : notifications.length === 0 ? (
             <Box sx={{ p: 4, textAlign: 'center' }}>
               <NotificationsIcon
-                sx={{ fontSize: 48, color: palette.scale[700], mb: 1 }}
+                sx={{ fontSize: 48, color: theme.palette.text.disabled, mb: 1 }}
               />
-              <Typography sx={{ color: palette.scale[500], fontSize: '0.875rem' }}>
+              <Typography sx={{ color: theme.palette.text.secondary, fontSize: '0.875rem' }}>
                 No notifications yet
               </Typography>
             </Box>
           ) : (
             <List disablePadding>
               {notifications.map((notification, index) => {
-                const typeConfig = TYPE_CONFIG[notification.type] || TYPE_CONFIG.info
+                const typeConfig = getTypeConfig(theme, notification.type)
                 const Icon = typeConfig.icon
 
                 return (
                   <Box key={notification.id}>
                     {index > 0 && (
-                      <Divider sx={{ borderColor: alpha(palette.scale[100], 0.06) }} />
+                      <Divider sx={{ borderColor: alpha(theme.palette.divider, 0.06) }} />
                     )}
                     <ListItem
                       disablePadding
@@ -374,14 +405,14 @@ export default function NotificationCenter() {
                           size="small"
                           onClick={(e) => handleDeleteNotification(e, notification.id)}
                           sx={{
-                            color: palette.scale[600],
+                            color: theme.palette.text.disabled,
                             opacity: 0,
                             transition: 'opacity 150ms',
                             '.MuiListItem-root:hover &': {
                               opacity: 1,
                             },
                             '&:hover': {
-                              color: palette.red[400],
+                              color: theme.palette.error.main,
                             },
                           }}
                         >
@@ -396,9 +427,9 @@ export default function NotificationCenter() {
                           px: 2,
                           bgcolor: notification.read
                             ? 'transparent'
-                            : alpha(palette.blue[500], 0.05),
+                            : alpha(theme.palette.info.main, 0.05),
                           '&:hover': {
-                            bgcolor: alpha(palette.scale[100], 0.05),
+                            bgcolor: alpha(theme.palette.primary.main, 0.05),
                           },
                         }}
                       >
@@ -423,7 +454,7 @@ export default function NotificationCenter() {
                                 sx={{
                                   fontSize: '0.8125rem',
                                   fontWeight: notification.read ? 400 : 600,
-                                  color: palette.scale[100],
+                                  color: theme.palette.text.primary,
                                   overflow: 'hidden',
                                   textOverflow: 'ellipsis',
                                   whiteSpace: 'nowrap',
@@ -435,7 +466,7 @@ export default function NotificationCenter() {
                               <Typography
                                 sx={{
                                   fontSize: '0.6875rem',
-                                  color: palette.scale[600],
+                                  color: theme.palette.text.disabled,
                                   ml: 1,
                                   flexShrink: 0,
                                 }}
@@ -448,7 +479,7 @@ export default function NotificationCenter() {
                             <Typography
                               sx={{
                                 fontSize: '0.75rem',
-                                color: palette.scale[500],
+                                color: theme.palette.text.secondary,
                                 overflow: 'hidden',
                                 textOverflow: 'ellipsis',
                                 display: '-webkit-box',
@@ -466,7 +497,7 @@ export default function NotificationCenter() {
                               width: 8,
                               height: 8,
                               borderRadius: '50%',
-                              bgcolor: palette.blue[400],
+                              bgcolor: theme.palette.info.main,
                               ml: 1,
                               flexShrink: 0,
                             }}
@@ -487,7 +518,7 @@ export default function NotificationCenter() {
             sx={{
               px: 2,
               py: 1,
-              borderTop: `1px solid ${alpha(palette.scale[100], 0.08)}`,
+              borderTop: `1px solid ${alpha(theme.palette.divider, 0.08)}`,
               textAlign: 'center',
             }}
           >
@@ -499,8 +530,8 @@ export default function NotificationCenter() {
               }}
               sx={{
                 fontSize: '0.75rem',
-                color: palette.scale[400],
-                '&:hover': { color: palette.scale[100] },
+                color: theme.palette.text.secondary,
+                '&:hover': { color: theme.palette.text.primary },
               }}
             >
               View Activity Log

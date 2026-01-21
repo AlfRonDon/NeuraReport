@@ -29,6 +29,13 @@ import ScheduleIcon from '@mui/icons-material/Schedule'
 import DashboardOutlinedIcon from '@mui/icons-material/DashboardOutlined'
 import TimelineIcon from '@mui/icons-material/Timeline'
 import AssessmentOutlinedIcon from '@mui/icons-material/AssessmentOutlined'
+import QuestionAnswerOutlinedIcon from '@mui/icons-material/QuestionAnswerOutlined'
+import AutoFixHighOutlinedIcon from '@mui/icons-material/AutoFixHighOutlined'
+import JoinInnerOutlinedIcon from '@mui/icons-material/JoinInnerOutlined'
+import MergeOutlinedIcon from '@mui/icons-material/MergeOutlined'
+import ChatOutlinedIcon from '@mui/icons-material/ChatOutlined'
+import SummarizeOutlinedIcon from '@mui/icons-material/SummarizeOutlined'
+import BarChartOutlinedIcon from '@mui/icons-material/BarChartOutlined'
 import { useAppStore } from '../../store/useAppStore'
 import { Kbd } from '../ui'
 import { globalSearch } from '../../api/client'
@@ -50,6 +57,13 @@ const ICON_MAP = {
   action: AddIcon,
   search: SearchIcon,
   recent: HistoryIcon,
+  query: QuestionAnswerOutlinedIcon,
+  enrichment: AutoFixHighOutlinedIcon,
+  federation: JoinInnerOutlinedIcon,
+  synthesis: MergeOutlinedIcon,
+  docqa: ChatOutlinedIcon,
+  summary: SummarizeOutlinedIcon,
+  stats: BarChartOutlinedIcon,
 }
 
 const loadRecentCommands = () => {
@@ -197,6 +211,76 @@ const COMMANDS = [
     group: 'Navigation',
   },
   {
+    id: 'nav-query',
+    label: 'Go to Query Builder',
+    description: 'Build queries with natural language',
+    icon: QuestionAnswerOutlinedIcon,
+    iconKey: 'query',
+    action: 'navigate',
+    path: '/query',
+    group: 'Setup',
+  },
+  {
+    id: 'nav-enrichment',
+    label: 'Go to Data Enrichment',
+    description: 'Enrich data with AI-powered sources',
+    icon: AutoFixHighOutlinedIcon,
+    iconKey: 'enrichment',
+    action: 'navigate',
+    path: '/enrichment',
+    group: 'Setup',
+  },
+  {
+    id: 'nav-federation',
+    label: 'Go to Combine Sources',
+    description: 'Federate multiple data sources',
+    icon: JoinInnerOutlinedIcon,
+    iconKey: 'federation',
+    action: 'navigate',
+    path: '/federation',
+    group: 'Setup',
+  },
+  {
+    id: 'nav-synthesis',
+    label: 'Go to Document Synthesis',
+    description: 'Combine and synthesize documents',
+    icon: MergeOutlinedIcon,
+    iconKey: 'synthesis',
+    action: 'navigate',
+    path: '/synthesis',
+    group: 'AI Tools',
+  },
+  {
+    id: 'nav-docqa',
+    label: 'Go to Ask Documents',
+    description: 'Ask questions about your documents',
+    icon: ChatOutlinedIcon,
+    iconKey: 'docqa',
+    action: 'navigate',
+    path: '/docqa',
+    group: 'AI Tools',
+  },
+  {
+    id: 'nav-summary',
+    label: 'Go to Summarize',
+    description: 'Generate AI summaries of content',
+    icon: SummarizeOutlinedIcon,
+    iconKey: 'summary',
+    action: 'navigate',
+    path: '/summary',
+    group: 'AI Tools',
+  },
+  {
+    id: 'nav-stats',
+    label: 'Go to Usage Stats',
+    description: 'View usage statistics',
+    icon: BarChartOutlinedIcon,
+    iconKey: 'stats',
+    action: 'navigate',
+    path: '/stats',
+    group: 'System',
+  },
+  {
     id: 'new-report',
     label: 'New Report',
     description: 'Start a new report generation',
@@ -220,7 +304,7 @@ const SEARCH_TYPE_CONFIG = {
   connection: {
     icon: StorageOutlinedIcon,
     iconKey: 'connections',
-    pathBuilder: (item) => `/connections/${item.id}`,
+    pathBuilder: () => '/connections',
     label: 'Connection',
   },
   job: {

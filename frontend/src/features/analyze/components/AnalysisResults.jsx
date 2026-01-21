@@ -170,6 +170,19 @@ export default function AnalysisResults({ result }) {
     URL.revokeObjectURL(url)
   }
 
+  const handleExportJSON = () => {
+    if (!raw_data || raw_data.length === 0) return
+
+    const jsonContent = JSON.stringify(raw_data, null, 2)
+    const blob = new Blob([jsonContent], { type: 'application/json;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `${document_name || 'analysis'}_data.json`
+    link.click()
+    URL.revokeObjectURL(url)
+  }
+
   const currentChartSpec = chart_suggestions[selectedChart] || null
 
   return (
@@ -182,14 +195,24 @@ export default function AnalysisResults({ result }) {
             <Chip label={`${(processing_time_ms / 1000).toFixed(1)}s`} size="small" variant="outlined" />
           )}
         </Stack>
-        <Button
-          startIcon={<DownloadIcon />}
-          size="small"
-          onClick={handleExportCSV}
-          disabled={!raw_data?.length}
-        >
-          Export CSV
-        </Button>
+        <Stack direction="row" spacing={1}>
+          <Button
+            startIcon={<DownloadIcon />}
+            size="small"
+            onClick={handleExportCSV}
+            disabled={!raw_data?.length}
+          >
+            Export CSV
+          </Button>
+          <Button
+            startIcon={<DownloadIcon />}
+            size="small"
+            onClick={handleExportJSON}
+            disabled={!raw_data?.length}
+          >
+            Export JSON
+          </Button>
+        </Stack>
       </Stack>
 
       {summary && (

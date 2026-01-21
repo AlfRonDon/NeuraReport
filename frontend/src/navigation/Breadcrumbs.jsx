@@ -1,9 +1,12 @@
+/**
+ * Premium Breadcrumbs
+ * Navigation path with theme-based styling
+ */
 import { useMemo } from 'react'
 import { useLocation, Link as RouterLink } from 'react-router-dom'
-import { Breadcrumbs as MuiBreadcrumbs, Link, Typography, alpha } from '@mui/material'
+import { Breadcrumbs as MuiBreadcrumbs, Link, Typography, useTheme, alpha } from '@mui/material'
 import NavigateNextIcon from '@mui/icons-material/NavigateNext'
 import HomeIcon from '@mui/icons-material/Home'
-import { palette } from '../theme'
 
 const ROUTE_LABELS = {
   connections: 'Connections',
@@ -24,6 +27,7 @@ const ROUTE_LABELS = {
 }
 
 export default function Breadcrumbs() {
+  const theme = useTheme()
   const location = useLocation()
 
   const crumbs = useMemo(() => {
@@ -44,7 +48,7 @@ export default function Breadcrumbs() {
         sx={{
           fontSize: '0.8125rem',
           fontWeight: 500,
-          color: palette.scale[100],
+          color: theme.palette.text.primary,
         }}
       >
         Dashboard
@@ -58,7 +62,7 @@ export default function Breadcrumbs() {
         <NavigateNextIcon
           sx={{
             fontSize: 14,
-            color: palette.scale[600],
+            color: theme.palette.text.disabled,
             mx: 0.25,
           }}
         />
@@ -72,9 +76,9 @@ export default function Breadcrumbs() {
         sx={{
           display: 'flex',
           alignItems: 'center',
-          color: palette.scale[500],
+          color: theme.palette.text.secondary,
           transition: 'color 150ms ease',
-          '&:hover': { color: palette.scale[100] },
+          '&:hover': { color: theme.palette.text.primary },
         }}
       >
         <HomeIcon sx={{ fontSize: 16 }} />
@@ -86,7 +90,7 @@ export default function Breadcrumbs() {
             sx={{
               fontSize: '0.8125rem',
               fontWeight: 500,
-              color: palette.scale[100],
+              color: theme.palette.text.primary,
             }}
           >
             {crumb.label}
@@ -100,9 +104,9 @@ export default function Breadcrumbs() {
             sx={{
               fontSize: '0.8125rem',
               fontWeight: 400,
-              color: palette.scale[500],
+              color: theme.palette.text.secondary,
               transition: 'color 150ms ease',
-              '&:hover': { color: palette.scale[100] },
+              '&:hover': { color: theme.palette.text.primary },
             }}
           >
             {crumb.label}

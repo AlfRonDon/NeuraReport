@@ -547,6 +547,8 @@ export default function DocumentQAPage() {
     removeDocument,
     askQuestion,
     clearHistory,
+    submitFeedback,
+    regenerateResponse,
     reset,
   } = useDocQAStore()
 
@@ -665,6 +667,40 @@ export default function DocumentQAPage() {
   const handleCopyMessage = (content) => {
     navigator.clipboard.writeText(content)
     toast.show('Copied to clipboard', 'success')
+  }
+
+  const handleCitationClick = useCallback(async (citation) => {
+    const text = citation?.quote || citation?.document_name
+    if (!text) return
+    if (!navigator?.clipboard?.writeText) {
+      toast.show('Clipboard not available', 'warning')
+      return
+    }
+    try {
+      await navigator.clipboard.writeText(text)
+      toast.show('Citation copied', 'success')
+    } catch (err) {
+      toast.show(err.message || 'Failed to copy citation', 'error')
+    }
+  }, [toast])
+
+  const handleFeedback = async (messageId, feedbackType) => {
+    if (!currentSession) return
+    const result = await submitFeedback(currentSession.id, messageId, feedbackType)
+    if (result) {
+      toast.show(feedbackType === 'helpful' ? 'Thanks for the feedback!' : 'Thanks for letting us know', 'success')
+    }
+  }
+
+  const handleRegenerate = async (messageId) => {
+    if (!currentSession) return
+    toast.show('Regenerating response...', 'info')
+    const result = await regenerateResponse(currentSession.id, messageId)
+    if (result) {
+      toast.show('Response regenerated', 'success')
+    } else {
+      toast.show('Failed to regenerate response', 'error')
+    }
   }
 
   const filteredSessions = sessions.filter((session) =>
@@ -1016,7 +1052,7 @@ export default function DocumentQAPage() {
                                 </Typography>
                               </Box>
                               {msg.citations.map((cit, cidx) => (
-                                <CitationItem key={cidx}>
+                                <CitationItem key={cidx} onClick={() => handleCitationClick(cit)}>
                                   <FileIcon sx={{ fontSize: 16, color: 'info.main', mt: 0.25 }} />
                                   <Box>
                                     <Typography variant="caption" sx={{ fontWeight: 600, display: 'block' }}>
@@ -1063,18 +1099,44 @@ export default function DocumentQAPage() {
                                   <CopyIcon sx={{ fontSize: 16 }} />
                                 </ActionButton>
                               </Tooltip>
-                              <Tooltip title="Helpful">
-                                <ActionButton size="small">
+                              <Tooltip title={msg.feedback?.feedback_type === 'helpful' ? 'Marked as helpful' : 'Helpful'}>
+                                <ActionButton
+                                  size="small"
+                                  onClick={() => handleFeedback(msg.id, 'helpful')}
+                                  sx={{
+                                    color: msg.feedback?.feedback_type === 'helpful'
+                                      ? 'success.main'
+                                      : undefined,
+                                    bgcolor: msg.feedback?.feedback_type === 'helpful'
+                                      ? alpha(theme.palette.success.main, 0.1)
+                                      : undefined,
+                                  }}
+                                >
                                   <ThumbUpIcon sx={{ fontSize: 16 }} />
                                 </ActionButton>
                               </Tooltip>
-                              <Tooltip title="Not helpful">
-                                <ActionButton size="small">
+                              <Tooltip title={msg.feedback?.feedback_type === 'not_helpful' ? 'Marked as not helpful' : 'Not helpful'}>
+                                <ActionButton
+                                  size="small"
+                                  onClick={() => handleFeedback(msg.id, 'not_helpful')}
+                                  sx={{
+                                    color: msg.feedback?.feedback_type === 'not_helpful'
+                                      ? 'error.main'
+                                      : undefined,
+                                    bgcolor: msg.feedback?.feedback_type === 'not_helpful'
+                                      ? alpha(theme.palette.error.main, 0.1)
+                                      : undefined,
+                                  }}
+                                >
                                   <ThumbDownIcon sx={{ fontSize: 16 }} />
                                 </ActionButton>
                               </Tooltip>
-                              <Tooltip title="Regenerate">
-                                <ActionButton size="small">
+                              <Tooltip title="Regenerate response">
+                                <ActionButton
+                                  size="small"
+                                  onClick={() => handleRegenerate(msg.id)}
+                                  disabled={asking}
+                                >
                                   <RefreshIcon sx={{ fontSize: 16 }} />
                                 </ActionButton>
                               </Tooltip>

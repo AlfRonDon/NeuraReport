@@ -1670,6 +1670,25 @@ export async function deleteSavedChart({ templateId, chartId, kind = 'pdf' }) {
 
 // A) List approved templates (adjust if your API differs)
 
+export async function listTemplates({ status, kind = 'all' } = {}) {
+  if (isMock) {
+    let templates = mock.listTemplates() || []
+    if (status) {
+      templates = templates.filter((tpl) => (tpl.status || '').toLowerCase() === String(status).toLowerCase())
+    }
+    if (kind === 'excel') return templates.filter((tpl) => (tpl.kind || 'pdf') === 'excel')
+    if (kind === 'pdf') return templates.filter((tpl) => (tpl.kind || 'pdf') === 'pdf')
+    return templates
+  }
+  const params = {}
+  if (status) params.status = status
+  const { data } = await api.get('/templates', { params })
+  const templates = Array.isArray(data?.templates) ? data.templates : []
+  if (kind === 'excel') return templates.filter((tpl) => (tpl.kind || 'pdf') === 'excel')
+  if (kind === 'pdf') return templates.filter((tpl) => (tpl.kind || 'pdf') === 'pdf')
+  return templates
+}
+
 export async function listApprovedTemplates({ kind = 'all' } = {}) {
   if (isMock) {
     const templates = mock.listTemplates() || []
@@ -1895,6 +1914,7 @@ export async function createSchedule(payload) {
     frequency: payload.frequency || 'daily',
     interval_minutes: payload.intervalMinutes,
     name: payload.name,
+    active: payload.active,
   }
   if (isMock) {
     if (typeof mock.createSchedule === 'function') {
@@ -1945,6 +1965,19 @@ export async function deleteSchedule(scheduleId) {
     return { status: 'ok', schedule_id: scheduleId }
   }
   const { data } = await api.delete(`/reports/schedules/${encodeURIComponent(scheduleId)}`)
+  return data
+}
+
+export async function getSchedulerStatus() {
+  if (isMock) {
+    await sleep(100)
+    return {
+      status: 'ok',
+      scheduler: { enabled: true, running: true, poll_interval_seconds: 60 },
+      schedules: { total: 2, active: 1, next_run: null },
+    }
+  }
+  const { data } = await api.get('/health/scheduler')
   return data
 }
 

@@ -91,9 +91,12 @@ const validators = {
 }
 
 export default function ConnectionForm({ connection, onSave, onCancel, loading }) {
+  const initialDbType = DB_TYPES.some((type) => type.value === connection?.db_type)
+    ? connection?.db_type
+    : 'sqlite'
   const [formData, setFormData] = useState({
     name: connection?.name || '',
-    db_type: connection?.db_type || 'sqlite',
+    db_type: initialDbType,
     host: connection?.host || 'localhost',
     port: connection?.port || 5432,
     database: connection?.database || '',
@@ -419,9 +422,11 @@ export default function ConnectionForm({ connection, onSave, onCancel, loading }
                     }
                   />
                 )}
-                <Typography variant="caption" color="text.secondary">
-                  Additional connection options can be configured here.
-                </Typography>
+                {isSqlite && (
+                  <Typography variant="caption" color="text.secondary">
+                    SQLite databases use file-based storage and do not require additional configuration.
+                  </Typography>
+                )}
               </Stack>
             </Box>
           </Collapse>

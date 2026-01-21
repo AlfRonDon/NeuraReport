@@ -21,6 +21,7 @@ from backend.app.features.analyze.services.document_analysis_service import (
     get_analysis_data,
     suggest_charts_for_analysis,
 )
+from backend.app.features.analyze.services.extraction_pipeline import extract_document_content
 from backend.app.services.background_tasks import enqueue_background_job, run_event_stream_async
 
 logger = logging.getLogger("neura.analyze.routes")
@@ -221,6 +222,36 @@ async def upload_and_analyze(
             "X-Accel-Buffering": "no",
         },
     )
+
+
+@router.post("/extract")
+async def extract_document(
+    request: Request,
+    file: UploadFile = File(...),
+):
+    """Quickly extract raw tables and text without full AI analysis."""
+    settings = get_settings()
+    file_name = _validate_upload(file)
+    correlation_id = getattr(request.state, "correlation_id", None)
+
+    try:
+        file_bytes = await _read_upload_with_limit(file, settings.max_upload_bytes)
+    finally:
+        await file.close()
+
+    extracted = extract_document_content(file_bytes=file_bytes, file_name=file_name)
+
+    return {
+        "status": "ok",
+        "file_name": extracted.file_name,
+        "document_type": extracted.document_type,
+        "page_count": extracted.page_count,
+        "tables": extracted.tables_raw,
+        "sheets": extracted.sheets,
+        "text": extracted.text_content,
+        "errors": extracted.errors,
+        "correlation_id": correlation_id,
+    }
 
 
 @router.get("/{analysis_id}")

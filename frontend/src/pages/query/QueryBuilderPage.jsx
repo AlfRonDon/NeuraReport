@@ -1,3 +1,7 @@
+/**
+ * Premium Query Builder Page
+ * Natural language to SQL interface with theme-based styling
+ */
 import { useEffect, useState, useCallback, useRef } from 'react'
 import {
   Box,
@@ -20,8 +24,11 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  alpha,
   Collapse,
+  useTheme,
+  alpha,
+  styled,
+  keyframes,
 } from '@mui/material'
 import PlayArrowIcon from '@mui/icons-material/PlayArrow'
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh'
@@ -41,11 +48,217 @@ import useQueryStore from '../../stores/queryStore'
 import * as nl2sqlApi from '../../api/nl2sql'
 import * as api from '../../api/client'
 import DataTable from '../../ui/DataTable/DataTable'
-import { palette } from '../../theme'
 import ConfirmModal from '../../ui/Modal/ConfirmModal'
 import { useToast } from '../../components/ToastProvider'
 
+// =============================================================================
+// ANIMATIONS
+// =============================================================================
+
+const fadeInUp = keyframes`
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+`
+
+const pulse = keyframes`
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.02); }
+`
+
+const shimmer = keyframes`
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+`
+
+// =============================================================================
+// STYLED COMPONENTS
+// =============================================================================
+
+const PageContainer = styled(Box)(({ theme }) => ({
+  padding: theme.spacing(3),
+  maxWidth: 1400,
+  margin: '0 auto',
+  width: '100%',
+  minHeight: '100vh',
+  background: theme.palette.mode === 'dark'
+    ? `radial-gradient(ellipse at 20% 0%, ${alpha(theme.palette.primary.dark, 0.15)} 0%, transparent 50%),
+       radial-gradient(ellipse at 80% 100%, ${alpha(theme.palette.secondary.dark, 0.1)} 0%, transparent 50%),
+       ${theme.palette.background.default}`
+    : `radial-gradient(ellipse at 20% 0%, ${alpha(theme.palette.primary.light, 0.08)} 0%, transparent 50%),
+       radial-gradient(ellipse at 80% 100%, ${alpha(theme.palette.secondary.light, 0.05)} 0%, transparent 50%),
+       ${theme.palette.background.default}`,
+}))
+
+const HeaderContainer = styled(Stack)(({ theme }) => ({
+  marginBottom: theme.spacing(3),
+  animation: `${fadeInUp} 0.5s ease-out`,
+}))
+
+const GlassCard = styled(Paper)(({ theme }) => ({
+  backgroundColor: alpha(theme.palette.background.paper, 0.8),
+  backdropFilter: 'blur(20px)',
+  border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+  borderRadius: 16,
+  padding: theme.spacing(2),
+  boxShadow: `0 8px 32px ${alpha(theme.palette.common.black, 0.08)}`,
+  animation: `${fadeInUp} 0.5s ease-out`,
+  marginBottom: theme.spacing(2),
+}))
+
+const HeaderButton = styled(Button)(({ theme }) => ({
+  borderRadius: 12,
+  textTransform: 'none',
+  fontWeight: 500,
+  borderColor: alpha(theme.palette.divider, 0.2),
+  transition: 'all 0.2s ease',
+  '&:hover': {
+    borderColor: theme.palette.primary.main,
+    backgroundColor: alpha(theme.palette.primary.main, 0.08),
+  },
+}))
+
+const PrimaryButton = styled(Button)(({ theme }) => ({
+  borderRadius: 12,
+  textTransform: 'none',
+  fontWeight: 600,
+  background: `linear-gradient(135deg, ${theme.palette.success.main}, ${theme.palette.success.dark})`,
+  color: '#fff',
+  boxShadow: `0 4px 14px ${alpha(theme.palette.success.main, 0.3)}`,
+  transition: 'all 0.2s ease',
+  '&:hover': {
+    boxShadow: `0 6px 20px ${alpha(theme.palette.success.main, 0.4)}`,
+    transform: 'translateY(-1px)',
+  },
+  '&:active': {
+    transform: 'translateY(0)',
+  },
+  '&:disabled': {
+    background: alpha(theme.palette.text.disabled, 0.2),
+    color: theme.palette.text.disabled,
+    boxShadow: 'none',
+  },
+}))
+
+const ExecuteButton = styled(Button)(({ theme }) => ({
+  borderRadius: 12,
+  textTransform: 'none',
+  fontWeight: 600,
+  background: `linear-gradient(135deg, ${theme.palette.info.main}, ${theme.palette.info.dark})`,
+  color: '#fff',
+  boxShadow: `0 4px 14px ${alpha(theme.palette.info.main, 0.3)}`,
+  transition: 'all 0.2s ease',
+  '&:hover': {
+    boxShadow: `0 6px 20px ${alpha(theme.palette.info.main, 0.4)}`,
+    transform: 'translateY(-1px)',
+  },
+  '&:disabled': {
+    background: alpha(theme.palette.text.disabled, 0.2),
+    color: theme.palette.text.disabled,
+    boxShadow: 'none',
+  },
+}))
+
+const StyledFormControl = styled(FormControl)(({ theme }) => ({
+  '& .MuiOutlinedInput-root': {
+    borderRadius: 12,
+    backgroundColor: alpha(theme.palette.background.paper, 0.6),
+    backdropFilter: 'blur(8px)',
+    transition: 'all 0.2s ease',
+    '&:hover': {
+      backgroundColor: alpha(theme.palette.background.paper, 0.8),
+    },
+    '&.Mui-focused': {
+      backgroundColor: theme.palette.background.paper,
+      boxShadow: `0 0 0 3px ${alpha(theme.palette.primary.main, 0.1)}`,
+    },
+  },
+}))
+
+const StyledTextField = styled(TextField)(({ theme }) => ({
+  '& .MuiOutlinedInput-root': {
+    borderRadius: 12,
+    backgroundColor: alpha(theme.palette.background.default, 0.5),
+    transition: 'all 0.2s ease',
+    '&:hover': {
+      backgroundColor: alpha(theme.palette.background.default, 0.7),
+    },
+    '&.Mui-focused': {
+      backgroundColor: alpha(theme.palette.background.default, 0.9),
+      boxShadow: `0 0 0 3px ${alpha(theme.palette.primary.main, 0.1)}`,
+    },
+  },
+}))
+
+const SavedQueryItem = styled(Stack)(({ theme }) => ({
+  padding: theme.spacing(1),
+  borderRadius: 10,
+  backgroundColor: alpha(theme.palette.primary.main, 0.05),
+  cursor: 'pointer',
+  transition: 'all 0.2s ease',
+  '&:hover': {
+    backgroundColor: alpha(theme.palette.primary.main, 0.1),
+    transform: 'translateX(4px)',
+  },
+}))
+
+const HistoryItem = styled(Stack)(({ theme }) => ({
+  padding: theme.spacing(1),
+  borderRadius: 10,
+  backgroundColor: alpha(theme.palette.primary.main, 0.05),
+  cursor: 'pointer',
+  transition: 'all 0.2s ease',
+  '&:hover': {
+    backgroundColor: alpha(theme.palette.primary.main, 0.1),
+    transform: 'translateX(4px)',
+  },
+}))
+
+const ExplanationBox = styled(Box)(({ theme }) => ({
+  marginTop: theme.spacing(2),
+  padding: theme.spacing(1.5),
+  backgroundColor: alpha(theme.palette.info.main, 0.1),
+  borderRadius: 12,
+  border: `1px solid ${alpha(theme.palette.info.main, 0.2)}`,
+}))
+
+const ConfidenceChip = styled(Chip)(({ theme, confidence }) => ({
+  height: 20,
+  fontSize: '0.7rem',
+  fontWeight: 600,
+  backgroundColor: alpha(
+    confidence > 0.8 ? theme.palette.success.main : theme.palette.warning.main,
+    0.2
+  ),
+  color: confidence > 0.8 ? theme.palette.success.main : theme.palette.warning.main,
+  borderRadius: 6,
+}))
+
+const StyledDialog = styled(Dialog)(({ theme }) => ({
+  '& .MuiBackdrop-root': {
+    backgroundColor: alpha(theme.palette.common.black, 0.6),
+    backdropFilter: 'blur(8px)',
+  },
+  '& .MuiDialog-paper': {
+    backgroundColor: alpha(theme.palette.background.paper, 0.95),
+    backdropFilter: 'blur(20px)',
+    border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+    borderRadius: 20,
+    boxShadow: `0 24px 64px ${alpha(theme.palette.common.black, 0.25)}`,
+  },
+}))
+
+// =============================================================================
+// MAIN COMPONENT
+// =============================================================================
+
 export default function QueryBuilderPage() {
+  const theme = useTheme()
   const toast = useToast()
   const connections = useAppStore((s) => s.savedConnections)
   const {
@@ -286,77 +499,62 @@ export default function QueryBuilderPage() {
       : null
 
   return (
-    <Box sx={{ p: 3, maxWidth: 1400, mx: 'auto' }}>
+    <PageContainer>
       {/* Header */}
-      <Stack direction="row" alignItems="center" justifyContent="space-between" mb={3}>
+      <HeaderContainer direction="row" alignItems="center" justifyContent="space-between">
         <Box>
-          <Typography variant="h5" fontWeight={600} color={palette.scale[50]}>
+          <Typography variant="h5" fontWeight={600} sx={{ color: theme.palette.text.primary }}>
             Query Builder
           </Typography>
-          <Typography variant="body2" color={palette.scale[400]}>
+          <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
             Ask questions in natural language and get SQL queries
           </Typography>
         </Box>
         <Stack direction="row" spacing={1}>
-          <Button
+          <HeaderButton
             variant="outlined"
             size="small"
             startIcon={<BookmarkIcon />}
             onClick={() => setShowSaved(!showSaved)}
-            sx={{ borderColor: alpha(palette.scale[100], 0.2) }}
           >
             Saved ({savedQueries.length})
-          </Button>
-          <Button
+          </HeaderButton>
+          <HeaderButton
             variant="outlined"
             size="small"
             startIcon={<HistoryIcon />}
             onClick={() => setShowHistory(!showHistory)}
-            sx={{ borderColor: alpha(palette.scale[100], 0.2) }}
           >
             History
-          </Button>
+          </HeaderButton>
         </Stack>
-      </Stack>
+      </HeaderContainer>
 
       {/* Saved Queries Panel */}
       <Collapse in={showSaved}>
-        <Paper
-          sx={{
-            mb: 2,
-            p: 2,
-            bgcolor: palette.scale[950],
-            border: `1px solid ${alpha(palette.scale[100], 0.1)}`,
-          }}
-        >
-          <Typography variant="subtitle2" color={palette.scale[300]} mb={1}>
+        <GlassCard>
+          <Typography variant="subtitle2" sx={{ color: theme.palette.text.secondary, mb: 1 }}>
             Saved Queries
           </Typography>
           {savedQueries.length === 0 ? (
-            <Typography variant="body2" color={palette.scale[500]}>
+            <Typography variant="body2" sx={{ color: theme.palette.text.disabled }}>
               No saved queries yet
             </Typography>
           ) : (
             <Stack spacing={1}>
               {savedQueries.slice(0, 5).map((q) => (
-                <Stack
+                <SavedQueryItem
                   key={q.id}
                   direction="row"
                   alignItems="center"
                   justifyContent="space-between"
-                  sx={{
-                    p: 1,
-                    borderRadius: 1,
-                    bgcolor: alpha(palette.scale[100], 0.05),
-                    '&:hover': { bgcolor: alpha(palette.scale[100], 0.1) },
-                  }}
                 >
-                  <Box sx={{ cursor: 'pointer', flex: 1 }} onClick={() => loadSavedQuery(q)}>
-                    <Typography variant="body2" fontWeight={500} color={palette.scale[200]}>
+                  <Box sx={{ flex: 1 }} onClick={() => loadSavedQuery(q)}>
+                    <Typography variant="body2" fontWeight={500} sx={{ color: theme.palette.text.primary }}>
                       {q.name}
                     </Typography>
                     {q.description && (
-                      <Typography variant="caption" color={palette.scale[500]}>
+                      <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>
                         {q.description}
                       </Typography>
                     )}
@@ -367,79 +565,72 @@ export default function QueryBuilderPage() {
                       onClick={() => setDeleteSavedConfirm({ open: true, queryId: q.id, queryName: q.name })}
                       aria-label="Delete saved query"
                     >
-                      <DeleteIcon fontSize="small" sx={{ color: palette.scale[500] }} />
+                      <DeleteIcon fontSize="small" sx={{ color: theme.palette.text.secondary }} />
                     </IconButton>
                   </Tooltip>
-                </Stack>
+                </SavedQueryItem>
               ))}
             </Stack>
           )}
-        </Paper>
+        </GlassCard>
       </Collapse>
 
       {/* History Panel */}
       <Collapse in={showHistory}>
-        <Paper
-          sx={{
-            mb: 2,
-            p: 2,
-            bgcolor: palette.scale[950],
-            border: `1px solid ${alpha(palette.scale[100], 0.1)}`,
-          }}
-        >
-          <Typography variant="subtitle2" color={palette.scale[300]} mb={1}>
+        <GlassCard>
+          <Typography variant="subtitle2" sx={{ color: theme.palette.text.secondary, mb: 1 }}>
             Recent Queries
           </Typography>
           {queryHistory.length === 0 ? (
-            <Typography variant="body2" color={palette.scale[500]}>
+            <Typography variant="body2" sx={{ color: theme.palette.text.disabled }}>
               No query history yet
             </Typography>
           ) : (
             <Stack spacing={1}>
               {queryHistory.slice(0, 5).map((h) => (
-                <Stack
+                <HistoryItem
                   key={h.id}
                   direction="row"
                   alignItems="center"
                   justifyContent="space-between"
-                  sx={{
-                    p: 1,
-                    borderRadius: 1,
-                    bgcolor: alpha(palette.scale[100], 0.05),
-                    cursor: 'pointer',
-                    '&:hover': { bgcolor: alpha(palette.scale[100], 0.1) },
-                  }}
                   onClick={() => {
                     setCurrentQuestion(h.question)
                     setGeneratedSQL(h.sql)
                   }}
                 >
                   <Box sx={{ flex: 1, minWidth: 0 }}>
-                    <Typography variant="body2" color={palette.scale[200]} noWrap>
+                    <Typography variant="body2" sx={{ color: theme.palette.text.primary }} noWrap>
                       {h.question}
                     </Typography>
                     <Stack direction="row" spacing={1} mt={0.5}>
-                      <Chip
+                      <ConfidenceChip
                         size="small"
                         label={`${Math.round(h.confidence * 100)}%`}
-                        sx={{
-                          height: 20,
-                          fontSize: '0.7rem',
-                          bgcolor: h.confidence > 0.8 ? alpha(palette.green[500], 0.2) : alpha(palette.yellow[500], 0.2),
-                          color: h.confidence > 0.8 ? palette.green[400] : palette.yellow[400],
-                        }}
+                        confidence={h.confidence}
                       />
                       {h.success ? (
                         <Chip
                           size="small"
                           label="Success"
-                          sx={{ height: 20, fontSize: '0.7rem', bgcolor: alpha(palette.green[500], 0.2), color: palette.green[400] }}
+                          sx={{
+                            height: 20,
+                            fontSize: '0.7rem',
+                            bgcolor: alpha(theme.palette.success.main, 0.2),
+                            color: theme.palette.success.main,
+                            borderRadius: 1.5,
+                          }}
                         />
                       ) : (
                         <Chip
                           size="small"
                           label="Failed"
-                          sx={{ height: 20, fontSize: '0.7rem', bgcolor: alpha(palette.red[500], 0.2), color: palette.red[400] }}
+                          sx={{
+                            height: 20,
+                            fontSize: '0.7rem',
+                            bgcolor: alpha(theme.palette.error.main, 0.2),
+                            color: theme.palette.error.main,
+                            borderRadius: 1.5,
+                          }}
                         />
                       )}
                     </Stack>
@@ -451,31 +642,24 @@ export default function QueryBuilderPage() {
                       setDeleteHistoryConfirm({ open: true, entryId: h.id, question: h.question })
                     }}
                   >
-                    <DeleteIcon fontSize="small" sx={{ color: palette.scale[500] }} />
+                    <DeleteIcon fontSize="small" sx={{ color: theme.palette.text.secondary }} />
                   </IconButton>
-                </Stack>
+                </HistoryItem>
               ))}
             </Stack>
           )}
-        </Paper>
+        </GlassCard>
       </Collapse>
 
       {/* Connection Selector */}
-      <Paper
-        sx={{
-          mb: 2,
-          p: 2,
-          bgcolor: palette.scale[950],
-          border: `1px solid ${alpha(palette.scale[100], 0.1)}`,
-        }}
-      >
-        <FormControl fullWidth size="small">
+      <GlassCard>
+        <StyledFormControl fullWidth size="small">
           <InputLabel>Database Connection</InputLabel>
           <Select
             value={selectedConnectionId || ''}
             label="Database Connection"
             onChange={(e) => setSelectedConnection(e.target.value)}
-            startAdornment={<StorageIcon sx={{ mr: 1, color: palette.scale[500] }} />}
+            startAdornment={<StorageIcon sx={{ mr: 1, color: theme.palette.text.secondary }} />}
           >
             {connections.map((conn) => (
               <MenuItem key={conn.id} value={conn.id}>
@@ -483,27 +667,20 @@ export default function QueryBuilderPage() {
               </MenuItem>
             ))}
           </Select>
-        </FormControl>
+        </StyledFormControl>
 
         {schema && (
           <Box mt={2}>
-            <Typography variant="caption" color={palette.scale[500]}>
+            <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>
               Available tables: {schema.tables?.map((t) => t.name).join(', ')}
             </Typography>
           </Box>
         )}
-      </Paper>
+      </GlassCard>
 
       {/* Question Input */}
-      <Paper
-        sx={{
-          mb: 2,
-          p: 2,
-          bgcolor: palette.scale[950],
-          border: `1px solid ${alpha(palette.scale[100], 0.1)}`,
-        }}
-      >
-        <TextField
+      <GlassCard>
+        <StyledTextField
           fullWidth
           multiline
           minRows={2}
@@ -516,81 +693,63 @@ export default function QueryBuilderPage() {
               handleGenerate()
             }
           }}
-          sx={{
-            '& .MuiOutlinedInput-root': {
-              bgcolor: palette.scale[900],
-            },
-          }}
         />
         <Stack direction="row" justifyContent="space-between" alignItems="center" mt={2}>
-          <Typography variant="caption" color={palette.scale[500]}>
+          <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>
             Press Ctrl+Enter to generate
           </Typography>
-          <Button
-            variant="contained"
+          <PrimaryButton
             startIcon={isGenerating ? <CircularProgress size={16} color="inherit" /> : <AutoFixHighIcon />}
             onClick={handleGenerate}
             disabled={!currentQuestion.trim() || !selectedConnectionId || isGenerating}
-            sx={{
-              bgcolor: palette.green[600],
-              '&:hover': { bgcolor: palette.green[700] },
-            }}
           >
             {isGenerating ? 'Generating...' : 'Generate SQL'}
-          </Button>
+          </PrimaryButton>
         </Stack>
-      </Paper>
+      </GlassCard>
 
       {/* Error Alert */}
       {error && (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
+        <Alert
+          severity="error"
+          sx={{ mb: 2, borderRadius: 3 }}
+          onClose={() => setError(null)}
+        >
           {error}
         </Alert>
       )}
 
       {/* Generated SQL */}
       {generatedSQL && (
-        <Paper
-          sx={{
-            mb: 2,
-            p: 2,
-            bgcolor: palette.scale[950],
-            border: `1px solid ${alpha(palette.scale[100], 0.1)}`,
-          }}
-        >
+        <GlassCard>
           <Stack direction="row" alignItems="center" justifyContent="space-between" mb={1}>
             <Stack direction="row" alignItems="center" spacing={1}>
-              <Typography variant="subtitle2" color={palette.scale[300]}>
+              <Typography variant="subtitle2" sx={{ color: theme.palette.text.secondary }}>
                 Generated SQL
               </Typography>
               {confidence > 0 && (
-                <Chip
+                <ConfidenceChip
                   size="small"
                   label={`${Math.round(confidence * 100)}% confidence`}
-                  sx={{
-                    height: 20,
-                    fontSize: '0.7rem',
-                    bgcolor: confidence > 0.8 ? alpha(palette.green[500], 0.2) : alpha(palette.yellow[500], 0.2),
-                    color: confidence > 0.8 ? palette.green[400] : palette.yellow[400],
-                  }}
+                  confidence={confidence}
                 />
               )}
             </Stack>
             <Stack direction="row" spacing={1}>
               <Tooltip title="Copy SQL">
                 <IconButton size="small" onClick={handleCopySQL} aria-label="Copy SQL">
-                  <ContentCopyIcon fontSize="small" sx={{ color: palette.scale[400] }} />
+                  <ContentCopyIcon fontSize="small" sx={{ color: theme.palette.text.secondary }} />
                 </IconButton>
               </Tooltip>
               <Tooltip title="Save Query">
                 <IconButton size="small" onClick={() => setShowSaveDialog(true)} aria-label="Save Query">
-                  <SaveIcon fontSize="small" sx={{ color: palette.scale[400] }} />
+                  <SaveIcon fontSize="small" sx={{ color: theme.palette.text.secondary }} />
                 </IconButton>
               </Tooltip>
             </Stack>
           </Stack>
 
-          <TextField
+          <StyledTextField
             fullWidth
             multiline
             minRows={3}
@@ -599,7 +758,6 @@ export default function QueryBuilderPage() {
             onChange={(e) => setGeneratedSQL(e.target.value)}
             sx={{
               '& .MuiOutlinedInput-root': {
-                bgcolor: palette.scale[900],
                 fontFamily: 'monospace',
                 fontSize: '0.875rem',
               },
@@ -609,7 +767,7 @@ export default function QueryBuilderPage() {
           {warnings.length > 0 && (
             <Stack spacing={0.5} mt={1}>
               {warnings.map((w, i) => (
-                <Alert key={i} severity="warning" sx={{ py: 0 }}>
+                <Alert key={i} severity="warning" sx={{ py: 0, borderRadius: 2 }}>
                   {w}
                 </Alert>
               ))}
@@ -617,63 +775,52 @@ export default function QueryBuilderPage() {
           )}
 
           {explanation && (
-            <Box mt={2} p={1.5} bgcolor={alpha(palette.blue[500], 0.1)} borderRadius={1}>
+            <ExplanationBox>
               <Stack direction="row" alignItems="flex-start" spacing={1}>
-                <LightbulbIcon sx={{ color: palette.blue[400], fontSize: 18, mt: 0.25 }} />
-                <Typography variant="body2" color={palette.scale[300]}>
+                <LightbulbIcon sx={{ color: theme.palette.info.main, fontSize: 18, mt: 0.25 }} />
+                <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
                   {explanation}
                 </Typography>
               </Stack>
-            </Box>
+            </ExplanationBox>
           )}
 
           <Stack direction="row" justifyContent="flex-end" mt={2}>
             <Tooltip title={executeDisabledReason || ''} disableHoverListener={!executeDisabledReason}>
               <span>
-                <Button
-                  variant="contained"
+                <ExecuteButton
                   startIcon={isExecuting ? <CircularProgress size={16} color="inherit" /> : <PlayArrowIcon />}
                   onClick={handleExecute}
                   disabled={Boolean(executeDisabledReason) || isExecuting}
-                  sx={{
-                    bgcolor: palette.blue[600],
-                    '&:hover': { bgcolor: palette.blue[700] },
-                  }}
                 >
                   {isExecuting ? 'Executing...' : 'Execute Query'}
-                </Button>
+                </ExecuteButton>
               </span>
             </Tooltip>
           </Stack>
           {executeDisabledReason && (
-            <Typography variant="caption" color={palette.scale[500]} sx={{ mt: 1, display: 'block' }}>
+            <Typography variant="caption" sx={{ color: theme.palette.text.secondary, mt: 1, display: 'block' }}>
               {executeDisabledReason}
             </Typography>
           )}
-        </Paper>
+        </GlassCard>
       )}
 
       {/* Results */}
       {results && (
-        <Paper
-          sx={{
-            p: 2,
-            bgcolor: palette.scale[950],
-            border: `1px solid ${alpha(palette.scale[100], 0.1)}`,
-          }}
-        >
+        <GlassCard>
           <Stack direction="row" alignItems="center" justifyContent="space-between" mb={2}>
-            <Typography variant="subtitle2" color={palette.scale[300]}>
+            <Typography variant="subtitle2" sx={{ color: theme.palette.text.secondary }}>
               Results
             </Typography>
             <Stack direction="row" spacing={2}>
               {totalCount !== null && (
-                <Typography variant="caption" color={palette.scale[500]}>
+                <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>
                   {totalCount} total rows
                 </Typography>
               )}
               {executionTimeMs !== null && (
-                <Typography variant="caption" color={palette.scale[500]}>
+                <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>
                   {executionTimeMs}ms
                 </Typography>
               )}
@@ -681,22 +828,22 @@ export default function QueryBuilderPage() {
           </Stack>
 
           <DataTable columns={tableColumns} data={results} pageSize={10} loading={false} />
-        </Paper>
+        </GlassCard>
       )}
 
       {/* Save Dialog */}
-      <Dialog open={showSaveDialog} onClose={() => setShowSaveDialog(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Save Query</DialogTitle>
+      <StyledDialog open={showSaveDialog} onClose={() => setShowSaveDialog(false)} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ color: theme.palette.text.primary }}>Save Query</DialogTitle>
         <DialogContent>
           <Stack spacing={2} mt={1}>
-            <TextField
+            <StyledTextField
               fullWidth
               label="Name"
               value={saveName}
               onChange={(e) => setSaveName(e.target.value)}
               placeholder="e.g., Monthly Sales Report"
             />
-            <TextField
+            <StyledTextField
               fullWidth
               multiline
               rows={2}
@@ -707,13 +854,18 @@ export default function QueryBuilderPage() {
             />
           </Stack>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setShowSaveDialog(false)}>Cancel</Button>
-          <Button variant="contained" onClick={handleSave} disabled={!saveName.trim()}>
-            Save
+        <DialogActions sx={{ p: 2.5 }}>
+          <Button
+            onClick={() => setShowSaveDialog(false)}
+            sx={{ borderRadius: 2, textTransform: 'none' }}
+          >
+            Cancel
           </Button>
+          <PrimaryButton onClick={handleSave} disabled={!saveName.trim()}>
+            Save
+          </PrimaryButton>
         </DialogActions>
-      </Dialog>
+      </StyledDialog>
 
       <ConfirmModal
         open={deleteSavedConfirm.open}
@@ -740,6 +892,6 @@ export default function QueryBuilderPage() {
         confirmLabel="Delete"
         severity="warning"
       />
-    </Box>
+    </PageContainer>
   )
 }

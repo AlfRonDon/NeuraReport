@@ -37,10 +37,17 @@ def _next_run_datetime(schedule: dict, baseline: datetime) -> datetime:
 class ReportScheduler:
     def __init__(
         self,
-        runner: Callable[[dict, str], dict],
+        runner: Callable[..., dict],
         *,
         poll_seconds: int = 60,
     ) -> None:
+        """Initialize the report scheduler.
+
+        Args:
+            runner: Callable that accepts (payload: dict, kind: str, *, job_tracker: JobRunTracker | None)
+                    and returns a result dict.
+            poll_seconds: Interval between schedule checks (minimum 5 seconds).
+        """
         self._runner = runner
         self._poll_seconds = max(poll_seconds, 5)
         self._task: asyncio.Task | None = None
@@ -90,6 +97,25 @@ class ReportScheduler:
             sid = schedule.get("id")
             if not sid or sid in self._inflight:
                 continue
+
+            # Check if schedule has passed its end_date
+            end_date = _parse_iso(schedule.get("end_date"))
+            if end_date is not None and now > end_date:
+                logger.info(
+                    "schedule_past_end_date",
+                    extra={
+                        "event": "schedule_past_end_date",
+                        "schedule_id": sid,
+                        "end_date": schedule.get("end_date"),
+                    },
+                )
+                continue
+
+            # Check if schedule hasn't started yet
+            start_date = _parse_iso(schedule.get("start_date"))
+            if start_date is not None and now < start_date:
+                continue
+
             next_run_at = _parse_iso(schedule.get("next_run_at"))
             if next_run_at is None or next_run_at <= now:
                 self._inflight.add(sid)

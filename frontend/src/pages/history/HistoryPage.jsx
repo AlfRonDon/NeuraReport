@@ -1,3 +1,7 @@
+/**
+ * Premium History Page
+ * Sophisticated report history with glassmorphism and animations
+ */
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
@@ -13,7 +17,10 @@ import {
   CircularProgress,
   Button,
   Tooltip,
+  useTheme,
   alpha,
+  styled,
+  keyframes,
 } from '@mui/material'
 import RefreshIcon from '@mui/icons-material/Refresh'
 import HistoryIcon from '@mui/icons-material/History'
@@ -27,27 +34,247 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import ErrorIcon from '@mui/icons-material/Error'
 import HourglassEmptyIcon from '@mui/icons-material/HourglassEmpty'
 import CancelIcon from '@mui/icons-material/Cancel'
+import AddIcon from '@mui/icons-material/Add'
 import { DataTable } from '../../ui/DataTable'
 import { ConfirmModal } from '../../ui/Modal'
 import { useToast } from '../../components/ToastProvider'
 import { useAppStore } from '../../store/useAppStore'
 import * as api from '../../api/client'
-import { palette } from '../../theme'
 
-const STATUS_CONFIG = {
-  completed: { icon: CheckCircleIcon, color: 'success', label: 'Completed' },
-  failed: { icon: ErrorIcon, color: 'error', label: 'Failed' },
-  running: { icon: HourglassEmptyIcon, color: 'info', label: 'Running' },
-  pending: { icon: HourglassEmptyIcon, color: 'warning', label: 'Pending' },
-  cancelled: { icon: CancelIcon, color: 'default', label: 'Cancelled' },
+// =============================================================================
+// ANIMATIONS
+// =============================================================================
+
+const fadeInUp = keyframes`
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+`
+
+const float = keyframes`
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+`
+
+const pulse = keyframes`
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.05); opacity: 0.8; }
+`
+
+// =============================================================================
+// STYLED COMPONENTS
+// =============================================================================
+
+const PageContainer = styled(Box)(({ theme }) => ({
+  padding: theme.spacing(3),
+  maxWidth: 1400,
+  margin: '0 auto',
+  width: '100%',
+  minHeight: '100vh',
+  background: theme.palette.mode === 'dark'
+    ? `radial-gradient(ellipse at 20% 0%, ${alpha(theme.palette.primary.dark, 0.15)} 0%, transparent 50%),
+       radial-gradient(ellipse at 80% 100%, ${alpha(theme.palette.secondary.dark, 0.1)} 0%, transparent 50%),
+       ${theme.palette.background.default}`
+    : `radial-gradient(ellipse at 20% 0%, ${alpha(theme.palette.primary.light, 0.08)} 0%, transparent 50%),
+       radial-gradient(ellipse at 80% 100%, ${alpha(theme.palette.secondary.light, 0.05)} 0%, transparent 50%),
+       ${theme.palette.background.default}`,
+}))
+
+const PageHeader = styled(Box)(({ theme }) => ({
+  marginBottom: theme.spacing(3),
+  animation: `${fadeInUp} 0.5s ease-out`,
+}))
+
+const PageTitle = styled(Typography)(({ theme }) => ({
+  fontSize: '1.75rem',
+  fontWeight: 700,
+  letterSpacing: '-0.02em',
+  background: `linear-gradient(135deg, ${theme.palette.text.primary} 0%, ${theme.palette.primary.main} 100%)`,
+  WebkitBackgroundClip: 'text',
+  WebkitTextFillColor: 'transparent',
+  backgroundClip: 'text',
+}))
+
+const FilterContainer = styled(Stack)(({ theme }) => ({
+  marginBottom: theme.spacing(3),
+  animation: `${fadeInUp} 0.5s ease-out 0.1s both`,
+}))
+
+const StyledFormControl = styled(FormControl)(({ theme }) => ({
+  minWidth: 150,
+  '& .MuiOutlinedInput-root': {
+    borderRadius: 12,
+    backgroundColor: alpha(theme.palette.background.paper, 0.6),
+    transition: 'all 0.2s ease',
+    '&:hover': {
+      backgroundColor: alpha(theme.palette.background.paper, 0.8),
+    },
+    '&.Mui-focused': {
+      backgroundColor: theme.palette.background.paper,
+      boxShadow: `0 0 0 3px ${alpha(theme.palette.primary.main, 0.1)}`,
+    },
+  },
+  '& .MuiInputLabel-root': {
+    fontWeight: 500,
+  },
+}))
+
+const TableContainer = styled(Box)(({ theme }) => ({
+  backgroundColor: alpha(theme.palette.background.paper, 0.8),
+  backdropFilter: 'blur(20px)',
+  borderRadius: 20,
+  border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+  boxShadow: `0 8px 32px ${alpha(theme.palette.common.black, 0.08)}`,
+  overflow: 'hidden',
+  animation: `${fadeInUp} 0.6s ease-out 0.2s both`,
+}))
+
+const EmptyStateContainer = styled(Box)(({ theme }) => ({
+  padding: theme.spacing(8, 4),
+  textAlign: 'center',
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+}))
+
+const EmptyIcon = styled(HistoryIcon)(({ theme }) => ({
+  fontSize: 64,
+  color: alpha(theme.palette.text.secondary, 0.3),
+  marginBottom: theme.spacing(2),
+  animation: `${float} 3s ease-in-out infinite`,
+}))
+
+const RefreshButton = styled(IconButton)(({ theme }) => ({
+  color: theme.palette.text.secondary,
+  transition: 'all 0.2s ease',
+  '&:hover': {
+    color: theme.palette.primary.main,
+    backgroundColor: alpha(theme.palette.primary.main, 0.08),
+  },
+}))
+
+const PrimaryButton = styled(Button)(({ theme }) => ({
+  borderRadius: 12,
+  textTransform: 'none',
+  fontWeight: 600,
+  fontSize: '0.875rem',
+  padding: theme.spacing(1, 2.5),
+  background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
+  color: '#fff',
+  boxShadow: `0 4px 14px ${alpha(theme.palette.primary.main, 0.3)}`,
+  transition: 'all 0.2s ease',
+  '&:hover': {
+    boxShadow: `0 6px 20px ${alpha(theme.palette.primary.main, 0.4)}`,
+    transform: 'translateY(-2px)',
+  },
+}))
+
+const SecondaryButton = styled(Button)(({ theme }) => ({
+  borderRadius: 12,
+  textTransform: 'none',
+  fontWeight: 500,
+  fontSize: '0.875rem',
+  borderColor: alpha(theme.palette.divider, 0.3),
+  transition: 'all 0.2s ease',
+  '&:hover': {
+    borderColor: theme.palette.primary.main,
+    backgroundColor: alpha(theme.palette.primary.main, 0.04),
+  },
+}))
+
+const KindIconContainer = styled(Box, {
+  shouldForwardProp: (prop) => prop !== 'iconColor',
+})(({ theme, iconColor }) => ({
+  width: 36,
+  height: 36,
+  borderRadius: 10,
+  backgroundColor: alpha(iconColor || theme.palette.primary.main, 0.12),
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  transition: 'all 0.2s ease',
+}))
+
+const StatusChip = styled(Chip, {
+  shouldForwardProp: (prop) => !['statusColor', 'statusBg'].includes(prop),
+})(({ theme, statusColor, statusBg }) => ({
+  borderRadius: 8,
+  fontWeight: 600,
+  fontSize: '0.6875rem',
+  backgroundColor: statusBg,
+  color: statusColor,
+  '& .MuiChip-icon': {
+    marginLeft: theme.spacing(0.5),
+    color: statusColor,
+  },
+}))
+
+const ArtifactButton = styled(IconButton)(({ theme }) => ({
+  transition: 'all 0.2s ease',
+  '&:hover': {
+    transform: 'translateY(-2px)',
+  },
+}))
+
+// =============================================================================
+// STATUS AND KIND CONFIG HELPERS
+// =============================================================================
+
+const getStatusConfig = (theme, status) => {
+  const configs = {
+    completed: {
+      icon: CheckCircleIcon,
+      color: theme.palette.success.main,
+      bgColor: alpha(theme.palette.success.main, 0.12),
+      label: 'Completed',
+    },
+    failed: {
+      icon: ErrorIcon,
+      color: theme.palette.error.main,
+      bgColor: alpha(theme.palette.error.main, 0.12),
+      label: 'Failed',
+    },
+    running: {
+      icon: HourglassEmptyIcon,
+      color: theme.palette.info.main,
+      bgColor: alpha(theme.palette.info.main, 0.12),
+      label: 'Running',
+    },
+    pending: {
+      icon: HourglassEmptyIcon,
+      color: theme.palette.warning.main,
+      bgColor: alpha(theme.palette.warning.main, 0.12),
+      label: 'Pending',
+    },
+    cancelled: {
+      icon: CancelIcon,
+      color: theme.palette.text.secondary,
+      bgColor: alpha(theme.palette.text.secondary, 0.08),
+      label: 'Cancelled',
+    },
+  }
+  return configs[status] || configs.pending
 }
 
-const KIND_CONFIG = {
-  pdf: { icon: PictureAsPdfIcon, color: palette.red[400] },
-  excel: { icon: TableChartIcon, color: palette.green[400] },
+const getKindConfig = (theme, kind) => {
+  const configs = {
+    pdf: { icon: PictureAsPdfIcon, color: theme.palette.error.main },
+    excel: { icon: TableChartIcon, color: theme.palette.success.main },
+  }
+  return configs[kind] || configs.pdf
 }
+
+// =============================================================================
+// MAIN COMPONENT
+// =============================================================================
 
 export default function HistoryPage() {
+  const theme = useTheme()
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const toast = useToast()
@@ -123,19 +350,18 @@ export default function HistoryPage() {
     else if (format === 'xlsx' && artifacts.xlsx_url) url = artifacts.xlsx_url
 
     if (url) {
-      window.open(url, '_blank')
+      window.open(api.withBase(url), '_blank')
     } else {
       toast.show('Download not available', 'warning')
     }
   }, [toast])
 
   const handleRowClick = useCallback((row) => {
-    // Open HTML preview if available, otherwise show first available artifact
     const artifacts = row.artifacts || {}
     if (artifacts.html_url) {
-      window.open(artifacts.html_url, '_blank')
+      window.open(api.withBase(artifacts.html_url), '_blank')
     } else if (artifacts.pdf_url) {
-      window.open(artifacts.pdf_url, '_blank')
+      window.open(api.withBase(artifacts.pdf_url), '_blank')
     } else {
       navigate('/jobs')
     }
@@ -181,28 +407,18 @@ export default function HistoryPage() {
       headerName: 'Template',
       renderCell: (value, row) => {
         const kind = row.templateKind || 'pdf'
-        const cfg = KIND_CONFIG[kind] || KIND_CONFIG.pdf
+        const cfg = getKindConfig(theme, kind)
         const Icon = cfg.icon
         return (
           <Stack direction="row" alignItems="center" spacing={1.5}>
-            <Box
-              sx={{
-                width: 32,
-                height: 32,
-                borderRadius: '6px',
-                bgcolor: alpha(cfg.color, 0.15),
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Icon sx={{ fontSize: 16, color: cfg.color }} />
-            </Box>
+            <KindIconContainer iconColor={cfg.color}>
+              <Icon sx={{ fontSize: 18, color: cfg.color }} />
+            </KindIconContainer>
             <Box>
-              <Typography sx={{ fontSize: '0.8125rem', fontWeight: 500, color: palette.scale[200] }}>
+              <Typography sx={{ fontSize: '0.8125rem', fontWeight: 500, color: 'text.primary' }}>
                 {value || 'Unknown'}
               </Typography>
-              <Typography sx={{ fontSize: '0.6875rem', color: palette.scale[500] }}>
+              <Typography sx={{ fontSize: '0.6875rem', color: 'text.secondary' }}>
                 {kind.toUpperCase()}
               </Typography>
             </Box>
@@ -213,16 +429,17 @@ export default function HistoryPage() {
     {
       field: 'status',
       headerName: 'Status',
-      width: 120,
+      width: 130,
       renderCell: (value) => {
-        const cfg = STATUS_CONFIG[value] || STATUS_CONFIG.pending
+        const cfg = getStatusConfig(theme, value)
+        const Icon = cfg.icon
         return (
-          <Chip
-            icon={<cfg.icon sx={{ fontSize: 14 }} />}
+          <StatusChip
+            icon={<Icon sx={{ fontSize: 14 }} />}
             label={cfg.label}
             size="small"
-            color={cfg.color}
-            sx={{ fontSize: '0.6875rem' }}
+            statusColor={cfg.color}
+            statusBg={cfg.bgColor}
           />
         )
       },
@@ -232,7 +449,7 @@ export default function HistoryPage() {
       headerName: 'Started',
       width: 160,
       renderCell: (value) => (
-        <Typography sx={{ fontSize: '0.8125rem', color: palette.scale[400] }}>
+        <Typography sx={{ fontSize: '0.8125rem', color: 'text.secondary' }}>
           {value ? new Date(value).toLocaleString() : '-'}
         </Typography>
       ),
@@ -242,7 +459,7 @@ export default function HistoryPage() {
       headerName: 'Completed',
       width: 160,
       renderCell: (value) => (
-        <Typography sx={{ fontSize: '0.8125rem', color: palette.scale[400] }}>
+        <Typography sx={{ fontSize: '0.8125rem', color: 'text.secondary' }}>
           {value ? new Date(value).toLocaleString() : '-'}
         </Typography>
       ),
@@ -250,13 +467,13 @@ export default function HistoryPage() {
     {
       field: 'artifacts',
       headerName: 'Downloads',
-      width: 140,
+      width: 150,
       renderCell: (value, row) => {
         const artifacts = value || {}
         const hasAny = artifacts.pdf_url || artifacts.html_url || artifacts.docx_url || artifacts.xlsx_url
         if (!hasAny) {
           return (
-            <Typography sx={{ fontSize: '0.75rem', color: palette.scale[600] }}>
+            <Typography sx={{ fontSize: '0.75rem', color: 'text.disabled' }}>
               {row.status === 'completed' ? 'No files' : '-'}
             </Typography>
           )
@@ -265,46 +482,50 @@ export default function HistoryPage() {
           <Stack direction="row" spacing={0.5}>
             {artifacts.pdf_url && (
               <Tooltip title="Download PDF">
-                <IconButton
+                <ArtifactButton
                   size="small"
                   onClick={(e) => { e.stopPropagation(); handleDownload(row, 'pdf') }}
-                  sx={{ color: palette.red[400] }}
+                  sx={{ color: 'error.main' }}
+                  aria-label="Download PDF"
                 >
-                  <PictureAsPdfIcon sx={{ fontSize: 16 }} />
-                </IconButton>
+                  <PictureAsPdfIcon sx={{ fontSize: 18 }} />
+                </ArtifactButton>
               </Tooltip>
             )}
             {artifacts.html_url && (
               <Tooltip title="View HTML">
-                <IconButton
+                <ArtifactButton
                   size="small"
                   onClick={(e) => { e.stopPropagation(); handleDownload(row, 'html') }}
-                  sx={{ color: palette.blue[400] }}
+                  sx={{ color: 'info.main' }}
+                  aria-label="View HTML"
                 >
-                  <VisibilityIcon sx={{ fontSize: 16 }} />
-                </IconButton>
+                  <VisibilityIcon sx={{ fontSize: 18 }} />
+                </ArtifactButton>
               </Tooltip>
             )}
             {artifacts.docx_url && (
               <Tooltip title="Download DOCX">
-                <IconButton
+                <ArtifactButton
                   size="small"
                   onClick={(e) => { e.stopPropagation(); handleDownload(row, 'docx') }}
-                  sx={{ color: palette.blue[400] }}
+                  sx={{ color: 'info.main' }}
+                  aria-label="Download DOCX"
                 >
-                  <ArticleIcon sx={{ fontSize: 16 }} />
-                </IconButton>
+                  <ArticleIcon sx={{ fontSize: 18 }} />
+                </ArtifactButton>
               </Tooltip>
             )}
             {artifacts.xlsx_url && (
               <Tooltip title="Download XLSX">
-                <IconButton
+                <ArtifactButton
                   size="small"
                   onClick={(e) => { e.stopPropagation(); handleDownload(row, 'xlsx') }}
-                  sx={{ color: palette.green[400] }}
+                  sx={{ color: 'success.main' }}
+                  aria-label="Download XLSX"
                 >
-                  <TableChartIcon sx={{ fontSize: 16 }} />
-                </IconButton>
+                  <TableChartIcon sx={{ fontSize: 18 }} />
+                </ArtifactButton>
               </Tooltip>
             )}
           </Stack>
@@ -327,44 +548,42 @@ export default function HistoryPage() {
   ]
 
   return (
-    <Box sx={{ p: 3, maxWidth: 1400, mx: 'auto', width: '100%' }}>
+    <PageContainer>
       {/* Header */}
-      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
-        <Box>
-          <Typography variant="h5" fontWeight={600} color={palette.scale[100]}>
-            Report History
-          </Typography>
-          <Typography variant="body2" color={palette.scale[500]}>
-            View and download previously generated reports
-          </Typography>
-        </Box>
-        <Stack direction="row" spacing={1}>
-          <Tooltip title="Refresh history">
-            <span>
-              <IconButton
-                onClick={fetchHistory}
-                disabled={loading}
-                aria-label="Refresh history"
-                sx={{ color: palette.scale[400] }}
-              >
-                {loading ? <CircularProgress size={20} /> : <RefreshIcon />}
-              </IconButton>
-            </span>
-          </Tooltip>
-          <Button
-            variant="contained"
-            onClick={() => navigate('/reports')}
-            sx={{ px: 2 }}
-          >
-            Generate New
-          </Button>
+      <PageHeader>
+        <Stack direction="row" justifyContent="space-between" alignItems="center">
+          <Box>
+            <PageTitle>Report History</PageTitle>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+              View and download previously generated reports
+            </Typography>
+          </Box>
+          <Stack direction="row" spacing={1.5}>
+            <Tooltip title="Refresh history">
+              <span>
+                <RefreshButton
+                  onClick={fetchHistory}
+                  disabled={loading}
+                  aria-label="Refresh history"
+                >
+                  {loading ? <CircularProgress size={20} /> : <RefreshIcon />}
+                </RefreshButton>
+              </span>
+            </Tooltip>
+            <PrimaryButton
+              onClick={() => navigate('/reports')}
+              startIcon={<AddIcon />}
+            >
+              Generate New
+            </PrimaryButton>
+          </Stack>
         </Stack>
-      </Stack>
+      </PageHeader>
 
       {/* Filters */}
-      <Stack direction="row" spacing={2} sx={{ mb: 3 }}>
-        <FormControl size="small" sx={{ minWidth: 150 }}>
-          <InputLabel sx={{ color: palette.scale[500] }}>Status</InputLabel>
+      <FilterContainer direction="row" spacing={2}>
+        <StyledFormControl size="small">
+          <InputLabel>Status</InputLabel>
           <Select
             value={statusFilter}
             onChange={(e) => {
@@ -374,12 +593,6 @@ export default function HistoryPage() {
               syncParams(nextStatus, templateFilter)
             }}
             label="Status"
-            sx={{
-              color: palette.scale[200],
-              '.MuiOutlinedInput-notchedOutline': {
-                borderColor: alpha(palette.scale[100], 0.15),
-              },
-            }}
           >
             <MenuItem value="">All</MenuItem>
             <MenuItem value="completed">Completed</MenuItem>
@@ -387,9 +600,9 @@ export default function HistoryPage() {
             <MenuItem value="running">Running</MenuItem>
             <MenuItem value="cancelled">Cancelled</MenuItem>
           </Select>
-        </FormControl>
-        <FormControl size="small" sx={{ minWidth: 200 }}>
-          <InputLabel sx={{ color: palette.scale[500] }}>Template</InputLabel>
+        </StyledFormControl>
+        <StyledFormControl size="small" sx={{ minWidth: 200 }}>
+          <InputLabel>Template</InputLabel>
           <Select
             value={templateFilter}
             onChange={(e) => {
@@ -399,12 +612,6 @@ export default function HistoryPage() {
               syncParams(statusFilter, nextTemplate)
             }}
             label="Template"
-            sx={{
-              color: palette.scale[200],
-              '.MuiOutlinedInput-notchedOutline': {
-                borderColor: alpha(palette.scale[100], 0.15),
-              },
-            }}
           >
             <MenuItem value="">All Templates</MenuItem>
             {templates.map((tpl) => (
@@ -413,39 +620,36 @@ export default function HistoryPage() {
               </MenuItem>
             ))}
           </Select>
-        </FormControl>
-      </Stack>
+        </StyledFormControl>
+      </FilterContainer>
 
       {/* History Table */}
-      <Box
-        sx={{
-          bgcolor: palette.scale[1000],
-          borderRadius: '8px',
-          border: `1px solid ${alpha(palette.scale[100], 0.08)}`,
-          overflow: 'hidden',
-        }}
-      >
+      <TableContainer>
         {loading && history.length === 0 ? (
-          <Box sx={{ py: 6, textAlign: 'center' }}>
-            <CircularProgress size={32} />
-          </Box>
+          <EmptyStateContainer>
+            <CircularProgress size={40} />
+            <Typography sx={{ mt: 2, fontSize: '0.875rem', color: 'text.secondary' }}>
+              Loading history...
+            </Typography>
+          </EmptyStateContainer>
         ) : history.length === 0 ? (
-          <Box sx={{ py: 6, textAlign: 'center' }}>
-            <HistoryIcon sx={{ fontSize: 48, color: palette.scale[700], mb: 2 }} />
-            <Typography sx={{ fontSize: '0.875rem', color: palette.scale[500] }}>
+          <EmptyStateContainer>
+            <EmptyIcon />
+            <Typography sx={{ fontSize: '1rem', fontWeight: 600, color: 'text.secondary' }}>
               No report history found
             </Typography>
-            <Typography sx={{ fontSize: '0.75rem', color: palette.scale[600], mt: 0.5 }}>
+            <Typography sx={{ fontSize: '0.875rem', color: 'text.disabled', mt: 0.5 }}>
               Generate reports to see them here
             </Typography>
-            <Button
+            <SecondaryButton
               variant="outlined"
               onClick={() => navigate('/reports')}
-              sx={{ mt: 2 }}
+              sx={{ mt: 3 }}
+              startIcon={<AddIcon />}
             >
               Generate Report
-            </Button>
-          </Box>
+            </SecondaryButton>
+          </EmptyStateContainer>
         ) : (
           <DataTable
             columns={columns}
@@ -465,7 +669,7 @@ export default function HistoryPage() {
             }}
           />
         )}
-      </Box>
+      </TableContainer>
 
       <ConfirmModal
         open={bulkDeleteOpen}
@@ -477,6 +681,6 @@ export default function HistoryPage() {
         severity="error"
         loading={bulkDeleting}
       />
-    </Box>
+    </PageContainer>
   )
 }

@@ -1,3 +1,7 @@
+/**
+ * Premium Drawer Component
+ * Slide-out panel with theme-based styling
+ */
 import {
   Drawer as MuiDrawer,
   Box,
@@ -6,10 +10,26 @@ import {
   Button,
   Stack,
   CircularProgress,
+  useTheme,
   alpha,
+  keyframes,
 } from '@mui/material'
 import CloseIcon from '@mui/icons-material/Close'
-import { palette } from '../../theme'
+
+// =============================================================================
+// ANIMATIONS
+// =============================================================================
+
+const fadeIn = keyframes`
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+`
 
 export default function Drawer({
   open,
@@ -27,6 +47,8 @@ export default function Drawer({
   onCancel,
   confirmDisabled = false,
 }) {
+  const theme = useTheme()
+
   const handleCancel = () => {
     onCancel?.()
     onClose()
@@ -41,8 +63,18 @@ export default function Drawer({
         sx: {
           width: { xs: '100%', sm: width },
           maxWidth: '100%',
-          bgcolor: palette.scale[1000],
-          borderLeft: `1px solid ${alpha(palette.scale[100], 0.08)}`,
+          bgcolor: alpha(theme.palette.background.paper, 0.98),
+          backdropFilter: 'blur(20px)',
+          borderLeft: `1px solid ${alpha(theme.palette.divider, 0.08)}`,
+          boxShadow: `0 0 64px ${alpha(theme.palette.common.black, 0.25)}`,
+        },
+      }}
+      slotProps={{
+        backdrop: {
+          sx: {
+            bgcolor: alpha(theme.palette.common.black, 0.5),
+            backdropFilter: 'blur(4px)',
+          },
         },
       }}
     >
@@ -51,17 +83,18 @@ export default function Drawer({
           display: 'flex',
           flexDirection: 'column',
           height: '100%',
+          animation: `${fadeIn} 0.3s ease-out`,
         }}
       >
         {/* Header */}
         <Box
           sx={{
-            px: 2.5,
-            py: 2,
+            px: 3,
+            py: 2.5,
             display: 'flex',
             alignItems: 'flex-start',
             justifyContent: 'space-between',
-            borderBottom: `1px solid ${alpha(palette.scale[100], 0.08)}`,
+            borderBottom: `1px solid ${alpha(theme.palette.divider, 0.08)}`,
           }}
         >
           <Box>
@@ -69,7 +102,7 @@ export default function Drawer({
               sx={{
                 fontSize: '1.125rem',
                 fontWeight: 600,
-                color: palette.scale[100],
+                color: theme.palette.text.primary,
                 letterSpacing: '-0.01em',
               }}
             >
@@ -79,7 +112,7 @@ export default function Drawer({
               <Typography
                 sx={{
                   fontSize: '0.8125rem',
-                  color: palette.scale[500],
+                  color: theme.palette.text.secondary,
                   mt: 0.5,
                 }}
               >
@@ -91,10 +124,13 @@ export default function Drawer({
             onClick={onClose}
             size="small"
             sx={{
-              color: palette.scale[500],
+              color: theme.palette.text.secondary,
+              borderRadius: 2,
+              transition: 'all 0.2s ease',
               '&:hover': {
-                bgcolor: alpha(palette.scale[100], 0.08),
-                color: palette.scale[100],
+                bgcolor: alpha(theme.palette.error.main, 0.1),
+                color: theme.palette.error.main,
+                transform: 'rotate(90deg)',
               },
             }}
           >
@@ -107,8 +143,8 @@ export default function Drawer({
           sx={{
             flex: 1,
             overflow: 'auto',
-            p: 2.5,
-            bgcolor: palette.scale[1100],
+            p: 3,
+            bgcolor: alpha(theme.palette.background.default, 0.5),
           }}
         >
           {children}
@@ -118,10 +154,10 @@ export default function Drawer({
         {(actions || onConfirm) && (
           <Box
             sx={{
-              px: 2.5,
-              py: 2,
-              borderTop: `1px solid ${alpha(palette.scale[100], 0.08)}`,
-              bgcolor: palette.scale[1000],
+              px: 3,
+              py: 2.5,
+              borderTop: `1px solid ${alpha(theme.palette.divider, 0.08)}`,
+              bgcolor: theme.palette.background.paper,
             }}
           >
             {actions || (
@@ -131,11 +167,15 @@ export default function Drawer({
                   onClick={handleCancel}
                   disabled={loading}
                   sx={{
-                    color: palette.scale[300],
-                    borderColor: alpha(palette.scale[100], 0.15),
+                    borderRadius: 2.5,
+                    textTransform: 'none',
+                    fontWeight: 500,
+                    color: theme.palette.text.secondary,
+                    borderColor: alpha(theme.palette.divider, 0.2),
+                    transition: 'all 0.2s ease',
                     '&:hover': {
-                      borderColor: alpha(palette.scale[100], 0.25),
-                      bgcolor: alpha(palette.scale[100], 0.05),
+                      borderColor: alpha(theme.palette.text.primary, 0.3),
+                      bgcolor: alpha(theme.palette.text.primary, 0.05),
                     },
                   }}
                 >
@@ -145,12 +185,20 @@ export default function Drawer({
                   variant="contained"
                   onClick={onConfirm}
                   disabled={confirmDisabled || loading}
-                  startIcon={loading ? <CircularProgress size={16} /> : null}
+                  startIcon={loading ? <CircularProgress size={16} color="inherit" /> : null}
                   sx={{
-                    bgcolor: palette.green[400],
-                    color: palette.scale[1100],
+                    borderRadius: 2.5,
+                    textTransform: 'none',
+                    fontWeight: 600,
+                    background: `linear-gradient(135deg, ${theme.palette.success.main}, ${theme.palette.success.dark})`,
+                    boxShadow: `0 4px 14px ${alpha(theme.palette.success.main, 0.3)}`,
+                    transition: 'all 0.2s ease',
                     '&:hover': {
-                      bgcolor: palette.green[300],
+                      boxShadow: `0 6px 20px ${alpha(theme.palette.success.main, 0.4)}`,
+                      transform: 'translateY(-1px)',
+                    },
+                    '&:active': {
+                      transform: 'translateY(0)',
                     },
                   }}
                 >

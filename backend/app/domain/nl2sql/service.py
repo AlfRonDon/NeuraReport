@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import logging
-import sqlite3
 import time
 import uuid
 from datetime import datetime, timezone
@@ -11,6 +10,7 @@ from typing import Any, Dict, List, Optional
 
 from backend.app.core.errors import AppError
 from backend.app.services.connections.db_connection import resolve_db_path, verify_sqlite
+from backend.app.services.dataframes import sqlite_shim, ensure_connection_loaded
 from backend.app.services.llm.client import get_llm_client
 from backend.app.services.llm.text_to_sql import TextToSQL, TableSchema
 from backend.app.services.state import store as state_store_module
@@ -75,7 +75,7 @@ class NL2SQLService:
             )
 
     def _get_schema_for_connection(self, db_path: Path, tables: Optional[List[str]] = None) -> Dict[str, Any]:
-        """Get database schema for SQL generation context."""
+        """Get database schema for SQL generation context using DataFrames."""
         from backend.app.services.dataframes.sqlite_loader import get_loader
 
         loader = get_loader(db_path)
@@ -95,18 +95,16 @@ class NL2SQLService:
                     "description": "",
                 })
 
-            # Get sample values for better context
+            # Get sample values from DataFrame (no direct DB access)
             sample_values = {}
             try:
-                with sqlite3.connect(str(db_path)) as con:
-                    con.row_factory = sqlite3.Row
-                    quoted = _quote_identifier(table_name)
-                    cur = con.execute(f'SELECT * FROM "{quoted}" LIMIT 3')
-                    rows = cur.fetchall()
-                    if rows:
-                        for col in columns:
-                            col_name = col["name"]
-                            values = [_coerce_value(row[col_name]) for row in rows if col_name in row.keys()]
+                frame = loader.frame(table_name)
+                if not frame.empty:
+                    sample_rows = frame.head(3)
+                    for col in columns:
+                        col_name = col["name"]
+                        if col_name in sample_rows.columns:
+                            values = [_coerce_value(v) for v in sample_rows[col_name].tolist()]
                             if values:
                                 sample_values[col_name] = values[:3]
             except Exception:
@@ -183,11 +181,14 @@ class NL2SQLService:
         request: NL2SQLExecuteRequest,
         correlation_id: Optional[str] = None,
     ) -> QueryExecutionResult:
-        """Execute a SQL query and return results."""
+        """Execute a SQL query and return results using DataFrames."""
         logger.info(f"Executing SQL query on connection {request.connection_id}", extra={"correlation_id": correlation_id})
 
         # Resolve and verify connection
         db_path = self._resolve_connection(request.connection_id)
+
+        # Ensure DataFrames are loaded for this connection
+        ensure_connection_loaded(request.connection_id, db_path)
 
         # Validate SQL (basic safety check)
         sql_upper = request.sql.upper().strip()
@@ -208,11 +209,11 @@ class NL2SQLService:
                     status_code=400,
                 )
 
-        # Execute query
+        # Execute query using DataFrame shim
         started = time.time()
         try:
-            with sqlite3.connect(str(db_path)) as con:
-                con.row_factory = sqlite3.Row
+            with sqlite_shim.connect(str(db_path)) as con:
+                con.row_factory = sqlite_shim.Row
 
                 # Get total count first (without limit)
                 count_sql = f"SELECT COUNT(*) as cnt FROM ({request.sql}) AS subq"
@@ -226,10 +227,10 @@ class NL2SQLService:
                 cur = con.execute(limited_sql)
                 rows_raw = cur.fetchall()
 
-                columns = [desc[0] for desc in cur.description] if cur.description else []
+                columns = list(rows_raw[0].keys()) if rows_raw else []
                 rows = [{col: _coerce_value(row[col]) for col in columns} for row in rows_raw]
 
-        except sqlite3.Error as exc:
+        except sqlite_shim.OperationalError as exc:
             execution_time_ms = int((time.time() - started) * 1000)
             logger.error(f"Query execution failed: {exc}", extra={"correlation_id": correlation_id})
 

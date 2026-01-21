@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import os
-import sqlite3
 import threading
 import time
 from pathlib import Path
@@ -11,6 +10,7 @@ from fastapi import HTTPException
 
 from backend.app.services.connections.db_connection import resolve_db_path, verify_sqlite
 from backend.app.services.dataframes.sqlite_loader import get_loader
+from backend.app.services.dataframes import sqlite_shim
 from backend.app.services.state import store as state_store_module
 
 _SCHEMA_CACHE: dict[tuple[str, bool, bool, int], dict] = {}
@@ -38,25 +38,28 @@ def _coerce_value(value: Any) -> Any:
 
 
 def _count_rows(db_path: Path, table: str) -> int:
-    quoted = _quote_identifier(table)
-    with sqlite3.connect(str(db_path)) as con:
-        cur = con.execute(f'SELECT COUNT(*) AS count FROM "{quoted}"')
-        row = cur.fetchone()
-        return int(row[0]) if row else 0
+    """Get row count from DataFrame (no direct database access)."""
+    loader = get_loader(db_path)
+    try:
+        frame = loader.frame(table)
+        return len(frame)
+    except Exception:
+        return 0
 
 
 def _sample_rows(db_path: Path, table: str, limit: int, offset: int = 0) -> list[dict]:
-    quoted = _quote_identifier(table)
-    with sqlite3.connect(str(db_path)) as con:
-        con.row_factory = sqlite3.Row
-        cur = con.execute(
-            f'SELECT * FROM "{quoted}" LIMIT ? OFFSET ?',
-            (limit, offset),
-        )
+    """Get sample rows from DataFrame (no direct database access)."""
+    loader = get_loader(db_path)
+    try:
+        frame = loader.frame(table)
+        # Apply offset and limit
+        sample = frame.iloc[offset:offset + limit]
         rows = []
-        for row in cur.fetchall():
-            rows.append({key: _coerce_value(value) for key, value in dict(row).items()})
+        for _, row in sample.iterrows():
+            rows.append({key: _coerce_value(value) for key, value in row.to_dict().items()})
         return rows
+    except Exception:
+        return []
 
 
 def get_connection_schema(

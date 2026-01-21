@@ -313,6 +313,7 @@ export default function DataTable({
   onBulkDelete,
   title,
   subtitle,
+  pagination = null,
   defaultSortField,
   defaultSortOrder = 'asc',
   pageSize = 10,
@@ -332,6 +333,11 @@ export default function DataTable({
   const [searchQuery, setSearchQuery] = useState('')
   const [activeFilters, setActiveFilters] = useState(persisted?.filters || {})
   const [expandedRows, setExpandedRows] = useState(new Set())
+  const [hiddenColumns, setHiddenColumns] = useState(persisted?.hiddenColumns || [])
+
+  const visibleColumns = useMemo(() => (
+    columns.filter((column) => column?.field && !hiddenColumns.includes(column.field))
+  ), [columns, hiddenColumns])
 
   // Persist state
   useEffect(() => {
@@ -341,8 +347,20 @@ export default function DataTable({
       orderBy,
       rowsPerPage,
       filters: activeFilters,
+      hiddenColumns,
     })
-  }, [persistKey, order, orderBy, rowsPerPage, activeFilters])
+  }, [persistKey, order, orderBy, rowsPerPage, activeFilters, hiddenColumns])
+
+  useEffect(() => {
+    setHiddenColumns((prev) => prev.filter((field) => columns.some((col) => col.field === field)))
+  }, [columns])
+
+  useEffect(() => {
+    if (!visibleColumns.length) return
+    if (!visibleColumns.some((column) => column.field === orderBy)) {
+      setOrderBy(visibleColumns[0].field)
+    }
+  }, [visibleColumns, orderBy])
 
   const handleRequestSort = useCallback((property) => {
     const isAsc = orderBy === property && order === 'asc'
@@ -387,6 +405,27 @@ export default function DataTable({
     })
   }, [])
 
+  const handleToggleColumn = useCallback((field) => {
+    if (!field) return
+    setHiddenColumns((prev) => {
+      const next = new Set(prev)
+      if (next.has(field)) {
+        next.delete(field)
+        return Array.from(next)
+      }
+      const visibleCount = columns.filter((column) =>
+        column?.field && !next.has(column.field)
+      ).length
+      if (visibleCount <= 1) return prev
+      next.add(field)
+      return Array.from(next)
+    })
+  }, [columns])
+
+  const handleResetColumns = useCallback(() => {
+    setHiddenColumns([])
+  }, [])
+
   useEffect(() => {
     if (!selectable) return
     const idSet = new Set(data.map((row) => row?.id).filter(Boolean))
@@ -398,19 +437,32 @@ export default function DataTable({
   }, [data, selectable, selected, onSelectionChange])
 
   const handleChangePage = useCallback((_, newPage) => {
+    if (pagination?.onPageChange) {
+      pagination.onPageChange(newPage)
+      return
+    }
     setPage(newPage)
-  }, [])
+  }, [pagination])
 
   const handleChangeRowsPerPage = useCallback((event) => {
-    setRowsPerPage(parseInt(event.target.value, 10))
+    const nextValue = parseInt(event.target.value, 10)
+    if (pagination?.onRowsPerPageChange) {
+      pagination.onRowsPerPageChange(nextValue)
+      return
+    }
+    setRowsPerPage(nextValue)
     setPage(0)
-  }, [])
+  }, [pagination])
 
   const handleSearch = useCallback((query) => {
     setSearchQuery(query)
-    setPage(0)
+    if (pagination?.onPageChange) {
+      pagination.onPageChange(0)
+    } else {
+      setPage(0)
+    }
     onSearch?.(query)
-  }, [onSearch])
+  }, [onSearch, pagination])
 
   const handleRowKeyDown = useCallback((event, row, rowIndex) => {
     if (event.key === 'Enter' && onRowClick) {
@@ -449,26 +501,102 @@ export default function DataTable({
       : data
 
     if (!searchQuery) return baseData
+    const searchColumns = visibleColumns.length ? visibleColumns : columns
     return baseData.filter((row) =>
-      columns.some((col) => {
+      searchColumns.some((col) => {
         const value = row[col.field]
         if (value == null) return false
         return String(value).toLowerCase().includes(searchQuery.toLowerCase())
       })
     )
-  }, [data, searchQuery, columns, activeFilters])
+  }, [data, searchQuery, columns, activeFilters, visibleColumns])
 
   const sortedData = useMemo(() => {
     return [...filteredData].sort(getComparator(order, orderBy))
   }, [filteredData, order, orderBy])
 
   const paginatedData = useMemo(() => {
+    if (pagination) return sortedData
     return sortedData.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-  }, [sortedData, page, rowsPerPage])
+  }, [sortedData, page, rowsPerPage, pagination])
 
   const isSelected = (id) => selected.includes(id)
   const numSelected = selected.length
-  const rowCount = filteredData.length
+  const rowCount = pagination?.total ?? filteredData.length
+  const pageRowCount = pagination ? paginatedData.length : rowCount
+  const effectivePage = pagination?.page ?? page
+  const effectiveRowsPerPage = pagination?.rowsPerPage ?? rowsPerPage
+
+  const exportColumns = useMemo(
+    () => visibleColumns.filter((column) => column?.exportable !== false && column?.field),
+    [visibleColumns],
+  )
+
+  const exportRows = useMemo(() => sortedData, [sortedData])
+
+  const getExportValue = useCallback((row, column) => {
+    if (typeof column.exportValue === 'function') {
+      return column.exportValue(row[column.field], row)
+    }
+    if (typeof column.valueGetter === 'function') {
+      return column.valueGetter(row)
+    }
+    return row[column.field]
+  }, [])
+
+  const formatCsvValue = useCallback((value) => {
+    if (value === null || value === undefined) return ''
+    if (value instanceof Date) return value.toISOString()
+    const text = typeof value === 'string' ? value : JSON.stringify(value)
+    const escaped = text.replace(/"/g, '""')
+    if (/[",\n\r]/.test(escaped)) {
+      return `"${escaped}"`
+    }
+    return escaped
+  }, [])
+
+  const buildExportFileName = useCallback((extension) => {
+    const base = String(title || 'table-export').trim().toLowerCase()
+    const safeBase = base.replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '') || 'table-export'
+    return `${safeBase}.${extension}`
+  }, [title])
+
+  const downloadFile = useCallback((content, filename, type) => {
+    const blob = new Blob([content], { type })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = filename
+    link.rel = 'noopener'
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    URL.revokeObjectURL(url)
+  }, [])
+
+  const handleExportCsv = useCallback(() => {
+    if (!exportColumns.length || !exportRows.length) return
+    const headers = exportColumns.map((column) => column.headerName || column.field)
+    const rows = exportRows.map((row) =>
+      exportColumns.map((column) => formatCsvValue(getExportValue(row, column)))
+    )
+    const csv = [headers, ...rows].map((row) => row.join(',')).join('\n')
+    downloadFile(csv, buildExportFileName('csv'), 'text/csv;charset=utf-8;')
+  }, [exportColumns, exportRows, formatCsvValue, getExportValue, downloadFile, buildExportFileName])
+
+  const handleExportJson = useCallback(() => {
+    if (!exportColumns.length || !exportRows.length) return
+    const records = exportRows.map((row) => {
+      const record = {}
+      exportColumns.forEach((column) => {
+        const key = column.field || column.headerName
+        record[key] = getExportValue(row, column) ?? null
+      })
+      return record
+    })
+    const json = JSON.stringify(records, null, 2)
+    downloadFile(json, buildExportFileName('json'), 'application/json;charset=utf-8;')
+  }, [exportColumns, exportRows, getExportValue, downloadFile, buildExportFileName])
 
   const cellPadding = {
     compact: 1,
@@ -491,6 +619,14 @@ export default function DataTable({
           onBulkDelete={onBulkDelete}
           numSelected={numSelected}
           onFiltersChange={setActiveFilters}
+          columns={columns}
+          hiddenColumns={hiddenColumns}
+          onToggleColumn={handleToggleColumn}
+          onResetColumns={handleResetColumns}
+          onExportCsv={handleExportCsv}
+          onExportJson={handleExportJson}
+          exportCsvDisabled={!exportColumns.length || !exportRows.length}
+          exportJsonDisabled={!exportColumns.length || !exportRows.length}
         />
         <DataTableEmptyState {...emptyState} />
       </TableWrapper>
@@ -510,6 +646,14 @@ export default function DataTable({
         onBulkDelete={onBulkDelete}
         numSelected={numSelected}
         onFiltersChange={setActiveFilters}
+        columns={columns}
+        hiddenColumns={hiddenColumns}
+        onToggleColumn={handleToggleColumn}
+        onResetColumns={handleResetColumns}
+        onExportCsv={handleExportCsv}
+        onExportJson={handleExportJson}
+        exportCsvDisabled={!exportColumns.length || !exportRows.length}
+        exportJsonDisabled={!exportColumns.length || !exportRows.length}
       />
 
       <StyledTableContainer sx={{ maxHeight: stickyHeader ? 600 : 'none' }}>
@@ -520,14 +664,14 @@ export default function DataTable({
               {selectable && (
                 <TableCell padding="checkbox" sx={{ width: 48 }}>
                   <StyledCheckbox
-                    indeterminate={numSelected > 0 && numSelected < rowCount}
-                    checked={rowCount > 0 && numSelected === rowCount}
+                    indeterminate={numSelected > 0 && numSelected < pageRowCount}
+                    checked={pageRowCount > 0 && numSelected === pageRowCount}
                     onChange={handleSelectAll}
                     inputProps={{ 'aria-label': 'Select all rows' }}
                   />
                 </TableCell>
               )}
-              {columns.map((column) => (
+              {visibleColumns.map((column) => (
                 <TableCell
                   key={column.field}
                   align={column.align || 'left'}
@@ -569,7 +713,7 @@ export default function DataTable({
                       <ShimmerSkeleton variant="rectangular" width={18} height={18} sx={{ borderRadius: 0.5 }} />
                     </TableCell>
                   )}
-                  {columns.map((column) => (
+                  {visibleColumns.map((column) => (
                     <TableCell key={column.field} sx={{ p: cellPadding }}>
                       <ShimmerSkeleton
                         variant="text"
@@ -635,7 +779,7 @@ export default function DataTable({
                           />
                         </TableCell>
                       )}
-                      {columns.map((column) => (
+                      {visibleColumns.map((column) => (
                         <TableCell key={column.field} align={column.align || 'left'} sx={{ p: cellPadding }}>
                           {column.renderCell
                             ? column.renderCell(row[column.field], row)
@@ -655,7 +799,7 @@ export default function DataTable({
                     {expandable && renderExpandedRow && (
                       <ExpandableRow>
                         <TableCell
-                          colSpan={columns.length + (selectable ? 2 : 1) + (rowActions ? 1 : 0)}
+                          colSpan={visibleColumns.length + (selectable ? 2 : 1) + (rowActions ? 1 : 0)}
                           sx={{ p: 0 }}
                         >
                           <Collapse in={isExpanded} timeout="auto" unmountOnExit>
@@ -664,7 +808,7 @@ export default function DataTable({
                         </TableCell>
                       </ExpandableRow>
                     )}
-                  </>
+                  </Fragment>
                 )
               })
             )}
@@ -676,8 +820,8 @@ export default function DataTable({
         rowsPerPageOptions={pageSizeOptions}
         component="div"
         count={rowCount}
-        rowsPerPage={rowsPerPage}
-        page={page}
+        rowsPerPage={effectiveRowsPerPage}
+        page={effectivePage}
         onPageChange={handleChangePage}
         onRowsPerPageChange={handleChangeRowsPerPage}
         labelRowsPerPage="Rows per page:"

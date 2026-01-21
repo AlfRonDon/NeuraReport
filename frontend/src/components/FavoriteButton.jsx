@@ -1,9 +1,12 @@
+/**
+ * Premium Favorite Button
+ * Star toggle with theme-based styling
+ */
 import { useState, useCallback, useEffect } from 'react'
-import { IconButton, Tooltip, CircularProgress, alpha } from '@mui/material'
+import { IconButton, Tooltip, CircularProgress, useTheme, alpha } from '@mui/material'
 import StarIcon from '@mui/icons-material/Star'
 import StarBorderIcon from '@mui/icons-material/StarBorder'
 import * as api from '../api/client'
-import { palette } from '../theme'
 
 /**
  * A reusable favorite toggle button.
@@ -21,6 +24,7 @@ export default function FavoriteButton({
   onToggle,
   size = 'small',
 }) {
+  const theme = useTheme()
   const [isFavorite, setIsFavorite] = useState(initialFavorite ?? false)
   const [loading, setLoading] = useState(false)
   const [checked, setChecked] = useState(initialFavorite !== undefined)
@@ -87,15 +91,17 @@ export default function FavoriteButton({
         onClick={handleToggle}
         disabled={loading}
         sx={{
-          color: isFavorite ? palette.yellow[400] : palette.scale[500],
+          color: isFavorite ? theme.palette.warning.main : theme.palette.text.secondary,
+          transition: 'all 0.2s ease',
           '&:hover': {
-            color: isFavorite ? palette.yellow[300] : palette.yellow[400],
-            bgcolor: alpha(palette.yellow[400], 0.1),
+            color: theme.palette.warning.main,
+            bgcolor: alpha(theme.palette.warning.main, 0.1),
+            transform: 'scale(1.1)',
           },
         }}
       >
         {loading ? (
-          <CircularProgress size={iconSize - 4} sx={{ color: palette.yellow[400] }} />
+          <CircularProgress size={iconSize - 4} sx={{ color: theme.palette.warning.main }} />
         ) : isFavorite ? (
           <StarIcon sx={{ fontSize: iconSize }} />
         ) : (

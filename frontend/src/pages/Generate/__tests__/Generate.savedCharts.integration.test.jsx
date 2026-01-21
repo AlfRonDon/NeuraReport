@@ -89,59 +89,73 @@ const {
   }
 })
 
+// Mock functions for the API
+const mockApiImplementation = {
+  isMock: false,
+  listApprovedTemplates: vi.fn().mockResolvedValue(templatesMock),
+  fetchTemplateKeyOptions: vi.fn().mockResolvedValue({}),
+  discoverReports: discoverReportsMock,
+  suggestCharts: suggestChartsMock,
+  listSavedCharts: vi.fn().mockImplementation(({ templateId }) =>
+    Promise.resolve(
+      savedChartsStore
+        .filter((chart) => chart.templateId === templateId)
+        .map((chart) => ({
+          ...chart,
+          spec: { ...chart.spec },
+        })),
+    ),
+  ),
+  createSavedChart: vi.fn().mockImplementation(({ templateId, name }) => {
+    const record = {
+      id: `saved-${savedChartsStore.length + 1}`,
+      templateId,
+      name,
+      spec: {
+        type: 'line',
+        xField: 'missing_field',
+        yFields: ['missing_metric'],
+        chartTemplateId: 'time_series_basic',
+      },
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }
+    savedChartsStore.push(record)
+    return Promise.resolve({ ...record, spec: { ...record.spec } })
+  }),
+  updateSavedChart: vi.fn().mockImplementation(({ templateId, chartId, name, spec }) => {
+    const record = savedChartsStore.find((item) => item.id === chartId && item.templateId === templateId)
+    if (!record) {
+      throw new Error('Chart not found')
+    }
+    if (name != null) record.name = name
+    if (spec != null) record.spec = { ...spec }
+    record.updatedAt = new Date().toISOString()
+    return Promise.resolve({ ...record, spec: { ...record.spec } })
+  }),
+  deleteSavedChart: vi.fn().mockImplementation(({ templateId, chartId }) => {
+    const index = savedChartsStore.findIndex((item) => item.id === chartId && item.templateId === templateId)
+    if (index >= 0) {
+      savedChartsStore.splice(index, 1)
+    }
+    return Promise.resolve({ status: 'ok' })
+  }),
+}
+
 vi.mock('../../../api/client.js', async () => {
   const actual = await vi.importActual('../../../api/client.js')
   return {
     ...actual,
-    isMock: false,
-    listApprovedTemplates: vi.fn().mockResolvedValue(templatesMock),
-    fetchTemplateKeyOptions: vi.fn().mockResolvedValue({}),
-    discoverReports: discoverReportsMock,
-    suggestCharts: suggestChartsMock,
-    listSavedCharts: vi.fn().mockImplementation(({ templateId }) =>
-      Promise.resolve(
-        savedChartsStore
-          .filter((chart) => chart.templateId === templateId)
-          .map((chart) => ({
-            ...chart,
-            spec: { ...chart.spec },
-          })),
-      ),
-    ),
-    createSavedChart: vi.fn().mockImplementation(({ templateId, name }) => {
-      const record = {
-        id: `saved-${savedChartsStore.length + 1}`,
-        templateId,
-        name,
-        spec: {
-          type: 'line',
-          xField: 'missing_field',
-          yFields: ['missing_metric'],
-          chartTemplateId: 'time_series_basic',
-        },
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      }
-      savedChartsStore.push(record)
-      return Promise.resolve({ ...record, spec: { ...record.spec } })
-    }),
-    updateSavedChart: vi.fn().mockImplementation(({ templateId, chartId, name, spec }) => {
-      const record = savedChartsStore.find((item) => item.id === chartId && item.templateId === templateId)
-      if (!record) {
-        throw new Error('Chart not found')
-      }
-      if (name != null) record.name = name
-      if (spec != null) record.spec = { ...spec }
-      record.updatedAt = new Date().toISOString()
-      return Promise.resolve({ ...record, spec: { ...record.spec } })
-    }),
-    deleteSavedChart: vi.fn().mockImplementation(({ templateId, chartId }) => {
-      const index = savedChartsStore.findIndex((item) => item.id === chartId && item.templateId === templateId)
-      if (index >= 0) {
-        savedChartsStore.splice(index, 1)
-      }
-      return Promise.resolve({ status: 'ok' })
-    }),
+    ...mockApiImplementation,
+  }
+})
+
+// Also mock generateApi.js since some components import from there
+vi.mock('../../../features/generate/services/generateApi.js', async () => {
+  const actual = await vi.importActual('../../../features/generate/services/generateApi.js')
+  return {
+    ...actual,
+    ...mockApiImplementation,
   }
 })
 
@@ -174,11 +188,7 @@ describe('GeneratePage saved chart integration', () => {
     }))
   })
 
-  // TODO: This test has mock configuration issues - the mock for listApprovedTemplates
-  // doesn't properly populate the templates in the React Query cache because TemplatePicker
-  // imports from generateApi.js which re-exports from client.js. The mock setup needs
-  // to be refactored to properly intercept the query function call.
-  it.skip(
+  it(
     'saves a suggested chart, shows warning for invalid fields, and deletes it',
     async () => {
     const promptSpy = vi.spyOn(window, 'prompt').mockReturnValue('My saved chart')

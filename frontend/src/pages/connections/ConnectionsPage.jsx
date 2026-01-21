@@ -1,5 +1,22 @@
+/**
+ * Premium Connections Page
+ * Data source management with theme-based styling
+ */
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
-import { Box, Chip, IconButton, Menu, MenuItem, ListItemIcon, ListItemText, Tooltip, alpha } from '@mui/material'
+import {
+  Box,
+  Chip,
+  IconButton,
+  Menu,
+  MenuItem,
+  ListItemIcon,
+  ListItemText,
+  Tooltip,
+  useTheme,
+  alpha,
+  styled,
+  keyframes,
+} from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
 import MoreVertIcon from '@mui/icons-material/MoreVert'
 import EditIcon from '@mui/icons-material/Edit'
@@ -18,9 +35,90 @@ import FavoriteButton from '../../components/FavoriteButton'
 import * as api from '../../api/client'
 import ConnectionForm from './ConnectionForm'
 import ConnectionSchemaDrawer from './ConnectionSchemaDrawer'
-import { palette } from '../../theme'
+
+// =============================================================================
+// ANIMATIONS
+// =============================================================================
+
+const fadeInUp = keyframes`
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+`
+
+// =============================================================================
+// STYLED COMPONENTS
+// =============================================================================
+
+const PageContainer = styled(Box)(({ theme }) => ({
+  padding: theme.spacing(3),
+  maxWidth: 1400,
+  margin: '0 auto',
+  width: '100%',
+  minHeight: '100vh',
+  background: theme.palette.mode === 'dark'
+    ? `radial-gradient(ellipse at 20% 0%, ${alpha(theme.palette.primary.dark, 0.15)} 0%, transparent 50%),
+       radial-gradient(ellipse at 80% 100%, ${alpha(theme.palette.secondary.dark, 0.1)} 0%, transparent 50%),
+       ${theme.palette.background.default}`
+    : `radial-gradient(ellipse at 20% 0%, ${alpha(theme.palette.primary.light, 0.08)} 0%, transparent 50%),
+       radial-gradient(ellipse at 80% 100%, ${alpha(theme.palette.secondary.light, 0.05)} 0%, transparent 50%),
+       ${theme.palette.background.default}`,
+  animation: `${fadeInUp} 0.5s ease-out`,
+}))
+
+const StyledMenu = styled(Menu)(({ theme }) => ({
+  '& .MuiPaper-root': {
+    backgroundColor: alpha(theme.palette.background.paper, 0.95),
+    backdropFilter: 'blur(20px)',
+    border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+    borderRadius: 12,
+    boxShadow: `0 8px 32px ${alpha(theme.palette.common.black, 0.15)}`,
+    minWidth: 160,
+    animation: `${fadeInUp} 0.2s ease-out`,
+  },
+}))
+
+const StyledMenuItem = styled(MenuItem)(({ theme }) => ({
+  borderRadius: 8,
+  margin: theme.spacing(0.5, 1),
+  padding: theme.spacing(1, 1.5),
+  fontSize: '0.8125rem',
+  transition: 'all 0.2s ease',
+  '&:hover': {
+    backgroundColor: alpha(theme.palette.primary.main, 0.08),
+  },
+}))
+
+const IconContainer = styled(Box)(({ theme }) => ({
+  width: 32,
+  height: 32,
+  borderRadius: 8,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  transition: 'all 0.2s ease',
+}))
+
+const ActionButton = styled(IconButton)(({ theme }) => ({
+  borderRadius: 10,
+  transition: 'all 0.2s ease',
+  '&:hover': {
+    backgroundColor: alpha(theme.palette.primary.main, 0.08),
+    transform: 'scale(1.05)',
+  },
+}))
+
+// =============================================================================
+// MAIN COMPONENT
+// =============================================================================
 
 export default function ConnectionsPage() {
+  const theme = useTheme()
   const toast = useToast()
   const savedConnections = useAppStore((s) => s.savedConnections)
   const setSavedConnections = useAppStore((s) => s.setSavedConnections)
@@ -219,22 +317,18 @@ export default function ConnectionsPage() {
             initialFavorite={favorites.has(row.id)}
             onToggle={(isFav) => handleFavoriteToggle(row.id, isFav)}
           />
-          <Box
+          <IconContainer
             sx={{
-              width: 32,
-              height: 32,
-              borderRadius: '6px',
-              bgcolor: alpha(palette.green[400], 0.15),
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
+              bgcolor: alpha(theme.palette.success.main, 0.15),
             }}
           >
-            <StorageIcon sx={{ color: palette.green[400], fontSize: 16 }} />
-          </Box>
+            <StorageIcon sx={{ color: theme.palette.success.main, fontSize: 16 }} />
+          </IconContainer>
           <Box>
-            <Box sx={{ fontWeight: 500, fontSize: '0.8125rem', color: palette.scale[100] }}>{value}</Box>
-            <Box sx={{ fontSize: '0.75rem', color: palette.scale[500] }}>
+            <Box sx={{ fontWeight: 500, fontSize: '0.8125rem', color: theme.palette.text.primary }}>
+              {value}
+            </Box>
+            <Box sx={{ fontSize: '0.75rem', color: theme.palette.text.secondary }}>
               {row.summary || row.db_type}
             </Box>
           </Box>
@@ -250,9 +344,10 @@ export default function ConnectionsPage() {
           label={value || 'Unknown'}
           size="small"
           sx={{
-            bgcolor: alpha(palette.scale[100], 0.08),
-            color: palette.scale[300],
+            bgcolor: alpha(theme.palette.primary.main, 0.08),
+            color: theme.palette.text.secondary,
             fontSize: '0.75rem',
+            borderRadius: 2,
           }}
         />
       ),
@@ -273,6 +368,7 @@ export default function ConnectionsPage() {
           sx={{
             fontSize: '0.75rem',
             textTransform: 'capitalize',
+            borderRadius: 2,
           }}
         />
       ),
@@ -282,7 +378,7 @@ export default function ConnectionsPage() {
       headerName: 'Latency',
       width: 100,
       renderCell: (value) => (
-        <Box sx={{ color: palette.scale[400], fontSize: '0.8125rem' }}>
+        <Box sx={{ color: theme.palette.text.secondary, fontSize: '0.8125rem' }}>
           {value ? `${value}ms` : '-'}
         </Box>
       ),
@@ -292,12 +388,12 @@ export default function ConnectionsPage() {
       headerName: 'Last Connected',
       width: 180,
       renderCell: (value) => (
-        <Box sx={{ color: palette.scale[400], fontSize: '0.8125rem' }}>
+        <Box sx={{ color: theme.palette.text.secondary, fontSize: '0.8125rem' }}>
           {value ? new Date(value).toLocaleString() : '-'}
         </Box>
       ),
     },
-  ], [favorites, handleFavoriteToggle])
+  ], [favorites, handleFavoriteToggle, theme])
 
   const filters = useMemo(() => [
     {
@@ -313,16 +409,13 @@ export default function ConnectionsPage() {
       key: 'db_type',
       label: 'Type',
       options: [
-        { value: 'postgresql', label: 'PostgreSQL' },
-        { value: 'mysql', label: 'MySQL' },
-        { value: 'mssql', label: 'SQL Server' },
         { value: 'sqlite', label: 'SQLite' },
       ],
     },
   ], [])
 
   return (
-    <Box sx={{ p: 3, maxWidth: 1400, mx: 'auto', width: '100%' }}>
+    <PageContainer>
       <DataTable
         title="Data Sources"
         subtitle="Connect to your databases and data files"
@@ -342,20 +435,14 @@ export default function ConnectionsPage() {
         onRowClick={handleRowClick}
         rowActions={(row) => (
           <Tooltip title="More actions">
-            <IconButton
+            <ActionButton
               size="small"
               onClick={(e) => handleOpenMenu(e, row)}
               aria-label="More actions"
-              sx={{
-                color: palette.scale[500],
-                '&:hover': {
-                  color: palette.scale[100],
-                  bgcolor: alpha(palette.scale[100], 0.08),
-                },
-              }}
+              sx={{ color: theme.palette.text.secondary }}
             >
               <MoreVertIcon sx={{ fontSize: 18 }} />
-            </IconButton>
+            </ActionButton>
           </Tooltip>
         )}
         emptyState={{
@@ -368,40 +455,49 @@ export default function ConnectionsPage() {
       />
 
       {/* Row Actions Menu */}
-      <Menu
+      <StyledMenu
         anchorEl={menuAnchor}
         open={Boolean(menuAnchor)}
         onClose={handleCloseMenu}
-        slotProps={{
-          paper: {
-            sx: {
-              bgcolor: palette.scale[900],
-              border: `1px solid ${alpha(palette.scale[100], 0.1)}`,
-              minWidth: 160,
-            },
-          },
-        }}
       >
-        <MenuItem
+        <StyledMenuItem
           onClick={() => { handleTestConnection(menuConnection); handleCloseMenu() }}
-          sx={{ color: palette.scale[200] }}
         >
-          <ListItemIcon><RefreshIcon sx={{ fontSize: 16, color: palette.scale[500] }} /></ListItemIcon>
-          <ListItemText primaryTypographyProps={{ fontSize: '0.8125rem' }}>Test Connection</ListItemText>
-        </MenuItem>
-        <MenuItem onClick={handleSchemaInspect} sx={{ color: palette.scale[200] }}>
-          <ListItemIcon><TableViewIcon sx={{ fontSize: 16, color: palette.scale[500] }} /></ListItemIcon>
-          <ListItemText primaryTypographyProps={{ fontSize: '0.8125rem' }}>Inspect Schema</ListItemText>
-        </MenuItem>
-        <MenuItem onClick={handleEditConnection} sx={{ color: palette.scale[200] }}>
-          <ListItemIcon><EditIcon sx={{ fontSize: 16, color: palette.scale[500] }} /></ListItemIcon>
-          <ListItemText primaryTypographyProps={{ fontSize: '0.8125rem' }}>Edit</ListItemText>
-        </MenuItem>
-        <MenuItem onClick={handleDeleteClick} sx={{ color: palette.red[400] }}>
-          <ListItemIcon><DeleteIcon sx={{ fontSize: 16, color: palette.red[400] }} /></ListItemIcon>
-          <ListItemText primaryTypographyProps={{ fontSize: '0.8125rem' }}>Delete</ListItemText>
-        </MenuItem>
-      </Menu>
+          <ListItemIcon>
+            <RefreshIcon sx={{ fontSize: 16, color: theme.palette.text.secondary }} />
+          </ListItemIcon>
+          <ListItemText primaryTypographyProps={{ fontSize: '0.8125rem' }}>
+            Test Connection
+          </ListItemText>
+        </StyledMenuItem>
+        <StyledMenuItem onClick={handleSchemaInspect}>
+          <ListItemIcon>
+            <TableViewIcon sx={{ fontSize: 16, color: theme.palette.text.secondary }} />
+          </ListItemIcon>
+          <ListItemText primaryTypographyProps={{ fontSize: '0.8125rem' }}>
+            Inspect Schema
+          </ListItemText>
+        </StyledMenuItem>
+        <StyledMenuItem onClick={handleEditConnection}>
+          <ListItemIcon>
+            <EditIcon sx={{ fontSize: 16, color: theme.palette.text.secondary }} />
+          </ListItemIcon>
+          <ListItemText primaryTypographyProps={{ fontSize: '0.8125rem' }}>
+            Edit
+          </ListItemText>
+        </StyledMenuItem>
+        <StyledMenuItem
+          onClick={handleDeleteClick}
+          sx={{ color: theme.palette.error.main }}
+        >
+          <ListItemIcon>
+            <DeleteIcon sx={{ fontSize: 16, color: theme.palette.error.main }} />
+          </ListItemIcon>
+          <ListItemText primaryTypographyProps={{ fontSize: '0.8125rem' }}>
+            Delete
+          </ListItemText>
+        </StyledMenuItem>
+      </StyledMenu>
 
       {/* Connection Form Drawer */}
       <Drawer
@@ -436,6 +532,6 @@ export default function ConnectionsPage() {
         onClose={() => setSchemaOpen(false)}
         connection={schemaConnection}
       />
-    </Box>
+    </PageContainer>
   )
 }

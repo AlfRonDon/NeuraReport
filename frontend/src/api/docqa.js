@@ -85,6 +85,40 @@ export async function clearHistory(sessionId) {
   return response.data;
 }
 
+/**
+ * Submit feedback for a message
+ * @param {string} sessionId - Session ID
+ * @param {string} messageId - Message ID
+ * @param {object} feedback - Feedback data { feedbackType: 'helpful' | 'not_helpful', comment?: string }
+ */
+export async function submitFeedback(sessionId, messageId, { feedbackType, comment }) {
+  const response = await apiClient.post(
+    `/docqa/sessions/${sessionId}/messages/${messageId}/feedback`,
+    {
+      feedback_type: feedbackType,
+      comment,
+    }
+  );
+  return response.data;
+}
+
+/**
+ * Regenerate a response for a message
+ * @param {string} sessionId - Session ID
+ * @param {string} messageId - Message ID
+ * @param {object} options - Options { includeCitations?: boolean, maxResponseLength?: number }
+ */
+export async function regenerateResponse(sessionId, messageId, { includeCitations = true, maxResponseLength = 2000 } = {}) {
+  const response = await apiClient.post(
+    `/docqa/sessions/${sessionId}/messages/${messageId}/regenerate`,
+    {
+      include_citations: includeCitations,
+      max_response_length: maxResponseLength,
+    }
+  );
+  return response.data;
+}
+
 export default {
   createSession,
   listSessions,
@@ -95,4 +129,6 @@ export default {
   askQuestion,
   getChatHistory,
   clearHistory,
+  submitFeedback,
+  regenerateResponse,
 };

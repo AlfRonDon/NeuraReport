@@ -23,7 +23,23 @@ const useEnrichmentStore = create((set, get) => ({
     set({ loading: true, error: null });
     try {
       const response = await enrichmentApi.getEnrichmentSources();
-      set({ sources: response.sources || [], loading: false });
+      const fetchedSources = Array.isArray(response.sources) ? response.sources : [];
+      const builtInSources = [];
+      const customSources = [];
+      fetchedSources.forEach((source) => {
+        const isCustom = Boolean(
+          source?.created_at ||
+          source?.updated_at ||
+          source?.cache_ttl_hours !== undefined ||
+          source?.config
+        );
+        if (isCustom) {
+          customSources.push(source);
+        } else {
+          builtInSources.push(source);
+        }
+      });
+      set({ sources: builtInSources, customSources, loading: false });
     } catch (err) {
       set({ error: err.message, loading: false });
     }
@@ -36,7 +52,10 @@ const useEnrichmentStore = create((set, get) => ({
       const response = await enrichmentApi.createSource({ name, type, description, config, cacheTtlHours });
       const newSource = response.source;
       set((state) => ({
-        customSources: [...state.customSources, newSource],
+        customSources: [
+          ...state.customSources.filter((source) => source.id !== newSource.id),
+          newSource,
+        ],
         loading: false,
       }));
       return newSource;
@@ -53,6 +72,7 @@ const useEnrichmentStore = create((set, get) => ({
       await enrichmentApi.deleteSource(sourceId);
       set((state) => ({
         customSources: state.customSources.filter((s) => s.id !== sourceId),
+        sources: state.sources.filter((s) => s.id !== sourceId),
         loading: false,
       }));
       return true;

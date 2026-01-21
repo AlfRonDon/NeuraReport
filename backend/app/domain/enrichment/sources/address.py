@@ -97,7 +97,27 @@ Return ONLY the JSON object, no other text."""
             return None
 
         except Exception as exc:
-            logger.warning(f"Address lookup failed for '{address[:50]}...': {exc}")
+            # Check for critical errors that should be re-raised
+            exc_str = str(exc).lower()
+            is_critical = any(indicator in exc_str for indicator in [
+                "authentication", "api_key", "invalid_api_key", "unauthorized",
+                "quota", "rate_limit", "insufficient_quota",
+            ])
+
+            if is_critical:
+                logger.error(
+                    f"Address lookup critical error for '{address[:50]}...': {exc}",
+                    exc_info=True,
+                    extra={"event": "address_enrichment_critical_error", "address_preview": address[:50]},
+                )
+                raise  # Re-raise critical errors (auth, quota, rate limit)
+
+            # Non-critical errors: log with details but return None
+            logger.warning(
+                f"Address lookup failed for '{address[:50]}...': {exc}",
+                exc_info=True,  # Include stack trace for debugging
+                extra={"event": "address_enrichment_failed", "address_preview": address[:50], "error_type": type(exc).__name__},
+            )
             return None
 
     def get_supported_fields(self) -> List[str]:

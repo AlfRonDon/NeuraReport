@@ -468,6 +468,7 @@ export default function DashboardPage() {
   const [favorites, setFavorites] = useState({ templates: [], connections: [] })
   const [recommendations, setRecommendations] = useState([])
   const [recLoading, setRecLoading] = useState(false)
+  const [recFromAI, setRecFromAI] = useState(true)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [showOnboarding, setShowOnboarding] = useState(() => {
@@ -520,8 +521,9 @@ export default function DashboardPage() {
     setRecLoading(true)
     try {
       const catalog = await recommendationsApi.getCatalog()
-      const tpls = catalog?.templates || catalog?.recommendations || []
+      const tpls = catalog?.catalog || catalog?.templates || catalog?.recommendations || []
       setRecommendations(tpls.slice(0, 4))
+      setRecFromAI(true)
     } catch {
       const topTpls = templates.slice(0, 4).map((t) => ({
         id: t.id,
@@ -531,10 +533,16 @@ export default function DashboardPage() {
         matchScore: 0.85,
       }))
       setRecommendations(topTpls)
+      setRecFromAI(false)
     } finally {
       setRecLoading(false)
     }
   }, [recLoading, templates])
+
+  const handleOpenCommandPalette = useCallback(() => {
+    if (typeof window === 'undefined') return
+    window.dispatchEvent(new CustomEvent('neura:open-command-palette'))
+  }, [])
 
   useEffect(() => {
     if (recommendations.length === 0 && templates.length > 0 && !recLoading) {
@@ -612,6 +620,8 @@ export default function DashboardPage() {
         >
           <Tooltip title="Press ⌘K for quick actions">
             <IconButton
+              onClick={handleOpenCommandPalette}
+              aria-label="Open command palette"
               sx={{
                 border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
                 bgcolor: alpha(theme.palette.background.paper, 0.5),
@@ -976,7 +986,7 @@ export default function DashboardPage() {
             <Stack>
               {jobs.slice(0, 5).map((job, index) => (
                 <Grow key={job.id} in timeout={300 + index * 100}>
-                  <JobListItem status={job.status} onClick={() => navigate(`/jobs/${job.id}`)}>
+                  <JobListItem status={job.status} onClick={() => navigate('/jobs')}>
                     <Box className="status-dot" />
                     <Box sx={{ flex: 1, minWidth: 0 }}>
                       <Typography variant="body2" fontWeight={600} noWrap>
@@ -1174,10 +1184,10 @@ export default function DashboardPage() {
             </Box>
             <Box>
               <Typography variant="subtitle1" fontWeight={700}>
-                AI Recommendations
+                {recFromAI ? 'AI Recommendations' : 'Recent Templates'}
               </Typography>
               <Typography variant="caption" color="text.secondary">
-                Smart template suggestions based on your data
+                {recFromAI ? 'Smart template suggestions based on your data' : 'Showing your recent templates (AI unavailable)'}
               </Typography>
             </Box>
           </Stack>
@@ -1188,7 +1198,7 @@ export default function DashboardPage() {
             disabled={recLoading}
             sx={{ fontWeight: 600 }}
           >
-            {recLoading ? 'Loading...' : 'Get Suggestions'}
+            {recLoading ? 'Loading...' : recFromAI ? 'Refresh' : 'Try AI Again'}
           </Button>
         </Stack>
 

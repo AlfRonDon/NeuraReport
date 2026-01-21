@@ -1,3 +1,7 @@
+/**
+ * Premium Global Search
+ * Command palette style search with theme-based styling
+ */
 import { useState, useCallback, useEffect, useRef } from 'react'
 import {
   Box,
@@ -12,8 +16,10 @@ import {
   Typography,
   Chip,
   CircularProgress,
+  useTheme,
   alpha,
   ClickAwayListener,
+  keyframes,
 } from '@mui/material'
 import SearchIcon from '@mui/icons-material/Search'
 import DescriptionIcon from '@mui/icons-material/Description'
@@ -22,16 +28,47 @@ import WorkIcon from '@mui/icons-material/Work'
 import KeyboardIcon from '@mui/icons-material/Keyboard'
 import { useNavigate } from 'react-router-dom'
 import * as api from '../api/client'
-import { palette } from '../theme'
 
-const TYPE_CONFIG = {
-  template: { icon: DescriptionIcon, color: palette.green[400], label: 'Template' },
-  connection: { icon: StorageIcon, color: palette.blue[400], label: 'Connection' },
-  job: { icon: WorkIcon, color: palette.yellow[400], label: 'Job' },
+// =============================================================================
+// ANIMATIONS
+// =============================================================================
+
+const fadeInUp = keyframes`
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+`
+
+// =============================================================================
+// HELPERS
+// =============================================================================
+
+const getTypeConfig = (theme, type) => {
+  const configs = {
+    template: { icon: DescriptionIcon, color: theme.palette.success.main, label: 'Template' },
+    connection: { icon: StorageIcon, color: theme.palette.info.main, label: 'Connection' },
+    job: { icon: WorkIcon, color: theme.palette.warning.main, label: 'Job' },
+  }
+  return configs[type] || configs.template
 }
 
-function SearchResult({ result, onSelect, isSelected }) {
-  const config = TYPE_CONFIG[result.type] || TYPE_CONFIG.template
+const SEARCH_ROUTE_BY_TYPE = {
+  template: (result) => (result?.id ? `/templates/${result.id}/edit` : '/templates'),
+  connection: () => '/connections',
+  job: () => '/jobs',
+}
+
+// =============================================================================
+// SEARCH RESULT COMPONENT
+// =============================================================================
+
+function SearchResult({ result, onSelect, isSelected, theme }) {
+  const config = getTypeConfig(theme, result.type)
   const Icon = config.icon
 
   return (
@@ -41,9 +78,10 @@ function SearchResult({ result, onSelect, isSelected }) {
         px: 2,
         py: 1.5,
         cursor: 'pointer',
-        bgcolor: isSelected ? alpha(palette.scale[100], 0.08) : 'transparent',
+        bgcolor: isSelected ? alpha(theme.palette.primary.main, 0.08) : 'transparent',
+        transition: 'all 0.15s ease',
         '&:hover': {
-          bgcolor: alpha(palette.scale[100], 0.08),
+          bgcolor: alpha(theme.palette.primary.main, 0.08),
         },
       }}
     >
@@ -52,7 +90,7 @@ function SearchResult({ result, onSelect, isSelected }) {
           sx={{
             width: 28,
             height: 28,
-            borderRadius: '6px',
+            borderRadius: '8px',
             bgcolor: alpha(config.color, 0.15),
             display: 'flex',
             alignItems: 'center',
@@ -68,11 +106,11 @@ function SearchResult({ result, onSelect, isSelected }) {
         primaryTypographyProps={{
           fontSize: '0.8125rem',
           fontWeight: 500,
-          color: palette.scale[100],
+          color: theme.palette.text.primary,
         }}
         secondaryTypographyProps={{
           fontSize: '0.75rem',
-          color: palette.scale[500],
+          color: theme.palette.text.secondary,
         }}
       />
       <Chip
@@ -83,11 +121,16 @@ function SearchResult({ result, onSelect, isSelected }) {
           color: config.color,
           fontSize: '0.625rem',
           height: 20,
+          borderRadius: 1.5,
         }}
       />
     </ListItem>
   )
 }
+
+// =============================================================================
+// MAIN COMPONENT
+// =============================================================================
 
 export default function GlobalSearch({
   variant = 'compact',
@@ -95,6 +138,7 @@ export default function GlobalSearch({
   showShortcutHint = true,
   placeholder,
 }) {
+  const theme = useTheme()
   const navigate = useNavigate()
   const [query, setQuery] = useState('')
   const [results, setResults] = useState([])
@@ -178,8 +222,17 @@ export default function GlobalSearch({
     setOpen(false)
     setQuery('')
     setResults([])
-    if (result.url) {
+    if (result?.url) {
       navigate(result.url)
+      return
+    }
+    const typeKey = result?.type ? String(result.type).toLowerCase() : ''
+    const routeBuilder = SEARCH_ROUTE_BY_TYPE[typeKey]
+    if (routeBuilder) {
+      const nextPath = routeBuilder(result)
+      if (nextPath) {
+        navigate(nextPath)
+      }
     }
   }, [navigate])
 
@@ -211,9 +264,9 @@ export default function GlobalSearch({
             startAdornment: (
               <InputAdornment position="start">
                 {loading ? (
-                  <CircularProgress size={16} sx={{ color: palette.scale[500] }} />
+                  <CircularProgress size={16} sx={{ color: theme.palette.text.secondary }} />
                 ) : (
-                  <SearchIcon sx={{ fontSize: 18, color: palette.scale[500] }} />
+                  <SearchIcon sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
                 )}
               </InputAdornment>
             ),
@@ -226,32 +279,33 @@ export default function GlobalSearch({
                     gap: 0.25,
                     px: 0.5,
                     py: 0.25,
-                    bgcolor: alpha(palette.scale[100], 0.08),
+                    bgcolor: alpha(theme.palette.text.primary, 0.08),
                     borderRadius: 0.5,
                   }}
                 >
-                  <KeyboardIcon sx={{ fontSize: 12, color: palette.scale[600] }} />
-                  <Typography sx={{ fontSize: '0.625rem', color: palette.scale[600] }}>K</Typography>
+                  <KeyboardIcon sx={{ fontSize: 12, color: theme.palette.text.disabled }} />
+                  <Typography sx={{ fontSize: '0.625rem', color: theme.palette.text.disabled }}>K</Typography>
                 </Box>
               </InputAdornment>
             ),
             sx: {
-              bgcolor: alpha(palette.scale[100], 0.05),
-              borderRadius: 1,
+              bgcolor: alpha(theme.palette.background.paper, 0.5),
+              borderRadius: 2,
+              transition: 'all 0.2s ease',
               '& .MuiOutlinedInput-notchedOutline': {
-                borderColor: alpha(palette.scale[100], 0.1),
+                borderColor: alpha(theme.palette.divider, 0.15),
               },
               '&:hover .MuiOutlinedInput-notchedOutline': {
-                borderColor: alpha(palette.scale[100], 0.2),
+                borderColor: alpha(theme.palette.divider, 0.3),
               },
               '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                borderColor: palette.green[400],
+                borderColor: theme.palette.primary.main,
               },
               '& input': {
                 fontSize: '0.8125rem',
-                color: palette.scale[200],
+                color: theme.palette.text.primary,
                 '&::placeholder': {
-                  color: palette.scale[600],
+                  color: theme.palette.text.secondary,
                   opacity: 1,
                 },
               },
@@ -268,17 +322,19 @@ export default function GlobalSearch({
           <Paper
             sx={{
               mt: 0.5,
-              bgcolor: palette.scale[950],
-              border: `1px solid ${alpha(palette.scale[100], 0.1)}`,
-              borderRadius: 1,
-              boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+              bgcolor: alpha(theme.palette.background.paper, 0.98),
+              backdropFilter: 'blur(20px)',
+              border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+              borderRadius: 2,
+              boxShadow: `0 8px 32px ${alpha(theme.palette.common.black, 0.2)}`,
               maxHeight: 400,
               overflow: 'auto',
+              animation: `${fadeInUp} 0.2s ease-out`,
             }}
           >
             {results.length === 0 ? (
               <Box sx={{ p: 2, textAlign: 'center' }}>
-                <Typography sx={{ color: palette.scale[500], fontSize: '0.8125rem' }}>
+                <Typography sx={{ color: theme.palette.text.secondary, fontSize: '0.8125rem' }}>
                   No results found
                 </Typography>
               </Box>
@@ -290,6 +346,7 @@ export default function GlobalSearch({
                     result={result}
                     onSelect={handleSelect}
                     isSelected={index === selectedIndex}
+                    theme={theme}
                   />
                 ))}
               </List>

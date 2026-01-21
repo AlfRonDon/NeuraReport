@@ -300,7 +300,8 @@ def _compute_column_stats(
     sample_for_unique = non_empty[:1000] if len(non_empty) > 1000 else non_empty
     try:
         unique_count = len(set(str(v) for v in sample_for_unique))
-    except Exception:
+    except Exception as e:
+        logger.debug(f"Could not compute unique count for column '{header}': {e}")
         unique_count = 0
 
     # Get min/max for numeric types
@@ -315,7 +316,8 @@ def _compute_column_stats(
                 elif isinstance(v, str):
                     cleaned = v.replace("$", "").replace(",", "").replace("%", "").strip()
                     numeric_vals.append(float(cleaned))
-            except Exception:
+            except (ValueError, TypeError):
+                # Expected for non-numeric values, skip silently
                 pass
         if numeric_vals:
             min_val = min(numeric_vals)

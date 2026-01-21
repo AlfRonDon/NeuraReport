@@ -1,3 +1,7 @@
+/**
+ * Premium Activity Page
+ * Beautiful activity log with animations and theme-based styling
+ */
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
@@ -11,8 +15,10 @@ import {
   FormControl,
   InputLabel,
   CircularProgress,
-  Button,
+  useTheme,
   alpha,
+  styled,
+  keyframes,
 } from '@mui/material'
 import RefreshIcon from '@mui/icons-material/Refresh'
 import DeleteIcon from '@mui/icons-material/Delete'
@@ -27,7 +33,116 @@ import OpenInNewIcon from '@mui/icons-material/OpenInNew'
 import { useToast } from '../../components/ToastProvider'
 import { ConfirmModal } from '../../ui/Modal'
 import * as api from '../../api/client'
-import { palette } from '../../theme'
+
+// =============================================================================
+// ANIMATIONS
+// =============================================================================
+
+const fadeInUp = keyframes`
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+`
+
+const pulse = keyframes`
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.05); opacity: 0.8; }
+`
+
+// =============================================================================
+// STYLED COMPONENTS
+// =============================================================================
+
+const PageContainer = styled(Box)(({ theme }) => ({
+  padding: theme.spacing(3),
+  maxWidth: 1000,
+  margin: '0 auto',
+  width: '100%',
+  minHeight: '100vh',
+  background: theme.palette.mode === 'dark'
+    ? `radial-gradient(ellipse at 20% 0%, ${alpha(theme.palette.primary.dark, 0.15)} 0%, transparent 50%),
+       radial-gradient(ellipse at 80% 100%, ${alpha(theme.palette.secondary.dark, 0.1)} 0%, transparent 50%),
+       ${theme.palette.background.default}`
+    : `radial-gradient(ellipse at 20% 0%, ${alpha(theme.palette.primary.light, 0.08)} 0%, transparent 50%),
+       radial-gradient(ellipse at 80% 100%, ${alpha(theme.palette.secondary.light, 0.05)} 0%, transparent 50%),
+       ${theme.palette.background.default}`,
+}))
+
+const HeaderContainer = styled(Stack)(({ theme }) => ({
+  marginBottom: theme.spacing(3),
+  animation: `${fadeInUp} 0.5s ease-out`,
+}))
+
+const FilterContainer = styled(Stack)(({ theme }) => ({
+  marginBottom: theme.spacing(3),
+  animation: `${fadeInUp} 0.5s ease-out 0.1s both`,
+}))
+
+const ActivityListContainer = styled(Box)(({ theme }) => ({
+  backgroundColor: alpha(theme.palette.background.paper, 0.8),
+  backdropFilter: 'blur(20px)',
+  borderRadius: 16,
+  border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+  padding: theme.spacing(2),
+  boxShadow: `0 8px 32px ${alpha(theme.palette.common.black, 0.08)}`,
+  animation: `${fadeInUp} 0.5s ease-out 0.2s both`,
+}))
+
+const StyledFormControl = styled(FormControl)(({ theme }) => ({
+  minWidth: 150,
+  '& .MuiOutlinedInput-root': {
+    borderRadius: 12,
+    backgroundColor: alpha(theme.palette.background.paper, 0.6),
+    backdropFilter: 'blur(8px)',
+    transition: 'all 0.2s ease',
+    '&:hover': {
+      backgroundColor: alpha(theme.palette.background.paper, 0.8),
+    },
+    '&.Mui-focused': {
+      backgroundColor: theme.palette.background.paper,
+      boxShadow: `0 0 0 3px ${alpha(theme.palette.primary.main, 0.1)}`,
+    },
+    '& .MuiOutlinedInput-notchedOutline': {
+      borderColor: alpha(theme.palette.divider, 0.15),
+    },
+  },
+  '& .MuiInputLabel-root': {
+    color: theme.palette.text.secondary,
+  },
+}))
+
+const RefreshButton = styled(IconButton)(({ theme }) => ({
+  borderRadius: 12,
+  transition: 'all 0.2s ease',
+  '&:hover': {
+    backgroundColor: alpha(theme.palette.primary.main, 0.1),
+    transform: 'rotate(180deg)',
+  },
+}))
+
+const DeleteButton = styled(IconButton)(({ theme }) => ({
+  borderRadius: 12,
+  transition: 'all 0.2s ease',
+  '&:hover': {
+    backgroundColor: alpha(theme.palette.error.main, 0.1),
+    color: theme.palette.error.main,
+  },
+}))
+
+const EmptyStateContainer = styled(Box)(({ theme }) => ({
+  padding: theme.spacing(6),
+  textAlign: 'center',
+  animation: `${fadeInUp} 0.5s ease-out`,
+}))
+
+// =============================================================================
+// HELPERS
+// =============================================================================
 
 // Map entity types to their navigation routes
 const ENTITY_ROUTES = {
@@ -47,16 +162,19 @@ const ACTION_ICONS = {
   default: HistoryIcon,
 }
 
-const ACTION_COLORS = {
-  created: palette.green[400],
-  deleted: palette.red[400],
-  updated: palette.blue[400],
-  completed: palette.green[400],
-  failed: palette.red[400],
-  started: palette.yellow[400],
-  favorite_added: palette.yellow[400],
-  favorite_removed: palette.scale[400],
-  default: palette.scale[400],
+const getActionConfig = (theme, action) => {
+  const configs = {
+    created: { color: theme.palette.success.main },
+    deleted: { color: theme.palette.error.main },
+    updated: { color: theme.palette.info.main },
+    completed: { color: theme.palette.success.main },
+    failed: { color: theme.palette.error.main },
+    started: { color: theme.palette.warning.main },
+    favorite_added: { color: theme.palette.warning.main },
+    favorite_removed: { color: theme.palette.text.secondary },
+    default: { color: theme.palette.text.secondary },
+  }
+  return configs[action] || configs.default
 }
 
 function formatRelativeTime(timestamp) {
@@ -81,17 +199,24 @@ function formatAction(action) {
     .replace(/\b\w/g, (c) => c.toUpperCase())
 }
 
+// =============================================================================
+// ACTIVITY ITEM COMPONENT
+// =============================================================================
+
 function ActivityItem({ activity, onNavigate }) {
+  const theme = useTheme()
   const entityTypeRaw = activity.entity_type || 'default'
   const entityType = String(entityTypeRaw).toLowerCase().replace(/s$/, '')
   const action = activity.action || ''
+  const actionKey = String(action).toLowerCase()
   const Icon = ACTION_ICONS[entityType] || ACTION_ICONS.default
-  const accentColor = ACTION_COLORS[action] || ACTION_COLORS.default
+  const actionConfig = getActionConfig(theme, action)
+  const accentColor = actionConfig.color
 
   // Determine if this item is navigable (not deleted items)
   const fallbackUrl = activity.details?.url || null
   const routeFn = ENTITY_ROUTES[entityType]
-  const isNavigable = action !== 'deleted' && (routeFn || fallbackUrl)
+  const isNavigable = !actionKey.includes('deleted') && (routeFn || fallbackUrl)
 
   const handleClick = () => {
     if (isNavigable && onNavigate) {
@@ -110,15 +235,16 @@ function ActivityItem({ activity, onNavigate }) {
         alignItems: 'flex-start',
         gap: 2,
         py: 2,
-        borderBottom: `1px solid ${alpha(palette.scale[100], 0.06)}`,
+        borderBottom: `1px solid ${alpha(theme.palette.divider, 0.06)}`,
         '&:last-child': { borderBottom: 'none' },
         cursor: isNavigable ? 'pointer' : 'default',
-        borderRadius: 1,
+        borderRadius: 2,
         mx: -1,
         px: 1,
-        transition: 'background-color 150ms ease',
+        transition: 'all 0.2s ease',
         '&:hover': isNavigable ? {
-          bgcolor: alpha(palette.scale[100], 0.04),
+          bgcolor: alpha(theme.palette.primary.main, 0.04),
+          transform: 'translateX(4px)',
         } : {},
       }}
     >
@@ -126,12 +252,16 @@ function ActivityItem({ activity, onNavigate }) {
         sx={{
           width: 36,
           height: 36,
-          borderRadius: '8px',
+          borderRadius: 2,
           bgcolor: alpha(accentColor, 0.15),
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           flexShrink: 0,
+          transition: 'transform 0.2s ease',
+          '.MuiBox-root:hover > &': isNavigable ? {
+            animation: `${pulse} 0.5s ease`,
+          } : {},
         }}
       >
         <Icon sx={{ fontSize: 16, color: accentColor }} />
@@ -142,7 +272,7 @@ function ActivityItem({ activity, onNavigate }) {
             sx={{
               fontSize: '0.8125rem',
               fontWeight: 500,
-              color: palette.scale[200],
+              color: theme.palette.text.primary,
             }}
           >
             {formatAction(action)}
@@ -153,8 +283,9 @@ function ActivityItem({ activity, onNavigate }) {
             sx={{
               height: 18,
               fontSize: '0.625rem',
-              bgcolor: alpha(palette.scale[100], 0.08),
-              color: palette.scale[400],
+              bgcolor: alpha(theme.palette.primary.main, 0.08),
+              color: theme.palette.text.secondary,
+              borderRadius: 1,
             }}
           />
         </Stack>
@@ -162,7 +293,7 @@ function ActivityItem({ activity, onNavigate }) {
           <Typography
             sx={{
               fontSize: '0.8125rem',
-              color: palette.scale[300],
+              color: theme.palette.text.secondary,
               mb: 0.5,
             }}
           >
@@ -173,7 +304,7 @@ function ActivityItem({ activity, onNavigate }) {
           <Typography
             sx={{
               fontSize: '0.75rem',
-              color: palette.scale[500],
+              color: theme.palette.text.disabled,
               fontFamily: 'monospace',
               mb: 0.5,
             }}
@@ -184,7 +315,7 @@ function ActivityItem({ activity, onNavigate }) {
         <Typography
           sx={{
             fontSize: '0.6875rem',
-            color: palette.scale[600],
+            color: theme.palette.text.disabled,
           }}
         >
           {formatRelativeTime(activity.timestamp)}
@@ -194,9 +325,9 @@ function ActivityItem({ activity, onNavigate }) {
         <OpenInNewIcon
           sx={{
             fontSize: 14,
-            color: palette.scale[600],
+            color: theme.palette.text.disabled,
             opacity: 0,
-            transition: 'opacity 150ms',
+            transition: 'opacity 0.2s ease',
             '.MuiBox-root:hover > &': { opacity: 1 },
           }}
         />
@@ -205,7 +336,12 @@ function ActivityItem({ activity, onNavigate }) {
   )
 }
 
+// =============================================================================
+// MAIN COMPONENT
+// =============================================================================
+
 export default function ActivityPage() {
+  const theme = useTheme()
   const toast = useToast()
   const navigate = useNavigate()
   const didLoadRef = useRef(false)
@@ -259,49 +395,47 @@ export default function ActivityPage() {
   }, [toast])
 
   return (
-    <Box sx={{ p: 3, maxWidth: 1000, mx: 'auto', width: '100%' }}>
+    <PageContainer>
       {/* Header */}
-      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
+      <HeaderContainer direction="row" justifyContent="space-between" alignItems="center">
         <Box>
-          <Typography variant="h5" fontWeight={600} color={palette.scale[100]}>
+          <Typography
+            variant="h5"
+            fontWeight={600}
+            sx={{ color: theme.palette.text.primary }}
+          >
             Activity Log
           </Typography>
-          <Typography variant="body2" color={palette.scale[500]}>
+          <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
             Track actions and events in your workspace
           </Typography>
         </Box>
         <Stack direction="row" spacing={1}>
-          <IconButton
+          <RefreshButton
             onClick={fetchActivities}
             disabled={loading}
-            sx={{ color: palette.scale[400] }}
+            sx={{ color: theme.palette.text.secondary }}
           >
             {loading ? <CircularProgress size={20} /> : <RefreshIcon />}
-          </IconButton>
-          <IconButton
+          </RefreshButton>
+          <DeleteButton
             onClick={() => setClearConfirmOpen(true)}
             disabled={activities.length === 0}
-            sx={{ color: palette.scale[400] }}
+            sx={{ color: theme.palette.text.secondary }}
           >
             <DeleteIcon />
-          </IconButton>
+          </DeleteButton>
         </Stack>
-      </Stack>
+      </HeaderContainer>
 
       {/* Filters */}
-      <Stack direction="row" spacing={2} sx={{ mb: 3 }}>
-        <FormControl size="small" sx={{ minWidth: 150 }}>
-          <InputLabel sx={{ color: palette.scale[500] }}>Entity Type</InputLabel>
+      <FilterContainer direction="row" spacing={2}>
+        <StyledFormControl size="small">
+          <InputLabel>Entity Type</InputLabel>
           <Select
             value={entityTypeFilter}
             onChange={(e) => setEntityTypeFilter(e.target.value)}
             label="Entity Type"
-            sx={{
-              color: palette.scale[200],
-              '.MuiOutlinedInput-notchedOutline': {
-                borderColor: alpha(palette.scale[100], 0.15),
-              },
-            }}
           >
             <MenuItem value="">All</MenuItem>
             <MenuItem value="template">Template</MenuItem>
@@ -309,59 +443,51 @@ export default function ActivityPage() {
             <MenuItem value="job">Job</MenuItem>
             <MenuItem value="schedule">Schedule</MenuItem>
           </Select>
-        </FormControl>
-        <FormControl size="small" sx={{ minWidth: 150 }}>
-          <InputLabel sx={{ color: palette.scale[500] }}>Action</InputLabel>
+        </StyledFormControl>
+        <StyledFormControl size="small">
+          <InputLabel>Action</InputLabel>
           <Select
             value={actionFilter}
             onChange={(e) => setActionFilter(e.target.value)}
             label="Action"
-            sx={{
-              color: palette.scale[200],
-              '.MuiOutlinedInput-notchedOutline': {
-                borderColor: alpha(palette.scale[100], 0.15),
-              },
-            }}
           >
             <MenuItem value="">All</MenuItem>
-            <MenuItem value="created">Created</MenuItem>
-            <MenuItem value="updated">Updated</MenuItem>
-            <MenuItem value="deleted">Deleted</MenuItem>
-            <MenuItem value="completed">Completed</MenuItem>
-            <MenuItem value="failed">Failed</MenuItem>
+            <MenuItem value="favorite_added">Favorite added</MenuItem>
+            <MenuItem value="favorite_removed">Favorite removed</MenuItem>
+            <MenuItem value="template_deleted">Template deleted</MenuItem>
+            <MenuItem value="job_cancelled">Job cancelled</MenuItem>
           </Select>
-        </FormControl>
-      </Stack>
+        </StyledFormControl>
+      </FilterContainer>
 
       {/* Activity List */}
-      <Box
-        sx={{
-          bgcolor: palette.scale[1000],
-          borderRadius: '8px',
-          border: `1px solid ${alpha(palette.scale[100], 0.08)}`,
-          p: 2,
-        }}
-      >
+      <ActivityListContainer>
         {loading ? (
           <Box sx={{ py: 4, textAlign: 'center' }}>
             <CircularProgress size={32} />
           </Box>
         ) : activities.length === 0 ? (
-          <Box sx={{ py: 6, textAlign: 'center' }}>
-            <HistoryIcon sx={{ fontSize: 48, color: palette.scale[700], mb: 2 }} />
-            <Typography sx={{ fontSize: '0.875rem', color: palette.scale[500] }}>
+          <EmptyStateContainer>
+            <HistoryIcon
+              sx={{
+                fontSize: 48,
+                color: theme.palette.text.disabled,
+                mb: 2,
+              }}
+            />
+            <Typography sx={{ fontSize: '0.875rem', color: theme.palette.text.secondary }}>
               No activity recorded yet
             </Typography>
-            <Typography sx={{ fontSize: '0.75rem', color: palette.scale[600], mt: 0.5 }}>
+            <Typography sx={{ fontSize: '0.75rem', color: theme.palette.text.disabled, mt: 0.5 }}>
               Actions like creating templates, running jobs, and more will appear here
             </Typography>
-          </Box>
+          </EmptyStateContainer>
         ) : (
           activities.map((activity) => (
             <ActivityItem key={activity.id} activity={activity} onNavigate={navigate} />
           ))
         )}
-      </Box>
+      </ActivityListContainer>
 
       {/* Clear Confirmation */}
       <ConfirmModal
@@ -374,6 +500,6 @@ export default function ActivityPage() {
         severity="warning"
         loading={clearing}
       />
-    </Box>
+    </PageContainer>
   )
 }

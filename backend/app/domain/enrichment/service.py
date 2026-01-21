@@ -329,11 +329,13 @@ class EnrichmentService:
         enriched_data = []
         enriched_count = 0
 
-        # Map source IDs to source types
+        # Map source IDs to source types (support multiple aliases)
         source_type_map = {
             "company": EnrichmentSourceType.COMPANY_INFO,
+            "company_info": EnrichmentSourceType.COMPANY_INFO,
             "address": EnrichmentSourceType.ADDRESS,
             "exchange": EnrichmentSourceType.EXCHANGE_RATE,
+            "exchange_rate": EnrichmentSourceType.EXCHANGE_RATE,
         }
 
         for row in data:
@@ -362,15 +364,21 @@ class EnrichmentService:
                 elif source_type == EnrichmentSourceType.EXCHANGE_RATE:
                     lookup_value = row.get("amount")
                     if lookup_value is not None:
-                        # Include currency info in lookup
-                        currency = row.get("currency", "USD")
-                        lookup_value = f"{lookup_value}|{currency}"
+                        # Pass as dict for proper parsing by ExchangeRateSource
+                        from_currency = row.get("currency") or row.get("from_currency") or "USD"
+                        target_currency = config.get("target_currency", "USD")
+                        lookup_value = {
+                            "amount": lookup_value,
+                            "from_currency": from_currency,
+                            "to_currency": target_currency,
+                        }
 
                 if lookup_value is None:
                     continue
 
                 try:
-                    enrichment_result = await source_instance.lookup(str(lookup_value))
+                    # Pass lookup_value directly (can be string, dict, or number)
+                    enrichment_result = await source_instance.lookup(lookup_value)
                     if enrichment_result:
                         enriched_row.update(enrichment_result)
                         row_enriched = True

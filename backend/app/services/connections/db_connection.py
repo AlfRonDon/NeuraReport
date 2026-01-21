@@ -6,10 +6,12 @@ import json
 import os
 import tempfile
 import uuid
+from datetime import date, datetime
 from pathlib import Path
 from urllib.parse import urlparse
 
-from ..dataframes import SQLiteDataFrameLoader
+from ..dataframes import SQLiteDataFrameLoader, ensure_connection_loaded, dataframe_store
+from ..dataframes import sqlite_shim
 from ..state import state_store
 
 STORAGE = os.path.join(tempfile.gettempdir(), "neura_connections.jsonl")
@@ -96,6 +98,70 @@ def verify_sqlite(path: Path) -> None:
         loader.table_names()
     except Exception as exc:  # pragma: no cover - surfaced to API caller
         raise RuntimeError(f"SQLite->DataFrame load error: {exc}") from exc
+
+
+def execute_query(
+    connection_id: str,
+    sql: str,
+    limit: int | None = None,
+    offset: int = 0,
+) -> dict:
+    """Execute a SQL query on a connection and return results.
+
+    Uses DataFrames instead of direct database access. The database is loaded
+    into memory as DataFrames on first use and all queries run against the
+    in-memory DataFrames via DuckDB.
+
+    Args:
+        connection_id: The connection ID to execute on
+        sql: The SQL query to execute
+        limit: Maximum number of rows to return
+        offset: Number of rows to skip
+
+    Returns:
+        Dictionary with 'columns' (list of column names) and 'rows' (list of row data)
+    """
+    db_path = resolve_db_path(connection_id=connection_id, db_url=None, db_path=None)
+
+    # Ensure DataFrames are loaded for this connection
+    ensure_connection_loaded(connection_id, db_path)
+
+    # Basic safety check - only allow SELECT/WITH queries
+    sql_upper = sql.upper().strip()
+    if not sql_upper.startswith("SELECT") and not sql_upper.startswith("WITH"):
+        raise ValueError("Only SELECT queries are allowed")
+
+    # Apply limit and offset if specified
+    final_sql = sql
+    if limit is not None:
+        final_sql = f"{sql} LIMIT {limit}"
+        if offset > 0:
+            final_sql += f" OFFSET {offset}"
+
+    def coerce_value(val):
+        """Convert values to JSON-serializable types."""
+        if val is None:
+            return None
+        if isinstance(val, (date, datetime)):
+            return val.isoformat()
+        if isinstance(val, bytes):
+            return val.decode("utf-8", errors="replace")
+        return val
+
+    # Execute using DataFrame store
+    with sqlite_shim.connect(str(db_path)) as con:
+        con.row_factory = sqlite_shim.Row
+        cur = con.execute(final_sql)
+        rows_raw = cur.fetchall()
+
+        columns = list(rows_raw[0].keys()) if rows_raw else []
+        rows = [[coerce_value(row[col]) for col in columns] for row in rows_raw]
+
+    return {
+        "columns": columns,
+        "rows": rows,
+        "row_count": len(rows),
+    }
 
 
 def save_connection(cfg: dict) -> str:

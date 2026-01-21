@@ -13,6 +13,19 @@ class MessageRole(str, Enum):
     SYSTEM = "system"
 
 
+class FeedbackType(str, Enum):
+    HELPFUL = "helpful"
+    NOT_HELPFUL = "not_helpful"
+
+
+class MessageFeedback(BaseModel):
+    """Feedback on a message."""
+
+    feedback_type: FeedbackType
+    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    comment: Optional[str] = None
+
+
 class Citation(BaseModel):
     """A citation to a document source."""
 
@@ -33,6 +46,7 @@ class ChatMessage(BaseModel):
     citations: List[Citation] = Field(default_factory=list)
     timestamp: datetime = Field(default_factory=datetime.utcnow)
     metadata: Dict[str, Any] = Field(default_factory=dict)
+    feedback: Optional[MessageFeedback] = None
 
 
 class DocumentReference(BaseModel):
@@ -72,3 +86,17 @@ class AskResponse(BaseModel):
     message: ChatMessage
     processing_time_ms: int
     tokens_used: Optional[int] = None
+
+
+class FeedbackRequest(BaseModel):
+    """Request to submit feedback on a message."""
+
+    feedback_type: FeedbackType
+    comment: Optional[str] = None
+
+
+class RegenerateRequest(BaseModel):
+    """Request to regenerate a response."""
+
+    include_citations: bool = Field(default=True)
+    max_response_length: int = Field(default=2000, ge=100, le=10000)

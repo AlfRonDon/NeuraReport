@@ -1,3 +1,7 @@
+/**
+ * Premium Templates Page
+ * Sophisticated template management with glassmorphism and animations
+ */
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
@@ -9,7 +13,6 @@ import {
   ListItemIcon,
   ListItemText,
   Tooltip,
-  alpha,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -22,6 +25,10 @@ import {
   InputLabel,
   Select,
   LinearProgress,
+  useTheme,
+  alpha,
+  styled,
+  keyframes,
 } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
 import MoreVertIcon from '@mui/icons-material/MoreVert'
@@ -37,6 +44,7 @@ import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf'
 import ArchiveIcon from '@mui/icons-material/Archive'
 import LabelIcon from '@mui/icons-material/Label'
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
+import CloseIcon from '@mui/icons-material/Close'
 import { DataTable } from '../../ui/DataTable'
 import { ConfirmModal } from '../../ui/Modal'
 import { useAppStore } from '../../store/useAppStore'
@@ -44,22 +52,306 @@ import { useToast } from '../../components/ToastProvider'
 import FavoriteButton from '../../components/FavoriteButton'
 import * as api from '../../api/client'
 import * as recommendationsApi from '../../api/recommendations'
-import { palette } from '../../theme'
 
-const KIND_CONFIG = {
-  pdf: {
-    icon: PictureAsPdfIcon,
-    color: palette.red[400],
-    bgColor: alpha(palette.red[400], 0.15),
+// =============================================================================
+// ANIMATIONS
+// =============================================================================
+
+const fadeInUp = keyframes`
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+`
+
+const pulse = keyframes`
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.05); opacity: 0.8; }
+`
+
+// =============================================================================
+// STYLED COMPONENTS
+// =============================================================================
+
+const PageContainer = styled(Box)(({ theme }) => ({
+  padding: theme.spacing(3),
+  maxWidth: 1400,
+  margin: '0 auto',
+  width: '100%',
+  minHeight: '100vh',
+  background: theme.palette.mode === 'dark'
+    ? `radial-gradient(ellipse at 20% 0%, ${alpha(theme.palette.primary.dark, 0.15)} 0%, transparent 50%),
+       radial-gradient(ellipse at 80% 100%, ${alpha(theme.palette.secondary.dark, 0.1)} 0%, transparent 50%),
+       ${theme.palette.background.default}`
+    : `radial-gradient(ellipse at 20% 0%, ${alpha(theme.palette.primary.light, 0.08)} 0%, transparent 50%),
+       radial-gradient(ellipse at 80% 100%, ${alpha(theme.palette.secondary.light, 0.05)} 0%, transparent 50%),
+       ${theme.palette.background.default}`,
+}))
+
+const QuickFilterChip = styled(Chip)(({ theme }) => ({
+  borderRadius: 8,
+  backgroundColor: alpha(theme.palette.text.primary, 0.08),
+  color: theme.palette.text.secondary,
+  fontSize: '0.75rem',
+  '& .MuiChip-deleteIcon': {
+    color: theme.palette.text.secondary,
+    '&:hover': {
+      color: theme.palette.error.main,
+    },
   },
-  excel: {
-    icon: TableChartIcon,
-    color: palette.green[400],
-    bgColor: alpha(palette.green[400], 0.15),
+}))
+
+const StyledMenu = styled(Menu)(({ theme }) => ({
+  '& .MuiPaper-root': {
+    backgroundColor: alpha(theme.palette.background.paper, 0.95),
+    backdropFilter: 'blur(20px)',
+    border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+    borderRadius: 12,
+    boxShadow: `0 8px 32px ${alpha(theme.palette.common.black, 0.15)}`,
+    minWidth: 180,
+    animation: `${fadeInUp} 0.2s ease-out`,
   },
+}))
+
+const StyledMenuItem = styled(MenuItem)(({ theme }) => ({
+  borderRadius: 8,
+  margin: theme.spacing(0.5, 1),
+  padding: theme.spacing(1, 1.5),
+  fontSize: '0.8125rem',
+  transition: 'all 0.15s ease',
+  '&:hover': {
+    backgroundColor: alpha(theme.palette.primary.main, 0.08),
+  },
+  '& .MuiListItemIcon-root': {
+    minWidth: 32,
+  },
+}))
+
+const StyledDialog = styled(Dialog)(({ theme }) => ({
+  '& .MuiBackdrop-root': {
+    backgroundColor: alpha(theme.palette.common.black, 0.6),
+    backdropFilter: 'blur(8px)',
+  },
+  '& .MuiDialog-paper': {
+    backgroundColor: alpha(theme.palette.background.paper, 0.95),
+    backdropFilter: 'blur(20px)',
+    border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+    borderRadius: 20,
+    boxShadow: `0 24px 64px ${alpha(theme.palette.common.black, 0.25)}`,
+    animation: `${fadeInUp} 0.3s ease-out`,
+  },
+}))
+
+const DialogHeader = styled(DialogTitle)(({ theme }) => ({
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  padding: theme.spacing(2.5, 3),
+  fontSize: '1.125rem',
+  fontWeight: 600,
+}))
+
+const StyledDialogContent = styled(DialogContent)(({ theme }) => ({
+  padding: theme.spacing(0, 3, 3),
+}))
+
+const StyledDialogActions = styled(DialogActions)(({ theme }) => ({
+  padding: theme.spacing(2, 3),
+  gap: theme.spacing(1),
+}))
+
+const StyledTextField = styled(TextField)(({ theme }) => ({
+  '& .MuiOutlinedInput-root': {
+    borderRadius: 12,
+    backgroundColor: alpha(theme.palette.background.paper, 0.6),
+    transition: 'all 0.2s ease',
+    '&:hover': {
+      backgroundColor: alpha(theme.palette.background.paper, 0.8),
+    },
+    '&.Mui-focused': {
+      backgroundColor: theme.palette.background.paper,
+      boxShadow: `0 0 0 3px ${alpha(theme.palette.primary.main, 0.1)}`,
+    },
+  },
+}))
+
+const StyledFormControl = styled(FormControl)(({ theme }) => ({
+  '& .MuiOutlinedInput-root': {
+    borderRadius: 12,
+    backgroundColor: alpha(theme.palette.background.paper, 0.6),
+    transition: 'all 0.2s ease',
+    '&:hover': {
+      backgroundColor: alpha(theme.palette.background.paper, 0.8),
+    },
+    '&.Mui-focused': {
+      backgroundColor: theme.palette.background.paper,
+      boxShadow: `0 0 0 3px ${alpha(theme.palette.primary.main, 0.1)}`,
+    },
+  },
+}))
+
+const ActionButton = styled(Button)(({ theme }) => ({
+  borderRadius: 12,
+  textTransform: 'none',
+  fontWeight: 500,
+  fontSize: '0.875rem',
+  padding: theme.spacing(1, 2.5),
+  transition: 'all 0.2s ease',
+}))
+
+const PrimaryButton = styled(ActionButton)(({ theme }) => ({
+  background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
+  color: '#fff',
+  boxShadow: `0 4px 14px ${alpha(theme.palette.primary.main, 0.3)}`,
+  '&:hover': {
+    boxShadow: `0 6px 20px ${alpha(theme.palette.primary.main, 0.4)}`,
+    transform: 'translateY(-1px)',
+  },
+  '&:disabled': {
+    background: theme.palette.action.disabledBackground,
+    color: theme.palette.action.disabled,
+    boxShadow: 'none',
+  },
+}))
+
+const SecondaryButton = styled(ActionButton)(({ theme }) => ({
+  borderColor: alpha(theme.palette.divider, 0.3),
+  '&:hover': {
+    borderColor: theme.palette.primary.main,
+    backgroundColor: alpha(theme.palette.primary.main, 0.04),
+  },
+}))
+
+const KindIconContainer = styled(Box, {
+  shouldForwardProp: (prop) => prop !== 'iconColor',
+})(({ theme, iconColor }) => ({
+  width: 36,
+  height: 36,
+  borderRadius: 10,
+  backgroundColor: alpha(iconColor || theme.palette.primary.main, 0.12),
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  transition: 'all 0.2s ease',
+}))
+
+const KindChip = styled(Chip, {
+  shouldForwardProp: (prop) => !['kindColor', 'kindBg'].includes(prop),
+})(({ theme, kindColor, kindBg }) => ({
+  borderRadius: 8,
+  fontWeight: 600,
+  fontSize: '0.6875rem',
+  backgroundColor: kindBg,
+  color: kindColor,
+}))
+
+const StatusChip = styled(Chip, {
+  shouldForwardProp: (prop) => !['statusColor', 'statusBg'].includes(prop),
+})(({ theme, statusColor, statusBg }) => ({
+  borderRadius: 8,
+  fontWeight: 600,
+  fontSize: '0.6875rem',
+  textTransform: 'capitalize',
+  backgroundColor: statusBg,
+  color: statusColor,
+}))
+
+const TagChip = styled(Chip)(({ theme }) => ({
+  borderRadius: 6,
+  fontSize: '0.6875rem',
+  backgroundColor: alpha(theme.palette.text.primary, 0.08),
+  color: theme.palette.text.secondary,
+}))
+
+const MoreActionsButton = styled(IconButton)(({ theme }) => ({
+  color: theme.palette.text.secondary,
+  transition: 'all 0.2s ease',
+  '&:hover': {
+    color: theme.palette.text.primary,
+    backgroundColor: alpha(theme.palette.primary.main, 0.08),
+  },
+}))
+
+const StyledLinearProgress = styled(LinearProgress)(({ theme }) => ({
+  borderRadius: 4,
+  height: 6,
+  backgroundColor: alpha(theme.palette.primary.main, 0.1),
+  '& .MuiLinearProgress-bar': {
+    borderRadius: 4,
+    background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+  },
+}))
+
+const SimilarTemplateCard = styled(Box)(({ theme }) => ({
+  padding: theme.spacing(2),
+  borderRadius: 12,
+  border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+  cursor: 'pointer',
+  transition: 'all 0.2s ease',
+  '&:hover': {
+    borderColor: theme.palette.primary.main,
+    backgroundColor: alpha(theme.palette.primary.main, 0.04),
+    transform: 'translateX(4px)',
+  },
+}))
+
+const AiIcon = styled(AutoAwesomeIcon)(({ theme }) => ({
+  color: theme.palette.primary.main,
+  animation: `${pulse} 2s infinite ease-in-out`,
+}))
+
+// =============================================================================
+// CONFIG HELPERS
+// =============================================================================
+
+const getKindConfig = (theme, kind) => {
+  const configs = {
+    pdf: {
+      icon: PictureAsPdfIcon,
+      color: theme.palette.error.main,
+      bgColor: alpha(theme.palette.error.main, 0.12),
+    },
+    excel: {
+      icon: TableChartIcon,
+      color: theme.palette.success.main,
+      bgColor: alpha(theme.palette.success.main, 0.12),
+    },
+  }
+  return configs[kind] || configs.pdf
 }
 
+const getStatusConfig = (theme, status) => {
+  const configs = {
+    approved: {
+      color: theme.palette.success.main,
+      bgColor: alpha(theme.palette.success.main, 0.12),
+    },
+    pending: {
+      color: theme.palette.warning.main,
+      bgColor: alpha(theme.palette.warning.main, 0.12),
+    },
+    draft: {
+      color: theme.palette.info.main,
+      bgColor: alpha(theme.palette.info.main, 0.12),
+    },
+    archived: {
+      color: theme.palette.text.secondary,
+      bgColor: alpha(theme.palette.text.secondary, 0.08),
+    },
+  }
+  return configs[status] || configs.approved
+}
+
+// =============================================================================
+// MAIN COMPONENT
+// =============================================================================
+
 export default function TemplatesPage() {
+  const theme = useTheme()
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const toast = useToast()
@@ -122,7 +414,7 @@ export default function TemplatesPage() {
     setLoading(true)
     try {
       const [templatesData, tagsData, favoritesData] = await Promise.all([
-        api.listApprovedTemplates(),
+        api.listTemplates(),
         api.getAllTemplateTags(),
         api.getFavorites().catch(() => ({ templates: [] })),
       ])
@@ -188,19 +480,16 @@ export default function TemplatesPage() {
     const templateToDelete = deletingTemplate
     const templateData = templates.find((t) => t.id === templateToDelete.id)
 
-    // Optimistically remove from UI
     removeTemplate(templateToDelete.id)
     setDeleteConfirmOpen(false)
     setDeletingTemplate(null)
 
-    // Set up delayed actual delete
     let undone = false
     const deleteTimeout = setTimeout(async () => {
       if (undone) return
       try {
         await api.deleteTemplate(templateToDelete.id)
       } catch (err) {
-        // If delete fails, restore the template
         if (templateData) {
           setTemplates((prev) => [...prev, templateData])
         }
@@ -208,13 +497,11 @@ export default function TemplatesPage() {
       }
     }, 5000)
 
-    // Show undo toast
     toast.showWithUndo(
       `"${templateToDelete.name || templateToDelete.id}" removed`,
       () => {
         undone = true
         clearTimeout(deleteTimeout)
-        // Restore template
         if (templateData) {
           setTemplates((prev) => [...prev, templateData])
         }
@@ -242,16 +529,14 @@ export default function TemplatesPage() {
     try {
       const result = await api.duplicateTemplate(menuTemplate.id)
       const duplicatedName = result?.name || (menuTemplate.name ? `${menuTemplate.name} (Copy)` : 'Template (Copy)')
-      // Refresh templates list to include the new copy
-      const data = await api.listApprovedTemplates()
-      setTemplates(data)
+      await fetchTemplatesData()
       toast.show(`Design copied as "${duplicatedName}"`, 'success')
     } catch (err) {
       toast.show(err.message || 'Failed to copy design', 'error')
     } finally {
       setDuplicating(false)
     }
-  }, [menuTemplate, toast, handleCloseMenu, setTemplates])
+  }, [menuTemplate, toast, handleCloseMenu, fetchTemplatesData])
 
   const handleEditMetadata = useCallback(() => {
     if (!menuTemplate) return
@@ -300,7 +585,6 @@ export default function TemplatesPage() {
       toast.show('Design name must be 200 characters or less', 'error')
       return
     }
-    // Validate tags (max 50 chars each per backend requirement)
     const tags = metadataForm.tags
       ? metadataForm.tags.split(',').map((tag) => tag.trim()).filter(Boolean)
       : []
@@ -338,14 +622,12 @@ export default function TemplatesPage() {
       toast.show('Select a design backup file first', 'error')
       return
     }
-    // Validate file extension
     const fileName = importFile.name || ''
     const ext = fileName.toLowerCase().split('.').pop()
     if (ext !== 'zip') {
       toast.show('Invalid file type. Please select a .zip file', 'error')
       return
     }
-    // Validate file size (max 50MB)
     const maxSize = 50 * 1024 * 1024
     if (importFile.size > maxSize) {
       toast.show('File too large. Maximum size is 50MB', 'error')
@@ -359,8 +641,7 @@ export default function TemplatesPage() {
         name: importName.trim() || undefined,
         onUploadProgress: (percent) => setImportProgress(percent),
       })
-      const data = await api.listApprovedTemplates()
-      setTemplates(data)
+      await fetchTemplatesData()
       toast.show('Design imported', 'success')
       setImportOpen(false)
       setImportFile(null)
@@ -371,7 +652,7 @@ export default function TemplatesPage() {
       setImporting(false)
       setImportProgress(0)
     }
-  }, [importFile, importName, toast, setTemplates])
+  }, [importFile, importName, toast, fetchTemplatesData])
 
   const handleBulkDeleteOpen = useCallback(() => {
     if (!selectedIds.length) return
@@ -448,7 +729,6 @@ export default function TemplatesPage() {
       toast.show('Enter at least one tag', 'error')
       return
     }
-    // Validate tag length (max 50 chars per backend requirement)
     const invalidTag = tags.find((tag) => tag.length > 50)
     if (invalidTag) {
       toast.show(`Tag "${invalidTag.slice(0, 20)}..." exceeds 50 character limit`, 'error')
@@ -489,7 +769,7 @@ export default function TemplatesPage() {
       field: 'name',
       headerName: 'Template',
       renderCell: (value, row) => {
-        const config = KIND_CONFIG[row.kind] || KIND_CONFIG.pdf
+        const config = getKindConfig(theme, row.kind)
         const Icon = config.icon
         return (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -499,26 +779,16 @@ export default function TemplatesPage() {
               initialFavorite={favorites.has(row.id)}
               onToggle={(isFav) => handleFavoriteToggle(row.id, isFav)}
             />
-            <Box
-              sx={{
-                width: 36,
-                height: 36,
-                borderRadius: '8px',
-                bgcolor: config.bgColor,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
+            <KindIconContainer iconColor={config.color}>
               <Icon sx={{ color: config.color, fontSize: 18 }} />
-            </Box>
+            </KindIconContainer>
             <Box>
-              <Box sx={{ fontWeight: 500, fontSize: '0.8125rem', color: palette.scale[100] }}>
+              <Typography sx={{ fontWeight: 500, fontSize: '0.8125rem', color: 'text.primary' }}>
                 {value || row.id}
-              </Box>
-              <Box sx={{ fontSize: '0.75rem', color: palette.scale[500] }}>
+              </Typography>
+              <Typography sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>
                 {row.description || `${row.kind?.toUpperCase() || 'PDF'} Template`}
-              </Box>
+              </Typography>
             </Box>
           </Box>
         )
@@ -529,17 +799,13 @@ export default function TemplatesPage() {
       headerName: 'Type',
       width: 100,
       renderCell: (value) => {
-        const config = KIND_CONFIG[value] || KIND_CONFIG.pdf
+        const config = getKindConfig(theme, value)
         return (
-          <Chip
+          <KindChip
             label={value?.toUpperCase() || 'PDF'}
             size="small"
-            sx={{
-              bgcolor: config.bgColor,
-              color: config.color,
-              fontSize: '0.6875rem',
-              fontWeight: 600,
-            }}
+            kindColor={config.color}
+            kindBg={config.bgColor}
           />
         )
       },
@@ -548,17 +814,17 @@ export default function TemplatesPage() {
       field: 'status',
       headerName: 'Status',
       width: 120,
-      renderCell: (value) => (
-        <Chip
-          label={value || 'approved'}
-          size="small"
-          color={value === 'approved' ? 'success' : 'default'}
-          sx={{
-            fontSize: '0.6875rem',
-            textTransform: 'capitalize',
-          }}
-        />
-      ),
+      renderCell: (value) => {
+        const config = getStatusConfig(theme, value)
+        return (
+          <StatusChip
+            label={value || 'approved'}
+            size="small"
+            statusColor={config.color}
+            statusBg={config.bgColor}
+          />
+        )
+      },
     },
     {
       field: 'mappingKeys',
@@ -567,9 +833,9 @@ export default function TemplatesPage() {
       renderCell: (value, row) => {
         const count = Array.isArray(value) ? value.length : Array.isArray(row.mappingKeys) ? row.mappingKeys.length : row.tokens_count
         return (
-          <Box sx={{ color: palette.scale[400], fontSize: '0.8125rem' }}>
+          <Typography sx={{ fontSize: '0.8125rem', color: 'text.secondary' }}>
             {count || '-'}
-          </Box>
+          </Typography>
         )
       },
     },
@@ -580,17 +846,12 @@ export default function TemplatesPage() {
       renderCell: (value) => {
         const tags = Array.isArray(value) ? value : []
         if (!tags.length) {
-          return <Box sx={{ color: palette.scale[600], fontSize: '0.75rem' }}>-</Box>
+          return <Typography sx={{ fontSize: '0.75rem', color: 'text.disabled' }}>-</Typography>
         }
         return (
           <Stack direction="row" spacing={0.5} sx={{ flexWrap: 'wrap' }}>
             {tags.slice(0, 2).map((tag) => (
-              <Chip
-                key={tag}
-                label={tag}
-                size="small"
-                sx={{ bgcolor: alpha(palette.scale[100], 0.08), color: palette.scale[300], fontSize: '0.6875rem' }}
-              />
+              <TagChip key={tag} label={tag} size="small" />
             ))}
             {tags.length > 2 && (
               <Typography variant="caption" color="text.secondary">
@@ -608,9 +869,9 @@ export default function TemplatesPage() {
       renderCell: (value, row) => {
         const raw = value || row.created_at
         return (
-          <Box sx={{ color: palette.scale[400], fontSize: '0.8125rem' }}>
+          <Typography sx={{ fontSize: '0.8125rem', color: 'text.secondary' }}>
             {raw ? new Date(raw).toLocaleDateString() : '-'}
-          </Box>
+          </Typography>
         )
       },
     },
@@ -621,9 +882,9 @@ export default function TemplatesPage() {
       renderCell: (value, row) => {
         const raw = value || row.last_run_at
         return (
-          <Box sx={{ color: palette.scale[400], fontSize: '0.8125rem' }}>
+          <Typography sx={{ fontSize: '0.8125rem', color: 'text.secondary' }}>
             {raw ? new Date(raw).toLocaleDateString() : '-'}
-          </Box>
+          </Typography>
         )
       },
     },
@@ -634,13 +895,13 @@ export default function TemplatesPage() {
       renderCell: (value, row) => {
         const raw = value || row.updated_at
         return (
-          <Box sx={{ color: palette.scale[400], fontSize: '0.8125rem' }}>
+          <Typography sx={{ fontSize: '0.8125rem', color: 'text.secondary' }}>
             {raw ? new Date(raw).toLocaleDateString() : '-'}
-          </Box>
+          </Typography>
         )
       },
     },
-  ], [favorites, handleFavoriteToggle])
+  ], [theme, favorites, handleFavoriteToggle])
 
   const filters = useMemo(() => {
     const baseFilters = [
@@ -664,7 +925,6 @@ export default function TemplatesPage() {
       },
     ]
 
-    // Add tags filter if we have tags
     if (allTags.length > 0) {
       baseFilters.push({
         key: 'tags',
@@ -693,26 +953,24 @@ export default function TemplatesPage() {
       onClick: () => setBulkTagsOpen(true),
       disabled: bulkActionLoading,
     },
-  ]), [bulkActionLoading, setBulkStatusOpen, setBulkTagsOpen])
+  ]), [bulkActionLoading])
 
   return (
-    <Box sx={{ p: 3, maxWidth: 1400, mx: 'auto', width: '100%' }}>
+    <PageContainer>
       {(kindFilter || statusParam) && (
         <Stack direction="row" spacing={1} sx={{ mb: 1.5, flexWrap: 'wrap' }}>
           {kindFilter && (
-            <Chip
+            <QuickFilterChip
               label={`Type: ${kindFilter.toUpperCase()}`}
               onDelete={() => clearQuickFilter('kind')}
               size="small"
-              sx={{ bgcolor: alpha(palette.scale[100], 0.08), color: palette.scale[300] }}
             />
           )}
           {statusParam && (
-            <Chip
+            <QuickFilterChip
               label={`Status: ${statusParam}`}
               onDelete={() => clearQuickFilter('status')}
               size="small"
-              sx={{ bgcolor: alpha(palette.scale[100], 0.08), color: palette.scale[300] }}
             />
           )}
         </Stack>
@@ -746,20 +1004,13 @@ export default function TemplatesPage() {
         onRowClick={handleRowClick}
         rowActions={(row) => (
           <Tooltip title="More actions">
-            <IconButton
+            <MoreActionsButton
               size="small"
               onClick={(e) => handleOpenMenu(e, row)}
               aria-label="More actions"
-              sx={{
-                color: palette.scale[500],
-                '&:hover': {
-                  color: palette.scale[100],
-                  bgcolor: alpha(palette.scale[100], 0.08),
-                },
-              }}
             >
               <MoreVertIcon sx={{ fontSize: 18 }} />
-            </IconButton>
+            </MoreActionsButton>
           </Tooltip>
         )}
         emptyState={{
@@ -772,45 +1023,36 @@ export default function TemplatesPage() {
       />
 
       {/* Row Actions Menu */}
-      <Menu
+      <StyledMenu
         anchorEl={menuAnchor}
         open={Boolean(menuAnchor)}
         onClose={handleCloseMenu}
-        slotProps={{
-          paper: {
-            sx: {
-              bgcolor: palette.scale[900],
-              border: `1px solid ${alpha(palette.scale[100], 0.1)}`,
-              minWidth: 160,
-            },
-          },
-        }}
       >
-        <MenuItem onClick={handleEditTemplate} sx={{ color: palette.scale[200] }}>
-          <ListItemIcon><EditIcon sx={{ fontSize: 16, color: palette.scale[500] }} /></ListItemIcon>
+        <StyledMenuItem onClick={handleEditTemplate}>
+          <ListItemIcon><EditIcon sx={{ fontSize: 16 }} /></ListItemIcon>
           <ListItemText primaryTypographyProps={{ fontSize: '0.8125rem' }}>Edit</ListItemText>
-        </MenuItem>
-        <MenuItem onClick={handleEditMetadata} sx={{ color: palette.scale[200] }}>
-          <ListItemIcon><SettingsIcon sx={{ fontSize: 16, color: palette.scale[500] }} /></ListItemIcon>
+        </StyledMenuItem>
+        <StyledMenuItem onClick={handleEditMetadata}>
+          <ListItemIcon><SettingsIcon sx={{ fontSize: 16 }} /></ListItemIcon>
           <ListItemText primaryTypographyProps={{ fontSize: '0.8125rem' }}>Edit Details</ListItemText>
-        </MenuItem>
-        <MenuItem onClick={handleExport} sx={{ color: palette.scale[200] }}>
-          <ListItemIcon><DownloadIcon sx={{ fontSize: 16, color: palette.scale[500] }} /></ListItemIcon>
+        </StyledMenuItem>
+        <StyledMenuItem onClick={handleExport}>
+          <ListItemIcon><DownloadIcon sx={{ fontSize: 16 }} /></ListItemIcon>
           <ListItemText primaryTypographyProps={{ fontSize: '0.8125rem' }}>Export</ListItemText>
-        </MenuItem>
-        <MenuItem onClick={handleDuplicate} disabled={duplicating} sx={{ color: palette.scale[200] }}>
-          <ListItemIcon><ContentCopyIcon sx={{ fontSize: 16, color: palette.scale[500] }} /></ListItemIcon>
+        </StyledMenuItem>
+        <StyledMenuItem onClick={handleDuplicate} disabled={duplicating}>
+          <ListItemIcon><ContentCopyIcon sx={{ fontSize: 16 }} /></ListItemIcon>
           <ListItemText primaryTypographyProps={{ fontSize: '0.8125rem' }}>{duplicating ? 'Duplicating...' : 'Duplicate'}</ListItemText>
-        </MenuItem>
-        <MenuItem onClick={handleViewSimilar} sx={{ color: palette.scale[200] }}>
-          <ListItemIcon><AutoAwesomeIcon sx={{ fontSize: 16, color: palette.scale[500] }} /></ListItemIcon>
+        </StyledMenuItem>
+        <StyledMenuItem onClick={handleViewSimilar}>
+          <ListItemIcon><AutoAwesomeIcon sx={{ fontSize: 16 }} /></ListItemIcon>
           <ListItemText primaryTypographyProps={{ fontSize: '0.8125rem' }}>View Similar</ListItemText>
-        </MenuItem>
-        <MenuItem onClick={handleDeleteClick} sx={{ color: palette.red[400] }}>
-          <ListItemIcon><DeleteIcon sx={{ fontSize: 16, color: palette.red[400] }} /></ListItemIcon>
+        </StyledMenuItem>
+        <StyledMenuItem onClick={handleDeleteClick} sx={{ color: 'error.main' }}>
+          <ListItemIcon><DeleteIcon sx={{ fontSize: 16, color: 'error.main' }} /></ListItemIcon>
           <ListItemText primaryTypographyProps={{ fontSize: '0.8125rem' }}>Delete</ListItemText>
-        </MenuItem>
-      </Menu>
+        </StyledMenuItem>
+      </StyledMenu>
 
       {/* Delete Confirmation */}
       <ConfirmModal
@@ -835,17 +1077,18 @@ export default function TemplatesPage() {
         loading={bulkActionLoading}
       />
 
-      <Dialog open={metadataOpen} onClose={() => setMetadataOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Edit Design Details</DialogTitle>
-        <DialogContent>
+      {/* Edit Metadata Dialog */}
+      <StyledDialog open={metadataOpen} onClose={() => setMetadataOpen(false)} maxWidth="sm" fullWidth>
+        <DialogHeader>Edit Design Details</DialogHeader>
+        <StyledDialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
-            <TextField
+            <StyledTextField
               label="Name"
               value={metadataForm.name}
               onChange={(e) => setMetadataForm((prev) => ({ ...prev, name: e.target.value }))}
               fullWidth
             />
-            <TextField
+            <StyledTextField
               label="Description"
               value={metadataForm.description}
               onChange={(e) => setMetadataForm((prev) => ({ ...prev, description: e.target.value }))}
@@ -853,14 +1096,14 @@ export default function TemplatesPage() {
               minRows={2}
               fullWidth
             />
-            <TextField
+            <StyledTextField
               label="Tags"
               value={metadataForm.tags}
               onChange={(e) => setMetadataForm((prev) => ({ ...prev, tags: e.target.value }))}
               helperText="Comma-separated (e.g. finance, monthly, ops)"
               fullWidth
             />
-            <FormControl fullWidth>
+            <StyledFormControl fullWidth>
               <InputLabel>Status</InputLabel>
               <Select
                 value={metadataForm.status}
@@ -872,29 +1115,29 @@ export default function TemplatesPage() {
                 <MenuItem value="draft">Draft</MenuItem>
                 <MenuItem value="archived">Archived</MenuItem>
               </Select>
-            </FormControl>
+            </StyledFormControl>
           </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setMetadataOpen(false)} disabled={metadataSaving}>Cancel</Button>
-          <Button
-            variant="contained"
+        </StyledDialogContent>
+        <StyledDialogActions>
+          <SecondaryButton variant="outlined" onClick={() => setMetadataOpen(false)} disabled={metadataSaving}>Cancel</SecondaryButton>
+          <PrimaryButton
             onClick={handleMetadataSave}
             disabled={metadataSaving || !metadataForm.name.trim()}
           >
             {metadataSaving ? 'Saving...' : 'Save'}
-          </Button>
-        </DialogActions>
-      </Dialog>
+          </PrimaryButton>
+        </StyledDialogActions>
+      </StyledDialog>
 
-      <Dialog open={bulkStatusOpen} onClose={() => setBulkStatusOpen(false)} maxWidth="xs" fullWidth>
-        <DialogTitle>Update Status</DialogTitle>
-        <DialogContent>
+      {/* Bulk Status Dialog */}
+      <StyledDialog open={bulkStatusOpen} onClose={() => setBulkStatusOpen(false)} maxWidth="xs" fullWidth>
+        <DialogHeader>Update Status</DialogHeader>
+        <StyledDialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
-            <Typography sx={{ fontSize: '0.8125rem', color: palette.scale[500] }}>
+            <Typography sx={{ fontSize: '0.8125rem', color: 'text.secondary' }}>
               Update {selectedIds.length} design{selectedIds.length !== 1 ? 's' : ''} to:
             </Typography>
-            <FormControl fullWidth>
+            <StyledFormControl fullWidth>
               <InputLabel>Status</InputLabel>
               <Select
                 value={bulkStatus}
@@ -906,29 +1149,29 @@ export default function TemplatesPage() {
                 <MenuItem value="draft">Draft</MenuItem>
                 <MenuItem value="archived">Archived</MenuItem>
               </Select>
-            </FormControl>
+            </StyledFormControl>
           </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setBulkStatusOpen(false)} disabled={bulkActionLoading}>Cancel</Button>
-          <Button
-            variant="contained"
+        </StyledDialogContent>
+        <StyledDialogActions>
+          <SecondaryButton variant="outlined" onClick={() => setBulkStatusOpen(false)} disabled={bulkActionLoading}>Cancel</SecondaryButton>
+          <PrimaryButton
             onClick={handleBulkStatusApply}
             disabled={bulkActionLoading}
           >
             {bulkActionLoading ? 'Updating...' : 'Update'}
-          </Button>
-        </DialogActions>
-      </Dialog>
+          </PrimaryButton>
+        </StyledDialogActions>
+      </StyledDialog>
 
-      <Dialog open={bulkTagsOpen} onClose={() => setBulkTagsOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Add Tags</DialogTitle>
-        <DialogContent>
+      {/* Bulk Tags Dialog */}
+      <StyledDialog open={bulkTagsOpen} onClose={() => setBulkTagsOpen(false)} maxWidth="sm" fullWidth>
+        <DialogHeader>Add Tags</DialogHeader>
+        <StyledDialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
-            <Typography sx={{ fontSize: '0.8125rem', color: palette.scale[500] }}>
+            <Typography sx={{ fontSize: '0.8125rem', color: 'text.secondary' }}>
               Add tags to {selectedIds.length} design{selectedIds.length !== 1 ? 's' : ''}.
             </Typography>
-            <TextField
+            <StyledTextField
               label="Tags"
               value={bulkTags}
               onChange={(e) => setBulkTags(e.target.value)}
@@ -936,24 +1179,24 @@ export default function TemplatesPage() {
               fullWidth
             />
           </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setBulkTagsOpen(false)} disabled={bulkActionLoading}>Cancel</Button>
-          <Button
-            variant="contained"
+        </StyledDialogContent>
+        <StyledDialogActions>
+          <SecondaryButton variant="outlined" onClick={() => setBulkTagsOpen(false)} disabled={bulkActionLoading}>Cancel</SecondaryButton>
+          <PrimaryButton
             onClick={handleBulkTagsApply}
             disabled={bulkActionLoading}
           >
             {bulkActionLoading ? 'Updating...' : 'Add Tags'}
-          </Button>
-        </DialogActions>
-      </Dialog>
+          </PrimaryButton>
+        </StyledDialogActions>
+      </StyledDialog>
 
-      <Dialog open={importOpen} onClose={() => !importing && setImportOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Import Design Backup</DialogTitle>
-        <DialogContent>
+      {/* Import Dialog */}
+      <StyledDialog open={importOpen} onClose={() => !importing && setImportOpen(false)} maxWidth="sm" fullWidth>
+        <DialogHeader>Import Design Backup</DialogHeader>
+        <StyledDialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
-            <Button variant="outlined" component="label" disabled={importing}>
+            <SecondaryButton variant="outlined" component="label" disabled={importing}>
               {importFile ? importFile.name : 'Choose backup file (.zip)'}
               <input
                 type="file"
@@ -961,8 +1204,8 @@ export default function TemplatesPage() {
                 accept=".zip"
                 onChange={(e) => setImportFile(e.target.files?.[0] || null)}
               />
-            </Button>
-            <TextField
+            </SecondaryButton>
+            <StyledTextField
               label="Design Name (optional)"
               value={importName}
               onChange={(e) => setImportName(e.target.value)}
@@ -974,26 +1217,28 @@ export default function TemplatesPage() {
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                   Uploading... {importProgress}%
                 </Typography>
-                <LinearProgress variant="determinate" value={importProgress} />
+                <StyledLinearProgress variant="determinate" value={importProgress} />
               </Box>
             )}
           </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setImportOpen(false)} disabled={importing}>Cancel</Button>
-          <Button variant="contained" onClick={handleImport} disabled={importing || !importFile}>
+        </StyledDialogContent>
+        <StyledDialogActions>
+          <SecondaryButton variant="outlined" onClick={() => setImportOpen(false)} disabled={importing}>Cancel</SecondaryButton>
+          <PrimaryButton onClick={handleImport} disabled={importing || !importFile}>
             {importing ? 'Importing...' : 'Import'}
-          </Button>
-        </DialogActions>
-      </Dialog>
+          </PrimaryButton>
+        </StyledDialogActions>
+      </StyledDialog>
 
       {/* Similar Designs Dialog */}
-      <Dialog open={similarOpen} onClose={() => setSimilarOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <AutoAwesomeIcon color="primary" />
-          Similar Designs
-        </DialogTitle>
-        <DialogContent>
+      <StyledDialog open={similarOpen} onClose={() => setSimilarOpen(false)} maxWidth="sm" fullWidth>
+        <DialogHeader>
+          <Stack direction="row" alignItems="center" spacing={1}>
+            <AiIcon />
+            <span>Similar Designs</span>
+          </Stack>
+        </DialogHeader>
+        <StyledDialogContent>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
             Designs similar to "{similarTemplate?.name || similarTemplate?.id}"
           </Typography>
@@ -1008,35 +1253,17 @@ export default function TemplatesPage() {
           ) : (
             <Stack spacing={1}>
               {similarTemplates.map((template) => {
-                const config = KIND_CONFIG[template.kind] || KIND_CONFIG.pdf
+                const config = getKindConfig(theme, template.kind)
                 const Icon = config.icon
                 return (
-                  <Box
+                  <SimilarTemplateCard
                     key={template.id}
                     onClick={() => handleSelectSimilarTemplate(template)}
-                    sx={{
-                      p: 2,
-                      border: 1,
-                      borderColor: 'divider',
-                      borderRadius: 1,
-                      cursor: 'pointer',
-                      '&:hover': { borderColor: 'primary.main', bgcolor: 'action.hover' },
-                    }}
                   >
                     <Stack direction="row" alignItems="center" spacing={2}>
-                      <Box
-                        sx={{
-                          width: 36,
-                          height: 36,
-                          borderRadius: '8px',
-                          bgcolor: config.bgColor,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                        }}
-                      >
+                      <KindIconContainer iconColor={config.color}>
                         <Icon sx={{ color: config.color, fontSize: 18 }} />
-                      </Box>
+                      </KindIconContainer>
                       <Box sx={{ flex: 1 }}>
                         <Typography variant="subtitle2">{template.name || template.id}</Typography>
                         <Typography variant="caption" color="text.secondary">
@@ -1049,19 +1276,20 @@ export default function TemplatesPage() {
                           size="small"
                           color="primary"
                           variant="outlined"
+                          sx={{ borderRadius: 8 }}
                         />
                       )}
                     </Stack>
-                  </Box>
+                  </SimilarTemplateCard>
                 )
               })}
             </Stack>
           )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setSimilarOpen(false)}>Close</Button>
-        </DialogActions>
-      </Dialog>
-    </Box>
+        </StyledDialogContent>
+        <StyledDialogActions>
+          <SecondaryButton variant="outlined" onClick={() => setSimilarOpen(false)}>Close</SecondaryButton>
+        </StyledDialogActions>
+      </StyledDialog>
+    </PageContainer>
   )
 }

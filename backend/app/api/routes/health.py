@@ -10,6 +10,7 @@ from fastapi import APIRouter, Request
 
 from backend.app.core.config import get_settings
 from backend.app.features.analyze.services.document_analysis_service import _ANALYSIS_CACHE
+from backend.app.services.utils.mailer import MAILER_CONFIG, refresh_mailer_config
 
 router = APIRouter()
 
@@ -214,5 +215,195 @@ async def health_detailed(request: Request) -> Dict[str, Any]:
         "response_time_ms": elapsed_ms,
         "checks": checks,
         "issues": issues if issues else None,
+        "correlation_id": getattr(request.state, "correlation_id", None),
+    }
+
+
+def _check_email_config() -> Dict[str, Any]:
+    """Check email/SMTP configuration status."""
+    config = MAILER_CONFIG
+    result: Dict[str, Any] = {
+        "enabled": config.enabled,
+        "host_configured": bool(config.host),
+        "sender_configured": bool(config.sender),
+        "auth_configured": bool(config.username and config.password),
+        "use_tls": config.use_tls,
+        "port": config.port,
+    }
+
+    if not config.enabled:
+        result["status"] = "not_configured"
+        missing = []
+        if not config.host:
+            missing.append("NEURA_MAIL_HOST")
+        if not config.sender:
+            missing.append("NEURA_MAIL_SENDER")
+        result["missing_env_vars"] = missing
+        result["message"] = f"Email disabled. Set {', '.join(missing)} to enable."
+    else:
+        result["status"] = "configured"
+        result["host"] = config.host
+        # Mask sender partially for security
+        if config.sender:
+            parts = config.sender.split("@")
+            if len(parts) == 2:
+                masked = parts[0][:3] + "***@" + parts[1]
+                result["sender_masked"] = masked
+            else:
+                result["sender_masked"] = config.sender[:5] + "***"
+
+    return result
+
+
+def _test_smtp_connection() -> Dict[str, Any]:
+    """Attempt to connect to SMTP server (without sending email)."""
+    config = MAILER_CONFIG
+    if not config.enabled or not config.host:
+        return {"status": "skipped", "reason": "email_not_configured"}
+
+    import smtplib
+    import ssl
+
+    try:
+        if config.use_tls:
+            with smtplib.SMTP(config.host, config.port, timeout=10) as client:
+                client.ehlo()
+                context = ssl.create_default_context()
+                client.starttls(context=context)
+                client.ehlo()
+                if config.username and config.password:
+                    client.login(config.username, config.password)
+                return {"status": "connected", "message": "SMTP connection successful"}
+        else:
+            with smtplib.SMTP(config.host, config.port, timeout=10) as client:
+                client.ehlo()
+                if config.username and config.password:
+                    client.login(config.username, config.password)
+                return {"status": "connected", "message": "SMTP connection successful"}
+    except smtplib.SMTPAuthenticationError as e:
+        return {"status": "auth_failed", "error": str(e), "message": "SMTP authentication failed"}
+    except smtplib.SMTPConnectError as e:
+        return {"status": "connection_failed", "error": str(e), "message": "Could not connect to SMTP server"}
+    except Exception as e:
+        return {"status": "error", "error": str(e), "message": "SMTP connection test failed"}
+
+
+@router.get("/health/email")
+async def email_health(request: Request) -> Dict[str, Any]:
+    """Check email/SMTP configuration and optionally test connection."""
+    config_status = _check_email_config()
+    return {
+        "status": "ok" if config_status.get("status") == "configured" else "warning",
+        "email": config_status,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "correlation_id": getattr(request.state, "correlation_id", None),
+    }
+
+
+@router.get("/health/email/test")
+async def email_connection_test(request: Request) -> Dict[str, Any]:
+    """Test SMTP connection (without sending an email)."""
+    config_status = _check_email_config()
+    connection_test = _test_smtp_connection()
+
+    overall_status = "ok"
+    if config_status.get("status") != "configured":
+        overall_status = "warning"
+    elif connection_test.get("status") != "connected":
+        overall_status = "error"
+
+    return {
+        "status": overall_status,
+        "email": config_status,
+        "connection_test": connection_test,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "correlation_id": getattr(request.state, "correlation_id", None),
+    }
+
+
+@router.post("/health/email/refresh")
+async def refresh_email_config(request: Request) -> Dict[str, Any]:
+    """Refresh email configuration from environment variables."""
+    refresh_mailer_config()
+    config_status = _check_email_config()
+    return {
+        "status": "ok",
+        "message": "Email configuration refreshed",
+        "email": config_status,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "correlation_id": getattr(request.state, "correlation_id", None),
+    }
+
+
+@router.get("/health/scheduler")
+async def scheduler_health(request: Request) -> Dict[str, Any]:
+    """Check scheduler status with detailed information."""
+    scheduler_disabled = os.getenv("NEURA_SCHEDULER_DISABLED", "false").lower() == "true"
+    poll_interval = int(os.getenv("NEURA_SCHEDULER_INTERVAL", "60") or "60")
+
+    # Try to get scheduler instance from main app
+    scheduler_running = False
+    inflight_jobs: list[str] = []
+    scheduler_instance = None
+
+    try:
+        import backend.api as api_module
+        scheduler_instance = getattr(api_module, "SCHEDULER", None)
+        if scheduler_instance is not None:
+            scheduler_running = scheduler_instance._task is not None and not scheduler_instance._task.done()
+            inflight_jobs = list(scheduler_instance._inflight)
+    except Exception:
+        pass
+
+    # Get schedule statistics
+    schedules_info = {"total": 0, "active": 0, "next_run": None}
+    try:
+        from backend.app.services.state import state_store
+        schedules = state_store.list_schedules()
+        schedules_info["total"] = len(schedules)
+        schedules_info["active"] = sum(1 for s in schedules if s.get("active", True))
+
+        # Find next scheduled run
+        now = datetime.now(timezone.utc)
+        next_runs = []
+        for s in schedules:
+            if s.get("active", True) and s.get("next_run_at"):
+                try:
+                    next_run = datetime.fromisoformat(s["next_run_at"].replace("Z", "+00:00"))
+                    next_runs.append((next_run, s.get("name", s.get("id"))))
+                except Exception:
+                    pass
+
+        if next_runs:
+            next_runs.sort(key=lambda x: x[0])
+            next_run_time, next_run_name = next_runs[0]
+            schedules_info["next_run"] = {
+                "schedule_name": next_run_name,
+                "next_run_at": next_run_time.isoformat(),
+                "in_seconds": max(0, int((next_run_time - now).total_seconds())),
+            }
+    except Exception:
+        pass
+
+    status = "ok"
+    message = None
+    if scheduler_disabled:
+        status = "disabled"
+        message = "Scheduler is disabled via NEURA_SCHEDULER_DISABLED environment variable"
+    elif not scheduler_running:
+        status = "warning"
+        message = "Scheduler is enabled but not currently running"
+
+    return {
+        "status": status,
+        "message": message,
+        "scheduler": {
+            "enabled": not scheduler_disabled,
+            "running": scheduler_running,
+            "poll_interval_seconds": poll_interval,
+            "inflight_jobs": inflight_jobs,
+        },
+        "schedules": schedules_info,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
         "correlation_id": getattr(request.state, "correlation_id", None),
     }
