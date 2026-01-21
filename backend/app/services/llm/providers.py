@@ -13,6 +13,7 @@ from __future__ import annotations
 import base64
 import json
 import logging
+import os
 import time
 from abc import ABC, abstractmethod
 from pathlib import Path
@@ -21,6 +22,21 @@ from typing import Any, AsyncIterator, Dict, Iterator, List, Optional, Union
 from .config import LLMConfig, LLMProvider
 
 logger = logging.getLogger("neura.llm.providers")
+_FORCE_GPT5 = os.getenv("NEURA_FORCE_GPT5", "true").lower() in {"1", "true", "yes"}
+
+
+def _force_gpt5(model_name: Optional[str]) -> str:
+    if not _FORCE_GPT5:
+        return str(model_name or "gpt-5").strip() or "gpt-5"
+    normalized = str(model_name or "").strip()
+    if normalized.lower().startswith("gpt-5"):
+        return normalized
+    if normalized:
+        logger.warning(
+            "llm_model_overridden",
+            extra={"event": "llm_model_overridden", "requested": normalized, "forced": "gpt-5"},
+        )
+    return "gpt-5"
 
 
 class BaseProvider(ABC):
@@ -104,6 +120,10 @@ class BaseProvider(ABC):
 class OpenAIProvider(BaseProvider):
     """OpenAI API provider (also works with OpenAI-compatible endpoints)."""
 
+    def _use_responses(self, model: str) -> bool:
+        force = os.getenv("OPENAI_USE_RESPONSES", "").lower() in {"1", "true", "yes"}
+        return force or str(model or "").lower().startswith("gpt-5")
+
     def get_client(self) -> Any:
         if self._client is not None:
             return self._client
@@ -134,13 +154,22 @@ class OpenAIProvider(BaseProvider):
         **kwargs: Any,
     ) -> Dict[str, Any]:
         client = self.get_client()
-        model = model or self.config.model
+        model = _force_gpt5(model or self.config.model)
 
         # Apply default settings
         if self.config.temperature is not None and "temperature" not in kwargs:
             kwargs["temperature"] = self.config.temperature
         if self.config.max_tokens is not None and "max_tokens" not in kwargs:
             kwargs["max_tokens"] = self.config.max_tokens
+
+        if self._use_responses(model):
+            payload_kwargs = _openai_prepare_responses_kwargs(kwargs)
+            response = client.responses.create(
+                model=model,
+                input=_openai_messages_to_responses_input(messages),
+                **payload_kwargs,
+            )
+            return _openai_responses_to_dict(response)
 
         response = client.chat.completions.create(
             model=model,
@@ -157,7 +186,32 @@ class OpenAIProvider(BaseProvider):
         **kwargs: Any,
     ) -> Iterator[Dict[str, Any]]:
         client = self.get_client()
-        model = model or self.config.model
+        model = _force_gpt5(model or self.config.model)
+
+        if self._use_responses(model):
+            payload_kwargs = _openai_prepare_responses_kwargs(kwargs)
+            response = client.responses.create(
+                model=model,
+                input=_openai_messages_to_responses_input(messages),
+                **payload_kwargs,
+            )
+            response_dict = _openai_responses_to_dict(response)
+            content = (
+                response_dict.get("choices", [{}])[0]
+                .get("message", {})
+                .get("content", "")
+            )
+            if content:
+                yield {
+                    "id": response_dict.get("id", ""),
+                    "model": response_dict.get("model", model),
+                    "choices": [{
+                        "index": 0,
+                        "delta": {"content": content},
+                        "finish_reason": "stop",
+                    }],
+                }
+            return
 
         kwargs["stream"] = True
 
@@ -883,6 +937,117 @@ class GoogleGeminiProvider(BaseProvider):
 
 
 # Helper functions
+
+def _openai_prepare_responses_kwargs(kwargs: Dict[str, Any]) -> Dict[str, Any]:
+    payload = dict(kwargs)
+    payload.pop("stream", None)
+    if "max_tokens" in payload and "max_output_tokens" not in payload:
+        payload["max_output_tokens"] = payload.pop("max_tokens")
+    return payload
+
+
+def _openai_messages_to_responses_input(messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    converted: List[Dict[str, Any]] = []
+    for message in messages:
+        if not isinstance(message, dict):
+            continue
+        role = message.get("role") or "user"
+        content = message.get("content", "")
+        if isinstance(content, list):
+            parts: List[Dict[str, Any]] = []
+            for part in content:
+                if isinstance(part, dict):
+                    part_type = part.get("type")
+                    if part_type == "text":
+                        parts.append({"type": "input_text", "text": part.get("text", "")})
+                        continue
+                    if part_type == "image_url":
+                        image_url = part.get("image_url")
+                        if isinstance(image_url, dict):
+                            image_url = image_url.get("url") or image_url.get("image_url")
+                        parts.append({"type": "input_image", "image_url": image_url})
+                        continue
+                    parts.append(part)
+                else:
+                    parts.append({"type": "input_text", "text": str(part)})
+            content = parts
+        converted.append({"role": role, "content": content})
+    return converted
+
+
+def _openai_responses_output_text(response: Any) -> str:
+    if isinstance(response, dict):
+        output_text = response.get("output_text")
+        if isinstance(output_text, str) and output_text.strip():
+            return output_text
+        output = response.get("output")
+    else:
+        output_text = getattr(response, "output_text", None)
+        if isinstance(output_text, str) and output_text.strip():
+            return output_text
+        output = getattr(response, "output", None)
+
+    if isinstance(output, list):
+        texts: List[str] = []
+        for item in output:
+            if isinstance(item, dict):
+                item_type = item.get("type")
+                content = item.get("content") or []
+            else:
+                item_type = getattr(item, "type", None)
+                content = getattr(item, "content", None) or []
+            if item_type != "message":
+                continue
+            for segment in content:
+                if isinstance(segment, dict):
+                    seg_type = segment.get("type")
+                    text = segment.get("text")
+                else:
+                    seg_type = getattr(segment, "type", None)
+                    text = getattr(segment, "text", None)
+                if seg_type in {"output_text", "text"} and isinstance(text, str):
+                    texts.append(text)
+        if texts:
+            return "\n".join(texts)
+    return ""
+
+
+def _openai_responses_usage(response: Any) -> Dict[str, int]:
+    usage = response.get("usage") if isinstance(response, dict) else getattr(response, "usage", None)
+    if usage is None:
+        return {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+    if isinstance(usage, dict):
+        input_tokens = usage.get("input_tokens") or usage.get("prompt_tokens") or 0
+        output_tokens = usage.get("output_tokens") or usage.get("completion_tokens") or 0
+    else:
+        input_tokens = getattr(usage, "input_tokens", None)
+        if input_tokens is None:
+            input_tokens = getattr(usage, "prompt_tokens", 0)
+        output_tokens = getattr(usage, "output_tokens", None)
+        if output_tokens is None:
+            output_tokens = getattr(usage, "completion_tokens", 0)
+    total_tokens = int(input_tokens or 0) + int(output_tokens or 0)
+    return {
+        "prompt_tokens": int(input_tokens or 0),
+        "completion_tokens": int(output_tokens or 0),
+        "total_tokens": int(total_tokens),
+    }
+
+
+def _openai_responses_to_dict(response: Any) -> Dict[str, Any]:
+    output_text = _openai_responses_output_text(response)
+    response_id = response.get("id") if isinstance(response, dict) else getattr(response, "id", "")
+    model = response.get("model") if isinstance(response, dict) else getattr(response, "model", "")
+    return {
+        "id": response_id,
+        "model": model,
+        "choices": [{
+            "index": 0,
+            "message": {"role": "assistant", "content": output_text},
+            "finish_reason": "stop",
+        }],
+        "usage": _openai_responses_usage(response),
+    }
 
 def _openai_response_to_dict(response: Any) -> Dict[str, Any]:
     """Convert OpenAI response object to dictionary."""

@@ -1,8 +1,8 @@
 import { createContext, useCallback, useContext, useMemo, useState } from 'react'
-import { Snackbar, Alert, alpha } from '@mui/material'
+import { Snackbar, Alert, Button, alpha } from '@mui/material'
 import { palette } from '../theme'
 
-const ToastCtx = createContext({ show: () => {} })
+const ToastCtx = createContext({ show: () => {}, showWithUndo: () => {} })
 
 const SEVERITY_STYLES = {
   success: {

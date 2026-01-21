@@ -54,6 +54,14 @@ const TYPE_CONFIG = {
   },
 }
 
+const ENTITY_ROUTES = {
+  template: (id) => (id ? `/templates/${id}/edit` : '/templates'),
+  connection: () => '/connections',
+  job: () => '/jobs',
+  schedule: () => '/schedules',
+  report: () => '/history',
+}
+
 function formatTimeAgo(dateString) {
   if (!dateString) return ''
   const date = new Date(dateString)
@@ -146,6 +154,15 @@ export default function NotificationCenter() {
   }
 
   const handleNotificationClick = async (notification) => {
+    const entityTypeRaw = notification.entity_type || notification.entityType
+    const entityId = notification.entity_id || notification.entityId
+    const normalizedType = entityTypeRaw ? String(entityTypeRaw).toLowerCase().replace(/s$/, '') : ''
+    const fallbackRoute =
+      normalizedType && ENTITY_ROUTES[normalizedType]
+        ? ENTITY_ROUTES[normalizedType](entityId)
+        : '/activity'
+    const targetRoute = notification.link || fallbackRoute
+
     // Mark as read if unread
     if (!notification.read) {
       try {
@@ -160,8 +177,8 @@ export default function NotificationCenter() {
     }
 
     // Navigate if link provided
-    if (notification.link) {
-      navigate(notification.link)
+    if (targetRoute) {
+      navigate(targetRoute)
       handleClose()
     }
   }
@@ -180,7 +197,13 @@ export default function NotificationCenter() {
     e.stopPropagation()
     try {
       await deleteNotification(notificationId)
-      setNotifications((prev) => prev.filter((n) => n.id !== notificationId))
+      setNotifications((prev) => {
+        const removed = prev.find((n) => n.id === notificationId)
+        if (removed && !removed.read) {
+          setUnreadCount((count) => Math.max(0, count - 1))
+        }
+        return prev.filter((n) => n.id !== notificationId)
+      })
     } catch (err) {
       console.error('Failed to delete notification:', err)
     }

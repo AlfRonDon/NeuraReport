@@ -20,7 +20,9 @@ import ExpandLessIcon from '@mui/icons-material/ExpandLess'
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf'
 import TableChartIcon from '@mui/icons-material/TableChart'
 import CheckIcon from '@mui/icons-material/Check'
-import { recommendTemplates } from '../api/client'
+import ScheduleIcon from '@mui/icons-material/Schedule'
+import { recommendTemplates, queueRecommendTemplates } from '../api/client'
+import { useToast } from './ToastProvider.jsx'
 
 const KIND_ICONS = {
   pdf: PictureAsPdfIcon,
@@ -36,8 +38,10 @@ export default function TemplateRecommender({ onSelectTemplate }) {
   const [expanded, setExpanded] = useState(false)
   const [requirement, setRequirement] = useState('')
   const [loading, setLoading] = useState(false)
+  const [queueing, setQueueing] = useState(false)
   const [recommendations, setRecommendations] = useState([])
   const [error, setError] = useState(null)
+  const toast = useToast()
 
   const handleSearch = useCallback(async () => {
     if (!requirement.trim()) return
@@ -61,6 +65,28 @@ export default function TemplateRecommender({ onSelectTemplate }) {
       setLoading(false)
     }
   }, [requirement])
+
+  const handleQueue = useCallback(async () => {
+    if (!requirement.trim()) return
+
+    setQueueing(true)
+    setError(null)
+    try {
+      const response = await queueRecommendTemplates({
+        requirement: requirement.trim(),
+        limit: 5,
+      })
+      if (response?.job_id) {
+        toast.show('Recommendation job queued. Track it in Jobs.', 'success')
+      } else {
+        toast.show('Failed to queue recommendation job.', 'error')
+      }
+    } catch (err) {
+      toast.show(err.message || 'Failed to queue recommendations', 'error')
+    } finally {
+      setQueueing(false)
+    }
+  }, [requirement, toast])
 
   const handleSelect = useCallback(
     (template) => {
@@ -153,7 +179,7 @@ export default function TemplateRecommender({ onSelectTemplate }) {
               <Button
                 variant="contained"
                 onClick={handleSearch}
-                disabled={loading || !requirement.trim()}
+                disabled={loading || queueing || !requirement.trim()}
                 startIcon={
                   loading ? (
                     <CircularProgress size={16} color="inherit" />
@@ -164,6 +190,21 @@ export default function TemplateRecommender({ onSelectTemplate }) {
                 sx={{ minWidth: 120, textTransform: 'none' }}
               >
                 {loading ? 'Searching...' : 'Find'}
+              </Button>
+              <Button
+                variant="outlined"
+                onClick={handleQueue}
+                disabled={loading || queueing || !requirement.trim()}
+                startIcon={
+                  queueing ? (
+                    <CircularProgress size={16} color="inherit" />
+                  ) : (
+                    <ScheduleIcon />
+                  )
+                }
+                sx={{ minWidth: 120, textTransform: 'none' }}
+              >
+                {queueing ? 'Queueing...' : 'Queue'}
               </Button>
             </Stack>
 

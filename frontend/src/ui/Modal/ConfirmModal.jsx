@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import { Typography, Stack, Box, alpha } from '@mui/material'
 import WarningAmberIcon from '@mui/icons-material/WarningAmber'
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline'
@@ -23,6 +24,20 @@ const SEVERITY_CONFIG = {
   },
 }
 
+const PREF_KEY = 'neurareport_preferences'
+
+const getDeletePreference = () => {
+  if (typeof window === 'undefined') return { confirmDelete: true }
+  try {
+    const raw = window.localStorage.getItem(PREF_KEY)
+    if (!raw) return { confirmDelete: true }
+    const parsed = JSON.parse(raw)
+    return { confirmDelete: parsed?.confirmDelete ?? true }
+  } catch {
+    return { confirmDelete: true }
+  }
+}
+
 export default function ConfirmModal({
   open,
   onClose,
@@ -37,6 +52,22 @@ export default function ConfirmModal({
   const config = SEVERITY_CONFIG[severity] || SEVERITY_CONFIG.warning
   const Icon = config.icon
   const confirmColor = severity === 'error' ? 'error' : 'primary'
+  const autoConfirmRef = useRef(false)
+  const isDeleteAction = `${title} ${confirmLabel}`.toLowerCase().includes('delete')
+
+  useEffect(() => {
+    if (!open) {
+      autoConfirmRef.current = false
+      return
+    }
+    if (!isDeleteAction || autoConfirmRef.current) return
+    const prefs = getDeletePreference()
+    if (prefs.confirmDelete === false) {
+      autoConfirmRef.current = true
+      onConfirm?.()
+      onClose?.()
+    }
+  }, [open, isDeleteAction, onConfirm, onClose])
 
   return (
     <Modal

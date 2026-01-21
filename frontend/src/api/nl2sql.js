@@ -129,3 +129,13 @@ export async function getQueryHistory({ connectionId, limit = 50 } = {}) {
   })
   return data
 }
+
+/**
+ * Delete a query history entry
+ * @param {string} entryId - History entry ID
+ * @returns {Promise<Object>} Deletion result
+ */
+export async function deleteQueryHistoryEntry(entryId) {
+  const { data } = await api.delete(`/nl2sql/history/${encodeURIComponent(entryId)}`)
+  return data
+}

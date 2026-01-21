@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   Box,
   Typography,
@@ -242,14 +242,21 @@ function CustomTooltip({ active, payload, label }) {
   )
 }
 
+const TAB_MAP = { overview: 0, jobs: 1, templates: 2 }
+const TAB_NAMES = ['overview', 'jobs', 'templates']
+
 export default function UsageStatsPage() {
   const toast = useToast()
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const didLoadRef = useRef(false)
 
+  // Get tab from URL or default to 0
+  const tabParam = searchParams.get('tab') || 'overview'
+  const activeTab = TAB_MAP[tabParam] ?? 0
+
   const [loading, setLoading] = useState(true)
-  const [period, setPeriod] = useState('week')
-  const [activeTab, setActiveTab] = useState(0)
+  const [period, setPeriod] = useState(searchParams.get('period') || 'week')
 
   const [dashboardData, setDashboardData] = useState(null)
   const [usageData, setUsageData] = useState(null)
@@ -385,7 +392,13 @@ export default function UsageStatsPage() {
             <InputLabel sx={{ color: palette.scale[500] }}>Time Period</InputLabel>
             <Select
               value={period}
-              onChange={(e) => setPeriod(e.target.value)}
+              onChange={(e) => {
+                const newPeriod = e.target.value
+                setPeriod(newPeriod)
+                const newParams = new URLSearchParams(searchParams)
+                newParams.set('period', newPeriod)
+                setSearchParams(newParams, { replace: true })
+              }}
               label="Time Period"
               sx={{
                 color: palette.scale[200],
@@ -468,7 +481,11 @@ export default function UsageStatsPage() {
       <Box sx={{ mb: 3 }}>
         <Tabs
           value={activeTab}
-          onChange={(e, v) => setActiveTab(v)}
+          onChange={(e, v) => {
+            const newParams = new URLSearchParams(searchParams)
+            newParams.set('tab', TAB_NAMES[v])
+            setSearchParams(newParams, { replace: true })
+          }}
           sx={{
             '& .MuiTab-root': {
               color: palette.scale[500],
@@ -696,6 +713,7 @@ export default function UsageStatsPage() {
               value={metrics.jobsToday || 0}
               icon={ScheduleIcon}
               color={palette.blue[400]}
+              onClick={() => navigate('/jobs')}
             />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
@@ -704,6 +722,7 @@ export default function UsageStatsPage() {
               value={metrics.jobsThisWeek || 0}
               icon={WorkIcon}
               color={palette.green[400]}
+              onClick={() => navigate('/jobs')}
             />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
@@ -712,6 +731,7 @@ export default function UsageStatsPage() {
               value={metrics.jobsThisMonth || 0}
               icon={BarChartIcon}
               color={palette.yellow[400]}
+              onClick={() => navigate('/jobs')}
             />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
@@ -720,6 +740,7 @@ export default function UsageStatsPage() {
               value={summary.failedJobs || 0}
               icon={ErrorIcon}
               color={palette.red[400]}
+              onClick={() => navigate('/history?status=failed')}
             />
           </Grid>
         </Grid>
@@ -734,6 +755,7 @@ export default function UsageStatsPage() {
               value={summary.totalTemplates || 0}
               icon={DescriptionIcon}
               color={palette.blue[400]}
+              onClick={() => navigate('/templates')}
             />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
@@ -742,6 +764,7 @@ export default function UsageStatsPage() {
               value={summary.pdfTemplates || 0}
               icon={DescriptionIcon}
               color={palette.red[400]}
+              onClick={() => navigate('/templates?kind=pdf')}
             />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
@@ -750,6 +773,7 @@ export default function UsageStatsPage() {
               value={summary.excelTemplates || 0}
               icon={DescriptionIcon}
               color={palette.green[400]}
+              onClick={() => navigate('/templates?kind=excel')}
             />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
@@ -758,6 +782,7 @@ export default function UsageStatsPage() {
               value={summary.activeSchedules || 0}
               icon={ScheduleIcon}
               color={palette.yellow[400]}
+              onClick={() => navigate('/schedules')}
             />
           </Grid>
 

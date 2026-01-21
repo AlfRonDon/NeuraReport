@@ -35,19 +35,35 @@ const TYPE_CONFIG = {
   error: { icon: ErrorIcon, color: palette.red[400] },
 }
 
+const ENTITY_ROUTES = {
+  template: (id) => (id ? `/templates/${id}/edit` : '/templates'),
+  connection: () => '/connections',
+  job: () => '/jobs',
+  schedule: () => '/schedules',
+  report: () => '/reports',
+}
+
 function NotificationItem({ notification, onMarkRead, onDelete }) {
   const navigate = useNavigate()
   const config = TYPE_CONFIG[notification.type] || TYPE_CONFIG.info
   const Icon = config.icon
+  const entityTypeRaw = notification.entity_type || notification.entityType
+  const entityId = notification.entity_id || notification.entityId
+  const normalizedType = entityTypeRaw ? String(entityTypeRaw).toLowerCase().replace(/s$/, '') : ''
+  const fallbackRoute =
+    normalizedType && ENTITY_ROUTES[normalizedType]
+      ? ENTITY_ROUTES[normalizedType](entityId)
+      : '/activity'
+  const targetLink = notification.link || fallbackRoute
 
   const handleClick = useCallback(() => {
     if (!notification.read) {
       onMarkRead(notification.id)
     }
-    if (notification.link) {
-      navigate(notification.link)
+    if (targetLink) {
+      navigate(targetLink)
     }
-  }, [notification, onMarkRead, navigate])
+  }, [notification, onMarkRead, navigate, targetLink])
 
   const handleDelete = useCallback((e) => {
     e.stopPropagation()
@@ -60,7 +76,7 @@ function NotificationItem({ notification, onMarkRead, onDelete }) {
       sx={{
         px: 2,
         py: 1.5,
-        cursor: notification.link ? 'pointer' : 'default',
+        cursor: targetLink ? 'pointer' : 'default',
         bgcolor: notification.read ? 'transparent' : alpha(config.color, 0.05),
         borderLeft: notification.read ? 'none' : `3px solid ${config.color}`,
         transition: 'all 150ms',
@@ -132,12 +148,30 @@ export default function NotificationCenter() {
 
   useEffect(() => {
     fetchUnreadCount()
-    // Poll for unread count every 30 seconds
-    pollIntervalRef.current = setInterval(fetchUnreadCount, 30000)
-    return () => {
+    const startPolling = () => {
+      if (pollIntervalRef.current) return
+      pollIntervalRef.current = setInterval(fetchUnreadCount, 30000)
+    }
+    const stopPolling = () => {
       if (pollIntervalRef.current) {
         clearInterval(pollIntervalRef.current)
+        pollIntervalRef.current = null
       }
+    }
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        fetchUnreadCount()
+        startPolling()
+      } else {
+        stopPolling()
+      }
+    }
+
+    handleVisibility()
+    document.addEventListener('visibilitychange', handleVisibility)
+    return () => {
+      stopPolling()
+      document.removeEventListener('visibilitychange', handleVisibility)
     }
   }, [fetchUnreadCount])
 

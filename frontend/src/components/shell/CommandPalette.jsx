@@ -33,12 +33,75 @@ import { useAppStore } from '../../store/useAppStore'
 import { Kbd } from '../ui'
 import { globalSearch } from '../../api/client'
 
+const RECENT_KEY = 'neurareport_recent_commands'
+const MAX_RECENT = 6
+
+const ICON_MAP = {
+  dashboard: DashboardOutlinedIcon,
+  connections: StorageOutlinedIcon,
+  templates: DescriptionOutlinedIcon,
+  reports: AssessmentOutlinedIcon,
+  jobs: WorkOutlineIcon,
+  schedules: ScheduleIcon,
+  analyze: DocumentScannerOutlinedIcon,
+  history: HistoryIcon,
+  activity: TimelineIcon,
+  settings: SettingsOutlinedIcon,
+  action: AddIcon,
+  search: SearchIcon,
+  recent: HistoryIcon,
+}
+
+const loadRecentCommands = () => {
+  if (typeof window === 'undefined') return []
+  try {
+    const raw = window.localStorage.getItem(RECENT_KEY)
+    if (!raw) return []
+    const parsed = JSON.parse(raw)
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
+}
+
+const persistRecentCommands = (items) => {
+  if (typeof window === 'undefined') return
+  try {
+    window.localStorage.setItem(RECENT_KEY, JSON.stringify(items))
+  } catch {
+    // ignore storage failures
+  }
+}
+
+const fuzzyScore = (query, text) => {
+  if (!query || !text) return 0
+  const q = query.toLowerCase()
+  const t = text.toLowerCase()
+  let score = 0
+  let qi = 0
+  let streak = 0
+  for (let ti = 0; ti < t.length && qi < q.length; ti += 1) {
+    if (t[ti] === q[qi]) {
+      qi += 1
+      streak += 1
+      score += 5 + streak * 2
+    } else {
+      streak = 0
+      score -= 1
+    }
+  }
+  if (qi < q.length) return 0
+  if (t.startsWith(q)) score += 8
+  return score
+}
+
 const COMMANDS = [
   {
     id: 'nav-dashboard',
     label: 'Go to Dashboard',
     description: 'View overview and analytics',
     icon: DashboardOutlinedIcon,
+    iconKey: 'dashboard',
     action: 'navigate',
     path: '/',
     group: 'Navigation',
@@ -48,6 +111,7 @@ const COMMANDS = [
     label: 'Go to Connections',
     description: 'Manage database connections',
     icon: StorageOutlinedIcon,
+    iconKey: 'connections',
     action: 'navigate',
     path: '/connections',
     group: 'Navigation',
@@ -57,6 +121,7 @@ const COMMANDS = [
     label: 'Go to Templates',
     description: 'Browse and manage templates',
     icon: DescriptionOutlinedIcon,
+    iconKey: 'templates',
     action: 'navigate',
     path: '/templates',
     group: 'Navigation',
@@ -66,6 +131,7 @@ const COMMANDS = [
     label: 'Go to Reports',
     description: 'Generate reports',
     icon: AssessmentOutlinedIcon,
+    iconKey: 'reports',
     action: 'navigate',
     path: '/reports',
     group: 'Navigation',
@@ -75,6 +141,7 @@ const COMMANDS = [
     label: 'Go to Jobs',
     description: 'View job status',
     icon: WorkOutlineIcon,
+    iconKey: 'jobs',
     action: 'navigate',
     path: '/jobs',
     group: 'Navigation',
@@ -84,6 +151,7 @@ const COMMANDS = [
     label: 'Go to Schedules',
     description: 'Manage scheduled reports',
     icon: ScheduleIcon,
+    iconKey: 'schedules',
     action: 'navigate',
     path: '/schedules',
     group: 'Navigation',
@@ -93,6 +161,7 @@ const COMMANDS = [
     label: 'Go to Analyze',
     description: 'AI document analysis',
     icon: DocumentScannerOutlinedIcon,
+    iconKey: 'analyze',
     action: 'navigate',
     path: '/analyze',
     group: 'Navigation',
@@ -102,6 +171,7 @@ const COMMANDS = [
     label: 'Go to History',
     description: 'View report history',
     icon: HistoryIcon,
+    iconKey: 'history',
     action: 'navigate',
     path: '/history',
     group: 'Navigation',
@@ -111,6 +181,7 @@ const COMMANDS = [
     label: 'Go to Activity',
     description: 'View activity log',
     icon: TimelineIcon,
+    iconKey: 'activity',
     action: 'navigate',
     path: '/activity',
     group: 'Navigation',
@@ -120,6 +191,7 @@ const COMMANDS = [
     label: 'Go to Settings',
     description: 'Application settings',
     icon: SettingsOutlinedIcon,
+    iconKey: 'settings',
     action: 'navigate',
     path: '/settings',
     group: 'Navigation',
@@ -129,6 +201,7 @@ const COMMANDS = [
     label: 'New Report',
     description: 'Start a new report generation',
     icon: AddIcon,
+    iconKey: 'action',
     action: 'navigate',
     path: '/setup/wizard',
     group: 'Actions',
@@ -140,21 +213,25 @@ const COMMANDS = [
 const SEARCH_TYPE_CONFIG = {
   template: {
     icon: DescriptionOutlinedIcon,
+    iconKey: 'templates',
     pathBuilder: (item) => `/templates/${item.id}/edit`,
     label: 'Template',
   },
   connection: {
     icon: StorageOutlinedIcon,
+    iconKey: 'connections',
     pathBuilder: (item) => `/connections/${item.id}`,
     label: 'Connection',
   },
   job: {
     icon: WorkOutlineIcon,
+    iconKey: 'jobs',
     pathBuilder: () => '/jobs',
     label: 'Job',
   },
   schedule: {
     icon: ScheduleIcon,
+    iconKey: 'schedules',
     pathBuilder: () => '/schedules',
     label: 'Schedule',
   },
@@ -166,6 +243,7 @@ export default function CommandPalette({ open, onClose }) {
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [searchResults, setSearchResults] = useState([])
   const [isSearching, setIsSearching] = useState(false)
+  const [recentCommands, setRecentCommands] = useState([])
   const inputRef = useRef(null)
   const listRef = useRef(null)
   const searchTimeoutRef = useRef(null)
@@ -215,6 +293,7 @@ export default function CommandPalette({ open, onClose }) {
       label: t.name,
       description: 'Edit template',
       icon: DescriptionOutlinedIcon,
+      iconKey: 'templates',
       action: 'navigate',
       path: `/templates/${t.id}/edit`,
       group: 'Recent Templates',
@@ -224,6 +303,7 @@ export default function CommandPalette({ open, onClose }) {
     const searchCommands = searchResults.map((result) => {
       const config = SEARCH_TYPE_CONFIG[result.type] || {
         icon: DescriptionOutlinedIcon,
+        iconKey: 'templates',
         pathBuilder: () => '/',
         label: 'Item',
       }
@@ -232,6 +312,7 @@ export default function CommandPalette({ open, onClose }) {
         label: result.name,
         description: result.description || `${config.label}`,
         icon: config.icon,
+        iconKey: config.iconKey,
         action: 'navigate',
         path: config.pathBuilder(result),
         group: 'Search Results',
@@ -240,34 +321,37 @@ export default function CommandPalette({ open, onClose }) {
       }
     })
 
-    return [...searchCommands, ...COMMANDS, ...templateCommands]
-  }, [approvedTemplates, searchResults])
+    const recent = recentCommands.map((entry) => ({
+      ...entry,
+      icon: ICON_MAP[entry.iconKey] || HistoryIcon,
+      action: 'navigate',
+      group: 'Recent',
+    }))
+
+    return [...recent, ...searchCommands, ...COMMANDS, ...templateCommands]
+  }, [approvedTemplates, searchResults, recentCommands])
 
   // Filter commands based on query
   const filteredCommands = useMemo(() => {
-    // If we have search results, show them first without additional filtering
-    if (searchResults.length > 0) {
-      const searchCommands = allCommands.filter((cmd) => cmd.group === 'Search Results')
-      const otherCommands = allCommands.filter((cmd) => cmd.group !== 'Search Results')
-      const q = query.toLowerCase()
-      const filteredOthers = otherCommands.filter(
-        (cmd) =>
-          cmd.label.toLowerCase().includes(q) ||
-          cmd.description?.toLowerCase().includes(q)
-      )
-      return [...searchCommands, ...filteredOthers.slice(0, 5)]
-    }
-
     if (!query.trim()) return allCommands
-
-    const q = query.toLowerCase()
-    return allCommands.filter(
-      (cmd) =>
-        cmd.label.toLowerCase().includes(q) ||
-        cmd.description?.toLowerCase().includes(q) ||
-        cmd.group?.toLowerCase().includes(q)
-    )
-  }, [allCommands, query, searchResults])
+    const q = query.trim()
+    const searchCommands = allCommands.filter((cmd) => cmd.group === 'Search Results')
+    const otherCommands = allCommands.filter((cmd) => cmd.group !== 'Search Results')
+    const rankedOthers = otherCommands
+      .map((cmd) => {
+        const labelScore = fuzzyScore(q, cmd.label || '')
+        const descScore = fuzzyScore(q, cmd.description || '')
+        const groupScore = fuzzyScore(q, cmd.group || '')
+        const score = Math.max(labelScore, descScore, groupScore)
+        return { cmd, score }
+      })
+      .filter((item) => item.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .map((item) => item.cmd)
+    return searchCommands.length
+      ? [...searchCommands, ...rankedOthers.slice(0, 8)]
+      : rankedOthers
+  }, [allCommands, query])
 
   // Group commands
   const groupedCommands = useMemo(() => {
@@ -287,6 +371,7 @@ export default function CommandPalette({ open, onClose }) {
       setSelectedIndex(0)
       setSearchResults([])
       setIsSearching(false)
+      setRecentCommands(loadRecentCommands())
       setTimeout(() => inputRef.current?.focus(), 50)
     }
   }, [open])
@@ -301,6 +386,19 @@ export default function CommandPalette({ open, onClose }) {
   // Execute command
   const executeCommand = useCallback(
     (cmd) => {
+      if (cmd?.action === 'navigate' && cmd?.path) {
+        const entry = {
+          id: cmd.id,
+          label: cmd.label,
+          description: cmd.description,
+          path: cmd.path,
+          iconKey: cmd.iconKey || cmd.type || 'recent',
+        }
+        const next = [entry, ...recentCommands.filter((item) => item.id !== cmd.id)]
+          .slice(0, MAX_RECENT)
+        persistRecentCommands(next)
+        setRecentCommands(next)
+      }
       if (cmd.action === 'navigate') {
         navigate(cmd.path)
       } else if (typeof cmd.action === 'function') {
@@ -308,7 +406,7 @@ export default function CommandPalette({ open, onClose }) {
       }
       onClose()
     },
-    [navigate, onClose]
+    [navigate, onClose, recentCommands]
   )
 
   // Keyboard navigation
@@ -420,7 +518,7 @@ export default function CommandPalette({ open, onClose }) {
             <List dense disablePadding sx={{ pb: 1 }}>
               {commands.map((cmd) => {
                 const index = flatIndex++
-                const Icon = cmd.icon
+                const Icon = cmd.icon || ICON_MAP[cmd.iconKey] || DescriptionOutlinedIcon
                 const isSelected = index === selectedIndex
 
                 return (

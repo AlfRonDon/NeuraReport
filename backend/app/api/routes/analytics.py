@@ -193,7 +193,7 @@ async def get_dashboard_analytics() -> Dict[str, Any]:
 
 @router.get("/usage")
 async def get_usage_statistics(
-    period: str = Query("week", regex="^(day|week|month)$"),
+    period: str = Query("week", pattern="^(day|week|month)$"),
 ) -> Dict[str, Any]:
     """Get detailed usage statistics over time."""
 

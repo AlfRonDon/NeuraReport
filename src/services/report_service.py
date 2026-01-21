@@ -44,7 +44,8 @@ _UPLOAD_KIND_PREFIXES: dict[str, str] = {"pdf": "uploads", "excel": "excel-uploa
 UPLOAD_ROOT_BASE = UPLOAD_ROOT.resolve()
 EXCEL_UPLOAD_ROOT_BASE = EXCEL_UPLOAD_ROOT.resolve()
 
-_JOB_MAX_WORKERS = max(int(os.getenv("NEURA_JOB_MAX_WORKERS", "4") or "4"), 1)
+_DEFAULT_JOB_WORKERS = os.cpu_count() or 4
+_JOB_MAX_WORKERS = max(int(os.getenv("NEURA_JOB_MAX_WORKERS", str(_DEFAULT_JOB_WORKERS)) or _DEFAULT_JOB_WORKERS), 1)
 REPORT_JOB_EXECUTOR = concurrent.futures.ThreadPoolExecutor(
     max_workers=_JOB_MAX_WORKERS,
     thread_name_prefix="nr-job",

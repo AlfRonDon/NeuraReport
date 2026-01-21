@@ -354,6 +354,11 @@ class NL2SQLService:
 
         return [QueryHistoryEntry(**h) for h in history]
 
+    def delete_query_history_entry(self, entry_id: str) -> bool:
+        """Delete a query history entry by ID."""
+        store = _state_store()
+        return store.delete_query_history_entry(entry_id)
+
     def _record_history(
         self,
         question: str,

@@ -1772,5 +1772,21 @@ class StateStore:
             self._write_state(state)
             return count
 
+    def delete_query_history_entry(self, entry_id: str) -> bool:
+        """Delete a single query history entry by ID."""
+        if not entry_id:
+            return False
+        with self._lock:
+            state = self._read_state()
+            history = list(state.get("query_history") or [])
+            if not history:
+                return False
+            filtered = [h for h in history if h.get("id") != entry_id]
+            if len(filtered) == len(history):
+                return False
+            state["query_history"] = filtered
+            self._write_state(state)
+            return True
+
 
 state_store = StateStore()

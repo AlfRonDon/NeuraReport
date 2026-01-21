@@ -20,6 +20,7 @@ import {
 import * as mock from '../../../api/mock'
 import { savePersistedCache } from '../../../hooks/useBootstrapState.js'
 import { useAppStore } from '../../../store/useAppStore'
+import { confirmDelete } from '../../../utils/confirmDelete'
 import { useToast } from '../../../components/ToastProvider.jsx'
 import Surface from '../../../components/layout/Surface.jsx'
 import ScaledIframePreview from '../../../components/ScaledIframePreview.jsx'
@@ -236,7 +237,7 @@ function TemplatePicker({ selected, onToggle, tagFilter, setTagFilter }) {
 
     if (typeof window !== 'undefined') {
 
-      const confirmed = window.confirm(`Delete template "${name}"? This action cannot be undone.`)
+      const confirmed = confirmDelete(`Delete template "${name}"? This action cannot be undone.`)
 
       if (!confirmed) return
 

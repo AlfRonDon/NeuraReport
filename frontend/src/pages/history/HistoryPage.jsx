@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   Box,
   Typography,
@@ -47,17 +47,21 @@ const KIND_CONFIG = {
 
 export default function HistoryPage() {
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const toast = useToast()
   const templates = useAppStore((s) => s.templates)
   const didLoadRef = useRef(false)
+
+  const initialStatus = searchParams.get('status') || ''
+  const initialTemplate = searchParams.get('template') || ''
 
   const [history, setHistory] = useState([])
   const [loading, setLoading] = useState(true)
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(0)
   const [rowsPerPage, setRowsPerPage] = useState(25)
-  const [statusFilter, setStatusFilter] = useState('')
-  const [templateFilter, setTemplateFilter] = useState('')
+  const [statusFilter, setStatusFilter] = useState(initialStatus)
+  const [templateFilter, setTemplateFilter] = useState(initialTemplate)
 
   const fetchHistory = useCallback(async () => {
     setLoading(true)
@@ -84,9 +88,25 @@ export default function HistoryPage() {
   }, [fetchHistory])
 
   useEffect(() => {
+    const nextStatus = searchParams.get('status') || ''
+    const nextTemplate = searchParams.get('template') || ''
+    if (nextStatus !== statusFilter) setStatusFilter(nextStatus)
+    if (nextTemplate !== templateFilter) setTemplateFilter(nextTemplate)
+  }, [searchParams, statusFilter, templateFilter])
+
+  useEffect(() => {
     if (!didLoadRef.current) return
     fetchHistory()
   }, [page, rowsPerPage, statusFilter, templateFilter, fetchHistory])
+
+  const syncParams = useCallback((nextStatus, nextTemplate) => {
+    const next = new URLSearchParams(searchParams)
+    if (nextStatus) next.set('status', nextStatus)
+    else next.delete('status')
+    if (nextTemplate) next.set('template', nextTemplate)
+    else next.delete('template')
+    setSearchParams(next, { replace: true })
+  }, [searchParams, setSearchParams])
 
   const handleDownload = useCallback((report, format) => {
     const artifacts = report.artifacts || {}
@@ -111,7 +131,7 @@ export default function HistoryPage() {
       window.open(artifacts.html_url, '_blank')
     } else if (artifacts.pdf_url) {
       window.open(artifacts.pdf_url, '_blank')
-    } else if (row.status === 'running' || row.status === 'pending') {
+    } else {
       navigate('/jobs')
     }
   }, [navigate])
@@ -303,7 +323,12 @@ export default function HistoryPage() {
           <InputLabel sx={{ color: palette.scale[500] }}>Status</InputLabel>
           <Select
             value={statusFilter}
-            onChange={(e) => { setStatusFilter(e.target.value); setPage(0) }}
+            onChange={(e) => {
+              const nextStatus = e.target.value
+              setStatusFilter(nextStatus)
+              setPage(0)
+              syncParams(nextStatus, templateFilter)
+            }}
             label="Status"
             sx={{
               color: palette.scale[200],
@@ -323,7 +348,12 @@ export default function HistoryPage() {
           <InputLabel sx={{ color: palette.scale[500] }}>Template</InputLabel>
           <Select
             value={templateFilter}
-            onChange={(e) => { setTemplateFilter(e.target.value); setPage(0) }}
+            onChange={(e) => {
+              const nextTemplate = e.target.value
+              setTemplateFilter(nextTemplate)
+              setPage(0)
+              syncParams(statusFilter, nextTemplate)
+            }}
             label="Template"
             sx={{
               color: palette.scale[200],

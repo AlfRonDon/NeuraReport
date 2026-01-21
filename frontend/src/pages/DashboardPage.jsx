@@ -32,8 +32,11 @@ import StarIcon from '@mui/icons-material/Star'
 import StarBorderIcon from '@mui/icons-material/StarBorder'
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf'
 import TableChartIcon from '@mui/icons-material/TableChart'
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
+import LightbulbIcon from '@mui/icons-material/Lightbulb'
 import { useAppStore } from '../store/useAppStore'
 import * as api from '../api/client'
+import * as recommendationsApi from '../api/recommendations'
 import { palette } from '../theme'
 
 function StatCard({ title, value, subtitle, icon: Icon, color = 'primary', onClick, trend }) {
@@ -212,8 +215,14 @@ export default function DashboardPage() {
   const [jobs, setJobs] = useState([])
   const [analytics, setAnalytics] = useState(null)
   const [favorites, setFavorites] = useState({ templates: [], connections: [] })
+  const [recommendations, setRecommendations] = useState([])
+  const [recLoading, setRecLoading] = useState(false)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
+  const [showOnboarding, setShowOnboarding] = useState(() => {
+    if (typeof window === 'undefined') return false
+    return window.localStorage.getItem('neurareport_onboarding_dismissed') !== 'true'
+  })
 
   const fetchData = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true)
@@ -254,10 +263,47 @@ export default function DashboardPage() {
     fetchData(true)
   }, [fetchData])
 
+  const fetchRecommendations = useCallback(async () => {
+    if (recLoading) return
+    setRecLoading(true)
+    try {
+      const catalog = await recommendationsApi.getCatalog()
+      // Get top recommendations from the catalog
+      const templates = catalog?.templates || catalog?.recommendations || []
+      setRecommendations(templates.slice(0, 4))
+    } catch {
+      // Fallback to existing templates as recommendations
+      const topTpls = templates.slice(0, 4).map((t) => ({
+        id: t.id,
+        name: t.name,
+        description: t.description || `${t.kind?.toUpperCase() || 'PDF'} template`,
+        kind: t.kind,
+        matchScore: 0.85,
+      }))
+      setRecommendations(topTpls)
+    } finally {
+      setRecLoading(false)
+    }
+  }, [recLoading, templates])
+
+  useEffect(() => {
+    if (recommendations.length === 0 && templates.length > 0 && !recLoading) {
+      fetchRecommendations()
+    }
+  }, [templates.length, recommendations.length, recLoading, fetchRecommendations])
+
   const summary = analytics?.summary || {}
   const metrics = analytics?.metrics || {}
   const topTemplates = analytics?.topTemplates || []
   const jobsTrend = analytics?.jobsTrend || []
+  const needsOnboarding = showOnboarding && (templates.length === 0 || savedConnections.length === 0)
+
+  const handleDismissOnboarding = () => {
+    setShowOnboarding(false)
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem('neurareport_onboarding_dismissed', 'true')
+    }
+  }
 
   return (
     <Box sx={{ p: 3, maxWidth: 1400, mx: 'auto', width: '100%' }}>
@@ -309,6 +355,50 @@ export default function DashboardPage() {
         </Stack>
       </Stack>
 
+      {needsOnboarding && (
+        <Box
+          sx={{
+            mb: 3,
+            p: 2.5,
+            bgcolor: palette.scale[1000],
+            borderRadius: '8px',
+            border: `1px solid ${alpha(palette.scale[100], 0.08)}`,
+          }}
+        >
+          <Stack spacing={1.5}>
+            <Typography sx={{ fontSize: '0.9375rem', fontWeight: 600, color: palette.scale[100] }}>
+              Get started with NeuraReport
+            </Typography>
+            <Typography sx={{ fontSize: '0.8125rem', color: palette.scale[500] }}>
+              Connect a data source, upload a template, then generate your first report.
+            </Typography>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+              <Button
+                variant="contained"
+                onClick={() => navigate('/setup/wizard')}
+                sx={{ textTransform: 'none' }}
+              >
+                Run setup wizard
+              </Button>
+              <Button
+                variant="outlined"
+                onClick={() => navigate('/connections')}
+                sx={{ textTransform: 'none' }}
+              >
+                Add a connection
+              </Button>
+              <Button
+                variant="text"
+                onClick={handleDismissOnboarding}
+                sx={{ textTransform: 'none', color: palette.scale[400] }}
+              >
+                Dismiss
+              </Button>
+            </Stack>
+          </Stack>
+        </Box>
+      )}
+
       {/* Stats Grid */}
       <Box
         sx={{
@@ -352,6 +442,7 @@ export default function DashboardPage() {
           subtitle={`${summary.completedJobs ?? 0} completed`}
           icon={AssessmentIcon}
           color="info"
+          onClick={() => navigate('/stats')}
         />
         <StatCard
           title="Schedules"
@@ -661,6 +752,164 @@ export default function DashboardPage() {
             )}
           </Box>
         </Box>
+      </Box>
+
+      {/* Recommendations Panel */}
+      <Box
+        sx={{
+          mt: 3,
+          p: 2.5,
+          bgcolor: palette.scale[1000],
+          borderRadius: '8px',
+          border: `1px solid ${alpha(palette.scale[100], 0.08)}`,
+        }}
+      >
+        <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
+          <Stack direction="row" alignItems="center" spacing={1.5}>
+            <Box
+              sx={{
+                width: 32,
+                height: 32,
+                borderRadius: '8px',
+                bgcolor: alpha(palette.purple?.[400] || palette.blue[400], 0.15),
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <AutoAwesomeIcon sx={{ fontSize: 16, color: palette.purple?.[400] || palette.blue[400] }} />
+            </Box>
+            <Box>
+              <Typography
+                sx={{
+                  fontSize: '0.875rem',
+                  fontWeight: 600,
+                  color: palette.scale[100],
+                }}
+              >
+                AI Recommendations
+              </Typography>
+              <Typography sx={{ fontSize: '0.75rem', color: palette.scale[500] }}>
+                Smart template suggestions for your data
+              </Typography>
+            </Box>
+          </Stack>
+          <Button
+            size="small"
+            startIcon={<LightbulbIcon sx={{ fontSize: 14 }} />}
+            onClick={fetchRecommendations}
+            disabled={recLoading}
+            sx={{
+              color: palette.scale[400],
+              fontSize: '0.75rem',
+              '&:hover': { color: palette.scale[100] },
+            }}
+          >
+            {recLoading ? 'Loading...' : 'Get Suggestions'}
+          </Button>
+        </Stack>
+
+        {recLoading ? (
+          <LinearProgress
+            sx={{
+              bgcolor: palette.scale[800],
+              '& .MuiLinearProgress-bar': { bgcolor: palette.blue[400] },
+            }}
+          />
+        ) : recommendations.length === 0 ? (
+          <Box sx={{ py: 3, textAlign: 'center' }}>
+            <LightbulbIcon sx={{ fontSize: 32, color: palette.scale[700], mb: 1 }} />
+            <Typography sx={{ fontSize: '0.8125rem', color: palette.scale[500], mb: 1 }}>
+              No recommendations yet
+            </Typography>
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={fetchRecommendations}
+              sx={{ textTransform: 'none' }}
+            >
+              Get AI Recommendations
+            </Button>
+          </Box>
+        ) : (
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' },
+              gap: 2,
+            }}
+          >
+            {recommendations.map((rec) => (
+              <Box
+                key={rec.id}
+                onClick={() => navigate(`/reports?template=${rec.id}`)}
+                sx={{
+                  p: 2,
+                  borderRadius: '8px',
+                  border: `1px solid ${alpha(palette.scale[100], 0.08)}`,
+                  bgcolor: alpha(palette.scale[100], 0.02),
+                  cursor: 'pointer',
+                  transition: 'all 150ms ease',
+                  '&:hover': {
+                    borderColor: alpha(palette.scale[100], 0.15),
+                    bgcolor: alpha(palette.scale[100], 0.05),
+                  },
+                }}
+              >
+                <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
+                  <Box
+                    sx={{
+                      width: 24,
+                      height: 24,
+                      borderRadius: '6px',
+                      bgcolor: alpha(rec.kind === 'excel' ? palette.green[400] : palette.red[400], 0.15),
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    {rec.kind === 'excel' ? (
+                      <TableChartIcon sx={{ fontSize: 12, color: palette.green[400] }} />
+                    ) : (
+                      <PictureAsPdfIcon sx={{ fontSize: 12, color: palette.red[400] }} />
+                    )}
+                  </Box>
+                  {rec.matchScore && (
+                    <Chip
+                      label={`${Math.round((rec.matchScore || 0) * 100)}%`}
+                      size="small"
+                      sx={{
+                        height: 18,
+                        fontSize: '0.6rem',
+                        bgcolor: alpha(palette.green[400], 0.15),
+                        color: palette.green[400],
+                      }}
+                    />
+                  )}
+                </Stack>
+                <Typography
+                  noWrap
+                  sx={{ fontSize: '0.8125rem', fontWeight: 500, color: palette.scale[200] }}
+                >
+                  {rec.name}
+                </Typography>
+                <Typography
+                  sx={{
+                    fontSize: '0.6875rem',
+                    color: palette.scale[500],
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    display: '-webkit-box',
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: 'vertical',
+                  }}
+                >
+                  {rec.description}
+                </Typography>
+              </Box>
+            ))}
+          </Box>
+        )}
       </Box>
 
       {/* Connection Status */}

@@ -23,6 +23,7 @@ import {
   Slider,
   Tooltip,
   Collapse,
+  Stack,
 } from '@mui/material';
 import {
   AutoAwesome as SummaryIcon,
@@ -31,8 +32,11 @@ import {
   History as HistoryIcon,
   ExpandMore as ExpandMoreIcon,
   ExpandLess as ExpandLessIcon,
+  Schedule as ScheduleIcon,
 } from '@mui/icons-material';
 import useSummaryStore from '../../stores/summaryStore';
+import { useToast } from '../../components/ToastProvider.jsx';
+import ConfirmModal from '../../ui/Modal/ConfirmModal';
 
 const TONE_OPTIONS = [
   { value: 'formal', label: 'Formal', description: 'Professional, business-appropriate tone' },
@@ -58,6 +62,7 @@ export default function SummaryPage() {
     loading,
     error,
     generateSummary,
+    queueSummary,
     clearSummary,
     clearHistory,
     reset,
@@ -70,6 +75,9 @@ export default function SummaryPage() {
   const [customFocus, setCustomFocus] = useState('');
   const [showHistory, setShowHistory] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [queueing, setQueueing] = useState(false);
+  const [clearHistoryConfirmOpen, setClearHistoryConfirmOpen] = useState(false);
+  const toast = useToast();
 
   useEffect(() => {
     return () => reset();
@@ -77,12 +85,49 @@ export default function SummaryPage() {
 
   const handleGenerate = async () => {
     if (!content.trim()) return;
+    // Validate content length
+    const trimmedContent = content.trim();
+    if (trimmedContent.length < 50) {
+      toast.show('Content is too short. Please provide at least 50 characters.', 'error');
+      return;
+    }
+    if (trimmedContent.length > 50000) {
+      toast.show('Content exceeds maximum length of 50,000 characters.', 'error');
+      return;
+    }
     await generateSummary({
-      content: content.trim(),
+      content: trimmedContent,
       tone,
       maxSentences,
       focusAreas: focusAreas.length > 0 ? focusAreas : undefined,
     });
+  };
+
+  const handleQueue = async () => {
+    if (!content.trim()) return;
+    // Validate content length
+    const trimmedContent = content.trim();
+    if (trimmedContent.length < 50) {
+      toast.show('Content is too short. Please provide at least 50 characters.', 'error');
+      return;
+    }
+    if (trimmedContent.length > 50000) {
+      toast.show('Content exceeds maximum length of 50,000 characters.', 'error');
+      return;
+    }
+    setQueueing(true);
+    const response = await queueSummary({
+      content: trimmedContent,
+      tone,
+      maxSentences,
+      focusAreas: focusAreas.length > 0 ? focusAreas : undefined,
+    });
+    if (response?.job_id) {
+      toast.show('Summary queued. Track progress in Jobs.', 'success');
+    } else {
+      toast.show('Failed to queue summary job.', 'error');
+    }
+    setQueueing(false);
   };
 
   const handleAddFocus = (focus) => {
@@ -150,7 +195,7 @@ export default function SummaryPage() {
         <Paper sx={{ p: 2, mb: 3 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
             <Typography variant="h6">Recent Summaries</Typography>
-            <Button size="small" color="error" onClick={clearHistory}>
+            <Button size="small" color="error" onClick={() => setClearHistoryConfirmOpen(true)}>
               Clear All
             </Button>
           </Box>
@@ -283,16 +328,28 @@ export default function SummaryPage() {
               </Box>
             </Box>
 
-            <Button
-              variant="contained"
-              fullWidth
-              size="large"
-              startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <SummaryIcon />}
-              onClick={handleGenerate}
-              disabled={!content.trim() || content.length < 10 || loading}
-            >
-              {loading ? 'Generating...' : 'Generate Summary'}
-            </Button>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+              <Button
+                variant="contained"
+                fullWidth
+                size="large"
+                startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <SummaryIcon />}
+                onClick={handleGenerate}
+                disabled={!content.trim() || content.length < 10 || loading || queueing}
+              >
+                {loading ? 'Generating...' : 'Generate Summary'}
+              </Button>
+              <Button
+                variant="outlined"
+                fullWidth
+                size="large"
+                startIcon={queueing ? <CircularProgress size={20} color="inherit" /> : <ScheduleIcon />}
+                onClick={handleQueue}
+                disabled={!content.trim() || content.length < 10 || loading || queueing}
+              >
+                {queueing ? 'Queueing...' : 'Queue in Background'}
+              </Button>
+            </Stack>
           </Paper>
         </Grid>
 
@@ -359,6 +416,19 @@ export default function SummaryPage() {
           </Paper>
         </Grid>
       </Grid>
+
+      <ConfirmModal
+        open={clearHistoryConfirmOpen}
+        onClose={() => setClearHistoryConfirmOpen(false)}
+        onConfirm={() => {
+          clearHistory();
+          setClearHistoryConfirmOpen(false);
+        }}
+        title="Clear History"
+        message="Are you sure you want to clear all summary history? This action cannot be undone."
+        confirmLabel="Clear All"
+        severity="warning"
+      />
     </Box>
   );
 }

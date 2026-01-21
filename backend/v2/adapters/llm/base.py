@@ -15,7 +15,7 @@ from ...core import Result, DomainError
 class LLMConfig:
     """Configuration for LLM calls."""
 
-    model: str = "gpt-4"
+    model: str = "gpt-5"
     temperature: float = 0.0
     max_tokens: int = 4096
     timeout_seconds: float = 60.0

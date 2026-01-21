@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   Box,
   Typography,
@@ -21,6 +22,7 @@ import * as api from '../../../api/client'
 
 export default function StepTemplate({ wizardState, updateWizardState, onComplete, setLoading }) {
   const toast = useToast()
+  const navigate = useNavigate()
   const fileInputRef = useRef(null)
 
   const activeConnection = useAppStore((s) => s.activeConnection)
@@ -34,6 +36,8 @@ export default function StepTemplate({ wizardState, updateWizardState, onComplet
   const [uploadedFile, setUploadedFile] = useState(null)
   const [verifyResult, setVerifyResult] = useState(null)
   const [error, setError] = useState(null)
+  const [queueInBackground, setQueueInBackground] = useState(false)
+  const [queuedJobId, setQueuedJobId] = useState(null)
 
   const handleKindChange = useCallback((_, newKind) => {
     if (newKind) {
@@ -66,21 +70,41 @@ export default function StepTemplate({ wizardState, updateWizardState, onComplet
     setUploadedFile(file)
     setUploading(true)
     setUploadProgress(0)
+    setQueuedJobId(null)
 
     try {
       const connectionId = wizardState.connectionId || activeConnection?.id
+      if (!connectionId) {
+        const msg = 'Please connect to a database before verifying templates.'
+        setError(msg)
+        toast.show(msg, 'warning')
+        setUploading(false)
+        setUploadProgress(0)
+        return
+      }
 
       const result = await api.verifyTemplate({
         file,
         connectionId,
         kind: templateKind,
+        background: queueInBackground,
         onProgress: (event) => {
           if (event.event === 'stage') {
             const progress = event.progress || 0
             setUploadProgress(progress)
           }
         },
+        onUploadProgress: (percent) => {
+          setUploadProgress(percent)
+        },
       })
+
+      if (queueInBackground) {
+        const jobId = result?.job_id || result?.jobId || null
+        setQueuedJobId(jobId)
+        toast.show('Template verification queued. Track progress in Jobs.', 'success')
+        return
+      }
 
       setVerifyResult(result)
       setTemplateId(result.template_id)
@@ -104,7 +128,17 @@ export default function StepTemplate({ wizardState, updateWizardState, onComplet
       setUploading(false)
       setUploadProgress(100)
     }
-  }, [wizardState.connectionId, activeConnection?.id, templateKind, setTemplateId, setVerifyArtifacts, updateWizardState, addTemplate, toast])
+  }, [
+    wizardState.connectionId,
+    activeConnection?.id,
+    templateKind,
+    queueInBackground,
+    setTemplateId,
+    setVerifyArtifacts,
+    updateWizardState,
+    addTemplate,
+    toast,
+  ])
 
   const handleBrowseClick = useCallback(() => {
     fileInputRef.current?.click()
@@ -148,6 +182,20 @@ export default function StepTemplate({ wizardState, updateWizardState, onComplet
       {error && (
         <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
           {error}
+        </Alert>
+      )}
+
+      {queuedJobId && (
+        <Alert
+          severity="info"
+          sx={{ mb: 3 }}
+          action={(
+            <Button size="small" onClick={() => navigate('/jobs')} sx={{ textTransform: 'none' }}>
+              View Jobs
+            </Button>
+          )}
+        >
+          Template verification queued. Job ID: {queuedJobId}
         </Alert>
       )}
 
@@ -195,6 +243,19 @@ export default function StepTemplate({ wizardState, updateWizardState, onComplet
           }}
           onClick={handleBrowseClick}
         >
+          <Stack direction="row" justifyContent="center" sx={{ mb: 2 }}>
+            <Button
+              variant={queueInBackground ? 'contained' : 'outlined'}
+              size="small"
+              onClick={(e) => {
+                e.stopPropagation()
+                setQueueInBackground((prev) => !prev)
+              }}
+              sx={{ textTransform: 'none' }}
+            >
+              {queueInBackground ? 'Queue in background: On' : 'Queue in background: Off'}
+            </Button>
+          </Stack>
           <input
             ref={fileInputRef}
             type="file"

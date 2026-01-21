@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState, useRef } from 'react'
 import {
   ResponsiveContainer,
   BarChart,
@@ -18,9 +18,10 @@ import {
   Cell,
   ReferenceArea,
 } from 'recharts'
-import { Box, IconButton, Stack, Typography, Chip } from '@mui/material'
+import { Box, IconButton, Stack, Typography, Chip, CircularProgress, Tooltip as MuiTooltip } from '@mui/material'
 import ZoomOutMapIcon from '@mui/icons-material/ZoomOutMap'
 import ZoomInIcon from '@mui/icons-material/ZoomIn'
+import DownloadIcon from '@mui/icons-material/Download'
 
 const CHART_COLORS = [
   '#4f46e5',
@@ -42,6 +43,8 @@ export default function ZoomableChart({
   showBrush = true,
   showZoomControls = true,
 }) {
+  const chartRef = useRef(null)
+  const [exporting, setExporting] = useState(false)
   const [zoomState, setZoomState] = useState({
     refAreaLeft: null,
     refAreaRight: null,
@@ -129,6 +132,79 @@ export default function ZoomableChart({
       isZoomed: false,
     })
   }, [])
+
+  const handleExportChart = useCallback(async () => {
+    if (!chartRef.current) return
+
+    setExporting(true)
+    try {
+      const svgElement = chartRef.current.querySelector('svg')
+      if (!svgElement) {
+        console.warn('No SVG found to export')
+        return
+      }
+
+      // Clone the SVG to avoid modifying the original
+      const clonedSvg = svgElement.cloneNode(true)
+
+      // Add white background
+      const bgRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect')
+      bgRect.setAttribute('width', '100%')
+      bgRect.setAttribute('height', '100%')
+      bgRect.setAttribute('fill', 'white')
+      clonedSvg.insertBefore(bgRect, clonedSvg.firstChild)
+
+      // Get SVG dimensions
+      const bbox = svgElement.getBoundingClientRect()
+      clonedSvg.setAttribute('width', bbox.width)
+      clonedSvg.setAttribute('height', bbox.height)
+
+      // Convert SVG to data URL
+      const svgData = new XMLSerializer().serializeToString(clonedSvg)
+      const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' })
+      const svgUrl = URL.createObjectURL(svgBlob)
+
+      // Create canvas and draw SVG
+      const canvas = document.createElement('canvas')
+      const ctx = canvas.getContext('2d')
+      const img = new Image()
+
+      img.onload = () => {
+        canvas.width = bbox.width * 2 // 2x for higher resolution
+        canvas.height = bbox.height * 2
+        ctx.scale(2, 2)
+        ctx.fillStyle = 'white'
+        ctx.fillRect(0, 0, bbox.width, bbox.height)
+        ctx.drawImage(img, 0, 0)
+
+        // Download as PNG
+        const pngUrl = canvas.toDataURL('image/png')
+        const link = document.createElement('a')
+        link.href = pngUrl
+        link.download = `chart_${title || 'export'}_${Date.now()}.png`
+        link.click()
+
+        URL.revokeObjectURL(svgUrl)
+        setExporting(false)
+      }
+
+      img.onerror = () => {
+        // Fallback to SVG download
+        const link = document.createElement('a')
+        link.href = svgUrl
+        link.download = `chart_${title || 'export'}_${Date.now()}.svg`
+        link.click()
+
+        URL.revokeObjectURL(svgUrl)
+        setExporting(false)
+      }
+
+      img.src = svgUrl
+    } catch (err) {
+      console.error('Failed to export chart:', err)
+      setExporting(false)
+    }
+  }, [title])
 
   const handleBrushChange = useCallback((range) => {
     if (!range) return
@@ -296,24 +372,39 @@ export default function ZoomableChart({
           )}
         </Stack>
 
-        {showZoomControls && type !== 'pie' && (
-          <Stack direction="row" spacing={0.5}>
+        <Stack direction="row" spacing={0.5} alignItems="center">
+          <MuiTooltip title="Export chart as PNG">
             <IconButton
               size="small"
-              onClick={handleResetZoom}
-              disabled={!zoomState.isZoomed}
-              title="Reset zoom"
+              onClick={handleExportChart}
+              disabled={exporting}
             >
-              <ZoomOutMapIcon fontSize="small" />
+              {exporting ? (
+                <CircularProgress size={16} />
+              ) : (
+                <DownloadIcon fontSize="small" />
+              )}
             </IconButton>
-            <Typography variant="caption" color="text.secondary" sx={{ alignSelf: 'center' }}>
-              Drag to zoom
-            </Typography>
-          </Stack>
-        )}
+          </MuiTooltip>
+          {showZoomControls && type !== 'pie' && (
+            <>
+              <IconButton
+                size="small"
+                onClick={handleResetZoom}
+                disabled={!zoomState.isZoomed}
+                title="Reset zoom"
+              >
+                <ZoomOutMapIcon fontSize="small" />
+              </IconButton>
+              <Typography variant="caption" color="text.secondary">
+                Drag to zoom
+              </Typography>
+            </>
+          )}
+        </Stack>
       </Stack>
 
-      <Box sx={{ width: '100%', height }}>
+      <Box ref={chartRef} sx={{ width: '100%', height }}>
         <ResponsiveContainer width="100%" height="100%">
           {renderChart()}
         </ResponsiveContainer>

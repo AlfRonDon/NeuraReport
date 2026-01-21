@@ -25,6 +25,7 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import DownloadOutlinedIcon from '@mui/icons-material/DownloadOutlined'
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined'
 import FileUploadOutlinedIcon from '@mui/icons-material/FileUploadOutlined'
+import ScheduleIcon from '@mui/icons-material/Schedule'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 
@@ -37,6 +38,7 @@ import Surface from '../../../components/layout/Surface.jsx'
 import TOOLTIP_COPY from '../../../content/tooltipCopy.jsx'
 import { useAppStore } from '../../../store/useAppStore'
 import { useToast } from '../../../components/ToastProvider.jsx'
+import { confirmDelete } from '../../../utils/confirmDelete'
 import { resolveTemplatePreviewUrl, resolveTemplateThumbnailUrl } from '../../../utils/preview'
 import { buildLastEditInfo } from '../../../utils/templateMeta'
 import getSourceMeta from '../utils/templateSourceMeta'
@@ -50,6 +52,7 @@ import {
   listApprovedTemplates,
   mock,
   recommendTemplates,
+  queueRecommendTemplates,
   withBase,
 } from '../services/generateApi'
 
@@ -72,6 +75,7 @@ export function TemplatePicker({ selected, onToggle, outputFormats, setOutputFor
   const [domainHints, setDomainHints] = useState([])
   const [recommendations, setRecommendations] = useState([])
   const [recommending, setRecommending] = useState(false)
+  const [queueingRecommendations, setQueueingRecommendations] = useState(false)
   const [importing, setImporting] = useState(false)
   const [exporting, setExporting] = useState(null)
   const importInputRef = useRef(null)
@@ -209,6 +213,32 @@ export function TemplatePicker({ selected, onToggle, outputFormats, setOutputFor
     }
   }
 
+  const handleQueueRecommend = async () => {
+    const prompt = requirement.trim()
+    if (!prompt) {
+      toast.show('Describe what you need before queueing recommendations.', 'info')
+      return
+    }
+    setQueueingRecommendations(true)
+    try {
+      const response = await queueRecommendTemplates({
+        requirement: prompt,
+        limit: 6,
+        kinds: kindHints,
+        domains: domainHints,
+      })
+      if (response?.job_id) {
+        toast.show('Recommendation job queued. Track it in Jobs.', 'success')
+      } else {
+        toast.show('Failed to queue recommendations.', 'error')
+      }
+    } catch (err) {
+      toast.show(String(err), 'error')
+    } finally {
+      setQueueingRecommendations(false)
+    }
+  }
+
   const handleRequirementKeyDown = (event) => {
     if (event.key === 'Enter') {
       event.preventDefault()
@@ -226,10 +256,8 @@ export function TemplatePicker({ selected, onToggle, outputFormats, setOutputFor
   const handleDeleteTemplate = async (template) => {
     if (!template?.id) return
     const name = template.name || template.id
-    if (typeof window !== 'undefined') {
-      const confirmed = window.confirm(`Delete "${name}"? This cannot be undone.`)
-      if (!confirmed) return
-    }
+    const confirmed = confirmDelete(`Delete "${name}"? This cannot be undone.`)
+    if (!confirmed) return
     setDeleting(template.id)
     try {
       await deleteTemplateRequest(template.id)
@@ -875,10 +903,25 @@ export function TemplatePicker({ selected, onToggle, outputFormats, setOutputFor
           <Button
             variant="contained"
             onClick={handleRecommend}
-            disabled={recommending}
+            disabled={recommending || queueingRecommendations}
             sx={{ whiteSpace: 'nowrap' }}
           >
             {recommending ? 'Finding...' : 'Get recommendations'}
+          </Button>
+          <Button
+            variant="outlined"
+            onClick={handleQueueRecommend}
+            disabled={recommending || queueingRecommendations}
+            startIcon={
+              queueingRecommendations ? (
+                <CircularProgress size={16} color="inherit" />
+              ) : (
+                <ScheduleIcon fontSize="small" />
+              )
+            }
+            sx={{ whiteSpace: 'nowrap' }}
+          >
+            {queueingRecommendations ? 'Queueing...' : 'Queue'}
           </Button>
         </Stack>
       </Stack>

@@ -679,7 +679,7 @@ export async function mappingPreview(templateId, connectionId, options = {}) {
     params.force_refresh = options.forceRefresh
   }
   const endpoint = getTemplateRoutes(kind).mappingPreview(templateId)
-  const { data } = await api.post(endpoint, null, { params })
+  const { data } = await api.post(endpoint, {}, { params })
   return data
 }
 
@@ -1730,6 +1730,28 @@ export async function recommendTemplates({ requirement, limit = 5, domains, kind
   return data
 }
 
+export async function queueRecommendTemplates({ requirement, limit = 5, domains, kinds } = {}) {
+  const payload = {}
+  const trimmedRequirement = typeof requirement === 'string' ? requirement.trim() : ''
+  if (trimmedRequirement) {
+    payload.requirement = trimmedRequirement
+  }
+  if (Array.isArray(domains) && domains.length) {
+    payload.domains = domains
+  }
+  if (Array.isArray(kinds) && kinds.length) {
+    payload.kinds = kinds
+  }
+  if (limit != null) {
+    payload.limit = limit
+  }
+  if (isMock) {
+    return { status: 'queued', job_id: `mock-recommend-${Date.now()}` }
+  }
+  const { data } = await api.post('/templates/recommend?background=true', payload)
+  return data
+}
+
 export async function deleteTemplate(templateId) {
   if (!templateId) throw new Error('Missing template id')
   if (isMock) {
@@ -2410,23 +2432,6 @@ export async function getTokenUsage() {
     }
   }
   const { data } = await api.get('/health/token-usage')
-  return data
-}
-
-export async function exportConfiguration() {
-  if (isMock) {
-    return {
-      status: 'ok',
-      config: {
-        version: '4.0',
-        exported_at: new Date().toISOString(),
-        connections: [],
-        templates: [],
-        preferences: {},
-      },
-    }
-  }
-  const { data } = await api.get('/config/export')
   return data
 }
 

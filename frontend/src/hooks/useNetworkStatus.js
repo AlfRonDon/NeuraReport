@@ -1,0 +1,69 @@
+import { useState, useEffect, useCallback } from 'react'
+
+/**
+ * Hook to detect network connectivity status
+ * Returns online status and a function to manually check connectivity
+ */
+export function useNetworkStatus() {
+  const [isOnline, setIsOnline] = useState(
+    typeof navigator !== 'undefined' ? navigator.onLine : true
+  )
+  const [lastChecked, setLastChecked] = useState(null)
+
+  // Check connectivity by making a lightweight request
+  const checkConnectivity = useCallback(async () => {
+    try {
+      // Use a simple HEAD request to check connectivity
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 5000)
+
+      await fetch('/api/health', {
+        method: 'HEAD',
+        signal: controller.signal,
+        cache: 'no-store',
+      })
+
+      clearTimeout(timeoutId)
+      setIsOnline(true)
+      setLastChecked(new Date())
+      return true
+    } catch {
+      // If fetch fails, check navigator.onLine as fallback
+      const online = typeof navigator !== 'undefined' ? navigator.onLine : false
+      setIsOnline(online)
+      setLastChecked(new Date())
+      return online
+    }
+  }, [])
+
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOnline(true)
+      setLastChecked(new Date())
+    }
+
+    const handleOffline = () => {
+      setIsOnline(false)
+      setLastChecked(new Date())
+    }
+
+    window.addEventListener('online', handleOnline)
+    window.addEventListener('offline', handleOffline)
+
+    // Initial check
+    checkConnectivity()
+
+    return () => {
+      window.removeEventListener('online', handleOnline)
+      window.removeEventListener('offline', handleOffline)
+    }
+  }, [checkConnectivity])
+
+  return {
+    isOnline,
+    lastChecked,
+    checkConnectivity,
+  }
+}
+
+export default useNetworkStatus

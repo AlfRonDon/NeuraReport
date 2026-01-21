@@ -3,10 +3,12 @@ from __future__ import annotations
 
 from typing import List, Optional
 from pydantic import BaseModel, Field
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Query, Request
 
 from backend.app.core.security import require_api_key
 from backend.app.domain.summary.service import SummaryService
+from backend.app.services.background_tasks import enqueue_background_job
+from backend.app.services.state import state_store
 
 router = APIRouter(dependencies=[Depends(require_api_key)])
 
@@ -27,17 +29,48 @@ async def generate_summary(
     payload: SummaryRequest,
     request: Request,
     svc: SummaryService = Depends(get_service),
+    background: bool = Query(False),
 ):
     """Generate an executive summary from content."""
     correlation_id = getattr(request.state, "correlation_id", None)
-    summary = svc.generate_summary(
-        content=payload.content,
-        tone=payload.tone,
-        max_sentences=payload.max_sentences,
-        focus_areas=payload.focus_areas,
-        correlation_id=correlation_id,
+    if not background:
+        summary = svc.generate_summary(
+            content=payload.content,
+            tone=payload.tone,
+            max_sentences=payload.max_sentences,
+            focus_areas=payload.focus_areas,
+            correlation_id=correlation_id,
+        )
+        return {"status": "ok", "summary": summary, "correlation_id": correlation_id}
+
+    async def runner(job_id: str) -> None:
+        state_store.record_job_start(job_id)
+        state_store.record_job_step(job_id, "generate", status="running", label="Generate summary")
+        try:
+            summary = svc.generate_summary(
+                content=payload.content,
+                tone=payload.tone,
+                max_sentences=payload.max_sentences,
+                focus_areas=payload.focus_areas,
+                correlation_id=correlation_id,
+            )
+            state_store.record_job_step(job_id, "generate", status="succeeded", progress=100.0)
+            state_store.record_job_completion(
+                job_id,
+                status="succeeded",
+                result={"summary": summary},
+            )
+        except Exception as exc:
+            state_store.record_job_step(job_id, "generate", status="failed", error=str(exc))
+            state_store.record_job_completion(job_id, status="failed", error=str(exc))
+
+    job = await enqueue_background_job(
+        job_type="summary_generate",
+        steps=[{"name": "generate", "label": "Generate summary"}],
+        meta={"background": True, "content_length": len(payload.content)},
+        runner=runner,
     )
-    return {"status": "ok", "summary": summary, "correlation_id": correlation_id}
+    return {"status": "queued", "job_id": job["id"], "correlation_id": correlation_id}
 
 
 @router.get("/reports/{report_id}")
@@ -45,8 +78,33 @@ async def get_report_summary(
     report_id: str,
     request: Request,
     svc: SummaryService = Depends(get_service),
+    background: bool = Query(False),
 ):
     """Generate summary for a specific report."""
     correlation_id = getattr(request.state, "correlation_id", None)
-    summary = svc.generate_report_summary(report_id, correlation_id)
-    return {"status": "ok", "summary": summary, "correlation_id": correlation_id}
+    if not background:
+        summary = svc.generate_report_summary(report_id, correlation_id)
+        return {"status": "ok", "summary": summary, "correlation_id": correlation_id}
+
+    async def runner(job_id: str) -> None:
+        state_store.record_job_start(job_id)
+        state_store.record_job_step(job_id, "generate", status="running", label="Generate report summary")
+        try:
+            summary = svc.generate_report_summary(report_id, correlation_id)
+            state_store.record_job_step(job_id, "generate", status="succeeded", progress=100.0)
+            state_store.record_job_completion(
+                job_id,
+                status="succeeded",
+                result={"summary": summary, "report_id": report_id},
+            )
+        except Exception as exc:
+            state_store.record_job_step(job_id, "generate", status="failed", error=str(exc))
+            state_store.record_job_completion(job_id, status="failed", error=str(exc))
+
+    job = await enqueue_background_job(
+        job_type="summary_report",
+        steps=[{"name": "generate", "label": "Generate report summary"}],
+        meta={"background": True, "report_id": report_id},
+        runner=runner,
+    )
+    return {"status": "queued", "job_id": job["id"], "correlation_id": correlation_id}

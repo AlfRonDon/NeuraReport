@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   Box,
   Chip,
@@ -40,6 +40,7 @@ import { DataTable } from '../../ui/DataTable'
 import { ConfirmModal } from '../../ui/Modal'
 import { useAppStore } from '../../store/useAppStore'
 import { useToast } from '../../components/ToastProvider'
+import FavoriteButton from '../../components/FavoriteButton'
 import * as api from '../../api/client'
 import * as recommendationsApi from '../../api/recommendations'
 import { palette } from '../../theme'
@@ -59,6 +60,7 @@ const KIND_CONFIG = {
 
 export default function TemplatesPage() {
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const toast = useToast()
   const templates = useAppStore((s) => s.templates)
   const setTemplates = useAppStore((s) => s.setTemplates)
@@ -93,22 +95,58 @@ export default function TemplatesPage() {
   const [similarTemplate, setSimilarTemplate] = useState(null)
   const [similarTemplates, setSimilarTemplates] = useState([])
   const [similarLoading, setSimilarLoading] = useState(false)
+  const [favorites, setFavorites] = useState(new Set())
+
+  const kindFilter = searchParams.get('kind') || ''
+  const statusParam = searchParams.get('status') || ''
+
+  const filteredTemplates = useMemo(() => {
+    let data = templates
+    if (kindFilter) {
+      data = data.filter((tpl) => (tpl.kind || '').toLowerCase() === kindFilter.toLowerCase())
+    }
+    if (statusParam) {
+      data = data.filter((tpl) => (tpl.status || '').toLowerCase() === statusParam.toLowerCase())
+    }
+    return data
+  }, [templates, kindFilter, statusParam])
+
+  const clearQuickFilter = useCallback((key) => {
+    const next = new URLSearchParams(searchParams)
+    next.delete(key)
+    setSearchParams(next, { replace: true })
+  }, [searchParams, setSearchParams])
 
   const fetchTemplatesData = useCallback(async () => {
     setLoading(true)
     try {
-      const [templatesData, tagsData] = await Promise.all([
+      const [templatesData, tagsData, favoritesData] = await Promise.all([
         api.listApprovedTemplates(),
         api.getAllTemplateTags(),
+        api.getFavorites().catch(() => ({ templates: [] })),
       ])
       setTemplates(templatesData)
       setAllTags(tagsData.tags || [])
+      const favIds = (favoritesData.templates || []).map((t) => t.id)
+      setFavorites(new Set(favIds))
     } catch (err) {
       toast.show(err.message || 'Failed to load templates', 'error')
     } finally {
       setLoading(false)
     }
   }, [setTemplates, toast])
+
+  const handleFavoriteToggle = useCallback((templateId, isFavorite) => {
+    setFavorites((prev) => {
+      const next = new Set(prev)
+      if (isFavorite) {
+        next.add(templateId)
+      } else {
+        next.delete(templateId)
+      }
+      return next
+    })
+  }, [])
 
   useEffect(() => {
     if (didLoadRef.current) return
@@ -236,14 +274,21 @@ export default function TemplatesPage() {
       toast.show('Template name must be 200 characters or less', 'error')
       return
     }
+    // Validate tags (max 50 chars each per backend requirement)
+    const tags = metadataForm.tags
+      ? metadataForm.tags.split(',').map((tag) => tag.trim()).filter(Boolean)
+      : []
+    const invalidTag = tags.find((tag) => tag.length > 50)
+    if (invalidTag) {
+      toast.show(`Tag "${invalidTag.slice(0, 20)}..." exceeds 50 character limit`, 'error')
+      return
+    }
     setMetadataSaving(true)
     const payload = {
       name: trimmedName,
       description: metadataForm.description.trim() || undefined,
       status: metadataForm.status,
-      tags: metadataForm.tags
-        ? metadataForm.tags.split(',').map((tag) => tag.trim()).filter(Boolean)
-        : [],
+      tags,
     }
     try {
       const result = await api.updateTemplateMetadata(metadataTemplate.id, payload)
@@ -377,6 +422,12 @@ export default function TemplatesPage() {
       toast.show('Enter at least one tag', 'error')
       return
     }
+    // Validate tag length (max 50 chars per backend requirement)
+    const invalidTag = tags.find((tag) => tag.length > 50)
+    if (invalidTag) {
+      toast.show(`Tag "${invalidTag.slice(0, 20)}..." exceeds 50 character limit`, 'error')
+      return
+    }
     setBulkActionLoading(true)
     try {
       const result = await api.bulkAddTemplateTags(selectedIds, tags)
@@ -415,7 +466,13 @@ export default function TemplatesPage() {
         const config = KIND_CONFIG[row.kind] || KIND_CONFIG.pdf
         const Icon = config.icon
         return (
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <FavoriteButton
+              entityType="templates"
+              entityId={row.id}
+              initialFavorite={favorites.has(row.id)}
+              onToggle={(isFav) => handleFavoriteToggle(row.id, isFav)}
+            />
             <Box
               sx={{
                 width: 36,
@@ -557,7 +614,7 @@ export default function TemplatesPage() {
         )
       },
     },
-  ], [])
+  ], [favorites, handleFavoriteToggle])
 
   const filters = useMemo(() => {
     const baseFilters = [
@@ -614,11 +671,31 @@ export default function TemplatesPage() {
 
   return (
     <Box sx={{ p: 3, maxWidth: 1400, mx: 'auto', width: '100%' }}>
+      {(kindFilter || statusParam) && (
+        <Stack direction="row" spacing={1} sx={{ mb: 1.5, flexWrap: 'wrap' }}>
+          {kindFilter && (
+            <Chip
+              label={`Type: ${kindFilter.toUpperCase()}`}
+              onDelete={() => clearQuickFilter('kind')}
+              size="small"
+              sx={{ bgcolor: alpha(palette.scale[100], 0.08), color: palette.scale[300] }}
+            />
+          )}
+          {statusParam && (
+            <Chip
+              label={`Status: ${statusParam}`}
+              onDelete={() => clearQuickFilter('status')}
+              size="small"
+              sx={{ bgcolor: alpha(palette.scale[100], 0.08), color: palette.scale[300] }}
+            />
+          )}
+        </Stack>
+      )}
       <DataTable
         title="Templates"
         subtitle="Manage your report templates"
         columns={columns}
-        data={templates}
+        data={filteredTemplates}
         loading={loading}
         searchPlaceholder="Search templates..."
         filters={filters}

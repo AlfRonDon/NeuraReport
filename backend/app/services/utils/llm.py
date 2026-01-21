@@ -37,6 +37,7 @@ else:
 _MAX_ATTEMPTS = int(os.getenv("OPENAI_MAX_ATTEMPTS", "3"))
 _BACKOFF_INITIAL = float(os.getenv("OPENAI_BACKOFF_SECONDS", "1.5"))
 _BACKOFF_MULTIPLIER = float(os.getenv("OPENAI_BACKOFF_MULTIPLIER", "2.0"))
+_FORCE_GPT5 = os.getenv("NEURA_FORCE_GPT5", "true").lower() in {"1", "true", "yes"}
 
 _LOG_PATH_ENV = os.getenv("LLM_RAW_OUTPUT_PATH")
 if _LOG_PATH_ENV:
@@ -381,6 +382,12 @@ def call_chat_completion(
         **kwargs: Forwarded to the client's create() call (e.g., temperature).
     """
     timeout = timeout if timeout is not None else _DEFAULT_TIMEOUT
+    if _FORCE_GPT5 and not str(model or "").lower().startswith("gpt-5"):
+        logger.warning(
+            "llm_model_overridden",
+            extra={"event": "llm_model_overridden", "requested": model, "forced": "gpt-5"},
+        )
+        model = "gpt-5"
     delay = _BACKOFF_INITIAL
     last_exc: BaseException | None = None
     fallback_models = _get_fallback_models(model)
@@ -399,7 +406,12 @@ def call_chat_completion(
             if prefer_responses:
                 try:
                     create_fn, extra_kwargs = _resolve_responses_create(client, timeout)
-                except AttributeError:
+                except AttributeError as exc:
+                    if _wants_responses(model):
+                        raise RuntimeError(
+                            "OpenAI Responses API is required for this model. "
+                            "Upgrade the openai package to >=1.0.0 to use gpt-5."
+                        ) from exc
                     prefer_responses = False
                 else:
                     payload = {

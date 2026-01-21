@@ -20,6 +20,18 @@ export async function analyzeData({ data, columnDescriptions, maxSuggestions = 3
 }
 
 /**
+ * Queue chart analysis in the background.
+ */
+export async function queueAnalyzeData({ data, columnDescriptions, maxSuggestions = 3 }) {
+  const response = await apiClient.post('/charts/analyze?background=true', {
+    data,
+    column_descriptions: columnDescriptions || undefined,
+    max_suggestions: maxSuggestions,
+  });
+  return response.data;
+}
+
+/**
  * Generate chart configuration
  * @param {Object} params
  * @param {Array} params.data - Data rows
@@ -39,7 +51,23 @@ export async function generateChart({ data, chartType, xField, yFields, title })
   return response.data;
 }
 
+/**
+ * Queue chart generation in the background.
+ */
+export async function queueGenerateChart({ data, chartType, xField, yFields, title }) {
+  const response = await apiClient.post('/charts/generate?background=true', {
+    data,
+    chart_type: chartType,
+    x_field: xField,
+    y_fields: Array.isArray(yFields) ? yFields : [yFields],
+    title,
+  });
+  return response.data;
+}
+
 export default {
   analyzeData,
+  queueAnalyzeData,
   generateChart,
+  queueGenerateChart,
 };

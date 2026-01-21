@@ -7,18 +7,25 @@ This replaces scattered HTTPException usage in business logic.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 from typing import Any, Dict, Optional
 
 
-@dataclass(frozen=True)
 class NeuraError(Exception):
     """Base error type for all NeuraReport errors."""
 
-    code: str = field(init=False, default="error")
-    message: str
-    details: Optional[Dict[str, Any]] = field(default=None)
-    cause: Optional[Exception] = field(default=None, repr=False)
+    code = "error"
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        details: Optional[Dict[str, Any]] = None,
+        cause: Optional[Exception] = None,
+    ) -> None:
+        super().__init__(message)
+        self.message = message
+        self.details = details
+        self.cause = cause
 
     def __str__(self) -> str:
         if self.details:
@@ -32,60 +39,82 @@ class NeuraError(Exception):
         return result
 
 
-@dataclass(frozen=True)
 class ValidationError(NeuraError):
     """Raised when input validation fails."""
 
-    code: str = field(init=False, default="validation_error")
+    code = "validation_error"
 
 
-@dataclass(frozen=True)
 class NotFoundError(NeuraError):
     """Raised when a requested resource does not exist."""
 
-    code: str = field(init=False, default="not_found")
+    code = "not_found"
 
 
-@dataclass(frozen=True)
 class ConflictError(NeuraError):
     """Raised when an operation conflicts with current state."""
 
-    code: str = field(init=False, default="conflict")
+    code = "conflict"
 
 
-@dataclass(frozen=True)
 class ExternalServiceError(NeuraError):
     """Raised when an external service (LLM, email, etc.) fails."""
 
-    code: str = field(init=False, default="external_service_error")
-    service: str = field(default="unknown")
+    code = "external_service_error"
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        service: str = "unknown",
+        details: Optional[Dict[str, Any]] = None,
+        cause: Optional[Exception] = None,
+    ) -> None:
+        super().__init__(message, details=details, cause=cause)
+        self.service = service
 
 
-@dataclass(frozen=True)
 class ConfigurationError(NeuraError):
     """Raised when system configuration is invalid."""
 
-    code: str = field(init=False, default="configuration_error")
+    code = "configuration_error"
 
 
-@dataclass(frozen=True)
 class PipelineError(NeuraError):
     """Raised when a pipeline step fails."""
 
-    code: str = field(init=False, default="pipeline_error")
-    step: str = field(default="unknown")
+    code = "pipeline_error"
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        step: str = "unknown",
+        details: Optional[Dict[str, Any]] = None,
+        cause: Optional[Exception] = None,
+    ) -> None:
+        super().__init__(message, details=details, cause=cause)
+        self.step = step
 
 
-@dataclass(frozen=True)
 class DataSourceError(NeuraError):
     """Raised when data source operations fail."""
 
-    code: str = field(init=False, default="data_source_error")
+    code = "data_source_error"
 
 
-@dataclass(frozen=True)
 class RenderError(NeuraError):
     """Raised when rendering fails."""
 
-    code: str = field(init=False, default="render_error")
-    format: str = field(default="unknown")
+    code = "render_error"
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        format: str = "unknown",
+        details: Optional[Dict[str, Any]] = None,
+        cause: Optional[Exception] = None,
+    ) -> None:
+        super().__init__(message, details=details, cause=cause)
+        self.format = format

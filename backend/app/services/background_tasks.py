@@ -13,7 +13,8 @@ from backend.app.services.state import state_store
 
 logger = logging.getLogger("neura.background_tasks")
 
-_TASK_WORKERS = max(int(os.getenv("NR_TASK_WORKERS", "4") or "4"), 1)
+_DEFAULT_TASK_WORKERS = os.cpu_count() or 4
+_TASK_WORKERS = max(int(os.getenv("NR_TASK_WORKERS", str(_DEFAULT_TASK_WORKERS)) or _DEFAULT_TASK_WORKERS), 1)
 _TASK_EXECUTOR = ThreadPoolExecutor(max_workers=_TASK_WORKERS)
 
 _BACKGROUND_TASKS: set[asyncio.Task] = set()

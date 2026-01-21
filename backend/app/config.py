@@ -54,6 +54,13 @@ def load_settings() -> Settings:
             "OPENAI_API_KEY is required. Set NEURA_ALLOW_MISSING_OPENAI=true to bypass for tests (not for production)."
         )
     openai_model = os.getenv("OPENAI_MODEL", "gpt-5")
+    force_gpt5 = os.getenv("NEURA_FORCE_GPT5", "true").lower() in {"1", "true", "yes"}
+    if force_gpt5 and not str(openai_model or "").lower().startswith("gpt-5"):
+        logger.warning(
+            "openai_model_overridden",
+            extra={"event": "openai_model_overridden", "requested": openai_model, "forced": "gpt-5"},
+        )
+        openai_model = "gpt-5"
 
     uploads_default = Path(__file__).resolve().parents[2] / "uploads"
     uploads_root = Path(os.getenv("UPLOAD_ROOT", str(uploads_default))).resolve()

@@ -47,12 +47,29 @@ try:
 except ImportError:  # pragma: no cover
     OpenAI = None  # type: ignore
 
-MODEL = os.getenv("OPENAI_MODEL", "gpt-5")
+logger = logging.getLogger("neura.template_verify")
+
+_FORCE_GPT5 = os.getenv("NEURA_FORCE_GPT5", "true").lower() in {"1", "true", "yes"}
+
+
+def _force_gpt5(model_name: str | None) -> str:
+    if not _FORCE_GPT5:
+        return str(model_name or "gpt-5").strip() or "gpt-5"
+    normalized = str(model_name or "").strip()
+    if normalized.lower().startswith("gpt-5"):
+        return normalized
+    if normalized:
+        logger.warning(
+            "llm_model_overridden",
+            extra={"event": "llm_model_overridden", "requested": normalized, "forced": "gpt-5"},
+        )
+    return "gpt-5"
+
+
+MODEL = _force_gpt5(os.getenv("OPENAI_MODEL", "gpt-5"))
 
 
 _client: Optional["OpenAI"] = None
-
-logger = logging.getLogger("neura.template_verify")
 
 
 @dataclass

@@ -49,6 +49,7 @@ import TOOLTIP_COPY from '../../../content/tooltipCopy.jsx'
 import { useAppStore } from '../../../store/useAppStore'
 import { useTrackedJobs } from '../../../hooks/useJobs'
 import { useToast } from '../../../components/ToastProvider.jsx'
+import { confirmDelete } from '../../../utils/confirmDelete'
 import SavedChartsPanel from './run/SavedChartsPanel.jsx'
 import {
   clampBrushRange,
@@ -549,7 +550,7 @@ function GenerateAndDownload({
     event?.stopPropagation()
     if (!chart || !activeTemplate) return
     if (typeof window !== 'undefined') {
-      const confirmed = window.confirm(`Delete saved chart "${chart.name || 'Saved chart'}"?`)
+      const confirmed = confirmDelete(`Delete saved chart "${chart.name || 'Saved chart'}"?`)
       if (!confirmed) return
     }
     try {

@@ -2,6 +2,7 @@
  * Data Enrichment Configuration Page
  */
 import React, { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Box,
   Paper,
@@ -45,6 +46,7 @@ import {
   Refresh as RefreshIcon,
 } from '@mui/icons-material';
 import useEnrichmentStore from '../../stores/enrichmentStore';
+import ConfirmModal from '../../ui/Modal/ConfirmModal';
 
 // Fallback sources in case API is unavailable
 const FALLBACK_SOURCES = [
@@ -78,7 +80,14 @@ export default function EnrichmentConfigPage() {
     reset,
   } = useEnrichmentStore();
 
-  const [activeTab, setActiveTab] = useState(0);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get('tab');
+  const activeTab = tabParam === 'cache' ? 1 : 0;
+
+  const handleTabChange = useCallback((e, newValue) => {
+    setSearchParams(newValue === 1 ? { tab: 'cache' } : {}, { replace: true });
+  }, [setSearchParams]);
+
   const [inputData, setInputData] = useState('');
   const [selectedSources, setSelectedSources] = useState([]);
   const [parsedData, setParsedData] = useState(null);
@@ -89,6 +98,10 @@ export default function EnrichmentConfigPage() {
   const [newSourceType, setNewSourceType] = useState('company_info');
   const [newSourceDescription, setNewSourceDescription] = useState('');
   const [newSourceCacheTtl, setNewSourceCacheTtl] = useState(24);
+
+  // Confirmation dialogs
+  const [deleteSourceConfirm, setDeleteSourceConfirm] = useState({ open: false, sourceId: null, sourceName: '' });
+  const [clearCacheConfirm, setClearCacheConfirm] = useState({ open: false, sourceId: null, sourceName: '' });
 
   // Use API sources if available, fallback to static list
   const availableSources = sources.length > 0 ? sources : FALLBACK_SOURCES;
@@ -216,7 +229,7 @@ export default function EnrichmentConfigPage() {
         </Alert>
       )}
 
-      <Tabs value={activeTab} onChange={(e, v) => setActiveTab(v)} sx={{ mb: 3 }}>
+      <Tabs value={activeTab} onChange={handleTabChange} sx={{ mb: 3 }}>
         <Tab label="Enrich Data" />
         <Tab label="Cache Admin" icon={<CacheIcon />} iconPosition="start" />
       </Tabs>
@@ -261,48 +274,53 @@ export default function EnrichmentConfigPage() {
                 Enrichment Sources
               </Typography>
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                {allSources.map((source) => (
-                  <Card
-                    key={source.id}
-                    variant="outlined"
-                    sx={{
-                      cursor: 'pointer',
-                      borderColor: selectedSources.includes(source.id) ? 'primary.main' : 'divider',
-                      bgcolor: selectedSources.includes(source.id) ? 'action.selected' : 'background.paper',
-                    }}
-                    onClick={() => toggleSource(source.id)}
-                  >
-                    <CardContent sx={{ py: 1.5, '&:last-child': { pb: 1.5 } }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <Box>
-                          <Typography variant="subtitle1">{source.name}</Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            {source.description}
-                          </Typography>
+                {allSources.map((source) => {
+                  const isCustom = customSources.some((cs) => cs.id === source.id)
+                  return (
+                    <Card
+                      key={source.id}
+                      variant="outlined"
+                      sx={{
+                        cursor: 'pointer',
+                        borderColor: selectedSources.includes(source.id) ? 'primary.main' : 'divider',
+                        bgcolor: selectedSources.includes(source.id) ? 'action.selected' : 'background.paper',
+                      }}
+                      onClick={() => toggleSource(source.id)}
+                    >
+                      <CardContent sx={{ py: 1.5, '&:last-child': { pb: 1.5 } }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <Box>
+                            <Typography variant="subtitle1">{source.name}</Typography>
+                            <Typography variant="body2" color="text.secondary">
+                              {source.description}
+                            </Typography>
+                          </Box>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            {isCustom ? (
+                              <Chip label="Custom" size="small" color="secondary" />
+                            ) : (
+                              <Chip label="Built-in" size="small" variant="outlined" />
+                            )}
+                            {selectedSources.includes(source.id) && (
+                              <Chip label="Selected" color="primary" size="small" />
+                            )}
+                            {isCustom && (
+                              <IconButton
+                                size="small"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setDeleteSourceConfirm({ open: true, sourceId: source.id, sourceName: source.name })
+                                }}
+                              >
+                                <DeleteIcon fontSize="small" />
+                              </IconButton>
+                            )}
+                          </Box>
                         </Box>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          {customSources.some(cs => cs.id === source.id) && (
-                            <Chip label="Custom" size="small" color="secondary" />
-                          )}
-                          {selectedSources.includes(source.id) && (
-                            <Chip label="Selected" color="primary" size="small" />
-                          )}
-                          {customSources.some(cs => cs.id === source.id) && (
-                            <IconButton
-                              size="small"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                deleteSource(source.id);
-                              }}
-                            >
-                              <DeleteIcon fontSize="small" />
-                            </IconButton>
-                          )}
-                        </Box>
-                      </Box>
-                    </CardContent>
-                  </Card>
-                ))}
+                      </CardContent>
+                    </Card>
+                  )
+                })}
               </Box>
 
               <Box sx={{ mt: 3, display: 'flex', gap: 2 }}>
@@ -428,7 +446,7 @@ export default function EnrichmentConfigPage() {
                   variant="outlined"
                   color="warning"
                   startIcon={loading ? <CircularProgress size={20} /> : <DeleteIcon />}
-                  onClick={handleClearCache}
+                  onClick={() => setClearCacheConfirm({ open: true, sourceId: null, sourceName: 'all sources' })}
                   disabled={loading}
                 >
                   Clear All Cache
@@ -445,7 +463,7 @@ export default function EnrichmentConfigPage() {
                     <Typography variant="body2">{source.name}</Typography>
                     <Button
                       size="small"
-                      onClick={() => clearCache(source.id)}
+                      onClick={() => setClearCacheConfirm({ open: true, sourceId: source.id, sourceName: source.name })}
                       disabled={loading}
                     >
                       Clear
@@ -512,6 +530,32 @@ export default function EnrichmentConfigPage() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <ConfirmModal
+        open={deleteSourceConfirm.open}
+        onClose={() => setDeleteSourceConfirm({ open: false, sourceId: null, sourceName: '' })}
+        onConfirm={() => {
+          deleteSource(deleteSourceConfirm.sourceId);
+          setDeleteSourceConfirm({ open: false, sourceId: null, sourceName: '' });
+        }}
+        title="Delete Source"
+        message={`Are you sure you want to delete "${deleteSourceConfirm.sourceName}"? This will remove the source configuration and all associated cache data.`}
+        confirmLabel="Delete"
+        severity="error"
+      />
+
+      <ConfirmModal
+        open={clearCacheConfirm.open}
+        onClose={() => setClearCacheConfirm({ open: false, sourceId: null, sourceName: '' })}
+        onConfirm={() => {
+          clearCache(clearCacheConfirm.sourceId);
+          setClearCacheConfirm({ open: false, sourceId: null, sourceName: '' });
+        }}
+        title="Clear Cache"
+        message={`Are you sure you want to clear cache for ${clearCacheConfirm.sourceName}? New enrichment requests will fetch fresh data from the source.`}
+        confirmLabel="Clear Cache"
+        severity="warning"
+      />
     </Box>
   );
 }

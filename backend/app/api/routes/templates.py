@@ -31,6 +31,7 @@ from backend.app.services.background_tasks import (
     iter_ndjson_events_async,
     run_event_stream_async,
 )
+from backend.app.services.state import state_store
 
 # Import service functions from the service layer
 from src.services.template_service import (
@@ -174,7 +175,7 @@ def update_template_metadata_route(template_id: str, payload: TemplateUpdatePayl
 async def verify_template_route(
     request: Request,
     file: UploadFile = File(...),
-    connection_id: str = Form(...),
+    connection_id: Optional[str] = Form(None),
     refine_iters: int = Form(0),
     background: bool = Query(False),
 ):
@@ -294,10 +295,51 @@ async def get_all_tags(service: TemplateService = Depends(get_service)):
 # Template Recommendations
 # =============================================================================
 
-@router.post("/recommend", response_model=TemplateRecommendResponse)
-def recommend_templates_route(payload: TemplateRecommendPayload, request: Request):
+@router.post("/recommend")
+async def recommend_templates_route(
+    payload: TemplateRecommendPayload,
+    request: Request,
+    background: bool = Query(False),
+):
     """Get AI-powered template recommendations based on user requirements."""
-    return recommend_templates(payload, request)
+    if not background:
+        return recommend_templates(payload, request)
+
+    correlation_id = _correlation(request)
+
+    async def runner(job_id: str) -> None:
+        state_store.record_job_start(job_id)
+        state_store.record_job_step(job_id, "recommend", status="running", label="Generate recommendations")
+        try:
+            response = recommend_templates(payload, _request_with_correlation(correlation_id))
+            if hasattr(response, "model_dump"):
+                result_payload = response.model_dump(mode="json")
+            elif hasattr(response, "dict"):
+                result_payload = response.dict()
+            else:
+                result_payload = response
+            result_data = (
+                result_payload.get("recommendations")
+                if isinstance(result_payload, dict)
+                else result_payload
+            )
+            state_store.record_job_step(job_id, "recommend", status="succeeded", progress=100.0)
+            state_store.record_job_completion(
+                job_id,
+                status="succeeded",
+                result={"recommendations": result_data},
+            )
+        except Exception as exc:
+            state_store.record_job_step(job_id, "recommend", status="failed", error=str(exc))
+            state_store.record_job_completion(job_id, status="failed", error=str(exc))
+
+    job = await enqueue_background_job(
+        job_type="recommend_templates",
+        steps=[{"name": "recommend", "label": "Generate recommendations"}],
+        meta={"background": True, "requirement": payload.requirement},
+        runner=runner,
+    )
+    return {"status": "queued", "job_id": job["id"], "correlation_id": correlation_id}
 
 
 # =============================================================================
@@ -434,6 +476,5 @@ def suggest_charts_route(template_id: str, request: Request):
 @router.get("/{template_id}/charts/saved")
 def list_saved_charts_route(template_id: str, request: Request):
     """List saved charts for a template."""
-    from backend.app.services.state import state_store
-    charts = state_store.state_store.list_saved_charts(template_id)
+    charts = state_store.list_saved_charts(template_id)
     return {"status": "ok", "charts": charts, "correlation_id": _correlation(request)}

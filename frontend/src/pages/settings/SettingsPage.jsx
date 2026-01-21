@@ -44,8 +44,9 @@ function getPreferences() {
 function savePreferences(prefs) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs))
-  } catch {
-    // Ignore storage errors
+    return { success: true }
+  } catch (err) {
+    return { success: false, error: err.message || 'Storage quota exceeded or unavailable' }
   }
 }
 
@@ -183,8 +184,12 @@ export default function SettingsPage() {
   const handlePrefChange = useCallback((key) => (event) => {
     const newPrefs = { ...preferences, [key]: event.target.checked }
     setPreferences(newPrefs)
-    savePreferences(newPrefs)
-    toast.show('Preferences saved', 'success')
+    const result = savePreferences(newPrefs)
+    if (result.success) {
+      toast.show('Preferences saved', 'success')
+    } else {
+      toast.show(`Failed to save preferences: ${result.error}`, 'error')
+    }
   }, [preferences, toast])
 
   const config = health?.checks?.configuration || {}

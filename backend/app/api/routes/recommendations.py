@@ -8,6 +8,8 @@ from fastapi import APIRouter, Depends, Query, Request
 from backend.app.core.security import require_api_key
 from backend.app.domain.recommendations.service import RecommendationService
 from backend.app.services.state import store as state_store_module
+from backend.app.services.background_tasks import enqueue_background_job
+from backend.app.services.state import state_store
 
 router = APIRouter(dependencies=[Depends(require_api_key)])
 
@@ -33,6 +35,7 @@ async def recommend_templates_post(
     payload: TemplateRecommendRequest,
     request: Request,
     svc: RecommendationService = Depends(get_service),
+    background: bool = Query(False),
 ):
     """Get template recommendations based on data description and columns."""
     correlation_id = getattr(request.state, "correlation_id", None)
@@ -50,12 +53,40 @@ async def recommend_templates_post(
 
     context = " | ".join(context_parts) if context_parts else None
 
-    recommendations = svc.recommend_templates(
-        context=context,
-        limit=5,
-        correlation_id=correlation_id,
+    if not background:
+        recommendations = svc.recommend_templates(
+            context=context,
+            limit=5,
+            correlation_id=correlation_id,
+        )
+        return {"status": "ok", "recommendations": recommendations, "correlation_id": correlation_id}
+
+    async def runner(job_id: str) -> None:
+        state_store.record_job_start(job_id)
+        state_store.record_job_step(job_id, "recommend", status="running", label="Generate recommendations")
+        try:
+            recommendations = svc.recommend_templates(
+                context=context,
+                limit=5,
+                correlation_id=correlation_id,
+            )
+            state_store.record_job_step(job_id, "recommend", status="succeeded", progress=100.0)
+            state_store.record_job_completion(
+                job_id,
+                status="succeeded",
+                result={"recommendations": recommendations},
+            )
+        except Exception as exc:
+            state_store.record_job_step(job_id, "recommend", status="failed", error=str(exc))
+            state_store.record_job_completion(job_id, status="failed", error=str(exc))
+
+    job = await enqueue_background_job(
+        job_type="recommend_templates",
+        steps=[{"name": "recommend", "label": "Generate recommendations"}],
+        meta={"background": True, "context": context},
+        runner=runner,
     )
-    return {"status": "ok", "recommendations": recommendations, "correlation_id": correlation_id}
+    return {"status": "queued", "job_id": job["id"], "correlation_id": correlation_id}
 
 
 @router.get("/templates")
@@ -65,16 +96,46 @@ async def recommend_templates_get(
     context: Optional[str] = Query(None, max_length=500),
     limit: int = Query(5, ge=1, le=20),
     svc: RecommendationService = Depends(get_service),
+    background: bool = Query(False),
 ):
     """Get template recommendations based on context (query params)."""
     correlation_id = getattr(request.state, "correlation_id", None)
-    recommendations = svc.recommend_templates(
-        connection_id=connection_id,
-        context=context,
-        limit=limit,
-        correlation_id=correlation_id,
+    if not background:
+        recommendations = svc.recommend_templates(
+            connection_id=connection_id,
+            context=context,
+            limit=limit,
+            correlation_id=correlation_id,
+        )
+        return {"status": "ok", "recommendations": recommendations, "correlation_id": correlation_id}
+
+    async def runner(job_id: str) -> None:
+        state_store.record_job_start(job_id)
+        state_store.record_job_step(job_id, "recommend", status="running", label="Generate recommendations")
+        try:
+            recommendations = svc.recommend_templates(
+                connection_id=connection_id,
+                context=context,
+                limit=limit,
+                correlation_id=correlation_id,
+            )
+            state_store.record_job_step(job_id, "recommend", status="succeeded", progress=100.0)
+            state_store.record_job_completion(
+                job_id,
+                status="succeeded",
+                result={"recommendations": recommendations},
+            )
+        except Exception as exc:
+            state_store.record_job_step(job_id, "recommend", status="failed", error=str(exc))
+            state_store.record_job_completion(job_id, status="failed", error=str(exc))
+
+    job = await enqueue_background_job(
+        job_type="recommend_templates",
+        steps=[{"name": "recommend", "label": "Generate recommendations"}],
+        meta={"background": True, "context": context, "connection_id": connection_id},
+        runner=runner,
     )
-    return {"status": "ok", "recommendations": recommendations, "correlation_id": correlation_id}
+    return {"status": "queued", "job_id": job["id"], "correlation_id": correlation_id}
 
 
 @router.get("/catalog")

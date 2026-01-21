@@ -73,6 +73,11 @@ const formatEmailList = (list) => {
   return list.filter(Boolean).join(', ')
 }
 
+const isValidEmail = (email) => {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  return emailRegex.test(email)
+}
+
 function ScheduleDialog({
   open,
   onClose,
@@ -82,6 +87,7 @@ function ScheduleDialog({
   defaultTemplateId,
   defaultConnectionId,
   onSave,
+  onError,
 }) {
   const [form, setForm] = useState({
     name: '',
@@ -140,6 +146,21 @@ function ScheduleDialog({
     const emailRecipients = parseEmailList(form.emailRecipients)
     const startDate = buildDateTime(form.startDate)
     const endDate = buildDateTime(form.endDate, true)
+
+    // Validate date range: end date must be >= start date
+    if (form.startDate && form.endDate && form.endDate < form.startDate) {
+      onError?.('End date must be on or after start date')
+      return
+    }
+
+    // Validate email format if recipients are provided
+    if (emailRecipients.length > 0) {
+      const invalidEmail = emailRecipients.find((email) => !isValidEmail(email))
+      if (invalidEmail) {
+        onError?.(`Invalid email address: ${invalidEmail}`)
+        return
+      }
+    }
 
     setSaving(true)
     try {
@@ -314,6 +335,7 @@ export default function SchedulesPage() {
   const [deletingSchedule, setDeletingSchedule] = useState(null)
   const [menuAnchor, setMenuAnchor] = useState(null)
   const [menuSchedule, setMenuSchedule] = useState(null)
+  const [togglingId, setTogglingId] = useState(null)
   const didLoadSchedulesRef = useRef(false)
   const didLoadTemplatesRef = useRef(false)
 
@@ -394,19 +416,30 @@ export default function SchedulesPage() {
     handleCloseMenu()
   }, [menuSchedule, handleCloseMenu])
 
+  const handleToggleSchedule = useCallback(
+    async (schedule, nextActive) => {
+      if (!schedule) return
+      setTogglingId(schedule.id)
+      try {
+        await api.updateSchedule(schedule.id, { active: nextActive })
+        toast.show(`Schedule ${nextActive ? 'enabled' : 'paused'}`, 'success')
+        await fetchSchedules()
+      } catch (err) {
+        toast.show(err.message || 'Failed to update schedule', 'error')
+      } finally {
+        setTogglingId(null)
+      }
+    },
+    [toast, fetchSchedules]
+  )
+
   const handleToggleEnabled = useCallback(async () => {
     if (!menuSchedule) return
     const currentActive = menuSchedule.active ?? menuSchedule.enabled ?? true
     const nextActive = !currentActive
-    try {
-      await api.updateSchedule(menuSchedule.id, { active: nextActive })
-      toast.show(`Schedule ${nextActive ? 'enabled' : 'paused'}`, 'success')
-      fetchSchedules()
-    } catch (err) {
-      toast.show(err.message || 'Failed to update schedule', 'error')
-    }
+    await handleToggleSchedule(menuSchedule, nextActive)
     handleCloseMenu()
-  }, [menuSchedule, toast, fetchSchedules, handleCloseMenu])
+  }, [menuSchedule, handleCloseMenu, handleToggleSchedule])
 
   const handleSaveSchedule = useCallback(
     async (data) => {
@@ -478,12 +511,20 @@ export default function SchedulesPage() {
         renderCell: (value, row) => {
           const active = row.active ?? value ?? true
           return (
-            <Chip
-              label={active ? 'Active' : 'Paused'}
-              size="small"
-              color={active ? 'success' : 'default'}
-              variant="outlined"
-            />
+            <Stack direction="row" alignItems="center" spacing={1}>
+              <Switch
+                size="small"
+                checked={active}
+                disabled={togglingId === row.id}
+                onChange={(e) => {
+                  e.stopPropagation()
+                  handleToggleSchedule(row, e.target.checked)
+                }}
+              />
+              <Typography variant="caption" color="text.secondary">
+                {active ? 'Active' : 'Paused'}
+              </Typography>
+            </Stack>
           )
         },
       },
@@ -507,7 +548,7 @@ export default function SchedulesPage() {
         },
       },
     ],
-    [templates]
+    [templates, handleToggleSchedule, togglingId]
   )
 
   const filters = useMemo(
@@ -605,6 +646,7 @@ export default function SchedulesPage() {
           defaultTemplateId={defaultTemplateId}
           defaultConnectionId={defaultConnectionId}
           onSave={handleSaveSchedule}
+          onError={(msg) => toast.show(msg, 'error')}
         />
 
         <ConfirmModal

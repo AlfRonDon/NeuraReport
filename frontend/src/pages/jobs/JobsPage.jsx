@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   Box,
   Chip,
@@ -85,6 +86,7 @@ const STATUS_CONFIG = {
 
 export default function JobsPage() {
   const toast = useToast()
+  const navigate = useNavigate()
   const [jobs, setJobs] = useState([])
   const [loading, setLoading] = useState(false)
   const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false)
@@ -99,26 +101,50 @@ export default function JobsPage() {
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
   const [bulkActionLoading, setBulkActionLoading] = useState(false)
   const pollIntervalRef = useRef(null)
+  const isMountedRef = useRef(true)
+  const isUserActionInProgressRef = useRef(false)
+  const abortControllerRef = useRef(null)
 
-  const fetchJobs = useCallback(async () => {
+  const fetchJobs = useCallback(async (force = false) => {
+    // Skip polling if a user action is in progress (unless forced)
+    if (!force && isUserActionInProgressRef.current) {
+      return
+    }
+
+    // Cancel any pending fetch
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
+    }
+    abortControllerRef.current = new AbortController()
+
     try {
       const data = await api.listJobs({ limit: 50 })
-      const normalized = Array.isArray(data.jobs) ? data.jobs.map((job) => normalizeJob(job)) : []
-      setJobs(normalized)
+      // Only update state if component is still mounted and no user action started
+      if (isMountedRef.current && (force || !isUserActionInProgressRef.current)) {
+        const normalized = Array.isArray(data.jobs) ? data.jobs.map((job) => normalizeJob(job)) : []
+        setJobs(normalized)
+      }
     } catch (err) {
-      console.error('Failed to fetch jobs:', err)
+      if (err.name !== 'AbortError') {
+        console.error('Failed to fetch jobs:', err)
+      }
     }
   }, [])
 
   useEffect(() => {
+    isMountedRef.current = true
     setLoading(true)
-    fetchJobs().finally(() => setLoading(false))
+    fetchJobs(true).finally(() => setLoading(false))
 
-    pollIntervalRef.current = setInterval(fetchJobs, 5000)
+    pollIntervalRef.current = setInterval(() => fetchJobs(false), 5000)
 
     return () => {
+      isMountedRef.current = false
       if (pollIntervalRef.current) {
         clearInterval(pollIntervalRef.current)
+      }
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort()
       }
     }
   }, [fetchJobs])
@@ -150,6 +176,9 @@ export default function JobsPage() {
   const handleCancelConfirm = useCallback(async () => {
     if (!cancellingJob) return
 
+    // Prevent polling from overwriting our optimistic update
+    isUserActionInProgressRef.current = true
+
     // Immediately update local state to show "cancelling" status
     setJobs((prev) =>
       prev.map((job) =>
@@ -161,13 +190,13 @@ export default function JobsPage() {
     try {
       await api.cancelJob(cancellingJob.id)
       toast.show('Job cancelled', 'success')
-      fetchJobs()
     } catch (err) {
       toast.show(err.message || 'Failed to cancel job', 'error')
-      // Revert optimistic update on error
-      fetchJobs()
     } finally {
       setCancellingJob(null)
+      isUserActionInProgressRef.current = false
+      // Force refresh after action completes
+      fetchJobs(true)
     }
   }, [cancellingJob, toast, fetchJobs])
 
@@ -184,19 +213,26 @@ export default function JobsPage() {
     handleCloseMenu()
   }, [menuJob, handleCloseMenu])
 
+  const handleRowClick = useCallback((row) => {
+    setDetailsJob(row)
+    setDetailsDialogOpen(true)
+  }, [])
+
   const handleRetry = useCallback(async () => {
     if (!menuJob) return
+    isUserActionInProgressRef.current = true
     setRetrying(true)
     handleCloseMenu()
     try {
       // Use the dedicated retry endpoint
       await api.retryJob(menuJob.id)
       toast.show('Job restarted successfully', 'success')
-      fetchJobs()
     } catch (err) {
       toast.show(err.message || 'Failed to retry job', 'error')
     } finally {
       setRetrying(false)
+      isUserActionInProgressRef.current = false
+      fetchJobs(true)
     }
   }, [menuJob, toast, fetchJobs, handleCloseMenu])
 
@@ -224,6 +260,9 @@ export default function JobsPage() {
       return
     }
 
+    // Prevent polling from overwriting our optimistic update
+    isUserActionInProgressRef.current = true
+
     // Immediately update local state to show "cancelling" status
     const activeIdSet = new Set(activeIds)
     setJobs((prev) =>
@@ -246,13 +285,12 @@ export default function JobsPage() {
       } else {
         toast.show(`Cancelled ${cancelledCount} job${cancelledCount !== 1 ? 's' : ''}`, 'success')
       }
-      await fetchJobs()
     } catch (err) {
       toast.show(err.message || 'Failed to cancel jobs', 'error')
-      // Revert optimistic update on error
-      await fetchJobs()
     } finally {
       setBulkActionLoading(false)
+      isUserActionInProgressRef.current = false
+      fetchJobs(true)
     }
   }, [selectedIds, jobs, toast, fetchJobs])
 
@@ -266,6 +304,7 @@ export default function JobsPage() {
       setBulkDeleteOpen(false)
       return
     }
+    isUserActionInProgressRef.current = true
     setBulkActionLoading(true)
     try {
       const result = await api.bulkDeleteJobs(selectedIds)
@@ -279,12 +318,13 @@ export default function JobsPage() {
       } else {
         toast.show(`Deleted ${deletedCount} job${deletedCount !== 1 ? 's' : ''}`, 'success')
       }
-      await fetchJobs()
     } catch (err) {
       toast.show(err.message || 'Failed to delete jobs', 'error')
     } finally {
       setBulkActionLoading(false)
       setBulkDeleteOpen(false)
+      isUserActionInProgressRef.current = false
+      fetchJobs(true)
     }
   }, [selectedIds, toast, fetchJobs])
 
@@ -438,9 +478,14 @@ export default function JobsPage() {
       key: 'type',
       label: 'Type',
       options: [
-        { value: 'report', label: 'Report' },
-        { value: 'batch', label: 'Batch' },
-        { value: 'schedule', label: 'Schedule' },
+        { value: 'run_report', label: 'Report' },
+        { value: 'verify_template', label: 'Verify Template' },
+        { value: 'verify_excel', label: 'Verify Excel' },
+        { value: 'recommend_templates', label: 'Recommendations' },
+        { value: 'summary_generate', label: 'Summary' },
+        { value: 'summary_report', label: 'Report Summary' },
+        { value: 'chart_analyze', label: 'Chart Analyze' },
+        { value: 'chart_generate', label: 'Chart Generate' },
       ],
     },
   ], [])
@@ -476,6 +521,7 @@ export default function JobsPage() {
         filters={filters}
         selectable
         onSelectionChange={setSelectedIds}
+        onRowClick={handleRowClick}
         bulkActions={bulkActions}
         onBulkDelete={handleBulkDeleteOpen}
         actions={[
@@ -506,6 +552,8 @@ export default function JobsPage() {
           icon: WorkIcon,
           title: 'No jobs yet',
           description: 'Jobs will appear here when you generate reports.',
+          actionLabel: 'Generate Report',
+          onAction: () => navigate('/reports'),
         }}
       />
 
@@ -577,7 +625,14 @@ export default function JobsPage() {
         onClose={() => setBulkDeleteOpen(false)}
         onConfirm={handleBulkDeleteConfirm}
         title="Delete Jobs"
-        message={`Delete ${selectedIds.length} job${selectedIds.length !== 1 ? 's' : ''} from history? This action cannot be undone.`}
+        message={(() => {
+          const selectedJobs = jobs.filter((j) => selectedIds.includes(j.id))
+          const names = selectedJobs.slice(0, 3).map((j) => j.templateName || j.id?.slice(0, 8) || 'Unknown')
+          const namesList = names.join(', ')
+          const remaining = selectedIds.length - 3
+          const suffix = remaining > 0 ? ` and ${remaining} more` : ''
+          return `Delete ${selectedIds.length} job${selectedIds.length !== 1 ? 's' : ''} (${namesList}${suffix}) from history? This action cannot be undone.`
+        })()}
         confirmLabel="Delete Jobs"
         severity="error"
         loading={bulkActionLoading}
@@ -678,6 +733,38 @@ export default function JobsPage() {
                   </Alert>
                 </>
               )}
+              {(() => {
+                const resultPayload = detailsJob?.result && Object.keys(detailsJob.result || {}).length
+                  ? detailsJob.result
+                  : null
+                if (!resultPayload) return null
+                const summaryText = typeof resultPayload.summary === 'string' ? resultPayload.summary : null
+                const bodyText = summaryText || JSON.stringify(resultPayload, null, 2)
+                return (
+                  <>
+                    <Divider sx={{ borderColor: alpha(palette.scale[100], 0.08) }} />
+                    <Box>
+                      <Typography variant="caption" sx={{ color: palette.scale[500] }}>Result</Typography>
+                      <Box
+                        component="pre"
+                        sx={{
+                          mt: 1,
+                          p: 1.5,
+                          bgcolor: alpha(palette.scale[100], 0.06),
+                          borderRadius: 1,
+                          fontSize: '0.75rem',
+                          whiteSpace: 'pre-wrap',
+                          color: palette.scale[200],
+                          maxHeight: 260,
+                          overflow: 'auto',
+                        }}
+                      >
+                        {bodyText}
+                      </Box>
+                    </Box>
+                  </>
+                )
+              })()}
             </Stack>
           )}
         </DialogContent>
@@ -691,6 +778,30 @@ export default function JobsPage() {
               sx={{ textTransform: 'none' }}
             >
               Download
+            </Button>
+          )}
+          {canRetryJob(detailsJob?.status) && (
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={<ReplayIcon sx={{ fontSize: 16 }} />}
+              disabled={retrying}
+              onClick={async () => {
+                setRetrying(true)
+                try {
+                  await api.retryJob(detailsJob.id)
+                  toast.show('Job restarted successfully', 'success')
+                  setDetailsDialogOpen(false)
+                  fetchJobs()
+                } catch (err) {
+                  toast.show(err.message || 'Failed to retry job', 'error')
+                } finally {
+                  setRetrying(false)
+                }
+              }}
+              sx={{ textTransform: 'none' }}
+            >
+              {retrying ? 'Retrying...' : 'Retry'}
             </Button>
           )}
           <Button onClick={() => setDetailsDialogOpen(false)} sx={{ textTransform: 'none' }}>

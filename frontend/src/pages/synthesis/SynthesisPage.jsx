@@ -44,8 +44,11 @@ import {
   AutoAwesome as SynthesizeIcon,
   ExpandMore as ExpandMoreIcon,
   Merge as MergeIcon,
+  Preview as PreviewIcon,
 } from '@mui/icons-material';
 import useSynthesisStore from '../../stores/synthesisStore';
+import ConfirmModal from '../../ui/Modal/ConfirmModal';
+import { useToast } from '../../components/ToastProvider';
 
 export default function SynthesisPage() {
   const {
@@ -74,6 +77,11 @@ export default function SynthesisPage() {
   const [docType, setDocType] = useState('text');
   const [outputFormat, setOutputFormat] = useState('structured');
   const [focusTopics, setFocusTopics] = useState('');
+  const [previewDoc, setPreviewDoc] = useState(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [deleteSessionConfirm, setDeleteSessionConfirm] = useState({ open: false, sessionId: null, sessionName: '' });
+  const [removeDocConfirm, setRemoveDocConfirm] = useState({ open: false, docId: null, docName: '' });
+  const toast = useToast();
 
   const [initialLoading, setInitialLoading] = useState(true);
 
@@ -110,18 +118,43 @@ export default function SynthesisPage() {
     const file = event.target.files[0];
     if (!file) return;
 
+    const ext = file.name.split('.').pop().toLowerCase();
+
+    // Binary file types that can't be read as text
+    const binaryExtensions = ['pdf', 'xlsx', 'xls', 'doc', 'docx'];
+    if (binaryExtensions.includes(ext)) {
+      toast.show(`${ext.toUpperCase()} files must be converted to text format first. Please paste the content directly.`, 'warning');
+      event.target.value = '';
+      return;
+    }
+
+    // Check file size (max 5MB for text files)
+    const maxSize = 5 * 1024 * 1024;
+    if (file.size > maxSize) {
+      toast.show('File size exceeds 5MB limit', 'error');
+      event.target.value = '';
+      return;
+    }
+
     const reader = new FileReader();
     reader.onload = (e) => {
+      const content = e.target.result;
+      // Check if content appears to be binary
+      if (content.includes('\0')) {
+        toast.show('File appears to be binary. Please upload a text file or paste content directly.', 'error');
+        event.target.value = '';
+        return;
+      }
       setDocName(file.name);
-      setDocContent(e.target.result);
+      setDocContent(content);
 
       // Set doc type based on file extension
-      const ext = file.name.split('.').pop().toLowerCase();
-      if (['pdf'].includes(ext)) setDocType('pdf');
-      else if (['xlsx', 'xls'].includes(ext)) setDocType('excel');
-      else if (['doc', 'docx'].includes(ext)) setDocType('word');
-      else if (['json'].includes(ext)) setDocType('json');
+      if (['json'].includes(ext)) setDocType('json');
       else setDocType('text');
+    };
+    reader.onerror = () => {
+      toast.show('Failed to read file', 'error');
+      event.target.value = '';
     };
     reader.readAsText(file);
   };
@@ -132,6 +165,16 @@ export default function SynthesisPage() {
       focusTopics: focusTopics ? focusTopics.split(',').map(t => t.trim()) : undefined,
       outputFormat,
     });
+  };
+
+  const handleOpenPreview = (doc) => {
+    setPreviewDoc(doc);
+    setPreviewOpen(true);
+  };
+
+  const handleClosePreview = () => {
+    setPreviewOpen(false);
+    setPreviewDoc(null);
   };
 
   const getSeverityColor = (severity) => {
@@ -217,7 +260,7 @@ export default function SynthesisPage() {
                         size="small"
                         onClick={(e) => {
                           e.stopPropagation();
-                          deleteSession(session.id);
+                          setDeleteSessionConfirm({ open: true, sessionId: session.id, sessionName: session.name });
                         }}
                       >
                         <DeleteIcon fontSize="small" />
@@ -268,9 +311,17 @@ export default function SynthesisPage() {
                             <Chip size="small" label={doc.doc_type} />
                           </CardContent>
                           <CardActions>
+                            <Tooltip title="Preview">
+                              <IconButton
+                                size="small"
+                                onClick={() => handleOpenPreview(doc)}
+                              >
+                                <PreviewIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
                             <IconButton
                               size="small"
-                              onClick={() => removeDocument(currentSession.id, doc.id)}
+                              onClick={() => setRemoveDocConfirm({ open: true, docId: doc.id, docName: doc.name })}
                             >
                               <DeleteIcon fontSize="small" />
                             </IconButton>
@@ -494,6 +545,53 @@ export default function SynthesisPage() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Preview Document Dialog */}
+      <Dialog open={previewOpen} onClose={handleClosePreview} maxWidth="md" fullWidth>
+        <DialogTitle>Document Preview</DialogTitle>
+        <DialogContent dividers>
+          <Typography variant="subtitle2" sx={{ mb: 1 }}>
+            {previewDoc?.name || 'Document'}
+          </Typography>
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>
+            {previewDoc?.doc_type || previewDoc?.docType || 'text'}
+          </Typography>
+          <Paper sx={{ p: 2, bgcolor: 'grey.50', maxHeight: 420, overflow: 'auto' }}>
+            <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+              {previewDoc?.content || 'No content available.'}
+            </Typography>
+          </Paper>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleClosePreview}>Close</Button>
+        </DialogActions>
+      </Dialog>
+
+      <ConfirmModal
+        open={deleteSessionConfirm.open}
+        onClose={() => setDeleteSessionConfirm({ open: false, sessionId: null, sessionName: '' })}
+        onConfirm={() => {
+          deleteSession(deleteSessionConfirm.sessionId);
+          setDeleteSessionConfirm({ open: false, sessionId: null, sessionName: '' });
+        }}
+        title="Delete Session"
+        message={`Are you sure you want to delete "${deleteSessionConfirm.sessionName}"? All documents and analysis data will be permanently removed.`}
+        confirmLabel="Delete"
+        severity="error"
+      />
+
+      <ConfirmModal
+        open={removeDocConfirm.open}
+        onClose={() => setRemoveDocConfirm({ open: false, docId: null, docName: '' })}
+        onConfirm={() => {
+          removeDocument(currentSession?.id, removeDocConfirm.docId);
+          setRemoveDocConfirm({ open: false, docId: null, docName: '' });
+        }}
+        title="Remove Document"
+        message={`Are you sure you want to remove "${removeDocConfirm.docName}" from this session?`}
+        confirmLabel="Remove"
+        severity="warning"
+      />
     </Box>
   );
 }

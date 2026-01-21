@@ -21,7 +21,7 @@ from ..utils.validation import (
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_MODEL = "gpt-4o-mini"
+DEFAULT_MODEL = "gpt-5"
 
 
 class GeneratorAssetsError(RuntimeError):

@@ -43,7 +43,7 @@ from .helpers import (
 )
 
 
-def verify_template(file: UploadFile, connection_id: str, request: Request, refine_iters: int = 0):
+def verify_template(file: UploadFile, connection_id: str | None, request: Request, refine_iters: int = 0):
     original_filename = getattr(file, "filename", "") or ""
     template_name_hint = Path(original_filename).stem if original_filename else ""
     tid = generate_template_id(template_name_hint, kind="pdf")

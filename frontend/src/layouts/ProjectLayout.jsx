@@ -3,6 +3,7 @@ import { Box, useMediaQuery, useTheme, alpha } from '@mui/material'
 import { Outlet } from 'react-router-dom'
 import Sidebar from '../navigation/Sidebar'
 import TopNav from '../navigation/TopNav'
+import OfflineBanner from '../components/OfflineBanner'
 import { useAppStore } from '../store/useAppStore'
 import { palette } from '../theme'
 
@@ -63,6 +64,7 @@ export default function ProjectLayout({ children }) {
           }),
         }}
       >
+        <OfflineBanner />
         {/* Top Navigation */}
         <TopNav
           onMenuClick={handleToggleSidebar}

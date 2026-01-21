@@ -17,6 +17,19 @@ export async function generateSummary({ content, tone = 'formal', maxSentences =
 }
 
 /**
+ * Queue summary generation in the background.
+ */
+export async function queueSummary({ content, tone = 'formal', maxSentences = 5, focusAreas }) {
+  const response = await apiClient.post('/summary/generate?background=true', {
+    content,
+    tone,
+    max_sentences: maxSentences,
+    focus_areas: focusAreas,
+  });
+  return response.data;
+}
+
+/**
  * Generate summary for a specific report
  */
 export async function getReportSummary(reportId) {
@@ -24,7 +37,17 @@ export async function getReportSummary(reportId) {
   return response.data;
 }
 
+/**
+ * Queue report summary generation in the background.
+ */
+export async function queueReportSummary(reportId) {
+  const response = await apiClient.get(`/summary/reports/${reportId}?background=true`);
+  return response.data;
+}
+
 export default {
   generateSummary,
+  queueSummary,
   getReportSummary,
+  queueReportSummary,
 };

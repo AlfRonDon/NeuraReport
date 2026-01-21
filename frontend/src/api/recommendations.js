@@ -17,6 +17,19 @@ export async function getRecommendations({ dataDescription, dataColumns, industr
 }
 
 /**
+ * Queue template recommendations in the background.
+ */
+export async function queueRecommendations({ dataDescription, dataColumns, industry, outputFormat }) {
+  const response = await apiClient.post('/recommendations/templates?background=true', {
+    data_description: dataDescription,
+    data_columns: dataColumns,
+    industry,
+    output_format: outputFormat,
+  });
+  return response.data;
+}
+
+/**
  * Get template catalog
  */
 export async function getCatalog() {
@@ -26,5 +39,6 @@ export async function getCatalog() {
 
 export default {
   getRecommendations,
+  queueRecommendations,
   getCatalog,
 };

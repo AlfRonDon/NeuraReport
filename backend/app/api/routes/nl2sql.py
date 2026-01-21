@@ -165,3 +165,20 @@ async def get_query_history(
         "history": [h.dict() for h in history],
         "correlation_id": correlation_id,
     }
+
+
+@router.delete("/history/{entry_id}")
+async def delete_query_history_entry(
+    entry_id: str,
+    request: Request,
+    svc: NL2SQLService = Depends(get_service),
+):
+    """Delete a query history entry."""
+    correlation_id = getattr(request.state, "correlation_id", None)
+    deleted = svc.delete_query_history_entry(entry_id)
+    return {
+        "status": "ok" if deleted else "error",
+        "deleted": deleted,
+        "entry_id": entry_id,
+        "correlation_id": correlation_id,
+    }

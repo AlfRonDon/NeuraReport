@@ -58,7 +58,7 @@ class TextToSQL:
 
     # Recommended models for SQL generation per provider
     SQL_MODELS = {
-        LLMProvider.OPENAI: "gpt-4o",
+        LLMProvider.OPENAI: "gpt-5",
         LLMProvider.OLLAMA: "sqlcoder:7b",  # or deepseek-coder-v2
         LLMProvider.DEEPSEEK: "deepseek-coder",
         LLMProvider.ANTHROPIC: "claude-3-5-sonnet-20241022",

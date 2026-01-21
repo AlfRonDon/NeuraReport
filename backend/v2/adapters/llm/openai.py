@@ -71,6 +71,30 @@ class OpenAIClient(LLMClient):
         last_error: Exception | None = None
         for attempt in range(cfg.retry_count + 1):
             try:
+                if _use_responses_model(cfg.model):
+                    payload = _prepare_responses_payload(
+                        {
+                            "model": cfg.model,
+                            "messages": api_messages,
+                            "temperature": cfg.temperature,
+                            "max_tokens": cfg.max_tokens,
+                        }
+                    )
+                    response = await asyncio.wait_for(
+                        client.responses.create(**payload),
+                        timeout=cfg.timeout_seconds,
+                    )
+                    content = _response_output_text(response)
+                    usage = _response_usage(response)
+
+                    return Ok(LLMResponse(
+                        content=content,
+                        model=response.model if hasattr(response, "model") else cfg.model,
+                        usage=usage,
+                        finish_reason="stop",
+                        raw_response=response,
+                    ))
+
                 response = await asyncio.wait_for(
                     client.chat.completions.create(
                         model=cfg.model,
@@ -185,9 +209,111 @@ Output ONLY the JSON, no additional text or markdown.
             )
             return Ok(response.data[0].embedding)
         except Exception as e:
-            return Err(LLMError(
-                code="embedding_failed",
-                message=str(e),
-                provider="openai",
-                cause=e,
-            ))
+        return Err(LLMError(
+            code="embedding_failed",
+            message=str(e),
+            provider="openai",
+            cause=e,
+        ))
+
+
+def _use_responses_model(model_name: Optional[str]) -> bool:
+    force = os.getenv("OPENAI_USE_RESPONSES", "").lower() in {"1", "true", "yes"}
+    return force or str(model_name or "").lower().startswith("gpt-5")
+
+
+def _prepare_responses_payload(request_kwargs: Dict[str, Any]) -> Dict[str, Any]:
+    payload = dict(request_kwargs)
+    messages = payload.pop("messages", [])
+    payload["input"] = _messages_to_responses_input(messages)
+    if "max_tokens" in payload and "max_output_tokens" not in payload:
+        payload["max_output_tokens"] = payload.pop("max_tokens")
+    return payload
+
+
+def _messages_to_responses_input(messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    converted: List[Dict[str, Any]] = []
+    for message in messages:
+        if not isinstance(message, dict):
+            continue
+        role = message.get("role") or "user"
+        content = message.get("content", "")
+        if isinstance(content, list):
+            parts: List[Dict[str, Any]] = []
+            for part in content:
+                if isinstance(part, dict):
+                    part_type = part.get("type")
+                    if part_type == "text":
+                        parts.append({"type": "input_text", "text": part.get("text", "")})
+                        continue
+                    if part_type == "image_url":
+                        image_url = part.get("image_url")
+                        if isinstance(image_url, dict):
+                            image_url = image_url.get("url") or image_url.get("image_url")
+                        parts.append({"type": "input_image", "image_url": image_url})
+                        continue
+                    parts.append(part)
+                else:
+                    parts.append({"type": "input_text", "text": str(part)})
+            content = parts
+        converted.append({"role": role, "content": content})
+    return converted
+
+
+def _response_output_text(response: Any) -> str:
+    if isinstance(response, dict):
+        output_text = response.get("output_text")
+        if isinstance(output_text, str) and output_text.strip():
+            return output_text
+        output = response.get("output")
+    else:
+        output_text = getattr(response, "output_text", None)
+        if isinstance(output_text, str) and output_text.strip():
+            return output_text
+        output = getattr(response, "output", None)
+
+    if isinstance(output, list):
+        texts: List[str] = []
+        for item in output:
+            if isinstance(item, dict):
+                item_type = item.get("type")
+                content = item.get("content") or []
+            else:
+                item_type = getattr(item, "type", None)
+                content = getattr(item, "content", None) or []
+            if item_type != "message":
+                continue
+            for segment in content:
+                if isinstance(segment, dict):
+                    seg_type = segment.get("type")
+                    text = segment.get("text")
+                else:
+                    seg_type = getattr(segment, "type", None)
+                    text = getattr(segment, "text", None)
+                if seg_type in {"output_text", "text"} and isinstance(text, str):
+                    texts.append(text)
+        if texts:
+            return "\n".join(texts)
+    return ""
+
+
+def _response_usage(response: Any) -> Dict[str, int]:
+    usage = response.get("usage") if isinstance(response, dict) else getattr(response, "usage", None)
+    if usage is None:
+        return {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+    if isinstance(usage, dict):
+        input_tokens = usage.get("input_tokens") or usage.get("prompt_tokens") or 0
+        output_tokens = usage.get("output_tokens") or usage.get("completion_tokens") or 0
+    else:
+        input_tokens = getattr(usage, "input_tokens", None)
+        if input_tokens is None:
+            input_tokens = getattr(usage, "prompt_tokens", 0)
+        output_tokens = getattr(usage, "output_tokens", None)
+        if output_tokens is None:
+            output_tokens = getattr(usage, "completion_tokens", 0)
+    total_tokens = int(input_tokens or 0) + int(output_tokens or 0)
+    return {
+        "prompt_tokens": int(input_tokens or 0),
+        "completion_tokens": int(output_tokens or 0),
+        "total_tokens": int(total_tokens),
+    }

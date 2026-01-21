@@ -12,7 +12,7 @@ import TuneIcon from '@mui/icons-material/Tune'
 import ScheduleIcon from '@mui/icons-material/Schedule'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import ExpandLessIcon from '@mui/icons-material/ExpandLess'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   fetchTemplateKeyOptions,
   discoverReports,
@@ -106,6 +106,16 @@ export default function TemplatesPane() {
   const setDiscoveryResults = useAppStore((state) => state.setDiscoveryResults)
   const clearDiscoveryResults = useAppStore((state) => state.clearDiscoveryResults)
   const toast = useToast()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const tabParam = searchParams.get('tab')
+  const activeTab = tabParam === 'configure' ? 1 : tabParam === 'schedules' ? 2 : 0
+
+  const handleTabChange = useCallback((e, newValue) => {
+    const tabMap = { 0: undefined, 1: 'configure', 2: 'schedules' }
+    const newTab = tabMap[newValue]
+    setSearchParams(newTab ? { tab: newTab } : {}, { replace: true })
+  }, [setSearchParams])
+
   const approved = useMemo(() => templates.filter((t) => t.status === 'approved'), [templates])
   const [selected, setSelected] = useState([])
   const [tagFilter, setTagFilter] = useState([])
@@ -140,7 +150,6 @@ export default function TemplatesPane() {
   const [editScheduleFields, setEditScheduleFields] = useState({})
   const [scheduleUpdating, setScheduleUpdating] = useState(false)
   const [generation, setGeneration] = useState({ items: [] })
-  const [activeTab, setActiveTab] = useState(0)
   const discoveryResetReady = useRef(false)
   const keyOptionsFetchKeyRef = useRef({})
   const isDevEnv = typeof import.meta !== 'undefined' && Boolean(import.meta.env?.DEV)
@@ -826,7 +835,7 @@ export default function TemplatesPane() {
         <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
           <Tabs
             value={activeTab}
-            onChange={(e, v) => setActiveTab(v)}
+            onChange={handleTabChange}
             variant="scrollable"
             scrollButtons="auto"
             sx={{

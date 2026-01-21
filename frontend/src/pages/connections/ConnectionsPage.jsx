@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import { Box, Chip, IconButton, Menu, MenuItem, ListItemIcon, ListItemText, alpha } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
 import MoreVertIcon from '@mui/icons-material/MoreVert'
@@ -14,6 +14,7 @@ import { ConfirmModal } from '../../ui/Modal'
 import { Drawer } from '../../ui/Drawer'
 import { useAppStore } from '../../store/useAppStore'
 import { useToast } from '../../components/ToastProvider'
+import FavoriteButton from '../../components/FavoriteButton'
 import * as api from '../../api/client'
 import ConnectionForm from './ConnectionForm'
 import ConnectionSchemaDrawer from './ConnectionSchemaDrawer'
@@ -37,6 +38,34 @@ export default function ConnectionsPage() {
   const [menuConnection, setMenuConnection] = useState(null)
   const [schemaOpen, setSchemaOpen] = useState(false)
   const [schemaConnection, setSchemaConnection] = useState(null)
+  const [favorites, setFavorites] = useState(new Set())
+  const didLoadFavoritesRef = useRef(false)
+
+  useEffect(() => {
+    if (didLoadFavoritesRef.current) return
+    didLoadFavoritesRef.current = true
+    api.getFavorites()
+      .then((data) => {
+        const favIds = (data.connections || []).map((c) => c.id)
+        setFavorites(new Set(favIds))
+      })
+      .catch((err) => {
+        console.error('Failed to load favorites:', err)
+        // Non-critical - don't block UI but log for debugging
+      })
+  }, [])
+
+  const handleFavoriteToggle = useCallback((connectionId, isFavorite) => {
+    setFavorites((prev) => {
+      const next = new Set(prev)
+      if (isFavorite) {
+        next.add(connectionId)
+      } else {
+        next.delete(connectionId)
+      }
+      return next
+    })
+  }, [])
 
   const handleOpenMenu = useCallback((event, connection) => {
     event.stopPropagation()
@@ -158,7 +187,13 @@ export default function ConnectionsPage() {
       field: 'name',
       headerName: 'Name',
       renderCell: (value, row) => (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <FavoriteButton
+            entityType="connections"
+            entityId={row.id}
+            initialFavorite={favorites.has(row.id)}
+            onToggle={(isFav) => handleFavoriteToggle(row.id, isFav)}
+          />
           <Box
             sx={{
               width: 32,
@@ -237,7 +272,7 @@ export default function ConnectionsPage() {
         </Box>
       ),
     },
-  ], [])
+  ], [favorites, handleFavoriteToggle])
 
   const filters = useMemo(() => [
     {

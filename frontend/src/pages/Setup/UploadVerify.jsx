@@ -308,8 +308,13 @@ export default function UploadVerify() {
 
   const startVerify = async () => {
     if (!file) return
-    if (isExcelFlow && !connectionId) {
-      toast.show('Please connect to a database before verifying Excel templates.', 'warning')
+    if (!connectionId) {
+      toast.show(
+        isExcelFlow
+          ? 'Please connect to a database before verifying Excel templates.'
+          : 'Please connect to a database before verifying templates.',
+        'warning'
+      )
       return
     }
 
@@ -518,8 +523,13 @@ export default function UploadVerify() {
 
   const queueVerify = async () => {
     if (!file) return
-    if (isExcelFlow && !connectionId) {
-      toast.show('Please connect to a database before verifying Excel templates.', 'warning')
+    if (!connectionId) {
+      toast.show(
+        isExcelFlow
+          ? 'Please connect to a database before verifying Excel templates.'
+          : 'Please connect to a database before verifying templates.',
+        'warning'
+      )
       return
     }
 

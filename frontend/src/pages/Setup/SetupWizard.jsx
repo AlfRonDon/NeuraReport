@@ -1,11 +1,38 @@
-import { useState, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useCallback, useEffect } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { WizardLayout } from '../../layouts'
 import { useAppStore } from '../../store/useAppStore'
 import { useToast } from '../../components/ToastProvider'
 import StepConnection from './steps/StepConnection'
 import StepTemplate from './steps/StepTemplate'
 import StepMapping from './steps/StepMapping'
+
+const WIZARD_STORAGE_KEY = 'neurareport_wizard_state'
+
+const saveWizardState = (state) => {
+  try {
+    sessionStorage.setItem(WIZARD_STORAGE_KEY, JSON.stringify(state))
+  } catch (e) {
+    // Ignore storage errors
+  }
+}
+
+const loadWizardState = () => {
+  try {
+    const stored = sessionStorage.getItem(WIZARD_STORAGE_KEY)
+    return stored ? JSON.parse(stored) : null
+  } catch (e) {
+    return null
+  }
+}
+
+const clearWizardState = () => {
+  try {
+    sessionStorage.removeItem(WIZARD_STORAGE_KEY)
+  } catch (e) {
+    // Ignore storage errors
+  }
+}
 
 const WIZARD_STEPS = [
   {
@@ -25,23 +52,45 @@ const WIZARD_STEPS = [
   },
 ]
 
+const STEP_MAP = { connection: 0, template: 1, mapping: 2 }
+const STEP_KEYS = ['connection', 'template', 'mapping']
+
 export default function SetupWizard() {
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const toast = useToast()
-  const [currentStep, setCurrentStep] = useState(0)
   const [loading, setLoading] = useState(false)
 
-  // Wizard state
-  const [wizardState, setWizardState] = useState({
-    connectionId: null,
-    templateId: null,
-    templateKind: 'pdf',
-    mapping: null,
-    keys: [],
+  // Get step from URL or default to 0
+  const stepParam = searchParams.get('step') || 'connection'
+  const [currentStep, setCurrentStep] = useState(() => STEP_MAP[stepParam] ?? 0)
+
+  // Load wizard state from sessionStorage on mount
+  const [wizardState, setWizardState] = useState(() => {
+    const stored = loadWizardState()
+    return stored || {
+      connectionId: null,
+      templateId: null,
+      templateKind: 'pdf',
+      mapping: null,
+      keys: [],
+    }
   })
 
   const activeConnection = useAppStore((s) => s.activeConnection)
   const templateId = useAppStore((s) => s.templateId)
+
+  // Persist wizard state to sessionStorage whenever it changes
+  useEffect(() => {
+    saveWizardState(wizardState)
+  }, [wizardState])
+
+  // Update URL when step changes
+  useEffect(() => {
+    const newParams = new URLSearchParams(searchParams)
+    newParams.set('step', STEP_KEYS[currentStep])
+    setSearchParams(newParams, { replace: true })
+  }, [currentStep, searchParams, setSearchParams])
 
   const updateWizardState = useCallback((updates) => {
     setWizardState((prev) => ({ ...prev, ...updates }))

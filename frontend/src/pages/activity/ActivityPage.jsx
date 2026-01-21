@@ -82,19 +82,23 @@ function formatAction(action) {
 }
 
 function ActivityItem({ activity, onNavigate }) {
-  const entityType = activity.entity_type || 'default'
+  const entityTypeRaw = activity.entity_type || 'default'
+  const entityType = String(entityTypeRaw).toLowerCase().replace(/s$/, '')
   const action = activity.action || ''
   const Icon = ACTION_ICONS[entityType] || ACTION_ICONS.default
   const accentColor = ACTION_COLORS[action] || ACTION_COLORS.default
 
   // Determine if this item is navigable (not deleted items)
-  const isNavigable = action !== 'deleted' && ENTITY_ROUTES[entityType]
+  const fallbackUrl = activity.details?.url || null
+  const routeFn = ENTITY_ROUTES[entityType]
+  const isNavigable = action !== 'deleted' && (routeFn || fallbackUrl)
 
   const handleClick = () => {
     if (isNavigable && onNavigate) {
-      const routeFn = ENTITY_ROUTES[entityType]
-      const route = routeFn(activity.entity_id)
-      onNavigate(route)
+      const route = routeFn ? routeFn(activity.entity_id) : fallbackUrl
+      if (route) {
+        onNavigate(route)
+      }
     }
   }
 

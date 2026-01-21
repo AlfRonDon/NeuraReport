@@ -39,13 +39,13 @@ class LLMProvider(str, Enum):
 
 # Default models for each provider
 DEFAULT_MODELS: Dict[LLMProvider, str] = {
-    LLMProvider.OPENAI: "gpt-4o",
+    LLMProvider.OPENAI: "gpt-5",
     LLMProvider.OLLAMA: "llama3.2",
     LLMProvider.DEEPSEEK: "deepseek-chat",
     LLMProvider.ANTHROPIC: "claude-3-5-sonnet-20241022",
     LLMProvider.AZURE: "gpt-4o",
     LLMProvider.GEMINI: "gemini-1.5-pro",
-    LLMProvider.CUSTOM: "gpt-4o",
+    LLMProvider.CUSTOM: "gpt-5",
 }
 
 # Vision-capable models per provider
@@ -61,24 +61,24 @@ VISION_MODELS: Dict[LLMProvider, List[str]] = {
 
 # Recommended models for document analysis tasks
 DOCUMENT_ANALYSIS_MODELS: Dict[LLMProvider, str] = {
-    LLMProvider.OPENAI: "gpt-4o",
+    LLMProvider.OPENAI: "gpt-5",
     LLMProvider.OLLAMA: "qwen2.5:32b",  # Excellent for document understanding
     LLMProvider.DEEPSEEK: "deepseek-chat",
     LLMProvider.ANTHROPIC: "claude-3-5-sonnet-20241022",
     LLMProvider.AZURE: "gpt-4o",
     LLMProvider.GEMINI: "gemini-1.5-pro",
-    LLMProvider.CUSTOM: "gpt-4o",
+    LLMProvider.CUSTOM: "gpt-5",
 }
 
 # Recommended models for code/SQL generation
 CODE_GENERATION_MODELS: Dict[LLMProvider, str] = {
-    LLMProvider.OPENAI: "gpt-4o",
+    LLMProvider.OPENAI: "gpt-5",
     LLMProvider.OLLAMA: "deepseek-coder-v2:16b",  # Excellent for SQL
     LLMProvider.DEEPSEEK: "deepseek-coder",
     LLMProvider.ANTHROPIC: "claude-3-5-sonnet-20241022",
     LLMProvider.AZURE: "gpt-4o",
     LLMProvider.GEMINI: "gemini-1.5-pro",
-    LLMProvider.CUSTOM: "gpt-4o",
+    LLMProvider.CUSTOM: "gpt-5",
 }
 
 
@@ -223,6 +223,26 @@ class LLMConfig:
                 fallback_model = os.getenv("LLM_FALLBACK_MODEL", DEFAULT_MODELS.get(fallback_provider))
             except ValueError:
                 pass
+
+        force_gpt5 = os.getenv("NEURA_FORCE_GPT5", "true").lower().strip() in {"1", "true", "yes"}
+        if force_gpt5:
+            if provider != LLMProvider.OPENAI:
+                logger.warning(
+                    "llm_provider_overridden",
+                    extra={
+                        "event": "llm_provider_overridden",
+                        "requested": provider.value,
+                        "forced": LLMProvider.OPENAI.value,
+                    },
+                )
+            provider = LLMProvider.OPENAI
+            model = "gpt-5"
+            api_key = os.getenv("OPENAI_API_KEY") or api_key
+            base_url = os.getenv("OPENAI_BASE_URL") or os.getenv("LLM_BASE_URL")
+            azure_endpoint = None
+            azure_deployment = None
+            fallback_provider = None
+            fallback_model = None
 
         return cls(
             provider=provider,

@@ -49,6 +49,23 @@ const useSummaryStore = create((set) => ({
     }
   },
 
+  // Queue a summary job in the background
+  queueSummary: async ({ content, tone = 'formal', maxSentences = 5, focusAreas }) => {
+    set({ error: null });
+    try {
+      const response = await summaryApi.queueSummary({
+        content,
+        tone,
+        maxSentences,
+        focusAreas,
+      });
+      return response;
+    } catch (err) {
+      set({ error: err.message });
+      return null;
+    }
+  },
+
   // Get summary for a specific report
   getReportSummary: async (reportId) => {
     set({ loading: true, error: null });
@@ -58,6 +75,18 @@ const useSummaryStore = create((set) => ({
       return response.summary;
     } catch (err) {
       set({ error: err.message, loading: false });
+      return null;
+    }
+  },
+
+  // Queue report summary generation
+  queueReportSummary: async (reportId) => {
+    set({ error: null });
+    try {
+      const response = await summaryApi.queueReportSummary(reportId);
+      return response;
+    } catch (err) {
+      set({ error: err.message });
       return null;
     }
   },

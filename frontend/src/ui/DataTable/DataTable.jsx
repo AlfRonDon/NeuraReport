@@ -32,6 +32,28 @@ function getComparator(order, orderBy) {
     : (a, b) => -descendingComparator(a, b, orderBy)
 }
 
+// Helpers for localStorage persistence
+const STORAGE_PREFIX = 'neurareport_table_'
+
+function loadPersistedState(key) {
+  if (!key) return null
+  try {
+    const stored = localStorage.getItem(`${STORAGE_PREFIX}${key}`)
+    return stored ? JSON.parse(stored) : null
+  } catch {
+    return null
+  }
+}
+
+function savePersistedState(key, state) {
+  if (!key) return
+  try {
+    localStorage.setItem(`${STORAGE_PREFIX}${key}`, JSON.stringify(state))
+  } catch {
+    // Ignore storage errors
+  }
+}
+
 export default function DataTable({
   columns,
   data = [],
@@ -54,14 +76,29 @@ export default function DataTable({
   pageSize = 10,
   pageSizeOptions = [10, 25, 50, 100],
   stickyHeader = false,
+  persistKey = null, // Unique key to persist table state to localStorage
 }) {
-  const [order, setOrder] = useState(defaultSortOrder)
-  const [orderBy, setOrderBy] = useState(defaultSortField || columns[0]?.field)
+  // Load persisted state if available
+  const persisted = loadPersistedState(persistKey)
+
+  const [order, setOrder] = useState(persisted?.order || defaultSortOrder)
+  const [orderBy, setOrderBy] = useState(persisted?.orderBy || defaultSortField || columns[0]?.field)
   const [selected, setSelected] = useState([])
   const [page, setPage] = useState(0)
-  const [rowsPerPage, setRowsPerPage] = useState(pageSize)
+  const [rowsPerPage, setRowsPerPage] = useState(persisted?.rowsPerPage || pageSize)
   const [searchQuery, setSearchQuery] = useState('')
-  const [activeFilters, setActiveFilters] = useState({})
+  const [activeFilters, setActiveFilters] = useState(persisted?.filters || {})
+
+  // Persist state to localStorage when it changes
+  useEffect(() => {
+    if (!persistKey) return
+    savePersistedState(persistKey, {
+      order,
+      orderBy,
+      rowsPerPage,
+      filters: activeFilters,
+    })
+  }, [persistKey, order, orderBy, rowsPerPage, activeFilters])
 
   const handleRequestSort = useCallback((property) => {
     const isAsc = orderBy === property && order === 'asc'
@@ -130,6 +167,28 @@ export default function DataTable({
     setPage(0)
     onSearch?.(query)
   }, [onSearch])
+
+  const handleRowKeyDown = useCallback((event, row, rowIndex) => {
+    if (event.key === 'Enter' && onRowClick) {
+      event.preventDefault()
+      onRowClick(row)
+      return
+    }
+    if ((event.key === ' ' || event.key === 'Spacebar') && selectable) {
+      event.preventDefault()
+      handleSelect(row.id)
+      return
+    }
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      event.preventDefault()
+      const dir = event.key === 'ArrowDown' ? 1 : -1
+      const rows = event.currentTarget.parentElement?.querySelectorAll('tr[data-row-index]')
+      const next = rows?.[rowIndex + dir]
+      if (next && typeof next.focus === 'function') {
+        next.focus()
+      }
+    }
+  }, [onRowClick, selectable, handleSelect])
 
   const filteredData = useMemo(() => {
     const filterEntries = Object.entries(activeFilters)
@@ -274,7 +333,7 @@ export default function DataTable({
                 </TableRow>
               ))
             ) : (
-              paginatedData.map((row) => {
+              paginatedData.map((row, rowIndex) => {
                 const isItemSelected = isSelected(row.id)
 
                 return (
@@ -282,7 +341,12 @@ export default function DataTable({
                     key={row.id}
                     hover
                     onClick={() => onRowClick?.(row)}
+                    onKeyDown={(event) => handleRowKeyDown(event, row, rowIndex)}
                     selected={isItemSelected}
+                    data-row-index={rowIndex}
+                    tabIndex={onRowClick || selectable ? 0 : -1}
+                    role={onRowClick ? 'button' : undefined}
+                    aria-selected={isItemSelected}
                     sx={{
                       cursor: onRowClick ? 'pointer' : 'default',
                       '&.Mui-selected': {

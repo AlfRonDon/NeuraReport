@@ -43,6 +43,8 @@ import {
   Clear as ClearIcon,
 } from '@mui/icons-material';
 import useDocQAStore from '../../stores/docqaStore';
+import ConfirmModal from '../../ui/Modal/ConfirmModal';
+import { useToast } from '../../components/ToastProvider';
 
 export default function DocumentQAPage() {
   const {
@@ -70,6 +72,9 @@ export default function DocumentQAPage() {
   const [docContent, setDocContent] = useState('');
   const [question, setQuestion] = useState('');
   const messagesEndRef = useRef(null);
+  const [deleteSessionConfirm, setDeleteSessionConfirm] = useState({ open: false, sessionId: null, sessionName: '' });
+  const [removeDocConfirm, setRemoveDocConfirm] = useState({ open: false, docId: null, docName: '' });
+  const toast = useToast();
 
   const [initialLoading, setInitialLoading] = useState(true);
 
@@ -109,10 +114,40 @@ export default function DocumentQAPage() {
     const file = event.target.files[0];
     if (!file) return;
 
+    // Validate file type
+    const allowedExtensions = ['.txt', '.md', '.json', '.csv'];
+    const fileName = file.name.toLowerCase();
+    const hasValidExtension = allowedExtensions.some(ext => fileName.endsWith(ext));
+
+    if (!hasValidExtension) {
+      toast.show(`Invalid file type. Supported formats: ${allowedExtensions.join(', ')}`, 'error');
+      event.target.value = ''; // Reset file input
+      return;
+    }
+
+    // Check file size (max 5MB for text files)
+    const maxSize = 5 * 1024 * 1024;
+    if (file.size > maxSize) {
+      toast.show('File size exceeds 5MB limit', 'error');
+      event.target.value = '';
+      return;
+    }
+
     const reader = new FileReader();
     reader.onload = (e) => {
+      const content = e.target.result;
+      // Check if content appears to be binary
+      if (content.includes('\0')) {
+        toast.show('File appears to be binary. Please upload a text file.', 'error');
+        event.target.value = '';
+        return;
+      }
       setDocName(file.name);
-      setDocContent(e.target.result);
+      setDocContent(content);
+    };
+    reader.onerror = () => {
+      toast.show('Failed to read file', 'error');
+      event.target.value = '';
     };
     reader.readAsText(file);
   };
@@ -200,7 +235,7 @@ export default function DocumentQAPage() {
                       size="small"
                       onClick={(e) => {
                         e.stopPropagation();
-                        deleteSession(session.id);
+                        setDeleteSessionConfirm({ open: true, sessionId: session.id, sessionName: session.name });
                       }}
                     >
                       <DeleteIcon fontSize="small" />
@@ -232,7 +267,7 @@ export default function DocumentQAPage() {
                       <ListItemSecondaryAction>
                         <IconButton
                           size="small"
-                          onClick={() => removeDocument(currentSession.id, doc.id)}
+                          onClick={() => setRemoveDocConfirm({ open: true, docId: doc.id, docName: doc.name })}
                         >
                           <DeleteIcon fontSize="small" />
                         </IconButton>
@@ -336,8 +371,20 @@ export default function DocumentQAPage() {
                                     key={fqidx}
                                     label={fq}
                                     size="small"
+                                    clickable
+                                    color="primary"
+                                    variant="outlined"
                                     onClick={() => setQuestion(fq)}
-                                    sx={{ cursor: 'pointer' }}
+                                    sx={{
+                                      cursor: 'pointer',
+                                      transition: 'all 150ms ease',
+                                      '&:hover': {
+                                        bgcolor: 'primary.main',
+                                        color: 'primary.contrastText',
+                                        transform: 'translateY(-1px)',
+                                        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                                      },
+                                    }}
                                   />
                                 ))}
                               </Box>
@@ -449,6 +496,32 @@ export default function DocumentQAPage() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <ConfirmModal
+        open={deleteSessionConfirm.open}
+        onClose={() => setDeleteSessionConfirm({ open: false, sessionId: null, sessionName: '' })}
+        onConfirm={() => {
+          deleteSession(deleteSessionConfirm.sessionId);
+          setDeleteSessionConfirm({ open: false, sessionId: null, sessionName: '' });
+        }}
+        title="Delete Session"
+        message={`Are you sure you want to delete "${deleteSessionConfirm.sessionName}"? All documents and chat history will be permanently removed.`}
+        confirmLabel="Delete"
+        severity="error"
+      />
+
+      <ConfirmModal
+        open={removeDocConfirm.open}
+        onClose={() => setRemoveDocConfirm({ open: false, docId: null, docName: '' })}
+        onConfirm={() => {
+          removeDocument(currentSession?.id, removeDocConfirm.docId);
+          setRemoveDocConfirm({ open: false, docId: null, docName: '' });
+        }}
+        title="Remove Document"
+        message={`Are you sure you want to remove "${removeDocConfirm.docName}" from this session?`}
+        confirmLabel="Remove"
+        severity="warning"
+      />
     </Box>
   );
 }

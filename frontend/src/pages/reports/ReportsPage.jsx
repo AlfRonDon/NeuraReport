@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useEffect } from 'react'
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import {
   Box,
@@ -26,11 +26,49 @@ import PlayArrowIcon from '@mui/icons-material/PlayArrow'
 import DownloadIcon from '@mui/icons-material/Download'
 import ScheduleIcon from '@mui/icons-material/Schedule'
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
+import ArrowForwardIcon from '@mui/icons-material/ArrowForward'
+import TodayIcon from '@mui/icons-material/Today'
+import DateRangeIcon from '@mui/icons-material/DateRange'
 import { useAppStore } from '../../store/useAppStore'
 import { useToast } from '../../components/ToastProvider'
 import TemplateRecommender from '../../components/TemplateRecommender'
 import * as api from '../../api/client'
 import * as summaryApi from '../../api/summary'
+
+// Date preset helpers
+const formatDateForInput = (date) => date.toISOString().split('T')[0]
+
+const getDatePresets = () => {
+  const today = new Date()
+  const startOfWeek = new Date(today)
+  startOfWeek.setDate(today.getDate() - today.getDay())
+  const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1)
+  const startOfLastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1)
+  const endOfLastMonth = new Date(today.getFullYear(), today.getMonth(), 0)
+
+  return {
+    today: {
+      label: 'Today',
+      start: formatDateForInput(today),
+      end: formatDateForInput(today),
+    },
+    thisWeek: {
+      label: 'This Week',
+      start: formatDateForInput(startOfWeek),
+      end: formatDateForInput(today),
+    },
+    thisMonth: {
+      label: 'This Month',
+      start: formatDateForInput(startOfMonth),
+      end: formatDateForInput(today),
+    },
+    lastMonth: {
+      label: 'Last Month',
+      start: formatDateForInput(startOfLastMonth),
+      end: formatDateForInput(endOfLastMonth),
+    },
+  }
+}
 
 export default function ReportsPage() {
   const [searchParams] = useSearchParams()
@@ -44,6 +82,7 @@ export default function ReportsPage() {
   const [selectedTemplate, setSelectedTemplate] = useState(searchParams.get('template') || '')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
+  const [datePreset, setDatePreset] = useState('thisMonth')
   const [keyValues, setKeyValues] = useState({})
   const [loading, setLoading] = useState(false)
   const [generating, setGenerating] = useState(false)
@@ -58,6 +97,11 @@ export default function ReportsPage() {
   const [selectedRun, setSelectedRun] = useState(null)
   const [runSummary, setRunSummary] = useState(null)
   const [summaryLoading, setSummaryLoading] = useState(false)
+  const [queueingSummary, setQueueingSummary] = useState(false)
+
+  // Refs to prevent race conditions
+  const keyOptionsRequestIdRef = useRef(0)
+  const summaryRequestIdRef = useRef(0)
 
   useEffect(() => {
     const fetchTemplates = async () => {
@@ -82,19 +126,32 @@ export default function ReportsPage() {
   useEffect(() => {
     const fetchKeyOptions = async () => {
       if (!selectedTemplate || !activeConnection?.id) return
+
+      // Increment request ID to track this specific request
+      const requestId = ++keyOptionsRequestIdRef.current
+
       try {
         const template = templates.find((t) => t.id === selectedTemplate)
         const result = await api.fetchTemplateKeyOptions(selectedTemplate, {
           connectionId: activeConnection.id,
           kind: template?.kind || 'pdf',
         })
-        setKeyOptions(result.keys || {})
+
+        // Only update state if this is still the latest request
+        if (requestId === keyOptionsRequestIdRef.current) {
+          setKeyOptions(result.keys || {})
+        }
       } catch (err) {
-        console.error('Failed to fetch key options:', err)
+        // Only show error if this is still the latest request
+        if (requestId === keyOptionsRequestIdRef.current) {
+          console.error('Failed to fetch key options:', err)
+          // Show user-friendly feedback but don't block workflow
+          toast.show('Could not load filter options. You can still generate reports.', 'warning')
+        }
       }
     }
     fetchKeyOptions()
-  }, [selectedTemplate, activeConnection?.id, templates])
+  }, [selectedTemplate, activeConnection?.id, templates, toast])
 
   const handleTemplateChange = useCallback((event) => {
     setSelectedTemplate(event.target.value)
@@ -120,6 +177,30 @@ export default function ReportsPage() {
     }))
   }, [])
 
+  const handleDatePreset = useCallback((presetKey) => {
+    setDatePreset(presetKey)
+    if (presetKey !== 'custom') {
+      const presets = getDatePresets()
+      const preset = presets[presetKey]
+      if (preset) {
+        setStartDate(preset.start)
+        setEndDate(preset.end)
+      }
+    }
+  }, [])
+
+  // Initialize dates on first render
+  useEffect(() => {
+    if (!startDate && !endDate && datePreset !== 'custom') {
+      const presets = getDatePresets()
+      const preset = presets[datePreset]
+      if (preset) {
+        setStartDate(preset.start)
+        setEndDate(preset.end)
+      }
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleGenerate = useCallback(async () => {
     if (!selectedTemplate || !activeConnection?.id) {
       toast.show('Please select a template and ensure you have an active connection', 'error')
@@ -127,6 +208,11 @@ export default function ReportsPage() {
     }
     if (discovery && selectedBatches.length === 0) {
       toast.show('Select at least one batch to run', 'error')
+      return
+    }
+    // Validate date range
+    if (startDate && endDate && new Date(startDate) > new Date(endDate)) {
+      toast.show('Start date must be before or equal to end date', 'error')
       return
     }
 
@@ -171,6 +257,11 @@ export default function ReportsPage() {
     }
     if (!startDate || !endDate) {
       toast.show('Provide a start and end date to discover batches', 'error')
+      return
+    }
+    // Validate date range
+    if (new Date(startDate) > new Date(endDate)) {
+      toast.show('Start date must be before or equal to end date', 'error')
       return
     }
     setDiscovering(true)
@@ -228,18 +319,49 @@ export default function ReportsPage() {
     setSelectedRun(run)
     setRunSummary(null)
     if (run?.id) {
+      // Increment request ID to track this specific request
+      const requestId = ++summaryRequestIdRef.current
+
       setSummaryLoading(true)
       try {
         const summaryData = await summaryApi.getReportSummary(run.id)
-        setRunSummary(summaryData.summary || summaryData)
+
+        // Only update state if this is still the latest request
+        if (requestId === summaryRequestIdRef.current) {
+          setRunSummary(summaryData.summary || summaryData)
+        }
       } catch (err) {
-        console.error('Failed to fetch summary:', err)
-        setRunSummary(null)
+        // Only update state if this is still the latest request
+        if (requestId === summaryRequestIdRef.current) {
+          console.error('Failed to fetch summary:', err)
+          setRunSummary(null)
+        }
       } finally {
-        setSummaryLoading(false)
+        // Only update loading state if this is still the latest request
+        if (requestId === summaryRequestIdRef.current) {
+          setSummaryLoading(false)
+        }
       }
     }
   }, [])
+
+  const handleQueueSummary = useCallback(async () => {
+    if (!selectedRun?.id) return
+    setQueueingSummary(true)
+    try {
+      const response = await summaryApi.queueReportSummary(selectedRun.id)
+      const jobId = response?.job_id || response?.jobId || null
+      if (jobId) {
+        toast.show('Summary queued. Track progress in Jobs.', 'success')
+      } else {
+        toast.show('Failed to queue summary.', 'error')
+      }
+    } catch (err) {
+      toast.show(err?.message || 'Failed to queue summary.', 'error')
+    } finally {
+      setQueueingSummary(false)
+    }
+  }, [selectedRun?.id, toast])
 
   const handleSelectAllBatches = useCallback(() => {
     const allIds = Array.isArray(discovery?.batches) ? discovery.batches.map((batch) => batch.id) : []
@@ -304,24 +426,58 @@ export default function ReportsPage() {
                 </FormControl>
 
                 {/* Date Range */}
-                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-                  <TextField
-                    label="Start Date"
-                    type="date"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                    InputLabelProps={{ shrink: true }}
-                    fullWidth
-                  />
-                  <TextField
-                    label="End Date"
-                    type="date"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                    InputLabelProps={{ shrink: true }}
-                    fullWidth
-                  />
-                </Stack>
+                <Box>
+                  <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1.5 }}>
+                    Time Period
+                  </Typography>
+                  <Stack direction="row" spacing={1} sx={{ mb: 2, flexWrap: 'wrap', gap: 1 }}>
+                    {Object.entries(getDatePresets()).map(([key, preset]) => (
+                      <Chip
+                        key={key}
+                        label={preset.label}
+                        icon={<TodayIcon sx={{ fontSize: 16 }} />}
+                        onClick={() => handleDatePreset(key)}
+                        color={datePreset === key ? 'primary' : 'default'}
+                        variant={datePreset === key ? 'filled' : 'outlined'}
+                        sx={{ cursor: 'pointer' }}
+                      />
+                    ))}
+                    <Chip
+                      label="Custom"
+                      icon={<DateRangeIcon sx={{ fontSize: 16 }} />}
+                      onClick={() => handleDatePreset('custom')}
+                      color={datePreset === 'custom' ? 'primary' : 'default'}
+                      variant={datePreset === 'custom' ? 'filled' : 'outlined'}
+                      sx={{ cursor: 'pointer' }}
+                    />
+                  </Stack>
+                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                    <TextField
+                      label="Start Date"
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => {
+                        setStartDate(e.target.value)
+                        setDatePreset('custom')
+                      }}
+                      InputLabelProps={{ shrink: true }}
+                      fullWidth
+                      size="small"
+                    />
+                    <TextField
+                      label="End Date"
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => {
+                        setEndDate(e.target.value)
+                        setDatePreset('custom')
+                      }}
+                      InputLabelProps={{ shrink: true }}
+                      fullWidth
+                      size="small"
+                    />
+                  </Stack>
+                </Box>
 
                 {/* Key Fields */}
                 {keyFields.length > 0 && (
@@ -496,9 +652,21 @@ export default function ReportsPage() {
                         )}
                       </Paper>
                     ) : !summaryLoading && (
-                      <Typography variant="body2" color="text.secondary">
-                        Click on a run below to view its AI summary.
-                      </Typography>
+                      <Stack spacing={1}>
+                        <Typography variant="body2" color="text.secondary">
+                          Click on a run below to view its AI summary.
+                        </Typography>
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          startIcon={<ScheduleIcon />}
+                          onClick={handleQueueSummary}
+                          disabled={queueingSummary}
+                          sx={{ alignSelf: 'flex-start' }}
+                        >
+                          {queueingSummary ? 'Queueing...' : 'Queue summary'}
+                        </Button>
+                      </Stack>
                     )}
                   </Stack>
                 </>
@@ -529,14 +697,26 @@ export default function ReportsPage() {
                         border: 1,
                         borderColor: selectedRun?.id === run.id ? 'primary.main' : 'divider',
                         cursor: 'pointer',
-                        '&:hover': { borderColor: 'primary.light' },
+                        '&:hover': {
+                          borderColor: 'primary.light',
+                          '& .run-history-hint': { color: 'text.primary' },
+                        },
                       }}
                       onClick={() => handleSelectRun(run)}
+                      title="Click to view summary"
                     >
                       <Stack spacing={0.5}>
-                        <Typography variant="body2" fontWeight={600}>
-                          {new Date(run.createdAt).toLocaleString()}
-                        </Typography>
+                        <Stack direction="row" alignItems="center" justifyContent="space-between">
+                          <Typography variant="body2" fontWeight={600}>
+                            {new Date(run.createdAt).toLocaleString()}
+                          </Typography>
+                          <Stack direction="row" alignItems="center" spacing={0.5} className="run-history-hint">
+                            <Typography variant="caption" color="text.secondary">
+                              View summary
+                            </Typography>
+                            <ArrowForwardIcon sx={{ fontSize: 12, color: 'inherit' }} />
+                          </Stack>
+                        </Stack>
                         <Typography variant="caption" color="text.secondary">
                           {run.startDate} to {run.endDate}
                         </Typography>

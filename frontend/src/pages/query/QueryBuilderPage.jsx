@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import {
   Box,
   Typography,
@@ -42,8 +42,11 @@ import * as nl2sqlApi from '../../api/nl2sql'
 import * as api from '../../api/client'
 import DataTable from '../../ui/DataTable/DataTable'
 import { palette } from '../../theme'
+import ConfirmModal from '../../ui/Modal/ConfirmModal'
+import { useToast } from '../../components/ToastProvider'
 
 export default function QueryBuilderPage() {
+  const toast = useToast()
   const connections = useAppStore((s) => s.savedConnections)
   const {
     currentQuestion,
@@ -84,6 +87,9 @@ export default function QueryBuilderPage() {
   const [showHistory, setShowHistory] = useState(false)
   const [showSaved, setShowSaved] = useState(false)
   const [schema, setSchema] = useState(null)
+  const [deleteSavedConfirm, setDeleteSavedConfirm] = useState({ open: false, queryId: null, queryName: '' })
+  const [deleteHistoryConfirm, setDeleteHistoryConfirm] = useState({ open: false, entryId: null, question: '' })
+  const schemaRequestIdRef = useRef(0)
 
   // Fetch connections on mount
   useEffect(() => {
@@ -104,12 +110,22 @@ export default function QueryBuilderPage() {
       setSchema(null)
       return
     }
+
+    // Increment request ID to track this specific request
+    const requestId = ++schemaRequestIdRef.current
+
     const fetchSchema = async () => {
       try {
         const result = await api.getConnectionSchema(selectedConnectionId)
-        setSchema(result)
+        // Only update state if this is still the latest request
+        if (requestId === schemaRequestIdRef.current) {
+          setSchema(result)
+        }
       } catch (err) {
-        console.error('Failed to fetch schema:', err)
+        // Only log error if this is still the latest request
+        if (requestId === schemaRequestIdRef.current) {
+          console.error('Failed to fetch schema:', err)
+        }
       }
     }
     fetchSchema()
@@ -222,22 +238,50 @@ export default function QueryBuilderPage() {
       try {
         await nl2sqlApi.deleteSavedQuery(queryId)
         removeSavedQuery(queryId)
+        toast.show('Query deleted', 'success')
       } catch (err) {
         console.error('Failed to delete query:', err)
+        toast.show(err.message || 'Failed to delete query', 'error')
       }
     },
-    [removeSavedQuery]
+    [removeSavedQuery, toast]
   )
 
-  const handleCopySQL = useCallback(() => {
-    navigator.clipboard.writeText(generatedSQL)
-  }, [generatedSQL])
+  const handleDeleteHistory = useCallback(
+    async (entryId) => {
+      if (!entryId) return
+      try {
+        await nl2sqlApi.deleteQueryHistoryEntry(entryId)
+        setQueryHistory(queryHistory.filter((entry) => entry.id !== entryId))
+        toast.show('History entry deleted', 'success')
+      } catch (err) {
+        console.error('Failed to delete history entry:', err)
+        toast.show(err.message || 'Failed to delete history entry', 'error')
+      }
+    },
+    [queryHistory, setQueryHistory, toast]
+  )
+
+  const handleCopySQL = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(generatedSQL)
+      toast.show('SQL copied to clipboard', 'success')
+    } catch (err) {
+      toast.show('Failed to copy to clipboard', 'error')
+    }
+  }, [generatedSQL, toast])
 
   const tableColumns = columns.map((col) => ({
     field: col,
     header: col,
     sortable: true,
   }))
+
+  const executeDisabledReason = !generatedSQL.trim()
+    ? 'Generate SQL before executing'
+    : !selectedConnectionId
+      ? 'Select a connection first'
+      : null
 
   return (
     <Box sx={{ p: 3, maxWidth: 1400, mx: 'auto' }}>
@@ -315,7 +359,7 @@ export default function QueryBuilderPage() {
                       </Typography>
                     )}
                   </Box>
-                  <IconButton size="small" onClick={() => handleDeleteSaved(q.id)}>
+                  <IconButton size="small" onClick={() => setDeleteSavedConfirm({ open: true, queryId: q.id, queryName: q.name })}>
                     <DeleteIcon fontSize="small" sx={{ color: palette.scale[500] }} />
                   </IconButton>
                 </Stack>
@@ -345,8 +389,11 @@ export default function QueryBuilderPage() {
           ) : (
             <Stack spacing={1}>
               {queryHistory.slice(0, 5).map((h) => (
-                <Box
+                <Stack
                   key={h.id}
+                  direction="row"
+                  alignItems="center"
+                  justifyContent="space-between"
                   sx={{
                     p: 1,
                     borderRadius: 1,
@@ -359,35 +406,46 @@ export default function QueryBuilderPage() {
                     setGeneratedSQL(h.sql)
                   }}
                 >
-                  <Typography variant="body2" color={palette.scale[200]} noWrap>
-                    {h.question}
-                  </Typography>
-                  <Stack direction="row" spacing={1} mt={0.5}>
-                    <Chip
-                      size="small"
-                      label={`${Math.round(h.confidence * 100)}%`}
-                      sx={{
-                        height: 20,
-                        fontSize: '0.7rem',
-                        bgcolor: h.confidence > 0.8 ? alpha(palette.green[500], 0.2) : alpha(palette.yellow[500], 0.2),
-                        color: h.confidence > 0.8 ? palette.green[400] : palette.yellow[400],
-                      }}
-                    />
-                    {h.success ? (
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <Typography variant="body2" color={palette.scale[200]} noWrap>
+                      {h.question}
+                    </Typography>
+                    <Stack direction="row" spacing={1} mt={0.5}>
                       <Chip
                         size="small"
-                        label="Success"
-                        sx={{ height: 20, fontSize: '0.7rem', bgcolor: alpha(palette.green[500], 0.2), color: palette.green[400] }}
+                        label={`${Math.round(h.confidence * 100)}%`}
+                        sx={{
+                          height: 20,
+                          fontSize: '0.7rem',
+                          bgcolor: h.confidence > 0.8 ? alpha(palette.green[500], 0.2) : alpha(palette.yellow[500], 0.2),
+                          color: h.confidence > 0.8 ? palette.green[400] : palette.yellow[400],
+                        }}
                       />
-                    ) : (
-                      <Chip
-                        size="small"
-                        label="Failed"
-                        sx={{ height: 20, fontSize: '0.7rem', bgcolor: alpha(palette.red[500], 0.2), color: palette.red[400] }}
-                      />
-                    )}
-                  </Stack>
-                </Box>
+                      {h.success ? (
+                        <Chip
+                          size="small"
+                          label="Success"
+                          sx={{ height: 20, fontSize: '0.7rem', bgcolor: alpha(palette.green[500], 0.2), color: palette.green[400] }}
+                        />
+                      ) : (
+                        <Chip
+                          size="small"
+                          label="Failed"
+                          sx={{ height: 20, fontSize: '0.7rem', bgcolor: alpha(palette.red[500], 0.2), color: palette.red[400] }}
+                        />
+                      )}
+                    </Stack>
+                  </Box>
+                  <IconButton
+                    size="small"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setDeleteHistoryConfirm({ open: true, entryId: h.id, question: h.question })
+                    }}
+                  >
+                    <DeleteIcon fontSize="small" sx={{ color: palette.scale[500] }} />
+                  </IconButton>
+                </Stack>
               ))}
             </Stack>
           )}
@@ -562,19 +620,28 @@ export default function QueryBuilderPage() {
           )}
 
           <Stack direction="row" justifyContent="flex-end" mt={2}>
-            <Button
-              variant="contained"
-              startIcon={isExecuting ? <CircularProgress size={16} color="inherit" /> : <PlayArrowIcon />}
-              onClick={handleExecute}
-              disabled={!generatedSQL.trim() || isExecuting}
-              sx={{
-                bgcolor: palette.blue[600],
-                '&:hover': { bgcolor: palette.blue[700] },
-              }}
-            >
-              {isExecuting ? 'Executing...' : 'Execute Query'}
-            </Button>
+            <Tooltip title={executeDisabledReason || ''} disableHoverListener={!executeDisabledReason}>
+              <span>
+                <Button
+                  variant="contained"
+                  startIcon={isExecuting ? <CircularProgress size={16} color="inherit" /> : <PlayArrowIcon />}
+                  onClick={handleExecute}
+                  disabled={Boolean(executeDisabledReason) || isExecuting}
+                  sx={{
+                    bgcolor: palette.blue[600],
+                    '&:hover': { bgcolor: palette.blue[700] },
+                  }}
+                >
+                  {isExecuting ? 'Executing...' : 'Execute Query'}
+                </Button>
+              </span>
+            </Tooltip>
           </Stack>
+          {executeDisabledReason && (
+            <Typography variant="caption" color={palette.scale[500]} sx={{ mt: 1, display: 'block' }}>
+              {executeDisabledReason}
+            </Typography>
+          )}
         </Paper>
       )}
 
@@ -639,6 +706,32 @@ export default function QueryBuilderPage() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <ConfirmModal
+        open={deleteSavedConfirm.open}
+        onClose={() => setDeleteSavedConfirm({ open: false, queryId: null, queryName: '' })}
+        onConfirm={() => {
+          handleDeleteSaved(deleteSavedConfirm.queryId)
+          setDeleteSavedConfirm({ open: false, queryId: null, queryName: '' })
+        }}
+        title="Delete Saved Query"
+        message={`Are you sure you want to delete "${deleteSavedConfirm.queryName}"? This action cannot be undone.`}
+        confirmLabel="Delete"
+        severity="error"
+      />
+
+      <ConfirmModal
+        open={deleteHistoryConfirm.open}
+        onClose={() => setDeleteHistoryConfirm({ open: false, entryId: null, question: '' })}
+        onConfirm={() => {
+          handleDeleteHistory(deleteHistoryConfirm.entryId)
+          setDeleteHistoryConfirm({ open: false, entryId: null, question: '' })
+        }}
+        title="Delete History Entry"
+        message={`Are you sure you want to delete this history entry? "${deleteHistoryConfirm.question?.substring(0, 50)}${deleteHistoryConfirm.question?.length > 50 ? '...' : ''}"`}
+        confirmLabel="Delete"
+        severity="warning"
+      />
     </Box>
   )
 }

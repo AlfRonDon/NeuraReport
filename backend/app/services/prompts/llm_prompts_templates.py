@@ -9,7 +9,7 @@ from ..utils import call_chat_completion, strip_code_fences
 
 logger = logging.getLogger("neura.template_recommender")
 
-DEFAULT_MODEL = "gpt-4o-mini"
+DEFAULT_MODEL = "gpt-5"
 
 
 def _summarise_catalog(catalog: Sequence[Mapping[str, Any]]) -> list[dict]:
