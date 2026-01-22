@@ -562,7 +562,7 @@ export default function TemplatesPage() {
         setDuplicating(true)
         try {
           const result = await api.duplicateTemplate(templateToDuplicate.id)
-          const duplicatedName = result?.name || (templateToDuplicate.name ? `${templateToDuplicate.name} (Copy)` : 'Template (Copy)')
+          const duplicatedName = result?.name || (templateToDuplicate.name ? `${templateToDuplicate.name} (Copy)` : 'Design (Copy)')
           await fetchTemplatesData()
           toast.show(`Design copied as "${duplicatedName}"`, 'success')
         } finally {
@@ -1103,7 +1103,7 @@ export default function TemplatesPage() {
       )}
       <DataTable
         title="Report Designs"
-        subtitle="Upload and manage your report layouts"
+        subtitle="Upload and manage your report designs"
         columns={columns}
         data={filteredTemplates}
         loading={loading}
@@ -1142,7 +1142,7 @@ export default function TemplatesPage() {
         emptyState={{
           icon: DescriptionIcon,
           title: 'No report designs yet',
-          description: 'Upload a PDF or Excel file as a template for your reports.',
+          description: 'Upload a PDF or Excel file as a report design.',
           actionLabel: 'Upload Design',
           onAction: handleAddTemplate,
         }}
@@ -1393,7 +1393,7 @@ export default function TemplatesPage() {
                       <Box sx={{ flex: 1 }}>
                         <Typography variant="subtitle2">{template.name || template.id}</Typography>
                         <Typography variant="caption" color="text.secondary">
-                          {template.description || `${template.kind?.toUpperCase() || 'PDF'} Template`}
+                          {template.description || `${template.kind?.toUpperCase() || 'PDF'} Design`}
                         </Typography>
                       </Box>
                       {template.similarity_score && (
