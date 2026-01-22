@@ -18,7 +18,7 @@ class CreateSessionRequest(BaseModel):
 
 class AddDocumentRequest(BaseModel):
     name: str = Field(..., min_length=1, max_length=200)
-    content: str = Field(..., min_length=10, max_length=100000)
+    content: str = Field(..., min_length=10, max_length=5 * 1024 * 1024)
     doc_type: DocumentType = Field(default=DocumentType.TEXT)
     metadata: Optional[dict] = None
 

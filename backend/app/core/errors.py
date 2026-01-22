@@ -31,7 +31,12 @@ async def http_error_handler(request: Request, exc):
     correlation_id = getattr(getattr(request, "state", None), "correlation_id", None)
     detail = exc.detail if hasattr(exc, "detail") else str(exc)
     status_code = exc.status_code if hasattr(exc, "status_code") else 500
-    body = {"status": "error", "code": f"http_{status_code}", "message": detail}
+    if isinstance(detail, dict) and {"status", "code", "message"} <= set(detail.keys()):
+        body = dict(detail)
+        body.setdefault("status", "error")
+        body.setdefault("code", f"http_{status_code}")
+    else:
+        body = {"status": "error", "code": f"http_{status_code}", "message": detail if isinstance(detail, str) else str(detail)}
     if correlation_id:
         body["correlation_id"] = correlation_id
     return JSONResponse(status_code=status_code, content=body)
@@ -72,4 +77,3 @@ def add_exception_handlers(app: FastAPI) -> None:
     app.add_exception_handler(AppError, app_error_handler)
     app.add_exception_handler(HTTPException, http_error_handler)
     app.add_exception_handler(Exception, generic_error_handler)
-

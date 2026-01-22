@@ -15,6 +15,9 @@ from pathlib import Path
 from typing import Any, Dict, Generator, Iterable, Mapping, Optional, Sequence
 
 from cryptography.fernet import Fernet, InvalidToken
+from sqlalchemy import Column
+from sqlalchemy.types import JSON
+from sqlmodel import Field, Session, SQLModel, create_engine, select
 
 from ..utils import write_json_atomic
 
@@ -87,6 +90,35 @@ def _normalize_email_list(values: Optional[Iterable[str]]) -> list[str]:
         seen.add(text)
         normalized.append(text)
     return normalized
+
+
+def _json_roundtrip(value: dict) -> dict:
+    if not isinstance(value, dict):
+        return {}
+    try:
+        return json.loads(json.dumps(value, default=str))
+    except Exception:
+        return {}
+
+
+class _StateSnapshot(SQLModel, table=True):
+    __tablename__ = "state_snapshot"
+
+    id: int = Field(default=1, primary_key=True)
+    data: dict = Field(default_factory=dict, sa_column=Column(JSON))
+    version: int = Field(default=STATE_VERSION, index=True)
+    checksum: str = Field(default="")
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+class _StateBackup(SQLModel, table=True):
+    __tablename__ = "state_backups"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    name: str = Field(index=True)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), index=True)
+    data: dict = Field(default_factory=dict, sa_column=Column(JSON))
+    size_bytes: int = Field(default=0)
 
 
 class StateStore:
@@ -1789,4 +1821,255 @@ class StateStore:
             return True
 
 
-state_store = StateStore()
+class SQLiteStateStore(StateStore):
+    """SQLite-backed state store with JSON persistence and schema versioning."""
+
+    def __init__(self, base_dir: Optional[Path] = None, db_path: Optional[Path] = None) -> None:
+        super().__init__(base_dir=base_dir)
+        db_override = db_path or os.getenv("NEURA_STATE_DB_PATH")
+        if db_override:
+            self._db_path = Path(db_override).expanduser()
+        else:
+            self._db_path = self._base_dir / "state.sqlite3"
+        self._db_path.parent.mkdir(parents=True, exist_ok=True)
+        self._engine = create_engine(
+            f"sqlite:///{self._db_path}",
+            connect_args={"check_same_thread": False},
+        )
+        self._ensure_schema()
+
+    def _ensure_schema(self) -> None:
+        SQLModel.metadata.create_all(self._engine)
+        with Session(self._engine) as session:
+            snapshot = session.get(_StateSnapshot, 1)
+            if snapshot is not None:
+                return
+            state = self._load_initial_state()
+            meta = {
+                "version": STATE_VERSION,
+                "updated_at": _now_iso(),
+                "checksum": _compute_checksum(state),
+            }
+            state["_metadata"] = meta
+            snapshot = _StateSnapshot(
+                id=1,
+                data=_json_roundtrip(state),
+                version=STATE_VERSION,
+                checksum=meta["checksum"],
+                updated_at=datetime.now(timezone.utc),
+            )
+            session.add(snapshot)
+            session.commit()
+
+            if self._state_path.exists():
+                migrated_path = self._state_path.with_name(self._state_path.name + ".migrated")
+                try:
+                    if not migrated_path.exists():
+                        self._state_path.replace(migrated_path)
+                except Exception:
+                    pass
+
+    def _load_initial_state(self) -> dict:
+        if self._state_path.exists():
+            try:
+                raw = json.loads(self._state_path.read_text(encoding="utf-8"))
+                if isinstance(raw, dict):
+                    return self._apply_defaults(raw)
+            except Exception:
+                pass
+        return self._default_state()
+
+    def _snapshot_mtime(self) -> Optional[float]:
+        try:
+            with Session(self._engine) as session:
+                stmt = select(_StateSnapshot.updated_at).where(_StateSnapshot.id == 1)
+                updated_at = session.exec(stmt).first()
+                if updated_at is None:
+                    return None
+                return updated_at.timestamp()
+        except Exception:
+            return None
+
+    def _read_state(self) -> dict:
+        if self._cache_enabled and self._cache is not None:
+            latest = self._snapshot_mtime()
+            if latest is None or latest == self._cache_mtime:
+                return self._cache
+
+        with Session(self._engine) as session:
+            snapshot = session.get(_StateSnapshot, 1)
+            if snapshot is None:
+                state = self._default_state()
+            else:
+                state = snapshot.data if isinstance(snapshot.data, dict) else {}
+
+        state = self._apply_defaults(state)
+        if self._cache_enabled:
+            self._cache = state
+            self._cache_mtime = self._snapshot_mtime() or time.time()
+        return state
+
+    def _write_state(self, state: dict) -> None:
+        self._create_backup()
+        meta = {
+            "version": STATE_VERSION,
+            "updated_at": _now_iso(),
+            "checksum": _compute_checksum(state),
+        }
+        state["_metadata"] = meta
+        sanitized = _json_roundtrip(state)
+        now = datetime.now(timezone.utc)
+        with Session(self._engine) as session:
+            with session.begin():
+                snapshot = session.get(_StateSnapshot, 1)
+                if snapshot is None:
+                    snapshot = _StateSnapshot(
+                        id=1,
+                        data=sanitized,
+                        version=STATE_VERSION,
+                        checksum=meta["checksum"],
+                        updated_at=now,
+                    )
+                    session.add(snapshot)
+                else:
+                    snapshot.data = sanitized
+                    snapshot.version = STATE_VERSION
+                    snapshot.checksum = meta["checksum"]
+                    snapshot.updated_at = now
+
+        if self._cache_enabled:
+            self._cache = state
+            self._cache_mtime = now.timestamp()
+
+    def _create_backup(self) -> None:
+        if not self._backups_enabled or self._backup_interval_seconds <= 0:
+            return
+
+        now = time.time()
+        if self._last_backup_at and (now - self._last_backup_at) < self._backup_interval_seconds:
+            return
+
+        with Session(self._engine) as session:
+            snapshot = session.get(_StateSnapshot, 1)
+            if snapshot is None:
+                return
+            backup_state = snapshot.data if isinstance(snapshot.data, dict) else {}
+            backup_state = _json_roundtrip(backup_state)
+            created_at = datetime.now(timezone.utc)
+            name = f"state_{created_at.strftime('%Y%m%d_%H%M%S')}"
+            size_bytes = len(json.dumps(backup_state, sort_keys=True, default=str).encode("utf-8"))
+            backup = _StateBackup(
+                name=name,
+                created_at=created_at,
+                data=backup_state,
+                size_bytes=size_bytes,
+            )
+            session.add(backup)
+            session.commit()
+            self._last_backup_at = now
+
+            backups = session.exec(
+                select(_StateBackup).order_by(_StateBackup.created_at.desc())
+            ).all()
+            for old_backup in backups[MAX_BACKUP_COUNT:]:
+                session.delete(old_backup)
+            session.commit()
+
+    def list_backups(self) -> list[dict]:
+        with Session(self._engine) as session:
+            backups = session.exec(
+                select(_StateBackup).order_by(_StateBackup.created_at.desc())
+            ).all()
+        results = []
+        for backup in backups:
+            results.append(
+                {
+                    "name": backup.name,
+                    "size_bytes": backup.size_bytes,
+                    "created_at": backup.created_at.astimezone(timezone.utc).isoformat(),
+                }
+            )
+        return results
+
+    def restore_from_backup(self, backup_name: Optional[str] = None) -> bool:
+        with Session(self._engine) as session:
+            if backup_name:
+                stmt = select(_StateBackup).where(_StateBackup.name == backup_name)
+            else:
+                stmt = select(_StateBackup).order_by(_StateBackup.created_at.desc())
+            backup = session.exec(stmt).first()
+            if backup is None:
+                return False
+            state = backup.data if isinstance(backup.data, dict) else {}
+            meta = {
+                "version": STATE_VERSION,
+                "updated_at": _now_iso(),
+                "checksum": _compute_checksum(state),
+            }
+            state["_metadata"] = meta
+            sanitized = _json_roundtrip(state)
+            snapshot = session.get(_StateSnapshot, 1)
+            if snapshot is None:
+                snapshot = _StateSnapshot(
+                    id=1,
+                    data=sanitized,
+                    version=STATE_VERSION,
+                    checksum=meta["checksum"],
+                    updated_at=datetime.now(timezone.utc),
+                )
+                session.add(snapshot)
+            else:
+                snapshot.data = sanitized
+                snapshot.version = STATE_VERSION
+                snapshot.checksum = meta["checksum"]
+                snapshot.updated_at = datetime.now(timezone.utc)
+            session.commit()
+            if self._cache_enabled:
+                self._cache = state
+                self._cache_mtime = snapshot.updated_at.timestamp()
+            return True
+
+    def get_stats(self) -> dict:
+        with self._lock:
+            state = self._read_state()
+            return {
+                "connections_count": len(state.get("connections", {})),
+                "templates_count": len(state.get("templates", {})),
+                "schedules_count": len(state.get("schedules", {})),
+                "jobs_count": len(state.get("jobs", {})),
+                "backups_count": len(self.list_backups()),
+                "state_file_exists": self._db_path.exists(),
+            }
+
+
+def _build_state_store() -> StateStore:
+    backend = os.getenv("NEURA_STATE_BACKEND", "sqlite").strip().lower()
+    if backend == "file":
+        return StateStore()
+    try:
+        return SQLiteStateStore()
+    except Exception as exc:
+        logger.error("state_store_sqlite_failed", extra={"error": str(exc)})
+        return StateStore()
+
+
+class StateStoreProxy:
+    def __init__(self, store: StateStore) -> None:
+        self._store = store
+
+    def set(self, store: StateStore) -> None:
+        self._store = store
+
+    def get(self) -> StateStore:
+        return self._store
+
+    def __getattr__(self, name: str) -> Any:  # noqa: ANN401 - proxy
+        return getattr(self._store, name)
+
+
+state_store = StateStoreProxy(_build_state_store())
+
+
+def set_state_store(store: StateStore) -> None:
+    """Swap the underlying global state store (primarily for tests)."""
+    state_store.set(store)

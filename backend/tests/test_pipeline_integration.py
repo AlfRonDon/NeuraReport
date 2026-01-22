@@ -53,7 +53,7 @@ def fresh_state(tmp_path, monkeypatch):
     """Create a fresh state store and upload directories for each test."""
     base_dir = tmp_path / "state"
     store = state_store_module.StateStore(base_dir=base_dir)
-    state_store_module.state_store = store
+    state_store_module.set_state_store(store)
     api.state_store = store
 
     # Disable scheduler

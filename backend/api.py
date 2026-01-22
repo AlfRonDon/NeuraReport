@@ -1,173 +1,38 @@
 # mypy: ignore-errors
 from __future__ import annotations
 
-import collections
 import logging
 import os
-import time
-import uuid
 import warnings
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Dict, Tuple
 
 # Silence noisy deprecations from dependencies during import/test
 warnings.filterwarnings("ignore", message=".*on_event is deprecated.*", category=DeprecationWarning)
 warnings.filterwarnings("ignore", message=".*Support for class-based `config` is deprecated.*", category=DeprecationWarning)
 warnings.filterwarnings("ignore", message=".*SwigPy.*has no __module__ attribute", category=DeprecationWarning)
 
-from fastapi import FastAPI, HTTPException, Request, UploadFile
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI
 
 
-# =============================================================================
-# Rate Limiting
-# =============================================================================
-
-class RateLimiter:
-    """Simple in-memory rate limiter using sliding window."""
-
-    def __init__(
-        self,
-        requests_per_minute: int = 60,
-        requests_per_second: int = 10,
-        burst_size: int = 20,
-    ):
-        self.requests_per_minute = requests_per_minute
-        self.requests_per_second = requests_per_second
-        self.burst_size = burst_size
-        # client_key -> list of request timestamps
-        self._requests: Dict[str, collections.deque] = {}
-        self._cleanup_counter = 0
-
-    def _get_client_key(self, request: Request) -> str:
-        """Get client identifier from request."""
-        # Try to get real IP from forwarded headers
-        forwarded = request.headers.get("x-forwarded-for")
-        if forwarded:
-            return forwarded.split(",")[0].strip()
-        real_ip = request.headers.get("x-real-ip")
-        if real_ip:
-            return real_ip
-        return request.client.host if request.client else "unknown"
-
-    def is_allowed(self, request: Request) -> Tuple[bool, Dict[str, int]]:
-        """Check if request is allowed under rate limits."""
-        client_key = self._get_client_key(request)
-        now = time.time()
-
-        # Periodic cleanup of old entries
-        self._cleanup_counter += 1
-        if self._cleanup_counter > 100:
-            self._cleanup(now)
-            self._cleanup_counter = 0
-
-        if client_key not in self._requests:
-            self._requests[client_key] = collections.deque()
-
-        timestamps = self._requests[client_key]
-
-        # Remove timestamps older than 1 minute
-        cutoff_minute = now - 60
-        while timestamps and timestamps[0] < cutoff_minute:
-            timestamps.popleft()
-
-        # Check per-minute limit
-        if len(timestamps) >= self.requests_per_minute:
-            return False, {
-                "limit": self.requests_per_minute,
-                "remaining": 0,
-                "reset": int(timestamps[0] + 60 - now),
-            }
-
-        # Check per-second limit (last second)
-        cutoff_second = now - 1
-        recent_count = sum(1 for ts in timestamps if ts >= cutoff_second)
-        if recent_count >= self.requests_per_second:
-            return False, {
-                "limit": self.requests_per_second,
-                "remaining": 0,
-                "reset": 1,
-            }
-
-        # Request allowed
-        timestamps.append(now)
-        remaining = self.requests_per_minute - len(timestamps)
-        return True, {
-            "limit": self.requests_per_minute,
-            "remaining": max(0, remaining),
-            "reset": 60,
-        }
-
-    def _cleanup(self, now: float) -> None:
-        """Remove stale entries from the rate limiter."""
-        cutoff = now - 120  # Remove clients with no requests in 2 minutes
-        stale_keys = [
-            key for key, timestamps in self._requests.items()
-            if not timestamps or timestamps[-1] < cutoff
-        ]
-        for key in stale_keys:
-            del self._requests[key]
-
-
-# Global rate limiter instance
-_RATE_LIMITER: RateLimiter | None = None
-_RATE_LIMIT_ENABLED = os.getenv("NEURA_RATE_LIMIT_ENABLED", "true").lower() in {"1", "true", "yes"}
-_RATE_LIMIT_RPM = int(os.getenv("NEURA_RATE_LIMIT_RPM", "120"))
-_RATE_LIMIT_RPS = int(os.getenv("NEURA_RATE_LIMIT_RPS", "20"))
-
-
-def get_rate_limiter() -> RateLimiter:
-    """Get or create the global rate limiter."""
-    global _RATE_LIMITER
-    if _RATE_LIMITER is None:
-        _RATE_LIMITER = RateLimiter(
-            requests_per_minute=_RATE_LIMIT_RPM,
-            requests_per_second=_RATE_LIMIT_RPS,
-        )
-    return _RATE_LIMITER
-from src.utils.static_files import UploadsStaticFiles
-from src.utils.connection_utils import db_path_from_payload_or_default as _db_path_from_payload_or_default
+from .app.core.static_files import UploadsStaticFiles
 
 from .app.core.event_bus import EventBus, logging_middleware, metrics_middleware
+from .app.core.errors import add_exception_handlers
+from .app.core.middleware import add_middlewares
 from backend.app.api.router import register_routes
-from src.services.report_service import scheduler_runner as report_scheduler_runner
+from src.services.report_service import (
+    _run_report_job_sync as _run_report_job_sync,
+    _run_report_with_email as _run_report_with_email,
+    _schedule_report_job as _schedule_report_job,
+    scheduler_runner as report_scheduler_runner,
+)
 
-from .app.config import load_settings, log_settings
+from .app.core.config import get_settings, log_settings
+from .app.core.auth import init_auth_db
 from .app.env_loader import load_env_file
 
-from .app.services.utils import get_correlation_id, set_correlation_id
 from .app.services.jobs.report_scheduler import ReportScheduler
-from backend.app.services.mapping.HeaderMapping import get_parent_child_info
-from src.services.mapping.helpers import build_catalog_from_db as _build_catalog_from_db, compute_db_signature
-from backend.app.services.contract.ContractBuilderV2 import build_or_load_contract_v2
-from backend.app.services.templates.TemplateVerify import (
-    pdf_to_pngs,
-    render_html_to_png,
-    render_panel_preview,
-    request_initial_html,
-    request_fix_html,
-    save_html,
-)
-from backend.app.services.render.html_raster import rasterize_html_to_png, save_png
-from backend.app.services.mapping.AutoMapInline import run_llm_call_3
-from src.services.mapping.preview import _mapping_preview_pipeline
-from src.endpoints.templates import verify_template_route as verify_template
-from backend.app.services.templates.layout_hints import get_layout_hints
-from backend.app.services.generator.GeneratorAssetsV1 import build_generator_assets_from_payload
-from backend.app.services.reports.docx_export import html_file_to_docx
-from backend.app.services.reports.xlsx_export import html_file_to_xlsx
-from backend.app.services.utils.artifacts import write_artifact_manifest
-from backend.app.services.utils.validation import validate_contract_schema
-from backend.app.services.state import state_store
-from src.services.report_service import (
-    JobRunTracker,
-    _schedule_report_job,
-    _run_report_with_email,
-    _run_report_job_sync,
-)
-from backend.app.services.connections.db_connection import resolve_db_path, verify_sqlite
 
 
 def _configure_error_log_handler(target_logger: logging.Logger | None = None) -> Path | None:
@@ -207,7 +72,7 @@ load_env_file()
 
 logger = logging.getLogger("neura.api")
 EVENT_BUS = EventBus(middlewares=[logging_middleware(logger), metrics_middleware(logger)])
-SETTINGS = load_settings()
+SETTINGS = get_settings()
 log_settings(logger, SETTINGS)
 ERROR_LOG_PATH: Path | None = None
 SCHEDULER: ReportScheduler | None = None
@@ -222,6 +87,11 @@ async def lifespan(app: FastAPI):
         if ERROR_LOG_PATH:
             logger.info("error_log_configured", extra={"event": "error_log_configured", "path": str(ERROR_LOG_PATH)})
 
+    try:
+        await init_auth_db()
+    except Exception as exc:
+        logger.warning("auth_db_init_failed", extra={"event": "auth_db_init_failed", "error": str(exc)})
+
     if not SCHEDULER_DISABLED and SCHEDULER is None:
         poll_seconds = max(int(os.getenv("NEURA_SCHEDULER_INTERVAL", "60") or "60"), 15)
         SCHEDULER = ReportScheduler(_scheduler_runner, poll_seconds=poll_seconds)
@@ -234,131 +104,9 @@ async def lifespan(app: FastAPI):
         await SCHEDULER.stop()
 
 
-app = FastAPI(title="NeuraReport API", lifespan=lifespan)
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # tighten for prod
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-
-@app.middleware("http")
-async def rate_limit_middleware(request: Request, call_next):
-    """Apply rate limiting to API requests."""
-    # Skip rate limiting for static files and health checks
-    path = request.url.path
-    if path.startswith(("/uploads", "/excel-uploads", "/health", "/docs", "/openapi.json")):
-        return await call_next(request)
-
-    if not _RATE_LIMIT_ENABLED:
-        return await call_next(request)
-
-    limiter = get_rate_limiter()
-    allowed, info = limiter.is_allowed(request)
-
-    if not allowed:
-        logger.warning(
-            "rate_limit_exceeded",
-            extra={
-                "event": "rate_limit_exceeded",
-                "path": path,
-                "method": request.method,
-                "client": limiter._get_client_key(request),
-            },
-        )
-        return JSONResponse(
-            status_code=429,
-            content={
-                "status": "error",
-                "code": "rate_limit_exceeded",
-                "message": "Too many requests. Please slow down.",
-                "retry_after": info.get("reset", 60),
-            },
-            headers={
-                "Retry-After": str(info.get("reset", 60)),
-                "X-RateLimit-Limit": str(info.get("limit", 0)),
-                "X-RateLimit-Remaining": str(info.get("remaining", 0)),
-            },
-        )
-
-    response = await call_next(request)
-
-    # Add rate limit headers to successful responses
-    response.headers["X-RateLimit-Limit"] = str(info.get("limit", 0))
-    response.headers["X-RateLimit-Remaining"] = str(info.get("remaining", 0))
-
-    return response
-
-
-@app.middleware("http")
-async def correlation_middleware(request: Request, call_next):
-    correlation_id = request.headers.get("x-correlation-id") or str(uuid.uuid4())
-    set_correlation_id(correlation_id)
-    request.state.correlation_id = correlation_id
-    started = time.time()
-    logger.info(
-        "request_start",
-        extra={
-            "event": "request_start",
-            "path": request.url.path,
-            "method": request.method,
-            "correlation_id": correlation_id,
-        },
-    )
-    try:
-        response = await call_next(request)
-    except Exception:
-        elapsed = int((time.time() - started) * 1000)
-        logger.exception(
-            "request_error",
-            extra={
-                "event": "request_error",
-                "path": request.url.path,
-                "method": request.method,
-                "elapsed_ms": elapsed,
-                "correlation_id": correlation_id,
-            },
-        )
-        set_correlation_id(None)
-        raise
-
-    elapsed = int((time.time() - started) * 1000)
-    logger.info(
-        "request_end",
-        extra={
-            "event": "request_end",
-            "path": request.url.path,
-            "method": request.method,
-            "status_code": response.status_code,
-            "elapsed_ms": elapsed,
-            "correlation_id": correlation_id,
-        },
-    )
-    content_type = response.headers.get("Content-Type", "")
-    response.headers["X-Correlation-ID"] = correlation_id
-    response.headers.setdefault("X-Content-Type-Options", "nosniff")
-    if content_type.startswith(("application/json", "text/html", "application/x-ndjson")):
-        response.headers.setdefault("Cache-Control", "no-store")
-    set_correlation_id(None)
-    return response
-
-
-@app.exception_handler(HTTPException)
-async def http_exception_handler(request: Request, exc: HTTPException):
-    request_state = getattr(request, "state", None)
-    correlation_id = getattr(request_state, "correlation_id", None) or get_correlation_id()
-    detail = exc.detail
-    if not isinstance(detail, dict) or not {"status", "code", "message"} <= set(detail.keys()):
-        detail = {
-            "status": "error",
-            "code": f"http_{exc.status_code}",
-            "message": detail if isinstance(detail, str) else str(detail),
-        }
-    detail["correlation_id"] = correlation_id
-    return JSONResponse(status_code=exc.status_code, content=detail)
+app = FastAPI(title=SETTINGS.api_title, version=SETTINGS.api_version, lifespan=lifespan)
+add_middlewares(app, SETTINGS)
+add_exception_handlers(app)
 
 
 # ---------- Static upload root ----------

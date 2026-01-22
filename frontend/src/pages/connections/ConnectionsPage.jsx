@@ -35,6 +35,12 @@ import FavoriteButton from '../../components/FavoriteButton'
 import * as api from '../../api/client'
 import ConnectionForm from './ConnectionForm'
 import ConnectionSchemaDrawer from './ConnectionSchemaDrawer'
+// UX Governance - Enforced interaction API
+import {
+  useInteraction,
+  InteractionType,
+  Reversibility,
+} from '../../components/ux/governance'
 
 // =============================================================================
 // ANIMATIONS
@@ -120,6 +126,8 @@ const ActionButton = styled(IconButton)(({ theme }) => ({
 export default function ConnectionsPage() {
   const theme = useTheme()
   const toast = useToast()
+  // UX Governance: Enforced interaction API - ALL user actions flow through this
+  const { execute } = useInteraction()
   const savedConnections = useAppStore((s) => s.savedConnections)
   const setSavedConnections = useAppStore((s) => s.setSavedConnections)
   const addSavedConnection = useAppStore((s) => s.addSavedConnection)
@@ -195,110 +203,142 @@ export default function ConnectionsPage() {
 
   const handleSchemaInspect = useCallback(async () => {
     if (!menuConnection) return
+    const connectionToInspect = menuConnection
     handleCloseMenu()
 
-    // Check connection health before opening schema drawer
-    try {
-      setLoading(true)
-      const result = await api.healthcheckConnection(menuConnection.id)
-      if (result.status !== 'ok') {
-        toast.show('Connection is unavailable. Please verify connection settings.', 'error')
-        return
-      }
-      setSchemaConnection(menuConnection)
-      setSchemaOpen(true)
-    } catch (err) {
-      toast.show(
-        err.message || 'Unable to connect to database. Please verify the connection is active.',
-        'error'
-      )
-    } finally {
-      setLoading(false)
-    }
-  }, [menuConnection, handleCloseMenu, toast])
+    // UX Governance: Analyze action with tracking
+    execute({
+      type: InteractionType.ANALYZE,
+      label: `Inspect schema for "${connectionToInspect.name}"`,
+      reversibility: Reversibility.SYSTEM_MANAGED,
+      errorMessage: 'Unable to connect to database. Please verify the connection is active.',
+      action: async () => {
+        setLoading(true)
+        try {
+          const result = await api.healthcheckConnection(connectionToInspect.id)
+          if (result.status !== 'ok') {
+            throw new Error('Connection is unavailable. Please verify connection settings.')
+          }
+          setSchemaConnection(connectionToInspect)
+          setSchemaOpen(true)
+        } finally {
+          setLoading(false)
+        }
+      },
+    })
+  }, [menuConnection, handleCloseMenu, execute])
 
   const handleDeleteConfirm = useCallback(async () => {
     if (!deletingConnection) return
     const connectionToDelete = deletingConnection
     const connectionData = savedConnections.find((c) => c.id === connectionToDelete.id)
 
-    // Optimistically remove from UI
-    removeSavedConnection(connectionToDelete.id)
     setDeleteConfirmOpen(false)
     setDeletingConnection(null)
 
-    // Set up delayed actual delete
-    let undone = false
-    const deleteTimeout = setTimeout(async () => {
-      if (undone) return
-      try {
-        await api.deleteConnection(connectionToDelete.id)
-      } catch (err) {
-        // If delete fails, restore the connection
-        if (connectionData) {
-          setSavedConnections((prev) => [...prev, connectionData])
-        }
-        toast.show(err.message || 'Failed to delete connection', 'error')
-      }
-    }, 5000)
+    // UX Governance: Delete action with tracking
+    execute({
+      type: InteractionType.DELETE,
+      label: `Delete data source "${connectionToDelete.name}"`,
+      reversibility: Reversibility.PARTIALLY_REVERSIBLE,
+      successMessage: `"${connectionToDelete.name}" removed`,
+      errorMessage: 'Failed to delete connection',
+      action: async () => {
+        // Optimistically remove from UI
+        removeSavedConnection(connectionToDelete.id)
 
-    // Show undo toast
-    toast.showWithUndo(
-      `"${connectionToDelete.name}" removed`,
-      () => {
-        undone = true
-        clearTimeout(deleteTimeout)
-        // Restore connection
-        if (connectionData) {
-          setSavedConnections((prev) => [...prev, connectionData])
-        }
-        toast.show('Data source restored', 'success')
+        // Set up delayed actual delete with undo capability
+        let undone = false
+        const deleteTimeout = setTimeout(async () => {
+          if (undone) return
+          try {
+            await api.deleteConnection(connectionToDelete.id)
+          } catch (err) {
+            // If delete fails, restore the connection
+            if (connectionData) {
+              setSavedConnections((prev) => [...prev, connectionData])
+            }
+            throw err
+          }
+        }, 5000)
+
+        // Show undo toast
+        toast.showWithUndo(
+          `"${connectionToDelete.name}" removed`,
+          () => {
+            undone = true
+            clearTimeout(deleteTimeout)
+            // Restore connection
+            if (connectionData) {
+              setSavedConnections((prev) => [...prev, connectionData])
+            }
+            toast.show('Data source restored', 'success')
+          },
+          { severity: 'info' }
+        )
       },
-      { severity: 'info' }
-    )
-  }, [deletingConnection, savedConnections, removeSavedConnection, setSavedConnections, toast])
+    })
+  }, [deletingConnection, savedConnections, removeSavedConnection, setSavedConnections, toast, execute])
 
   const handleSaveConnection = useCallback(async (connectionData) => {
-    setLoading(true)
-    try {
-      const result = await api.testConnection(connectionData)
-      if (!result.ok) {
-        throw new Error(result.detail || 'Connection test failed')
-      }
+    const isEditing = !!editingConnection
 
-      const savedConnection = await api.upsertConnection({
-        id: editingConnection?.id || result.connection_id,
-        name: connectionData.name,
-        dbType: connectionData.db_type,
-        dbUrl: connectionData.db_url,
-        database: connectionData.database,
-        status: 'connected',
-        latencyMs: result.latency_ms,
-      })
+    // UX Governance: Create/Update action with tracking
+    execute({
+      type: isEditing ? InteractionType.UPDATE : InteractionType.CREATE,
+      label: isEditing ? `Update data source "${connectionData.name}"` : `Add data source "${connectionData.name}"`,
+      reversibility: Reversibility.FULLY_REVERSIBLE,
+      successMessage: isEditing ? 'Data source updated' : 'Data source added',
+      errorMessage: 'Failed to save connection',
+      action: async () => {
+        setLoading(true)
+        try {
+          const result = await api.testConnection(connectionData)
+          if (!result.ok) {
+            throw new Error(result.detail || 'Connection test failed')
+          }
 
-      addSavedConnection(savedConnection)
-      toast.show(editingConnection ? 'Data source updated' : 'Data source added', 'success')
-      setDrawerOpen(false)
-    } catch (err) {
-      toast.show(err.message || 'Failed to save connection', 'error')
-    } finally {
-      setLoading(false)
-    }
-  }, [editingConnection, addSavedConnection, toast])
+          const savedConnection = await api.upsertConnection({
+            id: editingConnection?.id || result.connection_id,
+            name: connectionData.name,
+            dbType: connectionData.db_type,
+            dbUrl: connectionData.db_url,
+            database: connectionData.database,
+            status: 'connected',
+            latencyMs: result.latency_ms,
+          })
+
+          addSavedConnection(savedConnection)
+          setDrawerOpen(false)
+        } finally {
+          setLoading(false)
+        }
+      },
+    })
+  }, [editingConnection, addSavedConnection, execute])
 
   const handleTestConnection = useCallback(async (connection) => {
-    setLoading(true)
-    try {
-      const result = await api.healthcheckConnection(connection.id)
-      if (result.status === 'ok') {
-        toast.show(`Connected (${result.latency_ms}ms)`, 'success')
-      }
-    } catch (err) {
-      toast.show(err.message || 'Connection test failed', 'error')
-    } finally {
-      setLoading(false)
-    }
-  }, [toast])
+    // UX Governance: Execute action with tracking
+    execute({
+      type: InteractionType.EXECUTE,
+      label: `Test connection "${connection.name}"`,
+      reversibility: Reversibility.SYSTEM_MANAGED,
+      errorMessage: 'Connection test failed',
+      action: async () => {
+        setLoading(true)
+        try {
+          const result = await api.healthcheckConnection(connection.id)
+          if (result.status === 'ok') {
+            toast.show(`Connected (${result.latency_ms}ms)`, 'success')
+          } else {
+            throw new Error('Connection unavailable')
+          }
+        } finally {
+          setLoading(false)
+        }
+      },
+    })
+  }, [toast, execute])
 
   const handleRowClick = useCallback((row) => {
     setActiveConnectionId(row.id)

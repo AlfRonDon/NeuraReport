@@ -10,9 +10,11 @@ npm install
 
 ## Development
 
-- `npm run dev` – start the Vite dev server
-- `npm run lint` – run ESLint checks
-- `npm run test:ui` / `npm run test:a11y` / `npm run test:visual` – execute Playwright suites
+- `npm run dev` - start the Vite dev server
+- `npm run lint` - run ESLint checks
+- `npm run test:ui` / `npm run test:a11y` / `npm run test:visual` - execute Playwright suites
+
+Tip: copy `frontend/.env.example` to `frontend/.env.local` to configure the backend URL and mock mode.
 
 ## Layout Sanity Checklist
 

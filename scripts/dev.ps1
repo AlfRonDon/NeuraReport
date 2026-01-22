@@ -5,7 +5,7 @@ $root = if ($PSScriptRoot) { Split-Path -Parent $PSScriptRoot } else { (Get-Loca
 $backend = Join-Path $root "backend"
 $venv = Join-Path $backend ".venv\Scripts\Activate.ps1"
 if (-not (Test-Path $venv)) { Write-Error "No venv. Run scripts\setup.ps1 first."; exit 1 }
-$backendCmd = "Set-Location `"$backend`"; . `"$venv`"; uvicorn backend.api:app --host 0.0.0.0 --port 8000 --reload"
+$backendCmd = "Set-Location `"$root`"; . `"$venv`"; uvicorn backend.api:app --host 0.0.0.0 --port 8000 --reload"
 $bp = Start-Process powershell -ArgumentList "-NoLogo","-NoProfile","-Command",$backendCmd -PassThru
 Write-Host "Backend PID $($bp.Id) at http://localhost:8000" -ForegroundColor Green
 

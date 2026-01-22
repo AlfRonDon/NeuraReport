@@ -9,6 +9,7 @@ from typing import Any, Dict, Optional
 from fastapi import APIRouter, Request
 
 from backend.app.core.config import get_settings
+from backend.app.core.middleware import limiter
 from backend.app.features.analyze.services.document_analysis_service import _ANALYSIS_CACHE
 from backend.app.services.utils.mailer import MAILER_CONFIG, refresh_mailer_config
 
@@ -81,6 +82,7 @@ def _get_memory_usage() -> Dict[str, Any]:
             return {"status": "unknown", "message": "Memory stats not available"}
 
 
+@limiter.exempt
 @router.get("/health")
 async def health(request: Request) -> Dict[str, Any]:
     """Basic health check - fast, for load balancer probes."""
@@ -91,12 +93,14 @@ async def health(request: Request) -> Dict[str, Any]:
     }
 
 
+@limiter.exempt
 @router.get("/healthz")
 async def healthz() -> Dict[str, str]:
     """Kubernetes-style liveness probe."""
     return {"status": "ok"}
 
 
+@limiter.exempt
 @router.get("/ready")
 async def ready() -> Dict[str, Any]:
     """Kubernetes-style readiness probe - checks if app can serve requests."""
@@ -122,12 +126,14 @@ async def ready() -> Dict[str, Any]:
     }
 
 
+@limiter.exempt
 @router.get("/readyz")
 async def readyz() -> Dict[str, Any]:
     """Compatibility alias for readiness probe."""
     return await ready()
 
 
+@limiter.exempt
 @router.get("/health/token-usage")
 async def token_usage(request: Request) -> Dict[str, Any]:
     """Get LLM token usage statistics."""
@@ -154,6 +160,7 @@ async def token_usage(request: Request) -> Dict[str, Any]:
         }
 
 
+@limiter.exempt
 @router.get("/health/detailed")
 async def health_detailed(request: Request) -> Dict[str, Any]:
     """Comprehensive health check with all dependencies."""
@@ -288,6 +295,7 @@ def _test_smtp_connection() -> Dict[str, Any]:
         return {"status": "error", "error": str(e), "message": "SMTP connection test failed"}
 
 
+@limiter.exempt
 @router.get("/health/email")
 async def email_health(request: Request) -> Dict[str, Any]:
     """Check email/SMTP configuration and optionally test connection."""
@@ -300,6 +308,7 @@ async def email_health(request: Request) -> Dict[str, Any]:
     }
 
 
+@limiter.exempt
 @router.get("/health/email/test")
 async def email_connection_test(request: Request) -> Dict[str, Any]:
     """Test SMTP connection (without sending an email)."""
@@ -321,6 +330,7 @@ async def email_connection_test(request: Request) -> Dict[str, Any]:
     }
 
 
+@limiter.exempt
 @router.post("/health/email/refresh")
 async def refresh_email_config(request: Request) -> Dict[str, Any]:
     """Refresh email configuration from environment variables."""
@@ -335,6 +345,7 @@ async def refresh_email_config(request: Request) -> Dict[str, Any]:
     }
 
 
+@limiter.exempt
 @router.get("/health/scheduler")
 async def scheduler_health(request: Request) -> Dict[str, Any]:
     """Check scheduler status with detailed information."""

@@ -52,6 +52,12 @@ import { useToast } from '../../components/ToastProvider'
 import FavoriteButton from '../../components/FavoriteButton'
 import * as api from '../../api/client'
 import * as recommendationsApi from '../../api/recommendations'
+// UX Governance - Enforced interaction API
+import {
+  useInteraction,
+  InteractionType,
+  Reversibility,
+} from '../../components/ux/governance'
 
 // =============================================================================
 // ANIMATIONS
@@ -355,6 +361,8 @@ export default function TemplatesPage() {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const toast = useToast()
+  // UX Governance: Enforced interaction API - ALL user actions flow through this
+  const { execute } = useInteraction()
   const templates = useAppStore((s) => s.templates)
   const setTemplates = useAppStore((s) => s.setTemplates)
   const removeTemplate = useAppStore((s) => s.removeTemplate)
@@ -480,63 +488,88 @@ export default function TemplatesPage() {
     const templateToDelete = deletingTemplate
     const templateData = templates.find((t) => t.id === templateToDelete.id)
 
-    removeTemplate(templateToDelete.id)
     setDeleteConfirmOpen(false)
     setDeletingTemplate(null)
 
-    let undone = false
-    const deleteTimeout = setTimeout(async () => {
-      if (undone) return
-      try {
-        await api.deleteTemplate(templateToDelete.id)
-      } catch (err) {
-        if (templateData) {
-          setTemplates((prev) => [...prev, templateData])
-        }
-        toast.show(err.message || 'Failed to delete template', 'error')
-      }
-    }, 5000)
+    // UX Governance: Delete action with tracking
+    execute({
+      type: InteractionType.DELETE,
+      label: `Delete design "${templateToDelete.name || templateToDelete.id}"`,
+      reversibility: Reversibility.PARTIALLY_REVERSIBLE,
+      action: async () => {
+        removeTemplate(templateToDelete.id)
 
-    toast.showWithUndo(
-      `"${templateToDelete.name || templateToDelete.id}" removed`,
-      () => {
-        undone = true
-        clearTimeout(deleteTimeout)
-        if (templateData) {
-          setTemplates((prev) => [...prev, templateData])
-        }
-        toast.show('Design restored', 'success')
+        let undone = false
+        const deleteTimeout = setTimeout(async () => {
+          if (undone) return
+          try {
+            await api.deleteTemplate(templateToDelete.id)
+          } catch (err) {
+            if (templateData) {
+              setTemplates((prev) => [...prev, templateData])
+            }
+            throw err
+          }
+        }, 5000)
+
+        toast.showWithUndo(
+          `"${templateToDelete.name || templateToDelete.id}" removed`,
+          () => {
+            undone = true
+            clearTimeout(deleteTimeout)
+            if (templateData) {
+              setTemplates((prev) => [...prev, templateData])
+            }
+            toast.show('Design restored', 'success')
+          },
+          { severity: 'info' }
+        )
       },
-      { severity: 'info' }
-    )
-  }, [deletingTemplate, templates, removeTemplate, setTemplates, toast])
+    })
+  }, [deletingTemplate, templates, removeTemplate, setTemplates, toast, execute])
 
   const handleExport = useCallback(async () => {
     if (!menuTemplate) return
-    try {
-      await api.exportTemplateZip(menuTemplate.id)
-      toast.show('Design exported', 'success')
-    } catch (err) {
-      toast.show(err.message || 'Failed to export design', 'error')
-    }
+    const templateToExport = menuTemplate
     handleCloseMenu()
-  }, [menuTemplate, toast, handleCloseMenu])
+
+    // UX Governance: Download action with tracking
+    execute({
+      type: InteractionType.DOWNLOAD,
+      label: `Export design "${templateToExport.name || templateToExport.id}"`,
+      reversibility: Reversibility.SYSTEM_MANAGED,
+      successMessage: 'Design exported',
+      errorMessage: 'Failed to export design',
+      action: async () => {
+        await api.exportTemplateZip(templateToExport.id)
+      },
+    })
+  }, [menuTemplate, handleCloseMenu, execute])
 
   const handleDuplicate = useCallback(async () => {
     if (!menuTemplate) return
-    setDuplicating(true)
+    const templateToDuplicate = menuTemplate
     handleCloseMenu()
-    try {
-      const result = await api.duplicateTemplate(menuTemplate.id)
-      const duplicatedName = result?.name || (menuTemplate.name ? `${menuTemplate.name} (Copy)` : 'Template (Copy)')
-      await fetchTemplatesData()
-      toast.show(`Design copied as "${duplicatedName}"`, 'success')
-    } catch (err) {
-      toast.show(err.message || 'Failed to copy design', 'error')
-    } finally {
-      setDuplicating(false)
-    }
-  }, [menuTemplate, toast, handleCloseMenu, fetchTemplatesData])
+
+    // UX Governance: Create action with tracking
+    execute({
+      type: InteractionType.CREATE,
+      label: `Duplicate design "${templateToDuplicate.name || templateToDuplicate.id}"`,
+      reversibility: Reversibility.FULLY_REVERSIBLE,
+      errorMessage: 'Failed to copy design',
+      action: async () => {
+        setDuplicating(true)
+        try {
+          const result = await api.duplicateTemplate(templateToDuplicate.id)
+          const duplicatedName = result?.name || (templateToDuplicate.name ? `${templateToDuplicate.name} (Copy)` : 'Template (Copy)')
+          await fetchTemplatesData()
+          toast.show(`Design copied as "${duplicatedName}"`, 'success')
+        } finally {
+          setDuplicating(false)
+        }
+      },
+    })
+  }, [menuTemplate, toast, handleCloseMenu, fetchTemplatesData, execute])
 
   const handleEditMetadata = useCallback(() => {
     if (!menuTemplate) return

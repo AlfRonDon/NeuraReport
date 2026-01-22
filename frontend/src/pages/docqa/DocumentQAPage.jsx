@@ -62,6 +62,19 @@ import {
 import useDocQAStore from '../../stores/docqaStore'
 import ConfirmModal from '../../ui/Modal/ConfirmModal'
 import { useToast } from '../../components/ToastProvider'
+// UX Components for premium interactions
+import DisabledTooltip, { DisabledReasons } from '../../components/ux/DisabledTooltip'
+import { useOperationHistory, OperationType } from '../../components/ux/OperationHistoryProvider'
+import { ValidatedTextField, ValidationRules, CharacterCounter } from '../../components/ux/InlineValidator'
+import { ContentSkeleton } from '../../components/feedback/LoadingState'
+// UX Governance - Enforced interaction API
+import {
+  useInteraction,
+  InteractionType,
+  Reversibility,
+  useConfirmedAction,
+  IrreversibleActions,
+} from '../../components/ux/governance'
 
 // =============================================================================
 // ANIMATIONS
@@ -530,6 +543,12 @@ const GlassDialog = styled(Dialog)(({ theme }) => ({
 // MAIN COMPONENT
 // =============================================================================
 
+const MAX_DOC_SIZE = 5 * 1024 * 1024
+const MIN_DOC_LENGTH = 10
+const MAX_NAME_LENGTH = 200
+const MIN_QUESTION_LENGTH = 3
+const MAX_QUESTION_LENGTH = 2000
+
 export default function DocumentQAPage() {
   const theme = useTheme()
   const {
@@ -573,6 +592,10 @@ export default function DocumentQAPage() {
   const toast = useToast()
   const [initialLoading, setInitialLoading] = useState(true)
   const inputRef = useRef(null)
+  // UX Governance: Enforced interaction API - ALL user actions flow through this
+  const { execute } = useInteraction()
+  // UX: Confirmed action for irreversible delete operations
+  const confirmDeleteSession = useConfirmedAction('DELETE_SESSION')
 
   useEffect(() => {
     const init = async () => {
@@ -588,27 +611,66 @@ export default function DocumentQAPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  const handleCreateSession = async () => {
+  const handleCreateSession = () => {
     if (!newSessionName) return
-    await createSession(newSessionName)
-    setCreateDialogOpen(false)
-    setNewSessionName('')
+    if (newSessionName.length > MAX_NAME_LENGTH) {
+      toast.show(`Session name must be ${MAX_NAME_LENGTH} characters or less`, 'error')
+      return
+    }
+    // UX Governance: All actions flow through enforced interaction API
+    execute({
+      type: InteractionType.CREATE,
+      label: `Create session "${newSessionName}"`,
+      reversibility: Reversibility.FULLY_REVERSIBLE,
+      successMessage: 'Session created successfully',
+      action: async () => {
+        await createSession(newSessionName)
+        setCreateDialogOpen(false)
+        setNewSessionName('')
+      },
+    })
   }
 
-  const handleAddDocument = async () => {
+  const handleAddDocument = () => {
     if (!currentSession || !docName || !docContent) return
-    await addDocument(currentSession.id, {
-      name: docName,
-      content: docContent,
+    if (docName.length > MAX_NAME_LENGTH) {
+      toast.show(`Document name must be ${MAX_NAME_LENGTH} characters or less`, 'error')
+      return
+    }
+    if (docContent.trim().length < MIN_DOC_LENGTH) {
+      toast.show(`Document content must be at least ${MIN_DOC_LENGTH} characters`, 'error')
+      return
+    }
+    if (docContent.length > MAX_DOC_SIZE) {
+      toast.show('Document content exceeds 5MB limit', 'error')
+      return
+    }
+    // UX Governance: Upload action with tracking
+    execute({
+      type: InteractionType.UPLOAD,
+      label: `Add document "${docName}"`,
+      reversibility: Reversibility.FULLY_REVERSIBLE,
+      successMessage: 'Document added successfully',
+      action: async () => {
+        await addDocument(currentSession.id, {
+          name: docName,
+          content: docContent,
+        })
+        setAddDocDialogOpen(false)
+        setDocName('')
+        setDocContent('')
+      },
     })
-    setAddDocDialogOpen(false)
-    setDocName('')
-    setDocContent('')
   }
 
   const handleFileUpload = (event) => {
     const file = event.target.files[0]
     if (!file) return
+    if (file.name.length > MAX_NAME_LENGTH) {
+      toast.show(`File name must be ${MAX_NAME_LENGTH} characters or less`, 'error')
+      event.target.value = ''
+      return
+    }
 
     const allowedExtensions = ['.txt', '.md', '.json', '.csv']
     const fileName = file.name.toLowerCase()
@@ -625,8 +687,7 @@ export default function DocumentQAPage() {
       return
     }
 
-    const maxSize = 5 * 1024 * 1024
-    if (file.size > maxSize) {
+    if (file.size > MAX_DOC_SIZE) {
       toast.show('File size exceeds 5MB limit', 'error')
       event.target.value = ''
       return
@@ -650,11 +711,29 @@ export default function DocumentQAPage() {
     reader.readAsText(file)
   }
 
-  const handleAskQuestion = async () => {
+  const handleAskQuestion = () => {
     if (!currentSession || !question.trim()) return
-    const q = question
-    setQuestion('')
-    await askQuestion(currentSession.id, q)
+    const trimmedQuestion = question.trim()
+    if (trimmedQuestion.length < MIN_QUESTION_LENGTH) {
+      toast.show(`Question must be at least ${MIN_QUESTION_LENGTH} characters`, 'error')
+      return
+    }
+    if (trimmedQuestion.length > MAX_QUESTION_LENGTH) {
+      toast.show(`Question must be ${MAX_QUESTION_LENGTH} characters or less`, 'error')
+      return
+    }
+    const q = trimmedQuestion
+    // UX Governance: Analyze action with navigation safety
+    execute({
+      type: InteractionType.ANALYZE,
+      label: 'Analyzing documents...',
+      reversibility: Reversibility.SYSTEM_MANAGED,
+      blocksNavigation: true,
+      action: async () => {
+        setQuestion('')
+        await askQuestion(currentSession.id, q)
+      },
+    })
   }
 
   const handleKeyPress = (e) => {
@@ -692,15 +771,21 @@ export default function DocumentQAPage() {
     }
   }
 
-  const handleRegenerate = async (messageId) => {
+  const handleRegenerate = (messageId) => {
     if (!currentSession) return
-    toast.show('Regenerating response...', 'info')
-    const result = await regenerateResponse(currentSession.id, messageId)
-    if (result) {
-      toast.show('Response regenerated', 'success')
-    } else {
-      toast.show('Failed to regenerate response', 'error')
-    }
+    // UX Governance: Regenerate action with tracking
+    execute({
+      type: InteractionType.GENERATE,
+      label: 'Regenerating response...',
+      reversibility: Reversibility.SYSTEM_MANAGED,
+      successMessage: 'Response regenerated',
+      errorMessage: 'Failed to regenerate response',
+      blocksNavigation: true,
+      action: async () => {
+        const result = await regenerateResponse(currentSession.id, messageId)
+        if (!result) throw new Error('Regenerate failed')
+      },
+    })
   }
 
   const filteredSessions = sessions.filter((session) =>
@@ -1212,27 +1297,65 @@ export default function DocumentQAPage() {
                   disabled={asking || !currentSession.documents?.length}
                   multiline
                   maxRows={4}
+                  inputProps={{ maxLength: MAX_QUESTION_LENGTH }}
                 />
-                <SendButton
-                  onClick={handleAskQuestion}
-                  disabled={!question.trim() || asking || !currentSession.documents?.length}
+                {/* UX: DisabledTooltip explains WHY the button is disabled */}
+                <DisabledTooltip
+                  disabled={
+                    !question.trim()
+                    || question.trim().length < MIN_QUESTION_LENGTH
+                    || question.trim().length > MAX_QUESTION_LENGTH
+                    || asking
+                    || !currentSession.documents?.length
+                  }
+                  reason={
+                    asking
+                      ? 'Please wait for the current question to complete'
+                      : !currentSession.documents?.length
+                        ? 'Add at least one document first'
+                        : !question.trim()
+                          ? 'Enter a question to ask'
+                          : question.trim().length < MIN_QUESTION_LENGTH
+                            ? `Question must be at least ${MIN_QUESTION_LENGTH} characters`
+                            : question.trim().length > MAX_QUESTION_LENGTH
+                              ? `Question exceeds ${MAX_QUESTION_LENGTH} character limit`
+                              : undefined
+                  }
+                  hint={
+                    !currentSession.documents?.length
+                      ? 'Click the attach button or drag a file'
+                      : !question.trim()
+                        ? 'Type your question in the field above'
+                        : undefined
+                  }
                 >
-                  {asking ? (
-                    <Box
-                      sx={{
-                        width: 20,
-                        height: 20,
-                        border: '2px solid',
-                        borderColor: 'rgba(255,255,255,0.3)',
-                        borderTopColor: '#fff',
-                        borderRadius: '50%',
-                        animation: 'spin 0.8s linear infinite',
-                      }}
-                    />
-                  ) : (
-                    <SendIcon />
-                  )}
-                </SendButton>
+                  <SendButton
+                    onClick={handleAskQuestion}
+                    disabled={
+                      !question.trim()
+                      || question.trim().length < MIN_QUESTION_LENGTH
+                      || question.trim().length > MAX_QUESTION_LENGTH
+                      || asking
+                      || !currentSession.documents?.length
+                    }
+                  >
+                    {asking ? (
+                      <Box
+                        sx={{
+                          width: 20,
+                          height: 20,
+                          border: '2px solid',
+                          borderColor: 'rgba(255,255,255,0.3)',
+                          borderTopColor: '#fff',
+                          borderRadius: '50%',
+                          animation: 'spin 0.8s linear infinite',
+                        }}
+                      />
+                    ) : (
+                      <SendIcon />
+                    )}
+                  </SendButton>
+                </DisabledTooltip>
               </InputContainer>
               <Typography
                 variant="caption"
@@ -1289,6 +1412,7 @@ export default function DocumentQAPage() {
             value={newSessionName}
             onChange={(e) => setNewSessionName(e.target.value)}
             sx={{ mt: 2 }}
+            inputProps={{ maxLength: MAX_NAME_LENGTH }}
             InputProps={{
               sx: { borderRadius: 2 },
             }}
@@ -1377,6 +1501,7 @@ export default function DocumentQAPage() {
             value={docName}
             onChange={(e) => setDocName(e.target.value)}
             sx={{ mb: 2 }}
+            inputProps={{ maxLength: MAX_NAME_LENGTH }}
             InputProps={{ sx: { borderRadius: 2 } }}
           />
           <TextField
@@ -1387,6 +1512,7 @@ export default function DocumentQAPage() {
             value={docContent}
             onChange={(e) => setDocContent(e.target.value)}
             placeholder="Paste your document content here..."
+            inputProps={{ maxLength: MAX_DOC_SIZE }}
             InputProps={{ sx: { borderRadius: 2 } }}
           />
         </DialogContent>
@@ -1420,8 +1546,22 @@ export default function DocumentQAPage() {
           setDeleteSessionConfirm({ open: false, sessionId: null, sessionName: '' })
         }
         onConfirm={() => {
-          deleteSession(deleteSessionConfirm.sessionId)
+          const sessionId = deleteSessionConfirm.sessionId
+          const sessionName = deleteSessionConfirm.sessionName
           setDeleteSessionConfirm({ open: false, sessionId: null, sessionName: '' })
+
+          // UX Governance: Irreversible delete action with full tracking
+          execute({
+            type: InteractionType.DELETE,
+            label: `Delete session "${sessionName}"`,
+            reversibility: Reversibility.IRREVERSIBLE,
+            successMessage: `Session "${sessionName}" deleted`,
+            errorMessage: 'Failed to delete session',
+            action: async () => {
+              const success = await deleteSession(sessionId)
+              if (!success) throw new Error('Delete failed')
+            },
+          })
         }}
         title="Delete Session"
         message={`Are you sure you want to delete "${deleteSessionConfirm.sessionName}"? All documents and chat history will be permanently removed.`}
@@ -1435,8 +1575,22 @@ export default function DocumentQAPage() {
           setRemoveDocConfirm({ open: false, docId: null, docName: '' })
         }
         onConfirm={() => {
-          removeDocument(currentSession?.id, removeDocConfirm.docId)
+          const docId = removeDocConfirm.docId
+          const docName = removeDocConfirm.docName
           setRemoveDocConfirm({ open: false, docId: null, docName: '' })
+
+          // UX Governance: Delete action with tracking
+          execute({
+            type: InteractionType.DELETE,
+            label: `Remove document "${docName}"`,
+            reversibility: Reversibility.PARTIALLY_REVERSIBLE,
+            successMessage: `Document "${docName}" removed`,
+            errorMessage: 'Failed to remove document',
+            action: async () => {
+              const success = await removeDocument(currentSession?.id, docId)
+              if (!success) throw new Error('Remove failed')
+            },
+          })
         }}
         title="Remove Document"
         message={`Are you sure you want to remove "${removeDocConfirm.docName}" from this session?`}

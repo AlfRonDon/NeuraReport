@@ -32,6 +32,19 @@ def _correlation(request: Request) -> str | None:
     return getattr(request.state, "correlation_id", None)
 
 
+async def _refresh_scheduler() -> None:
+    try:
+        from backend.api import SCHEDULER
+    except Exception:
+        return
+    if SCHEDULER is None:
+        return
+    try:
+        await SCHEDULER.refresh()
+    except Exception:
+        pass
+
+
 @router.get("")
 def list_report_schedules(request: Request):
     """List all report schedules."""
@@ -39,9 +52,10 @@ def list_report_schedules(request: Request):
 
 
 @router.post("")
-def create_report_schedule(payload: ScheduleCreatePayload, request: Request):
+async def create_report_schedule(payload: ScheduleCreatePayload, request: Request):
     """Create a new report schedule."""
     schedule = create_schedule(payload)
+    await _refresh_scheduler()
     return {"schedule": schedule, "correlation_id": _correlation(request)}
 
 
@@ -58,14 +72,15 @@ def get_report_schedule(schedule_id: str, request: Request):
 
 
 @router.put("/{schedule_id}")
-def update_report_schedule(schedule_id: str, payload: ScheduleUpdatePayload, request: Request):
+async def update_report_schedule(schedule_id: str, payload: ScheduleUpdatePayload, request: Request):
     """Update an existing report schedule."""
     schedule = update_schedule(schedule_id, payload)
+    await _refresh_scheduler()
     return {"schedule": schedule, "correlation_id": _correlation(request)}
 
 
 @router.delete("/{schedule_id}")
-def delete_report_schedule(schedule_id: str, request: Request):
+async def delete_report_schedule(schedule_id: str, request: Request):
     """Delete a report schedule."""
     removed = delete_schedule(schedule_id)
     if not removed:
@@ -73,6 +88,7 @@ def delete_report_schedule(schedule_id: str, request: Request):
             status_code=404,
             detail={"status": "error", "code": "schedule_not_found", "message": "Schedule not found."}
         )
+    await _refresh_scheduler()
     return {"status": "ok", "schedule_id": schedule_id, "correlation_id": _correlation(request)}
 
 
@@ -242,7 +258,7 @@ async def trigger_schedule(schedule_id: str, background_tasks: BackgroundTasks, 
 
 
 @router.post("/{schedule_id}/pause")
-def pause_schedule(schedule_id: str, request: Request):
+async def pause_schedule(schedule_id: str, request: Request):
     """Pause a schedule (set active to false)."""
     schedule = get_schedule(schedule_id)
     if not schedule:
@@ -252,6 +268,7 @@ def pause_schedule(schedule_id: str, request: Request):
         )
 
     updated = update_schedule(schedule_id, ScheduleUpdatePayload(active=False))
+    await _refresh_scheduler()
     return {
         "status": "ok",
         "message": "Schedule paused",
@@ -261,7 +278,7 @@ def pause_schedule(schedule_id: str, request: Request):
 
 
 @router.post("/{schedule_id}/resume")
-def resume_schedule(schedule_id: str, request: Request):
+async def resume_schedule(schedule_id: str, request: Request):
     """Resume a paused schedule (set active to true)."""
     schedule = get_schedule(schedule_id)
     if not schedule:
@@ -271,6 +288,7 @@ def resume_schedule(schedule_id: str, request: Request):
         )
 
     updated = update_schedule(schedule_id, ScheduleUpdatePayload(active=True))
+    await _refresh_scheduler()
     return {
         "status": "ok",
         "message": "Schedule resumed",

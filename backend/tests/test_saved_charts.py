@@ -44,7 +44,7 @@ from ..app.services.state import store as state_store_module  # noqa: E402
 def fresh_state(tmp_path, monkeypatch):
     base_dir = tmp_path / "state"
     store = state_store_module.StateStore(base_dir=base_dir)
-    state_store_module.state_store = store
+    state_store_module.set_state_store(store)
     api.state_store = store
     db_conn_module.state_store = store
 

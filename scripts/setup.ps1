@@ -26,13 +26,17 @@ if (-not (Test-Path $venv)) { Fail "Virtual env not created at $venv" }
 python -m pip install --upgrade pip wheel
 if (Test-Path "requirements.txt") {
   Write-Host "Installing backend requirements ..." -ForegroundColor Cyan
-  pip install -r requirements.txt
+  python -m pip install -r requirements.txt
+  if (Test-Path "requirements-dev.txt") {
+    Write-Host "Installing backend dev requirements ..." -ForegroundColor Cyan
+    python -m pip install -r requirements-dev.txt
+  }
 } else {
-  Write-Warning "backend/requirements.txt not found — skipping pip install."
+  Write-Warning "backend/requirements.txt not found - skipping pip install."
 }
 
-pip install playwright
-playwright install chromium
+Write-Host "Installing Playwright browser (Chromium) ..." -ForegroundColor Cyan
+python -m playwright install chromium
 
 if (-not (Test-Path ".\.env")) {
   if (Test-Path ".\.env.example") { Copy-Item ".\.env.example" ".\.env" }
@@ -49,4 +53,9 @@ Set-Location $frontend
 Write-Host "Installing frontend dependencies ..." -ForegroundColor Cyan
 if (Test-Path "package-lock.json") { npm ci } else { npm install }
 
-Write-Host "`n✅ Setup complete." -ForegroundColor Green
+if (-not (Test-Path ".\\.env.local") -and (Test-Path ".\\.env.example")) {
+  Copy-Item ".\\.env.example" ".\\.env.local"
+  Write-Host "Created frontend\\.env.local (copied from .env.example)." -ForegroundColor Yellow
+}
+
+Write-Host "`nSetup complete." -ForegroundColor Green

@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import shutil
 import uuid
 import zipfile
@@ -18,6 +19,8 @@ from typing import Any, Dict, List, Optional
 from backend.core.errors import ValidationError
 from backend.domain.templates import Template, TemplateKind, TemplateStatus, Artifact
 from backend.adapters.extraction import PDFExtractor, ExcelExtractor
+from prefect import flow, task
+from prefect.task_runners import SequentialTaskRunner
 from .base import Pipeline, PipelineContext, Step
 
 logger = logging.getLogger("neura.pipelines.import")
@@ -318,6 +321,56 @@ def create_template_record(ctx: ImportPipelineContext) -> Template:
     return ctx.template
 
 
+# === Prefect Tasks + Flow ===
+
+
+@task(name="validate_import")
+def validate_import_task(ctx: ImportPipelineContext) -> None:
+    validate_import(ctx)
+
+
+@task(name="extract_archive")
+def extract_archive_task(ctx: ImportPipelineContext) -> Path:
+    return extract_archive(ctx)
+
+
+@task(name="extract_content")
+def extract_content_task(ctx: ImportPipelineContext) -> Dict[str, Any]:
+    return extract_content(ctx)
+
+
+@task(name="detect_tokens")
+def detect_tokens_task(ctx: ImportPipelineContext) -> List[str]:
+    return detect_tokens(ctx)
+
+
+@task(name="create_template")
+def create_template_task(ctx: ImportPipelineContext) -> Template:
+    return create_template_record(ctx)
+
+
+@flow(name="template_import", task_runner=SequentialTaskRunner())
+def import_template_flow(
+    source_path: Path,
+    output_dir: Path,
+    *,
+    template_name: Optional[str] = None,
+    correlation_id: Optional[str] = None,
+) -> Template:
+    ctx = ImportPipelineContext(
+        correlation_id=correlation_id or str(uuid.uuid4()),
+        source_path=source_path,
+        template_name=template_name,
+        output_dir=output_dir,
+    )
+    validate_import_task(ctx)
+    extract_archive_task(ctx)
+    extract_content_task(ctx)
+    detect_tokens_task(ctx)
+    create_template_task(ctx)
+    return ctx.template
+
+
 # === Pipeline Factory ===
 
 
@@ -336,18 +389,24 @@ class ImportPipeline:
         correlation_id: Optional[str] = None,
     ) -> Template:
         """Execute the import pipeline."""
+        engine = os.getenv("NEURA_PIPELINE_ENGINE", "prefect").strip().lower()
+        if engine == "prefect":
+            return import_template_flow(
+                source_path=source_path,
+                output_dir=self._output_dir,
+                template_name=template_name,
+                correlation_id=correlation_id,
+            )
+
         ctx = ImportPipelineContext(
             correlation_id=correlation_id or str(uuid.uuid4()),
             source_path=source_path,
             template_name=template_name,
             output_dir=self._output_dir,
         )
-
         result = self._pipeline.execute_sync(ctx)
-
         if not result.success:
             raise Exception(f"Import pipeline failed: {result.error}")
-
         return ctx.template
 
 

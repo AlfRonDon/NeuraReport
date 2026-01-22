@@ -76,7 +76,7 @@ def test_llm_providers():
 
         config = LLMConfig(
             provider=LP.OPENAI,
-            model="gpt-4o",
+            model="gpt-5",
             api_key=os.getenv("OPENAI_API_KEY", "test-key"),
         )
         provider = OpenAIProvider(config)

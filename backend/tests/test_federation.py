@@ -61,7 +61,7 @@ class TestFederationService:
 
         base_dir = tmp_path / "state"
         store = state_store_module.StateStore(base_dir=base_dir)
-        state_store_module.state_store = store
+        state_store_module.set_state_store(store)
         return store
 
     @pytest.fixture
@@ -133,7 +133,7 @@ class TestVirtualSchemaManagement:
 
         base_dir = tmp_path / "state"
         store = state_store_module.StateStore(base_dir=base_dir)
-        state_store_module.state_store = store
+        state_store_module.set_state_store(store)
         return store
 
     @pytest.fixture
@@ -253,7 +253,7 @@ class TestTableToConnectionMapping:
 
         base_dir = tmp_path / "state"
         store = state_store_module.StateStore(base_dir=base_dir)
-        state_store_module.state_store = store
+        state_store_module.set_state_store(store)
         return store
 
     @pytest.fixture
@@ -323,7 +323,7 @@ class TestResultMerging:
 
         base_dir = tmp_path / "state"
         store = state_store_module.StateStore(base_dir=base_dir)
-        state_store_module.state_store = store
+        state_store_module.set_state_store(store)
         return store
 
     @pytest.fixture
@@ -403,7 +403,7 @@ class TestFederatedQueryExecution:
 
         base_dir = tmp_path / "state"
         store = state_store_module.StateStore(base_dir=base_dir)
-        state_store_module.state_store = store
+        state_store_module.set_state_store(store)
         return store
 
     @pytest.fixture
@@ -529,7 +529,7 @@ class TestJoinSuggestion:
 
         base_dir = tmp_path / "state"
         store = state_store_module.StateStore(base_dir=base_dir)
-        state_store_module.state_store = store
+        state_store_module.set_state_store(store)
         return store
 
     @pytest.fixture

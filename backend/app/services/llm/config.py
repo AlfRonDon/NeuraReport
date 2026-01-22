@@ -3,9 +3,10 @@
 LLM Configuration Module.
 
 Supports multiple providers via environment variables:
-- LLM_PROVIDER: Provider name (openai, ollama, deepseek, anthropic, azure, gemini)
+- LLM_PROVIDER: Provider name (openai, litellm, ollama, deepseek, anthropic, azure, gemini)
 - LLM_MODEL: Model name (provider-specific)
 - LLM_BASE_URL: Custom base URL for OpenAI-compatible endpoints
+- NEURA_LLM_ENGINE: Engine selection (litellm, native)
 
 Provider-specific environment variables:
 - OPENAI_API_KEY, OPENAI_MODEL
@@ -29,6 +30,7 @@ logger = logging.getLogger("neura.llm.config")
 class LLMProvider(str, Enum):
     """Supported LLM providers."""
     OPENAI = "openai"
+    LITELLM = "litellm"
     OLLAMA = "ollama"
     DEEPSEEK = "deepseek"
     ANTHROPIC = "anthropic"
@@ -40,21 +42,23 @@ class LLMProvider(str, Enum):
 # Default models for each provider
 DEFAULT_MODELS: Dict[LLMProvider, str] = {
     LLMProvider.OPENAI: "gpt-5",
+    LLMProvider.LITELLM: "gpt-5",
     LLMProvider.OLLAMA: "llama3.2",
     LLMProvider.DEEPSEEK: "deepseek-chat",
     LLMProvider.ANTHROPIC: "claude-3-5-sonnet-20241022",
-    LLMProvider.AZURE: "gpt-4o",
+    LLMProvider.AZURE: "gpt-5",
     LLMProvider.GEMINI: "gemini-1.5-pro",
     LLMProvider.CUSTOM: "gpt-5",
 }
 
 # Vision-capable models per provider
 VISION_MODELS: Dict[LLMProvider, List[str]] = {
-    LLMProvider.OPENAI: ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-4-vision-preview", "gpt-5"],
+    LLMProvider.OPENAI: ["gpt-5"],
+    LLMProvider.LITELLM: ["gpt-5"],
     LLMProvider.OLLAMA: ["llava", "llava:13b", "llava:34b", "bakllava", "moondream", "llama3.2-vision"],
     LLMProvider.DEEPSEEK: ["deepseek-vl", "deepseek-vl2"],
     LLMProvider.ANTHROPIC: ["claude-3-5-sonnet-20241022", "claude-3-opus-20240229", "claude-3-sonnet-20240229", "claude-3-haiku-20240307"],
-    LLMProvider.AZURE: ["gpt-4o", "gpt-4-turbo", "gpt-4-vision-preview"],
+    LLMProvider.AZURE: ["gpt-5"],
     LLMProvider.GEMINI: ["gemini-1.5-pro", "gemini-1.5-flash", "gemini-2.0-flash-exp"],
     LLMProvider.CUSTOM: [],
 }
@@ -62,10 +66,11 @@ VISION_MODELS: Dict[LLMProvider, List[str]] = {
 # Recommended models for document analysis tasks
 DOCUMENT_ANALYSIS_MODELS: Dict[LLMProvider, str] = {
     LLMProvider.OPENAI: "gpt-5",
+    LLMProvider.LITELLM: "gpt-5",
     LLMProvider.OLLAMA: "qwen2.5:32b",  # Excellent for document understanding
     LLMProvider.DEEPSEEK: "deepseek-chat",
     LLMProvider.ANTHROPIC: "claude-3-5-sonnet-20241022",
-    LLMProvider.AZURE: "gpt-4o",
+    LLMProvider.AZURE: "gpt-5",
     LLMProvider.GEMINI: "gemini-1.5-pro",
     LLMProvider.CUSTOM: "gpt-5",
 }
@@ -73,10 +78,11 @@ DOCUMENT_ANALYSIS_MODELS: Dict[LLMProvider, str] = {
 # Recommended models for code/SQL generation
 CODE_GENERATION_MODELS: Dict[LLMProvider, str] = {
     LLMProvider.OPENAI: "gpt-5",
+    LLMProvider.LITELLM: "gpt-5",
     LLMProvider.OLLAMA: "deepseek-coder-v2:16b",  # Excellent for SQL
     LLMProvider.DEEPSEEK: "deepseek-coder",
     LLMProvider.ANTHROPIC: "claude-3-5-sonnet-20241022",
-    LLMProvider.AZURE: "gpt-4o",
+    LLMProvider.AZURE: "gpt-5",
     LLMProvider.GEMINI: "gemini-1.5-pro",
     LLMProvider.CUSTOM: "gpt-5",
 }
@@ -141,6 +147,7 @@ class LLMConfig:
     @classmethod
     def from_env(cls) -> "LLMConfig":
         """Create configuration from environment variables."""
+        engine = os.getenv("NEURA_LLM_ENGINE", "litellm").lower().strip()
         # Determine provider
         provider_str = os.getenv("LLM_PROVIDER", "").lower().strip()
 
@@ -171,12 +178,17 @@ class LLMConfig:
             )
             provider = LLMProvider.OPENAI
 
+        provider_hint: Optional[LLMProvider] = None
+        if engine == "litellm" and provider != LLMProvider.LITELLM:
+            provider_hint = provider
+            provider = LLMProvider.LITELLM
+
         # Get model name
         model = (
             os.getenv("LLM_MODEL") or
             os.getenv(f"{provider.value.upper()}_MODEL") or
             os.getenv("OPENAI_MODEL") or  # Backwards compatibility
-            DEFAULT_MODELS.get(provider, "gpt-4o")
+            DEFAULT_MODELS.get(provider, "gpt-5")
         )
 
         # Get API key
@@ -226,23 +238,39 @@ class LLMConfig:
 
         force_gpt5 = os.getenv("NEURA_FORCE_GPT5", "true").lower().strip() in {"1", "true", "yes"}
         if force_gpt5:
-            if provider != LLMProvider.OPENAI:
-                logger.warning(
-                    "llm_provider_overridden",
-                    extra={
-                        "event": "llm_provider_overridden",
-                        "requested": provider.value,
-                        "forced": LLMProvider.OPENAI.value,
-                    },
-                )
-            provider = LLMProvider.OPENAI
-            model = "gpt-5"
-            api_key = os.getenv("OPENAI_API_KEY") or api_key
-            base_url = os.getenv("OPENAI_BASE_URL") or os.getenv("LLM_BASE_URL")
-            azure_endpoint = None
-            azure_deployment = None
-            fallback_provider = None
-            fallback_model = None
+            if engine == "litellm":
+                if provider_hint is None:
+                    provider_hint = LLMProvider.OPENAI
+                provider = LLMProvider.LITELLM
+                model = "gpt-5"
+                api_key = os.getenv("OPENAI_API_KEY") or api_key
+                base_url = os.getenv("OPENAI_BASE_URL") or os.getenv("LLM_BASE_URL") or base_url
+                azure_endpoint = None
+                azure_deployment = None
+                fallback_provider = None
+                fallback_model = None
+            else:
+                if provider != LLMProvider.OPENAI:
+                    logger.warning(
+                        "llm_provider_overridden",
+                        extra={
+                            "event": "llm_provider_overridden",
+                            "requested": provider.value,
+                            "forced": LLMProvider.OPENAI.value,
+                        },
+                    )
+                provider = LLMProvider.OPENAI
+                model = "gpt-5"
+                api_key = os.getenv("OPENAI_API_KEY") or api_key
+                base_url = os.getenv("OPENAI_BASE_URL") or os.getenv("LLM_BASE_URL")
+                azure_endpoint = None
+                azure_deployment = None
+                fallback_provider = None
+                fallback_model = None
+
+        extra_options: Dict[str, Any] = {}
+        if provider_hint is not None:
+            extra_options["litellm_provider"] = provider_hint.value
 
         return cls(
             provider=provider,
@@ -260,6 +288,7 @@ class LLMConfig:
             max_tokens=int(max_tokens) if max_tokens else None,
             fallback_provider=fallback_provider,
             fallback_model=fallback_model,
+            extra_options=extra_options,
         )
 
     def get_vision_model(self) -> str:

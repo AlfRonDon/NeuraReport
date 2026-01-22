@@ -443,7 +443,7 @@ class TestEnrichmentServiceIntegration:
 
         base_dir = tmp_path / "state"
         store = state_store_module.StateStore(base_dir=base_dir)
-        state_store_module.state_store = store
+        state_store_module.set_state_store(store)
         return store
 
     @pytest.mark.asyncio

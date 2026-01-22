@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import re
-from html import escape
-from html.parser import HTMLParser
-from typing import Iterable
+from typing import Dict, List
+
+import bleach
+from bleach.css_sanitizer import CSSSanitizer
 
 ALLOWED_TAGS = {
     "html",
@@ -51,8 +52,6 @@ ALLOWED_TAGS = {
     "svg",
 }
 
-SELF_CLOSING = {"br", "hr", "img", "meta", "link", "col"}
-
 _REPEAT_COMMENT_RE = re.compile(r"^\s*(BEGIN:BLOCK_REPEAT\b.*|END:BLOCK_REPEAT\b.*)\s*$", re.IGNORECASE)
 
 ALLOWED_ATTRS = {
@@ -79,56 +78,35 @@ ALLOWED_ATTRS = {
     "canvas": {"width", "height"},
 }
 
+_CSS_SANITIZER = CSSSanitizer()
+_COMMENT_RE = re.compile(r"<!--(.*?)-->", re.DOTALL)
 
-def _allowed_attrs(tag: str) -> set[str]:
-    attrs: set[str] = set(ALLOWED_ATTRS.get("*", set()))
-    attrs.update(ALLOWED_ATTRS.get(tag, set()))
+
+def _bleach_attributes() -> Dict[str, List[str]]:
+    attrs: Dict[str, List[str]] = {}
+    for tag, allowed in ALLOWED_ATTRS.items():
+        attrs[tag] = sorted(allowed)
     return attrs
 
 
-class _Sanitizer(HTMLParser):
-    def __init__(self) -> None:
-        super().__init__()
-        self._output: list[str] = []
-
-    def handle_starttag(self, tag: str, attrs: Iterable[tuple[str, str | None]]) -> None:
-        if tag.lower() not in ALLOWED_TAGS:
-            return
-        allowed = _allowed_attrs(tag.lower())
-        clean_attrs = []
-        for name, value in attrs:
-            if name.lower() in allowed and value is not None:
-                clean_attrs.append(f'{name}="{escape(value, quote=True)}"')
-        attr_str = (" " + " ".join(clean_attrs)) if clean_attrs else ""
-        if tag.lower() in SELF_CLOSING:
-            self._output.append(f"<{tag}{attr_str} />")
-        else:
-            self._output.append(f"<{tag}{attr_str}>")
-
-    def handle_endtag(self, tag: str) -> None:
-        if tag.lower() not in ALLOWED_TAGS or tag.lower() in SELF_CLOSING:
-            return
-        self._output.append(f"</{tag}>")
-
-    def handle_data(self, data: str) -> None:
-        self._output.append(data)
-
-    def handle_entityref(self, name: str) -> None:
-        self._output.append(f"&{name};")
-
-    def handle_charref(self, name: str) -> None:
-        self._output.append(f"&#{name};")
-
-    def handle_comment(self, data: str) -> None:
+def _filter_comments(html: str) -> str:
+    def _replace(match: re.Match[str]) -> str:
+        data = match.group(1)
         if _REPEAT_COMMENT_RE.match(data):
-            self._output.append(f"<!--{data}-->")
+            return f"<!--{data}-->"
+        return ""
 
-    def get_output(self) -> str:
-        return "".join(self._output)
+    return _COMMENT_RE.sub(_replace, html)
 
 
 def sanitize_html(html: str) -> str:
-    parser = _Sanitizer()
-    parser.feed(html)
-    parser.close()
-    return parser.get_output()
+    cleaned = bleach.clean(
+        html or "",
+        tags=sorted(ALLOWED_TAGS),
+        attributes=_bleach_attributes(),
+        protocols=["http", "https", "data"],
+        strip=True,
+        strip_comments=False,
+        css_sanitizer=_CSS_SANITIZER,
+    )
+    return _filter_comments(cleaned)

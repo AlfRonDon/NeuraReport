@@ -3,7 +3,7 @@
 Multi-provider LLM abstraction layer.
 
 Supports:
-- OpenAI (GPT-4, GPT-4o, etc.)
+- OpenAI (GPT-5)
 - Ollama (local models: Llama, Mistral, DeepSeek, Qwen, etc.)
 - DeepSeek API
 - Anthropic Claude
@@ -57,6 +57,7 @@ from .client import (
 from .config import LLMConfig, LLMProvider, get_llm_config
 from .providers import (
     BaseProvider,
+    LiteLLMProvider,
     OpenAIProvider,
     OllamaProvider,
     DeepSeekProvider,
@@ -128,6 +129,7 @@ __all__ = [
     "get_llm_config",
     # Providers
     "BaseProvider",
+    "LiteLLMProvider",
     "OpenAIProvider",
     "OllamaProvider",
     "DeepSeekProvider",

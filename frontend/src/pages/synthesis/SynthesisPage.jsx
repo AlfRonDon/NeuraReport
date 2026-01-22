@@ -49,6 +49,19 @@ import {
 import useSynthesisStore from '../../stores/synthesisStore';
 import ConfirmModal from '../../ui/Modal/ConfirmModal';
 import { useToast } from '../../components/ToastProvider';
+// UX Components for premium interactions
+import DisabledTooltip from '../../components/ux/DisabledTooltip';
+// UX Governance - Enforced interaction API
+import {
+  useInteraction,
+  InteractionType,
+  Reversibility,
+} from '../../components/ux/governance';
+
+const MAX_DOC_SIZE = 5 * 1024 * 1024;
+const MIN_DOC_LENGTH = 10;
+const MAX_NAME_LENGTH = 200;
+const MAX_FOCUS_TOPICS = 10;
 
 export default function SynthesisPage() {
   const {
@@ -82,6 +95,8 @@ export default function SynthesisPage() {
   const [deleteSessionConfirm, setDeleteSessionConfirm] = useState({ open: false, sessionId: null, sessionName: '' });
   const [removeDocConfirm, setRemoveDocConfirm] = useState({ open: false, docId: null, docName: '' });
   const toast = useToast();
+  // UX Governance: Enforced interaction API - ALL user actions flow through this
+  const { execute } = useInteraction();
 
   const [initialLoading, setInitialLoading] = useState(true);
 
@@ -95,28 +110,67 @@ export default function SynthesisPage() {
     return () => reset();
   }, [fetchSessions, reset]);
 
-  const handleCreateSession = async () => {
+  const handleCreateSession = () => {
     if (!newSessionName) return;
-    await createSession(newSessionName);
-    setCreateDialogOpen(false);
-    setNewSessionName('');
+    if (newSessionName.length > MAX_NAME_LENGTH) {
+      toast.show(`Session name must be ${MAX_NAME_LENGTH} characters or less`, 'error');
+      return;
+    }
+    // UX Governance: Create action with tracking
+    execute({
+      type: InteractionType.CREATE,
+      label: `Create session "${newSessionName}"`,
+      reversibility: Reversibility.FULLY_REVERSIBLE,
+      successMessage: 'Session created successfully',
+      action: async () => {
+        await createSession(newSessionName);
+        setCreateDialogOpen(false);
+        setNewSessionName('');
+      },
+    });
   };
 
-  const handleAddDocument = async () => {
+  const handleAddDocument = () => {
     if (!currentSession || !docName || !docContent) return;
-    await addDocument(currentSession.id, {
-      name: docName,
-      content: docContent,
-      docType,
+    if (docName.length > MAX_NAME_LENGTH) {
+      toast.show(`Document name must be ${MAX_NAME_LENGTH} characters or less`, 'error');
+      return;
+    }
+    if (docContent.trim().length < MIN_DOC_LENGTH) {
+      toast.show(`Document content must be at least ${MIN_DOC_LENGTH} characters`, 'error');
+      return;
+    }
+    if (docContent.length > MAX_DOC_SIZE) {
+      toast.show('Document content exceeds 5MB limit', 'error');
+      return;
+    }
+    // UX Governance: Upload action with tracking
+    execute({
+      type: InteractionType.UPLOAD,
+      label: `Add document "${docName}"`,
+      reversibility: Reversibility.FULLY_REVERSIBLE,
+      successMessage: 'Document added successfully',
+      action: async () => {
+        await addDocument(currentSession.id, {
+          name: docName,
+          content: docContent,
+          docType,
+        });
+        setAddDocDialogOpen(false);
+        setDocName('');
+        setDocContent('');
+      },
     });
-    setAddDocDialogOpen(false);
-    setDocName('');
-    setDocContent('');
   };
 
   const handleFileUpload = (event) => {
     const file = event.target.files[0];
     if (!file) return;
+    if (file.name.length > MAX_NAME_LENGTH) {
+      toast.show(`File name must be ${MAX_NAME_LENGTH} characters or less`, 'error');
+      event.target.value = '';
+      return;
+    }
 
     const ext = file.name.split('.').pop().toLowerCase();
 
@@ -129,8 +183,7 @@ export default function SynthesisPage() {
     }
 
     // Check file size (max 5MB for text files)
-    const maxSize = 5 * 1024 * 1024;
-    if (file.size > maxSize) {
+    if (file.size > MAX_DOC_SIZE) {
       toast.show('File size exceeds 5MB limit', 'error');
       event.target.value = '';
       return;
@@ -159,11 +212,52 @@ export default function SynthesisPage() {
     reader.readAsText(file);
   };
 
-  const handleSynthesize = async () => {
+  const handleSynthesize = () => {
     if (!currentSession) return;
-    await synthesize(currentSession.id, {
-      focusTopics: focusTopics ? focusTopics.split(',').map(t => t.trim()) : undefined,
-      outputFormat,
+    const topics = focusTopics
+      ? focusTopics.split(',').map((topic) => topic.trim()).filter(Boolean)
+      : undefined;
+    if (topics && topics.length > MAX_FOCUS_TOPICS) {
+      toast.show(`Focus topics must be ${MAX_FOCUS_TOPICS} items or less`, 'error');
+      return;
+    }
+
+    // UX Governance: Generate action with tracking and navigation blocking
+    execute({
+      type: InteractionType.GENERATE,
+      label: 'Synthesize documents',
+      reversibility: Reversibility.SYSTEM_MANAGED,
+      blocksNavigation: true,
+      successMessage: 'Synthesis complete',
+      errorMessage: 'Synthesis failed',
+      action: async () => {
+        const result = await synthesize(currentSession.id, {
+          focusTopics: topics,
+          outputFormat,
+        });
+        if (!result) throw new Error('Synthesis failed');
+      },
+    });
+  };
+
+  const handleFindInconsistencies = () => {
+    if (!currentSession) return;
+
+    // UX Governance: Analyze action with tracking
+    execute({
+      type: InteractionType.ANALYZE,
+      label: 'Find inconsistencies',
+      reversibility: Reversibility.SYSTEM_MANAGED,
+      blocksNavigation: true,
+      action: async () => {
+        const result = await findInconsistencies(currentSession.id);
+        if (result === null) throw new Error('Analysis failed');
+        if (result.length > 0) {
+          toast.show(`Found ${result.length} inconsistencies`, 'warning');
+        } else {
+          toast.show('No inconsistencies found', 'success');
+        }
+      },
     });
   };
 
@@ -366,22 +460,45 @@ export default function SynthesisPage() {
                     </Grid>
                   </Grid>
                   <Box sx={{ display: 'flex', gap: 2 }}>
-                    <Button
-                      variant="outlined"
-                      startIcon={loading ? <CircularProgress size={20} /> : <WarningIcon />}
-                      onClick={() => findInconsistencies(currentSession.id)}
-                      disabled={loading}
+                    {/* UX: DisabledTooltip explains WHY buttons are disabled */}
+                    <DisabledTooltip
+                      disabled={loading || !currentSession?.documents?.length}
+                      reason={
+                        loading
+                          ? 'Please wait for the current operation to complete'
+                          : !currentSession?.documents?.length
+                            ? 'Add at least one document first'
+                            : undefined
+                      }
                     >
-                      Find Inconsistencies
-                    </Button>
-                    <Button
-                      variant="contained"
-                      startIcon={loading ? <CircularProgress size={20} /> : <SynthesizeIcon />}
-                      onClick={handleSynthesize}
-                      disabled={loading}
+                      <Button
+                        variant="outlined"
+                        startIcon={loading ? <CircularProgress size={20} /> : <WarningIcon />}
+                        onClick={handleFindInconsistencies}
+                        disabled={loading || !currentSession?.documents?.length}
+                      >
+                        Find Inconsistencies
+                      </Button>
+                    </DisabledTooltip>
+                    <DisabledTooltip
+                      disabled={loading || !currentSession?.documents?.length}
+                      reason={
+                        loading
+                          ? 'Please wait for the current operation to complete'
+                          : !currentSession?.documents?.length
+                            ? 'Add at least two documents to synthesize'
+                            : undefined
+                      }
                     >
-                      Synthesize
-                    </Button>
+                      <Button
+                        variant="contained"
+                        startIcon={loading ? <CircularProgress size={20} /> : <SynthesizeIcon />}
+                        onClick={handleSynthesize}
+                        disabled={loading || !currentSession?.documents?.length}
+                      >
+                        Synthesize
+                      </Button>
+                    </DisabledTooltip>
                   </Box>
                 </Paper>
               )}
@@ -479,6 +596,7 @@ export default function SynthesisPage() {
             value={newSessionName}
             onChange={(e) => setNewSessionName(e.target.value)}
             sx={{ mt: 2 }}
+            inputProps={{ maxLength: MAX_NAME_LENGTH }}
           />
         </DialogContent>
         <DialogActions>
@@ -499,6 +617,7 @@ export default function SynthesisPage() {
               label="Document Name"
               value={docName}
               onChange={(e) => setDocName(e.target.value)}
+              inputProps={{ maxLength: MAX_NAME_LENGTH }}
             />
             <FormControl sx={{ minWidth: 150 }}>
               <InputLabel>Type</InputLabel>
@@ -532,6 +651,7 @@ export default function SynthesisPage() {
             value={docContent}
             onChange={(e) => setDocContent(e.target.value)}
             placeholder="Paste document content or upload a file..."
+            inputProps={{ maxLength: MAX_DOC_SIZE }}
           />
         </DialogContent>
         <DialogActions>
@@ -571,8 +691,22 @@ export default function SynthesisPage() {
         open={deleteSessionConfirm.open}
         onClose={() => setDeleteSessionConfirm({ open: false, sessionId: null, sessionName: '' })}
         onConfirm={() => {
-          deleteSession(deleteSessionConfirm.sessionId);
+          const sessionId = deleteSessionConfirm.sessionId;
+          const sessionName = deleteSessionConfirm.sessionName;
           setDeleteSessionConfirm({ open: false, sessionId: null, sessionName: '' });
+
+          // UX Governance: Irreversible delete action with tracking
+          execute({
+            type: InteractionType.DELETE,
+            label: `Delete session "${sessionName}"`,
+            reversibility: Reversibility.IRREVERSIBLE,
+            successMessage: `Session "${sessionName}" deleted`,
+            errorMessage: 'Failed to delete session',
+            action: async () => {
+              const success = await deleteSession(sessionId);
+              if (!success) throw new Error('Delete failed');
+            },
+          });
         }}
         title="Delete Session"
         message={`Are you sure you want to delete "${deleteSessionConfirm.sessionName}"? All documents and analysis data will be permanently removed.`}
@@ -584,8 +718,22 @@ export default function SynthesisPage() {
         open={removeDocConfirm.open}
         onClose={() => setRemoveDocConfirm({ open: false, docId: null, docName: '' })}
         onConfirm={() => {
-          removeDocument(currentSession?.id, removeDocConfirm.docId);
+          const docId = removeDocConfirm.docId;
+          const docName = removeDocConfirm.docName;
           setRemoveDocConfirm({ open: false, docId: null, docName: '' });
+
+          // UX Governance: Delete action with tracking
+          execute({
+            type: InteractionType.DELETE,
+            label: `Remove document "${docName}"`,
+            reversibility: Reversibility.PARTIALLY_REVERSIBLE,
+            successMessage: `Document "${docName}" removed`,
+            errorMessage: 'Failed to remove document',
+            action: async () => {
+              const success = await removeDocument(currentSession?.id, docId);
+              if (!success) throw new Error('Remove failed');
+            },
+          });
         }}
         title="Remove Document"
         message={`Are you sure you want to remove "${removeDocConfirm.docName}" from this session?`}

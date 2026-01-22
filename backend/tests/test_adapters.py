@@ -276,8 +276,8 @@ class TestOpenAIClient:
             # Should have logged a warning
             assert any("may be invalid" in r.message for r in caplog.records)
 
-    def test_force_gpt5_disabled_by_default(self, monkeypatch):
-        """GPT-5 forcing should be disabled by default."""
+    def test_force_gpt5_enabled_by_default(self, monkeypatch):
+        """GPT-5 forcing should be enabled by default."""
         monkeypatch.delenv("NEURA_FORCE_GPT5", raising=False)
 
         # Need to reimport to pick up env change
@@ -285,8 +285,8 @@ class TestOpenAIClient:
         from backend.adapters.llm import openai
         importlib.reload(openai)
 
-        # Default should now be false
-        assert openai._FORCE_GPT5 is False
+        # Default should now be true
+        assert openai._FORCE_GPT5 is True
 
     def test_force_gpt5_can_be_enabled(self, monkeypatch):
         """GPT-5 forcing can be enabled via env var."""
@@ -306,8 +306,8 @@ class TestOpenAIClient:
         from backend.adapters.llm import openai
         importlib.reload(openai)
 
-        result = openai._force_gpt5("gpt-4")
-        assert result == "gpt-4"
+        result = openai._force_gpt5("custom-model")
+        assert result == "custom-model"
 
     def test_complete_prepares_messages(self, monkeypatch):
         """complete should prepare messages correctly."""
@@ -317,104 +317,31 @@ class TestOpenAIClient:
         from backend.adapters.llm.openai import OpenAIClient
         from backend.adapters.llm.base import LLMMessage, LLMRole
 
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = "Test response"
-        mock_response.choices[0].finish_reason = "stop"
-        mock_response.model = "gpt-4"
-        mock_response.usage = MagicMock()
-        mock_response.usage.prompt_tokens = 10
-        mock_response.usage.completion_tokens = 5
-        mock_response.usage.total_tokens = 15
+        mock_response = {
+            "output_text": "Test response",
+            "model": "gpt-5",
+            "usage": {"input_tokens": 10, "output_tokens": 5},
+        }
 
         mock_client = MagicMock()
-        mock_client.chat.completions.create.return_value = mock_response
+        mock_client.responses.create.return_value = mock_response
 
         with patch("openai.OpenAI", return_value=mock_client):
-            client = OpenAIClient(api_key="sk-test-key", default_model="gpt-4")
+            client = OpenAIClient(api_key="sk-test-key", default_model="gpt-5")
             messages = [
                 LLMMessage(role=LLMRole.SYSTEM, content="You are helpful"),
                 LLMMessage(role=LLMRole.USER, content="Hello"),
             ]
-            result = client.complete(messages, model="gpt-4")
+            result = client.complete(messages, model="gpt-5")
 
             assert result.content == "Test response"
-            assert result.model == "gpt-4"
+            assert result.model == "gpt-5"
             assert result.usage["total_tokens"] == 15
 
 
 # =============================================================================
-# Rate Limiter Tests
+# Rate Limiter Tests (deprecated)
 # =============================================================================
-
-
-class TestRateLimiter:
-    """Tests for the rate limiter."""
-
-    def test_allows_requests_under_limit(self):
-        """Should allow requests under the rate limit."""
-        from backend.api import RateLimiter
-
-        limiter = RateLimiter(requests_per_minute=10, requests_per_second=5)
-
-        mock_request = MagicMock()
-        mock_request.headers = {}
-        mock_request.client.host = "127.0.0.1"
-
-        # First request should be allowed
-        allowed, info = limiter.is_allowed(mock_request)
-        assert allowed is True
-        assert info["remaining"] == 9
-
-    def test_blocks_requests_over_limit(self):
-        """Should block requests over the rate limit."""
-        from backend.api import RateLimiter
-
-        limiter = RateLimiter(requests_per_minute=3, requests_per_second=10)
-
-        mock_request = MagicMock()
-        mock_request.headers = {}
-        mock_request.client.host = "127.0.0.1"
-
-        # Make 3 requests
-        for _ in range(3):
-            allowed, _ = limiter.is_allowed(mock_request)
-            assert allowed is True
-
-        # 4th request should be blocked
-        allowed, info = limiter.is_allowed(mock_request)
-        assert allowed is False
-        assert info["remaining"] == 0
-
-    def test_respects_forwarded_header(self):
-        """Should use X-Forwarded-For header for client identification."""
-        from backend.api import RateLimiter
-
-        limiter = RateLimiter(requests_per_minute=2, requests_per_second=10)
-
-        # Two different clients via forwarding
-        mock_request1 = MagicMock()
-        mock_request1.headers = {"x-forwarded-for": "10.0.0.1"}
-        mock_request1.client.host = "127.0.0.1"
-
-        mock_request2 = MagicMock()
-        mock_request2.headers = {"x-forwarded-for": "10.0.0.2"}
-        mock_request2.client.host = "127.0.0.1"
-
-        # Both clients should get their own limit
-        for _ in range(2):
-            allowed, _ = limiter.is_allowed(mock_request1)
-            assert allowed is True
-
-        for _ in range(2):
-            allowed, _ = limiter.is_allowed(mock_request2)
-            assert allowed is True
-
-        # Both should now be blocked
-        allowed1, _ = limiter.is_allowed(mock_request1)
-        allowed2, _ = limiter.is_allowed(mock_request2)
-        assert allowed1 is False
-        assert allowed2 is False
 
 
 if __name__ == "__main__":

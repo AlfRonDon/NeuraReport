@@ -142,7 +142,7 @@ def update_consume(tpl: str):
     }
     assets = {"entrypoints": entry, "params": {"required":["from_date","to_date"], "optional":["plant_name","location","recipe_code"]}, "dialect":"sqlite","needs_user_fix":[],"invalid":False,"summary":{}}
     schema = {"header":["plant_name","location","print_date","date_from","date_to","recipe_code"], "rows":["row_sl_no","row_material_name","row_set_wt_kg","row_ach_wt_kg","row_error_kg","row_error_pct"], "totals":["total_set_wt","total_ach_wt","total_error_kg","total_error_pct"]}
-    contract = {"tokens":{"scalars":schema["header"],"row_tokens":schema["rows"],"totals":schema["totals"]},"mapping":{"plant_name":"PARAM:plant_name","location":"PARAM:location","print_date":"PARAM:print_date","date_from":"PARAM:from_date","date_to":"PARAM:to_date","recipe_code":"PARAM:recipe_code","row_sl_no":"rows.row_sl_no","row_material_name":"rows.row_material_name","row_set_wt_kg":"rows.row_set_wt_kg","row_ach_wt_kg":"rows.row_ach_wt_kg","row_error_kg":"rows.row_error_kg","row_error_pct":"rows.row_error_pct","total_set_wt":"totals.total_set_wt","total_ach_wt":"totals.total_ach_wt","total_error_kg":"totals.total_error_kg","total_error_pct":"totals.total_error_pct"},"join":{"parent_table":"recipes","parent_key":"id","child_table":"","child_key":""},"date_columns":{"recipes":"start_time"},"filters":{},"reshape_rules":[{"purpose":"Rows","strategy":"NONE","columns":(schema["rows"] | ForEach-Object { })}]}
+    contract = {"tokens":{"scalars":schema["header"],"row_tokens":schema["rows"],"totals":schema["totals"]},"mapping":{"plant_name":"PARAM:plant_name","location":"PARAM:location","print_date":"PARAM:print_date","date_from":"PARAM:from_date","date_to":"PARAM:to_date","recipe_code":"PARAM:recipe_code","row_sl_no":"rows.row_sl_no","row_material_name":"rows.row_material_name","row_set_wt_kg":"rows.row_set_wt_kg","row_ach_wt_kg":"rows.row_ach_wt_kg","row_error_kg":"rows.row_error_kg","row_error_pct":"rows.row_error_pct","total_set_wt":"totals.total_set_wt","total_ach_wt":"totals.total_ach_wt","total_error_kg":"totals.total_error_kg","total_error_pct":"totals.total_error_pct"},"join":{"parent_table":"recipes","parent_key":"id","child_table":"","child_key":""},"date_columns":{"recipes":"start_time"},"filters":{},"reshape_rules":[{"purpose":"Rows","strategy":"NONE","columns":schema["rows"]}]}
     # Write
     gdir.mkdir(parents=True, exist_ok=True)
     write(gdir/"generator_assets.json", assets)
@@ -154,4 +154,3 @@ if __name__ == "__main__":
     update_runtime(TPL_RUNTIME)
     # Only runtime here; other writers omitted for brevity to avoid PS parsing issues.
     print("assets updated for:", TPL_RUNTIME)
-

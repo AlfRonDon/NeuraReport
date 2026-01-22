@@ -1,14 +1,31 @@
 fastapi
+slowapi
 uvicorn
 pydantic-settings
+sqlmodel
+apscheduler
+prefect
+litellm
+instructor
+fastapi-users
+fastapi-users-db-sqlalchemy
+python-jose[cryptography]
+passlib[bcrypt]
+aiosqlite
+email-validator
 pymupdf
 pdfplumber
 reportlab
 pikepdf
 python-multipart
 cryptography
+bleach
+filelock
 
 jsonschema>=4.18.0
+
+# State persistence (SQLite JSON store)
+sqlalchemy
 
 # LLM Providers (install based on your needs)
 openai>=1.0.0

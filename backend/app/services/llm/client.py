@@ -27,8 +27,10 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Callable, Dict, Iterator, List, Optional, Tuple, Union
 
+from pydantic import BaseModel
+
 from .config import LLMConfig, LLMProvider, get_llm_config
-from .providers import BaseProvider, get_provider
+from .providers import BaseProvider, LiteLLMProvider, get_provider
 
 logger = logging.getLogger("neura.llm.client")
 
@@ -377,10 +379,7 @@ class ResponseCache:
 
 # Approximate token costs per 1K tokens (as of early 2025)
 TOKEN_COSTS: Dict[str, Dict[str, float]] = {
-    "gpt-4o": {"input": 0.0025, "output": 0.01},
-    "gpt-4o-mini": {"input": 0.00015, "output": 0.0006},
-    "gpt-4-turbo": {"input": 0.01, "output": 0.03},
-    "gpt-3.5-turbo": {"input": 0.0005, "output": 0.0015},
+    "gpt-5": {"input": 0.01, "output": 0.03},
     "claude-3-5-sonnet-20241022": {"input": 0.003, "output": 0.015},
     "claude-3-opus-20240229": {"input": 0.015, "output": 0.075},
     "deepseek-chat": {"input": 0.00014, "output": 0.00028},
@@ -410,7 +409,7 @@ def estimate_cost(
     output_tokens: int,
 ) -> float:
     """Estimate cost for a completion."""
-    costs = TOKEN_COSTS.get(model, TOKEN_COSTS.get("gpt-4o", {"input": 0.01, "output": 0.03}))
+    costs = TOKEN_COSTS.get(model, TOKEN_COSTS.get("gpt-5", {"input": 0.01, "output": 0.03}))
     input_cost = (input_tokens / 1000) * costs["input"]
     output_cost = (output_tokens / 1000) * costs["output"]
     return input_cost + output_cost
@@ -509,6 +508,9 @@ class LLMClient:
 
         # Initialize response cache
         self._cache: Optional[ResponseCache] = None
+        if isinstance(self._provider, LiteLLMProvider):
+            enable_cache = os.getenv("LLM_CACHE_ENABLED", "false").lower() in {"1", "true", "yes"}
+
         if enable_cache:
             default_cache_dir = cache_dir or Path(
                 os.getenv("LLM_CACHE_DIR", "")
@@ -770,6 +772,58 @@ class LLMClient:
             error_msg = f"AI processing failed (primary and fallback providers both failed). Please try again. If the problem persists, check your API configuration or contact support."
 
         raise RuntimeError(error_msg) from last_exc
+
+    def complete_structured(
+        self,
+        messages: List[Dict[str, Any]],
+        response_model: type[BaseModel],
+        model: Optional[str] = None,
+        description: str = "llm_structured",
+        **kwargs: Any,
+    ) -> BaseModel:
+        """Execute a structured completion using Instructor-compatible models."""
+        try:
+            import instructor
+        except ImportError as exc:
+            raise RuntimeError("instructor package is required. Install with: pip install instructor") from exc
+
+        model = model or self.config.model
+        try:
+            if isinstance(self._provider, LiteLLMProvider):
+                litellm = self._provider.get_client()
+                instructor_client = instructor.from_litellm(litellm.completion)
+                return instructor_client.chat.completions.create(
+                    model=model,
+                    messages=messages,
+                    response_model=response_model,
+                    **kwargs,
+                )
+
+            base_client = self._provider.get_client()
+            instructor_client = instructor.from_openai(base_client)
+            return instructor_client.chat.completions.create(
+                model=model,
+                messages=messages,
+                response_model=response_model,
+                **kwargs,
+            )
+        except Exception:
+            # Fallback to manual parsing of JSON output.
+            response = self.complete(
+                messages=messages,
+                model=model,
+                description=description,
+                **kwargs,
+            )
+            content = (
+                response.get("choices", [{}])[0]
+                .get("message", {})
+                .get("content", "")
+            )
+            try:
+                return response_model.model_validate_json(content)
+            except AttributeError:
+                return response_model.parse_raw(content)
 
     def _try_fallback(
         self,

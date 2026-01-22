@@ -17,6 +17,12 @@ import theme from './theme.js'
 import { useBootstrapState } from './hooks/useBootstrapState.js'
 import { useKeyboardShortcuts, SHORTCUTS } from './hooks/useKeyboardShortcuts.js'
 import ProjectLayout from './layouts/ProjectLayout.jsx'
+// UX Infrastructure - Premium interaction components
+import { OperationHistoryProvider } from './components/ux/OperationHistoryProvider'
+import NetworkStatusBanner from './components/ux/NetworkStatusBanner'
+import ActivityPanel from './components/ux/ActivityPanel'
+// UX Governance - Enforced interaction safety
+import { UXGovernanceProvider } from './components/ux/governance'
 
 // Lazy-loaded pages - Main app pages
 const DashboardPage = lazy(() => import('./pages/DashboardPage.jsx'))
@@ -102,18 +108,22 @@ function AppContent() {
   // UI State
   const [jobsOpen, setJobsOpen] = useState(false)
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
+  const [activityOpen, setActivityOpen] = useState(false)
 
   // Handlers
   const handleOpenJobs = useCallback(() => setJobsOpen(true), [])
   const handleCloseJobs = useCallback(() => setJobsOpen(false), [])
   const handleOpenCommandPalette = useCallback(() => setCommandPaletteOpen(true), [])
   const handleCloseCommandPalette = useCallback(() => setCommandPaletteOpen(false), [])
+  const handleOpenActivity = useCallback(() => setActivityOpen(true), [])
+  const handleCloseActivity = useCallback(() => setActivityOpen(false), [])
 
   // Register global keyboard shortcuts
   useKeyboardShortcuts({
     [SHORTCUTS.COMMAND_PALETTE]: handleOpenCommandPalette,
     'escape': () => {
       if (commandPaletteOpen) handleCloseCommandPalette()
+      else if (activityOpen) handleCloseActivity()
       else if (jobsOpen) handleCloseJobs()
     },
   })
@@ -121,16 +131,22 @@ function AppContent() {
   useEffect(() => {
     const handleOpenCommandPaletteEvent = () => handleOpenCommandPalette()
     const handleOpenJobsPanelEvent = () => handleOpenJobs()
+    const handleOpenActivityPanelEvent = () => handleOpenActivity()
     window.addEventListener('neura:open-command-palette', handleOpenCommandPaletteEvent)
     window.addEventListener('neura:open-jobs-panel', handleOpenJobsPanelEvent)
+    window.addEventListener('neura:open-activity-panel', handleOpenActivityPanelEvent)
     return () => {
       window.removeEventListener('neura:open-command-palette', handleOpenCommandPaletteEvent)
       window.removeEventListener('neura:open-jobs-panel', handleOpenJobsPanelEvent)
+      window.removeEventListener('neura:open-activity-panel', handleOpenActivityPanelEvent)
     }
-  }, [handleOpenCommandPalette, handleOpenJobs])
+  }, [handleOpenCommandPalette, handleOpenJobs, handleOpenActivity])
 
   return (
     <>
+      {/* Network Status Banner - Visible connectivity feedback */}
+      <NetworkStatusBanner />
+
       {/* Skip to content link for accessibility */}
       <Box
         component="a"
@@ -222,6 +238,7 @@ function AppContent() {
       {/* Overlays */}
       <JobsPanel open={jobsOpen} onClose={handleCloseJobs} />
       <CommandPalette open={commandPaletteOpen} onClose={handleCloseCommandPalette} />
+      <ActivityPanel open={activityOpen} onClose={handleCloseActivity} />
     </>
   )
 }
@@ -232,9 +249,13 @@ export default function App() {
     <ErrorBoundary>
       <BrowserRouter>
         <AppProviders>
-          <ToastProvider>
-            <AppContent />
-          </ToastProvider>
+          <OperationHistoryProvider>
+            <UXGovernanceProvider>
+              <ToastProvider>
+                <AppContent />
+              </ToastProvider>
+            </UXGovernanceProvider>
+          </OperationHistoryProvider>
         </AppProviders>
       </BrowserRouter>
     </ErrorBoundary>

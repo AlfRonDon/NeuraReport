@@ -10,6 +10,12 @@ Refer to `CONFIG.md` for the complete list of supported environment variables. T
 - `UPLOAD_ROOT` (defaults to `backend/uploads`)
 - `NEURA_STATE_SECRET` (optional but recommended so encrypted state survives restarts)
 
+The backend will read a `.env` file if present (highest to lowest priority):
+
+1. `NEURA_ENV_FILE` (explicit path)
+2. Repo root `.env`
+3. `backend/.env` (created by `scripts/setup.ps1`)
+
 Set variables in PowerShell with:
 
 ```powershell
@@ -31,7 +37,9 @@ pip install -r backend/requirements.txt
 uvicorn backend.api:app --reload
 ```
 
-Static artifacts such as verified templates and mapping results are written to `uploads/`.
+Run `uvicorn` from the repository root so `backend.api` and `src/` imports resolve correctly.
+
+Static artifacts such as verified templates and mapping results are written to `backend/uploads/` by default.
 
 ## DataFrame-First Query Engine
 

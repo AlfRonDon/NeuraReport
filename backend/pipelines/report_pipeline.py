@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -25,6 +26,8 @@ from backend.adapters.rendering import (
     XLSXRenderer,
     RenderContext,
 )
+from prefect import flow, task
+from prefect.task_runners import SequentialTaskRunner
 from .base import Pipeline, PipelineContext, Step, StepResult
 
 logger = logging.getLogger("neura.pipelines.report")
@@ -473,6 +476,84 @@ def finalize_report(ctx: ReportPipelineContext) -> Report:
     return report
 
 
+# === Prefect Tasks + Flow ===
+
+
+@task(name="validate_request")
+def validate_request_task(ctx: ReportPipelineContext) -> None:
+    validate_request(ctx)
+
+
+@task(name="load_contract")
+def load_contract_task(ctx: ReportPipelineContext) -> Contract:
+    return load_contract(ctx)
+
+
+@task(name="load_template")
+def load_template_task(ctx: ReportPipelineContext) -> str:
+    return load_template(ctx)
+
+
+@task(name="load_data", retries=1, retry_delay_seconds=1)
+def load_data_task(ctx: ReportPipelineContext) -> Dict[str, Any]:
+    return load_data(ctx)
+
+
+@task(name="render_html")
+def render_html_task(ctx: ReportPipelineContext) -> Path:
+    return render_html(ctx)
+
+
+@task(name="render_pdf", timeout_seconds=120)
+def render_pdf_task(ctx: ReportPipelineContext) -> Optional[Path]:
+    return render_pdf(ctx)
+
+
+@task(name="render_docx")
+def render_docx_task(ctx: ReportPipelineContext) -> Optional[Path]:
+    return render_docx(ctx)
+
+
+@task(name="render_xlsx")
+def render_xlsx_task(ctx: ReportPipelineContext) -> Optional[Path]:
+    return render_xlsx(ctx)
+
+
+@task(name="finalize")
+def finalize_report_task(ctx: ReportPipelineContext) -> Report:
+    return finalize_report(ctx)
+
+
+@flow(name="report_generation", task_runner=SequentialTaskRunner())
+def report_generation_flow(
+    request: RenderRequest,
+    template_path: Path,
+    contract_path: Path,
+    db_path: Path,
+    correlation_id: Optional[str] = None,
+) -> Report:
+    ctx = ReportPipelineContext(
+        correlation_id=correlation_id or str(uuid.uuid4()),
+        request=request,
+        template_path=template_path,
+        contract_path=contract_path,
+        db_path=db_path,
+    )
+    validate_request_task(ctx)
+    load_contract_task(ctx)
+    load_template_task(ctx)
+    load_data_task(ctx)
+    render_html_task(ctx)
+    if OutputFormat.PDF in request.output_formats:
+        render_pdf_task(ctx)
+    if OutputFormat.DOCX in request.output_formats:
+        render_docx_task(ctx)
+    if OutputFormat.XLSX in request.output_formats:
+        render_xlsx_task(ctx)
+    finalize_report_task(ctx)
+    return ctx.report
+
+
 # === Pipeline Factory ===
 
 
@@ -492,6 +573,16 @@ class ReportPipeline:
         correlation_id: Optional[str] = None,
     ) -> Report:
         """Execute the report pipeline."""
+        engine = os.getenv("NEURA_PIPELINE_ENGINE", "prefect").strip().lower()
+        if engine == "prefect":
+            return report_generation_flow(
+                request=request,
+                template_path=template_path,
+                contract_path=contract_path,
+                db_path=db_path,
+                correlation_id=correlation_id,
+            )
+
         ctx = ReportPipelineContext(
             correlation_id=correlation_id or str(uuid.uuid4()),
             request=request,
@@ -499,12 +590,9 @@ class ReportPipeline:
             contract_path=contract_path,
             db_path=db_path,
         )
-
         result = self._pipeline.execute_sync(ctx)
-
         if not result.success:
             raise Exception(f"Report pipeline failed: {result.error}")
-
         return ctx.report
 
 

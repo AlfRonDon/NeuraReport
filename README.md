@@ -5,12 +5,11 @@ NeuraReport is a desktop-first reporting assistant that pairs a FastAPI backend 
 ## Repository Layout
 
 - `backend/` - FastAPI application, service modules (`templates`, `mapping`, `contract`, `generator`, `reports`), and tests.
+- `src/` - Shared services still imported by `backend/api.py` (legacy-but-active modules).
 - `frontend/` - Vite + React 18 SPA that streams pipeline progress and manages state with React Query/Zustand.
-- `desktop/` - Tauri scaffold for packaging the web UI with the Python sidecar (currently a stub).
 - `scripts/` - Developer utilities (`verify_pipeline.py`, `artifact_stats.py`, etc.).
-- `uploads/` - PDF pipeline artifacts, manifests, and run outputs (created at runtime).
-- `uploads_excel/` - Excel pipeline artifacts and history (created at runtime when Excel flow is used).
-- `state/` - Encrypted state store (`state.json`) plus generated Fernet secret.
+- `backend/uploads/`, `backend/uploads_excel/` - Runtime artifacts/manifests (created at runtime; served via `/uploads` and `/excel-uploads`).
+- `backend/state/` - Encrypted state store (`state.json`) plus generated Fernet secret (do not commit).
 - `dummy.db`, `scratch_recipe.db` - Sample SQLite datasets for development.
 
 See `requirements.md` for product goals and `PIPELINE_DOCUMENTATION.md` for a step-by-step view of the backend pipeline.
@@ -23,6 +22,22 @@ See `requirements.md` for product goals and `PIPELINE_DOCUMENTATION.md` for a st
 - (Optional) Playwright browsers for end-to-end UI checks (`npx playwright install --with-deps`)
 
 ## Quickstart
+
+### One-time setup (recommended)
+
+Windows (PowerShell):
+
+```powershell
+.\scripts\setup.ps1
+.\scripts\dev.ps1
+```
+
+macOS/Linux:
+
+```bash
+bash scripts/setup.sh
+bash scripts/dev.sh
+```
 
 ### Backend
 
@@ -55,7 +70,7 @@ npm install
 npm run dev
 ```
 
-Visit `http://127.0.0.1:5173`. The default `.env.local` enables mock responses; set `VITE_USE_MOCK=false` to hit the live backend (`VITE_API_BASE_URL` defaults to `http://127.0.0.1:8000`).
+Visit `http://127.0.0.1:5173`. Copy `frontend/.env.example` to `frontend/.env.local` to configure mock mode; set `VITE_USE_MOCK=false` to hit the live backend (`VITE_API_BASE_URL` defaults to `http://127.0.0.1:8000`).
 
 ### Sample Data
 

@@ -13,6 +13,8 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
 from backend.app.core.security import require_api_key
+from backend.app.features.generate.schemas.reports import RunPayload
+from backend.app.services.state import state_store
 from src.services.scheduler_service import get_job, list_active_jobs, list_jobs, cancel_job
 
 router = APIRouter(dependencies=[Depends(require_api_key)])
@@ -25,10 +27,10 @@ def _normalize_job_status(status: Optional[str]) -> str:
     to canonical frontend values (completed, pending, running, etc.).
     """
     value = (status or "").strip().lower()
-    if value in {"succeeded", "success", "done"}:
-        return "completed"
-    if value in {"queued"}:
-        return "pending"
+    if value in {"succeeded", "success", "done", "completed"}:
+        return "succeeded"
+    if value in {"queued", "pending"}:
+        return "queued"
     if value in {"in_progress", "started"}:
         return "running"
     if value in {"error"}:
@@ -36,9 +38,9 @@ def _normalize_job_status(status: Optional[str]) -> str:
     if value in {"canceled"}:
         return "cancelled"
     # Return as-is for known statuses
-    if value in {"pending", "running", "completed", "failed", "cancelled", "cancelling"}:
+    if value in {"queued", "running", "succeeded", "failed", "cancelled", "cancelling"}:
         return value
-    return value or "pending"
+    return value or "queued"
 
 
 def _normalize_job(job: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
@@ -55,6 +57,29 @@ def _normalize_job(job: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
 
 def _correlation(request: Request) -> str | None:
     return getattr(request.state, "correlation_id", None)
+
+
+@router.post("/run-report")
+async def run_report_job(payload: RunPayload | list[RunPayload], request: Request):
+    """Queue a report generation job (compatibility alias for `/reports/jobs/run-report`)."""
+    from src.services.report_service import queue_report_job
+
+    payloads = payload if isinstance(payload, list) else [payload]
+    kinds = set()
+    for item in payloads:
+        rec = state_store.get_template_record(item.template_id) or {}
+        kinds.add(str(rec.get("kind") or "pdf").strip().lower() or "pdf")
+    if len(kinds) > 1:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "status": "error",
+                "code": "mixed_template_kinds",
+                "message": "All runs in a batch submission must share the same template kind.",
+            },
+        )
+    kind = next(iter(kinds)) if kinds else "pdf"
+    return await queue_report_job(payload, request, kind=kind)
 
 
 @router.get("")

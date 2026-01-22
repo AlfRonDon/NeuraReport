@@ -4,147 +4,63 @@ import asyncio
 import logging
 import time
 import uuid
-from collections import defaultdict
-from dataclasses import dataclass, field
-from typing import Dict, Tuple
 
-from fastapi import FastAPI, Request, Response
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
+from .idempotency import IdempotencyMiddleware, IdempotencyStore
 from ..services.utils.context import set_correlation_id
 from .config import Settings
+from .ux_governance import UXGovernanceMiddleware, IntentHeaders
 
 logger = logging.getLogger("neura.api")
 
-
-@dataclass
-class RateLimitBucket:
-    """Token bucket for rate limiting with sliding window."""
-    tokens: float = 0.0
-    last_update: float = field(default_factory=time.time)
-
-
-class RateLimiter:
-    """In-memory sliding window rate limiter with token bucket algorithm."""
-
-    def __init__(
-        self,
-        requests_per_window: int = 100,
-        window_seconds: int = 60,
-        burst: int = 20,
-    ):
-        self.requests_per_window = requests_per_window
-        self.window_seconds = window_seconds
-        self.burst = burst
-        self.rate = requests_per_window / window_seconds
-        self.buckets: Dict[str, RateLimitBucket] = defaultdict(
-            lambda: RateLimitBucket(tokens=burst)
-        )
-        self._cleanup_counter = 0
-        self._cleanup_threshold = 1000  # cleanup every N requests
-
-    def _get_client_key(self, request: Request) -> str:
-        """Get unique client identifier from request."""
-        # Check for API key first
-        api_key = request.headers.get("x-api-key")
-        if api_key:
-            return f"key:{api_key[:16]}"  # Use first 16 chars for privacy
-
-        # Fall back to IP address
-        forwarded = request.headers.get("x-forwarded-for")
-        if forwarded:
-            ip = forwarded.split(",")[0].strip()
-        else:
-            ip = request.client.host if request.client else "unknown"
-        return f"ip:{ip}"
-
-    def _cleanup_stale_buckets(self) -> None:
-        """Remove stale buckets to prevent memory leak."""
-        now = time.time()
-        stale_threshold = self.window_seconds * 2
-        stale_keys = [
-            key
-            for key, bucket in self.buckets.items()
-            if now - bucket.last_update > stale_threshold
-        ]
-        for key in stale_keys:
-            del self.buckets[key]
-
-    def is_allowed(self, request: Request) -> Tuple[bool, int, int]:
-        """
-        Check if request is allowed under rate limit.
-        Returns (allowed, remaining_tokens, retry_after_seconds).
-        """
-        self._cleanup_counter += 1
-        if self._cleanup_counter >= self._cleanup_threshold:
-            self._cleanup_stale_buckets()
-            self._cleanup_counter = 0
-
-        client_key = self._get_client_key(request)
-        bucket = self.buckets[client_key]
-        now = time.time()
-
-        # Refill tokens based on elapsed time
-        elapsed = now - bucket.last_update
-        bucket.tokens = min(
-            self.burst + self.requests_per_window,
-            bucket.tokens + elapsed * self.rate,
-        )
-        bucket.last_update = now
-
-        if bucket.tokens >= 1.0:
-            bucket.tokens -= 1.0
-            remaining = int(bucket.tokens)
-            return True, remaining, 0
-        else:
-            # Calculate retry-after
-            tokens_needed = 1.0 - bucket.tokens
-            retry_after = int(tokens_needed / self.rate) + 1
-            return False, 0, retry_after
+def _get_client_key(request: Request) -> str:
+    """Get unique client identifier for rate limiting."""
+    api_key = request.headers.get("x-api-key")
+    if api_key:
+        return f"key:{api_key[:16]}"
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    real_ip = request.headers.get("x-real-ip")
+    if real_ip:
+        return real_ip
+    return request.client.host if request.client else "unknown"
 
 
-class RateLimitMiddleware(BaseHTTPMiddleware):
-    """Middleware to enforce rate limits on API requests."""
+def _format_rate_limit(requests: int, window_seconds: int) -> str:
+    if window_seconds <= 1:
+        return f"{requests}/second"
+    if window_seconds == 60:
+        return f"{requests}/minute"
+    if window_seconds == 3600:
+        return f"{requests}/hour"
+    if window_seconds == 86400:
+        return f"{requests}/day"
+    return f"{requests}/{window_seconds} second"
 
-    def __init__(self, app, rate_limiter: RateLimiter):
-        super().__init__(app)
-        self.rate_limiter = rate_limiter
 
-    async def dispatch(self, request: Request, call_next):
-        # Skip rate limiting for health checks
-        if request.url.path in ("/health", "/healthz", "/ready"):
-            return await call_next(request)
+def _build_default_limits(settings: Settings) -> list[str]:
+    limits: list[str] = []
+    if settings.rate_limit_requests > 0 and settings.rate_limit_window_seconds > 0:
+        limits.append(_format_rate_limit(settings.rate_limit_requests, settings.rate_limit_window_seconds))
+    if settings.rate_limit_burst > 0:
+        limits.append(f"{settings.rate_limit_burst}/second")
+    return limits
 
-        allowed, remaining, retry_after = self.rate_limiter.is_allowed(request)
 
-        if not allowed:
-            logger.warning(
-                "rate_limit_exceeded",
-                extra={
-                    "event": "rate_limit_exceeded",
-                    "path": request.url.path,
-                    "method": request.method,
-                    "retry_after": retry_after,
-                },
-            )
-            return JSONResponse(
-                status_code=429,
-                content={
-                    "detail": "Too many requests. Please slow down.",
-                    "retry_after": retry_after,
-                },
-                headers={
-                    "Retry-After": str(retry_after),
-                    "X-RateLimit-Remaining": "0",
-                },
-            )
+limiter = Limiter(key_func=_get_client_key, default_limits=[], headers_enabled=True)
 
-        response = await call_next(request)
-        response.headers["X-RateLimit-Remaining"] = str(remaining)
-        return response
+
+def _configure_limiter(settings: Settings) -> None:
+    limiter.default_limits = _build_default_limits(settings)
 
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
@@ -203,6 +119,7 @@ class RequestTimeoutMiddleware(BaseHTTPMiddleware):
             )
             return response
         except asyncio.TimeoutError:
+            correlation_id = getattr(getattr(request, "state", None), "correlation_id", None)
             logger.error(
                 "request_timeout",
                 extra={
@@ -215,8 +132,11 @@ class RequestTimeoutMiddleware(BaseHTTPMiddleware):
             return JSONResponse(
                 status_code=504,
                 content={
-                    "detail": "Request timed out. Please try again with a smaller payload or simpler request.",
+                    "status": "error",
+                    "code": "request_timeout",
+                    "message": "Request timed out. Please try again with a smaller payload or simpler request.",
                     "timeout_seconds": timeout,
+                    "correlation_id": correlation_id,
                 },
             )
 
@@ -229,6 +149,16 @@ class CorrelationIdMiddleware(BaseHTTPMiddleware):
         set_correlation_id(correlation_id)
         request.state.correlation_id = correlation_id
         started = time.time()
+
+        logger.info(
+            "request_start",
+            extra={
+                "event": "request_start",
+                "path": request.url.path,
+                "method": request.method,
+                "correlation_id": correlation_id,
+            },
+        )
 
         try:
             response = await call_next(request)
@@ -259,8 +189,11 @@ class CorrelationIdMiddleware(BaseHTTPMiddleware):
                 "correlation_id": correlation_id,
             },
         )
-        response.headers["X-Correlation-Id"] = correlation_id
-        response.headers.setdefault("Cache-Control", "no-store")
+        response.headers["X-Correlation-ID"] = correlation_id
+        response.headers.setdefault("X-Content-Type-Options", "nosniff")
+        content_type = response.headers.get("Content-Type", "")
+        if content_type.startswith(("application/json", "text/html", "application/x-ndjson")):
+            response.headers.setdefault("Cache-Control", "no-store")
         set_correlation_id(None)
         return response
 
@@ -282,12 +215,36 @@ def add_middlewares(app: FastAPI, settings: Settings) -> None:
             "Content-Type",
             "Authorization",
             "X-API-Key",
-            "X-Correlation-Id",
+            "X-Correlation-ID",
+            "Idempotency-Key",
             "Accept",
+            # UX Governance headers
+            IntentHeaders.INTENT_ID,
+            IntentHeaders.INTENT_TYPE,
+            IntentHeaders.INTENT_LABEL,
+            IntentHeaders.IDEMPOTENCY_KEY,
+            IntentHeaders.REVERSIBILITY,
+            IntentHeaders.USER_SESSION,
+            IntentHeaders.USER_ACTION,
+            IntentHeaders.WORKFLOW_ID,
+            IntentHeaders.WORKFLOW_STEP,
         ],
         allow_credentials=True,
-        expose_headers=["X-Correlation-Id", "X-RateLimit-Remaining"],
+        expose_headers=[
+            "X-Correlation-ID",
+            "X-RateLimit-Remaining",
+            "X-RateLimit-Limit",
+            "Idempotency-Replay",
+            "X-Intent-Processed",
+        ],
     )
+
+    if settings.idempotency_enabled:
+        app.add_middleware(
+            IdempotencyMiddleware,
+            store=IdempotencyStore(),
+            ttl_seconds=settings.idempotency_ttl_seconds,
+        )
 
     # Trusted host middleware - configure properly in production
     if settings.allowed_hosts_all:
@@ -307,12 +264,18 @@ def add_middlewares(app: FastAPI, settings: Settings) -> None:
 
     # Rate limiting middleware
     if settings.rate_limit_enabled:
-        rate_limiter = RateLimiter(
-            requests_per_window=settings.rate_limit_requests,
-            window_seconds=settings.rate_limit_window_seconds,
-            burst=settings.rate_limit_burst,
-        )
-        app.add_middleware(RateLimitMiddleware, rate_limiter=rate_limiter)
+        _configure_limiter(settings)
+        app.state.limiter = limiter
+        app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+        app.add_middleware(SlowAPIMiddleware)
+
+    # UX Governance middleware - enforces intent headers on mutating requests
+    # Set strict_mode=False initially to log warnings without rejecting requests
+    # Change to strict_mode=True when frontend is fully compliant
+    app.add_middleware(
+        UXGovernanceMiddleware,
+        strict_mode=settings.ux_governance_strict if hasattr(settings, 'ux_governance_strict') else False,
+    )
 
     # Correlation ID and logging middleware (should be last to wrap everything)
     app.add_middleware(CorrelationIdMiddleware)

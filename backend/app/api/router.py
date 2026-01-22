@@ -28,6 +28,7 @@ from .routes import (
 )
 from backend.app.features.analyze.routes import router as analyze_router
 from backend.app.features.analyze.routes import enhanced_analysis_routes
+from backend.app.core.auth import auth_backend, fastapi_users, UserCreate, UserRead, UserUpdate
 
 
 def register_routes(app: FastAPI) -> None:
@@ -54,6 +55,9 @@ def register_routes(app: FastAPI) -> None:
     - /docqa - Document Q&A chat
     """
     # Core routes
+    app.include_router(fastapi_users.get_auth_router(auth_backend), prefix="/auth/jwt", tags=["auth"])
+    app.include_router(fastapi_users.get_register_router(UserRead, UserCreate), prefix="/auth", tags=["auth"])
+    app.include_router(fastapi_users.get_users_router(UserRead, UserUpdate), prefix="/users", tags=["users"])
     app.include_router(health.router, tags=["health"])
     app.include_router(connections.router, prefix="/connections", tags=["connections"])
     app.include_router(templates.router, prefix="/templates", tags=["templates"])

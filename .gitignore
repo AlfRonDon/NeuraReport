@@ -6,6 +6,7 @@ Thumbs.db
 .idea/
 .vscode/
 .history/
+.claude/
 nul
 
 # Environment files
@@ -48,6 +49,9 @@ frontend/dist/
 frontend/.vite/
 frontend/.eslintcache
 frontend/.cache/
+frontend/playwright-report/
+frontend/playwright-results/
+frontend/test-output.txt
 
 # Generated runtime data
 uploads/*

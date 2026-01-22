@@ -1,0 +1,391 @@
+{
+  "api_framework": [
+    {
+      "full_name": "fastapi/fastapi",
+      "html_url": "https://github.com/fastapi/fastapi",
+      "description": "FastAPI framework, high performance, easy to learn, fast to code, ready for production",
+      "stargazers_count": 94350,
+      "license": "MIT",
+      "archived": false,
+      "updated_at": "2026-01-22T10:51:29Z"
+    }
+  ],
+  "rate_limiting": [
+    {
+      "full_name": "laurentS/slowapi",
+      "html_url": "https://github.com/laurentS/slowapi",
+      "description": "A rate limiter for Starlette and FastAPI",
+      "stargazers_count": 1874,
+      "license": "MIT",
+      "archived": false,
+      "updated_at": "2026-01-22T09:58:40Z"
+    },
+    {
+      "full_name": "alisaifee/limits",
+      "html_url": "https://github.com/alisaifee/limits",
+      "description": "Rate limiting using various strategies and storage backends such as redis, memcached & mongodb",
+      "stargazers_count": 598,
+      "license": "MIT",
+      "archived": false,
+      "updated_at": "2026-01-22T09:55:05Z"
+    }
+  ],
+  "idempotency": [
+    {
+      "full_name": "pypy-riley/idemptx",
+      "html_url": "https://github.com/pypy-riley/idemptx",
+      "description": "Idempotency decorator for FastAPI. Redis-based locking and replay support.",
+      "stargazers_count": 21,
+      "license": "MIT",
+      "archived": false,
+      "updated_at": "2026-01-21T06:27:46Z"
+    },
+    {
+      "full_name": "KikuAI-Lab/reliapi",
+      "html_url": "https://github.com/KikuAI-Lab/reliapi",
+      "description": "Small reliability layer for HTTP APIs and LLM calls. Idempotent HTTP/LLM proxy with retries, cache, circuit breaker and predictable AI costs.",
+      "stargazers_count": 6,
+      "license": "AGPL-3.0",
+      "archived": false,
+      "updated_at": "2026-01-05T09:53:09Z"
+    }
+  ],
+  "auth": [
+    {
+      "full_name": "fastapi-users/fastapi-users",
+      "html_url": "https://github.com/fastapi-users/fastapi-users",
+      "description": "Ready-to-use and customizable users management for FastAPI",
+      "stargazers_count": 5946,
+      "license": "MIT",
+      "archived": false,
+      "updated_at": "2026-01-22T09:09:40Z"
+    },
+    {
+      "full_name": "authlib/authlib",
+      "html_url": "https://github.com/authlib/authlib",
+      "description": "The ultimate Python library in building OAuth, OpenID Connect clients and servers. JWS, JWE, JWK, JWA, JWT included.",
+      "stargazers_count": 5184,
+      "license": "BSD-3-Clause",
+      "archived": false,
+      "updated_at": "2026-01-22T08:24:06Z"
+    },
+    {
+      "full_name": "fief-dev/fief",
+      "html_url": "https://github.com/fief-dev/fief",
+      "description": "Users and authentication management SaaS",
+      "stargazers_count": 727,
+      "license": null,
+      "archived": false,
+      "updated_at": "2026-01-13T06:34:25Z"
+    }
+  ],
+  "validation": [
+    {
+      "full_name": "pydantic/pydantic",
+      "html_url": "https://github.com/pydantic/pydantic",
+      "description": "Data validation using Python type hints",
+      "stargazers_count": 26533,
+      "license": "MIT",
+      "archived": false,
+      "updated_at": "2026-01-22T10:06:13Z"
+    }
+  ],
+  "async_jobs": [
+    {
+      "full_name": "celery/celery",
+      "html_url": "https://github.com/celery/celery",
+      "description": "Distributed Task Queue (development branch)",
+      "stargazers_count": 27898,
+      "license": null,
+      "archived": false,
+      "updated_at": "2026-01-22T07:34:11Z"
+    },
+    {
+      "full_name": "rq/rq",
+      "html_url": "https://github.com/rq/rq",
+      "description": "Simple job queues for Python",
+      "stargazers_count": 10554,
+      "license": null,
+      "archived": false,
+      "updated_at": "2026-01-21T17:21:13Z"
+    },
+    {
+      "full_name": "Bogdanp/dramatiq",
+      "html_url": "https://github.com/Bogdanp/dramatiq",
+      "description": "A fast and reliable background task processing library for Python 3.",
+      "stargazers_count": 5089,
+      "license": "LGPL-3.0",
+      "archived": false,
+      "updated_at": "2026-01-22T09:41:03Z"
+    }
+  ],
+  "scheduler": [
+    {
+      "full_name": "agronholm/apscheduler",
+      "html_url": "https://github.com/agronholm/apscheduler",
+      "description": "Task scheduling library for Python",
+      "stargazers_count": 7254,
+      "license": "MIT",
+      "archived": false,
+      "updated_at": "2026-01-22T06:00:18Z"
+    }
+  ],
+  "pipelines": [
+    {
+      "full_name": "PrefectHQ/prefect",
+      "html_url": "https://github.com/PrefectHQ/prefect",
+      "description": "Prefect is a workflow orchestration framework for building resilient data pipelines in Python.",
+      "stargazers_count": 21398,
+      "license": "Apache-2.0",
+      "archived": false,
+      "updated_at": "2026-01-22T10:43:02Z"
+    },
+    {
+      "full_name": "dagster-io/dagster",
+      "html_url": "https://github.com/dagster-io/dagster",
+      "description": "An orchestration platform for the development, production, and observation of data assets.",
+      "stargazers_count": 14784,
+      "license": "Apache-2.0",
+      "archived": false,
+      "updated_at": "2026-01-22T10:48:42Z"
+    },
+    {
+      "full_name": "apache/airflow",
+      "html_url": "https://github.com/apache/airflow",
+      "description": "Apache Airflow - A platform to programmatically author, schedule, and monitor workflows",
+      "stargazers_count": 43952,
+      "license": "Apache-2.0",
+      "archived": false,
+      "updated_at": "2026-01-22T09:31:45Z"
+    }
+  ],
+  "observability": [
+    {
+      "full_name": "open-telemetry/opentelemetry-python",
+      "html_url": "https://github.com/open-telemetry/opentelemetry-python",
+      "description": "OpenTelemetry Python API and SDK ",
+      "stargazers_count": 2284,
+      "license": "Apache-2.0",
+      "archived": false,
+      "updated_at": "2026-01-22T08:28:09Z"
+    },
+    {
+      "full_name": "getsentry/sentry-python",
+      "html_url": "https://github.com/getsentry/sentry-python",
+      "description": "The official Python SDK for Sentry.io",
+      "stargazers_count": 2129,
+      "license": "MIT",
+      "archived": false,
+      "updated_at": "2026-01-20T19:58:36Z"
+    }
+  ],
+  "metrics": [
+    {
+      "full_name": "prometheus/client_python",
+      "html_url": "https://github.com/prometheus/client_python",
+      "description": "Prometheus instrumentation library for Python applications",
+      "stargazers_count": 4284,
+      "license": "Apache-2.0",
+      "archived": false,
+      "updated_at": "2026-01-21T23:41:16Z"
+    }
+  ],
+  "logging": [
+    {
+      "full_name": "hynek/structlog",
+      "html_url": "https://github.com/hynek/structlog",
+      "description": "Simple, powerful, and fast logging for Python.",
+      "stargazers_count": 4515,
+      "license": null,
+      "archived": false,
+      "updated_at": "2026-01-22T10:38:19Z"
+    }
+  ],
+  "caching": [
+    {
+      "full_name": "grantjenks/python-diskcache",
+      "html_url": "https://github.com/grantjenks/python-diskcache",
+      "description": "Python disk-backed cache (Django-compatible). Faster than Redis and Memcached. Pure-Python.",
+      "stargazers_count": 2804,
+      "license": null,
+      "archived": false,
+      "updated_at": "2026-01-22T09:26:36Z"
+    },
+    {
+      "full_name": "tkem/cachetools",
+      "html_url": "https://github.com/tkem/cachetools",
+      "description": "Extensible memoizing collections and decorators",
+      "stargazers_count": 2683,
+      "license": "MIT",
+      "archived": false,
+      "updated_at": "2026-01-22T03:17:41Z"
+    }
+  ],
+  "retries": [
+    {
+      "full_name": "jd/tenacity",
+      "html_url": "https://github.com/jd/tenacity",
+      "description": "Retrying library for Python",
+      "stargazers_count": 8283,
+      "license": "Apache-2.0",
+      "archived": false,
+      "updated_at": "2026-01-22T06:43:42Z"
+    },
+    {
+      "full_name": "litl/backoff",
+      "html_url": "https://github.com/litl/backoff",
+      "description": "Python library providing function decorators for configurable backoff and retry",
+      "stargazers_count": 2703,
+      "license": "MIT",
+      "archived": true,
+      "updated_at": "2026-01-12T00:50:12Z"
+    }
+  ],
+  "file_lock": [
+    {
+      "full_name": "tox-dev/filelock",
+      "html_url": "https://github.com/tox-dev/filelock",
+      "description": "A platform-independent file lock for Python.",
+      "stargazers_count": 926,
+      "license": "Unlicense",
+      "archived": false,
+      "updated_at": "2026-01-20T14:15:20Z"
+    }
+  ],
+  "html_sanitizer": [
+    {
+      "full_name": "mozilla/bleach",
+      "html_url": "https://github.com/mozilla/bleach",
+      "description": "Bleach is an allowed-list-based HTML sanitizing library that escapes or strips markup and attributes",
+      "stargazers_count": 2747,
+      "license": null,
+      "archived": false,
+      "updated_at": "2026-01-11T11:37:52Z"
+    },
+    {
+      "full_name": "messense/nh3",
+      "html_url": "https://github.com/messense/nh3",
+      "description": "Python binding to Ammonia HTML sanitizer Rust crate",
+      "stargazers_count": 351,
+      "license": "MIT",
+      "archived": false,
+      "updated_at": "2026-01-21T00:28:53Z"
+    }
+  ],
+  "event_bus": [
+    {
+      "full_name": "jfhbrook/pyee",
+      "html_url": "https://github.com/jfhbrook/pyee",
+      "description": "A rough port of Node.js's EventEmitter to Python with a few tricks of its own",
+      "stargazers_count": 423,
+      "license": "MIT",
+      "archived": false,
+      "updated_at": "2026-01-11T04:58:29Z"
+    },
+    {
+      "full_name": "pallets-eco/blinker",
+      "html_url": "https://github.com/pallets-eco/blinker",
+      "description": "A fast Python in-process signal/event dispatching system.",
+      "stargazers_count": 2017,
+      "license": "MIT",
+      "archived": false,
+      "updated_at": "2026-01-21T09:40:48Z"
+    }
+  ],
+  "llm_orchestration": [
+    {
+      "full_name": "langchain-ai/langchain",
+      "html_url": "https://github.com/langchain-ai/langchain",
+      "description": "🦜🔗 The platform for reliable agents.",
+      "stargazers_count": 124836,
+      "license": "MIT",
+      "archived": false,
+      "updated_at": "2026-01-22T10:25:19Z"
+    },
+    {
+      "full_name": "run-llama/llama_index",
+      "html_url": "https://github.com/run-llama/llama_index",
+      "description": "LlamaIndex is the leading framework for building LLM-powered agents over your data.",
+      "stargazers_count": 46530,
+      "license": "MIT",
+      "archived": false,
+      "updated_at": "2026-01-22T10:10:55Z"
+    },
+    {
+      "full_name": "deepset-ai/haystack",
+      "html_url": "https://github.com/deepset-ai/haystack",
+      "description": "AI orchestration framework to build customizable, production-ready LLM applications. Connect components (models, vector DBs, file converters) to pipelines or agents that can interact with your data. With advanced retrieval methods, it's best suited for building RAG, question answering, semantic search or conversational agent chatbots.",
+      "stargazers_count": 23942,
+      "license": "Apache-2.0",
+      "archived": false,
+      "updated_at": "2026-01-22T09:41:49Z"
+    },
+    {
+      "full_name": "BerriAI/litellm",
+      "html_url": "https://github.com/BerriAI/litellm",
+      "description": "Python SDK, Proxy Server (AI Gateway) to call 100+ LLM APIs in OpenAI (or native) format, with cost tracking, guardrails, loadbalancing and logging. [Bedrock, Azure, OpenAI, VertexAI, Cohere, Anthropic, Sagemaker, HuggingFace, VLLM, NVIDIA NIM]",
+      "stargazers_count": 34285,
+      "license": null,
+      "archived": false,
+      "updated_at": "2026-01-22T10:45:08Z"
+    },
+    {
+      "full_name": "567-labs/instructor",
+      "html_url": "https://github.com/567-labs/instructor",
+      "description": "structured outputs for llms ",
+      "stargazers_count": 12184,
+      "license": "MIT",
+      "archived": false,
+      "updated_at": "2026-01-22T10:44:44Z"
+    }
+  ],
+  "pdf_parsing": [
+    {
+      "full_name": "jsvine/pdfplumber",
+      "html_url": "https://github.com/jsvine/pdfplumber",
+      "description": "Plumb a PDF for detailed information about each char, rectangle, line, et cetera — and easily extract text and tables.",
+      "stargazers_count": 9571,
+      "license": "MIT",
+      "archived": false,
+      "updated_at": "2026-01-22T10:39:11Z"
+    },
+    {
+      "full_name": "pymupdf/PyMuPDF",
+      "html_url": "https://github.com/pymupdf/PyMuPDF",
+      "description": "PyMuPDF is a high performance Python library for data extraction, analysis, conversion & manipulation of PDF (and other) documents.",
+      "stargazers_count": 8899,
+      "license": "AGPL-3.0",
+      "archived": false,
+      "updated_at": "2026-01-22T09:37:24Z"
+    },
+    {
+      "full_name": "pdfminer/pdfminer.six",
+      "html_url": "https://github.com/pdfminer/pdfminer.six",
+      "description": "Community maintained fork of pdfminer - we fathom PDF",
+      "stargazers_count": 6867,
+      "license": "MIT",
+      "archived": false,
+      "updated_at": "2026-01-22T09:24:44Z"
+    }
+  ],
+  "pdf_tables": [
+    {
+      "full_name": "atlanhq/camelot",
+      "html_url": "https://github.com/atlanhq/camelot",
+      "description": "Camelot: PDF Table Extraction for Humans",
+      "stargazers_count": 3725,
+      "license": null,
+      "archived": true,
+      "updated_at": "2026-01-22T02:26:24Z"
+    },
+    {
+      "full_name": "chezou/tabula-py",
+      "html_url": "https://github.com/chezou/tabula-py",
+      "description": "Simple wrapper of tabula-java: extract table from PDF into pandas DataFrame",
+      "stargazers_count": 2309,
+      "license": "MIT",
+      "archived": false,
+      "updated_at": "2026-01-18T06:44:44Z"
+    }
+  ]
+}

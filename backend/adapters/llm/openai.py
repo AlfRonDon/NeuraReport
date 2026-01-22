@@ -12,7 +12,7 @@ from .base import BaseLLMClient, LLMMessage, LLMResponse
 
 logger = logging.getLogger("neura.adapters.llm.openai")
 
-_FORCE_GPT5 = os.getenv("NEURA_FORCE_GPT5", "false").lower() in {"1", "true", "yes"}
+_FORCE_GPT5 = os.getenv("NEURA_FORCE_GPT5", "true").lower() in {"1", "true", "yes"}
 
 
 class OpenAIClient(BaseLLMClient):

@@ -50,6 +50,14 @@ import * as api from '../../api/client'
 import DataTable from '../../ui/DataTable/DataTable'
 import ConfirmModal from '../../ui/Modal/ConfirmModal'
 import { useToast } from '../../components/ToastProvider'
+// UX Components for premium interactions
+import DisabledTooltip from '../../components/ux/DisabledTooltip'
+// UX Governance - Enforced interaction API
+import {
+  useInteraction,
+  InteractionType,
+  Reversibility,
+} from '../../components/ux/governance'
 
 // =============================================================================
 // ANIMATIONS
@@ -260,6 +268,8 @@ const StyledDialog = styled(Dialog)(({ theme }) => ({
 export default function QueryBuilderPage() {
   const theme = useTheme()
   const toast = useToast()
+  // UX Governance: Enforced interaction API - ALL user actions flow through this
+  const { execute } = useInteraction()
   const connections = useAppStore((s) => s.savedConnections)
   const {
     currentQuestion,
@@ -372,109 +382,147 @@ export default function QueryBuilderPage() {
     fetchHistory()
   }, [setQueryHistory])
 
-  const handleGenerate = useCallback(async () => {
+  const handleGenerate = useCallback(() => {
     if (!currentQuestion.trim() || !selectedConnectionId) return
 
-    setIsGenerating(true)
-    setError(null)
-    clearResults()
+    // UX Governance: Generate action with tracking
+    execute({
+      type: InteractionType.GENERATE,
+      label: 'Generate SQL query',
+      reversibility: Reversibility.SYSTEM_MANAGED,
+      blocksNavigation: true,
+      action: async () => {
+        setIsGenerating(true)
+        setError(null)
+        clearResults()
 
-    try {
-      const result = await nl2sqlApi.generateSQL({
-        question: currentQuestion,
-        connectionId: selectedConnectionId,
-      })
+        try {
+          const result = await nl2sqlApi.generateSQL({
+            question: currentQuestion,
+            connectionId: selectedConnectionId,
+          })
 
-      setGenerationResult({
-        sql: result.sql,
-        explanation: result.explanation,
-        confidence: result.confidence,
-        warnings: result.warnings,
-        originalQuestion: result.original_question,
-      })
-    } catch (err) {
-      setError(err.response?.data?.message || err.message || 'Failed to generate SQL')
-    } finally {
-      setIsGenerating(false)
-    }
-  }, [currentQuestion, selectedConnectionId, setIsGenerating, setError, clearResults, setGenerationResult])
+          setGenerationResult({
+            sql: result.sql,
+            explanation: result.explanation,
+            confidence: result.confidence,
+            warnings: result.warnings,
+            originalQuestion: result.original_question,
+          })
+        } catch (err) {
+          const errorMsg = err.response?.data?.message || err.message || 'Failed to generate SQL'
+          setError(errorMsg)
+          throw new Error(errorMsg)
+        } finally {
+          setIsGenerating(false)
+        }
+      },
+    })
+  }, [currentQuestion, selectedConnectionId, setIsGenerating, setError, clearResults, setGenerationResult, execute])
 
-  const handleExecute = useCallback(async () => {
+  const handleExecute = useCallback(() => {
     if (!generatedSQL.trim() || !selectedConnectionId) return
 
-    setIsExecuting(true)
-    setError(null)
+    // UX Governance: Execute action with tracking and navigation blocking
+    execute({
+      type: InteractionType.EXECUTE,
+      label: 'Execute SQL query',
+      reversibility: Reversibility.SYSTEM_MANAGED,
+      blocksNavigation: true,
+      successMessage: 'Query executed successfully',
+      action: async () => {
+        setIsExecuting(true)
+        setError(null)
 
-    try {
-      const result = await nl2sqlApi.executeQuery({
-        sql: generatedSQL,
-        connectionId: selectedConnectionId,
-        limit: 100,
-      })
+        try {
+          const result = await nl2sqlApi.executeQuery({
+            sql: generatedSQL,
+            connectionId: selectedConnectionId,
+            limit: 100,
+          })
 
-      setExecutionResult({
-        columns: result.columns,
-        rows: result.rows,
-        rowCount: result.row_count,
-        totalCount: result.total_count,
-        executionTimeMs: result.execution_time_ms,
-        truncated: result.truncated,
-      })
-    } catch (err) {
-      setError(err.response?.data?.detail || err.response?.data?.message || err.message || 'Failed to execute query')
-    } finally {
-      setIsExecuting(false)
-    }
-  }, [generatedSQL, selectedConnectionId, setIsExecuting, setError, setExecutionResult])
+          setExecutionResult({
+            columns: result.columns,
+            rows: result.rows,
+            rowCount: result.row_count,
+            totalCount: result.total_count,
+            executionTimeMs: result.execution_time_ms,
+            truncated: result.truncated,
+          })
+          toast.show(`Query returned ${result.row_count} rows`, 'success')
+        } catch (err) {
+          const errorMsg = err.response?.data?.detail || err.response?.data?.message || err.message || 'Failed to execute query'
+          setError(errorMsg)
+          throw new Error(errorMsg)
+        } finally {
+          setIsExecuting(false)
+        }
+      },
+    })
+  }, [generatedSQL, selectedConnectionId, setIsExecuting, setError, setExecutionResult, execute, toast])
 
-  const handleSave = useCallback(async () => {
+  const handleSave = useCallback(() => {
     if (!saveName.trim() || !generatedSQL.trim() || !selectedConnectionId) return
 
-    try {
-      const result = await nl2sqlApi.saveQuery({
-        name: saveName,
-        sql: generatedSQL,
-        connectionId: selectedConnectionId,
-        description: saveDescription || undefined,
-        originalQuestion: currentQuestion || undefined,
-      })
+    // UX Governance: Create action with tracking
+    execute({
+      type: InteractionType.CREATE,
+      label: `Save query "${saveName}"`,
+      reversibility: Reversibility.FULLY_REVERSIBLE,
+      successMessage: 'Query saved successfully',
+      errorMessage: 'Failed to save query',
+      action: async () => {
+        const result = await nl2sqlApi.saveQuery({
+          name: saveName,
+          sql: generatedSQL,
+          connectionId: selectedConnectionId,
+          description: saveDescription || undefined,
+          originalQuestion: currentQuestion || undefined,
+        })
 
-      addSavedQuery(result.query)
-      setShowSaveDialog(false)
-      setSaveName('')
-      setSaveDescription('')
-    } catch (err) {
-      setError(err.response?.data?.message || err.message || 'Failed to save query')
-    }
-  }, [saveName, saveDescription, generatedSQL, selectedConnectionId, currentQuestion, addSavedQuery, setError])
+        addSavedQuery(result.query)
+        setShowSaveDialog(false)
+        setSaveName('')
+        setSaveDescription('')
+      },
+    })
+  }, [saveName, saveDescription, generatedSQL, selectedConnectionId, currentQuestion, addSavedQuery, execute])
 
   const handleDeleteSaved = useCallback(
-    async (queryId) => {
-      try {
-        await nl2sqlApi.deleteSavedQuery(queryId)
-        removeSavedQuery(queryId)
-        toast.show('Query deleted', 'success')
-      } catch (err) {
-        console.error('Failed to delete query:', err)
-        toast.show(err.message || 'Failed to delete query', 'error')
-      }
+    (queryId) => {
+      // UX Governance: Delete action with tracking
+      execute({
+        type: InteractionType.DELETE,
+        label: 'Delete saved query',
+        reversibility: Reversibility.IRREVERSIBLE,
+        successMessage: 'Query deleted',
+        errorMessage: 'Failed to delete query',
+        action: async () => {
+          await nl2sqlApi.deleteSavedQuery(queryId)
+          removeSavedQuery(queryId)
+        },
+      })
     },
-    [removeSavedQuery, toast]
+    [removeSavedQuery, execute]
   )
 
   const handleDeleteHistory = useCallback(
-    async (entryId) => {
+    (entryId) => {
       if (!entryId) return
-      try {
-        await nl2sqlApi.deleteQueryHistoryEntry(entryId)
-        setQueryHistory(queryHistory.filter((entry) => entry.id !== entryId))
-        toast.show('History entry deleted', 'success')
-      } catch (err) {
-        console.error('Failed to delete history entry:', err)
-        toast.show(err.message || 'Failed to delete history entry', 'error')
-      }
+      // UX Governance: Delete action with tracking
+      execute({
+        type: InteractionType.DELETE,
+        label: 'Delete history entry',
+        reversibility: Reversibility.IRREVERSIBLE,
+        successMessage: 'History entry deleted',
+        errorMessage: 'Failed to delete history entry',
+        action: async () => {
+          await nl2sqlApi.deleteQueryHistoryEntry(entryId)
+          setQueryHistory(queryHistory.filter((entry) => entry.id !== entryId))
+        },
+      })
     },
-    [queryHistory, setQueryHistory, toast]
+    [queryHistory, setQueryHistory, execute]
   )
 
   const handleCopySQL = useCallback(async () => {
@@ -786,23 +834,31 @@ export default function QueryBuilderPage() {
           )}
 
           <Stack direction="row" justifyContent="flex-end" mt={2}>
-            <Tooltip title={executeDisabledReason || ''} disableHoverListener={!executeDisabledReason}>
-              <span>
-                <ExecuteButton
-                  startIcon={isExecuting ? <CircularProgress size={16} color="inherit" /> : <PlayArrowIcon />}
-                  onClick={handleExecute}
-                  disabled={Boolean(executeDisabledReason) || isExecuting}
-                >
-                  {isExecuting ? 'Executing...' : 'Execute Query'}
-                </ExecuteButton>
-              </span>
-            </Tooltip>
+            {/* UX: DisabledTooltip explains WHY the button is disabled */}
+            <DisabledTooltip
+              disabled={Boolean(executeDisabledReason) || isExecuting}
+              reason={
+                isExecuting
+                  ? 'Query is currently running...'
+                  : executeDisabledReason
+              }
+              hint={
+                !selectedConnectionId
+                  ? 'Select a database from the dropdown above'
+                  : !generatedSQL.trim()
+                    ? 'Enter a question and click Generate first'
+                    : undefined
+              }
+            >
+              <ExecuteButton
+                startIcon={isExecuting ? <CircularProgress size={16} color="inherit" /> : <PlayArrowIcon />}
+                onClick={handleExecute}
+                disabled={Boolean(executeDisabledReason) || isExecuting}
+              >
+                {isExecuting ? 'Executing...' : 'Execute Query'}
+              </ExecuteButton>
+            </DisabledTooltip>
           </Stack>
-          {executeDisabledReason && (
-            <Typography variant="caption" sx={{ color: theme.palette.text.secondary, mt: 1, display: 'block' }}>
-              {executeDisabledReason}
-            </Typography>
-          )}
         </GlassCard>
       )}
 

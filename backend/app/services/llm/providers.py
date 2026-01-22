@@ -117,6 +117,97 @@ class BaseProvider(ABC):
         return {"role": "user", "content": content}
 
 
+class LiteLLMProvider(BaseProvider):
+    """LiteLLM provider wrapper for multi-provider completions."""
+
+    def get_client(self) -> Any:
+        if self._client is not None:
+            return self._client
+        try:
+            import litellm
+        except ImportError:
+            raise RuntimeError("litellm package is required. Install with: pip install litellm")
+        self._client = litellm
+        return self._client
+
+    def _resolve_model(self, model: Optional[str]) -> str:
+        return model or self.config.model
+
+    def _build_params(self, model: str) -> tuple[str, Dict[str, Any]]:
+        params: Dict[str, Any] = {}
+        if self.config.api_key:
+            params["api_key"] = self.config.api_key
+        if self.config.base_url:
+            params["api_base"] = self.config.base_url
+
+        provider_hint = (self.config.extra_options or {}).get("litellm_provider")
+        if provider_hint == LLMProvider.AZURE.value:
+            if self.config.azure_endpoint:
+                params["api_base"] = self.config.azure_endpoint
+            if self.config.azure_api_version:
+                params["api_version"] = self.config.azure_api_version
+            if self.config.azure_deployment:
+                model = self.config.azure_deployment
+        return model, params
+
+    def chat_completion(
+        self,
+        messages: List[Dict[str, Any]],
+        model: Optional[str] = None,
+        **kwargs: Any,
+    ) -> Dict[str, Any]:
+        client = self.get_client()
+        resolved_model = self._resolve_model(model)
+        resolved_model, params = self._build_params(resolved_model)
+
+        if self.config.temperature is not None and "temperature" not in kwargs:
+            kwargs["temperature"] = self.config.temperature
+        if self.config.max_tokens is not None and "max_tokens" not in kwargs:
+            kwargs["max_tokens"] = self.config.max_tokens
+
+        response = client.completion(
+            model=resolved_model,
+            messages=messages,
+            timeout=self.config.timeout_seconds,
+            **params,
+            **kwargs,
+        )
+        if hasattr(response, "model_dump"):
+            return response.model_dump()
+        return response
+
+    def chat_completion_stream(
+        self,
+        messages: List[Dict[str, Any]],
+        model: Optional[str] = None,
+        **kwargs: Any,
+    ) -> Iterator[Dict[str, Any]]:
+        client = self.get_client()
+        resolved_model = self._resolve_model(model)
+        resolved_model, params = self._build_params(resolved_model)
+        kwargs["stream"] = True
+        response = client.completion(
+            model=resolved_model,
+            messages=messages,
+            timeout=self.config.timeout_seconds,
+            **params,
+            **kwargs,
+        )
+        for chunk in response:
+            if hasattr(chunk, "model_dump"):
+                yield chunk.model_dump()
+            elif isinstance(chunk, dict):
+                yield chunk
+            else:
+                yield {"choices": [], "model": resolved_model}
+
+    def list_models(self) -> List[str]:
+        return [self.config.model]
+
+    def health_check(self) -> bool:
+        return True
+
+
 class OpenAIProvider(BaseProvider):
     """OpenAI API provider (also works with OpenAI-compatible endpoints)."""
 
@@ -1104,6 +1195,7 @@ def _openai_chunk_to_dict(chunk: Any) -> Dict[str, Any]:
 
 PROVIDERS: Dict[LLMProvider, type] = {
     LLMProvider.OPENAI: OpenAIProvider,
+    LLMProvider.LITELLM: LiteLLMProvider,
     LLMProvider.OLLAMA: OllamaProvider,
     LLMProvider.DEEPSEEK: DeepSeekProvider,
     LLMProvider.ANTHROPIC: AnthropicProvider,
@@ -1115,6 +1207,9 @@ PROVIDERS: Dict[LLMProvider, type] = {
 
 def get_provider(config: LLMConfig) -> BaseProvider:
     """Get the appropriate provider for the configuration."""
+    engine = os.getenv("NEURA_LLM_ENGINE", "litellm").lower().strip()
+    if engine == "litellm":
+        return LiteLLMProvider(config)
     provider_class = PROVIDERS.get(config.provider)
     if provider_class is None:
         raise ValueError(f"Unknown provider: {config.provider}")

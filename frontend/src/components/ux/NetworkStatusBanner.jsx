@@ -1,0 +1,296 @@
+/**
+ * Network Status Banner
+ * Shows when the user is offline or has connectivity issues
+ *
+ * UX Laws Addressed:
+ * - Make system state always visible
+ * - Never leave the user guessing
+ * - Safe defaults (user can do nothing and be fine)
+ */
+import { useState, useEffect, useCallback } from 'react'
+import {
+  Box,
+  Typography,
+  Button,
+  Collapse,
+  LinearProgress,
+  useTheme,
+  alpha,
+  keyframes,
+} from '@mui/material'
+import {
+  WifiOff as OfflineIcon,
+  Wifi as OnlineIcon,
+  Refresh as RetryIcon,
+  CloudOff as ServerDownIcon,
+} from '@mui/icons-material'
+import { useNetworkStatus } from '../../hooks/useNetworkStatus'
+
+// Animations
+const slideDown = keyframes`
+  from { transform: translateY(-100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+`
+
+const pulse = keyframes`
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+`
+
+// Status types
+export const NetworkStatus = {
+  ONLINE: 'online',
+  OFFLINE: 'offline',
+  RECONNECTING: 'reconnecting',
+  SERVER_DOWN: 'server_down',
+}
+
+/**
+ * Network Status Banner
+ * Displays at the top of the page when there are connectivity issues
+ */
+export default function NetworkStatusBanner({ onRetry }) {
+  const theme = useTheme()
+  const { isOnline, checkConnectivity } = useNetworkStatus()
+  const [status, setStatus] = useState(NetworkStatus.ONLINE)
+  const [isRetrying, setIsRetrying] = useState(false)
+  const [showBanner, setShowBanner] = useState(false)
+  const [wasOffline, setWasOffline] = useState(false)
+
+  // Check server connectivity
+  const checkServer = useCallback(async () => {
+    try {
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 5000)
+
+      const response = await fetch('/api/health', {
+        method: 'HEAD',
+        signal: controller.signal,
+        cache: 'no-store',
+      })
+
+      clearTimeout(timeoutId)
+      return response.ok
+    } catch {
+      return false
+    }
+  }, [])
+
+  // Handle retry
+  const handleRetry = useCallback(async () => {
+    setIsRetrying(true)
+    setStatus(NetworkStatus.RECONNECTING)
+
+    try {
+      const browserOnline = await checkConnectivity()
+
+      if (browserOnline) {
+        const serverUp = await checkServer()
+
+        if (serverUp) {
+          setStatus(NetworkStatus.ONLINE)
+          setWasOffline(true)
+          // Keep banner briefly to show success
+          setTimeout(() => {
+            setShowBanner(false)
+            setWasOffline(false)
+          }, 2000)
+        } else {
+          setStatus(NetworkStatus.SERVER_DOWN)
+        }
+      } else {
+        setStatus(NetworkStatus.OFFLINE)
+      }
+    } finally {
+      setIsRetrying(false)
+    }
+
+    onRetry?.()
+  }, [checkConnectivity, checkServer, onRetry])
+
+  // Monitor network status
+  useEffect(() => {
+    if (!isOnline) {
+      setStatus(NetworkStatus.OFFLINE)
+      setShowBanner(true)
+    } else if (status === NetworkStatus.OFFLINE) {
+      // Browser says online, verify with server
+      handleRetry()
+    }
+  }, [isOnline, status, handleRetry])
+
+  // Periodic check when offline
+  useEffect(() => {
+    if (status === NetworkStatus.OFFLINE || status === NetworkStatus.SERVER_DOWN) {
+      const interval = setInterval(handleRetry, 30000) // Check every 30s
+      return () => clearInterval(interval)
+    }
+  }, [status, handleRetry])
+
+  // Get banner configuration based on status
+  const getBannerConfig = () => {
+    switch (status) {
+      case NetworkStatus.OFFLINE:
+        return {
+          icon: <OfflineIcon />,
+          message: "You're offline",
+          description: 'Check your internet connection. Changes will sync when you reconnect.',
+          color: theme.palette.warning.main,
+          bgColor: alpha(theme.palette.warning.main, 0.15),
+          showRetry: true,
+        }
+      case NetworkStatus.SERVER_DOWN:
+        return {
+          icon: <ServerDownIcon />,
+          message: 'Server temporarily unavailable',
+          description: 'We\'re working on it. Your work is saved locally.',
+          color: theme.palette.error.main,
+          bgColor: alpha(theme.palette.error.main, 0.15),
+          showRetry: true,
+        }
+      case NetworkStatus.RECONNECTING:
+        return {
+          icon: <RetryIcon sx={{ animation: `spin 1s linear infinite`, '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } } }} />,
+          message: 'Reconnecting...',
+          description: 'Attempting to restore connection',
+          color: theme.palette.info.main,
+          bgColor: alpha(theme.palette.info.main, 0.15),
+          showRetry: false,
+        }
+      case NetworkStatus.ONLINE:
+      default:
+        if (wasOffline) {
+          return {
+            icon: <OnlineIcon />,
+            message: 'Back online',
+            description: 'Connection restored',
+            color: theme.palette.success.main,
+            bgColor: alpha(theme.palette.success.main, 0.15),
+            showRetry: false,
+          }
+        }
+        return null
+    }
+  }
+
+  const config = getBannerConfig()
+
+  if (!showBanner || !config) {
+    return null
+  }
+
+  return (
+    <Collapse in={showBanner}>
+      <Box
+        sx={{
+          bgcolor: config.bgColor,
+          borderBottom: `1px solid ${alpha(config.color, 0.2)}`,
+          animation: `${slideDown} 0.3s ease-out`,
+          position: 'relative',
+          overflow: 'hidden',
+        }}
+      >
+        {isRetrying && (
+          <LinearProgress
+            sx={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              height: 2,
+              bgcolor: alpha(config.color, 0.1),
+              '& .MuiLinearProgress-bar': {
+                bgcolor: config.color,
+              },
+            }}
+          />
+        )}
+
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 2,
+            py: 1.5,
+            px: 3,
+          }}
+        >
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1,
+              color: config.color,
+              animation: status === NetworkStatus.OFFLINE ? `${pulse} 2s infinite` : 'none',
+            }}
+          >
+            {config.icon}
+            <Typography variant="body2" fontWeight={600}>
+              {config.message}
+            </Typography>
+          </Box>
+
+          <Typography
+            variant="body2"
+            sx={{
+              color: alpha(theme.palette.text.primary, 0.7),
+              display: { xs: 'none', sm: 'block' },
+            }}
+          >
+            {config.description}
+          </Typography>
+
+          {config.showRetry && !isRetrying && (
+            <Button
+              size="small"
+              variant="outlined"
+              onClick={handleRetry}
+              startIcon={<RetryIcon />}
+              sx={{
+                ml: 2,
+                borderColor: alpha(config.color, 0.3),
+                color: config.color,
+                '&:hover': {
+                  borderColor: config.color,
+                  bgcolor: alpha(config.color, 0.1),
+                },
+              }}
+            >
+              Retry
+            </Button>
+          )}
+        </Box>
+      </Box>
+    </Collapse>
+  )
+}
+
+/**
+ * Compact inline network indicator for headers/footers
+ */
+export function NetworkIndicator({ showWhenOnline = false }) {
+  const theme = useTheme()
+  const { isOnline } = useNetworkStatus()
+
+  if (isOnline && !showWhenOnline) {
+    return null
+  }
+
+  return (
+    <Box
+      sx={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 0.5,
+        color: isOnline ? theme.palette.success.main : theme.palette.warning.main,
+        fontSize: '0.75rem',
+      }}
+    >
+      {isOnline ? <OnlineIcon fontSize="small" /> : <OfflineIcon fontSize="small" />}
+      <Typography variant="caption">
+        {isOnline ? 'Online' : 'Offline'}
+      </Typography>
+    </Box>
+  )
+}
