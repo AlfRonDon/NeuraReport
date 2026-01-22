@@ -626,25 +626,34 @@ export default function TemplatesPage() {
       toast.show(`Tag "${invalidTag.slice(0, 20)}..." exceeds 50 character limit`, 'error')
       return
     }
-    setMetadataSaving(true)
+
     const payload = {
       name: trimmedName,
       description: metadataForm.description.trim() || undefined,
       status: metadataForm.status,
       tags,
     }
-    try {
-      const result = await api.updateTemplateMetadata(metadataTemplate.id, payload)
-      const updated = result?.template || { ...metadataTemplate, ...payload }
-      updateTemplate(metadataTemplate.id, (tpl) => ({ ...tpl, ...updated }))
-      toast.show('Design details updated', 'success')
-      setMetadataOpen(false)
-    } catch (err) {
-      toast.show(err.message || 'Failed to update design details', 'error')
-    } finally {
-      setMetadataSaving(false)
-    }
-  }, [metadataTemplate, metadataForm, updateTemplate, toast])
+
+    // UX Governance: Update action with tracking
+    execute({
+      type: InteractionType.UPDATE,
+      label: `Update design details "${trimmedName}"`,
+      reversibility: Reversibility.FULLY_REVERSIBLE,
+      successMessage: 'Design details updated',
+      errorMessage: 'Failed to update design details',
+      action: async () => {
+        setMetadataSaving(true)
+        try {
+          const result = await api.updateTemplateMetadata(metadataTemplate.id, payload)
+          const updated = result?.template || { ...metadataTemplate, ...payload }
+          updateTemplate(metadataTemplate.id, (tpl) => ({ ...tpl, ...updated }))
+          setMetadataOpen(false)
+        } finally {
+          setMetadataSaving(false)
+        }
+      },
+    })
+  }, [metadataTemplate, metadataForm, updateTemplate, execute])
 
   const handleOpenImport = useCallback(() => {
     setImportOpen(true)
@@ -666,26 +675,35 @@ export default function TemplatesPage() {
       toast.show('File too large. Maximum size is 50MB', 'error')
       return
     }
-    setImporting(true)
-    setImportProgress(0)
-    try {
-      await api.importTemplateZip({
-        file: importFile,
-        name: importName.trim() || undefined,
-        onUploadProgress: (percent) => setImportProgress(percent),
-      })
-      await fetchTemplatesData()
-      toast.show('Design imported', 'success')
-      setImportOpen(false)
-      setImportFile(null)
-      setImportName('')
-    } catch (err) {
-      toast.show(err.message || 'Failed to import design', 'error')
-    } finally {
-      setImporting(false)
-      setImportProgress(0)
-    }
-  }, [importFile, importName, toast, fetchTemplatesData])
+
+    // UX Governance: Upload action with tracking
+    execute({
+      type: InteractionType.UPLOAD,
+      label: `Import design "${importName.trim() || fileName}"`,
+      reversibility: Reversibility.FULLY_REVERSIBLE,
+      blocksNavigation: true,
+      successMessage: 'Design imported',
+      errorMessage: 'Failed to import design',
+      action: async () => {
+        setImporting(true)
+        setImportProgress(0)
+        try {
+          await api.importTemplateZip({
+            file: importFile,
+            name: importName.trim() || undefined,
+            onUploadProgress: (percent) => setImportProgress(percent),
+          })
+          await fetchTemplatesData()
+          setImportOpen(false)
+          setImportFile(null)
+          setImportName('')
+        } finally {
+          setImporting(false)
+          setImportProgress(0)
+        }
+      },
+    })
+  }, [importFile, importName, fetchTemplatesData, execute])
 
   const handleBulkDeleteOpen = useCallback(() => {
     if (!selectedIds.length) return
