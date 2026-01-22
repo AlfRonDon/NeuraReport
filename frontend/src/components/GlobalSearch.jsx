@@ -145,6 +145,7 @@ export default function GlobalSearch({
   const [loading, setLoading] = useState(false)
   const [open, setOpen] = useState(false)
   const [selectedIndex, setSelectedIndex] = useState(-1)
+  const [hasSearched, setHasSearched] = useState(false)
   const inputRef = useRef(null)
   const anchorRef = useRef(null)
   const debounceRef = useRef(null)
@@ -185,21 +186,31 @@ export default function GlobalSearch({
   }, [open, results, selectedIndex])
 
   const handleSearch = useCallback(async (searchQuery) => {
-    if (!searchQuery || searchQuery.trim().length < 2) {
+    const normalizedQuery = searchQuery?.trim() || ''
+    if (!normalizedQuery || normalizedQuery.length < 2) {
       setResults([])
       setOpen(false)
+      setHasSearched(false)
+      setSelectedIndex(-1)
       return
     }
 
     setLoading(true)
+    setHasSearched(true)
     try {
-      const data = await api.globalSearch(searchQuery, { limit: 10 })
-      setResults(data.results || [])
-      setOpen(data.results?.length > 0)
+      const data = await api.globalSearch(normalizedQuery, { limit: 10 })
+      const nextResults = data.results || []
+      const isFocused =
+        typeof document !== 'undefined' && document.activeElement === inputRef.current
+      setResults(nextResults)
+      setOpen(isFocused)
       setSelectedIndex(-1)
     } catch (err) {
       console.error('Search failed:', err)
+      const isFocused =
+        typeof document !== 'undefined' && document.activeElement === inputRef.current
       setResults([])
+      setOpen(isFocused)
     } finally {
       setLoading(false)
     }
@@ -237,10 +248,10 @@ export default function GlobalSearch({
   }, [navigate])
 
   const handleFocus = useCallback(() => {
-    if (results.length > 0) {
+    if (hasSearched && query.trim().length >= 2) {
       setOpen(true)
     }
-  }, [results])
+  }, [hasSearched, query])
 
   const handleClickAway = useCallback(() => {
     setOpen(false)

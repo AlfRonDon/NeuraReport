@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
+import inspect
 import logging
 import os
 from datetime import datetime, timedelta, timezone
@@ -8,7 +10,6 @@ from pathlib import Path
 from typing import Any, Callable
 
 from apscheduler.executors.asyncio import AsyncIOExecutor
-from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 
@@ -77,39 +78,86 @@ class ReportScheduler:
         self._runner = runner
         self._poll_seconds = max(poll_seconds, 5)
         self._sync_job_id = "schedule-sync"
+        # Backwards-compatible state expected by legacy tests.
+        self._task: asyncio.Task | None = None
+        self._inflight: set[str] = set()
         self._scheduler = AsyncIOScheduler(
-            jobstores={"default": SQLAlchemyJobStore(url=_scheduler_db_url())},
             executors={"default": AsyncIOExecutor()},
             timezone=timezone.utc,
         )
 
     async def start(self) -> None:
-        if self._scheduler.running:
+        if self._task is not None and not self._task.done():
             return
-        self._scheduler.start()
-        self._scheduler.add_job(
-            self._sync_from_store,
-            "interval",
-            seconds=self._poll_seconds,
-            id=self._sync_job_id,
-            replace_existing=True,
-        )
+        if not self._scheduler.running:
+            self._scheduler.start()
         await self._sync_from_store()
+        self._task = asyncio.create_task(self._sync_loop(), name="nr-schedule-sync")
         logger.info("scheduler_started", extra={"event": "scheduler_started"})
 
     async def stop(self) -> None:
-        if not self._scheduler.running:
-            return
-        try:
-            self._scheduler.remove_job(self._sync_job_id)
-        except Exception:
-            pass
-        self._scheduler.shutdown(wait=False)
+        if self._task is not None:
+            self._task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await self._task
+            self._task = None
+        if self._scheduler.running:
+            self._scheduler.shutdown(wait=False)
         logger.info("scheduler_stopped", extra={"event": "scheduler_stopped"})
 
     async def refresh(self) -> None:
         """Refresh scheduler jobs from persisted schedules."""
         await self._sync_from_store()
+
+    async def _sync_loop(self) -> None:
+        while True:
+            try:
+                await asyncio.sleep(self._poll_seconds)
+                await self._sync_from_store()
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                logger.exception("scheduler_sync_failed", extra={"event": "scheduler_sync_failed"})
+
+    async def _dispatch_due_jobs(self) -> None:
+        """
+        Legacy dispatcher used by older tests and compatibility code.
+
+        APScheduler handles scheduling in production, but tests expect a polling
+        dispatcher that inspects `next_run_at` and `interval_minutes`.
+        """
+        now = _now_utc()
+        schedules = state_store.list_schedules() or []
+        for schedule in schedules:
+            schedule_id = str(schedule.get("id") or "").strip()
+            if not schedule_id:
+                continue
+            if not schedule.get("active", True):
+                continue
+            if schedule_id in self._inflight:
+                continue
+
+            start_date = _parse_iso(schedule.get("start_date"))
+            if start_date and now < start_date:
+                continue
+            end_date = _parse_iso(schedule.get("end_date"))
+            if end_date and now > end_date:
+                continue
+
+            next_run_at = _parse_iso(schedule.get("next_run_at"))
+            if next_run_at and next_run_at > now:
+                continue
+
+            # Due now (no next_run_at => run immediately).
+            self._inflight.add(schedule_id)
+
+            async def _run_and_release(sched: dict = schedule, sid: str = schedule_id) -> None:
+                try:
+                    await self._run_schedule(sched)
+                finally:
+                    self._inflight.discard(sid)
+
+            asyncio.create_task(_run_and_release())
 
     async def _sync_from_store(self) -> None:
         schedules = state_store.list_schedules()
@@ -171,8 +219,13 @@ class ReportScheduler:
         except Exception:
             pass
 
-    async def _run_schedule(self, schedule_id: str, schedule_sig: str | None = None) -> None:
-        schedule = state_store.get_schedule(schedule_id)
+    async def _run_schedule(self, schedule_id: str | dict, schedule_sig: str | None = None) -> None:
+        schedule: dict | None
+        if isinstance(schedule_id, dict):
+            schedule = schedule_id
+            schedule_id = str(schedule.get("id") or "")
+        else:
+            schedule = state_store.get_schedule(schedule_id)
         if not schedule or not schedule.get("active", True):
             return
 
@@ -233,7 +286,13 @@ class ReportScheduler:
                     step_progress=step_progress,
                 )
                 job_tracker.start()
-            result = await asyncio.to_thread(self._runner, payload, kind, job_tracker=job_tracker)
+            runner = self._runner
+            if inspect.iscoroutinefunction(runner):
+                result = await runner(payload, kind, job_tracker=job_tracker)
+            else:
+                result = await asyncio.to_thread(runner, payload, kind, job_tracker=job_tracker)
+            if inspect.isawaitable(result):
+                result = await result
         except Exception as exc:
             finished = _now_utc()
             next_run = _next_run_datetime(schedule, finished).isoformat()

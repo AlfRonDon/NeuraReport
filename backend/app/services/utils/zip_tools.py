@@ -88,6 +88,12 @@ def extract_zip_to_dir(
         members = list(zf.infolist())
         file_members = [member for member in members if not member.is_dir()]
 
+        unsafe_members = [member.filename for member in members if not _is_safe_member(member)]
+        if unsafe_members:
+            sample = ", ".join(unsafe_members[:5])
+            suffix = f" (+{len(unsafe_members) - 5} more)" if len(unsafe_members) > 5 else ""
+            raise ValueError(f"Zip contains unsafe members: {sample}{suffix}")
+
         if max_entries is not None and len(file_members) > max_entries:
             raise ValueError(f"Zip contains {len(file_members)} files, exceeds limit {max_entries}")
 
@@ -107,8 +113,6 @@ def extract_zip_to_dir(
 
         root = detect_zip_root(m.filename for m in members)
         for member in members:
-            if not _is_safe_member(member):
-                continue
             name = member.filename.replace("\\", "/")
             if strip_root and root and name.startswith(root + "/"):
                 rel = name[len(root) + 1 :]

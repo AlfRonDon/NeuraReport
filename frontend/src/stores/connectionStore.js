@@ -3,15 +3,24 @@
  */
 import { create } from 'zustand';
 import { bootstrapState, healthcheckConnection, deleteConnection } from '../api/client';
+import { useAppStore } from '../store/useAppStore';
+
+const getAppStore = () => useAppStore.getState();
+const normalizeConnections = (connections) =>
+  Array.isArray(connections) ? connections : [];
 
 const useConnectionStore = create((set, get) => ({
   // State
-  connections: [],
+  connections: normalizeConnections(getAppStore().savedConnections),
   loading: false,
   error: null,
 
   // Actions
-  setConnections: (connections) => set({ connections }),
+  setConnections: (connections) => {
+    const next = normalizeConnections(connections);
+    getAppStore().setSavedConnections(next);
+    set({ connections: next });
+  },
   setLoading: (loading) => set({ loading }),
   setError: (error) => set({ error }),
 
@@ -20,7 +29,8 @@ const useConnectionStore = create((set, get) => ({
     set({ loading: true, error: null });
     try {
       const data = await bootstrapState();
-      const connections = Array.isArray(data?.connections) ? data.connections : [];
+      const connections = normalizeConnections(data?.connections);
+      getAppStore().setSavedConnections(connections);
       set({ connections, loading: false });
       return connections;
     } catch (err) {
@@ -33,21 +43,13 @@ const useConnectionStore = create((set, get) => ({
   healthCheck: async (connectionId) => {
     try {
       const result = await healthcheckConnection(connectionId);
-      // Update the connection's latency in state
-      set((state) => ({
-        connections: state.connections.map((conn) =>
-          conn.id === connectionId
-            ? { ...conn, lastLatencyMs: result.latency_ms, status: 'connected' }
-            : conn
-        ),
-      }));
+      getAppStore().updateSavedConnection(connectionId, {
+        lastLatencyMs: result.latency_ms,
+        status: 'connected',
+      });
       return result;
     } catch (err) {
-      set((state) => ({
-        connections: state.connections.map((conn) =>
-          conn.id === connectionId ? { ...conn, status: 'error' } : conn
-        ),
-      }));
+      getAppStore().updateSavedConnection(connectionId, { status: 'error' });
       throw err;
     }
   },
@@ -57,10 +59,8 @@ const useConnectionStore = create((set, get) => ({
     set({ loading: true, error: null });
     try {
       await deleteConnection(connectionId);
-      set((state) => ({
-        connections: state.connections.filter((conn) => conn.id !== connectionId),
-        loading: false,
-      }));
+      getAppStore().removeSavedConnection(connectionId);
+      set({ loading: false });
       return true;
     } catch (err) {
       set({ error: err.message, loading: false });
@@ -74,7 +74,17 @@ const useConnectionStore = create((set, get) => ({
   },
 
   // Reset state
-  reset: () => set({ connections: [], error: null }),
+  reset: () => {
+    getAppStore().setSavedConnections([]);
+    set({ connections: [], error: null });
+  },
 }));
+
+useAppStore.subscribe(
+  (state) => state.savedConnections,
+  (savedConnections) => {
+    useConnectionStore.setState({ connections: normalizeConnections(savedConnections) });
+  }
+);
 
 export default useConnectionStore;

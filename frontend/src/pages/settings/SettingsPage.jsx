@@ -36,6 +36,11 @@ import TokenIcon from '@mui/icons-material/Toll'
 import { useToast } from '../../components/ToastProvider'
 import { useAppStore } from '../../store/useAppStore'
 import * as api from '../../api/client'
+import {
+  PREFERENCES_STORAGE_KEY,
+  readPreferences,
+  emitPreferencesChanged,
+} from '../../utils/preferences'
 
 // =============================================================================
 // ANIMATIONS
@@ -123,20 +128,14 @@ const ExportButton = styled(Button)(({ theme }) => ({
 // HELPERS
 // =============================================================================
 
-const STORAGE_KEY = 'neurareport_preferences'
-
 function getPreferences() {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY)
-    return stored ? JSON.parse(stored) : {}
-  } catch {
-    return {}
-  }
+  return readPreferences()
 }
 
 function savePreferences(prefs) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs))
+    localStorage.setItem(PREFERENCES_STORAGE_KEY, JSON.stringify(prefs))
+    emitPreferencesChanged(prefs)
     return { success: true }
   } catch (err) {
     return { success: false, error: err.message || 'Storage quota exceeded or unavailable' }

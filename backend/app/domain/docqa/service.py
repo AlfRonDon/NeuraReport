@@ -7,7 +7,7 @@ import re
 import time
 import uuid
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 from backend.app.services.llm.client import get_llm_client
 from backend.app.services.state import store as state_store_module
@@ -44,6 +44,23 @@ class DocumentQAService:
             self._llm_client = get_llm_client()
         return self._llm_client
 
+    def _read_sessions(self) -> Dict[str, Any]:
+        store = _state_store()
+        with store._lock:
+            state = store._read_state()
+            return dict(state.get("docqa_sessions", {}) or {})
+
+    def _update_sessions(self, updater: Callable[[Dict[str, Any]], None]) -> None:
+        store = _state_store()
+        with store._lock:
+            state = store._read_state()
+            sessions = state.get("docqa_sessions", {})
+            if not isinstance(sessions, dict):
+                sessions = {}
+            updater(sessions)
+            state["docqa_sessions"] = sessions
+            store._write_state(state)
+
     def create_session(
         self,
         name: str,
@@ -59,19 +76,13 @@ class DocumentQAService:
             updated_at=datetime.utcnow(),
         )
 
-        store = _state_store()
-        state = store._read_state()
-        sessions = state.get("docqa_sessions", {})
-        sessions[session.id] = session.model_dump(mode="json")
-        store._write_state({**state, "docqa_sessions": sessions})
+        self._update_sessions(lambda sessions: sessions.__setitem__(session.id, session.model_dump(mode="json")))
 
         return session
 
     def get_session(self, session_id: str) -> Optional[DocQASession]:
         """Get a Q&A session by ID."""
-        store = _state_store()
-        state = store._read_state()
-        sessions = state.get("docqa_sessions", {})
+        sessions = self._read_sessions()
         session_data = sessions.get(session_id)
 
         if session_data:
@@ -80,9 +91,7 @@ class DocumentQAService:
 
     def list_sessions(self) -> List[DocQASession]:
         """List all Q&A sessions."""
-        store = _state_store()
-        state = store._read_state()
-        sessions = state.get("docqa_sessions", {})
+        sessions = self._read_sessions()
         return [DocQASession(**data) for data in sessions.values()]
 
     def add_document(
@@ -115,11 +124,7 @@ class DocumentQAService:
         session.documents.append(document)
         session.updated_at = datetime.utcnow()
 
-        store = _state_store()
-        state = store._read_state()
-        sessions = state.get("docqa_sessions", {})
-        sessions[session_id] = session.model_dump(mode="json")
-        store._write_state({**state, "docqa_sessions": sessions})
+        self._update_sessions(lambda sessions: sessions.__setitem__(session_id, session.model_dump(mode="json")))
 
         return document
 
@@ -132,11 +137,7 @@ class DocumentQAService:
         session.documents = [d for d in session.documents if d.id != document_id]
         session.updated_at = datetime.utcnow()
 
-        store = _state_store()
-        state = store._read_state()
-        sessions = state.get("docqa_sessions", {})
-        sessions[session_id] = session.model_dump(mode="json")
-        store._write_state({**state, "docqa_sessions": sessions})
+        self._update_sessions(lambda sessions: sessions.__setitem__(session_id, session.model_dump(mode="json")))
 
         return True
 
@@ -279,11 +280,9 @@ Return ONLY the JSON object."""
                 session.messages.append(assistant_message)
                 session.updated_at = datetime.utcnow()
 
-                store = _state_store()
-                state = store._read_state()
-                sessions = state.get("docqa_sessions", {})
-                sessions[session_id] = session.model_dump(mode="json")
-                store._write_state({**state, "docqa_sessions": sessions})
+                self._update_sessions(
+                    lambda sessions: sessions.__setitem__(session_id, session.model_dump(mode="json"))
+                )
 
                 processing_time = int((time.time() - start_time) * 1000)
 
@@ -347,11 +346,7 @@ Return ONLY the JSON object."""
         target.metadata = meta
         session.updated_at = datetime.utcnow()
 
-        store = _state_store()
-        state = store._read_state()
-        sessions = state.get("docqa_sessions", {})
-        sessions[session_id] = session.model_dump(mode="json")
-        store._write_state({**state, "docqa_sessions": sessions})
+        self._update_sessions(lambda sessions: sessions.__setitem__(session_id, session.model_dump(mode="json")))
 
         return target
 
@@ -494,11 +489,9 @@ Return ONLY the JSON object."""
             session.messages[message_index] = assistant_message
             session.updated_at = datetime.utcnow()
 
-            store = _state_store()
-            state = store._read_state()
-            sessions = state.get("docqa_sessions", {})
-            sessions[session_id] = session.model_dump(mode="json")
-            store._write_state({**state, "docqa_sessions": sessions})
+            self._update_sessions(
+                lambda sessions: sessions.__setitem__(session_id, session.model_dump(mode="json"))
+            )
 
             processing_time = int((time.time() - start_time) * 1000)
 

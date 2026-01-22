@@ -44,6 +44,7 @@ import { DataTable } from '../../ui/DataTable'
 import { ConfirmModal } from '../../ui/Modal'
 import { useToast } from '../../components/ToastProvider'
 import * as api from '../../api/client'
+import { readPreferences, subscribePreferences } from '../../utils/preferences'
 import {
   normalizeJob,
   isActiveStatus,
@@ -361,10 +362,20 @@ export default function JobsPage() {
   const [bulkCancelOpen, setBulkCancelOpen] = useState(false)
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
   const [bulkActionLoading, setBulkActionLoading] = useState(false)
+  const [autoRefreshJobs, setAutoRefreshJobs] = useState(
+    () => readPreferences().autoRefreshJobs ?? true
+  )
   const pollIntervalRef = useRef(null)
   const isMountedRef = useRef(true)
   const isUserActionInProgressRef = useRef(false)
   const abortControllerRef = useRef(null)
+
+  useEffect(() => {
+    const unsubscribe = subscribePreferences((prefs) => {
+      setAutoRefreshJobs(prefs?.autoRefreshJobs ?? true)
+    })
+    return unsubscribe
+  }, [])
 
   const fetchJobs = useCallback(async (force = false) => {
     if (!force && isUserActionInProgressRef.current) {
@@ -394,7 +405,9 @@ export default function JobsPage() {
     setLoading(true)
     fetchJobs(true).finally(() => setLoading(false))
 
-    pollIntervalRef.current = setInterval(() => fetchJobs(false), 5000)
+    if (autoRefreshJobs) {
+      pollIntervalRef.current = setInterval(() => fetchJobs(false), 5000)
+    }
 
     return () => {
       isMountedRef.current = false
@@ -405,7 +418,7 @@ export default function JobsPage() {
         abortControllerRef.current.abort()
       }
     }
-  }, [fetchJobs])
+  }, [fetchJobs, autoRefreshJobs])
 
   const handleOpenMenu = useCallback((event, job) => {
     event.stopPropagation()

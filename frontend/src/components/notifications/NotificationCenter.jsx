@@ -25,6 +25,7 @@ import {
 } from '@mui/material'
 import NotificationsIcon from '@mui/icons-material/Notifications'
 import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive'
+import NotificationsOffIcon from '@mui/icons-material/NotificationsOff'
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
 import CheckCircleOutlinedIcon from '@mui/icons-material/CheckCircleOutlined'
 import WarningAmberOutlinedIcon from '@mui/icons-material/WarningAmberOutlined'
@@ -32,6 +33,7 @@ import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline'
 import DoneAllIcon from '@mui/icons-material/DoneAll'
 import DeleteSweepIcon from '@mui/icons-material/DeleteSweep'
 import CloseIcon from '@mui/icons-material/Close'
+import { readPreferences, subscribePreferences } from '../../utils/preferences'
 import {
   getNotifications,
   markNotificationRead,
@@ -114,8 +116,22 @@ export default function NotificationCenter() {
   const [unreadCount, setUnreadCount] = useState(0)
   const [loading, setLoading] = useState(false)
   const [polling, setPolling] = useState(false)
+  const [notificationsEnabled, setNotificationsEnabled] = useState(
+    () => readPreferences().showNotifications ?? true
+  )
 
   const open = Boolean(anchorEl)
+
+  useEffect(() => {
+    const unsubscribe = subscribePreferences((prefs) => {
+      const enabled = prefs?.showNotifications ?? true
+      setNotificationsEnabled(enabled)
+      if (!enabled) {
+        setAnchorEl(null)
+      }
+    })
+    return unsubscribe
+  }, [])
 
   const fetchNotifications = useCallback(async (showLoading = true) => {
     if (showLoading) setLoading(true)
@@ -132,6 +148,7 @@ export default function NotificationCenter() {
 
   // Initial fetch and visibility-aware polling
   useEffect(() => {
+    if (!notificationsEnabled) return undefined
     fetchNotifications()
 
     let interval = null
@@ -171,9 +188,10 @@ export default function NotificationCenter() {
       stopPolling()
       document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
-  }, [fetchNotifications, polling])
+  }, [fetchNotifications, polling, notificationsEnabled])
 
   const handleClick = (event) => {
+    if (!notificationsEnabled) return
     setAnchorEl(event.currentTarget)
     fetchNotifications()
   }
@@ -244,6 +262,23 @@ export default function NotificationCenter() {
     } catch (err) {
       console.error('Failed to clear notifications:', err)
     }
+  }
+
+  if (!notificationsEnabled) {
+    return (
+      <Tooltip title="Notifications disabled in Settings">
+        <span>
+          <IconButton
+            disabled
+            sx={{
+              color: theme.palette.text.disabled,
+            }}
+          >
+            <NotificationsOffIcon sx={{ fontSize: 20 }} />
+          </IconButton>
+        </span>
+      </Tooltip>
+    )
   }
 
   return (

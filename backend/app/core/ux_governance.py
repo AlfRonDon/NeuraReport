@@ -37,7 +37,7 @@ class IntentHeaders:
     INTENT_LABEL = "X-Intent-Label"
 
     # Idempotency
-    IDEMPOTENCY_KEY = "X-Idempotency-Key"
+    IDEMPOTENCY_KEY = "Idempotency-Key"
 
     # Reversibility
     REVERSIBILITY = "X-Reversibility"
@@ -91,6 +91,13 @@ class IntentContext(BaseModel):
     timestamp: datetime = Field(default_factory=datetime.utcnow)
 
 
+def _get_idempotency_key(request: Request) -> Optional[str]:
+    return (
+        request.headers.get(IntentHeaders.IDEMPOTENCY_KEY)
+        or request.headers.get("X-Idempotency-Key")
+    )
+
+
 def extract_intent_context(request: Request) -> Optional[IntentContext]:
     """Extract intent context from request headers."""
     intent_id = request.headers.get(IntentHeaders.INTENT_ID)
@@ -108,7 +115,7 @@ def extract_intent_context(request: Request) -> Optional[IntentContext]:
         intent_id=intent_id,
         intent_type=intent_type,
         intent_label=request.headers.get(IntentHeaders.INTENT_LABEL),
-        idempotency_key=request.headers.get(IntentHeaders.IDEMPOTENCY_KEY),
+        idempotency_key=_get_idempotency_key(request),
         reversibility=Reversibility(request.headers.get(IntentHeaders.REVERSIBILITY))
             if request.headers.get(IntentHeaders.REVERSIBILITY) else None,
         user_session=request.headers.get(IntentHeaders.USER_SESSION),
@@ -477,7 +484,7 @@ def validate_governance_compliance(request: Request) -> tuple[bool, Optional[str
 
     # Check idempotency for mutating requests
     if request.method in {"POST", "DELETE"}:
-        idempotency_key = request.headers.get(IntentHeaders.IDEMPOTENCY_KEY)
+        idempotency_key = _get_idempotency_key(request)
         if not idempotency_key:
             return False, f"Missing required header for {request.method}: {IntentHeaders.IDEMPOTENCY_KEY}"
 

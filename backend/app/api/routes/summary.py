@@ -24,6 +24,11 @@ def get_service() -> SummaryService:
     return SummaryService()
 
 
+def _is_cancelled(job_id: str) -> bool:
+    job = state_store.get_job(job_id) or {}
+    return str(job.get("status") or "").strip().lower() == "cancelled"
+
+
 @router.post("/generate")
 async def generate_summary(
     payload: SummaryRequest,
@@ -44,6 +49,8 @@ async def generate_summary(
         return {"status": "ok", "summary": summary, "correlation_id": correlation_id}
 
     async def runner(job_id: str) -> None:
+        if _is_cancelled(job_id):
+            return
         state_store.record_job_start(job_id)
         state_store.record_job_step(job_id, "generate", status="running", label="Generate summary")
         try:
@@ -54,6 +61,9 @@ async def generate_summary(
                 focus_areas=payload.focus_areas,
                 correlation_id=correlation_id,
             )
+            if _is_cancelled(job_id):
+                state_store.record_job_step(job_id, "generate", status="cancelled", error="Cancelled by user")
+                return
             state_store.record_job_step(job_id, "generate", status="succeeded", progress=100.0)
             state_store.record_job_completion(
                 job_id,
@@ -61,6 +71,9 @@ async def generate_summary(
                 result={"summary": summary},
             )
         except Exception as exc:
+            if _is_cancelled(job_id):
+                state_store.record_job_step(job_id, "generate", status="cancelled", error="Cancelled by user")
+                return
             state_store.record_job_step(job_id, "generate", status="failed", error=str(exc))
             state_store.record_job_completion(job_id, status="failed", error=str(exc))
 
@@ -87,10 +100,15 @@ async def get_report_summary(
         return {"status": "ok", "summary": summary, "correlation_id": correlation_id}
 
     async def runner(job_id: str) -> None:
+        if _is_cancelled(job_id):
+            return
         state_store.record_job_start(job_id)
         state_store.record_job_step(job_id, "generate", status="running", label="Generate report summary")
         try:
             summary = svc.generate_report_summary(report_id, correlation_id)
+            if _is_cancelled(job_id):
+                state_store.record_job_step(job_id, "generate", status="cancelled", error="Cancelled by user")
+                return
             state_store.record_job_step(job_id, "generate", status="succeeded", progress=100.0)
             state_store.record_job_completion(
                 job_id,
@@ -98,6 +116,9 @@ async def get_report_summary(
                 result={"summary": summary, "report_id": report_id},
             )
         except Exception as exc:
+            if _is_cancelled(job_id):
+                state_store.record_job_step(job_id, "generate", status="cancelled", error="Cancelled by user")
+                return
             state_store.record_job_step(job_id, "generate", status="failed", error=str(exc))
             state_store.record_job_completion(job_id, status="failed", error=str(exc))
 

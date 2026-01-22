@@ -17,6 +17,7 @@ import theme from './theme.js'
 import { useBootstrapState } from './hooks/useBootstrapState.js'
 import { useKeyboardShortcuts, SHORTCUTS } from './hooks/useKeyboardShortcuts.js'
 import ProjectLayout from './layouts/ProjectLayout.jsx'
+import { readPreferences, subscribePreferences } from './utils/preferences'
 // UX Infrastructure - Premium interaction components
 import { OperationHistoryProvider } from './components/ux/OperationHistoryProvider'
 import NetworkStatusBanner from './components/ux/NetworkStatusBanner'
@@ -141,6 +142,16 @@ function AppContent() {
       window.removeEventListener('neura:open-activity-panel', handleOpenActivityPanelEvent)
     }
   }, [handleOpenCommandPalette, handleOpenJobs, handleOpenActivity])
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return undefined
+    const applyCompactTables = (prefs) => {
+      const enabled = prefs?.compactTables ?? false
+      document.body.dataset.compactTables = enabled ? 'true' : 'false'
+    }
+    applyCompactTables(readPreferences())
+    return subscribePreferences(applyCompactTables)
+  }, [])
 
   return (
     <>

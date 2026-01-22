@@ -7,7 +7,7 @@ import logging
 import re
 import uuid
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 from backend.app.services.llm.client import get_llm_client
 from backend.app.services.state import store as state_store_module
@@ -39,6 +39,23 @@ class DocumentSynthesisService:
             self._llm_client = get_llm_client()
         return self._llm_client
 
+    def _read_sessions(self) -> Dict[str, Any]:
+        store = _state_store()
+        with store._lock:
+            state = store._read_state()
+            return dict(state.get("synthesis_sessions", {}) or {})
+
+    def _update_sessions(self, updater: Callable[[Dict[str, Any]], None]) -> None:
+        store = _state_store()
+        with store._lock:
+            state = store._read_state()
+            sessions = state.get("synthesis_sessions", {})
+            if not isinstance(sessions, dict):
+                sessions = {}
+            updater(sessions)
+            state["synthesis_sessions"] = sessions
+            store._write_state(state)
+
     def create_session(
         self,
         name: str,
@@ -54,19 +71,13 @@ class DocumentSynthesisService:
             updated_at=datetime.utcnow(),
         )
 
-        store = _state_store()
-        state = store._read_state()
-        sessions = state.get("synthesis_sessions", {})
-        sessions[session.id] = session.model_dump(mode="json")
-        store._write_state({**state, "synthesis_sessions": sessions})
+        self._update_sessions(lambda sessions: sessions.__setitem__(session.id, session.model_dump(mode="json")))
 
         return session
 
     def get_session(self, session_id: str) -> Optional[SynthesisSession]:
         """Get a synthesis session by ID."""
-        store = _state_store()
-        state = store._read_state()
-        sessions = state.get("synthesis_sessions", {})
+        sessions = self._read_sessions()
         session_data = sessions.get(session_id)
 
         if session_data:
@@ -75,9 +86,7 @@ class DocumentSynthesisService:
 
     def list_sessions(self) -> List[SynthesisSession]:
         """List all synthesis sessions."""
-        store = _state_store()
-        state = store._read_state()
-        sessions = state.get("synthesis_sessions", {})
+        sessions = self._read_sessions()
         return [SynthesisSession(**data) for data in sessions.values()]
 
     def add_document(
@@ -114,11 +123,7 @@ class DocumentSynthesisService:
         session.documents.append(document)
         session.updated_at = datetime.utcnow()
 
-        store = _state_store()
-        state = store._read_state()
-        sessions = state.get("synthesis_sessions", {})
-        sessions[session_id] = session.model_dump(mode="json")
-        store._write_state({**state, "synthesis_sessions": sessions})
+        self._update_sessions(lambda sessions: sessions.__setitem__(session_id, session.model_dump(mode="json")))
 
         return document
 
@@ -131,11 +136,7 @@ class DocumentSynthesisService:
         session.documents = [d for d in session.documents if d.id != document_id]
         session.updated_at = datetime.utcnow()
 
-        store = _state_store()
-        state = store._read_state()
-        sessions = state.get("synthesis_sessions", {})
-        sessions[session_id] = session.model_dump(mode="json")
-        store._write_state({**state, "synthesis_sessions": sessions})
+        self._update_sessions(lambda sessions: sessions.__setitem__(session_id, session.model_dump(mode="json")))
 
         return True
 
@@ -219,11 +220,9 @@ Return ONLY the JSON array. Return [] if no inconsistencies found."""
                 session.inconsistencies = inconsistencies
                 session.updated_at = datetime.utcnow()
 
-                store = _state_store()
-                state = store._read_state()
-                sessions = state.get("synthesis_sessions", {})
-                sessions[session_id] = session.model_dump(mode="json")
-                store._write_state({**state, "synthesis_sessions": sessions})
+                self._update_sessions(
+                    lambda sessions: sessions.__setitem__(session_id, session.model_dump(mode="json"))
+                )
 
                 return inconsistencies
 
@@ -344,11 +343,9 @@ Return ONLY the JSON object."""
                 session.status = "completed"
                 session.updated_at = datetime.utcnow()
 
-                store = _state_store()
-                state = store._read_state()
-                sessions = state.get("synthesis_sessions", {})
-                sessions[session_id] = session.model_dump(mode="json")
-                store._write_state({**state, "synthesis_sessions": sessions})
+                self._update_sessions(
+                    lambda sessions: sessions.__setitem__(session_id, session.model_dump(mode="json"))
+                )
 
                 return result
 
@@ -360,13 +357,13 @@ Return ONLY the JSON object."""
 
     def delete_session(self, session_id: str) -> bool:
         """Delete a synthesis session."""
-        store = _state_store()
-        state = store._read_state()
-        sessions = state.get("synthesis_sessions", {})
+        deleted = False
 
-        if session_id in sessions:
-            del sessions[session_id]
-            store._write_state({**state, "synthesis_sessions": sessions})
-            return True
+        def _delete(sessions: Dict[str, Any]) -> None:
+            nonlocal deleted
+            if session_id in sessions:
+                del sessions[session_id]
+                deleted = True
 
-        return False
+        self._update_sessions(_delete)
+        return deleted

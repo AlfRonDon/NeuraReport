@@ -145,7 +145,7 @@ export function validateDbConnectionString(value, dbType) {
     if (!value.startsWith('sqlite:///') && !value.startsWith('sqlite://')) {
       return {
         valid: false,
-        error: 'SQLite connection must start with sqlite:///',
+        error: 'SQLite connection must start with sqlite:// or sqlite:///',
       }
     }
   }

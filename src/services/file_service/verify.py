@@ -3,6 +3,7 @@ from __future__ import annotations
 import contextlib
 import importlib
 import os
+import shutil
 import tempfile
 import time
 import uuid
@@ -70,6 +71,7 @@ def verify_template(file: UploadFile, connection_id: str | None, request: Reques
 
     def event_stream():
         pipeline_started = time.time()
+        failed_error: str | None = None
 
         def emit(event: str, **payload):
             data = {"event": event, **payload}
@@ -358,15 +360,32 @@ def verify_template(file: UploadFile, connection_id: str | None, request: Reques
                 artifacts=artifacts_for_state,
             )
         except Exception as e:
+            failed_error = str(e)
             yield emit(
                 "error",
                 stage="Verification failed.",
-                detail=str(e),
+                detail=failed_error,
                 template_id=tid,
             )
         finally:
             with contextlib.suppress(Exception):
                 file.file.close()
+            if failed_error:
+                try:
+                    template_name = template_name_hint or f"Template {tid[:8]}"
+                    state_store_ref.upsert_template(
+                        tid,
+                        name=template_name,
+                        status="failed",
+                        artifacts={},
+                        connection_id=connection_id or None,
+                        template_type="pdf",
+                        description=failed_error,
+                    )
+                except Exception:
+                    pass
+                with contextlib.suppress(Exception):
+                    shutil.rmtree(tdir, ignore_errors=True)
 
     headers = {"Content-Type": "application/x-ndjson"}
     return StreamingResponse(event_stream(), headers=headers, media_type="application/x-ndjson")
@@ -392,6 +411,7 @@ def verify_excel(file: UploadFile, request: Request, connection_id: str | None =
 
     def event_stream():
         pipeline_started = time.time()
+        failed_error: str | None = None
 
         def emit(event: str, **payload):
             data = {"event": event, **payload}
@@ -567,15 +587,32 @@ def verify_excel(file: UploadFile, request: Request, connection_id: str | None =
                 },
             )
         except Exception as exc:
+            failed_error = str(exc)
             yield emit(
                 "error",
                 stage="Excel verification failed.",
-                detail=str(exc),
+                detail=failed_error,
                 template_id=tid,
                 kind=template_kind,
             )
         finally:
             file.file.close()
+            if failed_error:
+                try:
+                    template_display_name = template_name_hint or "Workbook"
+                    state_store_ref.upsert_template(
+                        tid,
+                        name=template_display_name,
+                        status="failed",
+                        artifacts={},
+                        connection_id=connection_id or None,
+                        template_type=template_kind,
+                        description=failed_error,
+                    )
+                except Exception:
+                    pass
+                with contextlib.suppress(Exception):
+                    shutil.rmtree(tdir, ignore_errors=True)
 
     headers = {"Content-Type": "application/x-ndjson"}
     return StreamingResponse(event_stream(), headers=headers, media_type="application/x-ndjson")

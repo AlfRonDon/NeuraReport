@@ -169,6 +169,8 @@ class OCREngine:
         self.language = language
         self._engine: Optional[str] = None
         self._lock = threading.Lock()
+        self._easyocr_reader = None
+        self._easyocr_lock = threading.Lock()
 
     def _detect_engine(self) -> str:
         """Detect available OCR engine."""
@@ -229,7 +231,13 @@ class OCREngine:
         image_array = np.array(image)
 
         # Initialize reader (cached)
-        reader = easyocr.Reader([self.language[:2]], gpu=False)
+        reader = self._easyocr_reader
+        if reader is None:
+            with self._easyocr_lock:
+                reader = self._easyocr_reader
+                if reader is None:
+                    reader = easyocr.Reader([self.language[:2]], gpu=False)
+                    self._easyocr_reader = reader
         results = reader.readtext(image_array)
 
         # Extract text
@@ -264,6 +272,96 @@ def get_ocr_engine(language: str = "eng") -> OCREngine:
 # =============================================================================
 # Helper Functions
 # =============================================================================
+
+def _resolve_config(config: Optional[ExtractionConfig]) -> ExtractionConfig:
+    return config or DEFAULT_CONFIG
+
+
+def _get_pdf_page_count(pdf_path: Union[str, Path]) -> Optional[int]:
+    try:
+        import fitz
+    except ImportError:
+        return None
+    try:
+        doc = fitz.open(pdf_path)
+        count = doc.page_count
+        doc.close()
+        return count
+    except Exception:
+        return None
+
+
+def _resolve_page_numbers(
+    pdf_path: Union[str, Path],
+    pages: Optional[List[int]],
+    config: ExtractionConfig,
+) -> List[int]:
+    if pages:
+        normalized = [p for p in pages if isinstance(p, int) and p >= 0]
+    else:
+        page_count = _get_pdf_page_count(pdf_path)
+        if page_count is None:
+            normalized = list(range(config.max_pages))
+        else:
+            normalized = list(range(page_count))
+    if config.max_pages and len(normalized) > config.max_pages:
+        normalized = normalized[: config.max_pages]
+    return normalized
+
+
+def _normalize_table_data(
+    data: List[List[Any]],
+    config: ExtractionConfig,
+) -> Tuple[List[str], List[List[str]]]:
+    if not data:
+        return [], []
+
+    cleaned_rows = [
+        [_clean_cell_value(cell) for cell in row]
+        for row in data
+    ]
+
+    if not cleaned_rows:
+        return [], []
+
+    if config.detect_headers:
+        header_candidate = cleaned_rows[0]
+        if _is_header_row(header_candidate, cleaned_rows):
+            headers = [h if h else f"Column_{i+1}" for i, h in enumerate(header_candidate)]
+            rows = cleaned_rows[1:]
+        else:
+            headers = [f"Column_{i+1}" for i in range(len(cleaned_rows[0]))]
+            rows = cleaned_rows
+    else:
+        header_candidate = cleaned_rows[0]
+        headers = [h if h else f"Column_{i+1}" for i, h in enumerate(header_candidate)]
+        rows = cleaned_rows[1:]
+
+    normalized_rows: List[List[str]] = []
+    for row in rows:
+        normalized_row = [row[i] if i < len(row) else "" for i in range(len(headers))]
+        normalized_rows.append(normalized_row)
+
+    return headers, normalized_rows
+
+
+def _apply_table_confidence(
+    table: ExtractedTable,
+    config: ExtractionConfig,
+    base_confidence: float,
+) -> float:
+    confidence = _calculate_table_confidence(table, config)
+    return min(1.0, max(0.0, base_confidence * confidence))
+
+
+def _table_meets_requirements(table: ExtractedTable, config: ExtractionConfig) -> bool:
+    if table.row_count < config.min_rows_for_table:
+        return False
+    if table.col_count < config.min_cols_for_table:
+        return False
+    if table.confidence < config.confidence_threshold:
+        return False
+    return True
 
 def _is_header_row(row: List[str], all_rows: List[List[str]]) -> bool:
     """
@@ -407,6 +505,7 @@ class PDFExtractor(ABC):
         self,
         pdf_path: Union[str, Path],
         pages: Optional[List[int]] = None,
+        config: Optional[ExtractionConfig] = None,
     ) -> ExtractionResult:
         """Extract tables from a PDF."""
         pass
@@ -415,10 +514,11 @@ class PDFExtractor(ABC):
         self,
         pdf_path: Union[str, Path],
         pages: Optional[List[int]] = None,
+        config: Optional[ExtractionConfig] = None,
     ) -> str:
         """Extract text from a PDF."""
         # Default implementation - subclasses can override
-        result = self.extract_tables(pdf_path, pages)
+        result = self.extract_tables(pdf_path, pages, config=config)
         return result.text
 
 
@@ -448,6 +548,7 @@ class TabulaExtractor(PDFExtractor):
         self,
         pdf_path: Union[str, Path],
         pages: Optional[List[int]] = None,
+        config: Optional[ExtractionConfig] = None,
     ) -> ExtractionResult:
         try:
             import tabula
@@ -460,64 +561,57 @@ class TabulaExtractor(PDFExtractor):
                 errors=["tabula-py not installed. Run: pip install tabula-py"],
             )
 
+        config = _resolve_config(config)
         pdf_path = Path(pdf_path)
         tables: List[ExtractedTable] = []
         errors: List[str] = []
+        base_confidence = 0.85
 
         try:
-            # Determine pages to extract
-            page_spec = "all" if pages is None else [p + 1 for p in pages]  # tabula uses 1-based
+            pages_to_process = _resolve_page_numbers(pdf_path, pages, config)
 
-            # Extract all tables
-            dfs = tabula.read_pdf(
-                str(pdf_path),
-                pages=page_spec,
-                multiple_tables=True,
-                pandas_options={"header": None},
-            )
-
-            for i, df in enumerate(dfs):
-                if df is None or df.empty:
+            for page_num in pages_to_process:
+                page_table_count = 0
+                try:
+                    dfs = tabula.read_pdf(
+                        str(pdf_path),
+                        pages=page_num + 1,  # tabula uses 1-based
+                        multiple_tables=True,
+                        pandas_options={"header": None},
+                    )
+                except Exception as exc:
+                    errors.append(f"Tabula failed on page {page_num + 1}: {exc}")
                     continue
 
-                # Convert DataFrame to table
-                data = df.fillna("").astype(str).values.tolist()
-
-                if len(data) < 1:
-                    continue
-
-                # First row as headers
-                headers = [str(h).strip() for h in data[0]]
-                rows = [[str(cell).strip() for cell in row] for row in data[1:]]
-
-                # Skip if headers look like data (no text)
-                if not any(h for h in headers):
-                    if rows:
-                        headers = [f"Column_{j+1}" for j in range(len(rows[0]))]
-                    else:
+                for i, df in enumerate(dfs):
+                    if page_table_count >= config.max_tables_per_page:
+                        break
+                    if df is None or df.empty:
                         continue
 
-                tables.append(ExtractedTable(
-                    id=f"tabula_table_{i+1}",
-                    page=1,  # tabula doesn't always report page numbers
-                    headers=headers,
-                    rows=rows,
-                    confidence=0.85,
-                    method=self.name,
-                ))
+                    data = df.fillna("").astype(str).values.tolist()
+                    headers, rows = _normalize_table_data(data, config)
+                    if not headers or not rows:
+                        continue
+
+                    table = ExtractedTable(
+                        id=f"tabula_p{page_num+1}_t{i+1}",
+                        page=page_num + 1,
+                        headers=headers,
+                        rows=rows,
+                        confidence=base_confidence,
+                        method=self.name,
+                    )
+                    table.confidence = _apply_table_confidence(table, config, base_confidence)
+                    if not _table_meets_requirements(table, config):
+                        continue
+                    tables.append(table)
+                    page_table_count += 1
 
             # Get page count
-            try:
-                import fitz
-                doc = fitz.open(pdf_path)
-                page_count = doc.page_count
-                doc.close()
-            except ImportError:
-                logger.debug("PyMuPDF not available for page count, using table count estimate")
-                page_count = len(dfs) if dfs else 0
-            except Exception as e:
-                logger.debug(f"Could not get page count via PyMuPDF: {e}")
-                page_count = len(dfs) if dfs else 0
+            page_count = _get_pdf_page_count(pdf_path)
+            if page_count is None:
+                page_count = len(pages_to_process)
 
             return ExtractionResult(
                 tables=tables,
@@ -564,6 +658,7 @@ class CamelotExtractor(PDFExtractor):
         self,
         pdf_path: Union[str, Path],
         pages: Optional[List[int]] = None,
+        config: Optional[ExtractionConfig] = None,
         flavor: str = "lattice",  # or "stream"
     ) -> ExtractionResult:
         try:
@@ -577,13 +672,14 @@ class CamelotExtractor(PDFExtractor):
                 errors=["camelot-py not installed. Run: pip install camelot-py[cv]"],
             )
 
+        config = _resolve_config(config)
         pdf_path = Path(pdf_path)
         tables: List[ExtractedTable] = []
         errors: List[str] = []
 
         try:
-            # Determine pages to extract
-            page_spec = "all" if pages is None else ",".join(str(p + 1) for p in pages)
+            pages_to_process = _resolve_page_numbers(pdf_path, pages, config)
+            page_spec = ",".join(str(p + 1) for p in pages_to_process) if pages_to_process else "1"
 
             # Try lattice mode first (for tables with borders)
             try:
@@ -601,7 +697,13 @@ class CamelotExtractor(PDFExtractor):
                     flavor=alt_flavor,
                 )
 
+            page_table_counts: Dict[int, int] = {}
+
             for i, ct in enumerate(camelot_tables):
+                page_number = ct.page if hasattr(ct, 'page') else 1
+                page_table_counts.setdefault(page_number, 0)
+                if page_table_counts[page_number] >= config.max_tables_per_page:
+                    continue
                 df = ct.df
                 if df is None or df.empty:
                     continue
@@ -612,25 +714,31 @@ class CamelotExtractor(PDFExtractor):
                 if len(data) < 1:
                     continue
 
-                # First row as headers
-                headers = [str(h).strip() for h in data[0]]
-                rows = [[str(cell).strip() for cell in row] for row in data[1:]]
+                headers, rows = _normalize_table_data(data, config)
+                if not headers or not rows:
+                    continue
 
                 # Get bounding box
                 bbox = None
                 if hasattr(ct, '_bbox'):
                     bbox = ct._bbox
 
-                tables.append(ExtractedTable(
+                base_confidence = ct.accuracy / 100.0 if hasattr(ct, 'accuracy') else 0.8
+                table = ExtractedTable(
                     id=f"camelot_table_{i+1}",
-                    page=ct.page if hasattr(ct, 'page') else 1,
+                    page=page_number,
                     headers=headers,
                     rows=rows,
-                    confidence=ct.accuracy / 100.0 if hasattr(ct, 'accuracy') else 0.8,
+                    confidence=base_confidence,
                     method=self.name,
                     bbox=bbox,
                     metadata={"flavor": flavor},
-                ))
+                )
+                table.confidence = _apply_table_confidence(table, config, base_confidence)
+                if not _table_meets_requirements(table, config):
+                    continue
+                tables.append(table)
+                page_table_counts[page_number] += 1
 
             # Get page count
             try:

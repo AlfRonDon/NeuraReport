@@ -54,6 +54,12 @@ import { ConfirmModal } from '../../ui/Modal'
 import { useAppStore } from '../../store/useAppStore'
 import { useToast } from '../../components/ToastProvider'
 import * as api from '../../api/client'
+// UX Governance - Enforced interaction API
+import {
+  useInteraction,
+  InteractionType,
+  Reversibility,
+} from '../../components/ux/governance'
 
 // =============================================================================
 // ANIMATIONS
@@ -590,6 +596,8 @@ function ScheduleDialog({
 export default function SchedulesPage() {
   const theme = useTheme()
   const toast = useToast()
+  // UX Governance: Enforced interaction API - ALL user actions flow through this
+  const { execute } = useInteraction()
   const [searchParams, setSearchParams] = useSearchParams()
   const templates = useAppStore((s) => s.templates)
   const setTemplates = useAppStore((s) => s.setTemplates)
@@ -700,18 +708,26 @@ export default function SchedulesPage() {
   const handleToggleSchedule = useCallback(
     async (schedule, nextActive) => {
       if (!schedule) return
-      setTogglingId(schedule.id)
-      try {
-        await api.updateSchedule(schedule.id, { active: nextActive })
-        toast.show(`Schedule ${nextActive ? 'enabled' : 'paused'}`, 'success')
-        await fetchSchedules()
-      } catch (err) {
-        toast.show(err.message || 'Failed to update schedule', 'error')
-      } finally {
-        setTogglingId(null)
-      }
+
+      // UX Governance: Update action with tracking
+      execute({
+        type: InteractionType.UPDATE,
+        label: `${nextActive ? 'Enable' : 'Pause'} schedule "${schedule.name || schedule.id}"`,
+        reversibility: Reversibility.FULLY_REVERSIBLE,
+        successMessage: `Schedule ${nextActive ? 'enabled' : 'paused'}`,
+        errorMessage: 'Failed to update schedule',
+        action: async () => {
+          setTogglingId(schedule.id)
+          try {
+            await api.updateSchedule(schedule.id, { active: nextActive })
+            await fetchSchedules()
+          } finally {
+            setTogglingId(null)
+          }
+        },
+      })
     },
-    [toast, fetchSchedules]
+    [fetchSchedules, execute]
   )
 
   const handleToggleEnabled = useCallback(async () => {
@@ -724,36 +740,48 @@ export default function SchedulesPage() {
 
   const handleSaveSchedule = useCallback(
     async (data) => {
-      try {
-        if (editingSchedule) {
-          await api.updateSchedule(editingSchedule.id, data)
-          toast.show('Schedule updated', 'success')
-        } else {
-          await api.createSchedule(data)
-          toast.show('Schedule created', 'success')
-        }
-        fetchSchedules()
-      } catch (err) {
-        toast.show(err.message || 'Failed to save schedule', 'error')
-        throw err
-      }
+      const isEditing = !!editingSchedule
+
+      // UX Governance: Create/Update action with tracking
+      await execute({
+        type: isEditing ? InteractionType.UPDATE : InteractionType.CREATE,
+        label: isEditing ? `Update schedule "${data.name}"` : `Create schedule "${data.name}"`,
+        reversibility: Reversibility.FULLY_REVERSIBLE,
+        successMessage: isEditing ? 'Schedule updated' : 'Schedule created',
+        errorMessage: 'Failed to save schedule',
+        action: async () => {
+          if (isEditing) {
+            await api.updateSchedule(editingSchedule.id, data)
+          } else {
+            await api.createSchedule(data)
+          }
+          fetchSchedules()
+        },
+      })
     },
-    [editingSchedule, toast, fetchSchedules]
+    [editingSchedule, fetchSchedules, execute]
   )
 
   const handleDeleteConfirm = useCallback(async () => {
     if (!deletingSchedule) return
-    try {
-      await api.deleteSchedule(deletingSchedule.id)
-      toast.show('Schedule deleted', 'success')
-      fetchSchedules()
-    } catch (err) {
-      toast.show(err.message || 'Failed to delete schedule', 'error')
-    } finally {
-      setDeleteConfirmOpen(false)
-      setDeletingSchedule(null)
-    }
-  }, [deletingSchedule, toast, fetchSchedules])
+    const scheduleToDelete = deletingSchedule
+
+    setDeleteConfirmOpen(false)
+    setDeletingSchedule(null)
+
+    // UX Governance: Delete action with tracking
+    execute({
+      type: InteractionType.DELETE,
+      label: `Delete schedule "${scheduleToDelete.name || scheduleToDelete.id}"`,
+      reversibility: Reversibility.IRREVERSIBLE,
+      successMessage: 'Schedule deleted',
+      errorMessage: 'Failed to delete schedule',
+      action: async () => {
+        await api.deleteSchedule(scheduleToDelete.id)
+        fetchSchedules()
+      },
+    })
+  }, [deletingSchedule, fetchSchedules, execute])
 
   const columns = useMemo(
     () => [

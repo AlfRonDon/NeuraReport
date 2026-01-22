@@ -139,6 +139,27 @@ const DEMO_TEMPLATES = [
   { id: 'demo_tpl_3', name: 'Customer Analytics Dashboard', kind: 'pdf', status: 'approved', description: 'Customer behavior and insights', tags: ['customers', 'analytics'], createdAt: new Date().toISOString(), mappingKeys: ['customer_segment', 'date_range'] },
 ]
 
+const normalizeLastUsed = (payload, state) => {
+  const prev = state?.lastUsed || { connectionId: null, templateId: null }
+  const hasConn = payload && Object.prototype.hasOwnProperty.call(payload, 'connectionId')
+  const hasTpl = payload && Object.prototype.hasOwnProperty.call(payload, 'templateId')
+
+  const next = {
+    connectionId: hasConn ? payload?.connectionId ?? null : prev.connectionId ?? null,
+    templateId: hasTpl ? payload?.templateId ?? null : prev.templateId ?? null,
+  }
+
+  if (
+    next.connectionId &&
+    Array.isArray(state?.savedConnections) &&
+    !state.savedConnections.some((c) => c.id === next.connectionId)
+  ) {
+    next.connectionId = null
+  }
+
+  return { next, hasConn, hasTpl }
+}
+
 export const useAppStore = create((set, get) => ({
   // Demo mode
   demoMode: false,
@@ -215,11 +236,22 @@ export const useAppStore = create((set, get) => ({
           : state.activeConnection,
     })),
   removeSavedConnection: (id) =>
-    set((state) => ({
-      savedConnections: state.savedConnections.filter((c) => c.id !== id),
-      activeConnectionId: state.activeConnectionId === id ? null : state.activeConnectionId,
-      activeConnection: state.activeConnectionId === id ? null : state.activeConnection,
-    })),
+    set((state) => {
+      const nextLastUsed =
+        state.lastUsed && typeof state.lastUsed === 'object'
+          ? { ...state.lastUsed }
+          : { connectionId: null, templateId: null }
+      if (nextLastUsed.connectionId === id) {
+        nextLastUsed.connectionId = null
+      }
+      const activeRemoved = state.activeConnectionId === id
+      return {
+        savedConnections: state.savedConnections.filter((c) => c.id !== id),
+        activeConnectionId: activeRemoved ? null : state.activeConnectionId,
+        activeConnection: activeRemoved ? null : state.activeConnection,
+        lastUsed: nextLastUsed,
+      }
+    }),
   activeConnectionId: null,
   activeConnection: null,
   setActiveConnectionId: (id) =>
@@ -345,19 +377,17 @@ export const useAppStore = create((set, get) => ({
   lastUsed: { connectionId: null, templateId: null },
   setLastUsed: (payload) =>
     set((state) => {
-      const next = payload || { connectionId: null, templateId: null }
-      const activeConnection = next.connectionId
-        ? state.savedConnections.find((c) => c.id === next.connectionId) || state.activeConnection
+      const { next, hasConn, hasTpl } = normalizeLastUsed(payload, state)
+      const activeConnection = hasConn
+        ? (next.connectionId
+            ? state.savedConnections.find((c) => c.id === next.connectionId) || null
+            : null)
         : state.activeConnection
       return {
         lastUsed: next,
-        activeConnectionId: Object.prototype.hasOwnProperty.call(next, 'connectionId')
-          ? next.connectionId
-          : state.activeConnectionId,
+        activeConnectionId: hasConn ? next.connectionId : state.activeConnectionId,
         activeConnection,
-        templateId: Object.prototype.hasOwnProperty.call(next, 'templateId')
-          ? next.templateId
-        : state.templateId,
+        templateId: hasTpl ? next.templateId : state.templateId,
       }
     }),
 

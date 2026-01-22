@@ -11,6 +11,20 @@ import { useCallback, useRef } from 'react'
 import { useToast } from '../ToastProvider'
 import { useOperationHistory, OperationType } from './OperationHistoryProvider'
 
+const getRollbackState = (rollback, ...args) =>
+  (rollback && typeof rollback.getState === 'function' ? rollback.getState(...args) : null)
+
+const applyRollback = (rollback, state, ...args) => {
+  if (!rollback) return
+  if (typeof rollback === 'function') {
+    rollback(state, ...args)
+    return
+  }
+  if (typeof rollback.restore === 'function') {
+    rollback.restore(state, ...args)
+  }
+}
+
 /**
  * Create an optimistic action handler
  *
@@ -38,7 +52,7 @@ export function createOptimisticAction(config) {
 
   return async (...args) => {
     // Store pre-update state for rollback
-    const preUpdateState = rollback ? rollback.getState?.() : null
+    const preUpdateState = getRollbackState(rollback, ...args)
 
     // Apply optimistic update immediately
     if (optimisticUpdate) {
@@ -55,9 +69,7 @@ export function createOptimisticAction(config) {
       return { success: true, result }
     } catch (error) {
       // Rollback on failure
-      if (rollback) {
-        rollback(preUpdateState, ...args)
-      }
+      applyRollback(rollback, preUpdateState, ...args)
 
       // Error callback
       onError?.(error)
@@ -91,7 +103,7 @@ export function useOptimisticAction() {
     const actionId = `action_${Date.now()}_${Math.random().toString(36).slice(2)}`
 
     // Store rollback state
-    const rollbackState = rollback?.getState?.()
+    const rollbackState = getRollbackState(rollback)
 
     // Apply optimistic update immediately (within 100ms target)
     const optimisticAppliedAt = Date.now()
@@ -146,9 +158,7 @@ export function useOptimisticAction() {
     } catch (error) {
       // Rollback optimistic update
       const pending = pendingActions.current.get(actionId)
-      if (pending?.rollback) {
-        pending.rollback(pending.rollbackState)
-      }
+      applyRollback(pending?.rollback, pending?.rollbackState)
 
       // Fail operation
       failOperation(operationId, error)

@@ -252,7 +252,10 @@ def _build_job_steps(payload: RunPayload, *, kind: str) -> list[dict[str, str]]:
         {"name": "contractCheck", "label": "Prepare contract"},
         {"name": "renderPdf", "label": "Render PDF"},
     ]
-    steps.append({"name": "renderDocx", "label": "Render DOCX"})
+    docx_requested = bool(payload.docx)
+    docx_landscape = kind == "excel"
+    if docx_requested or docx_landscape:
+        steps.append({"name": "renderDocx", "label": "Render DOCX"})
     if kind == "excel" or bool(payload.xlsx):
         steps.append({"name": "renderXlsx", "label": "Render XLSX"})
     steps.append({"name": "finalize", "label": "Finalize artifacts"})
@@ -603,7 +606,7 @@ def _run_report_internal(
     docx_requested = bool(p.docx)
     xlsx_requested = bool(p.xlsx)
     docx_landscape = kind == "excel"
-    docx_enabled = docx_requested or docx_landscape or kind == "pdf"
+    docx_enabled = docx_requested or docx_landscape
     xlsx_enabled = xlsx_requested or kind == "excel"
     render_strategy = RENDER_STRATEGIES.resolve("excel" if docx_landscape or xlsx_enabled else "pdf")
     _ensure_not_cancelled()
@@ -629,6 +632,24 @@ def _run_report_internal(
     with lock_ctx:
         try:
             _ensure_not_cancelled()
+            initial_artifacts = _artifact_map_from_paths(out_html, out_pdf, out_docx, out_xlsx)
+            try:
+                write_artifact_manifest(
+                    tdir,
+                    step="reports_run_started",
+                    files=initial_artifacts,
+                    inputs=[str(contract_path), str(db_path)],
+                    correlation_id=correlation_id,
+                )
+            except Exception:
+                logger.exception(
+                    "artifact_manifest_start_failed",
+                    extra={
+                        "event": "artifact_manifest_start_failed",
+                        "template_id": p.template_id,
+                        "correlation_id": correlation_id,
+                    },
+                )
             if job_tracker:
                 job_tracker.step_running("renderPdf", label="Render PDF artifacts")
             if kind == "excel":

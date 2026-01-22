@@ -12,7 +12,7 @@ warnings.filterwarnings("ignore", message=".*on_event is deprecated.*", category
 warnings.filterwarnings("ignore", message=".*Support for class-based `config` is deprecated.*", category=DeprecationWarning)
 warnings.filterwarnings("ignore", message=".*SwigPy.*has no __module__ attribute", category=DeprecationWarning)
 
-from fastapi import FastAPI
+from fastapi import FastAPI, UploadFile
 
 
 from .app.core.static_files import UploadsStaticFiles
@@ -27,6 +27,9 @@ from src.services.report_service import (
     _schedule_report_job as _schedule_report_job,
     scheduler_runner as report_scheduler_runner,
 )
+from src.services.report_service import JobRunTracker as JobRunTracker
+
+from src.services import report_service as report_service
 
 from .app.core.config import get_settings, log_settings
 from .app.core.auth import init_auth_db
@@ -133,3 +136,91 @@ register_routes(app)
 
 def _scheduler_runner(payload: dict, kind: str, *, job_tracker: JobRunTracker | None = None) -> dict:
     return report_scheduler_runner(payload, kind, job_tracker=job_tracker)
+
+
+# ---------------------------------------------------------------------------
+# Compatibility exports (tests + legacy src/* override hooks)
+# ---------------------------------------------------------------------------
+from fastapi import HTTPException
+
+from backend.app.services.connections.db_connection import resolve_db_path as resolve_db_path
+from backend.app.services.connections.db_connection import verify_sqlite as verify_sqlite
+from backend.app.services.contract.ContractBuilderV2 import build_or_load_contract_v2 as build_or_load_contract_v2
+from backend.app.services.generator.GeneratorAssetsV1 import (
+    build_generator_assets_from_payload as build_generator_assets_from_payload,
+)
+from backend.app.services.mapping.AutoMapInline import run_llm_call_3 as run_llm_call_3
+from backend.app.services.mapping.HeaderMapping import get_parent_child_info as get_parent_child_info
+from backend.app.services.render.html_raster import rasterize_html_to_png as rasterize_html_to_png
+from backend.app.services.render.html_raster import save_png as save_png
+from backend.app.services.reports.docx_export import html_file_to_docx as html_file_to_docx
+from backend.app.services.reports.xlsx_export import html_file_to_xlsx as html_file_to_xlsx
+from backend.app.services.state import state_store as state_store
+from backend.app.services.templates.TemplateVerify import pdf_to_pngs as pdf_to_pngs
+from backend.app.services.templates.TemplateVerify import render_html_to_png as render_html_to_png
+from backend.app.services.templates.TemplateVerify import render_panel_preview as render_panel_preview
+from backend.app.services.templates.TemplateVerify import request_fix_html as request_fix_html
+from backend.app.services.templates.TemplateVerify import request_initial_html as request_initial_html
+from backend.app.services.templates.TemplateVerify import save_html as save_html
+from backend.app.services.templates.layout_hints import get_layout_hints as get_layout_hints
+from backend.app.services.utils import validate_contract_schema as validate_contract_schema
+from backend.app.services.utils import write_artifact_manifest as write_artifact_manifest
+from src.services.file_service.verify import verify_template as _verify_template_service
+from src.services.mapping.helpers import build_catalog_from_db as _build_catalog_from_db
+from src.services.mapping.helpers import compute_db_signature as compute_db_signature
+from src.services.mapping.preview import _mapping_preview_pipeline as _mapping_preview_pipeline
+
+
+def _http_error(status_code: int, code: str, message: str) -> HTTPException:
+    return HTTPException(status_code=status_code, detail={"status": "error", "code": code, "message": message})
+
+
+def _db_path_from_payload_or_default(conn_id: str | None) -> Path:
+    """
+    Legacy override hook used by src/utils/connection_utils.py.
+
+    This implementation mirrors the same precedence rules but lives here so
+    tests can monkeypatch it without causing import recursion.
+    """
+    if conn_id:
+        secrets = state_store.get_connection_secrets(conn_id)
+        if secrets and secrets.get("database_path"):
+            return Path(secrets["database_path"])
+        record = state_store.get_connection_record(conn_id)
+        if record and record.get("database_path"):
+            return Path(record["database_path"])
+        try:
+            return resolve_db_path(connection_id=conn_id, db_url=None, db_path=None)
+        except Exception:
+            pass
+
+    last_used = state_store.get_last_used()
+    if last_used.get("connection_id"):
+        connection_id = str(last_used["connection_id"])
+        secrets = state_store.get_connection_secrets(connection_id)
+        if secrets and secrets.get("database_path"):
+            return Path(secrets["database_path"])
+        record = state_store.get_connection_record(connection_id)
+        if record and record.get("database_path"):
+            return Path(record["database_path"])
+
+    env_db = os.getenv("NR_DEFAULT_DB") or os.getenv("DB_PATH")
+    if env_db:
+        return Path(env_db)
+
+    latest = state_store.get_latest_connection()
+    if latest and latest.get("database_path"):
+        return Path(latest["database_path"])
+
+    raise _http_error(
+        400,
+        "db_missing",
+        "No database configured. Connect once or set NR_DEFAULT_DB/DB_PATH env.",
+    )
+
+
+async def verify_template(file: UploadFile, connection_id: str | None, request, refine_iters: int = 0):
+    """
+    Async wrapper for the sync verify pipeline to support tests calling it via `await`.
+    """
+    return _verify_template_service(file=file, connection_id=connection_id, request=request, refine_iters=refine_iters)

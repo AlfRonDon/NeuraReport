@@ -12,6 +12,7 @@ from fastapi.responses import StreamingResponse
 from backend.app.services.mapping.CorrectionsPreview import CorrectionsPreviewError, run_corrections_preview as corrections_preview_fn
 from backend.app.services.prompts.llm_prompts import PROMPT_VERSION_3_5
 from backend.app.services.state import state_store
+from backend.app.services.utils import TemplateLockError, acquire_template_lock
 from src.services.mapping.helpers import http_error as _http_error
 from src.utils.template_utils import artifact_url, template_dir
 
@@ -60,17 +61,32 @@ def run_corrections_preview(
             prompt_version=PROMPT_VERSION_3_5,
         )
         try:
-            result = corrections_preview_fn(
-                upload_dir=template_dir_path,
-                template_html_path=template_html_path,
-                mapping_step3_path=mapping_step3_path,
-                schema_ext_path=schema_ext_path,
-                user_input=payload.user_input or "",
-                page_png_path=page_png_path,
-                model_selector=payload.model_selector,
-                mapping_override=payload.mapping_override,
-                sample_tokens=payload.sample_tokens,
-            )
+            try:
+                lock_ctx = acquire_template_lock(
+                    template_dir_path,
+                    "mapping_corrections_preview",
+                    correlation_id,
+                )
+            except TemplateLockError:
+                yield emit(
+                    "error",
+                    stage="corrections_preview",
+                    detail="Template is currently processing another request.",
+                    template_id=template_id,
+                )
+                return
+            with lock_ctx:
+                result = corrections_preview_fn(
+                    upload_dir=template_dir_path,
+                    template_html_path=template_html_path,
+                    mapping_step3_path=mapping_step3_path,
+                    schema_ext_path=schema_ext_path,
+                    user_input=payload.user_input or "",
+                    page_png_path=page_png_path,
+                    model_selector=payload.model_selector,
+                    mapping_override=payload.mapping_override,
+                    sample_tokens=payload.sample_tokens,
+                )
         except CorrectionsPreviewError as exc:
             logger.warning(
                 "corrections_preview_failed",

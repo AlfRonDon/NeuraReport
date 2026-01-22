@@ -54,11 +54,16 @@ def get_schedule(schedule_id: str) -> dict[str, Any] | None:
 
 
 def cancel_job(job_id: str, *, force: bool = False) -> dict[str, Any]:
+    existing = _state_store().get_job(job_id)
+    if not existing:
+        raise _http_error(404, "job_not_found", "Job not found.")
+    previous_status = str(existing.get("status") or "").strip().lower()
     job = _state_store().cancel_job(job_id)
     if not job:
         raise _http_error(404, "job_not_found", "Job not found.")
     try:
-        _report_service().force_cancel_job(job_id, force=force)
+        should_force = force or previous_status in {"running", "in_progress", "started"}
+        _report_service().force_cancel_job(job_id, force=should_force)
     except Exception:
         # Best-effort force cancel; do not block the API response.
         pass

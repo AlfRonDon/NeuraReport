@@ -16,6 +16,17 @@ export const API_BASE = runtimeEnv.VITE_API_BASE_URL || 'http://127.0.0.1:8000'
 
 export const api = axios.create({ baseURL: API_BASE })
 
+const IDEMPOTENCY_HEADER = 'Idempotency-Key'
+const IDEMPOTENCY_LEGACY_HEADER = 'X-Idempotency-Key'
+
+const generateIdempotencyKey = () => {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID()
+  }
+  const rand = Math.random().toString(36).slice(2)
+  return `idem-${Date.now().toString(36)}-${rand}`
+}
+
 // User-friendly error message mapping
 const USER_FRIENDLY_ERRORS = {
   // Authentication
@@ -93,6 +104,23 @@ api.interceptors.response.use(
     return Promise.reject(error)
   }
 )
+
+api.interceptors.request.use((config) => {
+  const method = (config.method || 'get').toLowerCase()
+  if (['post', 'put', 'patch', 'delete'].includes(method)) {
+    const headers = config.headers || {}
+    const existing =
+      headers[IDEMPOTENCY_HEADER] ||
+      headers[IDEMPOTENCY_LEGACY_HEADER]
+    if (!existing) {
+      const key = generateIdempotencyKey()
+      headers[IDEMPOTENCY_HEADER] = key
+      headers[IDEMPOTENCY_LEGACY_HEADER] = key
+    }
+    config.headers = headers
+  }
+  return config
+})
 
 
 

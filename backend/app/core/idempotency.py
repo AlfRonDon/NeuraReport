@@ -114,7 +114,7 @@ class IdempotencyMiddleware(BaseHTTPMiddleware):
         if request.method.upper() not in {"POST", "PUT", "PATCH", "DELETE"}:
             return await call_next(request)
 
-        key = request.headers.get(self._header_name)
+        key = self._get_idempotency_key(request)
         if not key:
             return await call_next(request)
 
@@ -156,6 +156,13 @@ class IdempotencyMiddleware(BaseHTTPMiddleware):
             hasher.update(str(request.url.query).encode("utf-8"))
         hasher.update(body or b"")
         return hasher.hexdigest()
+
+    def _get_idempotency_key(self, request: Request) -> Optional[str]:
+        key = request.headers.get(self._header_name)
+        if key:
+            return key
+        fallback = "X-Idempotency-Key" if self._header_name.lower() == "idempotency-key" else "Idempotency-Key"
+        return request.headers.get(fallback)
 
     async def _get_record(self, key: str, request_hash: str) -> Optional[IdempotencyRecord]:
         return await self._run_in_thread(self._store.get, key, request_hash)

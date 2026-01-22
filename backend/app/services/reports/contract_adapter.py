@@ -285,7 +285,19 @@ class ContractAdapter:
                     decimals = int(spec.arg.strip())
                 except ValueError:
                     decimals = 0
-            return format_fixed_decimals(value, decimals, max_decimals=3)
+            try:
+                text = str(value).strip()
+                if text.endswith("%"):
+                    text = text[:-1].strip()
+                number = Decimal(text)
+            except (InvalidOperation, ValueError, TypeError):
+                return str(value)
+            if not number.is_finite():
+                number = Decimal(0)
+            if abs(number) <= 1:
+                number *= Decimal(100)
+            formatted = format_fixed_decimals(number, decimals, max_decimals=3)
+            return f"{formatted}%"
 
         if kind == "date":
             fmt = (spec.arg or "YYYY-MM-DD").strip()
@@ -411,6 +423,7 @@ class ContractAdapter:
                 continue
             translated, tokens = self._translate_expression(expr)
             if not tokens:
+                predicates.append(translated)
                 continue
             if "DATE(" in expr.upper():
                 translated = _wrap_date_param(translated, "from_date")
@@ -494,7 +507,7 @@ class ContractAdapter:
         group_by_exprs: List[str] = []
         handled_tokens: set[str] = set()
 
-        def _sanitize_order_clause(raw_order: Sequence[str]) -> str:
+        def _sanitize_order_clause(raw_order: Sequence[str], fallback_tokens: Sequence[str]) -> str:
             cleaned: List[str] = []
             for clause in raw_order:
                 text = str(clause or "").strip()
@@ -504,7 +517,11 @@ class ContractAdapter:
                     continue
                 cleaned.append(text)
             if not cleaned:
-                return "material_name ASC"
+                for token in fallback_tokens:
+                    token_text = str(token or "").strip()
+                    if token_text:
+                        return f"{token_text} ASC"
+                return ""
             return ", ".join(cleaned)
 
         def _normalise_expr(expr: str) -> str:
@@ -597,7 +614,12 @@ class ContractAdapter:
             f"  {group_by_clause}\n)"
         )
 
-        order_clause = _sanitize_order_clause(self._row_order or ["material_name ASC"])
+        available_order_tokens = [clause.rsplit(" AS ", 1)[1] for clause in select_clauses]
+        if "material_name" in available_order_tokens:
+            fallback_order_tokens = ["material_name"]
+        else:
+            fallback_order_tokens = available_order_tokens[:1]
+        order_clause = _sanitize_order_clause(self._row_order, fallback_order_tokens)
         ordered_cte = (
             f"{rows_alias} AS (\n"
             f"  SELECT\n"
@@ -653,7 +675,7 @@ class ContractAdapter:
         row_ctes, available_row_tokens, row_order_clause = self.build_row_aggregate_sql(
             long_cte_name="long_bins", union_columns=long_columns
         )
-        totals_cte, _ = self.build_totals_sql(rows_alias="rows")
+        totals_cte, totals_tokens = self.build_totals_sql(rows_alias="rows")
 
         cte_parts = [base_cte, long_cte] + row_ctes + [totals_cte]
         cte_chain = ",\n".join(cte_parts)
@@ -685,7 +707,7 @@ class ContractAdapter:
         if row_order_clause:
             rows_select += f"\nORDER BY {row_order_clause}"
 
-        totals_select = "SELECT " + ", ".join([f"{token}" for token in self._total_tokens]) + " FROM totals"
+        totals_select = "SELECT " + ", ".join([f"{token}" for token in totals_tokens]) + " FROM totals"
 
         script = (
             "-- HEADER SELECT --\n"

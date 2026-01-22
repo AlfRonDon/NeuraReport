@@ -50,7 +50,8 @@ class EnrichmentCache:
         cache_key = _compute_cache_key(source_id, lookup_value)
 
         try:
-            cache = self._store._read_state().get("enrichment_cache", {})
+            with self._store._lock:
+                cache = dict(self._store._read_state().get("enrichment_cache", {}) or {})
             entry = cache.get(cache_key)
 
             if not entry:
@@ -157,7 +158,8 @@ class EnrichmentCache:
     def get_stats(self) -> Dict[str, Any]:
         """Get cache statistics."""
         try:
-            cache = self._store._read_state().get("enrichment_cache", {})
+            with self._store._lock:
+                cache = dict(self._store._read_state().get("enrichment_cache", {}) or {})
 
             now = datetime.now(timezone.utc)
             expired_count = 0

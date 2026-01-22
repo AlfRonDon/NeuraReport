@@ -715,57 +715,77 @@ export default function TemplatesPage() {
       setBulkDeleteOpen(false)
       return
     }
-    setBulkActionLoading(true)
-    try {
-      const result = await api.bulkDeleteTemplates(selectedIds)
-      const deletedCount = result?.deletedCount ?? result?.deleted?.length ?? 0
-      const failedCount = result?.failedCount ?? result?.failed?.length ?? 0
-      if (failedCount > 0) {
-        toast.show(
-          `Removed ${deletedCount} design${deletedCount !== 1 ? 's' : ''}, ${failedCount} failed`,
-          'warning'
-        )
-      } else {
-        toast.show(`Removed ${deletedCount} design${deletedCount !== 1 ? 's' : ''}`, 'success')
-      }
-      await fetchTemplatesData()
-    } catch (err) {
-      toast.show(err.message || 'Failed to remove designs', 'error')
-    } finally {
-      setBulkActionLoading(false)
-      setBulkDeleteOpen(false)
-    }
-  }, [selectedIds, toast, fetchTemplatesData])
+
+    const count = selectedIds.length
+    setBulkDeleteOpen(false)
+
+    // UX Governance: Bulk delete action with tracking
+    execute({
+      type: InteractionType.DELETE,
+      label: `Delete ${count} design${count !== 1 ? 's' : ''}`,
+      reversibility: Reversibility.IRREVERSIBLE,
+      errorMessage: 'Failed to remove designs',
+      action: async () => {
+        setBulkActionLoading(true)
+        try {
+          const result = await api.bulkDeleteTemplates(selectedIds)
+          const deletedCount = result?.deletedCount ?? result?.deleted?.length ?? 0
+          const failedCount = result?.failedCount ?? result?.failed?.length ?? 0
+          if (failedCount > 0) {
+            toast.show(
+              `Removed ${deletedCount} design${deletedCount !== 1 ? 's' : ''}, ${failedCount} failed`,
+              'warning'
+            )
+          } else {
+            toast.show(`Removed ${deletedCount} design${deletedCount !== 1 ? 's' : ''}`, 'success')
+          }
+          await fetchTemplatesData()
+        } finally {
+          setBulkActionLoading(false)
+        }
+      },
+    })
+  }, [selectedIds, toast, fetchTemplatesData, execute])
 
   const handleBulkStatusApply = useCallback(async () => {
     if (!selectedIds.length) {
       setBulkStatusOpen(false)
       return
     }
-    setBulkActionLoading(true)
-    try {
-      const result = await api.bulkUpdateTemplateStatus(selectedIds, bulkStatus)
-      const updatedCount = result?.updatedCount ?? result?.updated?.length ?? 0
-      const failedCount = result?.failedCount ?? result?.failed?.length ?? 0
-      if (failedCount > 0) {
-        toast.show(
-          `Updated ${updatedCount} design${updatedCount !== 1 ? 's' : ''}, ${failedCount} failed`,
-          'warning'
-        )
-      } else {
-        toast.show(
-          `Updated ${updatedCount} design${updatedCount !== 1 ? 's' : ''}`,
-          'success'
-        )
-      }
-      await fetchTemplatesData()
-      setBulkStatusOpen(false)
-    } catch (err) {
-      toast.show(err.message || 'Failed to update status', 'error')
-    } finally {
-      setBulkActionLoading(false)
-    }
-  }, [selectedIds, bulkStatus, toast, fetchTemplatesData])
+
+    const count = selectedIds.length
+    setBulkStatusOpen(false)
+
+    // UX Governance: Bulk update action with tracking
+    execute({
+      type: InteractionType.UPDATE,
+      label: `Update status for ${count} design${count !== 1 ? 's' : ''}`,
+      reversibility: Reversibility.FULLY_REVERSIBLE,
+      errorMessage: 'Failed to update status',
+      action: async () => {
+        setBulkActionLoading(true)
+        try {
+          const result = await api.bulkUpdateTemplateStatus(selectedIds, bulkStatus)
+          const updatedCount = result?.updatedCount ?? result?.updated?.length ?? 0
+          const failedCount = result?.failedCount ?? result?.failed?.length ?? 0
+          if (failedCount > 0) {
+            toast.show(
+              `Updated ${updatedCount} design${updatedCount !== 1 ? 's' : ''}, ${failedCount} failed`,
+              'warning'
+            )
+          } else {
+            toast.show(
+              `Updated ${updatedCount} design${updatedCount !== 1 ? 's' : ''}`,
+              'success'
+            )
+          }
+          await fetchTemplatesData()
+        } finally {
+          setBulkActionLoading(false)
+        }
+      },
+    })
+  }, [selectedIds, bulkStatus, toast, fetchTemplatesData, execute])
 
   const handleBulkTagsApply = useCallback(async () => {
     if (!selectedIds.length) {
@@ -785,31 +805,41 @@ export default function TemplatesPage() {
       toast.show(`Tag "${invalidTag.slice(0, 20)}..." exceeds 50 character limit`, 'error')
       return
     }
-    setBulkActionLoading(true)
-    try {
-      const result = await api.bulkAddTemplateTags(selectedIds, tags)
-      const updatedCount = result?.updatedCount ?? result?.updated?.length ?? 0
-      const failedCount = result?.failedCount ?? result?.failed?.length ?? 0
-      if (failedCount > 0) {
-        toast.show(
-          `Tagged ${updatedCount} design${updatedCount !== 1 ? 's' : ''}, ${failedCount} failed`,
-          'warning'
-        )
-      } else {
-        toast.show(
-          `Tagged ${updatedCount} design${updatedCount !== 1 ? 's' : ''}`,
-          'success'
-        )
-      }
-      await fetchTemplatesData()
-      setBulkTags('')
-      setBulkTagsOpen(false)
-    } catch (err) {
-      toast.show(err.message || 'Failed to add tags', 'error')
-    } finally {
-      setBulkActionLoading(false)
-    }
-  }, [selectedIds, bulkTags, toast, fetchTemplatesData])
+
+    const count = selectedIds.length
+    setBulkTagsOpen(false)
+
+    // UX Governance: Bulk update action with tracking
+    execute({
+      type: InteractionType.UPDATE,
+      label: `Add tags to ${count} design${count !== 1 ? 's' : ''}`,
+      reversibility: Reversibility.FULLY_REVERSIBLE,
+      errorMessage: 'Failed to add tags',
+      action: async () => {
+        setBulkActionLoading(true)
+        try {
+          const result = await api.bulkAddTemplateTags(selectedIds, tags)
+          const updatedCount = result?.updatedCount ?? result?.updated?.length ?? 0
+          const failedCount = result?.failedCount ?? result?.failed?.length ?? 0
+          if (failedCount > 0) {
+            toast.show(
+              `Tagged ${updatedCount} design${updatedCount !== 1 ? 's' : ''}, ${failedCount} failed`,
+              'warning'
+            )
+          } else {
+            toast.show(
+              `Tagged ${updatedCount} design${updatedCount !== 1 ? 's' : ''}`,
+              'success'
+            )
+          }
+          await fetchTemplatesData()
+          setBulkTags('')
+        } finally {
+          setBulkActionLoading(false)
+        }
+      },
+    })
+  }, [selectedIds, bulkTags, toast, fetchTemplatesData, execute])
 
   const handleRowClick = useCallback((row) => {
     navigate(`/reports?template=${row.id}`)

@@ -6,12 +6,13 @@ This module contains endpoints for application state management:
 """
 from __future__ import annotations
 
+import importlib
 from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel
 from typing import Optional
 
 from backend.app.core.security import require_api_key
-from backend.app.services.state import state_store as state_store_module
+from backend.app.services.state import store as state_store_module
 from src.services.template_service import bootstrap_state
 
 router = APIRouter(dependencies=[Depends(require_api_key)])
@@ -27,7 +28,11 @@ def _correlation(request: Request) -> str | None:
 
 
 def _state_store():
-    return state_store_module.state_store
+    try:
+        api_mod = importlib.import_module("backend.api")
+        return getattr(api_mod, "state_store", state_store_module.state_store)
+    except Exception:
+        return state_store_module.state_store
 
 
 @router.get("/bootstrap")

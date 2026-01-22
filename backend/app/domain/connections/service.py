@@ -80,7 +80,7 @@ class ConnectionService:
             id=record["id"],
             name=record["name"],
             db_type=record["db_type"],
-            database_path=Path(record["database_path"]),
+            database_path=Path(db_path),
             status=record.get("status") or "unknown",
             latency_ms=record.get("latency_ms"),
         )
@@ -91,12 +91,11 @@ class ConnectionService:
 
     def healthcheck(self, connection_id: str, correlation_id: str | None = None) -> dict:
         """Verify a saved connection is still accessible and record the ping."""
-        connections = self.repo.list()
-        conn = next((c for c in connections if c.get("id") == connection_id), None)
-        if not conn:
+        secrets = self.repo.get_secrets(connection_id)
+        if not secrets:
             raise AppError(code="connection_not_found", message="Connection not found", status_code=404)
 
-        db_path = conn.get("database_path")
+        db_path = secrets.get("database_path") or secrets.get("database")
         if not db_path:
             raise AppError(
                 code="invalid_connection",

@@ -6,9 +6,11 @@ with a composable, observable, testable pipeline.
 
 from __future__ import annotations
 
+import ast
 import json
 import logging
 import os
+import re
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -217,22 +219,104 @@ def _load_rows(
     if not select_parts:
         return []
 
-    # Build query (simplified - real implementation would handle joins)
-    query = f"SELECT {', '.join(select_parts)}"
+    def _extract_table(expr: str) -> str:
+        if not expr:
+            return ""
+        match = re.search(r"(?:^|[^A-Za-z0-9_])\[?([A-Za-z_][\w]*)\]?\s*\.", str(expr))
+        return match.group(1) if match else ""
 
-    # Find first table from expressions
-    for expr in contract.mappings.values():
-        if "." in expr:
-            table = expr.split(".")[0].strip()
-            query += f" FROM [{table}]"
-            break
+    def _infer_row_tables() -> List[str]:
+        tables: List[str] = []
+        seen: set[str] = set()
+        for token in contract.tokens.row_tokens:
+            expr = contract.get_mapping(token) or ""
+            table = _extract_table(expr)
+            if table and table not in seen:
+                seen.add(table)
+                tables.append(table)
+        return tables
+
+    join = contract.join
+    parent_table = join.parent_table if join else ""
+    child_table = join.child_table if join else ""
+    parent_key = join.parent_key if join else ""
+    child_key = join.child_key if join else ""
+
+    row_tables = _infer_row_tables()
+
+    if not parent_table:
+        if len(row_tables) == 1:
+            parent_table = row_tables[0]
+        elif len(row_tables) > 1:
+            logger.warning(
+                "row_load_ambiguous_tables",
+                extra={
+                    "template_id": contract.template_id,
+                    "tables": row_tables,
+                },
+            )
+            return []
+    if not parent_table:
+        logger.warning(
+            "row_load_missing_parent_table",
+            extra={"template_id": contract.template_id},
+        )
+        return []
+
+    # Build query (simplified - handles optional joins)
+    query = f"SELECT {', '.join(select_parts)} FROM [{parent_table}]"
+    if child_table and parent_key and child_key:
+        query += (
+            f" LEFT JOIN [{child_table}] ON [{parent_table}].[{parent_key}]"
+            f" = [{child_table}].[{child_key}]"
+        )
 
     # Add WHERE clause for date range
     conditions = []
-    if request.start_date:
-        conditions.append(f"date >= '{request.start_date}'")
-    if request.end_date:
-        conditions.append(f"date <= '{request.end_date}'")
+    date_column = ""
+    date_table = ""
+    if contract.date_columns:
+        row_date_candidates = [
+            table for table in row_tables if contract.date_columns.get(table)
+        ]
+        if len(row_date_candidates) == 1:
+            date_table = row_date_candidates[0]
+            date_column = contract.date_columns.get(date_table, "")
+        elif len(row_date_candidates) > 1:
+            logger.warning(
+                "row_load_ambiguous_date_tables",
+                extra={
+                    "template_id": contract.template_id,
+                    "tables": row_date_candidates,
+                },
+            )
+        else:
+            parent_date = contract.date_columns.get(parent_table, "")
+            child_date = contract.date_columns.get(child_table, "") if child_table else ""
+            if parent_date:
+                date_column = parent_date
+                date_table = parent_table
+            elif child_date:
+                date_column = child_date
+                date_table = child_table
+    if request.start_date or request.end_date:
+        if date_column:
+            date_expr = date_column
+            if "." not in date_expr and date_table:
+                date_expr = f"{date_table}.{date_expr}"
+            if request.start_date:
+                conditions.append(f"date({date_expr}) >= date('{request.start_date}')")
+            if request.end_date:
+                conditions.append(f"date({date_expr}) <= date('{request.end_date}')")
+        else:
+            logger.warning(
+                "row_load_missing_date_column",
+                extra={
+                    "template_id": contract.template_id,
+                    "start_date": request.start_date,
+                    "end_date": request.end_date,
+                },
+            )
 
     if conditions:
         query += " WHERE " + " AND ".join(conditions)
@@ -256,21 +340,39 @@ def _calculate_totals(
     """Calculate totals from row data."""
     totals = {}
 
+    def _is_simple_row_ref(expr: str) -> Optional[str]:
+        normalized = expr.strip()
+        if not normalized:
+            return None
+        if normalized.lower().startswith("rows."):
+            candidate = normalized.split(".", 1)[1]
+            return candidate if candidate in contract.tokens.row_tokens else None
+        if normalized in contract.tokens.row_tokens:
+            return normalized
+        return None
+
     for token in contract.tokens.totals:
-        expr = contract.totals_math.get(token)
-        if not expr:
-            # Default: sum the corresponding row token
-            row_token = token.replace("total_", "row_")
-            if row_token in contract.tokens.row_tokens:
+        expr = (contract.totals_math.get(token) or "").strip()
+        mapping_expr = (contract.get_mapping(token) or "").strip()
+
+        if not expr and mapping_expr:
+            expr = mapping_expr
+
+        if expr:
+            row_ref = _is_simple_row_ref(expr)
+            if row_ref:
                 try:
-                    totals[token] = sum(
-                        float(row.get(row_token, 0) or 0) for row in rows
-                    )
+                    totals[token] = sum(float(row.get(row_ref, 0) or 0) for row in rows)
                 except (ValueError, TypeError):
                     totals[token] = 0
-        else:
-            # Evaluate expression
-            totals[token] = _eval_total_expr(expr, rows, totals)
+            else:
+                totals[token] = _eval_total_expr(expr, rows, totals)
+            continue
+
+        logger.warning(
+            "totals_missing_math",
+            extra={"total_token": token},
+        )
 
     return totals
 
@@ -281,14 +383,122 @@ def _eval_total_expr(
     totals: Dict[str, Any],
 ) -> Any:
     """Evaluate a totals expression safely."""
-    # Simple SUM() support
-    if expr.upper().startswith("SUM("):
-        col = expr[4:-1].strip()
+    if not expr:
+        return None
+
+    normalized = re.sub(r"\brows\.", "", expr.strip(), flags=re.IGNORECASE)
+    normalized = re.sub(r"\btotals\.", "", normalized, flags=re.IGNORECASE)
+
+    if "CASE" in normalized.upper():
+        logger.warning(
+            "totals_expr_unsupported_case",
+            extra={"expr": expr},
+        )
+        return None
+
+    replacements = {
+        "SUM": "sum_",
+        "COUNT": "count_",
+        "AVG": "avg_",
+        "MIN": "min_",
+        "MAX": "max_",
+        "NULLIF": "nullif",
+        "COALESCE": "coalesce",
+    }
+    for sql_name, py_name in replacements.items():
+        normalized = re.sub(
+            rf"\b{sql_name}\b", py_name, normalized, flags=re.IGNORECASE
+        )
+
+    column_values: Dict[str, List[Any]] = {}
+    for row in rows:
+        for key, value in row.items():
+            column_values.setdefault(key, []).append(value)
+
+    def _as_number(value: Any) -> Optional[float]:
         try:
-            return sum(float(row.get(col, 0) or 0) for row in rows)
-        except (ValueError, TypeError):
-            return 0
-    return expr
+            return float(value)
+        except (TypeError, ValueError):
+            return None
+
+    def _numeric(values: List[Any]) -> List[float]:
+        return [num for num in (_as_number(val) for val in values) if num is not None]
+
+    def sum_(values: List[Any]) -> float:
+        nums = _numeric(values)
+        return float(sum(nums)) if nums else 0.0
+
+    def count_(values: List[Any]) -> int:
+        return len([val for val in values if val is not None])
+
+    def avg_(values: List[Any]) -> float:
+        nums = _numeric(values)
+        return float(sum(nums) / len(nums)) if nums else 0.0
+
+    def min_(values: List[Any]) -> float:
+        nums = _numeric(values)
+        return float(min(nums)) if nums else 0.0
+
+    def max_(values: List[Any]) -> float:
+        nums = _numeric(values)
+        return float(max(nums)) if nums else 0.0
+
+    def nullif(a: Any, b: Any) -> Any:
+        return None if a == b else a
+
+    def coalesce(*args: Any) -> Any:
+        for item in args:
+            if item is not None:
+                return item
+        return None
+
+    allowed_funcs = {
+        "sum_": sum_,
+        "count_": count_,
+        "avg_": avg_,
+        "min_": min_,
+        "max_": max_,
+        "nullif": nullif,
+        "coalesce": coalesce,
+    }
+    allowed_names = set(column_values.keys()) | set(totals.keys())
+    allowed_nodes = (
+        ast.Expression,
+        ast.BinOp,
+        ast.UnaryOp,
+        ast.Call,
+        ast.Name,
+        ast.Load,
+        ast.Constant,
+        ast.Add,
+        ast.Sub,
+        ast.Mult,
+        ast.Div,
+        ast.Mod,
+        ast.Pow,
+        ast.USub,
+        ast.UAdd,
+    )
+
+    try:
+        tree = ast.parse(normalized, mode="eval")
+        for node in ast.walk(tree):
+            if not isinstance(node, allowed_nodes):
+                raise ValueError(f"Unsupported expression node: {type(node).__name__}")
+            if isinstance(node, ast.Call):
+                if not isinstance(node.func, ast.Name) or node.func.id not in allowed_funcs:
+                    raise ValueError("Unsupported function in totals expression")
+            if isinstance(node, ast.Name):
+                if node.id not in allowed_funcs and node.id not in allowed_names:
+                    raise ValueError(f"Unknown name '{node.id}' in totals expression")
+        context = {**allowed_funcs, **column_values, **totals}
+        return eval(compile(tree, "<totals_expr>", "eval"), {"__builtins__": {}}, context)
+    except (ValueError, TypeError, ZeroDivisionError, SyntaxError) as exc:
+        logger.warning(
+            "totals_expr_eval_failed",
+            extra={"expr": expr, "error": str(exc)},
+        )
+        return None
 
 
 def render_html(ctx: ReportPipelineContext) -> Path:

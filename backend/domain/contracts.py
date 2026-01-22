@@ -115,6 +115,7 @@ class Contract:
     - Mappings from tokens to SQL expressions
     - Reshape rules for data transformation
     - Join specifications for multi-table queries
+    - Date column mappings for range filters
     - Ordering specifications
     """
 
@@ -124,6 +125,7 @@ class Contract:
     mappings: Dict[str, str]
     reshape_rules: List[ReshapeRule] = field(default_factory=list)
     join: Optional[JoinSpec] = None
+    date_columns: Dict[str, str] = field(default_factory=dict)
     order_by: OrderSpec = field(default_factory=OrderSpec)
     row_order: List[str] = field(default_factory=lambda: ["ROWID"])
     literals: Dict[str, Any] = field(default_factory=dict)
@@ -199,6 +201,7 @@ class Contract:
             }
             if self.join
             else None,
+            "date_columns": dict(self.date_columns),
             "order_by": {"rows": list(self.order_by.rows)},
             "row_order": list(self.row_order),
             "literals": self.literals,
@@ -249,6 +252,12 @@ class Contract:
         order_by = OrderSpec(
             rows=order_data.get("rows", []) if isinstance(order_data, dict) else []
         )
+        date_columns_raw = data.get("date_columns", {})
+        date_columns = (
+            {str(k): str(v) for k, v in date_columns_raw.items()}
+            if isinstance(date_columns_raw, dict)
+            else {}
+        )
 
         return cls(
             contract_id=data.get("contract_id", f"contract-{template_id}"),
@@ -257,6 +266,7 @@ class Contract:
             mappings=dict(data.get("mapping", {})),
             reshape_rules=reshape_rules,
             join=join,
+            date_columns=date_columns,
             order_by=order_by,
             row_order=list(data.get("row_order", ["ROWID"])),
             literals=dict(data.get("literals", {})),

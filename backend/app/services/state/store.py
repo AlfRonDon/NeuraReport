@@ -51,17 +51,17 @@ def _normalize_job_status(status: Optional[str]) -> str:
     - cancelled/canceled → cancelled
     """
     value = (status or "").strip().lower()
-    if value in {"succeeded", "completed"}:
-        return "completed"
+    if value in {"succeeded", "success", "done", "completed"}:
+        return "succeeded"
     if value in {"queued", "pending"}:
-        return "pending"
-    if value in {"running", "in_progress"}:
+        return "queued"
+    if value in {"running", "in_progress", "started"}:
         return "running"
     if value in {"failed", "error"}:
         return "failed"
     if value in {"cancelled", "canceled"}:
         return "cancelled"
-    return value or "pending"
+    return value or "queued"
 
 
 def _normalize_mapping_keys(values: Optional[Iterable[str]]) -> list[str]:
@@ -506,9 +506,12 @@ class StateStore:
     ) -> dict:
         conn_id = conn_id or str(uuid.uuid4())
         now = _now_iso()
+        previous_path: Optional[str] = None
+        new_path: Optional[str] = None
         with self._lock:
             state = self._read_state()
             record = state["connections"].get(conn_id, {})
+            previous_path = record.get("database_path")
             created_at = record.get("created_at", now)
             # determine secret (reuse previous unless new payload supplied)
             if secret_payload is not None:
@@ -519,6 +522,7 @@ class StateStore:
                 db_path_value = str(database_path)
             else:
                 db_path_value = str(record.get("database_path") or "")
+            new_path = db_path_value
             record.update(
                 {
                     "id": conn_id,
@@ -536,7 +540,15 @@ class StateStore:
             )
             state["connections"][conn_id] = record
             self._write_state(state)
-            return self._sanitize_connection(record)
+            sanitized = self._sanitize_connection(record)
+        if previous_path and new_path and str(previous_path) != str(new_path):
+            try:
+                from backend.app.services.dataframes import dataframe_store
+
+                dataframe_store.invalidate_connection(conn_id)
+            except Exception:
+                pass
+        return sanitized
 
     def record_connection_ping(
         self,
@@ -568,8 +580,29 @@ class StateStore:
             del state["connections"][conn_id]
             if state.get("last_used", {}).get("connection_id") == conn_id:
                 state["last_used"]["connection_id"] = None
+            schedules = state.get("schedules") or {}
+            schedule_ids = [sid for sid, rec in schedules.items() if rec.get("connection_id") == conn_id]
+            for sid in schedule_ids:
+                schedules.pop(sid, None)
+            state["schedules"] = schedules
+            jobs = state.get("jobs") or {}
+            job_ids = [jid for jid, rec in jobs.items() if rec.get("connection_id") == conn_id]
+            for jid in job_ids:
+                jobs.pop(jid, None)
+            state["jobs"] = jobs
+            runs = state.get("runs") or {}
+            run_ids = [rid for rid, rec in runs.items() if rec.get("connection_id") == conn_id]
+            for rid in run_ids:
+                runs.pop(rid, None)
+            state["runs"] = runs
             self._write_state(state)
-            return True
+        try:
+            from backend.app.services.dataframes import dataframe_store
+
+            dataframe_store.invalidate_connection(conn_id)
+        except Exception:
+            pass
+        return True
 
     def _sanitize_connection(self, rec: Dict[str, Any]) -> dict:
         return {
@@ -684,6 +717,21 @@ class StateStore:
             drop_ids = [sid for sid, rec in saved_charts.items() if rec.get("template_id") == template_id]
             for sid in drop_ids:
                 saved_charts.pop(sid, None)
+            schedules = state.get("schedules") or {}
+            schedule_ids = [sid for sid, rec in schedules.items() if rec.get("template_id") == template_id]
+            for sid in schedule_ids:
+                schedules.pop(sid, None)
+            state["schedules"] = schedules
+            jobs = state.get("jobs") or {}
+            job_ids = [jid for jid, rec in jobs.items() if rec.get("template_id") == template_id]
+            for jid in job_ids:
+                jobs.pop(jid, None)
+            state["jobs"] = jobs
+            runs = state.get("runs") or {}
+            run_ids = [rid for rid, rec in runs.items() if rec.get("template_id") == template_id]
+            for rid in run_ids:
+                runs.pop(rid, None)
+            state["runs"] = runs
             self._write_state(state)
             return True
 
@@ -1342,6 +1390,10 @@ class StateStore:
 
         def mutator(rec: dict) -> bool:
             now = _now_iso()
+            current_status = str(rec.get("status") or "").strip().lower()
+            if current_status == "cancelled" and status_norm != "cancelled":
+                rec["updated_at"] = now
+                return False
             changed = False
             if rec.get("status") != status_norm:
                 rec["status"] = status_norm

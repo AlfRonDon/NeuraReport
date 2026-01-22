@@ -145,6 +145,17 @@ async def retry_job_route(job_id: str, request: Request):
             }
         )
 
+    job_type = str(original_job.get("type") or original_job.get("job_type") or "").strip() or "run_report"
+    if job_type != "run_report":
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "status": "error",
+                "code": "retry_not_supported",
+                "message": f"Retry is not supported for job type '{job_type}'. Re-run the original request.",
+            },
+        )
+
     # Extract job parameters from meta or direct fields
     meta = original_job.get("meta") or original_job.get("metadata") or {}
     template_id = original_job.get("template_id") or meta.get("template_id")

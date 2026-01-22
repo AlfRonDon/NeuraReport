@@ -80,6 +80,7 @@ ALLOWED_ATTRS = {
 
 _CSS_SANITIZER = CSSSanitizer()
 _COMMENT_RE = re.compile(r"<!--(.*?)-->", re.DOTALL)
+_STYLE_ATTR_RE = re.compile(r'style="([^"]*?)"')
 
 
 def _bleach_attributes() -> Dict[str, List[str]]:
@@ -109,4 +110,11 @@ def sanitize_html(html: str) -> str:
         strip_comments=False,
         css_sanitizer=_CSS_SANITIZER,
     )
-    return _filter_comments(cleaned)
+    cleaned = _filter_comments(cleaned)
+
+    def _strip_style(match: re.Match[str]) -> str:
+        value = match.group(1)
+        value = re.sub(r"[;\s]+$", "", value)
+        return f'style="{value}"'
+
+    return _STYLE_ATTR_RE.sub(_strip_style, cleaned)

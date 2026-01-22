@@ -22,6 +22,9 @@ class ConnectionRepository:
     def list(self) -> list[dict]:
         return state_store.list_connections()
 
+    def get_secrets(self, connection_id: str) -> dict | None:
+        return state_store.get_connection_secrets(connection_id)
+
     def delete(self, connection_id: str) -> bool:
         return state_store.delete_connection(connection_id)
 

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { API_BASE } from '../api/client'
 
 /**
  * Hook to detect network connectivity status
@@ -9,6 +10,7 @@ export function useNetworkStatus() {
     typeof navigator !== 'undefined' ? navigator.onLine : true
   )
   const [lastChecked, setLastChecked] = useState(null)
+  const healthUrl = `${API_BASE.replace(/\/+$/, '')}/health`
 
   // Check connectivity by making a lightweight request
   const checkConnectivity = useCallback(async () => {
@@ -17,7 +19,7 @@ export function useNetworkStatus() {
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), 5000)
 
-      await fetch('/api/health', {
+      await fetch(healthUrl, {
         method: 'HEAD',
         signal: controller.signal,
         cache: 'no-store',
