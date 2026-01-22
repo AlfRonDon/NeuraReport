@@ -1,11 +1,13 @@
 import { useState, useCallback, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
+import { Stack } from '@mui/material'
 import { WizardLayout } from '../../layouts'
 import { useAppStore } from '../../store/useAppStore'
 import { useToast } from '../../components/ToastProvider'
 import StepConnection from './steps/StepConnection'
 import StepTemplate from './steps/StepTemplate'
 import StepMapping from './steps/StepMapping'
+import ReportGlossaryNotice from '../../components/ux/ReportGlossaryNotice.jsx'
 
 const WIZARD_STORAGE_KEY = 'neurareport_wizard_state'
 
@@ -38,17 +40,17 @@ const WIZARD_STEPS = [
   {
     key: 'connection',
     label: 'Connect Data Source',
-    description: 'Select or create a data connection',
+    description: 'Select or create a data source for reports',
   },
   {
     key: 'template',
-    label: 'Upload Design',
-    description: 'Upload a PDF or Excel report design',
+    label: 'Upload Report Design',
+    description: 'Upload a PDF or Excel design',
   },
   {
     key: 'mapping',
     label: 'Map Fields',
-    description: 'Match design fields to data columns',
+    description: 'Match design fields to data columns (no SQL required)',
   },
 ]
 
@@ -110,7 +112,7 @@ export default function SetupWizard() {
 
   const handleComplete = useCallback(() => {
     clearWizardState()
-    toast.show('Report design setup complete!', 'success')
+    toast.show('Report design ready. You can run it from Reports.', 'success')
     navigate('/reports')
   }, [navigate, toast])
 
@@ -164,7 +166,7 @@ export default function SetupWizard() {
   return (
     <WizardLayout
       title="Set Up Report Design"
-      subtitle="Connect your data source and configure your report design"
+      subtitle="Connect your data source and prepare a report design for runs"
       steps={WIZARD_STEPS}
       currentStep={currentStep}
       onNext={handleNext}
@@ -173,7 +175,10 @@ export default function SetupWizard() {
       nextDisabled={isNextDisabled()}
       loading={loading}
     >
-      {getStepContent()}
+      <Stack spacing={2}>
+        <ReportGlossaryNotice dense showChips={false} />
+        {getStepContent()}
+      </Stack>
     </WizardLayout>
   )
 }

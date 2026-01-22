@@ -88,26 +88,47 @@ export function useBootstrapState() {
     }
 
     let cancelled = false
+    const normalizeLastUsed = (value, connections, templates) => {
+      if (!value) return { connectionId: null, templateId: null }
+      const connectionId = value.connectionId ?? null
+      const templateId = value.templateId ?? null
+      const connectionOk = connectionId && connections.some((c) => c.id === connectionId)
+      const templateOk = templateId && templates.some((t) => t.id === templateId)
+      return {
+        connectionId: connectionOk ? connectionId : null,
+        templateId: templateOk ? templateId : null,
+      }
+    }
+
+    const resolveLastUsed = (serverLastUsed, connections, templates) => {
+      const serverResolved = normalizeLastUsed(serverLastUsed, connections, templates)
+      if (serverResolved.connectionId || serverResolved.templateId) {
+        return serverResolved
+      }
+      return normalizeLastUsed(cached?.lastUsed, connections, templates)
+    }
+
     const hydrate = async () => {
       try {
         const data = await bootstrapState()
         if (cancelled || !data) return
         const connections = Array.isArray(data.connections) ? data.connections : []
         const templates = Array.isArray(data.templates) ? data.templates : []
-        setSavedConnections(connections)
-        const lastUsed = data.last_used
+        const serverLastUsed = data.last_used
           ? {
               connectionId: data.last_used.connection_id ?? null,
               templateId: data.last_used.template_id ?? null,
             }
-          : { connectionId: null, templateId: null }
+          : null
+        const resolvedLastUsed = resolveLastUsed(serverLastUsed, connections, templates)
 
+        setSavedConnections(connections)
         setTemplates(templates)
-        setLastUsed(lastUsed)
+        setLastUsed(resolvedLastUsed)
 
         const active =
-          lastUsed.connectionId &&
-          connections.find((c) => c.id === lastUsed.connectionId)
+          resolvedLastUsed.connectionId &&
+          connections.find((c) => c.id === resolvedLastUsed.connectionId)
         if (active) {
           setConnection({
             status: active.status || 'connected',
@@ -121,7 +142,7 @@ export function useBootstrapState() {
         savePersistedCache({
           connections,
           templates,
-          lastUsed,
+          lastUsed: resolvedLastUsed,
         })
       } catch (err) {
         if (!cached) {

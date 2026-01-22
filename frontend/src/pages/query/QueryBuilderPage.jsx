@@ -53,6 +53,7 @@ import DataTable from '../../ui/DataTable/DataTable'
 import ConfirmModal from '../../ui/Modal/ConfirmModal'
 import { useToast } from '../../components/ToastProvider'
 import { getWriteOperation } from '../../utils/sqlSafety'
+import AiUsageNotice from '../../components/ai/AiUsageNotice'
 // UX Components for premium interactions
 import DisabledTooltip from '../../components/ux/DisabledTooltip'
 // UX Governance - Enforced interaction API
@@ -321,6 +322,8 @@ export default function QueryBuilderPage() {
   const [deleteHistoryConfirm, setDeleteHistoryConfirm] = useState({ open: false, entryId: null, question: '' })
   const schemaRequestIdRef = useRef(0)
   const writeOperation = getWriteOperation(generatedSQL)
+  const selectedConnectionLabel = connections.find((conn) => conn.id === selectedConnectionId)?.name
+    || (selectedConnectionId ? 'Selected connection' : 'No connection selected')
 
   // Fetch connections on mount
   useEffect(() => {
@@ -597,6 +600,18 @@ export default function QueryBuilderPage() {
           </HeaderButton>
         </Stack>
       </HeaderContainer>
+
+      <AiUsageNotice
+        title="AI query draft"
+        description="AI turns questions into SQL using the selected connection's schema. Review the SQL before executing."
+        chips={[
+          { label: `Source: ${selectedConnectionLabel}`, color: 'info', variant: 'outlined' },
+          { label: 'Confidence: Varies per query', color: 'warning', variant: 'outlined' },
+          { label: 'Read-only recommended', color: 'success', variant: 'outlined' },
+        ]}
+        dense
+        sx={{ mb: 2 }}
+      />
 
       {/* Saved Queries Panel */}
       <Collapse in={showSaved}>

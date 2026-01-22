@@ -12,6 +12,7 @@ from backend.app.core.config import get_settings
 from backend.app.core.middleware import limiter
 from backend.app.features.analyze.services.document_analysis_service import _ANALYSIS_CACHE
 from backend.app.services.utils.mailer import MAILER_CONFIG, refresh_mailer_config
+from backend.app.services.state import store as state_store_module
 
 router = APIRouter()
 
@@ -198,6 +199,7 @@ async def health_detailed(request: Request) -> Dict[str, Any]:
     checks["memory"] = _get_memory_usage()
 
     # API configuration
+    state_store = state_store_module.state_store.get()
     checks["configuration"] = {
         "api_key_configured": settings.api_key is not None,
         "rate_limiting_enabled": settings.rate_limit_enabled,
@@ -209,6 +211,8 @@ async def health_detailed(request: Request) -> Dict[str, Any]:
         "template_import_max_concurrency": settings.template_import_max_concurrency,
         "analysis_max_concurrency": settings.analysis_max_concurrency,
         "debug_mode": settings.debug_mode,
+        "state_backend": getattr(state_store, "backend_name", os.getenv("NEURA_STATE_BACKEND", "sqlite")),
+        "state_backend_fallback": bool(getattr(state_store, "backend_fallback", False)),
     }
 
     elapsed_ms = int((time.time() - started) * 1000)

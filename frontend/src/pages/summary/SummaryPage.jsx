@@ -38,6 +38,7 @@ import {
 import useSummaryStore from '../../stores/summaryStore';
 import { useToast } from '../../components/ToastProvider.jsx';
 import ConfirmModal from '../../ui/Modal/ConfirmModal';
+import AiUsageNotice from '../../components/ai/AiUsageNotice';
 
 const TONE_OPTIONS = [
   { value: 'formal', label: 'Formal', description: 'Professional, business-appropriate tone' },
@@ -209,6 +210,18 @@ export default function SummaryPage() {
           Summary queued in background. Job ID: {queuedJobId}
         </Alert>
       )}
+
+      <AiUsageNotice
+        title="AI summary"
+        description="Summaries are generated from the text you provide. Review for accuracy before sharing."
+        chips={[
+          { label: 'Source: Pasted content', color: 'info', variant: 'outlined' },
+          { label: 'Confidence: Review required', color: 'warning', variant: 'outlined' },
+          { label: 'Reversible: Output only', color: 'success', variant: 'outlined' },
+        ]}
+        dense
+        sx={{ mb: 2 }}
+      />
 
       {/* History Panel */}
       <Collapse in={showHistory}>

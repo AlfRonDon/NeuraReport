@@ -149,12 +149,22 @@ const normalizeLastUsed = (payload, state) => {
     templateId: hasTpl ? payload?.templateId ?? null : prev.templateId ?? null,
   }
 
+  const savedConnections = Array.isArray(state?.savedConnections) ? state.savedConnections : []
   if (
     next.connectionId &&
-    Array.isArray(state?.savedConnections) &&
-    !state.savedConnections.some((c) => c.id === next.connectionId)
+    savedConnections.length > 0 &&
+    !savedConnections.some((c) => c.id === next.connectionId)
   ) {
     next.connectionId = null
+  }
+
+  const templates = Array.isArray(state?.templates) ? state.templates : []
+  if (
+    next.templateId &&
+    templates.length > 0 &&
+    !templates.some((t) => t.id === next.templateId)
+  ) {
+    next.templateId = null
   }
 
   return { next, hasConn, hasTpl }

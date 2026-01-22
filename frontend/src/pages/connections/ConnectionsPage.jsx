@@ -12,6 +12,8 @@ import {
   ListItemIcon,
   ListItemText,
   Tooltip,
+  Alert,
+  Stack,
   useTheme,
   alpha,
   styled,
@@ -364,10 +366,15 @@ export default function ConnectionsPage() {
           >
             <StorageIcon sx={{ color: theme.palette.success.main, fontSize: 16 }} />
           </IconContainer>
-          <Box>
-            <Box sx={{ fontWeight: 500, fontSize: '0.8125rem', color: theme.palette.text.primary }}>
-              {value}
-            </Box>
+          <Box sx={{ minWidth: 0 }}>
+            <Stack direction="row" spacing={1} alignItems="center">
+              <Box sx={{ fontWeight: 500, fontSize: '0.8125rem', color: theme.palette.text.primary }}>
+                {value}
+              </Box>
+              {activeConnectionId === row.id && (
+                <Chip size="small" label="Active" color="success" />
+              )}
+            </Stack>
             <Box sx={{ fontSize: '0.75rem', color: theme.palette.text.secondary }}>
               {row.summary || row.db_type}
             </Box>
@@ -433,7 +440,7 @@ export default function ConnectionsPage() {
         </Box>
       ),
     },
-  ], [favorites, handleFavoriteToggle, theme])
+  ], [favorites, handleFavoriteToggle, theme, activeConnectionId])
 
   const filters = useMemo(() => [
     {
@@ -456,6 +463,10 @@ export default function ConnectionsPage() {
 
   return (
     <PageContainer>
+      <Alert severity="info" sx={{ mb: 2, borderRadius: 2 }}>
+        Data sources power report runs and AI tools. Use a read-only account when possible. Active sources are labeled
+        and can be switched anytime.
+      </Alert>
       <DataTable
         title="Data Sources"
         subtitle="Connect to your databases and data files"
@@ -561,7 +572,7 @@ export default function ConnectionsPage() {
         onClose={() => setDeleteConfirmOpen(false)}
         onConfirm={handleDeleteConfirm}
         title="Remove Data Source"
-        message={`Are you sure you want to remove "${deletingConnection?.name}"? You can undo this within a few seconds.`}
+        message={`Remove "${deletingConnection?.name}"? This only removes it from NeuraReport and does not change your database. You can undo this within a few seconds.`}
         confirmLabel="Remove"
         severity="error"
         loading={loading}

@@ -2103,13 +2103,23 @@ class SQLiteStateStore(StateStore):
 
 def _build_state_store() -> StateStore:
     backend = os.getenv("NEURA_STATE_BACKEND", "sqlite").strip().lower()
+    if backend not in {"sqlite", "file"}:
+        logger.warning("state_backend_unknown", extra={"backend": backend})
+        backend = "sqlite"
     if backend == "file":
-        return StateStore()
+        store = StateStore()
+        setattr(store, "backend_name", "file")
+        return store
     try:
-        return SQLiteStateStore()
+        store = SQLiteStateStore()
+        setattr(store, "backend_name", "sqlite")
+        return store
     except Exception as exc:
         logger.error("state_store_sqlite_failed", extra={"error": str(exc)})
-        return StateStore()
+        store = StateStore()
+        setattr(store, "backend_name", "file")
+        setattr(store, "backend_fallback", True)
+        return store
 
 
 class StateStoreProxy:

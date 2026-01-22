@@ -16,6 +16,7 @@ import {
   InputLabel,
   CircularProgress,
   Button,
+  Alert,
   Tooltip,
   useTheme,
   alpha,
@@ -280,6 +281,7 @@ export default function HistoryPage() {
   const toast = useToast()
   const templates = useAppStore((s) => s.templates)
   const didLoadRef = useRef(false)
+  const bulkDeleteUndoRef = useRef(null)
 
   const initialStatus = searchParams.get('status') || ''
   const initialTemplate = searchParams.get('template') || ''
@@ -369,28 +371,68 @@ export default function HistoryPage() {
 
   const handleBulkDeleteConfirm = useCallback(async () => {
     if (!selectedIds.length) return
-    setBulkDeleting(true)
-    try {
-      const result = await api.bulkDeleteJobs(selectedIds)
-      const deletedCount = result?.deletedCount ?? result?.deleted?.length ?? 0
-      const failedCount = result?.failedCount ?? result?.failed?.length ?? 0
-      if (failedCount > 0) {
-        toast.show(
-          `Deleted ${deletedCount} record${deletedCount !== 1 ? 's' : ''}, ${failedCount} failed`,
-          'warning'
-        )
-      } else {
-        toast.show(`Deleted ${deletedCount} history record${deletedCount !== 1 ? 's' : ''}`, 'success')
-      }
-      setSelectedIds([])
-      fetchHistory()
-    } catch (err) {
-      toast.show(err.message || 'Failed to delete history records', 'error')
-    } finally {
-      setBulkDeleting(false)
+    const idsToDelete = [...selectedIds]
+    const removedRecords = history.filter((record) => idsToDelete.includes(record.id))
+    const prevHistory = history
+    const prevTotal = total
+    if (!removedRecords.length) {
       setBulkDeleteOpen(false)
+      return
     }
-  }, [selectedIds, toast, fetchHistory])
+
+    setBulkDeleteOpen(false)
+    setSelectedIds([])
+
+    if (bulkDeleteUndoRef.current?.timeoutId) {
+      clearTimeout(bulkDeleteUndoRef.current.timeoutId)
+      bulkDeleteUndoRef.current = null
+    }
+
+    setHistory((prev) => prev.filter((record) => !idsToDelete.includes(record.id)))
+    setTotal((prev) => Math.max(0, prev - removedRecords.length))
+
+    let undone = false
+    const timeoutId = setTimeout(async () => {
+      if (undone) return
+      setBulkDeleting(true)
+      try {
+        const result = await api.bulkDeleteJobs(idsToDelete)
+        const deletedCount = result?.deletedCount ?? result?.deleted?.length ?? 0
+        const failedCount = result?.failedCount ?? result?.failed?.length ?? 0
+        if (failedCount > 0) {
+          toast.show(
+            `Removed ${deletedCount} record${deletedCount !== 1 ? 's' : ''}, ${failedCount} failed`,
+            'warning'
+          )
+        } else {
+          toast.show(`Removed ${deletedCount} history record${deletedCount !== 1 ? 's' : ''}`, 'success')
+        }
+        fetchHistory()
+      } catch (err) {
+        setHistory(prevHistory)
+        setTotal(prevTotal)
+        toast.show(err.message || 'Failed to delete history records', 'error')
+      } finally {
+        setBulkDeleting(false)
+        bulkDeleteUndoRef.current = null
+      }
+    }, 5000)
+
+    bulkDeleteUndoRef.current = { timeoutId, ids: idsToDelete, records: removedRecords }
+
+    toast.showWithUndo(
+      `Removed ${idsToDelete.length} history record${idsToDelete.length !== 1 ? 's' : ''}`,
+      () => {
+        undone = true
+        clearTimeout(timeoutId)
+        bulkDeleteUndoRef.current = null
+        setHistory(prevHistory)
+        setTotal(prevTotal)
+        toast.show('History restored', 'success')
+      },
+      { severity: 'info' }
+    )
+  }, [selectedIds, history, total, toast, fetchHistory])
 
   const bulkActions = [
     {
@@ -404,7 +446,7 @@ export default function HistoryPage() {
   const columns = [
     {
       field: 'templateName',
-      headerName: 'Template',
+      headerName: 'Design',
       renderCell: (value, row) => {
         const kind = row.templateKind || 'pdf'
         const cfg = getKindConfig(theme, kind)
@@ -580,6 +622,11 @@ export default function HistoryPage() {
         </Stack>
       </PageHeader>
 
+      <Alert severity="info" sx={{ mb: 2, borderRadius: 2 }}>
+        History lists completed report outputs. Deleting a history record only removes the entry here; downloaded files
+        are not affected.
+      </Alert>
+
       {/* Filters */}
       <FilterContainer direction="row" spacing={2}>
         <StyledFormControl size="small">
@@ -602,7 +649,7 @@ export default function HistoryPage() {
           </Select>
         </StyledFormControl>
         <StyledFormControl size="small" sx={{ minWidth: 200 }}>
-          <InputLabel>Template</InputLabel>
+          <InputLabel>Design</InputLabel>
           <Select
             value={templateFilter}
             onChange={(e) => {
@@ -611,9 +658,9 @@ export default function HistoryPage() {
               setPage(0)
               syncParams(statusFilter, nextTemplate)
             }}
-            label="Template"
+            label="Design"
           >
-            <MenuItem value="">All Templates</MenuItem>
+            <MenuItem value="">All Designs</MenuItem>
             {templates.map((tpl) => (
               <MenuItem key={tpl.id} value={tpl.id}>
                 {tpl.name || tpl.id.slice(0, 12)}
@@ -676,7 +723,7 @@ export default function HistoryPage() {
         onClose={() => setBulkDeleteOpen(false)}
         onConfirm={handleBulkDeleteConfirm}
         title="Delete History Records"
-        message={`Delete ${selectedIds.length} history record${selectedIds.length !== 1 ? 's' : ''}? This cannot be undone.`}
+        message={`Remove ${selectedIds.length} history record${selectedIds.length !== 1 ? 's' : ''}? You can undo within a few seconds. Downloaded files are not affected.`}
         confirmLabel="Delete"
         severity="error"
         loading={bulkDeleting}

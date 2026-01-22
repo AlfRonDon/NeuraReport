@@ -14,6 +14,7 @@ import {
   ListItemIcon,
   ListItemText,
   Typography,
+  Alert,
   Stack,
   Dialog,
   DialogTitle,
@@ -614,6 +615,7 @@ export default function SchedulesPage() {
   const [menuSchedule, setMenuSchedule] = useState(null)
   const [togglingId, setTogglingId] = useState(null)
   const [schedulerStatus, setSchedulerStatus] = useState(null)
+  const scheduleDeleteUndoRef = useRef(null)
   const didLoadSchedulesRef = useRef(false)
   const didLoadTemplatesRef = useRef(false)
 
@@ -765,23 +767,74 @@ export default function SchedulesPage() {
   const handleDeleteConfirm = useCallback(async () => {
     if (!deletingSchedule) return
     const scheduleToDelete = deletingSchedule
+    const scheduleIndex = schedules.findIndex((item) => item.id === scheduleToDelete.id)
 
     setDeleteConfirmOpen(false)
     setDeletingSchedule(null)
+
+    if (scheduleDeleteUndoRef.current?.timeoutId) {
+      clearTimeout(scheduleDeleteUndoRef.current.timeoutId)
+      scheduleDeleteUndoRef.current = null
+    }
 
     // UX Governance: Delete action with tracking
     execute({
       type: InteractionType.DELETE,
       label: `Delete schedule "${scheduleToDelete.name || scheduleToDelete.id}"`,
-      reversibility: Reversibility.IRREVERSIBLE,
-      successMessage: 'Schedule deleted',
+      reversibility: Reversibility.PARTIALLY_REVERSIBLE,
+      successMessage: 'Schedule removed',
       errorMessage: 'Failed to delete schedule',
       action: async () => {
-        await api.deleteSchedule(scheduleToDelete.id)
-        fetchSchedules()
+        setSchedules((prev) => prev.filter((item) => item.id !== scheduleToDelete.id))
+
+        let undone = false
+        const timeoutId = setTimeout(async () => {
+          if (undone) return
+          try {
+            await api.deleteSchedule(scheduleToDelete.id)
+            fetchSchedules()
+          } catch (err) {
+            setSchedules((prev) => {
+              if (prev.some((item) => item.id === scheduleToDelete.id)) return prev
+              const next = [...prev]
+              if (scheduleIndex >= 0 && scheduleIndex <= next.length) {
+                next.splice(scheduleIndex, 0, scheduleToDelete)
+              } else {
+                next.push(scheduleToDelete)
+              }
+              return next
+            })
+            throw err
+          } finally {
+            scheduleDeleteUndoRef.current = null
+          }
+        }, 5000)
+
+        scheduleDeleteUndoRef.current = { timeoutId, schedule: scheduleToDelete }
+
+        toast.showWithUndo(
+          `Schedule "${scheduleToDelete.name || scheduleToDelete.id}" removed`,
+          () => {
+            undone = true
+            clearTimeout(timeoutId)
+            scheduleDeleteUndoRef.current = null
+            setSchedules((prev) => {
+              if (prev.some((item) => item.id === scheduleToDelete.id)) return prev
+              const next = [...prev]
+              if (scheduleIndex >= 0 && scheduleIndex <= next.length) {
+                next.splice(scheduleIndex, 0, scheduleToDelete)
+              } else {
+                next.push(scheduleToDelete)
+              }
+              return next
+            })
+            toast.show('Schedule restored', 'success')
+          },
+          { severity: 'info' }
+        )
       },
     })
-  }, [deletingSchedule, fetchSchedules, execute])
+  }, [deletingSchedule, schedules, fetchSchedules, execute, toast])
 
   const columns = useMemo(
     () => [
@@ -927,6 +980,9 @@ export default function SchedulesPage() {
     <PageContainer>
       <Container maxWidth="xl">
         {renderSchedulerStatusBanner()}
+        <Alert severity="info" sx={{ mb: 2, borderRadius: 2 }}>
+          Schedules create future report runs. Progress appears in Jobs and finished reports show up in History.
+        </Alert>
         <DataTable
           title="Scheduled Reports"
           subtitle="Automate report generation on a schedule"
@@ -997,7 +1053,7 @@ export default function SchedulesPage() {
           onClose={() => setDeleteConfirmOpen(false)}
           onConfirm={handleDeleteConfirm}
           title="Delete Schedule"
-          message={`Are you sure you want to delete "${deletingSchedule?.name || deletingSchedule?.id}"? This action cannot be undone.`}
+          message={`Remove "${deletingSchedule?.name || deletingSchedule?.id}"? You can undo within a few seconds. This stops future runs; past downloads remain in History.`}
           confirmLabel="Delete"
           severity="error"
         />

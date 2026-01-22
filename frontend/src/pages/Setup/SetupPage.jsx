@@ -22,6 +22,7 @@ import TemplatesPane from './TemplatesPane.jsx'
 import { useAppStore } from '../../store/useAppStore'
 import { useToast } from '../../components/ToastProvider.jsx'
 import Surface from '../../components/layout/Surface.jsx'
+import ReportGlossaryNotice from '../../components/ux/ReportGlossaryNotice.jsx'
 
 export default function SetupPage() {
   const setupNav = useAppStore((state) => state.setupNav)
@@ -119,6 +120,7 @@ export default function SetupPage() {
       </Stack>
 
       <Stack spacing={3}>
+        <ReportGlossaryNotice />
         {/* Step Navigation Tabs */}
         <Surface sx={{ p: 2 }}>
           <Stack
@@ -186,7 +188,7 @@ export default function SetupPage() {
               {/* Status Chips */}
               <Chip
                 size="small"
-                label={hasConnection ? 'DB Connected' : 'No Connection'}
+                label={hasConnection ? 'Data source connected' : 'No data source'}
                 color={hasConnection ? 'success' : 'default'}
                 variant="outlined"
               />

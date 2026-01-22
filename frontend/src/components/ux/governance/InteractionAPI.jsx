@@ -15,6 +15,7 @@
 import { createContext, useContext, useCallback, useMemo, useRef } from 'react'
 import { useOperationHistory, OperationType, OperationStatus } from '../OperationHistoryProvider'
 import { useToast } from '../../ToastProvider'
+import { pushActiveIntent, popActiveIntent } from '../../../api/intentBridge'
 
 // ============================================================================
 // INTERACTION TYPES - Every action must have a defined type
@@ -99,6 +100,8 @@ export const FeedbackType = FeedbackRequirement
  * @property {string} [confirmationMessage] - Custom confirmation message
  * @property {Array<string>} [feedbackRequirements] - Required feedback types
  * @property {boolean} [blocksNavigation] - Whether this blocks page navigation
+ * @property {boolean} [suppressSuccessToast] - Skip default success toast
+ * @property {boolean} [suppressErrorToast] - Skip default error toast
  */
 
 // ============================================================================
@@ -206,7 +209,8 @@ export function InteractionProvider({ children }) {
     }
 
     try {
-      // STEP 6: Execute the action
+    // STEP 6: Execute the action
+      pushActiveIntent(intent)
       const result = await contract.action(intent)
 
       // STEP 7: Complete operation
@@ -217,18 +221,20 @@ export function InteractionProvider({ children }) {
         contract.onSuccess(result)
       }
 
-      // STEP 9: Show undo option if applicable
-      if (contract.reversibility === Reversibility.FULLY_REVERSIBLE && contract.undoAction) {
-        showWithUndo(
-          `${contract.label} completed`,
-          async () => {
-            await contract.undoAction(result)
-            showToast(`${contract.label} undone`, 'info')
-          },
-          { severity: 'success', duration: 5000 }
-        )
-      } else {
-        showToast(`${contract.label} completed`, 'success')
+      if (!contract.suppressSuccessToast) {
+        // STEP 9: Show undo option if applicable
+        if (contract.reversibility === Reversibility.FULLY_REVERSIBLE && contract.undoAction) {
+          showWithUndo(
+            `${contract.label} completed`,
+            async () => {
+              await contract.undoAction(result)
+              showToast(`${contract.label} undone`, 'info')
+            },
+            { severity: 'success', duration: 5000 }
+          )
+        } else {
+          showToast(`${contract.label} completed`, 'success')
+        }
       }
 
       return { success: true, result, interactionId }
@@ -238,7 +244,9 @@ export function InteractionProvider({ children }) {
 
       // STEP 11: Show error with recovery path
       const userMessage = error.userMessage || error.message || 'An error occurred'
-      showToast(userMessage, 'error')
+      if (!contract.suppressErrorToast) {
+        showToast(userMessage, 'error')
+      }
 
       if (contract.onError) {
         contract.onError(error)
@@ -248,6 +256,7 @@ export function InteractionProvider({ children }) {
     } finally {
       // STEP 12: Remove from active interactions
       activeInteractions.current.delete(interactionId)
+      popActiveIntent(intent.id)
     }
   }, [startOperation, completeOperation, failOperation, showToast, showWithUndo])
 

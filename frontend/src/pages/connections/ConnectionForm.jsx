@@ -267,6 +267,11 @@ export default function ConnectionForm({ connection, onSave, onCancel, loading }
           </Alert>
         )}
 
+        <Alert severity="info">
+          Use a read-only account when possible. Testing only checks connectivity. Saved credentials are encrypted for
+          reuse. Deleting a connection never deletes data from your database.
+        </Alert>
+
         <TextField
           label={
             <Stack direction="row" alignItems="center" spacing={0.5} component="span">

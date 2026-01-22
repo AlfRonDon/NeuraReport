@@ -1,5 +1,6 @@
 import axios from 'axios'
 import * as mock from './mock'
+import { getActiveIntent } from './intentBridge'
 
 const runtimeEnv = {
   ...(typeof import.meta !== 'undefined' && import.meta?.env ? import.meta.env : {}),
@@ -25,6 +26,77 @@ const generateIdempotencyKey = () => {
   }
   const rand = Math.random().toString(36).slice(2)
   return `idem-${Date.now().toString(36)}-${rand}`
+}
+
+const buildIntentHeaders = (intent) => {
+  if (!intent) return {}
+  const headers = {
+    'X-Intent-Id': intent.id,
+    'X-Intent-Type': intent.type,
+  }
+  if (intent.label) {
+    headers['X-Intent-Label'] = encodeURIComponent(intent.label)
+  }
+  if (intent.reversibility) {
+    headers['X-Reversibility'] = intent.reversibility
+  }
+  if (intent.workflowId) headers['X-Workflow-Id'] = intent.workflowId
+  if (intent.workflowStep) headers['X-Workflow-Step'] = intent.workflowStep
+  if (intent.userSession) headers['X-User-Session'] = intent.userSession
+  if (intent.userAction) headers['X-User-Action'] = intent.userAction
+  return headers
+}
+
+let warnedMissingIntent = false
+const createFallbackIntent = (method) => {
+  const type = method === 'delete' ? 'delete' : method === 'post' ? 'create' : 'update'
+  return {
+    id: `intent_auto_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    type,
+    label: `Auto intent (${method.toUpperCase()})`,
+    reversibility: 'system_managed',
+  }
+}
+
+const applyIntentAndIdempotency = (headers, method) => {
+  const next = { ...(headers || {}) }
+  if (!['post', 'put', 'patch', 'delete'].includes(method)) {
+    return next
+  }
+
+  let intent = getActiveIntent()
+  if (!intent) {
+    intent = createFallbackIntent(method)
+    if (!warnedMissingIntent && typeof console !== 'undefined') {
+      console.warn('[UX GOVERNANCE] Auto-generated intent headers for a mutating request.')
+      warnedMissingIntent = true
+    }
+  }
+  if (intent) {
+    const intentHeaders = buildIntentHeaders(intent)
+    Object.entries(intentHeaders).forEach(([key, value]) => {
+      if (value && !next[key]) {
+        next[key] = value
+      }
+    })
+  }
+
+  const existing =
+    next[IDEMPOTENCY_HEADER] ||
+    next[IDEMPOTENCY_LEGACY_HEADER]
+  if (!existing) {
+    const key = generateIdempotencyKey()
+    next[IDEMPOTENCY_HEADER] = key
+    next[IDEMPOTENCY_LEGACY_HEADER] = key
+  }
+
+  return next
+}
+
+export const fetchWithIntent = (url, options = {}) => {
+  const method = (options.method || 'get').toLowerCase()
+  const headers = applyIntentAndIdempotency(options.headers, method)
+  return fetch(url, { ...options, headers })
 }
 
 // User-friendly error message mapping
@@ -108,16 +180,7 @@ api.interceptors.response.use(
 api.interceptors.request.use((config) => {
   const method = (config.method || 'get').toLowerCase()
   if (['post', 'put', 'patch', 'delete'].includes(method)) {
-    const headers = config.headers || {}
-    const existing =
-      headers[IDEMPOTENCY_HEADER] ||
-      headers[IDEMPOTENCY_LEGACY_HEADER]
-    if (!existing) {
-      const key = generateIdempotencyKey()
-      headers[IDEMPOTENCY_HEADER] = key
-      headers[IDEMPOTENCY_LEGACY_HEADER] = key
-    }
-    config.headers = headers
+    config.headers = applyIntentAndIdempotency(config.headers, method)
   }
   return config
 })
@@ -497,7 +560,7 @@ export async function verifyTemplate({
   }
 
   // Original fetch-based implementation for streaming without upload progress
-  const res = await fetch(url, {
+  const res = await fetchWithIntent(url, {
     method: 'POST',
     body: form,
   })
@@ -730,7 +793,7 @@ export async function runCorrectionsPreview({
     throw new DOMException('Aborted', 'AbortError')
   }
 
-  const res = await fetch(getTemplateRoutes(kind).corrections(templateId), {
+  const res = await fetchWithIntent(getTemplateRoutes(kind).corrections(templateId), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -911,7 +974,7 @@ export async function runCorrectionsPreview({
 // 4) Approve & save the mapping (streaming progress)
 
 export async function fetchArtifactManifest(templateId, { kind = 'pdf' } = {}) {
-  const res = await fetch(getTemplateRoutes(kind).manifest(templateId))
+  const res = await fetchWithIntent(getTemplateRoutes(kind).manifest(templateId))
   if (!res.ok) {
     throw new Error(await res.text().catch(() => `Manifest fetch failed (${res.status})`))
   }
@@ -921,7 +984,7 @@ export async function fetchArtifactManifest(templateId, { kind = 'pdf' } = {}) {
 
 export async function fetchArtifactHead(templateId, name, { kind = 'pdf' } = {}) {
   const url = getTemplateRoutes(kind).head(templateId, name)
-  const res = await fetch(url)
+  const res = await fetchWithIntent(url)
   if (!res.ok) {
     throw new Error(await res.text().catch(() => `Artifact head failed (${res.status})`))
   }
@@ -969,7 +1032,7 @@ export async function mappingApprove(
 
 
 
-  const res = await fetch(getTemplateRoutes(kind).approve(templateId), {
+  const res = await fetchWithIntent(getTemplateRoutes(kind).approve(templateId), {
 
     method: 'POST',
 
@@ -1267,7 +1330,7 @@ export async function fetchTemplateKeyOptions(
 
   const query = params.size ? `?${params.toString()}` : ''
   const endpoint = getTemplateRoutes(kind).keys(templateId)
-  const res = await fetch(`${endpoint}${query}`)
+  const res = await fetchWithIntent(`${endpoint}${query}`)
   if (!res.ok) {
     const text = await res.text().catch(() => '')
     throw new Error(text || `Key options fetch failed (${res.status})`)
@@ -1306,7 +1369,7 @@ export async function postGeneratorAssetsV1(templateId, body, { onProgress, sign
 
 
 
-  const res = await fetch(getTemplateRoutes(kind).generator(templateId), {
+  const res = await fetchWithIntent(getTemplateRoutes(kind).generator(templateId), {
 
     method: 'POST',
 
@@ -2618,7 +2681,7 @@ export async function analyzeDocument({
   if (connectionId) form.append('connection_id', connectionId)
   form.append('analysis_type', analysisType)
 
-  const res = await fetch(`${API_BASE}/analyze/upload`, {
+  const res = await fetchWithIntent(`${API_BASE}/analyze/upload`, {
     method: 'POST',
     body: form,
     signal,

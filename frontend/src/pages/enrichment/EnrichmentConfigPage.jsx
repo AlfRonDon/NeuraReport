@@ -47,6 +47,7 @@ import {
 } from '@mui/icons-material';
 import useEnrichmentStore from '../../stores/enrichmentStore';
 import ConfirmModal from '../../ui/Modal/ConfirmModal';
+import AiUsageNotice from '../../components/ai/AiUsageNotice';
 
 // Fallback sources in case API is unavailable
 const FALLBACK_SOURCES = [
@@ -229,6 +230,18 @@ export default function EnrichmentConfigPage() {
           {error}
         </Alert>
       )}
+
+      <AiUsageNotice
+        title="AI enrichment"
+        description="Enrichment adds fields to a new output based on the sources you select. Preview before running."
+        chips={[
+          { label: 'Source: Input data', color: 'info', variant: 'outlined' },
+          { label: 'Confidence: Review results', color: 'warning', variant: 'outlined' },
+          { label: 'Original data unchanged', color: 'success', variant: 'outlined' },
+        ]}
+        dense
+        sx={{ mb: 2 }}
+      />
 
       {usingFallbackSources && (
         <Alert severity="info" sx={{ mb: 2 }}>

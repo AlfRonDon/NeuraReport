@@ -49,6 +49,7 @@ import {
 import useSynthesisStore from '../../stores/synthesisStore';
 import ConfirmModal from '../../ui/Modal/ConfirmModal';
 import { useToast } from '../../components/ToastProvider';
+import AiUsageNotice from '../../components/ai/AiUsageNotice';
 // UX Components for premium interactions
 import DisabledTooltip from '../../components/ux/DisabledTooltip';
 // UX Governance - Enforced interaction API
@@ -95,6 +96,7 @@ export default function SynthesisPage() {
   const [deleteSessionConfirm, setDeleteSessionConfirm] = useState({ open: false, sessionId: null, sessionName: '' });
   const [removeDocConfirm, setRemoveDocConfirm] = useState({ open: false, docId: null, docName: '' });
   const toast = useToast();
+  const docCount = currentSession?.documents?.length || 0;
   // UX Governance: Enforced interaction API - ALL user actions flow through this
   const { execute } = useInteraction();
 
@@ -320,6 +322,20 @@ export default function SynthesisPage() {
         <Alert severity="error" sx={{ mb: 2 }} onClose={() => reset()}>
           {error}
         </Alert>
+      )}
+
+      {currentSession && (
+        <AiUsageNotice
+          title="AI synthesis"
+          description="Outputs are generated from the documents in this session. Review before sharing."
+          chips={[
+            { label: `Source: ${docCount} document${docCount === 1 ? '' : 's'}`, color: 'info', variant: 'outlined' },
+            { label: 'Confidence: Review required', color: 'warning', variant: 'outlined' },
+            { label: 'Reversible: No source changes', color: 'success', variant: 'outlined' },
+          ]}
+          dense
+          sx={{ mb: 2 }}
+        />
       )}
 
       <Grid container spacing={3}>

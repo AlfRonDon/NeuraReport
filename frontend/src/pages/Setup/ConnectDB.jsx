@@ -901,6 +901,7 @@ export default function ConnectDB() {
   const [editingId, setEditingId] = useState(null)
   const [confirmSelect, setConfirmSelect] = useState(null)
   const [confirmDelete, setConfirmDelete] = useState(null)
+  const deleteUndoRef = useRef(null)
   const [rowHeartbeat, setRowHeartbeat] = useState({})
   const [canSave, setCanSave] = useState(false)
   const testedSignatureRef = useRef(null)
@@ -1735,8 +1736,8 @@ const lastHeartbeatLabel = useMemo(() => {
         <SectionHeader
           id="connect-db-heading"
           eyebrow="Step 1"
-          title="Connect Database"
-          subtitle="Connected sources feed both PDF and spreadsheet template pipelines."
+          title="Connect Data Source"
+          subtitle="Connected sources power report designs and report runs."
           helpContent={TOOLTIP_COPY.connectDatabase}
           helpPlacement="left"
           action={
@@ -1765,6 +1766,17 @@ const lastHeartbeatLabel = useMemo(() => {
             </Stack>
           }
         />
+
+        <Alert severity="info" sx={{ borderRadius: 2 }}>
+          <Stack spacing={0.5}>
+            <Typography variant="subtitle2">Safe defaults</Typography>
+            <Typography variant="body2">
+              Use a read-only account when possible. Testing only checks connectivity.
+              The active connection is used for report runs, and you can switch it anytime.
+              Passwords stay hidden after save. Removing a connection only removes it from NeuraReport; it does not change your database.
+            </Typography>
+          </Stack>
+        </Alert>
 
 
 
@@ -2107,7 +2119,7 @@ const lastHeartbeatLabel = useMemo(() => {
           <EmptyState
             size="medium"
             title="No saved connections yet"
-            description="Test and save a connection to reuse it across template runs."
+            description="Test and save a connection to reuse it across report runs."
             sx={{ borderStyle: 'solid' }}
           />
         ) : (
@@ -2466,10 +2478,10 @@ const lastHeartbeatLabel = useMemo(() => {
       <ConfirmDialog
         open={!!confirmDelete}
         title="Delete Connection"
-        message="This will permanently remove the saved connection. Continue?"
+        message="This will remove the saved connection from NeuraReport. You can undo within a few seconds."
         confirmText="Delete"
         onClose={() => setConfirmDelete(null)}
-        onConfirm={async () => {
+        onConfirm={() => {
           const id = confirmDelete
           const record = savedConnections.find((x) => x.id === id)
           if (!record) {
@@ -2478,16 +2490,47 @@ const lastHeartbeatLabel = useMemo(() => {
             return
           }
           const connectionId = record.backend_connection_id || record.id
-          try {
-            if (!isMock && connectionId) {
-              await apiDeleteConnection(connectionId)
-            }
-          } catch (err) {
-            toast.show(err?.message || 'Failed to delete connection', 'error')
-            return
+          const wasActive =
+            activeConnectionId === record.backend_connection_id ||
+            activeConnectionId === record.id ||
+            activeConnectionId === connectionId
+          const previousConnectionState = connection
+          const previousActiveId = activeConnectionId
+          const previousDetailId = detailId
+          const previousEditingId = editingId
+          const previousHeartbeat = rowHeartbeat[id]
+
+          const persistCache = () => {
+            const stateNow = useAppStore.getState()
+            savePersistedCache({
+              connections: stateNow.savedConnections,
+              templates: stateNow.templates,
+              lastUsed: stateNow.lastUsed,
+            })
           }
 
+          const restoreConnection = () => {
+            addSavedConnection(record)
+            setRowHeartbeat((prev) => ({
+              ...prev,
+              ...(previousHeartbeat ? { [id]: previousHeartbeat } : {}),
+            }))
+            if (wasActive) {
+              const currentActiveId = useAppStore.getState().activeConnectionId
+              if (!currentActiveId) {
+                setActiveConnectionId(previousActiveId || record.id)
+                setConnection(previousConnectionState)
+              }
+            }
+            if (previousDetailId) setDetailId(previousDetailId)
+            if (previousEditingId === id) setEditingId(id)
+            persistCache()
+          }
 
+          if (deleteUndoRef.current?.timeoutId) {
+            clearTimeout(deleteUndoRef.current.timeoutId)
+            deleteUndoRef.current = null
+          }
 
           const remaining = savedConnections.filter((x) => x.id !== id)
           removeSavedConnection(id)
@@ -2497,32 +2540,50 @@ const lastHeartbeatLabel = useMemo(() => {
             delete next[id]
             return next
           })
-          toast.show('Connection deleted', 'success')
-          if (record) {
-            const activeMatch =
-              activeConnectionId === record.backend_connection_id ||
-              activeConnectionId === record.id ||
-              activeConnectionId === connectionId
-            if (activeMatch) {
-              setActiveConnectionId(null)
-              setConnection({ saved: false, status: 'disconnected', name: '', db_url: null, latencyMs: null })
-            }
-            if (editingId === id) {
-              setEditingId(null)
-            }
+          if (wasActive) {
+            setActiveConnectionId(null)
+            setConnection({ saved: false, status: 'disconnected', name: '', db_url: null, latencyMs: null })
+          }
+          if (editingId === id) {
+            setEditingId(null)
           }
           setDetailId(null)
           if (!remaining.length) {
             setActiveConnectionId(null)
             setConnection({ saved: false, status: 'disconnected', name: '', db_url: null, latencyMs: null })
           }
-          const stateAfterDelete = useAppStore.getState()
-          savePersistedCache({
-            connections: stateAfterDelete.savedConnections,
-            templates: stateAfterDelete.templates,
-            lastUsed: stateAfterDelete.lastUsed,
-          })
           setConfirmDelete(null)
+          persistCache()
+
+          let undone = false
+          const timeoutId = setTimeout(async () => {
+            if (undone) return
+            try {
+              if (!isMock && connectionId) {
+                await apiDeleteConnection(connectionId)
+              }
+              toast.show('Connection deleted', 'success')
+            } catch (err) {
+              restoreConnection()
+              toast.show(err?.message || 'Failed to delete connection', 'error')
+            } finally {
+              deleteUndoRef.current = null
+            }
+          }, 5000)
+
+          deleteUndoRef.current = { timeoutId, id }
+
+          toast.showWithUndo(
+            `Connection "${record.name || record.id}" removed`,
+            () => {
+              undone = true
+              clearTimeout(timeoutId)
+              deleteUndoRef.current = null
+              restoreConnection()
+              toast.show('Connection restored', 'success')
+            },
+            { severity: 'info' }
+          )
         }}
       />
     </Stack>

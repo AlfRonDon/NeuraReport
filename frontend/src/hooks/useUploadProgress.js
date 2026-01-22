@@ -6,6 +6,7 @@
  */
 
 import { useState, useCallback, useRef } from 'react'
+import { fetchWithIntent } from '../api/client'
 
 /**
  * Upload state object
@@ -240,7 +241,7 @@ export function useUploadProgress({ onProgress, onComplete, onError } = {}) {
 
     try {
       // Use XMLHttpRequest-style progress tracking via fetch ReadableStream
-      const response = await fetch(url, {
+      const response = await fetchWithIntent(url, {
         method: 'POST',
         body: formData,
         headers,

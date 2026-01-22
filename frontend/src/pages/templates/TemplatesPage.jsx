@@ -17,6 +17,7 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  Alert,
   TextField,
   Button,
   Stack,
@@ -50,6 +51,7 @@ import { ConfirmModal } from '../../ui/Modal'
 import { useAppStore } from '../../store/useAppStore'
 import { useToast } from '../../components/ToastProvider'
 import FavoriteButton from '../../components/FavoriteButton'
+import ReportGlossaryNotice from '../../components/ux/ReportGlossaryNotice.jsx'
 import * as api from '../../api/client'
 import * as recommendationsApi from '../../api/recommendations'
 // UX Governance - Enforced interaction API
@@ -893,7 +895,7 @@ export default function TemplatesPage() {
   const columns = useMemo(() => [
     {
       field: 'name',
-      headerName: 'Template',
+      headerName: 'Design',
       renderCell: (value, row) => {
         const config = getKindConfig(theme, row.kind)
         const Icon = config.icon
@@ -913,7 +915,7 @@ export default function TemplatesPage() {
                 {value || row.id}
               </Typography>
               <Typography sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>
-                {row.description || `${row.kind?.toUpperCase() || 'PDF'} Template`}
+                {row.description || `${row.kind?.toUpperCase() || 'PDF'} Design`}
               </Typography>
             </Box>
           </Box>
@@ -1101,6 +1103,9 @@ export default function TemplatesPage() {
           )}
         </Stack>
       )}
+      <Box sx={{ mb: 2 }}>
+        <ReportGlossaryNotice />
+      </Box>
       <DataTable
         title="Report Designs"
         subtitle="Upload and manage your report designs"
@@ -1186,7 +1191,7 @@ export default function TemplatesPage() {
         onClose={() => setDeleteConfirmOpen(false)}
         onConfirm={handleDeleteConfirm}
         title="Remove Design"
-        message={`Are you sure you want to remove "${deletingTemplate?.name || deletingTemplate?.id}"? You can undo this within a few seconds.`}
+        message={`Remove "${deletingTemplate?.name || deletingTemplate?.id}"? Past report files remain in History. You can undo this within a few seconds.`}
         confirmLabel="Remove"
         severity="error"
         loading={loading}
@@ -1197,7 +1202,7 @@ export default function TemplatesPage() {
         onClose={() => setBulkDeleteOpen(false)}
         onConfirm={handleBulkDeleteConfirm}
         title="Remove Designs"
-        message={`Remove ${selectedIds.length} design${selectedIds.length !== 1 ? 's' : ''}? You can undo this within a few seconds.`}
+        message={`Remove ${selectedIds.length} design${selectedIds.length !== 1 ? 's' : ''}? Past report files remain in History. You can undo this within a few seconds.`}
         confirmLabel="Remove"
         severity="error"
         loading={bulkActionLoading}

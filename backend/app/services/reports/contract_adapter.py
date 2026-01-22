@@ -423,8 +423,13 @@ class ContractAdapter:
                 continue
             translated, tokens = self._translate_expression(expr)
             if not tokens:
-                predicates.append(translated)
-                continue
+                param_name = str(token or "").strip()
+                if not param_name:
+                    predicates.append(translated)
+                    continue
+                placeholder = f":{param_name}"
+                translated = f"{translated} = {placeholder}"
+                tokens = [param_name]
             if "DATE(" in expr.upper():
                 translated = _wrap_date_param(translated, "from_date")
                 translated = _wrap_date_param(translated, "to_date")

@@ -1,4 +1,4 @@
-import { API_BASE, handleStreamingResponse } from '../../../api/client'
+import { API_BASE, fetchWithIntent, handleStreamingResponse } from '../../../api/client'
 
 /**
  * Upload and analyze a document (PDF or Excel).
@@ -31,7 +31,7 @@ export async function uploadAndAnalyze({
   if (connectionId) form.append('connection_id', connectionId)
 
   if (background) {
-    const res = await fetch(`${API_BASE}/analyze/upload?background=true`, {
+    const res = await fetchWithIntent(`${API_BASE}/analyze/upload?background=true`, {
       method: 'POST',
       body: form,
     })
@@ -42,7 +42,7 @@ export async function uploadAndAnalyze({
     return res.json()
   }
 
-  const res = await fetch(`${API_BASE}/analyze/upload`, {
+  const res = await fetchWithIntent(`${API_BASE}/analyze/upload`, {
     method: 'POST',
     body: form,
     signal,
@@ -63,7 +63,7 @@ export async function uploadAndAnalyze({
 export async function getAnalysis(analysisId) {
   if (!analysisId) throw new Error('Analysis ID is required')
 
-  const res = await fetch(`${API_BASE}/analyze/${encodeURIComponent(analysisId)}`)
+  const res = await fetchWithIntent(`${API_BASE}/analyze/${encodeURIComponent(analysisId)}`)
   if (!res.ok) {
     const text = await res.text().catch(() => '')
     throw new Error(text || `Failed to get analysis (${res.status})`)
@@ -88,7 +88,7 @@ export async function getAnalysisData(analysisId, { limit = 500, offset = 0 } = 
   if (offset) params.set('offset', String(offset))
 
   const query = params.toString()
-  const res = await fetch(`${API_BASE}/analyze/${encodeURIComponent(analysisId)}/data${query ? `?${query}` : ''}`)
+  const res = await fetchWithIntent(`${API_BASE}/analyze/${encodeURIComponent(analysisId)}/data${query ? `?${query}` : ''}`)
   if (!res.ok) {
     const text = await res.text().catch(() => '')
     throw new Error(text || `Failed to get analysis data (${res.status})`)
@@ -117,7 +117,7 @@ export async function suggestAnalysisCharts(analysisId, { question, includeSampl
     payload.table_ids = tableIds
   }
 
-  const res = await fetch(`${API_BASE}/analyze/${encodeURIComponent(analysisId)}/charts/suggest`, {
+  const res = await fetchWithIntent(`${API_BASE}/analyze/${encodeURIComponent(analysisId)}/charts/suggest`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),

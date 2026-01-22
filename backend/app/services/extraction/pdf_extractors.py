@@ -22,6 +22,7 @@ Each extractor has different strengths - use compare_extractors() to find the be
 from __future__ import annotations
 
 import concurrent.futures
+import copy
 import hashlib
 import json
 import logging
@@ -29,9 +30,10 @@ import os
 import re
 import tempfile
 import threading
+import time
 import warnings
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field, replace
+from dataclasses import asdict, dataclass, field, replace
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
@@ -63,6 +65,12 @@ class ExtractionConfig:
 
 
 DEFAULT_CONFIG = ExtractionConfig()
+
+# Cache/dedupe configuration (set to 0 to disable)
+_CACHE_TTL_SECONDS = int(os.getenv("NEURA_PDF_EXTRACT_CACHE_TTL_SECONDS", "300"))
+_CACHE_MAX_ITEMS = int(os.getenv("NEURA_PDF_EXTRACT_CACHE_MAX_ITEMS", "128"))
+_CACHE_DEDUPE_ENABLED = os.getenv("NEURA_PDF_EXTRACT_DEDUPE", "true").strip().lower() in {"1", "true", "yes"}
+_CACHE_WAIT_SECONDS = float(os.getenv("NEURA_PDF_EXTRACT_DEDUPE_WAIT_SECONDS", "30"))
 
 
 @dataclass
@@ -169,6 +177,118 @@ class ExtractionResult:
             "has_tables": self.has_tables,
             "total_rows": self.total_rows,
         }
+
+
+@dataclass
+class _ExtractionCacheEntry:
+    result: ExtractionResult
+    created_at: float
+    last_access: float
+    hits: int = 0
+
+
+_EXTRACTION_CACHE: dict[str, _ExtractionCacheEntry] = {}
+_EXTRACTION_INFLIGHT: dict[str, threading.Event] = {}
+_EXTRACTION_CACHE_LOCK = threading.Lock()
+
+
+def _cache_enabled() -> bool:
+    return _CACHE_DEDUPE_ENABLED and _CACHE_TTL_SECONDS > 0 and _CACHE_MAX_ITEMS > 0
+
+
+def _build_cache_key(
+    pdf_path: Path,
+    method: str,
+    pages: Optional[List[int]],
+    config: ExtractionConfig,
+) -> str:
+    try:
+        stat = pdf_path.stat()
+        mtime_ns = stat.st_mtime_ns
+        size = stat.st_size
+    except OSError:
+        mtime_ns = 0
+        size = 0
+    payload = {
+        "path": str(pdf_path),
+        "mtime_ns": mtime_ns,
+        "size": size,
+        "method": method,
+        "pages": pages,
+        "config": asdict(config),
+    }
+    raw = json.dumps(payload, sort_keys=True, default=str)
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+
+def _clone_result(result: ExtractionResult) -> ExtractionResult:
+    return copy.deepcopy(result)
+
+
+def _mark_cache_hit(entry: _ExtractionCacheEntry) -> ExtractionResult:
+    cached = _clone_result(entry.result)
+    cached.metadata = dict(cached.metadata or {})
+    cached.metadata["cache_hit"] = True
+    cached.metadata["cache_age_s"] = int(time.time() - entry.created_at)
+    return cached
+
+
+def _prune_cache_locked(now: float) -> None:
+    expired = [key for key, entry in _EXTRACTION_CACHE.items() if now - entry.created_at > _CACHE_TTL_SECONDS]
+    for key in expired:
+        _EXTRACTION_CACHE.pop(key, None)
+    if len(_EXTRACTION_CACHE) <= _CACHE_MAX_ITEMS:
+        return
+    ordered = sorted(_EXTRACTION_CACHE.items(), key=lambda item: item[1].last_access)
+    for key, _entry in ordered[: max(0, len(_EXTRACTION_CACHE) - _CACHE_MAX_ITEMS)]:
+        _EXTRACTION_CACHE.pop(key, None)
+
+
+def _get_cached_result(cache_key: str) -> Optional[ExtractionResult]:
+    if not _cache_enabled():
+        return None
+    now = time.time()
+    with _EXTRACTION_CACHE_LOCK:
+        entry = _EXTRACTION_CACHE.get(cache_key)
+        if not entry:
+            return None
+        if now - entry.created_at > _CACHE_TTL_SECONDS:
+            _EXTRACTION_CACHE.pop(cache_key, None)
+            return None
+        entry.hits += 1
+        entry.last_access = now
+        return _mark_cache_hit(entry)
+
+
+def _store_cache_result(cache_key: str, result: ExtractionResult) -> None:
+    if not _cache_enabled():
+        return
+    now = time.time()
+    with _EXTRACTION_CACHE_LOCK:
+        _EXTRACTION_CACHE[cache_key] = _ExtractionCacheEntry(
+            result=_clone_result(result),
+            created_at=now,
+            last_access=now,
+            hits=0,
+        )
+        _prune_cache_locked(now)
+
+
+def _acquire_inflight(cache_key: str) -> tuple[threading.Event, bool]:
+    with _EXTRACTION_CACHE_LOCK:
+        existing = _EXTRACTION_INFLIGHT.get(cache_key)
+        if existing:
+            return existing, False
+        event = threading.Event()
+        _EXTRACTION_INFLIGHT[cache_key] = event
+        return event, True
+
+
+def _release_inflight(cache_key: str, event: threading.Event) -> None:
+    with _EXTRACTION_CACHE_LOCK:
+        if _EXTRACTION_INFLIGHT.get(cache_key) is event:
+            _EXTRACTION_INFLIGHT.pop(cache_key, None)
+    event.set()
 
 
 # =============================================================================
@@ -1361,10 +1481,49 @@ def extract_pdf_tables(
         ExtractionResult with extracted tables
     """
     config = _resolve_config(config)
+    resolved_path, path_error = _resolve_pdf_path(pdf_path)
+    if path_error:
+        return ExtractionResult(
+            tables=[],
+            text="",
+            page_count=0,
+            method=method,
+            errors=[path_error],
+        )
+    normalized_pages, _ = _normalize_pages_input(pages)
+    effective_pages = normalized_pages if normalized_pages is not None else pages
     if method == "auto":
-        return extract_with_best_method(pdf_path, pages, config=config)
+        config = _limit_config_pages(config, config.max_auto_pages)
+
+    cache_key = None
+    if _cache_enabled():
+        cache_key = _build_cache_key(resolved_path, method, effective_pages, config)
+        cached = _get_cached_result(cache_key)
+        if cached is not None:
+            return cached
+
+        event, is_owner = _acquire_inflight(cache_key)
+        if not is_owner:
+            event.wait(_CACHE_WAIT_SECONDS)
+            cached = _get_cached_result(cache_key)
+            if cached is not None:
+                return cached
+    else:
+        event = None
+        is_owner = False
+    if method == "auto":
+        try:
+            result = extract_with_best_method(resolved_path, pages, config=config)
+            if cache_key:
+                _store_cache_result(cache_key, result)
+            return result
+        finally:
+            if cache_key and is_owner and event is not None:
+                _release_inflight(cache_key, event)
 
     if method not in EXTRACTORS:
+        if cache_key and is_owner and event is not None:
+            _release_inflight(cache_key, event)
         return ExtractionResult(
             tables=[],
             text="",
@@ -1375,6 +1534,8 @@ def extract_pdf_tables(
 
     extractor = EXTRACTORS[method]()
     if not extractor.is_available():
+        if cache_key and is_owner and event is not None:
+            _release_inflight(cache_key, event)
         return ExtractionResult(
             tables=[],
             text="",
@@ -1383,7 +1544,14 @@ def extract_pdf_tables(
             errors=[f"Extractor '{method}' is not available. Check dependencies."],
         )
 
-    return extractor.extract_tables(pdf_path, pages, config=config)
+    try:
+        result = extractor.extract_tables(resolved_path, pages, config=config)
+        if cache_key:
+            _store_cache_result(cache_key, result)
+        return result
+    finally:
+        if cache_key and is_owner and event is not None:
+            _release_inflight(cache_key, event)
 
 
 def extract_with_best_method(

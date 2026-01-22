@@ -503,7 +503,7 @@ export default function HeaderMappingEditor({
     };
     resetMappingState();
     toast.showWithUndo(
-      "Mapping reset to User Input.",
+      "Fields reset to User Input.",
       () => {
         const snapshot = resetSnapshotRef.current;
         if (!snapshot) return;
@@ -860,23 +860,28 @@ export default function HeaderMappingEditor({
     <>
     <Stack spacing={2}>
       <Stack direction="row" alignItems="center" spacing={0.75}>
-        <Typography variant="h6">Header Mappings</Typography>
+        <Typography variant="h6">Field Mapping</Typography>
         <InfoTooltip
           content={TOOLTIP_COPY.headerMappings}
           ariaLabel="Header mappings guidance"
         />
       </Stack>
 
+      <Alert severity="info">
+        Match each design field to a data column. Formulas are optional for advanced cases.
+        Auto-Fix uses AI to suggest corrections; review before approving. Approving saves the mapping and makes the design available for report runs.
+      </Alert>
+
       {!!errorMsg && <Alert severity="error">{errorMsg}</Alert>}
 
       {hasAutoExpressions && (
         <Alert severity="info">
-          Auto-mapped SQL expressions are shown below. You can edit or accept the LLM's SQL snippet before approval.
+          Auto-mapped formulas are shown below. Review or edit them before approval.
         </Alert>
       )}
       {hasExpressionIssues && (
         <Alert severity="warning">
-          SQL syntax check: {Object.keys(expressionIssues).join(", ")} {Object.keys(expressionIssues).length === 1 ? "needs" : "need"} attention.
+          Formula check: {Object.keys(expressionIssues).join(", ")} {Object.keys(expressionIssues).length === 1 ? "needs" : "need"} attention.
         </Alert>
       )}
 
@@ -1031,13 +1036,13 @@ export default function HeaderMappingEditor({
                           minRows={1}
                           value={valueString}
                           onChange={(e) => handleExpressionChange(header, e.target.value)}
-                          placeholder="Enter SQL expression"
+                          placeholder="Enter a formula (advanced)"
                           disabled={waiting}
                           error={exprIssues.length > 0}
                           helperText={
                             exprIssues.length > 0
                               ? exprIssues.join(". ")
-                              : "Use SQL functions with catalog columns or params."
+                              : "Advanced: use formulas with catalog columns or params."
                           }
                           FormHelperTextProps={{ sx: { mt: 0.5 } }}
                         />
@@ -1053,7 +1058,7 @@ export default function HeaderMappingEditor({
                             variant="caption"
                             color={exprIssues.length > 0 ? "warning.main" : "text.secondary"}
                           >
-                            {isAutoSql ? "Auto-generated SQL expression" : "SQL expression"}
+                            {isAutoSql ? "Auto-generated formula" : "Formula (advanced)"}
                           </Typography>
                           <Button
                             size="small"
@@ -1152,7 +1157,7 @@ export default function HeaderMappingEditor({
                           onClick={() => handleConvertToExpression(header)}
                           disabled={waiting}
                         >
-                          Convert to expression
+                          Use formula
                         </Button>
                       </Stack>
                     )}
@@ -1257,7 +1262,7 @@ export default function HeaderMappingEditor({
               disabled={headersAll.length === 0 || waiting}
               sx={{ width: { xs: "100%", sm: "auto" } }}
             >
-              Reset
+              Reset Fields
             </Button>
             <Button
               variant="outlined"
@@ -1265,7 +1270,7 @@ export default function HeaderMappingEditor({
               disabled={waiting}
               sx={{ width: { xs: "100%", sm: "auto" } }}
             >
-              Corrections Assistant
+              Auto-Fix Fields
             </Button>
             <Button
               variant="contained"
@@ -1273,7 +1278,7 @@ export default function HeaderMappingEditor({
               disabled={approveButtonDisabled}
               sx={{ width: { xs: "100%", sm: "auto" } }}
             >
-              {saving ? "Saving..." : "Approve Template"}
+              {saving ? "Saving..." : "Approve Design"}
             </Button>
           </Stack>
         </Stack>
@@ -1284,7 +1289,7 @@ export default function HeaderMappingEditor({
             color="text.secondary"
             sx={{ mt: 0.75, maxWidth: { xs: "100%", sm: 420 } }}
           >
-            Run the Corrections Assistant and save the preview before approving.
+            Run Auto-Fix Fields and save the preview before approving.
           </Typography>
         )}
 
@@ -1332,8 +1337,8 @@ export default function HeaderMappingEditor({
       fullWidth
       disableEscapeKeyDown={saving}
     >
-      <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-        Narrative Instructions
+    <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+        Report Instructions
         <InfoTooltip
           content={TOOLTIP_COPY.llm4Narrative}
           ariaLabel="Narrative guidance"
@@ -1342,7 +1347,7 @@ export default function HeaderMappingEditor({
       </DialogTitle>
       <DialogContent dividers sx={{ pt: 1.5 }}>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-          Describe any custom logic, aggregations, or layout rules the contract builder should follow. These instructions shape the final narrative output.
+          Describe any custom logic, calculations, or layout rules you want in the report. These instructions guide the narrative output.
         </Typography>
         {hasUnresolved && (
           <Box sx={{ mb: 2, p: 1.5, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
@@ -1350,7 +1355,7 @@ export default function HeaderMappingEditor({
               Unresolved placeholders
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-              These headers are still marked as User Input. Mention how they should be populated when describing the desired contract output.
+              These headers are still marked as User Input. Mention how they should be populated when describing the desired report output.
             </Typography>
             <List dense disablePadding sx={{ listStyleType: 'disc', pl: 3 }}>
               {unresolvedOnly.map((label) => (
@@ -1362,7 +1367,7 @@ export default function HeaderMappingEditor({
           </Box>
         )}
         <TextField
-          label="Narrative instructions"
+          label="Report instructions"
           placeholder="Example: Summarize daily totals by material and include variance columns."
           multiline
           minRows={4}
@@ -1452,7 +1457,7 @@ export default function HeaderMappingEditor({
             disabled={approveActionDisabled}
             startIcon={saving ? <CircularProgress size={18} /> : null}
           >
-            {saving ? "Saving..." : "Approve Template"}
+            {saving ? "Saving..." : "Approve Design"}
           </Button>
         </Stack>
       </DialogActions>
@@ -1465,9 +1470,9 @@ export default function HeaderMappingEditor({
         setResetConfirmOpen(false);
         performReset();
       }}
-      title="Reset Mapping"
+      title="Reset Fields"
       message="Resetting will clear all column selections, keys, and corrections status. You can restore immediately after reset."
-      confirmLabel="Reset"
+      confirmLabel="Reset Fields"
       severity="warning"
     />
     </>

@@ -126,6 +126,7 @@ export default function UploadVerify() {
   const setTemplateKind = useAppStore((state) => state.setTemplateKind)
 
   const [file, setFile] = useState(null)
+  const [pendingFileAction, setPendingFileAction] = useState(null)
 
 
   const [verified, setVerified] = useState(false)
@@ -158,6 +159,7 @@ export default function UploadVerify() {
   const navigate = useNavigate()
   const inputRef = useRef()
   const verifyBtnRef = useRef(null)
+  const hasInProgressSetupRef = useRef(false)
   const mappingBtnRef = useRef(null)
   const {
     eta: verifyEta,
@@ -196,7 +198,7 @@ export default function UploadVerify() {
     (selectedFile) => {
       if (!selectedFile) return
       if (!isSupportedTemplateFile(selectedFile)) {
-        toast.show('Unsupported file type. Please upload a PDF or Excel template.', 'warning')
+        toast.show('Unsupported file type. Please upload a PDF or Excel design.', 'warning')
         return
       }
       resetVerificationState({ clearFile: true })
@@ -210,6 +212,10 @@ export default function UploadVerify() {
   )
 
   const clearFile = useCallback(() => {
+    if (hasInProgressSetupRef.current) {
+      setPendingFileAction({ action: 'remove', file: null })
+      return
+    }
     resetVerificationState({ clearFile: true })
   }, [resetVerificationState])
 
@@ -233,6 +239,10 @@ export default function UploadVerify() {
       const fileList = event.dataTransfer?.files
       if (fileList?.length) {
         const dropped = fileList[0]
+        if (hasInProgressSetupRef.current) {
+          setPendingFileAction({ action: 'replace', file: dropped })
+          return
+        }
         applySelectedFile(dropped)
       }
     },
@@ -252,6 +262,10 @@ export default function UploadVerify() {
     file || verified || preview?.templateId || verifyLog.length || mappingOpen
   )
 
+  useEffect(() => {
+    hasInProgressSetupRef.current = hasInProgressSetup
+  }, [hasInProgressSetup])
+
 
   const connectionId = connection?.connectionId || activeConnectionId || null
   const normalizedTemplateKind = (templateKind || '').toLowerCase()
@@ -261,7 +275,11 @@ export default function UploadVerify() {
   const onPick = (e) => {
     const f = e.target.files?.[0]
     if (f) {
-      applySelectedFile(f)
+      if (hasInProgressSetupRef.current) {
+        setPendingFileAction({ action: 'replace', file: f })
+      } else {
+        applySelectedFile(f)
+      }
     }
     if (e.target) {
       // allow selecting the same file again
@@ -314,15 +332,15 @@ export default function UploadVerify() {
     if (!connectionId) {
       toast.show(
         isExcelFlow
-          ? 'Please connect to a database before verifying Excel templates.'
-          : 'Please connect to a database before verifying templates.',
+          ? 'Please connect to a database before verifying Excel designs.'
+          : 'Please connect to a database before verifying designs.',
         'warning'
       )
       return
     }
 
     setQueuedJobId(null)
-    setVerifyModalOpen(true)
+    setVerifyModalOpen(false)
     setVerifying(true)
     setVerified(false)
     setVerifyProgress(0)
@@ -529,8 +547,8 @@ export default function UploadVerify() {
     if (!connectionId) {
       toast.show(
         isExcelFlow
-          ? 'Please connect to a database before verifying Excel templates.'
-          : 'Please connect to a database before verifying templates.',
+          ? 'Please connect to a database before verifying Excel designs.'
+          : 'Please connect to a database before verifying designs.',
         'warning'
       )
       return
@@ -561,7 +579,7 @@ export default function UploadVerify() {
 
   const startMapping = () => {
     if (!preview?.templateId) {
-      toast.show('Verify a template first', 'info')
+      toast.show('Verify a design first', 'info')
       return
     }
     if (!connectionId) {
@@ -770,10 +788,10 @@ export default function UploadVerify() {
       <Stack spacing={1}>
         <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ sm: 'center' }} justifyContent="space-between" spacing={1.5}>
           <Stack direction="row" alignItems="center" spacing={0.75}>
-            <Typography variant="h6">Upload & Verify Template</Typography>
+            <Typography variant="h6">Upload & Verify Design</Typography>
             <InfoTooltip
               content={TOOLTIP_COPY.uploadVerifyTemplate}
-              ariaLabel="How to upload and verify a template"
+              ariaLabel="How to upload and verify a design"
             />
           </Stack>
           <Button
@@ -800,12 +818,17 @@ export default function UploadVerify() {
             '& .MuiStepConnector-line': { borderColor: 'divider' },
           }}
         >
-          {['Verify Template', 'Review Mapping'].map((label, idx) => (
+          {['Check Preview', 'Map Fields'].map((label, idx) => (
             <Step key={label} completed={idx < (verified ? 2 : 0)}>
               <StepLabel StepIconComponent={StepIndicator}>{label}</StepLabel>
             </Step>
           ))}
         </Stepper>
+
+        <Alert severity="info" sx={{ borderRadius: 2 }}>
+          Upload a report design, verify the preview, then map fields to your data.
+          SQL expressions and AI corrections are optional. Approving saves the design for report runs.
+        </Alert>
 
         <Stack
           direction={{ xs: 'column', sm: 'row' }}
@@ -889,7 +912,7 @@ export default function UploadVerify() {
               <CloudUploadOutlinedIcon fontSize="medium" />
             </Box>
             <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-              {dropDisabled ? 'Verification in progress...' : 'Drop template here or click to browse'}
+              {dropDisabled ? 'Verification in progress...' : 'Drop design here or click to browse'}
             </Typography>
               <Typography id={dropDescriptionId} variant="body2" color="text.secondary">
                 Accepts PDF or Excel files (.pdf, .xls, .xlsx)
@@ -964,7 +987,7 @@ export default function UploadVerify() {
           onClick={startVerify} disabled={!file || verifying || queueingVerify}
           ref={verifyBtnRef}
         >
-          {verifying ? 'Verifying...' : 'Verify Template'}
+          {verifying ? 'Verifying...' : 'Verify Design'}
         </Button>
 
         <Button
@@ -974,7 +997,7 @@ export default function UploadVerify() {
           onClick={queueVerify}
           disabled={!file || verifying || queueingVerify}
         >
-          {queueingVerify ? 'Queueing...' : 'Queue in Background'}
+          {queueingVerify ? 'Queueing...' : 'Verify in Background'}
         </Button>
 
         <Button
@@ -984,7 +1007,7 @@ export default function UploadVerify() {
           disabled={!canGenerate || verifying || queueingVerify}
           ref={mappingBtnRef}
         >
-          Review Mapping
+          Map Fields
         </Button>
       </Stack>
 
@@ -1000,6 +1023,51 @@ export default function UploadVerify() {
         >
           Verification queued in background. Job ID: {queuedJobId}
         </Alert>
+      )}
+
+      {(verifying || verifyLog.length > 0) && (
+        <Box
+          sx={{
+            mt: 2,
+            p: 2,
+            borderRadius: 2,
+            border: '1px solid',
+            borderColor: 'divider',
+            bgcolor: 'background.paper',
+          }}
+        >
+          <Stack spacing={1.25}>
+            <Stack direction="row" alignItems="center" justifyContent="space-between">
+              <Typography variant="subtitle2">Verification progress</Typography>
+              <Button
+                size="small"
+                variant="text"
+                onClick={() => setVerifyModalOpen(true)}
+                sx={{ textTransform: 'none' }}
+              >
+                View details
+              </Button>
+            </Stack>
+            <LoadingState
+              label={verifyStageLabel}
+              progress={verifyProgress}
+              description={verifyEtaText}
+            />
+            {!!verifyLog.length && (
+              <Stack spacing={0.5}>
+                {verifyLog.slice(-3).map((entry) => (
+                  <Typography
+                    key={`inline-${entry.key}`}
+                    variant="caption"
+                    color="text.secondary"
+                  >
+                    {entry.label || entry.key}
+                  </Typography>
+                ))}
+              </Stack>
+            )}
+          </Stack>
+        </Box>
       )}
 
       {/* Preview (after verify) */}
@@ -1049,7 +1117,7 @@ export default function UploadVerify() {
               </Box>
             </Stack>
             <Stack spacing={1.5}>
-              <Typography variant="subtitle2">Generated HTML (photocopy)</Typography>
+              <Typography variant="subtitle2">Generated HTML (preview)</Typography>
               <Box
                 sx={{
                   position: 'relative',
@@ -1131,7 +1199,7 @@ export default function UploadVerify() {
             icon={SchemaIcon}
             size="large"
             title="Preview not ready"
-            description={file ? 'Verify the template to generate the side-by-side A4 preview.' : 'Upload and verify a template to generate the preview.'}
+            description={file ? 'Verify the design to generate the side-by-side A4 preview.' : 'Upload and verify a design to generate the preview.'}
             action={
               file ? (
                 <Button
@@ -1165,7 +1233,7 @@ export default function UploadVerify() {
         aria-labelledby="verify-dialog-title"
         aria-describedby="verify-dialog-description"
       >
-        <DialogTitle id="verify-dialog-title">Template Verification</DialogTitle>
+        <DialogTitle id="verify-dialog-title">Design Verification</DialogTitle>
         <DialogContent id="verify-dialog-description">
           <Box sx={{ my: 2 }} aria-live="polite">
             <LoadingState
@@ -1237,7 +1305,7 @@ export default function UploadVerify() {
         aria-labelledby="mapping-dialog-title"
         aria-describedby="mapping-dialog-description"
       >
-        <DialogTitle id="mapping-dialog-title">Mapping Editor</DialogTitle>
+        <DialogTitle id="mapping-dialog-title">Map Fields</DialogTitle>
         <DialogContent dividers id="mapping-dialog-description">
           <Box
             sx={{
@@ -1260,7 +1328,7 @@ export default function UploadVerify() {
               }}
             >
               <Stack spacing={2} sx={{ flexGrow: 1, minHeight: 0 }}>
-                <Typography variant="subtitle2">Template Preview</Typography>
+                <Typography variant="subtitle2">Design Preview</Typography>
 
                 <Box
                   sx={{
@@ -1304,15 +1372,15 @@ export default function UploadVerify() {
                     </Box>
                   ) : (
                     <Typography variant="body2" color="text.secondary" sx={{ px: 2, textAlign: 'center' }}>
-                      Upload and verify a template to see the photocopy preview here.
+                      Upload and verify a design to see the preview here.
                     </Typography>
                   )}
                 </Box>
 
-                {/* Template Details */}
-                <Typography variant="subtitle2">Template Details</Typography>
+                {/* Design Details */}
+                <Typography variant="subtitle2">Design Details</Typography>
                 <TextField
-                  label="Template Name"
+                  label="Design Name"
                   size="small"
                   value={tplName}
                   onChange={(e) => setTplName(e.target.value)}
@@ -1374,6 +1442,29 @@ export default function UploadVerify() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <ConfirmModal
+        open={Boolean(pendingFileAction)}
+        onClose={() => setPendingFileAction(null)}
+        onConfirm={() => {
+          const action = pendingFileAction?.action
+          const nextFile = pendingFileAction?.file
+          setPendingFileAction(null)
+          if (action === 'remove') {
+            resetVerificationState({ clearFile: true })
+            return
+          }
+          if (nextFile) {
+            applySelectedFile(nextFile)
+          }
+        }}
+        title={pendingFileAction?.action === 'remove' ? 'Remove design file' : 'Replace design file'}
+        message={pendingFileAction?.action === 'remove'
+          ? 'Removing the file clears verification progress, preview, and mapping changes. Continue?'
+          : 'Replacing the file clears verification progress, preview, and mapping changes. Continue?'}
+        confirmLabel={pendingFileAction?.action === 'remove' ? 'Remove file' : 'Replace file'}
+        severity="warning"
+      />
 
       <ConfirmModal
         open={changeConnectionConfirmOpen}

@@ -44,6 +44,8 @@ import { useAppStore } from '../../store/useAppStore'
 import { useToast } from '../../components/ToastProvider'
 import TemplateRecommender from '../../components/TemplateRecommender'
 import SuccessCelebration, { useCelebration } from '../../components/SuccessCelebration'
+import AiUsageNotice from '../../components/ai/AiUsageNotice'
+import ReportGlossaryNotice from '../../components/ux/ReportGlossaryNotice.jsx'
 import * as api from '../../api/client'
 import * as summaryApi from '../../api/summary'
 
@@ -477,6 +479,11 @@ export default function ReportsPage() {
   const [summaryLoading, setSummaryLoading] = useState(false)
   const [queueingSummary, setQueueingSummary] = useState(false)
 
+  const selectedTemplateInfo = templates.find((t) => t.id === selectedTemplate)
+  const outputLabel = selectedTemplateInfo?.kind?.toUpperCase() || 'PDF'
+  const dateRangeLabel = startDate && endDate ? `${startDate} to ${endDate}` : 'Select dates'
+  const connectionLabel = activeConnection?.name || 'No connection'
+
   // Success celebration
   const { celebrating, celebrate, onComplete: onCelebrationComplete } = useCelebration()
 
@@ -750,11 +757,13 @@ export default function ReportsPage() {
       <SuccessCelebration trigger={celebrating} onComplete={onCelebrationComplete} />
       <Container maxWidth="lg">
         <PageHeader>
-          <PageTitle>Create a Report</PageTitle>
+          <PageTitle>Run a Report</PageTitle>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-            Choose a design, set your date range, and generate a new report.
+            Choose a design, set your date range, and generate a new report run.
           </Typography>
         </PageHeader>
+
+        <ReportGlossaryNotice sx={{ mb: 3 }} />
 
         {!activeConnection && (
           <WarningAlert severity="warning" sx={{ mb: 3 }}>
@@ -777,6 +786,40 @@ export default function ReportsPage() {
               </SectionLabel>
 
               <Stack spacing={3}>
+                <Alert
+                  severity="info"
+                  sx={{ borderRadius: 2 }}
+                  action={(
+                    <Button
+                      size="small"
+                      onClick={() => navigate('/jobs')}
+                      sx={{ textTransform: 'none' }}
+                    >
+                      View Progress
+                    </Button>
+                  )}
+                >
+                  Reports run in the background. Track progress in Report Progress and download finished files in History.
+                </Alert>
+
+                <Box
+                  sx={{
+                    p: 1.5,
+                    borderRadius: 2,
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    bgcolor: alpha(theme.palette.background.paper, 0.6),
+                  }}
+                >
+                  <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                    Outcome preview
+                  </Typography>
+                  <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                    <Chip size="small" label={`Output: ${outputLabel}`} variant="outlined" />
+                    <Chip size="small" label={`Connection: ${connectionLabel}`} variant="outlined" />
+                    <Chip size="small" label={`Dates: ${dateRangeLabel}`} variant="outlined" />
+                  </Stack>
+                </Box>
                 {/* Design Selection */}
                 <StyledFormControl fullWidth>
                   <InputLabel>Report Design</InputLabel>
@@ -1023,6 +1066,16 @@ export default function ReportsPage() {
               {selectedRun && (
                 <>
                   <StyledDivider />
+                  <AiUsageNotice
+                    title="AI summary"
+                    description="Summaries are generated from the selected report run. Review before sharing."
+                    chips={[
+                      { label: 'Source: Selected run', color: 'info', variant: 'outlined' },
+                      { label: 'Confidence: Review required', color: 'warning', variant: 'outlined' },
+                    ]}
+                    dense
+                    sx={{ mb: 2 }}
+                  />
                   <Stack spacing={1.5}>
                     <Stack direction="row" spacing={1} alignItems="center">
                       <AiIcon fontSize="small" />
@@ -1090,7 +1143,7 @@ export default function ReportsPage() {
                 {historyLoading && <StyledLinearProgress />}
                 {!historyLoading && runHistory.length === 0 && (
                   <Typography variant="body2" color="text.secondary">
-                    No recent runs for this template yet.
+                    No recent runs for this design yet.
                   </Typography>
                 )}
                 <Stack spacing={1}>

@@ -1,90 +1,107 @@
-/**
- * Connection Store for managing database connections
- */
-import { create } from 'zustand';
-import { bootstrapState, healthcheckConnection, deleteConnection } from '../api/client';
-import { useAppStore } from '../store/useAppStore';
+import { useCallback, useMemo, useState } from 'react'
+import { bootstrapState, healthcheckConnection, deleteConnection } from '../api/client'
+import { useAppStore } from '../store/useAppStore'
 
-const getAppStore = () => useAppStore.getState();
 const normalizeConnections = (connections) =>
-  Array.isArray(connections) ? connections : [];
+  Array.isArray(connections) ? connections : []
 
-const useConnectionStore = create((set, get) => ({
-  // State
-  connections: normalizeConnections(getAppStore().savedConnections),
-  loading: false,
-  error: null,
+export default function useConnectionStore() {
+  const connections = useAppStore((s) => s.savedConnections)
+  const setSavedConnections = useAppStore((s) => s.setSavedConnections)
+  const updateSavedConnection = useAppStore((s) => s.updateSavedConnection)
+  const removeSavedConnection = useAppStore((s) => s.removeSavedConnection)
 
-  // Actions
-  setConnections: (connections) => {
-    const next = normalizeConnections(connections);
-    getAppStore().setSavedConnections(next);
-    set({ connections: next });
-  },
-  setLoading: (loading) => set({ loading }),
-  setError: (error) => set({ error }),
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
 
-  // Fetch all connections from bootstrap state
-  fetchConnections: async () => {
-    set({ loading: true, error: null });
+  const normalizedConnections = useMemo(
+    () => normalizeConnections(connections),
+    [connections]
+  )
+
+  const setConnections = useCallback((next) => {
+    setSavedConnections(normalizeConnections(next))
+  }, [setSavedConnections])
+
+  const fetchConnections = useCallback(async () => {
+    setLoading(true)
+    setError(null)
     try {
-      const data = await bootstrapState();
-      const connections = normalizeConnections(data?.connections);
-      getAppStore().setSavedConnections(connections);
-      set({ connections, loading: false });
-      return connections;
+      const data = await bootstrapState()
+      const next = normalizeConnections(data?.connections)
+      setSavedConnections(next)
+      setLoading(false)
+      return next
     } catch (err) {
-      set({ error: err.message, loading: false });
-      return [];
+      setError(err.message || 'Failed to load connections')
+      setLoading(false)
+      return []
     }
-  },
+  }, [setSavedConnections])
 
-  // Health check a connection
-  healthCheck: async (connectionId) => {
+  const healthCheck = useCallback(async (connectionId) => {
     try {
-      const result = await healthcheckConnection(connectionId);
-      getAppStore().updateSavedConnection(connectionId, {
+      const result = await healthcheckConnection(connectionId)
+      updateSavedConnection(connectionId, {
         lastLatencyMs: result.latency_ms,
         status: 'connected',
-      });
-      return result;
+      })
+      return result
     } catch (err) {
-      getAppStore().updateSavedConnection(connectionId, { status: 'error' });
-      throw err;
+      updateSavedConnection(connectionId, { status: 'error' })
+      throw err
     }
-  },
+  }, [updateSavedConnection])
 
-  // Remove a connection
-  removeConnection: async (connectionId) => {
-    set({ loading: true, error: null });
+  const removeConnection = useCallback(async (connectionId) => {
+    setLoading(true)
+    setError(null)
     try {
-      await deleteConnection(connectionId);
-      getAppStore().removeSavedConnection(connectionId);
-      set({ loading: false });
-      return true;
+      await deleteConnection(connectionId)
+      removeSavedConnection(connectionId)
+      setLoading(false)
+      return true
     } catch (err) {
-      set({ error: err.message, loading: false });
-      return false;
+      setError(err.message || 'Failed to delete connection')
+      setLoading(false)
+      return false
     }
-  },
+  }, [removeSavedConnection])
 
-  // Get connection by ID
-  getConnection: (connectionId) => {
-    return get().connections.find((conn) => conn.id === connectionId) || null;
-  },
+  const getConnection = useCallback(
+    (connectionId) =>
+      normalizedConnections.find((conn) => conn.id === connectionId) || null,
+    [normalizedConnections]
+  )
 
-  // Reset state
-  reset: () => {
-    getAppStore().setSavedConnections([]);
-    set({ connections: [], error: null });
-  },
-}));
+  const reset = useCallback(() => {
+    setSavedConnections([])
+    setError(null)
+  }, [setSavedConnections])
 
-useAppStore.subscribe(
-  (state) => state.savedConnections,
-  (savedConnections) => {
-    useConnectionStore.setState({ connections: normalizeConnections(savedConnections) });
-  }
-);
-
-export default useConnectionStore;
+  return useMemo(() => ({
+    connections: normalizedConnections,
+    loading,
+    error,
+    setConnections,
+    setLoading,
+    setError,
+    fetchConnections,
+    healthCheck,
+    removeConnection,
+    getConnection,
+    reset,
+  }), [
+    normalizedConnections,
+    loading,
+    error,
+    setConnections,
+    setLoading,
+    setError,
+    fetchConnections,
+    healthCheck,
+    removeConnection,
+    getConnection,
+    reset,
+  ])
+}

@@ -55,6 +55,7 @@ import EditorSkeleton from '../components/EditorSkeleton.jsx'
 import KeyboardShortcutsPanel from '../components/KeyboardShortcutsPanel.jsx'
 import DraftRecoveryBanner, { AutoSaveIndicator } from '../components/DraftRecoveryBanner.jsx'
 import ConfirmModal from '../../../ui/Modal/ConfirmModal'
+import AiUsageNotice from '../../../components/ai/AiUsageNotice.jsx'
 
 // Hooks
 import { useEditorKeyboardShortcuts, getShortcutDisplay } from '../hooks/useEditorKeyboardShortcuts.js'
@@ -373,9 +374,9 @@ export default function TemplateEditor() {
           >
             {breadcrumbLabel}
           </Link>
-          <Typography color="text.primary" fontWeight={600}>
-            Edit Template
-          </Typography>
+            <Typography color="text.primary" fontWeight={600}>
+              Edit Design
+            </Typography>
         </Breadcrumbs>
       </Box>
 
@@ -385,7 +386,7 @@ export default function TemplateEditor() {
           <Box sx={{ minWidth: 0, flex: 1 }}>
             <Stack direction="row" spacing={1.5} alignItems="center" flexWrap="wrap">
               <Typography variant="h5" fontWeight={700}>
-                {template?.name || 'Template Editor'}
+                {template?.name || 'Design Editor'}
               </Typography>
               <AutoSaveIndicator lastSaved={lastSaved} dirty={dirty} />
             </Stack>
@@ -452,6 +453,18 @@ export default function TemplateEditor() {
             </Button>
           </Stack>
         </Stack>
+
+        <AiUsageNotice
+          dense
+          title="AI editing"
+          description="AI edits apply to this report design. Review changes before saving."
+          chips={[
+            { label: 'Source: Design + instructions', color: 'info', variant: 'outlined' },
+            { label: 'Confidence: Review required', color: 'warning', variant: 'outlined' },
+            { label: 'Undo available', color: 'success', variant: 'outlined' },
+          ]}
+          sx={{ mb: 1 }}
+        />
 
         {/* Draft recovery banner */}
         <DraftRecoveryBanner
@@ -613,9 +626,10 @@ export default function TemplateEditor() {
 
                     {/* HTML Editor */}
                     <TextField
-                      label="Template HTML"
+                      label="Design HTML"
                       value={html}
                       onChange={(e) => setHtml(e.target.value)}
+                      inputProps={{ 'aria-label': 'Template HTML' }}
                       multiline
                       minRows={10}
                       maxRows={24}
@@ -784,13 +798,12 @@ export default function TemplateEditor() {
           if (dirty) {
             saveDraft(html, instructions)
           }
-          setHtml(initialHtml)
           setModeSwitchConfirm({ open: false, nextMode: null })
-          setEditMode('chat')
-          toast.show('Draft saved. You can restore it when returning to manual edit mode.', 'info')
+          setEditMode(modeSwitchConfirm.nextMode || 'chat')
+          toast.show('Draft saved. Your current edits are still available in chat and manual modes.', 'info')
         }}
         title="Switch to Chat Mode"
-        message="Switching to chat mode discards unsaved manual edits in this view. We'll save a draft so you can restore it later."
+        message="Switching to chat mode keeps your current edits and saves a draft for manual mode."
         confirmLabel="Switch"
         severity="warning"
       />

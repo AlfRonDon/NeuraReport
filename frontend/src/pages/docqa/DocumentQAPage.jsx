@@ -67,6 +67,7 @@ import DisabledTooltip, { DisabledReasons } from '../../components/ux/DisabledTo
 import { useOperationHistory, OperationType } from '../../components/ux/OperationHistoryProvider'
 import { ValidatedTextField, ValidationRules, CharacterCounter } from '../../components/ux/InlineValidator'
 import { ContentSkeleton } from '../../components/feedback/LoadingState'
+import AiUsageNotice from '../../components/ai/AiUsageNotice'
 // UX Governance - Enforced interaction API
 import {
   useInteraction,
@@ -592,6 +593,7 @@ export default function DocumentQAPage() {
   const toast = useToast()
   const [initialLoading, setInitialLoading] = useState(true)
   const inputRef = useRef(null)
+  const docCount = currentSession?.documents?.length || 0
   // UX Governance: Enforced interaction API - ALL user actions flow through this
   const { execute } = useInteraction()
   // UX: Confirmed action for irreversible delete operations
@@ -1052,6 +1054,19 @@ export default function DocumentQAPage() {
               )}
             </ChatHeader>
 
+            <Box sx={{ px: 3, pt: 2 }}>
+              <AiUsageNotice
+                title="AI answers"
+                description="Responses are generated from documents in this session. Review citations before sharing."
+                chips={[
+                  { label: `Source: ${docCount} document${docCount === 1 ? '' : 's'}`, color: 'info', variant: 'outlined' },
+                  { label: 'Confidence: Verify citations', color: 'warning', variant: 'outlined' },
+                  { label: 'Reversible: No source changes', color: 'success', variant: 'outlined' },
+                ]}
+                dense
+              />
+            </Box>
+
             {/* Messages */}
             <MessagesContainer>
               {messages.length === 0 ? (
@@ -1357,13 +1372,6 @@ export default function DocumentQAPage() {
                   </SendButton>
                 </DisabledTooltip>
               </InputContainer>
-              <Typography
-                variant="caption"
-                color="text.secondary"
-                sx={{ display: 'block', textAlign: 'center', mt: 1.5, opacity: 0.7 }}
-              >
-                AI responses are generated based on your uploaded documents
-              </Typography>
             </InputArea>
           </>
         ) : (

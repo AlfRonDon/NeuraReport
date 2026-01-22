@@ -49,6 +49,14 @@ export const IntentStatus = {
 let intentCounter = 0
 let sessionId = `session_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
 
+const generateIdempotencyKey = () => {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID()
+  }
+  const rand = Math.random().toString(36).slice(2)
+  return `idem-${Date.now().toString(36)}-${rand}`
+}
+
 export function createIntent(config) {
   const id = `intent_${Date.now()}_${++intentCounter}`
 
@@ -135,7 +143,7 @@ export function IntentProvider({ children, onIntentChange, maxHistory = 100 }) {
     })
 
     // Send update to backend
-    sendIntentUpdateToBackend(intentId, status, result).catch((err) => {
+    sendIntentUpdateToBackend(updatedIntent, status, result).catch((err) => {
       console.warn('Failed to update intent on backend:', err)
     })
   }, [onIntentChange])
@@ -243,11 +251,16 @@ async function sendIntentToBackend(intent) {
   // Send intent to backend for audit trail
   // This is async and non-blocking - failures don't affect UI
   try {
+    const idemKey = generateIdempotencyKey()
     const response = await fetch('/api/audit/intent', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Idempotency-Key': idemKey,
+        'X-Idempotency-Key': idemKey,
         'X-Intent-Id': intent.id,
+        'X-Intent-Type': intent.type,
+        'X-Intent-Label': encodeURIComponent(intent.label || ''),
         'X-Correlation-Id': intent.correlationId,
         'X-Session-Id': intent.sessionId,
       },
@@ -263,12 +276,20 @@ async function sendIntentToBackend(intent) {
   }
 }
 
-async function sendIntentUpdateToBackend(intentId, status, result) {
+async function sendIntentUpdateToBackend(intent, status, result) {
   try {
-    const response = await fetch(`/api/audit/intent/${intentId}`, {
+    const idemKey = generateIdempotencyKey()
+    const response = await fetch(`/api/audit/intent/${intent.id}`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
+        'Idempotency-Key': idemKey,
+        'X-Idempotency-Key': idemKey,
+        'X-Intent-Id': intent.id,
+        'X-Intent-Type': intent.type,
+        'X-Intent-Label': encodeURIComponent(intent.label || ''),
+        'X-Correlation-Id': intent.correlationId,
+        'X-Session-Id': intent.sessionId,
       },
       body: JSON.stringify({ status, result }),
     })

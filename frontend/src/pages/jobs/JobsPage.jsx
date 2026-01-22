@@ -366,6 +366,7 @@ export default function JobsPage() {
     () => readPreferences().autoRefreshJobs ?? true
   )
   const pollIntervalRef = useRef(null)
+  const bulkDeleteUndoRef = useRef(null)
   const isMountedRef = useRef(true)
   const isUserActionInProgressRef = useRef(false)
   const abortControllerRef = useRef(null)
@@ -569,29 +570,74 @@ export default function JobsPage() {
       setBulkDeleteOpen(false)
       return
     }
-    isUserActionInProgressRef.current = true
-    setBulkActionLoading(true)
-    try {
-      const result = await api.bulkDeleteJobs(selectedIds)
-      const deletedCount = result?.deletedCount ?? result?.deleted?.length ?? 0
-      const failedCount = result?.failedCount ?? result?.failed?.length ?? 0
-      if (failedCount > 0) {
-        toast.show(
-          `Deleted ${deletedCount} job${deletedCount !== 1 ? 's' : ''}, ${failedCount} failed`,
-          'warning'
-        )
-      } else {
-        toast.show(`Deleted ${deletedCount} job${deletedCount !== 1 ? 's' : ''}`, 'success')
-      }
-    } catch (err) {
-      toast.show(err.message || 'Failed to delete jobs', 'error')
-    } finally {
-      setBulkActionLoading(false)
+    const idsToDelete = [...selectedIds]
+    const removedJobs = jobs.filter((job) => idsToDelete.includes(job.id))
+    if (!removedJobs.length) {
       setBulkDeleteOpen(false)
-      isUserActionInProgressRef.current = false
-      fetchJobs(true)
+      return
     }
-  }, [selectedIds, toast, fetchJobs])
+
+    setBulkDeleteOpen(false)
+    setSelectedIds([])
+
+    if (bulkDeleteUndoRef.current?.timeoutId) {
+      clearTimeout(bulkDeleteUndoRef.current.timeoutId)
+      bulkDeleteUndoRef.current = null
+    }
+
+    isUserActionInProgressRef.current = true
+    setJobs((prev) => prev.filter((job) => !idsToDelete.includes(job.id)))
+
+    let undone = false
+    const timeoutId = setTimeout(async () => {
+      if (undone) return
+      setBulkActionLoading(true)
+      try {
+        const result = await api.bulkDeleteJobs(idsToDelete)
+        const deletedCount = result?.deletedCount ?? result?.deleted?.length ?? 0
+        const failedCount = result?.failedCount ?? result?.failed?.length ?? 0
+        if (failedCount > 0) {
+          toast.show(
+            `Removed ${deletedCount} job${deletedCount !== 1 ? 's' : ''}, ${failedCount} failed`,
+            'warning'
+          )
+        } else {
+          toast.show(`Removed ${deletedCount} job${deletedCount !== 1 ? 's' : ''}`, 'success')
+        }
+      } catch (err) {
+        setJobs((prev) => {
+          const existing = new Set(prev.map((job) => job.id))
+          const restored = removedJobs.filter((job) => !existing.has(job.id))
+          return restored.length ? [...prev, ...restored] : prev
+        })
+        toast.show(err.message || 'Failed to delete jobs', 'error')
+      } finally {
+        setBulkActionLoading(false)
+        isUserActionInProgressRef.current = false
+        bulkDeleteUndoRef.current = null
+        fetchJobs(true)
+      }
+    }, 5000)
+
+    bulkDeleteUndoRef.current = { timeoutId, ids: idsToDelete, jobs: removedJobs }
+
+    toast.showWithUndo(
+      `Removed ${idsToDelete.length} job${idsToDelete.length !== 1 ? 's' : ''} from history`,
+      () => {
+        undone = true
+        clearTimeout(timeoutId)
+        bulkDeleteUndoRef.current = null
+        setJobs((prev) => {
+          const existing = new Set(prev.map((job) => job.id))
+          const restored = removedJobs.filter((job) => !existing.has(job.id))
+          return restored.length ? [...prev, ...restored] : prev
+        })
+        isUserActionInProgressRef.current = false
+        toast.show('Jobs restored', 'success')
+      },
+      { severity: 'info' }
+    )
+  }, [selectedIds, jobs, toast, fetchJobs])
 
   const columns = useMemo(() => [
     {
@@ -748,6 +794,10 @@ export default function JobsPage() {
 
   return (
     <PageContainer>
+      <Alert severity="info" sx={{ mb: 2, borderRadius: 2 }}>
+        Jobs track background report runs. Removing a job only clears it from this list; downloaded files remain in
+        History.
+      </Alert>
       <DataTable
         title="Report Progress"
         subtitle={activeJobsCount > 0 ? `${activeJobsCount} report${activeJobsCount > 1 ? 's' : ''} generating` : 'All reports complete'}
@@ -855,7 +905,7 @@ export default function JobsPage() {
           const namesList = names.join(', ')
           const remaining = selectedIds.length - 3
           const suffix = remaining > 0 ? ` and ${remaining} more` : ''
-          return `Delete ${selectedIds.length} job${selectedIds.length !== 1 ? 's' : ''} (${namesList}${suffix}) from history? This action cannot be undone.`
+          return `Remove ${selectedIds.length} job${selectedIds.length !== 1 ? 's' : ''} (${namesList}${suffix}) from history? You can undo within a few seconds. Downloaded files are not affected.`
         })()}
         confirmLabel="Delete Jobs"
         severity="error"

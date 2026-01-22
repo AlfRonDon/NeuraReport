@@ -57,6 +57,7 @@ import InsightsIcon from '@mui/icons-material/Insights'
 import { useAppStore } from '../store/useAppStore'
 import { useToast } from '../components/ToastProvider'
 import SuccessCelebration, { useCelebration } from '../components/SuccessCelebration'
+import ReportGlossaryNotice from '../components/ux/ReportGlossaryNotice.jsx'
 import * as api from '../api/client'
 import * as recommendationsApi from '../api/recommendations'
 
@@ -528,7 +529,7 @@ export default function DashboardPage() {
       const topTpls = templates.slice(0, 4).map((t) => ({
         id: t.id,
         name: t.name,
-        description: t.description || `${t.kind?.toUpperCase() || 'PDF'} template`,
+        description: t.description || `${t.kind?.toUpperCase() || 'PDF'} design`,
         kind: t.kind,
         matchScore: 0.85,
       }))
@@ -669,6 +670,8 @@ export default function DashboardPage() {
         </Stack>
       </Stack>
 
+      <ReportGlossaryNotice dense showChips={false} sx={{ mb: 3 }} />
+
       {/* ========== ONBOARDING ========== */}
       <Collapse in={needsOnboarding}>
         <GlassCard
@@ -738,10 +741,10 @@ export default function DashboardPage() {
                   )}
                   <Box sx={{ flex: 1 }}>
                     <Typography variant="subtitle2" fontWeight={600}>
-                      Add a report template
+                      Add a report design
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
-                      Upload a PDF or Excel template that shows how reports should look
+                      Upload a PDF or Excel design that shows how reports should look
                     </Typography>
                   </Box>
                   {templates.length > 0 && (
@@ -764,7 +767,7 @@ export default function DashboardPage() {
                       Create your first report
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
-                      Generate a report using your data and template
+                      Generate a report using your data and design
                     </Typography>
                   </Box>
                   {(metrics.jobsToday ?? 0) > 0 && (

@@ -29,6 +29,7 @@ import InfoTooltip from '../../components/common/InfoTooltip.jsx'
 import TOOLTIP_COPY from '../../content/tooltipCopy.jsx'
 import TemplatePicker from '../../features/generate/components/TemplatePicker.jsx'
 import GenerateAndDownload from '../../features/generate/components/GenerateAndDownload.jsx'
+import ReportGlossaryNotice from '../../components/ux/ReportGlossaryNotice.jsx'
 import {
   ALL_OPTION,
   SCHEDULE_FREQUENCY_OPTIONS,
@@ -155,6 +156,9 @@ export default function TemplatesPane() {
   const [editingSchedule, setEditingSchedule] = useState(null)
   const [editScheduleFields, setEditScheduleFields] = useState({})
   const [scheduleUpdating, setScheduleUpdating] = useState(false)
+  const scheduleDeleteUndoRef = useRef(null)
+  const [deleteScheduleConfirmOpen, setDeleteScheduleConfirmOpen] = useState(false)
+  const [scheduleToDelete, setScheduleToDelete] = useState(null)
   const [generation, setGeneration] = useState({ items: [] })
   const queuedJobs = useMemo(
     () => generation.items.filter((item) => item.status === 'queued'),
@@ -406,7 +410,7 @@ export default function TemplatesPane() {
   }, [clearDiscoveryResults, setFinding, selected, start?.valueOf(), end?.valueOf()])
 
   const onFind = async () => {
-    if (!selectedTemplates.length || !start || !end) return toast.show('Select a template and choose a start/end date.', 'warning')
+    if (!selectedTemplates.length || !start || !end) return toast.show('Select a design and choose a start/end date.', 'warning')
     const startSql = toSqlFromDayjs(start)
     const endSql = toSqlFromDayjs(end)
     if (!startSql || !endSql) return toast.show('Provide a valid start and end date.', 'warning')
@@ -599,7 +603,7 @@ export default function TemplatesPane() {
     (results[tplId]?.batches || []).filter(b => b.selected).map(b => b.id)
 
   const onGenerate = async () => {
-    if (!selectedTemplates.length) return toast.show('Select at least one template.', 'warning')
+    if (!selectedTemplates.length) return toast.show('Select at least one design.', 'warning')
     if (!start || !end) return toast.show('Choose a start and end date before running.', 'warning')
     const startSql = toSqlFromDayjs(start)
     const endSql = toSqlFromDayjs(end)
@@ -675,7 +679,7 @@ export default function TemplatesPane() {
 
   const handleCreateSchedule = async () => {
     if (selectedTemplates.length !== 1) {
-      toast.show('Select exactly one template to create a schedule.', 'warning')
+      toast.show('Select exactly one design to create a schedule.', 'warning')
       return
     }
     if (!start || !end) {
@@ -721,19 +725,79 @@ export default function TemplatesPane() {
     }
   }
 
-  const handleDeleteSchedule = async (scheduleId) => {
-    if (!scheduleId) return
-    setDeletingScheduleId(scheduleId)
-    try {
-      await deleteSchedule(scheduleId)
-      toast.show('Schedule removed.', 'success')
-      refreshSchedules()
-    } catch (e) {
-      toast.show(String(e), 'error')
-    } finally {
-      setDeletingScheduleId(null)
+  const handleDeleteScheduleRequest = useCallback((schedule) => {
+    if (!schedule?.id) return
+    setScheduleToDelete(schedule)
+    setDeleteScheduleConfirmOpen(true)
+  }, [])
+
+  const handleDeleteScheduleConfirm = useCallback(async () => {
+    if (!scheduleToDelete?.id) {
+      setDeleteScheduleConfirmOpen(false)
+      return
     }
-  }
+    const schedule = scheduleToDelete
+    const scheduleId = schedule.id
+    const scheduleIndex = schedules.findIndex((item) => item.id === scheduleId)
+    setDeleteScheduleConfirmOpen(false)
+    setScheduleToDelete(null)
+
+    if (scheduleDeleteUndoRef.current?.timeoutId) {
+      clearTimeout(scheduleDeleteUndoRef.current.timeoutId)
+      scheduleDeleteUndoRef.current = null
+    }
+
+    setSchedules((prev) => prev.filter((item) => item.id !== scheduleId))
+
+    let undone = false
+    const timeoutId = setTimeout(async () => {
+      if (undone) return
+      setDeletingScheduleId(scheduleId)
+      try {
+        await deleteSchedule(scheduleId)
+        toast.show('Schedule removed. Future runs stopped; past downloads remain.', 'success')
+        refreshSchedules()
+      } catch (e) {
+        setSchedules((prev) => {
+          if (prev.some((item) => item.id === scheduleId)) return prev
+          const next = [...prev]
+          if (scheduleIndex >= 0 && scheduleIndex <= next.length) {
+            next.splice(scheduleIndex, 0, schedule)
+          } else {
+            next.push(schedule)
+          }
+          return next
+        })
+        toast.show(String(e), 'error')
+      } finally {
+        setDeletingScheduleId(null)
+        scheduleDeleteUndoRef.current = null
+      }
+    }, 5000)
+
+    scheduleDeleteUndoRef.current = { timeoutId, schedule }
+
+    toast.showWithUndo(
+      `Schedule "${schedule.name || schedule.template_name || schedule.template_id}" removed`,
+      () => {
+        undone = true
+        clearTimeout(timeoutId)
+        scheduleDeleteUndoRef.current = null
+        setSchedules((prev) => {
+          if (prev.some((item) => item.id === scheduleId)) return prev
+          const next = [...prev]
+          if (scheduleIndex >= 0 && scheduleIndex <= next.length) {
+            next.splice(scheduleIndex, 0, schedule)
+          } else {
+            next.push(schedule)
+          }
+          return next
+        })
+        toast.show('Schedule restored', 'success')
+      },
+      { severity: 'info' }
+    )
+  }, [scheduleToDelete, schedules, toast, refreshSchedules])
 
   const handleOpenEditSchedule = (schedule) => {
     setEditingSchedule(schedule)
@@ -798,7 +862,7 @@ export default function TemplatesPane() {
             <Chip
               size="small"
               icon={<CheckRoundedIcon />}
-              label={`${selected.length} template${selected.length !== 1 ? 's' : ''}`}
+              label={`${selected.length} design${selected.length !== 1 ? 's' : ''}`}
               color={selected.length > 0 ? 'primary' : 'default'}
               variant={selected.length > 0 ? 'filled' : 'outlined'}
             />
@@ -844,6 +908,10 @@ export default function TemplatesPane() {
         </Stack>
       </Surface>
 
+      <Box sx={{ mt: 2 }}>
+        <ReportGlossaryNotice dense showChips={false} />
+      </Box>
+
       {/* Tabbed Interface */}
       <Surface sx={{ p: 0 }}>
         <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
@@ -864,7 +932,7 @@ export default function TemplatesPane() {
             <Tab
               icon={<Badge badgeContent={selected.length} color="primary"><CheckRoundedIcon /></Badge>}
               iconPosition="start"
-              label="Templates"
+              label="Designs"
             />
             <Tab
               icon={<TuneIcon />}
@@ -879,7 +947,7 @@ export default function TemplatesPane() {
           </Tabs>
         </Box>
 
-        {/* Tab 0: Templates */}
+        {/* Tab 0: Designs */}
         <TabPanel value={activeTab} index={0}>
           <Box sx={{ px: 2, pb: 2 }}>
             <TemplatePicker
@@ -901,6 +969,9 @@ export default function TemplatesPane() {
         <TabPanel value={activeTab} index={1}>
           <Box sx={{ px: 2, pb: 2 }}>
             <Stack spacing={2}>
+              <Alert severity="info" sx={{ borderRadius: 2 }}>
+                Runs start as background jobs. Track progress in Jobs, and download outputs from History.
+              </Alert>
               {queuedJobs.length > 0 && (
                 <Alert
                   severity="info"
@@ -988,6 +1059,9 @@ export default function TemplatesPane() {
         <TabPanel value={activeTab} index={2}>
           <Box sx={{ px: 2, pb: 2 }}>
             <Stack spacing={2}>
+              <Alert severity="info" sx={{ borderRadius: 2 }}>
+                Schedules create future report runs. Deleting a schedule stops future runs and does not remove past downloads.
+              </Alert>
               {/* Create Schedule */}
               <Paper variant="outlined" sx={{ p: 2 }}>
                 <Typography variant="subtitle2" fontWeight={600} gutterBottom>
@@ -1028,7 +1102,7 @@ export default function TemplatesPane() {
                   </Stack>
                   {!canSchedule && (
                     <Typography variant="caption" color="text.secondary">
-                      Select exactly one template, set a date range, and connect to a database to create a schedule.
+                      Select exactly one design, set a date range, and connect to a database to create a schedule.
                     </Typography>
                   )}
                 </Stack>
@@ -1083,7 +1157,7 @@ export default function TemplatesPane() {
                               size="small"
                               color="error"
                               variant="outlined"
-                              onClick={() => handleDeleteSchedule(schedule.id)}
+                              onClick={() => handleDeleteScheduleRequest(schedule)}
                               disabled={deletingScheduleId === schedule.id}
                             >
                               {deletingScheduleId === schedule.id ? '...' : 'Delete'}
@@ -1145,6 +1219,43 @@ export default function TemplatesPane() {
           </Button>
           <Button onClick={handleUpdateSchedule} variant="contained" disabled={scheduleUpdating}>
             {scheduleUpdating ? 'Saving...' : 'Save'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={deleteScheduleConfirmOpen}
+        onClose={() => {
+          setDeleteScheduleConfirmOpen(false)
+          setScheduleToDelete(null)
+        }}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle>Delete Schedule</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+            Delete "{scheduleToDelete?.name || scheduleToDelete?.template_name || scheduleToDelete?.template_id}"?
+            You can undo within a few seconds. This stops future runs; past downloads remain in History.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => {
+              setDeleteScheduleConfirmOpen(false)
+              setScheduleToDelete(null)
+            }}
+            disabled={Boolean(deletingScheduleId)}
+          >
+            Cancel
+          </Button>
+          <Button
+            color="error"
+            variant="contained"
+            onClick={handleDeleteScheduleConfirm}
+            disabled={Boolean(deletingScheduleId)}
+          >
+            Delete
           </Button>
         </DialogActions>
       </Dialog>

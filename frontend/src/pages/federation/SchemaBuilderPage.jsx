@@ -45,6 +45,7 @@ import { useConnectionStore } from '../../stores';
 import ConfirmModal from '../../ui/Modal/ConfirmModal';
 import { getWriteOperation } from '../../utils/sqlSafety';
 import { useConfirmedAction } from '../../components/ux/governance';
+import AiUsageNotice from '../../components/ai/AiUsageNotice';
 
 export default function SchemaBuilderPage() {
   const {
@@ -176,6 +177,18 @@ export default function SchemaBuilderPage() {
           {error}
         </Alert>
       )}
+
+      <AiUsageNotice
+        title="AI join suggestions"
+        description="Join suggestions are generated from schema metadata. Review before running cross-database queries."
+        chips={[
+          { label: 'Source: Selected schemas', color: 'info', variant: 'outlined' },
+          { label: 'Confidence: Provided per suggestion', color: 'warning', variant: 'outlined' },
+          { label: 'Read-only recommended', color: 'success', variant: 'outlined' },
+        ]}
+        dense
+        sx={{ mb: 2 }}
+      />
 
       <Grid container spacing={3}>
         {/* Schema List */}
