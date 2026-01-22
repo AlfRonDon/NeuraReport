@@ -662,13 +662,43 @@ async def export_to_excel(
 
 async def export_to_pdf(result: EnhancedAnalysisResult) -> bytes:
     """Export analysis result to PDF format."""
-    # For PDF, we'll generate HTML and indicate it should be converted
-    # In a full implementation, you'd use a library like weasyprint or reportlab
     html_content = export_to_html(result)
 
-    # Return HTML bytes with PDF indicator
-    # The frontend or a separate service would handle the actual PDF conversion
-    return html_content.encode('utf-8')
+    # Try WeasyPrint first (HTML -> PDF)
+    try:
+        from weasyprint import HTML
+        return HTML(string=html_content).write_pdf()
+    except ImportError:
+        pass
+    except Exception as exc:
+        logger.warning(f"WeasyPrint PDF export failed: {exc}")
+
+    # Fallback to ReportLab if available
+    try:
+        import re
+        from io import BytesIO
+        from reportlab.lib.pagesizes import letter
+        from reportlab.pdfgen import canvas
+
+        # Strip HTML tags for a basic text-only PDF
+        text = re.sub(r"<[^>]+>", "", html_content)
+        buffer = BytesIO()
+        pdf = canvas.Canvas(buffer, pagesize=letter)
+        width, height = letter
+        y = height - 72
+        for line in text.splitlines():
+            if y < 72:
+                pdf.showPage()
+                y = height - 72
+            pdf.drawString(72, y, line[:120])
+            y -= 14
+        pdf.save()
+        buffer.seek(0)
+        return buffer.read()
+    except ImportError:
+        raise RuntimeError("PDF export requires weasyprint or reportlab to be installed.")
+    except Exception as exc:
+        raise RuntimeError(f"PDF export failed: {exc}") from exc
 
 
 # =============================================================================

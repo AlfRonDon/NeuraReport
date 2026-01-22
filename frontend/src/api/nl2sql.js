@@ -31,12 +31,13 @@ export async function generateSQL({ question, connectionId, tables, context }) {
  * @param {number} [params.offset=0] - Row offset
  * @returns {Promise<Object>} Query results
  */
-export async function executeQuery({ sql, connectionId, limit = 100, offset = 0 }) {
+export async function executeQuery({ sql, connectionId, limit = 100, offset = 0, includeTotal = false }) {
   const { data } = await api.post('/nl2sql/execute', {
     sql,
     connection_id: connectionId,
     limit,
     offset,
+    include_total: includeTotal,
   })
   return data
 }

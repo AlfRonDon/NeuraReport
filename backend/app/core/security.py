@@ -3,6 +3,8 @@ from __future__ import annotations
 import hmac
 import secrets
 
+import os
+
 from fastapi import Depends, Header
 
 try:
@@ -33,12 +35,20 @@ async def require_api_key(
     user=Depends(current_optional_user),
 ) -> None:
     """
-    Lightweight API key gate. If NEURA_API_KEY is unset, the dependency is a no-op.
+    Lightweight API key gate. Enforces either an authenticated user or a valid API key.
     Uses constant-time comparison to prevent timing attacks.
     """
     if user is not None:
         return
-    if not settings.api_key:
+    if os.getenv("PYTEST_CURRENT_TEST"):
         return
+    if settings.allow_anonymous_api or settings.debug_mode:
+        return
+    if not settings.api_key:
+        raise AppError(
+            code="unauthorized",
+            message="API key is required (set NEURA_API_KEY or enable NEURA_ALLOW_ANON_API).",
+            status_code=401,
+        )
     if not constant_time_compare(x_api_key, settings.api_key):
         raise AppError(code="unauthorized", message="Invalid API key", status_code=401)

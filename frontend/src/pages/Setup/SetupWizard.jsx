@@ -37,18 +37,18 @@ const clearWizardState = () => {
 const WIZARD_STEPS = [
   {
     key: 'connection',
-    label: 'Connect Database',
-    description: 'Select or create a database connection',
+    label: 'Connect Data Source',
+    description: 'Select or create a data connection',
   },
   {
     key: 'template',
-    label: 'Upload Template',
-    description: 'Upload a PDF or Excel template',
+    label: 'Upload Design',
+    description: 'Upload a PDF or Excel report design',
   },
   {
     key: 'mapping',
-    label: 'Configure Mapping',
-    description: 'Map template fields to database columns',
+    label: 'Map Fields',
+    description: 'Match design fields to data columns',
   },
 ]
 
@@ -110,7 +110,7 @@ export default function SetupWizard() {
 
   const handleComplete = useCallback(() => {
     clearWizardState()
-    toast.show('Template setup complete!', 'success')
+    toast.show('Report design setup complete!', 'success')
     navigate('/reports')
   }, [navigate, toast])
 
@@ -163,8 +163,8 @@ export default function SetupWizard() {
 
   return (
     <WizardLayout
-      title="Set Up Report Template"
-      subtitle="Connect your data source and configure your report template"
+      title="Set Up Report Design"
+      subtitle="Connect your data source and configure your report design"
       steps={WIZARD_STEPS}
       currentStep={currentStep}
       onNext={handleNext}

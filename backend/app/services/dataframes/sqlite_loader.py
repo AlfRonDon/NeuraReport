@@ -207,6 +207,9 @@ def _rewrite_sql(sql: str) -> str:
     return updated
 
 
+_MISSING_TABLE_RE = re.compile(r'(?:Table|Relation) with name "?(?P<table>[^"\s]+)"? does not exist', re.I)
+
+
 class DuckDBDataFrameQuery:
     """
     Execute SQL statements against in-memory pandas DataFrames by delegating
@@ -214,8 +217,10 @@ class DuckDBDataFrameQuery:
     avoiding a live SQLite database dependency.
     """
 
-    def __init__(self, frames: Mapping[str, pd.DataFrame]):
+    def __init__(self, frames: Mapping[str, pd.DataFrame], loader: SQLiteDataFrameLoader | None = None):
         self._conn = duckdb.connect(database=":memory:")
+        self._loader = loader
+        self._registered: set[str] = set()
         self._register_frames(frames)
         self._register_sqlite_macros()
 
@@ -223,7 +228,29 @@ class DuckDBDataFrameQuery:
         for name, frame in frames.items():
             if frame is None:
                 continue
-            self._conn.register(name, frame)
+            self._register_frame(name, frame)
+
+    def _register_frame(self, name: str, frame: pd.DataFrame) -> None:
+        if not name or name in self._registered:
+            return
+        self._conn.register(name, frame)
+        self._registered.add(name)
+
+    def _try_register_missing_table(self, exc: Exception) -> bool:
+        if self._loader is None:
+            return False
+        match = _MISSING_TABLE_RE.search(str(exc))
+        if not match:
+            return False
+        table = match.group("table")
+        if not table or table in self._registered:
+            return False
+        try:
+            frame = self._loader.frame(table)
+        except Exception:
+            return False
+        self._register_frame(table, frame)
+        return True
 
     def _register_sqlite_macros(self) -> None:
         """Install lightweight SQLite compatibility macros for DuckDB execution."""
@@ -258,12 +285,22 @@ class DuckDBDataFrameQuery:
     def execute(self, sql: str, params: Any | None = None) -> pd.DataFrame:
         prepared_sql, ordered_params = _normalize_params(sql, params)
         rewritten_sql = _rewrite_sql(prepared_sql)
-        try:
-            result = self._conn.execute(rewritten_sql, ordered_params)
-            df = result.fetchdf()
-        except duckdb.Error as exc:  # pragma: no cover - surfaced to caller
-            raise RuntimeError(f"DuckDB execution failed: {exc}") from exc
-        return df
+        attempts = 0
+        while True:
+            try:
+                result = self._conn.execute(rewritten_sql, ordered_params)
+                return result.fetchdf()
+            except duckdb.Error as exc:  # pragma: no cover - surfaced to caller
+                if attempts < 5 and self._try_register_missing_table(exc):
+                    attempts += 1
+                    continue
+                raise RuntimeError(f"DuckDB execution failed: {exc}") from exc
 
     def close(self) -> None:
         self._conn.close()
+
+
+def eager_load_enabled() -> bool:
+    """Return True if DataFrame eager loading is enabled."""
+    flag = os.getenv("NEURA_DATAFRAME_EAGER_LOAD", "false")
+    return str(flag).strip().lower() in {"1", "true", "yes"}

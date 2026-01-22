@@ -93,13 +93,16 @@ describe('TemplatesPane scheduling flows', () => {
 
     renderPane()
 
-    await screen.findByText(/No schedules yet/i)
-
     await userEvent.click(screen.getByRole('button', { name: /select template/i }))
+
+    await userEvent.click(screen.getByRole('tab', { name: /configure/i }))
     await userEvent.click(screen.getByRole('button', { name: /set start/i }))
     await userEvent.click(screen.getByRole('button', { name: /set end/i }))
 
-    const scheduleButton = screen.getByRole('button', { name: /schedule run/i })
+    await userEvent.click(screen.getByRole('tab', { name: /schedules/i }))
+    await screen.findByText(/No schedules yet/i)
+
+    const scheduleButton = screen.getByRole('button', { name: /create schedule/i })
     expect(scheduleButton).not.toBeDisabled()
     await userEvent.click(scheduleButton)
 
@@ -116,6 +119,6 @@ describe('TemplatesPane scheduling flows', () => {
 
     await waitFor(() => expect(listSchedulesMock.mock.calls.length).toBeGreaterThanOrEqual(2))
     await screen.findByText(/Nightly run/i)
-    expect(screen.getByText(/Next run/i)).toBeInTheDocument()
+    expect(screen.getByText(/Next:/i)).toBeInTheDocument()
   })
 })

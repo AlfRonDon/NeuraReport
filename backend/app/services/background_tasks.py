@@ -239,3 +239,27 @@ async def enqueue_background_job(
     task = asyncio.create_task(_schedule())
     _track_task(task)
     return job
+
+
+def mark_incomplete_jobs_failed(
+    *,
+    reason: str = "Server restarted before job completed",
+    skip_types: Optional[set[str]] = None,
+) -> int:
+    """
+    Mark queued/running jobs as failed (used during startup recovery).
+    Returns number of jobs updated.
+    """
+    skipped = {str(t or "").strip().lower() for t in (skip_types or set())}
+    jobs = state_store.list_jobs(statuses=["queued", "running"], limit=0)
+    updated = 0
+    for job in jobs:
+        job_id = job.get("id")
+        if not job_id:
+            continue
+        job_type = str(job.get("type") or "").strip().lower()
+        if job_type in skipped:
+            continue
+        state_store.record_job_completion(job_id, status="failed", error=reason)
+        updated += 1
+    return updated

@@ -36,6 +36,7 @@ import MergeOutlinedIcon from '@mui/icons-material/MergeOutlined'
 import ChatOutlinedIcon from '@mui/icons-material/ChatOutlined'
 import SummarizeOutlinedIcon from '@mui/icons-material/SummarizeOutlined'
 import BarChartOutlinedIcon from '@mui/icons-material/BarChartOutlined'
+import AdminPanelSettingsOutlinedIcon from '@mui/icons-material/AdminPanelSettingsOutlined'
 import { useAppStore } from '../../store/useAppStore'
 import { Kbd } from '../ui'
 import { globalSearch } from '../../api/client'
@@ -64,6 +65,7 @@ const ICON_MAP = {
   docqa: ChatOutlinedIcon,
   summary: SummarizeOutlinedIcon,
   stats: BarChartOutlinedIcon,
+  ops: AdminPanelSettingsOutlinedIcon,
 }
 
 const loadRecentCommands = () => {
@@ -278,6 +280,16 @@ const COMMANDS = [
     iconKey: 'stats',
     action: 'navigate',
     path: '/stats',
+    group: 'System',
+  },
+  {
+    id: 'nav-ops',
+    label: 'Go to Ops Console',
+    description: 'Access health, auth, and job utilities',
+    icon: AdminPanelSettingsOutlinedIcon,
+    iconKey: 'ops',
+    action: 'navigate',
+    path: '/ops',
     group: 'System',
   },
   {

@@ -21,7 +21,7 @@ import {
 } from '../utils/generateFeatureUtils'
 
 export default function GeneratePage() {
-  const { templates } = useAppStore()
+  const templates = useAppStore((state) => state.templates)
   const queryClient = useQueryClient()
   const toast = useToast()
   const location = useLocation()

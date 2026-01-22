@@ -24,12 +24,11 @@ import { useToast } from '../../components/ToastProvider.jsx'
 import Surface from '../../components/layout/Surface.jsx'
 
 export default function SetupPage() {
-  const {
-    setupNav, setSetupNav,
-    activeConnection,
-    addDownload,
-    templates,
-  } = useAppStore()
+  const setupNav = useAppStore((state) => state.setupNav)
+  const setSetupNav = useAppStore((state) => state.setSetupNav)
+  const activeConnection = useAppStore((state) => state.activeConnection)
+  const addDownload = useAppStore((state) => state.addDownload)
+  const templates = useAppStore((state) => state.templates)
 
   const toast = useToast()
 
@@ -44,20 +43,20 @@ export default function SetupPage() {
     {
       key: 'connect',
       label: 'Connect',
-      fullLabel: 'Connect Database',
+      fullLabel: 'Connect Data Source',
       icon: <StorageIcon fontSize="small" />,
       completed: hasConnection,
     },
     {
       key: 'generate',
-      label: 'Templates',
-      fullLabel: 'Upload Templates',
+      label: 'Designs',
+      fullLabel: 'Upload Report Designs',
       icon: <AutoAwesomeIcon fontSize="small" />,
       completed: hasTemplates,
     },
     {
       key: 'templates',
-      label: 'Reports',
+      label: 'Run',
       fullLabel: 'Run Reports',
       icon: <ArticleIcon fontSize="small" />,
       completed: false,
@@ -67,28 +66,28 @@ export default function SetupPage() {
   const sectionInfo = {
     connect: {
       title: 'Connect Your Data Source',
-      description: 'Configure your database connection to enable report generation.',
+      description: 'Configure a data source so reports can pull data safely.',
       steps: [
-        'Choose your database engine (PostgreSQL, MySQL, SQL Server, or SQLite)',
+        'Choose the database engine you need',
         'Enter connection details and test the connection',
-        'Save and select the connection as your active data source',
+        'Save and select the active data source for reports',
       ],
     },
     generate: {
-      title: 'Upload & Verify Templates',
-      description: 'Upload PDF or Excel templates and configure field mappings.',
+      title: 'Upload & Verify Report Designs',
+      description: 'Upload PDF or Excel designs and map fields.',
       steps: [
-        'Drop a template file and verify it generates a preview',
-        'Review and configure field mappings for each data token',
-        'Approve the template when mappings are complete',
+        'Drop a design file and generate a preview',
+        'Match each field to a data column',
+        'Approve the design when mappings are complete',
       ],
     },
     templates: {
-      title: 'Generate Reports',
-      description: 'Select templates, configure parameters, and run reports.',
+      title: 'Run Reports',
+      description: 'Select report designs, configure parameters, and run reports.',
       steps: [
-        'Choose one or more approved templates',
-        'Set date range and fill in required parameters',
+        'Choose one or more approved designs',
+        'Set date range and required parameters',
         'Click Run Reports and download the generated output',
       ],
     },
@@ -106,7 +105,7 @@ export default function SetupPage() {
             Setup
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Configure your database connection and upload report templates.
+            Connect data, upload report designs, and run your first report.
           </Typography>
         </Box>
         {hasConnection && (
@@ -193,7 +192,7 @@ export default function SetupPage() {
               />
               <Chip
                 size="small"
-                label={`${templates?.length || 0} templates`}
+                label={`${templates?.length || 0} designs`}
                 color={hasTemplates ? 'success' : 'default'}
                 variant="outlined"
               />

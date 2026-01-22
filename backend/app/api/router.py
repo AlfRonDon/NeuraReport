@@ -17,6 +17,7 @@ from .routes import (
     federation,
     health,
     jobs,
+    legacy,
     nl2sql,
     recommendations,
     reports,
@@ -83,3 +84,6 @@ def register_routes(app: FastAPI) -> None:
     app.include_router(summary.router, prefix="/summary", tags=["summary"])
     app.include_router(synthesis.router, prefix="/synthesis", tags=["synthesis"])
     app.include_router(docqa.router, prefix="/docqa", tags=["docqa"])
+
+    # Legacy/compatibility routes
+    app.include_router(legacy.router)

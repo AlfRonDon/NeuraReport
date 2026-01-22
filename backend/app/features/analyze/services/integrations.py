@@ -740,6 +740,7 @@ class IntegrationService:
         self.data_sources = DataSourceManager()
         self.workflows = WorkflowAutomationService()
         self._integrations: Dict[str, ExternalToolIntegration] = {}
+        self._integration_types: Dict[str, str] = {}
 
     def register_integration(
         self,
@@ -761,7 +762,15 @@ class IntegrationService:
         else:
             raise ValueError(f"Unknown integration type: {integration_type}")
 
+        self._integration_types[integration_id] = integration_type
         return integration_id
+
+    def list_integrations(self) -> List[Dict[str, Any]]:
+        """List registered integrations (without secrets)."""
+        return [
+            {"id": int_id, "type": self._integration_types.get(int_id, "unknown")}
+            for int_id in self._integrations.keys()
+        ]
 
     async def send_notification(
         self,
@@ -815,6 +824,9 @@ class IntegrationService:
     async def fetch_from_source(self, *args, **kwargs) -> FetchResult:
         return await self.data_sources.fetch_data(*args, **kwargs)
 
+    def list_data_sources(self) -> List[DataSourceConnection]:
+        return self.data_sources.list_connections()
+
     # Workflow methods
     def create_trigger(self, *args, **kwargs) -> AnalysisTrigger:
         return self.workflows.create_trigger(*args, **kwargs)
@@ -830,3 +842,6 @@ class IntegrationService:
 
     def register_webhook(self, *args, **kwargs) -> WebhookConfig:
         return self.workflows.register_webhook(*args, **kwargs)
+
+    async def send_webhook(self, *args, **kwargs) -> bool:
+        return await self.workflows.send_webhook(*args, **kwargs)

@@ -25,6 +25,8 @@ import {
   DialogContent,
   DialogActions,
   Collapse,
+  FormControlLabel,
+  Switch,
   useTheme,
   alpha,
   styled,
@@ -50,6 +52,7 @@ import * as api from '../../api/client'
 import DataTable from '../../ui/DataTable/DataTable'
 import ConfirmModal from '../../ui/Modal/ConfirmModal'
 import { useToast } from '../../components/ToastProvider'
+import { getWriteOperation } from '../../utils/sqlSafety'
 // UX Components for premium interactions
 import DisabledTooltip from '../../components/ux/DisabledTooltip'
 // UX Governance - Enforced interaction API
@@ -57,6 +60,7 @@ import {
   useInteraction,
   InteractionType,
   Reversibility,
+  useConfirmedAction,
 } from '../../components/ux/governance'
 
 // =============================================================================
@@ -270,6 +274,7 @@ export default function QueryBuilderPage() {
   const toast = useToast()
   // UX Governance: Enforced interaction API - ALL user actions flow through this
   const { execute } = useInteraction()
+  const confirmWriteQuery = useConfirmedAction('EXECUTE_WRITE_QUERY')
   const connections = useAppStore((s) => s.savedConnections)
   const {
     currentQuestion,
@@ -281,6 +286,7 @@ export default function QueryBuilderPage() {
     columns,
     totalCount,
     executionTimeMs,
+    includeTotal,
     isGenerating,
     isExecuting,
     error,
@@ -300,6 +306,7 @@ export default function QueryBuilderPage() {
     setSavedQueries,
     addSavedQuery,
     removeSavedQuery,
+    setIncludeTotal,
     setQueryHistory,
     loadSavedQuery,
   } = useQueryStore()
@@ -313,6 +320,7 @@ export default function QueryBuilderPage() {
   const [deleteSavedConfirm, setDeleteSavedConfirm] = useState({ open: false, queryId: null, queryName: '' })
   const [deleteHistoryConfirm, setDeleteHistoryConfirm] = useState({ open: false, entryId: null, question: '' })
   const schemaRequestIdRef = useRef(0)
+  const writeOperation = getWriteOperation(generatedSQL)
 
   // Fetch connections on mount
   useEffect(() => {
@@ -420,9 +428,7 @@ export default function QueryBuilderPage() {
     })
   }, [currentQuestion, selectedConnectionId, setIsGenerating, setError, clearResults, setGenerationResult, execute])
 
-  const handleExecute = useCallback(() => {
-    if (!generatedSQL.trim() || !selectedConnectionId) return
-
+  const runExecute = useCallback(() => {
     // UX Governance: Execute action with tracking and navigation blocking
     execute({
       type: InteractionType.EXECUTE,
@@ -439,6 +445,7 @@ export default function QueryBuilderPage() {
             sql: generatedSQL,
             connectionId: selectedConnectionId,
             limit: 100,
+            includeTotal,
           })
 
           setExecutionResult({
@@ -459,7 +466,20 @@ export default function QueryBuilderPage() {
         }
       },
     })
-  }, [generatedSQL, selectedConnectionId, setIsExecuting, setError, setExecutionResult, execute, toast])
+  }, [execute, generatedSQL, includeTotal, selectedConnectionId, setError, setExecutionResult, setIsExecuting, toast])
+
+  const handleExecute = useCallback(() => {
+    if (!generatedSQL.trim() || !selectedConnectionId) return
+
+    if (writeOperation) {
+      const selectedConnection = connections.find((conn) => conn.id === selectedConnectionId)
+      const targetLabel = selectedConnection?.name || selectedConnectionId || 'selected connection'
+      confirmWriteQuery(targetLabel, runExecute)
+      return
+    }
+
+    runExecute()
+  }, [confirmWriteQuery, connections, generatedSQL, runExecute, selectedConnectionId, writeOperation])
 
   const handleSave = useCallback(() => {
     if (!saveName.trim() || !generatedSQL.trim() || !selectedConnectionId) return
@@ -833,7 +853,40 @@ export default function QueryBuilderPage() {
             </ExplanationBox>
           )}
 
-          <Stack direction="row" justifyContent="flex-end" mt={2}>
+          <Stack
+            direction={{ xs: 'column', sm: 'row' }}
+            alignItems={{ xs: 'stretch', sm: 'center' }}
+            justifyContent="space-between"
+            mt={2}
+            spacing={1.5}
+          >
+            <FormControlLabel
+              control={
+                <Switch
+                  size="small"
+                  checked={includeTotal}
+                  onChange={(event) => setIncludeTotal(event.target.checked)}
+                />
+              }
+              label="Include total row count (slower)"
+              sx={{ color: theme.palette.text.secondary }}
+            />
+            <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
+              <Chip
+                size="small"
+                label="Read-only recommended"
+                variant="outlined"
+                sx={{ fontSize: '0.7rem' }}
+              />
+              {writeOperation && (
+                <Chip
+                  size="small"
+                  color="warning"
+                  label={`${writeOperation.toUpperCase()} detected`}
+                  sx={{ fontSize: '0.7rem' }}
+                />
+              )}
+            </Stack>
             {/* UX: DisabledTooltip explains WHY the button is disabled */}
             <DisabledTooltip
               disabled={Boolean(executeDisabledReason) || isExecuting}
@@ -859,6 +912,11 @@ export default function QueryBuilderPage() {
               </ExecuteButton>
             </DisabledTooltip>
           </Stack>
+          {writeOperation && (
+            <Alert severity="warning" sx={{ mt: 1.5, borderRadius: 2 }}>
+              Write queries can modify data and may not be reversible. You will be asked to confirm before execution.
+            </Alert>
+          )}
         </GlassCard>
       )}
 

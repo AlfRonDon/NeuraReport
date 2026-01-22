@@ -391,6 +391,7 @@ export default function TemplatesPage() {
   const [bulkTagsOpen, setBulkTagsOpen] = useState(false)
   const [bulkTags, setBulkTags] = useState('')
   const [bulkActionLoading, setBulkActionLoading] = useState(false)
+  const bulkDeleteUndoRef = useRef(null)
   const didLoadRef = useRef(false)
   const [similarOpen, setSimilarOpen] = useState(false)
   const [similarTemplate, setSimilarTemplate] = useState(null)
@@ -716,36 +717,80 @@ export default function TemplatesPage() {
       return
     }
 
-    const count = selectedIds.length
+    const idsToDelete = [...selectedIds]
+    const count = idsToDelete.length
+    const removedTemplates = templates.filter((tpl) => idsToDelete.includes(tpl.id))
+    if (!removedTemplates.length) {
+      setBulkDeleteOpen(false)
+      return
+    }
+
     setBulkDeleteOpen(false)
+    setSelectedIds([])
+
+    if (bulkDeleteUndoRef.current?.timeoutId) {
+      clearTimeout(bulkDeleteUndoRef.current.timeoutId)
+      bulkDeleteUndoRef.current = null
+    }
 
     // UX Governance: Bulk delete action with tracking
     execute({
       type: InteractionType.DELETE,
       label: `Delete ${count} design${count !== 1 ? 's' : ''}`,
-      reversibility: Reversibility.IRREVERSIBLE,
+      reversibility: Reversibility.PARTIALLY_REVERSIBLE,
       errorMessage: 'Failed to remove designs',
       action: async () => {
-        setBulkActionLoading(true)
-        try {
-          const result = await api.bulkDeleteTemplates(selectedIds)
-          const deletedCount = result?.deletedCount ?? result?.deleted?.length ?? 0
-          const failedCount = result?.failedCount ?? result?.failed?.length ?? 0
-          if (failedCount > 0) {
-            toast.show(
-              `Removed ${deletedCount} design${deletedCount !== 1 ? 's' : ''}, ${failedCount} failed`,
-              'warning'
-            )
-          } else {
-            toast.show(`Removed ${deletedCount} design${deletedCount !== 1 ? 's' : ''}`, 'success')
+        setTemplates((prev) => prev.filter((tpl) => !idsToDelete.includes(tpl.id)))
+
+        let undone = false
+        const timeoutId = setTimeout(async () => {
+          if (undone) return
+          setBulkActionLoading(true)
+          try {
+            const result = await api.bulkDeleteTemplates(idsToDelete)
+            const deletedCount = result?.deletedCount ?? result?.deleted?.length ?? 0
+            const failedCount = result?.failedCount ?? result?.failed?.length ?? 0
+            if (failedCount > 0) {
+              toast.show(
+                `Removed ${deletedCount} design${deletedCount !== 1 ? 's' : ''}, ${failedCount} failed`,
+                'warning'
+              )
+            } else {
+              toast.show(`Removed ${deletedCount} design${deletedCount !== 1 ? 's' : ''}`, 'success')
+            }
+            await fetchTemplatesData()
+          } catch (err) {
+            setTemplates((prev) => {
+              const existing = new Set(prev.map((tpl) => tpl.id))
+              const restored = removedTemplates.filter((tpl) => !existing.has(tpl.id))
+              return restored.length ? [...prev, ...restored] : prev
+            })
+            throw err
+          } finally {
+            setBulkActionLoading(false)
           }
-          await fetchTemplatesData()
-        } finally {
-          setBulkActionLoading(false)
-        }
+        }, 5000)
+
+        bulkDeleteUndoRef.current = { timeoutId, ids: idsToDelete, templates: removedTemplates }
+
+        toast.showWithUndo(
+          `Removed ${count} design${count !== 1 ? 's' : ''}`,
+          () => {
+            undone = true
+            clearTimeout(timeoutId)
+            bulkDeleteUndoRef.current = null
+            setTemplates((prev) => {
+              const existing = new Set(prev.map((tpl) => tpl.id))
+              const restored = removedTemplates.filter((tpl) => !existing.has(tpl.id))
+              return restored.length ? [...prev, ...restored] : prev
+            })
+            toast.show('Designs restored', 'success')
+          },
+          { severity: 'info' }
+        )
       },
     })
-  }, [selectedIds, toast, fetchTemplatesData, execute])
+  }, [selectedIds, templates, toast, fetchTemplatesData, execute, setTemplates])
 
   const handleBulkStatusApply = useCallback(async () => {
     if (!selectedIds.length) {
@@ -1152,7 +1197,7 @@ export default function TemplatesPage() {
         onClose={() => setBulkDeleteOpen(false)}
         onConfirm={handleBulkDeleteConfirm}
         title="Remove Designs"
-        message={`Remove ${selectedIds.length} design${selectedIds.length !== 1 ? 's' : ''}? This cannot be undone.`}
+        message={`Remove ${selectedIds.length} design${selectedIds.length !== 1 ? 's' : ''}? You can undo this within a few seconds.`}
         confirmLabel="Remove"
         severity="error"
         loading={bulkActionLoading}

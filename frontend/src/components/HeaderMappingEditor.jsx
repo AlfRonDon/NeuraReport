@@ -11,6 +11,8 @@ import { useStepTimingEstimator, formatDuration } from "../hooks/useStepTimingEs
 import CorrectionsPreviewPanel from "./CorrectionsPreviewPanel.jsx";
 import InfoTooltip from "./common/InfoTooltip.jsx";
 import TOOLTIP_COPY from "../content/tooltipCopy.jsx";
+import { useToast } from "./ToastProvider.jsx";
+import ConfirmModal from "../ui/Modal/ConfirmModal";
 
 const VALUE_UNRESOLVED = "UNRESOLVED";
 const VALUE_SAMPLE = "INPUT_SAMPLE";
@@ -195,8 +197,10 @@ export default function HeaderMappingEditor({
   const [contractDialogOpen, setContractDialogOpen] = useState(false);
   const [llm35Instructions, setLlm35Instructions] = useState("");
   const [llm4Instructions, setLlm4Instructions] = useState("");
+  const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
   const approveAbortRef = useRef(null);
   const approveRequestRef = useRef(0);
+  const resetSnapshotRef = useRef(null);
   const {
     eta: approveEta,
     startRun: beginApproveTiming,
@@ -204,6 +208,7 @@ export default function HeaderMappingEditor({
     completeStage: markApproveStageDone,
     finishRun: finishApproveTiming,
   } = useStepTimingEstimator("mapping-approve");
+  const toast = useToast();
 
   const handleCorrectionsCompleted = useCallback(
     (payload) => {
@@ -468,13 +473,65 @@ export default function HeaderMappingEditor({
     [mapping, expressionMode]
   );
 
-  const handleReset = () => {
+  const resetMappingState = useCallback(() => {
     setExpressionMode({});
     setExpressionOrigin({});
     setMapping(Object.fromEntries(headersAll.map((h) => [h, VALUE_UNRESOLVED])));
     setSelectedKeys([]);
     setCorrectionsComplete(false);
-  };
+  }, [headersAll]);
+
+  const hasCustomMapping = useMemo(() => {
+    if (!headersAll.length) return false;
+    if (selectedKeys.length > 0) return true;
+    if (Object.keys(expressionMode).length > 0) return true;
+    return headersAll.some((header) => {
+      const value = mapping?.[header];
+      if (typeof value !== "string") return false;
+      const trimmed = value.trim();
+      return Boolean(trimmed && trimmed !== VALUE_UNRESOLVED);
+    });
+  }, [headersAll, mapping, selectedKeys, expressionMode]);
+
+  const performReset = useCallback(() => {
+    resetSnapshotRef.current = {
+      mapping,
+      expressionMode,
+      expressionOrigin,
+      selectedKeys,
+      correctionsComplete,
+    };
+    resetMappingState();
+    toast.showWithUndo(
+      "Mapping reset to User Input.",
+      () => {
+        const snapshot = resetSnapshotRef.current;
+        if (!snapshot) return;
+        setMapping(snapshot.mapping);
+        setExpressionMode(snapshot.expressionMode);
+        setExpressionOrigin(snapshot.expressionOrigin);
+        setSelectedKeys(snapshot.selectedKeys);
+        setCorrectionsComplete(snapshot.correctionsComplete);
+      },
+      { severity: "info", undoLabel: "Restore" }
+    );
+  }, [
+    correctionsComplete,
+    expressionMode,
+    expressionOrigin,
+    mapping,
+    resetMappingState,
+    selectedKeys,
+    toast,
+  ]);
+
+  const handleResetClick = useCallback(() => {
+    if (!hasCustomMapping) {
+      resetMappingState();
+      return;
+    }
+    setResetConfirmOpen(true);
+  }, [hasCustomMapping, resetMappingState]);
 
   const handleApprove = async () => {
     const payload = Object.fromEntries(
@@ -1196,7 +1253,7 @@ export default function HeaderMappingEditor({
           >
             <Button
               variant="outlined"
-              onClick={handleReset}
+              onClick={handleResetClick}
               disabled={headersAll.length === 0 || waiting}
               sx={{ width: { xs: "100%", sm: "auto" } }}
             >
@@ -1400,6 +1457,19 @@ export default function HeaderMappingEditor({
         </Stack>
       </DialogActions>
     </Dialog>
+
+    <ConfirmModal
+      open={resetConfirmOpen}
+      onClose={() => setResetConfirmOpen(false)}
+      onConfirm={() => {
+        setResetConfirmOpen(false);
+        performReset();
+      }}
+      title="Reset Mapping"
+      message="Resetting will clear all column selections, keys, and corrections status. You can restore immediately after reset."
+      confirmLabel="Reset"
+      severity="warning"
+    />
     </>
   );
 }

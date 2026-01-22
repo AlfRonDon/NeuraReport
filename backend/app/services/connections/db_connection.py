@@ -11,6 +11,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 from ..dataframes import SQLiteDataFrameLoader, ensure_connection_loaded, dataframe_store
+from ...core.sql_safety import get_write_operation, is_select_or_with
 from ..dataframes import sqlite_shim
 from ..state import state_store
 
@@ -127,9 +128,12 @@ def execute_query(
     ensure_connection_loaded(connection_id, db_path)
 
     # Basic safety check - only allow SELECT/WITH queries
-    sql_upper = sql.upper().strip()
-    if not sql_upper.startswith("SELECT") and not sql_upper.startswith("WITH"):
+    if not is_select_or_with(sql):
         raise ValueError("Only SELECT queries are allowed")
+
+    write_op = get_write_operation(sql)
+    if write_op:
+        raise ValueError(f"Query contains prohibited operation: {write_op}")
 
     # Apply limit and offset if specified
     final_sql = sql

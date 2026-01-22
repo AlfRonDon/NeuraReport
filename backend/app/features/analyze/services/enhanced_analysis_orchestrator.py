@@ -19,6 +19,7 @@ import logging
 import time
 import uuid
 from datetime import datetime
+from pathlib import Path
 from typing import Any, AsyncGenerator, Dict, List, Optional
 
 from backend.app.features.analyze.schemas.enhanced_analysis import (
@@ -60,8 +61,9 @@ from backend.app.features.analyze.services.extraction_pipeline import (
     extract_document_content,
     format_content_for_llm,
 )
+from backend.app.features.analyze.services.enhanced_analysis_store import get_analysis_store
 from backend.app.services.llm.rag import RAGRetriever
-from backend.app.services.utils.llm import call_chat_completion
+from backend.app.services.utils.llm import call_chat_completion, call_chat_completion_async
 from backend.app.services.templates.TemplateVerify import MODEL, get_openai_client
 
 logger = logging.getLogger("neura.analyze.orchestrator")
@@ -111,20 +113,23 @@ class EnhancedAnalysisOrchestrator:
         self.ux_service = UserExperienceService()
         self.integration_service = IntegrationService()
         self._rag_retrievers: Dict[str, RAGRetriever] = {}
+        self._store = get_analysis_store()
 
     async def analyze_document_streaming(
         self,
-        file_bytes: bytes,
+        file_bytes: Optional[bytes],
         file_name: str,
         preferences: Optional[AnalysisPreferences] = None,
         correlation_id: Optional[str] = None,
+        file_path: Optional[Path] = None,
+        analysis_id: Optional[str] = None,
     ) -> AsyncGenerator[Dict[str, Any], None]:
         """
         Perform comprehensive document analysis with streaming progress updates.
 
         This is the main entry point for document analysis.
         """
-        analysis_id = _generate_analysis_id()
+        analysis_id = analysis_id or _generate_analysis_id()
         started = time.time()
 
         # Use default preferences if not provided
@@ -141,7 +146,7 @@ class EnhancedAnalysisOrchestrator:
             # Stage 1: Upload validation
             yield self._event("stage", "Validating document...", 5, analysis_id, correlation_id)
 
-            if not file_bytes:
+            if not file_bytes and not file_path:
                 yield self._event("error", "Empty file provided", 0, analysis_id, correlation_id)
                 return
 
@@ -152,6 +157,7 @@ class EnhancedAnalysisOrchestrator:
 
             content = extract_document_content(
                 file_bytes=file_bytes,
+                file_path=file_path,
                 file_name=file_name,
             )
 
@@ -228,6 +234,8 @@ class EnhancedAnalysisOrchestrator:
                     metrics=metrics,
                     tables=tables,
                     document_id=analysis_id,
+                    images=content.images,
+                    document_context=content.text_content,
                 )
 
             # Stage 8: Build RAG index for Q&A
@@ -306,6 +314,11 @@ class EnhancedAnalysisOrchestrator:
 
             # Cache the result
             _ANALYSIS_CACHE[analysis_id] = result
+            try:
+                self._store.save_result(result)
+                self._store.save_context(analysis_id, content.text_content)
+            except Exception as exc:
+                logger.warning(f"Failed to persist analysis result: {exc}")
 
             yield self._event("stage", "Complete", 100, analysis_id, correlation_id)
 
@@ -349,7 +362,27 @@ class EnhancedAnalysisOrchestrator:
 
     def get_analysis(self, analysis_id: str) -> Optional[EnhancedAnalysisResult]:
         """Get a cached analysis result."""
-        return _ANALYSIS_CACHE.get(analysis_id)
+        result = _ANALYSIS_CACHE.get(analysis_id)
+        if result:
+            return result
+        stored = self._store.load_result(analysis_id)
+        if stored:
+            _ANALYSIS_CACHE[analysis_id] = stored
+            if analysis_id not in self._rag_retrievers:
+                text_content = self._store.load_context(analysis_id)
+                if text_content:
+                    rag = RAGRetriever(use_embeddings=False)
+                    rag.add_document(
+                        content=text_content,
+                        doc_id=analysis_id,
+                        metadata={"file_name": stored.document_name, "analysis_id": analysis_id},
+                    )
+                    self._rag_retrievers[analysis_id] = rag
+        return stored
+
+    def new_analysis_id(self) -> str:
+        """Generate a new analysis ID."""
+        return _generate_analysis_id()
 
     async def ask_question(
         self,
@@ -387,7 +420,7 @@ class EnhancedAnalysisOrchestrator:
         )
 
         # Generate follow-up questions
-        suggested_followups = self._generate_followup_questions(question, rag_result["answer"])
+        suggested_followups = await self._generate_followup_questions(question, rag_result["answer"])
 
         return QuestionResponse(
             answer=rag_result["answer"],
@@ -396,7 +429,7 @@ class EnhancedAnalysisOrchestrator:
             suggested_followups=suggested_followups,
         )
 
-    def _generate_followup_questions(self, question: str, answer: str) -> List[str]:
+    async def _generate_followup_questions(self, question: str, answer: str) -> List[str]:
         """Generate follow-up questions based on Q&A."""
         try:
             client = get_openai_client()
@@ -408,7 +441,7 @@ Answer: {answer[:500]}
 Return JSON array of questions:
 ["Question 1", "Question 2", "Question 3"]"""
 
-            response = call_chat_completion(
+            response = await call_chat_completion_async(
                 client,
                 model=MODEL,
                 messages=[{"role": "user", "content": prompt}],

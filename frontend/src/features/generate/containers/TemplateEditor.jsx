@@ -54,6 +54,7 @@ import EditHistoryTimeline from '../components/EditHistoryTimeline.jsx'
 import EditorSkeleton from '../components/EditorSkeleton.jsx'
 import KeyboardShortcutsPanel from '../components/KeyboardShortcutsPanel.jsx'
 import DraftRecoveryBanner, { AutoSaveIndicator } from '../components/DraftRecoveryBanner.jsx'
+import ConfirmModal from '../../../ui/Modal/ConfirmModal'
 
 // Hooks
 import { useEditorKeyboardShortcuts, getShortcutDisplay } from '../hooks/useEditorKeyboardShortcuts.js'
@@ -102,6 +103,7 @@ export default function TemplateEditor() {
   const [diffOpen, setDiffOpen] = useState(false)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const [previewFullscreen, setPreviewFullscreen] = useState(false)
+  const [modeSwitchConfirm, setModeSwitchConfirm] = useState({ open: false, nextMode: null })
 
   const dirty = html !== initialHtml
   const hasInstructions = (instructions || '').trim().length > 0
@@ -114,6 +116,7 @@ export default function TemplateEditor() {
     scheduleAutoSave,
     discardDraft,
     clearDraftAfterSave,
+    saveDraft,
   } = useEditorDraft(templateId, { enabled: editMode === 'manual' })
 
   // Auto-save when content changes
@@ -300,11 +303,8 @@ export default function TemplateEditor() {
   const handleEditModeChange = (event, newMode) => {
     if (newMode !== null) {
       if (dirty && newMode === 'chat') {
-        const confirmed = window.confirm(
-          'You have unsaved changes. Switch to chat mode and discard them?',
-        )
-        if (!confirmed) return
-        setHtml(initialHtml)
+        setModeSwitchConfirm({ open: true, nextMode: newMode })
+        return
       }
       setEditMode(newMode)
     }
@@ -776,6 +776,24 @@ export default function TemplateEditor() {
           <KeyboardShortcutsPanel />
         </DialogContent>
       </Dialog>
+
+      <ConfirmModal
+        open={modeSwitchConfirm.open}
+        onClose={() => setModeSwitchConfirm({ open: false, nextMode: null })}
+        onConfirm={() => {
+          if (dirty) {
+            saveDraft(html, instructions)
+          }
+          setHtml(initialHtml)
+          setModeSwitchConfirm({ open: false, nextMode: null })
+          setEditMode('chat')
+          toast.show('Draft saved. You can restore it when returning to manual edit mode.', 'info')
+        }}
+        title="Switch to Chat Mode"
+        message="Switching to chat mode discards unsaved manual edits in this view. We'll save a draft so you can restore it later."
+        confirmLabel="Switch"
+        severity="warning"
+      />
     </>
   )
 }

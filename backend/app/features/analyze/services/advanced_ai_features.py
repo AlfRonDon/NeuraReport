@@ -59,16 +59,30 @@ class ChartDataExtraction:
 
 
 def analyze_document_images(
-    images: List[Dict[str, Any]],
+    images: List[Any],
     document_context: str = "",
 ) -> List[ImageAnalysisResult]:
     """Analyze images found in a document using VLM."""
     results = []
+    if not images:
+        return results
+
+    vlm = None
+    try:
+        from backend.app.services.llm.vision import VisionLanguageModel
+        vlm = VisionLanguageModel()
+    except Exception as exc:
+        logger.warning(f"Vision model unavailable for image analysis: {exc}")
 
     # For each image, determine type and extract relevant data
     for img in images:
-        img_data = img.get("data")  # base64 or bytes
-        page = img.get("page")
+        img_data = None
+        page = None
+        if isinstance(img, dict):
+            img_data = img.get("data") or img.get("bytes") or img.get("image")
+            page = img.get("page")
+        else:
+            img_data = img
 
         if not img_data:
             continue
@@ -98,13 +112,37 @@ Return JSON:
 ```"""
 
         try:
-            # This would use the VLM service
-            # For now, we'll create a placeholder
+            parsed: Dict[str, Any] = {}
+            if vlm:
+                response = vlm.client.complete_with_vision(
+                    text=prompt,
+                    images=[img_data],
+                    model=vlm.model,
+                    description="vlm_image_analysis",
+                )
+                raw_content = response["choices"][0]["message"]["content"]
+                parsed = _extract_json_payload(raw_content, {})
+
+            image_type = parsed.get("image_type", "unknown")
+            description = parsed.get("description", "Analyzed image")
+            extracted_data = parsed.get("extracted_data", {}) or {}
+            confidence = float(parsed.get("confidence", 0.7) or 0.7)
+
+            # Optional sub-analyses
+            if image_type in ("chart", "diagram"):
+                chart_data = extract_chart_data_from_image(img_data)
+                if chart_data:
+                    extracted_data["chart_data"] = chart_data.__dict__
+            if image_type in ("handwriting", "signature"):
+                extracted_data["handwriting"] = detect_handwriting(img_data)
+            if image_type == "logo":
+                extracted_data["logos"] = detect_logos(img_data)
+
             results.append(ImageAnalysisResult(
-                image_type="chart",
-                description="Analyzed image",
-                extracted_data={},
-                confidence=0.8,
+                image_type=image_type,
+                description=description,
+                extracted_data=extracted_data,
+                confidence=confidence,
                 location=f"Page {page}" if page else None,
             ))
         except Exception as e:
@@ -149,9 +187,21 @@ Return JSON:
 
 Extract as much data as you can accurately determine from the image."""
 
-    # This would use the VLM service
-    # Placeholder implementation
-    return None
+    try:
+        from backend.app.services.llm.vision import VisionLanguageModel
+        vlm = VisionLanguageModel()
+        result = vlm.analyze_chart(image_data)
+        return ChartDataExtraction(
+            chart_type=result.get("chart_type", "unknown"),
+            title=result.get("title"),
+            x_axis=result.get("x_axis", {}),
+            y_axis=result.get("y_axis", {}),
+            data_series=result.get("data_series", []),
+            insights=result.get("insights", []) if isinstance(result.get("insights"), list) else [str(result.get("insights"))],
+        )
+    except Exception as exc:
+        logger.warning(f"Chart extraction failed: {exc}")
+        return None
 
 
 def detect_handwriting(image_data: bytes) -> Dict[str, Any]:
@@ -173,16 +223,105 @@ Return JSON:
 
 Transcribe all visible handwritten text accurately."""
 
+    try:
+        from backend.app.services.llm.vision import VisionLanguageModel
+        vlm = VisionLanguageModel()
+        response = vlm.client.complete_with_vision(
+            text=prompt,
+            images=[image_data],
+            model=vlm.model,
+            description="vlm_handwriting_detection",
+        )
+        raw_content = response["choices"][0]["message"]["content"]
+        parsed = _extract_json_payload(raw_content, {})
+        if parsed:
+            return parsed
+    except Exception as exc:
+        logger.warning(f"Handwriting detection failed: {exc}")
     return {
         "has_handwriting": False,
         "transcribed_text": "",
-        "confidence": 0,
+        "confidence": 0.0,
+        "words": [],
+        "is_signature": False,
     }
 
 
 def detect_logos(image_data: bytes) -> List[Dict[str, Any]]:
     """Detect and identify logos in an image."""
-    return []
+    prompt = """Analyze this image and detect any logos or brand marks.
+
+Return JSON:
+```json
+{
+  "logos": [
+    {
+      "name": "Brand or company name if known",
+      "confidence": 0.85,
+      "description": "Brief description of the logo",
+      "position": {"x": 0, "y": 0, "width": 0, "height": 0}
+    }
+  ]
+}
+```"""
+
+    try:
+        from backend.app.services.llm.vision import VisionLanguageModel
+        vlm = VisionLanguageModel()
+        response = vlm.client.complete_with_vision(
+            text=prompt,
+            images=[image_data],
+            model=vlm.model,
+            description="vlm_logo_detection",
+        )
+        raw_content = response["choices"][0]["message"]["content"]
+        parsed = _extract_json_payload(raw_content, {})
+        logos = parsed.get("logos", [])
+        return logos if isinstance(logos, list) else []
+    except Exception as exc:
+        logger.warning(f"Logo detection failed: {exc}")
+        return []
+
+
+def _extract_json_payload(raw_content: str, default: Dict[str, Any]) -> Dict[str, Any]:
+    """Extract JSON from an LLM response."""
+    json_match = re.search(r"```(?:json)?\\s*([\\s\\S]*?)```", raw_content)
+    if json_match:
+        json_str = json_match.group(1).strip()
+    else:
+        json_str = raw_content.strip()
+
+    start = json_str.find("{")
+    if start == -1:
+        return default
+
+    depth = 0
+    in_string = False
+    escape_next = False
+    for i, char in enumerate(json_str[start:], start):
+        if escape_next:
+            escape_next = False
+            continue
+        if char == "\\":
+            escape_next = True
+            continue
+        if char == '"' and not escape_next:
+            in_string = not in_string
+            continue
+        if in_string:
+            continue
+        if char == "{":
+            depth += 1
+        elif char == "}":
+            depth -= 1
+            if depth == 0:
+                json_str = json_str[start:i + 1]
+                break
+
+    try:
+        return json.loads(json_str)
+    except Exception:
+        return default
 
 
 # =============================================================================
@@ -823,7 +962,7 @@ class AdvancedAIService:
 
     def analyze_images(
         self,
-        images: List[Dict[str, Any]],
+        images: List[Any],
         document_context: str = "",
     ) -> List[ImageAnalysisResult]:
         """Analyze images in the document."""
@@ -961,9 +1100,11 @@ class AdvancedAIService:
         metrics: List[ExtractedMetric],
         tables: List[EnhancedExtractedTable],
         document_id: str,
+        images: Optional[List[Any]] = None,
+        document_context: str = "",
     ) -> Dict[str, Any]:
         """Run all advanced AI features."""
-        return {
+        results = {
             "knowledge_graph": self.build_knowledge_graph(entities, metrics, document_id).to_dict(),
             "citations": [c.__dict__ for c in self.detect_citations(text, document_id)],
             "forecasts": [f.__dict__ for f in self.generate_forecasts(tables)],
@@ -971,3 +1112,8 @@ class AdvancedAIService:
             "growth_models": [m.__dict__ for m in self.build_growth_models(tables)],
             "ai_predictions": self.generate_ai_predictions(metrics, tables),
         }
+        if images:
+            results["image_analysis"] = [
+                r.__dict__ for r in self.analyze_images(images, document_context=document_context)
+            ]
+        return results

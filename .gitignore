@@ -38,6 +38,8 @@ coverage.xml
 
 # Logs and temp
 *.log
+.vitest-localstorage.*
+frontend/.vitest-localstorage.*
 *.tmp
 *.bak
 *.orig

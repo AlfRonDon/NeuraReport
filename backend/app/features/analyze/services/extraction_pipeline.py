@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import logging
 import re
+import time
 from dataclasses import dataclass, field
+import os
 from io import BytesIO
 from pathlib import Path
 from typing import Any, Optional
@@ -20,6 +22,11 @@ try:
     import openpyxl
 except ImportError:  # pragma: no cover
     openpyxl = None  # type: ignore
+
+_DEFAULT_MAX_PDF_PAGES = int(os.getenv("NEURA_ANALYSIS_PDF_MAX_PAGES", "50"))
+_DEFAULT_MAX_PDF_SECONDS = int(os.getenv("NEURA_ANALYSIS_PDF_MAX_SECONDS", "20"))
+_DEFAULT_MAX_EXCEL_ROWS = int(os.getenv("NEURA_ANALYSIS_EXCEL_MAX_ROWS", "500"))
+_DEFAULT_MAX_EXCEL_SHEETS = int(os.getenv("NEURA_ANALYSIS_EXCEL_MAX_SHEETS", "10"))
 
 
 @dataclass
@@ -113,7 +120,12 @@ def _infer_data_type_from_values(values: list[str]) -> str:
     return "text"
 
 
-def extract_pdf_content(file_path: Path | str, file_bytes: bytes | None = None) -> ExtractedContent:
+def extract_pdf_content(
+    file_path: Path | str,
+    file_bytes: bytes | None = None,
+    max_pages: int | None = None,
+    max_seconds: int | None = None,
+) -> ExtractedContent:
     """Extract text, tables, and images from a PDF file."""
     if fitz is None:
         return ExtractedContent(
@@ -137,12 +149,23 @@ def extract_pdf_content(file_path: Path | str, file_bytes: bytes | None = None) 
         )
 
     page_count = len(doc)
+    max_pages = max_pages if max_pages is not None else _DEFAULT_MAX_PDF_PAGES
+    max_seconds = max_seconds if max_seconds is not None else _DEFAULT_MAX_PDF_SECONDS
     text_parts: list[str] = []
     tables_raw: list[dict[str, Any]] = []
     images: list[bytes] = []
     errors: list[str] = []
+    started = time.time()
+
+    if max_pages and page_count > max_pages:
+        errors.append(f"PDF has {page_count} pages; processed first {max_pages} pages")
 
     for page_num, page in enumerate(doc):
+        if max_pages and page_num >= max_pages:
+            break
+        if max_seconds and (time.time() - started) > max_seconds:
+            errors.append(f"PDF extraction exceeded time budget of {max_seconds}s; stopping early.")
+            break
         try:
             text = page.get_text("text")
             if text.strip():
@@ -216,7 +239,12 @@ def extract_pdf_content(file_path: Path | str, file_bytes: bytes | None = None) 
     )
 
 
-def extract_excel_content(file_path: Path | str, file_bytes: bytes | None = None) -> ExtractedContent:
+def extract_excel_content(
+    file_path: Path | str,
+    file_bytes: bytes | None = None,
+    max_rows: int | None = None,
+    max_sheets: int | None = None,
+) -> ExtractedContent:
     """Extract tables and data from an Excel file."""
     if openpyxl is None:
         return ExtractedContent(
@@ -245,8 +273,7 @@ def extract_excel_content(file_path: Path | str, file_bytes: bytes | None = None
     text_parts: list[str] = []
     errors: list[str] = []
 
-    # Limit to first 10 sheets
-    max_sheets = 10
+    max_sheets = max_sheets if max_sheets is not None else _DEFAULT_MAX_EXCEL_SHEETS
     if sheet_count > max_sheets:
         logger.warning(f"Excel file has {sheet_count} sheets, processing only first {max_sheets}")
         errors.append(f"File has {sheet_count} sheets - only the first {max_sheets} were processed")
@@ -254,25 +281,28 @@ def extract_excel_content(file_path: Path | str, file_bytes: bytes | None = None
     for sheet_idx, sheet_name in enumerate(wb.sheetnames[:max_sheets]):
         try:
             sheet = wb[sheet_name]
-            rows = list(sheet.iter_rows(values_only=True))
-
+            max_rows = max_rows if max_rows is not None else _DEFAULT_MAX_EXCEL_ROWS
             header_row = None
             header_index = -1
-            for idx, row in enumerate(rows):
-                if _row_has_values(row):
-                    header_row = row
-                    header_index = idx
-                    break
-
-            if header_row is None:
-                continue
-
-            headers = [_ensure_label(v, i) for i, v in enumerate(header_row)]
+            headers: list[str] = []
             data_rows: list[list[str]] = []
 
-            for row in rows[header_index + 1:]:
-                if _row_has_values(row):
-                    data_rows.append([_stringify_cell(row[i] if i < len(row) else "") for i in range(len(headers))])
+            for idx, row in enumerate(sheet.iter_rows(values_only=True)):
+                if header_row is None:
+                    if _row_has_values(row):
+                        header_row = row
+                        header_index = idx
+                        headers = [_ensure_label(v, i) for i, v in enumerate(header_row)]
+                    continue
+
+                if not _row_has_values(row):
+                    continue
+                if len(data_rows) < max_rows:
+                    data_rows.append(
+                        [_stringify_cell(row[i] if i < len(row) else "") for i in range(len(headers))]
+                    )
+                if len(data_rows) >= max_rows:
+                    break
 
             if not data_rows:
                 continue
@@ -285,10 +315,8 @@ def extract_excel_content(file_path: Path | str, file_bytes: bytes | None = None
 
             data_types = [_infer_data_type_from_values(col_values.get(i, [])) for i in range(len(headers))]
 
-            # Limit rows and log truncation
-            max_rows = 500
-            total_rows = len(data_rows)
-            truncated = total_rows > max_rows
+            total_rows = max(0, (sheet.max_row or 0) - (header_index + 1))
+            truncated = total_rows > max_rows if max_rows else False
             if truncated:
                 logger.info(f"Sheet '{sheet_name}' truncated from {total_rows} to {max_rows} rows")
 
@@ -315,7 +343,7 @@ def extract_excel_content(file_path: Path | str, file_bytes: bytes | None = None
             preview_rows = min(5, len(data_rows))
             text_preview = f"--- Sheet: {sheet_name} ---\n"
             text_preview += f"Headers: {', '.join(headers)}\n"
-            text_preview += f"Rows: {len(data_rows)}\n"
+            text_preview += f"Rows: {total_rows}\n"
             for i in range(preview_rows):
                 text_preview += f"Row {i+1}: {', '.join(data_rows[i][:10])}\n"
             text_parts.append(text_preview)
@@ -340,6 +368,9 @@ def extract_document_content(
     file_path: Path | str | None = None,
     file_bytes: bytes | None = None,
     file_name: str | None = None,
+    max_pages: int | None = None,
+    max_rows: int | None = None,
+    max_seconds: int | None = None,
 ) -> ExtractedContent:
     """Extract content from a document, auto-detecting type from extension."""
     if file_name is None and file_path:
@@ -351,9 +382,14 @@ def extract_document_content(
     ext = Path(file_name).suffix.lower()
 
     if ext == ".pdf":
-        return extract_pdf_content(file_path or file_name, file_bytes)
+        return extract_pdf_content(
+            file_path or file_name,
+            file_bytes,
+            max_pages=max_pages,
+            max_seconds=max_seconds,
+        )
     elif ext in (".xlsx", ".xls", ".xlsm"):
-        return extract_excel_content(file_path or file_name, file_bytes)
+        return extract_excel_content(file_path or file_name, file_bytes, max_rows=max_rows)
     else:
         return ExtractedContent(
             document_type="unknown",

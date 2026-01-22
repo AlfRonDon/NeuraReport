@@ -38,6 +38,7 @@ const SettingsPage = lazy(() => import('./pages/settings/SettingsPage.jsx'))
 const ActivityPage = lazy(() => import('./pages/activity/ActivityPage.jsx'))
 const HistoryPage = lazy(() => import('./pages/history/HistoryPage.jsx'))
 const UsageStatsPage = lazy(() => import('./pages/stats/UsageStatsPage.jsx'))
+const OpsConsolePage = lazy(() => import('./pages/ops/OpsConsolePage.jsx'))
 
 // AI Features
 const QueryBuilderPage = lazy(() => import('./pages/query/QueryBuilderPage.jsx'))
@@ -232,6 +233,7 @@ function AppContent() {
               <Route path="/activity" element={<ActivityPage />} />
               <Route path="/history" element={<HistoryPage />} />
               <Route path="/stats" element={<UsageStatsPage />} />
+              <Route path="/ops" element={<OpsConsolePage />} />
               {/* AI Features */}
               <Route path="/query" element={<QueryBuilderPage />} />
               <Route path="/enrichment" element={<EnrichmentConfigPage />} />

@@ -35,6 +35,7 @@ class NL2SQLExecuteRequest(BaseModel):
     connection_id: str = Field(..., min_length=1, max_length=64)
     limit: int = Field(default=100, ge=1, le=1000)
     offset: int = Field(default=0, ge=0)
+    include_total: bool = Field(default=False)
 
     @validator("connection_id")
     def validate_connection_id(cls, value: str) -> str:

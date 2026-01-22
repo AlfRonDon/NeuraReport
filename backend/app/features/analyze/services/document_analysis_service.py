@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import logging
 import os
@@ -31,7 +32,8 @@ from backend.app.services.prompts.llm_prompts_analysis import (
     strip_code_fences,
 )
 from backend.app.services.templates.TemplateVerify import MODEL, get_openai_client
-from backend.app.services.utils.llm import call_chat_completion
+from backend.app.services.utils.fs import write_json_atomic
+from backend.app.services.utils.llm import call_chat_completion, call_chat_completion_async
 
 from .extraction_pipeline import (
     ExtractedContent,
@@ -165,6 +167,79 @@ def _analysis_size_limits() -> tuple[int, int]:
     max_bytes = _settings.max_upload_bytes
     max_mb = max(1, int(max_bytes / (1024 * 1024)))
     return max_bytes, max_mb
+
+
+def _analysis_persist_ttl_seconds() -> Optional[int]:
+    raw = os.getenv("NEURA_ANALYSIS_PERSIST_TTL_SECONDS")
+    if raw is None or raw == "":
+        return None
+    try:
+        value = int(raw)
+    except (TypeError, ValueError):
+        return None
+    return value if value > 0 else None
+
+
+def _analysis_store_dir() -> Path:
+    base = _settings.state_dir / "analysis_cache"
+    base.mkdir(parents=True, exist_ok=True)
+    return base
+
+
+def _analysis_store_path(analysis_id: str) -> Path:
+    safe_id = str(analysis_id or "").strip()
+    return _analysis_store_dir() / f"{safe_id}.json"
+
+
+def _parse_analysis_result(payload: dict[str, Any]) -> AnalysisResult:
+    if hasattr(AnalysisResult, "model_validate"):
+        return AnalysisResult.model_validate(payload)
+    return AnalysisResult.parse_obj(payload)
+
+
+def _persist_analysis_result(result: AnalysisResult) -> None:
+    try:
+        path = _analysis_store_path(result.analysis_id)
+        write_json_atomic(
+            path,
+            {
+                "analysis_id": result.analysis_id,
+                "created_at": time.time(),
+                "result": result.dict(),
+            },
+            ensure_ascii=False,
+            indent=2,
+            step="analysis_store",
+        )
+    except Exception as exc:
+        logger.warning("analysis_persist_failed", extra={"event": "analysis_persist_failed", "error": str(exc)})
+
+
+def _load_persisted_analysis(analysis_id: str) -> Optional[AnalysisResult]:
+    path = _analysis_store_path(analysis_id)
+    if not path.exists():
+        return None
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        logger.warning("analysis_persist_read_failed", extra={"event": "analysis_persist_read_failed", "error": str(exc)})
+        return None
+
+    created_at = payload.get("created_at") if isinstance(payload, dict) else None
+    ttl = _analysis_persist_ttl_seconds()
+    if ttl and isinstance(created_at, (int, float)) and time.time() - float(created_at) > ttl:
+        with contextlib.suppress(Exception):
+            path.unlink(missing_ok=True)
+        return None
+
+    result_payload = payload.get("result") if isinstance(payload, dict) else payload
+    if not isinstance(result_payload, dict):
+        return None
+    try:
+        return _parse_analysis_result(result_payload)
+    except Exception as exc:
+        logger.warning("analysis_persist_parse_failed", extra={"event": "analysis_persist_parse_failed", "error": str(exc)})
+        return None
 
 
 def _get_analysis_semaphore() -> asyncio.Semaphore:
@@ -339,8 +414,9 @@ def _merge_extracted_tables(
 
 
 async def analyze_document_streaming(
-    file_bytes: bytes,
     file_name: str,
+    file_bytes: bytes | None = None,
+    file_path: Path | str | None = None,
     template_id: Optional[str] = None,
     connection_id: Optional[str] = None,
     correlation_id: Optional[str] = None,
@@ -349,6 +425,10 @@ async def analyze_document_streaming(
     analysis_id = _generate_analysis_id()
     started = time.time()
     max_bytes, max_mb = _analysis_size_limits()
+    resolved_path = Path(file_path) if file_path else None
+
+    if resolved_path and not file_name:
+        file_name = resolved_path.name
 
     semaphore = _get_analysis_semaphore()
     async with semaphore:
@@ -358,21 +438,38 @@ async def analyze_document_streaming(
             correlation_id,
         )
 
-        if not file_bytes:
+        if file_bytes is None and resolved_path is None:
             yield _attach_event_metadata(
                 {"event": "error", "detail": "Empty file provided."},
                 analysis_id,
                 correlation_id,
             )
             return
-
-        if len(file_bytes) > max_bytes:
-            yield _attach_event_metadata(
-                {"event": "error", "detail": f"File too large. Maximum size is {max_mb}MB."},
-                analysis_id,
-                correlation_id,
-            )
-            return
+        if file_bytes is not None:
+            if len(file_bytes) > max_bytes:
+                yield _attach_event_metadata(
+                    {"event": "error", "detail": f"File too large. Maximum size is {max_mb}MB."},
+                    analysis_id,
+                    correlation_id,
+                )
+                return
+        elif resolved_path is not None:
+            try:
+                size_bytes = resolved_path.stat().st_size
+            except Exception as exc:
+                yield _attach_event_metadata(
+                    {"event": "error", "detail": f"Failed to read file size: {exc}"},
+                    analysis_id,
+                    correlation_id,
+                )
+                return
+            if size_bytes > max_bytes:
+                yield _attach_event_metadata(
+                    {"event": "error", "detail": f"File too large. Maximum size is {max_mb}MB."},
+                    analysis_id,
+                    correlation_id,
+                )
+                return
 
         yield _attach_event_metadata(
             {"event": "stage", "stage": "parsing", "progress": 20, "detail": "Extracting content..."},
@@ -380,7 +477,9 @@ async def analyze_document_streaming(
             correlation_id,
         )
 
-        content = extract_document_content(
+        content = await asyncio.to_thread(
+            extract_document_content,
+            file_path=resolved_path,
             file_bytes=file_bytes,
             file_name=file_name,
         )
@@ -425,7 +524,7 @@ async def analyze_document_streaming(
 
             messages = [{"role": "user", "content": prompt}]
 
-            response = call_chat_completion(
+            response = await call_chat_completion_async(
                 client,
                 model=MODEL,
                 messages=messages,
@@ -495,6 +594,7 @@ async def analyze_document_streaming(
         )
 
         _ANALYSIS_CACHE.set(analysis_id, result)
+        _persist_analysis_result(result)
 
         yield _attach_event_metadata(
             {"event": "stage", "stage": "complete", "progress": 100},
@@ -551,7 +651,13 @@ def _generate_fallback_charts(tables: list[ExtractedTable]) -> list[ChartSpec]:
 
 def get_analysis(analysis_id: str) -> Optional[AnalysisResult]:
     """Retrieve a cached analysis result."""
-    return _ANALYSIS_CACHE.get(analysis_id)
+    cached = _ANALYSIS_CACHE.get(analysis_id)
+    if cached is not None:
+        return cached
+    persisted = _load_persisted_analysis(analysis_id)
+    if persisted is not None:
+        _ANALYSIS_CACHE.set(analysis_id, persisted)
+    return persisted
 
 
 def get_analysis_data(analysis_id: str) -> Optional[list[dict[str, Any]]]:

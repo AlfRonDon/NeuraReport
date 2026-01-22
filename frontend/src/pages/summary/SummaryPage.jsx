@@ -2,6 +2,7 @@
  * Executive Summary Generation Page
  */
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Paper,
@@ -76,8 +77,10 @@ export default function SummaryPage() {
   const [showHistory, setShowHistory] = useState(false);
   const [copied, setCopied] = useState(false);
   const [queueing, setQueueing] = useState(false);
+  const [queuedJobId, setQueuedJobId] = useState(null);
   const [clearHistoryConfirmOpen, setClearHistoryConfirmOpen] = useState(false);
   const toast = useToast();
+  const navigate = useNavigate();
 
   useEffect(() => {
     return () => reset();
@@ -85,6 +88,7 @@ export default function SummaryPage() {
 
   const handleGenerate = async () => {
     if (!content.trim()) return;
+    setQueuedJobId(null);
     // Validate content length
     const trimmedContent = content.trim();
     if (trimmedContent.length < 50) {
@@ -105,6 +109,7 @@ export default function SummaryPage() {
 
   const handleQueue = async () => {
     if (!content.trim()) return;
+    setQueuedJobId(null);
     // Validate content length
     const trimmedContent = content.trim();
     if (trimmedContent.length < 50) {
@@ -123,6 +128,7 @@ export default function SummaryPage() {
       focusAreas: focusAreas.length > 0 ? focusAreas : undefined,
     });
     if (response?.job_id) {
+      setQueuedJobId(response.job_id);
       toast.show('Summary queued. Track progress in Jobs.', 'success');
     } else {
       toast.show('Failed to queue summary job.', 'error');
@@ -187,6 +193,20 @@ export default function SummaryPage() {
       {error && (
         <Alert severity="error" sx={{ mb: 2 }} onClose={() => reset()}>
           {error}
+        </Alert>
+      )}
+
+      {queuedJobId && (
+        <Alert
+          severity="info"
+          sx={{ mb: 2 }}
+          action={(
+            <Button size="small" onClick={() => navigate('/jobs')} sx={{ textTransform: 'none' }}>
+              View Jobs
+            </Button>
+          )}
+        >
+          Summary queued in background. Job ID: {queuedJobId}
         </Alert>
       )}
 

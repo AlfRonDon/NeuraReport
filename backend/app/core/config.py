@@ -51,6 +51,7 @@ class Settings(BaseSettings):
     api_version: str = "4.0"
     cors_origins: List[str] = Field(default_factory=lambda: ["http://localhost:3000"])
     api_key: Optional[str] = Field(default=None, env="NEURA_API_KEY")
+    allow_anonymous_api: bool = Field(default=False, env="NEURA_ALLOW_ANON_API")
     jwt_secret: str = Field(default="change-me", env="NEURA_JWT_SECRET")
     jwt_lifetime_seconds: int = Field(default=3600, env="NEURA_JWT_LIFETIME_SECONDS")
 
@@ -99,6 +100,9 @@ class Settings(BaseSettings):
 
     # Debug/development mode
     debug_mode: bool = Field(default=False, env="NEURA_DEBUG")
+
+    # File/path safety overrides (use only in trusted environments)
+    allow_unsafe_pdf_paths: bool = Field(default=False, env="NEURA_ALLOW_UNSAFE_PDF_PATHS")
 
     # UX Governance configuration
     # Set to True when frontend is fully compliant with governance headers

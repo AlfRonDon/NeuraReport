@@ -1209,6 +1209,7 @@ async def queue_report_job(p: RunPayload | Sequence[Any], request: Request, *, k
         correlation_id = correlation_base if len(payloads) == 1 else f"{correlation_base}-{idx + 1}"
         steps = _build_job_steps(payload, kind=kind)
         template_rec = _state_store().get_template_record(payload.template_id) or {}
+        payload_data = payload.dict()
         job_record = _state_store().create_job(
             job_type="run_report",
             template_id=payload.template_id,
@@ -1223,9 +1224,9 @@ async def queue_report_job(p: RunPayload | Sequence[Any], request: Request, *, k
                 "end_date": payload.end_date,
                 "docx": bool(payload.docx),
                 "xlsx": bool(payload.xlsx),
+                "payload": payload_data,
             },
         )
-        payload_data = payload.dict()
         step_progress = _step_progress_from_steps(steps)
         schedule_fn(job_record["id"], payload_data, kind, correlation_id, step_progress)
         logger.info(
@@ -1257,6 +1258,82 @@ async def queue_report_job(p: RunPayload | Sequence[Any], request: Request, *, k
     if len(job_ids) == 1:
         return {"job_id": job_ids[0]}
     return response
+
+
+def recover_report_jobs(*, max_jobs: int = 50) -> int:
+    """
+    Attempt to requeue report jobs that were queued/running before a restart.
+
+    Jobs must have a serialized payload stored in job meta to be recoverable.
+    Returns the number of jobs requeued.
+    """
+    recovered = 0
+    try:
+        api_mod = importlib.import_module("backend.api")
+        schedule_fn = getattr(api_mod, "_schedule_report_job", _schedule_report_job)
+    except Exception:
+        schedule_fn = _schedule_report_job
+
+    jobs = _state_store().list_jobs(statuses=["queued", "running"], types=["run_report"], limit=0)
+    for job in jobs:
+        if max_jobs and recovered >= max_jobs:
+            break
+        job_id = job.get("id")
+        if not job_id:
+            continue
+        meta = _state_store().get_job_meta(job_id) or {}
+        payload = meta.get("payload")
+        if not isinstance(payload, Mapping):
+            _state_store().record_job_completion(
+                job_id,
+                status="failed",
+                error="Server restarted before job could resume",
+            )
+            continue
+        try:
+            run_payload = RunPayload(**payload)
+        except Exception as exc:
+            _state_store().record_job_completion(
+                job_id,
+                status="failed",
+                error=f"Server restarted; job payload invalid: {exc}",
+            )
+            continue
+
+        kind = str(job.get("templateKind") or meta.get("template_kind") or payload.get("template_kind") or "pdf")
+        steps = _build_job_steps(run_payload, kind=kind)
+        step_progress = _step_progress_from_steps(steps)
+        correlation_id = job.get("correlationId") or payload.get("correlation_id") or f"recovered-{job_id[:8]}"
+
+        _state_store().record_job_completion(
+            job_id,
+            status="failed",
+            error="Server restarted; job requeued",
+        )
+
+        template_rec = _state_store().get_template_record(run_payload.template_id) or {}
+        new_job = _state_store().create_job(
+            job_type="run_report",
+            template_id=run_payload.template_id,
+            connection_id=run_payload.connection_id,
+            template_name=template_rec.get("name") or f"Template {run_payload.template_id[:8]}",
+            template_kind=template_rec.get("kind") or kind,
+            schedule_id=run_payload.schedule_id,
+            correlation_id=correlation_id,
+            steps=steps,
+            meta={
+                "start_date": run_payload.start_date,
+                "end_date": run_payload.end_date,
+                "docx": bool(run_payload.docx),
+                "xlsx": bool(run_payload.xlsx),
+                "payload": payload,
+                "recovered_from": job_id,
+            },
+        )
+        schedule_fn(new_job["id"], payload, kind, correlation_id, step_progress)
+        recovered += 1
+
+    return recovered
 
 
 def list_report_runs(

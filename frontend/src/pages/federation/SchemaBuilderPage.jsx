@@ -1,7 +1,7 @@
 /**
  * Cross-Database Federation Schema Builder Page
  */
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Paper,
@@ -42,6 +42,9 @@ import {
 } from '@mui/icons-material';
 import useFederationStore from '../../stores/federationStore';
 import { useConnectionStore } from '../../stores';
+import ConfirmModal from '../../ui/Modal/ConfirmModal';
+import { getWriteOperation } from '../../utils/sqlSafety';
+import { useConfirmedAction } from '../../components/ux/governance';
 
 export default function SchemaBuilderPage() {
   const {
@@ -61,14 +64,17 @@ export default function SchemaBuilderPage() {
   } = useFederationStore();
 
   const { connections, fetchConnections } = useConnectionStore();
+  const confirmWriteQuery = useConfirmedAction('EXECUTE_WRITE_QUERY');
 
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [newSchemaName, setNewSchemaName] = useState('');
   const [newSchemaDescription, setNewSchemaDescription] = useState('');
   const [selectedConnections, setSelectedConnections] = useState([]);
   const [queryInput, setQueryInput] = useState('');
+  const [deleteConfirm, setDeleteConfirm] = useState({ open: false, schemaId: null, schemaName: '' });
 
   const [initialLoading, setInitialLoading] = useState(true);
+  const writeOperation = getWriteOperation(queryInput);
 
   useEffect(() => {
     const init = async () => {
@@ -100,10 +106,27 @@ export default function SchemaBuilderPage() {
     await suggestJoins(); // Store gets connections from currentSchema
   };
 
-  const handleExecuteQuery = async () => {
+  const runExecuteQuery = useCallback(async () => {
     if (!currentSchema || !queryInput.trim()) return;
     await executeQuery(currentSchema.id, queryInput);
-  };
+  }, [currentSchema, executeQuery, queryInput]);
+
+  const handleExecuteQuery = useCallback(async () => {
+    if (!currentSchema || !queryInput.trim()) return;
+    if (writeOperation) {
+      confirmWriteQuery(currentSchema.name || currentSchema.id || 'selected schema', runExecuteQuery);
+      return;
+    }
+    await runExecuteQuery();
+  }, [confirmWriteQuery, currentSchema, queryInput, runExecuteQuery, writeOperation]);
+
+  const handleDeleteRequest = useCallback((schema) => {
+    setDeleteConfirm({
+      open: true,
+      schemaId: schema?.id || null,
+      schemaName: schema?.name || 'this schema',
+    });
+  }, []);
 
   const toggleConnection = (connId) => {
     setSelectedConnections(prev =>
@@ -178,7 +201,7 @@ export default function SchemaBuilderPage() {
                         edge="end"
                         onClick={(e) => {
                           e.stopPropagation();
-                          deleteSchema(schema.id);
+                          handleDeleteRequest(schema);
                         }}
                       >
                         <DeleteIcon />
@@ -286,6 +309,22 @@ export default function SchemaBuilderPage() {
                 onChange={(e) => setQueryInput(e.target.value)}
                 sx={{ mb: 2, fontFamily: 'monospace' }}
               />
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
+                <Chip
+                  size="small"
+                  label="Read-only recommended"
+                  variant="outlined"
+                  sx={{ fontSize: '0.7rem' }}
+                />
+                {writeOperation && (
+                  <Chip
+                    size="small"
+                    color="warning"
+                    label={`${writeOperation.toUpperCase()} detected`}
+                    sx={{ fontSize: '0.7rem' }}
+                  />
+                )}
+              </Box>
               <Button
                 variant="contained"
                 startIcon={loading ? <CircularProgress size={20} /> : <RunIcon />}
@@ -294,6 +333,11 @@ export default function SchemaBuilderPage() {
               >
                 Execute Query
               </Button>
+              {writeOperation && (
+                <Alert severity="warning" sx={{ mt: 2 }}>
+                  Write queries can modify data and may not be reversible. You will be asked to confirm before execution.
+                </Alert>
+              )}
 
               {/* Query Results */}
               {queryResult && (
@@ -381,6 +425,21 @@ export default function SchemaBuilderPage() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <ConfirmModal
+        open={deleteConfirm.open}
+        onClose={() => setDeleteConfirm({ open: false, schemaId: null, schemaName: '' })}
+        onConfirm={() => {
+          if (deleteConfirm.schemaId) {
+            deleteSchema(deleteConfirm.schemaId);
+          }
+          setDeleteConfirm({ open: false, schemaId: null, schemaName: '' });
+        }}
+        title="Delete Virtual Schema"
+        message={`Delete "${deleteConfirm.schemaName}"? This will remove the virtual schema and its saved join logic.`}
+        confirmLabel="Delete"
+        severity="error"
+      />
     </Box>
   );
 }

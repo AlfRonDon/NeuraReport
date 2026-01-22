@@ -172,24 +172,47 @@ def _load_scalars(
     request: RenderRequest,
 ) -> Dict[str, Any]:
     """Load scalar values from database."""
-    scalars = {}
+    scalars: dict[str, Any] = {}
 
+    select_parts: list[str] = []
+    ordered_tokens: list[str] = []
     for token in contract.tokens.scalars:
         expr = contract.get_mapping(token)
         if not expr:
             continue
+        select_parts.append(f"{expr} AS {token}")
+        ordered_tokens.append(token)
 
-        # Simple query for scalar value
+    if select_parts:
         try:
-            result = datasource.execute_query(f"SELECT {expr} AS value")
+            result = datasource.execute_query(f"SELECT {', '.join(select_parts)}")
             if result.rows:
-                scalars[token] = result.rows[0][0]
-        except Exception as e:
+                row = result.rows[0]
+                for idx, token in enumerate(ordered_tokens):
+                    try:
+                        scalars[token] = row[idx]
+                    except Exception:
+                        scalars[token] = None
+        except Exception as exc:
             logger.warning(
-                "scalar_load_failed",
-                extra={"token": token, "error": str(e)},
+                "scalar_batch_load_failed",
+                extra={"error": str(exc), "token_count": len(ordered_tokens)},
             )
-            scalars[token] = None
+            # Fall back to per-token queries for resilience
+            for token in ordered_tokens:
+                expr = contract.get_mapping(token)
+                if not expr:
+                    continue
+                try:
+                    result = datasource.execute_query(f"SELECT {expr} AS value")
+                    if result.rows:
+                        scalars[token] = result.rows[0][0]
+                except Exception as e:
+                    logger.warning(
+                        "scalar_load_failed",
+                        extra={"token": token, "error": str(e)},
+                    )
+                    scalars[token] = None
 
     # Add date range if provided
     if request.start_date:

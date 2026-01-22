@@ -18,7 +18,7 @@ from typing import Any, Dict, Optional
 
 import pandas as pd
 
-from .sqlite_loader import DuckDBDataFrameQuery, SQLiteDataFrameLoader, get_loader
+from .sqlite_loader import DuckDBDataFrameQuery, SQLiteDataFrameLoader, get_loader, eager_load_enabled
 
 logger = logging.getLogger("neura.dataframes.store")
 
@@ -76,10 +76,10 @@ class DataFrameStore:
                         logger.debug(f"Connection {connection_id} already registered and up to date")
                         return
 
-            # Load all tables as DataFrames
             logger.info(f"Loading DataFrames for connection {connection_id} from {db_path}")
             loader = get_loader(db_path)
-            frames = loader.frames()  # Eagerly load all tables
+            eager = eager_load_enabled()
+            frames = loader.frames() if eager else {}
 
             # Close existing query engine if any
             existing_engine = self._query_engines.get(connection_id)
@@ -91,11 +91,14 @@ class DataFrameStore:
 
             # Store everything
             self._loaders[connection_id] = loader
-            self._frames_cache[connection_id] = frames
+            self._frames_cache[connection_id] = frames if frames else {}
             self._db_paths[connection_id] = db_path
-            self._query_engines[connection_id] = DuckDBDataFrameQuery(frames)
+            self._query_engines[connection_id] = DuckDBDataFrameQuery(frames, loader=loader)
 
-            logger.info(f"Loaded {len(frames)} tables for connection {connection_id}: {list(frames.keys())}")
+            logger.info(
+                f"Loaded {len(frames)} tables for connection {connection_id}: {list(frames.keys())}"
+                if frames else f"Registered connection {connection_id} for lazy DataFrame loading"
+            )
 
     def get_loader(self, connection_id: str) -> Optional[SQLiteDataFrameLoader]:
         """Get the loader for a connection."""

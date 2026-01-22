@@ -21,6 +21,7 @@ from backend.app.services.dataframes import (
     get_dataframe_store,
     ensure_connection_loaded,
 )
+from backend.app.services.dataframes.sqlite_loader import eager_load_enabled
 from backend.domain.connections import ConnectionTest, SchemaInfo, TableInfo
 from .base import DataSource, QueryResult, SchemaDiscovery
 
@@ -232,7 +233,8 @@ class DataFrameDataSource:
         # Load DataFrames for this database
         from backend.app.services.dataframes.sqlite_loader import get_loader
         self._loader = get_loader(self._path)
-        self._loader.frames()  # Eagerly load all tables
+        if eager_load_enabled():
+            self._loader.frames()  # Eagerly load all tables
 
         if use_pool:
             self._pool = DataFrameConnectionPool(
@@ -331,12 +333,11 @@ class DataFrameDataSource:
         with self._get_connection() as conn:
             conn.row_factory = sqlite_shim.Row
             cursor = conn.execute(query, parameters or ())
-            rows_raw = cursor.fetchall()
-            columns = list(rows_raw[0].keys()) if rows_raw else []
+            first_batch = cursor.fetchmany(batch_size)
+            columns = list(first_batch[0].keys()) if first_batch else []
 
-            # Yield in batches
-            for i in range(0, len(rows_raw), batch_size):
-                batch = rows_raw[i:i + batch_size]
+            batch = first_batch
+            while batch:
                 execution_time = (time.perf_counter() - start) * 1000
                 yield QueryResult(
                     columns=columns,
@@ -345,6 +346,7 @@ class DataFrameDataSource:
                     query=query,
                     execution_time_ms=execution_time,
                 )
+                batch = cursor.fetchmany(batch_size)
 
     def get_table_columns(self, table_name: str) -> List[str]:
         """Get column names from DataFrame."""

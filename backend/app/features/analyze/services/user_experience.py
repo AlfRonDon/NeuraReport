@@ -23,6 +23,7 @@ from backend.app.features.analyze.schemas.enhanced_analysis import (
     EnhancedAnalysisResult,
     SummaryMode,
 )
+from backend.app.features.analyze.services.enhanced_analysis_store import get_analysis_store
 
 logger = logging.getLogger("neura.analyze.ux")
 
@@ -226,6 +227,123 @@ class CollaborationService:
         self._comments: Dict[str, List[AnalysisComment]] = {}
         self._shares: Dict[str, List[AnalysisShare]] = {}
         self._versions: Dict[str, List[AnalysisVersion]] = {}
+        self._store = get_analysis_store()
+
+    def _parse_dt(self, value: Any) -> Optional[datetime]:
+        if value is None:
+            return None
+        if isinstance(value, datetime):
+            return value
+        try:
+            return datetime.fromisoformat(str(value))
+        except Exception:
+            return None
+
+    def _comment_to_dict(self, comment: AnalysisComment) -> Dict[str, Any]:
+        return {
+            "id": comment.id,
+            "analysis_id": comment.analysis_id,
+            "user_id": comment.user_id,
+            "user_name": comment.user_name,
+            "content": comment.content,
+            "element_type": comment.element_type,
+            "element_id": comment.element_id,
+            "created_at": comment.created_at.isoformat() if comment.created_at else None,
+            "updated_at": comment.updated_at.isoformat() if comment.updated_at else None,
+            "replies": [self._comment_to_dict(r) for r in comment.replies],
+            "resolved": comment.resolved,
+        }
+
+    def _comment_from_dict(self, data: Dict[str, Any]) -> AnalysisComment:
+        replies = [self._comment_from_dict(r) for r in data.get("replies", [])]
+        return AnalysisComment(
+            id=data.get("id", f"comment_{uuid.uuid4().hex[:12]}"),
+            analysis_id=data.get("analysis_id", ""),
+            user_id=data.get("user_id", "anonymous"),
+            user_name=data.get("user_name", "Anonymous"),
+            content=data.get("content", ""),
+            element_type=data.get("element_type"),
+            element_id=data.get("element_id"),
+            created_at=self._parse_dt(data.get("created_at")) or datetime.utcnow(),
+            updated_at=self._parse_dt(data.get("updated_at")) or datetime.utcnow(),
+            replies=replies,
+            resolved=bool(data.get("resolved", False)),
+        )
+
+    def _share_to_dict(self, share: AnalysisShare) -> Dict[str, Any]:
+        return {
+            "id": share.id,
+            "analysis_id": share.analysis_id,
+            "share_type": share.share_type,
+            "access_level": share.access_level,
+            "created_by": share.created_by,
+            "created_at": share.created_at.isoformat() if share.created_at else None,
+            "expires_at": share.expires_at.isoformat() if share.expires_at else None,
+            "password_protected": share.password_protected,
+            "access_count": share.access_count,
+            "allowed_emails": list(share.allowed_emails or []),
+        }
+
+    def _share_from_dict(self, data: Dict[str, Any]) -> AnalysisShare:
+        return AnalysisShare(
+            id=data.get("id", f"share_{uuid.uuid4().hex[:12]}"),
+            analysis_id=data.get("analysis_id", ""),
+            share_type=data.get("share_type", "link"),
+            access_level=data.get("access_level", "view"),
+            created_by=data.get("created_by", "api"),
+            created_at=self._parse_dt(data.get("created_at")) or datetime.utcnow(),
+            expires_at=self._parse_dt(data.get("expires_at")),
+            password_protected=bool(data.get("password_protected", False)),
+            access_count=int(data.get("access_count", 0) or 0),
+            allowed_emails=list(data.get("allowed_emails") or []),
+        )
+
+    def _version_to_dict(self, version: AnalysisVersion) -> Dict[str, Any]:
+        return {
+            "version_id": version.version_id,
+            "analysis_id": version.analysis_id,
+            "version_number": version.version_number,
+            "created_at": version.created_at.isoformat() if version.created_at else None,
+            "created_by": version.created_by,
+            "description": version.description,
+            "changes": list(version.changes or []),
+            "snapshot": version.snapshot,
+        }
+
+    def _version_from_dict(self, data: Dict[str, Any]) -> AnalysisVersion:
+        return AnalysisVersion(
+            version_id=data.get("version_id", f"v_{uuid.uuid4().hex[:12]}"),
+            analysis_id=data.get("analysis_id", ""),
+            version_number=int(data.get("version_number", 1) or 1),
+            created_at=self._parse_dt(data.get("created_at")) or datetime.utcnow(),
+            created_by=data.get("created_by", "api"),
+            description=data.get("description", ""),
+            changes=list(data.get("changes") or []),
+            snapshot=data.get("snapshot") or {},
+        )
+
+    def _ensure_comments_loaded(self, analysis_id: str) -> None:
+        if analysis_id not in self._comments:
+            payload = self._store.load_comments(analysis_id)
+            self._comments[analysis_id] = [self._comment_from_dict(p) for p in payload]
+
+    def _ensure_shares_loaded(self, analysis_id: str) -> None:
+        if analysis_id not in self._shares:
+            payload = self._store.list_shares_for_analysis(analysis_id)
+            self._shares[analysis_id] = [self._share_from_dict(p) for p in payload]
+
+    def _ensure_versions_loaded(self, analysis_id: str) -> None:
+        if analysis_id not in self._versions:
+            payload = self._store.load_versions(analysis_id)
+            self._versions[analysis_id] = [self._version_from_dict(p) for p in payload]
+
+    def _persist_comments(self, analysis_id: str) -> None:
+        payload = [self._comment_to_dict(c) for c in self._comments.get(analysis_id, [])]
+        self._store.save_comments(analysis_id, payload)
+
+    def _persist_versions(self, analysis_id: str) -> None:
+        payload = [self._version_to_dict(v) for v in self._versions.get(analysis_id, [])]
+        self._store.save_versions(analysis_id, payload)
 
     def add_comment(
         self,
@@ -248,8 +366,7 @@ class CollaborationService:
             element_id=element_id,
         )
 
-        if analysis_id not in self._comments:
-            self._comments[analysis_id] = []
+        self._ensure_comments_loaded(analysis_id)
 
         if parent_comment_id:
             # Find parent and add as reply
@@ -260,10 +377,12 @@ class CollaborationService:
         else:
             self._comments[analysis_id].append(comment)
 
+        self._persist_comments(analysis_id)
         return comment
 
     def get_comments(self, analysis_id: str) -> List[AnalysisComment]:
         """Get all comments for an analysis."""
+        self._ensure_comments_loaded(analysis_id)
         return self._comments.get(analysis_id, [])
 
     def create_share_link(
@@ -287,11 +406,37 @@ class CollaborationService:
             allowed_emails=allowed_emails or [],
         )
 
-        if analysis_id not in self._shares:
-            self._shares[analysis_id] = []
+        self._ensure_shares_loaded(analysis_id)
         self._shares[analysis_id].append(share)
+        self._store.save_share(self._share_to_dict(share))
 
         return share
+
+    def get_shares(self, analysis_id: str) -> List[AnalysisShare]:
+        """List shares for an analysis."""
+        self._ensure_shares_loaded(analysis_id)
+        return self._shares.get(analysis_id, [])
+
+    def get_share(self, share_id: str) -> Optional[AnalysisShare]:
+        """Get a share by ID."""
+        payload = self._store.load_share(share_id)
+        if not payload:
+            return None
+        return self._share_from_dict(payload)
+
+    def record_share_access(self, share_id: str) -> None:
+        """Increment access count for a share."""
+        share = self.get_share(share_id)
+        if not share:
+            return
+        share.access_count += 1
+        # Update in-memory list if loaded
+        if share.analysis_id in self._shares:
+            for idx, existing in enumerate(self._shares[share.analysis_id]):
+                if existing.id == share.id:
+                    self._shares[share.analysis_id][idx] = share
+                    break
+        self._store.save_share(self._share_to_dict(share))
 
     def save_version(
         self,
@@ -302,7 +447,7 @@ class CollaborationService:
     ) -> AnalysisVersion:
         """Save a version of the analysis."""
         if analysis_id not in self._versions:
-            self._versions[analysis_id] = []
+            self._ensure_versions_loaded(analysis_id)
 
         version_number = len(self._versions[analysis_id]) + 1
 
@@ -328,10 +473,12 @@ class CollaborationService:
         )
 
         self._versions[analysis_id].append(version)
+        self._persist_versions(analysis_id)
         return version
 
     def get_version_history(self, analysis_id: str) -> List[AnalysisVersion]:
         """Get version history for an analysis."""
+        self._ensure_versions_loaded(analysis_id)
         return self._versions.get(analysis_id, [])
 
 
@@ -579,6 +726,12 @@ class UserExperienceService:
 
     def create_share_link(self, *args, **kwargs) -> AnalysisShare:
         return self.collaboration.create_share_link(*args, **kwargs)
+
+    def get_share(self, share_id: str) -> Optional[AnalysisShare]:
+        return self.collaboration.get_share(share_id)
+
+    def record_share_access(self, share_id: str) -> None:
+        self.collaboration.record_share_access(share_id)
 
     def save_version(self, *args, **kwargs) -> AnalysisVersion:
         return self.collaboration.save_version(*args, **kwargs)

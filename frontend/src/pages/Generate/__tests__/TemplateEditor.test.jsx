@@ -79,10 +79,11 @@ describe('TemplateEditor metadata sync', () => {
     }
   })
 
-  it('shows placeholder when no edits exist', async () => {
+  it('omits last edit summary when no edits exist', async () => {
     getTemplateHtml.mockResolvedValue({ html: '<html></html>', metadata: null })
     renderEditor()
-    await screen.findAllByText('This template has not been edited yet.')
+    await screen.findByLabelText(/Template HTML/i)
+    expect(screen.queryByText(/Last edit:/i)).not.toBeInTheDocument()
   })
 
   it('updates store after manual save', async () => {
@@ -94,9 +95,12 @@ describe('TemplateEditor metadata sync', () => {
     })
 
     renderEditor()
-    await screen.findAllByText('This template has not been edited yet.')
+    await screen.findByLabelText(/Template HTML/i)
 
-    fireEvent.click(screen.getAllByRole('button', { name: /save html/i })[0])
+    const htmlField = screen.getByLabelText(/Template HTML/i)
+    fireEvent.change(htmlField, { target: { value: '<html>changed</html>' } })
+
+    fireEvent.click(screen.getByRole('button', { name: /^save$/i }))
 
     await waitFor(() =>
       expect(
@@ -116,11 +120,11 @@ describe('TemplateEditor metadata sync', () => {
     })
 
     renderEditor()
-    await screen.findAllByText('This template has not been edited yet.')
+    await screen.findByLabelText(/Template HTML/i)
 
     const [instructionsField] = screen.getAllByLabelText(/AI instructions/i)
     fireEvent.change(instructionsField, { target: { value: 'Revamp header' } })
-    fireEvent.click(screen.getAllByRole('button', { name: /apply via ai/i })[0])
+    fireEvent.click(screen.getByRole('button', { name: /^apply ai$/i }))
 
     await waitFor(() =>
       expect(screen.getByText((content) => content.includes('Last edit: AI edit'))).toBeInTheDocument(),
@@ -138,9 +142,9 @@ describe('TemplateEditor metadata sync', () => {
     })
 
     renderEditor()
-    await screen.findAllByText('This template has not been edited yet.')
+    await screen.findByLabelText(/Template HTML/i)
 
-    fireEvent.click(screen.getAllByRole('button', { name: /undo last change/i })[0])
+    fireEvent.click(screen.getByRole('button', { name: /^undo$/i }))
 
     await waitFor(() =>
       expect(screen.getByText((content) => content.includes('Last edit: Undo'))).toBeInTheDocument(),
@@ -159,7 +163,7 @@ describe('TemplateEditor metadata sync', () => {
     fireEvent.click(screen.getByRole('button', { name: /View diff/i }))
 
     const dialog = await screen.findByRole('dialog')
-    expect(within(dialog).getByText('HTML diff (before vs current)')).toBeInTheDocument()
+    expect(within(dialog).getByText('HTML Changes')).toBeInTheDocument()
     expect(within(dialog).getByText((content) => content.includes('Old HTML'))).toBeInTheDocument()
     expect(within(dialog).getByText((content) => content.includes('New HTML'))).toBeInTheDocument()
   })

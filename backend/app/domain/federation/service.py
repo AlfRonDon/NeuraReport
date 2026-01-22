@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from backend.app.core.errors import AppError
+from backend.app.core.sql_safety import get_write_operation, is_select_or_with
 from backend.app.services.state import store as state_store_module
 from backend.app.services.llm.client import get_llm_client
 
@@ -449,6 +450,21 @@ Return ONLY the JSON array."""
             raise AppError(
                 code="no_connections",
                 message="Virtual schema has no connections",
+                status_code=400,
+            )
+
+        if not is_select_or_with(request.sql):
+            raise AppError(
+                code="invalid_query",
+                message="Only SELECT queries are allowed",
+                status_code=400,
+            )
+
+        write_op = get_write_operation(request.sql)
+        if write_op:
+            raise AppError(
+                code="dangerous_query",
+                message=f"Query contains prohibited operation: {write_op}",
                 status_code=400,
             )
 

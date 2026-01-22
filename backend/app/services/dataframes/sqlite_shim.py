@@ -6,7 +6,7 @@ from typing import Any, Sequence
 
 import pandas as pd
 
-from .sqlite_loader import DuckDBDataFrameQuery, get_loader
+from .sqlite_loader import DuckDBDataFrameQuery, get_loader, eager_load_enabled
 
 
 class Error(Exception):
@@ -147,6 +147,17 @@ class DataFrameCursor:
             rows.append(row)
         return rows
 
+    def fetchmany(self, size: int = 1):
+        if size is None:
+            size = 1
+        rows = []
+        for _ in range(max(0, int(size))):
+            row = self.fetchone()
+            if row is None:
+                break
+            rows.append(row)
+        return rows
+
     def __iter__(self):
         while True:
             row = self.fetchone()
@@ -159,7 +170,11 @@ class DataFrameConnection:
     def __init__(self, db_path: Path):
         self.db_path = Path(db_path)
         self._loader = get_loader(self.db_path)
-        self._query = DuckDBDataFrameQuery(self._loader.frames())
+        if eager_load_enabled():
+            frames = self._loader.frames()
+        else:
+            frames = {}
+        self._query = DuckDBDataFrameQuery(frames, loader=self._loader)
         self.row_factory: Any | None = None
 
     def cursor(self) -> DataFrameCursor:

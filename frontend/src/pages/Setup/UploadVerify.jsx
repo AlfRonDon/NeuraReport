@@ -35,6 +35,7 @@ import EmptyState from '../../components/feedback/EmptyState.jsx'
 import LoadingState from '../../components/feedback/LoadingState.jsx'
 import InfoTooltip from '../../components/common/InfoTooltip.jsx'
 import TOOLTIP_COPY from '../../content/tooltipCopy.jsx'
+import ConfirmModal from '../../ui/Modal/ConfirmModal'
 
 function detectFormat(file) {
   if (!file?.name) return null
@@ -108,23 +109,21 @@ function StepIndicator(props) {
 }
 
 export default function UploadVerify() {
-  const {
-    setSetupNav,
-    addTemplate,
-    setLastApprovedTemplate,
-    connection,
-    activeConnectionId,
-    setSetupStep,
-    templateId,
-    setTemplateId,
-  setVerifyArtifacts,
-  cacheKey,
-  setCacheKey,
-  htmlUrls,
-  setHtmlUrls,
-  templateKind,
-  setTemplateKind,
-} = useAppStore()
+  const setSetupNav = useAppStore((state) => state.setSetupNav)
+  const addTemplate = useAppStore((state) => state.addTemplate)
+  const setLastApprovedTemplate = useAppStore((state) => state.setLastApprovedTemplate)
+  const connection = useAppStore((state) => state.connection)
+  const activeConnectionId = useAppStore((state) => state.activeConnectionId)
+  const setSetupStep = useAppStore((state) => state.setSetupStep)
+  const templateId = useAppStore((state) => state.templateId)
+  const setTemplateId = useAppStore((state) => state.setTemplateId)
+  const setVerifyArtifacts = useAppStore((state) => state.setVerifyArtifacts)
+  const cacheKey = useAppStore((state) => state.cacheKey)
+  const setCacheKey = useAppStore((state) => state.setCacheKey)
+  const htmlUrls = useAppStore((state) => state.htmlUrls)
+  const setHtmlUrls = useAppStore((state) => state.setHtmlUrls)
+  const templateKind = useAppStore((state) => state.templateKind)
+  const setTemplateKind = useAppStore((state) => state.setTemplateKind)
 
   const [file, setFile] = useState(null)
 
@@ -148,6 +147,7 @@ export default function UploadVerify() {
 
 
   const [mappingOpen, setMappingOpen] = useState(false)
+  const [changeConnectionConfirmOpen, setChangeConnectionConfirmOpen] = useState(false)
 
 
   const [tplName, setTplName] = useState('New Template')
@@ -248,6 +248,9 @@ export default function UploadVerify() {
   }, [verifyEta])
   const verifyStageLabel = verifyStage && verifyStage !== 'Idle' ? verifyStage : 'Preparing verification...'
   const dropDisabled = verifying || queueingVerify
+  const hasInProgressSetup = Boolean(
+    file || verified || preview?.templateId || verifyLog.length || mappingOpen
+  )
 
 
   const connectionId = connection?.connectionId || activeConnectionId || null
@@ -570,6 +573,14 @@ export default function UploadVerify() {
     setMappingOpen(true)
   }
 
+  const handleChangeConnection = useCallback(() => {
+    if (hasInProgressSetup) {
+      setChangeConnectionConfirmOpen(true)
+      return
+    }
+    setSetupNav('connect')
+  }, [hasInProgressSetup, setSetupNav])
+
 
 
 
@@ -770,7 +781,7 @@ export default function UploadVerify() {
             variant="outlined"
             startIcon={<SwapHorizIcon />}
             sx={{ px: 1.5, display: { xs: 'none', sm: 'inline-flex' } }}
-            onClick={() => setSetupNav('connect')}
+            onClick={handleChangeConnection}
           >
             Change Connection
           </Button>
@@ -1363,6 +1374,22 @@ export default function UploadVerify() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <ConfirmModal
+        open={changeConnectionConfirmOpen}
+        onClose={() => setChangeConnectionConfirmOpen(false)}
+        onConfirm={() => {
+          resetVerificationState({ clearFile: true })
+          setMappingOpen(false)
+          setVerifyModalOpen(false)
+          setChangeConnectionConfirmOpen(false)
+          setSetupNav('connect')
+        }}
+        title="Switch Connection"
+        message="Switching connections will clear the uploaded file, verification progress, and any mapping work. Continue?"
+        confirmLabel="Switch"
+        severity="warning"
+      />
 
     </Surface>
   )

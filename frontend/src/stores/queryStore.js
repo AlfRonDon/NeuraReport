@@ -20,6 +20,9 @@ const useQueryStore = create(
       totalCount: null,
       executionTimeMs: null,
 
+      // Execution options
+      includeTotal: false,
+
       // UI state
       isGenerating: false,
       isExecuting: false,
@@ -62,6 +65,8 @@ const useQueryStore = create(
           executionTimeMs,
           error: null,
         }),
+
+      setIncludeTotal: (includeTotal) => set({ includeTotal: Boolean(includeTotal) }),
 
       setError: (error) => set({ error, isGenerating: false, isExecuting: false }),
 

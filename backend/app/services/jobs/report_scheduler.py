@@ -18,6 +18,13 @@ from src.services.report_service import JobRunTracker, _build_job_steps, _step_p
 from backend.app.features.generate.schemas.reports import RunPayload
 
 logger = logging.getLogger("neura.scheduler")
+_MISFIRE_GRACE_SECONDS_RAW = os.getenv("NEURA_SCHEDULER_MISFIRE_GRACE_SECONDS", "3600")
+try:
+    _MISFIRE_GRACE_SECONDS = int(_MISFIRE_GRACE_SECONDS_RAW)
+except (TypeError, ValueError):
+    _MISFIRE_GRACE_SECONDS = 3600
+if _MISFIRE_GRACE_SECONDS <= 0:
+    _MISFIRE_GRACE_SECONDS = None
 
 
 def _parse_iso(ts: str | None) -> datetime | None:
@@ -197,7 +204,7 @@ class ReportScheduler:
                 replace_existing=True,
                 max_instances=1,
                 coalesce=True,
-                misfire_grace_time=60,
+                misfire_grace_time=_MISFIRE_GRACE_SECONDS,
             )
 
             if job.next_run_time:
@@ -267,6 +274,7 @@ class ReportScheduler:
                     "schedule_name": schedule.get("name"),
                     "docx": bool(payload.get("docx")),
                     "xlsx": bool(payload.get("xlsx")),
+                    "payload": payload,
                 }
                 job_record = state_store.create_job(
                     job_type="run_report",

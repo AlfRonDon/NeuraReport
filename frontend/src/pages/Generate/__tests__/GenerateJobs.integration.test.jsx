@@ -18,7 +18,6 @@ vi.mock('react-router-dom', async () => {
   }
 })
 
-let AppHeader
 let JobsPanel
 let runReportAsJobFn
 let runReportAsJobSpy
@@ -45,8 +44,6 @@ beforeEach(
   async () => {
     vi.resetModules()
     globalThis.__NEURA_TEST_ENVIRONMENT__ = { VITE_USE_MOCK: 'true' }
-    const appModule = await import('../../../App.jsx')
-    AppHeader = appModule.AppHeader
     JobsPanel = (await import('../../../components/JobsPanel.jsx')).default
     const clientModule = await import('../../../api/client.js')
     const realRunReportAsJob = clientModule.runReportAsJob
@@ -134,7 +131,9 @@ function TestShell({ queryClient }) {
         <QueryClientProvider client={queryClient}>
           <ToastProvider>
             <TestGenerateDriver />
-            <AppHeader onJobsOpen={() => setJobsOpen(true)} />
+            <button type="button" aria-label="Open jobs panel" onClick={() => setJobsOpen(true)}>
+              Open jobs panel
+            </button>
             <JobsPanel open={jobsOpen} onClose={() => setJobsOpen(false)} />
           </ToastProvider>
         </QueryClientProvider>
@@ -161,12 +160,12 @@ describe('Generate to JobsPanel integration (mock mode)', () => {
     const jobHeadings = await within(currentList).findAllByText(readyTemplate.name, { exact: false }, { timeout: 8000 })
     const newJobCard = jobHeadings[0].closest('[data-testid="job-card"]')
     expect(newJobCard).toBeTruthy()
-    expect(within(newJobCard).getAllByText(/Queued|Running/i).length).toBeGreaterThan(0)
+    expect(within(newJobCard).getAllByText(/Pending|Queued|Running/i).length).toBeGreaterThan(0)
 
     const completedHeadings = await within(currentList).findAllByText('Completed mock run')
     const completedCard = completedHeadings[0].closest('[data-testid="job-card"]')
     expect(completedCard).toBeTruthy()
-    fireEvent.click(within(completedCard).getByRole('button', { name: /Open Generate/i }))
-    expect(mockNavigate).toHaveBeenCalledWith('/generate', { state: { focusTemplateId: 'tpl_success_mock' } })
+    fireEvent.click(within(completedCard).getByRole('button', { name: /Open Report/i }))
+    expect(mockNavigate).toHaveBeenCalledWith('/reports?template=tpl_success_mock')
   }, 10000)
 })

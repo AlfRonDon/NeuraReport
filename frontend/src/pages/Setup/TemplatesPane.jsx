@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Box, Typography, Stack, Button, TextField, Chip, LinearProgress,
   MenuItem, Paper, Dialog, DialogTitle, DialogContent, DialogActions,
-  Tabs, Tab, Collapse, IconButton, Badge, Tooltip,
+  Tabs, Tab, Collapse, IconButton, Badge, Tooltip, Alert,
 } from '@mui/material'
 import CheckRoundedIcon from '@mui/icons-material/CheckRounded'
 import PlayArrowIcon from '@mui/icons-material/PlayArrow'
@@ -156,6 +156,14 @@ export default function TemplatesPane() {
   const [editScheduleFields, setEditScheduleFields] = useState({})
   const [scheduleUpdating, setScheduleUpdating] = useState(false)
   const [generation, setGeneration] = useState({ items: [] })
+  const queuedJobs = useMemo(
+    () => generation.items.filter((item) => item.status === 'queued'),
+    [generation.items],
+  )
+  const queuedJobIds = useMemo(
+    () => queuedJobs.map((item) => item.jobId).filter(Boolean),
+    [queuedJobs],
+  )
   const discoveryResetReady = useRef(false)
   const keyOptionsFetchKeyRef = useRef({})
   const isDevEnv = typeof import.meta !== 'undefined' && Boolean(import.meta.env?.DEV)
@@ -893,6 +901,23 @@ export default function TemplatesPane() {
         <TabPanel value={activeTab} index={1}>
           <Box sx={{ px: 2, pb: 2 }}>
             <Stack spacing={2}>
+              {queuedJobs.length > 0 && (
+                <Alert
+                  severity="info"
+                  action={(
+                    <Button
+                      size="small"
+                      onClick={() => navigate('/jobs')}
+                      sx={{ textTransform: 'none' }}
+                    >
+                      View Jobs
+                    </Button>
+                  )}
+                >
+                  Reports queued in background.
+                  {queuedJobIds.length > 0 ? ` Job IDs: ${queuedJobIds.slice(0, 3).join(', ')}` : ' Track progress in Jobs.'}
+                </Alert>
+              )}
               <GenerateAndDownload
                 selected={selected}
                 selectedTemplates={selectedTemplates}

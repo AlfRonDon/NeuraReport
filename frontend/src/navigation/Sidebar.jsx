@@ -32,6 +32,7 @@ import ScheduleIcon from '@mui/icons-material/Schedule'
 import HistoryIcon from '@mui/icons-material/History'
 import TimelineIcon from '@mui/icons-material/Timeline'
 import BarChartIcon from '@mui/icons-material/BarChart'
+import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings'
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import MenuIcon from '@mui/icons-material/Menu'
@@ -123,6 +124,7 @@ const NAV_ITEMS = [
     section: 'System',
     items: [
       { key: 'stats', label: 'Usage Stats', icon: BarChartIcon, path: '/stats' },
+      { key: 'ops', label: 'Ops Console', icon: AdminPanelSettingsIcon, path: '/ops' },
       { key: 'activity', label: 'Activity Log', icon: TimelineIcon, path: '/activity' },
       { key: 'settings', label: 'Settings', icon: SettingsIcon, path: '/settings' },
     ],

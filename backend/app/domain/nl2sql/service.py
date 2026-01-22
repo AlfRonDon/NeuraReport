@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from backend.app.core.errors import AppError
+from backend.app.core.sql_safety import get_write_operation, is_select_or_with
 from backend.app.services.connections.db_connection import resolve_db_path, verify_sqlite
 from backend.app.services.dataframes import sqlite_shim, ensure_connection_loaded
 from backend.app.services.llm.client import get_llm_client
@@ -190,24 +191,21 @@ class NL2SQLService:
         # Ensure DataFrames are loaded for this connection
         ensure_connection_loaded(request.connection_id, db_path)
 
-        # Validate SQL (basic safety check)
-        sql_upper = request.sql.upper().strip()
-        if not sql_upper.startswith("SELECT") and not sql_upper.startswith("WITH"):
+        # Validate SQL (read-only safety check)
+        if not is_select_or_with(request.sql):
             raise AppError(
                 code="invalid_query",
                 message="Only SELECT queries are allowed",
                 status_code=400,
             )
 
-        # Check for dangerous patterns
-        dangerous_patterns = ["DROP ", "DELETE ", "INSERT ", "UPDATE ", "ALTER ", "CREATE ", "TRUNCATE "]
-        for pattern in dangerous_patterns:
-            if pattern in sql_upper:
-                raise AppError(
-                    code="dangerous_query",
-                    message=f"Query contains prohibited operation: {pattern.strip()}",
-                    status_code=400,
-                )
+        write_op = get_write_operation(request.sql)
+        if write_op:
+            raise AppError(
+                code="dangerous_query",
+                message=f"Query contains prohibited operation: {write_op}",
+                status_code=400,
+            )
 
         # Execute query using DataFrame shim
         started = time.time()
@@ -215,12 +213,13 @@ class NL2SQLService:
             with sqlite_shim.connect(str(db_path)) as con:
                 con.row_factory = sqlite_shim.Row
 
-                # Get total count first (without limit)
-                count_sql = f"SELECT COUNT(*) as cnt FROM ({request.sql}) AS subq"
-                try:
-                    total_count = con.execute(count_sql).fetchone()["cnt"]
-                except Exception:
-                    total_count = None
+                total_count = None
+                if request.include_total:
+                    count_sql = f"SELECT COUNT(*) as cnt FROM ({request.sql}) AS subq"
+                    try:
+                        total_count = con.execute(count_sql).fetchone()["cnt"]
+                    except Exception:
+                        total_count = None
 
                 # Execute with limit and offset
                 limited_sql = f"{request.sql} LIMIT {request.limit} OFFSET {request.offset}"

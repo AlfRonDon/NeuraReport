@@ -9,7 +9,7 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "test": "vitest",
+    "test": "node ./scripts/run-vitest.mjs",
     "test:ui": "playwright test --grep @ui",
     "test:a11y": "playwright test --grep @a11y",
     "test:visual": "playwright test --grep @visual",

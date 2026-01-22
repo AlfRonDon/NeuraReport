@@ -27,7 +27,9 @@ const {
   suggestionMock,
   discoverReportsMock,
   suggestChartsMock,
+  mockApiImplementation,
 } = vi.hoisted(() => {
+  const savedChartsStore = []
   const discovery = {
     batches: [
       { id: 'b1', rows: 120, parent: 12, selected: true },
@@ -66,81 +68,83 @@ const {
       { batch_index: 2, rows: 95, parent: 10, rows_per_parent: 9.5 },
     ],
   }
-  return {
-    savedChartsStore: [],
-    templatesMock: [
-      {
-        id: 'tpl-int',
-        name: 'Integration Template',
-        status: 'approved',
-        kind: 'pdf',
-        artifacts: {
-          generator_sql_pack_url: '/mock.sql',
-          generator_output_schemas_url: '/mock.json',
-        },
-        generator: { summary: {} },
-        mappingKeys: [],
+  const templatesMock = [
+    {
+      id: 'tpl-int',
+      name: 'Integration Template',
+      status: 'approved',
+      kind: 'pdf',
+      artifacts: {
+        generator_sql_pack_url: '/mock.sql',
+        generator_output_schemas_url: '/mock.json',
       },
-    ],
+      generator: { summary: {} },
+      mappingKeys: [],
+    },
+  ]
+  const discoverReportsMock = vi.fn().mockResolvedValue(discovery)
+  const suggestChartsMock = vi.fn().mockResolvedValue(suggestion)
+  const mockApiImplementation = {
+    isMock: false,
+    listApprovedTemplates: vi.fn().mockResolvedValue(templatesMock),
+    fetchTemplateKeyOptions: vi.fn().mockResolvedValue({}),
+    discoverReports: discoverReportsMock,
+    suggestCharts: suggestChartsMock,
+    listSavedCharts: vi.fn().mockImplementation(({ templateId }) =>
+      Promise.resolve(
+        savedChartsStore
+          .filter((chart) => chart.templateId === templateId)
+          .map((chart) => ({
+            ...chart,
+            spec: { ...chart.spec },
+          })),
+      ),
+    ),
+    createSavedChart: vi.fn().mockImplementation(({ templateId, name }) => {
+      const record = {
+        id: `saved-${savedChartsStore.length + 1}`,
+        templateId,
+        name,
+        spec: {
+          type: 'line',
+          xField: 'missing_field',
+          yFields: ['missing_metric'],
+          chartTemplateId: 'time_series_basic',
+        },
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }
+      savedChartsStore.push(record)
+      return Promise.resolve({ ...record, spec: { ...record.spec } })
+    }),
+    updateSavedChart: vi.fn().mockImplementation(({ templateId, chartId, name, spec }) => {
+      const record = savedChartsStore.find((item) => item.id === chartId && item.templateId === templateId)
+      if (!record) {
+        throw new Error('Chart not found')
+      }
+      if (name != null) record.name = name
+      if (spec != null) record.spec = { ...spec }
+      record.updatedAt = new Date().toISOString()
+      return Promise.resolve({ ...record, spec: { ...record.spec } })
+    }),
+    deleteSavedChart: vi.fn().mockImplementation(({ templateId, chartId }) => {
+      const index = savedChartsStore.findIndex((item) => item.id === chartId && item.templateId === templateId)
+      if (index >= 0) {
+        savedChartsStore.splice(index, 1)
+      }
+      return Promise.resolve({ status: 'ok' })
+    }),
+  }
+  return {
+    savedChartsStore,
+    templatesMock,
     discoveryMock: discovery,
     suggestionMock: suggestion,
-    discoverReportsMock: vi.fn().mockResolvedValue(discovery),
-    suggestChartsMock: vi.fn().mockResolvedValue(suggestion),
+    discoverReportsMock,
+    suggestChartsMock,
+    mockApiImplementation,
   }
 })
-
-// Mock functions for the API
-const mockApiImplementation = {
-  isMock: false,
-  listApprovedTemplates: vi.fn().mockResolvedValue(templatesMock),
-  fetchTemplateKeyOptions: vi.fn().mockResolvedValue({}),
-  discoverReports: discoverReportsMock,
-  suggestCharts: suggestChartsMock,
-  listSavedCharts: vi.fn().mockImplementation(({ templateId }) =>
-    Promise.resolve(
-      savedChartsStore
-        .filter((chart) => chart.templateId === templateId)
-        .map((chart) => ({
-          ...chart,
-          spec: { ...chart.spec },
-        })),
-    ),
-  ),
-  createSavedChart: vi.fn().mockImplementation(({ templateId, name }) => {
-    const record = {
-      id: `saved-${savedChartsStore.length + 1}`,
-      templateId,
-      name,
-      spec: {
-        type: 'line',
-        xField: 'missing_field',
-        yFields: ['missing_metric'],
-        chartTemplateId: 'time_series_basic',
-      },
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    }
-    savedChartsStore.push(record)
-    return Promise.resolve({ ...record, spec: { ...record.spec } })
-  }),
-  updateSavedChart: vi.fn().mockImplementation(({ templateId, chartId, name, spec }) => {
-    const record = savedChartsStore.find((item) => item.id === chartId && item.templateId === templateId)
-    if (!record) {
-      throw new Error('Chart not found')
-    }
-    if (name != null) record.name = name
-    if (spec != null) record.spec = { ...spec }
-    record.updatedAt = new Date().toISOString()
-    return Promise.resolve({ ...record, spec: { ...record.spec } })
-  }),
-  deleteSavedChart: vi.fn().mockImplementation(({ templateId, chartId }) => {
-    const index = savedChartsStore.findIndex((item) => item.id === chartId && item.templateId === templateId)
-    if (index >= 0) {
-      savedChartsStore.splice(index, 1)
-    }
-    return Promise.resolve({ status: 'ok' })
-  }),
-}
 
 vi.mock('../../../api/client.js', async () => {
   const actual = await vi.importActual('../../../api/client.js')
@@ -196,13 +200,21 @@ describe('GeneratePage saved chart integration', () => {
 
     renderGeneratePage()
 
-    const selectButton = await screen.findByRole('button', { name: /Select Integration Template/i })
+    const templateTitle = await screen.findByText('Integration Template')
+    const templateCard = templateTitle.closest('.MuiCard-root')
+    expect(templateCard).toBeTruthy()
+    const selectButton = within(templateCard).getByRole('button', { name: /^Select$/i })
     fireEvent.click(selectButton)
+    await waitFor(() =>
+      expect(within(templateCard).getByRole('button', { name: /^Selected$/i })).toBeInTheDocument(),
+    )
 
     fireEvent.change(screen.getByLabelText(/Start Date & Time/i), { target: { value: '2024-01-01T00:00' } })
     fireEvent.change(screen.getByLabelText(/End Date & Time/i), { target: { value: '2024-01-02T00:00' } })
 
-    fireEvent.click(screen.getByRole('button', { name: /Discover matching reports/i }))
+    const findButton = screen.getByRole('button', { name: /Find Reports/i })
+    await waitFor(() => expect(findButton).not.toBeDisabled())
+    fireEvent.click(findButton)
     await waitFor(() => expect(discoverReportsMock).toHaveBeenCalled())
 
     fireEvent.change(screen.getByLabelText(/Ask a question about this template's data/i), {

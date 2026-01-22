@@ -36,6 +36,7 @@ from .app.core.auth import init_auth_db
 from .app.env_loader import load_env_file
 
 from .app.services.jobs.report_scheduler import ReportScheduler
+from .app.services.background_tasks import mark_incomplete_jobs_failed
 
 
 def _configure_error_log_handler(target_logger: logging.Logger | None = None) -> Path | None:
@@ -100,6 +101,33 @@ async def lifespan(app: FastAPI):
         SCHEDULER = ReportScheduler(_scheduler_runner, poll_seconds=poll_seconds)
     if SCHEDULER and not SCHEDULER_DISABLED:
         await SCHEDULER.start()
+
+    recover_jobs = os.getenv("NEURA_RECOVER_JOBS_ON_STARTUP", "true").lower() in {"1", "true", "yes"}
+    if recover_jobs:
+        try:
+            recovered = report_service.recover_report_jobs()
+            if recovered:
+                logger.info(
+                    "report_jobs_recovered",
+                    extra={"event": "report_jobs_recovered", "count": recovered},
+                )
+        except Exception as exc:
+            logger.warning(
+                "report_job_recovery_failed",
+                extra={"event": "report_job_recovery_failed", "error": str(exc)},
+            )
+        try:
+            updated = mark_incomplete_jobs_failed(skip_types={"run_report"})
+            if updated:
+                logger.info(
+                    "background_jobs_marked_failed",
+                    extra={"event": "background_jobs_marked_failed", "count": updated},
+                )
+        except Exception as exc:
+            logger.warning(
+                "background_job_cleanup_failed",
+                extra={"event": "background_job_cleanup_failed", "error": str(exc)},
+            )
 
     yield
 

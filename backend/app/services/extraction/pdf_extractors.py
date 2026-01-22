@@ -29,10 +29,13 @@ import os
 import re
 import tempfile
 import threading
+import warnings
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+
+from backend.app.core.config import get_settings
 
 logger = logging.getLogger("neura.extraction.pdf")
 
@@ -45,6 +48,8 @@ logger = logging.getLogger("neura.extraction.pdf")
 class ExtractionConfig:
     """Configuration for PDF extraction."""
     max_pages: int = 100
+    max_auto_pages: int = 25
+    max_compare_pages: int = 10
     max_tables_per_page: int = 10
     min_rows_for_table: int = 2
     min_cols_for_table: int = 2
@@ -128,6 +133,14 @@ class ExtractionResult:
     extraction_time_ms: float = 0.0
     ocr_used: bool = False
 
+    def __post_init__(self) -> None:
+        self.metadata = dict(self.metadata or {})
+        self.metadata.setdefault("error_count", len(self.errors))
+        self.metadata.setdefault(
+            "partial_success",
+            bool(self.errors) and (bool(self.tables) or bool(self.text)),
+        )
+
     @property
     def has_tables(self) -> bool:
         """Check if any tables were extracted."""
@@ -161,6 +174,35 @@ class ExtractionResult:
 # =============================================================================
 # OCR Support
 # =============================================================================
+
+def _get_ocr_max_pixels() -> int:
+    raw = os.getenv("NEURA_OCR_MAX_PIXELS", "20000000")
+    try:
+        value = int(raw)
+    except (TypeError, ValueError):
+        value = 20000000
+    return max(value, 1000000)
+
+
+def _load_image_for_ocr(image_bytes: bytes):
+    import io
+    from PIL import Image, UnidentifiedImageError
+
+    max_pixels = _get_ocr_max_pixels()
+    if max_pixels:
+        Image.MAX_IMAGE_PIXELS = max_pixels
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", Image.DecompressionBombWarning)
+        try:
+            image = Image.open(io.BytesIO(image_bytes))
+            image.load()
+            return image
+        except (Image.DecompressionBombError, Image.DecompressionBombWarning) as exc:
+            raise ValueError("Image exceeds pixel limit") from exc
+        except UnidentifiedImageError as exc:
+            raise ValueError("Unsupported image format") from exc
+
 
 class OCREngine:
     """OCR engine abstraction supporting multiple backends."""
@@ -206,29 +248,31 @@ class OCREngine:
         engine = self._detect_engine()
 
         if engine == "none":
-            return ""
+            raise RuntimeError("OCR engine not available")
 
-        try:
-            if engine == "easyocr":
+        if engine == "easyocr":
+            try:
                 return self._ocr_easyocr(image_bytes)
-            elif engine == "tesseract":
-                return self._ocr_tesseract(image_bytes)
-        except Exception as e:
-            logger.warning(f"OCR extraction failed: {e}")
-            return ""
+            except Exception as exc:
+                logger.warning(f"OCR extraction failed (easyocr): {exc}")
+                try:
+                    import pytesseract
+                    pytesseract.get_tesseract_version()
+                    self._engine = "tesseract"
+                    return self._ocr_tesseract(image_bytes)
+                except Exception as fallback_exc:
+                    raise RuntimeError("OCR extraction failed") from fallback_exc
+        if engine == "tesseract":
+            return self._ocr_tesseract(image_bytes)
 
-        return ""
+        raise RuntimeError("OCR engine not available")
 
     def _ocr_easyocr(self, image_bytes: bytes) -> str:
         """Extract text using EasyOCR."""
         import easyocr
         import numpy as np
-        from PIL import Image
-        import io
 
-        # Convert bytes to image
-        image = Image.open(io.BytesIO(image_bytes))
-        image_array = np.array(image)
+        image_array = np.array(_load_image_for_ocr(image_bytes))
 
         # Initialize reader (cached)
         reader = self._easyocr_reader
@@ -246,10 +290,8 @@ class OCREngine:
     def _ocr_tesseract(self, image_bytes: bytes) -> str:
         """Extract text using Tesseract."""
         import pytesseract
-        from PIL import Image
-        import io
 
-        image = Image.open(io.BytesIO(image_bytes))
+        image = _load_image_for_ocr(image_bytes)
         return pytesseract.image_to_string(image, lang=self.language)
 
     def is_available(self) -> bool:
@@ -257,16 +299,18 @@ class OCREngine:
         return self._detect_engine() != "none"
 
 
-# Global OCR engine instance
-_ocr_engine: Optional[OCREngine] = None
+# Global OCR engines per language
+_ocr_engines: Dict[str, OCREngine] = {}
 
 
 def get_ocr_engine(language: str = "eng") -> OCREngine:
-    """Get or create OCR engine."""
-    global _ocr_engine
-    if _ocr_engine is None:
-        _ocr_engine = OCREngine(language)
-    return _ocr_engine
+    """Get or create OCR engine for a specific language."""
+    lang = (language or "eng").strip() or "eng"
+    engine = _ocr_engines.get(lang)
+    if engine is None:
+        engine = OCREngine(lang)
+        _ocr_engines[lang] = engine
+    return engine
 
 
 # =============================================================================
@@ -275,6 +319,134 @@ def get_ocr_engine(language: str = "eng") -> OCREngine:
 
 def _resolve_config(config: Optional[ExtractionConfig]) -> ExtractionConfig:
     return config or DEFAULT_CONFIG
+
+
+def _safe_error_message(prefix: str, exc: Exception | None = None) -> str:
+    if exc is None:
+        return prefix
+    return f"{prefix} ({exc.__class__.__name__})"
+
+
+def _limit_config_pages(config: ExtractionConfig, limit: Optional[int]) -> ExtractionConfig:
+    if limit is None:
+        return config
+    try:
+        limit_value = int(limit)
+    except (TypeError, ValueError):
+        return config
+    if limit_value <= 0:
+        return config
+    if config.max_pages > limit_value:
+        return replace(config, max_pages=limit_value)
+    return config
+
+
+def _is_relative_to(path: Path, base: Path) -> bool:
+    try:
+        path.relative_to(base)
+        return True
+    except ValueError:
+        return False
+
+
+def _is_unc_path(path: Path) -> bool:
+    raw = str(path)
+    return raw.startswith("\\\\") or raw.startswith("//")
+
+
+def _resolve_pdf_path(pdf_path: Union[str, Path]) -> tuple[Optional[Path], Optional[str]]:
+    if pdf_path is None:
+        return None, "pdf_path is required"
+    try:
+        candidate = Path(pdf_path)
+    except TypeError:
+        return None, "pdf_path must be a valid filesystem path"
+
+    if candidate.suffix.lower() != ".pdf":
+        return None, "pdf_path must point to a .pdf file"
+
+    try:
+        resolved = candidate.resolve()
+    except Exception:
+        resolved = candidate
+
+    if not resolved.exists():
+        return None, "pdf_path does not exist"
+    if not resolved.is_file():
+        return None, "pdf_path must be a file"
+
+    settings = get_settings()
+    if not settings.allow_unsafe_pdf_paths:
+        if _is_unc_path(resolved):
+            return None, "UNC paths are not allowed"
+        allowed_roots = [
+            Path(settings.uploads_root).resolve(),
+            Path(settings.excel_uploads_root).resolve(),
+            Path(tempfile.gettempdir()).resolve(),
+        ]
+        if not any(_is_relative_to(resolved, root) for root in allowed_roots):
+            return None, "pdf_path must be within uploads or temp directories"
+
+    return resolved, None
+
+
+def _normalize_pages_input(
+    pages: Optional[List[int]],
+) -> tuple[Optional[List[int]], Optional[str]]:
+    if pages is None:
+        return None, None
+    if not isinstance(pages, (list, tuple)):
+        return None, "pages must be a list of non-negative integers"
+    if not pages:
+        return None, "pages must contain at least one page index"
+    normalized: list[int] = []
+    for page in pages:
+        if isinstance(page, bool) or not isinstance(page, int):
+            return None, "pages must be a list of non-negative integers"
+        if page < 0:
+            return None, "pages must be non-negative"
+        normalized.append(page)
+    deduped: list[int] = []
+    seen: set[int] = set()
+    for page in normalized:
+        if page in seen:
+            continue
+        seen.add(page)
+        deduped.append(page)
+    return deduped, None
+
+
+def _resolve_pages_to_process(
+    pdf_path: Union[str, Path],
+    pages: Optional[List[int]],
+    config: ExtractionConfig,
+    *,
+    page_count: Optional[int] = None,
+    max_pages: Optional[int] = None,
+) -> tuple[List[int], Optional[str]]:
+    normalized, error = _normalize_pages_input(pages)
+    if error:
+        return [], error
+
+    page_count = page_count if page_count is not None else _get_pdf_page_count(pdf_path)
+
+    if normalized is None:
+        if page_count is None:
+            normalized = list(range(config.max_pages))
+        else:
+            normalized = list(range(page_count))
+    else:
+        if page_count is not None:
+            out_of_range = [p for p in normalized if p >= page_count]
+            if out_of_range:
+                max_index = max(page_count - 1, 0)
+                return [], f"pages out of range (max index {max_index})"
+
+    limit = max_pages if max_pages is not None else config.max_pages
+    if limit and len(normalized) > limit:
+        normalized = normalized[:limit]
+
+    return normalized, None
 
 
 def _get_pdf_page_count(pdf_path: Union[str, Path]) -> Optional[int]:
@@ -295,18 +467,17 @@ def _resolve_page_numbers(
     pdf_path: Union[str, Path],
     pages: Optional[List[int]],
     config: ExtractionConfig,
-) -> List[int]:
-    if pages:
-        normalized = [p for p in pages if isinstance(p, int) and p >= 0]
-    else:
-        page_count = _get_pdf_page_count(pdf_path)
-        if page_count is None:
-            normalized = list(range(config.max_pages))
-        else:
-            normalized = list(range(page_count))
-    if config.max_pages and len(normalized) > config.max_pages:
-        normalized = normalized[: config.max_pages]
-    return normalized
+    *,
+    page_count: Optional[int] = None,
+    max_pages: Optional[int] = None,
+) -> tuple[List[int], Optional[str]]:
+    return _resolve_pages_to_process(
+        pdf_path,
+        pages,
+        config,
+        page_count=page_count,
+        max_pages=max_pages,
+    )
 
 
 def _normalize_table_data(
@@ -562,13 +733,29 @@ class TabulaExtractor(PDFExtractor):
             )
 
         config = _resolve_config(config)
-        pdf_path = Path(pdf_path)
+        pdf_path, path_error = _resolve_pdf_path(pdf_path)
+        if path_error:
+            return ExtractionResult(
+                tables=[],
+                text="",
+                page_count=0,
+                method=self.name,
+                errors=[path_error],
+            )
         tables: List[ExtractedTable] = []
         errors: List[str] = []
         base_confidence = 0.85
 
         try:
-            pages_to_process = _resolve_page_numbers(pdf_path, pages, config)
+            pages_to_process, page_error = _resolve_page_numbers(pdf_path, pages, config)
+            if page_error:
+                return ExtractionResult(
+                    tables=[],
+                    text="",
+                    page_count=0,
+                    method=self.name,
+                    errors=[page_error],
+                )
 
             for page_num in pages_to_process:
                 page_table_count = 0
@@ -580,7 +767,7 @@ class TabulaExtractor(PDFExtractor):
                         pandas_options={"header": None},
                     )
                 except Exception as exc:
-                    errors.append(f"Tabula failed on page {page_num + 1}: {exc}")
+                    errors.append(_safe_error_message(f"Tabula failed on page {page_num + 1}", exc))
                     continue
 
                 for i, df in enumerate(dfs):
@@ -628,7 +815,7 @@ class TabulaExtractor(PDFExtractor):
                 text="",
                 page_count=0,
                 method=self.name,
-                errors=[f"Tabula extraction failed: {str(e)}"],
+                errors=[_safe_error_message("Tabula extraction failed", e)],
             )
 
 
@@ -673,12 +860,28 @@ class CamelotExtractor(PDFExtractor):
             )
 
         config = _resolve_config(config)
-        pdf_path = Path(pdf_path)
+        pdf_path, path_error = _resolve_pdf_path(pdf_path)
+        if path_error:
+            return ExtractionResult(
+                tables=[],
+                text="",
+                page_count=0,
+                method=self.name,
+                errors=[path_error],
+            )
         tables: List[ExtractedTable] = []
         errors: List[str] = []
 
         try:
-            pages_to_process = _resolve_page_numbers(pdf_path, pages, config)
+            pages_to_process, page_error = _resolve_page_numbers(pdf_path, pages, config)
+            if page_error:
+                return ExtractionResult(
+                    tables=[],
+                    text="",
+                    page_count=0,
+                    method=self.name,
+                    errors=[page_error],
+                )
             page_spec = ",".join(str(p + 1) for p in pages_to_process) if pages_to_process else "1"
 
             # Try lattice mode first (for tables with borders)
@@ -768,7 +971,7 @@ class CamelotExtractor(PDFExtractor):
                 text="",
                 page_count=0,
                 method=self.name,
-                errors=[f"Camelot extraction failed: {str(e)}"],
+                errors=[_safe_error_message("Camelot extraction failed", e)],
             )
 
 
@@ -797,6 +1000,7 @@ class PyMuPDFExtractor(PDFExtractor):
         self,
         pdf_path: Union[str, Path],
         pages: Optional[List[int]] = None,
+        config: Optional[ExtractionConfig] = None,
     ) -> ExtractionResult:
         try:
             import fitz
@@ -809,65 +1013,123 @@ class PyMuPDFExtractor(PDFExtractor):
                 errors=["pymupdf not installed. Run: pip install pymupdf"],
             )
 
-        pdf_path = Path(pdf_path)
+        config = _resolve_config(config)
+        pdf_path, path_error = _resolve_pdf_path(pdf_path)
+        if path_error:
+            return ExtractionResult(
+                tables=[],
+                text="",
+                page_count=0,
+                method=self.name,
+                errors=[path_error],
+            )
         tables: List[ExtractedTable] = []
         text_parts: List[str] = []
         errors: List[str] = []
+        ocr_used = False
+        base_confidence = 0.9
 
-        try:
-            doc = fitz.open(pdf_path)
-            page_count = doc.page_count
+        def _extract_page(page_num: int) -> tuple[int, str, List[ExtractedTable], List[str], bool]:
+            local_tables: List[ExtractedTable] = []
+            local_errors: List[str] = []
+            local_ocr = False
+            try:
+                doc_local = fitz.open(pdf_path)
+                if page_num >= doc_local.page_count:
+                    doc_local.close()
+                    return page_num, "", [], [], False
+                page = doc_local[page_num]
+                page_text = page.get_text("text") or ""
+                if not page_text.strip() and config.ocr_enabled:
+                    try:
+                        pix = page.get_pixmap(dpi=150)
+                        ocr_text = get_ocr_engine(config.ocr_language).extract_text(pix.tobytes("png"))
+                        if ocr_text.strip():
+                            page_text = ocr_text
+                            local_ocr = True
+                    except Exception as exc:
+                        local_errors.append(_safe_error_message(f"OCR failed on page {page_num + 1}", exc))
 
-            pages_to_process = pages if pages else range(page_count)
+                page_text = page_text or ""
+                page_text_block = f"--- Page {page_num + 1} ---\n{page_text}"
 
-            for page_num in pages_to_process:
-                if page_num >= page_count:
-                    continue
-
-                page = doc[page_num]
-
-                # Extract text
-                page_text = page.get_text("text")
-                text_parts.append(f"--- Page {page_num + 1} ---\n{page_text}")
-
-                # Extract tables using PyMuPDF's table detection
                 try:
                     page_tables = page.find_tables()
-
-                    for i, table in enumerate(page_tables):
-                        if table.row_count == 0:
+                    tables_iter = page_tables.tables if hasattr(page_tables, "tables") else page_tables
+                    page_table_count = 0
+                    for i, table in enumerate(tables_iter):
+                        if page_table_count >= config.max_tables_per_page:
+                            break
+                        if getattr(table, "row_count", 0) == 0:
                             continue
 
                         data = table.extract()
-                        if not data or len(data) < 2:
+                        if not data or len(data) < 1:
                             continue
 
-                        # First row as headers
-                        headers = [str(cell or "").strip() for cell in data[0]]
-                        rows = []
+                        headers, rows = _normalize_table_data(data, config)
+                        if not headers or not rows:
+                            continue
 
-                        for row in data[1:]:
-                            normalized_row = []
-                            for j, cell in enumerate(row):
-                                if j < len(headers):
-                                    normalized_row.append(str(cell or "").strip())
-                            while len(normalized_row) < len(headers):
-                                normalized_row.append("")
-                            rows.append(normalized_row)
-
-                        tables.append(ExtractedTable(
+                        extracted = ExtractedTable(
                             id=f"pymupdf_p{page_num+1}_t{i+1}",
                             page=page_num + 1,
                             headers=headers,
                             rows=rows,
-                            confidence=0.9,
+                            confidence=base_confidence,
                             method=self.name,
-                        ))
+                        )
+                        extracted.confidence = _apply_table_confidence(extracted, config, base_confidence)
+                        if not _table_meets_requirements(extracted, config):
+                            continue
+                        local_tables.append(extracted)
+                        page_table_count += 1
+                except Exception as exc:
+                    local_errors.append(_safe_error_message(f"Table extraction failed on page {page_num + 1}", exc))
 
-                except Exception as e:
-                    errors.append(f"Table extraction failed on page {page_num + 1}: {e}")
+                doc_local.close()
+                return page_num, page_text_block, local_tables, local_errors, local_ocr
+            except Exception as exc:
+                return page_num, "", [], [_safe_error_message(f"Page {page_num + 1} failed", exc)], False
 
+        try:
+            doc = fitz.open(pdf_path)
+            page_count = doc.page_count
             doc.close()
+
+            pages_to_process, page_error = _resolve_page_numbers(
+                pdf_path,
+                pages,
+                config,
+                page_count=page_count,
+            )
+            if page_error:
+                return ExtractionResult(
+                    tables=[],
+                    text="",
+                    page_count=page_count,
+                    method=self.name,
+                    errors=[page_error],
+                )
+
+            if config.parallel_pages and len(pages_to_process) > 1:
+                with concurrent.futures.ThreadPoolExecutor(max_workers=config.max_workers) as executor:
+                    futures = [executor.submit(_extract_page, page_num) for page_num in pages_to_process]
+                    results = [f.result() for f in concurrent.futures.as_completed(futures)]
+                for page_num, page_text_block, local_tables, local_errors, local_ocr in sorted(results, key=lambda r: r[0]):
+                    if page_text_block:
+                        text_parts.append(page_text_block)
+                    tables.extend(local_tables)
+                    errors.extend(local_errors)
+                    ocr_used = ocr_used or local_ocr
+            else:
+                for page_num in pages_to_process:
+                    _, page_text_block, local_tables, local_errors, local_ocr = _extract_page(page_num)
+                    if page_text_block:
+                        text_parts.append(page_text_block)
+                    tables.extend(local_tables)
+                    errors.extend(local_errors)
+                    ocr_used = ocr_used or local_ocr
 
             return ExtractionResult(
                 tables=tables,
@@ -875,6 +1137,7 @@ class PyMuPDFExtractor(PDFExtractor):
                 page_count=page_count,
                 method=self.name,
                 errors=errors,
+                ocr_used=ocr_used,
             )
 
         except Exception as e:
@@ -884,7 +1147,7 @@ class PyMuPDFExtractor(PDFExtractor):
                 text="",
                 page_count=0,
                 method=self.name,
-                errors=[f"PyMuPDF extraction failed: {str(e)}"],
+                errors=[_safe_error_message("PyMuPDF extraction failed", e)],
             )
 
 
@@ -913,6 +1176,7 @@ class PDFPlumberExtractor(PDFExtractor):
         self,
         pdf_path: Union[str, Path],
         pages: Optional[List[int]] = None,
+        config: Optional[ExtractionConfig] = None,
     ) -> ExtractionResult:
         try:
             import pdfplumber
@@ -925,55 +1189,117 @@ class PDFPlumberExtractor(PDFExtractor):
                 errors=["pdfplumber not installed. Run: pip install pdfplumber"],
             )
 
-        pdf_path = Path(pdf_path)
+        config = _resolve_config(config)
+        pdf_path, path_error = _resolve_pdf_path(pdf_path)
+        if path_error:
+            return ExtractionResult(
+                tables=[],
+                text="",
+                page_count=0,
+                method=self.name,
+                errors=[path_error],
+            )
         tables: List[ExtractedTable] = []
         text_parts: List[str] = []
         errors: List[str] = []
+        ocr_used = False
+        base_confidence = 0.85
 
-        try:
-            with pdfplumber.open(pdf_path) as pdf:
-                page_count = len(pdf.pages)
-                pages_to_process = pages if pages else range(page_count)
-
-                for page_num in pages_to_process:
-                    if page_num >= page_count:
-                        continue
-
-                    page = pdf.pages[page_num]
-
-                    # Extract text
+        def _extract_page(page_num: int) -> tuple[int, str, List[ExtractedTable], List[str], bool]:
+            local_tables: List[ExtractedTable] = []
+            local_errors: List[str] = []
+            local_ocr = False
+            try:
+                with pdfplumber.open(pdf_path) as pdf_local:
+                    if page_num >= len(pdf_local.pages):
+                        return page_num, "", [], [], False
+                    page = pdf_local.pages[page_num]
                     page_text = page.extract_text() or ""
-                    text_parts.append(f"--- Page {page_num + 1} ---\n{page_text}")
+                    if not page_text.strip() and config.ocr_enabled:
+                        try:
+                            image = page.to_image(resolution=150).original
+                            from io import BytesIO
+                            buffer = BytesIO()
+                            image.save(buffer, format="PNG")
+                            ocr_text = get_ocr_engine(config.ocr_language).extract_text(buffer.getvalue())
+                            if ocr_text.strip():
+                                page_text = ocr_text
+                                local_ocr = True
+                        except Exception as exc:
+                            local_errors.append(_safe_error_message(f"OCR failed on page {page_num + 1}", exc))
 
-                    # Extract tables
+                    page_text_block = f"--- Page {page_num + 1} ---\n{page_text}"
+
                     try:
                         page_tables = page.extract_tables()
-
+                        page_table_count = 0
                         for i, table_data in enumerate(page_tables):
-                            if not table_data or len(table_data) < 2:
+                            if page_table_count >= config.max_tables_per_page:
+                                break
+                            if not table_data or len(table_data) < 1:
                                 continue
 
-                            # First row as headers
-                            headers = [str(cell or "").strip() for cell in table_data[0]]
-                            rows = []
+                            headers, rows = _normalize_table_data(table_data, config)
+                            if not headers or not rows:
+                                continue
 
-                            for row in table_data[1:]:
-                                normalized_row = [str(cell or "").strip() for cell in row]
-                                while len(normalized_row) < len(headers):
-                                    normalized_row.append("")
-                                rows.append(normalized_row[:len(headers)])
-
-                            tables.append(ExtractedTable(
+                            extracted = ExtractedTable(
                                 id=f"pdfplumber_p{page_num+1}_t{i+1}",
                                 page=page_num + 1,
                                 headers=headers,
                                 rows=rows,
-                                confidence=0.85,
+                                confidence=base_confidence,
                                 method=self.name,
-                            ))
+                            )
+                            extracted.confidence = _apply_table_confidence(extracted, config, base_confidence)
+                            if not _table_meets_requirements(extracted, config):
+                                continue
+                            local_tables.append(extracted)
+                            page_table_count += 1
+                    except Exception as exc:
+                        local_errors.append(_safe_error_message(f"Table extraction failed on page {page_num + 1}", exc))
 
-                    except Exception as e:
-                        errors.append(f"Table extraction failed on page {page_num + 1}: {e}")
+                return page_num, page_text_block, local_tables, local_errors, local_ocr
+            except Exception as exc:
+                return page_num, "", [], [_safe_error_message(f"Page {page_num + 1} failed", exc)], False
+
+        try:
+            with pdfplumber.open(pdf_path) as pdf:
+                page_count = len(pdf.pages)
+
+            pages_to_process, page_error = _resolve_page_numbers(
+                pdf_path,
+                pages,
+                config,
+                page_count=page_count,
+            )
+            if page_error:
+                return ExtractionResult(
+                    tables=[],
+                    text="",
+                    page_count=page_count,
+                    method=self.name,
+                    errors=[page_error],
+                )
+
+            if config.parallel_pages and len(pages_to_process) > 1:
+                with concurrent.futures.ThreadPoolExecutor(max_workers=config.max_workers) as executor:
+                    futures = [executor.submit(_extract_page, page_num) for page_num in pages_to_process]
+                    results = [f.result() for f in concurrent.futures.as_completed(futures)]
+                for page_num, page_text_block, local_tables, local_errors, local_ocr in sorted(results, key=lambda r: r[0]):
+                    if page_text_block:
+                        text_parts.append(page_text_block)
+                    tables.extend(local_tables)
+                    errors.extend(local_errors)
+                    ocr_used = ocr_used or local_ocr
+            else:
+                for page_num in pages_to_process:
+                    _, page_text_block, local_tables, local_errors, local_ocr = _extract_page(page_num)
+                    if page_text_block:
+                        text_parts.append(page_text_block)
+                    tables.extend(local_tables)
+                    errors.extend(local_errors)
+                    ocr_used = ocr_used or local_ocr
 
             return ExtractionResult(
                 tables=tables,
@@ -981,6 +1307,7 @@ class PDFPlumberExtractor(PDFExtractor):
                 page_count=page_count,
                 method=self.name,
                 errors=errors,
+                ocr_used=ocr_used,
             )
 
         except Exception as e:
@@ -990,7 +1317,7 @@ class PDFPlumberExtractor(PDFExtractor):
                 text="",
                 page_count=0,
                 method=self.name,
-                errors=[f"pdfplumber extraction failed: {str(e)}"],
+                errors=[_safe_error_message("pdfplumber extraction failed", e)],
             )
 
 
@@ -1020,6 +1347,7 @@ def extract_pdf_tables(
     pdf_path: Union[str, Path],
     method: str = "auto",
     pages: Optional[List[int]] = None,
+    config: Optional[ExtractionConfig] = None,
 ) -> ExtractionResult:
     """
     Extract tables from a PDF using the specified method.
@@ -1032,8 +1360,9 @@ def extract_pdf_tables(
     Returns:
         ExtractionResult with extracted tables
     """
+    config = _resolve_config(config)
     if method == "auto":
-        return extract_with_best_method(pdf_path, pages)
+        return extract_with_best_method(pdf_path, pages, config=config)
 
     if method not in EXTRACTORS:
         return ExtractionResult(
@@ -1054,20 +1383,32 @@ def extract_pdf_tables(
             errors=[f"Extractor '{method}' is not available. Check dependencies."],
         )
 
-    return extractor.extract_tables(pdf_path, pages)
+    return extractor.extract_tables(pdf_path, pages, config=config)
 
 
 def extract_with_best_method(
     pdf_path: Union[str, Path],
     pages: Optional[List[int]] = None,
+    config: Optional[ExtractionConfig] = None,
 ) -> ExtractionResult:
     """
     Try multiple extractors and return the best result.
 
     Priority order: pymupdf > pdfplumber > camelot > tabula
     """
-    pdf_path = Path(pdf_path)
+    config = _resolve_config(config)
+    config = _limit_config_pages(config, config.max_auto_pages)
+    pdf_path, path_error = _resolve_pdf_path(pdf_path)
+    if path_error:
+        return ExtractionResult(
+            tables=[],
+            text="",
+            page_count=0,
+            method="auto",
+            errors=[path_error],
+        )
     best_result: Optional[ExtractionResult] = None
+    method_errors: list[str] = []
 
     # Priority order - faster methods first
     priority = ["pymupdf", "pdfplumber", "camelot", "tabula"]
@@ -1081,10 +1422,12 @@ def extract_with_best_method(
             continue
 
         try:
-            result = extractor.extract_tables(pdf_path, pages)
+            result = extractor.extract_tables(pdf_path, pages, config=config)
 
-            if result.errors and not result.tables:
-                continue
+            if result.errors:
+                method_errors.extend([f"{method}: {err}" for err in result.errors])
+                if not result.tables:
+                    continue
 
             if best_result is None:
                 best_result = result
@@ -1101,6 +1444,7 @@ def extract_with_best_method(
 
         except Exception as e:
             logger.warning(f"Extractor {method} failed: {e}")
+            method_errors.append(_safe_error_message(f"{method} extractor failed", e))
             continue
 
     if best_result is None:
@@ -1109,7 +1453,7 @@ def extract_with_best_method(
             text="",
             page_count=0,
             method="auto",
-            errors=["No extractors were able to process this PDF"],
+            errors=method_errors or ["No extractors were able to process this PDF"],
         )
 
     return best_result
@@ -1118,6 +1462,7 @@ def extract_with_best_method(
 def compare_extractors(
     pdf_path: Union[str, Path],
     pages: Optional[List[int]] = None,
+    config: Optional[ExtractionConfig] = None,
 ) -> Dict[str, ExtractionResult]:
     """
     Compare results from all available extractors.
@@ -1129,18 +1474,20 @@ def compare_extractors(
     """
     results = {}
 
+    config = _resolve_config(config)
+    config = _limit_config_pages(config, config.max_compare_pages)
     for name, cls in EXTRACTORS.items():
         try:
             extractor = cls()
             if extractor.is_available():
-                results[name] = extractor.extract_tables(pdf_path, pages)
+                results[name] = extractor.extract_tables(pdf_path, pages, config=config)
         except Exception as e:
             results[name] = ExtractionResult(
                 tables=[],
                 text="",
                 page_count=0,
                 method=name,
-                errors=[str(e)],
+                errors=[_safe_error_message("Extractor failed", e)],
             )
 
     return results

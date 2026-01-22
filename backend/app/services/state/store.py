@@ -1324,6 +1324,13 @@ class StateStore:
             rec = (state.get("jobs") or {}).get(job_id)
             return self._sanitize_job(rec)
 
+    def get_job_meta(self, job_id: str) -> dict:
+        with self._lock:
+            state = self._read_state()
+            rec = (state.get("jobs") or {}).get(job_id) or {}
+            meta = rec.get("meta") or {}
+            return dict(meta)
+
     def _update_job_record(self, job_id: str, mutator) -> Optional[dict]:
         with self._lock:
             state = self._read_state()

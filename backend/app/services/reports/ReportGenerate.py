@@ -2,6 +2,7 @@
 import asyncio
 import contextlib
 import json
+import os
 import re
 from ..dataframes import DuckDBDataFrameQuery, SQLiteDataFrameLoader, sqlite_shim as sqlite3
 from collections import defaultdict
@@ -348,6 +349,20 @@ def fill_and_print(
         if not tokens:
             yield {}
             return
+        max_combos_raw = os.getenv("NEURA_REPORT_MAX_KEY_COMBINATIONS", "50")
+        try:
+            max_combos = int(max_combos_raw)
+        except ValueError:
+            max_combos = 50
+        max_combos = max(1, max_combos)
+        estimated = 1
+        for values in value_lists:
+            estimated *= max(1, len(values))
+            if estimated > max_combos:
+                raise ValueError(
+                    f"Too many key combinations ({estimated} > {max_combos}). "
+                    "Narrow key selections or reduce multi-select values."
+                )
         for combo in product(*value_lists):
             yield {token: value for token, value in zip(tokens, combo)}
 
@@ -1646,7 +1661,163 @@ def fill_and_print(
     last_totals_per_token = {token: "0" for token in TOTALS}
 
     child_totals_cols = {col: list(tokens) for col, tokens in totals_by_table.get(child_table, {}).items()}
+
+    allowed_row_tokens = {t for t in PLACEHOLDER_TO_COL.keys() if t not in TOTALS} - set(HEADER_TOKENS)
+    row_template = None
+    row_span = None
+    row_tokens_in_template: list[str] = []
+    row_columns_template: list[str] = []
+    row_cols_needed: list[str] = []
+    row_render_mode = "none"
+
+    prefetched_headers: dict[str, dict[str, Any]] = {}
+    prefetched_rows: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    prefetched_totals: dict[str, dict[str, Any]] = {}
+
+    if generator_results is None:
+        tbody_m, tbody_inner = best_rows_tbody(prototype_block, allowed_row_tokens)
+        if tbody_m and tbody_inner:
+            row_template, row_span, row_tokens_in_template = find_row_template(tbody_inner, allowed_row_tokens)
+        if row_tokens_in_template:
+            row_render_mode = "tbody"
+        else:
+            tr_tokens = [
+                m.group(1) or m.group(2)
+                for m in re.finditer(r"\{\{\s*([^}\n]+?)\s*\}\}|\{\s*([^}\n]+?)\s*\}", prototype_block)
+            ]
+            row_tokens_in_template = [t.strip() for t in tr_tokens if t and t.strip() in allowed_row_tokens]
+            if row_tokens_in_template:
+                row_render_mode = "tr"
+
+        if row_tokens_in_template:
+            row_columns_template = [
+                _extract_col_name(PLACEHOLDER_TO_COL.get(tok)) or "" for tok in row_tokens_in_template
+            ]
+            row_cols_needed = sorted(
+                {
+                    col
+                    for t in row_tokens_in_template
+                    for col in [_extract_col_name(PLACEHOLDER_TO_COL.get(t))]
+                    if col
+                }
+            )
+            if order_col.upper() != "ROWID" and order_col not in row_cols_needed:
+                row_cols_needed.append(order_col)
+
+        def _compose_key(row: Mapping[str, Any], cols: list[str]) -> str:
+            if not cols:
+                return ""
+            if len(cols) == 1:
+                return str(row.get(cols[0], ""))
+            parts: list[str] = []
+            for col in cols:
+                val = row.get(col)
+                parts.append("" if val is None else str(val))
+            return "|".join(parts)
+
+        def _batch_predicate(cols: list[str], batch_ids_chunk: list[str]) -> tuple[str, list[Any]]:
+            if not cols or not batch_ids_chunk:
+                return "1=0", []
+            if len(cols) == 1:
+                placeholders = ", ".join("?" for _ in batch_ids_chunk)
+                return f"{qident(cols[0])} IN ({placeholders})", list(batch_ids_chunk)
+            tuple_placeholder = "(" + ", ".join("?" for _ in cols) + ")"
+            placeholders = ", ".join(tuple_placeholder for _ in batch_ids_chunk)
+            params: list[Any] = []
+            for bid in batch_ids_chunk:
+                params.extend(_split_bid(bid, len(cols)))
+            cols_expr = ", ".join(qident(c) for c in cols)
+            return f"({cols_expr}) IN ({placeholders})", params
+
+        def _iter_batch_chunks(batch_ids_chunk: list[str], cols: list[str], extra_params: int) -> Iterable[list[str]]:
+            max_params = 900
+            per_id = max(1, len(cols))
+            allowed = max(1, max_params - extra_params)
+            chunk_size = max(1, allowed // per_id)
+            for idx in range(0, len(batch_ids_chunk), chunk_size):
+                yield batch_ids_chunk[idx : idx + chunk_size]
+
+        if BATCH_IDS:
+            con = sqlite3.connect(str(DB_PATH))
+            con.row_factory = sqlite3.Row
+            cur = con.cursor()
+            try:
+                if header_cols and parent_table and pcols:
+                    extra_params = len(PDATE) + len(parent_filter_values_tuple)
+                    select_cols = list(dict.fromkeys(pcols + header_cols))
+                    for chunk in _iter_batch_chunks(list(BATCH_IDS), pcols, extra_params):
+                        batch_pred, batch_params = _batch_predicate(pcols, chunk)
+                        where_clause = f"{batch_pred} AND {parent_where_clause}"
+                        sql = (
+                            f"SELECT {', '.join(qident(c) for c in select_cols)} "
+                            f"FROM {qident(parent_table)} "
+                            f"WHERE {where_clause} "
+                            f"ORDER BY ROWID"
+                        )
+                        cur.execute(sql, tuple(batch_params) + tuple(PDATE) + parent_filter_values_tuple)
+                        for row in cur.fetchall():
+                            row_dict = dict(row)
+                            key = _compose_key(row_dict, pcols)
+                            if key and key not in prefetched_headers:
+                                prefetched_headers[key] = row_dict
+
+                if has_child and child_table and ccols and row_cols_needed:
+                    extra_params = len(CDATE) + len(child_filter_values_tuple)
+                    select_cols = list(dict.fromkeys(ccols + row_cols_needed))
+                    order_parts = [qident(c) for c in ccols]
+                    if order_col.upper() == "ROWID":
+                        order_parts.append("ROWID")
+                    else:
+                        order_parts.append(qident(order_col))
+                        order_parts.append("ROWID")
+                    order_clause = "ORDER BY " + ", ".join(order_parts)
+                    for chunk in _iter_batch_chunks(list(BATCH_IDS), ccols, extra_params):
+                        batch_pred, batch_params = _batch_predicate(ccols, chunk)
+                        where_clause = f"{batch_pred} AND {child_where_clause}"
+                        sql = (
+                            f"SELECT {', '.join(qident(c) for c in select_cols)} "
+                            f"FROM {qident(child_table)} "
+                            f"WHERE {where_clause} "
+                            f"{order_clause}"
+                        )
+                        cur.execute(sql, tuple(batch_params) + tuple(CDATE) + child_filter_values_tuple)
+                        for row in cur.fetchall():
+                            row_dict = dict(row)
+                            key = _compose_key(row_dict, ccols)
+                            prefetched_rows[key].append(row_dict)
+
+                if has_child and child_table and ccols and child_totals_cols:
+                    extra_params = len(CDATE) + len(child_filter_values_tuple)
+                    sum_exprs = ", ".join([f"COALESCE(SUM({qident(c)}),0) AS {qident(c)}" for c in child_totals_cols])
+                    group_cols = ", ".join(qident(c) for c in ccols)
+                    select_cols = ", ".join(qident(c) for c in ccols)
+                    for chunk in _iter_batch_chunks(list(BATCH_IDS), ccols, extra_params):
+                        batch_pred, batch_params = _batch_predicate(ccols, chunk)
+                        where_clause = f"{batch_pred} AND {child_where_clause}"
+                        sql = (
+                            f"SELECT {select_cols}, {sum_exprs} "
+                            f"FROM {qident(child_table)} "
+                            f"WHERE {where_clause} "
+                            f"GROUP BY {group_cols}"
+                        )
+                        cur.execute(sql, tuple(batch_params) + tuple(CDATE) + child_filter_values_tuple)
+                        for row in cur.fetchall():
+                            row_dict = dict(row)
+                            key = _compose_key(row_dict, ccols)
+                            if key:
+                                prefetched_totals[key] = row_dict
+            finally:
+                con.close()
     # ---- Render all batches ----
+    fallback_con: sqlite3.Connection | None = None
+
+    def _get_fallback_cursor() -> sqlite3.Cursor:
+        nonlocal fallback_con
+        if fallback_con is None:
+            fallback_con = sqlite3.connect(str(DB_PATH))
+            fallback_con.row_factory = sqlite3.Row
+        return fallback_con.cursor()
+
     rendered_blocks = []
     if generator_results is not None:
         block_html = prototype_block
@@ -1739,39 +1910,15 @@ def fill_and_print(
             rendered_blocks.append(block_html)
         else:
             print("Generator SQL produced no usable row data after filtering; skipping block.")
+
     else:
         for batch_id in BATCH_IDS or []:
             block_html = prototype_block
 
             # (a) Header fill (parent row)
             if header_cols:
-                if len(pcols) == 1:
-                    sql = (
-                        f"SELECT {', '.join(qident(c) for c in header_cols)} "
-                        f"FROM {qident(parent_table)} "
-                        f"WHERE {qident(pcols[0])} = ? AND {parent_where_clause} "
-                        f"LIMIT 1"
-                    )
-                    hdr_params = (batch_id,) + tuple(PDATE) + parent_filter_values_tuple
-                else:
-                    where = " AND ".join([f"{qident(c)} = ?" for c in pcols])
-                    sql = (
-                        f"SELECT {', '.join(qident(c) for c in header_cols)} "
-                        f"FROM {qident(parent_table)} "
-                        f"WHERE {where} AND {parent_where_clause} "
-                        f"LIMIT 1"
-                    )
-                    hdr_parts = _split_bid(batch_id, len(pcols))
-                    hdr_params = tuple(hdr_parts) + tuple(PDATE) + parent_filter_values_tuple
-
-                con = sqlite3.connect(str(DB_PATH))
-                con.row_factory = sqlite3.Row
-                cur = con.cursor()
-                cur.execute(sql, hdr_params)
-                row = cur.fetchone()
-                con.close()
-                if row:
-                    r = dict(row)
+                r = prefetched_headers.get(batch_id)
+                if r:
                     for t in HEADER_TOKENS:
                         if t in PLACEHOLDER_TO_COL:
                             col = _extract_col_name(PLACEHOLDER_TO_COL.get(t))
@@ -1781,211 +1928,89 @@ def fill_and_print(
                             block_html = sub_token(block_html, t, format_token_value(t, val))
 
             # (b) Row repeater (child rows)
-            allowed_row_tokens = {t for t in PLACEHOLDER_TO_COL.keys() if t not in TOTALS} - set(HEADER_TOKENS)
+            if not row_tokens_in_template:
+                print(f"No row tokens found for batch {batch_id}; skipping block.")
+                continue
 
-            # Try standard tbody-based path first
-            tbody_m, tbody_inner = best_rows_tbody(block_html, allowed_row_tokens)
-            if tbody_m and tbody_inner:
-                row_template, row_span, row_tokens_in_template = find_row_template(tbody_inner, allowed_row_tokens)
-                if row_template and row_tokens_in_template:
-                    row_cols_needed = sorted(
-                        {
-                            col
-                            for t in row_tokens_in_template
-                            for col in [_extract_col_name(PLACEHOLDER_TO_COL.get(t))]
-                            if col
-                        }
-                    )
-
-                    if order_col.upper() != "ROWID" and order_col not in row_cols_needed:
-                        row_cols_needed.append(order_col)
-
-                    order_clause = (
-                        "ORDER BY ROWID" if order_col.upper() == "ROWID" else f"ORDER BY {qident(order_col)}, ROWID"
-                    )
-
-                    if len(ccols) == 1:
-                        sql = (
-                            f"SELECT {', '.join(qident(c) for c in row_cols_needed)} "
-                            f"FROM {qident(child_table)} "
-                            f"WHERE {qident(ccols[0])} = ? AND {child_where_clause} "
-                            f"{order_clause}"
+            rows = [dict(r) for r in prefetched_rows.get(batch_id, [])]
+            if not rows:
+                maj_table = majority_table_for_tokens(row_tokens_in_template, PLACEHOLDER_TO_COL)
+                if maj_table:
+                    date_col = DATE_COLUMNS.get(maj_table, "")
+                    if date_col:
+                        cols_needed = sorted(
+                            {
+                                col
+                                for t in row_tokens_in_template
+                                for col in [_extract_col_name(PLACEHOLDER_TO_COL.get(t))]
+                                if col
+                            }
                         )
-                        row_params = (batch_id,) + tuple(CDATE) + child_filter_values_tuple
-                    else:
-                        where = " AND ".join([f"{qident(c)} = ?" for c in ccols])
-                        sql = (
-                            f"SELECT {', '.join(qident(c) for c in row_cols_needed)} "
-                            f"FROM {qident(child_table)} "
-                            f"WHERE {where} AND {child_where_clause} "
-                            f"{order_clause}"
+                        if date_col not in cols_needed:
+                            cols_needed.append(date_col)
+                        sql_fb = (
+                            f"SELECT {', '.join(qident(c) for c in cols_needed)} "
+                            f"FROM {qident(maj_table)} "
+                            f"WHERE datetime({qident(date_col)}) BETWEEN datetime(?) AND datetime(?) "
+                            f"ORDER BY {qident(date_col)} ASC, ROWID ASC"
                         )
-                        row_parts = _split_bid(batch_id, len(ccols))
-                        row_params = tuple(row_parts) + tuple(CDATE) + child_filter_values_tuple
+                        cur = _get_fallback_cursor()
+                        cur.execute(sql_fb, (START_DATE, END_DATE))
+                        rows = [dict(r) for r in cur.fetchall()]
+                        print(f"Row fallback used: table={maj_table}, rows={len(rows)}")
 
-                    con = sqlite3.connect(str(DB_PATH))
-                    con.row_factory = sqlite3.Row
-                    cur = con.cursor()
-                    cur.execute(sql, row_params)
-                    rows = [dict(r) for r in cur.fetchall()]
-                    con.close()
+            if not rows:
+                print(f"No child rows found for batch {batch_id}; skipping block.")
+                continue
 
-                    # Fallback: date-only by majority table if needed
-                    if not rows:
-                        maj_table = majority_table_for_tokens(row_tokens_in_template, PLACEHOLDER_TO_COL)
-                        if maj_table:
-                            date_col = DATE_COLUMNS.get(maj_table, "")
-                            if date_col:
-                                cols_needed = sorted(
-                                    {
-                                        col
-                                        for t in row_tokens_in_template
-                                        for col in [_extract_col_name(PLACEHOLDER_TO_COL.get(t))]
-                                        if col
-                                    }
-                                )
-                                if date_col not in cols_needed:
-                                    cols_needed.append(date_col)
-                                sql_fb = (
-                                    f"SELECT {', '.join(qident(c) for c in cols_needed)} "
-                                    f"FROM {qident(maj_table)} "
-                                    f"WHERE datetime({qident(date_col)}) BETWEEN datetime(?) AND datetime(?) "
-                                    f"ORDER BY {qident(date_col)} ASC, ROWID ASC"
-                                )
-                                con = sqlite3.connect(str(DB_PATH))
-                                con.row_factory = sqlite3.Row
-                                cur = con.cursor()
-                                cur.execute(sql_fb, (START_DATE, END_DATE))
-                                rows = [dict(r) for r in cur.fetchall()]
-                                con.close()
-                                print(f"Row fallback used: table={maj_table}, rows={len(rows)}")
+            significant_cols = [
+                col
+                for col in row_cols_needed
+                if col and not any(keyword in col.lower() for keyword in ("row", "serial", "sl"))
+            ]
+            filtered_rows = []
+            for r in rows:
+                if significant_cols and not _row_has_significant_data(r, significant_cols):
+                    continue
+                filtered_rows.append(dict(r))
 
-                    if not rows:
-                        print(f"No child rows found for batch {batch_id}; skipping block.")
-                        continue
+            if not filtered_rows and rows:
+                filtered_rows = [dict(r) for r in rows]
+            filtered_rows = _prune_placeholder_rows(filtered_rows, row_tokens_in_template)
+            if __force_single:
+                _log_debug(
+                    f"[multi-debug] sql rows: total={len(rows)}, filtered={len(filtered_rows)}, key_values={KEY_VALUES}"
+                )
+            if not filtered_rows:
+                print(f"No significant child rows for batch {batch_id}; skipping block.")
+                continue
 
-                    significant_cols = [
-                        col
-                        for col in row_cols_needed
-                        if col and not any(keyword in col.lower() for keyword in ("row", "serial", "sl"))
-                    ]
-                    filtered_rows = []
-                    for r in rows:
-                        if significant_cols and not _row_has_significant_data(r, significant_cols):
+            _reindex_serial_fields(filtered_rows, row_tokens_in_template, row_cols_needed)
+
+            parts: list[str] = []
+            if row_render_mode == "tbody" and row_template and row_span and tbody_m and tbody_inner:
+                for r in filtered_rows:
+                    tr = row_template
+                    for t in row_tokens_in_template:
+                        col = _extract_col_name(PLACEHOLDER_TO_COL.get(t))
+                        if not col:
                             continue
-                        filtered_rows.append(dict(r))
+                        tr = sub_token(tr, t, format_token_value(t, r.get(col)))
+                    parts.append(tr)
 
-                    if not filtered_rows and rows:
-                        filtered_rows = [dict(r) for r in rows]
-                    filtered_rows = _prune_placeholder_rows(filtered_rows, row_tokens_in_template)
-                    if __force_single:
-                        _log_debug(
-                            f"[multi-debug] sql rows: total={len(rows)}, filtered={len(filtered_rows)}, key_values={KEY_VALUES}"
-                        )
-                    if not filtered_rows:
-                        print(f"No significant child rows for batch {batch_id}; skipping block.")
-                        continue
-
-                    _reindex_serial_fields(filtered_rows, row_tokens_in_template, row_cols_needed)
-
-                    parts: list[str] = []
-                    for r in filtered_rows:
-                        tr = row_template
-                        for t in row_tokens_in_template:
-                            col = _extract_col_name(PLACEHOLDER_TO_COL.get(t))
-                            if not col:
-                                continue
-                            tr = sub_token(tr, t, format_token_value(t, r.get(col)))
-                        parts.append(tr)
-
-                    new_tbody_inner = tbody_inner[: row_span[0]] + "\n".join(parts) + tbody_inner[row_span[1] :]
-                    block_html = block_html[: tbody_m.start(1)] + new_tbody_inner + block_html[tbody_m.end(1) :]
-
+                new_tbody_inner = tbody_inner[: row_span[0]] + "\n".join(parts) + tbody_inner[row_span[1] :]
+                block_html = block_html[: tbody_m.start(1)] + new_tbody_inner + block_html[tbody_m.end(1) :]
             else:
-                # Inferred single-<tr> block (no <tbody> path) ΓÇö duplicate the <tr> itself
-                tr_tokens = [
-                    m.group(1) or m.group(2)
-                    for m in re.finditer(r"\{\{\s*([^}\n]+?)\s*\}\}|\{\s*([^}\n]+?)\s*\}", block_html)
-                ]
-                tr_tokens = sorted({t.strip() for t in tr_tokens if t}, key=len, reverse=True)
-
-                row_tokens_in_template = [t for t in tr_tokens if t in allowed_row_tokens]
-                if row_tokens_in_template:
-                    row_cols_needed = sorted(
-                        {
-                            col
-                            for t in row_tokens_in_template
-                            for col in [_extract_col_name(PLACEHOLDER_TO_COL.get(t))]
-                            if col
-                        }
-                    )
-                    if order_col.upper() != "ROWID" and order_col not in row_cols_needed:
-                        row_cols_needed.append(order_col)
-                    order_clause = (
-                        "ORDER BY ROWID" if order_col.upper() == "ROWID" else f"ORDER BY {qident(order_col)}, ROWID"
-                    )
-
-                    if len(ccols) == 1:
-                        sql = (
-                            f"SELECT {', '.join(qident(c) for c in row_cols_needed)} "
-                            f"FROM {qident(child_table)} "
-                            f"WHERE {qident(ccols[0])} = ? AND {child_where_clause} "
-                            f"{order_clause}"
-                        )
-                        row_params = (batch_id,) + tuple(CDATE) + child_filter_values_tuple
-                    else:
-                        where = " AND ".join([f"{qident(c)} = ?" for c in ccols])
-                        sql = (
-                            f"SELECT {', '.join(qident(c) for c in row_cols_needed)} "
-                            f"FROM {qident(child_table)} "
-                            f"WHERE {where} AND {child_where_clause} "
-                            f"{order_clause}"
-                        )
-                        row_parts = _split_bid(batch_id, len(ccols))
-                        row_params = tuple(row_parts) + tuple(CDATE) + child_filter_values_tuple
-
-                    con = sqlite3.connect(str(DB_PATH))
-                    con.row_factory = sqlite3.Row
-                    cur = con.cursor()
-                    cur.execute(sql, row_params)
-                    rows = [dict(r) for r in cur.fetchall()]
-                    con.close()
-
-                    significant_cols = [
-                        col
-                        for col in row_cols_needed
-                        if col and not any(keyword in col.lower() for keyword in ("row", "serial", "sl"))
-                    ]
-                    filtered_rows = []
-                    for r in rows:
-                        if significant_cols and not _row_has_significant_data(r, significant_cols):
+                for r in filtered_rows:
+                    tr = prototype_block  # the <tr> itself
+                    for t in row_tokens_in_template:
+                        col = _extract_col_name(PLACEHOLDER_TO_COL.get(t))
+                        if not col:
                             continue
-                        filtered_rows.append(dict(r))
+                        tr = sub_token(tr, t, format_token_value(t, r.get(col)))
+                    parts.append(tr)
 
-                    if not filtered_rows and rows:
-                        filtered_rows = [dict(r) for r in rows]
-                    filtered_rows = _prune_placeholder_rows(filtered_rows, row_tokens_in_template)
-                    if __force_single:
-                        _log_debug(
-                            f"[multi-debug] sql rows (no tbody): total={len(rows)}, filtered={len(filtered_rows)}, key_values={KEY_VALUES}"
-                        )
-                    if not filtered_rows:
-                        print(f"No significant child rows (no tbody path) for batch {batch_id}; skipping block.")
-                        continue
-
-                    _reindex_serial_fields(filtered_rows, row_tokens_in_template, row_cols_needed)
-
-                    parts = []
-                    for r in filtered_rows:
-                        tr = prototype_block  # the <tr> itself
-                        for t in row_tokens_in_template:
-                            col = _extract_col_name(PLACEHOLDER_TO_COL.get(t))
-                            if not col:
-                                continue
-                            tr = sub_token(tr, t, format_token_value(t, r.get(col)))
-                        parts.append(tr)
-
-                    block_html = "\n".join(parts)
+                block_html = "\n".join(parts)
 
             # (c) Per-batch totals
             batch_total_values = {token: "0" for token in TOTALS}
@@ -1993,30 +2018,7 @@ def fill_and_print(
             if child_totals_cols:
                 child_cols = sorted(child_totals_cols.keys())
                 if child_cols:
-                    exprs = ", ".join([f"COALESCE(SUM({qident(c)}),0) AS {qident(c)}" for c in child_cols])
-
-                    if len(ccols) == 1:
-                        sql = (
-                            f"SELECT {exprs} "
-                            f"FROM {qident(child_table)} "
-                            f"WHERE {qident(ccols[0])} = ? AND {child_where_clause}"
-                        )
-                        tot_params = (batch_id,) + tuple(CDATE) + child_filter_values_tuple
-                    else:
-                        where = " AND ".join([f"{qident(c)} = ?" for c in ccols])
-                        sql = (
-                            f"SELECT {exprs} " f"FROM {qident(child_table)} " f"WHERE {where} AND {child_where_clause}"
-                        )
-                        tot_parts = _split_bid(batch_id, len(ccols))
-                        tot_params = tuple(tot_parts) + tuple(CDATE) + child_filter_values_tuple
-
-                    con = sqlite3.connect(str(DB_PATH))
-                    con.row_factory = sqlite3.Row
-                    cur = con.cursor()
-                    cur.execute(sql, tot_params)
-                    sums = dict(cur.fetchone() or {})
-                    con.close()
-
+                    sums = prefetched_totals.get(batch_id, {})
                     for col in child_cols:
                         raw_val = sums.get(col, 0)
                         fv, formatted = _coerce_total_value(raw_val)
@@ -2031,7 +2033,6 @@ def fill_and_print(
                 last_totals_per_token[token] = value
 
             rendered_blocks.append(block_html)
-
     # ---- Assemble full document ----
     rows_rendered = bool(rendered_blocks)
     if not rows_rendered:
@@ -2072,6 +2073,10 @@ def fill_and_print(
 
     asyncio.run(html_to_pdf_async(OUT_HTML, OUT_PDF, TEMPLATE_PATH.parent))
     print("Wrote PDF via Playwright:", OUT_PDF)
+
+    if fallback_con is not None:
+        with contextlib.suppress(Exception):
+            fallback_con.close()
 
     return {"html_path": str(OUT_HTML), "pdf_path": str(OUT_PDF), "rows_rendered": rows_rendered}
 

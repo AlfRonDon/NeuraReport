@@ -2,6 +2,7 @@
 """API routes for document analysis."""
 from __future__ import annotations
 
+import asyncio
 import contextlib
 import json
 import logging
@@ -9,10 +10,11 @@ import tempfile
 from pathlib import Path
 from typing import Optional
 
-from fastapi import APIRouter, File, Form, HTTPException, Query, Request, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.responses import StreamingResponse
 
 from backend.app.core.config import get_settings
+from backend.app.core.security import require_api_key
 from backend.app.core.validation import validate_file_extension
 from backend.app.features.analyze.schemas.analysis import AnalysisSuggestChartsPayload
 from backend.app.features.analyze.services.document_analysis_service import (
@@ -26,7 +28,7 @@ from backend.app.services.background_tasks import enqueue_background_job, run_ev
 
 logger = logging.getLogger("neura.analyze.routes")
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_api_key)])
 
 ALLOWED_EXTENSIONS = [".pdf", ".xlsx", ".xls", ".xlsm"]
 ALLOWED_CONTENT_TYPES = {
@@ -58,23 +60,6 @@ def _validate_upload(file: UploadFile) -> str:
     return filename
 
 
-async def _read_upload_with_limit(upload: UploadFile, max_bytes: int) -> bytes:
-    size = 0
-    chunks: list[bytes] = []
-    while True:
-        chunk = await upload.read(READ_CHUNK_BYTES)
-        if not chunk:
-            break
-        size += len(chunk)
-        if size > max_bytes:
-            raise HTTPException(
-                status_code=413,
-                detail=f"File too large. Maximum size is {max_bytes} bytes.",
-            )
-        chunks.append(chunk)
-    return b"".join(chunks)
-
-
 async def _persist_upload_with_limit(upload: UploadFile, max_bytes: int, suffix: str) -> tuple[Path, int]:
     size = 0
     tmp = tempfile.NamedTemporaryFile(prefix="nr-analysis-", suffix=suffix, delete=False)
@@ -98,7 +83,7 @@ async def _persist_upload_with_limit(upload: UploadFile, max_bytes: int, suffix:
 
 
 async def _streaming_generator(
-    file_bytes: bytes,
+    file_path: Path,
     file_name: str,
     template_id: Optional[str],
     connection_id: Optional[str],
@@ -107,7 +92,7 @@ async def _streaming_generator(
     """Generate NDJSON streaming response."""
     try:
         async for event in analyze_document_streaming(
-            file_bytes=file_bytes,
+            file_path=file_path,
             file_name=file_name,
             template_id=template_id,
             connection_id=connection_id,
@@ -126,6 +111,9 @@ async def _streaming_generator(
         if correlation_id:
             error_event["correlation_id"] = correlation_id
         yield json.dumps(error_event) + "\n"
+    finally:
+        with contextlib.suppress(FileNotFoundError):
+            file_path.unlink(missing_ok=True)
 
 
 @router.post("/upload")
@@ -157,11 +145,9 @@ async def upload_and_analyze(
 
         async def runner(job_id: str) -> None:
             try:
-                file_bytes = upload_path.read_bytes()
-
                 async def _events():
                     async for event in analyze_document_streaming(
-                        file_bytes=file_bytes,
+                        file_path=upload_path,
                         file_name=file_name,
                         template_id=template_id,
                         connection_id=connection_id,
@@ -204,13 +190,14 @@ async def upload_and_analyze(
         return {"status": "queued", "job_id": job["id"], "correlation_id": correlation_id}
 
     try:
-        file_bytes = await _read_upload_with_limit(file, settings.max_upload_bytes)
+        suffix = Path(file_name).suffix or ".bin"
+        upload_path, _ = await _persist_upload_with_limit(file, settings.max_upload_bytes, suffix=suffix)
     finally:
         await file.close()
 
     return StreamingResponse(
         _streaming_generator(
-            file_bytes,
+            upload_path,
             file_name,
             template_id,
             connection_id,
@@ -228,6 +215,10 @@ async def upload_and_analyze(
 async def extract_document(
     request: Request,
     file: UploadFile = File(...),
+    table_limit: int = Query(50, ge=1, le=200),
+    table_offset: int = Query(0, ge=0),
+    text_limit: int = Query(50000, ge=0, le=200000),
+    include_text: bool = Query(True),
 ):
     """Quickly extract raw tables and text without full AI analysis."""
     settings = get_settings()
@@ -235,20 +226,41 @@ async def extract_document(
     correlation_id = getattr(request.state, "correlation_id", None)
 
     try:
-        file_bytes = await _read_upload_with_limit(file, settings.max_upload_bytes)
+        suffix = Path(file_name).suffix or ".bin"
+        upload_path, _ = await _persist_upload_with_limit(file, settings.max_upload_bytes, suffix=suffix)
     finally:
         await file.close()
 
-    extracted = extract_document_content(file_bytes=file_bytes, file_name=file_name)
+    extracted = await asyncio.to_thread(
+        extract_document_content,
+        file_path=upload_path,
+        file_name=file_name,
+    )
+    with contextlib.suppress(FileNotFoundError):
+        upload_path.unlink(missing_ok=True)
+
+    total_tables = len(extracted.tables_raw or [])
+    table_slice = extracted.tables_raw[table_offset:table_offset + table_limit]
+    text_content = extracted.text_content or ""
+    original_text_len = len(text_content)
+    if not include_text:
+        text_content = ""
+    elif text_limit and original_text_len > text_limit:
+        text_content = text_content[:text_limit]
 
     return {
         "status": "ok",
         "file_name": extracted.file_name,
         "document_type": extracted.document_type,
         "page_count": extracted.page_count,
-        "tables": extracted.tables_raw,
+        "tables": table_slice,
+        "tables_total": total_tables,
+        "tables_offset": table_offset,
+        "tables_limit": table_limit,
         "sheets": extracted.sheets,
-        "text": extracted.text_content,
+        "text": text_content,
+        "text_length": original_text_len,
+        "text_truncated": include_text and text_limit > 0 and original_text_len > text_limit,
         "errors": extracted.errors,
         "correlation_id": correlation_id,
     }
@@ -304,7 +316,7 @@ async def suggest_charts(
     if not result:
         raise HTTPException(status_code=404, detail="Analysis not found")
 
-    charts = suggest_charts_for_analysis(analysis_id, payload)
+    charts = await asyncio.to_thread(suggest_charts_for_analysis, analysis_id, payload)
 
     sample_data = result.raw_data[:100] if payload.include_sample_data else None
 

@@ -584,3 +584,28 @@ def call_chat_completion(
         ) from last_exc
     message = _extract_openai_error_message(last_exc)
     raise RuntimeError(f"{description} failed after {_MAX_ATTEMPTS} attempts. {message}".strip()) from last_exc
+
+
+async def call_chat_completion_async(
+    client: Any,
+    *,
+    model: str,
+    messages: Iterable[Dict[str, Any]],
+    description: str,
+    timeout: float | None = None,
+    **kwargs: Any,
+) -> Any:
+    """
+    Async wrapper for call_chat_completion to avoid blocking the event loop.
+    """
+    import asyncio
+
+    return await asyncio.to_thread(
+        call_chat_completion,
+        client,
+        model=model,
+        messages=messages,
+        description=description,
+        timeout=timeout,
+        **kwargs,
+    )

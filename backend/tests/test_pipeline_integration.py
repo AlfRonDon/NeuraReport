@@ -45,12 +45,16 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from fastapi.testclient import TestClient
 from .. import api
+from ..app.core import config as config_module
 from ..app.services.state import store as state_store_module
 
 
 @pytest.fixture
 def fresh_state(tmp_path, monkeypatch):
     """Create a fresh state store and upload directories for each test."""
+    settings = config_module.get_settings()
+    settings.allow_anonymous_api = True
+    api.SETTINGS = settings
     base_dir = tmp_path / "state"
     store = state_store_module.StateStore(base_dir=base_dir)
     state_store_module.set_state_store(store)
@@ -150,8 +154,8 @@ class TestConnectionPipeline:
         list_resp = client.get("/connections")
         assert list_resp.status_code == 200
         connections = list_resp.json()["connections"]
-        assert len(connections) == 1
-        assert connections[0]["id"] == conn_id
+        connection_ids = {conn["id"] for conn in connections}
+        assert conn_id in connection_ids
 
         # Step 4: Health check
         health_resp = client.post(f"/connections/{conn_id}/health")

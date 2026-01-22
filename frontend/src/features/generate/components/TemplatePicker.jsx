@@ -57,13 +57,11 @@ import {
 } from '../services/generateApi'
 
 export function TemplatePicker({ selected, onToggle, outputFormats, setOutputFormats, tagFilter, setTagFilter, onEditTemplate }) {
-  const {
-    templates,
-    templateCatalog,
-    setTemplates,
-    setTemplateCatalog,
-    removeTemplate,
-  } = useAppStore()
+  const templates = useAppStore((state) => state.templates)
+  const templateCatalog = useAppStore((state) => state.templateCatalog)
+  const setTemplates = useAppStore((state) => state.setTemplates)
+  const setTemplateCatalog = useAppStore((state) => state.setTemplateCatalog)
+  const removeTemplate = useAppStore((state) => state.removeTemplate)
   const queryClient = useQueryClient()
   const toast = useToast()
   const [deleting, setDeleting] = useState(null)

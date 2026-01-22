@@ -872,8 +872,8 @@ export default function DashboardPage() {
           <Stack spacing={1}>
             {[
               { label: 'Manage Connections', icon: StorageIcon, path: '/connections' },
-              { label: 'View Templates', icon: DescriptionIcon, path: '/templates' },
-              { label: 'Generate Report', icon: AssessmentIcon, path: '/reports' },
+              { label: 'Report Designs', icon: DescriptionIcon, path: '/templates' },
+              { label: 'Run Reports', icon: AssessmentIcon, path: '/reports' },
               { label: 'Manage Schedules', icon: ScheduleIcon, path: '/schedules' },
             ].map((action) => (
               <QuickActionCard key={action.path} onClick={() => navigate(action.path)}>
@@ -971,7 +971,7 @@ export default function DashboardPage() {
                 <WorkIcon sx={{ fontSize: 28, color: 'text.secondary' }} />
               </Box>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                No jobs yet. Generate your first report to get started.
+                No jobs yet. Run your first report to get started.
               </Typography>
               <Button
                 variant="outlined"
@@ -979,7 +979,7 @@ export default function DashboardPage() {
                 onClick={() => navigate('/setup/wizard')}
                 sx={{ borderRadius: 2 }}
               >
-                Create First Report
+                Run First Report
               </Button>
             </Box>
           ) : (
@@ -1030,18 +1030,18 @@ export default function DashboardPage() {
 
         {/* Right Sidebar */}
         <Stack spacing={3}>
-          {/* Top Templates */}
+          {/* Top Designs */}
           <GlassCard sx={{ animationDelay: '300ms' }}>
             <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
               <InsightsIcon sx={{ fontSize: 18, color: 'primary.main' }} />
               <Typography variant="subtitle2" fontWeight={700}>
-                Top Templates
+                Top Designs
               </Typography>
             </Stack>
 
             {topTemplates.length === 0 ? (
               <Typography variant="body2" color="text.secondary">
-                No template usage data yet
+                No design usage data yet
               </Typography>
             ) : (
               <Stack spacing={1.5}>
@@ -1105,7 +1105,7 @@ export default function DashboardPage() {
 
             {favorites.templates.length === 0 && favorites.connections.length === 0 ? (
               <Typography variant="body2" color="text.secondary">
-                No favorites yet. Star templates or connections for quick access.
+                No favorites yet. Star designs or connections for quick access.
               </Typography>
             ) : (
               <Stack spacing={1}>
@@ -1184,10 +1184,10 @@ export default function DashboardPage() {
             </Box>
             <Box>
               <Typography variant="subtitle1" fontWeight={700}>
-                {recFromAI ? 'AI Recommendations' : 'Recent Templates'}
+                {recFromAI ? 'AI Recommendations' : 'Recent Designs'}
               </Typography>
               <Typography variant="caption" color="text.secondary">
-                {recFromAI ? 'Smart template suggestions based on your data' : 'Showing your recent templates (AI unavailable)'}
+                {recFromAI ? 'Smart design suggestions based on your data' : 'Showing your recent designs (AI unavailable)'}
               </Typography>
             </Box>
           </Stack>
