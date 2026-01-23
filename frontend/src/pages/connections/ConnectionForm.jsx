@@ -52,6 +52,7 @@ function HelpIcon({ field }) {
   )
 }
 import { testConnection } from '../../api/client'
+import { useInteraction, InteractionType, Reversibility } from '../../components/ux/governance'
 import {
   validateRequired,
   validateMinLength,
@@ -111,6 +112,7 @@ export default function ConnectionForm({ connection, onSave, onCancel, loading }
   const [testing, setTesting] = useState(false)
   const [testResult, setTestResult] = useState(null) // 'success' | 'error' | null
   const submitDebounceRef = useRef(false)
+  const { execute } = useInteraction()
 
   const handleChange = useCallback((field) => (event) => {
     const value = event.target.type === 'checkbox' ? event.target.checked : event.target.value
@@ -171,35 +173,50 @@ export default function ConnectionForm({ connection, onSave, onCancel, loading }
       return
     }
 
-    setTesting(true)
-    setTestResult(null)
-    setError(null)
+    await execute({
+      type: InteractionType.EXECUTE,
+      label: 'Test connection',
+      reversibility: Reversibility.SYSTEM_MANAGED,
+      suppressSuccessToast: true,
+      suppressErrorToast: true,
+      intent: {
+        dbType: formData.db_type,
+        action: 'test_connection',
+      },
+      action: async () => {
+        setTesting(true)
+        setTestResult(null)
+        setError(null)
 
-    try {
-      const db_url = buildConnectionUrl()
-      const result = await testConnection({
-        db_url,
-        db_type: formData.db_type,
-        database: formData.database,
-      })
-      if (
-        result?.status === 'healthy'
-        || result?.healthy
-        || result?.status === 'ok'
-        || result?.ok
-      ) {
-        setTestResult('success')
-      } else {
-        setTestResult('error')
-        setError(result?.message || result?.error || 'Connection test failed')
-      }
-    } catch (err) {
-      setTestResult('error')
-      setError(err.message || 'Connection test failed')
-    } finally {
-      setTesting(false)
-    }
-  }, [formData, buildConnectionUrl])
+        try {
+          const db_url = buildConnectionUrl()
+          const result = await testConnection({
+            db_url,
+            db_type: formData.db_type,
+            database: formData.database,
+          })
+          if (
+            result?.status === 'healthy'
+            || result?.healthy
+            || result?.status === 'ok'
+            || result?.ok
+          ) {
+            setTestResult('success')
+          } else {
+            setTestResult('error')
+            setError(result?.message || result?.error || 'Connection test failed')
+          }
+          return result
+        } catch (err) {
+          setTestResult('error')
+          setError(err.message || 'Connection test failed')
+          throw err
+        } finally {
+          setTesting(false)
+        }
+      },
+    })
+  }, [buildConnectionUrl, execute, formData])
 
   const handleSubmit = useCallback((e) => {
     e.preventDefault()

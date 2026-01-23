@@ -331,6 +331,9 @@ def mapping_preview_internal(
     *,
     kind: str = "pdf",
 ) -> dict:
-    return asyncio.get_event_loop().run_until_complete(
-        run_mapping_preview(template_id, connection_id, request, force_refresh, kind=kind)
-    )
+    coro = run_mapping_preview(template_id, connection_id, request, force_refresh, kind=kind)
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        return asyncio.run(coro)
+    raise RuntimeError("mapping_preview_internal cannot be called from a running event loop; use run_mapping_preview instead.")

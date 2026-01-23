@@ -47,39 +47,26 @@ const buildIntentHeaders = (intent) => {
   return headers
 }
 
-let warnedMissingIntent = false
-const createFallbackIntent = (method) => {
-  const type = method === 'delete' ? 'delete' : method === 'post' ? 'create' : 'update'
-  return {
-    id: `intent_auto_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-    type,
-    label: `Auto intent (${method.toUpperCase()})`,
-    reversibility: 'system_managed',
-  }
-}
-
 const applyIntentAndIdempotency = (headers, method) => {
   const next = { ...(headers || {}) }
   if (!['post', 'put', 'patch', 'delete'].includes(method)) {
     return next
   }
 
-  let intent = getActiveIntent()
+  const intent = getActiveIntent()
   if (!intent) {
-    intent = createFallbackIntent(method)
-    if (!warnedMissingIntent && typeof console !== 'undefined') {
-      console.warn('[UX GOVERNANCE] Auto-generated intent headers for a mutating request.')
-      warnedMissingIntent = true
+    const error = new Error('[UX GOVERNANCE] Missing active intent for mutating request.')
+    if (typeof console !== 'undefined') {
+      console.error(error)
     }
+    throw error
   }
-  if (intent) {
-    const intentHeaders = buildIntentHeaders(intent)
-    Object.entries(intentHeaders).forEach(([key, value]) => {
-      if (value && !next[key]) {
-        next[key] = value
-      }
-    })
-  }
+  const intentHeaders = buildIntentHeaders(intent)
+  Object.entries(intentHeaders).forEach(([key, value]) => {
+    if (value && !next[key]) {
+      next[key] = value
+    }
+  })
 
   const existing =
     next[IDEMPOTENCY_HEADER] ||
@@ -93,10 +80,16 @@ const applyIntentAndIdempotency = (headers, method) => {
   return next
 }
 
-export const fetchWithIntent = (url, options = {}) => {
+export const fetchWithIntent = async (url, options = {}) => {
   const method = (options.method || 'get').toLowerCase()
   const headers = applyIntentAndIdempotency(options.headers, method)
-  return fetch(url, { ...options, headers })
+  try {
+    return await fetch(url, { ...options, headers })
+  } catch (error) {
+    const err = error instanceof Error ? error : new Error('Network error')
+    err.userMessage = getUserFriendlyError(err)
+    throw err
+  }
 }
 
 // User-friendly error message mapping
@@ -107,6 +100,9 @@ const USER_FRIENDLY_ERRORS = {
 
   // Network/Server
   'Network Error': 'Unable to connect to the server. Please check your internet connection.',
+  'Failed to fetch': 'Unable to connect to the server. Please check your internet connection.',
+  'NetworkError': 'Unable to connect to the server. Please check your internet connection.',
+  'Load failed': 'Unable to connect to the server. Please check your internet connection.',
   'timeout': 'Request timed out. Please try again.',
   502: 'Server is temporarily unavailable. Please try again in a moment.',
   503: 'Service is temporarily unavailable. Please try again later.',
@@ -127,6 +123,9 @@ const ERROR_PATTERNS = [
 ]
 
 function getUserFriendlyError(error) {
+  if (error?.name === 'AbortError') {
+    return 'Request was cancelled.'
+  }
   // Handle axios errors
   if (error.response) {
     const status = error.response.status
@@ -369,32 +368,6 @@ export async function handleStreamingResponse(res, { onEvent, errorMessage = 'Re
 
   return finalEvent
 }
-
-
-// Optional: turn server errors into nice messages
-
-api.interceptors.response.use(
-
-  (r) => r,
-
-  (err) => {
-
-    const msg =
-
-      err?.response?.data?.detail ||
-
-      err?.response?.data?.message ||
-
-      err?.message ||
-
-      'Request failed'
-
-    return Promise.reject(new Error(msg))
-
-  }
-
-)
-
 
 
 /* ------------------------ REAL API calls (existing) ------------------------ */

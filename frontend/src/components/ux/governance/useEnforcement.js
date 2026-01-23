@@ -59,7 +59,7 @@ export function useEnforceGovernance(componentName, options = {}) {
 
   useEffect(() => {
     // Only run in development
-    if (process.env.NODE_ENV !== 'development') return
+    if (!import.meta.env?.DEV) return
 
     // Only check each component once
     if (checkedComponents.has(componentName)) return
@@ -96,7 +96,7 @@ export function useEnforceGovernance(componentName, options = {}) {
  * @deprecated Use useInteraction().execute() instead
  */
 export function withGovernanceWarning(handlerName, handler, componentName) {
-  if (process.env.NODE_ENV !== 'development') {
+  if (!import.meta.env?.DEV) {
     return handler
   }
 
@@ -177,7 +177,7 @@ export function validateContract(contract) {
  * Development-time report of governance compliance
  */
 export function generateComplianceReport() {
-  if (process.env.NODE_ENV !== 'development') {
+  if (!import.meta.env?.DEV) {
     return null
   }
 

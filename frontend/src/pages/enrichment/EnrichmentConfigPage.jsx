@@ -48,6 +48,7 @@ import {
 import useEnrichmentStore from '../../stores/enrichmentStore';
 import ConfirmModal from '../../ui/Modal/ConfirmModal';
 import AiUsageNotice from '../../components/ai/AiUsageNotice';
+import { useInteraction, InteractionType, Reversibility } from '../../components/ux/governance';
 
 // Fallback sources in case API is unavailable
 const FALLBACK_SOURCES = [
@@ -80,10 +81,13 @@ export default function EnrichmentConfigPage() {
     enrichData,
     reset,
   } = useEnrichmentStore();
+  const { execute } = useInteraction();
 
   const [searchParams, setSearchParams] = useSearchParams();
   const tabParam = searchParams.get('tab');
   const activeTab = tabParam === 'cache' ? 1 : 0;
+
+  const [initialLoading, setInitialLoading] = useState(true);
 
   const handleTabChange = useCallback((e, newValue) => {
     setSearchParams(newValue === 1 ? { tab: 'cache' } : {}, { replace: true });
@@ -104,13 +108,6 @@ export default function EnrichmentConfigPage() {
   const [deleteSourceConfirm, setDeleteSourceConfirm] = useState({ open: false, sourceId: null, sourceName: '' });
   const [clearCacheConfirm, setClearCacheConfirm] = useState({ open: false, sourceId: null, sourceName: '' });
 
-  // Use API sources if available, fallback to static list
-  const usingFallbackSources = sources.length === 0 && !initialLoading;
-  const availableSources = sources.length > 0 ? sources : FALLBACK_SOURCES;
-  const allSources = [...availableSources, ...customSources];
-
-  const [initialLoading, setInitialLoading] = useState(true);
-
   useEffect(() => {
     const init = async () => {
       setInitialLoading(true);
@@ -120,21 +117,6 @@ export default function EnrichmentConfigPage() {
     init();
     return () => reset();
   }, [fetchSources, fetchCacheStats, reset]);
-
-  // Show loading during initial fetch
-  if (initialLoading) {
-    return (
-      <Box sx={{ p: 3, maxWidth: 1400, mx: 'auto' }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
-          <EnrichIcon />
-          <Typography variant="h4">Data Enrichment</Typography>
-        </Box>
-        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 300 }}>
-          <CircularProgress />
-        </Box>
-      </Box>
-    );
-  }
 
   const handleParseData = useCallback(() => {
     try {
@@ -165,12 +147,46 @@ export default function EnrichmentConfigPage() {
 
   const handlePreview = async () => {
     if (!parsedData || selectedSources.length === 0) return;
-    await previewEnrichment(parsedData, selectedSources, 3);
+    await execute({
+      type: InteractionType.ANALYZE,
+      label: 'Preview enrichment',
+      reversibility: Reversibility.SYSTEM_MANAGED,
+      suppressSuccessToast: true,
+      suppressErrorToast: true,
+      intent: {
+        sourceIds: selectedSources,
+        action: 'preview_enrichment',
+      },
+      action: async () => {
+        const result = await previewEnrichment(parsedData, selectedSources, 3);
+        if (!result) {
+          throw new Error('Preview enrichment failed');
+        }
+        return result;
+      },
+    });
   };
 
   const handleEnrich = async () => {
     if (!parsedData || selectedSources.length === 0) return;
-    await enrichData(parsedData, selectedSources);
+    await execute({
+      type: InteractionType.GENERATE,
+      label: 'Enrich data',
+      reversibility: Reversibility.SYSTEM_MANAGED,
+      suppressSuccessToast: true,
+      suppressErrorToast: true,
+      intent: {
+        sourceIds: selectedSources,
+        action: 'enrich_data',
+      },
+      action: async () => {
+        const result = await enrichData(parsedData, selectedSources);
+        if (!result) {
+          throw new Error('Enrichment failed');
+        }
+        return result;
+      },
+    });
   };
 
   const toggleSource = (sourceId) => {
@@ -184,26 +200,130 @@ export default function EnrichmentConfigPage() {
   const handleCreateSource = async () => {
     if (!newSourceName.trim()) return;
 
-    const result = await createSource({
-      name: newSourceName,
-      type: newSourceType,
-      description: newSourceDescription,
-      config: {},
-      cacheTtlHours: newSourceCacheTtl,
-    });
+    await execute({
+      type: InteractionType.CREATE,
+      label: 'Create enrichment source',
+      reversibility: Reversibility.SYSTEM_MANAGED,
+      suppressSuccessToast: true,
+      suppressErrorToast: true,
+      intent: {
+        sourceType: newSourceType,
+        action: 'create_enrichment_source',
+      },
+      action: async () => {
+        const result = await createSource({
+          name: newSourceName,
+          type: newSourceType,
+          description: newSourceDescription,
+          config: {},
+          cacheTtlHours: newSourceCacheTtl,
+        });
 
-    if (result) {
-      setCreateDialogOpen(false);
-      setNewSourceName('');
-      setNewSourceType('company_info');
-      setNewSourceDescription('');
-      setNewSourceCacheTtl(24);
-    }
+        if (result) {
+          setCreateDialogOpen(false);
+          setNewSourceName('');
+          setNewSourceType('company_info');
+          setNewSourceDescription('');
+          setNewSourceCacheTtl(24);
+        }
+        if (!result) {
+          throw new Error('Create source failed');
+        }
+        return result;
+      },
+    });
   };
 
   const handleClearCache = async () => {
-    await clearCache();
+    await execute({
+      type: InteractionType.DELETE,
+      label: 'Clear enrichment cache',
+      reversibility: Reversibility.SYSTEM_MANAGED,
+      suppressSuccessToast: true,
+      suppressErrorToast: true,
+      intent: {
+        action: 'clear_enrichment_cache',
+      },
+      action: async () => {
+        const result = await clearCache();
+        if (result == null) {
+          throw new Error('Clear cache failed');
+        }
+        return result;
+      },
+    });
   };
+
+  const handleDeleteSourceConfirm = async () => {
+    const sourceId = deleteSourceConfirm.sourceId;
+    const sourceName = deleteSourceConfirm.sourceName;
+    setDeleteSourceConfirm({ open: false, sourceId: null, sourceName: '' });
+    if (!sourceId) return;
+    await execute({
+      type: InteractionType.DELETE,
+      label: 'Delete enrichment source',
+      reversibility: Reversibility.SYSTEM_MANAGED,
+      suppressSuccessToast: true,
+      suppressErrorToast: true,
+      intent: {
+        sourceId,
+        sourceName,
+        action: 'delete_enrichment_source',
+      },
+      action: async () => {
+        const result = await deleteSource(sourceId);
+        if (!result) {
+          throw new Error('Delete source failed');
+        }
+        return result;
+      },
+    });
+  };
+
+  const handleClearCacheConfirm = async () => {
+    const sourceId = clearCacheConfirm.sourceId || null;
+    const sourceName = clearCacheConfirm.sourceName;
+    setClearCacheConfirm({ open: false, sourceId: null, sourceName: '' });
+    await execute({
+      type: InteractionType.DELETE,
+      label: 'Clear enrichment cache',
+      reversibility: Reversibility.SYSTEM_MANAGED,
+      suppressSuccessToast: true,
+      suppressErrorToast: true,
+      intent: {
+        sourceId,
+        sourceName,
+        action: 'clear_enrichment_cache',
+      },
+      action: async () => {
+        const result = await clearCache(sourceId);
+        if (result == null) {
+          throw new Error('Clear cache failed');
+        }
+        return result;
+      },
+    });
+  };
+
+  // Use API sources if available, fallback to static list
+  const usingFallbackSources = sources.length === 0 && !initialLoading;
+  const availableSources = sources.length > 0 ? sources : FALLBACK_SOURCES;
+  const allSources = [...availableSources, ...customSources];
+
+  // Show loading during initial fetch
+  if (initialLoading) {
+    return (
+      <Box sx={{ p: 3, maxWidth: 1400, mx: 'auto' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
+          <EnrichIcon />
+          <Typography variant="h4">Data Enrichment</Typography>
+        </Box>
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 300 }}>
+          <CircularProgress />
+        </Box>
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ p: 3, maxWidth: 1400, mx: 'auto' }}>
@@ -556,10 +676,7 @@ export default function EnrichmentConfigPage() {
       <ConfirmModal
         open={deleteSourceConfirm.open}
         onClose={() => setDeleteSourceConfirm({ open: false, sourceId: null, sourceName: '' })}
-        onConfirm={() => {
-          deleteSource(deleteSourceConfirm.sourceId);
-          setDeleteSourceConfirm({ open: false, sourceId: null, sourceName: '' });
-        }}
+        onConfirm={handleDeleteSourceConfirm}
         title="Delete Source"
         message={`Are you sure you want to delete "${deleteSourceConfirm.sourceName}"? This will remove the source configuration and all associated cache data.`}
         confirmLabel="Delete"
@@ -569,10 +686,7 @@ export default function EnrichmentConfigPage() {
       <ConfirmModal
         open={clearCacheConfirm.open}
         onClose={() => setClearCacheConfirm({ open: false, sourceId: null, sourceName: '' })}
-        onConfirm={() => {
-          clearCache(clearCacheConfirm.sourceId);
-          setClearCacheConfirm({ open: false, sourceId: null, sourceName: '' });
-        }}
+        onConfirm={handleClearCacheConfirm}
         title="Clear Cache"
         message={`Are you sure you want to clear cache for ${clearCacheConfirm.sourceName}? New enrichment requests will fetch fresh data from the source.`}
         confirmLabel="Clear Cache"

@@ -38,6 +38,7 @@ import { useNavigate, useParams, useLocation, Link as RouterLink } from 'react-r
 import ScaledIframePreview from '../../../components/ScaledIframePreview.jsx'
 import Surface from '../../../components/layout/Surface.jsx'
 import { useToast } from '../../../components/ToastProvider.jsx'
+import { useInteraction, InteractionType, Reversibility } from '../../../components/ux/governance'
 import { useAppStore } from '../../../store/useAppStore.js'
 import { buildLastEditInfo } from '../../../utils/templateMeta'
 import {
@@ -74,6 +75,7 @@ export default function TemplateEditor() {
   const navigate = useNavigate()
   const location = useLocation()
   const toast = useToast()
+  const { execute } = useInteraction()
   const templates = useAppStore((state) => state.templates)
   const updateTemplateEntry = useAppStore((state) => state.updateTemplate)
 
@@ -214,26 +216,41 @@ export default function TemplateEditor() {
 
   const handleSave = useCallback(async () => {
     if (!templateId) return
-    setSaving(true)
-    try {
-      const data = await editTemplateManual(templateId, html)
-      const nextHtml = typeof data?.html === 'string' ? data.html : html
-      setHtml(nextHtml)
-      setInitialHtml(nextHtml)
-      setServerMeta(data?.metadata || null)
-      setDiffSummary(data?.diff_summary || null)
-      setHistory(Array.isArray(data?.history) ? data.history : history)
-      if (data?.metadata) {
-        syncTemplateMetadata(data.metadata)
-      }
-      clearDraftAfterSave()
-      toast.show('Template HTML saved.', 'success')
-    } catch (err) {
-      toast.show(String(err), 'error')
-    } finally {
-      setSaving(false)
-    }
-  }, [templateId, html, toast, syncTemplateMetadata, clearDraftAfterSave, history])
+    await execute({
+      type: InteractionType.UPDATE,
+      label: 'Save template',
+      reversibility: Reversibility.SYSTEM_MANAGED,
+      suppressSuccessToast: true,
+      suppressErrorToast: true,
+      intent: {
+        templateId,
+        action: 'edit_manual',
+      },
+      action: async () => {
+        setSaving(true)
+        try {
+          const data = await editTemplateManual(templateId, html)
+          const nextHtml = typeof data?.html === 'string' ? data.html : html
+          setHtml(nextHtml)
+          setInitialHtml(nextHtml)
+          setServerMeta(data?.metadata || null)
+          setDiffSummary(data?.diff_summary || null)
+          setHistory(Array.isArray(data?.history) ? data.history : history)
+          if (data?.metadata) {
+            syncTemplateMetadata(data.metadata)
+          }
+          clearDraftAfterSave()
+          toast.show('Template HTML saved.', 'success')
+          return data
+        } catch (err) {
+          toast.show(String(err), 'error')
+          throw err
+        } finally {
+          setSaving(false)
+        }
+      },
+    })
+  }, [templateId, html, toast, syncTemplateMetadata, clearDraftAfterSave, history, execute])
 
   const handleApplyAi = useCallback(async () => {
     if (!templateId) return
@@ -242,54 +259,84 @@ export default function TemplateEditor() {
       toast.show('Enter AI instructions before applying.', 'info')
       return
     }
-    setAiBusy(true)
-    try {
-      const data = await editTemplateAi(templateId, text, html)
-      const nextHtml = typeof data?.html === 'string' ? data.html : html
-      setHtml(nextHtml)
-      setInitialHtml(nextHtml)
-      setServerMeta(data?.metadata || null)
-      setDiffSummary(data?.diff_summary || null)
-      setHistory(Array.isArray(data?.history) ? data.history : history)
-      if (data?.metadata) {
-        syncTemplateMetadata(data.metadata)
-      }
-      setInstructions('')
-      clearDraftAfterSave()
-      const changes = Array.isArray(data?.summary) ? data.summary : []
-      if (changes.length) {
-        toast.show(`AI updated template: ${changes.join('; ')}`, 'success')
-      } else {
-        toast.show('AI updated the template HTML.', 'success')
-      }
-    } catch (err) {
-      toast.show(String(err), 'error')
-    } finally {
-      setAiBusy(false)
-    }
-  }, [templateId, html, instructions, toast, syncTemplateMetadata, clearDraftAfterSave, history])
+    await execute({
+      type: InteractionType.GENERATE,
+      label: 'Apply AI edit',
+      reversibility: Reversibility.FULLY_REVERSIBLE,
+      suppressSuccessToast: true,
+      suppressErrorToast: true,
+      intent: {
+        templateId,
+        action: 'edit_ai',
+      },
+      action: async () => {
+        setAiBusy(true)
+        try {
+          const data = await editTemplateAi(templateId, text, html)
+          const nextHtml = typeof data?.html === 'string' ? data.html : html
+          setHtml(nextHtml)
+          setInitialHtml(nextHtml)
+          setServerMeta(data?.metadata || null)
+          setDiffSummary(data?.diff_summary || null)
+          setHistory(Array.isArray(data?.history) ? data.history : history)
+          if (data?.metadata) {
+            syncTemplateMetadata(data.metadata)
+          }
+          setInstructions('')
+          clearDraftAfterSave()
+          const changes = Array.isArray(data?.summary) ? data.summary : []
+          if (changes.length) {
+            toast.show(`AI updated template: ${changes.join('; ')}`, 'success')
+          } else {
+            toast.show('AI updated the template HTML.', 'success')
+          }
+          return data
+        } catch (err) {
+          toast.show(String(err), 'error')
+          throw err
+        } finally {
+          setAiBusy(false)
+        }
+      },
+    })
+  }, [templateId, html, instructions, toast, syncTemplateMetadata, clearDraftAfterSave, history, execute])
 
   const handleUndo = useCallback(async () => {
     if (!templateId) return
-    setUndoBusy(true)
-    try {
-      const data = await undoTemplateEdit(templateId)
-      const nextHtml = typeof data?.html === 'string' ? data.html : html
-      setHtml(nextHtml)
-      setInitialHtml(nextHtml)
-      setServerMeta(data?.metadata || null)
-      setDiffSummary(data?.diff_summary || null)
-      setHistory(Array.isArray(data?.history) ? data.history : history)
-      if (data?.metadata) {
-        syncTemplateMetadata(data.metadata)
-      }
-      toast.show('Reverted to the previous template version.', 'success')
-    } catch (err) {
-      toast.show(String(err), 'error')
-    } finally {
-      setUndoBusy(false)
-    }
-  }, [templateId, html, toast, syncTemplateMetadata, history])
+    await execute({
+      type: InteractionType.UPDATE,
+      label: 'Undo template edit',
+      reversibility: Reversibility.SYSTEM_MANAGED,
+      suppressSuccessToast: true,
+      suppressErrorToast: true,
+      intent: {
+        templateId,
+        action: 'undo_edit',
+      },
+      action: async () => {
+        setUndoBusy(true)
+        try {
+          const data = await undoTemplateEdit(templateId)
+          const nextHtml = typeof data?.html === 'string' ? data.html : html
+          setHtml(nextHtml)
+          setInitialHtml(nextHtml)
+          setServerMeta(data?.metadata || null)
+          setDiffSummary(data?.diff_summary || null)
+          setHistory(Array.isArray(data?.history) ? data.history : history)
+          if (data?.metadata) {
+            syncTemplateMetadata(data.metadata)
+          }
+          toast.show('Reverted to the previous template version.', 'success')
+          return data
+        } catch (err) {
+          toast.show(String(err), 'error')
+          throw err
+        } finally {
+          setUndoBusy(false)
+        }
+      },
+    })
+  }, [templateId, html, toast, syncTemplateMetadata, history, execute])
 
   const handleBack = () => {
     if (dirty && typeof window !== 'undefined') {

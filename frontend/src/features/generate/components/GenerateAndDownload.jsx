@@ -49,6 +49,7 @@ import TOOLTIP_COPY from '../../../content/tooltipCopy.jsx'
 import { useAppStore } from '../../../store/useAppStore'
 import { useTrackedJobs } from '../../../hooks/useJobs'
 import { useToast } from '../../../components/ToastProvider.jsx'
+import { useInteraction, InteractionType, Reversibility } from '../../../components/ux/governance'
 import { confirmDelete } from '../../../utils/confirmDelete'
 import SavedChartsPanel from './run/SavedChartsPanel.jsx'
 import {
@@ -141,6 +142,7 @@ function GenerateAndDownload({
 }) {
   const { downloads } = useAppStore()
   const toast = useToast()
+  const { execute } = useInteraction()
   const targetNames = selectedTemplates.map((t) => t.name)
   const subline = targetNames.length
     ? `${targetNames.slice(0, 3).join(', ')}${targetNames.length > 3 ? ', ...' : ''}`
@@ -478,14 +480,27 @@ function GenerateAndDownload({
       return
     }
     try {
-      setChartSampleData(null)
-      await chartSuggestMutation.mutateAsync({
-        templateId: activeTemplate.id,
-        kind: activeTemplateKind,
-        startDate: startSql,
-        endDate: endSql,
-        keyValuesForTemplate: keyValues?.[activeTemplate.id] || {},
-        question: chartQuestion,
+      await execute({
+        type: InteractionType.ANALYZE,
+        label: 'Suggest charts',
+        reversibility: Reversibility.SYSTEM_MANAGED,
+        suppressSuccessToast: true,
+        suppressErrorToast: true,
+        intent: {
+          templateId: activeTemplate.id,
+          action: 'suggest_charts',
+        },
+        action: async () => {
+          setChartSampleData(null)
+          return chartSuggestMutation.mutateAsync({
+            templateId: activeTemplate.id,
+            kind: activeTemplateKind,
+            startDate: startSql,
+            endDate: endSql,
+            keyValuesForTemplate: keyValues?.[activeTemplate.id] || {},
+            question: chartQuestion,
+          })
+        },
       })
     } catch {
       // handled in onError
@@ -516,17 +531,33 @@ function GenerateAndDownload({
     if (!entered || !entered.trim()) return
     const name = entered.trim()
     try {
-      setSaveChartLoading(true)
-      const created = await createSavedChart({ name, spec: selectedSuggestion })
-      if (created) {
-        setSelectedChartSource('saved')
-        setSelectedSavedChartId(created.id)
-        toast.show(`Saved chart "${created.name}"`, 'success')
-      }
+      await execute({
+        type: InteractionType.CREATE,
+        label: 'Save chart',
+        reversibility: Reversibility.SYSTEM_MANAGED,
+        suppressSuccessToast: true,
+        suppressErrorToast: true,
+        intent: {
+          templateId: activeTemplate.id,
+          action: 'save_chart',
+        },
+        action: async () => {
+          setSaveChartLoading(true)
+          try {
+            const created = await createSavedChart({ name, spec: selectedSuggestion })
+            if (created) {
+              setSelectedChartSource('saved')
+              setSelectedSavedChartId(created.id)
+              toast.show(`Saved chart "${created.name}"`, 'success')
+            }
+            return created
+          } finally {
+            setSaveChartLoading(false)
+          }
+        },
+      })
     } catch (error) {
       toast.show(error?.message || 'Failed to save chart.', 'error')
-    } finally {
-      setSaveChartLoading(false)
     }
   }
   const handleRenameSavedChart = async (event, chart) => {
@@ -538,10 +569,24 @@ function GenerateAndDownload({
     if (!entered || !entered.trim()) return
     const name = entered.trim()
     try {
-      const updated = await renameSavedChart({ chartId: chart.id, name })
-      if (updated) {
-        toast.show(`Renamed chart to "${updated.name}"`, 'success')
-      }
+      await execute({
+        type: InteractionType.UPDATE,
+        label: 'Rename chart',
+        reversibility: Reversibility.SYSTEM_MANAGED,
+        suppressSuccessToast: true,
+        suppressErrorToast: true,
+        intent: {
+          chartId: chart.id,
+          action: 'rename_chart',
+        },
+        action: async () => {
+          const updated = await renameSavedChart({ chartId: chart.id, name })
+          if (updated) {
+            toast.show(`Renamed chart to "${updated.name}"`, 'success')
+          }
+          return updated
+        },
+      })
     } catch (error) {
       toast.show(error?.message || 'Failed to rename chart.', 'error')
     }
@@ -554,12 +599,25 @@ function GenerateAndDownload({
       if (!confirmed) return
     }
     try {
-      await deleteSavedChart({ chartId: chart.id })
-      if (selectedChartSource === 'saved' && selectedSavedChartId === chart.id) {
-        setSelectedChartSource('suggestion')
-        setSelectedSavedChartId(null)
-      }
-      toast.show('Deleted saved chart.', 'success')
+      await execute({
+        type: InteractionType.DELETE,
+        label: 'Delete saved chart',
+        reversibility: Reversibility.SYSTEM_MANAGED,
+        suppressSuccessToast: true,
+        suppressErrorToast: true,
+        intent: {
+          chartId: chart.id,
+          action: 'delete_chart',
+        },
+        action: async () => {
+          await deleteSavedChart({ chartId: chart.id })
+          if (selectedChartSource === 'saved' && selectedSavedChartId === chart.id) {
+            setSelectedChartSource('suggestion')
+            setSelectedSavedChartId(null)
+          }
+          toast.show('Deleted saved chart.', 'success')
+        },
+      })
     } catch (error) {
       toast.show(error?.message || 'Failed to delete chart.', 'error')
     }

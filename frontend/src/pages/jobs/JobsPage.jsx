@@ -43,6 +43,7 @@ import PlayArrowIcon from '@mui/icons-material/PlayArrow'
 import { DataTable } from '../../ui/DataTable'
 import { ConfirmModal } from '../../ui/Modal'
 import { useToast } from '../../components/ToastProvider'
+import { useInteraction, InteractionType, Reversibility } from '../../components/ux/governance'
 import * as api from '../../api/client'
 import { readPreferences, subscribePreferences } from '../../utils/preferences'
 import {
@@ -349,6 +350,7 @@ export default function JobsPage() {
   const theme = useTheme()
   const toast = useToast()
   const navigate = useNavigate()
+  const { execute } = useInteraction()
   const [jobs, setJobs] = useState([])
   const [loading, setLoading] = useState(false)
   const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false)
@@ -448,26 +450,40 @@ export default function JobsPage() {
   const handleCancelConfirm = useCallback(async () => {
     if (!cancellingJob) return
 
-    isUserActionInProgressRef.current = true
+    await execute({
+      type: InteractionType.UPDATE,
+      label: 'Cancel job',
+      reversibility: Reversibility.SYSTEM_MANAGED,
+      suppressSuccessToast: true,
+      suppressErrorToast: true,
+      intent: {
+        jobId: cancellingJob.id,
+        action: 'cancel_job',
+      },
+      action: async () => {
+        isUserActionInProgressRef.current = true
 
-    setJobs((prev) =>
-      prev.map((job) =>
-        job.id === cancellingJob.id ? { ...job, status: JobStatus.CANCELLING } : job
-      )
-    )
-    setCancelConfirmOpen(false)
+        setJobs((prev) =>
+          prev.map((job) =>
+            job.id === cancellingJob.id ? { ...job, status: JobStatus.CANCELLING } : job
+          )
+        )
+        setCancelConfirmOpen(false)
 
-    try {
-      await api.cancelJob(cancellingJob.id)
-      toast.show('Job cancelled', 'success')
-    } catch (err) {
-      toast.show(err.message || 'Failed to cancel job', 'error')
-    } finally {
-      setCancellingJob(null)
-      isUserActionInProgressRef.current = false
-      fetchJobs(true)
-    }
-  }, [cancellingJob, toast, fetchJobs])
+        try {
+          await api.cancelJob(cancellingJob.id)
+          toast.show('Job cancelled', 'success')
+        } catch (err) {
+          toast.show(err.message || 'Failed to cancel job', 'error')
+          throw err
+        } finally {
+          setCancellingJob(null)
+          isUserActionInProgressRef.current = false
+          fetchJobs(true)
+        }
+      },
+    })
+  }, [cancellingJob, toast, fetchJobs, execute])
 
   const handleDownload = useCallback(() => {
     if (menuJob?.artifacts?.html_url) {
@@ -489,20 +505,34 @@ export default function JobsPage() {
 
   const handleRetry = useCallback(async () => {
     if (!menuJob) return
-    isUserActionInProgressRef.current = true
-    setRetrying(true)
-    handleCloseMenu()
-    try {
-      await api.retryJob(menuJob.id)
-      toast.show('Job restarted successfully', 'success')
-    } catch (err) {
-      toast.show(err.message || 'Failed to retry job', 'error')
-    } finally {
-      setRetrying(false)
-      isUserActionInProgressRef.current = false
-      fetchJobs(true)
-    }
-  }, [menuJob, toast, fetchJobs, handleCloseMenu])
+    await execute({
+      type: InteractionType.UPDATE,
+      label: 'Retry job',
+      reversibility: Reversibility.SYSTEM_MANAGED,
+      suppressSuccessToast: true,
+      suppressErrorToast: true,
+      intent: {
+        jobId: menuJob.id,
+        action: 'retry_job',
+      },
+      action: async () => {
+        isUserActionInProgressRef.current = true
+        setRetrying(true)
+        handleCloseMenu()
+        try {
+          await api.retryJob(menuJob.id)
+          toast.show('Job restarted successfully', 'success')
+        } catch (err) {
+          toast.show(err.message || 'Failed to retry job', 'error')
+          throw err
+        } finally {
+          setRetrying(false)
+          isUserActionInProgressRef.current = false
+          fetchJobs(true)
+        }
+      },
+    })
+  }, [menuJob, toast, fetchJobs, handleCloseMenu, execute])
 
   const handleBulkCancelOpen = useCallback(() => {
     if (!selectedIds.length) return
@@ -528,37 +558,52 @@ export default function JobsPage() {
       return
     }
 
-    isUserActionInProgressRef.current = true
+    await execute({
+      type: InteractionType.UPDATE,
+      label: 'Cancel selected jobs',
+      reversibility: Reversibility.SYSTEM_MANAGED,
+      suppressSuccessToast: true,
+      suppressErrorToast: true,
+      intent: {
+        jobIds: activeIds,
+        action: 'bulk_cancel_jobs',
+      },
+      action: async () => {
+        isUserActionInProgressRef.current = true
 
-    const activeIdSet = new Set(activeIds)
-    setJobs((prev) =>
-      prev.map((job) =>
-        activeIdSet.has(job.id) ? { ...job, status: JobStatus.CANCELLING } : job
-      )
-    )
-    setBulkCancelOpen(false)
-    setBulkActionLoading(true)
-
-    try {
-      const result = await api.bulkCancelJobs(activeIds)
-      const cancelledCount = result?.cancelledCount ?? result?.cancelled?.length ?? 0
-      const failedCount = result?.failedCount ?? result?.failed?.length ?? 0
-      if (failedCount > 0) {
-        toast.show(
-          `Cancelled ${cancelledCount} job${cancelledCount !== 1 ? 's' : ''}, ${failedCount} failed`,
-          'warning'
+        const activeIdSet = new Set(activeIds)
+        setJobs((prev) =>
+          prev.map((job) =>
+            activeIdSet.has(job.id) ? { ...job, status: JobStatus.CANCELLING } : job
+          )
         )
-      } else {
-        toast.show(`Cancelled ${cancelledCount} job${cancelledCount !== 1 ? 's' : ''}`, 'success')
-      }
-    } catch (err) {
-      toast.show(err.message || 'Failed to cancel jobs', 'error')
-    } finally {
-      setBulkActionLoading(false)
-      isUserActionInProgressRef.current = false
-      fetchJobs(true)
-    }
-  }, [selectedIds, jobs, toast, fetchJobs])
+        setBulkCancelOpen(false)
+        setBulkActionLoading(true)
+
+        try {
+          const result = await api.bulkCancelJobs(activeIds)
+          const cancelledCount = result?.cancelledCount ?? result?.cancelled?.length ?? 0
+          const failedCount = result?.failedCount ?? result?.failed?.length ?? 0
+          if (failedCount > 0) {
+            toast.show(
+              `Cancelled ${cancelledCount} job${cancelledCount !== 1 ? 's' : ''}, ${failedCount} failed`,
+              'warning'
+            )
+          } else {
+            toast.show(`Cancelled ${cancelledCount} job${cancelledCount !== 1 ? 's' : ''}`, 'success')
+          }
+          return result
+        } catch (err) {
+          toast.show(err.message || 'Failed to cancel jobs', 'error')
+          throw err
+        } finally {
+          setBulkActionLoading(false)
+          isUserActionInProgressRef.current = false
+          fetchJobs(true)
+        }
+      },
+    })
+  }, [selectedIds, jobs, toast, fetchJobs, execute])
 
   const handleBulkDeleteOpen = useCallback(() => {
     if (!selectedIds.length) return
@@ -591,32 +636,47 @@ export default function JobsPage() {
     let undone = false
     const timeoutId = setTimeout(async () => {
       if (undone) return
-      setBulkActionLoading(true)
-      try {
-        const result = await api.bulkDeleteJobs(idsToDelete)
-        const deletedCount = result?.deletedCount ?? result?.deleted?.length ?? 0
-        const failedCount = result?.failedCount ?? result?.failed?.length ?? 0
-        if (failedCount > 0) {
-          toast.show(
-            `Removed ${deletedCount} job${deletedCount !== 1 ? 's' : ''}, ${failedCount} failed`,
-            'warning'
-          )
-        } else {
-          toast.show(`Removed ${deletedCount} job${deletedCount !== 1 ? 's' : ''}`, 'success')
-        }
-      } catch (err) {
-        setJobs((prev) => {
-          const existing = new Set(prev.map((job) => job.id))
-          const restored = removedJobs.filter((job) => !existing.has(job.id))
-          return restored.length ? [...prev, ...restored] : prev
-        })
-        toast.show(err.message || 'Failed to delete jobs', 'error')
-      } finally {
-        setBulkActionLoading(false)
-        isUserActionInProgressRef.current = false
-        bulkDeleteUndoRef.current = null
-        fetchJobs(true)
-      }
+      await execute({
+        type: InteractionType.DELETE,
+        label: 'Delete jobs',
+        reversibility: Reversibility.SYSTEM_MANAGED,
+        suppressSuccessToast: true,
+        suppressErrorToast: true,
+        intent: {
+          jobIds: idsToDelete,
+          action: 'bulk_delete_jobs',
+        },
+        action: async () => {
+          setBulkActionLoading(true)
+          try {
+            const result = await api.bulkDeleteJobs(idsToDelete)
+            const deletedCount = result?.deletedCount ?? result?.deleted?.length ?? 0
+            const failedCount = result?.failedCount ?? result?.failed?.length ?? 0
+            if (failedCount > 0) {
+              toast.show(
+                `Removed ${deletedCount} job${deletedCount !== 1 ? 's' : ''}, ${failedCount} failed`,
+                'warning'
+              )
+            } else {
+              toast.show(`Removed ${deletedCount} job${deletedCount !== 1 ? 's' : ''}`, 'success')
+            }
+            return result
+          } catch (err) {
+            setJobs((prev) => {
+              const existing = new Set(prev.map((job) => job.id))
+              const restored = removedJobs.filter((job) => !existing.has(job.id))
+              return restored.length ? [...prev, ...restored] : prev
+            })
+            toast.show(err.message || 'Failed to delete jobs', 'error')
+            throw err
+          } finally {
+            setBulkActionLoading(false)
+            isUserActionInProgressRef.current = false
+            bulkDeleteUndoRef.current = null
+            fetchJobs(true)
+          }
+        },
+      })
     }, 5000)
 
     bulkDeleteUndoRef.current = { timeoutId, ids: idsToDelete, jobs: removedJobs }
@@ -637,7 +697,7 @@ export default function JobsPage() {
       },
       { severity: 'info' }
     )
-  }, [selectedIds, jobs, toast, fetchJobs])
+  }, [selectedIds, jobs, toast, fetchJobs, execute])
 
   const columns = useMemo(() => [
     {
@@ -1039,17 +1099,31 @@ export default function JobsPage() {
               startIcon={<ReplayIcon sx={{ fontSize: 16 }} />}
               disabled={retrying}
               onClick={async () => {
-                setRetrying(true)
-                try {
-                  await api.retryJob(detailsJob.id)
-                  toast.show('Job restarted successfully', 'success')
-                  setDetailsDialogOpen(false)
-                  fetchJobs()
-                } catch (err) {
-                  toast.show(err.message || 'Failed to retry job', 'error')
-                } finally {
-                  setRetrying(false)
-                }
+                await execute({
+                  type: InteractionType.UPDATE,
+                  label: 'Retry job',
+                  reversibility: Reversibility.SYSTEM_MANAGED,
+                  suppressSuccessToast: true,
+                  suppressErrorToast: true,
+                  intent: {
+                    jobId: detailsJob.id,
+                    action: 'retry_job',
+                  },
+                  action: async () => {
+                    setRetrying(true)
+                    try {
+                      await api.retryJob(detailsJob.id)
+                      toast.show('Job restarted successfully', 'success')
+                      setDetailsDialogOpen(false)
+                      fetchJobs()
+                    } catch (err) {
+                      toast.show(err.message || 'Failed to retry job', 'error')
+                      throw err
+                    } finally {
+                      setRetrying(false)
+                    }
+                  },
+                })
               }}
             >
               {retrying ? 'Retrying...' : 'Retry'}

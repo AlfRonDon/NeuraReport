@@ -7,6 +7,7 @@ import TOOLTIP_COPY from '../../content/tooltipCopy.jsx'
 import { verifyTemplate as apiVerifyTemplate } from '../../api/client'
 import { useAppStore } from '../../store/useAppStore'
 import { useToast } from '../../components/ToastProvider.jsx'
+import { useInteraction, InteractionType, Reversibility } from '../../components/ux/governance'
 
 const getTemplateKind = (file) => {
   const name = file?.name?.toLowerCase() || ''
@@ -24,6 +25,7 @@ export default function UploadTemplate() {
   const [isDragging, setIsDragging] = useState(false)
   const inputRef = useRef(null)
   const toast = useToast()
+  const { execute } = useInteraction()
   const {
     activeConnectionId,
     setTemplateId,
@@ -86,31 +88,48 @@ export default function UploadTemplate() {
       return
     }
 
-    setUploading(true)
-    setUploadProgress(0)
-    setError(null)
-    setResult(null)
-
-    try {
-      const response = await apiVerifyTemplate({
-        file,
+    await execute({
+      type: InteractionType.UPLOAD,
+      label: 'Verify template',
+      reversibility: Reversibility.SYSTEM_MANAGED,
+      suppressSuccessToast: true,
+      suppressErrorToast: true,
+      intent: {
         connectionId: activeConnectionId,
-        kind,
-        onUploadProgress: (percent) => setUploadProgress(percent),
-      })
-      setResult(response)
-      setTemplateId(response?.template_id || null)
-      setVerifyArtifacts(response?.artifacts || null)
-      setTemplateKind(kind)
-      toast.show('Template uploaded and verified', 'success')
-    } catch (err) {
-      const message = err?.message || 'Failed to upload template'
-      setError(message)
-      toast.show(message, 'error')
-    } finally {
-      setUploading(false)
-    }
-  }, [activeConnectionId, files, setTemplateId, setTemplateKind, setVerifyArtifacts, toast, uploading])
+        templateKind: kind,
+        fileName: file?.name,
+        action: 'verify_template',
+      },
+      action: async () => {
+        setUploading(true)
+        setUploadProgress(0)
+        setError(null)
+        setResult(null)
+
+        try {
+          const response = await apiVerifyTemplate({
+            file,
+            connectionId: activeConnectionId,
+            kind,
+            onUploadProgress: (percent) => setUploadProgress(percent),
+          })
+          setResult(response)
+          setTemplateId(response?.template_id || null)
+          setVerifyArtifacts(response?.artifacts || null)
+          setTemplateKind(kind)
+          toast.show('Template uploaded and verified', 'success')
+          return response
+        } catch (err) {
+          const message = err?.message || 'Failed to upload template'
+          setError(message)
+          toast.show(message, 'error')
+          throw err
+        } finally {
+          setUploading(false)
+        }
+      },
+    })
+  }, [activeConnectionId, execute, files, setTemplateId, setTemplateKind, setVerifyArtifacts, toast, uploading])
 
   return (
     <Surface>

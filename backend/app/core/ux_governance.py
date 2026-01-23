@@ -20,6 +20,7 @@ from functools import wraps
 from typing import Any, Callable, Dict, List, Optional, TypeVar
 
 from fastapi import HTTPException, Request, Response
+from fastapi.responses import JSONResponse
 from fastapi.routing import APIRoute
 from pydantic import BaseModel, Field
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -171,9 +172,9 @@ class UXGovernanceMiddleware(BaseHTTPMiddleware):
 
         if not intent:
             if self.strict_mode:
-                raise HTTPException(
+                return JSONResponse(
                     status_code=400,
-                    detail={
+                    content={
                         "error": "UX_GOVERNANCE_VIOLATION",
                         "message": "Request missing required intent headers",
                         "required_headers": [
@@ -181,7 +182,7 @@ class UXGovernanceMiddleware(BaseHTTPMiddleware):
                             IntentHeaders.INTENT_TYPE,
                         ],
                         "hint": "All mutating requests must include X-Intent-Id and X-Intent-Type headers",
-                    }
+                    },
                 )
             else:
                 # Non-strict mode: log warning but allow
@@ -191,14 +192,14 @@ class UXGovernanceMiddleware(BaseHTTPMiddleware):
         if intent and request.method in {"POST", "DELETE"}:
             if not intent.idempotency_key:
                 if self.strict_mode:
-                    raise HTTPException(
+                    return JSONResponse(
                         status_code=400,
-                        detail={
+                        content={
                             "error": "UX_GOVERNANCE_VIOLATION",
                             "message": f"{request.method} requests require idempotency key",
                             "required_headers": [IntentHeaders.IDEMPOTENCY_KEY],
                             "hint": "Include X-Idempotency-Key header for request deduplication",
-                        }
+                        },
                     )
 
         # Store intent in request state for downstream use

@@ -25,6 +25,7 @@ import ExpandLessIcon from '@mui/icons-material/ExpandLess'
 
 import { useTemplateChatStore } from '../../../stores/templateChatStore'
 import { chatTemplateEdit, applyChatTemplateEdit } from '../../../api/client'
+import { useInteraction, InteractionType, Reversibility } from '../../../components/ux/governance'
 import { useToast } from '../../../components/ToastProvider'
 import ScaledIframePreview from '../../../components/ScaledIframePreview'
 
@@ -324,6 +325,7 @@ export default function TemplateChatEditor({
   const setProposedChanges = useTemplateChatStore((s) => s.setProposedChanges)
   const clearProposedChanges = useTemplateChatStore((s) => s.clearProposedChanges)
   const clearSession = useTemplateChatStore((s) => s.clearSession)
+  const { execute } = useInteraction()
 
   // Initialize session
   useEffect(() => {
@@ -356,43 +358,58 @@ export default function TemplateChatEditor({
     setFollowUpQuestions(null)
     addUserMessage(templateId, text)
 
-    setIsProcessing(true)
-    try {
-      // Get messages for API (including the new user message)
-      const apiMessages = [
-        ...getMessagesForApi(templateId),
-        { role: 'user', content: text },
-      ]
-
-      const response = await chatTemplateEdit(templateId, apiMessages, currentHtml)
-
-      // Add assistant response
-      addAssistantMessage(templateId, response.message, {
-        proposedChanges: response.proposed_changes,
-        proposedHtml: response.updated_html,
-        readyToApply: response.ready_to_apply,
-      })
-
-      // Update proposed changes state
-      setProposedChanges(templateId, {
-        proposedChanges: response.proposed_changes,
-        proposedHtml: response.updated_html,
-        readyToApply: response.ready_to_apply,
-      })
-
-      // Set follow-up questions if provided
-      if (response.follow_up_questions) {
-        setFollowUpQuestions(response.follow_up_questions)
-      }
-    } catch (err) {
-      toast.show(String(err.message || err), 'error')
-      addAssistantMessage(
+    await execute({
+      type: InteractionType.GENERATE,
+      label: 'Generate edit suggestions',
+      reversibility: Reversibility.FULLY_REVERSIBLE,
+      suppressSuccessToast: true,
+      suppressErrorToast: true,
+      intent: {
         templateId,
-        "I apologize, but I encountered an error. Please try again or rephrase your request."
-      )
-    } finally {
-      setIsProcessing(false)
-    }
+        action: 'template_chat',
+      },
+      action: async () => {
+        setIsProcessing(true)
+        try {
+          // Get messages for API (including the new user message)
+          const apiMessages = [
+            ...getMessagesForApi(templateId),
+            { role: 'user', content: text },
+          ]
+
+          const response = await chatTemplateEdit(templateId, apiMessages, currentHtml)
+
+          // Add assistant response
+          addAssistantMessage(templateId, response.message, {
+            proposedChanges: response.proposed_changes,
+            proposedHtml: response.updated_html,
+            readyToApply: response.ready_to_apply,
+          })
+
+          // Update proposed changes state
+          setProposedChanges(templateId, {
+            proposedChanges: response.proposed_changes,
+            proposedHtml: response.updated_html,
+            readyToApply: response.ready_to_apply,
+          })
+
+          // Set follow-up questions if provided
+          if (response.follow_up_questions) {
+            setFollowUpQuestions(response.follow_up_questions)
+          }
+          return response
+        } catch (err) {
+          toast.show(String(err.message || err), 'error')
+          addAssistantMessage(
+            templateId,
+            "I apologize, but I encountered an error. Please try again or rephrase your request."
+          )
+          throw err
+        } finally {
+          setIsProcessing(false)
+        }
+      },
+    })
   }, [
     inputValue,
     isProcessing,
@@ -403,34 +420,50 @@ export default function TemplateChatEditor({
     getMessagesForApi,
     setProposedChanges,
     toast,
+    execute,
   ])
 
   const handleApplyChanges = useCallback(async () => {
     if (!proposedHtml || !templateId) return
 
-    setApplying(true)
-    try {
-      const result = await applyChatTemplateEdit(templateId, proposedHtml)
-
-      // Clear proposed changes
-      clearProposedChanges(templateId)
-
-      // Notify parent of HTML update
-      onHtmlUpdate?.(proposedHtml)
-      onApplySuccess?.(result)
-
-      // Add confirmation message
-      addAssistantMessage(
+    await execute({
+      type: InteractionType.UPDATE,
+      label: 'Apply template changes',
+      reversibility: Reversibility.SYSTEM_MANAGED,
+      suppressSuccessToast: true,
+      suppressErrorToast: true,
+      intent: {
         templateId,
-        "The changes have been applied successfully. Is there anything else you'd like to modify?"
-      )
+        action: 'apply_template_changes',
+      },
+      action: async () => {
+        setApplying(true)
+        try {
+          const result = await applyChatTemplateEdit(templateId, proposedHtml)
 
-      toast.show('Template changes applied successfully.', 'success')
-    } catch (err) {
-      toast.show(String(err.message || err), 'error')
-    } finally {
-      setApplying(false)
-    }
+          // Clear proposed changes
+          clearProposedChanges(templateId)
+
+          // Notify parent of HTML update
+          onHtmlUpdate?.(proposedHtml)
+          onApplySuccess?.(result)
+
+          // Add confirmation message
+          addAssistantMessage(
+            templateId,
+            "The changes have been applied successfully. Is there anything else you'd like to modify?"
+          )
+
+          toast.show('Template changes applied successfully.', 'success')
+          return result
+        } catch (err) {
+          toast.show(String(err.message || err), 'error')
+          throw err
+        } finally {
+          setApplying(false)
+        }
+      },
+    })
   }, [
     proposedHtml,
     templateId,
@@ -439,6 +472,7 @@ export default function TemplateChatEditor({
     onHtmlUpdate,
     onApplySuccess,
     toast,
+    execute,
   ])
 
   const handleRejectChanges = useCallback(() => {

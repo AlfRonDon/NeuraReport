@@ -61,9 +61,10 @@ export default function NetworkStatusBanner({ onRetry }) {
 
   // Check server connectivity
   const checkServer = useCallback(async () => {
+    let timeoutId
     try {
       const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 5000)
+      timeoutId = setTimeout(() => controller.abort(), 5000)
 
       const response = await fetch(healthUrl, {
         method: 'HEAD',
@@ -71,12 +72,13 @@ export default function NetworkStatusBanner({ onRetry }) {
         cache: 'no-store',
       })
 
-      clearTimeout(timeoutId)
       return response.ok
     } catch {
       return false
+    } finally {
+      if (timeoutId) clearTimeout(timeoutId)
     }
-  }, [])
+  }, [healthUrl])
 
   // Handle retry
   const handleRetry = useCallback(async () => {

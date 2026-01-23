@@ -28,10 +28,12 @@ import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import { useAppStore } from '../../../store/useAppStore'
 import { useToast } from '../../../components/ToastProvider'
+import { useInteraction, InteractionType, Reversibility } from '../../../components/ux/governance'
 import * as api from '../../../api/client'
 
 export default function StepMapping({ wizardState, updateWizardState, onComplete, setLoading }) {
   const toast = useToast()
+  const { execute } = useInteraction()
 
   const templateId = useAppStore((s) => s.templateId) || wizardState.templateId
   const activeConnection = useAppStore((s) => s.activeConnection)
@@ -52,20 +54,40 @@ export default function StepMapping({ wizardState, updateWizardState, onComplete
       setLocalLoading(true)
       try {
         const connectionId = wizardState.connectionId || activeConnection?.id
-        const result = await api.mappingPreview(templateId, connectionId, {
-          kind: wizardState.templateKind || 'pdf',
-        })
+        await execute({
+          type: InteractionType.ANALYZE,
+          label: 'Load mapping preview',
+          reversibility: Reversibility.SYSTEM_MANAGED,
+          suppressSuccessToast: true,
+          suppressErrorToast: true,
+          blocksNavigation: false,
+          intent: {
+            connectionId,
+            templateId,
+            templateKind: wizardState.templateKind || 'pdf',
+            action: 'mapping_preview',
+          },
+          action: async () => {
+            try {
+              const result = await api.mappingPreview(templateId, connectionId, {
+                kind: wizardState.templateKind || 'pdf',
+              })
 
-        if (result.mapping) {
-          setMapping(result.mapping)
-          updateWizardState({ mapping: result.mapping })
-        }
-        if (result.keys) {
-          setKeys(result.keys)
-          updateWizardState({ keys: result.keys })
-        }
-      } catch (err) {
-        setError(err.message || 'Failed to load mapping')
+              if (result.mapping) {
+                setMapping(result.mapping)
+                updateWizardState({ mapping: result.mapping })
+              }
+              if (result.keys) {
+                setKeys(result.keys)
+                updateWizardState({ keys: result.keys })
+              }
+              return result
+            } catch (err) {
+              setError(err.message || 'Failed to load mapping')
+              throw err
+            }
+          },
+        })
       } finally {
         setLocalLoading(false)
       }
@@ -74,7 +96,7 @@ export default function StepMapping({ wizardState, updateWizardState, onComplete
     if (!wizardState.mapping) {
       fetchMapping()
     }
-  }, [templateId, wizardState.connectionId, wizardState.templateKind, wizardState.mapping, activeConnection?.id, updateWizardState])
+  }, [templateId, wizardState.connectionId, wizardState.templateKind, wizardState.mapping, activeConnection?.id, updateWizardState, execute])
 
   const handleMappingChange = useCallback((token, field, value) => {
     setMapping((prev) => ({
@@ -93,31 +115,51 @@ export default function StepMapping({ wizardState, updateWizardState, onComplete
     try {
       const connectionId = wizardState.connectionId || activeConnection?.id
 
-      const result = await api.mappingApprove(templateId, mapping, {
-        connectionId,
-        keys,
-        kind: wizardState.templateKind || 'pdf',
-        onProgress: (event) => {
-          // Handle progress events
+      await execute({
+        type: InteractionType.UPDATE,
+        label: 'Approve template mapping',
+        reversibility: Reversibility.SYSTEM_MANAGED,
+        suppressSuccessToast: true,
+        suppressErrorToast: true,
+        blocksNavigation: true,
+        intent: {
+          connectionId,
+          templateId,
+          templateKind: wizardState.templateKind || 'pdf',
+          action: 'mapping_approve',
+        },
+        action: async () => {
+          try {
+            const result = await api.mappingApprove(templateId, mapping, {
+              connectionId,
+              keys,
+              kind: wizardState.templateKind || 'pdf',
+              onProgress: () => {
+                // Handle progress events
+              },
+            })
+
+            if (result.ok) {
+              setApproved(true)
+              setLastApprovedTemplate({
+                id: templateId,
+                name: wizardState.templateName,
+                kind: wizardState.templateKind,
+              })
+              toast.show('Template approved and ready to use!', 'success')
+            }
+            return result
+          } catch (err) {
+            setError(err.message || 'Failed to approve mapping')
+            toast.show(err.message || 'Failed to approve mapping', 'error')
+            throw err
+          }
         },
       })
-
-      if (result.ok) {
-        setApproved(true)
-        setLastApprovedTemplate({
-          id: templateId,
-          name: wizardState.templateName,
-          kind: wizardState.templateKind,
-        })
-        toast.show('Template approved and ready to use!', 'success')
-      }
-    } catch (err) {
-      setError(err.message || 'Failed to approve mapping')
-      toast.show(err.message || 'Failed to approve mapping', 'error')
     } finally {
       setApproving(false)
     }
-  }, [templateId, mapping, keys, wizardState, activeConnection?.id, setLastApprovedTemplate, toast])
+  }, [templateId, mapping, keys, wizardState, activeConnection?.id, setLastApprovedTemplate, toast, execute])
 
   const mappingEntries = Object.entries(mapping)
 

@@ -11,6 +11,7 @@ import { useForm, Controller } from 'react-hook-form'
 import { yupResolver } from '@hookform/resolvers/yup'
 import * as yup from 'yup'
 import {
+  API_BASE,
   isMock,
   testConnection as apiTestConnection,
   upsertConnection as apiUpsertConnection,
@@ -45,6 +46,7 @@ import FormErrorSummary from '../../components/form/FormErrorSummary.jsx'
 import TOOLTIP_COPY from '../../content/tooltipCopy.jsx'
 import { savePersistedCache } from '../../hooks/useBootstrapState.js'
 import useFormErrorFocus from '../../hooks/useFormErrorFocus.js'
+import { useInteraction, InteractionType, Reversibility } from '../../components/ux/governance'
 const sanitizeDbType = (value) => (typeof value === 'string' ? value.trim().toLowerCase() : '')
 const trimString = (value) => (typeof value === 'string' ? value.trim() : '')
 const formatHostPort = (host, port) => {
@@ -896,6 +898,7 @@ export default function ConnectDB() {
 
 
   const toast = useToast()
+  const { execute } = useInteraction()
   const [showPw, setShowPw] = useState(false)
   const [showDetails, setShowDetails] = useState(false)
   const [editingId, setEditingId] = useState(null)
@@ -1288,7 +1291,8 @@ const portValue = watch('port')
         if (isMock) {
           await mock.health()
         } else {
-          const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/health`)
+          const healthUrl = `${API_BASE.replace(/\/+$/, '')}/health`
+          const res = await fetch(healthUrl)
           if (!res.ok) throw new Error()
         }
         if (!cancelled) setApiStatus('healthy')
@@ -1376,7 +1380,7 @@ const portValue = watch('port')
 
 
 
-const onSubmit = (values) => {
+const onSubmit = async (values) => {
     // SQLite uses the Database field as path. Host/Port/User/Pass ignored.
     if (checkDuplicateName(values.name)) {
       setError('name', { type: 'duplicate', message: 'Connection name already exists' })
@@ -1384,13 +1388,24 @@ const onSubmit = (values) => {
       return
     }
     setCanSave(false)
-    mutation.mutate(values)
+    await execute({
+      type: InteractionType.EXECUTE,
+      label: 'Test connection',
+      reversibility: Reversibility.SYSTEM_MANAGED,
+      suppressSuccessToast: true,
+      suppressErrorToast: true,
+      intent: {
+        dbType: sanitizeDbType(values.db_type),
+        action: 'test_connection',
+      },
+      action: async () => mutation.mutateAsync(values),
+    })
   }
 
 
 
   /** ---- Row healthcheck for saved rows ---- */
-  const handleRowTest = async (row) => {
+  const runRowTest = async (row) => {
     if (!row) return
     const now = new Date().toISOString()
     const connectionId = row.backend_connection_id || row.id
@@ -1519,6 +1534,7 @@ const onSubmit = (values) => {
         setConnection({ status: 'failed', lastMessage: detail, details: detail, lastCheckedAt: now })
       }
       toast.show(detail, 'error')
+      throw error
     } finally {
       const snapshot = useAppStore.getState()
       savePersistedCache({
@@ -1536,10 +1552,27 @@ const onSubmit = (values) => {
     }
   }
 
+  const handleRowTest = async (row) => {
+    if (!row) return
+    await execute({
+      type: InteractionType.EXECUTE,
+      label: 'Healthcheck connection',
+      reversibility: Reversibility.SYSTEM_MANAGED,
+      suppressSuccessToast: true,
+      suppressErrorToast: true,
+      intent: {
+        connectionId: row.backend_connection_id || row.id || null,
+        dbType: sanitizeDbType(row.db_type),
+        action: 'connection_healthcheck',
+      },
+      action: async () => runRowTest(row),
+    })
+  }
+
 
 
   /** ---- Save & Continue (persist to backend + store) ---- */
-const handleSave = async () => {
+const runSave = async () => {
     const values = watch()
     const friendlyName = trimString(values.name)
     if (checkDuplicateName(friendlyName)) {
@@ -1678,7 +1711,24 @@ const handleSave = async () => {
       toast.show('Connection saved', 'success')
     } catch (err) {
       toast.show(err?.message || 'Failed to save connection', 'error')
+      throw err
     }
+  }
+
+  const handleSave = async () => {
+    await execute({
+      type: InteractionType.UPDATE,
+      label: 'Save connection',
+      reversibility: Reversibility.SYSTEM_MANAGED,
+      suppressSuccessToast: true,
+      suppressErrorToast: true,
+      intent: {
+        connectionId: connection.connectionId || editingId || null,
+        dbType: sanitizeDbType(watch('db_type')),
+        action: 'save_connection',
+      },
+      action: async () => runSave(),
+    })
   }
 
 
@@ -2558,17 +2608,31 @@ const lastHeartbeatLabel = useMemo(() => {
           let undone = false
           const timeoutId = setTimeout(async () => {
             if (undone) return
-            try {
-              if (!isMock && connectionId) {
-                await apiDeleteConnection(connectionId)
-              }
-              toast.show('Connection deleted', 'success')
-            } catch (err) {
-              restoreConnection()
-              toast.show(err?.message || 'Failed to delete connection', 'error')
-            } finally {
-              deleteUndoRef.current = null
-            }
+            await execute({
+              type: InteractionType.DELETE,
+              label: 'Delete connection',
+              reversibility: Reversibility.SYSTEM_MANAGED,
+              suppressSuccessToast: true,
+              suppressErrorToast: true,
+              intent: {
+                connectionId,
+                action: 'delete_connection',
+              },
+              action: async () => {
+                try {
+                  if (!isMock && connectionId) {
+                    await apiDeleteConnection(connectionId)
+                  }
+                  toast.show('Connection deleted', 'success')
+                } catch (err) {
+                  restoreConnection()
+                  toast.show(err?.message || 'Failed to delete connection', 'error')
+                  throw err
+                } finally {
+                  deleteUndoRef.current = null
+                }
+              },
+            })
           }, 5000)
 
           deleteUndoRef.current = { timeoutId, id }

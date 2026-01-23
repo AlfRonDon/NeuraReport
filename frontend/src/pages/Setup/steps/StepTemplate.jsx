@@ -18,10 +18,12 @@ import TableChartIcon from '@mui/icons-material/TableChart'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import { useAppStore } from '../../../store/useAppStore'
 import { useToast } from '../../../components/ToastProvider'
+import { useInteraction, InteractionType, Reversibility } from '../../../components/ux/governance'
 import * as api from '../../../api/client'
 
 export default function StepTemplate({ wizardState, updateWizardState, onComplete, setLoading }) {
   const toast = useToast()
+  const { execute } = useInteraction()
   const navigate = useNavigate()
   const fileInputRef = useRef(null)
 
@@ -153,47 +155,67 @@ export default function StepTemplate({ wizardState, updateWizardState, onComplet
         return
       }
 
-      const result = await api.verifyTemplate({
-        file,
-        connectionId,
-        kind: templateKind,
-        background: queueInBackground,
-        onProgress: (event) => {
-          if (event.event === 'stage') {
-            const progress = event.progress || 0
-            setUploadProgress(progress)
+      await execute({
+        type: InteractionType.UPLOAD,
+        label: `Verify ${templateKind.toUpperCase()} template`,
+        reversibility: Reversibility.SYSTEM_MANAGED,
+        suppressSuccessToast: true,
+        suppressErrorToast: true,
+        blocksNavigation: true,
+        intent: {
+          connectionId,
+          templateKind,
+          fileName: file?.name,
+          action: 'verify_template',
+        },
+        action: async () => {
+          try {
+            const result = await api.verifyTemplate({
+              file,
+              connectionId,
+              kind: templateKind,
+              background: queueInBackground,
+              onProgress: (event) => {
+                if (event.event === 'stage') {
+                  const progress = event.progress || 0
+                  setUploadProgress(progress)
+                }
+              },
+              onUploadProgress: (percent) => {
+                setUploadProgress(percent)
+              },
+            })
+
+            if (queueInBackground) {
+              const jobId = result?.job_id || result?.jobId || null
+              setQueuedJobId(jobId)
+              toast.show('Template verification queued. Track progress in Jobs.', 'success')
+              return result
+            }
+
+            setVerifyResult(result)
+            setTemplateId(result.template_id)
+            setVerifyArtifacts(result.artifacts)
+            updateWizardState({ templateId: result.template_id })
+
+            // Add to templates list
+            addTemplate({
+              id: result.template_id,
+              name: file.name,
+              kind: templateKind,
+              status: 'pending',
+              created_at: new Date().toISOString(),
+            })
+
+            toast.show('Template verified successfully', 'success')
+            return result
+          } catch (err) {
+            setError(err.message || 'Failed to verify template')
+            toast.show(err.message || 'Failed to verify template', 'error')
+            throw err
           }
         },
-        onUploadProgress: (percent) => {
-          setUploadProgress(percent)
-        },
       })
-
-      if (queueInBackground) {
-        const jobId = result?.job_id || result?.jobId || null
-        setQueuedJobId(jobId)
-        toast.show('Template verification queued. Track progress in Jobs.', 'success')
-        return
-      }
-
-      setVerifyResult(result)
-      setTemplateId(result.template_id)
-      setVerifyArtifacts(result.artifacts)
-      updateWizardState({ templateId: result.template_id })
-
-      // Add to templates list
-      addTemplate({
-        id: result.template_id,
-        name: file.name,
-        kind: templateKind,
-        status: 'pending',
-        created_at: new Date().toISOString(),
-      })
-
-      toast.show('Template verified successfully', 'success')
-    } catch (err) {
-      setError(err.message || 'Failed to verify template')
-      toast.show(err.message || 'Failed to verify template', 'error')
     } finally {
       setUploading(false)
       setUploadProgress(100)
@@ -208,6 +230,7 @@ export default function StepTemplate({ wizardState, updateWizardState, onComplet
     updateWizardState,
     addTemplate,
     toast,
+    execute,
   ])
 
   const handleBrowseClick = useCallback(() => {

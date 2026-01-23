@@ -485,7 +485,7 @@ export function useTrackedOperation(operationType) {
  * THROWS in development if not defined
  */
 export function validateTimeExpectation(operationType) {
-  if (process.env.NODE_ENV === 'development') {
+  if (import.meta.env?.DEV) {
     if (!OperationTimeMap[operationType] && operationType !== 'default') {
       console.warn(
         `[TIME EXPECTATION] Operation type "${operationType}" has no defined time expectations. ` +

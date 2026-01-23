@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Box, Button, CircularProgress, LinearProgress, Stack, TextField, Typography } from '@mui/material';
 
 import { runCorrectionsPreview } from '../api/client';
+import { useInteraction, InteractionType, Reversibility } from './ux/governance';
 import InfoTooltip from './common/InfoTooltip.jsx';
 import TOOLTIP_COPY from '../content/tooltipCopy.jsx';
 
@@ -16,6 +17,7 @@ export default function CorrectionsPreviewPanel({
   sampleTokens = [],
   onSaveAndClose = () => {},
 }) {
+  const { execute } = useInteraction();
   const [instructions, setInstructions] = useState(initialInstructions || '');
   const latestInstructionsRef = useRef(initialInstructions || '');
   const [running, setRunning] = useState(false);
@@ -86,26 +88,48 @@ export default function CorrectionsPreviewPanel({
     setErrorMsg('');
     setAcknowledged(false);
 
-    try {
-      const finalEvent = await runCorrectionsPreview({
+    const outcome = await execute({
+      type: InteractionType.GENERATE,
+      label: 'Run corrections preview',
+      reversibility: Reversibility.FULLY_REVERSIBLE,
+      suppressSuccessToast: true,
+      suppressErrorToast: true,
+      intent: {
         templateId,
-        userInput: instructions,
-        mappingOverride: mappingSnapshot,
-        sampleTokens: sampleTokensSnapshot,
-        onEvent: () => {},
-        signal: controller.signal,
-        kind: templateKind,
-      });
-      setResult(finalEvent);
-      onCompleted?.(finalEvent);
-    } catch (err) {
-      if (err?.name === 'AbortError') return;
-      setErrorMsg(err?.message || 'Corrections preview failed.');
-    } finally {
-      if (abortRef.current === controller) {
-        abortRef.current = null;
-      }
-      setRunning(false);
+        templateKind,
+        action: 'corrections_preview',
+      },
+      action: async () => {
+        try {
+          const finalEvent = await runCorrectionsPreview({
+            templateId,
+            userInput: instructions,
+            mappingOverride: mappingSnapshot,
+            sampleTokens: sampleTokensSnapshot,
+            onEvent: () => {},
+            signal: controller.signal,
+            kind: templateKind,
+          });
+          setResult(finalEvent);
+          onCompleted?.(finalEvent);
+          return finalEvent;
+        } catch (err) {
+          if (err?.name === 'AbortError') {
+            return null;
+          }
+          setErrorMsg(err?.message || 'Corrections preview failed.');
+          throw err;
+        } finally {
+          if (abortRef.current === controller) {
+            abortRef.current = null;
+          }
+          setRunning(false);
+        }
+      },
+    });
+
+    if (!outcome?.success) {
+      return;
     }
   };
 

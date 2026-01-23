@@ -21,6 +21,7 @@ import UploadVerify from './UploadVerify'
 import TemplatesPane from './TemplatesPane.jsx'
 import { useAppStore } from '../../store/useAppStore'
 import { useToast } from '../../components/ToastProvider.jsx'
+import { API_BASE } from '../../api/client'
 import Surface from '../../components/layout/Surface.jsx'
 import ReportGlossaryNotice from '../../components/ux/ReportGlossaryNotice.jsx'
 
@@ -33,7 +34,7 @@ export default function SetupPage() {
 
   const toast = useToast()
 
-  const apiBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/+$/,'')
+  const apiBase = API_BASE.replace(/\/+$/, '')
   const connectionId = activeConnection?.connection_id || null
 
   // Track completion status

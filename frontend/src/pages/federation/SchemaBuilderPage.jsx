@@ -44,7 +44,7 @@ import useFederationStore from '../../stores/federationStore';
 import { useConnectionStore } from '../../stores';
 import ConfirmModal from '../../ui/Modal/ConfirmModal';
 import { getWriteOperation } from '../../utils/sqlSafety';
-import { useConfirmedAction } from '../../components/ux/governance';
+import { useConfirmedAction, useInteraction, InteractionType, Reversibility } from '../../components/ux/governance';
 import AiUsageNotice from '../../components/ai/AiUsageNotice';
 
 export default function SchemaBuilderPage() {
@@ -66,6 +66,7 @@ export default function SchemaBuilderPage() {
 
   const { connections, fetchConnections } = useConnectionStore();
   const confirmWriteQuery = useConfirmedAction('EXECUTE_WRITE_QUERY');
+  const { execute } = useInteraction();
 
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [newSchemaName, setNewSchemaName] = useState('');
@@ -89,28 +90,78 @@ export default function SchemaBuilderPage() {
 
   const handleCreateSchema = async () => {
     if (!newSchemaName || selectedConnections.length < 2) return;
-
-    await createSchema({
-      name: newSchemaName,
-      connectionIds: selectedConnections,
-      description: newSchemaDescription,
+    await execute({
+      type: InteractionType.CREATE,
+      label: 'Create federation schema',
+      reversibility: Reversibility.SYSTEM_MANAGED,
+      suppressSuccessToast: true,
+      suppressErrorToast: true,
+      intent: {
+        connectionIds: selectedConnections,
+        action: 'create_federation_schema',
+      },
+      action: async () => {
+        const result = await createSchema({
+          name: newSchemaName,
+          connectionIds: selectedConnections,
+          description: newSchemaDescription,
+        });
+        if (!result) {
+          throw new Error('Create schema failed');
+        }
+        setCreateDialogOpen(false);
+        setNewSchemaName('');
+        setNewSchemaDescription('');
+        setSelectedConnections([]);
+        return result;
+      },
     });
-
-    setCreateDialogOpen(false);
-    setNewSchemaName('');
-    setNewSchemaDescription('');
-    setSelectedConnections([]);
   };
 
   const handleSuggestJoins = async () => {
     if (!currentSchema) return;
-    await suggestJoins(); // Store gets connections from currentSchema
+    await execute({
+      type: InteractionType.GENERATE,
+      label: 'Suggest joins',
+      reversibility: Reversibility.SYSTEM_MANAGED,
+      suppressSuccessToast: true,
+      suppressErrorToast: true,
+      intent: {
+        schemaId: currentSchema.id,
+        action: 'suggest_joins',
+      },
+      action: async () => {
+        const result = await suggestJoins(); // Store gets connections from currentSchema
+        if (!result) {
+          throw new Error('Suggest joins failed');
+        }
+        return result;
+      },
+    });
   };
 
   const runExecuteQuery = useCallback(async () => {
     if (!currentSchema || !queryInput.trim()) return;
-    await executeQuery(currentSchema.id, queryInput);
-  }, [currentSchema, executeQuery, queryInput]);
+    await execute({
+      type: InteractionType.EXECUTE,
+      label: 'Run federated query',
+      reversibility: writeOperation ? Reversibility.IRREVERSIBLE : Reversibility.FULLY_REVERSIBLE,
+      suppressSuccessToast: true,
+      suppressErrorToast: true,
+      intent: {
+        schemaId: currentSchema.id,
+        action: 'execute_federation_query',
+        writeOperation,
+      },
+      action: async () => {
+        const result = await executeQuery(currentSchema.id, queryInput);
+        if (!result) {
+          throw new Error('Query execution failed');
+        }
+        return result;
+      },
+    });
+  }, [currentSchema, executeQuery, queryInput, execute, writeOperation]);
 
   const handleExecuteQuery = useCallback(async () => {
     if (!currentSchema || !queryInput.trim()) return;
@@ -128,6 +179,32 @@ export default function SchemaBuilderPage() {
       schemaName: schema?.name || 'this schema',
     });
   }, []);
+
+  const handleDeleteSchemaConfirm = async () => {
+    const schemaId = deleteConfirm.schemaId;
+    const schemaName = deleteConfirm.schemaName;
+    setDeleteConfirm({ open: false, schemaId: null, schemaName: '' });
+    if (!schemaId) return;
+    await execute({
+      type: InteractionType.DELETE,
+      label: 'Delete federation schema',
+      reversibility: Reversibility.SYSTEM_MANAGED,
+      suppressSuccessToast: true,
+      suppressErrorToast: true,
+      intent: {
+        schemaId,
+        schemaName,
+        action: 'delete_federation_schema',
+      },
+      action: async () => {
+        const result = await deleteSchema(schemaId);
+        if (!result) {
+          throw new Error('Delete schema failed');
+        }
+        return result;
+      },
+    });
+  };
 
   const toggleConnection = (connId) => {
     setSelectedConnections(prev =>
@@ -442,12 +519,7 @@ export default function SchemaBuilderPage() {
       <ConfirmModal
         open={deleteConfirm.open}
         onClose={() => setDeleteConfirm({ open: false, schemaId: null, schemaName: '' })}
-        onConfirm={() => {
-          if (deleteConfirm.schemaId) {
-            deleteSchema(deleteConfirm.schemaId);
-          }
-          setDeleteConfirm({ open: false, schemaId: null, schemaName: '' });
-        }}
+        onConfirm={handleDeleteSchemaConfirm}
         title="Delete Virtual Schema"
         message={`Delete "${deleteConfirm.schemaName}"? This will remove the virtual schema and its saved join logic.`}
         confirmLabel="Delete"

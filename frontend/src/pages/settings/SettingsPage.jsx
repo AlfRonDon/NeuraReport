@@ -34,6 +34,7 @@ import CloudIcon from '@mui/icons-material/Cloud'
 import DownloadIcon from '@mui/icons-material/Download'
 import TokenIcon from '@mui/icons-material/Toll'
 import { useToast } from '../../components/ToastProvider'
+import { useInteraction, InteractionType, Reversibility } from '../../components/ux/governance'
 import { useAppStore } from '../../store/useAppStore'
 import * as api from '../../api/client'
 import {
@@ -225,6 +226,7 @@ function ConfigRow({ label, value, mono = false }) {
 export default function SettingsPage() {
   const theme = useTheme()
   const toast = useToast()
+  const { execute } = useInteraction()
   const setDemoMode = useAppStore((s) => s.setDemoMode)
   const demoMode = useAppStore((s) => s.demoMode)
   const [loading, setLoading] = useState(true)
@@ -306,18 +308,33 @@ export default function SettingsPage() {
     if (!cacheResult.success) {
       toast.show(`Failed to cache preferences locally: ${cacheResult.error}`, 'warning')
     }
-    try {
-      const result = await api.setUserPreference(key, nextValue)
-      if (result?.preferences) {
-        const merged = { ...nextPrefs, ...result.preferences }
-        setPreferences(merged)
-        savePreferences(merged)
-      }
-      toast.show('Preferences saved', 'success')
-    } catch (err) {
-      toast.show(err.message || 'Failed to save preferences', 'error')
-    }
-  }, [preferences, toast])
+    await execute({
+      type: InteractionType.UPDATE,
+      label: 'Update preference',
+      reversibility: Reversibility.SYSTEM_MANAGED,
+      suppressSuccessToast: true,
+      suppressErrorToast: true,
+      intent: {
+        preferenceKey: key,
+        action: 'update_preference',
+      },
+      action: async () => {
+        try {
+          const result = await api.setUserPreference(key, nextValue)
+          if (result?.preferences) {
+            const merged = { ...nextPrefs, ...result.preferences }
+            setPreferences(merged)
+            savePreferences(merged)
+          }
+          toast.show('Preferences saved', 'success')
+          return result
+        } catch (err) {
+          toast.show(err.message || 'Failed to save preferences', 'error')
+          throw err
+        }
+      },
+    })
+  }, [preferences, toast, execute])
 
   const handleDemoModeChange = useCallback(async (event) => {
     const enabled = event.target.checked
@@ -329,18 +346,33 @@ export default function SettingsPage() {
     if (!cacheResult.success) {
       toast.show(`Failed to cache preferences locally: ${cacheResult.error}`, 'warning')
     }
-    try {
-      const result = await api.setUserPreference('demoMode', enabled)
-      if (result?.preferences) {
-        const merged = { ...nextPrefs, ...result.preferences }
-        setPreferences(merged)
-        savePreferences(merged)
-      }
-      toast.show(enabled ? 'Demo mode enabled - sample data loaded' : 'Demo mode disabled', 'success')
-    } catch (err) {
-      toast.show(err.message || 'Failed to save preferences', 'error')
-    }
-  }, [preferences, setDemoMode, toast])
+    await execute({
+      type: InteractionType.UPDATE,
+      label: 'Toggle demo mode',
+      reversibility: Reversibility.SYSTEM_MANAGED,
+      suppressSuccessToast: true,
+      suppressErrorToast: true,
+      intent: {
+        preferenceKey: 'demoMode',
+        action: 'toggle_demo_mode',
+      },
+      action: async () => {
+        try {
+          const result = await api.setUserPreference('demoMode', enabled)
+          if (result?.preferences) {
+            const merged = { ...nextPrefs, ...result.preferences }
+            setPreferences(merged)
+            savePreferences(merged)
+          }
+          toast.show(enabled ? 'Demo mode enabled - sample data loaded' : 'Demo mode disabled', 'success')
+          return result
+        } catch (err) {
+          toast.show(err.message || 'Failed to save preferences', 'error')
+          throw err
+        }
+      },
+    })
+  }, [preferences, setDemoMode, toast, execute])
 
   const config = health?.checks?.configuration || {}
   const openai = health?.checks?.openai || {}

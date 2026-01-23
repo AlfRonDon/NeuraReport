@@ -122,7 +122,7 @@ function validateContract(contract, callerInfo = '') {
     console.error(error)
 
     // In development, throw to force fix
-    if (process.env.NODE_ENV === 'development') {
+    if (import.meta.env?.DEV) {
       throw error
     }
 

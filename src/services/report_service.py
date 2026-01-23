@@ -56,6 +56,38 @@ _JOB_THREADS: dict[str, int] = {}
 _JOB_PROCESSES: dict[str, set[int]] = {}
 _JOB_PROCESS_LOCK = threading.RLock()
 _SUBPROCESS_POPEN = subprocess.Popen
+_SUBPROCESS_PATCH_LOCK = threading.RLock()
+_SUBPROCESS_PATCH_COUNT = 0
+_SUBPROCESS_PATCH_ORIGINAL: type[subprocess.Popen] | None = None
+_SUBPROCESS_JOB_CONTEXT = threading.local()
+
+
+def _job_popen_wrapper(*args, **kwargs):
+    proc = _SUBPROCESS_POPEN(*args, **kwargs)
+    job_id = getattr(_SUBPROCESS_JOB_CONTEXT, "job_id", None)
+    if job_id and proc and getattr(proc, "pid", None):
+        _register_job_process(job_id, proc.pid)
+    return proc
+
+
+def _install_subprocess_patch() -> None:
+    global _SUBPROCESS_PATCH_COUNT, _SUBPROCESS_PATCH_ORIGINAL
+    with _SUBPROCESS_PATCH_LOCK:
+        if _SUBPROCESS_PATCH_COUNT == 0:
+            _SUBPROCESS_PATCH_ORIGINAL = subprocess.Popen
+            subprocess.Popen = _job_popen_wrapper  # type: ignore[assignment]
+        _SUBPROCESS_PATCH_COUNT += 1
+
+
+def _remove_subprocess_patch() -> None:
+    global _SUBPROCESS_PATCH_COUNT, _SUBPROCESS_PATCH_ORIGINAL
+    with _SUBPROCESS_PATCH_LOCK:
+        if _SUBPROCESS_PATCH_COUNT <= 0:
+            return
+        _SUBPROCESS_PATCH_COUNT -= 1
+        if _SUBPROCESS_PATCH_COUNT == 0 and _SUBPROCESS_PATCH_ORIGINAL is not None:
+            subprocess.Popen = _SUBPROCESS_PATCH_ORIGINAL  # type: ignore[assignment]
+            _SUBPROCESS_PATCH_ORIGINAL = None
 
 
 def _state_store():
@@ -1021,17 +1053,17 @@ def _run_report_job_sync(
         if not job_id:
             yield
             return
-        original = subprocess.Popen
-        def _job_popen(*args, **kwargs):
-            proc = _SUBPROCESS_POPEN(*args, **kwargs)
-            if proc and getattr(proc, "pid", None):
-                _register_job_process(job_id, proc.pid)
-            return proc
-        subprocess.Popen = _job_popen  # type: ignore[assignment]
+        _SUBPROCESS_JOB_CONTEXT.job_id = job_id
+        _install_subprocess_patch()
         try:
             yield
         finally:
-            subprocess.Popen = original  # type: ignore[assignment]
+            if getattr(_SUBPROCESS_JOB_CONTEXT, "job_id", None) == job_id:
+                try:
+                    delattr(_SUBPROCESS_JOB_CONTEXT, "job_id")
+                except Exception:
+                    _SUBPROCESS_JOB_CONTEXT.job_id = None
+            _remove_subprocess_patch()
 
     try:
         api_mod = importlib.import_module("backend.api")

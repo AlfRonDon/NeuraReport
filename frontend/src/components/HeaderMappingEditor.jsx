@@ -13,13 +13,14 @@ import InfoTooltip from "./common/InfoTooltip.jsx";
 import TOOLTIP_COPY from "../content/tooltipCopy.jsx";
 import { useToast } from "./ToastProvider.jsx";
 import ConfirmModal from "../ui/Modal/ConfirmModal";
+import { useInteraction, InteractionType, Reversibility } from "./ux/governance";
 
 const VALUE_UNRESOLVED = "UNRESOLVED";
 const VALUE_SAMPLE = "INPUT_SAMPLE";
 const VALUE_LATER_SELECTED = "LATER_SELECTED";
 const UNRESOLVED_VALUES = new Set([VALUE_UNRESOLVED, VALUE_SAMPLE, VALUE_LATER_SELECTED]);
 const DIRECT_COLUMN_REGEX = /^[A-Za-z_][\w]*\.[A-Za-z_][\w]*$/;
-const COLUMN_REF_REGEX = /["`\[]?([A-Za-z_][\w]*)["`\]]?\.\s*["`\[]?([A-Za-z_][\w]*)["`\]]?/g;
+const COLUMN_REF_REGEX = /(?:"|`|\[)?([A-Za-z_][\w]*)(?:"|`|\])?\.\s*(?:"|`|\[)?([A-Za-z_][\w]*)(?:"|`|\])?/g;
 const LEGACY_WRAPPER_REGEX = /DERIVED\s*:|TABLE_COLUMNS\s*\[/i;
 const REPORT_DATE_PREFIXES = new Set([
   "from",
@@ -209,6 +210,7 @@ export default function HeaderMappingEditor({
     finishRun: finishApproveTiming,
   } = useStepTimingEstimator("mapping-approve");
   const toast = useToast();
+  const { execute } = useInteraction();
 
   const handleCorrectionsCompleted = useCallback(
     (payload) => {
@@ -291,7 +293,25 @@ export default function HeaderMappingEditor({
     setCorrectionsComplete(false);
     (async () => {
       try {
-        const data = await mappingPreview(templateId, connectionId, { kind: templateKind });
+        const response = await execute({
+          type: InteractionType.ANALYZE,
+          label: "Load mapping preview",
+          reversibility: Reversibility.SYSTEM_MANAGED,
+          suppressSuccessToast: true,
+          suppressErrorToast: true,
+          blocksNavigation: false,
+          intent: {
+            templateId,
+            connectionId,
+            templateKind,
+            action: "mapping_preview",
+          },
+          action: async () => mappingPreview(templateId, connectionId, { kind: templateKind }),
+        });
+        if (!response.success) {
+          throw response.error;
+        }
+        const data = response.result;
         if (cancelled) return;
         const initialMapping = data.mapping || {};
         const catalogSet = new Set(
@@ -329,7 +349,7 @@ export default function HeaderMappingEditor({
           new Set(
             initialKeys
               .map((token) => (typeof token === "string" ? token.trim() : ""))
-              .filter((token) => token && normalizedMapping.hasOwnProperty(token))
+              .filter((token) => token && Object.prototype.hasOwnProperty.call(normalizedMapping, token))
           )
         );
         setSelectedKeys(normalizedKeys);
@@ -348,7 +368,7 @@ export default function HeaderMappingEditor({
     return () => {
       cancelled = true;
     };
-  }, [templateId, connectionId]);
+  }, [templateId, connectionId, templateKind, execute]);
 
   useEffect(() => () => {
     approveAbortRef.current?.abort();
@@ -533,7 +553,7 @@ export default function HeaderMappingEditor({
     setResetConfirmOpen(true);
   }, [hasCustomMapping, resetMappingState]);
 
-  const handleApprove = async () => {
+  const runApprove = async () => {
     const payload = Object.fromEntries(
       headersAll.map((h) => [h, mapping?.[h] ?? VALUE_UNRESOLVED])
     );
@@ -758,6 +778,31 @@ export default function HeaderMappingEditor({
       }
     }
     return outcome;
+  };
+
+  const handleApprove = async () => {
+    const response = await execute({
+      type: InteractionType.UPDATE,
+      label: "Approve mapping",
+      reversibility: Reversibility.SYSTEM_MANAGED,
+      suppressSuccessToast: true,
+      suppressErrorToast: true,
+      intent: {
+        templateId,
+        connectionId,
+        templateKind,
+        action: "mapping_approve",
+      },
+      action: async () => {
+        const outcome = await runApprove();
+        if (outcome === "error") {
+          throw new Error("Mapping approval failed");
+        }
+        return outcome;
+      },
+    });
+    if (!response.success) return "error";
+    return response.result;
   };
 
   // unresolved = empty or "UNRESOLVED", computed against headersAll

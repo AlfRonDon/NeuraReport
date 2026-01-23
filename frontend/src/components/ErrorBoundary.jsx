@@ -99,7 +99,7 @@ class ErrorBoundary extends Component {
               An unexpected error occurred. You can try refreshing the page or go back to the dashboard.
             </Typography>
 
-            {process.env.NODE_ENV === 'development' && this.state.error && (
+            {import.meta.env?.DEV && this.state.error && (
               <Box
                 sx={{
                   bgcolor: (theme) => alpha(theme.palette.error.main, 0.1),

@@ -109,7 +109,7 @@ export const addKeyValues = (body, keyValues) => {
 export const formatTokenLabel = (token) => {
   if (!token) return ''
   return token
-    .replace(/[_\-]+/g, ' ')
+    .replace(/[_-]+/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
     .replace(/(^|\s)([a-z])/g, (match, prefix, char) => `${prefix}${char.toUpperCase()}`)

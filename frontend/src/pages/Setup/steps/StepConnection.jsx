@@ -18,12 +18,14 @@ import StorageIcon from '@mui/icons-material/Storage'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import { useAppStore } from '../../../store/useAppStore'
 import { useToast } from '../../../components/ToastProvider'
+import { useInteraction, InteractionType, Reversibility } from '../../../components/ux/governance'
 import { Drawer } from '../../../ui/Drawer'
 import ConnectionForm from '../../connections/ConnectionForm'
 import * as api from '../../../api/client'
 
 export default function StepConnection({ wizardState, updateWizardState, onComplete, setLoading }) {
   const toast = useToast()
+  const { execute } = useInteraction()
   const savedConnections = useAppStore((s) => s.savedConnections)
   const setSavedConnections = useAppStore((s) => s.setSavedConnections)
   const addSavedConnection = useAppStore((s) => s.addSavedConnection)
@@ -64,31 +66,49 @@ export default function StepConnection({ wizardState, updateWizardState, onCompl
   const handleSaveConnection = useCallback(async (connectionData) => {
     setFormLoading(true)
     try {
-      const result = await api.testConnection(connectionData)
-      if (!result.ok) {
-        throw new Error(result.detail || 'Connection test failed')
-      }
+      await execute({
+        type: InteractionType.CREATE,
+        label: `Add connection "${connectionData?.name || connectionData?.db_url || 'connection'}"`,
+        reversibility: Reversibility.FULLY_REVERSIBLE,
+        suppressSuccessToast: true,
+        suppressErrorToast: true,
+        blocksNavigation: false,
+        intent: {
+          connectionName: connectionData?.name,
+          dbType: connectionData?.db_type,
+        },
+        action: async () => {
+          try {
+            const result = await api.testConnection(connectionData)
+            if (!result.ok) {
+              throw new Error(result.detail || 'Connection test failed')
+            }
 
-      const savedConnection = await api.upsertConnection({
-        id: result.connection_id,
-        name: connectionData.name,
-        dbType: connectionData.db_type,
-        dbUrl: connectionData.db_url,
-        database: connectionData.database,
-        status: 'connected',
-        latencyMs: result.latency_ms,
+            const savedConnection = await api.upsertConnection({
+              id: result.connection_id,
+              name: connectionData.name,
+              dbType: connectionData.db_type,
+              dbUrl: connectionData.db_url,
+              database: connectionData.database,
+              status: 'connected',
+              latencyMs: result.latency_ms,
+            })
+
+            addSavedConnection(savedConnection)
+            handleSelect(savedConnection.id)
+            toast.show('Connection added', 'success')
+            setDrawerOpen(false)
+            return savedConnection
+          } catch (err) {
+            toast.show(err.message || 'Failed to save connection', 'error')
+            throw err
+          }
+        },
       })
-
-      addSavedConnection(savedConnection)
-      handleSelect(savedConnection.id)
-      toast.show('Connection added', 'success')
-      setDrawerOpen(false)
-    } catch (err) {
-      toast.show(err.message || 'Failed to save connection', 'error')
     } finally {
       setFormLoading(false)
     }
-  }, [addSavedConnection, handleSelect, toast])
+  }, [addSavedConnection, handleSelect, toast, execute])
 
   const handleContinue = useCallback(() => {
     if (selectedId) {

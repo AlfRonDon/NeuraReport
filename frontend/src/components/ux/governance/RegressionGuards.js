@@ -92,7 +92,7 @@ export const REQUIRED_PATTERNS = {
  * Call this in development mode to catch violations early
  */
 export function guardAgainstViolations(code, filename = 'unknown') {
-  if (process.env.NODE_ENV !== 'development') {
+  if (!import.meta.env?.DEV) {
     return { violations: [], passed: true }
   }
 
@@ -288,7 +288,7 @@ export function formatCIResults(results) {
  * Hook that validates component compliance at render time (dev only)
  */
 export function useGovernanceValidation(componentName) {
-  if (process.env.NODE_ENV !== 'development') {
+  if (!import.meta.env?.DEV) {
     return { isValid: true, violations: [] }
   }
 

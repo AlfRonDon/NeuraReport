@@ -112,6 +112,12 @@ class ExchangeRateSource(EnrichmentSourceBase):
         self.target_currency = config.get("target_currency", "USD")
         self._use_live_rates = config.get("use_live_rates", True)
 
+    @staticmethod
+    def _build_api_params(api_url: str, base: str) -> Dict[str, str]:
+        if "frankfurter" in api_url or "exchangerate.host" in api_url:
+            return {"base": base}
+        return {"from": base}
+
     async def _fetch_live_rates(self, base: str = "USD") -> Optional[Dict[str, float]]:
         """
         Fetch live exchange rates from API.
@@ -162,7 +168,7 @@ class ExchangeRateSource(EnrichmentSourceBase):
         async with httpx.AsyncClient(timeout=10.0) as client:
             for api_url in EXCHANGE_API_URLS:
                 try:
-                    params = {"base": base} if "frankfurter" in api_url else {"from": base}
+                    params = self._build_api_params(api_url, base)
                     response = await client.get(api_url, params=params)
                     if response.status_code == 200:
                         data = response.json()
@@ -191,7 +197,7 @@ class ExchangeRateSource(EnrichmentSourceBase):
 
         for api_url in EXCHANGE_API_URLS:
             try:
-                params = {"base": base} if "frankfurter" in api_url else {"from": base}
+                params = self._build_api_params(api_url, base)
                 async with aiohttp.ClientSession() as session:
                     async with session.get(
                         api_url,
@@ -225,7 +231,7 @@ class ExchangeRateSource(EnrichmentSourceBase):
 
         for api_url in EXCHANGE_API_URLS:
             try:
-                params = {"base": base} if "frankfurter" in api_url else {"from": base}
+                params = self._build_api_params(api_url, base)
                 response = requests.get(api_url, params=params, timeout=10)
                 if response.status_code == 200:
                     data = response.json()

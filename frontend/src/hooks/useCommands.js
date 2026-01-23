@@ -3,6 +3,7 @@ import { nanoid } from 'nanoid'
 import { useSessionStore, useAppStore } from '../stores'
 import { parseCommand, HELP_TEXT } from '../services/commandParser'
 import * as api from '../api/client'
+import { useInteraction, InteractionType, Reversibility } from '../components/ux/governance'
 
 export function useCommands() {
   const addMessage = useSessionStore((s) => s.addMessage)
@@ -18,6 +19,7 @@ export function useCommands() {
   const startProcessing = useAppStore((s) => s.startProcessing)
   const finishProcessing = useAppStore((s) => s.finishProcessing)
   const stopProcessing = useAppStore((s) => s.stopProcessing)
+  const { execute } = useInteraction()
 
   const executeCommand = useCallback(
     async (input, sessionId) => {
@@ -76,30 +78,49 @@ export function useCommands() {
             try {
               const connStr = command.params.connectionString
               // Parse connection string - assume format: type://host:port/database or just URL
-              const result = await api.testConnection({ db_url: connStr })
+              const connectResponse = await execute({
+                type: InteractionType.CREATE,
+                label: 'Connect to database',
+                reversibility: Reversibility.FULLY_REVERSIBLE,
+                suppressSuccessToast: true,
+                suppressErrorToast: true,
+                blocksNavigation: false,
+                intent: { action: 'connect', connectionString: connStr },
+                action: async () => {
+                  const result = await api.testConnection({ db_url: connStr })
 
-              if (!result.ok) {
-                throw new Error(result.detail || 'Connection test failed')
-              }
+                  if (!result.ok) {
+                    throw new Error(result.detail || 'Connection test failed')
+                  }
 
-              // Persist the connection
-              const connData = await api.upsertConnection({
-                id: result.connection_id,
-                name: result.name || connStr.split('/').pop() || 'Database',
-                dbType: result.db_type,
-                dbUrl: connStr,
-                database: result.database,
-                status: 'connected',
-                latencyMs: result.latency_ms,
+                  // Persist the connection
+                  const connData = await api.upsertConnection({
+                    id: result.connection_id,
+                    name: result.name || connStr.split('/').pop() || 'Database',
+                    dbType: result.db_type,
+                    dbUrl: connStr,
+                    database: result.database,
+                    status: 'connected',
+                    latencyMs: result.latency_ms,
+                  })
+
+                  return { result, connData }
+                },
               })
 
+              if (!connectResponse?.success) {
+                throw connectResponse?.error || new Error('Connection test failed')
+              }
+
+              const { result, connData } = connectResponse.result || {}
+
               setConnection({
-                id: connData.id || result.connection_id,
-                name: connData.name,
-                type: connData.db_type || result.db_type,
+                id: connData?.id || result?.connection_id,
+                name: connData?.name,
+                type: connData?.db_type || result?.db_type,
                 status: 'connected',
-                tables: result.tables_count || 0,
-                latencyMs: result.latency_ms,
+                tables: result?.tables_count || 0,
+                latencyMs: result?.latency_ms,
               })
 
               // Refresh templates after connection
@@ -111,7 +132,7 @@ export function useCommands() {
               }
 
               updateMessage(sessionId, msgId, {
-                content: `Connected successfully to ${connData.name || connStr}.\nFound ${result.tables_count || 0} tables. Latency: ${result.latency_ms}ms`,
+                content: `Connected successfully to ${connData?.name || connStr}.\nFound ${result?.tables_count || 0} tables. Latency: ${result?.latency_ms}ms`,
                 streaming: false,
                 blocks: [
                   {
@@ -119,10 +140,10 @@ export function useCommands() {
                     type: 'connection',
                     data: {
                       status: 'connected',
-                      name: connData.name,
-                      type: connData.db_type || result.db_type,
-                      tables: result.tables_count,
-                      latencyMs: result.latency_ms,
+                      name: connData?.name,
+                      type: connData?.db_type || result?.db_type,
+                      tables: result?.tables_count,
+                      latencyMs: result?.latency_ms,
                     },
                   },
                 ],
@@ -145,9 +166,17 @@ export function useCommands() {
 
           case 'disconnect': {
             if (connection?.id) {
-              try {
-                await api.deleteConnection(connection.id)
-              } catch {
+              const deleteResponse = await execute({
+                type: InteractionType.DELETE,
+                label: 'Disconnect database',
+                reversibility: Reversibility.FULLY_REVERSIBLE,
+                suppressSuccessToast: true,
+                suppressErrorToast: true,
+                blocksNavigation: false,
+                intent: { action: 'disconnect', connectionId: connection.id },
+                action: async () => api.deleteConnection(connection.id),
+              })
+              if (!deleteResponse?.success) {
                 // Ignore deletion errors
               }
             }
@@ -259,11 +288,30 @@ export function useCommands() {
               })
 
               // Get chart suggestions from AI
-              const { charts, sampleData } = await api.suggestCharts({
-                templateId,
-                connectionId: connection.id,
-                question: query,
+              const suggestResponse = await execute({
+                type: InteractionType.ANALYZE,
+                label: 'Suggest charts',
+                reversibility: Reversibility.SYSTEM_MANAGED,
+                suppressSuccessToast: true,
+                suppressErrorToast: true,
+                blocksNavigation: false,
+                intent: {
+                  action: 'suggest_charts',
+                  templateId,
+                  connectionId: connection.id,
+                },
+                action: async () => api.suggestCharts({
+                  templateId,
+                  connectionId: connection.id,
+                  question: query,
+                }),
               })
+
+              if (!suggestResponse?.success) {
+                throw suggestResponse?.error || new Error('Chart suggestion failed')
+              }
+
+              const { charts, sampleData } = suggestResponse.result || {}
 
               if (controller.signal.aborted) {
                 updateMessage(sessionId, msgId, {
@@ -364,12 +412,31 @@ export function useCommands() {
                 throw new Error('No template specified')
               }
 
-              const result = await api.runReportAsJob({
-                templateId,
-                connectionId: connection.id,
-                startDate: command.params.startDate,
-                endDate: command.params.endDate,
+              const reportResponse = await execute({
+                type: InteractionType.EXECUTE,
+                label: 'Queue report job',
+                reversibility: Reversibility.SYSTEM_MANAGED,
+                suppressSuccessToast: true,
+                suppressErrorToast: true,
+                blocksNavigation: false,
+                intent: {
+                  action: 'run_report',
+                  templateId,
+                  connectionId: connection.id,
+                },
+                action: async () => api.runReportAsJob({
+                  templateId,
+                  connectionId: connection.id,
+                  startDate: command.params.startDate,
+                  endDate: command.params.endDate,
+                }),
               })
+
+              if (!reportResponse?.success) {
+                throw reportResponse?.error || new Error('Report job failed')
+              }
+
+              const result = reportResponse.result
 
               updateMessage(sessionId, msgId, {
                 content: `Report job started: ${result.job_id}`,
@@ -438,6 +505,7 @@ export function useCommands() {
       setTemplates,
       startProcessing,
       finishProcessing,
+      execute,
     ]
   )
 

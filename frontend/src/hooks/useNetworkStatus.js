@@ -14,18 +14,17 @@ export function useNetworkStatus() {
 
   // Check connectivity by making a lightweight request
   const checkConnectivity = useCallback(async () => {
+    let timeoutId
     try {
       // Use a simple HEAD request to check connectivity
       const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 5000)
+      timeoutId = setTimeout(() => controller.abort(), 5000)
 
       await fetch(healthUrl, {
         method: 'HEAD',
         signal: controller.signal,
         cache: 'no-store',
       })
-
-      clearTimeout(timeoutId)
       setIsOnline(true)
       setLastChecked(new Date())
       return true
@@ -35,8 +34,10 @@ export function useNetworkStatus() {
       setIsOnline(online)
       setLastChecked(new Date())
       return online
+    } finally {
+      if (timeoutId) clearTimeout(timeoutId)
     }
-  }, [])
+  }, [healthUrl])
 
   useEffect(() => {
     const handleOnline = () => {

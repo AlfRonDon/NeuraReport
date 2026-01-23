@@ -61,7 +61,10 @@ class IdempotencyStore:
                 return None
             if record.request_hash != request_hash:
                 return None
-            if record.expires_at <= now:
+            expires_at = record.expires_at
+            if expires_at.tzinfo is None:
+                expires_at = expires_at.replace(tzinfo=timezone.utc)
+            if expires_at <= now:
                 session.delete(record)
                 session.commit()
                 return None

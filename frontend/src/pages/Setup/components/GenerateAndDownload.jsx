@@ -422,13 +422,6 @@ function GenerateAndDownload({
               size="small"
               label="Dimension"
               value={safeResampleConfig.dimension}
-              onChange={(e) =>
-                onToggleBatch &&
-                onKeyValueChange &&
-                setEnd &&
-                onFind && // noop; avoids lint complaints about unused handlers
-                setStart && e && e.target && onKeyValueChange // placeholder
-              }
               SelectProps={{ native: false }}
               sx={{ minWidth: { xs: '100%', sm: 200 } }}
               disabled

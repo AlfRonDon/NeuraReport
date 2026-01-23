@@ -24,6 +24,7 @@ import {
 } from '../../api/client'
 import { useAppStore } from '../../store/useAppStore'
 import { useToast } from '../../components/ToastProvider.jsx'
+import { useInteraction, InteractionType, Reversibility } from '../../components/ux/governance'
 import Surface from '../../components/layout/Surface.jsx'
 import InfoTooltip from '../../components/common/InfoTooltip.jsx'
 import TOOLTIP_COPY from '../../content/tooltipCopy.jsx'
@@ -113,6 +114,7 @@ export default function TemplatesPane() {
   const setDiscoveryResults = useAppStore((state) => state.setDiscoveryResults)
   const clearDiscoveryResults = useAppStore((state) => state.clearDiscoveryResults)
   const toast = useToast()
+  const { execute } = useInteraction()
   const [searchParams, setSearchParams] = useSearchParams()
   const tabParam = searchParams.get('tab')
   const activeTab = tabParam === 'configure' ? 1 : tabParam === 'schedules' ? 2 : 0
@@ -409,7 +411,7 @@ export default function TemplatesPane() {
     setFinding(false)
   }, [clearDiscoveryResults, setFinding, selected, start?.valueOf(), end?.valueOf()])
 
-  const onFind = async () => {
+  const runFind = async () => {
     if (!selectedTemplates.length || !start || !end) return toast.show('Select a design and choose a start/end date.', 'warning')
     const startSql = toSqlFromDayjs(start)
     const endSql = toSqlFromDayjs(end)
@@ -517,9 +519,26 @@ export default function TemplatesPane() {
       })
     } catch (e) {
       toast.show(String(e), 'error')
+      throw e
     } finally {
       setFinding(false)
     }
+  }
+
+  const onFind = async () => {
+    await execute({
+      type: InteractionType.ANALYZE,
+      label: 'Discover batches',
+      reversibility: Reversibility.SYSTEM_MANAGED,
+      suppressSuccessToast: true,
+      suppressErrorToast: true,
+      intent: {
+        templateIds: selectedTemplates.map((t) => t.id),
+        connectionId: activeConnectionId || null,
+        action: 'discover_reports',
+      },
+      action: async () => runFind(),
+    })
   }
 
   const onToggleBatch = (id, idx, val) => {
@@ -602,7 +621,7 @@ export default function TemplatesPane() {
   const batchIdsFor = (tplId) =>
     (results[tplId]?.batches || []).filter(b => b.selected).map(b => b.id)
 
-  const onGenerate = async () => {
+  const runGenerate = async () => {
     if (!selectedTemplates.length) return toast.show('Select at least one design.', 'warning')
     if (!start || !end) return toast.show('Choose a start and end date before running.', 'warning')
     const startSql = toSqlFromDayjs(start)
@@ -677,6 +696,22 @@ export default function TemplatesPane() {
     }
   }
 
+  const onGenerate = async () => {
+    await execute({
+      type: InteractionType.EXECUTE,
+      label: 'Run reports',
+      reversibility: Reversibility.SYSTEM_MANAGED,
+      suppressSuccessToast: true,
+      suppressErrorToast: true,
+      intent: {
+        templateIds: selectedTemplates.map((t) => t.id),
+        connectionId: activeConnectionId || null,
+        action: 'run_reports',
+      },
+      action: async () => runGenerate(),
+    })
+  }
+
   const handleCreateSchedule = async () => {
     if (selectedTemplates.length !== 1) {
       toast.show('Select exactly one design to create a schedule.', 'warning')
@@ -699,30 +734,45 @@ export default function TemplatesPane() {
     const template = selectedTemplates[0]
     const keyFilters = buildKeyFiltersForTemplate(template.id)
     const emailList = parseEmailTargets(emailTargets)
-    setScheduleSaving(true)
-    try {
-      await createSchedule({
+    await execute({
+      type: InteractionType.CREATE,
+      label: 'Create schedule',
+      reversibility: Reversibility.SYSTEM_MANAGED,
+      suppressSuccessToast: true,
+      suppressErrorToast: true,
+      intent: {
         templateId: template.id,
         connectionId: activeConnectionId,
-        startDate: startSql,
-        endDate: endSql,
-        keyValues: Object.keys(keyFilters).length ? keyFilters : undefined,
-        batchIds: batchIdsFor(template.id),
-        docx: true,
-        xlsx: getTemplateKind(template) === 'excel',
-        emailRecipients: emailList.length ? emailList : undefined,
-        emailSubject: emailSubject || undefined,
-        emailMessage: emailMessage || undefined,
-        frequency: scheduleFrequency,
-        name: scheduleName || undefined,
-      })
-      toast.show('Scheduled job created. The first run will begin soon.', 'success')
-      refreshSchedules()
-    } catch (e) {
-      toast.show(String(e), 'error')
-    } finally {
-      setScheduleSaving(false)
-    }
+        action: 'create_schedule',
+      },
+      action: async () => {
+        setScheduleSaving(true)
+        try {
+          await createSchedule({
+            templateId: template.id,
+            connectionId: activeConnectionId,
+            startDate: startSql,
+            endDate: endSql,
+            keyValues: Object.keys(keyFilters).length ? keyFilters : undefined,
+            batchIds: batchIdsFor(template.id),
+            docx: true,
+            xlsx: getTemplateKind(template) === 'excel',
+            emailRecipients: emailList.length ? emailList : undefined,
+            emailSubject: emailSubject || undefined,
+            emailMessage: emailMessage || undefined,
+            frequency: scheduleFrequency,
+            name: scheduleName || undefined,
+          })
+          toast.show('Scheduled job created. The first run will begin soon.', 'success')
+          refreshSchedules()
+        } catch (e) {
+          toast.show(String(e), 'error')
+          throw e
+        } finally {
+          setScheduleSaving(false)
+        }
+      },
+    })
   }
 
   const handleDeleteScheduleRequest = useCallback((schedule) => {
@@ -752,27 +802,41 @@ export default function TemplatesPane() {
     let undone = false
     const timeoutId = setTimeout(async () => {
       if (undone) return
-      setDeletingScheduleId(scheduleId)
-      try {
-        await deleteSchedule(scheduleId)
-        toast.show('Schedule removed. Future runs stopped; past downloads remain.', 'success')
-        refreshSchedules()
-      } catch (e) {
-        setSchedules((prev) => {
-          if (prev.some((item) => item.id === scheduleId)) return prev
-          const next = [...prev]
-          if (scheduleIndex >= 0 && scheduleIndex <= next.length) {
-            next.splice(scheduleIndex, 0, schedule)
-          } else {
-            next.push(schedule)
+      await execute({
+        type: InteractionType.DELETE,
+        label: 'Delete schedule',
+        reversibility: Reversibility.SYSTEM_MANAGED,
+        suppressSuccessToast: true,
+        suppressErrorToast: true,
+        intent: {
+          scheduleId,
+          action: 'delete_schedule',
+        },
+        action: async () => {
+          setDeletingScheduleId(scheduleId)
+          try {
+            await deleteSchedule(scheduleId)
+            toast.show('Schedule removed. Future runs stopped; past downloads remain.', 'success')
+            refreshSchedules()
+          } catch (e) {
+            setSchedules((prev) => {
+              if (prev.some((item) => item.id === scheduleId)) return prev
+              const next = [...prev]
+              if (scheduleIndex >= 0 && scheduleIndex <= next.length) {
+                next.splice(scheduleIndex, 0, schedule)
+              } else {
+                next.push(schedule)
+              }
+              return next
+            })
+            toast.show(String(e), 'error')
+            throw e
+          } finally {
+            setDeletingScheduleId(null)
+            scheduleDeleteUndoRef.current = null
           }
-          return next
-        })
-        toast.show(String(e), 'error')
-      } finally {
-        setDeletingScheduleId(null)
-        scheduleDeleteUndoRef.current = null
-      }
+        },
+      })
     }, 5000)
 
     scheduleDeleteUndoRef.current = { timeoutId, schedule }
@@ -797,7 +861,7 @@ export default function TemplatesPane() {
       },
       { severity: 'info' }
     )
-  }, [scheduleToDelete, schedules, toast, refreshSchedules])
+  }, [scheduleToDelete, schedules, toast, refreshSchedules, execute])
 
   const handleOpenEditSchedule = (schedule) => {
     setEditingSchedule(schedule)
@@ -815,32 +879,46 @@ export default function TemplatesPane() {
 
   const handleUpdateSchedule = async () => {
     if (!editingSchedule) return
-    setScheduleUpdating(true)
-    try {
-      const payload = {}
-      if (editScheduleFields.name !== (editingSchedule.name || '')) {
-        payload.name = editScheduleFields.name || null
-      }
-      if (editScheduleFields.frequency !== (editingSchedule.frequency || 'daily')) {
-        payload.frequency = editScheduleFields.frequency
-      }
-      if (editScheduleFields.active !== (editingSchedule.active !== false)) {
-        payload.active = editScheduleFields.active
-      }
-      if (Object.keys(payload).length === 0) {
-        toast.show('No changes to save.', 'info')
-        handleCloseEditSchedule()
-        return
-      }
-      await updateSchedule(editingSchedule.id, payload)
-      toast.show('Schedule updated.', 'success')
-      refreshSchedules()
-      handleCloseEditSchedule()
-    } catch (e) {
-      toast.show(String(e), 'error')
-    } finally {
-      setScheduleUpdating(false)
-    }
+    await execute({
+      type: InteractionType.UPDATE,
+      label: 'Update schedule',
+      reversibility: Reversibility.SYSTEM_MANAGED,
+      suppressSuccessToast: true,
+      suppressErrorToast: true,
+      intent: {
+        scheduleId: editingSchedule.id,
+        action: 'update_schedule',
+      },
+      action: async () => {
+        setScheduleUpdating(true)
+        try {
+          const payload = {}
+          if (editScheduleFields.name !== (editingSchedule.name || '')) {
+            payload.name = editScheduleFields.name || null
+          }
+          if (editScheduleFields.frequency !== (editingSchedule.frequency || 'daily')) {
+            payload.frequency = editScheduleFields.frequency
+          }
+          if (editScheduleFields.active !== (editingSchedule.active !== false)) {
+            payload.active = editScheduleFields.active
+          }
+          if (Object.keys(payload).length === 0) {
+            toast.show('No changes to save.', 'info')
+            handleCloseEditSchedule()
+            return
+          }
+          await updateSchedule(editingSchedule.id, payload)
+          toast.show('Schedule updated.', 'success')
+          refreshSchedules()
+          handleCloseEditSchedule()
+        } catch (e) {
+          toast.show(String(e), 'error')
+          throw e
+        } finally {
+          setScheduleUpdating(false)
+        }
+      },
+    })
   }
 
   const dateRangeValid = !!start && !!end && end.valueOf() >= start.valueOf()

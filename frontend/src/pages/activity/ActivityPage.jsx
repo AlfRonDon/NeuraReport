@@ -31,6 +31,7 @@ import StarIcon from '@mui/icons-material/Star'
 import SettingsIcon from '@mui/icons-material/Settings'
 import OpenInNewIcon from '@mui/icons-material/OpenInNew'
 import { useToast } from '../../components/ToastProvider'
+import { useInteraction, InteractionType, Reversibility } from '../../components/ux/governance'
 import { ConfirmModal } from '../../ui/Modal'
 import * as api from '../../api/client'
 
@@ -344,6 +345,7 @@ export default function ActivityPage() {
   const theme = useTheme()
   const toast = useToast()
   const navigate = useNavigate()
+  const { execute } = useInteraction()
   const didLoadRef = useRef(false)
 
   const [activities, setActivities] = useState([])
@@ -381,18 +383,32 @@ export default function ActivityPage() {
   }, [entityTypeFilter, actionFilter, fetchActivities])
 
   const handleClearLog = useCallback(async () => {
-    setClearing(true)
-    try {
-      const result = await api.clearActivityLog()
-      setActivities([])
-      toast.show(`Cleared ${result.cleared} activity entries`, 'success')
-    } catch (err) {
-      toast.show(err.message || 'Failed to clear activity log', 'error')
-    } finally {
-      setClearing(false)
-      setClearConfirmOpen(false)
-    }
-  }, [toast])
+    await execute({
+      type: InteractionType.DELETE,
+      label: 'Clear activity log',
+      reversibility: Reversibility.SYSTEM_MANAGED,
+      suppressSuccessToast: true,
+      suppressErrorToast: true,
+      intent: {
+        action: 'clear_activity_log',
+      },
+      action: async () => {
+        setClearing(true)
+        try {
+          const result = await api.clearActivityLog()
+          setActivities([])
+          toast.show(`Cleared ${result.cleared} activity entries`, 'success')
+          return result
+        } catch (err) {
+          toast.show(err.message || 'Failed to clear activity log', 'error')
+          throw err
+        } finally {
+          setClearing(false)
+          setClearConfirmOpen(false)
+        }
+      },
+    })
+  }, [toast, execute])
 
   return (
     <PageContainer>

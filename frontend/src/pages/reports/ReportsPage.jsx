@@ -46,6 +46,7 @@ import TemplateRecommender from '../../components/TemplateRecommender'
 import SuccessCelebration, { useCelebration } from '../../components/SuccessCelebration'
 import AiUsageNotice from '../../components/ai/AiUsageNotice'
 import ReportGlossaryNotice from '../../components/ux/ReportGlossaryNotice.jsx'
+import { useInteraction, InteractionType, Reversibility } from '../../components/ux/governance'
 import * as api from '../../api/client'
 import * as summaryApi from '../../api/summary'
 
@@ -454,6 +455,7 @@ export default function ReportsPage() {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const toast = useToast()
+  const { execute } = useInteraction()
 
   const templates = useAppStore((s) => s.templates)
   const activeConnection = useAppStore((s) => s.activeConnection)
@@ -599,38 +601,54 @@ export default function ReportsPage() {
       return
     }
 
-    setGenerating(true)
-    setError(null)
-    setResult(null)
-
-    try {
-      const template = templates.find((t) => t.id === selectedTemplate)
-
-      const batches = discovery?.batches || []
-      const allSelected = batches.length > 0 && selectedBatches.length === batches.length
-      const useSelectedBatches = batches.length > 0 && selectedBatches.length > 0 && !allSelected
-
-      const reportResult = await api.runReportAsJob({
+    await execute({
+      type: InteractionType.EXECUTE,
+      label: 'Generate report',
+      reversibility: Reversibility.SYSTEM_MANAGED,
+      suppressSuccessToast: true,
+      suppressErrorToast: true,
+      intent: {
         templateId: selectedTemplate,
-        templateName: template?.name,
-        connectionId: activeConnection.id,
-        startDate: startDate || undefined,
-        endDate: endDate || undefined,
-        keyValues: Object.keys(keyValues).length > 0 ? keyValues : undefined,
-        batchIds: useSelectedBatches ? selectedBatches : undefined,
-        kind: template?.kind || 'pdf',
-      })
+        connectionId: activeConnection?.id,
+        action: 'run_report',
+      },
+      action: async () => {
+        setGenerating(true)
+        setError(null)
+        setResult(null)
 
-      setResult(reportResult)
-      toast.show('Report generation started!', 'success')
-      celebrate()
-    } catch (err) {
-      setError(err.message || 'Failed to generate report')
-      toast.show(err.message || 'Failed to generate report', 'error')
-    } finally {
-      setGenerating(false)
-    }
-  }, [selectedTemplate, activeConnection?.id, templates, startDate, endDate, keyValues, discovery, selectedBatches, toast, celebrate])
+        try {
+          const template = templates.find((t) => t.id === selectedTemplate)
+
+          const batches = discovery?.batches || []
+          const allSelected = batches.length > 0 && selectedBatches.length === batches.length
+          const useSelectedBatches = batches.length > 0 && selectedBatches.length > 0 && !allSelected
+
+          const reportResult = await api.runReportAsJob({
+            templateId: selectedTemplate,
+            templateName: template?.name,
+            connectionId: activeConnection.id,
+            startDate: startDate || undefined,
+            endDate: endDate || undefined,
+            keyValues: Object.keys(keyValues).length > 0 ? keyValues : undefined,
+            batchIds: useSelectedBatches ? selectedBatches : undefined,
+            kind: template?.kind || 'pdf',
+          })
+
+          setResult(reportResult)
+          toast.show('Report generation started!', 'success')
+          celebrate()
+          return reportResult
+        } catch (err) {
+          setError(err.message || 'Failed to generate report')
+          toast.show(err.message || 'Failed to generate report', 'error')
+          throw err
+        } finally {
+          setGenerating(false)
+        }
+      },
+    })
+  }, [selectedTemplate, activeConnection?.id, templates, startDate, endDate, keyValues, discovery, selectedBatches, toast, celebrate, execute])
 
   const keyFields = Object.keys(keyOptions)
 
@@ -647,27 +665,43 @@ export default function ReportsPage() {
       toast.show('Start date must be before or equal to end date', 'error')
       return
     }
-    setDiscovering(true)
-    setDiscovery(null)
-    try {
-      const template = templates.find((t) => t.id === selectedTemplate)
-      const data = await api.discoverReports({
+    await execute({
+      type: InteractionType.ANALYZE,
+      label: 'Discover batches',
+      reversibility: Reversibility.SYSTEM_MANAGED,
+      suppressSuccessToast: true,
+      suppressErrorToast: true,
+      intent: {
         templateId: selectedTemplate,
-        connectionId: activeConnection.id,
-        startDate,
-        endDate,
-        keyValues: Object.keys(keyValues).length > 0 ? keyValues : undefined,
-        kind: template?.kind || 'pdf',
-      })
-      setDiscovery(data)
-      const batchIds = Array.isArray(data?.batches) ? data.batches.map((batch) => batch.id) : []
-      setSelectedBatches(batchIds)
-    } catch (err) {
-      toast.show(err.message || 'Failed to discover batches', 'error')
-    } finally {
-      setDiscovering(false)
-    }
-  }, [selectedTemplate, activeConnection?.id, startDate, endDate, keyValues, templates, toast])
+        connectionId: activeConnection?.id,
+        action: 'discover_batches',
+      },
+      action: async () => {
+        setDiscovering(true)
+        setDiscovery(null)
+        try {
+          const template = templates.find((t) => t.id === selectedTemplate)
+          const data = await api.discoverReports({
+            templateId: selectedTemplate,
+            connectionId: activeConnection.id,
+            startDate,
+            endDate,
+            keyValues: Object.keys(keyValues).length > 0 ? keyValues : undefined,
+            kind: template?.kind || 'pdf',
+          })
+          setDiscovery(data)
+          const batchIds = Array.isArray(data?.batches) ? data.batches.map((batch) => batch.id) : []
+          setSelectedBatches(batchIds)
+          return data
+        } catch (err) {
+          toast.show(err.message || 'Failed to discover batches', 'error')
+          throw err
+        } finally {
+          setDiscovering(false)
+        }
+      },
+    })
+  }, [selectedTemplate, activeConnection?.id, startDate, endDate, keyValues, templates, toast, execute])
 
   const fetchRunHistory = useCallback(async () => {
     if (!selectedTemplate) {
@@ -727,21 +761,36 @@ export default function ReportsPage() {
 
   const handleQueueSummary = useCallback(async () => {
     if (!selectedRun?.id) return
-    setQueueingSummary(true)
-    try {
-      const response = await summaryApi.queueReportSummary(selectedRun.id)
-      const jobId = response?.job_id || response?.jobId || null
-      if (jobId) {
-        toast.show('Summary queued. Track progress in Report Progress.', 'success')
-      } else {
-        toast.show('Failed to queue summary.', 'error')
-      }
-    } catch (err) {
-      toast.show(err?.message || 'Failed to queue summary.', 'error')
-    } finally {
-      setQueueingSummary(false)
-    }
-  }, [selectedRun?.id, toast])
+    await execute({
+      type: InteractionType.GENERATE,
+      label: 'Queue summary',
+      reversibility: Reversibility.SYSTEM_MANAGED,
+      suppressSuccessToast: true,
+      suppressErrorToast: true,
+      intent: {
+        runId: selectedRun?.id,
+        action: 'queue_report_summary',
+      },
+      action: async () => {
+        setQueueingSummary(true)
+        try {
+          const response = await summaryApi.queueReportSummary(selectedRun.id)
+          const jobId = response?.job_id || response?.jobId || null
+          if (jobId) {
+            toast.show('Summary queued. Track progress in Report Progress.', 'success')
+          } else {
+            toast.show('Failed to queue summary.', 'error')
+          }
+          return response
+        } catch (err) {
+          toast.show(err?.message || 'Failed to queue summary.', 'error')
+          throw err
+        } finally {
+          setQueueingSummary(false)
+        }
+      },
+    })
+  }, [selectedRun?.id, toast, execute])
 
   const handleSelectAllBatches = useCallback(() => {
     const allIds = Array.isArray(discovery?.batches) ? discovery.batches.map((batch) => batch.id) : []

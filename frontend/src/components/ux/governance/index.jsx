@@ -165,7 +165,7 @@ export const GovernanceEnforcement = {
    * @deprecated Use useInteraction().execute() instead
    */
   warnOnRawHandler: (handlerName, handler) => {
-    if (process.env.NODE_ENV === 'development') {
+    if (import.meta.env?.DEV) {
       return (...args) => {
         console.warn(
           `[UX GOVERNANCE VIOLATION] Raw handler "${handlerName}" called without interaction API.\n` +
@@ -183,7 +183,7 @@ export const GovernanceEnforcement = {
    * Call this in useEffect to verify compliance
    */
   assertCompliance: (componentName, hasInteractionHook) => {
-    if (process.env.NODE_ENV === 'development' && !hasInteractionHook) {
+    if (import.meta.env?.DEV && !hasInteractionHook) {
       console.error(
         `[UX GOVERNANCE VIOLATION] Component "${componentName}" has user interactions ` +
         `but is not using useInteraction() hook. This is a compliance violation.`

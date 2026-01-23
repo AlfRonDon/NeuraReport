@@ -37,6 +37,7 @@ import {
 } from '@mui/icons-material';
 import useSummaryStore from '../../stores/summaryStore';
 import { useToast } from '../../components/ToastProvider.jsx';
+import { useInteraction, InteractionType, Reversibility } from '../../components/ux/governance';
 import ConfirmModal from '../../ui/Modal/ConfirmModal';
 import AiUsageNotice from '../../components/ai/AiUsageNotice';
 
@@ -82,6 +83,7 @@ export default function SummaryPage() {
   const [clearHistoryConfirmOpen, setClearHistoryConfirmOpen] = useState(false);
   const toast = useToast();
   const navigate = useNavigate();
+  const { execute } = useInteraction();
 
   useEffect(() => {
     return () => reset();
@@ -100,11 +102,27 @@ export default function SummaryPage() {
       toast.show('Content exceeds maximum length of 50,000 characters.', 'error');
       return;
     }
-    await generateSummary({
-      content: trimmedContent,
-      tone,
-      maxSentences,
-      focusAreas: focusAreas.length > 0 ? focusAreas : undefined,
+    await execute({
+      type: InteractionType.GENERATE,
+      label: 'Generate summary',
+      reversibility: Reversibility.FULLY_REVERSIBLE,
+      suppressSuccessToast: true,
+      suppressErrorToast: true,
+      intent: {
+        action: 'generate_summary',
+      },
+      action: async () => {
+        const result = await generateSummary({
+          content: trimmedContent,
+          tone,
+          maxSentences,
+          focusAreas: focusAreas.length > 0 ? focusAreas : undefined,
+        });
+        if (!result) {
+          throw new Error('Summary generation failed');
+        }
+        return result;
+      },
     });
   };
 
@@ -121,20 +139,37 @@ export default function SummaryPage() {
       toast.show('Content exceeds maximum length of 50,000 characters.', 'error');
       return;
     }
-    setQueueing(true);
-    const response = await queueSummary({
-      content: trimmedContent,
-      tone,
-      maxSentences,
-      focusAreas: focusAreas.length > 0 ? focusAreas : undefined,
+    await execute({
+      type: InteractionType.GENERATE,
+      label: 'Queue summary',
+      reversibility: Reversibility.SYSTEM_MANAGED,
+      suppressSuccessToast: true,
+      suppressErrorToast: true,
+      intent: {
+        action: 'queue_summary',
+      },
+      action: async () => {
+        setQueueing(true);
+        try {
+          const response = await queueSummary({
+            content: trimmedContent,
+            tone,
+            maxSentences,
+            focusAreas: focusAreas.length > 0 ? focusAreas : undefined,
+          });
+          if (response?.job_id) {
+            setQueuedJobId(response.job_id);
+            toast.show('Summary queued. Track progress in Jobs.', 'success');
+          } else {
+            toast.show('Failed to queue summary job.', 'error');
+            throw new Error('Failed to queue summary job');
+          }
+          return response;
+        } finally {
+          setQueueing(false);
+        }
+      },
     });
-    if (response?.job_id) {
-      setQueuedJobId(response.job_id);
-      toast.show('Summary queued. Track progress in Jobs.', 'success');
-    } else {
-      toast.show('Failed to queue summary job.', 'error');
-    }
-    setQueueing(false);
   };
 
   const handleAddFocus = (focus) => {

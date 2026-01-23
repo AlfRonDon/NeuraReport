@@ -16,6 +16,7 @@ import PageHeader from '../../components/layout/PageHeader.jsx'
 import Surface from '../../components/layout/Surface.jsx'
 import SectionHeader from '../../components/layout/SectionHeader.jsx'
 import { useToast } from '../../components/ToastProvider.jsx'
+import { useInteraction, InteractionType, Reversibility } from '../../components/ux/governance'
 import api, { API_BASE } from '../../api/client.js'
 
 const parseJsonInput = (value, toast, label) => {
@@ -38,6 +39,7 @@ const splitList = (value) => (
 
 export default function OpsConsolePage() {
   const toast = useToast()
+  const { execute } = useInteraction()
   const [busy, setBusy] = useState(false)
   const [lastResponse, setLastResponse] = useState(null)
 
@@ -101,49 +103,72 @@ export default function OpsConsolePage() {
 
   const runRequest = async ({ method = 'get', url, data, headers = {}, onSuccess } = {}) => {
     const verb = method.toLowerCase()
-    setBusy(true)
-    setLastResponse({
-      pending: true,
-      method: verb,
-      url,
-      timestamp: new Date().toISOString(),
+    const interactionType = verb === 'delete'
+      ? InteractionType.DELETE
+      : verb === 'put' || verb === 'patch'
+        ? InteractionType.UPDATE
+        : verb === 'post'
+          ? InteractionType.CREATE
+          : InteractionType.EXECUTE
+    const reversibility = verb === 'delete' ? Reversibility.IRREVERSIBLE : Reversibility.SYSTEM_MANAGED
+
+    return execute({
+      type: interactionType,
+      label: `${verb.toUpperCase()} ${url}`,
+      reversibility,
+      suppressSuccessToast: true,
+      suppressErrorToast: true,
+      blocksNavigation: false,
+      intent: {
+        method: verb,
+        url,
+      },
+      action: async () => {
+        setBusy(true)
+        setLastResponse({
+          pending: true,
+          method: verb,
+          url,
+          timestamp: new Date().toISOString(),
+        })
+        try {
+          const response = await api.request({
+            method: verb,
+            url,
+            data,
+            headers: {
+              ...authHeaders,
+              ...headers,
+            },
+          })
+          const payload = response.data
+          setLastResponse({
+            method: verb,
+            url,
+            status: response.status,
+            data: payload,
+            timestamp: new Date().toISOString(),
+          })
+          if (onSuccess) onSuccess(payload)
+          toast.show(`Success: ${verb.toUpperCase()} ${url}`, 'success')
+          return payload
+        } catch (error) {
+          const status = error.response?.status
+          const payload = error.response?.data || { message: error.userMessage || error.message }
+          setLastResponse({
+            method: verb,
+            url,
+            status,
+            error: payload,
+            timestamp: new Date().toISOString(),
+          })
+          toast.show(`Failed: ${verb.toUpperCase()} ${url}`, 'error')
+          throw error
+        } finally {
+          setBusy(false)
+        }
+      },
     })
-    try {
-      const response = await api.request({
-        method: verb,
-        url,
-        data,
-        headers: {
-          ...authHeaders,
-          ...headers,
-        },
-      })
-      const payload = response.data
-      setLastResponse({
-        method: verb,
-        url,
-        status: response.status,
-        data: payload,
-        timestamp: new Date().toISOString(),
-      })
-      if (onSuccess) onSuccess(payload)
-      toast.show(`Success: ${verb.toUpperCase()} ${url}`, 'success')
-      return payload
-    } catch (error) {
-      const status = error.response?.status
-      const payload = error.response?.data || { message: error.userMessage || error.message }
-      setLastResponse({
-        method: verb,
-        url,
-        status,
-        error: payload,
-        timestamp: new Date().toISOString(),
-      })
-      toast.show(`Failed: ${verb.toUpperCase()} ${url}`, 'error')
-      return null
-    } finally {
-      setBusy(false)
-    }
   }
 
   const responseBody = useMemo(() => {

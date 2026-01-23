@@ -39,6 +39,7 @@ import AddIcon from '@mui/icons-material/Add'
 import { DataTable } from '../../ui/DataTable'
 import { ConfirmModal } from '../../ui/Modal'
 import { useToast } from '../../components/ToastProvider'
+import { useInteraction, InteractionType, Reversibility } from '../../components/ux/governance'
 import { useAppStore } from '../../store/useAppStore'
 import * as api from '../../api/client'
 
@@ -279,6 +280,7 @@ export default function HistoryPage() {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const toast = useToast()
+  const { execute } = useInteraction()
   const templates = useAppStore((s) => s.templates)
   const didLoadRef = useRef(false)
   const bulkDeleteUndoRef = useRef(null)
@@ -394,28 +396,43 @@ export default function HistoryPage() {
     let undone = false
     const timeoutId = setTimeout(async () => {
       if (undone) return
-      setBulkDeleting(true)
-      try {
-        const result = await api.bulkDeleteJobs(idsToDelete)
-        const deletedCount = result?.deletedCount ?? result?.deleted?.length ?? 0
-        const failedCount = result?.failedCount ?? result?.failed?.length ?? 0
-        if (failedCount > 0) {
-          toast.show(
-            `Removed ${deletedCount} record${deletedCount !== 1 ? 's' : ''}, ${failedCount} failed`,
-            'warning'
-          )
-        } else {
-          toast.show(`Removed ${deletedCount} history record${deletedCount !== 1 ? 's' : ''}`, 'success')
-        }
-        fetchHistory()
-      } catch (err) {
-        setHistory(prevHistory)
-        setTotal(prevTotal)
-        toast.show(err.message || 'Failed to delete history records', 'error')
-      } finally {
-        setBulkDeleting(false)
-        bulkDeleteUndoRef.current = null
-      }
+      await execute({
+        type: InteractionType.DELETE,
+        label: 'Delete history records',
+        reversibility: Reversibility.SYSTEM_MANAGED,
+        suppressSuccessToast: true,
+        suppressErrorToast: true,
+        intent: {
+          jobIds: idsToDelete,
+          action: 'bulk_delete_history',
+        },
+        action: async () => {
+          setBulkDeleting(true)
+          try {
+            const result = await api.bulkDeleteJobs(idsToDelete)
+            const deletedCount = result?.deletedCount ?? result?.deleted?.length ?? 0
+            const failedCount = result?.failedCount ?? result?.failed?.length ?? 0
+            if (failedCount > 0) {
+              toast.show(
+                `Removed ${deletedCount} record${deletedCount !== 1 ? 's' : ''}, ${failedCount} failed`,
+                'warning'
+              )
+            } else {
+              toast.show(`Removed ${deletedCount} history record${deletedCount !== 1 ? 's' : ''}`, 'success')
+            }
+            fetchHistory()
+            return result
+          } catch (err) {
+            setHistory(prevHistory)
+            setTotal(prevTotal)
+            toast.show(err.message || 'Failed to delete history records', 'error')
+            throw err
+          } finally {
+            setBulkDeleting(false)
+            bulkDeleteUndoRef.current = null
+          }
+        },
+      })
     }, 5000)
 
     bulkDeleteUndoRef.current = { timeoutId, ids: idsToDelete, records: removedRecords }
@@ -432,7 +449,7 @@ export default function HistoryPage() {
       },
       { severity: 'info' }
     )
-  }, [selectedIds, history, total, toast, fetchHistory])
+  }, [selectedIds, history, total, toast, fetchHistory, execute])
 
   const bulkActions = [
     {

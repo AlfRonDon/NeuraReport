@@ -164,6 +164,14 @@ export default function OfflineBanner() {
   const [isRetrying, setIsRetrying] = useState(false)
   const [showReconnected, setShowReconnected] = useState(false)
   const wasOfflineRef = useRef(false)
+  const reconnectTimeoutRef = useRef(null)
+
+  const clearReconnectTimer = useCallback(() => {
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current)
+      reconnectTimeoutRef.current = null
+    }
+  }, [])
 
   // Track when we go offline and show reconnected message when back online
   useEffect(() => {
@@ -171,11 +179,14 @@ export default function OfflineBanner() {
       wasOfflineRef.current = true
     } else if (wasOfflineRef.current) {
       setShowReconnected(true)
-      const timeoutId = setTimeout(() => setShowReconnected(false), 3000)
+      clearReconnectTimer()
+      reconnectTimeoutRef.current = setTimeout(() => setShowReconnected(false), 3000)
       wasOfflineRef.current = false
-      return () => clearTimeout(timeoutId)
     }
-  }, [isOnline])
+    return () => clearReconnectTimer()
+  }, [isOnline, clearReconnectTimer])
+
+  useEffect(() => () => clearReconnectTimer(), [clearReconnectTimer])
 
   const handleRetry = useCallback(async () => {
     setIsRetrying(true)
@@ -183,12 +194,13 @@ export default function OfflineBanner() {
       const online = await checkConnectivity()
       if (online) {
         setShowReconnected(true)
-        setTimeout(() => setShowReconnected(false), 3000)
+        clearReconnectTimer()
+        reconnectTimeoutRef.current = setTimeout(() => setShowReconnected(false), 3000)
       }
     } finally {
       setIsRetrying(false)
     }
-  }, [checkConnectivity])
+  }, [checkConnectivity, clearReconnectTimer])
 
   // Reconnected banner
   if (showReconnected && isOnline) {

@@ -7,6 +7,7 @@ import { IconButton, Tooltip, CircularProgress, useTheme, alpha } from '@mui/mat
 import StarIcon from '@mui/icons-material/Star'
 import StarBorderIcon from '@mui/icons-material/StarBorder'
 import * as api from '../api/client'
+import { useInteraction, InteractionType, Reversibility } from './ux/governance'
 
 /**
  * A reusable favorite toggle button.
@@ -25,6 +26,7 @@ export default function FavoriteButton({
   size = 'small',
 }) {
   const theme = useTheme()
+  const { execute } = useInteraction()
   const [isFavorite, setIsFavorite] = useState(initialFavorite ?? false)
   const [loading, setLoading] = useState(false)
   const [checked, setChecked] = useState(initialFavorite !== undefined)
@@ -68,19 +70,37 @@ export default function FavoriteButton({
     setIsFavorite(nextFavorite)
 
     try {
-      if (nextFavorite) {
-        await api.addFavorite(entityType, entityId)
-      } else {
-        await api.removeFavorite(entityType, entityId)
-      }
-      onToggle?.(nextFavorite)
-    } catch {
-      // Revert on error
-      setIsFavorite(!nextFavorite)
+      await execute({
+        type: nextFavorite ? InteractionType.CREATE : InteractionType.DELETE,
+        label: nextFavorite ? 'Add favorite' : 'Remove favorite',
+        reversibility: Reversibility.FULLY_REVERSIBLE,
+        suppressSuccessToast: true,
+        suppressErrorToast: true,
+        blocksNavigation: false,
+        intent: {
+          entityType,
+          entityId,
+          action: nextFavorite ? 'favorite_add' : 'favorite_remove',
+        },
+        action: async () => {
+          try {
+            if (nextFavorite) {
+              await api.addFavorite(entityType, entityId)
+            } else {
+              await api.removeFavorite(entityType, entityId)
+            }
+            onToggle?.(nextFavorite)
+          } catch (err) {
+            // Revert on error
+            setIsFavorite(!nextFavorite)
+            throw err
+          }
+        },
+      })
     } finally {
       setLoading(false)
     }
-  }, [entityType, entityId, isFavorite, loading, onToggle])
+  }, [entityType, entityId, isFavorite, loading, onToggle, execute])
 
   const iconSize = size === 'small' ? 18 : 22
 

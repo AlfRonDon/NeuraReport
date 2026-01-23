@@ -310,8 +310,10 @@ export const buildResampleComputation = (
         } else if (aggregation === 'min') {
           value = min
         }
-        const start = Number(bucket?.start) ?? idx
-        const end = Number(bucket?.end) ?? idx + 1
+        const startRaw = Number(bucket?.start)
+        const endRaw = Number(bucket?.end)
+        const start = Number.isFinite(startRaw) ? startRaw : idx
+        const end = Number.isFinite(endRaw) ? endRaw : idx + 1
         return {
           key: `bin:${idx}`,
           label: `${start} - ${end}`,

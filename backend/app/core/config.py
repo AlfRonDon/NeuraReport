@@ -106,7 +106,7 @@ class Settings(BaseSettings):
 
     # UX Governance configuration
     # Set to True when frontend is fully compliant with governance headers
-    ux_governance_strict: bool = Field(default=False, env="NEURA_UX_GOVERNANCE_STRICT")
+    ux_governance_strict: bool = Field(default=True, env="NEURA_UX_GOVERNANCE_STRICT")
 
     @property
     def uploads_root(self) -> Path:
