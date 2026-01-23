@@ -14,14 +14,14 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Iterator, List, Optional, Sequence
 
-from backend.app.services.dataframes import (
+from .dataframes import (
     SQLiteDataFrameLoader,
     DuckDBDataFrameQuery,
     sqlite_shim,
     get_dataframe_store,
     ensure_connection_loaded,
 )
-from backend.app.services.dataframes.sqlite_loader import eager_load_enabled
+from .dataframes.sqlite_loader import eager_load_enabled
 from backend.engine.domain.connections import ConnectionTest, SchemaInfo, TableInfo
 from .base import DataSource, QueryResult, SchemaDiscovery
 
@@ -51,7 +51,7 @@ class DataFrameConnectionPool:
         self._active_count = 0
 
         # Pre-load DataFrames for this database
-        from backend.app.services.dataframes.sqlite_loader import get_loader
+        from .dataframes.sqlite_loader import get_loader
         self._loader = get_loader(self._path)
         self._loader.frames()  # Eagerly load all tables
         logger.info(f"Loaded {len(self._loader.table_names())} tables into DataFrames for {self._path}")
@@ -231,7 +231,7 @@ class DataFrameDataSource:
         self._pool: Optional[DataFrameConnectionPool] = None
 
         # Load DataFrames for this database
-        from backend.app.services.dataframes.sqlite_loader import get_loader
+        from .dataframes.sqlite_loader import get_loader
         self._loader = get_loader(self._path)
         if eager_load_enabled():
             self._loader.frames()  # Eagerly load all tables

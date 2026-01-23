@@ -43,14 +43,14 @@ import {
   Brush,
 } from 'recharts'
 
-import Surface from '../../../components/layout/Surface.jsx'
-import InfoTooltip from '../../../components/common/InfoTooltip.jsx'
-import TOOLTIP_COPY from '../../../content/tooltipCopy.jsx'
-import { useAppStore } from '../../../stores'
-import { useTrackedJobs } from '../../../hooks/useJobs'
-import { useToast } from '../../../components/ToastProvider.jsx'
-import { useInteraction, InteractionType, Reversibility } from '../../../components/ux/governance'
-import { confirmDelete } from '../../../utils/confirmDelete'
+import Surface from '@/components/layout/Surface.jsx'
+import InfoTooltip from '@/components/common/InfoTooltip.jsx'
+import TOOLTIP_COPY from '@/content/tooltipCopy.jsx'
+import { useAppStore } from '@/stores'
+import { useTrackedJobs } from '@/hooks/useJobs'
+import { useToast } from '@/components/ToastProvider.jsx'
+import { useInteraction, InteractionType, Reversibility } from '@/components/ux/governance'
+import { confirmDelete } from '@/utils/confirmDelete'
 import SavedChartsPanel from './run/SavedChartsPanel.jsx'
 import {
   clampBrushRange,

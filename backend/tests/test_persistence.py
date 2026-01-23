@@ -37,8 +37,8 @@ sys.modules.setdefault("cryptography.fernet", fernet_module)
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from .. import api  # noqa: E402
-from ..app.services.connections import db_connection as db_conn_module  # noqa: E402
-from ..app.services.state import store as state_store_module  # noqa: E402
+from ..app.repositories.connections import db_connection as db_conn_module  # noqa: E402
+from ..app.repositories.state import store as state_store_module  # noqa: E402
 from backend.legacy.services.report_service import _extract_excel_print_scale_from_html
 
 
@@ -68,9 +68,9 @@ def client(fresh_state):
     return TestClient(api.app)
 
 
-def test_bootstrap_returns_persistent_state(client: TestClient, fresh_state):
-    db_path = Path(client.app.root_path) / "data" / "fixtures" / "dummy.db"
-    db_path.write_text("", encoding="utf-8")
+def test_bootstrap_returns_persistent_state(client: TestClient, fresh_state, tmp_path):
+    db_path = tmp_path / "dummy.db"
+    sqlite3.connect(db_path).close()
     conn = fresh_state.upsert_connection(
         conn_id=None,
         name="sqlite@test.db",

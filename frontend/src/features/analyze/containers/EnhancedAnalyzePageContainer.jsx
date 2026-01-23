@@ -64,8 +64,9 @@ import RocketLaunchIcon from '@mui/icons-material/RocketLaunch'
 import ArticleIcon from '@mui/icons-material/Article'
 
 import ZoomableChart from '../components/ZoomableChart'
-import { useToast } from '../../../components/ToastProvider'
-import AiUsageNotice from '../../../components/ai/AiUsageNotice'
+import { useToast } from '@/components/ToastProvider'
+import { useInteraction, InteractionType, Reversibility } from '@/components/ux/governance'
+import AiUsageNotice from '@/components/ai/AiUsageNotice'
 import {
   uploadAndAnalyzeEnhanced,
   askQuestion,
@@ -692,6 +693,7 @@ export default function EnhancedAnalyzePageContainer() {
   const abortControllerRef = useRef(null)
   const fileInputRef = useRef(null)
   const toast = useToast()
+  const { execute } = useInteraction()
 
   const handleDragOver = useCallback((e) => {
     e.preventDefault()
@@ -723,145 +725,202 @@ export default function EnhancedAnalyzePageContainer() {
     }
   }, [])
 
-  const handleAnalyze = useCallback(async () => {
-    if (!selectedFile) return
+  const handleAnalyze = useCallback(() => {
+    if (!selectedFile) return undefined
 
-    abortControllerRef.current = new AbortController()
+    return execute({
+      type: InteractionType.ANALYZE,
+      label: 'Analyze document',
+      reversibility: Reversibility.FULLY_REVERSIBLE,
+      blocksNavigation: true,
+      suppressSuccessToast: true,
+      intent: { fileName: selectedFile?.name },
+      action: async () => {
+        abortControllerRef.current = new AbortController()
 
-    setIsAnalyzing(true)
-    setAnalysisProgress(0)
-    setProgressStage('Initializing AI analysis...')
-    setError(null)
+        setIsAnalyzing(true)
+        setAnalysisProgress(0)
+        setProgressStage('Initializing AI analysis...')
+        setError(null)
 
-    try {
-      const result = await uploadAndAnalyzeEnhanced({
-        file: selectedFile,
-        preferences,
-        signal: abortControllerRef.current?.signal,
-        onProgress: (event) => {
-          if (event.event === 'stage') {
-            setAnalysisProgress(event.progress || 0)
-            setProgressStage(event.detail || event.stage || 'Processing...')
+        try {
+          const result = await uploadAndAnalyzeEnhanced({
+            file: selectedFile,
+            preferences,
+            signal: abortControllerRef.current?.signal,
+            onProgress: (event) => {
+              if (event.event === 'stage') {
+                setAnalysisProgress(event.progress || 0)
+                setProgressStage(event.detail || event.stage || 'Processing...')
+              }
+            },
+          })
+
+          if (result.event === 'result') {
+            setAnalysisResult(result)
+            setSuggestedQuestions(result.suggested_questions || [])
+            setGeneratedCharts(result.chart_suggestions || [])
+            setActiveTab(0)
+            toast.show('Analysis complete!', 'success')
           }
-        },
-      })
-
-      if (result.event === 'result') {
-        setAnalysisResult(result)
-        setSuggestedQuestions(result.suggested_questions || [])
-        setGeneratedCharts(result.chart_suggestions || [])
-        setActiveTab(0)
-        toast.show('Analysis complete!', 'success')
-      }
-    } catch (err) {
-      if (err.name === 'AbortError') {
-        toast.show('Analysis cancelled', 'info')
-      } else {
-        setError(err.message || 'Analysis failed')
-      }
-    } finally {
-      setIsAnalyzing(false)
-      setAnalysisProgress(100)
-      abortControllerRef.current = null
-    }
-  }, [selectedFile, preferences, toast])
+        } catch (err) {
+          if (err.name === 'AbortError') {
+            toast.show('Analysis cancelled', 'info')
+          } else {
+            setError(err.message || 'Analysis failed')
+          }
+        } finally {
+          setIsAnalyzing(false)
+          setAnalysisProgress(100)
+          abortControllerRef.current = null
+        }
+      },
+    })
+  }, [execute, selectedFile, preferences, toast])
 
   const handleCancelAnalysis = useCallback(() => {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort()
-      setIsAnalyzing(false)
-      setAnalysisProgress(0)
-      setProgressStage('')
-    }
-  }, [])
+    return execute({
+      type: InteractionType.UPDATE,
+      label: 'Cancel analysis',
+      reversibility: Reversibility.FULLY_REVERSIBLE,
+      suppressSuccessToast: true,
+      suppressErrorToast: true,
+      intent: { source: 'enhanced-analyze' },
+      action: () => {
+        if (abortControllerRef.current) {
+          abortControllerRef.current.abort()
+          setIsAnalyzing(false)
+          setAnalysisProgress(0)
+          setProgressStage('')
+        }
+      },
+    })
+  }, [execute])
 
-  const handleAskQuestion = useCallback(async () => {
-    if (!analysisResult?.analysis_id || !question.trim()) return
+  const handleAskQuestion = useCallback(() => {
+    if (!analysisResult?.analysis_id || !question.trim()) return undefined
 
-    setIsAskingQuestion(true)
-    try {
-      const response = await askQuestion(analysisResult.analysis_id, {
-        question: question.trim(),
-        includeSources: true,
-      })
+    return execute({
+      type: InteractionType.ANALYZE,
+      label: 'Ask analysis question',
+      reversibility: Reversibility.FULLY_REVERSIBLE,
+      suppressSuccessToast: true,
+      intent: { analysisId: analysisResult.analysis_id },
+      action: async () => {
+        setIsAskingQuestion(true)
+        try {
+          const response = await askQuestion(analysisResult.analysis_id, {
+            question: question.trim(),
+            includeSources: true,
+          })
 
-      setQaHistory((prev) => [
-        ...prev,
-        {
-          question: question.trim(),
-          answer: response.answer,
-          sources: response.sources,
-          timestamp: new Date(),
-        },
-      ])
-      setQuestion('')
+          setQaHistory((prev) => [
+            ...prev,
+            {
+              question: question.trim(),
+              answer: response.answer,
+              sources: response.sources,
+              timestamp: new Date(),
+            },
+          ])
+          setQuestion('')
 
-      if (response.suggested_followups?.length) {
-        setSuggestedQuestions(response.suggested_followups)
-      }
-    } catch (err) {
-      toast.show(err.message || 'Failed to get answer', 'error')
-    } finally {
-      setIsAskingQuestion(false)
-    }
-  }, [analysisResult?.analysis_id, question, toast])
+          if (response.suggested_followups?.length) {
+            setSuggestedQuestions(response.suggested_followups)
+          }
+        } catch (err) {
+          toast.show(err.message || 'Failed to get answer', 'error')
+        } finally {
+          setIsAskingQuestion(false)
+        }
+      },
+    })
+  }, [analysisResult?.analysis_id, execute, question, toast])
 
-  const handleGenerateCharts = useCallback(async () => {
-    if (!analysisResult?.analysis_id || !chartQuery.trim()) return
+  const handleGenerateCharts = useCallback(() => {
+    if (!analysisResult?.analysis_id || !chartQuery.trim()) return undefined
 
-    setIsGeneratingCharts(true)
-    try {
-      const response = await generateCharts(analysisResult.analysis_id, {
-        query: chartQuery.trim(),
-        includeTrends: true,
-        includeForecasts: false,
-      })
+    return execute({
+      type: InteractionType.GENERATE,
+      label: 'Generate charts',
+      reversibility: Reversibility.FULLY_REVERSIBLE,
+      suppressSuccessToast: true,
+      intent: { analysisId: analysisResult.analysis_id },
+      action: async () => {
+        setIsGeneratingCharts(true)
+        try {
+          const response = await generateCharts(analysisResult.analysis_id, {
+            query: chartQuery.trim(),
+            includeTrends: true,
+            includeForecasts: false,
+          })
 
-      if (response.charts?.length) {
-        setGeneratedCharts((prev) => [...response.charts, ...prev])
-        setChartQuery('')
-        toast.show(`Generated ${response.charts.length} chart(s)`, 'success')
-      }
-    } catch (err) {
-      toast.show(err.message || 'Failed to generate charts', 'error')
-    } finally {
-      setIsGeneratingCharts(false)
-    }
-  }, [analysisResult?.analysis_id, chartQuery, toast])
+          if (response.charts?.length) {
+            setGeneratedCharts((prev) => [...response.charts, ...prev])
+            setChartQuery('')
+            toast.show(`Generated ${response.charts.length} chart(s)`, 'success')
+          }
+        } catch (err) {
+          toast.show(err.message || 'Failed to generate charts', 'error')
+        } finally {
+          setIsGeneratingCharts(false)
+        }
+      },
+    })
+  }, [analysisResult?.analysis_id, chartQuery, execute, toast])
 
-  const handleExport = useCallback(async (format) => {
-    if (!analysisResult?.analysis_id) return
+  const handleExport = useCallback((format) => {
+    if (!analysisResult?.analysis_id) return undefined
 
-    setExportMenuAnchor(null)
-    setIsExporting(true)
+    return execute({
+      type: InteractionType.DOWNLOAD,
+      label: `Export analysis (${format.toUpperCase()})`,
+      reversibility: Reversibility.FULLY_REVERSIBLE,
+      suppressSuccessToast: true,
+      intent: { analysisId: analysisResult.analysis_id, format },
+      action: async () => {
+        setExportMenuAnchor(null)
+        setIsExporting(true)
 
-    try {
-      const blob = await exportAnalysis(analysisResult.analysis_id, { format })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `analysis_${analysisResult.analysis_id}.${format}`
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      URL.revokeObjectURL(url)
-      toast.show(`Exported as ${format.toUpperCase()}`, 'success')
-    } catch (err) {
-      toast.show(err.message || 'Export failed', 'error')
-    } finally {
-      setIsExporting(false)
-    }
-  }, [analysisResult?.analysis_id, toast])
+        try {
+          const blob = await exportAnalysis(analysisResult.analysis_id, { format })
+          const url = URL.createObjectURL(blob)
+          const a = document.createElement('a')
+          a.href = url
+          a.download = `analysis_${analysisResult.analysis_id}.${format}`
+          document.body.appendChild(a)
+          a.click()
+          document.body.removeChild(a)
+          URL.revokeObjectURL(url)
+          toast.show(`Exported as ${format.toUpperCase()}`, 'success')
+        } catch (err) {
+          toast.show(err.message || 'Export failed', 'error')
+        } finally {
+          setIsExporting(false)
+        }
+      },
+    })
+  }, [analysisResult?.analysis_id, execute, toast])
 
   const handleReset = useCallback(() => {
-    setSelectedFile(null)
-    setAnalysisResult(null)
-    setError(null)
-    setSuggestedQuestions([])
-    setQaHistory([])
-    setGeneratedCharts([])
-    setActiveTab(0)
-  }, [])
+    return execute({
+      type: InteractionType.UPDATE,
+      label: 'Reset analysis',
+      reversibility: Reversibility.FULLY_REVERSIBLE,
+      suppressSuccessToast: true,
+      suppressErrorToast: true,
+      intent: { source: 'enhanced-analyze' },
+      action: () => {
+        setSelectedFile(null)
+        setAnalysisResult(null)
+        setError(null)
+        setSuggestedQuestions([])
+        setQaHistory([])
+        setGeneratedCharts([])
+        setActiveTab(0)
+      },
+    })
+  }, [execute])
 
   // Stats
   const stats = useMemo(() => {

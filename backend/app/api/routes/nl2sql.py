@@ -5,13 +5,13 @@ from typing import List, Optional
 
 from fastapi import APIRouter, Depends, Query, Request
 
-from backend.app.core.security import require_api_key
-from backend.app.domain.nl2sql.schemas import (
+from backend.app.services.security import require_api_key
+from backend.app.schemas.nl2sql import (
     NL2SQLGenerateRequest,
     NL2SQLExecuteRequest,
     NL2SQLSaveRequest,
 )
-from backend.app.domain.nl2sql.service import NL2SQLService
+from backend.app.services.nl2sql.service import NL2SQLService
 
 router = APIRouter(dependencies=[Depends(require_api_key)])
 

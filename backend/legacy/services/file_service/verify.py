@@ -32,7 +32,7 @@ from backend.app.services.utils import (
     write_json_atomic,
 )
 from backend.app.services.utils.artifacts import load_manifest
-from backend.app.services.state import state_store
+from backend.app.repositories.state import state_store
 from backend.legacy.schemas.template_schema import GeneratorAssetsPayload
 from backend.legacy.utils.template_utils import artifact_url, manifest_endpoint, template_dir
 

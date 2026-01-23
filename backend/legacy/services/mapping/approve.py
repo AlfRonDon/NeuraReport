@@ -10,11 +10,11 @@ from typing import Any
 from fastapi import HTTPException, Request
 from fastapi.responses import StreamingResponse
 
-from backend.app.services.connections.db_connection import verify_sqlite
+from backend.app.repositories.connections.db_connection import verify_sqlite
 from backend.app.services.contract.ContractBuilderV2 import ContractBuilderError, build_or_load_contract_v2
 from backend.app.services.generator.GeneratorAssetsV1 import GeneratorAssetsError, build_generator_assets_from_payload
 from backend.app.services.prompts.llm_prompts import PROMPT_VERSION, PROMPT_VERSION_3_5, PROMPT_VERSION_4
-from backend.app.services.state import state_store
+from backend.app.repositories.state import state_store
 from backend.app.services.templates.TemplateVerify import render_html_to_png, render_panel_preview
 from backend.app.services.utils import (
     TemplateLockError,

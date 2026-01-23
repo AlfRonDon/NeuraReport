@@ -10,7 +10,7 @@ import asyncio
 import contextlib
 import json
 import re
-from ..dataframes import sqlite_shim as sqlite3
+from backend.app.repositories.dataframes import sqlite_shim as sqlite3
 from collections import defaultdict
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
@@ -51,7 +51,7 @@ except ImportError:  # pragma: no cover
 from .contract_adapter import ContractAdapter, format_decimal_str
 from .date_utils import get_col_type, mk_between_pred_for_date
 from .discovery_excel import discover_batches_and_counts as discover_batches_excel
-from ..dataframes import DuckDBDataFrameQuery, SQLiteDataFrameLoader
+from backend.app.repositories.dataframes import DuckDBDataFrameQuery, SQLiteDataFrameLoader
 from .common_helpers import (
     _format_for_token,
     _has_time_component,

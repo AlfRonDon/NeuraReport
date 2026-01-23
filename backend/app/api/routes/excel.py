@@ -18,15 +18,15 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile
 
-from backend.app.core.security import require_api_key
-from backend.app.features.generate.schemas.charts import (
+from backend.app.services.security import require_api_key
+from backend.app.schemas.generate.charts import (
     ChartSuggestPayload,
     SavedChartCreatePayload,
     SavedChartUpdatePayload,
 )
-from backend.app.features.generate.schemas.reports import RunPayload, DiscoverPayload
-from backend.app.features.generate.services.chart_suggestions_service import suggest_charts as suggest_charts_service
-from backend.app.features.generate.services.saved_charts_service import (
+from backend.app.schemas.generate.reports import RunPayload, DiscoverPayload
+from backend.app.services.generate.chart_suggestions_service import suggest_charts as suggest_charts_service
+from backend.app.services.generate.saved_charts_service import (
     create_saved_chart as create_saved_chart_service,
     delete_saved_chart as delete_saved_chart_service,
     list_saved_charts as list_saved_charts_service,
@@ -47,7 +47,7 @@ from backend.app.services.reports.discovery_metrics import (
     build_batch_field_catalog_and_stats,
     build_batch_metrics,
 )
-from backend.app.services.state import state_store
+from backend.app.services.state_access import state_store
 from backend.app.services.templates.TemplateVerify import get_openai_client
 from backend.app.services.utils import call_chat_completion, get_correlation_id, strip_code_fences
 
@@ -332,7 +332,7 @@ async def enqueue_report_job_excel(payload: RunPayload | list[RunPayload], reque
 @router.post("/reports/discover")
 def discover_reports_excel(payload: DiscoverPayload, request: Request):
     """Discover available batches for Excel report generation."""
-    from backend.app.features.generate.services.discovery_service import discover_reports as discover_reports_service
+    from backend.app.services.generate.discovery_service import discover_reports as discover_reports_service
     from backend.app.services.utils.artifacts import load_manifest
     from backend.legacy.utils.template_utils import manifest_endpoint
 

@@ -5,11 +5,11 @@ from typing import List, Optional
 from pydantic import BaseModel, Field
 from fastapi import APIRouter, Depends, Query, Request
 
-from backend.app.core.security import require_api_key
-from backend.app.domain.recommendations.service import RecommendationService
-from backend.app.services.state import store as state_store_module
+from backend.app.services.security import require_api_key
+from backend.app.services.recommendations.service import RecommendationService
+from backend.app.services.state_access import store as state_store_module
 from backend.app.services.background_tasks import enqueue_background_job
-from backend.app.services.state import state_store
+from backend.app.services.state_access import state_store
 
 router = APIRouter(dependencies=[Depends(require_api_key)])
 

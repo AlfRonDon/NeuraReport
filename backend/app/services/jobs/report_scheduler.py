@@ -13,9 +13,9 @@ from apscheduler.executors.asyncio import AsyncIOExecutor
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 
-from ..state import state_store
-from backend.legacy.services.report_service import JobRunTracker, _build_job_steps, _step_progress_from_steps
-from backend.app.features.generate.schemas.reports import RunPayload
+from backend.app.repositories.state import state_store
+from backend.app.services.jobs.job_tracking import JobRunTracker, _build_job_steps, _step_progress_from_steps
+from backend.app.schemas.generate.reports import RunPayload
 
 logger = logging.getLogger("neura.scheduler")
 _MISFIRE_GRACE_SECONDS_RAW = os.getenv("NEURA_SCHEDULER_MISFIRE_GRACE_SECONDS", "3600")

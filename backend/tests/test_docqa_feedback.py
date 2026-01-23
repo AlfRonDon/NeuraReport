@@ -3,7 +3,7 @@ import pytest
 from unittest.mock import patch, MagicMock
 from datetime import datetime
 
-from backend.app.domain.docqa.schemas import (
+from backend.app.schemas.docqa import (
     AskRequest,
     AskResponse,
     ChatMessage,
@@ -16,7 +16,7 @@ from backend.app.domain.docqa.schemas import (
     MessageRole,
     RegenerateRequest,
 )
-from backend.app.domain.docqa.service import DocumentQAService
+from backend.app.services.docqa.service import DocumentQAService
 
 
 class TestFeedbackSchemas:
@@ -140,7 +140,7 @@ class TestDocQAServiceFeedback:
 
     def test_submit_feedback_helpful(self, mock_state_store, sample_session):
         """Test submitting helpful feedback."""
-        with patch("backend.app.domain.docqa.service._state_store", return_value=mock_state_store):
+        with patch("backend.app.services.docqa.service._state_store", return_value=mock_state_store):
             mock_state_store._read_state.return_value = {
                 "docqa_sessions": {"session-123": sample_session}
             }
@@ -156,7 +156,7 @@ class TestDocQAServiceFeedback:
 
     def test_submit_feedback_not_helpful(self, mock_state_store, sample_session):
         """Test submitting not helpful feedback."""
-        with patch("backend.app.domain.docqa.service._state_store", return_value=mock_state_store):
+        with patch("backend.app.services.docqa.service._state_store", return_value=mock_state_store):
             mock_state_store._read_state.return_value = {
                 "docqa_sessions": {"session-123": sample_session}
             }
@@ -176,7 +176,7 @@ class TestDocQAServiceFeedback:
 
     def test_submit_feedback_session_not_found(self, mock_state_store):
         """Test submitting feedback for non-existent session."""
-        with patch("backend.app.domain.docqa.service._state_store", return_value=mock_state_store):
+        with patch("backend.app.services.docqa.service._state_store", return_value=mock_state_store):
             mock_state_store._read_state.return_value = {"docqa_sessions": {}}
 
             service = DocumentQAService()
@@ -188,7 +188,7 @@ class TestDocQAServiceFeedback:
 
     def test_submit_feedback_message_not_found(self, mock_state_store, sample_session):
         """Test submitting feedback for non-existent message."""
-        with patch("backend.app.domain.docqa.service._state_store", return_value=mock_state_store):
+        with patch("backend.app.services.docqa.service._state_store", return_value=mock_state_store):
             mock_state_store._read_state.return_value = {
                 "docqa_sessions": {"session-123": sample_session}
             }
@@ -256,7 +256,7 @@ class TestDocQAServiceRegenerate:
 
     def test_regenerate_session_not_found(self, mock_state_store):
         """Test regenerating response for non-existent session."""
-        with patch("backend.app.domain.docqa.service._state_store", return_value=mock_state_store):
+        with patch("backend.app.services.docqa.service._state_store", return_value=mock_state_store):
             mock_state_store._read_state.return_value = {"docqa_sessions": {}}
 
             service = DocumentQAService()
@@ -268,7 +268,7 @@ class TestDocQAServiceRegenerate:
 
     def test_regenerate_message_not_found(self, mock_state_store, sample_session_with_docs):
         """Test regenerating response for non-existent message."""
-        with patch("backend.app.domain.docqa.service._state_store", return_value=mock_state_store):
+        with patch("backend.app.services.docqa.service._state_store", return_value=mock_state_store):
             mock_state_store._read_state.return_value = {
                 "docqa_sessions": {"session-456": sample_session_with_docs}
             }
@@ -293,7 +293,7 @@ class TestDocQAServiceRegenerate:
             "usage": {"total_tokens": 100},
         }
 
-        with patch("backend.app.domain.docqa.service._state_store", return_value=mock_state_store):
+        with patch("backend.app.services.docqa.service._state_store", return_value=mock_state_store):
             mock_state_store._read_state.return_value = {
                 "docqa_sessions": {"session-456": sample_session_with_docs}
             }

@@ -68,7 +68,7 @@ class TestSQLiteConnectionPool:
     def test_pool_acquire_and_release(self, tmp_path):
         """Connections should be acquired and released properly."""
         from backend.engine.adapters.databases.sqlite import SQLiteConnectionPool
-        from backend.app.services.dataframes import sqlite_shim
+        from backend.app.repositories.dataframes import sqlite_shim
 
         db_path = tmp_path / "test.db"
         import sqlite3

@@ -9,7 +9,7 @@
  * - Collaboration features
  */
 
-import { API_BASE, fetchWithIntent, handleStreamingResponse } from '../../../api/client'
+import { API_BASE, fetchWithIntent, handleStreamingResponse } from '@/api/client'
 
 const API_V2 = `${API_BASE}/analyze/v2`
 

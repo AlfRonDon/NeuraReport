@@ -5,9 +5,9 @@ from typing import List, Optional
 from pydantic import BaseModel, Field
 from fastapi import APIRouter, Depends, Request, HTTPException
 
-from backend.app.core.security import require_api_key
-from backend.app.domain.synthesis.service import DocumentSynthesisService
-from backend.app.domain.synthesis.schemas import DocumentType, SynthesisRequest
+from backend.app.services.security import require_api_key
+from backend.app.services.synthesis.service import DocumentSynthesisService
+from backend.app.schemas.synthesis import DocumentType, SynthesisRequest
 
 router = APIRouter(dependencies=[Depends(require_api_key)])
 

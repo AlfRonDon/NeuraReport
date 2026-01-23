@@ -36,8 +36,8 @@ sys.modules.setdefault("cryptography.fernet", fernet_module)
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from .. import api  # noqa: E402
-from ..app.services.connections import db_connection as db_conn_module  # noqa: E402
-from ..app.services.state import store as state_store_module  # noqa: E402
+from ..app.repositories.connections import db_connection as db_conn_module  # noqa: E402
+from ..app.repositories.state import store as state_store_module  # noqa: E402
 
 
 @pytest.fixture

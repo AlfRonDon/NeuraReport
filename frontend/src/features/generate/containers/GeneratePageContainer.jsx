@@ -2,11 +2,12 @@ import Grid from '@mui/material/Grid2'
 import { Box, Typography, Stack, Chip, Alert, Button } from '@mui/material'
 import PlayArrowIcon from '@mui/icons-material/PlayArrow'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { useLocation } from 'react-router-dom'
+import { useNavigateInteraction } from '@/components/ux/governance'
 import { useQueryClient } from '@tanstack/react-query'
 
-import { useAppStore } from '../../../stores'
-import { useToast } from '../../../components/ToastProvider.jsx'
+import { useAppStore } from '@/stores'
+import { useToast } from '@/components/ToastProvider.jsx'
 import TemplatePicker from '../components/TemplatePicker.jsx'
 import GenerateAndDownload from '../components/GenerateAndDownload.jsx'
 import {
@@ -25,7 +26,12 @@ export default function GeneratePage() {
   const queryClient = useQueryClient()
   const toast = useToast()
   const location = useLocation()
-  const navigate = useNavigate()
+  const navigate = useNavigateInteraction()
+  const handleNavigate = useCallback(
+    (path, label, intent = {}, navigateOptions) =>
+      navigate(path, { label, intent: { from: 'generate', ...intent }, navigateOptions }),
+    [navigate]
+  )
   const approved = useMemo(() => templates.filter((t) => t.status === 'approved'), [templates])
   const [selected, setSelected] = useState([])
   const [pendingFocusTemplate, setPendingFocusTemplate] = useState(location.state?.focusTemplateId || null)
@@ -61,10 +67,12 @@ export default function GeneratePage() {
     setPendingFocusTemplate(focusTemplateIdFromLocation)
     const nextState = { ...(locationState || {}) }
     delete nextState.focusTemplateId
-    navigate(location.pathname + location.search, {
-      replace: true,
-      state: Object.keys(nextState).length ? nextState : null,
-    })
+    handleNavigate(
+      location.pathname + location.search,
+      'Sync generate route',
+      { reason: 'focus-template' },
+      { replace: true, state: Object.keys(nextState).length ? nextState : null }
+    )
   }, [focusTemplateIdFromLocation, location.pathname, location.search, locationState, navigate])
 
   useEffect(() => {
@@ -617,7 +625,7 @@ export default function GeneratePage() {
           <Alert
             severity="warning"
             action={
-              <Button color="inherit" size="small" onClick={() => navigate('/')}>
+              <Button color="inherit" size="small" onClick={() => handleNavigate('/', 'Open dashboard')}>
                 Go to Setup
               </Button>
             }
@@ -638,7 +646,12 @@ export default function GeneratePage() {
               setTagFilter={setTagFilter}
               onEditTemplate={(tpl) => {
                 if (!tpl?.id) return
-                navigate(`/templates/${tpl.id}/edit`, { state: { from: '/generate' } })
+                handleNavigate(
+                  `/templates/${tpl.id}/edit`,
+                  'Edit template',
+                  { templateId: tpl.id },
+                  { state: { from: '/generate' } }
+                )
               }}
             />
           </Grid>

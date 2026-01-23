@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional, Sequence
 
-from ..state import state_store
+from backend.app.repositories.state import state_store
 from .starter_catalog import STARTER_TEMPLATES
 
 

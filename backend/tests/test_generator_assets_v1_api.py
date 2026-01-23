@@ -21,7 +21,7 @@ def _write_png(path: Path) -> None:
 os.environ.setdefault("NEURA_ALLOW_MISSING_OPENAI", "true")
 
 from backend import api  # noqa: E402
-from backend.app.services.state import StateStore  # noqa: E402
+from backend.app.repositories.state import StateStore  # noqa: E402
 from backend.app.services.utils import (  # noqa: E402
     write_artifact_manifest,
     write_json_atomic,
@@ -38,8 +38,8 @@ def client(tmp_path, monkeypatch):
     state_dir.mkdir(parents=True, exist_ok=True)
     test_state_store = StateStore(state_dir)
     monkeypatch.setattr(api, "state_store", test_state_store)
-    monkeypatch.setattr("backend.app.services.state.state_store", test_state_store)
-    monkeypatch.setattr("backend.app.services.state.store.state_store", test_state_store)
+    monkeypatch.setattr("backend.app.repositories.state.state_store", test_state_store)
+    monkeypatch.setattr("backend.app.repositories.state.store.state_store", test_state_store)
     return TestClient(api.app)
 
 

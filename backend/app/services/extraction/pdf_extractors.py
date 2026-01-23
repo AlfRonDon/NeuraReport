@@ -37,7 +37,7 @@ from dataclasses import asdict, dataclass, field, replace
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
-from backend.app.core.config import get_settings
+from backend.app.services.config import get_settings
 
 logger = logging.getLogger("neura.extraction.pdf")
 

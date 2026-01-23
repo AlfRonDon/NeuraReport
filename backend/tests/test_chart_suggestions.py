@@ -5,8 +5,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from backend.app.features.generate.schemas.charts import ChartSuggestPayload
-from backend.app.features.generate.services import chart_suggestions_service as svc
+from backend.app.schemas.generate.charts import ChartSuggestPayload
+from backend.app.services.generate import chart_suggestions_service as svc
 from backend.app.services.reports.discovery_metrics import build_batch_field_catalog_and_stats
 
 

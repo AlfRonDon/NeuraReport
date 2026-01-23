@@ -3,7 +3,7 @@ import pytest
 from unittest.mock import MagicMock, patch
 from datetime import datetime, timezone, timedelta
 
-from backend.app.domain.enrichment.cache import EnrichmentCache, _compute_cache_key
+from backend.app.services.enrichment.cache import EnrichmentCache, _compute_cache_key
 
 
 class TestCacheHitMissTracking:

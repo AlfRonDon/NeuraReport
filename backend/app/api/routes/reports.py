@@ -11,8 +11,8 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 
-from backend.app.core.security import require_api_key
-from backend.app.features.generate.schemas.reports import RunPayload, DiscoverPayload
+from backend.app.services.security import require_api_key
+from backend.app.schemas.generate.reports import RunPayload, DiscoverPayload
 from backend.legacy.services.report_service import (
     queue_report_job,
     run_report as run_report_service,
@@ -50,7 +50,7 @@ async def enqueue_report_job(payload: RunPayload | list[RunPayload], request: Re
 @router.post("/discover")
 def discover_reports(payload: DiscoverPayload, request: Request):
     """Discover available batches for report generation."""
-    from backend.app.features.generate.services.discovery_service import discover_reports as discover_reports_service
+    from backend.app.services.generate.discovery_service import discover_reports as discover_reports_service
     from backend.legacy.utils.template_utils import template_dir
     from backend.legacy.utils.connection_utils import db_path_from_payload_or_default
     from backend.app.services.contract.ContractBuilderV2 import load_contract_v2

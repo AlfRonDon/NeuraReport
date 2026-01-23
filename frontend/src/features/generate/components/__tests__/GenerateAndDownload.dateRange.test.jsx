@@ -4,13 +4,13 @@ import { ThemeProvider } from '@mui/material/styles'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 import GenerateAndDownload from '../GenerateAndDownload.jsx'
-import theme from '../../../../theme.js'
+import theme from '@/theme.js'
 
-vi.mock('../../../../hooks/useJobs', () => ({
+vi.mock('@/hooks/useJobs', () => ({
   useTrackedJobs: () => ({ jobsById: {} }),
 }))
 
-vi.mock('../../../../hooks/useSavedCharts', () => ({
+vi.mock('@/features/generate/hooks/useSavedCharts', () => ({
   useSavedCharts: () => ({
     savedCharts: [],
     savedChartsLoading: false,
@@ -22,7 +22,7 @@ vi.mock('../../../../hooks/useSavedCharts', () => ({
   }),
 }))
 
-vi.mock('../../../../stores', () => ({
+vi.mock('@/stores', () => ({
   useAppStore: (selector = (state) => state) => selector({ downloads: [] }),
 }))
 

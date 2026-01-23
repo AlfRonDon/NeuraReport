@@ -24,15 +24,21 @@ def load_manifest(template_id: str, uploads_root: Path) -> dict:
         raise ArtifactStatsError(f"failed to parse manifest: {exc}") from exc
 
 
-def check_thresholds(manifest: dict, warn_bytes: int, warn_render_ms: int, uploads_root: Path) -> list[str]:
+def check_thresholds(manifest: dict, warn_bytes: int, warn_render_ms: int, template_dir: Path) -> list[str]:
     issues: list[str] = []
     files = manifest.get("files") or {}
     for name, rel in files.items():
         try:
-            path = (uploads_root / rel).resolve()
+            path = (template_dir / rel).resolve()
         except Exception:
             path = None
-        if not path or not path.exists():
+        if not path:
+            continue
+        template_root = template_dir.resolve()
+        if template_root not in path.parents and path != template_root:
+            issues.append(f"{name} path escapes template_dir: {rel}")
+            continue
+        if not path.exists():
             continue
         size = path.stat().st_size
         if size > warn_bytes:
@@ -71,7 +77,8 @@ def main(argv: list[str] | None = None) -> int:
         print(str(exc), file=sys.stderr)
         return 2
 
-    issues = check_thresholds(manifest, args.warn_bytes, args.warn_render_ms, uploads_root)
+    template_dir = (uploads_root / args.template_id).resolve()
+    issues = check_thresholds(manifest, args.warn_bytes, args.warn_render_ms, template_dir)
 
     print(
         json.dumps(

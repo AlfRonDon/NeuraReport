@@ -7,8 +7,8 @@ from typing import Optional
 
 from fastapi import HTTPException
 
-from backend.app.services.connections.db_connection import resolve_db_path
-from backend.app.services.state import store as state_store_module
+from backend.app.repositories.connections.db_connection import resolve_db_path
+from backend.app.repositories.state import store as state_store_module
 
 
 def _http_error(status_code: int, code: str, message: str) -> HTTPException:

@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import json
+import uuid
 from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
 
 from backend import api
-from backend.app.services.state import StateStore
+from backend.app.repositories.state import StateStore
 
 
 def _write_final_html(root: Path, template_id: str, html: str) -> Path:
@@ -20,6 +21,13 @@ def _write_final_html(root: Path, template_id: str, html: str) -> Path:
 def _register_template(store: StateStore, template_id: str) -> None:
     store.upsert_template(template_id, name=f"Template {template_id}", status="approved")
 
+
+def _intent_headers(intent_type: str = "update") -> dict[str, str]:
+    return {
+        "X-Intent-Id": uuid.uuid4().hex,
+        "X-Intent-Type": intent_type,
+        "Idempotency-Key": uuid.uuid4().hex,
+    }
 
 @pytest.fixture
 def edit_env(tmp_path, monkeypatch):
@@ -34,14 +42,14 @@ def edit_env(tmp_path, monkeypatch):
     monkeypatch.setattr(api, "EXCEL_UPLOAD_ROOT_BASE", excel_root.resolve())
     monkeypatch.setitem(api._UPLOAD_KIND_BASES, "pdf", (uploads_root.resolve(), "/uploads"))
     monkeypatch.setitem(api._UPLOAD_KIND_BASES, "excel", (excel_root.resolve(), "/excel-uploads"))
-    monkeypatch.setattr("src.core.config.UPLOAD_ROOT", uploads_root)
-    monkeypatch.setattr("src.core.config.EXCEL_UPLOAD_ROOT", excel_root)
+    monkeypatch.setattr("backend.legacy.core.config.UPLOAD_ROOT", uploads_root)
+    monkeypatch.setattr("backend.legacy.core.config.EXCEL_UPLOAD_ROOT", excel_root)
 
     store = StateStore(tmp_path / "state")
     monkeypatch.setattr(api, "state_store", store, raising=False)
-    monkeypatch.setattr("backend.app.services.state.state_store", store)
-    monkeypatch.setattr("backend.app.services.state.store.state_store", store)
-    monkeypatch.setattr("src.services.file_service.helpers.state_store", store)
+    monkeypatch.setattr("backend.app.repositories.state.state_store", store)
+    monkeypatch.setattr("backend.app.repositories.state.store.state_store", store)
+    monkeypatch.setattr("backend.legacy.services.file_service.helpers.state_store", store)
 
     client = TestClient(api.app)
     return {"client": client, "uploads_root": uploads_root, "state_store": store}
@@ -55,7 +63,11 @@ def test_manual_edit_snapshots_and_diff(edit_env):
     _register_template(state_store, template_id)
     tdir = _write_final_html(uploads_root, template_id, "<html>old</html>")
 
-    response = client.post(f"/templates/{template_id}/edit-manual", json={"html": "<html>new</html>"})
+    response = client.post(
+        f"/templates/{template_id}/edit-manual",
+        json={"html": "<html>new</html>"},
+        headers=_intent_headers(),
+    )
     assert response.status_code == 200, response.text
     data = response.json()
 
@@ -76,11 +88,12 @@ def test_ai_edit_records_diff_and_prev_copy(edit_env, monkeypatch):
     def fake_llm(html: str, instructions: str):
         return "<html>ai</html>", [f"applied:{instructions}"]
 
-    monkeypatch.setattr("src.services.file_service.edit._run_template_edit_llm", fake_llm)
+    monkeypatch.setattr("backend.legacy.services.file_service.edit._run_template_edit_llm", fake_llm)
 
     response = client.post(
         f"/templates/{template_id}/edit-ai",
         json={"instructions": "make it better"},
+        headers=_intent_headers(),
     )
     assert response.status_code == 200, response.text
     data = response.json()
@@ -100,7 +113,10 @@ def test_undo_swaps_versions_and_reports_diff(edit_env):
     tdir = _write_final_html(uploads_root, template_id, "<html>current</html>")
     (tdir / "report_final_prev.html").write_text("<html>previous</html>", encoding="utf-8")
 
-    response = client.post(f"/templates/{template_id}/undo-last-edit")
+    response = client.post(
+        f"/templates/{template_id}/undo-last-edit",
+        headers=_intent_headers(),
+    )
     assert response.status_code == 200, response.text
     data = response.json()
 
@@ -121,7 +137,11 @@ def test_template_history_is_capped_at_two_entries(edit_env):
     timestamps: list[str | None] = []
     for idx in range(3):
         html = f"<html>v{idx + 1}</html>"
-        response = client.post(f"/templates/{template_id}/edit-manual", json={"html": html})
+        response = client.post(
+            f"/templates/{template_id}/edit-manual",
+            json={"html": html},
+            headers=_intent_headers(),
+        )
         assert response.status_code == 200, response.text
         timestamps.append(response.json()["metadata"]["lastEditAt"])
 

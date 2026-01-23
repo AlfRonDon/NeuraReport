@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Callable, Tuple
 
-from ..dataframes.sqlite_loader import get_loader
+from backend.app.repositories.dataframes.sqlite_loader import get_loader
 
 
 def get_col_type(db_path: Path, table: str, col: str) -> str:

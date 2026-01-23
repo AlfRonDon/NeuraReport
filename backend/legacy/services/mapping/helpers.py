@@ -11,7 +11,7 @@ from typing import Any, Iterable, Mapping, Optional
 
 from fastapi import HTTPException
 
-from backend.app.services.dataframes.sqlite_loader import get_loader
+from backend.app.repositories.dataframes.sqlite_loader import get_loader
 from backend.app.services.mapping.HeaderMapping import REPORT_SELECTED_VALUE
 from backend.app.services.mapping.auto_fill import _compute_db_signature as _compute_db_signature_impl
 from backend.app.services.utils import write_json_atomic

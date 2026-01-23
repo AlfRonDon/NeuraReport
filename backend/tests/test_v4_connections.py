@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import pytest
 
-from backend.app.core.errors import AppError
-from backend.app.domain.connections.schemas import ConnectionTestRequest, ConnectionUpsertRequest
-from backend.app.domain.connections.service import ConnectionService
+from backend.app.utils.errors import AppError
+from backend.app.schemas.connections import ConnectionTestRequest, ConnectionUpsertRequest
+from backend.app.services.connections.service import ConnectionService
 
 
 class _FakeRepo:

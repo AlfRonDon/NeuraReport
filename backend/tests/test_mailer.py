@@ -343,12 +343,12 @@ class TestNotificationStrategy:
         monkeypatch.setenv("NEURA_MAIL_HOST", "smtp.example.com")
         monkeypatch.setenv("NEURA_MAIL_SENDER", "noreply@example.com")
 
-        from backend.app.domain.reports.strategies import NotificationStrategy
+        from backend.app.services.reports.strategies import NotificationStrategy
 
         strategy = NotificationStrategy()
 
         with patch(
-            "backend.app.domain.reports.strategies.send_report_email",
+            "backend.app.services.reports.strategies.send_report_email",
             return_value=True
         ) as mock_send:
             result = strategy.send(
@@ -368,7 +368,7 @@ class TestNotificationStrategy:
 
     def test_notification_strategy_registry(self):
         """Notification strategy registry should have email strategy."""
-        from backend.app.domain.reports.strategies import (
+        from backend.app.services.reports.strategies import (
             build_notification_strategy_registry,
             NotificationStrategy,
         )
@@ -390,7 +390,7 @@ class TestReportServiceEmailIntegration:
     def test_maybe_send_email_skips_without_recipients(self, monkeypatch):
         """_maybe_send_email should skip without recipients."""
         from backend.legacy.services.report_service import _maybe_send_email
-        from backend.app.features.generate.schemas.reports import RunPayload
+        from backend.app.schemas.generate.reports import RunPayload
 
         payload = RunPayload(
             template_id="test-tpl",
@@ -412,7 +412,7 @@ class TestReportServiceEmailIntegration:
     def test_build_job_steps_includes_email_step(self):
         """Job steps should include email when recipients provided."""
         from backend.legacy.services.report_service import _build_job_steps
-        from backend.app.features.generate.schemas.reports import RunPayload
+        from backend.app.schemas.generate.reports import RunPayload
 
         payload = RunPayload(
             template_id="test-tpl",
@@ -429,7 +429,7 @@ class TestReportServiceEmailIntegration:
     def test_build_job_steps_excludes_email_without_recipients(self):
         """Job steps should exclude email without recipients."""
         from backend.legacy.services.report_service import _build_job_steps
-        from backend.app.features.generate.schemas.reports import RunPayload
+        from backend.app.schemas.generate.reports import RunPayload
 
         payload = RunPayload(
             template_id="test-tpl",

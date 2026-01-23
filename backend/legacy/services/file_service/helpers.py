@@ -10,7 +10,8 @@ from typing import Any, Mapping, Optional, Callable
 
 from fastapi import HTTPException
 
-from backend.app.services.state import state_store
+from backend.app.repositories.state import state_store
+from backend.app.services.config import get_settings
 from backend.app.services.utils import write_json_atomic
 from backend.legacy.utils.schedule_utils import utcnow_iso
 from backend.legacy.utils.template_utils import artifact_url, template_dir, normalize_template_id
@@ -37,6 +38,8 @@ def format_bytes(num_bytes: int) -> str:
 
 
 def resolve_pdf_upload_limit(default: int | None = _DEFAULT_VERIFY_PDF_BYTES) -> int | None:
+    if default is None:
+        default = int(get_settings().max_verify_pdf_bytes)
     raw = os.getenv("NEURA_MAX_VERIFY_PDF_BYTES")
     if raw is None or raw.strip() == "":
         return default

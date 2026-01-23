@@ -6,10 +6,10 @@ from typing import Any
 
 from fastapi import Request
 
-from backend.app.services.connections.db_connection import verify_sqlite
-from backend.app.services.dataframes import sqlite_shim as sqlite3
+from backend.app.repositories.connections.db_connection import verify_sqlite
+from backend.app.repositories.dataframes import sqlite_shim as sqlite3
 from backend.app.services.mapping.HeaderMapping import approval_errors
-from backend.app.services.state import state_store
+from backend.app.repositories.state import state_store
 from backend.legacy.utils.connection_utils import db_path_from_payload_or_default
 from backend.legacy.utils.mapping_utils import load_mapping_keys
 from backend.legacy.utils.template_utils import template_dir

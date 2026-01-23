@@ -9,7 +9,7 @@ import threading
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any, AsyncIterable, Callable, Iterable, Optional
 
-from backend.app.services.state import state_store
+from backend.app.repositories.state import state_store
 
 logger = logging.getLogger("neura.background_tasks")
 

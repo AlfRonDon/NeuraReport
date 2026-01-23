@@ -3,7 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
-from ..dataframes.sqlite_loader import get_loader
+from backend.app.repositories.dataframes.sqlite_loader import get_loader
 from pathlib import Path
 from typing import Optional
 

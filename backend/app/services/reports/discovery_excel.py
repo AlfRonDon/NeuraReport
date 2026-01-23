@@ -23,7 +23,7 @@ from .discovery_metrics import (
     build_discovery_schema,
     build_resample_support,
 )
-from ..dataframes import SQLiteDataFrameLoader
+from backend.app.repositories.dataframes import SQLiteDataFrameLoader
 
 try:  # pragma: no cover - compatibility shim
     from ..mapping.auto_fill import build_or_load_contract  # type: ignore

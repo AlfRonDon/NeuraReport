@@ -6,9 +6,9 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Body, Depends, HTTPException, Query
 from pydantic import BaseModel
 
-from backend.app.core.config import get_settings
-from backend.app.core.security import require_api_key
-from backend.app.services.state import state_store
+from backend.app.services.config import get_settings
+from backend.app.services.security import require_api_key
+from backend.app.services.state_access import state_store
 
 router = APIRouter(dependencies=[Depends(require_api_key)])
 

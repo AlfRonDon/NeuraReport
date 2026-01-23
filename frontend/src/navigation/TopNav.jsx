@@ -3,7 +3,7 @@
  * Sophisticated header with glassmorphism, animations, and refined interactions
  */
 import { useState, useCallback, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigateInteraction, useInteraction, InteractionType, Reversibility } from '@/components/ux/governance'
 import {
   AppBar,
   Toolbar,
@@ -50,7 +50,7 @@ import { useAppStore } from '../stores'
 import { useJobsList } from '../hooks/useJobs'
 import { getShortcutDisplay, SHORTCUTS } from '../hooks/useKeyboardShortcuts'
 import { withBase } from '../api/client'
-import GlobalSearch from '../components/GlobalSearch'
+import GlobalSearch from './GlobalSearch'
 import NotificationCenter from '../components/notifications/NotificationCenter'
 
 // =============================================================================
@@ -238,7 +238,8 @@ const StyledDialog = styled(Dialog)(({ theme }) => ({
 
 export default function TopNav({ onMenuClick, showMenuButton, connection }) {
   const theme = useTheme()
-  const navigate = useNavigate()
+  const { execute } = useInteraction()
+  const navigate = useNavigateInteraction()
   const [anchorEl, setAnchorEl] = useState(null)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const [helpOpen, setHelpOpen] = useState(false)
@@ -247,51 +248,90 @@ export default function TopNav({ onMenuClick, showMenuButton, connection }) {
   const jobsQuery = useJobsList({ limit: 5 })
   const jobs = jobsQuery?.data?.jobs || []
 
-  const handleOpenMenu = useCallback((event) => {
-    setAnchorEl(event.currentTarget)
+  const executeUI = useCallback((label, action, intent = {}) => {
+    return execute({
+      type: InteractionType.EXECUTE,
+      label,
+      reversibility: Reversibility.FULLY_REVERSIBLE,
+      suppressSuccessToast: true,
+      suppressErrorToast: true,
+      intent: { source: 'topnav', ...intent },
+      action,
+    })
+  }, [execute])
+
+  const openMenu = useCallback((anchor) => {
+    setAnchorEl(anchor)
   }, [])
 
-  const handleCloseMenu = useCallback(() => {
+  const closeMenu = useCallback(() => {
     setAnchorEl(null)
   }, [])
 
-  const handleNavigate = useCallback((path) => {
-    navigate(path)
-    handleCloseMenu()
-  }, [navigate, handleCloseMenu])
+  const handleOpenMenu = useCallback((event) => {
+    const anchor = event.currentTarget
+    return executeUI('Open user menu', () => openMenu(anchor))
+  }, [executeUI, openMenu])
+
+  const handleCloseMenu = useCallback(() => {
+    return executeUI('Close user menu', () => closeMenu())
+  }, [executeUI, closeMenu])
+
+  const handleNavigate = useCallback((path, label) => {
+    navigate(path, {
+      label: label || `Open ${path}`,
+      intent: { source: 'topnav', path },
+    })
+    closeMenu()
+  }, [navigate, closeMenu])
+
+  const handleMenuButtonClick = useCallback(() => {
+    return executeUI('Open navigation menu', () => onMenuClick?.(), { target: 'sidebar' })
+  }, [executeUI, onMenuClick])
 
   const handleOpenCommandPalette = useCallback(() => {
-    if (typeof window === 'undefined') return
-    window.dispatchEvent(new CustomEvent('neura:open-command-palette'))
-  }, [])
+    return executeUI('Open command palette', () => {
+      if (typeof window === 'undefined') return
+      window.dispatchEvent(new CustomEvent('neura:open-command-palette'))
+    })
+  }, [executeUI])
 
-  const handleOpenShortcuts = useCallback(() => setShortcutsOpen(true), [])
-  const handleCloseShortcuts = useCallback(() => setShortcutsOpen(false), [])
+  const handleOpenShortcuts = useCallback(() => executeUI('Open shortcuts', () => setShortcutsOpen(true)), [executeUI])
+  const handleCloseShortcuts = useCallback(() => executeUI('Close shortcuts', () => setShortcutsOpen(false)), [executeUI])
 
-  const handleOpenHelp = useCallback(() => setHelpOpen(true), [])
-  const handleCloseHelp = useCallback(() => setHelpOpen(false), [])
+  const handleOpenHelp = useCallback(() => executeUI('Open help', () => setHelpOpen(true)), [executeUI])
+  const handleCloseHelp = useCallback(() => executeUI('Close help', () => setHelpOpen(false)), [executeUI])
 
-  const handleOpenNotifications = useCallback((event) => {
-    setNotificationsAnchorEl(event.currentTarget)
-  }, [])
-
-  const handleCloseNotifications = useCallback(() => {
+  const closeNotifications = useCallback(() => {
     setNotificationsAnchorEl(null)
   }, [])
 
+  const handleOpenNotifications = useCallback((event) => {
+    const anchor = event.currentTarget
+    return executeUI('Open notifications', () => setNotificationsAnchorEl(anchor))
+  }, [executeUI])
+
+  const handleCloseNotifications = useCallback(() => {
+    return executeUI('Close notifications', () => closeNotifications())
+  }, [executeUI, closeNotifications])
+
   const handleOpenJobsPanel = useCallback(() => {
-    if (typeof window === 'undefined') return
-    window.dispatchEvent(new CustomEvent('neura:open-jobs-panel'))
-    handleCloseNotifications()
-  }, [handleCloseNotifications])
+    return executeUI('Open jobs panel', () => {
+      if (typeof window === 'undefined') return
+      window.dispatchEvent(new CustomEvent('neura:open-jobs-panel'))
+      closeNotifications()
+    })
+  }, [executeUI, closeNotifications])
 
   const handleOpenDownload = useCallback((download) => {
-    const rawUrl = download?.pdfUrl || download?.docxUrl || download?.xlsxUrl || download?.htmlUrl || download?.url
-    if (!rawUrl || typeof window === 'undefined') return
-    const href = typeof rawUrl === 'string' ? withBase(rawUrl) : rawUrl
-    window.open(href, '_blank', 'noopener')
-    handleCloseNotifications()
-  }, [handleCloseNotifications])
+    return executeUI('Open download', () => {
+      const rawUrl = download?.pdfUrl || download?.docxUrl || download?.xlsxUrl || download?.htmlUrl || download?.url
+      if (!rawUrl || typeof window === 'undefined') return
+      const href = typeof rawUrl === 'string' ? withBase(rawUrl) : rawUrl
+      window.open(href, '_blank', 'noopener')
+      closeNotifications()
+    }, { downloadId: download?.id })
+  }, [executeUI, closeNotifications])
 
   const clearAppStorage = useCallback(() => {
     if (typeof window === 'undefined') return
@@ -307,12 +347,22 @@ export default function TopNav({ onMenuClick, showMenuButton, connection }) {
   }, [])
 
   const handleSignOut = useCallback(() => {
-    handleCloseMenu()
-    clearAppStorage()
-    if (typeof window !== 'undefined') {
-      window.location.assign('/')
-    }
-  }, [handleCloseMenu, clearAppStorage])
+    return execute({
+      type: InteractionType.LOGOUT,
+      label: 'Sign out',
+      reversibility: Reversibility.PARTIALLY_REVERSIBLE,
+      suppressSuccessToast: true,
+      suppressErrorToast: true,
+      intent: { source: 'topnav' },
+      action: () => {
+        closeMenu()
+        clearAppStorage()
+        if (typeof window !== 'undefined') {
+          window.location.assign('/')
+        }
+      },
+    })
+  }, [execute, closeMenu, clearAppStorage])
 
   const jobNotifications = useMemo(() => (
     Array.isArray(jobs) ? jobs.slice(0, 3) : []
@@ -342,7 +392,7 @@ export default function TopNav({ onMenuClick, showMenuButton, connection }) {
       <StyledToolbar>
         {/* Menu Button (Mobile) */}
         {showMenuButton && (
-          <NavIconButton edge="start" onClick={onMenuClick} aria-label="Open menu">
+          <NavIconButton edge="start" onClick={handleMenuButtonClick} aria-label="Open menu">
             <MenuIcon sx={{ fontSize: 20 }} />
           </NavIconButton>
         )}
@@ -465,7 +515,7 @@ export default function TopNav({ onMenuClick, showMenuButton, connection }) {
               key={job.id}
               onClick={() => {
                 handleCloseNotifications()
-                navigate('/jobs')
+                handleNavigate('/jobs', 'Open jobs')
               }}
             >
               <ListItemIcon>
@@ -592,7 +642,7 @@ export default function TopNav({ onMenuClick, showMenuButton, connection }) {
                     variant="outlined"
                     onClick={() => {
                       handleCloseHelp()
-                      navigate(action.path)
+                      handleNavigate(action.path, `Open ${action.label}`)
                     }}
                     sx={{
                       borderRadius: 2,

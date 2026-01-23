@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from backend.app.features.generate.services.chart_suggestions_service import suggest_charts
-from backend.app.features.generate.schemas.charts import ChartSuggestPayload
+from backend.app.services.generate.chart_suggestions_service import suggest_charts
+from backend.app.schemas.generate.charts import ChartSuggestPayload
 
 
 def test_chart_suggestions_fallback_when_llm_returns_empty(tmp_path):

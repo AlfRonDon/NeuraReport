@@ -28,6 +28,7 @@
 export {
   InteractionProvider,
   useInteraction,
+  useNavigateInteraction,
   InteractionType,
   Reversibility,
   FeedbackType,

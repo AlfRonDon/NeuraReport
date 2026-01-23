@@ -8,9 +8,9 @@ from pathlib import Path
 import pytest
 from starlette.datastructures import UploadFile
 
-from backend.app.core.errors import AppError
-from backend.app.domain.templates.service import TemplateService
-from backend.app.services.state import StateStore
+from backend.app.utils.errors import AppError
+from backend.app.services.templates.service import TemplateService
+from backend.app.repositories.state import StateStore
 
 
 def _zip_bytes(contents: dict[str, bytes]) -> bytes:
@@ -28,7 +28,7 @@ def temp_state(tmp_path, monkeypatch):
     os.environ["NEURA_STATE_DIR"] = str(state_dir)
     store = StateStore(base_dir=state_dir)
     # Patch global used by TemplateService to isolate tests
-    import backend.app.domain.templates.service as tsvc
+    import backend.app.services.templates.service as tsvc
 
     tsvc.state_store = store
     return store

@@ -11,7 +11,7 @@ import {
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ToastProvider } from './components/ToastProvider.jsx'
 import ErrorBoundary from './components/ErrorBoundary.jsx'
-import JobsPanel from './components/JobsPanel.jsx'
+import JobsPanel from '@/features/jobs/components/JobsPanel.jsx'
 import { CommandPalette } from './components/shell'
 import theme from './theme.js'
 import { useBootstrapState } from './hooks/useBootstrapState.js'
@@ -23,7 +23,13 @@ import { OperationHistoryProvider } from './components/ux/OperationHistoryProvid
 import NetworkStatusBanner from './components/ux/NetworkStatusBanner'
 import ActivityPanel from './components/ux/ActivityPanel'
 // UX Governance - Enforced interaction safety
-import { UXGovernanceProvider } from './components/ux/governance'
+import {
+  UXGovernanceProvider,
+  useInteraction,
+  useNavigateInteraction,
+  InteractionType,
+  Reversibility,
+} from './components/ux/governance'
 
 // Lazy-loaded pages - Main app pages
 const DashboardPage = lazy(() => import('./pages/DashboardPage.jsx'))
@@ -47,6 +53,13 @@ const SchemaBuilderPage = lazy(() => import('./pages/federation/SchemaBuilderPag
 const SynthesisPage = lazy(() => import('./pages/synthesis/SynthesisPage.jsx'))
 const DocumentQAPage = lazy(() => import('./pages/docqa/DocumentQAPage.jsx'))
 const SummaryPage = lazy(() => import('./pages/summary/SummaryPage.jsx'))
+
+// Document Editing & Creation
+const DocumentEditorPage = lazy(() => import('./pages/documents/DocumentEditorPage.jsx'))
+const SpreadsheetEditorPage = lazy(() => import('./pages/spreadsheets/SpreadsheetEditorPage.jsx'))
+const DashboardBuilderPage = lazy(() => import('./pages/dashboards/DashboardBuilderPage.jsx'))
+const ConnectorsPage = lazy(() => import('./pages/connectors/ConnectorsPage.jsx'))
+const WorkflowBuilderPage = lazy(() => import('./pages/workflows/WorkflowBuilderPage.jsx'))
 
 // Lazy-loaded pages - Setup and editing
 const SetupWizard = lazy(() => import('./pages/Setup/SetupWizard.jsx'))
@@ -108,17 +121,58 @@ function AppContent() {
   useBootstrapState()
 
   // UI State
+  const { execute } = useInteraction()
   const [jobsOpen, setJobsOpen] = useState(false)
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
   const [activityOpen, setActivityOpen] = useState(false)
 
   // Handlers
-  const handleOpenJobs = useCallback(() => setJobsOpen(true), [])
-  const handleCloseJobs = useCallback(() => setJobsOpen(false), [])
-  const handleOpenCommandPalette = useCallback(() => setCommandPaletteOpen(true), [])
-  const handleCloseCommandPalette = useCallback(() => setCommandPaletteOpen(false), [])
-  const handleOpenActivity = useCallback(() => setActivityOpen(true), [])
-  const handleCloseActivity = useCallback(() => setActivityOpen(false), [])
+  const executeUI = useCallback((label, action, intent = {}) => {
+    return execute({
+      type: InteractionType.EXECUTE,
+      label,
+      reversibility: Reversibility.FULLY_REVERSIBLE,
+      suppressSuccessToast: true,
+      suppressErrorToast: true,
+      intent: { source: 'app', ...intent },
+      action,
+    })
+  }, [execute])
+
+  const handleOpenJobs = useCallback(
+    () => executeUI('Open jobs panel', () => setJobsOpen(true), { panel: 'jobs' }),
+    [executeUI],
+  )
+  const handleCloseJobs = useCallback(
+    () => executeUI('Close jobs panel', () => setJobsOpen(false), { panel: 'jobs' }),
+    [executeUI],
+  )
+  const handleOpenCommandPalette = useCallback(
+    () => executeUI('Open command palette', () => setCommandPaletteOpen(true), { panel: 'command-palette' }),
+    [executeUI],
+  )
+  const handleCloseCommandPalette = useCallback(
+    () => executeUI('Close command palette', () => setCommandPaletteOpen(false), { panel: 'command-palette' }),
+    [executeUI],
+  )
+  const handleOpenActivity = useCallback(
+    () => executeUI('Open activity panel', () => setActivityOpen(true), { panel: 'activity' }),
+    [executeUI],
+  )
+  const handleCloseActivity = useCallback(
+    () => executeUI('Close activity panel', () => setActivityOpen(false), { panel: 'activity' }),
+    [executeUI],
+  )
+
+  const handleSkipToContent = useCallback(() => {
+    return executeUI('Skip to content', () => {
+      const target = document.getElementById('main-content')
+      if (target) {
+        target.focus()
+        target.scrollIntoView({ behavior: 'smooth' })
+      }
+    }, { action: 'skip-to-content' })
+  }, [executeUI])
 
   // Register global keyboard shortcuts
   useKeyboardShortcuts({
@@ -165,11 +219,7 @@ function AppContent() {
         href="#main-content"
         onClick={(e) => {
           e.preventDefault()
-          const target = document.getElementById('main-content')
-          if (target) {
-            target.focus()
-            target.scrollIntoView({ behavior: 'smooth' })
-          }
+          handleSkipToContent()
         }}
         sx={{
           position: 'fixed',
@@ -241,6 +291,12 @@ function AppContent() {
               <Route path="/synthesis" element={<SynthesisPage />} />
               <Route path="/docqa" element={<DocumentQAPage />} />
               <Route path="/summary" element={<SummaryPage />} />
+              {/* Document Editing & Creation Tools */}
+              <Route path="/documents" element={<DocumentEditorPage />} />
+              <Route path="/spreadsheets" element={<SpreadsheetEditorPage />} />
+              <Route path="/dashboard-builder" element={<DashboardBuilderPage />} />
+              <Route path="/connectors" element={<ConnectorsPage />} />
+              <Route path="/workflows" element={<WorkflowBuilderPage />} />
             </Route>
 
             <Route path="*" element={<Navigate to="/" replace />} />
@@ -256,16 +312,75 @@ function AppContent() {
   )
 }
 
+function StaticErrorFallback() {
+  return (
+    <Box
+      sx={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        bgcolor: 'background.default',
+        p: 4,
+      }}
+    >
+      <Stack spacing={1} sx={{ maxWidth: 520, textAlign: 'center' }}>
+        <Typography variant="h5" fontWeight={600} color="text.primary">
+          Something went wrong
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          An unexpected error occurred. Refresh the page to continue.
+        </Typography>
+      </Stack>
+    </Box>
+  )
+}
+
+function GovernedErrorBoundary({ children }) {
+  const { execute } = useInteraction()
+  const navigate = useNavigateInteraction()
+
+  const executeUI = useCallback((label, action, intent = {}) => {
+    return execute({
+      type: InteractionType.EXECUTE,
+      label,
+      reversibility: Reversibility.FULLY_REVERSIBLE,
+      suppressSuccessToast: true,
+      suppressErrorToast: true,
+      intent: { source: 'error-boundary', ...intent },
+      action,
+    })
+  }, [execute])
+
+  const handleReload = useCallback(
+    () => executeUI('Reload application', () => window.location.reload(), { action: 'reload' }),
+    [executeUI],
+  )
+
+  const handleGoHome = useCallback(
+    () => navigate('/', { label: 'Go to dashboard', intent: { source: 'error-boundary' } }),
+    [navigate],
+  )
+
+  return (
+    <ErrorBoundary onReload={handleReload} onGoHome={handleGoHome}>
+      {children}
+    </ErrorBoundary>
+  )
+}
+
 // Root App component
 export default function App() {
   return (
-    <ErrorBoundary>
+    <ErrorBoundary fallback={StaticErrorFallback}>
       <BrowserRouter>
         <AppProviders>
           <OperationHistoryProvider>
             <UXGovernanceProvider>
               <ToastProvider>
-                <AppContent />
+                <GovernedErrorBoundary>
+                  <AppContent />
+                </GovernedErrorBoundary>
               </ToastProvider>
             </UXGovernanceProvider>
           </OperationHistoryProvider>

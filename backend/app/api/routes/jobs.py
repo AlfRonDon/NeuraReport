@@ -12,9 +12,9 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
-from backend.app.core.security import require_api_key
-from backend.app.features.generate.schemas.reports import RunPayload
-from backend.app.services.state import state_store
+from backend.app.services.security import require_api_key
+from backend.app.schemas.generate.reports import RunPayload
+from backend.app.services.state_access import state_store
 from backend.legacy.services.scheduler_service import get_job, list_active_jobs, list_jobs, cancel_job
 
 router = APIRouter(dependencies=[Depends(require_api_key)])
@@ -125,7 +125,7 @@ async def retry_job_route(job_id: str, request: Request):
     Only jobs with status 'failed' can be retried.
     """
     from backend.legacy.services.report_service import queue_report_job
-    from backend.app.features.generate.schemas.reports import RunPayload
+    from backend.app.schemas.generate.reports import RunPayload
 
     original_job = get_job(job_id)
     if not original_job:

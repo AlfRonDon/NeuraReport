@@ -1,3 +1,7 @@
-import GeneratePageContainer from '../../features/generate/containers/GeneratePageContainer.jsx'
+import { useInteraction } from '@/components/ux/governance'
+import GeneratePageContainer from '@/features/generate/containers/GeneratePageContainer'
 
-export default GeneratePageContainer
+export default function GeneratePage() {
+  useInteraction()
+  return <GeneratePageContainer />
+}

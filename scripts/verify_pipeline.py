@@ -21,7 +21,7 @@ from backend.app.services.utils.artifacts import (  # type: ignore  # noqa: E402
     compute_checksums,
     load_manifest,
 )
-from backend.app.services.utils.fs import (  # type: ignore  # noqa: E402
+from backend.app.utils.fs import (  # type: ignore  # noqa: E402
     write_text_atomic,
 )
 from backend.app.services.utils.validation import (  # type: ignore  # noqa: E402

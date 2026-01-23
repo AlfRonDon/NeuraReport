@@ -5,9 +5,9 @@ from typing import Optional
 from pydantic import BaseModel, Field
 from fastapi import APIRouter, Depends, Request, HTTPException
 
-from backend.app.core.security import require_api_key
-from backend.app.domain.docqa.service import DocumentQAService
-from backend.app.domain.docqa.schemas import AskRequest, FeedbackRequest, RegenerateRequest
+from backend.app.services.security import require_api_key
+from backend.app.services.docqa.service import DocumentQAService
+from backend.app.schemas.docqa import AskRequest, FeedbackRequest, RegenerateRequest
 
 router = APIRouter(dependencies=[Depends(require_api_key)])
 

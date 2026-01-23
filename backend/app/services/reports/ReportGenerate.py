@@ -4,7 +4,7 @@ import contextlib
 import json
 import os
 import re
-from ..dataframes import DuckDBDataFrameQuery, SQLiteDataFrameLoader, sqlite_shim as sqlite3
+from backend.app.repositories.dataframes import DuckDBDataFrameQuery, SQLiteDataFrameLoader, sqlite_shim as sqlite3
 from collections import defaultdict
 from datetime import datetime
 from decimal import Decimal, InvalidOperation

@@ -1,0 +1,458 @@
+"""
+Document API Routes - Document editing and collaboration endpoints.
+"""
+
+from __future__ import annotations
+
+import logging
+from pathlib import Path
+from typing import Optional
+
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, UploadFile, File
+from pydantic import BaseModel
+
+from ...schemas.documents import (
+    CreateDocumentRequest,
+    UpdateDocumentRequest,
+    DocumentResponse,
+    DocumentListResponse,
+    CommentRequest,
+    CommentResponse,
+    CollaborationSessionResponse,
+    PDFMergeRequest,
+    PDFWatermarkRequest,
+    PDFRedactRequest,
+    PDFReorderRequest,
+    AIWritingRequest,
+    AIWritingResponse,
+)
+from ...services.documents import (
+    DocumentService,
+    CollaborationService,
+    PDFOperationsService,
+)
+
+logger = logging.getLogger("neura.api.documents")
+
+router = APIRouter(prefix="/documents", tags=["documents"])
+
+# Service instances (would use dependency injection in production)
+_doc_service: Optional[DocumentService] = None
+_collab_service: Optional[CollaborationService] = None
+_pdf_service: Optional[PDFOperationsService] = None
+
+
+def get_document_service() -> DocumentService:
+    global _doc_service
+    if _doc_service is None:
+        _doc_service = DocumentService()
+    return _doc_service
+
+
+def get_collaboration_service() -> CollaborationService:
+    global _collab_service
+    if _collab_service is None:
+        _collab_service = CollaborationService()
+    return _collab_service
+
+
+def get_pdf_service() -> PDFOperationsService:
+    global _pdf_service
+    if _pdf_service is None:
+        _pdf_service = PDFOperationsService()
+    return _pdf_service
+
+
+# ============================================
+# Document CRUD Endpoints
+# ============================================
+
+@router.post("", response_model=DocumentResponse)
+async def create_document(
+    request: CreateDocumentRequest,
+    doc_service: DocumentService = Depends(get_document_service),
+):
+    """Create a new document."""
+    doc = doc_service.create(
+        name=request.name,
+        content=request.content,
+        is_template=request.is_template,
+        metadata=request.metadata,
+    )
+    return DocumentResponse(**doc.model_dump())
+
+
+@router.get("", response_model=DocumentListResponse)
+async def list_documents(
+    is_template: Optional[bool] = Query(None),
+    tags: Optional[str] = Query(None, description="Comma-separated tags"),
+    limit: int = Query(100, ge=1, le=500),
+    offset: int = Query(0, ge=0),
+    doc_service: DocumentService = Depends(get_document_service),
+):
+    """List documents with optional filters."""
+    tag_list = tags.split(",") if tags else None
+    documents = doc_service.list_documents(
+        is_template=is_template,
+        tags=tag_list,
+        limit=limit,
+        offset=offset,
+    )
+    return DocumentListResponse(
+        documents=[DocumentResponse(**d.model_dump()) for d in documents],
+        total=len(documents),
+        offset=offset,
+        limit=limit,
+    )
+
+
+@router.get("/{document_id}", response_model=DocumentResponse)
+async def get_document(
+    document_id: str,
+    doc_service: DocumentService = Depends(get_document_service),
+):
+    """Get a document by ID."""
+    doc = doc_service.get(document_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+    return DocumentResponse(**doc.model_dump())
+
+
+@router.put("/{document_id}", response_model=DocumentResponse)
+async def update_document(
+    document_id: str,
+    request: UpdateDocumentRequest,
+    doc_service: DocumentService = Depends(get_document_service),
+):
+    """Update a document."""
+    doc = doc_service.update(
+        document_id=document_id,
+        name=request.name,
+        content=request.content,
+        metadata=request.metadata,
+    )
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+    return DocumentResponse(**doc.model_dump())
+
+
+@router.delete("/{document_id}")
+async def delete_document(
+    document_id: str,
+    doc_service: DocumentService = Depends(get_document_service),
+):
+    """Delete a document."""
+    success = doc_service.delete(document_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Document not found")
+    return {"status": "ok", "message": "Document deleted"}
+
+
+# ============================================
+# Version History Endpoints
+# ============================================
+
+@router.get("/{document_id}/versions")
+async def get_document_versions(
+    document_id: str,
+    doc_service: DocumentService = Depends(get_document_service),
+):
+    """Get version history for a document."""
+    doc = doc_service.get(document_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    versions = doc_service.get_versions(document_id)
+    return {"versions": [v.model_dump() for v in versions]}
+
+
+@router.get("/{document_id}/versions/{version}")
+async def get_document_version(
+    document_id: str,
+    version: int,
+    doc_service: DocumentService = Depends(get_document_service),
+):
+    """Get a specific version of a document."""
+    versions = doc_service.get_versions(document_id)
+    for v in versions:
+        if v.version == version:
+            return v.model_dump()
+    raise HTTPException(status_code=404, detail="Version not found")
+
+
+# ============================================
+# Comment Endpoints
+# ============================================
+
+@router.post("/{document_id}/comments", response_model=CommentResponse)
+async def add_comment(
+    document_id: str,
+    request: CommentRequest,
+    doc_service: DocumentService = Depends(get_document_service),
+):
+    """Add a comment to a document."""
+    comment = doc_service.add_comment(
+        document_id=document_id,
+        selection_start=request.selection_start,
+        selection_end=request.selection_end,
+        text=request.text,
+    )
+    if not comment:
+        raise HTTPException(status_code=404, detail="Document not found")
+    return CommentResponse(**comment.model_dump())
+
+
+@router.get("/{document_id}/comments")
+async def get_comments(
+    document_id: str,
+    doc_service: DocumentService = Depends(get_document_service),
+):
+    """Get all comments for a document."""
+    comments = doc_service.get_comments(document_id)
+    return {"comments": [c.model_dump() for c in comments]}
+
+
+@router.patch("/{document_id}/comments/{comment_id}/resolve")
+async def resolve_comment(
+    document_id: str,
+    comment_id: str,
+    doc_service: DocumentService = Depends(get_document_service),
+):
+    """Resolve a comment."""
+    success = doc_service.resolve_comment(document_id, comment_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Comment not found")
+    return {"status": "ok", "message": "Comment resolved"}
+
+
+# ============================================
+# Collaboration Endpoints
+# ============================================
+
+@router.post("/{document_id}/collaborate", response_model=CollaborationSessionResponse)
+async def start_collaboration(
+    document_id: str,
+    collab_service: CollaborationService = Depends(get_collaboration_service),
+    doc_service: DocumentService = Depends(get_document_service),
+):
+    """Start a collaboration session for a document."""
+    doc = doc_service.get(document_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    session = collab_service.start_session(document_id)
+    return CollaborationSessionResponse(**session.model_dump())
+
+
+@router.get("/{document_id}/collaborate/presence")
+async def get_collaboration_presence(
+    document_id: str,
+    collab_service: CollaborationService = Depends(get_collaboration_service),
+):
+    """Get current collaborators for a document."""
+    session = collab_service.get_session_by_document(document_id)
+    if not session:
+        return {"collaborators": []}
+
+    presence = collab_service.get_presence(session.id)
+    return {"collaborators": [p.model_dump() for p in presence]}
+
+
+# ============================================
+# PDF Operation Endpoints
+# ============================================
+
+@router.post("/{document_id}/pdf/reorder")
+async def reorder_pdf_pages(
+    document_id: str,
+    request: PDFReorderRequest,
+    pdf_service: PDFOperationsService = Depends(get_pdf_service),
+    doc_service: DocumentService = Depends(get_document_service),
+):
+    """Reorder pages in a PDF document."""
+    doc = doc_service.get(document_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    # Get PDF path from document metadata
+    pdf_path = doc.metadata.get("pdf_path")
+    if not pdf_path:
+        raise HTTPException(status_code=400, detail="Document is not a PDF")
+
+    try:
+        output_path = pdf_service.reorder_pages(
+            Path(pdf_path),
+            request.page_order,
+        )
+        return {"status": "ok", "output_path": str(output_path)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/{document_id}/pdf/watermark")
+async def add_watermark(
+    document_id: str,
+    request: PDFWatermarkRequest,
+    pdf_service: PDFOperationsService = Depends(get_pdf_service),
+    doc_service: DocumentService = Depends(get_document_service),
+):
+    """Add watermark to a PDF document."""
+    doc = doc_service.get(document_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    pdf_path = doc.metadata.get("pdf_path")
+    if not pdf_path:
+        raise HTTPException(status_code=400, detail="Document is not a PDF")
+
+    try:
+        from ...services.documents.pdf_operations import WatermarkConfig
+        config = WatermarkConfig(
+            text=request.text,
+            position=request.position,
+            font_size=request.font_size,
+            opacity=request.opacity,
+            color=request.color,
+        )
+        output_path = pdf_service.add_watermark(Path(pdf_path), config)
+        return {"status": "ok", "output_path": str(output_path)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/{document_id}/pdf/redact")
+async def redact_pdf(
+    document_id: str,
+    request: PDFRedactRequest,
+    pdf_service: PDFOperationsService = Depends(get_pdf_service),
+    doc_service: DocumentService = Depends(get_document_service),
+):
+    """Redact regions in a PDF document."""
+    doc = doc_service.get(document_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    pdf_path = doc.metadata.get("pdf_path")
+    if not pdf_path:
+        raise HTTPException(status_code=400, detail="Document is not a PDF")
+
+    try:
+        from ...services.documents.pdf_operations import RedactionRegion
+        regions = [
+            RedactionRegion(
+                page=r.page,
+                x=r.x,
+                y=r.y,
+                width=r.width,
+                height=r.height,
+            )
+            for r in request.regions
+        ]
+        output_path = pdf_service.redact_regions(Path(pdf_path), regions)
+        return {"status": "ok", "output_path": str(output_path)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/merge")
+async def merge_pdfs(
+    request: PDFMergeRequest,
+    pdf_service: PDFOperationsService = Depends(get_pdf_service),
+    doc_service: DocumentService = Depends(get_document_service),
+):
+    """Merge multiple PDF documents into one."""
+    pdf_paths = []
+    for doc_id in request.document_ids:
+        doc = doc_service.get(doc_id)
+        if not doc:
+            raise HTTPException(status_code=404, detail=f"Document {doc_id} not found")
+        pdf_path = doc.metadata.get("pdf_path")
+        if not pdf_path:
+            raise HTTPException(status_code=400, detail=f"Document {doc_id} is not a PDF")
+        pdf_paths.append(Path(pdf_path))
+
+    try:
+        result = pdf_service.merge_pdfs(pdf_paths)
+        return {
+            "status": "ok",
+            "output_path": result.output_path,
+            "page_count": result.page_count,
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================
+# AI Writing Endpoints
+# ============================================
+
+@router.post("/{document_id}/ai/grammar", response_model=AIWritingResponse)
+async def check_grammar(
+    document_id: str,
+    request: AIWritingRequest,
+):
+    """Check grammar and spelling in text."""
+    # TODO: Implement with OpenAI
+    return AIWritingResponse(
+        original_text=request.text,
+        result_text=request.text,
+        suggestions=[],
+        metadata={"operation": "grammar_check"},
+    )
+
+
+@router.post("/{document_id}/ai/summarize", response_model=AIWritingResponse)
+async def summarize_text(
+    document_id: str,
+    request: AIWritingRequest,
+):
+    """Summarize text content."""
+    # TODO: Implement with OpenAI
+    return AIWritingResponse(
+        original_text=request.text,
+        result_text=request.text[:200] + "...",
+        metadata={"operation": "summarize"},
+    )
+
+
+@router.post("/{document_id}/ai/rewrite", response_model=AIWritingResponse)
+async def rewrite_text(
+    document_id: str,
+    request: AIWritingRequest,
+):
+    """Rewrite text for clarity or different tone."""
+    # TODO: Implement with OpenAI
+    return AIWritingResponse(
+        original_text=request.text,
+        result_text=request.text,
+        metadata={"operation": "rewrite"},
+    )
+
+
+@router.post("/{document_id}/ai/expand", response_model=AIWritingResponse)
+async def expand_text(
+    document_id: str,
+    request: AIWritingRequest,
+):
+    """Expand bullet points or short text into paragraphs."""
+    # TODO: Implement with OpenAI
+    return AIWritingResponse(
+        original_text=request.text,
+        result_text=request.text,
+        metadata={"operation": "expand"},
+    )
+
+
+@router.post("/{document_id}/ai/translate", response_model=AIWritingResponse)
+async def translate_text(
+    document_id: str,
+    request: AIWritingRequest,
+):
+    """Translate text to another language."""
+    target_language = request.options.get("target_language", "Spanish")
+    # TODO: Implement with OpenAI
+    return AIWritingResponse(
+        original_text=request.text,
+        result_text=request.text,
+        metadata={"operation": "translate", "target_language": target_language},
+    )

@@ -23,11 +23,11 @@ import SmartToyOutlinedIcon from '@mui/icons-material/SmartToyOutlined'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import ExpandLessIcon from '@mui/icons-material/ExpandLess'
 
-import { useTemplateChatStore } from '../../../stores/templateChatStore'
-import { chatTemplateEdit, applyChatTemplateEdit } from '../../../api/client'
-import { useInteraction, InteractionType, Reversibility } from '../../../components/ux/governance'
-import { useToast } from '../../../components/ToastProvider'
-import ScaledIframePreview from '../../../components/ScaledIframePreview'
+import { useTemplateChatStore } from '@/stores/templateChatStore'
+import { chatTemplateEdit, applyChatTemplateEdit } from '@/api/client'
+import { useInteraction, InteractionType, Reversibility } from '@/components/ux/governance'
+import { useToast } from '@/components/ToastProvider'
+import ScaledIframePreview from '@/components/ScaledIframePreview'
 
 const ROLE_CONFIG = {
   user: {

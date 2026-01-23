@@ -1,2 +1,1 @@
-"""Domain layer for v4 services (schemas, repositories, services)."""
-
+"""Domain layer for pure business logic (no I/O, no framework dependencies)."""

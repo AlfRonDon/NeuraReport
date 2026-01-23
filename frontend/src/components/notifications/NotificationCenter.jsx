@@ -33,14 +33,15 @@ import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline'
 import DoneAllIcon from '@mui/icons-material/DoneAll'
 import DeleteSweepIcon from '@mui/icons-material/DeleteSweep'
 import CloseIcon from '@mui/icons-material/Close'
-import { readPreferences, subscribePreferences } from '../../utils/preferences'
+import { readPreferences, subscribePreferences } from '@/utils/preferences'
+import { useInteraction, InteractionType, Reversibility } from '@/components/ux/governance'
 import {
   getNotifications,
   markNotificationRead,
   markAllNotificationsRead,
   deleteNotification,
   clearAllNotifications,
-} from '../../api/client'
+} from '@/api/client'
 
 // =============================================================================
 // ANIMATIONS
@@ -111,6 +112,7 @@ function formatTimeAgo(dateString) {
 export default function NotificationCenter() {
   const theme = useTheme()
   const navigate = useNavigate()
+  const { execute } = useInteraction()
   const [anchorEl, setAnchorEl] = useState(null)
   const [notifications, setNotifications] = useState([])
   const [unreadCount, setUnreadCount] = useState(0)
@@ -121,6 +123,50 @@ export default function NotificationCenter() {
   )
 
   const open = Boolean(anchorEl)
+
+  const runUI = useCallback((label, action, intent = {}) => {
+    return execute({
+      type: InteractionType.EXECUTE,
+      label,
+      reversibility: Reversibility.FULLY_REVERSIBLE,
+      suppressSuccessToast: true,
+      suppressErrorToast: true,
+      intent: { source: 'notifications', ...intent },
+      action,
+    })
+  }, [execute])
+
+  const runNavigate = useCallback((label, action, intent = {}) => {
+    return execute({
+      type: InteractionType.NAVIGATE,
+      label,
+      reversibility: Reversibility.FULLY_REVERSIBLE,
+      suppressSuccessToast: true,
+      suppressErrorToast: true,
+      intent: { source: 'notifications', ...intent },
+      action,
+    })
+  }, [execute])
+
+  const runUpdate = useCallback((label, action, intent = {}) => {
+    return execute({
+      type: InteractionType.UPDATE,
+      label,
+      reversibility: Reversibility.SYSTEM_MANAGED,
+      intent: { source: 'notifications', ...intent },
+      action,
+    })
+  }, [execute])
+
+  const runDelete = useCallback((label, action, intent = {}) => {
+    return execute({
+      type: InteractionType.DELETE,
+      label,
+      reversibility: Reversibility.SYSTEM_MANAGED,
+      intent: { source: 'notifications', ...intent },
+      action,
+    })
+  }, [execute])
 
   useEffect(() => {
     const unsubscribe = subscribePreferences((prefs) => {
@@ -190,17 +236,20 @@ export default function NotificationCenter() {
     }
   }, [fetchNotifications, polling, notificationsEnabled])
 
-  const handleClick = (event) => {
-    if (!notificationsEnabled) return
-    setAnchorEl(event.currentTarget)
-    fetchNotifications()
-  }
+  const handleClick = useCallback((event) => {
+    if (!notificationsEnabled) return undefined
+    const anchor = event.currentTarget
+    return runUI('Open notifications', () => {
+      setAnchorEl(anchor)
+      return fetchNotifications()
+    })
+  }, [fetchNotifications, notificationsEnabled, runUI])
 
-  const handleClose = () => {
-    setAnchorEl(null)
-  }
+  const handleClose = useCallback(() => {
+    return runUI('Close notifications', () => setAnchorEl(null))
+  }, [runUI])
 
-  const handleNotificationClick = async (notification) => {
+  const handleNotificationClick = useCallback((notification) => {
     const entityTypeRaw = notification.entity_type || notification.entityType
     const entityId = notification.entity_id || notification.entityId
     const normalizedType = entityTypeRaw ? String(entityTypeRaw).toLowerCase().replace(/s$/, '') : ''
@@ -209,38 +258,47 @@ export default function NotificationCenter() {
         ? ENTITY_ROUTES[normalizedType](entityId)
         : '/activity'
     const targetRoute = notification.link || fallbackRoute
-
-    if (!notification.read) {
-      try {
-        await markNotificationRead(notification.id)
-        setNotifications((prev) =>
-          prev.map((n) => (n.id === notification.id ? { ...n, read: true } : n))
-        )
-        setUnreadCount((prev) => Math.max(0, prev - 1))
-      } catch (err) {
-        console.error('Failed to mark notification as read:', err)
+    return runNavigate('Open notification', async () => {
+      let readError = null
+      if (!notification.read) {
+        try {
+          await markNotificationRead(notification.id)
+          setNotifications((prev) =>
+            prev.map((n) => (n.id === notification.id ? { ...n, read: true } : n))
+          )
+          setUnreadCount((prev) => Math.max(0, prev - 1))
+        } catch (err) {
+          readError = err
+          console.error('Failed to mark notification as read:', err)
+        }
       }
-    }
 
-    if (targetRoute) {
-      navigate(targetRoute)
-      handleClose()
-    }
-  }
+      if (targetRoute) {
+        navigate(targetRoute)
+      }
+      setAnchorEl(null)
 
-  const handleMarkAllRead = async () => {
-    try {
+      if (readError) {
+        throw readError
+      }
+    }, {
+      notificationId: notification.id,
+      entityType: normalizedType,
+      targetRoute,
+    })
+  }, [navigate, runNavigate])
+
+  const handleMarkAllRead = useCallback(() => {
+    return runUpdate('Mark all notifications read', async () => {
       await markAllNotificationsRead()
       setNotifications((prev) => prev.map((n) => ({ ...n, read: true })))
       setUnreadCount(0)
-    } catch (err) {
-      console.error('Failed to mark all as read:', err)
-    }
-  }
+    }, { unreadCount })
+  }, [runUpdate, unreadCount])
 
-  const handleDeleteNotification = async (e, notificationId) => {
-    e.stopPropagation()
-    try {
+  const handleDeleteNotification = useCallback((event, notificationId) => {
+    event.stopPropagation()
+    return runDelete('Delete notification', async () => {
       await deleteNotification(notificationId)
       setNotifications((prev) => {
         const removed = prev.find((n) => n.id === notificationId)
@@ -249,20 +307,23 @@ export default function NotificationCenter() {
         }
         return prev.filter((n) => n.id !== notificationId)
       })
-    } catch (err) {
-      console.error('Failed to delete notification:', err)
-    }
-  }
+    }, { notificationId })
+  }, [runDelete])
 
-  const handleClearAll = async () => {
-    try {
+  const handleClearAll = useCallback(() => {
+    return runDelete('Clear notifications', async () => {
       await clearAllNotifications()
       setNotifications([])
       setUnreadCount(0)
-    } catch (err) {
-      console.error('Failed to clear notifications:', err)
-    }
-  }
+    }, { count: notifications.length })
+  }, [runDelete, notifications.length])
+
+  const handleViewActivity = useCallback(() => {
+    return runNavigate('Open activity log', () => {
+      navigate('/activity')
+      setAnchorEl(null)
+    }, { targetRoute: '/activity' })
+  }, [navigate, runNavigate])
 
   if (!notificationsEnabled) {
     return (
@@ -559,10 +620,7 @@ export default function NotificationCenter() {
           >
             <Button
               size="small"
-              onClick={() => {
-                navigate('/activity')
-                handleClose()
-              }}
+              onClick={handleViewActivity}
               sx={{
                 fontSize: '0.75rem',
                 color: theme.palette.text.secondary,

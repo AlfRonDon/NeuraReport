@@ -27,9 +27,9 @@ import CancelIcon from '@mui/icons-material/Cancel'
 import DocumentUpload from '../components/DocumentUpload'
 import AnalysisResults from '../components/AnalysisResults'
 import { uploadAndAnalyze, suggestAnalysisCharts, normalizeChartSpec } from '../services/analyzeApi'
-import Surface from '../../../components/layout/Surface'
-import { useToast } from '../../../components/ToastProvider'
-import { useNavigate } from 'react-router-dom'
+import Surface from '@/components/layout/Surface'
+import { useToast } from '@/components/ToastProvider'
+import { useInteraction, InteractionType, Reversibility, useNavigateInteraction } from '@/components/ux/governance'
 
 const STEPS = [
   { label: 'Upload Document', icon: <UploadFileOutlinedIcon fontSize="small" /> },
@@ -51,7 +51,13 @@ export default function AnalyzePageContainer() {
   const [queuedJobId, setQueuedJobId] = useState(null)
   const abortControllerRef = useRef(null)
   const toast = useToast()
-  const navigate = useNavigate()
+  const { execute } = useInteraction()
+  const navigate = useNavigateInteraction()
+  const handleNavigate = useCallback(
+    (path, label, intent = {}) =>
+      navigate(path, { label, intent: { from: 'analyze', ...intent } }),
+    [navigate]
+  )
 
   const handleFileSelect = useCallback((file) => {
     setSelectedFile(file)
@@ -63,125 +69,168 @@ export default function AnalyzePageContainer() {
     }
   }, [])
 
-  const handleAnalyze = useCallback(async () => {
-    if (!selectedFile) return
+  const handleAnalyze = useCallback(() => {
+    if (!selectedFile) return undefined
 
-    // Create abort controller for cancellation
-    abortControllerRef.current = new AbortController()
+    return execute({
+      type: InteractionType.ANALYZE,
+      label: runInBackground ? 'Queue analysis' : 'Analyze document',
+      reversibility: Reversibility.FULLY_REVERSIBLE,
+      blocksNavigation: !runInBackground,
+      suppressSuccessToast: true,
+      intent: {
+        fileName: selectedFile?.name,
+        background: runInBackground,
+      },
+      action: async () => {
+        // Create abort controller for cancellation
+        abortControllerRef.current = new AbortController()
 
-    setIsAnalyzing(true)
-    setAnalysisProgress(0)
-    setProgressStage('Starting analysis...')
-    setError(null)
-    setQueuedJobId(null)
-
-    if (runInBackground) {
-      try {
-        const queued = await uploadAndAnalyze({
-          file: selectedFile,
-          background: true,
-        })
-        const jobId = queued?.job_id || queued?.jobId || null
-        setQueuedJobId(jobId)
-        setAnalysisResult(null)
-        setActiveStep(0)
-        toast.show('Analysis queued in background', 'success')
-      } catch (err) {
-        if (err.name !== 'AbortError') {
-          setError(err.message || 'Failed to queue analysis')
-        }
-      } finally {
-        setIsAnalyzing(false)
+        setIsAnalyzing(true)
         setAnalysisProgress(0)
-        setProgressStage('')
-        abortControllerRef.current = null
-      }
-      return
-    }
+        setProgressStage('Starting analysis...')
+        setError(null)
+        setQueuedJobId(null)
 
-    setActiveStep(1)
-
-    try {
-      const result = await uploadAndAnalyze({
-        file: selectedFile,
-        signal: abortControllerRef.current?.signal,
-        onProgress: (event) => {
-          if (event.event === 'stage') {
-            setAnalysisProgress(event.progress || 0)
-            setProgressStage(event.detail || event.stage || 'Processing...')
+        if (runInBackground) {
+          try {
+            const queued = await uploadAndAnalyze({
+              file: selectedFile,
+              background: true,
+            })
+            const jobId = queued?.job_id || queued?.jobId || null
+            setQueuedJobId(jobId)
+            setAnalysisResult(null)
+            setActiveStep(0)
+            toast.show('Analysis queued in background', 'success')
+          } catch (err) {
+            if (err.name !== 'AbortError') {
+              setError(err.message || 'Failed to queue analysis')
+            }
+          } finally {
+            setIsAnalyzing(false)
+            setAnalysisProgress(0)
+            setProgressStage('')
+            abortControllerRef.current = null
           }
-        },
-      })
+          return
+        }
 
-      if (result.event === 'result') {
-        setAnalysisResult(result)
-        setActiveStep(2)
-      }
-    } catch (err) {
-      if (err.name === 'AbortError') {
-        toast.show('Analysis cancelled', 'info')
-        setActiveStep(0)
-      } else {
-        setError(err.message || 'Analysis failed')
-        setActiveStep(0)
-      }
-    } finally {
-      setIsAnalyzing(false)
-      setAnalysisProgress(100)
-      abortControllerRef.current = null
-    }
-  }, [selectedFile, runInBackground, toast])
+        setActiveStep(1)
+
+        try {
+          const result = await uploadAndAnalyze({
+            file: selectedFile,
+            signal: abortControllerRef.current?.signal,
+            onProgress: (event) => {
+              if (event.event === 'stage') {
+                setAnalysisProgress(event.progress || 0)
+                setProgressStage(event.detail || event.stage || 'Processing...')
+              }
+            },
+          })
+
+          if (result.event === 'result') {
+            setAnalysisResult(result)
+            setActiveStep(2)
+          }
+        } catch (err) {
+          if (err.name === 'AbortError') {
+            toast.show('Analysis cancelled', 'info')
+            setActiveStep(0)
+          } else {
+            setError(err.message || 'Analysis failed')
+            setActiveStep(0)
+          }
+        } finally {
+          setIsAnalyzing(false)
+          setAnalysisProgress(100)
+          abortControllerRef.current = null
+        }
+      },
+    })
+  }, [execute, selectedFile, runInBackground, toast])
 
   const handleCancelAnalysis = useCallback(() => {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort()
-      setIsAnalyzing(false)
-      setActiveStep(0)
-      setAnalysisProgress(0)
-      setProgressStage('')
-      toast.show('Analysis cancelled', 'info')
-    }
-  }, [toast])
+    return execute({
+      type: InteractionType.UPDATE,
+      label: 'Cancel analysis',
+      reversibility: Reversibility.FULLY_REVERSIBLE,
+      suppressSuccessToast: true,
+      suppressErrorToast: true,
+      intent: { source: 'analyze' },
+      action: () => {
+        if (abortControllerRef.current) {
+          abortControllerRef.current.abort()
+          setIsAnalyzing(false)
+          setActiveStep(0)
+          setAnalysisProgress(0)
+          setProgressStage('')
+          toast.show('Analysis cancelled', 'info')
+        }
+      },
+    })
+  }, [execute, toast])
 
-  const handleAskCharts = useCallback(async () => {
-    if (!analysisResult?.analysis_id || !chartQuestion.trim()) return
+  const handleAskCharts = useCallback(() => {
+    if (!analysisResult?.analysis_id || !chartQuestion.trim()) return undefined
 
-    setIsLoadingCharts(true)
-    try {
-      const response = await suggestAnalysisCharts(analysisResult.analysis_id, {
-        question: chartQuestion,
-        includeSampleData: true,
-      })
+    return execute({
+      type: InteractionType.GENERATE,
+      label: 'Generate charts',
+      reversibility: Reversibility.FULLY_REVERSIBLE,
+      blocksNavigation: true,
+      suppressSuccessToast: true,
+      intent: { analysisId: analysisResult.analysis_id },
+      action: async () => {
+        setIsLoadingCharts(true)
+        try {
+          const response = await suggestAnalysisCharts(analysisResult.analysis_id, {
+            question: chartQuestion,
+            includeSampleData: true,
+          })
 
-      if (response?.charts) {
-        const normalizedCharts = response.charts
-          .map((c, idx) => normalizeChartSpec(c, idx))
-          .filter(Boolean)
+          if (response?.charts) {
+            const normalizedCharts = response.charts
+              .map((c, idx) => normalizeChartSpec(c, idx))
+              .filter(Boolean)
 
-        setAnalysisResult((prev) => ({
-          ...prev,
-          chart_suggestions: [
-            ...normalizedCharts,
-            ...(prev.chart_suggestions || []),
-          ],
-        }))
-      }
-    } catch (err) {
-      setError(err.message || 'Failed to generate charts')
-    } finally {
-      setIsLoadingCharts(false)
-      setChartQuestion('')
-    }
-  }, [analysisResult?.analysis_id, chartQuestion])
+            setAnalysisResult((prev) => ({
+              ...prev,
+              chart_suggestions: [
+                ...normalizedCharts,
+                ...(prev.chart_suggestions || []),
+              ],
+            }))
+          }
+        } catch (err) {
+          setError(err.message || 'Failed to generate charts')
+        } finally {
+          setIsLoadingCharts(false)
+          setChartQuestion('')
+        }
+      },
+    })
+  }, [analysisResult?.analysis_id, chartQuestion, execute])
 
   const handleReset = useCallback(() => {
-    setSelectedFile(null)
-    setAnalysisResult(null)
-    setError(null)
-    setActiveStep(0)
-    setChartQuestion('')
-    setQueuedJobId(null)
-  }, [])
+    return execute({
+      type: InteractionType.UPDATE,
+      label: 'Reset analysis',
+      reversibility: Reversibility.FULLY_REVERSIBLE,
+      suppressSuccessToast: true,
+      suppressErrorToast: true,
+      intent: { source: 'analyze' },
+      action: () => {
+        setSelectedFile(null)
+        setAnalysisResult(null)
+        setError(null)
+        setActiveStep(0)
+        setChartQuestion('')
+        setQueuedJobId(null)
+      },
+    })
+  }, [execute])
 
   // Compute status chips
   const getStatusChips = () => {
@@ -247,7 +296,7 @@ export default function AnalyzePageContainer() {
           <Alert
             severity="info"
             action={(
-              <Button size="small" onClick={() => navigate('/jobs')} sx={{ textTransform: 'none' }}>
+              <Button size="small" onClick={() => handleNavigate('/jobs', 'Open jobs')} sx={{ textTransform: 'none' }}>
                 View Jobs
               </Button>
             )}

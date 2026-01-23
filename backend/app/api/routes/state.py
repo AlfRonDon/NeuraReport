@@ -11,8 +11,8 @@ from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel
 from typing import Optional
 
-from backend.app.core.security import require_api_key
-from backend.app.services.state import store as state_store_module
+from backend.app.services.security import require_api_key
+from backend.app.services.state_access import store as state_store_module
 from backend.legacy.services.template_service import bootstrap_state
 
 router = APIRouter(dependencies=[Depends(require_api_key)])

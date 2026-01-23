@@ -2,16 +2,15 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Query, Request
 
-from backend.app.core.security import require_api_key
-from backend.app.domain.connections.repository import ConnectionRepository
-from backend.app.domain.connections.schemas import ConnectionTestRequest, ConnectionUpsertRequest
-from backend.app.domain.connections.service import ConnectionService
+from backend.app.services.security import require_api_key
+from backend.app.schemas.connections import ConnectionTestRequest, ConnectionUpsertRequest
+from backend.app.services.connections.service import ConnectionService
 
 router = APIRouter(dependencies=[Depends(require_api_key)])
 
 
 def get_service() -> ConnectionService:
-    return ConnectionService(ConnectionRepository())
+    return ConnectionService()
 
 
 @router.post("/test")

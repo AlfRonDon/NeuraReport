@@ -33,20 +33,20 @@ import FullscreenExitIcon from '@mui/icons-material/FullscreenExit'
 import KeyboardIcon from '@mui/icons-material/Keyboard'
 import CloseIcon from '@mui/icons-material/Close'
 import { forwardRef, useCallback, useEffect, useMemo, useState } from 'react'
-import { useNavigate, useParams, useLocation, Link as RouterLink } from 'react-router-dom'
+import { useParams, useLocation, Link as RouterLink } from 'react-router-dom'
 
-import ScaledIframePreview from '../../../components/ScaledIframePreview.jsx'
-import Surface from '../../../components/layout/Surface.jsx'
-import { useToast } from '../../../components/ToastProvider.jsx'
-import { useInteraction, InteractionType, Reversibility } from '../../../components/ux/governance'
-import { useAppStore } from '../../../stores'
-import { buildLastEditInfo } from '../../../utils/templateMeta'
+import ScaledIframePreview from '@/components/ScaledIframePreview.jsx'
+import Surface from '@/components/layout/Surface.jsx'
+import { useToast } from '@/components/ToastProvider.jsx'
+import { useInteraction, InteractionType, Reversibility, useNavigateInteraction } from '@/components/ux/governance'
+import { useAppStore } from '@/stores'
+import { buildLastEditInfo } from '@/utils/templateMeta'
 import {
   getTemplateHtml,
   editTemplateManual,
   editTemplateAi,
   undoTemplateEdit,
-} from '../../../api/client'
+} from '@/api/client'
 
 // New components
 import TemplateChatEditor from './TemplateChatEditor.jsx'
@@ -55,8 +55,8 @@ import EditHistoryTimeline from '../components/EditHistoryTimeline.jsx'
 import EditorSkeleton from '../components/EditorSkeleton.jsx'
 import KeyboardShortcutsPanel from '../components/KeyboardShortcutsPanel.jsx'
 import DraftRecoveryBanner, { AutoSaveIndicator } from '../components/DraftRecoveryBanner.jsx'
-import ConfirmModal from '../../../ui/Modal/ConfirmModal'
-import AiUsageNotice from '../../../components/ai/AiUsageNotice.jsx'
+import ConfirmModal from '@/components/Modal/ConfirmModal'
+import AiUsageNotice from '@/components/ai/AiUsageNotice.jsx'
 
 // Hooks
 import { useEditorKeyboardShortcuts, getShortcutDisplay } from '../hooks/useEditorKeyboardShortcuts.js'
@@ -72,7 +72,7 @@ const FixedTextarea = forwardRef(function FixedTextarea(props, ref) {
 
 export default function TemplateEditor() {
   const { templateId } = useParams()
-  const navigate = useNavigate()
+  const navigate = useNavigateInteraction()
   const location = useLocation()
   const toast = useToast()
   const { execute } = useInteraction()
@@ -345,7 +345,10 @@ export default function TemplateEditor() {
       )
       if (!confirmed) return
     }
-    navigate(referrer)
+    navigate(referrer, {
+      label: 'Back to templates',
+      intent: { referrer },
+    })
   }
 
   const handleEditModeChange = (event, newMode) => {

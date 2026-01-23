@@ -24,8 +24,8 @@ import {
   Refresh as RetryIcon,
   CloudOff as ServerDownIcon,
 } from '@mui/icons-material'
-import { useNetworkStatus } from '../../hooks/useNetworkStatus'
-import { API_BASE } from '../../api/client'
+import { useNetworkStatus } from '@/hooks/useNetworkStatus'
+import { API_BASE } from '@/api/client'
 
 // Animations
 const slideDown = keyframes`

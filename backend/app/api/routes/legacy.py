@@ -10,7 +10,7 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from pydantic import BaseModel
 
-from backend.app.core.security import require_api_key
+from backend.app.services.security import require_api_key
 
 router = APIRouter(prefix="/legacy", tags=["legacy"], dependencies=[Depends(require_api_key)])
 
@@ -27,10 +27,10 @@ router.include_router(src_router, prefix="/src")
 # Legacy generate feature routers
 # -----------------------------------------------------------------------------
 def _build_generate_router() -> APIRouter:
-    from backend.app.features.generate.routes.run_routes import build_run_router
-    from backend.app.features.generate.routes.discover_routes import build_discover_router
-    from backend.app.features.generate.routes.chart_suggest_routes import build_chart_suggest_router
-    from backend.app.features.generate.routes.saved_charts_routes import build_saved_charts_router
+    from backend.app.api.generate.run_routes import build_run_router
+    from backend.app.api.generate.discover_routes import build_discover_router
+    from backend.app.api.generate.chart_suggest_routes import build_chart_suggest_router
+    from backend.app.api.generate.saved_charts_routes import build_saved_charts_router
 
     from backend.app.services.prompts.llm_prompts_charts import (
         CHART_SUGGEST_PROMPT_VERSION,
@@ -42,7 +42,7 @@ def _build_generate_router() -> APIRouter:
         build_batch_field_catalog_and_stats,
         build_batch_metrics,
     )
-    from backend.app.services.state import state_store
+    from backend.app.services.state_access import state_store
     from backend.app.services.templates.TemplateVerify import get_openai_client
     from backend.app.services.utils import call_chat_completion, get_correlation_id, strip_code_fences
     from backend.app.services.utils.artifacts import load_manifest

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException, Request
 
-from backend.app.features.generate.schemas.reports import RunPayload  # reuse existing schemas
+from backend.app.schemas.generate.reports import RunPayload  # reuse existing schemas
 from backend.legacy.services.report_service import (
     queue_report_job,
     run_report as run_report_service,

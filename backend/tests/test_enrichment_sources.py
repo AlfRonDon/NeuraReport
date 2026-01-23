@@ -37,10 +37,10 @@ sys.modules.setdefault("cryptography.fernet", fernet_module)
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from backend.app.domain.enrichment.sources.base import EnrichmentSourceBase
-from backend.app.domain.enrichment.sources.company import CompanyInfoSource
-from backend.app.domain.enrichment.sources.address import AddressSource
-from backend.app.domain.enrichment.sources.exchange import (
+from backend.app.services.enrichment.sources.base import EnrichmentSourceBase
+from backend.app.services.enrichment.sources.company import CompanyInfoSource
+from backend.app.services.enrichment.sources.address import AddressSource
+from backend.app.services.enrichment.sources.exchange import (
     ExchangeRateSource,
     FALLBACK_RATES_USD,
     clear_exchange_rate_cache,
@@ -439,7 +439,7 @@ class TestEnrichmentServiceIntegration:
     @pytest.fixture
     def mock_state_store(self, tmp_path, monkeypatch):
         """Create a mock state store."""
-        from backend.app.services.state import store as state_store_module
+        from backend.app.repositories.state import store as state_store_module
 
         base_dir = tmp_path / "state"
         store = state_store_module.StateStore(base_dir=base_dir)
@@ -449,8 +449,8 @@ class TestEnrichmentServiceIntegration:
     @pytest.mark.asyncio
     async def test_service_creates_source(self, mock_state_store):
         """Test creating an enrichment source via service."""
-        from backend.app.domain.enrichment.service import EnrichmentService
-        from backend.app.domain.enrichment.schemas import (
+        from backend.app.services.enrichment.service import EnrichmentService
+        from backend.app.schemas.enrichment import (
             EnrichmentSourceCreate,
             EnrichmentSourceType,
         )
@@ -472,8 +472,8 @@ class TestEnrichmentServiceIntegration:
     @pytest.mark.asyncio
     async def test_service_lists_sources(self, mock_state_store):
         """Test listing enrichment sources."""
-        from backend.app.domain.enrichment.service import EnrichmentService
-        from backend.app.domain.enrichment.schemas import (
+        from backend.app.services.enrichment.service import EnrichmentService
+        from backend.app.schemas.enrichment import (
             EnrichmentSourceCreate,
             EnrichmentSourceType,
         )
@@ -494,7 +494,7 @@ class TestEnrichmentServiceIntegration:
 
     def test_get_available_source_types(self, mock_state_store):
         """Test getting available source types."""
-        from backend.app.domain.enrichment.service import EnrichmentService
+        from backend.app.services.enrichment.service import EnrichmentService
 
         service = EnrichmentService()
         types = service.get_available_source_types()

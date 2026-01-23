@@ -10,7 +10,7 @@ from fastapi import HTTPException, Request
 from fastapi.responses import StreamingResponse
 
 from backend.app.services.generator.GeneratorAssetsV1 import GeneratorAssetsError, build_generator_assets_from_payload
-from backend.app.services.state import store as state_store_module
+from backend.app.repositories.state import store as state_store_module
 from backend.app.services.utils import TemplateLockError, acquire_template_lock, get_correlation_id
 from backend.app.services.utils.artifacts import load_manifest
 from backend.legacy.schemas.template_schema import GeneratorAssetsPayload

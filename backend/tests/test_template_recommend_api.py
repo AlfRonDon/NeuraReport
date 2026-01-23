@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 os.environ.setdefault("NEURA_ALLOW_MISSING_OPENAI", "true")
 
 from backend import api  # noqa: E402
-from backend.app.services.state import StateStore  # noqa: E402
+from backend.app.repositories.state import StateStore  # noqa: E402
 import backend.legacy.services.template_service as template_service  # noqa: E402
 
 
@@ -18,8 +18,8 @@ def client(tmp_path, monkeypatch):
     state_dir.mkdir()
     store = StateStore(base_dir=state_dir)
     monkeypatch.setattr(api, "state_store", store, raising=False)
-    monkeypatch.setattr("backend.app.services.state.state_store", store)
-    monkeypatch.setattr("backend.app.services.state.store.state_store", store)
+    monkeypatch.setattr("backend.app.repositories.state.state_store", store)
+    monkeypatch.setattr("backend.app.repositories.state.store.state_store", store)
     return TestClient(api.app)
 
 

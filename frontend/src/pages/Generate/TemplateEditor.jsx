@@ -1,3 +1,7 @@
-import TemplateEditorContainer from '../../features/generate/containers/TemplateEditor.jsx'
+import { useInteraction } from '@/components/ux/governance'
+import TemplateEditorContainer from '@/features/generate/containers/TemplateEditor'
 
-export default TemplateEditorContainer
+export default function TemplateEditor() {
+  useInteraction()
+  return <TemplateEditorContainer />
+}

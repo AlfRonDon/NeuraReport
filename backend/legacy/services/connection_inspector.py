@@ -8,10 +8,10 @@ from typing import Any
 
 from fastapi import HTTPException
 
-from backend.app.services.connections.db_connection import resolve_db_path, verify_sqlite
-from backend.app.services.dataframes.sqlite_loader import get_loader
-from backend.app.services.dataframes import sqlite_shim
-from backend.app.services.state import store as state_store_module
+from backend.app.repositories.connections.db_connection import resolve_db_path, verify_sqlite
+from backend.app.repositories.dataframes.sqlite_loader import get_loader
+from backend.app.repositories.dataframes import sqlite_shim
+from backend.app.repositories.state import store as state_store_module
 
 _SCHEMA_CACHE: dict[tuple[str, bool, bool, int], dict] = {}
 _SCHEMA_CACHE_LOCK = threading.Lock()

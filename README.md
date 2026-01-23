@@ -11,8 +11,7 @@ NeuraReport is a desktop-first reporting assistant that pairs a FastAPI backend 
 - `scripts/` - Developer utilities (`verify_pipeline.py`, `artifact_stats.py`, etc.).
 - `backend/uploads/`, `backend/uploads_excel/` - Runtime artifacts/manifests (created at runtime; served via `/uploads` and `/excel-uploads`).
 - `backend/state/` - Encrypted state store (`state.json`) plus generated Fernet secret (do not commit).
-- `data/fixtures/dummy.db`, `data/fixtures/scratch_recipe.db` - Sample SQLite datasets for development.
-- `samples/` - Archived pipeline runs, uploads, and debug artifacts used for demos/regression.
+- `samples/uploads/<uuid>/` - Minimal fixture artifacts used by CI `verify_pipeline.py` and artifact stats checks.
 
 See `docs/product/requirements.md` for product goals and `docs/operations/PIPELINE_DOCUMENTATION.md` for a step-by-step view of the backend pipeline.
 
@@ -73,11 +72,6 @@ npm run dev
 ```
 
 Visit `http://127.0.0.1:5173`. Copy `frontend/.env.example` to `frontend/.env.local` to configure mock mode; set `VITE_USE_MOCK=false` to hit the live backend (`VITE_API_BASE_URL` defaults to `http://127.0.0.1:8000`).
-
-### Sample Data
-
-- `data/fixtures/dummy.db` contains lightweight fixtures for the connection workflow.
-- To simulate pipelines without touching production data, point the app to this SQLite database when creating a connection.
 
 ## Running Tests & Checks
 

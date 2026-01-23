@@ -26,14 +26,6 @@ export {
   StepProgress,
 } from './ProgressOverlay'
 
-// Optimistic actions
-export {
-  createOptimisticAction,
-  useOptimisticAction,
-  useOptimisticDelete,
-  useOptimisticCreate,
-} from './OptimisticAction'
-
 // Validation
 export {
   ValidationState,

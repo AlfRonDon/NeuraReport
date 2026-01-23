@@ -5,7 +5,7 @@ from typing import Any, Optional
 
 from fastapi import HTTPException
 
-from backend.app.services import state as state_store_module
+from backend.app.services import state_access as state_store_module
 from backend.legacy.services import report_service as report_service_module
 from backend.legacy.schemas.report_schema import ScheduleCreatePayload, ScheduleUpdatePayload
 from backend.legacy.utils.email_utils import normalize_email_targets

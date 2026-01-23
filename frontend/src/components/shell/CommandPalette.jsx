@@ -37,9 +37,10 @@ import ChatOutlinedIcon from '@mui/icons-material/ChatOutlined'
 import SummarizeOutlinedIcon from '@mui/icons-material/SummarizeOutlined'
 import BarChartOutlinedIcon from '@mui/icons-material/BarChartOutlined'
 import AdminPanelSettingsOutlinedIcon from '@mui/icons-material/AdminPanelSettingsOutlined'
-import { useAppStore } from '../../stores'
-import { Kbd } from '../primitives'
-import { globalSearch } from '../../api/client'
+import { useAppStore } from '@/stores'
+import { useInteraction, InteractionType, Reversibility } from '@/components/ux/governance'
+import { Kbd } from '@/ui'
+import { globalSearch } from '@/api/client'
 
 const RECENT_KEY = 'neurareport_recent_commands'
 const MAX_RECENT = 6
@@ -335,6 +336,7 @@ const SEARCH_TYPE_CONFIG = {
 
 export default function CommandPalette({ open, onClose }) {
   const navigate = useNavigate()
+  const { execute } = useInteraction()
   const [query, setQuery] = useState('')
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [searchResults, setSearchResults] = useState([])
@@ -346,6 +348,30 @@ export default function CommandPalette({ open, onClose }) {
 
   const templates = useAppStore((s) => s.templates)
   const approvedTemplates = templates.filter((t) => t.status === 'approved')
+
+  const executeUI = useCallback((label, action, intent = {}) => {
+    return execute({
+      type: InteractionType.EXECUTE,
+      label,
+      reversibility: Reversibility.FULLY_REVERSIBLE,
+      suppressSuccessToast: true,
+      suppressErrorToast: true,
+      intent: { source: 'command-palette', ...intent },
+      action,
+    })
+  }, [execute])
+
+  const handleClose = useCallback(() => {
+    return executeUI('Close command palette', () => onClose?.())
+  }, [executeUI, onClose])
+
+  const updateRecentCommands = useCallback((entry) => {
+    setRecentCommands((prev) => {
+      const next = [entry, ...prev.filter((item) => item.id !== entry.id)].slice(0, MAX_RECENT)
+      persistRecentCommands(next)
+      return next
+    })
+  }, [])
 
   // Debounced search effect
   useEffect(() => {
@@ -363,16 +389,24 @@ export default function CommandPalette({ open, onClose }) {
     }
 
     // Debounce search
-    searchTimeoutRef.current = setTimeout(async () => {
-      try {
-        const result = await globalSearch(query, { limit: 10 })
-        setSearchResults(result.results || [])
-      } catch (err) {
-        console.error('Search failed:', err)
-        setSearchResults([])
-      } finally {
-        setIsSearching(false)
-      }
+    searchTimeoutRef.current = setTimeout(() => {
+      execute({
+        type: InteractionType.EXECUTE,
+        label: 'Search command palette',
+        reversibility: Reversibility.FULLY_REVERSIBLE,
+        suppressSuccessToast: true,
+        suppressErrorToast: true,
+        intent: { source: 'command-palette', query },
+        action: async () => {
+          try {
+            const result = await globalSearch(query, { limit: 10 })
+            setSearchResults(result.results || [])
+          } catch (err) {
+            console.error('Search failed:', err)
+            setSearchResults([])
+          }
+        },
+      }).finally(() => setIsSearching(false))
     }, 200)
 
     return () => {
@@ -380,7 +414,7 @@ export default function CommandPalette({ open, onClose }) {
         clearTimeout(searchTimeoutRef.current)
       }
     }
-  }, [query])
+  }, [execute, query])
 
   // Build full command list including templates and search results
   const allCommands = useMemo(() => {
@@ -482,27 +516,38 @@ export default function CommandPalette({ open, onClose }) {
   // Execute command
   const executeCommand = useCallback(
     (cmd) => {
-      if (cmd?.action === 'navigate' && cmd?.path) {
-        const entry = {
-          id: cmd.id,
-          label: cmd.label,
-          description: cmd.description,
+      if (!cmd) return undefined
+      return execute({
+        type: cmd.action === 'navigate' ? InteractionType.NAVIGATE : InteractionType.EXECUTE,
+        label: cmd.label || 'Run command',
+        reversibility: Reversibility.FULLY_REVERSIBLE,
+        suppressSuccessToast: true,
+        suppressErrorToast: true,
+        intent: {
+          source: 'command-palette',
+          commandId: cmd.id,
+          action: cmd.action,
           path: cmd.path,
-          iconKey: cmd.iconKey || cmd.type || 'recent',
-        }
-        const next = [entry, ...recentCommands.filter((item) => item.id !== cmd.id)]
-          .slice(0, MAX_RECENT)
-        persistRecentCommands(next)
-        setRecentCommands(next)
-      }
-      if (cmd.action === 'navigate') {
-        navigate(cmd.path)
-      } else if (typeof cmd.action === 'function') {
-        cmd.action()
-      }
-      onClose()
+          group: cmd.group,
+        },
+        action: async () => {
+          if (cmd?.action === 'navigate' && cmd?.path) {
+            updateRecentCommands({
+              id: cmd.id,
+              label: cmd.label,
+              description: cmd.description,
+              path: cmd.path,
+              iconKey: cmd.iconKey || cmd.type || 'recent',
+            })
+            navigate(cmd.path)
+          } else if (typeof cmd.action === 'function') {
+            await cmd.action()
+          }
+          onClose?.()
+        },
+      })
     },
-    [navigate, onClose, recentCommands]
+    [execute, navigate, onClose, updateRecentCommands]
   )
 
   // Keyboard navigation
@@ -525,11 +570,11 @@ export default function CommandPalette({ open, onClose }) {
           break
         case 'Escape':
           e.preventDefault()
-          onClose()
+          handleClose()
           break
       }
     },
-    [filteredCommands, selectedIndex, executeCommand, onClose]
+    [filteredCommands, selectedIndex, executeCommand, handleClose]
   )
 
   // Scroll selected item into view
@@ -545,7 +590,7 @@ export default function CommandPalette({ open, onClose }) {
   return (
     <Dialog
       open={open}
-      onClose={onClose}
+      onClose={handleClose}
       maxWidth="sm"
       fullWidth
       PaperProps={{

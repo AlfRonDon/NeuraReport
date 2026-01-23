@@ -5,19 +5,19 @@ import os
 
 from fastapi import HTTPException
 
-from backend.app.features.generate.routes.chart_suggest_routes import build_chart_suggest_router
-from backend.app.features.generate.routes.discover_routes import build_discover_router
-from backend.app.features.generate.routes.saved_charts_routes import build_saved_charts_router
-from backend.app.features.generate.schemas.reports import DiscoverPayload
-from backend.app.features.generate.services.chart_suggestions_service import suggest_charts as suggest_charts_service
-from backend.app.features.generate.services.discovery_service import discover_reports as discover_reports_service
+from backend.app.api.generate.chart_suggest_routes import build_chart_suggest_router  # ARCH-EXC-003
+from backend.app.api.generate.discover_routes import build_discover_router  # ARCH-EXC-003
+from backend.app.api.generate.saved_charts_routes import build_saved_charts_router  # ARCH-EXC-003
+from backend.app.schemas.generate.reports import DiscoverPayload
+from backend.app.services.generate.chart_suggestions_service import suggest_charts as suggest_charts_service
+from backend.app.services.generate.discovery_service import discover_reports as discover_reports_service
 from backend.app.services.prompts.llm_prompts_charts import (
     CHART_SUGGEST_PROMPT_VERSION,
     build_chart_suggestions_prompt,
 )
 from backend.app.services.prompts.llm_prompts import PROMPT_VERSION, PROMPT_VERSION_3_5, PROMPT_VERSION_4
 from backend.app.services.contract.ContractBuilderV2 import load_contract_v2
-from backend.app.services.state import store as state_store_module
+from backend.app.repositories.state import store as state_store_module
 from backend.app.services.utils import call_chat_completion, get_correlation_id, strip_code_fences
 from backend.app.services.utils.artifacts import load_manifest
 from backend.app.services.reports.discovery import discover_batches_and_counts

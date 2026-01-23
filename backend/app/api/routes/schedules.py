@@ -12,8 +12,8 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 
-from backend.app.core.security import require_api_key
-from backend.app.services.state import state_store
+from backend.app.services.security import require_api_key
+from backend.app.services.state_access import state_store
 from backend.legacy.schemas.report_schema import ScheduleCreatePayload, ScheduleUpdatePayload
 from backend.legacy.services.scheduler_service import (
     create_schedule,
@@ -111,7 +111,7 @@ async def trigger_schedule(schedule_id: str, background_tasks: BackgroundTasks, 
         )
 
     # Import here to avoid circular imports
-    from backend.app.features.generate.schemas.reports import RunPayload
+    from backend.app.schemas.generate.reports import RunPayload
     from backend.legacy.services.report_service import (
         JobRunTracker,
         _build_job_steps,

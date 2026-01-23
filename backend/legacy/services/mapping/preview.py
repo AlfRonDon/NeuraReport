@@ -8,12 +8,12 @@ from typing import Any, Iterator, Optional
 
 from fastapi import HTTPException, Request
 
-from backend.app.services.connections.db_connection import verify_sqlite
+from backend.app.repositories.connections.db_connection import verify_sqlite
 from backend.app.services.mapping.AutoMapInline import MappingInlineValidationError, run_llm_call_3
 from backend.app.services.mapping.CorrectionsPreview import run_corrections_preview as corrections_preview_fn
 from backend.app.services.mapping.HeaderMapping import approval_errors, get_parent_child_info
 from backend.app.services.prompts.llm_prompts import PROMPT_VERSION
-from backend.app.services.state import store as state_store_module
+from backend.app.repositories.state import store as state_store_module
 from backend.app.services.utils import TemplateLockError, acquire_template_lock, write_artifact_manifest, write_json_atomic, write_text_atomic
 from backend.legacy.utils.connection_utils import db_path_from_payload_or_default
 from backend.legacy.utils.mapping_utils import load_mapping_keys, mapping_keys_path

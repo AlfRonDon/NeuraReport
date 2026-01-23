@@ -1,4 +1,4 @@
-import { API_BASE, fetchWithIntent, handleStreamingResponse } from '../../../api/client'
+import { API_BASE, fetchWithIntent, handleStreamingResponse } from '@/api/client'
 
 /**
  * Upload and analyze a document (PDF or Excel).

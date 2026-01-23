@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable, Mapping
 
-from .fs import write_json_atomic
+from backend.app.utils.fs import write_json_atomic
 
 logger = logging.getLogger("neura.artifacts")
 

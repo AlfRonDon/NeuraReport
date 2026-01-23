@@ -20,8 +20,8 @@ import {
   undoTemplateEdit,
   updateSavedChart,
   withBase,
-} from '../../../api/client'
-import * as mock from '../../../api/mock'
+} from '@/api/client'
+import * as mock from '@/api/mock'
 
 export {
   createSavedChart,

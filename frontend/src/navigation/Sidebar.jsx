@@ -4,7 +4,8 @@
  */
 
 import { useCallback, useState } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { useLocation } from 'react-router-dom'
+import { useInteraction, InteractionType, Reversibility, useNavigateInteraction } from '@/components/ux/governance'
 import {
   Box,
   Drawer,
@@ -45,6 +46,11 @@ import ChatIcon from '@mui/icons-material/Chat'
 import SummarizeIcon from '@mui/icons-material/Summarize'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import SparklesIcon from '@mui/icons-material/AutoAwesome'
+import EditNoteIcon from '@mui/icons-material/EditNote'
+import TableChartIcon from '@mui/icons-material/TableChart'
+import DashboardCustomizeIcon from '@mui/icons-material/DashboardCustomize'
+import CableIcon from '@mui/icons-material/Cable'
+import AccountTreeIcon from '@mui/icons-material/AccountTree'
 
 import { useAppStore } from '../stores'
 import NotificationCenter from '../components/notifications/NotificationCenter'
@@ -91,10 +97,21 @@ const NAV_ITEMS = [
     ],
   },
   {
+    section: 'Create',
+    collapsible: true,
+    items: [
+      { key: 'documents', label: 'Documents', icon: EditNoteIcon, path: '/documents', highlight: true },
+      { key: 'spreadsheets', label: 'Spreadsheets', icon: TableChartIcon, path: '/spreadsheets' },
+      { key: 'dashboard-builder', label: 'Dashboards', icon: DashboardCustomizeIcon, path: '/dashboard-builder' },
+      { key: 'workflows', label: 'Workflows', icon: AccountTreeIcon, path: '/workflows' },
+    ],
+  },
+  {
     section: 'Setup',
     collapsible: true,
     items: [
       { key: 'connections', label: 'Data Sources', icon: StorageIcon, path: '/connections' },
+      { key: 'connectors', label: 'Connectors', icon: CableIcon, path: '/connectors' },
       { key: 'templates', label: 'Report Designs', icon: DescriptionIcon, path: '/templates' },
       { key: 'query', label: 'Query Builder', icon: QuestionAnswerIcon, path: '/query' },
       { key: 'enrichment', label: 'Data Enrichment', icon: AutoFixHighIcon, path: '/enrichment' },
@@ -334,10 +351,12 @@ const CollapseButton = styled(IconButton)(({ theme }) => ({
 // =============================================================================
 
 export default function Sidebar({ width, collapsed, mobileOpen, onClose, onToggle }) {
-  const navigate = useNavigate()
+  const { execute } = useInteraction()
+  const navigate = useNavigateInteraction()
   const location = useLocation()
   const theme = useTheme()
   const [expandedSections, setExpandedSections] = useState({
+    Create: true,
     Setup: true,
     'AI Tools': true,
   })
@@ -347,17 +366,51 @@ export default function Sidebar({ width, collapsed, mobileOpen, onClose, onToggl
     return jobs.filter((j) => j.status === 'running' || j.status === 'pending').length
   })
 
-  const handleNavigate = useCallback((path) => {
-    navigate(path)
+  const handleNavigate = useCallback((path, label) => {
+    const resolvedLabel = label || `Open ${path}`
+    navigate(path, {
+      label: resolvedLabel,
+      intent: { source: 'sidebar', path },
+    })
     onClose?.()
   }, [navigate, onClose])
 
-  const toggleSection = (section) => {
-    setExpandedSections(prev => ({
-      ...prev,
-      [section]: !prev[section],
-    }))
-  }
+  const executeUI = useCallback((label, action, intent = {}) => {
+    return execute({
+      type: InteractionType.EXECUTE,
+      label,
+      reversibility: Reversibility.FULLY_REVERSIBLE,
+      suppressSuccessToast: true,
+      suppressErrorToast: true,
+      intent: { source: 'sidebar', ...intent },
+      action,
+    })
+  }, [execute])
+
+  const handleToggleSection = useCallback((section) => {
+    const isExpanded = expandedSections[section] !== false
+    const nextLabel = isExpanded ? 'Collapse' : 'Expand'
+    return executeUI(
+      `${nextLabel} ${section} section`,
+      () => setExpandedSections(prev => ({
+        ...prev,
+        [section]: !prev[section],
+      })),
+      { section, expanded: !isExpanded }
+    )
+  }, [executeUI, expandedSections])
+
+  const handleToggleSidebar = useCallback(() => {
+    return executeUI(
+      collapsed ? 'Expand sidebar' : 'Collapse sidebar',
+      () => onToggle?.(),
+      { collapsed: !collapsed }
+    )
+  }, [executeUI, collapsed, onToggle])
+
+  const handleCloseSidebar = useCallback(() => {
+    return executeUI('Close sidebar', () => onClose?.())
+  }, [executeUI, onClose])
 
   const isActive = (path) => {
     if (path === '/') {
@@ -407,7 +460,7 @@ export default function Sidebar({ width, collapsed, mobileOpen, onClose, onToggl
       </LogoContainer>
 
       {/* Collapse Button */}
-      <CollapseButton size="small" onClick={onToggle}>
+      <CollapseButton size="small" onClick={handleToggleSidebar}>
         {collapsed ? <ChevronRightIcon /> : <ChevronLeftIcon />}
       </CollapseButton>
 
@@ -449,11 +502,11 @@ export default function Sidebar({ width, collapsed, mobileOpen, onClose, onToggl
             <Box key={section.section}>
               {/* Section Header */}
               {!collapsed && (
-                <SectionHeader
-                  collapsed={collapsed}
-                  collapsible={section.collapsible}
-                  onClick={() => section.collapsible && toggleSection(section.section)}
-                >
+                  <SectionHeader
+                    collapsed={collapsed}
+                    collapsible={section.collapsible}
+                    onClick={() => section.collapsible && handleToggleSection(section.section)}
+                  >
                   <Typography
                     variant="caption"
                     fontWeight={600}
@@ -653,7 +706,7 @@ export default function Sidebar({ width, collapsed, mobileOpen, onClose, onToggl
       <Drawer
         variant="temporary"
         open={mobileOpen}
-        onClose={onClose}
+        onClose={handleCloseSidebar}
         ModalProps={{ keepMounted: true }}
         sx={{
           display: { xs: 'block', md: 'none' },

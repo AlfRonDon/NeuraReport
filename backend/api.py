@@ -15,12 +15,12 @@ warnings.filterwarnings("ignore", message=".*SwigPy.*has no __module__ attribute
 from fastapi import FastAPI, UploadFile
 
 
-from .app.core.static_files import UploadsStaticFiles
+from backend.app.services.static_files import UploadsStaticFiles
 
-from .app.core.event_bus import EventBus, logging_middleware, metrics_middleware
-from .app.core.errors import add_exception_handlers
-from .app.core.middleware import add_middlewares
-from backend.app.api.router import register_routes
+from backend.app.utils.event_bus import EventBus, logging_middleware, metrics_middleware
+from backend.app.services.errors import add_exception_handlers
+from backend.app.api.middleware import add_middlewares  # ARCH-EXC-002
+from backend.app.api.router import register_routes  # ARCH-EXC-002
 from backend.legacy.services.report_service import (
     _run_report_job_sync as _run_report_job_sync,
     _run_report_with_email as _run_report_with_email,
@@ -31,12 +31,12 @@ from backend.legacy.services.report_service import JobRunTracker as JobRunTracke
 
 from backend.legacy.services import report_service as report_service
 
-from .app.core.config import get_settings, log_settings
-from .app.core.auth import init_auth_db
-from .app.env_loader import load_env_file
+from backend.app.services.config import get_settings, log_settings
+from backend.app.services.auth import init_auth_db
+from backend.app.utils.env_loader import load_env_file
 
-from .app.services.jobs.report_scheduler import ReportScheduler
-from .app.services.background_tasks import mark_incomplete_jobs_failed
+from backend.app.services.jobs.report_scheduler import ReportScheduler
+from backend.app.services.background_tasks import mark_incomplete_jobs_failed
 
 
 def _configure_error_log_handler(target_logger: logging.Logger | None = None) -> Path | None:
@@ -171,8 +171,8 @@ def _scheduler_runner(payload: dict, kind: str, *, job_tracker: JobRunTracker | 
 # ---------------------------------------------------------------------------
 from fastapi import HTTPException
 
-from backend.app.services.connections.db_connection import resolve_db_path as resolve_db_path
-from backend.app.services.connections.db_connection import verify_sqlite as verify_sqlite
+from backend.app.repositories.connections.db_connection import resolve_db_path as resolve_db_path
+from backend.app.repositories.connections.db_connection import verify_sqlite as verify_sqlite
 from backend.app.services.contract.ContractBuilderV2 import build_or_load_contract_v2 as build_or_load_contract_v2
 from backend.app.services.generator.GeneratorAssetsV1 import (
     build_generator_assets_from_payload as build_generator_assets_from_payload,
@@ -183,7 +183,7 @@ from backend.app.services.render.html_raster import rasterize_html_to_png as ras
 from backend.app.services.render.html_raster import save_png as save_png
 from backend.app.services.reports.docx_export import html_file_to_docx as html_file_to_docx
 from backend.app.services.reports.xlsx_export import html_file_to_xlsx as html_file_to_xlsx
-from backend.app.services.state import state_store as state_store
+from backend.app.repositories.state import state_store as state_store
 from backend.app.services.templates.TemplateVerify import pdf_to_pngs as pdf_to_pngs
 from backend.app.services.templates.TemplateVerify import render_html_to_png as render_html_to_png
 from backend.app.services.templates.TemplateVerify import render_panel_preview as render_panel_preview

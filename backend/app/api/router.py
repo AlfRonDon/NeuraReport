@@ -11,7 +11,10 @@ from .routes import (
     analytics,
     charts,
     connections,
+    connectors,
+    dashboards,
     docqa,
+    documents,
     enrichment,
     excel,
     federation,
@@ -22,14 +25,15 @@ from .routes import (
     recommendations,
     reports,
     schedules,
+    spreadsheets,
     state,
     summary,
     synthesis,
     templates,
 )
-from backend.app.features.analyze.routes import router as analyze_router
-from backend.app.features.analyze.routes import enhanced_analysis_routes
-from backend.app.core.auth import auth_backend, fastapi_users, UserCreate, UserRead, UserUpdate
+from backend.app.api.analyze import router as analyze_router
+from backend.app.api.analyze import enhanced_analysis_routes
+from backend.app.services.auth import auth_backend, fastapi_users, UserCreate, UserRead, UserUpdate
 
 
 def register_routes(app: FastAPI) -> None:
@@ -84,6 +88,12 @@ def register_routes(app: FastAPI) -> None:
     app.include_router(summary.router, prefix="/summary", tags=["summary"])
     app.include_router(synthesis.router, prefix="/synthesis", tags=["synthesis"])
     app.include_router(docqa.router, prefix="/docqa", tags=["docqa"])
+
+    # Document editing and collaboration
+    app.include_router(documents.router, prefix="/documents", tags=["documents"])
+    app.include_router(spreadsheets.router, prefix="/spreadsheets", tags=["spreadsheets"])
+    app.include_router(dashboards.router, prefix="/dashboards", tags=["dashboards"])
+    app.include_router(connectors.router, prefix="/connectors", tags=["connectors"])
 
     # Legacy/compatibility routes
     app.include_router(legacy.router)

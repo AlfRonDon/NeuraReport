@@ -21,7 +21,7 @@ from backend.legacy.schemas.template_schema import (
     TemplateRecommendResponse,
     TemplateUpdatePayload,
 )
-from backend.app.services.state import store as state_store_module
+from backend.app.repositories.state import store as state_store_module
 from backend.legacy.services.mapping.approve import run_mapping_approve
 from backend.legacy.services.mapping.corrections import run_corrections_preview
 from backend.legacy.services.mapping.key_options import mapping_key_options as mapping_key_options_service

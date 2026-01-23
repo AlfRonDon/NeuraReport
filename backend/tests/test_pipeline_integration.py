@@ -45,8 +45,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from fastapi.testclient import TestClient
 from .. import api
-from ..app.core import config as config_module
-from ..app.services.state import store as state_store_module
+from ..app.services import config as config_module
+from ..app.repositories.state import store as state_store_module
 
 
 @pytest.fixture

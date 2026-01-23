@@ -435,16 +435,8 @@ class TestHealthEndpoints:
         try:
             from backend.api import app
         except ImportError:
-            try:
-                # Create a minimal test app with health routes
-                from fastapi import FastAPI
-                from backend.app.api.routes.health import router as health_router
-
-                app = FastAPI()
-                app.include_router(health_router)
-            except ImportError:
-                pytest.skip("Cannot import app for testing")
-                return None
+            pytest.skip("Cannot import app for testing")
+            return None
 
         return TestClient(app)
 
@@ -507,11 +499,7 @@ class TestScheduleEndpoints:
         from fastapi.testclient import TestClient
 
         try:
-            from fastapi import FastAPI
-            from backend.app.api.routes.schedules import router as schedules_router
-
-            app = FastAPI()
-            app.include_router(schedules_router, prefix="/reports/schedules")
+            from backend.api import app
             return TestClient(app)
         except ImportError as e:
             pytest.skip(f"Cannot import schedule routes: {e}")
@@ -634,11 +622,11 @@ class TestSchedulerEmailIntegration:
 
     def test_notification_strategy_calls_mailer(self):
         """NotificationStrategy should call send_report_email."""
-        from backend.app.domain.reports.strategies import NotificationStrategy
+        from backend.app.services.reports.strategies import NotificationStrategy
 
         strategy = NotificationStrategy()
 
-        with patch("backend.app.domain.reports.strategies.send_report_email", return_value=True) as mock_send:
+        with patch("backend.app.services.reports.strategies.send_report_email", return_value=True) as mock_send:
             result = strategy.send(
                 recipients=["test@example.com"],
                 subject="Test",

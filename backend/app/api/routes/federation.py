@@ -3,9 +3,9 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Request
 
-from backend.app.core.security import require_api_key
-from backend.app.domain.federation.schemas import VirtualSchemaCreate, SuggestJoinsRequest, FederatedQueryRequest
-from backend.app.domain.federation.service import FederationService
+from backend.app.services.security import require_api_key
+from backend.app.schemas.federation import VirtualSchemaCreate, SuggestJoinsRequest, FederatedQueryRequest
+from backend.app.services.federation.service import FederationService
 
 router = APIRouter(dependencies=[Depends(require_api_key)])
 

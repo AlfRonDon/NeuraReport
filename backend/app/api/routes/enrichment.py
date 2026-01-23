@@ -5,14 +5,14 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, Query, Request
 
-from backend.app.core.security import require_api_key
-from backend.app.domain.enrichment.schemas import (
+from backend.app.services.security import require_api_key
+from backend.app.schemas.enrichment import (
     EnrichmentSourceCreate,
     EnrichmentSourceType,
     SimpleEnrichmentRequest,
     SimplePreviewRequest,
 )
-from backend.app.domain.enrichment.service import EnrichmentService
+from backend.app.services.enrichment.service import EnrichmentService
 
 router = APIRouter(dependencies=[Depends(require_api_key)])
 

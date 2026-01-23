@@ -43,7 +43,7 @@ sys.modules.setdefault("cryptography.fernet", fernet_module)
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from .. import api
-from ..app.services.state import store as state_store_module
+from ..app.repositories.state import store as state_store_module
 
 
 @pytest.fixture

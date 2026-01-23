@@ -8,11 +8,11 @@ from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Request
 
-from backend.app.core.config import get_settings
-from backend.app.core.middleware import limiter
-from backend.app.features.analyze.services.document_analysis_service import _ANALYSIS_CACHE
+from backend.app.services.config import get_settings
+from backend.app.api.middleware import limiter
+from backend.app.services.analyze.document_analysis_service import _ANALYSIS_CACHE
 from backend.app.services.utils.mailer import MAILER_CONFIG, refresh_mailer_config
-from backend.app.services.state import store as state_store_module
+from backend.app.services.state_access import store as state_store_module
 
 router = APIRouter()
 
@@ -373,7 +373,7 @@ async def scheduler_health(request: Request) -> Dict[str, Any]:
     # Get schedule statistics
     schedules_info = {"total": 0, "active": 0, "next_run": None}
     try:
-        from backend.app.services.state import state_store
+        from backend.app.services.state_access import state_store
         schedules = state_store.list_schedules()
         schedules_info["total"] = len(schedules)
         schedules_info["active"] = sum(1 for s in schedules if s.get("active", True))

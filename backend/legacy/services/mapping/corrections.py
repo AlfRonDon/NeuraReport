@@ -11,7 +11,7 @@ from fastapi.responses import StreamingResponse
 
 from backend.app.services.mapping.CorrectionsPreview import CorrectionsPreviewError, run_corrections_preview as corrections_preview_fn
 from backend.app.services.prompts.llm_prompts import PROMPT_VERSION_3_5
-from backend.app.services.state import state_store
+from backend.app.repositories.state import state_store
 from backend.app.services.utils import TemplateLockError, acquire_template_lock
 from backend.legacy.services.mapping.helpers import http_error as _http_error
 from backend.legacy.utils.template_utils import artifact_url, template_dir

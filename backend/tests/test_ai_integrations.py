@@ -41,7 +41,7 @@ def print_result(test_name: str, success: bool, details: str = "", skip: bool = 
             print(f"       {line}")
 
 
-def test_llm_config():
+def _check_llm_config():
     """Test LLM configuration detection."""
     print_header("1. LLM Configuration")
 
@@ -63,7 +63,7 @@ def test_llm_config():
         return False
 
 
-def test_llm_providers():
+def _check_llm_providers():
     """Test LLM provider availability."""
     print_header("2. LLM Providers")
 
@@ -139,7 +139,7 @@ def test_llm_providers():
     return results
 
 
-def test_pdf_extractors():
+def _check_pdf_extractors():
     """Test PDF extraction tools."""
     print_header("3. PDF Extraction Tools")
 
@@ -161,7 +161,7 @@ def test_pdf_extractors():
     return results
 
 
-def test_excel_extractor():
+def _check_excel_extractor():
     """Test Excel extraction."""
     print_header("4. Excel Extraction")
 
@@ -197,7 +197,7 @@ def test_excel_extractor():
         return False
 
 
-def test_vision_language_model():
+def _check_vision_language_model():
     """Test VLM integration."""
     print_header("5. Vision-Language Models")
 
@@ -226,7 +226,7 @@ def test_vision_language_model():
         return False
 
 
-def test_multi_agent_system():
+def _check_multi_agent_system():
     """Test multi-agent orchestration."""
     print_header("6. Multi-Agent System")
 
@@ -264,7 +264,7 @@ def test_multi_agent_system():
         return False
 
 
-def test_text_to_sql():
+def _check_text_to_sql():
     """Test Text-to-SQL generation."""
     print_header("7. Text-to-SQL Generation")
 
@@ -315,7 +315,7 @@ def test_text_to_sql():
         return False
 
 
-def test_rag_framework():
+def _check_rag_framework():
     """Test RAG framework."""
     print_header("8. RAG Framework")
 
@@ -360,7 +360,7 @@ def test_rag_framework():
         return False
 
 
-def test_chart_generation():
+def _check_chart_generation():
     """Test chart generation."""
     print_header("9. Chart Generation (QuickChart)")
 
@@ -424,7 +424,7 @@ def test_chart_generation():
         return False
 
 
-def test_document_extractor():
+def _check_document_extractor():
     """Test enhanced document extractor."""
     print_header("10. Enhanced Document Extractor")
 
@@ -467,6 +467,46 @@ def test_document_extractor():
         return False
 
 
+def test_llm_config():
+    _check_llm_config()
+
+
+def test_llm_providers():
+    _check_llm_providers()
+
+
+def test_pdf_extractors():
+    _check_pdf_extractors()
+
+
+def test_excel_extractor():
+    _check_excel_extractor()
+
+
+def test_vision_language_model():
+    _check_vision_language_model()
+
+
+def test_multi_agent_system():
+    _check_multi_agent_system()
+
+
+def test_text_to_sql():
+    _check_text_to_sql()
+
+
+def test_rag_framework():
+    _check_rag_framework()
+
+
+def test_chart_generation():
+    _check_chart_generation()
+
+
+def test_document_extractor():
+    _check_document_extractor()
+
+
 def run_all_tests():
     """Run all integration tests."""
     print("\n" + "=" * 60)
@@ -474,16 +514,16 @@ def run_all_tests():
     print("=" * 60)
 
     results = {
-        "llm_config": test_llm_config(),
-        "llm_providers": test_llm_providers(),
-        "pdf_extractors": test_pdf_extractors(),
-        "excel_extractor": test_excel_extractor(),
-        "vlm": test_vision_language_model(),
-        "multi_agent": test_multi_agent_system(),
-        "text_to_sql": test_text_to_sql(),
-        "rag": test_rag_framework(),
-        "chart_generation": test_chart_generation(),
-        "document_extractor": test_document_extractor(),
+        "llm_config": _check_llm_config(),
+        "llm_providers": _check_llm_providers(),
+        "pdf_extractors": _check_pdf_extractors(),
+        "excel_extractor": _check_excel_extractor(),
+        "vlm": _check_vision_language_model(),
+        "multi_agent": _check_multi_agent_system(),
+        "text_to_sql": _check_text_to_sql(),
+        "rag": _check_rag_framework(),
+        "chart_generation": _check_chart_generation(),
+        "document_extractor": _check_document_extractor(),
     }
 
     # Summary

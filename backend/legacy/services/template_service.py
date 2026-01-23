@@ -12,16 +12,16 @@ from fastapi import HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse
 from starlette.background import BackgroundTask
 
-from backend.app.core.config import get_settings as get_api_settings
-from backend.app.domain.templates.errors import TemplateImportError
-from backend.app.domain.templates.service import TemplateService
+from backend.app.services.config import get_settings as get_api_settings
+from backend.app.services.templates.errors import TemplateImportError
+from backend.app.services.templates.service import TemplateService
 from backend.app.services.utils import TemplateLockError, acquire_template_lock
 from backend.app.services.templates.catalog import build_unified_template_catalog
 from backend.app.services.utils import get_correlation_id
-from backend.app.services.state import store as state_store_module
+from backend.app.repositories.state import store as state_store_module
 from backend.app.services.prompts.llm_prompts_templates import recommend_templates_from_catalog
 from backend.app.services.utils.zip_tools import create_zip_from_dir
-from backend.app.core.validation import is_safe_name
+from backend.app.utils.validation import is_safe_name
 from backend.legacy.services.file_service import (
     apply_chat_template_edit as apply_chat_template_edit_service,
     chat_template_edit as chat_template_edit_service,

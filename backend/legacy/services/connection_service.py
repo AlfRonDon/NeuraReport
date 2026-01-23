@@ -6,8 +6,8 @@ from typing import Any, Optional
 
 from fastapi import HTTPException
 
-from backend.app.services.connections.db_connection import resolve_db_path, save_connection, verify_sqlite
-from backend.app.services.state import store as state_store_module
+from backend.app.repositories.connections.db_connection import resolve_db_path, save_connection, verify_sqlite
+from backend.app.repositories.state import store as state_store_module
 from backend.legacy.schemas.connection_schema import ConnectionUpsertPayload, TestPayload
 from backend.legacy.utils.connection_utils import display_name_for_path
 

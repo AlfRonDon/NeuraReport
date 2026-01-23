@@ -6,19 +6,19 @@ import reactRefresh from 'eslint-plugin-react-refresh'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 const boundaryElements = [
-  { type: 'app', pattern: 'src/*.{js,jsx}', mode: 'file' },
-  { type: 'pages', pattern: 'src/pages/*' },
-  { type: 'features', pattern: 'src/features/*' },
-  { type: 'layouts', pattern: 'src/layouts/*' },
-  { type: 'navigation', pattern: 'src/navigation/*' },
-  { type: 'components', pattern: 'src/components/*' },
-  { type: 'ui', pattern: 'src/ui/*' },
-  { type: 'hooks', pattern: 'src/hooks/*' },
-  { type: 'stores', pattern: 'src/stores/*' },
-  { type: 'api', pattern: 'src/api/*' },
-  { type: 'utils', pattern: 'src/utils/*' },
-  { type: 'content', pattern: 'src/content/*' },
-  { type: 'assets', pattern: 'src/assets/*' },
+  { type: 'app', pattern: 'src/*.{js,jsx,css}', mode: 'file' },
+  { type: 'pages', pattern: 'src/pages/**' },
+  { type: 'features', pattern: 'src/features/**' },
+  { type: 'layouts', pattern: 'src/layouts/**' },
+  { type: 'navigation', pattern: 'src/navigation/**' },
+  { type: 'components', pattern: 'src/components/**' },
+  { type: 'ui', pattern: 'src/ui/**' },
+  { type: 'hooks', pattern: 'src/hooks/**' },
+  { type: 'stores', pattern: 'src/stores/**' },
+  { type: 'api', pattern: 'src/api/**' },
+  { type: 'utils', pattern: 'src/utils/**' },
+  { type: 'content', pattern: 'src/content/**' },
+  { type: 'assets', pattern: 'src/assets/**' },
 ]
 
 const boundaryRules = [

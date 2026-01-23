@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from backend.app.core.config import get_settings
+from backend.app.services.config import get_settings
 
 SETTINGS = get_settings()
 APP_VERSION = SETTINGS.version

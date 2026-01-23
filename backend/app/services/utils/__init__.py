@@ -10,7 +10,7 @@ from .artifacts import compute_checksums, write_artifact_manifest
 from .context import get_correlation_id, set_correlation_id
 
 # Re-export convenience functions for tidy imports.
-from .fs import write_json_atomic, write_text_atomic
+from backend.app.utils.fs import write_json_atomic, write_text_atomic
 from .html import sanitize_html
 from .llm import call_chat_completion
 from .lock import TemplateLockError, acquire_template_lock

@@ -1,5 +1,6 @@
 import { Box, Container, Typography, Tabs, Tab, Paper } from '@mui/material'
-import { Outlet, useNavigate, useLocation } from 'react-router-dom'
+import { Outlet, useLocation } from 'react-router-dom'
+import { useNavigateInteraction } from '@/components/ux/governance'
 
 const settingsTabs = [
   { label: 'General', path: '/settings/general' },
@@ -10,7 +11,7 @@ const settingsTabs = [
 ]
 
 export default function SettingsLayout({ children }) {
-  const navigate = useNavigate()
+  const navigate = useNavigateInteraction()
   const location = useLocation()
 
   const currentTab = settingsTabs.findIndex((tab) => location.pathname.startsWith(tab.path))
@@ -34,7 +35,11 @@ export default function SettingsLayout({ children }) {
           <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
             <Tabs
               value={currentTab === -1 ? 0 : currentTab}
-              onChange={(_, newValue) => navigate(settingsTabs[newValue].path)}
+              onChange={(_, newValue) =>
+                navigate(settingsTabs[newValue].path, {
+                  label: `Open ${settingsTabs[newValue].label} settings`,
+                  intent: { source: 'settings-layout', tab: settingsTabs[newValue].label },
+                })}
               sx={{
                 px: 2,
                 '& .MuiTab-root': {

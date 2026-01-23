@@ -18,7 +18,7 @@ except ImportError:  # pragma: no cover - optional dependency during tests
 
 logger = logging.getLogger("neura.llm")
 
-_TIMEOUT_RAW = os.getenv("OPENAI_REQUEST_TIMEOUT_SECONDS")
+_TIMEOUT_RAW = os.getenv("LLM_TIMEOUT_SECONDS", os.getenv("OPENAI_REQUEST_TIMEOUT_SECONDS"))
 if _TIMEOUT_RAW not in (None, "", "0"):
     try:
         _DEFAULT_TIMEOUT = float(_TIMEOUT_RAW)
@@ -34,9 +34,9 @@ if _TIMEOUT_RAW not in (None, "", "0"):
 else:
     _DEFAULT_TIMEOUT = None
 
-_MAX_ATTEMPTS = int(os.getenv("OPENAI_MAX_ATTEMPTS", "3"))
-_BACKOFF_INITIAL = float(os.getenv("OPENAI_BACKOFF_SECONDS", "1.5"))
-_BACKOFF_MULTIPLIER = float(os.getenv("OPENAI_BACKOFF_MULTIPLIER", "2.0"))
+_MAX_ATTEMPTS = int(os.getenv("LLM_MAX_RETRIES", os.getenv("OPENAI_MAX_ATTEMPTS", "3")))
+_BACKOFF_INITIAL = float(os.getenv("LLM_RETRY_DELAY", os.getenv("OPENAI_BACKOFF_SECONDS", "1.5")))
+_BACKOFF_MULTIPLIER = float(os.getenv("LLM_RETRY_MULTIPLIER", os.getenv("OPENAI_BACKOFF_MULTIPLIER", "2.0")))
 _FORCE_GPT5 = os.getenv("NEURA_FORCE_GPT5", "true").lower() in {"1", "true", "yes"}
 
 _LOG_PATH_ENV = os.getenv("LLM_RAW_OUTPUT_PATH")

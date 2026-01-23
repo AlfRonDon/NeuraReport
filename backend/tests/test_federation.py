@@ -57,7 +57,7 @@ class TestFederationService:
     @pytest.fixture
     def mock_state_store(self, tmp_path, monkeypatch):
         """Create a mock state store."""
-        from backend.app.services.state import store as state_store_module
+        from backend.app.repositories.state import store as state_store_module
 
         base_dir = tmp_path / "state"
         store = state_store_module.StateStore(base_dir=base_dir)
@@ -67,7 +67,7 @@ class TestFederationService:
     @pytest.fixture
     def service(self, mock_state_store):
         """Create a FederationService instance."""
-        from backend.app.domain.federation.service import FederationService
+        from backend.app.services.federation.service import FederationService
         return FederationService()
 
     def test_extract_table_names_simple_select(self, service):
@@ -129,7 +129,7 @@ class TestVirtualSchemaManagement:
     @pytest.fixture
     def mock_state_store(self, tmp_path, monkeypatch):
         """Create a mock state store."""
-        from backend.app.services.state import store as state_store_module
+        from backend.app.repositories.state import store as state_store_module
 
         base_dir = tmp_path / "state"
         store = state_store_module.StateStore(base_dir=base_dir)
@@ -139,7 +139,7 @@ class TestVirtualSchemaManagement:
     @pytest.fixture
     def service(self, mock_state_store):
         """Create a FederationService instance."""
-        from backend.app.domain.federation.service import FederationService
+        from backend.app.services.federation.service import FederationService
         return FederationService()
 
     @pytest.fixture
@@ -163,13 +163,13 @@ class TestVirtualSchemaManagement:
             return schemas.get(conn_id, {"tables": []})
 
         monkeypatch.setattr(
-            "src.services.connection_inspector.get_connection_schema",
+            "backend.app.services.federation.service.get_connection_schema",
             mock_get_schema
         )
 
     def test_create_virtual_schema(self, service, mock_connection_schema):
         """Test creating a virtual schema."""
-        from backend.app.domain.federation.schemas import VirtualSchemaCreate
+        from backend.app.schemas.federation import VirtualSchemaCreate
 
         request = VirtualSchemaCreate(
             name="Test Schema",
@@ -187,7 +187,7 @@ class TestVirtualSchemaManagement:
 
     def test_list_virtual_schemas(self, service, mock_connection_schema):
         """Test listing virtual schemas."""
-        from backend.app.domain.federation.schemas import VirtualSchemaCreate
+        from backend.app.schemas.federation import VirtualSchemaCreate
 
         # Create a schema first
         request = VirtualSchemaCreate(
@@ -202,7 +202,7 @@ class TestVirtualSchemaManagement:
 
     def test_get_virtual_schema(self, service, mock_connection_schema):
         """Test getting a specific virtual schema."""
-        from backend.app.domain.federation.schemas import VirtualSchemaCreate
+        from backend.app.schemas.federation import VirtualSchemaCreate
 
         request = VirtualSchemaCreate(
             name="Schema to Get",
@@ -222,7 +222,7 @@ class TestVirtualSchemaManagement:
 
     def test_delete_virtual_schema(self, service, mock_connection_schema):
         """Test deleting a virtual schema."""
-        from backend.app.domain.federation.schemas import VirtualSchemaCreate
+        from backend.app.schemas.federation import VirtualSchemaCreate
 
         request = VirtualSchemaCreate(
             name="Schema to Delete",
@@ -249,7 +249,7 @@ class TestTableToConnectionMapping:
     @pytest.fixture
     def mock_state_store(self, tmp_path, monkeypatch):
         """Create a mock state store."""
-        from backend.app.services.state import store as state_store_module
+        from backend.app.repositories.state import store as state_store_module
 
         base_dir = tmp_path / "state"
         store = state_store_module.StateStore(base_dir=base_dir)
@@ -259,12 +259,12 @@ class TestTableToConnectionMapping:
     @pytest.fixture
     def service(self, mock_state_store):
         """Create a FederationService instance."""
-        from backend.app.domain.federation.service import FederationService
+        from backend.app.services.federation.service import FederationService
         return FederationService()
 
     def test_map_tables_to_connections(self, service):
         """Test mapping tables to their connections."""
-        from backend.app.domain.federation.schemas import VirtualSchema, TableReference
+        from backend.app.schemas.federation import VirtualSchema, TableReference
 
         schema = VirtualSchema(
             id="test-schema",
@@ -293,7 +293,7 @@ class TestTableToConnectionMapping:
 
     def test_map_tables_by_alias(self, service):
         """Test mapping tables by their alias."""
-        from backend.app.domain.federation.schemas import VirtualSchema, TableReference
+        from backend.app.schemas.federation import VirtualSchema, TableReference
 
         schema = VirtualSchema(
             id="test-schema",
@@ -319,7 +319,7 @@ class TestResultMerging:
     @pytest.fixture
     def mock_state_store(self, tmp_path, monkeypatch):
         """Create a mock state store."""
-        from backend.app.services.state import store as state_store_module
+        from backend.app.repositories.state import store as state_store_module
 
         base_dir = tmp_path / "state"
         store = state_store_module.StateStore(base_dir=base_dir)
@@ -329,7 +329,7 @@ class TestResultMerging:
     @pytest.fixture
     def service(self, mock_state_store):
         """Create a FederationService instance."""
-        from backend.app.domain.federation.service import FederationService
+        from backend.app.services.federation.service import FederationService
         return FederationService()
 
     def test_merge_single_result(self, service):
@@ -399,7 +399,7 @@ class TestFederatedQueryExecution:
     @pytest.fixture
     def mock_state_store(self, tmp_path, monkeypatch):
         """Create a mock state store."""
-        from backend.app.services.state import store as state_store_module
+        from backend.app.repositories.state import store as state_store_module
 
         base_dir = tmp_path / "state"
         store = state_store_module.StateStore(base_dir=base_dir)
@@ -409,7 +409,7 @@ class TestFederatedQueryExecution:
     @pytest.fixture
     def service(self, mock_state_store):
         """Create a FederationService instance."""
-        from backend.app.domain.federation.service import FederationService
+        from backend.app.services.federation.service import FederationService
         return FederationService()
 
     @pytest.fixture
@@ -431,13 +431,13 @@ class TestFederatedQueryExecution:
             return schemas.get(conn_id, {"tables": []})
 
         monkeypatch.setattr(
-            "src.services.connection_inspector.get_connection_schema",
+            "backend.app.services.federation.service.get_connection_schema",
             mock_get_schema
         )
 
     def test_execute_query_single_connection(self, service, mock_connection_schema, monkeypatch):
         """Query on single connection should execute directly."""
-        from backend.app.domain.federation.schemas import (
+        from backend.app.schemas.federation import (
             VirtualSchemaCreate,
             FederatedQueryRequest,
         )
@@ -457,7 +457,7 @@ class TestFederatedQueryExecution:
             }
 
         monkeypatch.setattr(
-            "backend.app.services.connections.db_connection.execute_query",
+            "backend.app.repositories.connections.db_connection.execute_query",
             mock_execute
         )
 
@@ -475,8 +475,8 @@ class TestFederatedQueryExecution:
 
     def test_execute_query_schema_not_found(self, service):
         """Query on nonexistent schema should raise error."""
-        from backend.app.domain.federation.schemas import FederatedQueryRequest
-        from backend.app.core.errors import AppError
+        from backend.app.schemas.federation import FederatedQueryRequest
+        from backend.app.utils.errors import AppError
 
         query_request = FederatedQueryRequest(
             virtual_schema_id="nonexistent",
@@ -490,8 +490,8 @@ class TestFederatedQueryExecution:
 
     def test_execute_query_no_connections(self, service, mock_state_store):
         """Query on schema with no connections should raise error."""
-        from backend.app.domain.federation.schemas import FederatedQueryRequest
-        from backend.app.core.errors import AppError
+        from backend.app.schemas.federation import FederatedQueryRequest
+        from backend.app.utils.errors import AppError
 
         # Manually create a schema with no connections
         store = mock_state_store
@@ -525,7 +525,7 @@ class TestJoinSuggestion:
     @pytest.fixture
     def mock_state_store(self, tmp_path, monkeypatch):
         """Create a mock state store."""
-        from backend.app.services.state import store as state_store_module
+        from backend.app.repositories.state import store as state_store_module
 
         base_dir = tmp_path / "state"
         store = state_store_module.StateStore(base_dir=base_dir)
@@ -535,7 +535,7 @@ class TestJoinSuggestion:
     @pytest.fixture
     def service(self, mock_state_store):
         """Create a FederationService instance."""
-        from backend.app.domain.federation.service import FederationService
+        from backend.app.services.federation.service import FederationService
         return FederationService()
 
     @pytest.fixture
@@ -569,7 +569,7 @@ class TestJoinSuggestion:
             return schemas.get(conn_id, {"tables": []})
 
         monkeypatch.setattr(
-            "src.services.connection_inspector.get_connection_schema",
+            "backend.app.services.federation.service.get_connection_schema",
             mock_get_schema
         )
 

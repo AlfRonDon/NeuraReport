@@ -41,6 +41,8 @@ class ErrorBoundary extends Component {
   render() {
     if (this.state.hasError) {
       const { fallback } = this.props
+      const reloadHandler = this.props.onReload || this.handleReload
+      const goHomeHandler = this.props.onGoHome || this.handleGoHome
 
       // Allow custom fallback UI
       if (fallback) {
@@ -137,7 +139,7 @@ class ErrorBoundary extends Component {
               <Button
                 variant="outlined"
                 startIcon={<HomeIcon />}
-                onClick={this.handleGoHome}
+                onClick={goHomeHandler}
                 sx={{
                   borderRadius: 3,
                   textTransform: 'none',
@@ -155,7 +157,7 @@ class ErrorBoundary extends Component {
               <Button
                 variant="contained"
                 startIcon={<RefreshIcon />}
-                onClick={this.handleReload}
+                onClick={reloadHandler}
                 color="primary"
                 sx={{
                   borderRadius: 3,

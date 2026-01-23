@@ -13,9 +13,10 @@
  * - Navigation safety
  */
 import { createContext, useContext, useCallback, useMemo, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useOperationHistory, OperationType, OperationStatus } from '../OperationHistoryProvider'
-import { useToast } from '../../ToastProvider'
-import { pushActiveIntent, popActiveIntent } from '../../../api/intentBridge'
+import { useToast } from '@/components/ToastProvider'
+import { pushActiveIntent, popActiveIntent } from '@/api/intentBridge'
 
 // ============================================================================
 // INTERACTION TYPES - Every action must have a defined type
@@ -317,6 +318,34 @@ export function useInteraction() {
     )
   }
   return context
+}
+
+/**
+ * Hook to create a NAVIGATE interaction handler
+ */
+export function useNavigateInteraction() {
+  const navigate = useNavigate()
+  const { execute } = useInteraction()
+
+  return useCallback((to, options = {}) => {
+    const {
+      label = 'Navigate',
+      intent = {},
+      navigateOptions,
+      blocksNavigation = false,
+    } = options
+
+    return execute({
+      type: InteractionType.NAVIGATE,
+      label,
+      reversibility: Reversibility.FULLY_REVERSIBLE,
+      blocksNavigation,
+      suppressSuccessToast: true,
+      suppressErrorToast: true,
+      intent: { to, ...intent },
+      action: () => navigate(to, navigateOptions),
+    })
+  }, [execute, navigate])
 }
 
 /**
