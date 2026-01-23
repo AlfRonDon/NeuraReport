@@ -7,7 +7,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import GeneratePage from '../GeneratePage.jsx'
 import theme from '../../../theme.js'
 import { ToastProvider } from '../../../components/ToastProvider.jsx'
-import { useAppStore } from '../../../store/useAppStore.js'
+import { useAppStore } from '../../../stores'
 
 if (!global.ResizeObserver) {
   vi.stubGlobal(

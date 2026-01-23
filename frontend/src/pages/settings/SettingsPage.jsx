@@ -35,7 +35,7 @@ import DownloadIcon from '@mui/icons-material/Download'
 import TokenIcon from '@mui/icons-material/Toll'
 import { useToast } from '../../components/ToastProvider'
 import { useInteraction, InteractionType, Reversibility } from '../../components/ux/governance'
-import { useAppStore } from '../../store/useAppStore'
+import { useAppStore } from '../../stores'
 import * as api from '../../api/client'
 import {
   PREFERENCES_STORAGE_KEY,

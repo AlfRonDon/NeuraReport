@@ -13,7 +13,7 @@ from typing import Optional
 
 from backend.app.core.security import require_api_key
 from backend.app.services.state import store as state_store_module
-from src.services.template_service import bootstrap_state
+from backend.legacy.services.template_service import bootstrap_state
 
 router = APIRouter(dependencies=[Depends(require_api_key)])
 

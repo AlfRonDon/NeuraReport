@@ -60,7 +60,7 @@ from backend.app.services.templates.TemplateVerify import get_openai_client
 from backend.app.services.utils import call_chat_completion, get_correlation_id, strip_code_fences
 
 # Import service functions from the service layer
-from src.services.template_service import (
+from backend.legacy.services.template_service import (
     get_template_html,
     edit_template_ai,
     edit_template_manual,
@@ -76,12 +76,12 @@ from src.services.template_service import (
     update_template_metadata,
     generator_assets,
 )
-from src.services.mapping.approve import run_mapping_approve
-from src.services.mapping.corrections import run_corrections_preview
-from src.services.mapping.key_options import mapping_key_options as mapping_key_options_service
-from src.services.mapping.preview import run_mapping_preview
-from src.services.file_service import artifact_head_response, artifact_manifest_response
-from src.schemas.template_schema import (
+from backend.legacy.services.mapping.approve import run_mapping_approve
+from backend.legacy.services.mapping.corrections import run_corrections_preview
+from backend.legacy.services.mapping.key_options import mapping_key_options as mapping_key_options_service
+from backend.legacy.services.mapping.preview import run_mapping_preview
+from backend.legacy.services.file_service import artifact_head_response, artifact_manifest_response
+from backend.legacy.schemas.template_schema import (
     CorrectionsPreviewPayload,
     GeneratorAssetsPayload,
     MappingPayload,
@@ -92,9 +92,9 @@ from src.schemas.template_schema import (
     TemplateRecommendResponse,
     TemplateUpdatePayload,
 )
-from src.utils.connection_utils import db_path_from_payload_or_default
-from src.utils.schedule_utils import clean_key_values
-from src.utils.template_utils import normalize_template_id, template_dir
+from backend.legacy.utils.connection_utils import db_path_from_payload_or_default
+from backend.legacy.utils.schedule_utils import clean_key_values
+from backend.legacy.utils.template_utils import normalize_template_id, template_dir
 
 router = APIRouter(dependencies=[Depends(require_api_key)])
 

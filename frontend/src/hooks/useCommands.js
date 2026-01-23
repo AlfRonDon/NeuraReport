@@ -1,7 +1,7 @@
 import { useCallback } from 'react'
 import { nanoid } from 'nanoid'
 import { useSessionStore, useAppStore } from '../stores'
-import { parseCommand, HELP_TEXT } from '../services/commandParser'
+import { parseCommand, HELP_TEXT } from '../utils/commandParser'
 import * as api from '../api/client'
 import { useInteraction, InteractionType, Reversibility } from '../components/ux/governance'
 

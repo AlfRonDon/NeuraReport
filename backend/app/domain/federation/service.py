@@ -44,7 +44,7 @@ class FederationService:
 
     def _get_connection_schema(self, connection_id: str) -> Dict[str, Any]:
         """Get schema for a connection."""
-        from src.services.connection_inspector import get_connection_schema
+        from backend.legacy.services.connection_inspector import get_connection_schema
         return get_connection_schema(connection_id, include_row_counts=False, sample_rows=3)
 
     def create_virtual_schema(

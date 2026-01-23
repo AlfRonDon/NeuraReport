@@ -7,7 +7,7 @@ import { MemoryRouter } from 'react-router-dom'
 import GenerateAndDownload from '../../../features/generate/components/GenerateAndDownload.jsx'
 import { ToastProvider } from '../../../components/ToastProvider.jsx'
 import theme from '../../../theme.js'
-import { useAppStore } from '../../../store/useAppStore.js'
+import { useAppStore } from '../../../stores'
 import { DEFAULT_RESAMPLE_CONFIG } from '../../../features/generate/utils/generateFeatureUtils.js'
 
 const { suggestChartsMock } = vi.hoisted(() => ({

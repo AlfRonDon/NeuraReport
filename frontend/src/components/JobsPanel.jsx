@@ -21,7 +21,7 @@ import CancelIcon from '@mui/icons-material/Cancel'
 import { useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { useJobsList } from '../hooks/useJobs'
-import { useAppStore } from '../store/useAppStore'
+import { useAppStore } from '../stores'
 import EmptyState from './feedback/EmptyState.jsx'
 import { cancelJob as cancelJobRequest } from '../api/client'
 import {

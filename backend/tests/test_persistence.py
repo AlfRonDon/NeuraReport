@@ -39,7 +39,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from .. import api  # noqa: E402
 from ..app.services.connections import db_connection as db_conn_module  # noqa: E402
 from ..app.services.state import store as state_store_module  # noqa: E402
-from src.services.report_service import _extract_excel_print_scale_from_html
+from backend.legacy.services.report_service import _extract_excel_print_scale_from_html
 
 
 @pytest.fixture
@@ -69,7 +69,7 @@ def client(fresh_state):
 
 
 def test_bootstrap_returns_persistent_state(client: TestClient, fresh_state):
-    db_path = Path(client.app.root_path) / "dummy.db"
+    db_path = Path(client.app.root_path) / "data" / "fixtures" / "dummy.db"
     db_path.write_text("", encoding="utf-8")
     conn = fresh_state.upsert_connection(
         conn_id=None,

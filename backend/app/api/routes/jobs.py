@@ -15,7 +15,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from backend.app.core.security import require_api_key
 from backend.app.features.generate.schemas.reports import RunPayload
 from backend.app.services.state import state_store
-from src.services.scheduler_service import get_job, list_active_jobs, list_jobs, cancel_job
+from backend.legacy.services.scheduler_service import get_job, list_active_jobs, list_jobs, cancel_job
 
 router = APIRouter(dependencies=[Depends(require_api_key)])
 
@@ -62,7 +62,7 @@ def _correlation(request: Request) -> str | None:
 @router.post("/run-report")
 async def run_report_job(payload: RunPayload | list[RunPayload], request: Request):
     """Queue a report generation job (compatibility alias for `/reports/jobs/run-report`)."""
-    from src.services.report_service import queue_report_job
+    from backend.legacy.services.report_service import queue_report_job
 
     payloads = payload if isinstance(payload, list) else [payload]
     kinds = set()
@@ -124,7 +124,7 @@ async def retry_job_route(job_id: str, request: Request):
 
     Only jobs with status 'failed' can be retried.
     """
-    from src.services.report_service import queue_report_job
+    from backend.legacy.services.report_service import queue_report_job
     from backend.app.features.generate.schemas.reports import RunPayload
 
     original_job = get_job(job_id)

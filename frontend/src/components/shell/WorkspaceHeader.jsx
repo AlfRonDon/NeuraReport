@@ -15,7 +15,7 @@ import NavigateNextIcon from '@mui/icons-material/NavigateNext'
 import RefreshIcon from '@mui/icons-material/Refresh'
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline'
 import KeyboardCommandKeyIcon from '@mui/icons-material/KeyboardCommandKey'
-import { useAppStore } from '../../store/useAppStore'
+import { useAppStore } from '../../stores'
 import NotificationCenter from '../notifications/NotificationCenter'
 
 const WORKSPACE_META = {

@@ -19,7 +19,7 @@ import {
 } from '../../../api/client'
 import * as mock from '../../../api/mock'
 import { savePersistedCache } from '../../../hooks/useBootstrapState.js'
-import { useAppStore } from '../../../store/useAppStore'
+import { useAppStore } from '../../../stores'
 import { confirmDelete } from '../../../utils/confirmDelete'
 import { useToast } from '../../../components/ToastProvider.jsx'
 import Surface from '../../../components/layout/Surface.jsx'

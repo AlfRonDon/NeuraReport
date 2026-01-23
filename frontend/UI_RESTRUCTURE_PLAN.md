@@ -4,6 +4,8 @@ Based on patterns from: assistant-ui, huggingface/chat-ui, mckaywrigley/chatbot-
 
 ---
 
+> Note (2026-01-23): `frontend/src/store` has moved to `frontend/src/stores`, and duplicate `components/ui` primitives were consolidated into `components/primitives`.
+
 ## STEP 1: HIGH-LEVEL UI ARCHITECTURE
 
 ### Current vs Target Layout

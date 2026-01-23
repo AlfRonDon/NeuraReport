@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react'
 import { bootstrapState, healthcheckConnection, deleteConnection } from '../api/client'
-import { useAppStore } from '../store/useAppStore'
+import { useAppStore } from './useAppStore'
 
 const normalizeConnections = (connections) =>
   Array.isArray(connections) ? connections : []

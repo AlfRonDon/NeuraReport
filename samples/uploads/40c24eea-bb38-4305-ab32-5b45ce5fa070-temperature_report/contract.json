@@ -1,0 +1,144 @@
+{
+  "tokens": {
+    "scalars": ["report_from_date", "report_to_date", "print_date"],
+    "row_tokens": [
+      "row_date",
+      "row_m1a_2_pt100",
+      "row_m1a_3_pt100",
+      "row_p3a_pt100",
+      "row_p4a_pt100",
+      "row_p5a_pt100",
+      "row_p6a_pt100",
+      "row_p8a_3_pt100",
+      "row_p8a_4_pt100",
+      "row_p8a_dry_out_pt100",
+      "row_p8a_pt100",
+      "row_p9a_dry_out_pt100",
+      "row_room_pt100",
+      "row_avg_temp"
+    ],
+    "totals": [
+      "total_max_m1a_2_pt100",
+      "total_max_m1a_3_pt100",
+      "total_max_p3a_pt100",
+      "total_max_p4a_pt100",
+      "total_max_p5a_pt100",
+      "total_max_p6a_pt100",
+      "total_max_p8a_3_pt100",
+      "total_max_p8a_4_pt100",
+      "total_max_p8a_dry_out_pt100",
+      "total_max_p8a_pt100",
+      "total_max_p9a_dry_out_pt100",
+      "total_max_room_pt100",
+      "total_overall_avg"
+    ]
+  },
+  "mapping": {
+    "report_from_date": "strftime('%d-%m-%Y', date(PARAM:from_date))",
+    "report_to_date": "strftime('%d-%m-%Y', date(PARAM:to_date))",
+    "print_date": "strftime('%d-%m-%Y', 'now', 'localtime')",
+    "row_date": "cycle_date",
+    "row_m1a_2_pt100": "STATE_DELTA(M1A_2_PT100_PV)",
+    "row_m1a_3_pt100": "STATE_DELTA(M1A_3_PT100_PV)",
+    "row_p3a_pt100": "STATE_DELTA(P3A_PT100_PV)",
+    "row_p4a_pt100": "STATE_DELTA(P4A_PT100_PV)",
+    "row_p5a_pt100": "STATE_DELTA(P5A_PT100_PV)",
+    "row_p6a_pt100": "STATE_DELTA(P6A_PT100_PV)",
+    "row_p8a_3_pt100": "STATE_DELTA(P8A_3_PT100_PV)",
+    "row_p8a_4_pt100": "STATE_DELTA(P8A_4_PT100_PV)",
+    "row_p8a_dry_out_pt100": "STATE_DELTA(P8A_DRY_OUT_PT100_PV)",
+    "row_p8a_pt100": "STATE_DELTA(P8A_PT100_PV)",
+    "row_p9a_dry_out_pt100": "STATE_DELTA(P9A_DRY_OUT_PT100_PV)",
+    "row_room_pt100": "STATE_DELTA(ROOM_PT100_PV)",
+    "row_avg_temp": "AVG(STATE_DELTA(all_sensors))"
+  },
+  "join": {
+    "parent_table": "neuract__TEMPERATURES",
+    "parent_key": "timestamp_utc",
+    "child_table": "neuract__TEMPERATURES",
+    "child_key": "timestamp_utc"
+  },
+  "date_columns": {
+    "timestamp_utc": "substr(timestamp_utc, 1, 10)"
+  },
+  "filters": {
+    "date(neuract__TEMPERATURES.timestamp_utc) >= date(PARAM:from_date)": "date(neuract__TEMPERATURES.timestamp_utc) >= date(PARAM:from_date)",
+    "date(neuract__TEMPERATURES.timestamp_utc) <= date(PARAM:to_date)": "date(neuract__TEMPERATURES.timestamp_utc) <= date(PARAM:to_date)"
+  },
+  "reshape_rules": [
+    {
+      "strategy": "STATE_BASED_DELTA",
+      "alias": "rows",
+      "from": "neuract__TEMPERATURES",
+      "description": "For each sensor: find stable baseline (consecutive same values), detect change start, track until stabilization (two consecutive same values), calculate delta = end_value - start_value",
+      "columns": [
+        {"as": "row_date", "from": ["cycle_date"]},
+        {"as": "row_m1a_2_pt100", "from": ["M1A_2_PT100_PV"], "method": "state_delta"},
+        {"as": "row_m1a_3_pt100", "from": ["M1A_3_PT100_PV"], "method": "state_delta"},
+        {"as": "row_p3a_pt100", "from": ["P3A_PT100_PV"], "method": "state_delta"},
+        {"as": "row_p4a_pt100", "from": ["P4A_PT100_PV"], "method": "state_delta"},
+        {"as": "row_p5a_pt100", "from": ["P5A_PT100_PV"], "method": "state_delta"},
+        {"as": "row_p6a_pt100", "from": ["P6A_PT100_PV"], "method": "state_delta"},
+        {"as": "row_p8a_3_pt100", "from": ["P8A_3_PT100_PV"], "method": "state_delta"},
+        {"as": "row_p8a_4_pt100", "from": ["P8A_4_PT100_PV"], "method": "state_delta"},
+        {"as": "row_p8a_dry_out_pt100", "from": ["P8A_DRY_OUT_PT100_PV"], "method": "state_delta"},
+        {"as": "row_p8a_pt100", "from": ["P8A_PT100_PV"], "method": "state_delta"},
+        {"as": "row_p9a_dry_out_pt100", "from": ["P9A_DRY_OUT_PT100_PV"], "method": "state_delta"},
+        {"as": "row_room_pt100", "from": ["ROOM_PT100_PV"], "method": "state_delta"}
+      ]
+    }
+  ],
+  "row_computed": {},
+  "totals_math": {
+    "total_max_m1a_2_pt100": "MAX(STATE_DELTA(M1A_2_PT100_PV))",
+    "total_max_m1a_3_pt100": "MAX(STATE_DELTA(M1A_3_PT100_PV))",
+    "total_max_p3a_pt100": "MAX(STATE_DELTA(P3A_PT100_PV))",
+    "total_max_p4a_pt100": "MAX(STATE_DELTA(P4A_PT100_PV))",
+    "total_max_p5a_pt100": "MAX(STATE_DELTA(P5A_PT100_PV))",
+    "total_max_p6a_pt100": "MAX(STATE_DELTA(P6A_PT100_PV))",
+    "total_max_p8a_3_pt100": "MAX(STATE_DELTA(P8A_3_PT100_PV))",
+    "total_max_p8a_4_pt100": "MAX(STATE_DELTA(P8A_4_PT100_PV))",
+    "total_max_p8a_dry_out_pt100": "MAX(STATE_DELTA(P8A_DRY_OUT_PT100_PV))",
+    "total_max_p8a_pt100": "MAX(STATE_DELTA(P8A_PT100_PV))",
+    "total_max_p9a_dry_out_pt100": "MAX(STATE_DELTA(P9A_DRY_OUT_PT100_PV))",
+    "total_max_room_pt100": "MAX(STATE_DELTA(ROOM_PT100_PV))",
+    "total_overall_avg": "AVG(STATE_DELTA(all_sensors))"
+  },
+  "formatters": {},
+  "order_by": {
+    "rows": ["row_date ASC"]
+  },
+  "header_tokens": ["report_from_date", "report_to_date", "print_date"],
+  "row_tokens": [
+    "row_date",
+    "row_m1a_2_pt100",
+    "row_m1a_3_pt100",
+    "row_p3a_pt100",
+    "row_p4a_pt100",
+    "row_p5a_pt100",
+    "row_p6a_pt100",
+    "row_p8a_3_pt100",
+    "row_p8a_4_pt100",
+    "row_p8a_dry_out_pt100",
+    "row_p8a_pt100",
+    "row_p9a_dry_out_pt100",
+    "row_room_pt100",
+    "row_avg_temp"
+  ],
+  "totals": {
+    "total_max_m1a_2_pt100": "MAX(STATE_DELTA(M1A_2_PT100_PV))",
+    "total_max_m1a_3_pt100": "MAX(STATE_DELTA(M1A_3_PT100_PV))",
+    "total_max_p3a_pt100": "MAX(STATE_DELTA(P3A_PT100_PV))",
+    "total_max_p4a_pt100": "MAX(STATE_DELTA(P4A_PT100_PV))",
+    "total_max_p5a_pt100": "MAX(STATE_DELTA(P5A_PT100_PV))",
+    "total_max_p6a_pt100": "MAX(STATE_DELTA(P6A_PT100_PV))",
+    "total_max_p8a_3_pt100": "MAX(STATE_DELTA(P8A_3_PT100_PV))",
+    "total_max_p8a_4_pt100": "MAX(STATE_DELTA(P8A_4_PT100_PV))",
+    "total_max_p8a_dry_out_pt100": "MAX(STATE_DELTA(P8A_DRY_OUT_PT100_PV))",
+    "total_max_p8a_pt100": "MAX(STATE_DELTA(P8A_PT100_PV))",
+    "total_max_p9a_dry_out_pt100": "MAX(STATE_DELTA(P9A_DRY_OUT_PT100_PV))",
+    "total_max_room_pt100": "MAX(STATE_DELTA(ROOM_PT100_PV))",
+    "total_overall_avg": "AVG(STATE_DELTA(all_sensors))"
+  },
+  "row_order": ["row_date ASC"]
+}

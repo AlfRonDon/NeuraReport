@@ -57,7 +57,7 @@ async def connection_schema(
     include_foreign_keys: bool = Query(True),
     sample_rows: int = Query(0, ge=0, le=25),
 ):
-    from src.services.connection_inspector import get_connection_schema
+    from backend.legacy.services.connection_inspector import get_connection_schema
 
     result = get_connection_schema(
         connection_id,
@@ -77,7 +77,7 @@ async def connection_preview(
     limit: int = Query(10, ge=1, le=200),
     offset: int = Query(0, ge=0),
 ):
-    from src.services.connection_inspector import get_connection_table_preview
+    from backend.legacy.services.connection_inspector import get_connection_table_preview
 
     result = get_connection_table_preview(
         connection_id,

@@ -39,7 +39,7 @@ import ScaledIframePreview from '../../../components/ScaledIframePreview.jsx'
 import Surface from '../../../components/layout/Surface.jsx'
 import { useToast } from '../../../components/ToastProvider.jsx'
 import { useInteraction, InteractionType, Reversibility } from '../../../components/ux/governance'
-import { useAppStore } from '../../../store/useAppStore.js'
+import { useAppStore } from '../../../stores'
 import { buildLastEditInfo } from '../../../utils/templateMeta'
 import {
   getTemplateHtml,

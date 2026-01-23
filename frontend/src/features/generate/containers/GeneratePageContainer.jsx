@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 
-import { useAppStore } from '../../../store/useAppStore.js'
+import { useAppStore } from '../../../stores'
 import { useToast } from '../../../components/ToastProvider.jsx'
 import TemplatePicker from '../components/TemplatePicker.jsx'
 import GenerateAndDownload from '../components/GenerateAndDownload.jsx'

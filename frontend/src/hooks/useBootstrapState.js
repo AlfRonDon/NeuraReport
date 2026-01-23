@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { bootstrapState } from '../api/client'
-import { useAppStore } from '../store/useAppStore'
+import { useAppStore } from '../stores'
 
 const CACHE_KEY = 'neura:persistent-cache'
 

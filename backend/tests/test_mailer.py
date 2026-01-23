@@ -389,7 +389,7 @@ class TestReportServiceEmailIntegration:
 
     def test_maybe_send_email_skips_without_recipients(self, monkeypatch):
         """_maybe_send_email should skip without recipients."""
-        from src.services.report_service import _maybe_send_email
+        from backend.legacy.services.report_service import _maybe_send_email
         from backend.app.features.generate.schemas.reports import RunPayload
 
         payload = RunPayload(
@@ -411,7 +411,7 @@ class TestReportServiceEmailIntegration:
 
     def test_build_job_steps_includes_email_step(self):
         """Job steps should include email when recipients provided."""
-        from src.services.report_service import _build_job_steps
+        from backend.legacy.services.report_service import _build_job_steps
         from backend.app.features.generate.schemas.reports import RunPayload
 
         payload = RunPayload(
@@ -428,7 +428,7 @@ class TestReportServiceEmailIntegration:
 
     def test_build_job_steps_excludes_email_without_recipients(self):
         """Job steps should exclude email without recipients."""
-        from src.services.report_service import _build_job_steps
+        from backend.legacy.services.report_service import _build_job_steps
         from backend.app.features.generate.schemas.reports import RunPayload
 
         payload = RunPayload(

@@ -1,0 +1,13 @@
+{
+  "exceptions": [
+    {
+      "id": "ARCH-EXC-001",
+      "date": "2026-01-23",
+      "rule_id": "APP-IMPORT-ENGINE",
+      "path": "backend/app/api/routes/legacy.py",
+      "imports": [
+        "backend.engine"
+      ]
+    }
+  ]
+}

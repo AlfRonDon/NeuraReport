@@ -69,6 +69,10 @@ __tmp_*.pdf
 _latest_gen.txt
 *.sqlite3
 *.db
+# Keep curated fixture databases tracked
+!data/fixtures/*.sqlite3
+!data/fixtures/*.db
+data/fixtures/test-copy-2.db
 test_all.*
 test_counter.html
 

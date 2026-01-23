@@ -6,7 +6,7 @@ import { ThemeProvider } from '@mui/material/styles'
 import TemplateEditor from '../TemplateEditor.jsx'
 import { ToastProvider } from '../../../components/ToastProvider.jsx'
 import theme from '../../../theme.js'
-import { useAppStore } from '../../../store/useAppStore.js'
+import { useAppStore } from '../../../stores'
 import {
   getTemplateHtml,
   editTemplateManual,

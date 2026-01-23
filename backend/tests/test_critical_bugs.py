@@ -57,7 +57,7 @@ class TestTemplateEndpointNamingBugs:
         The route handler `export_template_zip` shadows the imported function
         `export_template_zip` from template_service.py.
         """
-        from src.endpoints import templates as templates_module
+        from backend.legacy.endpoints import templates as templates_module
 
         # Check if the route handler has the same name as imported function
         # This is a potential infinite recursion bug
@@ -88,7 +88,7 @@ class TestTemplateEndpointNamingBugs:
         CRITICAL BUG: templates.py:78-80 defines import_template_zip route handler
         with the same name as the imported function, causing infinite recursion.
         """
-        from src.endpoints import templates as templates_module
+        from backend.legacy.endpoints import templates as templates_module
 
         func = getattr(templates_module, 'import_template_zip', None)
         if func is None:
@@ -114,7 +114,7 @@ class TestReportServiceJobCancellation:
         running threads, which is dangerous and can leave the interpreter in an
         inconsistent state.
         """
-        from src.services import report_service
+        from backend.legacy.services import report_service
 
         # Verify the function exists and uses ctypes
         func = getattr(report_service, '_inject_thread_cancel', None)
@@ -227,7 +227,7 @@ class TestAPIContractConsistency:
 
     def test_excel_routes_exist(self):
         """Verify all Excel routes that frontend expects exist in backend."""
-        from src import routes
+        from backend.legacy import routes
 
         # Get all route paths from the main router
         all_routes = []
@@ -260,7 +260,7 @@ class TestAPIContractConsistency:
 
     def test_discover_endpoint_exists(self):
         """Verify the discover endpoint exists (client.js has placeholder)."""
-        from src import routes
+        from backend.legacy import routes
 
         all_routes = []
         for route in routes.router.routes:
@@ -305,7 +305,7 @@ class TestConnectionsEndpoint:
         BUG: connections.py:44 imports HTTPException inside function body.
         This should be at module level for clarity and slight performance improvement.
         """
-        from src.endpoints import connections
+        from backend.legacy.endpoints import connections
 
         # Check if HTTPException is imported at module level
         module_imports = dir(connections)
@@ -330,7 +330,7 @@ class TestSubprocessMonkeypatching:
         BUG: report_service.py:951 globally patches subprocess.Popen
         which could cause issues in concurrent scenarios.
         """
-        from src.services import report_service
+        from backend.legacy.services import report_service
 
         # Check if _patch_subprocess_tracking exists and uses context manager
         source = inspect.getsource(report_service)

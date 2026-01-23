@@ -5,7 +5,7 @@ import Surface from '../../components/layout/Surface.jsx'
 import InfoTooltip from '../../components/common/InfoTooltip.jsx'
 import TOOLTIP_COPY from '../../content/tooltipCopy.jsx'
 import { verifyTemplate as apiVerifyTemplate } from '../../api/client'
-import { useAppStore } from '../../store/useAppStore'
+import { useAppStore } from '../../stores'
 import { useToast } from '../../components/ToastProvider.jsx'
 import { useInteraction, InteractionType, Reversibility } from '../../components/ux/governance'
 

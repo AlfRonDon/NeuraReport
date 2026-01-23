@@ -9,7 +9,7 @@ os.environ.setdefault("NEURA_ALLOW_MISSING_OPENAI", "true")
 
 from backend import api  # noqa: E402
 from backend.app.services.state import StateStore  # noqa: E402
-import src.services.template_service as template_service  # noqa: E402
+import backend.legacy.services.template_service as template_service  # noqa: E402
 
 
 @pytest.fixture

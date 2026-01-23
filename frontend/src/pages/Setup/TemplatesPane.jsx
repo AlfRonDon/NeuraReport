@@ -22,7 +22,7 @@ import {
   updateSchedule,
   deleteSchedule,
 } from '../../api/client'
-import { useAppStore } from '../../store/useAppStore'
+import { useAppStore } from '../../stores'
 import { useToast } from '../../components/ToastProvider.jsx'
 import { useInteraction, InteractionType, Reversibility } from '../../components/ux/governance'
 import Surface from '../../components/layout/Surface.jsx'

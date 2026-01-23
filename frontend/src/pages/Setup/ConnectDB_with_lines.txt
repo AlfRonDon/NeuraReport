@@ -6,7 +6,7 @@
 6	import { isMock } from '../../api/client'
 7	import * as mock from '../../api/mock'
 8	import { useMutation } from '@tanstack/react-query'
-9	import { useAppStore } from '../../store/useAppStore'
+9	import { useAppStore } from '../../stores'
 10	import Visibility from '@mui/icons-material/Visibility'
 11	import VisibilityOff from '@mui/icons-material/VisibilityOff'
 12	import ConfirmDialog from '../../components/ConfirmDialog.jsx'

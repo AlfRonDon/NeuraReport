@@ -8,7 +8,7 @@ import dayjs from 'dayjs'
 import TemplatesPane from '../TemplatesPane.jsx'
 import { ToastProvider } from '../../../components/ToastProvider.jsx'
 import theme from '../../../theme.js'
-import { useAppStore } from '../../../store/useAppStore.js'
+import { useAppStore } from '../../../stores'
 
 const listSchedulesMock = vi.fn()
 const createScheduleMock = vi.fn()

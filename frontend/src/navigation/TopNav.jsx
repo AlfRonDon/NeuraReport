@@ -46,7 +46,7 @@ import {
   OpenInNew as OpenInNewIcon,
 } from '@mui/icons-material'
 import Breadcrumbs from './Breadcrumbs'
-import { useAppStore } from '../store/useAppStore'
+import { useAppStore } from '../stores'
 import { useJobsList } from '../hooks/useJobs'
 import { getShortcutDisplay, SHORTCUTS } from '../hooks/useKeyboardShortcuts'
 import { withBase } from '../api/client'

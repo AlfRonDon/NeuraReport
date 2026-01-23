@@ -54,7 +54,7 @@ import SpeedIcon from '@mui/icons-material/Speed'
 import InsightsIcon from '@mui/icons-material/Insights'
 
 // Store & API
-import { useAppStore } from '../store/useAppStore'
+import { useAppStore } from '../stores'
 import { useToast } from '../components/ToastProvider'
 import SuccessCelebration, { useCelebration } from '../components/SuccessCelebration'
 import ReportGlossaryNotice from '../components/ux/ReportGlossaryNotice.jsx'

@@ -52,7 +52,7 @@ import {
 } from '@mui/icons-material'
 import { DataTable } from '../../ui/DataTable'
 import { ConfirmModal } from '../../ui/Modal'
-import { useAppStore } from '../../store/useAppStore'
+import { useAppStore } from '../../stores'
 import { useToast } from '../../components/ToastProvider'
 import * as api from '../../api/client'
 // UX Governance - Enforced interaction API

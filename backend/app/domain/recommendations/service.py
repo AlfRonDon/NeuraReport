@@ -59,7 +59,7 @@ class RecommendationService:
         # Get schema if connection provided
         if connection_id and not schema_info:
             try:
-                from src.services.connection_inspector import get_connection_schema
+                from backend.legacy.services.connection_inspector import get_connection_schema
                 schema_info = get_connection_schema(connection_id, include_row_counts=False)
             except Exception:
                 pass

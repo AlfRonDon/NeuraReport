@@ -3,7 +3,7 @@ mapping, and report generation.
 
 ## Environment
 
-Refer to `CONFIG.md` for the complete list of supported environment variables. The bare minimum for production is:
+Refer to `docs/operations/CONFIG.md` for the complete list of supported environment variables. The bare minimum for production is:
 
 - `OPENAI_API_KEY`
 - `OPENAI_MODEL` (defaults to `gpt-5`)
@@ -37,7 +37,7 @@ pip install -r backend/requirements.txt
 uvicorn backend.api:app --reload
 ```
 
-Run `uvicorn` from the repository root so `backend.api` and `src/` imports resolve correctly.
+Run `uvicorn` from the repository root so `backend.api` and `backend.legacy` imports resolve correctly.
 
 Static artifacts such as verified templates and mapping results are written to `backend/uploads/` by default.
 
@@ -66,9 +66,9 @@ curl.exe http://127.0.0.1:8000/readyz
 ## Verification Workflow (PowerShell)
 
 ```powershell
-python scripts/verify_pipeline.py --template-id ad6a0b1f-d98a-41c2-8ffe-8b651de9100f --uploads-root .\backend\uploads
+python scripts/verify_pipeline.py --template-id ad6a0b1f-d98a-41c2-8ffe-8b651de9100f --uploads-root .\samples\uploads
 python scripts/verify_pipeline.py --template-id ad6a0b1f-d98a-41c2-8ffe-8b651de9100f --simulate mapping_save
-python scripts/artifact_stats.py --template-id ad6a0b1f-d98a-41c2-8ffe-8b651de9100f --uploads-root .\backend\uploads
+python scripts/artifact_stats.py --template-id ad6a0b1f-d98a-41c2-8ffe-8b651de9100f --uploads-root .\samples\uploads
 ```
 
 ## Automated Tests

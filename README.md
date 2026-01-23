@@ -4,15 +4,17 @@ NeuraReport is a desktop-first reporting assistant that pairs a FastAPI backend 
 
 ## Repository Layout
 
-- `backend/` - FastAPI application, service modules (`templates`, `mapping`, `contract`, `generator`, `reports`), and tests.
-- `src/` - Shared services still imported by `backend/api.py` (legacy-but-active modules).
+- `backend/` - FastAPI application, domain/services/features, and tests.
+- `backend/engine/` - Legacy pipeline engine (adapters, orchestration, pipelines) kept for compatibility routes/tests.
+- `backend/legacy/` - Legacy service layer still referenced by API compatibility routes.
 - `frontend/` - Vite + React 18 SPA that streams pipeline progress and manages state with React Query/Zustand.
 - `scripts/` - Developer utilities (`verify_pipeline.py`, `artifact_stats.py`, etc.).
 - `backend/uploads/`, `backend/uploads_excel/` - Runtime artifacts/manifests (created at runtime; served via `/uploads` and `/excel-uploads`).
 - `backend/state/` - Encrypted state store (`state.json`) plus generated Fernet secret (do not commit).
-- `dummy.db`, `scratch_recipe.db` - Sample SQLite datasets for development.
+- `data/fixtures/dummy.db`, `data/fixtures/scratch_recipe.db` - Sample SQLite datasets for development.
+- `samples/` - Archived pipeline runs, uploads, and debug artifacts used for demos/regression.
 
-See `requirements.md` for product goals and `PIPELINE_DOCUMENTATION.md` for a step-by-step view of the backend pipeline.
+See `docs/product/requirements.md` for product goals and `docs/operations/PIPELINE_DOCUMENTATION.md` for a step-by-step view of the backend pipeline.
 
 ## Prerequisites
 
@@ -60,7 +62,7 @@ uvicorn backend.api:app --reload
 ```
 
 The API runs on `http://127.0.0.1:8000`. Static artifacts are served under `/uploads/<template_id>/`.
-Review `CONFIG.md` for environment overrides (state directory, upload root, LLM tuning, etc.).
+Review `docs/operations/CONFIG.md` for environment overrides (state directory, upload root, LLM tuning, etc.).
 
 ### Frontend
 
@@ -74,7 +76,7 @@ Visit `http://127.0.0.1:5173`. Copy `frontend/.env.example` to `frontend/.env.lo
 
 ### Sample Data
 
-- `dummy.db` contains lightweight fixtures for the connection workflow.
+- `data/fixtures/dummy.db` contains lightweight fixtures for the connection workflow.
 - To simulate pipelines without touching production data, point the app to this SQLite database when creating a connection.
 
 ## Running Tests & Checks
@@ -87,7 +89,7 @@ python scripts/verify_pipeline.py --template-id <uuid> --uploads-root ./backend/
 python scripts/artifact_stats.py --template-id <uuid>
 ```
 
-Use `NEURA_FAIL_AFTER_STEP` to simulate rollback scenarios (see `CONFIG.md`).
+Use `NEURA_FAIL_AFTER_STEP` to simulate rollback scenarios (see `docs/operations/CONFIG.md`).
 
 ### Frontend
 
@@ -118,8 +120,8 @@ Snapshots live under `frontend/playwright-report` and `playwright-results`. Upda
 
 ## Additional Documentation
 
-- `requirements.md` - Product requirements and scope.
-- `immediateRequirements.md` - Detailed UI spec for the Setup flow.
-- `CONFIG.md` - Configuration and environment variables.
-- `PIPELINE_DOCUMENTATION.md` - Back-end pipeline breakdown.
-- `RELEASE_NOTES.md` - Latest release summary and rollback notes.
+- `docs/product/requirements.md` - Product requirements and scope.
+- `docs/product/immediate-requirements.md` - Detailed UI spec for the Setup flow.
+- `docs/operations/CONFIG.md` - Configuration and environment variables.
+- `docs/operations/PIPELINE_DOCUMENTATION.md` - Back-end pipeline breakdown.
+- `docs/operations/RELEASE_NOTES.md` - Latest release summary and rollback notes.

@@ -5,7 +5,7 @@ import { ThemeProvider } from '@mui/material/styles'
 
 import JobsPanel from '../JobsPanel.jsx'
 import theme from '../../theme.js'
-import { useAppStore } from '../../store/useAppStore.js'
+import { useAppStore } from '../../stores'
 import { MemoryRouter } from 'react-router-dom'
 
 const setQueryData = vi.fn()

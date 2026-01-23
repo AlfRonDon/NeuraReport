@@ -22,7 +22,7 @@ vi.mock('../../../../hooks/useSavedCharts', () => ({
   }),
 }))
 
-vi.mock('../../../../store/useAppStore', () => ({
+vi.mock('../../../../stores', () => ({
   useAppStore: (selector = (state) => state) => selector({ downloads: [] }),
 }))
 

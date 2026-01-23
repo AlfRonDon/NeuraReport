@@ -2,6 +2,8 @@
 
 This document describes the ongoing migration from the legacy `src/` directory to the new `backend/` architecture.
 
+> Note (2026-01-23): the legacy `src/` tree now lives under `backend/legacy/`. Treat `src/` references below as `backend/legacy/` equivalents.
+
 ## Overview
 
 The codebase is transitioning from a flat `src/` structure to a domain-driven `backend/` architecture. This migration improves:

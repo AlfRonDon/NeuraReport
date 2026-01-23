@@ -45,7 +45,7 @@ import LightbulbIcon from '@mui/icons-material/Lightbulb'
 import BookmarkIcon from '@mui/icons-material/Bookmark'
 import BookmarkBorderIcon from '@mui/icons-material/BookmarkBorder'
 
-import { useAppStore } from '../../store/useAppStore'
+import { useAppStore } from '../../stores'
 import useQueryStore from '../../stores/queryStore'
 import * as nl2sqlApi from '../../api/nl2sql'
 import * as api from '../../api/client'

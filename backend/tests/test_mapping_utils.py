@@ -3,7 +3,7 @@ import unittest
 from unittest import mock
 
 from backend.app.services.templates import TemplateVerify
-from src.services.mapping import helpers as mapping_helpers
+from backend.legacy.services.mapping import helpers as mapping_helpers
 
 
 class NormalizeMappingTests(unittest.TestCase):

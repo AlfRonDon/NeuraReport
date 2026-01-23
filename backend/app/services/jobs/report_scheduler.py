@@ -14,7 +14,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 
 from ..state import state_store
-from src.services.report_service import JobRunTracker, _build_job_steps, _step_progress_from_steps
+from backend.legacy.services.report_service import JobRunTracker, _build_job_steps, _step_progress_from_steps
 from backend.app.features.generate.schemas.reports import RunPayload
 
 logger = logging.getLogger("neura.scheduler")

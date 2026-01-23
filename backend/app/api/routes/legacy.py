@@ -16,9 +16,9 @@ router = APIRouter(prefix="/legacy", tags=["legacy"], dependencies=[Depends(requ
 
 
 # -----------------------------------------------------------------------------
-# Legacy src/* routers
+# Legacy legacy/* routers
 # -----------------------------------------------------------------------------
-from src.routes import router as src_router
+from backend.legacy.routes import router as src_router
 
 router.include_router(src_router, prefix="/src")
 
@@ -47,10 +47,10 @@ def _build_generate_router() -> APIRouter:
     from backend.app.services.utils import call_chat_completion, get_correlation_id, strip_code_fences
     from backend.app.services.utils.artifacts import load_manifest
     from backend.app.services.contract.ContractBuilderV2 import load_contract_v2
-    from src.services.report_service import run_report, queue_report_job
-    from src.utils.connection_utils import db_path_from_payload_or_default
-    from src.utils.schedule_utils import clean_key_values
-    from src.utils.template_utils import manifest_endpoint, normalize_template_id, template_dir
+    from backend.legacy.services.report_service import run_report, queue_report_job
+    from backend.legacy.utils.connection_utils import db_path_from_payload_or_default
+    from backend.legacy.utils.schedule_utils import clean_key_values
+    from backend.legacy.utils.template_utils import manifest_endpoint, normalize_template_id, template_dir
     import logging
     import os
 
@@ -124,7 +124,8 @@ router.include_router(_build_generate_router(), prefix="/generate")
 @router.get("/pipelines/report/steps")
 async def report_pipeline_steps():
     """Expose report pipeline definition."""
-    from backend.pipelines.report_pipeline import create_report_pipeline
+    # ARCH-EXC-001: legacy compatibility route requires direct engine access.
+    from backend.engine.pipelines.report_pipeline import create_report_pipeline
 
     pipeline = create_report_pipeline()
     return {
@@ -136,8 +137,8 @@ async def report_pipeline_steps():
 @router.post("/orchestration/test-run")
 async def orchestration_test_run():
     """Run a short orchestration job for validation."""
-    from backend.orchestration.executor import get_executor
-    from backend.domain.jobs import Job, JobType, JobStep
+    from backend.engine.orchestration.executor import get_executor
+    from backend.engine.domain.jobs import Job, JobType, JobStep
 
     executor = get_executor()
     job = Job.create(

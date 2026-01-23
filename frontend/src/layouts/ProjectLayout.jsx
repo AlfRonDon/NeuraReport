@@ -16,7 +16,7 @@ import { Outlet } from 'react-router-dom'
 import Sidebar from '../navigation/Sidebar'
 import TopNav from '../navigation/TopNav'
 import OfflineBanner from '../components/OfflineBanner'
-import { useAppStore } from '../store/useAppStore'
+import { useAppStore } from '../stores'
 
 // =============================================================================
 // CONSTANTS

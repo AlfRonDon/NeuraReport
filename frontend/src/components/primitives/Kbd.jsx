@@ -19,7 +19,7 @@ const KEY_MAP = {
   space: '␣',
 }
 
-export default function Kbd({ children, size = 'medium' }) {
+export default function Kbd({ children, size = 'medium', sx, ...props }) {
   const text = String(children).toLowerCase()
   const display = KEY_MAP[text] || children
 
@@ -47,9 +47,35 @@ export default function Kbd({ children, size = 'medium' }) {
         fontWeight: 500,
         color: 'text.secondary',
         whiteSpace: 'nowrap',
+        ...sx,
       }}
+      {...props}
     >
       {display}
+    </Box>
+  )
+}
+
+export function KbdCombo({ keys = [], separator = '+', size = 'medium', sx }) {
+  return (
+    <Box
+      sx={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 0.5,
+        ...sx,
+      }}
+    >
+      {keys.map((key, idx) => (
+        <Box key={idx} sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.25 }}>
+          {idx > 0 && (
+            <Box component="span" sx={{ fontSize: '0.625rem', opacity: 0.5 }}>
+              {separator}
+            </Box>
+          )}
+          <Kbd size={size}>{key}</Kbd>
+        </Box>
+      ))}
     </Box>
   )
 }

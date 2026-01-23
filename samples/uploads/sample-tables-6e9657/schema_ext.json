@@ -1,0 +1,15 @@
+{
+  "scalars": [
+    "year1",
+    "year2"
+  ],
+  "row_tokens": [
+    "function_name",
+    "val_year1",
+    "val_year2",
+    "role_label",
+    "cast_name"
+  ],
+  "totals": [],
+  "notes": ""
+}

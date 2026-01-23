@@ -1,0 +1,10 @@
+{
+  "event": "mapping_key_options",
+  "timestamp": "20260113-200116-563339",
+  "template_id": "40c24eea-bb38-4305-ab32-5b45ce5fa070-temperature_report",
+  "template_kind": "html",
+  "connection_id": "6943d96a-826e-4b95-9f25-fa1b688e6c91",
+  "db_path": "C:\\Users\\Alfred\\NeuraReport\\test - Copy (2).db",
+  "tokens_available": [],
+  "token_details": {}
+}

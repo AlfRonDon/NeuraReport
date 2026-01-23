@@ -3,7 +3,7 @@ from pathlib import Path
 import time
 
 ROOT = Path(__file__).resolve().parents[1]
-UPLOADS = ROOT / "uploads"
+UPLOADS = ROOT / "samples" / "uploads"
 
 TPL_RUNTIME = "6018182b-58bb-4f78-91ad-d135b2f21eed"
 TPL_CONSUME = "c5598348-4d89-445e-a2f9-43a3aa6382ee"

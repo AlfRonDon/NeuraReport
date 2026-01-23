@@ -7,6 +7,7 @@ const ScrollArea = forwardRef(function ScrollArea(
     autoScroll = false,
     onScroll,
     maxHeight,
+    sx,
     ...props
   },
   ref
@@ -87,7 +88,7 @@ const ScrollArea = forwardRef(function ScrollArea(
             bgcolor: 'action.disabled',
           },
         },
-        ...props.sx,
+        ...(sx || {}),
       }}
       {...props}
     >

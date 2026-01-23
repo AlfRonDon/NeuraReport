@@ -1,0 +1,68 @@
+{
+  "prompt_version": "manual_temperature_v1",
+  "model": "human-curated",
+  "input_signature": "neuract__TEMPERATURES::12cols",
+  "db_signature": "test - Copy (2).db",
+  "page_summary_sha256": "",
+  "generated_at": 1768314676,
+  "assumptions": [
+    "timestamp_utc values represent the sampling order (ISO format with timezone).",
+    "Temperature columns (12 PT100 sensors) contain raw readings in sensor units.",
+    "Temperature calculation uses STATE_BASED_DELTA method: peak - baseline per day.",
+    "Date filtering uses substr(timestamp_utc, 1, 10) to extract YYYY-MM-DD."
+  ],
+  "warnings": [],
+  "validation": {
+    "unknown_tokens": [],
+    "unknown_columns": [],
+    "token_coverage": {
+      "scalars_mapped_pct": 100,
+      "row_tokens_mapped_pct": 100,
+      "totals_mapped_pct": 100
+    }
+  },
+  "overview_path": "overview.md",
+  "contract_payload": {
+    "header_tokens": [
+      "report_from_date",
+      "report_to_date",
+      "print_date"
+    ],
+    "row_tokens": [
+      "row_date",
+      "row_m1a_2_pt100",
+      "row_m1a_3_pt100",
+      "row_p3a_pt100",
+      "row_p4a_pt100",
+      "row_p5a_pt100",
+      "row_p6a_pt100",
+      "row_p8a_3_pt100",
+      "row_p8a_4_pt100",
+      "row_p8a_dry_out_pt100",
+      "row_p8a_pt100",
+      "row_p9a_dry_out_pt100",
+      "row_room_pt100",
+      "row_avg_temp"
+    ],
+    "totals": {
+      "total_max_m1a_2_pt100": "MAX(daily_delta(M1A_2_PT100_PV))",
+      "total_max_m1a_3_pt100": "MAX(daily_delta(M1A_3_PT100_PV))",
+      "total_max_p3a_pt100": "MAX(daily_delta(P3A_PT100_PV))",
+      "total_max_p4a_pt100": "MAX(daily_delta(P4A_PT100_PV))",
+      "total_max_p5a_pt100": "MAX(daily_delta(P5A_PT100_PV))",
+      "total_max_p6a_pt100": "MAX(daily_delta(P6A_PT100_PV))",
+      "total_max_p8a_3_pt100": "MAX(daily_delta(P8A_3_PT100_PV))",
+      "total_max_p8a_4_pt100": "MAX(daily_delta(P8A_4_PT100_PV))",
+      "total_max_p8a_dry_out_pt100": "MAX(daily_delta(P8A_DRY_OUT_PT100_PV))",
+      "total_max_p8a_pt100": "MAX(daily_delta(P8A_PT100_PV))",
+      "total_max_p9a_dry_out_pt100": "MAX(daily_delta(P9A_DRY_OUT_PT100_PV))",
+      "total_max_room_pt100": "MAX(daily_delta(ROOM_PT100_PV))",
+      "total_overall_avg": "AVG(daily_avg_delta)"
+    },
+    "row_order": [
+      "row_date ASC"
+    ],
+    "literals": {}
+  },
+  "key_tokens": []
+}

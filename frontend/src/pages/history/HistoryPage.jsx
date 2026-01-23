@@ -40,7 +40,7 @@ import { DataTable } from '../../ui/DataTable'
 import { ConfirmModal } from '../../ui/Modal'
 import { useToast } from '../../components/ToastProvider'
 import { useInteraction, InteractionType, Reversibility } from '../../components/ux/governance'
-import { useAppStore } from '../../store/useAppStore'
+import { useAppStore } from '../../stores'
 import * as api from '../../api/client'
 
 // =============================================================================

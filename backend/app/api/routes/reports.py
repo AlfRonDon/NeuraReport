@@ -13,7 +13,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 
 from backend.app.core.security import require_api_key
 from backend.app.features.generate.schemas.reports import RunPayload, DiscoverPayload
-from src.services.report_service import (
+from backend.legacy.services.report_service import (
     queue_report_job,
     run_report as run_report_service,
     list_report_runs as list_report_runs_service,
@@ -51,14 +51,14 @@ async def enqueue_report_job(payload: RunPayload | list[RunPayload], request: Re
 def discover_reports(payload: DiscoverPayload, request: Request):
     """Discover available batches for report generation."""
     from backend.app.features.generate.services.discovery_service import discover_reports as discover_reports_service
-    from src.utils.template_utils import template_dir
-    from src.utils.connection_utils import db_path_from_payload_or_default
+    from backend.legacy.utils.template_utils import template_dir
+    from backend.legacy.utils.connection_utils import db_path_from_payload_or_default
     from backend.app.services.contract.ContractBuilderV2 import load_contract_v2
-    from src.utils.schedule_utils import clean_key_values
+    from backend.legacy.utils.schedule_utils import clean_key_values
     from backend.app.services.reports.discovery import discover_batches_and_counts
     from backend.app.services.reports.discovery_metrics import build_batch_field_catalog_and_stats, build_batch_metrics
     from backend.app.services.utils.artifacts import load_manifest
-    from src.utils.template_utils import manifest_endpoint
+    from backend.legacy.utils.template_utils import manifest_endpoint
     import logging
 
     logger = logging.getLogger("neura.api")

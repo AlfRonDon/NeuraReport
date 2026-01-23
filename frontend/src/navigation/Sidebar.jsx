@@ -46,7 +46,7 @@ import SummarizeIcon from '@mui/icons-material/Summarize'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import SparklesIcon from '@mui/icons-material/AutoAwesome'
 
-import { useAppStore } from '../store/useAppStore'
+import { useAppStore } from '../stores'
 import NotificationCenter from '../components/notifications/NotificationCenter'
 
 // =============================================================================

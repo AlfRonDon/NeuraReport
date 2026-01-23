@@ -24,7 +24,7 @@ import AddIcon from '@mui/icons-material/Add'
 import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined'
 import HistoryIcon from '@mui/icons-material/History'
 import FolderOutlinedIcon from '@mui/icons-material/FolderOutlined'
-import { useAppStore } from '../../store/useAppStore'
+import { useAppStore } from '../../stores'
 import { SIDEBAR_WIDTH, SIDEBAR_COLLAPSED_WIDTH } from './constants'
 
 const NAV_ITEMS = [

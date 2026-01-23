@@ -20,7 +20,7 @@ import {
 } from '../../api/client'
 import * as mock from '../../api/mock'
 import { useMutation } from '@tanstack/react-query'
-import { useAppStore } from '../../store/useAppStore'
+import { useAppStore } from '../../stores'
 import Visibility from '@mui/icons-material/Visibility'
 import VisibilityOff from '@mui/icons-material/VisibilityOff'
 import PlayArrowIcon from '@mui/icons-material/PlayArrow'

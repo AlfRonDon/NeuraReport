@@ -3,7 +3,7 @@ import { render, screen, fireEvent, waitFor, within } from '@testing-library/rea
 import { ThemeProvider } from '@mui/material/styles'
 import { MemoryRouter } from 'react-router-dom'
 import theme from '../../theme.js'
-import { useAppStore } from '../../store/useAppStore.js'
+import { useAppStore } from '../../stores'
 import JobsPanel from '../JobsPanel.jsx'
 
 const mockUseJobsList = vi.fn()

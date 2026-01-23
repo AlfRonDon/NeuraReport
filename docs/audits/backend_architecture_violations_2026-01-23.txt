@@ -1,0 +1,836 @@
+Architecture violations detected:
+- backend/api.py
+  rule: APP-API-IMPORT-SCOPE
+  message: Only backend/app/api/* may import backend.app.api.*
+  forbidden: backend.app.api.router
+  allowed: backend/app/api/*
+- backend/app/api/router.py
+  rule: APP-UNKNOWN-IMPORT-LAYER
+  message: backend/app imports must target api/domain/services/repositories/schemas/utils only
+  forbidden: backend.app.features.analyze.routes
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/api/router.py
+  rule: APP-UNKNOWN-IMPORT-LAYER
+  message: backend/app imports must target api/domain/services/repositories/schemas/utils only
+  forbidden: backend.app.features.analyze.routes
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/api/router.py
+  rule: APP-UNKNOWN-IMPORT-LAYER
+  message: backend/app imports must target api/domain/services/repositories/schemas/utils only
+  forbidden: backend.app.core.auth
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/api/routes/analytics.py
+  rule: APP-UNKNOWN-IMPORT-LAYER
+  message: backend/app imports must target api/domain/services/repositories/schemas/utils only
+  forbidden: backend.app.core.config
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/api/routes/analytics.py
+  rule: APP-UNKNOWN-IMPORT-LAYER
+  message: backend/app imports must target api/domain/services/repositories/schemas/utils only
+  forbidden: backend.app.core.security
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/api/routes/charts.py
+  rule: APP-UNKNOWN-IMPORT-LAYER
+  message: backend/app imports must target api/domain/services/repositories/schemas/utils only
+  forbidden: backend.app.core.security
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/api/routes/charts.py
+  rule: APP-LAYER-IMPORT
+  message: backend/app/api may only import api, schemas, services
+  forbidden: backend.app.domain.charts.service
+  allowed: api, schemas, services
+- backend/app/api/routes/connections.py
+  rule: APP-UNKNOWN-IMPORT-LAYER
+  message: backend/app imports must target api/domain/services/repositories/schemas/utils only
+  forbidden: backend.app.core.security
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/api/routes/connections.py
+  rule: APP-LAYER-IMPORT
+  message: backend/app/api may only import api, schemas, services
+  forbidden: backend.app.domain.connections.repository
+  allowed: api, schemas, services
+- backend/app/api/routes/connections.py
+  rule: APP-LAYER-IMPORT
+  message: backend/app/api may only import api, schemas, services
+  forbidden: backend.app.domain.connections.schemas
+  allowed: api, schemas, services
+- backend/app/api/routes/connections.py
+  rule: APP-LAYER-IMPORT
+  message: backend/app/api may only import api, schemas, services
+  forbidden: backend.app.domain.connections.service
+  allowed: api, schemas, services
+- backend/app/api/routes/docqa.py
+  rule: APP-UNKNOWN-IMPORT-LAYER
+  message: backend/app imports must target api/domain/services/repositories/schemas/utils only
+  forbidden: backend.app.core.security
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/api/routes/docqa.py
+  rule: APP-LAYER-IMPORT
+  message: backend/app/api may only import api, schemas, services
+  forbidden: backend.app.domain.docqa.service
+  allowed: api, schemas, services
+- backend/app/api/routes/docqa.py
+  rule: APP-LAYER-IMPORT
+  message: backend/app/api may only import api, schemas, services
+  forbidden: backend.app.domain.docqa.schemas
+  allowed: api, schemas, services
+- backend/app/api/routes/enrichment.py
+  rule: APP-UNKNOWN-IMPORT-LAYER
+  message: backend/app imports must target api/domain/services/repositories/schemas/utils only
+  forbidden: backend.app.core.security
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/api/routes/enrichment.py
+  rule: APP-LAYER-IMPORT
+  message: backend/app/api may only import api, schemas, services
+  forbidden: backend.app.domain.enrichment.schemas
+  allowed: api, schemas, services
+- backend/app/api/routes/enrichment.py
+  rule: APP-LAYER-IMPORT
+  message: backend/app/api may only import api, schemas, services
+  forbidden: backend.app.domain.enrichment.service
+  allowed: api, schemas, services
+- backend/app/api/routes/excel.py
+  rule: APP-UNKNOWN-IMPORT-LAYER
+  message: backend/app imports must target api/domain/services/repositories/schemas/utils only
+  forbidden: backend.app.core.security
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/api/routes/excel.py
+  rule: APP-UNKNOWN-IMPORT-LAYER
+  message: backend/app imports must target api/domain/services/repositories/schemas/utils only
+  forbidden: backend.app.features.generate.schemas.charts
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/api/routes/excel.py
+  rule: APP-UNKNOWN-IMPORT-LAYER
+  message: backend/app imports must target api/domain/services/repositories/schemas/utils only
+  forbidden: backend.app.features.generate.schemas.reports
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/api/routes/excel.py
+  rule: APP-UNKNOWN-IMPORT-LAYER
+  message: backend/app imports must target api/domain/services/repositories/schemas/utils only
+  forbidden: backend.app.features.generate.services.chart_suggestions_service
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/api/routes/excel.py
+  rule: APP-UNKNOWN-IMPORT-LAYER
+  message: backend/app imports must target api/domain/services/repositories/schemas/utils only
+  forbidden: backend.app.features.generate.services.saved_charts_service
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/api/routes/excel.py
+  rule: APP-UNKNOWN-IMPORT-LAYER
+  message: backend/app imports must target api/domain/services/repositories/schemas/utils only
+  forbidden: backend.app.features.generate.services.discovery_service
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/api/routes/federation.py
+  rule: APP-UNKNOWN-IMPORT-LAYER
+  message: backend/app imports must target api/domain/services/repositories/schemas/utils only
+  forbidden: backend.app.core.security
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/api/routes/federation.py
+  rule: APP-LAYER-IMPORT
+  message: backend/app/api may only import api, schemas, services
+  forbidden: backend.app.domain.federation.schemas
+  allowed: api, schemas, services
+- backend/app/api/routes/federation.py
+  rule: APP-LAYER-IMPORT
+  message: backend/app/api may only import api, schemas, services
+  forbidden: backend.app.domain.federation.service
+  allowed: api, schemas, services
+- backend/app/api/routes/health.py
+  rule: APP-UNKNOWN-IMPORT-LAYER
+  message: backend/app imports must target api/domain/services/repositories/schemas/utils only
+  forbidden: backend.app.core.config
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/api/routes/health.py
+  rule: APP-UNKNOWN-IMPORT-LAYER
+  message: backend/app imports must target api/domain/services/repositories/schemas/utils only
+  forbidden: backend.app.core.middleware
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/api/routes/health.py
+  rule: APP-UNKNOWN-IMPORT-LAYER
+  message: backend/app imports must target api/domain/services/repositories/schemas/utils only
+  forbidden: backend.app.features.analyze.services.document_analysis_service
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/api/routes/jobs.py
+  rule: APP-UNKNOWN-IMPORT-LAYER
+  message: backend/app imports must target api/domain/services/repositories/schemas/utils only
+  forbidden: backend.app.core.security
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/api/routes/jobs.py
+  rule: APP-UNKNOWN-IMPORT-LAYER
+  message: backend/app imports must target api/domain/services/repositories/schemas/utils only
+  forbidden: backend.app.features.generate.schemas.reports
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/api/routes/jobs.py
+  rule: APP-UNKNOWN-IMPORT-LAYER
+  message: backend/app imports must target api/domain/services/repositories/schemas/utils only
+  forbidden: backend.app.features.generate.schemas.reports
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/api/routes/legacy.py
+  rule: APP-UNKNOWN-IMPORT-LAYER
+  message: backend/app imports must target api/domain/services/repositories/schemas/utils only
+  forbidden: backend.app.core.security
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/api/routes/legacy.py
+  rule: APP-UNKNOWN-IMPORT-LAYER
+  message: backend/app imports must target api/domain/services/repositories/schemas/utils only
+  forbidden: backend.app.features.generate.routes.run_routes
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/api/routes/legacy.py
+  rule: APP-UNKNOWN-IMPORT-LAYER
+  message: backend/app imports must target api/domain/services/repositories/schemas/utils only
+  forbidden: backend.app.features.generate.routes.discover_routes
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/api/routes/legacy.py
+  rule: APP-UNKNOWN-IMPORT-LAYER
+  message: backend/app imports must target api/domain/services/repositories/schemas/utils only
+  forbidden: backend.app.features.generate.routes.chart_suggest_routes
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/api/routes/legacy.py
+  rule: APP-UNKNOWN-IMPORT-LAYER
+  message: backend/app imports must target api/domain/services/repositories/schemas/utils only
+  forbidden: backend.app.features.generate.routes.saved_charts_routes
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/api/routes/nl2sql.py
+  rule: APP-UNKNOWN-IMPORT-LAYER
+  message: backend/app imports must target api/domain/services/repositories/schemas/utils only
+  forbidden: backend.app.core.security
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/api/routes/nl2sql.py
+  rule: APP-LAYER-IMPORT
+  message: backend/app/api may only import api, schemas, services
+  forbidden: backend.app.domain.nl2sql.schemas
+  allowed: api, schemas, services
+- backend/app/api/routes/nl2sql.py
+  rule: APP-LAYER-IMPORT
+  message: backend/app/api may only import api, schemas, services
+  forbidden: backend.app.domain.nl2sql.service
+  allowed: api, schemas, services
+- backend/app/api/routes/recommendations.py
+  rule: APP-UNKNOWN-IMPORT-LAYER
+  message: backend/app imports must target api/domain/services/repositories/schemas/utils only
+  forbidden: backend.app.core.security
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/api/routes/recommendations.py
+  rule: APP-LAYER-IMPORT
+  message: backend/app/api may only import api, schemas, services
+  forbidden: backend.app.domain.recommendations.service
+  allowed: api, schemas, services
+- backend/app/api/routes/reports.py
+  rule: APP-UNKNOWN-IMPORT-LAYER
+  message: backend/app imports must target api/domain/services/repositories/schemas/utils only
+  forbidden: backend.app.core.security
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/api/routes/reports.py
+  rule: APP-UNKNOWN-IMPORT-LAYER
+  message: backend/app imports must target api/domain/services/repositories/schemas/utils only
+  forbidden: backend.app.features.generate.schemas.reports
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/api/routes/reports.py
+  rule: APP-UNKNOWN-IMPORT-LAYER
+  message: backend/app imports must target api/domain/services/repositories/schemas/utils only
+  forbidden: backend.app.features.generate.services.discovery_service
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/api/routes/schedules.py
+  rule: APP-UNKNOWN-IMPORT-LAYER
+  message: backend/app imports must target api/domain/services/repositories/schemas/utils only
+  forbidden: backend.app.core.security
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/api/routes/schedules.py
+  rule: APP-UNKNOWN-IMPORT-LAYER
+  message: backend/app imports must target api/domain/services/repositories/schemas/utils only
+  forbidden: backend.app.features.generate.schemas.reports
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/api/routes/state.py
+  rule: APP-UNKNOWN-IMPORT-LAYER
+  message: backend/app imports must target api/domain/services/repositories/schemas/utils only
+  forbidden: backend.app.core.security
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/api/routes/summary.py
+  rule: APP-UNKNOWN-IMPORT-LAYER
+  message: backend/app imports must target api/domain/services/repositories/schemas/utils only
+  forbidden: backend.app.core.security
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/api/routes/summary.py
+  rule: APP-LAYER-IMPORT
+  message: backend/app/api may only import api, schemas, services
+  forbidden: backend.app.domain.summary.service
+  allowed: api, schemas, services
+- backend/app/api/routes/synthesis.py
+  rule: APP-UNKNOWN-IMPORT-LAYER
+  message: backend/app imports must target api/domain/services/repositories/schemas/utils only
+  forbidden: backend.app.core.security
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/api/routes/synthesis.py
+  rule: APP-LAYER-IMPORT
+  message: backend/app/api may only import api, schemas, services
+  forbidden: backend.app.domain.synthesis.service
+  allowed: api, schemas, services
+- backend/app/api/routes/synthesis.py
+  rule: APP-LAYER-IMPORT
+  message: backend/app/api may only import api, schemas, services
+  forbidden: backend.app.domain.synthesis.schemas
+  allowed: api, schemas, services
+- backend/app/api/routes/templates.py
+  rule: APP-UNKNOWN-IMPORT-LAYER
+  message: backend/app imports must target api/domain/services/repositories/schemas/utils only
+  forbidden: backend.app.core.config
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/api/routes/templates.py
+  rule: APP-UNKNOWN-IMPORT-LAYER
+  message: backend/app imports must target api/domain/services/repositories/schemas/utils only
+  forbidden: backend.app.core.security
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/api/routes/templates.py
+  rule: APP-UNKNOWN-IMPORT-LAYER
+  message: backend/app imports must target api/domain/services/repositories/schemas/utils only
+  forbidden: backend.app.core.validation
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/api/routes/templates.py
+  rule: APP-LAYER-IMPORT
+  message: backend/app/api may only import api, schemas, services
+  forbidden: backend.app.domain.templates.schemas
+  allowed: api, schemas, services
+- backend/app/api/routes/templates.py
+  rule: APP-LAYER-IMPORT
+  message: backend/app/api may only import api, schemas, services
+  forbidden: backend.app.domain.templates.service
+  allowed: api, schemas, services
+- backend/app/api/routes/templates.py
+  rule: APP-UNKNOWN-IMPORT-LAYER
+  message: backend/app imports must target api/domain/services/repositories/schemas/utils only
+  forbidden: backend.app.features.generate.schemas.charts
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/api/routes/templates.py
+  rule: APP-UNKNOWN-IMPORT-LAYER
+  message: backend/app imports must target api/domain/services/repositories/schemas/utils only
+  forbidden: backend.app.features.generate.services.chart_suggestions_service
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/api/routes/templates.py
+  rule: APP-UNKNOWN-IMPORT-LAYER
+  message: backend/app imports must target api/domain/services/repositories/schemas/utils only
+  forbidden: backend.app.features.generate.services.saved_charts_service
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/core/__init__.py
+  rule: APP-UNKNOWN-LAYER
+  message: backend/app/* code must live under api/, domain/, services/, repositories/, schemas/, utils/
+  forbidden: n/a
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/core/auth.py
+  rule: APP-UNKNOWN-LAYER
+  message: backend/app/* code must live under api/, domain/, services/, repositories/, schemas/, utils/
+  forbidden: n/a
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/core/config.py
+  rule: APP-UNKNOWN-LAYER
+  message: backend/app/* code must live under api/, domain/, services/, repositories/, schemas/, utils/
+  forbidden: n/a
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/core/errors.py
+  rule: APP-UNKNOWN-LAYER
+  message: backend/app/* code must live under api/, domain/, services/, repositories/, schemas/, utils/
+  forbidden: n/a
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/core/event_bus.py
+  rule: APP-UNKNOWN-LAYER
+  message: backend/app/* code must live under api/, domain/, services/, repositories/, schemas/, utils/
+  forbidden: n/a
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/core/governance_guards.py
+  rule: APP-UNKNOWN-LAYER
+  message: backend/app/* code must live under api/, domain/, services/, repositories/, schemas/, utils/
+  forbidden: n/a
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/core/idempotency.py
+  rule: APP-UNKNOWN-LAYER
+  message: backend/app/* code must live under api/, domain/, services/, repositories/, schemas/, utils/
+  forbidden: n/a
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/core/middleware.py
+  rule: APP-UNKNOWN-LAYER
+  message: backend/app/* code must live under api/, domain/, services/, repositories/, schemas/, utils/
+  forbidden: n/a
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/core/pipeline.py
+  rule: APP-UNKNOWN-LAYER
+  message: backend/app/* code must live under api/, domain/, services/, repositories/, schemas/, utils/
+  forbidden: n/a
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/core/result.py
+  rule: APP-UNKNOWN-LAYER
+  message: backend/app/* code must live under api/, domain/, services/, repositories/, schemas/, utils/
+  forbidden: n/a
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/core/security.py
+  rule: APP-UNKNOWN-LAYER
+  message: backend/app/* code must live under api/, domain/, services/, repositories/, schemas/, utils/
+  forbidden: n/a
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/core/soft_delete.py
+  rule: APP-UNKNOWN-LAYER
+  message: backend/app/* code must live under api/, domain/, services/, repositories/, schemas/, utils/
+  forbidden: n/a
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/core/sql_safety.py
+  rule: APP-UNKNOWN-LAYER
+  message: backend/app/* code must live under api/, domain/, services/, repositories/, schemas/, utils/
+  forbidden: n/a
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/core/static_files.py
+  rule: APP-UNKNOWN-LAYER
+  message: backend/app/* code must live under api/, domain/, services/, repositories/, schemas/, utils/
+  forbidden: n/a
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/core/strategies.py
+  rule: APP-UNKNOWN-LAYER
+  message: backend/app/* code must live under api/, domain/, services/, repositories/, schemas/, utils/
+  forbidden: n/a
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/core/ux_governance.py
+  rule: APP-UNKNOWN-LAYER
+  message: backend/app/* code must live under api/, domain/, services/, repositories/, schemas/, utils/
+  forbidden: n/a
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/core/validation.py
+  rule: APP-UNKNOWN-LAYER
+  message: backend/app/* code must live under api/, domain/, services/, repositories/, schemas/, utils/
+  forbidden: n/a
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/domain/charts/service.py
+  rule: APP-LAYER-IMPORT
+  message: backend/app/domain may only import domain, utils
+  forbidden: backend.app.services.llm.client
+  allowed: domain, utils
+- backend/app/domain/connections/repository.py
+  rule: APP-LAYER-IMPORT
+  message: backend/app/domain may only import domain, utils
+  forbidden: backend.app.services.connections.db_connection
+  allowed: domain, utils
+- backend/app/domain/connections/repository.py
+  rule: APP-LAYER-IMPORT
+  message: backend/app/domain may only import domain, utils
+  forbidden: backend.app.services.state
+  allowed: domain, utils
+- backend/app/domain/connections/schemas.py
+  rule: APP-UNKNOWN-IMPORT-LAYER
+  message: backend/app imports must target api/domain/services/repositories/schemas/utils only
+  forbidden: backend.app.core.validation
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/domain/connections/service.py
+  rule: APP-UNKNOWN-IMPORT-LAYER
+  message: backend/app imports must target api/domain/services/repositories/schemas/utils only
+  forbidden: backend.app.core.errors
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/domain/docqa/service.py
+  rule: APP-LAYER-IMPORT
+  message: backend/app/domain may only import domain, utils
+  forbidden: backend.app.services.llm.client
+  allowed: domain, utils
+- backend/app/domain/docqa/service.py
+  rule: APP-LAYER-IMPORT
+  message: backend/app/domain may only import domain, utils
+  forbidden: backend.app.services.state
+  allowed: domain, utils
+- backend/app/domain/enrichment/schemas.py
+  rule: APP-UNKNOWN-IMPORT-LAYER
+  message: backend/app imports must target api/domain/services/repositories/schemas/utils only
+  forbidden: backend.app.core.validation
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/domain/enrichment/service.py
+  rule: APP-UNKNOWN-IMPORT-LAYER
+  message: backend/app imports must target api/domain/services/repositories/schemas/utils only
+  forbidden: backend.app.core.errors
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/domain/enrichment/service.py
+  rule: APP-LAYER-IMPORT
+  message: backend/app/domain may only import domain, utils
+  forbidden: backend.app.services.state
+  allowed: domain, utils
+- backend/app/domain/enrichment/sources/address.py
+  rule: APP-LAYER-IMPORT
+  message: backend/app/domain may only import domain, utils
+  forbidden: backend.app.services.llm.client
+  allowed: domain, utils
+- backend/app/domain/enrichment/sources/company.py
+  rule: APP-LAYER-IMPORT
+  message: backend/app/domain may only import domain, utils
+  forbidden: backend.app.services.llm.client
+  allowed: domain, utils
+- backend/app/domain/errors.py
+  rule: APP-UNKNOWN-IMPORT-LAYER
+  message: backend/app imports must target api/domain/services/repositories/schemas/utils only
+  forbidden: backend.app.core.errors
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/domain/federation/service.py
+  rule: APP-IMPORT-LEGACY
+  message: backend/app/* may only import backend.legacy.* from api routes / backend.api.py
+  forbidden: backend.legacy.services.connection_inspector
+  allowed: backend/app/api/routes/*, backend/api.py
+- backend/app/domain/federation/service.py
+  rule: APP-UNKNOWN-IMPORT-LAYER
+  message: backend/app imports must target api/domain/services/repositories/schemas/utils only
+  forbidden: backend.app.core.errors
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/domain/federation/service.py
+  rule: APP-UNKNOWN-IMPORT-LAYER
+  message: backend/app imports must target api/domain/services/repositories/schemas/utils only
+  forbidden: backend.app.core.sql_safety
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/domain/federation/service.py
+  rule: APP-LAYER-IMPORT
+  message: backend/app/domain may only import domain, utils
+  forbidden: backend.app.services.state
+  allowed: domain, utils
+- backend/app/domain/federation/service.py
+  rule: APP-LAYER-IMPORT
+  message: backend/app/domain may only import domain, utils
+  forbidden: backend.app.services.llm.client
+  allowed: domain, utils
+- backend/app/domain/federation/service.py
+  rule: APP-LAYER-IMPORT
+  message: backend/app/domain may only import domain, utils
+  forbidden: backend.app.services.connections.db_connection
+  allowed: domain, utils
+- backend/app/domain/nl2sql/schemas.py
+  rule: APP-UNKNOWN-IMPORT-LAYER
+  message: backend/app imports must target api/domain/services/repositories/schemas/utils only
+  forbidden: backend.app.core.validation
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/domain/nl2sql/service.py
+  rule: APP-UNKNOWN-IMPORT-LAYER
+  message: backend/app imports must target api/domain/services/repositories/schemas/utils only
+  forbidden: backend.app.core.errors
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/domain/nl2sql/service.py
+  rule: APP-UNKNOWN-IMPORT-LAYER
+  message: backend/app imports must target api/domain/services/repositories/schemas/utils only
+  forbidden: backend.app.core.sql_safety
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/domain/nl2sql/service.py
+  rule: APP-LAYER-IMPORT
+  message: backend/app/domain may only import domain, utils
+  forbidden: backend.app.services.connections.db_connection
+  allowed: domain, utils
+- backend/app/domain/nl2sql/service.py
+  rule: APP-LAYER-IMPORT
+  message: backend/app/domain may only import domain, utils
+  forbidden: backend.app.services.dataframes
+  allowed: domain, utils
+- backend/app/domain/nl2sql/service.py
+  rule: APP-LAYER-IMPORT
+  message: backend/app/domain may only import domain, utils
+  forbidden: backend.app.services.llm.client
+  allowed: domain, utils
+- backend/app/domain/nl2sql/service.py
+  rule: APP-LAYER-IMPORT
+  message: backend/app/domain may only import domain, utils
+  forbidden: backend.app.services.llm.text_to_sql
+  allowed: domain, utils
+- backend/app/domain/nl2sql/service.py
+  rule: APP-LAYER-IMPORT
+  message: backend/app/domain may only import domain, utils
+  forbidden: backend.app.services.state
+  allowed: domain, utils
+- backend/app/domain/nl2sql/service.py
+  rule: APP-LAYER-IMPORT
+  message: backend/app/domain may only import domain, utils
+  forbidden: backend.app.services.dataframes.sqlite_loader
+  allowed: domain, utils
+- backend/app/domain/recommendations/service.py
+  rule: APP-IMPORT-LEGACY
+  message: backend/app/* may only import backend.legacy.* from api routes / backend.api.py
+  forbidden: backend.legacy.services.connection_inspector
+  allowed: backend/app/api/routes/*, backend/api.py
+- backend/app/domain/recommendations/service.py
+  rule: APP-LAYER-IMPORT
+  message: backend/app/domain may only import domain, utils
+  forbidden: backend.app.services.llm.client
+  allowed: domain, utils
+- backend/app/domain/recommendations/service.py
+  rule: APP-LAYER-IMPORT
+  message: backend/app/domain may only import domain, utils
+  forbidden: backend.app.services.state
+  allowed: domain, utils
+- backend/app/domain/reports/strategies.py
+  rule: APP-UNKNOWN-IMPORT-LAYER
+  message: backend/app imports must target api/domain/services/repositories/schemas/utils only
+  forbidden: backend.app.core.strategies
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/domain/reports/strategies.py
+  rule: APP-LAYER-IMPORT
+  message: backend/app/domain may only import domain, utils
+  forbidden: backend.app.services.reports.docx_export
+  allowed: domain, utils
+- backend/app/domain/reports/strategies.py
+  rule: APP-LAYER-IMPORT
+  message: backend/app/domain may only import domain, utils
+  forbidden: backend.app.services.reports.xlsx_export
+  allowed: domain, utils
+- backend/app/domain/reports/strategies.py
+  rule: APP-LAYER-IMPORT
+  message: backend/app/domain may only import domain, utils
+  forbidden: backend.app.services.utils.mailer
+  allowed: domain, utils
+- backend/app/domain/summary/service.py
+  rule: APP-LAYER-IMPORT
+  message: backend/app/domain may only import domain, utils
+  forbidden: backend.app.services.llm.client
+  allowed: domain, utils
+- backend/app/domain/summary/service.py
+  rule: APP-LAYER-IMPORT
+  message: backend/app/domain may only import domain, utils
+  forbidden: backend.app.services.state
+  allowed: domain, utils
+- backend/app/domain/synthesis/service.py
+  rule: APP-LAYER-IMPORT
+  message: backend/app/domain may only import domain, utils
+  forbidden: backend.app.services.llm.client
+  allowed: domain, utils
+- backend/app/domain/synthesis/service.py
+  rule: APP-LAYER-IMPORT
+  message: backend/app/domain may only import domain, utils
+  forbidden: backend.app.services.state
+  allowed: domain, utils
+- backend/app/domain/templates/service.py
+  rule: APP-UNKNOWN-IMPORT-LAYER
+  message: backend/app imports must target api/domain/services/repositories/schemas/utils only
+  forbidden: backend.app.core.event_bus
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/domain/templates/service.py
+  rule: APP-UNKNOWN-IMPORT-LAYER
+  message: backend/app imports must target api/domain/services/repositories/schemas/utils only
+  forbidden: backend.app.core.pipeline
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/domain/templates/service.py
+  rule: APP-UNKNOWN-IMPORT-LAYER
+  message: backend/app imports must target api/domain/services/repositories/schemas/utils only
+  forbidden: backend.app.core.result
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/domain/templates/service.py
+  rule: APP-UNKNOWN-IMPORT-LAYER
+  message: backend/app imports must target api/domain/services/repositories/schemas/utils only
+  forbidden: backend.app.core.strategies
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/domain/templates/service.py
+  rule: APP-UNKNOWN-IMPORT-LAYER
+  message: backend/app imports must target api/domain/services/repositories/schemas/utils only
+  forbidden: backend.app.core.validation
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/domain/templates/service.py
+  rule: APP-LAYER-IMPORT
+  message: backend/app/domain may only import domain, utils
+  forbidden: backend.app.services.state
+  allowed: domain, utils
+- backend/app/domain/templates/service.py
+  rule: APP-LAYER-IMPORT
+  message: backend/app/domain may only import domain, utils
+  forbidden: backend.app.services.utils
+  allowed: domain, utils
+- backend/app/domain/templates/service.py
+  rule: APP-LAYER-IMPORT
+  message: backend/app/domain may only import domain, utils
+  forbidden: backend.app.services.utils.artifacts
+  allowed: domain, utils
+- backend/app/domain/templates/service.py
+  rule: APP-LAYER-IMPORT
+  message: backend/app/domain may only import domain, utils
+  forbidden: backend.app.services.utils.zip_tools
+  allowed: domain, utils
+- backend/app/domain/templates/strategies.py
+  rule: APP-UNKNOWN-IMPORT-LAYER
+  message: backend/app imports must target api/domain/services/repositories/schemas/utils only
+  forbidden: backend.app.core.strategies
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/env_loader.py
+  rule: APP-UNKNOWN-LAYER
+  message: backend/app/* code must live under api/, domain/, services/, repositories/, schemas/, utils/
+  forbidden: n/a
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/features/analyze/__init__.py
+  rule: APP-UNKNOWN-LAYER
+  message: backend/app/* code must live under api/, domain/, services/, repositories/, schemas/, utils/
+  forbidden: n/a
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/features/analyze/routes/__init__.py
+  rule: APP-UNKNOWN-LAYER
+  message: backend/app/* code must live under api/, domain/, services/, repositories/, schemas/, utils/
+  forbidden: n/a
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/features/analyze/routes/analysis_routes.py
+  rule: APP-UNKNOWN-LAYER
+  message: backend/app/* code must live under api/, domain/, services/, repositories/, schemas/, utils/
+  forbidden: n/a
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/features/analyze/routes/enhanced_analysis_routes.py
+  rule: APP-UNKNOWN-LAYER
+  message: backend/app/* code must live under api/, domain/, services/, repositories/, schemas/, utils/
+  forbidden: n/a
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/features/analyze/schemas/__init__.py
+  rule: APP-UNKNOWN-LAYER
+  message: backend/app/* code must live under api/, domain/, services/, repositories/, schemas/, utils/
+  forbidden: n/a
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/features/analyze/schemas/analysis.py
+  rule: APP-UNKNOWN-LAYER
+  message: backend/app/* code must live under api/, domain/, services/, repositories/, schemas/, utils/
+  forbidden: n/a
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/features/analyze/schemas/enhanced_analysis.py
+  rule: APP-UNKNOWN-LAYER
+  message: backend/app/* code must live under api/, domain/, services/, repositories/, schemas/, utils/
+  forbidden: n/a
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/features/analyze/services/__init__.py
+  rule: APP-UNKNOWN-LAYER
+  message: backend/app/* code must live under api/, domain/, services/, repositories/, schemas/, utils/
+  forbidden: n/a
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/features/analyze/services/advanced_ai_features.py
+  rule: APP-UNKNOWN-LAYER
+  message: backend/app/* code must live under api/, domain/, services/, repositories/, schemas/, utils/
+  forbidden: n/a
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/features/analyze/services/analysis_engines.py
+  rule: APP-UNKNOWN-LAYER
+  message: backend/app/* code must live under api/, domain/, services/, repositories/, schemas/, utils/
+  forbidden: n/a
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/features/analyze/services/data_transform_export.py
+  rule: APP-UNKNOWN-LAYER
+  message: backend/app/* code must live under api/, domain/, services/, repositories/, schemas/, utils/
+  forbidden: n/a
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/features/analyze/services/document_analysis_service.py
+  rule: APP-UNKNOWN-LAYER
+  message: backend/app/* code must live under api/, domain/, services/, repositories/, schemas/, utils/
+  forbidden: n/a
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/features/analyze/services/enhanced_analysis_orchestrator.py
+  rule: APP-UNKNOWN-LAYER
+  message: backend/app/* code must live under api/, domain/, services/, repositories/, schemas/, utils/
+  forbidden: n/a
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/features/analyze/services/enhanced_analysis_store.py
+  rule: APP-UNKNOWN-LAYER
+  message: backend/app/* code must live under api/, domain/, services/, repositories/, schemas/, utils/
+  forbidden: n/a
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/features/analyze/services/enhanced_extraction_service.py
+  rule: APP-UNKNOWN-LAYER
+  message: backend/app/* code must live under api/, domain/, services/, repositories/, schemas/, utils/
+  forbidden: n/a
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/features/analyze/services/extraction_pipeline.py
+  rule: APP-UNKNOWN-LAYER
+  message: backend/app/* code must live under api/, domain/, services/, repositories/, schemas/, utils/
+  forbidden: n/a
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/features/analyze/services/integrations.py
+  rule: APP-UNKNOWN-LAYER
+  message: backend/app/* code must live under api/, domain/, services/, repositories/, schemas/, utils/
+  forbidden: n/a
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/features/analyze/services/user_experience.py
+  rule: APP-UNKNOWN-LAYER
+  message: backend/app/* code must live under api/, domain/, services/, repositories/, schemas/, utils/
+  forbidden: n/a
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/features/analyze/services/visualization_engine.py
+  rule: APP-UNKNOWN-LAYER
+  message: backend/app/* code must live under api/, domain/, services/, repositories/, schemas/, utils/
+  forbidden: n/a
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/features/generate/__init__.py
+  rule: APP-UNKNOWN-LAYER
+  message: backend/app/* code must live under api/, domain/, services/, repositories/, schemas/, utils/
+  forbidden: n/a
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/features/generate/routes/chart_suggest_routes.py
+  rule: APP-UNKNOWN-LAYER
+  message: backend/app/* code must live under api/, domain/, services/, repositories/, schemas/, utils/
+  forbidden: n/a
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/features/generate/routes/discover_routes.py
+  rule: APP-UNKNOWN-LAYER
+  message: backend/app/* code must live under api/, domain/, services/, repositories/, schemas/, utils/
+  forbidden: n/a
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/features/generate/routes/run_routes.py
+  rule: APP-UNKNOWN-LAYER
+  message: backend/app/* code must live under api/, domain/, services/, repositories/, schemas/, utils/
+  forbidden: n/a
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/features/generate/routes/saved_charts_routes.py
+  rule: APP-UNKNOWN-LAYER
+  message: backend/app/* code must live under api/, domain/, services/, repositories/, schemas/, utils/
+  forbidden: n/a
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/features/generate/schemas/__init__.py
+  rule: APP-UNKNOWN-LAYER
+  message: backend/app/* code must live under api/, domain/, services/, repositories/, schemas/, utils/
+  forbidden: n/a
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/features/generate/schemas/charts.py
+  rule: APP-UNKNOWN-LAYER
+  message: backend/app/* code must live under api/, domain/, services/, repositories/, schemas/, utils/
+  forbidden: n/a
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/features/generate/schemas/reports.py
+  rule: APP-UNKNOWN-LAYER
+  message: backend/app/* code must live under api/, domain/, services/, repositories/, schemas/, utils/
+  forbidden: n/a
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/features/generate/services/__init__.py
+  rule: APP-UNKNOWN-LAYER
+  message: backend/app/* code must live under api/, domain/, services/, repositories/, schemas/, utils/
+  forbidden: n/a
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/features/generate/services/chart_suggestions_service.py
+  rule: APP-UNKNOWN-LAYER
+  message: backend/app/* code must live under api/, domain/, services/, repositories/, schemas/, utils/
+  forbidden: n/a
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/features/generate/services/discovery_service.py
+  rule: APP-UNKNOWN-LAYER
+  message: backend/app/* code must live under api/, domain/, services/, repositories/, schemas/, utils/
+  forbidden: n/a
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/features/generate/services/saved_charts_service.py
+  rule: APP-UNKNOWN-LAYER
+  message: backend/app/* code must live under api/, domain/, services/, repositories/, schemas/, utils/
+  forbidden: n/a
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/features/generate/utils/__init__.py
+  rule: APP-UNKNOWN-LAYER
+  message: backend/app/* code must live under api/, domain/, services/, repositories/, schemas/, utils/
+  forbidden: n/a
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/services/connections/db_connection.py
+  rule: APP-UNKNOWN-IMPORT-LAYER
+  message: backend/app imports must target api/domain/services/repositories/schemas/utils only
+  forbidden: backend.app.core.sql_safety
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/services/extraction/pdf_extractors.py
+  rule: APP-UNKNOWN-IMPORT-LAYER
+  message: backend/app imports must target api/domain/services/repositories/schemas/utils only
+  forbidden: backend.app.core.config
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/app/services/jobs/report_scheduler.py
+  rule: APP-IMPORT-LEGACY
+  message: backend/app/* may only import backend.legacy.* from api routes / backend.api.py
+  forbidden: backend.legacy.services.report_service
+  allowed: backend/app/api/routes/*, backend/api.py
+- backend/app/services/jobs/report_scheduler.py
+  rule: APP-UNKNOWN-IMPORT-LAYER
+  message: backend/app imports must target api/domain/services/repositories/schemas/utils only
+  forbidden: backend.app.features.generate.schemas.reports
+  allowed: api, domain, repositories, schemas, services, utils
+- backend/tests/test_scheduler_email.py
+  rule: APP-API-IMPORT-SCOPE
+  message: Only backend/app/api/* may import backend.app.api.*
+  forbidden: backend.app.api.routes.schedules
+  allowed: backend/app/api/*
+- backend/tests/test_scheduler_email.py
+  rule: APP-API-IMPORT-SCOPE
+  message: Only backend/app/api/* may import backend.app.api.*
+  forbidden: backend.app.api.routes.health
+  allowed: backend/app/api/*

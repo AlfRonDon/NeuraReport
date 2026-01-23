@@ -31,7 +31,7 @@ pipeline_module = importlib.import_module("scripts.verify_pipeline")
 verify_pipeline = pipeline_module.verify_pipeline
 
 TEMPLATE_ID = "ad6a0b1f-d98a-41c2-8ffe-8b651de9100f"
-UPLOADS_ROOT = REPO_ROOT / "backend" / "uploads"
+UPLOADS_ROOT = REPO_ROOT / "samples" / "uploads"
 
 
 def _lookup_check(checks: list[Any], name: str) -> Any:

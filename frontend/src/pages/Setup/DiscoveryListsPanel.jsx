@@ -16,7 +16,7 @@ import {
   Box,
 } from '@mui/material'
 import CloseIcon from '@mui/icons-material/Close'
-import { useAppStore } from '../../store/useAppStore'
+import { useAppStore } from '../../stores'
 
 const formatCount = (value) => {
   const num = Number(value || 0)

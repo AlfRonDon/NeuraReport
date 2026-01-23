@@ -1,0 +1,29 @@
+{
+  "correlation_id": "89a25aca-1dc1-41e7-b1c1-43acdcf8ad19",
+  "schema_version": "1.0",
+  "step": "reports_assets_build",
+  "produced_at": "2026-01-13T18:07:45.775726+00:00",
+  "input_refs": [
+    "C:\\Users\\Alfred\\NeuraReport\\test - Copy (2).db"
+  ],
+  "files": {
+    "contract.json": "contract.json",
+    "contract_v2_meta.json": "contract_v2_meta.json",
+    "generator/generator_assets.json": "generator/generator_assets.json",
+    "generator/output_schemas.json": "generator/output_schemas.json",
+    "mapping_keys.json": "mapping_keys.json",
+    "mapping_pdf_labels.json": "mapping_pdf_labels.json",
+    "overview.md": "overview.md",
+    "report_final.html": "report_final.html"
+  },
+  "file_checksums": {
+    "contract.json": "fe430175afdc75f1baed229b670c843d968d5b7d02ad33ee40d064f9ca5c8c6a",
+    "contract_v2_meta.json": "385bc78483fff4beb971c90613d325d34de27e124f167bc656e546a428ed2bda",
+    "generator/generator_assets.json": "2e63f318e7fff188c994186e1082e4543a91b5968b9eabca7291d9e5e5804c13",
+    "generator/output_schemas.json": "5d71c0b6edd4194cadcda378c21e473556e263f3d98abc9ef0a5c2583840a57a",
+    "mapping_keys.json": "1e27673e994af7aa1c6d574befd0b61c7547129bef6835f74eb4c933a669ecea",
+    "mapping_pdf_labels.json": "62823e6734afb7aae4b33a5fc52884ad15985a10bec72b1d5309e2613efc8027",
+    "overview.md": "970cf4ecbf608ec96c0f6428e322a01767b2988f967e7d5513525048b106f396",
+    "report_final.html": "0c545fc2c742d5059ab29f9db315941964595dd596e6f486280f26f45c2f486c"
+  }
+}

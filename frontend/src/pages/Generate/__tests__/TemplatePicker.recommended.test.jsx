@@ -6,7 +6,7 @@ import { ThemeProvider } from '@mui/material/styles'
 import TemplatePicker from '../../../features/generate/components/TemplatePicker.jsx'
 import theme from '../../../theme.js'
 import { ToastProvider } from '../../../components/ToastProvider.jsx'
-import { useAppStore } from '../../../store/useAppStore.js'
+import { useAppStore } from '../../../stores'
 import { recommendTemplates } from '../../../api/client'
 
 vi.mock('@tanstack/react-query', () => ({

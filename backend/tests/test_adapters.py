@@ -47,7 +47,7 @@ class TestSQLiteConnectionPool:
 
     def test_pool_creation(self, tmp_path):
         """Connection pool should be created with proper size."""
-        from backend.adapters.databases.sqlite import SQLiteConnectionPool
+        from backend.engine.adapters.databases.sqlite import SQLiteConnectionPool
 
         db_path = tmp_path / "test.db"
         # Create empty db
@@ -67,7 +67,7 @@ class TestSQLiteConnectionPool:
 
     def test_pool_acquire_and_release(self, tmp_path):
         """Connections should be acquired and released properly."""
-        from backend.adapters.databases.sqlite import SQLiteConnectionPool
+        from backend.engine.adapters.databases.sqlite import SQLiteConnectionPool
         from backend.app.services.dataframes import sqlite_shim
 
         db_path = tmp_path / "test.db"
@@ -95,7 +95,7 @@ class TestSQLiteConnectionPool:
 
     def test_pool_concurrent_acquire(self, tmp_path):
         """Pool should handle concurrent connections (DataFrame-based)."""
-        from backend.adapters.databases.sqlite import SQLiteConnectionPool
+        from backend.engine.adapters.databases.sqlite import SQLiteConnectionPool
 
         db_path = tmp_path / "test.db"
         import sqlite3
@@ -120,7 +120,7 @@ class TestSQLiteDataSource:
 
     def test_test_connection_success(self, tmp_path):
         """test_connection should return success for valid database."""
-        from backend.adapters.databases.sqlite import SQLiteDataSource
+        from backend.engine.adapters.databases.sqlite import SQLiteDataSource
 
         db_path = tmp_path / "test.db"
         import sqlite3
@@ -141,7 +141,7 @@ class TestSQLiteDataSource:
 
     def test_test_connection_empty_database(self, tmp_path):
         """test_connection should succeed for empty database with 0 tables."""
-        from backend.adapters.databases.sqlite import SQLiteDataSource
+        from backend.engine.adapters.databases.sqlite import SQLiteDataSource
 
         db_path = tmp_path / "empty.db"
         # Create empty database file
@@ -161,7 +161,7 @@ class TestSQLiteDataSource:
 
     def test_execute_query(self, tmp_path):
         """execute_query should return proper results."""
-        from backend.adapters.databases.sqlite import SQLiteDataSource
+        from backend.engine.adapters.databases.sqlite import SQLiteDataSource
 
         db_path = tmp_path / "test.db"
         import sqlite3
@@ -192,7 +192,7 @@ class TestSQLiteDataSource:
 
     def test_with_connection_pool(self, tmp_path):
         """DataSource should work with connection pooling enabled."""
-        from backend.adapters.databases.sqlite import SQLiteDataSource
+        from backend.engine.adapters.databases.sqlite import SQLiteDataSource
 
         db_path = tmp_path / "test.db"
         import sqlite3
@@ -217,7 +217,7 @@ class TestSQLiteSchemaDiscovery:
 
     def test_discover_tables_batch(self, tmp_path):
         """Schema discovery should batch queries efficiently."""
-        from backend.adapters.databases.sqlite import SQLiteDataSource
+        from backend.engine.adapters.databases.sqlite import SQLiteDataSource
 
         db_path = tmp_path / "test.db"
         import sqlite3
@@ -254,7 +254,7 @@ class TestOpenAIClient:
         """Client should raise error when API key is missing."""
         monkeypatch.delenv("OPENAI_API_KEY", raising=False)
 
-        from backend.adapters.llm.openai import OpenAIClient
+        from backend.engine.adapters.llm.openai import OpenAIClient
 
         client = OpenAIClient(api_key=None)
 
@@ -265,7 +265,7 @@ class TestOpenAIClient:
         """Client should warn on invalid API key format."""
         monkeypatch.delenv("OPENAI_API_KEY", raising=False)
 
-        from backend.adapters.llm.openai import OpenAIClient
+        from backend.engine.adapters.llm.openai import OpenAIClient
         import logging
 
         with patch("openai.OpenAI"):
@@ -282,7 +282,7 @@ class TestOpenAIClient:
 
         # Need to reimport to pick up env change
         import importlib
-        from backend.adapters.llm import openai
+        from backend.engine.adapters.llm import openai
         importlib.reload(openai)
 
         # Default should now be true
@@ -293,7 +293,7 @@ class TestOpenAIClient:
         monkeypatch.setenv("NEURA_FORCE_GPT5", "true")
 
         import importlib
-        from backend.adapters.llm import openai
+        from backend.engine.adapters.llm import openai
         importlib.reload(openai)
 
         assert openai._FORCE_GPT5 is True
@@ -303,7 +303,7 @@ class TestOpenAIClient:
         monkeypatch.setenv("NEURA_FORCE_GPT5", "false")
 
         import importlib
-        from backend.adapters.llm import openai
+        from backend.engine.adapters.llm import openai
         importlib.reload(openai)
 
         result = openai._force_gpt5("custom-model")
@@ -314,8 +314,8 @@ class TestOpenAIClient:
         monkeypatch.setenv("OPENAI_API_KEY", "sk-test-key")
         monkeypatch.setenv("NEURA_FORCE_GPT5", "false")
 
-        from backend.adapters.llm.openai import OpenAIClient
-        from backend.adapters.llm.base import LLMMessage, LLMRole
+        from backend.engine.adapters.llm.openai import OpenAIClient
+        from backend.engine.adapters.llm.base import LLMMessage, LLMRole
 
         mock_response = {
             "output_text": "Test response",

@@ -21,15 +21,15 @@ from .app.core.event_bus import EventBus, logging_middleware, metrics_middleware
 from .app.core.errors import add_exception_handlers
 from .app.core.middleware import add_middlewares
 from backend.app.api.router import register_routes
-from src.services.report_service import (
+from backend.legacy.services.report_service import (
     _run_report_job_sync as _run_report_job_sync,
     _run_report_with_email as _run_report_with_email,
     _schedule_report_job as _schedule_report_job,
     scheduler_runner as report_scheduler_runner,
 )
-from src.services.report_service import JobRunTracker as JobRunTracker
+from backend.legacy.services.report_service import JobRunTracker as JobRunTracker
 
-from src.services import report_service as report_service
+from backend.legacy.services import report_service as report_service
 
 from .app.core.config import get_settings, log_settings
 from .app.core.auth import init_auth_db
@@ -167,7 +167,7 @@ def _scheduler_runner(payload: dict, kind: str, *, job_tracker: JobRunTracker | 
 
 
 # ---------------------------------------------------------------------------
-# Compatibility exports (tests + legacy src/* override hooks)
+# Compatibility exports (tests + legacy backend/legacy override hooks)
 # ---------------------------------------------------------------------------
 from fastapi import HTTPException
 
@@ -193,10 +193,10 @@ from backend.app.services.templates.TemplateVerify import save_html as save_html
 from backend.app.services.templates.layout_hints import get_layout_hints as get_layout_hints
 from backend.app.services.utils import validate_contract_schema as validate_contract_schema
 from backend.app.services.utils import write_artifact_manifest as write_artifact_manifest
-from src.services.file_service.verify import verify_template as _verify_template_service
-from src.services.mapping.helpers import build_catalog_from_db as _build_catalog_from_db
-from src.services.mapping.helpers import compute_db_signature as compute_db_signature
-from src.services.mapping.preview import _mapping_preview_pipeline as _mapping_preview_pipeline
+from backend.legacy.services.file_service.verify import verify_template as _verify_template_service
+from backend.legacy.services.mapping.helpers import build_catalog_from_db as _build_catalog_from_db
+from backend.legacy.services.mapping.helpers import compute_db_signature as compute_db_signature
+from backend.legacy.services.mapping.preview import _mapping_preview_pipeline as _mapping_preview_pipeline
 
 
 def _http_error(status_code: int, code: str, message: str) -> HTTPException:

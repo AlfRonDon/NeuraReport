@@ -16,7 +16,7 @@ import {
 import AddIcon from '@mui/icons-material/Add'
 import StorageIcon from '@mui/icons-material/Storage'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
-import { useAppStore } from '../../../store/useAppStore'
+import { useAppStore } from '../../../stores'
 import { useToast } from '../../../components/ToastProvider'
 import { useInteraction, InteractionType, Reversibility } from '../../../components/ux/governance'
 import { Drawer } from '../../../ui/Drawer'
