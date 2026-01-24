@@ -154,9 +154,9 @@ code {
   background-color: rgba(197, 181, 165, 0.8);
 }
 
-/* Focus states - neutral, not green */
+/* Focus states - brand green accent */
 :focus-visible {
-  outline: 2px solid var(--color-text-primary);
+  outline: 2px solid var(--color-brand);
   outline-offset: 2px;
 }
 
