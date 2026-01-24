@@ -34,7 +34,7 @@ _build_sample_data_rows = lambda batches, metadata=None, limit=100: build_batch_
     limit=limit,
 )
 
-DEFAULT_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+DEFAULT_MODEL = os.getenv("OPENAI_MODEL", "gpt-5")
 
 
 def _state_store():

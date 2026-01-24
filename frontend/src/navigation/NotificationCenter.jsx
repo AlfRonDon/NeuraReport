@@ -66,19 +66,19 @@ const getTypeConfig = (theme, type) => {
   const configs = {
     info: {
       icon: InfoOutlinedIcon,
-      color: theme.palette.info.main,
+      color: theme.palette.text.secondary,
     },
     success: {
       icon: CheckCircleOutlinedIcon,
-      color: theme.palette.success.main,
+      color: theme.palette.text.secondary,
     },
     warning: {
       icon: WarningAmberOutlinedIcon,
-      color: theme.palette.warning.main,
+      color: theme.palette.text.secondary,
     },
     error: {
       icon: ErrorOutlineIcon,
-      color: theme.palette.error.main,
+      color: theme.palette.text.secondary,
     },
   }
   return configs[type] || configs.info
@@ -358,11 +358,10 @@ export default function NotificationCenter() {
         >
           <Badge
             badgeContent={unreadCount}
-            color="error"
             max={99}
             sx={{
               '& .MuiBadge-badge': {
-                bgcolor: theme.palette.error.main,
+                bgcolor: theme.palette.mode === 'dark' ? '#63635E' : '#21201C',
                 color: '#fff',
                 fontSize: '0.65rem',
                 fontWeight: 600,
@@ -459,7 +458,7 @@ export default function NotificationCenter() {
                 disabled={notifications.length === 0}
                 sx={{
                   color: theme.palette.text.secondary,
-                  '&:hover': { color: theme.palette.error.main },
+                  '&:hover': { color: theme.palette.text.primary },
                 }}
               >
                 <DeleteSweepIcon sx={{ fontSize: 18 }} />
@@ -508,7 +507,7 @@ export default function NotificationCenter() {
                               opacity: 1,
                             },
                             '&:hover': {
-                              color: theme.palette.error.main,
+                              color: theme.palette.text.primary,
                             },
                           }}
                         >
@@ -593,7 +592,7 @@ export default function NotificationCenter() {
                               width: 8,
                               height: 8,
                               borderRadius: '50%',
-                              bgcolor: theme.palette.info.main,
+                              bgcolor: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
                               ml: 1,
                               flexShrink: 0,
                             }}

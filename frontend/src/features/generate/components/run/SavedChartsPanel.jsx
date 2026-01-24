@@ -64,7 +64,7 @@ export default function SavedChartsPanel({
                 key={chart.id}
                 variant={isSelected ? 'outlined' : 'elevation'}
                 sx={{
-                  borderColor: isSelected ? 'primary.main' : 'divider',
+                  borderColor: isSelected ? 'text.secondary' : 'divider',
                   bgcolor: isSelected ? alpha('#4f46e5', 0.04) : 'background.paper',
                 }}
               >

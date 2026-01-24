@@ -294,22 +294,22 @@ export function IrreversibleBoundaryProvider({ children }) {
   const getSeverityConfig = (severity) => {
     const configs = {
       [ActionSeverity.LOW]: {
-        color: theme.palette.info.main,
+        color: theme.palette.text.secondary,
         icon: WarningIcon,
         label: 'Low Impact',
       },
       [ActionSeverity.MEDIUM]: {
-        color: theme.palette.warning.main,
+        color: theme.palette.text.secondary,
         icon: WarningIcon,
         label: 'Medium Impact',
       },
       [ActionSeverity.HIGH]: {
-        color: theme.palette.error.main,
+        color: theme.palette.text.secondary,
         icon: DangerIcon,
         label: 'High Impact',
       },
       [ActionSeverity.CRITICAL]: {
-        color: theme.palette.error.dark,
+        color: theme.palette.text.secondary,
         icon: DeleteIcon,
         label: 'CRITICAL - Cannot Be Undone',
       },
@@ -434,9 +434,8 @@ export function IrreversibleBoundaryProvider({ children }) {
               <Button
                 onClick={executeAction}
                 variant="contained"
-                color="error"
                 disabled={!isConfirmationValid}
-                sx={{ minWidth: 120 }}
+                sx={{ minWidth: 120, color: 'text.secondary' }}
               >
                 {cooldownRemaining > 0 ? (
                   `Wait ${cooldownRemaining}s`

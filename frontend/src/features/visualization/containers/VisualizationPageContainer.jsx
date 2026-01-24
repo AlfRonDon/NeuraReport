@@ -95,9 +95,9 @@ const DiagramTypeCard = styled(Card)(({ theme, selected }) => ({
   cursor: 'pointer',
   transition: 'all 0.2s ease',
   marginBottom: theme.spacing(1),
-  border: selected ? `2px solid ${theme.palette.primary.main}` : `1px solid ${alpha(theme.palette.divider, 0.2)}`,
+  border: selected ? `2px solid ${theme.palette.mode === 'dark' ? '#82827C' : '#63635E'}` : `1px solid ${alpha(theme.palette.divider, 0.2)}`,
   '&:hover': {
-    backgroundColor: alpha(theme.palette.primary.main, 0.05),
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8',
   },
 }))
 
@@ -358,7 +358,7 @@ export default function VisualizationPageContainer() {
       <Header>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <ChartIcon sx={{ color: 'primary.main', fontSize: 28 }} />
+            <ChartIcon sx={{ color: 'text.secondary', fontSize: 28 }} />
             <Box>
               <Typography variant="h6" sx={{ fontWeight: 600 }}>
                 Visualization Studio
@@ -496,7 +496,7 @@ export default function VisualizationPageContainer() {
             </PreviewCard>
           ) : (
             <Box sx={{ textAlign: 'center', maxWidth: 400 }}>
-              <ChartIcon sx={{ fontSize: 80, color: 'primary.main', opacity: 0.3, mb: 2 }} />
+              <ChartIcon sx={{ fontSize: 80, color: 'text.secondary', opacity: 0.3, mb: 2 }} />
               <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
                 Create Your First Diagram
               </Typography>

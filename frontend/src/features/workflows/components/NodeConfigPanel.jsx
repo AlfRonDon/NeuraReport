@@ -106,10 +106,10 @@ const VariableChip = styled(Chip)(({ theme }) => ({
   height: 24,
   fontSize: '0.7rem',
   fontFamily: 'monospace',
-  backgroundColor: alpha(theme.palette.primary.main, 0.1),
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF',
   cursor: 'pointer',
   '&:hover': {
-    backgroundColor: alpha(theme.palette.primary.main, 0.2),
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.15) : '#E9E8E6',
   },
 }))
 
@@ -526,7 +526,7 @@ export default function NodeConfigPanel({
     <PanelContainer>
       <PanelHeader>
         <Stack direction="row" alignItems="center" spacing={1}>
-          <NodeIcon sx={{ color: `${nodeTypeInfo?.color || 'primary'}.main`, fontSize: 20 }} />
+          <NodeIcon sx={{ color: 'text.secondary', fontSize: 20 }} />
           <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
             Configure Node
           </Typography>
@@ -541,8 +541,8 @@ export default function NodeConfigPanel({
         <Stack direction="row" spacing={1} mb={2}>
           <NodeTypeChip
             label={nodeTypeInfo?.label || node.type}
-            color={nodeTypeInfo?.color || 'default'}
             size="small"
+            sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6', color: 'text.secondary' }}
           />
           <Chip label={`ID: ${node.id}`} size="small" variant="outlined" />
         </Stack>
@@ -712,10 +712,10 @@ export default function NodeConfigPanel({
         <Stack direction="row" spacing={1} justifyContent="space-between">
           <Button
             variant="outlined"
-            color="error"
             size="small"
             startIcon={<DeleteIcon />}
             onClick={onDelete}
+            sx={{ color: 'text.secondary' }}
           >
             Delete
           </Button>

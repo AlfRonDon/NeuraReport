@@ -79,10 +79,10 @@ const ContentArea = styled(Box)(({ theme }) => ({
 const BrandKitCard = styled(Card)(({ theme, isDefault }) => ({
   cursor: 'pointer',
   transition: 'all 0.2s ease',
-  border: isDefault ? `2px solid ${theme.palette.primary.main}` : `1px solid ${alpha(theme.palette.divider, 0.2)}`,
+  border: isDefault ? `2px solid ${theme.palette.mode === 'dark' ? '#82827C' : '#63635E'}` : `1px solid ${alpha(theme.palette.divider, 0.2)}`,
   '&:hover': {
     transform: 'translateY(-2px)',
-    boxShadow: `0 8px 24px ${alpha(theme.palette.primary.main, 0.15)}`,
+    boxShadow: `0 8px 24px ${alpha(theme.palette.text.primary, 0.15)}`,
   },
 }))
 
@@ -103,9 +103,9 @@ const ThemeCard = styled(Paper)(({ theme, isActive }) => ({
   padding: theme.spacing(2),
   cursor: 'pointer',
   transition: 'all 0.2s ease',
-  border: isActive ? `2px solid ${theme.palette.success.main}` : `1px solid ${alpha(theme.palette.divider, 0.2)}`,
+  border: isActive ? `2px solid ${theme.palette.mode === 'dark' ? '#82827C' : '#63635E'}` : `1px solid ${alpha(theme.palette.divider, 0.2)}`,
   '&:hover': {
-    backgroundColor: alpha(theme.palette.primary.main, 0.02),
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8',
   },
 }))
 
@@ -301,7 +301,7 @@ export default function DesignPageContainer() {
       <Header>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <PaletteIcon sx={{ color: 'primary.main', fontSize: 28 }} />
+            <PaletteIcon sx={{ color: 'text.secondary', fontSize: 28 }} />
             <Box>
               <Typography variant="h6" sx={{ fontWeight: 600 }}>
                 Design System
@@ -340,7 +340,7 @@ export default function DesignPageContainer() {
                         {kit.name}
                       </Typography>
                       {kit.is_default && (
-                        <Chip size="small" label="Default" color="primary" icon={<DefaultIcon />} />
+                        <Chip size="small" label="Default" icon={<DefaultIcon />} sx={{ bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6', color: 'text.secondary' }} />
                       )}
                     </Box>
 
@@ -400,7 +400,7 @@ export default function DesignPageContainer() {
                     <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
                       {t.name}
                     </Typography>
-                    {t.is_active && <CheckIcon color="success" />}
+                    {t.is_active && <CheckIcon sx={{ color: 'text.secondary' }} />}
                   </Box>
                   <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
                     <ColorSwatch color={t.colors?.primary || '#3b82f6'} />

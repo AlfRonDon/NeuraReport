@@ -104,14 +104,14 @@ const ActionButton = styled(Button)(({ theme }) => ({
   fontWeight: 600,
   fontSize: '0.875rem',
   padding: theme.spacing(1.25, 3),
-  backgroundColor: theme.palette.primary.main,
+  backgroundColor: theme.palette.mode === 'dark' ? '#63635E' : '#21201C',
   color: '#fff',
-  boxShadow: `0 4px 16px ${alpha(theme.palette.primary.main, 0.3)}`,
+  boxShadow: `0 4px 16px ${alpha(theme.palette.common.black, 0.15)}`,
   transition: 'all 0.2s ease',
   '&:hover': {
-    backgroundColor: theme.palette.primary.dark,
+    backgroundColor: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
     transform: 'translateY(-2px)',
-    boxShadow: `0 8px 24px ${alpha(theme.palette.primary.main, 0.4)}`,
+    boxShadow: `0 8px 24px ${alpha(theme.palette.common.black, 0.2)}`,
   },
   '&:active': {
     transform: 'translateY(0)',
@@ -127,9 +127,9 @@ const SecondaryButton = styled(Button)(({ theme }) => ({
   color: theme.palette.text.secondary,
   borderColor: alpha(theme.palette.divider, 0.2),
   '&:hover': {
-    borderColor: theme.palette.primary.main,
-    backgroundColor: alpha(theme.palette.primary.main, 0.04),
-    color: theme.palette.primary.main,
+    borderColor: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : '#F9F9F8',
+    color: theme.palette.text.primary,
   },
 }))
 
@@ -143,7 +143,7 @@ const DecorativeDots = styled(Box)(({ theme }) => ({
     borderRadius: '50%',
     backgroundColor: alpha(theme.palette.text.primary, 0.1),
     '&:nth-of-type(2)': {
-      backgroundColor: alpha(theme.palette.primary.main, 0.3),
+      backgroundColor: alpha(theme.palette.text.primary, 0.2),
     },
   },
 }))

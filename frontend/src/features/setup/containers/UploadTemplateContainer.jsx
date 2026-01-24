@@ -157,7 +157,7 @@ export default function UploadTemplate() {
           }}
           sx={{
             border: '1px dashed',
-            borderColor: isDragging ? 'primary.main' : 'divider',
+            borderColor: isDragging ? 'text.secondary' : 'divider',
             borderRadius: 2,
             p: 3,
             textAlign: 'center',

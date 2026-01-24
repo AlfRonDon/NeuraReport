@@ -22,6 +22,7 @@ import {
   IconButton,
   Tooltip,
 } from '@mui/material'
+import { alpha } from '@mui/material/styles'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import ExpandLessIcon from '@mui/icons-material/ExpandLess'
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh'
@@ -233,9 +234,9 @@ export default function StepMapping({ wizardState, updateWizardState, onComplete
                     </TableCell>
                     <TableCell>
                       {config?.column || config?.expression ? (
-                        <Chip label="Mapped" size="small" color="success" variant="outlined" />
+                        <Chip label="Mapped" size="small" variant="outlined" sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6', color: 'text.secondary' }} />
                       ) : (
-                        <Chip label="Unmapped" size="small" color="warning" variant="outlined" />
+                        <Chip label="Unmapped" size="small" variant="outlined" sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6', color: 'text.secondary' }} />
                       )}
                     </TableCell>
                   </TableRow>
@@ -271,7 +272,7 @@ export default function StepMapping({ wizardState, updateWizardState, onComplete
                       label={token}
                       size="small"
                       variant={keys.includes(token) ? 'filled' : 'outlined'}
-                      color={keys.includes(token) ? 'primary' : 'default'}
+                      sx={keys.includes(token) ? { bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6', color: 'text.secondary' } : {}}
                       onClick={() => {
                         if (keys.includes(token)) {
                           setKeys((prev) => prev.filter((k) => k !== token))

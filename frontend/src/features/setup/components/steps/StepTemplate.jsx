@@ -420,11 +420,11 @@ export default function StepTemplate({ wizardState, updateWizardState, onComplet
                     sx={{
                       height: '100%',
                       border: 2,
-                      borderColor: isSelected ? 'primary.main' : 'divider',
-                      bgcolor: isSelected ? (theme) => alpha(theme.palette.primary.main, 0.04) : 'transparent',
+                      borderColor: isSelected ? (theme) => theme.palette.mode === 'dark' ? '#82827C' : '#63635E' : 'divider',
+                      bgcolor: isSelected ? (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : '#F9F9F8' : 'transparent',
                       transition: 'all 0.2s',
                       '&:hover': {
-                        borderColor: 'primary.main',
+                        borderColor: (theme) => theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
                         transform: 'translateY(-2px)',
                         boxShadow: 2,
                       },
@@ -439,7 +439,7 @@ export default function StepTemplate({ wizardState, updateWizardState, onComplet
                           <Radio checked={isSelected} size="small" sx={{ p: 0, mr: 0.5 }} />
                           <IconComponent sx={{
                             fontSize: 24,
-                            color: template.kind === 'pdf' ? 'error.main' : 'success.main'
+                            color: 'text.secondary'
                           }} />
                           <Box sx={{ flex: 1 }}>
                             <Stack direction="row" alignItems="center" spacing={1}>
@@ -447,15 +447,14 @@ export default function StepTemplate({ wizardState, updateWizardState, onComplet
                                 {template.name}
                               </Typography>
                               {template.popular && (
-                                <Chip label="Popular" size="small" color="primary" sx={{ height: 18, fontSize: '0.65rem' }} />
+                                <Chip label="Popular" size="small" sx={{ height: 18, fontSize: '0.65rem', bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6', color: 'text.secondary' }} />
                               )}
                             </Stack>
                             <Chip
                               label={template.kind.toUpperCase()}
                               size="small"
                               variant="outlined"
-                              color={template.kind === 'pdf' ? 'error' : 'success'}
-                              sx={{ height: 18, fontSize: '0.6rem', mt: 0.5 }}
+                              sx={{ height: 18, fontSize: '0.6rem', mt: 0.5, bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6', color: 'text.secondary' }}
                             />
                           </Box>
                         </Stack>
@@ -539,12 +538,12 @@ export default function StepTemplate({ wizardState, updateWizardState, onComplet
           sx={{
             p: 3,
             border: 2,
-            borderColor: 'success.main',
-            bgcolor: (theme) => alpha(theme.palette.success.main, 0.04),
+            borderColor: (theme) => alpha(theme.palette.divider, 0.3),
+            bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : '#F9F9F8',
           }}
         >
           <Stack direction="row" alignItems="center" spacing={2}>
-            <CheckCircleIcon sx={{ fontSize: 48, color: 'success.main' }} />
+            <CheckCircleIcon sx={{ fontSize: 48, color: 'text.secondary' }} />
             <Box>
               <Typography variant="subtitle1" fontWeight={600}>
                 Template Verified
@@ -572,8 +571,8 @@ export default function StepTemplate({ wizardState, updateWizardState, onComplet
             cursor: 'pointer',
             transition: 'border-color 0.2s, background-color 0.2s',
             '&:hover': {
-              borderColor: 'primary.main',
-              bgcolor: (theme) => alpha(theme.palette.primary.main, 0.04),
+              borderColor: (theme) => theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
+              bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : '#F9F9F8',
             },
           }}
           onClick={handleBrowseClick}

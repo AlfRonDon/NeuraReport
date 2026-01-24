@@ -115,12 +115,12 @@ const ConnectionChip = styled(Chip, {
   height: 30,
   borderRadius: 10,
   backgroundColor: connected
-    ? alpha(theme.palette.success.main, 0.1)
-    : alpha(theme.palette.warning.main, 0.1),
+    ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF')
+    : (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.06) : '#F9F9F8'),
   border: `1px solid ${connected
-    ? alpha(theme.palette.success.main, 0.2)
-    : alpha(theme.palette.warning.main, 0.2)}`,
-  color: connected ? theme.palette.success.main : theme.palette.warning.main,
+    ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.15) : '#E2E1DE')
+    : alpha(theme.palette.divider, 0.2)}`,
+  color: theme.palette.text.secondary,
   fontWeight: 500,
   fontSize: '0.75rem',
   transition: 'all 0.2s ease',
@@ -128,9 +128,7 @@ const ConnectionChip = styled(Chip, {
     marginLeft: 6,
   },
   '&:hover': {
-    backgroundColor: connected
-      ? alpha(theme.palette.success.main, 0.15)
-      : alpha(theme.palette.warning.main, 0.15),
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.12) : '#E9E8E6',
   },
 }))
 
@@ -140,8 +138,12 @@ const StatusDot = styled(Box, {
   width: 8,
   height: 8,
   borderRadius: '50%',
-  backgroundColor: connected ? theme.palette.success.main : theme.palette.warning.main,
-  boxShadow: `0 0 0 3px ${alpha(connected ? theme.palette.success.main : theme.palette.warning.main, 0.2)}`,
+  backgroundColor: connected
+    ? (theme.palette.mode === 'dark' ? '#82827C' : '#63635E')
+    : (theme.palette.mode === 'dark' ? '#BCBBB5' : '#8D8D86'),
+  boxShadow: connected
+    ? `0 0 0 3px ${theme.palette.mode === 'dark' ? alpha('#82827C', 0.2) : alpha('#63635E', 0.2)}`
+    : 'none',
   animation: connected ? `${pulse} 2s infinite ease-in-out` : 'none',
 }))
 
@@ -178,7 +180,7 @@ const StyledMenuItem = styled(MenuItem)(({ theme }) => ({
   padding: theme.spacing(1, 1.5),
   transition: 'all 0.15s ease',
   '&:hover': {
-    backgroundColor: alpha(theme.palette.primary.main, 0.08),
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
   },
 }))
 
@@ -216,8 +218,8 @@ const HelpCard = styled(Box)(({ theme }) => ({
   border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
   transition: 'all 0.2s ease',
   '&:hover': {
-    backgroundColor: alpha(theme.palette.primary.main, 0.04),
-    borderColor: alpha(theme.palette.primary.main, 0.15),
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : '#F9F9F8',
+    borderColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.12) : '#E2E1DE',
   },
 }))
 

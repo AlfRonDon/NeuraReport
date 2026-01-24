@@ -449,7 +449,7 @@ export default function TemplateEditor() {
               </Typography>
             )}
             {diffSummary && (
-              <Typography variant="caption" color="info.main" sx={{ display: 'block' }}>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
                 Recent change: {diffSummary}
               </Typography>
             )}
@@ -735,11 +735,10 @@ export default function TemplateEditor() {
                       </Button>
                       <Button
                         variant="outlined"
-                        color="secondary"
                         onClick={handleApplyAi}
                         disabled={aiBusy || loading || !hasInstructions}
                         startIcon={aiBusy ? <CircularProgress size={16} /> : <AutoFixHighIcon />}
-                        sx={{ minWidth: 130 }}
+                        sx={{ minWidth: 130, color: 'text.secondary', borderColor: 'divider' }}
                       >
                         {aiBusy ? 'Applying...' : 'Apply AI'}
                       </Button>
@@ -754,10 +753,10 @@ export default function TemplateEditor() {
                       </Button>
                       <Button
                         variant="text"
-                        color="primary"
                         onClick={() => setDiffOpen(true)}
                         disabled={loading || !dirty}
                         startIcon={<CompareArrowsIcon />}
+                        sx={{ color: 'text.secondary' }}
                       >
                         View Diff
                       </Button>

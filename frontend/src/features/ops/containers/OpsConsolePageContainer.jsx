@@ -359,7 +359,6 @@ export default function OpsConsolePage() {
                   </Button>
                   <Button
                     variant="outlined"
-                    color="error"
                     disabled={busy}
                     onClick={() => {
                       if (!userId) {
@@ -368,6 +367,7 @@ export default function OpsConsolePage() {
                       }
                       runRequest({ method: 'delete', url: `/users/${encodeURIComponent(userId)}` })
                     }}
+                    sx={{ color: 'text.secondary' }}
                   >
                     Delete User
                   </Button>

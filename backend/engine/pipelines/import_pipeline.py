@@ -20,7 +20,11 @@ from backend.engine.core.errors import ValidationError
 from backend.engine.domain.templates import Template, TemplateKind, TemplateStatus, Artifact
 from backend.engine.adapters.extraction import PDFExtractor, ExcelExtractor
 from prefect import flow, task
-from prefect.task_runners import SequentialTaskRunner
+try:
+    from prefect.task_runners import SequentialTaskRunner
+except ImportError:
+    # Prefect 3.x removed SequentialTaskRunner - use default synchronous execution
+    SequentialTaskRunner = None
 from .base import Pipeline, PipelineContext, Step
 
 logger = logging.getLogger("neura.pipelines.import")
@@ -349,7 +353,11 @@ def create_template_task(ctx: ImportPipelineContext) -> Template:
     return create_template_record(ctx)
 
 
-@flow(name="template_import", task_runner=SequentialTaskRunner())
+_flow_kwargs = {"name": "template_import"}
+if SequentialTaskRunner is not None:
+    _flow_kwargs["task_runner"] = SequentialTaskRunner()
+
+@flow(**_flow_kwargs)
 def import_template_flow(
     source_path: Path,
     output_dir: Path,

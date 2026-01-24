@@ -84,27 +84,38 @@ const palette = {
 const fontFamilyUI = '"Lato", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
 const fontFamilyMono = '"JetBrains Mono", "SF Mono", Monaco, "Cascadia Code", Consolas, monospace'
 
-// Figma Grey Scale (exact values from design variables)
+// Figma Grey Scale (EXACT values from design variables - extracted from 7 Figma pages)
 const figmaGrey = {
-  white: '#FFFFFF',
-  200: '#F9F9F8',   // Surface/panel background
-  300: '#F1F0EF',   // Input backgrounds
-  400: '#E9E8E6',   // Active/selected backgrounds
-  500: '#E2E1DE',   // Borders, dividers
-  600: '#DAD9D6',   // Subtle borders
-  700: '#CFCECA',   // Muted borders
-  800: '#BCBBB5',   // Muted text, icons
-  900: '#8D8D86',   // Main grey (icons)
-  1000: '#82827C',  // Secondary icons
-  1100: '#63635E',  // Secondary text
-  1200: '#21201C',  // Primary text
+  white: '#FFFFFF',   // Grey/white
+  200: '#F9F9F8',     // Grey/200 - Main content background
+  300: '#F1F0EF',     // Grey/300 - Input backgrounds, hover states
+  400: '#E9E8E6',     // Grey/400 - Active/selected backgrounds, chips
+  500: '#E2E1DE',     // Grey/500 - Borders, dividers
+  600: '#DAD9D6',     // Grey/600 - Subtle borders
+  700: '#CFCECA',     // Grey/700 - Muted borders
+  800: '#BCBBB5',     // Grey/800 - Disabled text, muted icons
+  900: '#8D8D86',     // Grey/900(main) - Main grey for icons
+  1000: '#82827C',    // Grey/1000 - Secondary icons, hover borders
+  1100: '#63635E',    // Grey/1100 - Secondary text
+  1200: '#21201C',    // Grey/1200 - Primary text
 }
 
-// Neutral colors from Figma
+// Figma Neutral Scale (EXACT values from design variables)
 const figmaNeutral = {
-  200: '#E5E7EB',
-  400: '#9CA3AF',
-  500: '#6B7280',
+  50: '#F9FAFB',      // Neutral/50
+  100: '#F3F4F6',     // Neutral/100
+  200: '#E5E7EB',     // Neutral/200
+  300: '#D1D5DB',     // Neutral/300
+  400: '#9CA3AF',     // Neutral/400 - Placeholder text
+  500: '#6B7280',     // Neutral/500 - Muted text
+  600: '#4B5563',     // Neutral/600
+  700: '#374151',     // Neutral/700
+  800: '#1F2937',     // Neutral/800
+}
+
+// Figma Shadow (EXACT from Drop shadow/XSmall)
+const figmaShadow = {
+  xsmall: '0 1px 2px rgba(16, 24, 40, 0.04)',  // #1018280A
 }
 
 // Create dark theme (Supabase default)
@@ -270,102 +281,102 @@ function createAppTheme(mode = 'dark') {
       fontWeightRegular: 400,
       fontWeightMedium: 500,
       fontWeightBold: 600,
-      // Page title - 24px from Figma "Plugged Devices" heading
+      // Page title - 24px (Plugged Devices heading from Figma)
       h1: {
-        fontSize: '1.5rem',      // 24px
+        fontSize: '24px',
         fontWeight: 500,
         letterSpacing: 0,
-        lineHeight: 1.2,         // ~29px
+        lineHeight: 1.2,
       },
-      // Section header - 20px from Figma "Settings" sidebar header
+      // Section header - 20px (Settings sidebar header from Figma)
       h2: {
-        fontSize: '1.25rem',     // 20px
+        fontSize: '20px',
         fontWeight: 500,
         letterSpacing: 0,
-        lineHeight: 1.2,         // ~24px
+        lineHeight: 1.2,
       },
       // Subsection - 18px
       h3: {
-        fontSize: '1.125rem',    // 18px
+        fontSize: '18px',
         fontWeight: 500,
         letterSpacing: 0,
-        lineHeight: 1.22,        // ~22px
+        lineHeight: 1.22,
       },
-      // Nav items / Card titles - 16px from Figma sidebar nav
+      // Nav items / Card titles - 16px (16/para-Reg from Figma)
       h4: {
-        fontSize: '1rem',        // 16px
-        fontWeight: 500,
+        fontSize: '16px',
+        fontWeight: 400,
         letterSpacing: 0,
-        lineHeight: 1.1875,      // 19px (from Figma h-[19px])
+        lineHeight: 1.4,         // EXACT from Figma 16/para-Reg
       },
-      // Label Medium - 14px from Figma Label/Medium/Medium
+      // Label/Medium/Medium - EXACT from Figma: 14px, 500, lineHeight 16px
       h5: {
-        fontSize: '0.875rem',    // 14px
+        fontSize: '14px',
         fontWeight: 500,
         letterSpacing: 0,
-        lineHeight: 1.143,       // 16px (from Figma lineHeight: 16)
+        lineHeight: '16px',      // EXACT from Figma
       },
-      // Small label - 12px
+      // Label/Small/Medium - EXACT from Figma: 12px, 500, lineHeight 14px
       h6: {
-        fontSize: '0.75rem',     // 12px
+        fontSize: '12px',
         fontWeight: 500,
         letterSpacing: 0,
-        lineHeight: 1.33,        // 16px
+        lineHeight: '14px',      // EXACT from Figma
       },
-      // Subtitle - 14px medium
+      // Label/Medium/Semi Bold - EXACT from Figma: 14px, 600, lineHeight 16px
       subtitle1: {
-        fontSize: '0.875rem',    // 14px
-        fontWeight: 500,
-        lineHeight: 1.143,       // 16px
+        fontSize: '14px',
+        fontWeight: 600,
+        lineHeight: '16px',      // EXACT from Figma
         letterSpacing: 0,
       },
-      // Subtitle small - 12px medium
+      // Label/Small/Regular - EXACT from Figma: 12px, 400, lineHeight 14px
       subtitle2: {
-        fontSize: '0.75rem',     // 12px
-        fontWeight: 500,
-        lineHeight: 1.33,        // 16px
+        fontSize: '12px',
+        fontWeight: 400,
+        lineHeight: '14px',      // EXACT from Figma
         letterSpacing: 0,
       },
-      // Body text - Paragraph/Small/Regular from Figma: 14px, 400, line-height 20px
+      // Paragraph/Small/Regular - EXACT from Figma: 14px, 400, lineHeight 20px
       body1: {
-        fontSize: '0.875rem',    // 14px
+        fontSize: '14px',
         fontWeight: 400,
-        lineHeight: 1.43,        // 20px (from Figma lineHeight: 20)
+        lineHeight: '20px',      // EXACT from Figma
         letterSpacing: 0,
       },
-      // Body small - 12px regular
+      // Label/Small/Regular - EXACT from Figma: 12px, 400, lineHeight 14px
       body2: {
-        fontSize: '0.75rem',     // 12px
+        fontSize: '12px',
         fontWeight: 400,
-        lineHeight: 1.5,         // 18px
+        lineHeight: '14px',      // EXACT from Figma
         letterSpacing: 0,
       },
-      // Caption/Meta - 10px from Figma "Running" status text
+      // Caption - 10px
       caption: {
-        fontSize: '0.625rem',    // 10px
+        fontSize: '10px',
         fontWeight: 500,
-        lineHeight: 1.4,         // 14px
+        lineHeight: '14px',
         letterSpacing: 0,
       },
       // Overline - 11px uppercase
       overline: {
-        fontSize: '0.6875rem',   // 11px
+        fontSize: '11px',
         fontWeight: 500,
         letterSpacing: '0.05em',
         textTransform: 'uppercase',
-        lineHeight: 1.45,        // 16px
+        lineHeight: '16px',
       },
-      // Button text - 14px medium from Figma
+      // Button - Label/Medium/Medium from Figma: 14px, 500, lineHeight 16px
       button: {
-        fontSize: '0.875rem',    // 14px
+        fontSize: '14px',
         fontWeight: 500,
         letterSpacing: 0,
-        lineHeight: 1.143,       // 16px
+        lineHeight: '16px',      // EXACT from Figma
         textTransform: 'none',
       },
       code: {
         fontFamily: fontFamilyMono,
-        fontSize: '0.8125rem',   // 13px
+        fontSize: '13px',
       },
     },
     components: {
@@ -450,14 +461,16 @@ function createAppTheme(mode = 'dark') {
             boxShadow: 'none',
           },
           elevation1: {
-            // Shadow-only cards from Figma
-            boxShadow: isDark ? '0 4px 12px rgba(0,0,0,0.3)' : '0 1px 3px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.05)',
+            // EXACT from Figma Drop shadow/XSmall: #1018280A, offset (0,1), radius 2
+            boxShadow: isDark ? '0 4px 12px rgba(0,0,0,0.3)' : '0 1px 2px rgba(16, 24, 40, 0.04)',
           },
           elevation2: {
-            boxShadow: isDark ? '0 6px 16px rgba(0,0,0,0.35)' : '0 2px 8px rgba(0,0,0,0.08), 0 8px 24px rgba(0,0,0,0.06)',
+            // Double XSmall shadow for medium elevation
+            boxShadow: isDark ? '0 6px 16px rgba(0,0,0,0.35)' : '0 1px 2px rgba(16, 24, 40, 0.04), 0 4px 8px rgba(16, 24, 40, 0.04)',
           },
           elevation3: {
-            boxShadow: isDark ? '0 8px 24px rgba(0,0,0,0.4)' : '0 4px 12px rgba(0,0,0,0.1), 0 12px 32px rgba(0,0,0,0.08)',
+            // Triple XSmall shadow for high elevation
+            boxShadow: isDark ? '0 8px 24px rgba(0,0,0,0.4)' : '0 1px 2px rgba(16, 24, 40, 0.04), 0 4px 8px rgba(16, 24, 40, 0.06), 0 8px 16px rgba(16, 24, 40, 0.04)',
           },
         },
       },
@@ -468,10 +481,10 @@ function createAppTheme(mode = 'dark') {
         styleOverrides: {
           root: {
             borderRadius: 8,  // Consistent 8px radius for ALL cards
-            backgroundColor: isDark ? palette.scale[1000] : '#FFFFFF',
-            // SHADOW-ONLY - NO BORDERS (per design requirement)
+            backgroundColor: isDark ? palette.scale[1000] : figmaGrey.white,
+            // SHADOW-ONLY - EXACT from Figma Drop shadow/XSmall
             border: 'none',
-            boxShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.05)',
+            boxShadow: isDark ? 'none' : figmaShadow.xsmall,
           },
         },
       },
@@ -708,11 +721,12 @@ function createAppTheme(mode = 'dark') {
         styleOverrides: {
           paper: {
             borderRadius: 8,
-            backgroundColor: isDark ? palette.scale[900] : '#FFFFFF',
-            border: `1px solid ${isDark ? alpha(palette.scale[100], 0.1) : figmaGrey[600]}`,  // Warm border from Figma
+            backgroundColor: isDark ? palette.scale[900] : figmaGrey.white,
+            border: `1px solid ${isDark ? alpha(palette.scale[100], 0.1) : figmaGrey[600]}`,
+            // EXACT from Figma - subtle shadow
             boxShadow: isDark
               ? '0 4px 24px rgba(0,0,0,0.4)'
-              : '-1px 1px 8px rgba(0,0,0,0.12), -1px 1px 24px rgba(0,0,0,0.12)',  // Multi-layer shadow from Figma
+              : '0 1px 2px rgba(16, 24, 40, 0.04), 0 4px 12px rgba(16, 24, 40, 0.08)',
             marginTop: 4,
           },
           list: {
@@ -835,11 +849,12 @@ function createAppTheme(mode = 'dark') {
         styleOverrides: {
           paper: {
             borderRadius: 12,
-            backgroundColor: isDark ? palette.scale[1000] : '#FFFFFF',
-            border: `1px solid ${isDark ? alpha(palette.scale[100], 0.1) : figmaGrey[600]}`,  // Warm border from Figma
+            backgroundColor: isDark ? palette.scale[1000] : figmaGrey.white,
+            border: `1px solid ${isDark ? alpha(palette.scale[100], 0.1) : figmaGrey[600]}`,
+            // EXACT from Figma - layered shadow
             boxShadow: isDark
               ? '0 16px 48px rgba(0,0,0,0.4)'
-              : '-1px 1px 8px rgba(0,0,0,0.12), -1px 1px 24px rgba(0,0,0,0.12)',  // Multi-layer shadow
+              : '0 1px 2px rgba(16, 24, 40, 0.04), 0 8px 24px rgba(16, 24, 40, 0.12)',
           },
         },
       },
@@ -1174,4 +1189,4 @@ function createAppTheme(mode = 'dark') {
 const theme = createAppTheme('light')
 
 export default theme
-export { createAppTheme, palette, fontFamilyUI, fontFamilyMono }
+export { createAppTheme, palette, fontFamilyUI, fontFamilyMono, figmaGrey, figmaNeutral, figmaShadow }

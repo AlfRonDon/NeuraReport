@@ -87,18 +87,18 @@ const Sidebar = styled(Box)(({ theme }) => ({
 const AgentCard = styled(Card)(({ theme, selected }) => ({
   cursor: 'pointer',
   transition: 'all 0.2s ease',
-  border: selected ? `2px solid ${theme.palette.primary.main}` : `1px solid ${alpha(theme.palette.divider, 0.2)}`,
+  border: selected ? `2px solid ${theme.palette.mode === 'dark' ? '#82827C' : '#63635E'}` : `1px solid ${alpha(theme.palette.divider, 0.2)}`,
   '&:hover': {
     transform: 'translateY(-2px)',
-    boxShadow: `0 8px 24px ${alpha(theme.palette.primary.main, 0.15)}`,
+    boxShadow: `0 8px 24px ${alpha(theme.palette.text.primary, 0.15)}`,
   },
 }))
 
 const ResultCard = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(2),
   marginTop: theme.spacing(2),
-  backgroundColor: alpha(theme.palette.success.main, 0.05),
-  border: `1px solid ${alpha(theme.palette.success.main, 0.2)}`,
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8',
+  border: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
 }))
 
 const ActionButton = styled(Button)(({ theme }) => ({
@@ -359,7 +359,7 @@ export default function AgentsPageContainer() {
       <Header>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <AgentIcon sx={{ color: 'primary.main', fontSize: 28 }} />
+            <AgentIcon sx={{ color: 'text.secondary', fontSize: 28 }} />
             <Box>
               <Typography variant="h6" sx={{ fontWeight: 600 }}>
                 AI Agents
@@ -402,10 +402,10 @@ export default function AgentsPageContainer() {
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          bgcolor: alpha(theme.palette[agent.color].main, 0.1),
+                          bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8',
                         }}
                       >
-                        <agent.icon color={agent.color} />
+                        <agent.icon color="inherit" sx={{ color: 'text.secondary' }} />
                       </Box>
                       <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
                         {agent.name}

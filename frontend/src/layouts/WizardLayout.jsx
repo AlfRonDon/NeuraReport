@@ -60,7 +60,7 @@ export default function WizardLayout({
           height: 4,
           bgcolor: 'action.hover',
           '& .MuiLinearProgress-bar': {
-            bgcolor: 'primary.main',
+            bgcolor: (theme) => theme.palette.mode === 'dark' ? '#82827C' : '#21201C',
           },
         }}
       />
@@ -87,10 +87,10 @@ export default function WizardLayout({
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    bgcolor: index < currentStep
-                      ? 'success.main'
+                    bgcolor: (theme) => index < currentStep
+                      ? (theme.palette.mode === 'dark' ? '#63635E' : '#21201C')
                       : index === currentStep
-                        ? 'primary.main'
+                        ? (theme.palette.mode === 'dark' ? '#82827C' : '#63635E')
                         : 'action.disabledBackground',
                     color: index <= currentStep ? 'white' : 'text.disabled',
                     fontSize: '0.75rem',
@@ -118,7 +118,7 @@ export default function WizardLayout({
                     sx={{
                       width: 40,
                       height: 2,
-                      bgcolor: index < currentStep ? 'success.main' : 'divider',
+                      bgcolor: (theme) => index < currentStep ? (theme.palette.mode === 'dark' ? '#63635E' : '#21201C') : theme.palette.divider,
                       mx: 1,
                     }}
                   />

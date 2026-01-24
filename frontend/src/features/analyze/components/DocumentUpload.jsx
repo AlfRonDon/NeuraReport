@@ -111,11 +111,11 @@ export default function DocumentUpload({
         borderStyle: 'dashed',
         borderWidth: 2,
         borderColor: dragActive
-          ? 'primary.main'
+          ? 'text.secondary'
           : displayError
-            ? 'error.main'
+            ? 'text.secondary'
             : selectedFile
-              ? 'success.main'
+              ? 'text.secondary'
               : 'divider',
         bgcolor: dragActive
           ? 'action.hover'
@@ -125,7 +125,7 @@ export default function DocumentUpload({
               ? 'success.lighter'
               : 'background.paper',
         '&:hover': {
-          borderColor: disabled || isUploading ? undefined : 'primary.main',
+          borderColor: disabled || isUploading ? undefined : 'text.secondary',
           bgcolor: disabled || isUploading ? undefined : 'action.hover',
         },
       }}
@@ -141,7 +141,7 @@ export default function DocumentUpload({
 
       {isUploading ? (
         <Stack spacing={2} alignItems="center">
-          <Typography variant="body1" color="primary">
+          <Typography variant="body1" color="text.secondary">
             {progressStage || 'Analyzing document...'}
           </Typography>
           <Box sx={{ width: '100%', maxWidth: 400 }}>
@@ -153,7 +153,7 @@ export default function DocumentUpload({
         </Stack>
       ) : selectedFile ? (
         <Stack spacing={2} alignItems="center">
-          <CheckCircleIcon color="success" sx={{ fontSize: 48 }} />
+          <CheckCircleIcon sx={{ fontSize: 48, color: 'text.secondary' }} />
           <Stack direction="row" spacing={1} alignItems="center">
             <InsertDriveFileIcon color="action" />
             <Typography variant="body1">{selectedFile.name}</Typography>

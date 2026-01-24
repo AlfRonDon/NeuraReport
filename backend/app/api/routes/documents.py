@@ -11,6 +11,8 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, UploadFile, File
 from pydantic import BaseModel
 
+from backend.app.services.config import get_settings
+from backend.app.utils.validation import validate_path_safety
 from ...schemas.documents import (
     CreateDocumentRequest,
     UpdateDocumentRequest,
@@ -61,6 +63,47 @@ def get_pdf_service() -> PDFOperationsService:
     if _pdf_service is None:
         _pdf_service = PDFOperationsService()
     return _pdf_service
+
+
+def validate_pdf_path(pdf_path: str | None) -> Path:
+    """Validate that a PDF path is safe and within allowed directories."""
+    if not pdf_path:
+        raise HTTPException(status_code=400, detail="Document is not a PDF")
+
+    # Check for dangerous path patterns
+    is_safe, error = validate_path_safety(pdf_path)
+    if not is_safe:
+        logger.warning(f"Blocked unsafe PDF path: {pdf_path} - {error}")
+        raise HTTPException(status_code=400, detail="Invalid PDF path")
+
+    path = Path(pdf_path)
+
+    # Resolve to absolute path and verify it's within allowed directories
+    try:
+        resolved = path.resolve()
+        settings = get_settings()
+        uploads_root = Path(settings.uploads_dir).resolve()
+        excel_root = Path(settings.excel_uploads_dir).resolve()
+
+        # Check if path is within allowed directories
+        try:
+            resolved.relative_to(uploads_root)
+        except ValueError:
+            try:
+                resolved.relative_to(excel_root)
+            except ValueError:
+                logger.warning(f"PDF path outside allowed directories: {resolved}")
+                raise HTTPException(status_code=400, detail="PDF not accessible")
+    except Exception as e:
+        if isinstance(e, HTTPException):
+            raise
+        logger.warning(f"Failed to validate PDF path: {pdf_path} - {e}")
+        raise HTTPException(status_code=400, detail="Invalid PDF path")
+
+    if not resolved.exists():
+        raise HTTPException(status_code=404, detail="PDF file not found")
+
+    return resolved
 
 
 # ============================================
@@ -274,16 +317,11 @@ async def reorder_pdf_pages(
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
 
-    # Get PDF path from document metadata
-    pdf_path = doc.metadata.get("pdf_path")
-    if not pdf_path:
-        raise HTTPException(status_code=400, detail="Document is not a PDF")
+    # Validate and resolve PDF path safely
+    pdf_path = validate_pdf_path(doc.metadata.get("pdf_path"))
 
     try:
-        output_path = pdf_service.reorder_pages(
-            Path(pdf_path),
-            request.page_order,
-        )
+        output_path = pdf_service.reorder_pages(pdf_path, request.page_order)
         return {"status": "ok", "output_path": str(output_path)}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -301,9 +339,8 @@ async def add_watermark(
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
 
-    pdf_path = doc.metadata.get("pdf_path")
-    if not pdf_path:
-        raise HTTPException(status_code=400, detail="Document is not a PDF")
+    # Validate and resolve PDF path safely
+    pdf_path = validate_pdf_path(doc.metadata.get("pdf_path"))
 
     try:
         from ...services.documents.pdf_operations import WatermarkConfig
@@ -314,7 +351,7 @@ async def add_watermark(
             opacity=request.opacity,
             color=request.color,
         )
-        output_path = pdf_service.add_watermark(Path(pdf_path), config)
+        output_path = pdf_service.add_watermark(pdf_path, config)
         return {"status": "ok", "output_path": str(output_path)}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -332,9 +369,8 @@ async def redact_pdf(
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
 
-    pdf_path = doc.metadata.get("pdf_path")
-    if not pdf_path:
-        raise HTTPException(status_code=400, detail="Document is not a PDF")
+    # Validate and resolve PDF path safely
+    pdf_path = validate_pdf_path(doc.metadata.get("pdf_path"))
 
     try:
         from ...services.documents.pdf_operations import RedactionRegion
@@ -348,7 +384,7 @@ async def redact_pdf(
             )
             for r in request.regions
         ]
-        output_path = pdf_service.redact_regions(Path(pdf_path), regions)
+        output_path = pdf_service.redact_regions(pdf_path, regions)
         return {"status": "ok", "output_path": str(output_path)}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -366,10 +402,9 @@ async def merge_pdfs(
         doc = doc_service.get(doc_id)
         if not doc:
             raise HTTPException(status_code=404, detail=f"Document {doc_id} not found")
-        pdf_path = doc.metadata.get("pdf_path")
-        if not pdf_path:
-            raise HTTPException(status_code=400, detail=f"Document {doc_id} is not a PDF")
-        pdf_paths.append(Path(pdf_path))
+        # Validate each PDF path safely
+        validated_path = validate_pdf_path(doc.metadata.get("pdf_path"))
+        pdf_paths.append(validated_path)
 
     try:
         result = pdf_service.merge_pdfs(pdf_paths)

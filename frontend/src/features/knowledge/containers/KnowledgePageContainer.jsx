@@ -57,6 +57,7 @@ import {
 import useKnowledgeStore from '@/stores/knowledgeStore'
 import { useToast } from '@/components/ToastProvider'
 import { useInteraction, InteractionType, Reversibility } from '@/components/ux/governance'
+import { API_BASE } from '@/api/client'
 
 // =============================================================================
 // STYLED COMPONENTS
@@ -100,16 +101,16 @@ const DocumentCard = styled(Card)(({ theme }) => ({
   transition: 'all 0.2s ease',
   '&:hover': {
     transform: 'translateY(-2px)',
-    boxShadow: `0 8px 24px ${alpha(theme.palette.primary.main, 0.1)}`,
+    boxShadow: `0 8px 24px ${alpha(theme.palette.text.primary, 0.05)}`,
   },
 }))
 
 const CollectionItem = styled(ListItem)(({ theme, selected }) => ({
   borderRadius: 8,
   marginBottom: 4,
-  backgroundColor: selected ? alpha(theme.palette.primary.main, 0.1) : 'transparent',
+  backgroundColor: selected ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF') : 'transparent',
   '&:hover': {
-    backgroundColor: alpha(theme.palette.primary.main, 0.05),
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8',
   },
 }))
 
@@ -120,16 +121,16 @@ const ActionButton = styled(Button)(({ theme }) => ({
 }))
 
 const UploadDropzone = styled(Box)(({ theme, isDragActive }) => ({
-  border: `2px dashed ${isDragActive ? theme.palette.primary.main : alpha(theme.palette.divider, 0.3)}`,
+  border: `2px dashed ${isDragActive ? (theme.palette.mode === 'dark' ? '#82827C' : '#63635E') : alpha(theme.palette.divider, 0.3)}`,
   borderRadius: 16,
   padding: theme.spacing(6),
   textAlign: 'center',
-  backgroundColor: isDragActive ? alpha(theme.palette.primary.main, 0.05) : alpha(theme.palette.background.paper, 0.5),
+  backgroundColor: isDragActive ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8') : alpha(theme.palette.background.paper, 0.5),
   cursor: 'pointer',
   transition: 'all 0.2s ease',
   '&:hover': {
-    borderColor: theme.palette.primary.main,
-    backgroundColor: alpha(theme.palette.primary.main, 0.02),
+    borderColor: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.02) : '#F9F9F8',
   },
 }))
 
@@ -340,7 +341,7 @@ export default function KnowledgePageContainer() {
             formData.append('collection_id', selectedCollection.id)
           }
 
-          const response = await fetch('/api/knowledge/documents', {
+          const response = await fetch(`${API_BASE}/knowledge/documents`, {
             method: 'POST',
             body: formData,
           })
@@ -384,7 +385,7 @@ export default function KnowledgePageContainer() {
       <Header>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <FolderOpenIcon sx={{ color: 'primary.main', fontSize: 28 }} />
+            <FolderOpenIcon sx={{ color: 'text.secondary', fontSize: 28 }} />
             <Box>
               <Typography variant="h6" sx={{ fontWeight: 600 }}>
                 Knowledge Library
@@ -397,7 +398,6 @@ export default function KnowledgePageContainer() {
           <Box sx={{ display: 'flex', gap: 1 }}>
             <ActionButton
               variant="contained"
-              color="primary"
               startIcon={<UploadIcon />}
               onClick={() => setUploadDialogOpen(true)}
             >
@@ -468,7 +468,7 @@ export default function KnowledgePageContainer() {
               }}
             >
               <ListItemIcon sx={{ minWidth: 36 }}>
-                <StarIcon fontSize="small" color="warning" />
+                <StarIcon fontSize="small" sx={{ color: 'text.secondary' }} />
               </ListItemIcon>
               <ListItemText primary="Favorites" />
             </CollectionItem>
@@ -494,7 +494,7 @@ export default function KnowledgePageContainer() {
                 onClick={() => handleSelectCollection(collection)}
               >
                 <ListItemIcon sx={{ minWidth: 36 }}>
-                  <FolderIcon fontSize="small" color="primary" />
+                  <FolderIcon fontSize="small" sx={{ color: 'text.secondary' }} />
                 </ListItemIcon>
                 <ListItemText
                   primary={collection.name}
@@ -543,7 +543,7 @@ export default function KnowledgePageContainer() {
                         size="small"
                         onClick={() => handleToggleFavorite(doc.id)}
                       >
-                        {doc.is_favorite ? <StarIcon color="warning" /> : <StarBorderIcon />}
+                        {doc.is_favorite ? <StarIcon sx={{ color: 'text.secondary' }} /> : <StarBorderIcon />}
                       </IconButton>
                     </Box>
                     {doc.tags?.length > 0 && (
@@ -584,7 +584,6 @@ export default function KnowledgePageContainer() {
               </Typography>
               <ActionButton
                 variant="contained"
-                color="primary"
                 size="large"
                 startIcon={<UploadIcon />}
                 onClick={() => setUploadDialogOpen(true)}
@@ -612,7 +611,7 @@ export default function KnowledgePageContainer() {
         </MenuItem>
         <Divider />
         <MenuItem onClick={() => { handleDeleteDocument(selectedDoc?.id); handleMenuClose(); }}>
-          <ListItemIcon><DeleteIcon fontSize="small" color="error" /></ListItemIcon>
+          <ListItemIcon><DeleteIcon fontSize="small" sx={{ color: 'text.secondary' }} /></ListItemIcon>
           <ListItemText>Delete</ListItemText>
         </MenuItem>
       </Menu>

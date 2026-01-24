@@ -33,6 +33,11 @@ class AgentStatus(str, Enum):
     FAILED = "failed"
 
 
+def _utc_now() -> datetime:
+    """Return current UTC time (avoids deprecated utcnow)."""
+    return datetime.now(timezone.utc)
+
+
 class AgentTask(BaseModel):
     """Task assigned to an agent."""
     task_id: str
@@ -42,7 +47,7 @@ class AgentTask(BaseModel):
     progress: float = 0
     result: Optional[Dict[str, Any]] = None
     error: Optional[str] = None
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=_utc_now)
     completed_at: Optional[datetime] = None
 
 
@@ -114,7 +119,7 @@ class BaseAgent(ABC):
     def _get_model(self) -> str:
         """Get model name from settings."""
         from backend.app.services.config import get_settings
-        return get_settings().openai_model or "gpt-4"
+        return get_settings().openai_model or "gpt-5"
 
     def _call_openai(
         self,
@@ -127,8 +132,8 @@ class BaseAgent(ABC):
         client = self._get_client()
         model = self._get_model()
 
-        # Newer models (o1, gpt-4o, etc.) use max_completion_tokens instead of max_tokens
-        uses_new_param = any(m in model.lower() for m in ["o1", "gpt-4o", "o3"])
+        # Newer models (gpt-5, o1, etc.) use max_completion_tokens instead of max_tokens
+        uses_new_param = any(m in model.lower() for m in ["gpt-5", "o1", "o3"])
 
         create_params = {
             "model": model,

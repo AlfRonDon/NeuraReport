@@ -53,14 +53,14 @@ export default function SuccessCelebration({ trigger, onComplete }) {
         width: 80,
         height: 80,
         borderRadius: '50%',
-        bgcolor: 'success.main',
+        bgcolor: '#21201C',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         animation: `${pulse} 1.5s ease-out forwards`,
         zIndex: 9999,
         pointerEvents: 'none',
-        boxShadow: '0 0 40px rgba(34, 197, 94, 0.4)',
+        boxShadow: '0 0 40px rgba(33, 32, 28, 0.4)',
       }}
     >
       <Box

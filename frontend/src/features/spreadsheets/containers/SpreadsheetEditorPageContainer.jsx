@@ -130,7 +130,7 @@ const SheetTab = styled(Chip, {
   '&:hover': {
     backgroundColor: active
       ? theme.palette.background.paper
-      : alpha(theme.palette.primary.main, 0.05),
+      : theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8',
   },
 }))
 
@@ -147,10 +147,10 @@ const SpreadsheetListItem = styled(ListItemButton, {
 })(({ theme, active }) => ({
   borderRadius: 8,
   marginBottom: theme.spacing(0.5),
-  backgroundColor: active ? alpha(theme.palette.primary.main, 0.1) : 'transparent',
+  backgroundColor: active ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF') : 'transparent',
   '&:hover': {
     backgroundColor: active
-      ? alpha(theme.palette.primary.main, 0.15)
+      ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.15) : '#F1F0EF')
       : alpha(theme.palette.action.hover, 0.05),
   },
 }))
@@ -625,7 +625,7 @@ export default function SpreadsheetEditorPage() {
                   onClick={() => handleSelectSpreadsheet(ss.id)}
                 >
                   <ListItemIcon sx={{ minWidth: 36 }}>
-                    <SpreadsheetIcon color="success" fontSize="small" />
+                    <SpreadsheetIcon sx={{ color: 'text.secondary' }} fontSize="small" />
                   </ListItemIcon>
                   <ListItemText
                     primary={ss.name}
@@ -663,8 +663,7 @@ export default function SpreadsheetEditorPage() {
                   <Chip
                     label="Unsaved"
                     size="small"
-                    color="warning"
-                    sx={{ height: 20, fontSize: '0.7rem' }}
+                    sx={{ height: 20, fontSize: '0.7rem', bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6', color: 'text.secondary' }}
                   />
                 )}
               </Box>
@@ -878,7 +877,7 @@ export default function SpreadsheetEditorPage() {
       >
         <DialogTitle>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <AIIcon color="primary" />
+            <AIIcon sx={{ color: 'text.secondary' }} />
             Generate Formula with AI
           </Box>
         </DialogTitle>

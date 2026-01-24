@@ -206,7 +206,7 @@ export function NavigationSafetyProvider({ children }) {
         }}
       >
         <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-          <WarningIcon color="warning" />
+          <WarningIcon sx={{ color: 'text.secondary' }} />
           <Typography variant="h6" fontWeight={600}>
             Wait! You have unsaved work
           </Typography>
@@ -222,9 +222,9 @@ export function NavigationSafetyProvider({ children }) {
                   {blocker.type === BlockerType.OPERATION_IN_PROGRESS ? (
                     <CircularProgress size={20} />
                   ) : blocker.type === BlockerType.UNSAVED_CHANGES ? (
-                    <UnsavedIcon color="warning" />
+                    <UnsavedIcon sx={{ color: 'text.secondary' }} />
                   ) : (
-                    <PendingIcon color="info" />
+                    <PendingIcon sx={{ color: 'text.secondary' }} />
                   )}
                 </ListItemIcon>
                 <ListItemText
@@ -236,10 +236,10 @@ export function NavigationSafetyProvider({ children }) {
           </List>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={cancelNavigation} variant="contained" color="primary">
+          <Button onClick={cancelNavigation} variant="contained">
             Stay on this page
           </Button>
-          <Button onClick={forceNavigation} color="error">
+          <Button onClick={forceNavigation} sx={{ color: 'text.secondary' }}>
             Leave anyway
           </Button>
         </DialogActions>

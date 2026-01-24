@@ -19,11 +19,11 @@ export default function HeartbeatBadge({
   const color = useMemo(() => {
     switch (status) {
       case 'testing':
-        return 'info.main'
+        return 'text.secondary'
       case 'healthy':
-        return 'success.main'
+        return 'text.secondary'
       case 'unreachable':
-        return 'error.main'
+        return 'text.secondary'
       default:
         return 'text.disabled'
     }

@@ -35,6 +35,7 @@ import {
   AccordionSummary,
   AccordionDetails,
 } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 import {
   Add as AddIcon,
   Delete as DeleteIcon,
@@ -413,7 +414,7 @@ export default function SynthesisPage() {
                         <Card variant="outlined">
                           <CardContent>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                              <DocIcon color="primary" />
+                              <DocIcon sx={{ color: 'text.secondary' }} />
                               <Typography variant="subtitle2" noWrap>
                                 {doc.name}
                               </Typography>
@@ -523,7 +524,7 @@ export default function SynthesisPage() {
               {inconsistencies.length > 0 && (
                 <Paper sx={{ p: 3 }}>
                   <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <WarningIcon color="warning" /> Inconsistencies Found ({inconsistencies.length})
+                    <WarningIcon sx={{ color: 'text.secondary' }} /> Inconsistencies Found ({inconsistencies.length})
                   </Typography>
                   {inconsistencies.map((item, idx) => (
                     <Accordion key={idx} variant="outlined">
@@ -532,7 +533,7 @@ export default function SynthesisPage() {
                           <Chip
                             size="small"
                             label={item.severity}
-                            color={getSeverityColor(item.severity)}
+                            sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6', color: 'text.secondary' }}
                           />
                           <Typography>{item.field_or_topic}</Typography>
                         </Box>

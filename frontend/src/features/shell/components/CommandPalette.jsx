@@ -672,10 +672,10 @@ export default function CommandPalette({ open, onClose }) {
                         mx: 1,
                         borderRadius: 1.5,
                         '&.Mui-selected': {
-                          bgcolor: 'primary.main',
+                          bgcolor: (theme) => theme.palette.mode === 'dark' ? '#63635E' : '#21201C',
                           color: 'primary.contrastText',
                           '&:hover': {
-                            bgcolor: 'primary.dark',
+                            bgcolor: (theme) => theme.palette.mode === 'dark' ? '#63635E' : '#21201C',
                           },
                           '& .MuiListItemIcon-root': {
                             color: 'inherit',

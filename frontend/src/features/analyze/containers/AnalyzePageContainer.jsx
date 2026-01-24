@@ -16,6 +16,7 @@ import {
   CircularProgress,
   Chip,
   LinearProgress,
+  alpha,
 } from '@mui/material'
 import RefreshIcon from '@mui/icons-material/Refresh'
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
@@ -283,10 +284,9 @@ export default function AnalyzePageContainer() {
                 key={idx}
                 label={chip.label}
                 size="small"
-                color={chip.color || 'default'}
                 variant={chip.variant || 'filled'}
                 icon={chip.color === 'success' ? <CheckCircleOutlineIcon /> : undefined}
-                sx={{ fontWeight: 500 }}
+                sx={{ fontWeight: 500, bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6', color: 'text.secondary' }}
               />
             ))}
           </Stack>
@@ -317,11 +317,11 @@ export default function AnalyzePageContainer() {
             },
             '& .MuiStepLabel-label.Mui-active': {
               fontWeight: 700,
-              color: 'primary.main',
+              color: 'text.secondary',
             },
             '& .MuiStepLabel-label.Mui-completed': {
               fontWeight: 600,
-              color: 'success.main',
+              color: 'text.secondary',
             },
           }}
         >
@@ -330,8 +330,8 @@ export default function AnalyzePageContainer() {
               <StepLabel
                 StepIconProps={{
                   sx: {
-                    '&.Mui-completed': { color: 'success.main' },
-                    '&.Mui-active': { color: 'primary.main' },
+                    '&.Mui-completed': { color: 'text.secondary' },
+                    '&.Mui-active': { color: 'text.secondary' },
                   },
                 }}
               >
@@ -363,7 +363,6 @@ export default function AnalyzePageContainer() {
                     <Switch
                       checked={runInBackground}
                       onChange={(e) => setRunInBackground(e.target.checked)}
-                      color="primary"
                     />
                   )}
                   label="Run in background"
@@ -405,7 +404,7 @@ export default function AnalyzePageContainer() {
                 thickness={4}
                 variant={analysisProgress > 0 ? 'determinate' : 'indeterminate'}
                 value={analysisProgress}
-                sx={{ color: 'primary.main' }}
+                sx={{ color: 'text.secondary' }}
               />
               <Box
                 sx={{
@@ -419,7 +418,7 @@ export default function AnalyzePageContainer() {
                   justifyContent: 'center',
                 }}
               >
-                <Typography variant="caption" fontWeight={700} color="primary.main">
+                <Typography variant="caption" fontWeight={700} color="text.secondary">
                   {analysisProgress}%
                 </Typography>
               </Box>
@@ -478,7 +477,7 @@ export default function AnalyzePageContainer() {
               }}
             >
               <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
-                <AutoAwesomeIcon color="primary" fontSize="small" />
+                <AutoAwesomeIcon color="inherit" fontSize="small" sx={{ color: 'text.secondary' }} />
                 <Typography variant="subtitle1" fontWeight={600}>
                   Ask for more insights
                 </Typography>

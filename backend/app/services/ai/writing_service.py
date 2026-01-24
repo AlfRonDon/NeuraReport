@@ -106,12 +106,12 @@ class WritingService:
     def _call_openai(self, system_prompt: str, user_prompt: str, max_tokens: int = 2000) -> str:
         """Make a call to OpenAI API."""
         client = self._get_client()
-        model = self._settings.openai_model or "gpt-4"
+        model = self._settings.openai_model or "gpt-5"
 
         try:
-            # Newer models (o1, gpt-4o, etc.) use max_completion_tokens instead of max_tokens
+            # Newer models (gpt-5, o1, etc.) use max_completion_tokens instead of max_tokens
             # Check if model requires the new parameter
-            uses_new_param = any(m in model.lower() for m in ["o1", "gpt-4o", "o3"])
+            uses_new_param = any(m in model.lower() for m in ["gpt-5", "o1", "o3"])
 
             create_params = {
                 "model": model,

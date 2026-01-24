@@ -159,11 +159,11 @@ const StyledTextField = styled(TextField)(({ theme }) => ({
     borderRadius: 12,
     transition: 'all 0.2s ease',
     '&:hover .MuiOutlinedInput-notchedOutline': {
-      borderColor: alpha(theme.palette.primary.main, 0.5),
+      borderColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.3) : '#BCBBB5',
     },
     '&.Mui-focused': {
       '& .MuiOutlinedInput-notchedOutline': {
-        borderColor: theme.palette.primary.main,
+        borderColor: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
         borderWidth: 2,
       },
     },
@@ -183,28 +183,28 @@ const StatusChip = styled(Chip, {
   fontWeight: 500,
   fontSize: '0.75rem',
   backgroundColor: active
-    ? alpha(theme.palette.success.main, 0.1)
-    : alpha(theme.palette.text.secondary, 0.1),
-  color: active ? theme.palette.success.main : theme.palette.text.secondary,
+    ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF')
+    : (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.06) : '#F9F9F8'),
+  color: theme.palette.text.secondary,
   border: `1px solid ${active
-    ? alpha(theme.palette.success.main, 0.2)
-    : alpha(theme.palette.text.secondary, 0.2)}`,
+    ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.15) : '#E2E1DE')
+    : alpha(theme.palette.divider, 0.2)}`,
 }))
 
 const FrequencyChip = styled(Chip)(({ theme }) => ({
   borderRadius: 8,
   fontWeight: 500,
   fontSize: '0.75rem',
-  backgroundColor: alpha(theme.palette.primary.main, 0.1),
-  color: theme.palette.primary.main,
-  border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
+  color: theme.palette.text.secondary,
+  border: `1px solid ${theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.12) : '#E2E1DE'}`,
 }))
 
 const StyledSwitch = styled(Switch)(({ theme }) => ({
   '& .MuiSwitch-switchBase.Mui-checked': {
-    color: theme.palette.success.main,
+    color: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
     '& + .MuiSwitch-track': {
-      backgroundColor: theme.palette.success.main,
+      backgroundColor: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
     },
   },
 }))
@@ -226,18 +226,20 @@ const StyledMenuItem = styled(MenuItem)(({ theme }) => ({
   padding: theme.spacing(1, 1.5),
   transition: 'all 0.15s ease',
   '&:hover': {
-    backgroundColor: alpha(theme.palette.primary.main, 0.08),
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F9F9F8',
   },
 }))
 
 const SchedulerStatusBanner = styled(Box, {
   shouldForwardProp: (prop) => prop !== 'status',
 })(({ theme, status }) => {
+  const neutralColor = theme.palette.mode === 'dark' ? '#82827C' : '#63635E'
+  const neutralBg = theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF'
   const colors = {
-    ok: { bg: theme.palette.success.main, text: '#fff' },
-    warning: { bg: theme.palette.warning.main, text: theme.palette.warning.contrastText },
-    disabled: { bg: theme.palette.grey[500], text: '#fff' },
-    error: { bg: theme.palette.error.main, text: '#fff' },
+    ok: { bg: neutralBg, border: neutralColor, text: neutralColor },
+    warning: { bg: neutralBg, border: neutralColor, text: neutralColor },
+    disabled: { bg: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.06) : '#F9F9F8', border: alpha(theme.palette.divider, 0.3), text: theme.palette.text.secondary },
+    error: { bg: neutralBg, border: neutralColor, text: neutralColor },
   }
   const colorScheme = colors[status] || colors.warning
   return {
@@ -247,9 +249,9 @@ const SchedulerStatusBanner = styled(Box, {
     padding: theme.spacing(1.5, 2),
     marginBottom: theme.spacing(2),
     borderRadius: 12,
-    backgroundColor: alpha(colorScheme.bg, 0.1),
-    border: `1px solid ${alpha(colorScheme.bg, 0.3)}`,
-    color: colorScheme.bg,
+    backgroundColor: colorScheme.bg,
+    border: `1px solid ${colorScheme.border}`,
+    color: colorScheme.text,
   }
 })
 
@@ -262,11 +264,12 @@ const ActionButton = styled(Button)(({ theme }) => ({
 }))
 
 const PrimaryButton = styled(ActionButton)(({ theme }) => ({
-  background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
+  background: theme.palette.mode === 'dark' ? '#63635E' : '#21201C',
   color: '#fff',
-  boxShadow: `0 4px 14px ${alpha(theme.palette.primary.main, 0.3)}`,
+  boxShadow: `0 4px 14px ${alpha(theme.palette.common.black, 0.15)}`,
   '&:hover': {
-    boxShadow: `0 6px 20px ${alpha(theme.palette.primary.main, 0.4)}`,
+    background: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
+    boxShadow: `0 6px 20px ${alpha(theme.palette.common.black, 0.2)}`,
     transform: 'translateY(-1px)',
   },
   '&:disabled': {
@@ -1030,7 +1033,7 @@ export default function SchedulesPage() {
           </StyledMenuItem>
           <StyledMenuItem onClick={handleDeleteClick} sx={{ color: 'error.main' }}>
             <ListItemIcon>
-              <DeleteIcon fontSize="small" color="error" />
+              <DeleteIcon fontSize="small" sx={{ color: 'text.secondary' }} />
             </ListItemIcon>
             <ListItemText>Delete</ListItemText>
           </StyledMenuItem>

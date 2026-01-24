@@ -121,10 +121,10 @@ const DashboardListItem = styled(ListItemButton, {
 })(({ theme, active }) => ({
   borderRadius: 8,
   marginBottom: theme.spacing(0.5),
-  backgroundColor: active ? alpha(theme.palette.primary.main, 0.1) : 'transparent',
+  backgroundColor: active ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF') : 'transparent',
   '&:hover': {
     backgroundColor: active
-      ? alpha(theme.palette.primary.main, 0.15)
+      ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.15) : '#F1F0EF')
       : alpha(theme.palette.action.hover, 0.05),
   },
 }))
@@ -151,8 +151,8 @@ const EmptyState = styled(Box)(({ theme }) => ({
 const InsightCard = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(1.5),
   marginBottom: theme.spacing(1),
-  backgroundColor: alpha(theme.palette.info.main, 0.05),
-  border: `1px solid ${alpha(theme.palette.info.main, 0.2)}`,
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8',
+  border: `1px solid ${theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF'}`,
 }))
 
 // =============================================================================
@@ -622,7 +622,7 @@ export default function DashboardBuilderPage() {
                     dense
                   >
                     <ListItemIcon sx={{ minWidth: 32 }}>
-                      <DashboardIcon fontSize="small" color="secondary" />
+                      <DashboardIcon fontSize="small" sx={{ color: 'text.secondary' }} />
                     </ListItemIcon>
                     <ListItemText
                       primary={db.name}
@@ -679,8 +679,7 @@ export default function DashboardBuilderPage() {
                   <Chip
                     size="small"
                     label="Unsaved"
-                    color="warning"
-                    sx={{ borderRadius: 1, height: 20, fontSize: '0.7rem' }}
+                    sx={{ borderRadius: 1, height: 20, fontSize: '0.7rem', bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6', color: 'text.secondary' }}
                   />
                 )}
               </Box>
@@ -753,7 +752,7 @@ export default function DashboardBuilderPage() {
           </>
         ) : (
           <EmptyState>
-            <DashboardIcon sx={{ fontSize: 80, color: 'text.disabled', mb: 2 }} />
+            <DashboardIcon sx={{ fontSize: 80, color: 'text.secondary', mb: 2 }} />
             <Typography variant="h5" sx={{ fontWeight: 600, mb: 1 }}>
               No Dashboard Selected
             </Typography>

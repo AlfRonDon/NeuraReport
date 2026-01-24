@@ -53,9 +53,9 @@ export default function KeyboardShortcutsPanel({ compact = false }) {
           py: 1,
           px: 1.5,
           borderRadius: 1,
-          bgcolor: (theme) => alpha(theme.palette.info.main, 0.04),
+          bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : '#F9F9F8',
           border: '1px solid',
-          borderColor: (theme) => alpha(theme.palette.info.main, 0.1),
+          borderColor: (theme) => alpha(theme.palette.divider, 0.1),
         }}
       >
         <Stack direction="row" spacing={0.5} alignItems="center">

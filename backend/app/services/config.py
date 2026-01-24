@@ -67,7 +67,7 @@ class Settings(BaseSettings):
     template_import_max_concurrency: int = Field(default=4, env="NEURA_TEMPLATE_IMPORT_MAX_CONCURRENCY")
 
     openai_api_key: Optional[str] = Field(default=None, env="OPENAI_API_KEY")
-    openai_model: str = Field(default="gpt-4o", env="OPENAI_MODEL")
+    openai_model: str = Field(default="gpt-5", env="OPENAI_MODEL")
 
     artifact_warn_bytes: int = Field(default=5 * 1024 * 1024, env="ARTIFACT_WARN_BYTES")
     artifact_warn_render_ms: int = Field(default=2000, env="ARTIFACT_WARN_RENDER_MS")

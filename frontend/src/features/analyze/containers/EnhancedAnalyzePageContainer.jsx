@@ -111,7 +111,7 @@ function GlassCard({ children, sx = {}, gradient = false, hover = true, ...props
         p: 3,
         borderRadius: 4,
         background: gradient
-          ? `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.1)} 0%, ${alpha(theme.palette.secondary.main, 0.1)} 100%)`
+          ? `linear-gradient(135deg, ${alpha(theme.palette.text.primary, 0.04)} 0%, ${alpha(theme.palette.text.primary, 0.02)} 100%)`
           : alpha(theme.palette.background.paper, 0.8),
         backdropFilter: 'blur(20px)',
         border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
@@ -119,8 +119,8 @@ function GlassCard({ children, sx = {}, gradient = false, hover = true, ...props
         ...(hover && {
           '&:hover': {
             transform: 'translateY(-4px)',
-            boxShadow: `0 20px 40px ${alpha(theme.palette.primary.main, 0.15)}`,
-            borderColor: alpha(theme.palette.primary.main, 0.3),
+            boxShadow: theme.palette.mode === 'dark' ? `0 20px 40px ${alpha(theme.palette.common.black, 0.3)}` : '0 20px 40px rgba(0,0,0,0.08)',
+            borderColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.15) : '#E2E1DE',
           },
         }),
         ...sx,
@@ -133,20 +133,22 @@ function GlassCard({ children, sx = {}, gradient = false, hover = true, ...props
 }
 
 // Animated stat card
-function StatCard({ icon, label, value, color = 'primary', delay = 0 }) {
+function StatCard({ icon, label, value, delay = 0 }) {
   const theme = useTheme()
   return (
     <Grow in timeout={500 + delay * 100}>
       <Card
         sx={{
           minWidth: 140,
-          background: `linear-gradient(135deg, ${alpha(theme.palette[color].main, 0.15)} 0%, ${alpha(theme.palette[color].main, 0.05)} 100%)`,
-          border: `1px solid ${alpha(theme.palette[color].main, 0.2)}`,
+          background: theme.palette.mode === 'dark'
+            ? `linear-gradient(135deg, ${alpha(theme.palette.text.primary, 0.08)} 0%, ${alpha(theme.palette.text.primary, 0.03)} 100%)`
+            : 'linear-gradient(135deg, #F1F0EF 0%, #F9F9F8 100%)',
+          border: `1px solid ${alpha(theme.palette.divider, 0.15)}`,
           borderRadius: 3,
           transition: 'all 0.3s ease',
           '&:hover': {
             transform: 'scale(1.05)',
-            boxShadow: `0 8px 24px ${alpha(theme.palette[color].main, 0.25)}`,
+            boxShadow: theme.palette.mode === 'dark' ? `0 8px 24px ${alpha(theme.palette.common.black, 0.3)}` : '0 8px 24px rgba(0,0,0,0.08)',
           },
         }}
       >
@@ -154,8 +156,8 @@ function StatCard({ icon, label, value, color = 'primary', delay = 0 }) {
           <Stack direction="row" alignItems="center" spacing={1.5}>
             <Avatar
               sx={{
-                bgcolor: alpha(theme.palette[color].main, 0.2),
-                color: theme.palette[color].main,
+                bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6',
+                color: 'text.secondary',
                 width: 40,
                 height: 40,
               }}
@@ -163,7 +165,7 @@ function StatCard({ icon, label, value, color = 'primary', delay = 0 }) {
               {icon}
             </Avatar>
             <Box>
-              <Typography variant="h5" fontWeight={800} color={`${color}.main`}>
+              <Typography variant="h5" fontWeight={800} color="text.primary">
                 {value}
               </Typography>
               <Typography variant="caption" color="text.secondary" fontWeight={500}>
@@ -188,7 +190,7 @@ function MetricCard({ metric, index }) {
       <Card
         sx={{
           minWidth: 220,
-          background: `linear-gradient(145deg, ${theme.palette.background.paper} 0%, ${alpha(theme.palette.primary.main, 0.03)} 100%)`,
+          background: `linear-gradient(145deg, ${theme.palette.background.paper} 0%, ${alpha(theme.palette.text.primary, 0.02)} 100%)`,
           border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
           borderRadius: 3,
           overflow: 'hidden',
@@ -196,7 +198,7 @@ function MetricCard({ metric, index }) {
           transition: 'all 0.3s ease',
           '&:hover': {
             transform: 'translateY(-6px)',
-            boxShadow: `0 12px 32px ${alpha(theme.palette.primary.main, 0.15)}`,
+            boxShadow: theme.palette.mode === 'dark' ? `0 12px 32px ${alpha(theme.palette.common.black, 0.3)}` : '0 12px 32px rgba(0,0,0,0.08)',
             '& .metric-icon': {
               transform: 'scale(1.2) rotate(10deg)',
             },
@@ -208,7 +210,7 @@ function MetricCard({ metric, index }) {
             left: 0,
             right: 0,
             height: 4,
-            background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+            background: theme.palette.mode === 'dark' ? '#63635E' : '#21201C',
           },
         }}
       >
@@ -228,10 +230,7 @@ function MetricCard({ metric, index }) {
                 fontWeight={800}
                 sx={{
                   mt: 0.5,
-                  background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
-                  backgroundClip: 'text',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
+                  color: theme.palette.text.primary,
                 }}
               >
                 {metric.raw_value}
@@ -245,8 +244,8 @@ function MetricCard({ metric, index }) {
                     mt: 1,
                     height: 24,
                     fontWeight: 700,
-                    bgcolor: isPositive ? alpha(theme.palette.success.main, 0.15) : isNegative ? alpha(theme.palette.error.main, 0.15) : alpha(theme.palette.grey[500], 0.15),
-                    color: isPositive ? 'success.main' : isNegative ? 'error.main' : 'text.secondary',
+                    bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF',
+                    color: 'text.secondary',
                     '& .MuiChip-icon': {
                       color: 'inherit',
                     },
@@ -258,7 +257,7 @@ function MetricCard({ metric, index }) {
               className="metric-icon"
               sx={{
                 transition: 'transform 0.3s ease',
-                color: alpha(theme.palette.primary.main, 0.2),
+                color: alpha(theme.palette.text.primary, 0.15),
               }}
             >
               <AutoGraphIcon sx={{ fontSize: 48 }} />
@@ -276,38 +275,46 @@ function InsightCard({ insight, type = 'insight', index = 0 }) {
 
   const config = {
     insight: {
-      gradient: `linear-gradient(135deg, ${alpha('#3b82f6', 0.1)} 0%, ${alpha('#8b5cf6', 0.1)} 100%)`,
-      borderColor: '#3b82f6',
+      gradient: theme.palette.mode === 'dark'
+        ? `linear-gradient(135deg, ${alpha(theme.palette.text.primary, 0.08)} 0%, ${alpha(theme.palette.text.primary, 0.04)} 100%)`
+        : 'linear-gradient(135deg, #F1F0EF 0%, #F9F9F8 100%)',
+      borderColor: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
       icon: <LightbulbIcon />,
-      iconBg: alpha('#3b82f6', 0.15),
+      iconBg: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6',
     },
     risk: {
-      gradient: `linear-gradient(135deg, ${alpha('#ef4444', 0.1)} 0%, ${alpha('#f97316', 0.1)} 100%)`,
-      borderColor: '#ef4444',
+      gradient: theme.palette.mode === 'dark'
+        ? `linear-gradient(135deg, ${alpha(theme.palette.text.primary, 0.08)} 0%, ${alpha(theme.palette.text.primary, 0.04)} 100%)`
+        : 'linear-gradient(135deg, #F1F0EF 0%, #F9F9F8 100%)',
+      borderColor: theme.palette.mode === 'dark' ? '#8D8D86' : '#63635E',
       icon: <SecurityIcon />,
-      iconBg: alpha('#ef4444', 0.15),
+      iconBg: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6',
     },
     opportunity: {
-      gradient: `linear-gradient(135deg, ${alpha('#10b981', 0.1)} 0%, ${alpha('#06b6d4', 0.1)} 100%)`,
-      borderColor: '#10b981',
+      gradient: theme.palette.mode === 'dark'
+        ? `linear-gradient(135deg, ${alpha(theme.palette.text.primary, 0.08)} 0%, ${alpha(theme.palette.text.primary, 0.04)} 100%)`
+        : 'linear-gradient(135deg, #F1F0EF 0%, #F9F9F8 100%)',
+      borderColor: theme.palette.mode === 'dark' ? '#BCBBB5' : '#82827C',
       icon: <RocketLaunchIcon />,
-      iconBg: alpha('#10b981', 0.15),
+      iconBg: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6',
     },
     action: {
-      gradient: `linear-gradient(135deg, ${alpha('#f59e0b', 0.1)} 0%, ${alpha('#eab308', 0.1)} 100%)`,
-      borderColor: '#f59e0b',
+      gradient: theme.palette.mode === 'dark'
+        ? `linear-gradient(135deg, ${alpha(theme.palette.text.primary, 0.08)} 0%, ${alpha(theme.palette.text.primary, 0.04)} 100%)`
+        : 'linear-gradient(135deg, #F1F0EF 0%, #F9F9F8 100%)',
+      borderColor: theme.palette.mode === 'dark' ? '#CFCECA' : '#8D8D86',
       icon: <PlaylistAddCheckIcon />,
-      iconBg: alpha('#f59e0b', 0.15),
+      iconBg: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6',
     },
   }
 
   const { gradient, borderColor, icon, iconBg } = config[type] || config.insight
 
   const priorityColors = {
-    critical: { bg: '#ef4444', text: '#fff' },
-    high: { bg: '#f97316', text: '#fff' },
-    medium: { bg: '#eab308', text: '#000' },
-    low: { bg: '#6b7280', text: '#fff' },
+    critical: { bg: theme.palette.mode === 'dark' ? '#63635E' : '#21201C', text: '#fff' },
+    high: { bg: theme.palette.mode === 'dark' ? '#82827C' : '#63635E', text: '#fff' },
+    medium: { bg: theme.palette.mode === 'dark' ? '#8D8D86' : '#82827C', text: '#fff' },
+    low: { bg: theme.palette.mode === 'dark' ? '#BCBBB5' : '#8D8D86', text: theme.palette.mode === 'dark' ? '#21201C' : '#fff' },
   }
 
   const priorityConfig = priorityColors[insight.priority?.toLowerCase()] || priorityColors.medium
@@ -400,27 +407,31 @@ function SentimentDisplay({ sentiment }) {
   if (!sentiment) return null
 
   const getSentimentConfig = (level) => {
+    const neutralColor = theme.palette.mode === 'dark' ? '#82827C' : '#63635E'
+    const neutralGradient = theme.palette.mode === 'dark'
+      ? `linear-gradient(135deg, ${alpha(theme.palette.text.primary, 0.12)} 0%, ${alpha(theme.palette.text.primary, 0.06)} 100%)`
+      : 'linear-gradient(135deg, #E9E8E6 0%, #F1F0EF 100%)'
     if (level?.includes('positive')) {
       return {
         icon: <SentimentSatisfiedAltIcon sx={{ fontSize: 32 }} />,
-        color: '#10b981',
+        color: neutralColor,
         label: 'Positive',
-        gradient: `linear-gradient(135deg, ${alpha('#10b981', 0.2)} 0%, ${alpha('#06b6d4', 0.2)} 100%)`,
+        gradient: neutralGradient,
       }
     }
     if (level?.includes('negative')) {
       return {
         icon: <SentimentVeryDissatisfiedIcon sx={{ fontSize: 32 }} />,
-        color: '#ef4444',
+        color: neutralColor,
         label: 'Negative',
-        gradient: `linear-gradient(135deg, ${alpha('#ef4444', 0.2)} 0%, ${alpha('#f97316', 0.2)} 100%)`,
+        gradient: neutralGradient,
       }
     }
     return {
       icon: <SentimentNeutralIcon sx={{ fontSize: 32 }} />,
-      color: '#f59e0b',
+      color: neutralColor,
       label: 'Neutral',
-      gradient: `linear-gradient(135deg, ${alpha('#f59e0b', 0.2)} 0%, ${alpha('#eab308', 0.2)} 100%)`,
+      gradient: neutralGradient,
     }
   }
 
@@ -478,12 +489,12 @@ function SentimentDisplay({ sentiment }) {
           <Chip
             size="small"
             label={`Tone: ${sentiment.emotional_tone || 'Neutral'}`}
-            sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1) }}
+            sx={{ bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF' }}
           />
           <Chip
             size="small"
             label={`Urgency: ${sentiment.urgency_level || 'Normal'}`}
-            sx={{ bgcolor: alpha(theme.palette.warning.main, 0.1) }}
+            sx={{ bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF' }}
           />
         </Stack>
       </Stack>
@@ -498,9 +509,9 @@ function DataQualityGauge({ quality }) {
 
   const score = Math.round((quality.quality_score || 0) * 100)
   const getColor = (s) => {
-    if (s >= 80) return '#10b981'
-    if (s >= 60) return '#f59e0b'
-    return '#ef4444'
+    if (s >= 80) return theme.palette.mode === 'dark' ? '#82827C' : '#63635E'
+    if (s >= 60) return theme.palette.mode === 'dark' ? '#8D8D86' : '#82827C'
+    return theme.palette.mode === 'dark' ? '#BCBBB5' : '#8D8D86'
   }
   const color = getColor(score)
 
@@ -595,9 +606,9 @@ function QABubble({ qa, index }) {
               p: 2,
               px: 3,
               borderRadius: '20px 20px 4px 20px',
-              background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
+              background: theme.palette.mode === 'dark' ? '#63635E' : '#21201C',
               color: '#fff',
-              boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.3)}`,
+              boxShadow: `0 4px 12px ${alpha(theme.palette.common.black, 0.2)}`,
             }}
           >
             <Typography variant="body1" fontWeight={500}>
@@ -613,8 +624,8 @@ function QABubble({ qa, index }) {
               width: 36,
               height: 36,
               mr: 1.5,
-              bgcolor: alpha(theme.palette.secondary.main, 0.15),
-              color: theme.palette.secondary.main,
+              bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF',
+              color: 'text.secondary',
             }}
           >
             <SmartToyIcon sx={{ fontSize: 20 }} />
@@ -940,7 +951,9 @@ export default function EnhancedAnalyzePageContainer() {
     <Box
       sx={{
         minHeight: '100vh',
-        background: `linear-gradient(180deg, ${alpha(theme.palette.primary.main, 0.03)} 0%, ${theme.palette.background.default} 50%)`,
+        background: theme.palette.mode === 'dark'
+          ? `linear-gradient(180deg, ${alpha(theme.palette.text.primary, 0.02)} 0%, ${theme.palette.background.default} 50%)`
+          : `linear-gradient(180deg, #F9F9F8 0%, ${theme.palette.background.default} 50%)`,
       }}
     >
       {/* Hero Header */}
@@ -949,7 +962,9 @@ export default function EnhancedAnalyzePageContainer() {
           pt: 4,
           pb: analysisResult ? 2 : 4,
           px: 4,
-          background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.08)} 0%, ${alpha(theme.palette.secondary.main, 0.05)} 50%, transparent 100%)`,
+          background: theme.palette.mode === 'dark'
+            ? `linear-gradient(135deg, ${alpha(theme.palette.text.primary, 0.06)} 0%, ${alpha(theme.palette.text.primary, 0.03)} 50%, transparent 100%)`
+            : 'linear-gradient(135deg, #F1F0EF 0%, #F9F9F8 50%, transparent 100%)',
           borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
         }}
       >
@@ -959,8 +974,8 @@ export default function EnhancedAnalyzePageContainer() {
               sx={{
                 width: 56,
                 height: 56,
-                background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
-                boxShadow: `0 8px 24px ${alpha(theme.palette.primary.main, 0.3)}`,
+                background: theme.palette.mode === 'dark' ? '#63635E' : '#21201C',
+                boxShadow: `0 8px 24px ${alpha(theme.palette.common.black, 0.2)}`,
               }}
             >
               <PsychologyIcon sx={{ fontSize: 28 }} />
@@ -969,12 +984,7 @@ export default function EnhancedAnalyzePageContainer() {
               <Typography
                 variant="h4"
                 fontWeight={800}
-                sx={{
-                  background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
-                  backgroundClip: 'text',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                }}
+                color="text.primary"
               >
                 AI Document Analysis
               </Typography>
@@ -1023,8 +1033,11 @@ export default function EnhancedAnalyzePageContainer() {
                     borderRadius: 2,
                     textTransform: 'none',
                     fontWeight: 600,
-                    background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
-                    boxShadow: `0 4px 14px ${alpha(theme.palette.primary.main, 0.3)}`,
+                    background: theme.palette.mode === 'dark' ? '#63635E' : '#21201C',
+                    boxShadow: `0 4px 14px ${alpha(theme.palette.common.black, 0.2)}`,
+                    '&:hover': {
+                      background: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
+                    },
                   }}
                 >
                   New Analysis
@@ -1050,13 +1063,13 @@ export default function EnhancedAnalyzePageContainer() {
         {/* Stats Bar */}
         {stats && (
           <Stack direction="row" spacing={2} sx={{ mt: 3, flexWrap: 'wrap' }} useFlexGap>
-            <StatCard icon={<TableChartIcon />} label="Tables" value={stats.tables} color="primary" delay={0} />
-            <StatCard icon={<AssessmentIcon />} label="Metrics" value={stats.metrics} color="success" delay={1} />
-            <StatCard icon={<DataObjectIcon />} label="Entities" value={stats.entities} color="info" delay={2} />
-            <StatCard icon={<LightbulbIcon />} label="Insights" value={stats.insights} color="secondary" delay={3} />
-            <StatCard icon={<WarningAmberIcon />} label="Risks" value={stats.risks} color="error" delay={4} />
-            <StatCard icon={<TrendingUpIcon />} label="Opportunities" value={stats.opportunities} color="warning" delay={5} />
-            <StatCard icon={<BarChartIcon />} label="Charts" value={stats.charts} color="primary" delay={6} />
+            <StatCard icon={<TableChartIcon />} label="Tables" value={stats.tables} delay={0} />
+            <StatCard icon={<AssessmentIcon />} label="Metrics" value={stats.metrics} delay={1} />
+            <StatCard icon={<DataObjectIcon />} label="Entities" value={stats.entities} delay={2} />
+            <StatCard icon={<LightbulbIcon />} label="Insights" value={stats.insights} delay={3} />
+            <StatCard icon={<WarningAmberIcon />} label="Risks" value={stats.risks} delay={4} />
+            <StatCard icon={<TrendingUpIcon />} label="Opportunities" value={stats.opportunities} delay={5} />
+            <StatCard icon={<BarChartIcon />} label="Charts" value={stats.charts} delay={6} />
           </Stack>
         )}
       </Box>
@@ -1075,8 +1088,8 @@ export default function EnhancedAnalyzePageContainer() {
                   p: 6,
                   textAlign: 'center',
                   cursor: 'pointer',
-                  border: `2px dashed ${isDragOver ? theme.palette.primary.main : alpha(theme.palette.divider, 0.3)}`,
-                  bgcolor: isDragOver ? alpha(theme.palette.primary.main, 0.05) : undefined,
+                  border: `2px dashed ${isDragOver ? (theme.palette.mode === 'dark' ? '#82827C' : '#63635E') : alpha(theme.palette.divider, 0.3)}`,
+                  bgcolor: isDragOver ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8') : undefined,
                   transition: 'all 0.3s ease',
                 }}
                 onDragOver={handleDragOver}
@@ -1100,11 +1113,11 @@ export default function EnhancedAnalyzePageContainer() {
                         height: 100,
                         mx: 'auto',
                         mb: 3,
-                        background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.2)} 0%, ${alpha(theme.palette.secondary.main, 0.2)} 100%)`,
+                        background: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6',
                         animation: `${float} 3s ease-in-out infinite`,
                       }}
                     >
-                      <CloudUploadIcon sx={{ fontSize: 48, color: theme.palette.primary.main }} />
+                      <CloudUploadIcon sx={{ fontSize: 48, color: 'text.secondary' }} />
                     </Avatar>
                     <Typography variant="h5" fontWeight={700} gutterBottom>
                       Drop your document here
@@ -1118,7 +1131,7 @@ export default function EnhancedAnalyzePageContainer() {
                           key={type}
                           label={type}
                           size="small"
-                          sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1) }}
+                          sx={{ bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF' }}
                         />
                       ))}
                     </Stack>
@@ -1133,10 +1146,10 @@ export default function EnhancedAnalyzePageContainer() {
                         height: 80,
                         mx: 'auto',
                         mb: 3,
-                        bgcolor: alpha(theme.palette.success.main, 0.15),
+                        bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF',
                       }}
                     >
-                      <CheckCircleIcon sx={{ fontSize: 40, color: 'success.main' }} />
+                      <CheckCircleIcon sx={{ fontSize: 40, color: 'text.secondary' }} />
                     </Avatar>
                     <Typography variant="h6" fontWeight={700} gutterBottom>
                       {selectedFile.name}
@@ -1159,12 +1172,13 @@ export default function EnhancedAnalyzePageContainer() {
                         fontWeight: 700,
                         fontSize: '1.1rem',
                         textTransform: 'none',
-                        background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
-                        boxShadow: `0 8px 32px ${alpha(theme.palette.primary.main, 0.4)}`,
+                        bgcolor: theme.palette.mode === 'dark' ? '#63635E' : '#21201C',
+                        boxShadow: `0 8px 32px ${alpha(theme.palette.common.black, 0.2)}`,
                         transition: 'all 0.3s ease',
                         '&:hover': {
                           transform: 'scale(1.05)',
-                          boxShadow: `0 12px 40px ${alpha(theme.palette.primary.main, 0.5)}`,
+                          bgcolor: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
+                          boxShadow: `0 12px 40px ${alpha(theme.palette.common.black, 0.25)}`,
                         },
                       }}
                     >
@@ -1189,7 +1203,7 @@ export default function EnhancedAnalyzePageContainer() {
                         value={100}
                         size={120}
                         thickness={4}
-                        sx={{ color: alpha(theme.palette.primary.main, 0.2) }}
+                        sx={{ color: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6' }}
                       />
                       <CircularProgress
                         variant="determinate"
@@ -1199,7 +1213,7 @@ export default function EnhancedAnalyzePageContainer() {
                         sx={{
                           position: 'absolute',
                           left: 0,
-                          color: theme.palette.primary.main,
+                          color: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
                           '& .MuiCircularProgress-circle': { strokeLinecap: 'round' },
                         }}
                       />
@@ -1212,7 +1226,7 @@ export default function EnhancedAnalyzePageContainer() {
                           justifyContent: 'center',
                         }}
                       >
-                        <Typography variant="h4" fontWeight={800} color="primary.main">
+                        <Typography variant="h4" fontWeight={800} color="text.primary">
                           {analysisProgress}%
                         </Typography>
                       </Box>
@@ -1229,10 +1243,10 @@ export default function EnhancedAnalyzePageContainer() {
                         mt: 2,
                         height: 8,
                         borderRadius: 4,
-                        bgcolor: alpha(theme.palette.primary.main, 0.1),
+                        bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6',
                         '& .MuiLinearProgress-bar': {
                           borderRadius: 4,
-                          background: `linear-gradient(90deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
+                          background: theme.palette.mode === 'dark' ? '#63635E' : '#21201C',
                         },
                       }}
                     />
@@ -1256,12 +1270,12 @@ export default function EnhancedAnalyzePageContainer() {
                   sx={{
                     mt: 2,
                     p: 2,
-                    bgcolor: alpha(theme.palette.error.main, 0.1),
-                    border: `1px solid ${alpha(theme.palette.error.main, 0.3)}`,
+                    bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
+                    border: `1px solid ${alpha(theme.palette.divider, 0.3)}`,
                     borderRadius: 2,
                   }}
                 >
-                  <Typography color="error.main">{error}</Typography>
+                  <Typography color="text.primary">{error}</Typography>
                 </Paper>
               )}
             </Box>
@@ -1287,16 +1301,16 @@ export default function EnhancedAnalyzePageContainer() {
                       minHeight: 64,
                       transition: 'all 0.2s ease',
                       '&:hover': {
-                        bgcolor: alpha(theme.palette.primary.main, 0.05),
+                        bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8',
                       },
                       '&.Mui-selected': {
-                        color: theme.palette.primary.main,
+                        color: 'text.primary',
                       },
                     },
                     '& .MuiTabs-indicator': {
                       height: 3,
                       borderRadius: '3px 3px 0 0',
-                      background: `linear-gradient(90deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
+                      background: theme.palette.mode === 'dark' ? '#82827C' : '#21201C',
                     },
                   }}
                 >
@@ -1315,7 +1329,7 @@ export default function EnhancedAnalyzePageContainer() {
                   <Grid size={{ xs: 12, lg: 8 }}>
                     <GlassCard sx={{ height: '100%' }}>
                       <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 2 }}>
-                        <Avatar sx={{ bgcolor: alpha(theme.palette.primary.main, 0.15), color: 'primary.main' }}>
+                        <Avatar sx={{ bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF', color: 'text.secondary' }}>
                           <ArticleIcon />
                         </Avatar>
                         <Typography variant="h6" fontWeight={700}>
@@ -1336,9 +1350,9 @@ export default function EnhancedAnalyzePageContainer() {
                           sx={{
                             mt: 3,
                             p: 2.5,
-                            bgcolor: alpha(theme.palette.primary.main, 0.05),
+                            bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8',
                             borderRadius: 3,
-                            border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
+                            border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
                           }}
                         >
                           <Typography variant="subtitle2" fontWeight={700} gutterBottom>
@@ -1352,7 +1366,7 @@ export default function EnhancedAnalyzePageContainer() {
                                     width: 24,
                                     height: 24,
                                     borderRadius: '50%',
-                                    bgcolor: theme.palette.primary.main,
+                                    bgcolor: theme.palette.mode === 'dark' ? '#63635E' : '#21201C',
                                     color: '#fff',
                                     display: 'flex',
                                     alignItems: 'center',
@@ -1386,7 +1400,7 @@ export default function EnhancedAnalyzePageContainer() {
                   <Grid size={12}>
                     <GlassCard>
                       <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 3 }}>
-                        <Avatar sx={{ bgcolor: alpha(theme.palette.success.main, 0.15), color: 'success.main' }}>
+                        <Avatar sx={{ bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF', color: 'text.secondary' }}>
                           <SpeedIcon />
                         </Avatar>
                         <Typography variant="h6" fontWeight={700}>
@@ -1405,7 +1419,7 @@ export default function EnhancedAnalyzePageContainer() {
                   <Grid size={{ xs: 12, md: 6 }}>
                     <GlassCard>
                       <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 3 }}>
-                        <Avatar sx={{ bgcolor: alpha('#3b82f6', 0.15), color: '#3b82f6' }}>
+                        <Avatar sx={{ bgcolor: (t) => t.palette.mode === 'dark' ? alpha(t.palette.text.primary, 0.1) : '#F1F0EF', color: 'text.secondary' }}>
                           <LightbulbIcon />
                         </Avatar>
                         <Typography variant="h6" fontWeight={700}>
@@ -1422,7 +1436,7 @@ export default function EnhancedAnalyzePageContainer() {
                   <Grid size={{ xs: 12, md: 6 }}>
                     <GlassCard>
                       <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 3 }}>
-                        <Avatar sx={{ bgcolor: alpha('#ef4444', 0.15), color: '#ef4444' }}>
+                        <Avatar sx={{ bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF', color: 'text.secondary' }}>
                           <SecurityIcon />
                         </Avatar>
                         <Typography variant="h6" fontWeight={700}>
@@ -1446,7 +1460,7 @@ export default function EnhancedAnalyzePageContainer() {
                   <Grid size={{ xs: 12, lg: 8 }}>
                     <GlassCard sx={{ minHeight: 500 }}>
                       <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 3 }}>
-                        <Avatar sx={{ bgcolor: alpha(theme.palette.secondary.main, 0.15), color: 'secondary.main' }}>
+                        <Avatar sx={{ bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF', color: 'text.secondary' }}>
                           <SmartToyIcon />
                         </Avatar>
                         <Box>
@@ -1479,10 +1493,10 @@ export default function EnhancedAnalyzePageContainer() {
                                 height: 80,
                                 mx: 'auto',
                                 mb: 2,
-                                bgcolor: alpha(theme.palette.secondary.main, 0.1),
+                                bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
                               }}
                             >
-                              <QuestionAnswerIcon sx={{ fontSize: 40, color: 'secondary.main' }} />
+                              <QuestionAnswerIcon sx={{ fontSize: 40, color: 'text.secondary' }} />
                             </Avatar>
                             <Typography variant="h6" color="text.secondary" gutterBottom>
                               Start a conversation
@@ -1519,7 +1533,10 @@ export default function EnhancedAnalyzePageContainer() {
                           sx={{
                             minWidth: 56,
                             borderRadius: 3,
-                            background: `linear-gradient(135deg, ${theme.palette.secondary.main} 0%, ${theme.palette.secondary.dark} 100%)`,
+                            background: theme.palette.mode === 'dark' ? '#63635E' : '#21201C',
+                            '&:hover': {
+                              background: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
+                            },
                           }}
                         >
                           {isAskingQuestion ? <CircularProgress size={20} color="inherit" /> : <SendIcon />}
@@ -1550,8 +1567,8 @@ export default function EnhancedAnalyzePageContainer() {
                               fontWeight: 500,
                               borderColor: alpha(theme.palette.divider, 0.2),
                               '&:hover': {
-                                bgcolor: alpha(theme.palette.primary.main, 0.05),
-                                borderColor: theme.palette.primary.main,
+                                bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8',
+                                borderColor: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
                               },
                             }}
                           >
@@ -1568,7 +1585,7 @@ export default function EnhancedAnalyzePageContainer() {
               <TabPanel value={activeTab} index={2}>
                 <GlassCard sx={{ mb: 3 }}>
                   <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 3 }}>
-                    <Avatar sx={{ bgcolor: alpha(theme.palette.info.main, 0.15), color: 'info.main' }}>
+                    <Avatar sx={{ bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF', color: 'text.secondary' }}>
                       <AutoAwesomeIcon />
                     </Avatar>
                     <Box>
@@ -1604,7 +1621,10 @@ export default function EnhancedAnalyzePageContainer() {
                         borderRadius: 3,
                         textTransform: 'none',
                         fontWeight: 600,
-                        background: `linear-gradient(135deg, ${theme.palette.info.main} 0%, ${theme.palette.info.dark} 100%)`,
+                        background: theme.palette.mode === 'dark' ? '#63635E' : '#21201C',
+                        '&:hover': {
+                          background: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
+                        },
                       }}
                     >
                       Generate
@@ -1634,12 +1654,12 @@ export default function EnhancedAnalyzePageContainer() {
                                 sx={{
                                   mt: 2,
                                   p: 2,
-                                  bgcolor: alpha(theme.palette.info.main, 0.08),
+                                  bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
                                   borderRadius: 2,
-                                  border: `1px solid ${alpha(theme.palette.info.main, 0.2)}`,
+                                  border: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
                                 }}
                               >
-                                <Typography variant="caption" fontWeight={700} color="info.main">
+                                <Typography variant="caption" fontWeight={700} color="text.secondary">
                                   AI INSIGHTS
                                 </Typography>
                                 {chart.ai_insights.map((insight, i) => (
@@ -1664,7 +1684,7 @@ export default function EnhancedAnalyzePageContainer() {
                   <Grid size={12}>
                     <GlassCard>
                       <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 3 }}>
-                        <Avatar sx={{ bgcolor: alpha(theme.palette.primary.main, 0.15), color: 'primary.main' }}>
+                        <Avatar sx={{ bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF', color: 'text.secondary' }}>
                           <TableChartIcon />
                         </Avatar>
                         <Typography variant="h6" fontWeight={700}>
@@ -1686,14 +1706,14 @@ export default function EnhancedAnalyzePageContainer() {
                           <AccordionSummary
                             expandIcon={<ExpandMoreIcon />}
                             sx={{
-                              bgcolor: alpha(theme.palette.primary.main, 0.03),
-                              '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.06) },
+                              bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.03) : '#F9F9F8',
+                              '&:hover': { bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.06) : '#F1F0EF' },
                             }}
                           >
                             <Stack direction="row" alignItems="center" spacing={2}>
-                              <TableChartIcon color="primary" />
+                              <TableChartIcon sx={{ color: 'text.secondary' }} />
                               <Typography fontWeight={600}>{table.title || table.id}</Typography>
-                              <Chip label={`${table.row_count} rows`} size="small" color="primary" variant="outlined" />
+                              <Chip label={`${table.row_count} rows`} size="small" variant="outlined" sx={{ borderColor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.3) : '#E2E1DE', color: 'text.secondary' }} />
                               <Chip label={`${table.column_count} cols`} size="small" variant="outlined" />
                             </Stack>
                           </AccordionSummary>
@@ -1710,8 +1730,8 @@ export default function EnhancedAnalyzePageContainer() {
                                     fontWeight: 700,
                                     fontSize: '0.8rem',
                                     textTransform: 'uppercase',
-                                    bgcolor: alpha(theme.palette.primary.main, 0.08),
-                                    borderBottom: `2px solid ${theme.palette.primary.main}`,
+                                    bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
+                                    borderBottom: `2px solid ${theme.palette.mode === 'dark' ? '#63635E' : '#21201C'}`,
                                   },
                                   '& td': {
                                     p: 1.5,
@@ -1719,7 +1739,7 @@ export default function EnhancedAnalyzePageContainer() {
                                     borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
                                   },
                                   '& tr:hover td': {
-                                    bgcolor: alpha(theme.palette.primary.main, 0.02),
+                                    bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.02) : '#F9F9F8',
                                   },
                                 }}
                               >
@@ -1758,7 +1778,7 @@ export default function EnhancedAnalyzePageContainer() {
                   <Grid size={{ xs: 12, md: 6 }}>
                     <GlassCard>
                       <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 3 }}>
-                        <Avatar sx={{ bgcolor: alpha(theme.palette.info.main, 0.15), color: 'info.main' }}>
+                        <Avatar sx={{ bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF', color: 'text.secondary' }}>
                           <DataObjectIcon />
                         </Avatar>
                         <Typography variant="h6" fontWeight={700}>
@@ -1778,7 +1798,7 @@ export default function EnhancedAnalyzePageContainer() {
                               bgcolor: alpha(theme.palette.background.default, 0.5),
                               transition: 'all 0.2s ease',
                               '&:hover': {
-                                bgcolor: alpha(theme.palette.primary.main, 0.05),
+                                bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8',
                               },
                             }}
                           >
@@ -1788,22 +1808,8 @@ export default function EnhancedAnalyzePageContainer() {
                               sx={{
                                 minWidth: 80,
                                 fontWeight: 600,
-                                bgcolor:
-                                  entity.type === 'money'
-                                    ? alpha('#10b981', 0.15)
-                                    : entity.type === 'date'
-                                    ? alpha('#3b82f6', 0.15)
-                                    : entity.type === 'percentage'
-                                    ? alpha('#8b5cf6', 0.15)
-                                    : alpha(theme.palette.grey[500], 0.15),
-                                color:
-                                  entity.type === 'money'
-                                    ? '#10b981'
-                                    : entity.type === 'date'
-                                    ? '#3b82f6'
-                                    : entity.type === 'percentage'
-                                    ? '#8b5cf6'
-                                    : theme.palette.text.secondary,
+                                bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF',
+                                color: 'text.secondary',
                               }}
                             />
                             <Typography variant="body2" fontWeight={500}>
@@ -1826,7 +1832,7 @@ export default function EnhancedAnalyzePageContainer() {
                       {analysisResult.invoices?.length > 0 && (
                         <GlassCard>
                           <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 3 }}>
-                            <Avatar sx={{ bgcolor: alpha('#10b981', 0.15), color: '#10b981' }}>
+                            <Avatar sx={{ bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF', color: 'text.secondary' }}>
                               <ReceiptLongIcon />
                             </Avatar>
                             <Typography variant="h6" fontWeight={700}>
@@ -1840,8 +1846,8 @@ export default function EnhancedAnalyzePageContainer() {
                                 p: 2,
                                 mb: 2,
                                 borderRadius: 2,
-                                bgcolor: alpha('#10b981', 0.05),
-                                border: `1px solid ${alpha('#10b981', 0.2)}`,
+                                bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8',
+                                border: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
                               }}
                             >
                               <Typography variant="subtitle2" fontWeight={700}>
@@ -1850,7 +1856,7 @@ export default function EnhancedAnalyzePageContainer() {
                               <Typography variant="body2" color="text.secondary">
                                 Invoice #{invoice.invoice_number} • {invoice.invoice_date}
                               </Typography>
-                              <Typography variant="h5" fontWeight={800} color="#10b981" sx={{ mt: 1 }}>
+                              <Typography variant="h5" fontWeight={800} color="text.primary" sx={{ mt: 1 }}>
                                 {invoice.currency} {invoice.grand_total}
                               </Typography>
                             </Box>
@@ -1861,7 +1867,7 @@ export default function EnhancedAnalyzePageContainer() {
                       {analysisResult.contracts?.length > 0 && (
                         <GlassCard>
                           <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 3 }}>
-                            <Avatar sx={{ bgcolor: alpha('#8b5cf6', 0.15), color: '#8b5cf6' }}>
+                            <Avatar sx={{ bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF', color: 'text.secondary' }}>
                               <GavelIcon />
                             </Avatar>
                             <Typography variant="h6" fontWeight={700}>
@@ -1874,8 +1880,8 @@ export default function EnhancedAnalyzePageContainer() {
                               sx={{
                                 p: 2,
                                 borderRadius: 2,
-                                bgcolor: alpha('#8b5cf6', 0.05),
-                                border: `1px solid ${alpha('#8b5cf6', 0.2)}`,
+                                bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8',
+                                border: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
                               }}
                             >
                               <Typography variant="subtitle2" fontWeight={700}>
@@ -1902,7 +1908,7 @@ export default function EnhancedAnalyzePageContainer() {
                   <Grid size={{ xs: 12, md: 6 }}>
                     <GlassCard>
                       <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 3 }}>
-                        <Avatar sx={{ bgcolor: alpha('#3b82f6', 0.15), color: '#3b82f6' }}>
+                        <Avatar sx={{ bgcolor: (t) => t.palette.mode === 'dark' ? alpha(t.palette.text.primary, 0.1) : '#F1F0EF', color: 'text.secondary' }}>
                           <LightbulbIcon />
                         </Avatar>
                         <Typography variant="h6" fontWeight={700}>
@@ -1918,7 +1924,7 @@ export default function EnhancedAnalyzePageContainer() {
                   <Grid size={{ xs: 12, md: 6 }}>
                     <GlassCard>
                       <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 3 }}>
-                        <Avatar sx={{ bgcolor: alpha('#ef4444', 0.15), color: '#ef4444' }}>
+                        <Avatar sx={{ bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF', color: 'text.secondary' }}>
                           <SecurityIcon />
                         </Avatar>
                         <Typography variant="h6" fontWeight={700}>
@@ -1934,7 +1940,7 @@ export default function EnhancedAnalyzePageContainer() {
                   <Grid size={{ xs: 12, md: 6 }}>
                     <GlassCard>
                       <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 3 }}>
-                        <Avatar sx={{ bgcolor: alpha('#10b981', 0.15), color: '#10b981' }}>
+                        <Avatar sx={{ bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF', color: 'text.secondary' }}>
                           <RocketLaunchIcon />
                         </Avatar>
                         <Typography variant="h6" fontWeight={700}>
@@ -1950,7 +1956,7 @@ export default function EnhancedAnalyzePageContainer() {
                   <Grid size={{ xs: 12, md: 6 }}>
                     <GlassCard>
                       <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 3 }}>
-                        <Avatar sx={{ bgcolor: alpha('#f59e0b', 0.15), color: '#f59e0b' }}>
+                        <Avatar sx={{ bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF', color: 'text.secondary' }}>
                           <PlaylistAddCheckIcon />
                         </Avatar>
                         <Typography variant="h6" fontWeight={700}>

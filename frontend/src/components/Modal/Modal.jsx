@@ -78,7 +78,7 @@ const DialogPaper = styled(Box)(({ theme }) => ({
     left: 0,
     right: 0,
     height: 120,
-    background: `linear-gradient(180deg, ${alpha(theme.palette.primary.main, 0.03)} 0%, transparent 100%)`,
+    background: `linear-gradient(180deg, ${alpha(theme.palette.text.primary, 0.02)} 0%, transparent 100%)`,
     pointerEvents: 'none',
   },
 }))
@@ -112,8 +112,8 @@ const CloseButton = styled(IconButton)(({ theme }) => ({
   color: theme.palette.text.secondary,
   transition: 'all 0.2s ease',
   '&:hover': {
-    backgroundColor: alpha(theme.palette.error.main, 0.1),
-    color: theme.palette.error.main,
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF',
+    color: theme.palette.text.primary,
     transform: 'rotate(90deg)',
   },
 }))
@@ -159,11 +159,12 @@ const ConfirmButton = styled(Button)(({ theme }) => ({
   padding: theme.spacing(1, 2.5),
   transition: 'all 0.2s ease',
   '&.primary': {
-    background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
+    background: theme.palette.mode === 'dark' ? '#63635E' : '#21201C',
     color: '#fff',
-    boxShadow: `0 4px 14px ${alpha(theme.palette.primary.main, 0.3)}`,
+    boxShadow: `0 4px 14px ${alpha(theme.palette.common.black, 0.15)}`,
     '&:hover': {
-      boxShadow: `0 6px 20px ${alpha(theme.palette.primary.main, 0.4)}`,
+      background: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
+      boxShadow: `0 6px 20px ${alpha(theme.palette.common.black, 0.2)}`,
       transform: 'translateY(-1px)',
     },
     '&:active': {
@@ -171,11 +172,12 @@ const ConfirmButton = styled(Button)(({ theme }) => ({
     },
   },
   '&.error': {
-    background: `linear-gradient(135deg, ${theme.palette.error.main}, ${theme.palette.error.dark})`,
+    background: theme.palette.mode === 'dark' ? '#63635E' : '#21201C',
     color: '#fff',
-    boxShadow: `0 4px 14px ${alpha(theme.palette.error.main, 0.3)}`,
+    boxShadow: `0 4px 14px ${alpha(theme.palette.common.black, 0.15)}`,
     '&:hover': {
-      boxShadow: `0 6px 20px ${alpha(theme.palette.error.main, 0.4)}`,
+      background: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
+      boxShadow: `0 6px 20px ${alpha(theme.palette.common.black, 0.2)}`,
       transform: 'translateY(-1px)',
     },
   },

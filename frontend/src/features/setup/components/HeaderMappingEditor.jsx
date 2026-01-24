@@ -1471,7 +1471,7 @@ export default function HeaderMappingEditor({
                   <Typography
                     key={`${entry?.key || baseLabel}-${idx}`}
                     variant="caption"
-                    color={isActive ? "primary.main" : isError ? "error.main" : "text.secondary"}
+                    color="text.secondary"
                     sx={{ fontWeight: isActive ? 600 : 400 }}
                   >
                     {idx + 1}. {text}

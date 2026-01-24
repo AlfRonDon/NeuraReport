@@ -109,11 +109,11 @@ class ConnectionService:
 
         # Basic connectivity check using socket
         import socket
+        sock = None
         try:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.settimeout(5)
             result = sock.connect_ex((host, int(port)))
-            sock.close()
             if result != 0:
                 raise AppError(
                     code="connection_failed",
@@ -127,6 +127,9 @@ class ConnectionService:
                 detail=str(exc),
                 status_code=503,
             )
+        finally:
+            if sock:
+                sock.close()
 
     def test(self, payload: ConnectionTestRequest, correlation_id: str | None = None) -> dict:
         started = time.time()
@@ -245,15 +248,18 @@ class ConnectionService:
         """
         if db_type == "sqlite":
             import sqlite3
+            conn = None
             try:
                 conn = sqlite3.connect(db_path, timeout=5)
                 cursor = conn.cursor()
                 cursor.execute("SELECT 1")
                 cursor.fetchone()
-                conn.close()
                 return True, "Query executed successfully"
             except sqlite3.Error as e:
                 return False, f"SQLite error: {str(e)}"
+            finally:
+                if conn:
+                    conn.close()
         else:
             # For network databases, we already checked port connectivity
             # A proper implementation would use the appropriate driver

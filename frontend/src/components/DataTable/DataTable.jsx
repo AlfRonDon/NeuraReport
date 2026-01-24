@@ -118,7 +118,7 @@ const StyledTableHead = styled(TableHead)(({ theme }) => ({
     padding: theme.spacing(1.5, 2),
     transition: 'background-color 0.2s ease',
     '&:hover': {
-      backgroundColor: alpha(theme.palette.primary.main, 0.04),
+      backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : '#F9F9F8',
     },
   },
 }))
@@ -138,7 +138,7 @@ const StyledTableRow = styled(TableRow, {
     transition: 'all 0.2s ease',
   },
   '&:hover': {
-    backgroundColor: alpha(theme.palette.primary.main, 0.04),
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : '#F9F9F8',
     '& .MuiTableCell-body': {
       color: theme.palette.text.primary,
     },
@@ -148,9 +148,9 @@ const StyledTableRow = styled(TableRow, {
     },
   },
   '&.Mui-selected': {
-    backgroundColor: alpha(theme.palette.primary.main, 0.08),
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
     '&:hover': {
-      backgroundColor: alpha(theme.palette.primary.main, 0.12),
+      backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.12) : '#E9E8E6',
     },
   },
   '&:last-child .MuiTableCell-body': {
@@ -173,25 +173,25 @@ const StyledCheckbox = styled(Checkbox)(({ theme }) => ({
   padding: theme.spacing(0.5),
   transition: 'all 0.2s ease',
   '&:hover': {
-    backgroundColor: alpha(theme.palette.primary.main, 0.1),
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF',
   },
   '&.Mui-checked': {
-    color: theme.palette.primary.main,
+    color: theme.palette.text.primary,
   },
   '&.MuiCheckbox-indeterminate': {
-    color: theme.palette.primary.main,
+    color: theme.palette.text.primary,
   },
 }))
 
 const StyledTableSortLabel = styled(TableSortLabel)(({ theme }) => ({
   color: theme.palette.text.secondary,
   '&:hover': {
-    color: theme.palette.primary.main,
+    color: theme.palette.text.primary,
   },
   '&.Mui-active': {
-    color: theme.palette.primary.main,
+    color: theme.palette.text.primary,
     '& .MuiTableSortLabel-icon': {
-      color: theme.palette.primary.main,
+      color: theme.palette.text.primary,
     },
   },
   '& .MuiTableSortLabel-icon': {
@@ -236,8 +236,8 @@ const StyledPagination = styled(TablePagination)(({ theme }) => ({
     '& .MuiIconButton-root': {
       color: theme.palette.text.secondary,
       '&:hover': {
-        backgroundColor: alpha(theme.palette.primary.main, 0.08),
-        color: theme.palette.primary.main,
+        backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
+        color: theme.palette.text.primary,
       },
       '&.Mui-disabled': {
         color: alpha(theme.palette.text.primary, 0.2),
@@ -760,7 +760,7 @@ export default function DataTable({
                             sx={{
                               transition: 'all 0.2s ease',
                               transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
-                              color: isExpanded ? 'primary.main' : 'text.secondary',
+                              color: isExpanded ? 'text.primary' : 'text.secondary',
                             }}
                           >
                             <ExpandIcon fontSize="small" />

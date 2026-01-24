@@ -79,25 +79,25 @@ const ContentArea = styled(Box)(({ theme }) => ({
 
 const DropZone = styled(Paper)(({ theme, isDragging }) => ({
   padding: theme.spacing(6),
-  border: `2px dashed ${isDragging ? theme.palette.primary.main : alpha(theme.palette.divider, 0.3)}`,
-  backgroundColor: isDragging ? alpha(theme.palette.primary.main, 0.05) : 'transparent',
+  border: `2px dashed ${isDragging ? (theme.palette.mode === 'dark' ? '#82827C' : '#63635E') : alpha(theme.palette.divider, 0.3)}`,
+  backgroundColor: isDragging ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8') : 'transparent',
   borderRadius: 16,
   textAlign: 'center',
   cursor: 'pointer',
   transition: 'all 0.2s ease',
   '&:hover': {
-    borderColor: theme.palette.primary.main,
-    backgroundColor: alpha(theme.palette.primary.main, 0.02),
+    borderColor: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.02) : '#F9F9F8',
   },
 }))
 
 const MethodCard = styled(Card)(({ theme, selected }) => ({
   cursor: 'pointer',
   transition: 'all 0.2s ease',
-  border: selected ? `2px solid ${theme.palette.primary.main}` : `1px solid ${alpha(theme.palette.divider, 0.2)}`,
+  border: selected ? `2px solid ${theme.palette.mode === 'dark' ? '#82827C' : '#21201C'}` : `1px solid ${alpha(theme.palette.divider, 0.2)}`,
   '&:hover': {
     transform: 'translateY(-2px)',
-    boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.15)}`,
+    boxShadow: `0 4px 12px ${alpha(theme.palette.common.black, 0.1)}`,
   },
 }))
 
@@ -106,17 +106,17 @@ const UploadItem = styled(Paper)(({ theme, status }) => ({
   marginBottom: theme.spacing(1),
   borderLeft: `4px solid ${
     status === 'completed'
-      ? theme.palette.success.main
+      ? (theme.palette.mode === 'dark' ? '#82827C' : '#63635E')
       : status === 'error'
-      ? theme.palette.error.main
-      : theme.palette.info.main
+      ? (theme.palette.mode === 'dark' ? '#63635E' : '#21201C')
+      : (theme.palette.mode === 'dark' ? '#8D8D86' : '#82827C')
   }`,
 }))
 
 const WatcherCard = styled(Paper)(({ theme, isRunning }) => ({
   padding: theme.spacing(2),
   marginBottom: theme.spacing(1),
-  border: `1px solid ${isRunning ? theme.palette.success.main : alpha(theme.palette.divider, 0.2)}`,
+  border: `1px solid ${isRunning ? (theme.palette.mode === 'dark' ? '#82827C' : '#63635E') : alpha(theme.palette.divider, 0.2)}`,
 }))
 
 const ActionButton = styled(Button)(({ theme }) => ({
@@ -364,7 +364,7 @@ export default function IngestionPageContainer() {
                 hidden
                 onChange={handleFileSelect}
               />
-              <UploadIcon sx={{ fontSize: 48, color: 'primary.main', mb: 2 }} />
+              <UploadIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
               <Typography variant="h6" sx={{ mb: 1 }}>
                 Drag & drop files here
               </Typography>
@@ -468,7 +468,7 @@ export default function IngestionPageContainer() {
                 hidden
                 onChange={handleTranscribe}
               />
-              <MicIcon sx={{ fontSize: 48, color: 'success.main', mb: 2 }} />
+              <MicIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
               <Typography variant="h6" sx={{ mb: 1 }}>
                 Upload audio or video file
               </Typography>
@@ -505,7 +505,7 @@ export default function IngestionPageContainer() {
     <PageContainer>
       <Header>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <UploadIcon sx={{ color: 'primary.main', fontSize: 28 }} />
+          <UploadIcon sx={{ color: 'text.secondary', fontSize: 28 }} />
           <Box>
             <Typography variant="h6" sx={{ fontWeight: 600 }}>
               Document Ingestion
@@ -535,12 +535,12 @@ export default function IngestionPageContainer() {
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      bgcolor: alpha(theme.palette[method.color].main, 0.1),
+                      bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF',
                       mx: 'auto',
                       mb: 1,
                     }}
                   >
-                    <method.icon color={method.color} />
+                    <method.icon sx={{ color: 'text.secondary' }} />
                   </Box>
                   <Typography variant="body2" sx={{ fontWeight: 500 }}>
                     {method.name}
@@ -565,7 +565,7 @@ export default function IngestionPageContainer() {
             {uploads.slice(0, 10).map((upload) => (
               <UploadItem key={upload.id} status={upload.status || 'completed'}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                  <DocIcon color="primary" />
+                  <DocIcon sx={{ color: 'text.secondary' }} />
                   <Box sx={{ flex: 1 }}>
                     <Typography variant="body2" sx={{ fontWeight: 500 }}>
                       {upload.filename || upload.title || 'Untitled'}
@@ -574,8 +574,8 @@ export default function IngestionPageContainer() {
                       {upload.file_type?.toUpperCase()} - {new Date(upload.created_at).toLocaleString()}
                     </Typography>
                   </Box>
-                  {upload.status === 'completed' && <SuccessIcon color="success" />}
-                  {upload.status === 'error' && <ErrorIcon color="error" />}
+                  {upload.status === 'completed' && <SuccessIcon sx={{ color: 'text.secondary' }} />}
+                  {upload.status === 'error' && <ErrorIcon sx={{ color: 'text.secondary' }} />}
                   {upload.status === 'processing' && <CircularProgress size={20} />}
                 </Box>
                 {uploadProgress[upload.id] !== undefined && uploadProgress[upload.id] < 100 && (

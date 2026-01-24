@@ -111,14 +111,16 @@ export default function NetworkStatusBanner({ onRetry }) {
 
   // Get banner configuration based on status
   const getBannerConfig = () => {
+    const neutralColor = theme.palette.mode === 'dark' ? '#82827C' : '#63635E'
+    const neutralBgColor = theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF'
     switch (status) {
       case NetworkStatus.OFFLINE:
         return {
           icon: <OfflineIcon />,
           message: "You're offline",
           description: 'Check your internet connection. Changes will sync when you reconnect.',
-          color: theme.palette.warning.main,
-          bgColor: alpha(theme.palette.warning.main, 0.15),
+          color: neutralColor,
+          bgColor: neutralBgColor,
           showRetry: true,
         }
       case NetworkStatus.SERVER_DOWN:
@@ -126,8 +128,8 @@ export default function NetworkStatusBanner({ onRetry }) {
           icon: <ServerDownIcon />,
           message: 'Server temporarily unavailable',
           description: 'We\'re working on it. Your work is saved locally.',
-          color: theme.palette.error.main,
-          bgColor: alpha(theme.palette.error.main, 0.15),
+          color: neutralColor,
+          bgColor: neutralBgColor,
           showRetry: true,
         }
       case NetworkStatus.RECONNECTING:
@@ -135,8 +137,8 @@ export default function NetworkStatusBanner({ onRetry }) {
           icon: <RetryIcon sx={{ animation: `spin 1s linear infinite`, '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } } }} />,
           message: 'Reconnecting...',
           description: 'Attempting to restore connection',
-          color: theme.palette.info.main,
-          bgColor: alpha(theme.palette.info.main, 0.15),
+          color: neutralColor,
+          bgColor: neutralBgColor,
           showRetry: false,
         }
       case NetworkStatus.ONLINE:
@@ -146,8 +148,8 @@ export default function NetworkStatusBanner({ onRetry }) {
             icon: <OnlineIcon />,
             message: 'Back online',
             description: 'Connection restored',
-            color: theme.palette.success.main,
-            bgColor: alpha(theme.palette.success.main, 0.15),
+            color: neutralColor,
+            bgColor: neutralBgColor,
             showRetry: false,
           }
         }
@@ -265,7 +267,7 @@ export function NetworkIndicator({ showWhenOnline = false }) {
         display: 'flex',
         alignItems: 'center',
         gap: 0.5,
-        color: isOnline ? theme.palette.success.main : theme.palette.warning.main,
+        color: 'text.secondary',
         fontSize: '0.75rem',
       }}
     >

@@ -79,7 +79,7 @@ const RuleCard = styled(Paper)(({ theme }) => ({
   border: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
   transition: 'all 0.15s ease',
   '&:hover': {
-    borderColor: theme.palette.primary.main,
+    borderColor: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
   },
 }))
 
@@ -497,7 +497,7 @@ export default function DataValidationPanel({
     <PanelContainer>
       <PanelHeader>
         <Stack direction="row" alignItems="center" spacing={1}>
-          <ValidationIcon sx={{ color: 'primary.main', fontSize: 20 }} />
+          <ValidationIcon sx={{ color: 'text.secondary', fontSize: 20 }} />
           <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
             Data Validation
           </Typography>
@@ -541,7 +541,7 @@ export default function DataValidationPanel({
         {/* Validations List */}
         {validations.length === 0 ? (
           <Box sx={{ textAlign: 'center', py: 4 }}>
-            <ValidationIcon sx={{ fontSize: 48, color: 'text.disabled', mb: 1 }} />
+            <ValidationIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 1 }} />
             <Typography variant="body2" color="text.secondary">
               No validation rules yet
             </Typography>
@@ -557,14 +557,14 @@ export default function DataValidationPanel({
             return (
               <RuleCard key={validation.id} elevation={0}>
                 <Stack direction="row" alignItems="flex-start" spacing={1.5}>
-                  <TypeIcon sx={{ color: 'primary.main', fontSize: 20, mt: 0.25 }} />
+                  <TypeIcon sx={{ color: 'text.secondary', fontSize: 20, mt: 0.25 }} />
                   <Box sx={{ flex: 1 }}>
                     <Stack direction="row" alignItems="center" spacing={1} mb={0.5}>
                       <TypeChip
                         label={VALIDATION_TYPES.find((t) => t.value === validation.type)?.label}
                         size="small"
-                        color="primary"
                         variant="outlined"
+                        sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6', color: 'text.secondary' }}
                       />
                       <Chip
                         label={validation.range}
@@ -621,7 +621,7 @@ export default function DataValidationPanel({
                         size="small"
                         onClick={() => handleDeleteValidation(validation.id)}
                       >
-                        <DeleteIcon sx={{ fontSize: 16, color: 'error.main' }} />
+                        <DeleteIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
                       </IconButton>
                     </Tooltip>
                   </Stack>

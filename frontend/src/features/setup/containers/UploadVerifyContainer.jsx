@@ -96,10 +96,10 @@ function StepIndicator(props) {
         fontWeight: 600,
         fontSize: 14,
         border: '2px solid',
-        borderColor: completed ? 'success.main' : active ? 'primary.main' : 'divider',
-        bgcolor: completed ? 'success.main' : active ? 'primary.main' : 'background.paper',
+        borderColor: (theme) => completed ? (theme.palette.mode === 'dark' ? '#63635E' : '#21201C') : active ? (theme.palette.mode === 'dark' ? '#82827C' : '#63635E') : 'divider',
+        bgcolor: (theme) => completed ? (theme.palette.mode === 'dark' ? '#63635E' : '#21201C') : active ? (theme.palette.mode === 'dark' ? '#82827C' : '#63635E') : 'background.paper',
         color: completed || active ? 'common.white' : 'text.secondary',
-        boxShadow: active ? '0 6px 16px rgba(79,70,229,0.18)' : 'none',
+        boxShadow: (theme) => active ? `0 6px 16px ${alpha(theme.palette.common.black, 0.15)}` : 'none',
         transition: 'all 160ms ease',
       }}
     >
@@ -880,8 +880,8 @@ export default function UploadVerify() {
           <Chip
             label={connection?.status === 'connected' ? 'Connected' : 'Unknown'}
             size="small"
-            color={connection?.status === 'connected' ? 'success' : 'default'}
             variant={connection?.status === 'connected' ? 'filled' : 'outlined'}
+            sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6', color: 'text.secondary' }}
           />
         </Stack>
       </Stack>
@@ -905,8 +905,8 @@ export default function UploadVerify() {
             border: '1px dashed',
             borderColor: (theme) => {
               if (dropDisabled) return alpha(theme.palette.action.disabled, 0.4)
-              if (file) return alpha(theme.palette.success.main, 0.5)
-              return alpha(theme.palette.primary.main, 0.35)
+              if (file) return theme.palette.mode === 'dark' ? '#82827C' : '#63635E'
+              return alpha(theme.palette.divider, 0.5)
             },
             px: { xs: 2.5, sm: 3.5 },
             py: { xs: 3, sm: 3.5 },
@@ -915,22 +915,22 @@ export default function UploadVerify() {
             cursor: dropDisabled ? 'not-allowed' : 'pointer',
             bgcolor: (theme) => {
               if (dropDisabled) return alpha(theme.palette.action.disabledBackground, 0.4)
-              if (file) return alpha(theme.palette.success.main, 0.08)
-              return alpha(theme.palette.primary.main, 0.05)
+              if (file) return theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8'
+              return theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : '#F9F9F8'
             },
             color: 'text.secondary',
             transition: 'border-color 160ms ease, background-color 160ms ease, box-shadow 160ms ease',
             '&:hover': dropDisabled
               ? {}
               : {
-                  borderColor: 'primary.main',
-                  bgcolor: (theme) => alpha(theme.palette.primary.main, 0.08),
+                  borderColor: (theme) => theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
+                  bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
                 },
             '&:focus-visible': dropDisabled
               ? {}
               : {
-                  borderColor: 'primary.main',
-                  boxShadow: (theme) => `0 0 0 3px ${alpha(theme.palette.primary.main, 0.22)}`,
+                  borderColor: (theme) => theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
+                  boxShadow: (theme) => `0 0 0 3px ${alpha(theme.palette.text.primary, 0.1)}`,
                 },
           }}
         >
@@ -946,7 +946,7 @@ export default function UploadVerify() {
                 justifyContent: 'center',
                 bgcolor: 'common.white',
                 boxShadow: '0 8px 20px rgba(15, 23, 42, 0.12)',
-                color: 'primary.main',
+                color: 'text.secondary',
               }}
             >
               <CloudUploadOutlinedIcon fontSize="medium" />
@@ -991,7 +991,7 @@ export default function UploadVerify() {
             py: { xs: 1.75, sm: 2 },
             borderRadius: 2,
             border: '1px solid',
-            borderColor: (theme) => alpha(theme.palette.primary.main, 0.25),
+            borderColor: (theme) => alpha(theme.palette.divider, 0.3),
             bgcolor: 'common.white',
             boxShadow: '0 10px 24px rgba(15, 23, 42, 0.06)',
           }}
@@ -1008,10 +1008,10 @@ export default function UploadVerify() {
             <Chip
               label={format || 'Unknown'}
               size="small"
-              color={format === 'PDF' ? 'primary' : format === 'Excel' ? 'secondary' : 'default'}
               variant={format === 'PDF' || format === 'Excel' ? 'filled' : 'outlined'}
+              sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6', color: 'text.secondary' }}
             />
-            <Button variant="text" size="small" color="primary" onClick={clearFile}>
+            <Button variant="text" size="small" onClick={clearFile} sx={{ color: 'text.secondary' }}>
               Remove
             </Button>
           </Stack>
@@ -1031,9 +1031,9 @@ export default function UploadVerify() {
         </Button>
 
         <Button
-          variant="outlined" color="primary"
+          variant="outlined"
           startIcon={queueingVerify ? <CircularProgress size={18} /> : <ScheduleIcon />}
-          sx={{ px: 2.5 }}
+          sx={{ px: 2.5, color: 'text.secondary', borderColor: 'divider' }}
           onClick={queueVerify}
           disabled={!file || verifying || queueingVerify}
         >
@@ -1041,8 +1041,8 @@ export default function UploadVerify() {
         </Button>
 
         <Button
-          variant="outlined" color="secondary"
-          startIcon={<SchemaIcon />} sx={{ px: 2.5 }}
+          variant="outlined"
+          startIcon={<SchemaIcon />} sx={{ px: 2.5, color: 'text.secondary', borderColor: 'divider' }}
           onClick={startMapping}
           disabled={!canGenerate || verifying || queueingVerify}
           ref={mappingBtnRef}
@@ -1206,7 +1206,7 @@ export default function UploadVerify() {
                           description="We are re-rendering the A4 layout to match the reference PDF."
                           inline
                           dense
-                          color="secondary"
+                          sx={{ color: 'text.secondary' }}
                         />
                       </Box>
                     )}
@@ -1313,7 +1313,7 @@ export default function UploadVerify() {
                       key={`${entry?.key || baseLabel}-${idx}`}
                       component="li"
                       variant="caption"
-                      color={isActive ? 'primary.main' : isError ? 'error.main' : 'text.secondary'}
+                      color={isActive ? 'text.primary' : isError ? 'text.secondary' : 'text.secondary'}
                       sx={{ display: 'list-item' }}
                     >
                       {text}

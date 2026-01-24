@@ -382,7 +382,7 @@ Respond in JSON format:
 {{"action_items": ["item1", "item2"], "key_points": ["point1", "point2"]}}"""
 
             response = client.chat.completions.create(
-                model=settings.openai_model or "gpt-4",
+                model=settings.openai_model or "gpt-5",
                 messages=[{"role": "user", "content": prompt}],
                 max_tokens=500,
             )

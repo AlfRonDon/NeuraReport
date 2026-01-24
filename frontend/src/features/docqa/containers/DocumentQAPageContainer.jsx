@@ -149,7 +149,7 @@ const Sidebar = styled(Box)(({ theme }) => ({
     left: 0,
     right: 0,
     height: 200,
-    background: `linear-gradient(180deg, ${alpha(theme.palette.primary.main, 0.05)} 0%, transparent 100%)`,
+    background: `linear-gradient(180deg, ${alpha(theme.palette.text.primary, 0.03)} 0%, transparent 100%)`,
     pointerEvents: 'none',
   },
 }))
@@ -187,16 +187,16 @@ const SessionCard = styled(Box, {
   cursor: 'pointer',
   marginBottom: theme.spacing(1),
   backgroundColor: selected
-    ? alpha(theme.palette.primary.main, 0.12)
+    ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF')
     : alpha(theme.palette.background.paper, 0.4),
-  border: `1px solid ${selected ? alpha(theme.palette.primary.main, 0.3) : 'transparent'}`,
+  border: `1px solid ${selected ? alpha(theme.palette.divider, 0.3) : 'transparent'}`,
   transition: 'all 0.2s ease',
   position: 'relative',
   overflow: 'hidden',
   '&:hover': {
     backgroundColor: selected
-      ? alpha(theme.palette.primary.main, 0.15)
-      : alpha(theme.palette.primary.main, 0.05),
+      ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.12) : '#E9E8E6')
+      : (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8'),
     transform: 'translateX(4px)',
   },
   '&::before': selected
@@ -208,7 +208,7 @@ const SessionCard = styled(Box, {
         transform: 'translateY(-50%)',
         width: 3,
         height: '60%',
-        background: `linear-gradient(180deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+        background: theme.palette.mode === 'dark' ? '#82827C' : '#21201C',
         borderRadius: '0 4px 4px 0',
       }
     : {},
@@ -217,9 +217,9 @@ const SessionCard = styled(Box, {
 const DocumentChip = styled(Chip)(({ theme }) => ({
   height: 24,
   fontSize: 11,
-  backgroundColor: alpha(theme.palette.info.main, 0.1),
-  color: theme.palette.info.main,
-  border: `1px solid ${alpha(theme.palette.info.main, 0.2)}`,
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
+  color: theme.palette.text.secondary,
+  border: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
   '& .MuiChip-icon': {
     fontSize: 14,
   },
@@ -281,14 +281,14 @@ const BubbleContent = styled(Box, {
   padding: theme.spacing(2, 2.5),
   borderRadius: isUser ? '20px 20px 4px 20px' : '20px 20px 20px 4px',
   backgroundColor: isUser
-    ? theme.palette.primary.main
+    ? (theme.palette.mode === 'dark' ? '#63635E' : '#21201C')
     : alpha(theme.palette.background.paper, 0.8),
   color: isUser ? '#fff' : theme.palette.text.primary,
   backdropFilter: isUser ? 'none' : 'blur(10px)',
   border: isUser ? 'none' : `1px solid ${alpha(theme.palette.divider, 0.1)}`,
   position: 'relative',
   boxShadow: isUser
-    ? `0 4px 20px ${alpha(theme.palette.primary.main, 0.3)}`
+    ? `0 4px 20px ${alpha(theme.palette.common.black, 0.2)}`
     : `0 4px 20px ${alpha(theme.palette.common.black, 0.05)}`,
 }))
 
@@ -298,22 +298,22 @@ const AvatarStyled = styled(Avatar, {
   width: 36,
   height: 36,
   background: isUser
-    ? `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`
-    : `linear-gradient(135deg, ${alpha(theme.palette.secondary.main, 0.2)}, ${alpha(theme.palette.primary.main, 0.2)})`,
+    ? (theme.palette.mode === 'dark' ? '#63635E' : '#21201C')
+    : (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF'),
   border: `2px solid ${alpha(theme.palette.background.paper, 0.8)}`,
   boxShadow: `0 2px 10px ${alpha(theme.palette.common.black, 0.1)}`,
   '& svg': {
     fontSize: 18,
-    color: isUser ? '#fff' : theme.palette.primary.main,
+    color: isUser ? '#fff' : theme.palette.text.secondary,
   },
 }))
 
 const CitationBox = styled(Box)(({ theme }) => ({
   marginTop: theme.spacing(2),
   padding: theme.spacing(1.5),
-  backgroundColor: alpha(theme.palette.warning.main, 0.05),
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : '#F9F9F8',
   borderRadius: 12,
-  border: `1px solid ${alpha(theme.palette.warning.main, 0.1)}`,
+  border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
 }))
 
 const CitationItem = styled(Box)(({ theme }) => ({
@@ -327,20 +327,20 @@ const CitationItem = styled(Box)(({ theme }) => ({
   cursor: 'pointer',
   transition: 'all 0.2s ease',
   '&:hover': {
-    backgroundColor: alpha(theme.palette.primary.main, 0.05),
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8',
   },
 }))
 
 const FollowUpChip = styled(Chip)(({ theme }) => ({
   borderRadius: 20,
-  backgroundColor: alpha(theme.palette.primary.main, 0.08),
-  border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
-  color: theme.palette.primary.main,
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
+  border: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
+  color: theme.palette.text.primary,
   transition: 'all 0.2s ease',
   '&:hover': {
-    backgroundColor: alpha(theme.palette.primary.main, 0.15),
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.12) : '#E9E8E6',
     transform: 'translateY(-2px)',
-    boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.2)}`,
+    boxShadow: `0 4px 12px ${alpha(theme.palette.common.black, 0.1)}`,
   },
 }))
 
@@ -361,8 +361,8 @@ const InputContainer = styled(Box)(({ theme }) => ({
   boxShadow: `0 4px 20px ${alpha(theme.palette.common.black, 0.05)}`,
   transition: 'all 0.2s ease',
   '&:focus-within': {
-    borderColor: alpha(theme.palette.primary.main, 0.4),
-    boxShadow: `0 4px 30px ${alpha(theme.palette.primary.main, 0.1)}`,
+    borderColor: alpha(theme.palette.divider, 0.4),
+    boxShadow: `0 4px 30px ${alpha(theme.palette.common.black, 0.08)}`,
   },
 }))
 
@@ -385,12 +385,13 @@ const StyledTextField = styled(TextField)(({ theme }) => ({
 const SendButton = styled(IconButton)(({ theme }) => ({
   width: 44,
   height: 44,
-  background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
+  background: theme.palette.mode === 'dark' ? '#63635E' : '#21201C',
   color: '#fff',
   transition: 'all 0.2s ease',
   '&:hover': {
     transform: 'scale(1.05)',
-    boxShadow: `0 4px 20px ${alpha(theme.palette.primary.main, 0.4)}`,
+    background: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
+    boxShadow: `0 4px 20px ${alpha(theme.palette.common.black, 0.2)}`,
   },
   '&:disabled': {
     background: alpha(theme.palette.text.primary, 0.1),
@@ -407,7 +408,7 @@ const TypingIndicator = styled(Box)(({ theme }) => ({
     width: 8,
     height: 8,
     borderRadius: '50%',
-    backgroundColor: theme.palette.primary.main,
+    backgroundColor: theme.palette.text.secondary,
     animation: `${typing} 1.4s infinite ease-in-out`,
     '&:nth-of-type(1)': { animationDelay: '0s' },
     '&:nth-of-type(2)': { animationDelay: '0.2s' },
@@ -420,7 +421,7 @@ const ThinkingBox = styled(Box)(({ theme }) => ({
   alignItems: 'center',
   gap: theme.spacing(1.5),
   padding: theme.spacing(1.5, 2),
-  backgroundColor: alpha(theme.palette.secondary.main, 0.08),
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
   borderRadius: 16,
   marginBottom: theme.spacing(1),
   animation: `${pulse} 2s infinite ease-in-out`,
@@ -440,7 +441,7 @@ const EmptyIcon = styled(Box)(({ theme }) => ({
   width: 120,
   height: 120,
   borderRadius: '50%',
-  background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.1)}, ${alpha(theme.palette.secondary.main, 0.1)})`,
+  background: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
@@ -448,9 +449,7 @@ const EmptyIcon = styled(Box)(({ theme }) => ({
   animation: `${float} 3s infinite ease-in-out`,
   '& svg': {
     fontSize: 56,
-    background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
-    WebkitBackgroundClip: 'text',
-    WebkitTextFillColor: 'transparent',
+    color: theme.palette.text.secondary,
   },
 }))
 
@@ -462,8 +461,8 @@ const SuggestionCard = styled(Box)(({ theme }) => ({
   cursor: 'pointer',
   transition: 'all 0.2s ease',
   '&:hover': {
-    backgroundColor: alpha(theme.palette.primary.main, 0.05),
-    borderColor: alpha(theme.palette.primary.main, 0.2),
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8',
+    borderColor: alpha(theme.palette.divider, 0.2),
     transform: 'translateY(-2px)',
   },
 }))
@@ -473,23 +472,24 @@ const ActionButton = styled(IconButton)(({ theme }) => ({
   height: 28,
   color: alpha(theme.palette.text.secondary, 0.6),
   '&:hover': {
-    color: theme.palette.primary.main,
-    backgroundColor: alpha(theme.palette.primary.main, 0.1),
+    color: theme.palette.text.primary,
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
   },
 }))
 
 const NewSessionButton = styled(Button)(({ theme }) => ({
   borderRadius: 12,
   padding: theme.spacing(1.5, 2),
-  background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
+  background: theme.palette.mode === 'dark' ? '#63635E' : '#21201C',
   color: '#fff',
   fontWeight: 600,
   textTransform: 'none',
-  boxShadow: `0 4px 20px ${alpha(theme.palette.primary.main, 0.3)}`,
+  boxShadow: `0 4px 20px ${alpha(theme.palette.common.black, 0.15)}`,
   transition: 'all 0.2s ease',
   '&:hover': {
     transform: 'translateY(-2px)',
-    boxShadow: `0 6px 28px ${alpha(theme.palette.primary.main, 0.4)}`,
+    background: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
+    boxShadow: `0 6px 28px ${alpha(theme.palette.common.black, 0.2)}`,
   },
 }))
 
@@ -517,7 +517,7 @@ const LoadingSpinner = styled(Box)(({ theme }) => ({
   width: 48,
   height: 48,
   borderRadius: '50%',
-  background: `conic-gradient(from 0deg, transparent, ${theme.palette.primary.main})`,
+  background: `conic-gradient(from 0deg, transparent, ${theme.palette.text.secondary})`,
   animation: 'spin 1s linear infinite',
   '@keyframes spin': {
     to: { transform: 'rotate(360deg)' },
@@ -836,7 +836,7 @@ export default function DocumentQAPage() {
                 width: 40,
                 height: 40,
                 borderRadius: 2,
-                background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                background: theme.palette.mode === 'dark' ? '#63635E' : '#21201C',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -941,7 +941,7 @@ export default function DocumentQAPage() {
                       }}
                       sx={{
                         opacity: 0.5,
-                        '&:hover': { opacity: 1, color: 'error.main' },
+                        '&:hover': { opacity: 1, color: 'text.primary' },
                       }}
                     >
                       <DeleteIcon fontSize="small" />
@@ -966,8 +966,8 @@ export default function DocumentQAPage() {
                   onClick={() => setAddDocDialogOpen(true)}
                   aria-label="Add document"
                   sx={{
-                    bgcolor: alpha(theme.palette.primary.main, 0.1),
-                    '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.2) },
+                    bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
+                    '&:hover': { bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.12) : '#E9E8E6' },
                   }}
                 >
                   <AddIcon fontSize="small" />
@@ -985,10 +985,10 @@ export default function DocumentQAPage() {
                     p: 1,
                     borderRadius: 1.5,
                     bgcolor: alpha(theme.palette.background.paper, 0.5),
-                    '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.05) },
+                    '&:hover': { bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8' },
                   }}
                 >
-                  <DocIcon sx={{ fontSize: 18, color: 'info.main' }} />
+                  <DocIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
                   <Typography
                     variant="caption"
                     sx={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
@@ -998,7 +998,7 @@ export default function DocumentQAPage() {
                   <IconButton
                     size="small"
                     onClick={() => setRemoveDocConfirm({ open: true, docId: doc.id, docName: doc.name })}
-                    sx={{ opacity: 0.5, '&:hover': { opacity: 1, color: 'error.main' } }}
+                    sx={{ opacity: 0.5, '&:hover': { opacity: 1, color: 'text.primary' } }}
                   >
                     <CloseIcon sx={{ fontSize: 14 }} />
                   </IconButton>
@@ -1026,13 +1026,13 @@ export default function DocumentQAPage() {
                     width: 36,
                     height: 36,
                     borderRadius: 2,
-                    bgcolor: alpha(theme.palette.primary.main, 0.1),
+                    bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                   }}
                 >
-                  <QAIcon sx={{ color: 'primary.main', fontSize: 20 }} />
+                  <QAIcon sx={{ color: 'text.secondary', fontSize: 20 }} />
                 </Box>
                 <Box>
                   <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
@@ -1157,14 +1157,14 @@ export default function DocumentQAPage() {
                           {msg.citations?.length > 0 && (
                             <CitationBox>
                               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                                <QuoteIcon sx={{ fontSize: 16, color: 'warning.main' }} />
-                                <Typography variant="caption" sx={{ fontWeight: 600, color: 'warning.main' }}>
+                                <QuoteIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
+                                <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary' }}>
                                   Sources ({msg.citations.length})
                                 </Typography>
                               </Box>
                               {msg.citations.map((cit, cidx) => (
                                 <CitationItem key={cidx} onClick={() => handleCitationClick(cit)}>
-                                  <FileIcon sx={{ fontSize: 16, color: 'info.main', mt: 0.25 }} />
+                                  <FileIcon sx={{ fontSize: 16, color: 'text.secondary', mt: 0.25 }} />
                                   <Box>
                                     <Typography variant="caption" sx={{ fontWeight: 600, display: 'block' }}>
                                       {cit.document_name}
@@ -1216,10 +1216,10 @@ export default function DocumentQAPage() {
                                   onClick={() => handleFeedback(msg.id, 'helpful')}
                                   sx={{
                                     color: msg.feedback?.feedback_type === 'helpful'
-                                      ? 'success.main'
+                                      ? 'text.primary'
                                       : undefined,
                                     bgcolor: msg.feedback?.feedback_type === 'helpful'
-                                      ? alpha(theme.palette.success.main, 0.1)
+                                      ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF')
                                       : undefined,
                                   }}
                                 >
@@ -1232,10 +1232,10 @@ export default function DocumentQAPage() {
                                   onClick={() => handleFeedback(msg.id, 'not_helpful')}
                                   sx={{
                                     color: msg.feedback?.feedback_type === 'not_helpful'
-                                      ? 'error.main'
+                                      ? 'text.primary'
                                       : undefined,
                                     bgcolor: msg.feedback?.feedback_type === 'not_helpful'
-                                      ? alpha(theme.palette.error.main, 0.1)
+                                      ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF')
                                       : undefined,
                                   }}
                                 >
@@ -1267,7 +1267,7 @@ export default function DocumentQAPage() {
                         </AvatarStyled>
                         <Box>
                           <ThinkingBox>
-                            <ThinkIcon sx={{ fontSize: 18, color: 'secondary.main' }} />
+                            <ThinkIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
                             <Typography variant="caption" sx={{ fontWeight: 500 }}>
                               Analyzing documents...
                             </Typography>
@@ -1452,7 +1452,7 @@ export default function DocumentQAPage() {
               borderRadius: 2,
               textTransform: 'none',
               px: 3,
-              background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
+              background: theme.palette.mode === 'dark' ? '#63635E' : '#21201C',
             }}
           >
             Create Session
@@ -1480,20 +1480,20 @@ export default function DocumentQAPage() {
             sx={{
               mt: 2,
               p: 4,
-              border: `2px dashed ${alpha(theme.palette.primary.main, 0.3)}`,
+              border: `2px dashed ${alpha(theme.palette.divider, 0.4)}`,
               borderRadius: 3,
               textAlign: 'center',
               cursor: 'pointer',
               transition: 'all 0.2s ease',
-              bgcolor: alpha(theme.palette.primary.main, 0.02),
+              bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.02) : '#F9F9F8',
               '&:hover': {
-                borderColor: theme.palette.primary.main,
-                bgcolor: alpha(theme.palette.primary.main, 0.05),
+                borderColor: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
+                bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F1F0EF',
               },
             }}
             component="label"
           >
-            <UploadIcon sx={{ fontSize: 40, color: 'primary.main', mb: 1 }} />
+            <UploadIcon sx={{ fontSize: 40, color: 'text.secondary', mb: 1 }} />
             <Typography variant="body1" sx={{ fontWeight: 500, mb: 0.5 }}>
               Drop your file here or click to browse
             </Typography>
@@ -1550,7 +1550,7 @@ export default function DocumentQAPage() {
               borderRadius: 2,
               textTransform: 'none',
               px: 3,
-              background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
+              background: theme.palette.mode === 'dark' ? '#63635E' : '#21201C',
             }}
           >
             Add Document

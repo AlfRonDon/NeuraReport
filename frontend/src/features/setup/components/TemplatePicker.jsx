@@ -1,6 +1,7 @@
 import Grid from '@mui/material/Grid2'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
+  alpha,
   Box, Typography, Stack, Button, TextField, Chip, Divider, LinearProgress,
   Card, CardActionArea, CardActions, CardContent, Autocomplete, Tooltip, Dialog, DialogContent, DialogTitle,
   CircularProgress, Alert, IconButton, Collapse,
@@ -397,7 +398,7 @@ function TemplatePicker({ selected, onToggle, tagFilter, setTagFilter }) {
 
                   selectedState && {
 
-                    borderColor: 'primary.main',
+                    borderColor: 'text.secondary',
 
                     boxShadow: '0 0 0 1px rgba(79,70,229,0.28)',
 
@@ -517,7 +518,7 @@ function TemplatePicker({ selected, onToggle, tagFilter, setTagFilter }) {
 
                             size="small"
 
-                            color="info"
+                            sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6', color: 'text.secondary' }}
 
                             variant="outlined"
 
@@ -623,7 +624,7 @@ function TemplatePicker({ selected, onToggle, tagFilter, setTagFilter }) {
 
                           size="small"
 
-                          color="error"
+                          sx={{ color: 'text.secondary' }}
 
                           disabled={deleting === t.id}
 
@@ -744,7 +745,7 @@ function TemplatePicker({ selected, onToggle, tagFilter, setTagFilter }) {
       </Grid>
       <Collapse in={isFetching && !isLoading} unmountOnExit>
 
-        <LinearProgress color="secondary" sx={{ borderRadius: 1 }} aria-label="Refreshing templates" />
+        <LinearProgress sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF', '& .MuiLinearProgress-bar': { bgcolor: (theme) => theme.palette.mode === 'dark' ? '#82827C' : '#63635E' }, borderRadius: 1 }} aria-label="Refreshing templates" />
 
       </Collapse>
 

@@ -235,7 +235,7 @@ function AppContent() {
           top: -40,
           left: 16,
           zIndex: 9999,
-          bgcolor: 'primary.main',
+          bgcolor: (theme) => theme.palette.mode === 'dark' ? '#63635E' : '#21201C',
           color: 'primary.contrastText',
           px: 2,
           py: 1,

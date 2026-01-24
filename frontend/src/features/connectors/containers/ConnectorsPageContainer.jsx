@@ -75,7 +75,7 @@ const ConnectorCard = styled(Card)(({ theme }) => ({
   transition: 'all 0.2s ease',
   '&:hover': {
     transform: 'translateY(-4px)',
-    boxShadow: `0 8px 30px ${alpha(theme.palette.primary.main, 0.15)}`,
+    boxShadow: `0 8px 30px ${alpha(theme.palette.text.primary, 0.15)}`,
   },
 }))
 
@@ -93,12 +93,12 @@ const StatusChip = styled(Chip)(({ theme, status }) => ({
   borderRadius: 6,
   fontWeight: 500,
   ...(status === 'connected' && {
-    backgroundColor: alpha(theme.palette.success.main, 0.1),
-    color: theme.palette.success.main,
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6',
+    color: theme.palette.text.secondary,
   }),
   ...(status === 'error' && {
-    backgroundColor: alpha(theme.palette.error.main, 0.1),
-    color: theme.palette.error.main,
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
+    color: theme.palette.text.secondary,
   }),
 }))
 
@@ -353,8 +353,8 @@ export default function ConnectorsPage() {
           </Box>
           <Chip
             label={`${connections.length} connections`}
-            color="primary"
             variant="outlined"
+            sx={{ borderColor: theme.palette.mode === 'dark' ? '#82827C' : '#63635E', color: 'text.secondary' }}
           />
         </Box>
 
@@ -378,7 +378,7 @@ export default function ConnectorsPage() {
               return (
                 <Box key={catKey} sx={{ mb: 4 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                    <CategoryIcon color="primary" />
+                    <CategoryIcon color="inherit" sx={{ color: 'text.secondary' }} />
                     <Typography variant="h6" sx={{ fontWeight: 600 }}>
                       {category.label}
                     </Typography>
@@ -482,7 +482,7 @@ export default function ConnectorsPage() {
                         <Tooltip title="Delete">
                           <IconButton
                             size="small"
-                            color="error"
+                            sx={{ color: 'text.secondary' }}
                             onClick={() => handleDeleteConnection(conn.id)}
                           >
                             <DeleteIcon />

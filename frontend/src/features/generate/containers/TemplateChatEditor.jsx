@@ -33,8 +33,8 @@ const ROLE_CONFIG = {
   user: {
     icon: PersonOutlineIcon,
     label: 'You',
-    bgcolor: 'primary.main',
-    textColor: 'primary.contrastText',
+    bgcolor: '#21201C',
+    textColor: '#fff',
   },
   assistant: {
     icon: SmartToyOutlinedIcon,
@@ -65,7 +65,7 @@ function ChatMessage({ message }) {
           width: 32,
           height: 32,
           borderRadius: '50%',
-          bgcolor: isUser ? 'primary.main' : 'secondary.main',
+          bgcolor: isUser ? '#21201C' : '#8D8D86',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -109,11 +109,11 @@ function ChatMessage({ message }) {
             p: 2,
             borderRadius: 3,
             bgcolor: isUser
-              ? 'primary.main'
+              ? '#21201C'
               : 'background.paper',
-            color: isUser ? 'primary.contrastText' : 'text.primary',
+            color: isUser ? '#fff' : 'text.primary',
             boxShadow: isUser
-              ? '0 2px 8px rgba(79, 70, 229, 0.2)'
+              ? '0 2px 8px rgba(33, 32, 28, 0.2)'
               : '0 1px 3px rgba(0,0,0,0.08)',
           }}
         >
@@ -177,13 +177,13 @@ function ProposedChangesPanel({ changes, proposedHtml, onApply, onReject, applyi
         mb: 2,
         borderRadius: 2,
         border: '1px solid',
-        borderColor: 'success.main',
-        bgcolor: (theme) => alpha(theme.palette.success.main, 0.04),
+        borderColor: (theme) => alpha(theme.palette.divider, 0.3),
+        bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : '#F9F9F8',
       }}
     >
       <Stack spacing={2}>
         <Stack direction="row" alignItems="center" spacing={1}>
-          <CheckCircleIcon color="success" fontSize="small" />
+          <CheckCircleIcon sx={{ color: 'text.secondary' }} fontSize="small" />
           <Typography variant="subtitle2" fontWeight={600}>
             Ready to Apply Changes
           </Typography>
@@ -196,7 +196,7 @@ function ProposedChangesPanel({ changes, proposedHtml, onApply, onReject, applyi
           <Stack spacing={0.5}>
             {changes.map((change, idx) => (
               <Stack key={idx} direction="row" spacing={1} alignItems="flex-start">
-                <Typography variant="body2" color="success.dark">
+                <Typography variant="body2" color="text.secondary">
                   •
                 </Typography>
                 <Typography variant="body2">
@@ -247,7 +247,6 @@ function ProposedChangesPanel({ changes, proposedHtml, onApply, onReject, applyi
         <Stack direction="row" spacing={1.5}>
           <Button
             variant="contained"
-            color="success"
             onClick={onApply}
             disabled={applying}
             startIcon={applying ? <CircularProgress size={16} /> : <CheckCircleIcon />}
@@ -597,9 +596,9 @@ export default function TemplateChatEditor({
             borderColor: 'divider',
             transition: 'all 150ms ease',
             '&:focus-within': {
-              borderColor: 'primary.main',
+              borderColor: (theme) => theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
               boxShadow: (theme) =>
-                `0 0 0 2px ${alpha(theme.palette.primary.main, 0.1)}`,
+                `0 0 0 2px ${alpha(theme.palette.text.primary, 0.08)}`,
             },
           }}
         >
@@ -637,17 +636,16 @@ export default function TemplateChatEditor({
           <IconButton
             onClick={handleSendMessage}
             disabled={!inputValue.trim() || isProcessing}
-            color="primary"
             sx={{
-              bgcolor: inputValue.trim() && !isProcessing
-                ? 'primary.main'
+              bgcolor: (theme) => inputValue.trim() && !isProcessing
+                ? (theme.palette.mode === 'dark' ? '#63635E' : '#21201C')
                 : 'action.disabledBackground',
               color: inputValue.trim() && !isProcessing
-                ? 'primary.contrastText'
+                ? '#fff'
                 : 'text.disabled',
               '&:hover': {
-                bgcolor: inputValue.trim() && !isProcessing
-                  ? 'primary.dark'
+                bgcolor: (theme) => inputValue.trim() && !isProcessing
+                  ? (theme.palette.mode === 'dark' ? '#82827C' : '#63635E')
                   : 'action.disabledBackground',
               },
             }}

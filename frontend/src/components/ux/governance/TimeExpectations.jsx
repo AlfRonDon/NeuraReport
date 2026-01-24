@@ -325,13 +325,13 @@ export function TimeExpectationProvider({ children }) {
     const configs = {
       [EscalationLevel.WARNING]: {
         icon: WarningIcon,
-        color: theme.palette.warning.main,
+        color: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
         title: 'Operation Taking Longer Than Expected',
         message: 'This operation is taking longer than usual. You can wait, retry, or cancel.',
       },
       [EscalationLevel.TIMEOUT]: {
         icon: ErrorIcon,
-        color: theme.palette.error.main,
+        color: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
         title: 'Operation Timed Out',
         message: 'This operation has exceeded its time limit. Please retry or cancel.',
       },
@@ -380,7 +380,7 @@ export function TimeExpectationProvider({ children }) {
                 display: 'flex',
                 alignItems: 'center',
                 gap: 1.5,
-                bgcolor: alpha(escalationConfig.color, 0.1),
+                bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF',
               }}
             >
               <EscalationIcon sx={{ color: escalationConfig.color }} />
@@ -421,7 +421,6 @@ export function TimeExpectationProvider({ children }) {
                   onClick={() => retryOperation(escalationDialog.operationId)}
                   startIcon={<RetryIcon />}
                   variant="outlined"
-                  color="primary"
                 >
                   Retry
                 </Button>
@@ -430,7 +429,7 @@ export function TimeExpectationProvider({ children }) {
                 onClick={() => cancelOperation(escalationDialog.operationId)}
                 startIcon={<CancelIcon />}
                 variant="contained"
-                color="error"
+                sx={{ color: 'text.secondary' }}
               >
                 Cancel
               </Button>

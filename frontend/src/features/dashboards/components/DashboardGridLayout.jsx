@@ -19,8 +19,8 @@ const GridContainer = styled(Box)(({ theme }) => ({
   '& .react-grid-item': {
     transition: 'transform 200ms ease, all 200ms ease',
     '&.react-grid-placeholder': {
-      backgroundColor: alpha(theme.palette.primary.main, 0.1),
-      border: `2px dashed ${theme.palette.primary.main}`,
+      backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F1F0EF',
+      border: `2px dashed ${theme.palette.mode === 'dark' ? '#82827C' : '#63635E'}`,
       borderRadius: 12,
     },
   },
@@ -36,13 +36,13 @@ const GridContainer = styled(Box)(({ theme }) => ({
       bottom: 5,
       width: 10,
       height: 10,
-      borderRight: `2px solid ${alpha(theme.palette.primary.main, 0.3)}`,
-      borderBottom: `2px solid ${alpha(theme.palette.primary.main, 0.3)}`,
+      borderRight: `2px solid ${alpha(theme.palette.text.primary, 0.3)}`,
+      borderBottom: `2px solid ${alpha(theme.palette.text.primary, 0.3)}`,
       borderRadius: '0 0 4px 0',
     },
   },
   '& .react-grid-item:hover > .react-resizable-handle::after': {
-    borderColor: theme.palette.primary.main,
+    borderColor: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
   },
 }))
 

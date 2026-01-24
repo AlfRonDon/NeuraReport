@@ -50,9 +50,9 @@ const fadeInUp = keyframes`
 
 const getTypeConfig = (theme, type) => {
   const configs = {
-    template: { icon: DescriptionIcon, color: theme.palette.success.main, label: 'Template' },
-    connection: { icon: StorageIcon, color: theme.palette.info.main, label: 'Connection' },
-    job: { icon: WorkIcon, color: theme.palette.warning.main, label: 'Job' },
+    template: { icon: DescriptionIcon, color: theme.palette.text.secondary, label: 'Template' },
+    connection: { icon: StorageIcon, color: theme.palette.text.secondary, label: 'Connection' },
+    job: { icon: WorkIcon, color: theme.palette.text.secondary, label: 'Job' },
   }
   return configs[type] || configs.template
 }
@@ -117,8 +117,8 @@ function SearchResult({ result, onSelect, isSelected, theme }) {
         label={config.label}
         size="small"
         sx={{
-          bgcolor: alpha(config.color, 0.1),
-          color: config.color,
+          bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
+          color: 'text.secondary',
           fontSize: '0.625rem',
           height: 20,
           borderRadius: 1.5,
@@ -335,7 +335,7 @@ export default function GlobalSearch({
                 borderColor: alpha(theme.palette.divider, 0.3),
               },
               '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                borderColor: theme.palette.primary.main,
+                borderColor: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
               },
               '& input': {
                 fontSize: '0.8125rem',

@@ -217,8 +217,8 @@ function GenerateAndDownload({
                 <Tooltip title={targetNames.join(', ')}>
                   <IconButton
                     size="small"
-                    color="primary"
                     aria-label="View discovery targets"
+                    sx={{ color: 'text.secondary' }}
                   >
                     <ListAltIcon fontSize="inherit" />
                   </IconButton>
@@ -234,12 +234,11 @@ function GenerateAndDownload({
           >
             <Button
               variant="outlined"
-              color="secondary"
               startIcon={<SearchIcon />}
               onClick={onFind}
               disabled={!valid || findDisabled}
               aria-label="Discover matching reports"
-              sx={{ width: { xs: '100%', sm: 'auto' } }}
+              sx={{ width: { xs: '100%', sm: 'auto' }, color: 'text.secondary', borderColor: (theme) => alpha(theme.palette.text.secondary, 0.3) }}
             >
               Find Reports
             </Button>
@@ -247,13 +246,12 @@ function GenerateAndDownload({
               <span>
                 <Button
                   variant="contained"
-                  color="primary"
                   disableElevation
                   startIcon={<RocketLaunchIcon />}
                   onClick={onGenerate}
                   disabled={!canGenerate}
                   aria-label={generateTooltip || generateLabel}
-                  sx={{ width: { xs: '100%', sm: 'auto' } }}
+                  sx={{ width: { xs: '100%', sm: 'auto' }, bgcolor: (theme) => theme.palette.mode === 'dark' ? '#63635E' : '#21201C', color: '#fff', '&:hover': { bgcolor: (theme) => theme.palette.mode === 'dark' ? '#82827C' : '#63635E' } }}
                 >
                   {generateLabel}
                 </Button>
@@ -541,7 +539,6 @@ function GenerateAndDownload({
                   <Button
                     size="small"
                     variant="contained"
-                    color="primary"
                     disableElevation
                     startIcon={<DownloadIcon />}
                     disabled={!item.pdfUrl}
@@ -549,6 +546,7 @@ function GenerateAndDownload({
                     href={item.pdfUrl ? buildDownloadUrl(item.pdfUrl) : '#'}
                     target="_blank"
                     rel="noopener"
+                    sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? '#63635E' : '#21201C', color: '#fff', '&:hover': { bgcolor: (theme) => theme.palette.mode === 'dark' ? '#82827C' : '#63635E' } }}
                   >
                     Download
                   </Button>
@@ -556,13 +554,13 @@ function GenerateAndDownload({
                     <Button
                       size="small"
                       variant="contained"
-                      color="secondary"
                       disableElevation
                       startIcon={<DownloadIcon />}
                       component="a"
                       href={buildDownloadUrl(item.docxUrl)}
                       target="_blank"
                       rel="noopener"
+                      sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? '#82827C' : '#63635E', color: '#fff', '&:hover': { bgcolor: (theme) => theme.palette.mode === 'dark' ? '#8D8D86' : '#82827C' } }}
                     >
                       Download DOCX
                     </Button>
@@ -571,13 +569,13 @@ function GenerateAndDownload({
                     <Button
                       size="small"
                       variant="contained"
-                      color="info"
                       disableElevation
                       startIcon={<DownloadIcon />}
                       component="a"
                       href={buildDownloadUrl(item.xlsxUrl)}
                       target="_blank"
                       rel="noopener"
+                      sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? '#8D8D86' : '#82827C', color: '#fff', '&:hover': { bgcolor: (theme) => theme.palette.mode === 'dark' ? '#BCBBB5' : '#8D8D86' } }}
                     >
                       Download XLSX
                     </Button>
@@ -589,9 +587,9 @@ function GenerateAndDownload({
                     <Button
                       size="small"
                       variant="outlined"
-                      color="warning"
                       startIcon={<ReplayIcon />}
                       onClick={() => onRetryGeneration(item)}
+                      sx={{ color: 'text.secondary', borderColor: (theme) => alpha(theme.palette.text.secondary, 0.3) }}
                     >
                       Retry
                     </Button>
@@ -758,11 +756,10 @@ function GenerateAndDownload({
                       <Button
                         size="small"
                         variant="contained"
-                        color="success"
                         disableElevation
                         startIcon={<ReplayIcon />}
                         onClick={d.onRerun}
-                        sx={{ width: { xs: '100%', lg: 'auto' }, textTransform: 'none', px: 2.5 }}
+                        sx={{ width: { xs: '100%', lg: 'auto' }, textTransform: 'none', px: 2.5, bgcolor: (theme) => theme.palette.mode === 'dark' ? '#63635E' : '#21201C', color: '#fff', '&:hover': { bgcolor: (theme) => theme.palette.mode === 'dark' ? '#82827C' : '#63635E' } }}
                       >
                         Re-run
                       </Button>

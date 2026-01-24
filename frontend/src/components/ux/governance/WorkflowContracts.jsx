@@ -594,11 +594,11 @@ export function WorkflowProgress({ compact = false }) {
   const getStepIcon = (status) => {
     switch (status) {
       case StepStatus.COMPLETED:
-        return <CompleteIcon sx={{ color: theme.palette.success.main }} />
+        return <CompleteIcon sx={{ color: 'text.secondary' }} />
       case StepStatus.FAILED:
-        return <ErrorIcon sx={{ color: theme.palette.error.main }} />
+        return <ErrorIcon sx={{ color: 'text.secondary' }} />
       case StepStatus.IN_PROGRESS:
-        return <InProgressIcon sx={{ color: theme.palette.primary.main }} />
+        return <InProgressIcon sx={{ color: 'text.secondary' }} />
       default:
         return <PendingIcon sx={{ color: theme.palette.text.disabled }} />
     }

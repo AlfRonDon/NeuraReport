@@ -48,7 +48,6 @@ export default function DraftRecoveryBanner({
             <Button
               size="small"
               variant="contained"
-              color="info"
               startIcon={<RestoreIcon />}
               onClick={onRestore}
               disabled={restoring}
@@ -99,8 +98,8 @@ export function AutoSaveIndicator({ lastSaved, dirty }) {
         borderRadius: 1,
         bgcolor: (theme) =>
           dirty
-            ? alpha(theme.palette.warning.main, 0.08)
-            : alpha(theme.palette.success.main, 0.08),
+            ? alpha(theme.palette.text.primary, 0.05)
+            : alpha(theme.palette.text.primary, 0.05),
       }}
     >
       <Box
@@ -108,10 +107,10 @@ export function AutoSaveIndicator({ lastSaved, dirty }) {
           width: 6,
           height: 6,
           borderRadius: '50%',
-          bgcolor: dirty ? 'warning.main' : 'success.main',
+          bgcolor: 'text.secondary',
         }}
       />
-      <Typography variant="caption" color={dirty ? 'warning.main' : 'success.main'}>
+      <Typography variant="caption" color="text.secondary">
         {dirty
           ? 'Unsaved changes'
           : lastSaved

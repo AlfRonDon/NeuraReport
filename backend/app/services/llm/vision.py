@@ -6,7 +6,7 @@ Provides specialized document analysis using VLMs:
 - Qwen-VL (via Ollama or API)
 - DeepSeek-VL
 - LLaVA
-- GPT-4 Vision
+- GPT-5 Vision
 - Claude 3 Vision
 - Gemini Vision
 

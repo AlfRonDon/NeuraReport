@@ -250,39 +250,51 @@ def add_middlewares(app: FastAPI, settings: Settings) -> None:
 
     # CORS middleware - MUST be added LAST so it executes FIRST
     # This ensures OPTIONS preflight requests are handled before any other middleware
-    cors_origins = settings.cors_origins
-    if settings.debug_mode:
-        # In debug mode, allow more origins for development
-        cors_origins = ["*"]
+    cors_headers = [
+        "Content-Type",
+        "Authorization",
+        "X-API-Key",
+        "X-Correlation-ID",
+        "Idempotency-Key",
+        "Accept",
+        # UX Governance headers
+        IntentHeaders.INTENT_ID,
+        IntentHeaders.INTENT_TYPE,
+        IntentHeaders.INTENT_LABEL,
+        IntentHeaders.IDEMPOTENCY_KEY,
+        IntentHeaders.REVERSIBILITY,
+        IntentHeaders.USER_SESSION,
+        IntentHeaders.USER_ACTION,
+        IntentHeaders.WORKFLOW_ID,
+        IntentHeaders.WORKFLOW_STEP,
+    ]
+    cors_expose = [
+        "X-Correlation-ID",
+        "X-RateLimit-Remaining",
+        "X-RateLimit-Limit",
+        "Idempotency-Replay",
+        "X-Intent-Processed",
+    ]
+    cors_methods = ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"]
 
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=cors_origins,
-        allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-        allow_headers=[
-            "Content-Type",
-            "Authorization",
-            "X-API-Key",
-            "X-Correlation-ID",
-            "Idempotency-Key",
-            "Accept",
-            # UX Governance headers
-            IntentHeaders.INTENT_ID,
-            IntentHeaders.INTENT_TYPE,
-            IntentHeaders.INTENT_LABEL,
-            IntentHeaders.IDEMPOTENCY_KEY,
-            IntentHeaders.REVERSIBILITY,
-            IntentHeaders.USER_SESSION,
-            IntentHeaders.USER_ACTION,
-            IntentHeaders.WORKFLOW_ID,
-            IntentHeaders.WORKFLOW_STEP,
-        ],
-        allow_credentials=True,
-        expose_headers=[
-            "X-Correlation-ID",
-            "X-RateLimit-Remaining",
-            "X-RateLimit-Limit",
-            "Idempotency-Replay",
-            "X-Intent-Processed",
-        ],
-    )
+    if settings.debug_mode:
+        # In debug mode, use regex to allow any localhost/127.0.0.1 origin
+        # Note: allow_credentials=True is incompatible with allow_origins=["*"]
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origin_regex=r"https?://(localhost|127\.0\.0\.1)(:\d+)?",
+            allow_methods=cors_methods,
+            allow_headers=cors_headers,
+            allow_credentials=True,
+            expose_headers=cors_expose,
+        )
+    else:
+        # In production, use explicit origin list
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=settings.cors_origins,
+            allow_methods=cors_methods,
+            allow_headers=cors_headers,
+            allow_credentials=True,
+            expose_headers=cors_expose,
+        )

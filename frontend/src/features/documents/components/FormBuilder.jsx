@@ -97,17 +97,17 @@ const FieldCard = styled(Paper, {
   marginBottom: theme.spacing(1.5),
   border: `1px solid ${
     isSelected
-      ? theme.palette.primary.main
+      ? (theme.palette.mode === 'dark' ? '#82827C' : '#21201C')
       : alpha(theme.palette.divider, 0.2)
   }`,
   backgroundColor: isDragging
-    ? alpha(theme.palette.primary.main, 0.05)
+    ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8')
     : theme.palette.background.paper,
   cursor: 'grab',
   transition: 'all 0.15s ease',
   '&:hover': {
-    borderColor: theme.palette.primary.main,
-    boxShadow: `0 2px 8px ${alpha(theme.palette.primary.main, 0.15)}`,
+    borderColor: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
+    boxShadow: `0 2px 8px ${alpha(theme.palette.common.black, 0.1)}`,
   },
 }))
 
@@ -116,8 +116,8 @@ const PaletteItem = styled(ListItemButton)(({ theme }) => ({
   marginBottom: theme.spacing(0.5),
   border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
   '&:hover': {
-    borderColor: theme.palette.primary.main,
-    backgroundColor: alpha(theme.palette.primary.main, 0.05),
+    borderColor: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8',
   },
 }))
 
@@ -236,11 +236,11 @@ function FieldPreview({ field, isSelected, onClick, onDelete, onDuplicate }) {
         <DragIcon sx={{ color: 'text.disabled', mt: 0.5, cursor: 'grab' }} />
         <Box sx={{ flex: 1 }}>
           <Stack direction="row" alignItems="center" spacing={1} mb={1}>
-            <FieldIcon sx={{ fontSize: 18, color: 'primary.main' }} />
+            <FieldIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
             <Typography variant="body2" sx={{ fontWeight: 600 }}>
               {field.label || 'Untitled Field'}
               {field.required && (
-                <Typography component="span" color="error.main" sx={{ ml: 0.5 }}>
+                <Typography component="span" color="text.primary" sx={{ ml: 0.5 }}>
                   *
                 </Typography>
               )}
@@ -261,7 +261,7 @@ function FieldPreview({ field, isSelected, onClick, onDelete, onDuplicate }) {
           </Tooltip>
           <Tooltip title="Delete">
             <IconButton size="small" onClick={(e) => { e.stopPropagation(); onDelete?.() }}>
-              <DeleteIcon sx={{ fontSize: 16, color: 'error.main' }} />
+              <DeleteIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
             </IconButton>
           </Tooltip>
         </Stack>
@@ -316,8 +316,7 @@ function FieldPropertiesPanel({ field, onChange }) {
         <Chip
           label={FIELD_TYPES.find((f) => f.type === field.type)?.label || field.type}
           size="small"
-          color="primary"
-          sx={{ borderRadius: 1 }}
+          sx={{ borderRadius: 1, bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6', color: 'text.secondary' }}
         />
       </Box>
 
@@ -587,7 +586,7 @@ export default function FormBuilder({
                         disabled={readOnly}
                       >
                         <ListItemIcon sx={{ minWidth: 32 }}>
-                          <Icon sx={{ fontSize: 18, color: 'primary.main' }} />
+                          <Icon sx={{ fontSize: 18, color: 'text.secondary' }} />
                         </ListItemIcon>
                         <ListItemText
                           primary={fieldType.label}
@@ -635,7 +634,7 @@ export default function FormBuilder({
               </Tooltip>
               {!readOnly && (
                 <Tooltip title="Save">
-                  <IconButton onClick={onSave} color="primary">
+                  <IconButton onClick={onSave} sx={{ color: 'text.secondary' }}>
                     <SaveIcon />
                   </IconButton>
                 </Tooltip>

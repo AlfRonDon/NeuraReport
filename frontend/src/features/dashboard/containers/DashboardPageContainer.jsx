@@ -87,8 +87,8 @@ const pulse = keyframes`
 `
 
 const glow = keyframes`
-  0%, 100% { box-shadow: 0 0 20px rgba(99, 102, 241, 0.2); }
-  50% { box-shadow: 0 0 40px rgba(99, 102, 241, 0.4); }
+  0%, 100% { box-shadow: 0 0 20px rgba(33, 32, 28, 0.1); }
+  50% { box-shadow: 0 0 40px rgba(33, 32, 28, 0.2); }
 `
 
 const spin = keyframes`
@@ -122,8 +122,8 @@ const PageContainer = styled(Box)(({ theme }) => ({
     right: 0,
     bottom: 0,
     background: theme.palette.mode === 'dark'
-      ? `radial-gradient(ellipse at top left, ${alpha(theme.palette.primary.main, 0.08)} 0%, transparent 50%),
-         radial-gradient(ellipse at bottom right, ${alpha(theme.palette.secondary.main, 0.06)} 0%, transparent 50%)`
+      ? `radial-gradient(ellipse at top left, ${alpha(theme.palette.text.primary, 0.04)} 0%, transparent 50%),
+         radial-gradient(ellipse at bottom right, ${alpha(theme.palette.text.primary, 0.03)} 0%, transparent 50%)`
       : 'none',
     pointerEvents: 'none',
     zIndex: -1,
@@ -215,10 +215,10 @@ const OnboardingStep = styled(Box, {
   padding: theme.spacing(2),
   borderRadius: theme.shape.borderRadius * 1.5,
   backgroundColor: completed
-    ? alpha(theme.palette.success.main, 0.08)
+    ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF')
     : alpha(theme.palette.action.hover, 0.3),
   border: `1px solid ${completed
-    ? alpha(theme.palette.success.main, 0.2)
+    ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.15) : '#E2E1DE')
     : alpha(theme.palette.divider, 0.1)}`,
   cursor: disabled ? 'not-allowed' : 'pointer',
   opacity: disabled ? 0.5 : 1,
@@ -226,8 +226,8 @@ const OnboardingStep = styled(Box, {
 
   ...(!disabled && !completed && {
     '&:hover': {
-      backgroundColor: alpha(theme.palette.primary.main, 0.05),
-      borderColor: alpha(theme.palette.primary.main, 0.2),
+      backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8',
+      borderColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.15) : '#E2E1DE',
       transform: 'translateX(4px)',
     },
   }),
@@ -237,10 +237,10 @@ const JobListItem = styled(Box, {
   shouldForwardProp: (prop) => prop !== 'status',
 })(({ theme, status }) => {
   const statusColors = {
-    completed: theme.palette.success.main,
-    running: theme.palette.info.main,
-    pending: theme.palette.warning.main,
-    failed: theme.palette.error.main,
+    completed: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
+    running: theme.palette.mode === 'dark' ? '#8D8D86' : '#82827C',
+    pending: theme.palette.mode === 'dark' ? '#BCBBB5' : '#8D8D86',
+    failed: theme.palette.mode === 'dark' ? '#63635E' : '#21201C',
   }
 
   return {
@@ -257,7 +257,7 @@ const JobListItem = styled(Box, {
     },
 
     '&:hover': {
-      backgroundColor: alpha(theme.palette.primary.main, 0.02),
+      backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.02) : '#F9F9F8',
       paddingLeft: theme.spacing(1),
       paddingRight: theme.spacing(1),
       marginLeft: theme.spacing(-1),
@@ -275,7 +275,7 @@ const JobListItem = styled(Box, {
       height: 8,
       borderRadius: '50%',
       backgroundColor: statusColors[status] || theme.palette.grey[500],
-      boxShadow: `0 0 8px ${alpha(statusColors[status] || theme.palette.grey[500], 0.5)}`,
+      boxShadow: `0 0 8px ${alpha(statusColors[status] || theme.palette.grey[500], 0.3)}`,
     },
   }
 })
@@ -299,15 +299,19 @@ const RecommendationCard = styled(Box)(({ theme }) => ({
     left: 0,
     right: 0,
     bottom: 0,
-    background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.05)} 0%, transparent 50%)`,
+    background: theme.palette.mode === 'dark'
+      ? `linear-gradient(135deg, ${alpha(theme.palette.text.primary, 0.03)} 0%, transparent 50%)`
+      : `linear-gradient(135deg, rgba(0,0,0,0.02) 0%, transparent 50%)`,
     opacity: 0,
     transition: 'opacity 0.3s ease',
   },
 
   '&:hover': {
     transform: 'translateY(-4px) scale(1.02)',
-    boxShadow: `0 12px 24px ${alpha(theme.palette.primary.main, 0.12)}`,
-    borderColor: alpha(theme.palette.primary.main, 0.2),
+    boxShadow: theme.palette.mode === 'dark'
+      ? `0 12px 24px ${alpha(theme.palette.common.black, 0.3)}`
+      : '0 12px 24px rgba(0,0,0,0.08)',
+    borderColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.15) : '#E2E1DE',
 
     '&::before': {
       opacity: 1,
@@ -329,7 +333,7 @@ const ChartBar = styled(Box, {
   flex: 1,
   height: `${height}%`,
   minHeight: 4,
-  backgroundColor: color || theme.palette.primary.main,
+  backgroundColor: color || (theme.palette.mode === 'dark' ? '#82827C' : '#63635E'),
   borderRadius: 2,
   transition: 'height 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
   transitionDelay: `${delay}ms`,
@@ -377,15 +381,15 @@ function StatCard({ title, value, subtitle, icon: Icon, color = 'primary', onCli
           {trend !== undefined && (
             <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mt: 0.5 }}>
               {trend >= 0 ? (
-                <TrendingUpIcon sx={{ fontSize: 14, color: 'success.main' }} />
+                <TrendingUpIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
               ) : (
-                <TrendingDownIcon sx={{ fontSize: 14, color: 'error.main' }} />
+                <TrendingDownIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
               )}
               <Typography
                 sx={{
                   fontWeight: 600,
                   fontSize: '0.75rem',
-                  color: trend >= 0 ? 'success.main' : 'error.main',
+                  color: 'text.secondary',
                 }}
               >
                 {trend >= 0 ? '+' : ''}{trend}%
@@ -418,13 +422,13 @@ function getStatusIcon(status) {
   const iconProps = { sx: { fontSize: 18 } }
   switch (status) {
     case 'completed':
-      return <CheckCircleOutlineIcon {...iconProps} sx={{ ...iconProps.sx, color: 'success.main' }} />
+      return <CheckCircleOutlineIcon {...iconProps} sx={{ ...iconProps.sx, color: 'text.secondary' }} />
     case 'running':
-      return <PlayArrowIcon {...iconProps} sx={{ ...iconProps.sx, color: 'info.main' }} />
+      return <PlayArrowIcon {...iconProps} sx={{ ...iconProps.sx, color: 'text.secondary' }} />
     case 'pending':
-      return <HourglassEmptyIcon {...iconProps} sx={{ ...iconProps.sx, color: 'warning.main' }} />
+      return <HourglassEmptyIcon {...iconProps} sx={{ ...iconProps.sx, color: 'text.secondary' }} />
     case 'failed':
-      return <ErrorOutlineIcon {...iconProps} sx={{ ...iconProps.sx, color: 'error.main' }} />
+      return <ErrorOutlineIcon {...iconProps} sx={{ ...iconProps.sx, color: 'text.secondary' }} />
     default:
       return <HourglassEmptyIcon {...iconProps} sx={{ ...iconProps.sx, color: 'text.secondary' }} />
   }
@@ -706,7 +710,7 @@ export default function DashboardPage() {
           sx={{
             mb: 4,
             background: theme.palette.mode === 'dark'
-              ? `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.1)} 0%, ${alpha(theme.palette.background.paper, 0.6)} 100%)`
+              ? `linear-gradient(135deg, ${alpha(theme.palette.text.primary, 0.05)} 0%, ${alpha(theme.palette.background.paper, 0.6)} 100%)`
               : undefined,
             animation: `${glow} 3s ease-in-out infinite`,
           }}
@@ -717,7 +721,7 @@ export default function DashboardPage() {
                 width: { xs: '100%', md: 64 },
                 height: 64,
                 borderRadius: 3,
-                background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
+                background: theme.palette.mode === 'dark' ? '#63635E' : '#21201C',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -741,7 +745,7 @@ export default function DashboardPage() {
                   onClick={() => handleNavigate('/connections', 'Open connections')}
                 >
                   {savedConnections.length > 0 ? (
-                    <CheckCircleIcon sx={{ fontSize: 24, color: 'success.main' }} />
+                    <CheckCircleIcon sx={{ fontSize: 24, color: 'text.secondary' }} />
                   ) : (
                     <RadioButtonUncheckedIcon sx={{ fontSize: 24, color: 'text.secondary' }} />
                   )}
@@ -754,7 +758,7 @@ export default function DashboardPage() {
                     </Typography>
                   </Box>
                   {savedConnections.length > 0 && (
-                    <Chip label="Done" size="small" color="success" sx={{ fontWeight: 600 }} />
+                    <Chip label="Done" size="small" sx={{ fontWeight: 600, bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF', color: 'text.secondary' }} />
                   )}
                 </OnboardingStep>
 
@@ -763,7 +767,7 @@ export default function DashboardPage() {
                   onClick={() => handleNavigate('/templates', 'Open templates')}
                 >
                   {templates.length > 0 ? (
-                    <CheckCircleIcon sx={{ fontSize: 24, color: 'success.main' }} />
+                    <CheckCircleIcon sx={{ fontSize: 24, color: 'text.secondary' }} />
                   ) : (
                     <RadioButtonUncheckedIcon sx={{ fontSize: 24, color: 'text.secondary' }} />
                   )}
@@ -776,7 +780,7 @@ export default function DashboardPage() {
                     </Typography>
                   </Box>
                   {templates.length > 0 && (
-                    <Chip label="Done" size="small" color="success" sx={{ fontWeight: 600 }} />
+                    <Chip label="Done" size="small" sx={{ fontWeight: 600, bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF', color: 'text.secondary' }} />
                   )}
                 </OnboardingStep>
 
@@ -790,7 +794,7 @@ export default function DashboardPage() {
                   }}
                 >
                   {(metrics.jobsToday ?? 0) > 0 ? (
-                    <CheckCircleIcon sx={{ fontSize: 24, color: 'success.main' }} />
+                    <CheckCircleIcon sx={{ fontSize: 24, color: 'text.secondary' }} />
                   ) : (
                     <RadioButtonUncheckedIcon sx={{ fontSize: 24, color: 'text.secondary' }} />
                   )}
@@ -803,7 +807,7 @@ export default function DashboardPage() {
                     </Typography>
                   </Box>
                   {(metrics.jobsToday ?? 0) > 0 && (
-                    <Chip label="Done" size="small" color="success" sx={{ fontWeight: 600 }} />
+                    <Chip label="Done" size="small" sx={{ fontWeight: 600, bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF', color: 'text.secondary' }} />
                   )}
                 </OnboardingStep>
               </Stack>
@@ -848,7 +852,6 @@ export default function DashboardPage() {
           value={summary.totalConnections ?? savedConnections.length}
           subtitle={`${summary.activeConnections ?? 0} active`}
           icon={StorageIcon}
-          color="primary"
           onClick={() => handleNavigate('/connections', 'Open connections')}
           delay={0}
         />
@@ -857,7 +860,6 @@ export default function DashboardPage() {
           value={summary.totalTemplates ?? templates.length}
           subtitle={`${summary.pdfTemplates ?? 0} PDF, ${summary.excelTemplates ?? 0} Excel`}
           icon={DescriptionIcon}
-          color="secondary"
           onClick={() => handleNavigate('/templates', 'Open templates')}
           delay={50}
         />
@@ -866,7 +868,6 @@ export default function DashboardPage() {
           value={metrics.jobsToday ?? 0}
           subtitle={`${metrics.jobsThisWeek ?? 0} this week`}
           icon={WorkIcon}
-          color="warning"
           onClick={() => handleNavigate('/jobs', 'Open jobs')}
           delay={100}
         />
@@ -875,7 +876,6 @@ export default function DashboardPage() {
           value={`${metrics.successRate ?? 0}%`}
           subtitle={`${summary.completedJobs ?? 0} completed`}
           icon={SpeedIcon}
-          color="success"
           onClick={() => handleNavigate('/stats', 'Open usage stats')}
           trend={metrics.successRateTrend}
           delay={150}
@@ -885,7 +885,6 @@ export default function DashboardPage() {
           value={summary.totalSchedules ?? 0}
           subtitle={`${summary.activeSchedules ?? 0} active`}
           icon={ScheduleIcon}
-          color="info"
           onClick={() => handleNavigate('/schedules', 'Open schedules')}
           delay={200}
         />
@@ -943,8 +942,8 @@ export default function DashboardPage() {
                       <ChartBar
                         height={Math.max(10, (item.total / maxTrend) * 100)}
                         color={item.failed > 0
-                          ? alpha(theme.palette.error.main, 0.6)
-                          : theme.palette.primary.main}
+                          ? (theme.palette.mode === 'dark' ? '#63635E' : '#21201C')
+                          : (theme.palette.mode === 'dark' ? '#82827C' : '#63635E')}
                         delay={idx * 50}
                       />
                       <Typography variant="caption" sx={{ fontSize: '0.55rem', color: 'text.tertiary', mt: 0.5 }}>
@@ -1039,16 +1038,13 @@ export default function DashboardPage() {
                     <Chip
                       label={job.status}
                       size="small"
-                      color={
-                        job.status === 'completed' ? 'success' :
-                        job.status === 'running' ? 'info' :
-                        job.status === 'failed' ? 'error' : 'warning'
-                      }
                       sx={{
                         height: 24,
                         fontWeight: 600,
                         textTransform: 'capitalize',
                         fontSize: '0.7rem',
+                        bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF',
+                        color: 'text.secondary',
                       }}
                     />
                     <ArrowForwardIcon
@@ -1073,7 +1069,7 @@ export default function DashboardPage() {
           {/* Top Designs */}
           <GlassCard sx={{ animationDelay: '300ms' }}>
             <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
-              <InsightsIcon sx={{ fontSize: 18, color: 'primary.main' }} />
+              <InsightsIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
               <Typography variant="subtitle2" fontWeight={700}>
                 Top Designs
               </Typography>
@@ -1136,7 +1132,7 @@ export default function DashboardPage() {
           {/* Favorites */}
           <GlassCard sx={{ animationDelay: '350ms' }}>
             <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
-              <StarIcon sx={{ fontSize: 18, color: 'warning.main' }} />
+              <StarIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
               <Typography variant="subtitle2" fontWeight={700}>
                 Favorites
               </Typography>
@@ -1203,7 +1199,7 @@ export default function DashboardPage() {
         sx={{
           mt: 4,
           background: theme.palette.mode === 'dark'
-            ? `linear-gradient(135deg, ${alpha(theme.palette.secondary.main, 0.08)} 0%, ${alpha(theme.palette.background.paper, 0.6)} 100%)`
+            ? `linear-gradient(135deg, ${alpha(theme.palette.text.primary, 0.04)} 0%, ${alpha(theme.palette.background.paper, 0.6)} 100%)`
             : undefined,
           animationDelay: '400ms',
         }}
@@ -1215,7 +1211,7 @@ export default function DashboardPage() {
                 width: 44,
                 height: 44,
                 borderRadius: 2,
-                background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
+                background: theme.palette.mode === 'dark' ? '#63635E' : '#21201C',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -1302,16 +1298,13 @@ export default function DashboardPage() {
                       sx={{
                         width: 28,
                         height: 28,
-                        bgcolor: alpha(
-                          rec.kind === 'excel' ? theme.palette.success.main : theme.palette.error.main,
-                          0.15
-                        ),
+                        bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
                       }}
                     >
                       {rec.kind === 'excel' ? (
-                        <TableChartIcon sx={{ fontSize: 14, color: 'success.main' }} />
+                        <TableChartIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
                       ) : (
-                        <PictureAsPdfIcon sx={{ fontSize: 14, color: 'error.main' }} />
+                        <PictureAsPdfIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
                       )}
                     </Avatar>
                     {rec.matchScore && (
@@ -1377,10 +1370,11 @@ export default function DashboardPage() {
               <Chip
                 label="Active"
                 size="small"
-                color="success"
                 sx={{
                   fontWeight: 600,
                   animation: `${pulse} 2s ease-in-out infinite`,
+                  bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF',
+                  color: 'text.secondary',
                 }}
               />
             </Stack>

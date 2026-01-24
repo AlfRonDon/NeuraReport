@@ -110,7 +110,7 @@ const StyledFormControl = styled(FormControl)(({ theme }) => ({
     },
     '&.Mui-focused': {
       backgroundColor: theme.palette.background.paper,
-      boxShadow: `0 0 0 3px ${alpha(theme.palette.primary.main, 0.1)}`,
+      boxShadow: `0 0 0 3px ${alpha(theme.palette.text.primary, 0.08)}`,
     },
     '& .MuiOutlinedInput-notchedOutline': {
       borderColor: alpha(theme.palette.divider, 0.15),
@@ -128,8 +128,8 @@ const ExportButton = styled(Button)(({ theme }) => ({
   borderColor: alpha(theme.palette.divider, 0.2),
   transition: 'all 0.2s ease',
   '&:hover': {
-    borderColor: theme.palette.primary.main,
-    backgroundColor: alpha(theme.palette.primary.main, 0.08),
+    borderColor: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
   },
 }))
 
@@ -137,7 +137,7 @@ const RefreshButton = styled(IconButton)(({ theme }) => ({
   borderRadius: 12,
   transition: 'all 0.2s ease',
   '&:hover': {
-    backgroundColor: alpha(theme.palette.primary.main, 0.1),
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF',
     transform: 'rotate(180deg)',
   },
 }))
@@ -151,14 +151,14 @@ const StyledTabs = styled(Tabs)(({ theme }) => ({
     fontWeight: 500,
     transition: 'all 0.2s ease',
     '&.Mui-selected': {
-      color: theme.palette.primary.main,
+      color: theme.palette.text.primary,
     },
     '&:hover': {
       color: theme.palette.text.primary,
     },
   },
   '& .MuiTabs-indicator': {
-    backgroundColor: theme.palette.primary.main,
+    backgroundColor: theme.palette.mode === 'dark' ? '#82827C' : '#21201C',
     borderRadius: 2,
     height: 3,
   },
@@ -195,19 +195,19 @@ const PERIOD_OPTIONS = [
 ]
 
 const getChartColors = (theme) => [
-  theme.palette.success.main,
-  theme.palette.info.main,
-  theme.palette.warning.main,
-  theme.palette.error.main,
-  theme.palette.secondary.main,
+  theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
+  theme.palette.mode === 'dark' ? '#8D8D86' : '#82827C',
+  theme.palette.mode === 'dark' ? '#BCBBB5' : '#8D8D86',
+  theme.palette.mode === 'dark' ? '#63635E' : '#21201C',
+  theme.palette.mode === 'dark' ? '#CFCECA' : '#BCBBB5',
   theme.palette.text.secondary,
 ]
 
 const getStatusColors = (theme) => ({
-  completed: theme.palette.success.main,
-  failed: theme.palette.error.main,
-  pending: theme.palette.warning.main,
-  running: theme.palette.info.main,
+  completed: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
+  failed: theme.palette.mode === 'dark' ? '#63635E' : '#21201C',
+  pending: theme.palette.mode === 'dark' ? '#BCBBB5' : '#8D8D86',
+  running: theme.palette.mode === 'dark' ? '#8D8D86' : '#82827C',
   cancelled: theme.palette.text.secondary,
 })
 
@@ -219,8 +219,8 @@ function StatCard({ title, value, subtitle, icon: Icon, trend, color, onClick })
   const theme = useTheme()
   const trendPositive = trend > 0
   const TrendIcon = trendPositive ? TrendingUpIcon : TrendingDownIcon
-  const trendColor = trendPositive ? theme.palette.success.main : theme.palette.error.main
-  const accentColor = color || theme.palette.primary.main
+  const trendColor = theme.palette.text.secondary
+  const accentColor = color || (theme.palette.mode === 'dark' ? '#82827C' : '#63635E')
 
   return (
     <GlassCard
@@ -479,7 +479,9 @@ export default function UsageStatsPage() {
     return Object.entries(byKind).map(([name, value]) => ({
       name: name.toUpperCase(),
       value,
-      color: name === 'pdf' ? theme.palette.error.main : theme.palette.success.main,
+      color: name === 'pdf'
+        ? (theme.palette.mode === 'dark' ? '#63635E' : '#21201C')
+        : (theme.palette.mode === 'dark' ? '#82827C' : '#63635E'),
     }))
   }, [usageData, theme])
 
@@ -612,7 +614,7 @@ export default function UsageStatsPage() {
             value={summary.totalJobs || 0}
             subtitle={`${metrics.jobsThisWeek || 0} this week`}
             icon={WorkIcon}
-            color={theme.palette.info.main}
+            color={theme.palette.mode === 'dark' ? '#8D8D86' : '#82827C'}
             onClick={() => handleNavigate('/jobs', 'Open jobs')}
           />
         </Grid>
@@ -622,7 +624,7 @@ export default function UsageStatsPage() {
             value={`${(metrics.successRate || 0).toFixed(1)}%`}
             subtitle={`${summary.completedJobs || 0} completed`}
             icon={CheckCircleIcon}
-            color={theme.palette.success.main}
+            color={theme.palette.mode === 'dark' ? '#82827C' : '#63635E'}
             onClick={() => handleNavigate('/history', 'Open history')}
           />
         </Grid>
@@ -632,7 +634,7 @@ export default function UsageStatsPage() {
             value={summary.totalTemplates || 0}
             subtitle={`${summary.approvedTemplates || 0} approved`}
             icon={DescriptionIcon}
-            color={theme.palette.warning.main}
+            color={theme.palette.mode === 'dark' ? '#BCBBB5' : '#8D8D86'}
             onClick={() => handleNavigate('/templates', 'Open templates')}
           />
         </Grid>
@@ -642,7 +644,7 @@ export default function UsageStatsPage() {
             value={summary.totalConnections || 0}
             subtitle={`${summary.activeConnections || 0} active`}
             icon={StorageIcon}
-            color={theme.palette.secondary.main}
+            color={theme.palette.mode === 'dark' ? '#CFCECA' : '#BCBBB5'}
             onClick={() => handleNavigate('/connections', 'Open connections')}
           />
         </Grid>
@@ -681,8 +683,8 @@ export default function UsageStatsPage() {
                     axisLine={{ stroke: alpha(theme.palette.divider, 0.3) }}
                   />
                   <Tooltip content={<CustomTooltip />} />
-                  <Bar dataKey="completed" name="Completed" fill={theme.palette.success.main} radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="failed" name="Failed" fill={theme.palette.error.main} radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="completed" name="Completed" fill={theme.palette.mode === 'dark' ? '#82827C' : '#63635E'} radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="failed" name="Failed" fill={theme.palette.mode === 'dark' ? '#63635E' : '#21201C'} radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </ChartCard>
@@ -767,11 +769,8 @@ export default function UsageStatsPage() {
                             sx={{
                               height: 18,
                               fontSize: '0.5625rem',
-                              bgcolor: alpha(
-                                template.kind === 'excel' ? theme.palette.success.main : theme.palette.error.main,
-                                0.15
-                              ),
-                              color: template.kind === 'excel' ? theme.palette.success.main : theme.palette.error.main,
+                              bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
+                              color: 'text.secondary',
                               borderRadius: 1,
                             }}
                           />
@@ -815,12 +814,12 @@ export default function UsageStatsPage() {
                 <AreaChart data={historyByDay}>
                   <defs>
                     <linearGradient id="colorCompleted" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={theme.palette.success.main} stopOpacity={0.3} />
-                      <stop offset="95%" stopColor={theme.palette.success.main} stopOpacity={0} />
+                      <stop offset="5%" stopColor={theme.palette.mode === 'dark' ? '#82827C' : '#63635E'} stopOpacity={0.3} />
+                      <stop offset="95%" stopColor={theme.palette.mode === 'dark' ? '#82827C' : '#63635E'} stopOpacity={0} />
                     </linearGradient>
                     <linearGradient id="colorFailed" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={theme.palette.error.main} stopOpacity={0.3} />
-                      <stop offset="95%" stopColor={theme.palette.error.main} stopOpacity={0} />
+                      <stop offset="5%" stopColor={theme.palette.mode === 'dark' ? '#63635E' : '#21201C'} stopOpacity={0.3} />
+                      <stop offset="95%" stopColor={theme.palette.mode === 'dark' ? '#63635E' : '#21201C'} stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke={alpha(theme.palette.divider, 0.3)} />
@@ -839,7 +838,7 @@ export default function UsageStatsPage() {
                     type="monotone"
                     dataKey="completed"
                     name="Completed"
-                    stroke={theme.palette.success.main}
+                    stroke={theme.palette.mode === 'dark' ? '#82827C' : '#63635E'}
                     fill="url(#colorCompleted)"
                     strokeWidth={2}
                   />
@@ -847,7 +846,7 @@ export default function UsageStatsPage() {
                     type="monotone"
                     dataKey="failed"
                     name="Failed"
-                    stroke={theme.palette.error.main}
+                    stroke={theme.palette.mode === 'dark' ? '#63635E' : '#21201C'}
                     fill="url(#colorFailed)"
                     strokeWidth={2}
                   />
@@ -869,7 +868,7 @@ export default function UsageStatsPage() {
               title="Jobs Today"
               value={metrics.jobsToday || 0}
               icon={ScheduleIcon}
-              color={theme.palette.info.main}
+              color={theme.palette.mode === 'dark' ? '#8D8D86' : '#82827C'}
               onClick={() => handleNavigate('/jobs', 'Open jobs')}
             />
           </Grid>
@@ -878,7 +877,7 @@ export default function UsageStatsPage() {
               title="Jobs This Week"
               value={metrics.jobsThisWeek || 0}
               icon={WorkIcon}
-              color={theme.palette.success.main}
+              color={theme.palette.mode === 'dark' ? '#82827C' : '#63635E'}
               onClick={() => handleNavigate('/jobs', 'Open jobs')}
             />
           </Grid>
@@ -887,7 +886,7 @@ export default function UsageStatsPage() {
               title="Jobs This Month"
               value={metrics.jobsThisMonth || 0}
               icon={BarChartIcon}
-              color={theme.palette.warning.main}
+              color={theme.palette.mode === 'dark' ? '#BCBBB5' : '#8D8D86'}
               onClick={() => handleNavigate('/jobs', 'Open jobs')}
             />
           </Grid>
@@ -896,7 +895,7 @@ export default function UsageStatsPage() {
               title="Failed Jobs"
               value={summary.failedJobs || 0}
               icon={ErrorIcon}
-              color={theme.palette.error.main}
+              color={theme.palette.mode === 'dark' ? '#63635E' : '#21201C'}
               onClick={() =>
                 handleNavigate('/history?status=failed', 'Open failed history', { status: 'failed' })
               }
@@ -913,7 +912,7 @@ export default function UsageStatsPage() {
               title="Total Templates"
               value={summary.totalTemplates || 0}
               icon={DescriptionIcon}
-              color={theme.palette.info.main}
+              color={theme.palette.mode === 'dark' ? '#8D8D86' : '#82827C'}
               onClick={() => handleNavigate('/templates', 'Open templates')}
             />
           </Grid>
@@ -922,7 +921,7 @@ export default function UsageStatsPage() {
               title="PDF Templates"
               value={summary.pdfTemplates || 0}
               icon={DescriptionIcon}
-              color={theme.palette.error.main}
+              color={theme.palette.mode === 'dark' ? '#63635E' : '#21201C'}
               onClick={() =>
                 handleNavigate('/templates?kind=pdf', 'Open PDF templates', { kind: 'pdf' })
               }
@@ -933,7 +932,7 @@ export default function UsageStatsPage() {
               title="Excel Templates"
               value={summary.excelTemplates || 0}
               icon={DescriptionIcon}
-              color={theme.palette.success.main}
+              color={theme.palette.mode === 'dark' ? '#82827C' : '#63635E'}
               onClick={() =>
                 handleNavigate('/templates?kind=excel', 'Open Excel templates', { kind: 'excel' })
               }
@@ -944,7 +943,7 @@ export default function UsageStatsPage() {
               title="Active Schedules"
               value={summary.activeSchedules || 0}
               icon={ScheduleIcon}
-              color={theme.palette.warning.main}
+              color={theme.palette.mode === 'dark' ? '#BCBBB5' : '#8D8D86'}
               onClick={() => handleNavigate('/schedules', 'Open schedules')}
             />
           </Grid>
@@ -976,7 +975,7 @@ export default function UsageStatsPage() {
                       width={120}
                     />
                     <Tooltip content={<CustomTooltip />} />
-                    <Bar dataKey="count" name="Jobs" fill={theme.palette.success.main} radius={[0, 4, 4, 0]} />
+                    <Bar dataKey="count" name="Jobs" fill={theme.palette.mode === 'dark' ? '#82827C' : '#63635E'} radius={[0, 4, 4, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               )}

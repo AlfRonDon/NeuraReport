@@ -14,13 +14,15 @@
   --color-bg-surface: #FFFFFF;    /* Cards, panels - pure white */
   --color-bg-sidebar: #FFFFFF;    /* White sidebar - no cream */
   --color-bg-input: #F1F0EF;      /* Input field background - Grey/300 */
+  --color-bg-tertiary: #F3F4F6;   /* Tertiary background for code blocks */
   --color-border: #E2E1DE;        /* Standard border - Grey/500 */
   --color-border-subtle: #E9E8E6; /* Subtle border - Grey/400 */
 
-  /* Text colors from Figma */
-  --color-text-primary: #1F2937;   /* Dark grey headings */
-  --color-text-secondary: #6B7280; /* Muted body text */
-  --color-text-muted: #9CA3AF;     /* Very muted/disabled */
+  /* Text colors - EXACT from Figma Grey scale */
+  --color-text-primary: #21201C;   /* Grey/1200 - Primary text */
+  --color-text-secondary: #63635E; /* Grey/1100 - Secondary text */
+  --color-text-muted: #8D8D86;     /* Grey/900(main) - Muted text */
+  --color-text-disabled: #BCBBB5;  /* Grey/800 - Disabled text */
 
   /* Brand color - use sparingly */
   --color-brand: #08C18F;
@@ -51,10 +53,11 @@
   --radius-lg: 8px;
   --radius-xl: 12px;
 
-  /* Shadows - clean, subtle */
-  --shadow-card: 0 1px 3px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.05);
-  --shadow-elevated: 0 2px 8px rgba(0,0,0,0.08), 0 8px 24px rgba(0,0,0,0.06);
-  --shadow-modal: 0 4px 12px rgba(0,0,0,0.1), 0 12px 32px rgba(0,0,0,0.08);
+  /* Shadows - EXACT from Figma Drop shadow/XSmall: #1018280A, offset (0,1), radius 2 */
+  --shadow-xsmall: 0 1px 2px rgba(16, 24, 40, 0.04);
+  --shadow-card: 0 1px 2px rgba(16, 24, 40, 0.04);
+  --shadow-elevated: 0 1px 2px rgba(16, 24, 40, 0.04), 0 4px 8px rgba(16, 24, 40, 0.04);
+  --shadow-modal: 0 1px 2px rgba(16, 24, 40, 0.04), 0 8px 24px rgba(16, 24, 40, 0.12);
 
   font-family: var(--font-ui);
   line-height: 1.5;

@@ -75,11 +75,11 @@ const DateRangeButton = styled(Button)(({ theme }) => ({
   borderRadius: 8,
   textTransform: 'none',
   fontWeight: 500,
-  backgroundColor: alpha(theme.palette.primary.main, 0.08),
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8',
   borderColor: 'transparent',
   '&:hover': {
-    backgroundColor: alpha(theme.palette.primary.main, 0.12),
-    borderColor: theme.palette.primary.main,
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF',
+    borderColor: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
   },
 }))
 
@@ -102,7 +102,7 @@ const SavedFilterItem = styled(ListItemButton)(({ theme }) => ({
   borderRadius: 4,
   margin: theme.spacing(0.5, 1),
   '&:hover': {
-    backgroundColor: alpha(theme.palette.primary.main, 0.08),
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8',
   },
 }))
 
@@ -420,7 +420,7 @@ export default function FilterBar({
             size="small"
             onClick={() => setExpanded(!expanded)}
           >
-            <Badge badgeContent={activeFilterCount} color="primary">
+            <Badge badgeContent={activeFilterCount} sx={{ '& .MuiBadge-badge': { bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6', color: 'text.secondary' } }}>
               <FilterIcon />
             </Badge>
           </IconButton>
@@ -495,8 +495,8 @@ export default function FilterBar({
                 sx={{
                   borderRadius: 2,
                   textTransform: 'none',
-                  borderColor: hasSelection ? 'primary.main' : undefined,
-                  backgroundColor: hasSelection ? alpha(theme.palette.primary.main, 0.08) : undefined,
+                  borderColor: hasSelection ? (theme.palette.mode === 'dark' ? '#82827C' : '#63635E') : undefined,
+                  backgroundColor: hasSelection ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8') : undefined,
                 }}
               >
                 {filter.label}
@@ -504,8 +504,7 @@ export default function FilterBar({
                   <Chip
                     label={selectedValues.length}
                     size="small"
-                    color="primary"
-                    sx={{ ml: 0.5, height: 18, fontSize: '0.7rem' }}
+                    sx={{ ml: 0.5, height: 18, fontSize: '0.7rem', bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6', color: 'text.secondary' }}
                   />
                 )}
               </Button>

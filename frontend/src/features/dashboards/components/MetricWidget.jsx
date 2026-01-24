@@ -69,14 +69,14 @@ const TrendBadge = styled(Box, {
   shouldForwardProp: (prop) => prop !== 'trend',
 })(({ theme, trend }) => {
   const colors = {
-    up: theme.palette.success.main,
-    down: theme.palette.error.main,
+    up: theme.palette.text.secondary,
+    down: theme.palette.text.secondary,
     flat: theme.palette.text.secondary,
   }
   const bgColors = {
-    up: alpha(theme.palette.success.main, 0.1),
-    down: alpha(theme.palette.error.main, 0.1),
-    flat: alpha(theme.palette.text.secondary, 0.1),
+    up: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF',
+    down: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF',
+    flat: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8',
   }
 
   return {
@@ -170,6 +170,8 @@ const MetricWidget = forwardRef(function MetricWidget({
   const sparklineOptions = useMemo(() => {
     if (!sparklineData.length) return null
 
+    const primaryColor = theme.palette.mode === 'dark' ? '#82827C' : '#63635E'
+
     return {
       grid: { left: 0, right: 0, top: 5, bottom: 5 },
       xAxis: { type: 'category', show: false },
@@ -181,7 +183,7 @@ const MetricWidget = forwardRef(function MetricWidget({
           smooth: true,
           symbol: 'none',
           lineStyle: {
-            color: theme.palette[color]?.main || theme.palette.primary.main,
+            color: primaryColor,
             width: 2,
           },
           areaStyle: {
@@ -194,11 +196,11 @@ const MetricWidget = forwardRef(function MetricWidget({
               colorStops: [
                 {
                   offset: 0,
-                  color: alpha(theme.palette[color]?.main || theme.palette.primary.main, 0.3),
+                  color: alpha(primaryColor, 0.3),
                 },
                 {
                   offset: 1,
-                  color: alpha(theme.palette[color]?.main || theme.palette.primary.main, 0),
+                  color: alpha(primaryColor, 0),
                 },
               ],
             },
@@ -245,7 +247,7 @@ const MetricWidget = forwardRef(function MetricWidget({
           variant="h4"
           sx={{
             fontWeight: 700,
-            color: `${color}.main`,
+            color: 'text.secondary',
             lineHeight: 1,
           }}
         >

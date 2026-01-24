@@ -94,11 +94,11 @@ const ToolbarButton = styled(IconButton)(({ theme }) => ({
   borderRadius: 6,
   padding: 6,
   '&.active': {
-    backgroundColor: alpha(theme.palette.primary.main, 0.12),
-    color: theme.palette.primary.main,
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF',
+    color: theme.palette.text.secondary,
   },
   '&:hover': {
-    backgroundColor: alpha(theme.palette.primary.main, 0.08),
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8',
   },
 }))
 
@@ -128,14 +128,14 @@ const EditorWrapper = styled(Box)(({ theme }) => ({
       paddingLeft: '1.5em',
     },
     '& blockquote': {
-      borderLeft: `4px solid ${theme.palette.primary.main}`,
+      borderLeft: `4px solid ${theme.palette.mode === 'dark' ? '#82827C' : '#63635E'}`,
       paddingLeft: '1em',
       marginLeft: 0,
       color: theme.palette.text.secondary,
       fontStyle: 'italic',
     },
     '& code': {
-      backgroundColor: alpha(theme.palette.primary.main, 0.1),
+      backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF',
       borderRadius: 4,
       padding: '0.2em 0.4em',
       fontFamily: 'monospace',
@@ -156,7 +156,7 @@ const EditorWrapper = styled(Box)(({ theme }) => ({
       margin: '2em 0',
     },
     '& a': {
-      color: theme.palette.primary.main,
+      color: theme.palette.text.secondary,
       textDecoration: 'underline',
       cursor: 'pointer',
     },
@@ -165,7 +165,7 @@ const EditorWrapper = styled(Box)(({ theme }) => ({
       borderRadius: 8,
     },
     '& mark': {
-      backgroundColor: alpha(theme.palette.warning.main, 0.3),
+      backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF',
       borderRadius: 2,
       padding: '0.1em 0.2em',
     },
@@ -191,7 +191,7 @@ const EditorWrapper = styled(Box)(({ theme }) => ({
         minWidth: 80,
       },
       '& th': {
-        backgroundColor: alpha(theme.palette.primary.main, 0.08),
+        backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8',
         fontWeight: 600,
       },
     },

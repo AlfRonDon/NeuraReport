@@ -149,7 +149,7 @@ const StyledFormControl = styled(FormControl)(({ theme }) => ({
     },
     '&.Mui-focused': {
       backgroundColor: theme.palette.background.paper,
-      boxShadow: `0 0 0 3px ${alpha(theme.palette.primary.main, 0.1)}`,
+      boxShadow: `0 0 0 3px ${alpha(theme.palette.text.primary, 0.08)}`,
     },
   },
   '& .MuiInputLabel-root': {
@@ -167,7 +167,7 @@ const StyledTextField = styled(TextField)(({ theme }) => ({
     },
     '&.Mui-focused': {
       backgroundColor: theme.palette.background.paper,
-      boxShadow: `0 0 0 3px ${alpha(theme.palette.primary.main, 0.1)}`,
+      boxShadow: `0 0 0 3px ${alpha(theme.palette.text.primary, 0.08)}`,
     },
   },
 }))
@@ -181,9 +181,9 @@ const PresetChip = styled(Chip, {
   transition: 'all 0.2s ease',
   cursor: 'pointer',
   ...(selected && {
-    background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
+    background: theme.palette.mode === 'dark' ? '#63635E' : '#21201C',
     color: '#fff',
-    boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.3)}`,
+    boxShadow: `0 4px 12px ${alpha(theme.palette.common.black, 0.15)}`,
     '& .MuiChip-icon': {
       color: '#fff',
     },
@@ -191,7 +191,7 @@ const PresetChip = styled(Chip, {
   ...(!selected && {
     backgroundColor: alpha(theme.palette.action.hover, 0.5),
     '&:hover': {
-      backgroundColor: alpha(theme.palette.primary.main, 0.1),
+      backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF',
       transform: 'translateY(-1px)',
     },
   }),
@@ -232,10 +232,10 @@ const BatchListItem = styled(ListItem, {
   transition: 'all 0.15s ease',
   borderBottom: `1px solid ${alpha(theme.palette.divider, 0.05)}`,
   ...(selected && {
-    backgroundColor: alpha(theme.palette.primary.main, 0.08),
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
   }),
   '&:hover': {
-    backgroundColor: alpha(theme.palette.primary.main, 0.05),
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8',
   },
   '&:last-child': {
     borderBottom: 'none',
@@ -248,12 +248,13 @@ const PrimaryButton = styled(Button)(({ theme }) => ({
   fontWeight: 600,
   fontSize: '0.875rem',
   padding: theme.spacing(1.25, 3),
-  background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
+  background: theme.palette.mode === 'dark' ? '#63635E' : '#21201C',
   color: '#fff',
-  boxShadow: `0 4px 14px ${alpha(theme.palette.primary.main, 0.3)}`,
+  boxShadow: `0 4px 14px ${alpha(theme.palette.common.black, 0.15)}`,
   transition: 'all 0.2s ease',
   '&:hover': {
-    boxShadow: `0 6px 20px ${alpha(theme.palette.primary.main, 0.4)}`,
+    background: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
+    boxShadow: `0 6px 20px ${alpha(theme.palette.common.black, 0.2)}`,
     transform: 'translateY(-2px)',
   },
   '&:active': {
@@ -276,8 +277,8 @@ const SecondaryButton = styled(Button)(({ theme }) => ({
   color: theme.palette.text.primary,
   transition: 'all 0.2s ease',
   '&:hover': {
-    borderColor: theme.palette.primary.main,
-    backgroundColor: alpha(theme.palette.primary.main, 0.04),
+    borderColor: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : '#F9F9F8',
     transform: 'translateY(-1px)',
   },
 }))
@@ -291,8 +292,8 @@ const TextButton = styled(Button)(({ theme }) => ({
   color: theme.palette.text.secondary,
   transition: 'all 0.2s ease',
   '&:hover': {
-    backgroundColor: alpha(theme.palette.primary.main, 0.08),
-    color: theme.palette.primary.main,
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
+    color: theme.palette.text.primary,
   },
 }))
 
@@ -308,15 +309,15 @@ const RunHistoryCard = styled(Paper, {
   borderRadius: 12,
   cursor: 'pointer',
   transition: 'all 0.2s ease',
-  border: `1px solid ${selected ? theme.palette.primary.main : alpha(theme.palette.divider, 0.1)}`,
-  backgroundColor: selected ? alpha(theme.palette.primary.main, 0.05) : 'transparent',
+  border: `1px solid ${selected ? (theme.palette.mode === 'dark' ? '#82827C' : '#63635E') : alpha(theme.palette.divider, 0.1)}`,
+  backgroundColor: selected ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8') : 'transparent',
   '&:hover': {
-    borderColor: theme.palette.primary.light,
-    backgroundColor: alpha(theme.palette.primary.main, 0.03),
+    borderColor: alpha(theme.palette.divider, 0.3),
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.03) : '#F9F9F8',
     transform: 'translateX(4px)',
     '& .view-summary-hint': {
       opacity: 1,
-      color: theme.palette.primary.main,
+      color: theme.palette.text.primary,
     },
   },
 }))
@@ -324,17 +325,17 @@ const RunHistoryCard = styled(Paper, {
 const SummaryCard = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(2),
   borderRadius: 12,
-  backgroundColor: alpha(theme.palette.primary.main, 0.04),
-  border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : '#F9F9F8',
+  border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
 }))
 
 const StyledLinearProgress = styled(LinearProgress)(({ theme }) => ({
   borderRadius: 4,
   height: 6,
-  backgroundColor: alpha(theme.palette.primary.main, 0.1),
+  backgroundColor: alpha(theme.palette.text.primary, 0.1),
   '& .MuiLinearProgress-bar': {
     borderRadius: 4,
-    background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+    background: theme.palette.mode === 'dark' ? '#82827C' : '#21201C',
   },
 }))
 
@@ -387,8 +388,8 @@ const DownloadButton = styled(Button)(({ theme }) => ({
   borderColor: alpha(theme.palette.divider, 0.3),
   transition: 'all 0.2s ease',
   '&:hover': {
-    borderColor: theme.palette.primary.main,
-    backgroundColor: alpha(theme.palette.primary.main, 0.04),
+    borderColor: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : '#F9F9F8',
   },
 }))
 
@@ -1138,7 +1139,7 @@ export default function ReportsPage() {
                         </Typography>
                         {runSummary.key_points && (
                           <Box sx={{ mt: 1.5 }}>
-                            <Typography variant="caption" fontWeight={600} color="primary.main">
+                            <Typography variant="caption" fontWeight={600} color="text.primary">
                               Key Points:
                             </Typography>
                             <ul style={{ margin: '4px 0', paddingLeft: 20 }}>

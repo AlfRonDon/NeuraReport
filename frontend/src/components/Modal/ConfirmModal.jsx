@@ -104,31 +104,33 @@ const MessageText = styled(Typography)(({ theme }) => ({
 // =============================================================================
 
 const getSeverityConfig = (theme, severity) => {
+  const neutralColor = theme.palette.text.secondary
+  const neutralBg = theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF'
   const configs = {
     warning: {
       icon: WarningIcon,
-      color: theme.palette.warning.main,
-      bgColor: alpha(theme.palette.warning.main, 0.12),
+      color: neutralColor,
+      bgColor: neutralBg,
     },
     error: {
       icon: ErrorIcon,
-      color: theme.palette.error.main,
-      bgColor: alpha(theme.palette.error.main, 0.12),
+      color: neutralColor,
+      bgColor: neutralBg,
     },
     info: {
       icon: InfoIcon,
-      color: theme.palette.info.main,
-      bgColor: alpha(theme.palette.info.main, 0.12),
+      color: neutralColor,
+      bgColor: neutralBg,
     },
     success: {
       icon: SuccessIcon,
-      color: theme.palette.success.main,
-      bgColor: alpha(theme.palette.success.main, 0.12),
+      color: neutralColor,
+      bgColor: neutralBg,
     },
     question: {
       icon: QuestionIcon,
-      color: theme.palette.primary.main,
-      bgColor: alpha(theme.palette.primary.main, 0.12),
+      color: neutralColor,
+      bgColor: neutralBg,
     },
   }
   return configs[severity] || configs.warning

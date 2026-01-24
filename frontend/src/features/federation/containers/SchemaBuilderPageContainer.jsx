@@ -30,6 +30,7 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  alpha,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -357,7 +358,7 @@ export default function SchemaBuilderPage() {
                         <Card variant="outlined">
                           <CardContent sx={{ py: 1.5 }}>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                              <LinkIcon color="primary" />
+                              <LinkIcon sx={{ color: 'text.secondary' }} />
                               <Typography variant="subtitle2">
                                 {suggestion.left_table} ↔ {suggestion.right_table}
                               </Typography>
@@ -373,8 +374,7 @@ export default function SchemaBuilderPage() {
                             <Chip
                               size="small"
                               label={`${Math.round((suggestion.confidence || 0) * 100)}% confidence`}
-                              color={(suggestion.confidence || 0) > 0.8 ? 'success' : 'warning'}
-                              sx={{ mt: 1 }}
+                              sx={{ mt: 1, bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6', color: 'text.secondary' }}
                             />
                           </CardContent>
                         </Card>
@@ -409,9 +409,8 @@ export default function SchemaBuilderPage() {
                 {writeOperation && (
                   <Chip
                     size="small"
-                    color="warning"
                     label={`${writeOperation.toUpperCase()} detected`}
-                    sx={{ fontSize: '0.7rem' }}
+                    sx={{ fontSize: '0.7rem', bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6', color: 'text.secondary' }}
                   />
                 )}
               </Box>
@@ -484,7 +483,7 @@ export default function SchemaBuilderPage() {
                 variant="outlined"
                 sx={{
                   cursor: 'pointer',
-                  borderColor: selectedConnections.includes(conn.id) ? 'primary.main' : 'divider',
+                  borderColor: selectedConnections.includes(conn.id) ? 'text.secondary' : 'divider',
                   bgcolor: selectedConnections.includes(conn.id) ? 'action.selected' : 'background.paper',
                 }}
                 onClick={() => toggleConnection(conn.id)}
@@ -496,7 +495,7 @@ export default function SchemaBuilderPage() {
                       <Typography>{conn.name}</Typography>
                     </Box>
                     {selectedConnections.includes(conn.id) && (
-                      <Chip label="Selected" color="primary" size="small" />
+                      <Chip label="Selected" size="small" sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6', color: 'text.secondary' }} />
                     )}
                   </Box>
                 </CardContent>

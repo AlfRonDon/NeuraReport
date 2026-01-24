@@ -115,11 +115,16 @@ class DocumentService:
     def get(self, document_id: str) -> Optional[Document]:
         """Get a document by ID."""
         doc_path = self._get_document_path(document_id)
-        if not doc_path or not doc_path.exists():
+        if not doc_path:
             return None
         with self._lock:
-            with open(doc_path) as f:
-                data = json.load(f)
+            if not doc_path.exists():
+                return None
+            try:
+                with open(doc_path, encoding="utf-8") as f:
+                    data = json.load(f)
+            except FileNotFoundError:
+                return None
         return Document(**data)
 
     def update(
@@ -160,7 +165,7 @@ class DocumentService:
         doc_path = self._get_document_path(document_id)
         if not doc_path or not doc_path.exists():
             return None
-        with open(doc_path) as f:
+        with open(doc_path, encoding="utf-8") as f:
             data = json.load(f)
         return Document(**data)
 
@@ -196,9 +201,13 @@ class DocumentService:
     ) -> list[Document]:
         """List documents with optional filters."""
         documents = []
-        for doc_file in self._uploads_root.glob("**/document.json"):
+        # Collect file paths first under lock to avoid concurrent modification issues
+        with self._lock:
+            doc_files = list(self._uploads_root.glob("**/document.json"))
+
+        for doc_file in doc_files:
             try:
-                with open(doc_file) as f:
+                with open(doc_file, encoding="utf-8") as f:
                     data = json.load(f)
                 doc = Document(**data)
 
@@ -211,6 +220,9 @@ class DocumentService:
                     continue
 
                 documents.append(doc)
+            except FileNotFoundError:
+                # File was deleted between glob and read - skip it
+                continue
             except Exception as e:
                 logger.warning(f"Error loading document from {doc_file}: {e}")
 
@@ -230,7 +242,7 @@ class DocumentService:
         versions = []
         for version_file in versions_dir.glob("*.json"):
             try:
-                with open(version_file) as f:
+                with open(version_file, encoding="utf-8") as f:
                     data = json.load(f)
                 versions.append(DocumentVersion(**data))
             except Exception as e:
@@ -281,7 +293,7 @@ class DocumentService:
         comments = []
         for comment_file in comments_dir.glob("*.json"):
             try:
-                with open(comment_file) as f:
+                with open(comment_file, encoding="utf-8") as f:
                     data = json.load(f)
                 comments.append(DocumentComment(**data))
             except Exception as e:
@@ -324,8 +336,8 @@ class DocumentService:
         doc_dir = self._uploads_root / doc.id
         doc_dir.mkdir(parents=True, exist_ok=True)
         doc_path = doc_dir / "document.json"
-        with open(doc_path, "w") as f:
-            json.dump(doc.model_dump(), f, indent=2)
+        with open(doc_path, "w", encoding="utf-8") as f:
+            json.dump(doc.model_dump(), f, indent=2, ensure_ascii=False)
 
     def _create_version(self, doc: Document) -> DocumentVersion:
         """Create a version snapshot of a document."""
@@ -340,8 +352,8 @@ class DocumentService:
         versions_dir = self._uploads_root / doc.id / "versions"
         versions_dir.mkdir(parents=True, exist_ok=True)
         version_path = versions_dir / f"v{doc.version}.json"
-        with open(version_path, "w") as f:
-            json.dump(version.model_dump(), f, indent=2)
+        with open(version_path, "w", encoding="utf-8") as f:
+            json.dump(version.model_dump(), f, indent=2, ensure_ascii=False)
 
         return version
 
@@ -350,5 +362,5 @@ class DocumentService:
         comments_dir = self._uploads_root / comment.document_id / "comments"
         comments_dir.mkdir(parents=True, exist_ok=True)
         comment_path = comments_dir / f"{comment.id}.json"
-        with open(comment_path, "w") as f:
-            json.dump(comment.model_dump(), f, indent=2)
+        with open(comment_path, "w", encoding="utf-8") as f:
+            json.dump(comment.model_dump(), f, indent=2, ensure_ascii=False)

@@ -1,3 +1,5 @@
+import { API_BASE } from './client'
+
 const buildIntentHeaders = (intent, idempotencyKey) => ({
   'Content-Type': 'application/json',
   'Idempotency-Key': idempotencyKey,
@@ -19,7 +21,7 @@ const generateIdempotencyKey = () => {
 
 export async function recordIntent(intent) {
   const idempotencyKey = generateIdempotencyKey()
-  const response = await fetch('/api/audit/intent', {
+  const response = await fetch(`${API_BASE}/api/audit/intent`, {
     method: 'POST',
     headers: buildIntentHeaders(intent, idempotencyKey),
     body: JSON.stringify(intent),
@@ -32,7 +34,7 @@ export async function recordIntent(intent) {
 
 export async function updateIntent(intent, status, result) {
   const idempotencyKey = generateIdempotencyKey()
-  const response = await fetch(`/api/audit/intent/${intent.id}`, {
+  const response = await fetch(`${API_BASE}/api/audit/intent/${intent.id}`, {
     method: 'PATCH',
     headers: buildIntentHeaders(intent, idempotencyKey),
     body: JSON.stringify({ status, result }),

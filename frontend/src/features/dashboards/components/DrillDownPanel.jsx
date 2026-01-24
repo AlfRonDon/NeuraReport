@@ -78,7 +78,7 @@ const PanelContent = styled(Box)(({ theme }) => ({
 
 const BreadcrumbContainer = styled(Box)(({ theme }) => ({
   padding: theme.spacing(1, 2),
-  backgroundColor: alpha(theme.palette.primary.main, 0.04),
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : '#F9F9F8',
   borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
 }))
 
@@ -88,8 +88,8 @@ const DataCard = styled(Paper)(({ theme }) => ({
   border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
   transition: 'all 0.15s ease',
   '&:hover': {
-    borderColor: theme.palette.primary.main,
-    boxShadow: `0 2px 8px ${alpha(theme.palette.primary.main, 0.1)}`,
+    borderColor: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
+    boxShadow: `0 2px 8px ${alpha(theme.palette.common.black, 0.1)}`,
   },
 }))
 
@@ -98,8 +98,8 @@ const DrillableRow = styled(ListItemButton)(({ theme }) => ({
   marginBottom: theme.spacing(0.5),
   border: `1px solid transparent`,
   '&:hover': {
-    borderColor: theme.palette.primary.main,
-    backgroundColor: alpha(theme.palette.primary.main, 0.05),
+    borderColor: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8',
   },
 }))
 
@@ -118,24 +118,14 @@ const ChangeIndicator = styled(Box, {
   borderRadius: 4,
   fontSize: '0.75rem',
   fontWeight: 600,
-  backgroundColor:
-    trend === 'up'
-      ? alpha(theme.palette.success.main, 0.1)
-      : trend === 'down'
-      ? alpha(theme.palette.error.main, 0.1)
-      : alpha(theme.palette.grey[500], 0.1),
-  color:
-    trend === 'up'
-      ? theme.palette.success.main
-      : trend === 'down'
-      ? theme.palette.error.main
-      : theme.palette.grey[600],
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF',
+  color: theme.palette.text.secondary,
 }))
 
 const ProgressBar = styled(Box)(({ theme }) => ({
   height: 6,
   borderRadius: 3,
-  backgroundColor: alpha(theme.palette.primary.main, 0.15),
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6',
   overflow: 'hidden',
 }))
 
@@ -144,7 +134,7 @@ const ProgressFill = styled(Box, {
 })(({ theme, width }) => ({
   height: '100%',
   borderRadius: 3,
-  backgroundColor: theme.palette.primary.main,
+  backgroundColor: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
   width: `${width}%`,
   transition: 'width 0.3s ease',
 }))
@@ -243,7 +233,7 @@ export default function DrillDownPanel({
     <PanelContainer>
       <PanelHeader>
         <Stack direction="row" alignItems="center" spacing={1}>
-          <ZoomInIcon sx={{ color: 'primary.main', fontSize: 20 }} />
+          <ZoomInIcon sx={{ color: 'text.secondary', fontSize: 20 }} />
           <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
             {title}
           </Typography>
@@ -393,7 +383,7 @@ export default function DrillDownPanel({
                 >
                   <ListItemIcon sx={{ minWidth: 36 }}>
                     {isDrillable ? (
-                      <FolderIcon sx={{ fontSize: 20, color: 'primary.main' }} />
+                      <FolderIcon sx={{ fontSize: 20, color: 'text.secondary' }} />
                     ) : (
                       <DocumentIcon sx={{ fontSize: 20, color: 'text.secondary' }} />
                     )}

@@ -24,6 +24,7 @@ import {
   Tooltip,
   Collapse,
   Stack,
+  alpha,
 } from '@mui/material';
 import {
   AutoAwesome as SummaryIcon,
@@ -375,7 +376,7 @@ export default function SummaryPage() {
         <Paper sx={{ p: 2, mb: 3 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
             <Typography variant="h6">Recent Summaries</Typography>
-            <Button size="small" color="error" onClick={handleOpenClearHistory}>
+            <Button size="small" onClick={handleOpenClearHistory} sx={{ color: 'text.secondary' }}>
               Clear All
             </Button>
           </Box>
@@ -470,8 +471,8 @@ export default function SummaryPage() {
                     key={focus}
                     label={focus}
                     size="small"
-                    color="primary"
                     onDelete={() => handleRemoveFocus(focus)}
+                    sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6', color: 'text.secondary' }}
                   />
                 ))}
               </Box>
@@ -571,7 +572,7 @@ export default function SummaryPage() {
                   <Chip label={`Tone: ${tone}`} size="small" variant="outlined" />
                   <Chip label={`${maxSentences} sentences`} size="small" variant="outlined" />
                   {focusAreas.map((f) => (
-                    <Chip key={f} label={f} size="small" color="primary" variant="outlined" />
+                    <Chip key={f} label={f} size="small" variant="outlined" sx={{ borderColor: 'divider', color: 'text.secondary' }} />
                   ))}
                 </Box>
               </Box>

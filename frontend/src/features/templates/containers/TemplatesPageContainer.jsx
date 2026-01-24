@@ -103,7 +103,7 @@ const QuickFilterChip = styled(Chip)(({ theme }) => ({
   '& .MuiChip-deleteIcon': {
     color: theme.palette.text.secondary,
     '&:hover': {
-      color: theme.palette.error.main,
+      color: theme.palette.text.primary,
     },
   },
 }))
@@ -127,7 +127,7 @@ const StyledMenuItem = styled(MenuItem)(({ theme }) => ({
   fontSize: '0.8125rem',
   transition: 'all 0.15s ease',
   '&:hover': {
-    backgroundColor: alpha(theme.palette.primary.main, 0.08),
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
   },
   '& .MuiListItemIcon-root': {
     minWidth: 32,
@@ -177,7 +177,7 @@ const StyledTextField = styled(TextField)(({ theme }) => ({
     },
     '&.Mui-focused': {
       backgroundColor: theme.palette.background.paper,
-      boxShadow: `0 0 0 3px ${alpha(theme.palette.primary.main, 0.1)}`,
+      boxShadow: `0 0 0 3px ${alpha(theme.palette.text.primary, 0.08)}`,
     },
   },
 }))
@@ -192,7 +192,7 @@ const StyledFormControl = styled(FormControl)(({ theme }) => ({
     },
     '&.Mui-focused': {
       backgroundColor: theme.palette.background.paper,
-      boxShadow: `0 0 0 3px ${alpha(theme.palette.primary.main, 0.1)}`,
+      boxShadow: `0 0 0 3px ${alpha(theme.palette.text.primary, 0.08)}`,
     },
   },
 }))
@@ -207,11 +207,12 @@ const ActionButton = styled(Button)(({ theme }) => ({
 }))
 
 const PrimaryButton = styled(ActionButton)(({ theme }) => ({
-  background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
+  background: theme.palette.mode === 'dark' ? '#63635E' : '#21201C',
   color: '#fff',
-  boxShadow: `0 4px 14px ${alpha(theme.palette.primary.main, 0.3)}`,
+  boxShadow: `0 4px 14px ${alpha(theme.palette.common.black, 0.15)}`,
   '&:hover': {
-    boxShadow: `0 6px 20px ${alpha(theme.palette.primary.main, 0.4)}`,
+    background: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
+    boxShadow: `0 6px 20px ${alpha(theme.palette.common.black, 0.2)}`,
     transform: 'translateY(-1px)',
   },
   '&:disabled': {
@@ -224,8 +225,8 @@ const PrimaryButton = styled(ActionButton)(({ theme }) => ({
 const SecondaryButton = styled(ActionButton)(({ theme }) => ({
   borderColor: alpha(theme.palette.divider, 0.3),
   '&:hover': {
-    borderColor: theme.palette.primary.main,
-    backgroundColor: alpha(theme.palette.primary.main, 0.04),
+    borderColor: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : '#F9F9F8',
   },
 }))
 
@@ -275,17 +276,17 @@ const MoreActionsButton = styled(IconButton)(({ theme }) => ({
   transition: 'all 0.2s ease',
   '&:hover': {
     color: theme.palette.text.primary,
-    backgroundColor: alpha(theme.palette.primary.main, 0.08),
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
   },
 }))
 
 const StyledLinearProgress = styled(LinearProgress)(({ theme }) => ({
   borderRadius: 4,
   height: 6,
-  backgroundColor: alpha(theme.palette.primary.main, 0.1),
+  backgroundColor: alpha(theme.palette.text.primary, 0.1),
   '& .MuiLinearProgress-bar': {
     borderRadius: 4,
-    background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+    background: theme.palette.mode === 'dark' ? '#82827C' : '#21201C',
   },
 }))
 
@@ -296,14 +297,14 @@ const SimilarTemplateCard = styled(Box)(({ theme }) => ({
   cursor: 'pointer',
   transition: 'all 0.2s ease',
   '&:hover': {
-    borderColor: theme.palette.primary.main,
-    backgroundColor: alpha(theme.palette.primary.main, 0.04),
+    borderColor: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : '#F9F9F8',
     transform: 'translateX(4px)',
   },
 }))
 
 const AiIcon = styled(AutoAwesomeIcon)(({ theme }) => ({
-  color: theme.palette.primary.main,
+  color: theme.palette.text.secondary,
   animation: `${pulse} 2s infinite ease-in-out`,
 }))
 
@@ -315,13 +316,13 @@ const getKindConfig = (theme, kind) => {
   const configs = {
     pdf: {
       icon: PictureAsPdfIcon,
-      color: theme.palette.error.main,
-      bgColor: alpha(theme.palette.error.main, 0.12),
+      color: theme.palette.text.secondary,
+      bgColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF',
     },
     excel: {
       icon: TableChartIcon,
-      color: theme.palette.success.main,
-      bgColor: alpha(theme.palette.success.main, 0.12),
+      color: theme.palette.text.secondary,
+      bgColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF',
     },
   }
   return configs[kind] || configs.pdf
@@ -330,16 +331,16 @@ const getKindConfig = (theme, kind) => {
 const getStatusConfig = (theme, status) => {
   const configs = {
     approved: {
-      color: theme.palette.success.main,
-      bgColor: alpha(theme.palette.success.main, 0.12),
+      color: theme.palette.text.secondary,
+      bgColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF',
     },
     pending: {
-      color: theme.palette.warning.main,
-      bgColor: alpha(theme.palette.warning.main, 0.12),
+      color: theme.palette.text.secondary,
+      bgColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F9F9F8',
     },
     draft: {
-      color: theme.palette.info.main,
-      bgColor: alpha(theme.palette.info.main, 0.12),
+      color: theme.palette.text.secondary,
+      bgColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F9F9F8',
     },
     archived: {
       color: theme.palette.text.secondary,
@@ -1179,8 +1180,8 @@ export default function TemplatesPage() {
           <ListItemIcon><AutoAwesomeIcon sx={{ fontSize: 16 }} /></ListItemIcon>
           <ListItemText primaryTypographyProps={{ fontSize: '0.8125rem' }}>View Similar</ListItemText>
         </StyledMenuItem>
-        <StyledMenuItem onClick={handleDeleteClick} sx={{ color: 'error.main' }}>
-          <ListItemIcon><DeleteIcon sx={{ fontSize: 16, color: 'error.main' }} /></ListItemIcon>
+        <StyledMenuItem onClick={handleDeleteClick} sx={{ color: 'text.primary' }}>
+          <ListItemIcon><DeleteIcon sx={{ fontSize: 16, color: 'text.secondary' }} /></ListItemIcon>
           <ListItemText primaryTypographyProps={{ fontSize: '0.8125rem' }}>Delete</ListItemText>
         </StyledMenuItem>
       </StyledMenu>
@@ -1405,9 +1406,8 @@ export default function TemplatesPage() {
                         <Chip
                           label={`${Math.round(template.similarity_score * 100)}% match`}
                           size="small"
-                          color="primary"
                           variant="outlined"
-                          sx={{ borderRadius: 8 }}
+                          sx={{ borderRadius: 8, bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6', color: 'text.secondary' }}
                         />
                       )}
                     </Stack>

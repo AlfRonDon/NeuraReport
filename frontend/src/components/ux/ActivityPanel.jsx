@@ -89,23 +89,23 @@ const getStatusConfig = (status, theme) => {
     },
     [OperationStatus.IN_PROGRESS]: {
       icon: PendingIcon,
-      color: theme.palette.info.main,
+      color: theme.palette.text.secondary,
       label: 'In progress',
       showProgress: true,
     },
     [OperationStatus.COMPLETED]: {
       icon: SuccessIcon,
-      color: theme.palette.success.main,
+      color: theme.palette.text.secondary,
       label: 'Completed',
     },
     [OperationStatus.FAILED]: {
       icon: ErrorIcon,
-      color: theme.palette.error.main,
+      color: theme.palette.text.secondary,
       label: 'Failed',
     },
     [OperationStatus.UNDONE]: {
       icon: UndoIcon,
-      color: theme.palette.warning.main,
+      color: theme.palette.text.secondary,
       label: 'Undone',
     },
   }
@@ -247,7 +247,7 @@ function OperationItem({ operation, onUndo }) {
             </Typography>
           )}
           {operation.error && (
-            <Typography variant="body2" color="error.main">
+            <Typography variant="body2" color="text.secondary">
               Error: {operation.error}
             </Typography>
           )}
@@ -305,7 +305,7 @@ export default function ActivityPanel({ open, onClose }) {
         }}
       >
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-          <HistoryIcon color="primary" />
+          <HistoryIcon sx={{ color: 'text.secondary' }} />
           <Typography variant="h6" fontWeight={600}>
             Activity
           </Typography>
@@ -313,8 +313,7 @@ export default function ActivityPanel({ open, onClose }) {
             <Chip
               size="small"
               label={`${activeCount} active`}
-              color="primary"
-              sx={{ height: 22, fontSize: '0.6875rem' }}
+              sx={{ height: 22, fontSize: '0.6875rem', bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6', color: 'text.secondary' }}
             />
           )}
         </Box>
@@ -340,7 +339,7 @@ export default function ActivityPanel({ open, onClose }) {
               <Box component="span" fontWeight={600}>{completedCount}</Box> completed
             </Typography>
             {failedCount > 0 && (
-              <Typography variant="body2" color="error.main">
+              <Typography variant="body2" color="text.secondary">
                 <Box component="span" fontWeight={600}>{failedCount}</Box> failed
               </Typography>
             )}
@@ -419,7 +418,7 @@ export function ActivityButton({ onClick }) {
         onClick={onClick}
         sx={{
           position: 'relative',
-          color: hasActiveOperations ? theme.palette.primary.main : theme.palette.text.secondary,
+          color: theme.palette.text.secondary,
         }}
       >
         <HistoryIcon />
@@ -432,7 +431,7 @@ export function ActivityButton({ onClick }) {
               width: 8,
               height: 8,
               borderRadius: '50%',
-              bgcolor: theme.palette.primary.main,
+              bgcolor: theme.palette.text.secondary,
               animation: 'pulse 1.5s infinite',
               '@keyframes pulse': {
                 '0%, 100%': { opacity: 1, transform: 'scale(1)' },

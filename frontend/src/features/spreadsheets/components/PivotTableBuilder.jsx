@@ -87,9 +87,9 @@ const DropZone = styled(Paper, {
   padding: theme.spacing(1.5),
   marginBottom: theme.spacing(2),
   minHeight: 80,
-  border: `2px dashed ${isDragOver ? theme.palette.primary.main : alpha(theme.palette.divider, 0.3)}`,
+  border: `2px dashed ${isDragOver ? (theme.palette.mode === 'dark' ? '#82827C' : '#63635E') : alpha(theme.palette.divider, 0.3)}`,
   borderRadius: 8,
-  backgroundColor: isDragOver ? alpha(theme.palette.primary.main, 0.05) : 'transparent',
+  backgroundColor: isDragOver ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8') : 'transparent',
   transition: 'all 0.15s ease',
 }))
 
@@ -108,8 +108,8 @@ const DraggableField = styled(ListItemButton)(({ theme }) => ({
   padding: theme.spacing(0.75, 1.5),
   cursor: 'grab',
   '&:hover': {
-    borderColor: theme.palette.primary.main,
-    backgroundColor: alpha(theme.palette.primary.main, 0.05),
+    borderColor: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8',
   },
   '&:active': {
     cursor: 'grabbing',
@@ -126,7 +126,7 @@ const PreviewTable = styled('table')(({ theme }) => ({
     textAlign: 'left',
   },
   '& th': {
-    backgroundColor: alpha(theme.palette.primary.main, 0.08),
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8',
     fontWeight: 600,
   },
   '& tbody tr:hover': {
@@ -399,7 +399,7 @@ export default function PivotTableBuilder({
           sx={{ cursor: 'pointer', mb: 0.5 }}
         >
           <Stack direction="row" alignItems="center" spacing={1}>
-            <Icon sx={{ fontSize: 18, color: 'primary.main' }} />
+            <Icon sx={{ fontSize: 18, color: 'text.secondary' }} />
             <Typography variant="body2" sx={{ fontWeight: 600 }}>
               {label}
             </Typography>

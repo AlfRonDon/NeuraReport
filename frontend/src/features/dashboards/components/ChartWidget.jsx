@@ -122,12 +122,12 @@ const generateChartOptions = (chartType, data, config, theme) => {
       },
     },
     color: [
-      theme.palette.primary.main,
-      theme.palette.secondary.main,
-      theme.palette.success.main,
-      theme.palette.warning.main,
-      theme.palette.error.main,
-      theme.palette.info.main,
+      theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
+      theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
+      theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
+      theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
+      theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
+      theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
       '#8B5CF6',
       '#EC4899',
       '#06B6D4',
@@ -377,7 +377,7 @@ const ChartWidget = forwardRef(function ChartWidget({
             <DragIcon fontSize="small" />
           </DragHandle>
         )}
-        <TypeIcon sx={{ fontSize: 18, color: 'primary.main', mr: 1 }} />
+        <TypeIcon sx={{ fontSize: 18, color: 'text.secondary', mr: 1 }} />
         <Typography
           variant="subtitle2"
           sx={{ fontWeight: 600, flex: 1, fontSize: '0.875rem' }}
@@ -417,8 +417,8 @@ const ChartWidget = forwardRef(function ChartWidget({
             <ListItemText>Fullscreen</ListItemText>
           </MenuItem>
           {editable && (
-            <MenuItem onClick={() => handleAction('delete')} sx={{ color: 'error.main' }}>
-              <ListItemIcon><DeleteIcon fontSize="small" color="error" /></ListItemIcon>
+            <MenuItem onClick={() => handleAction('delete')} sx={{ color: 'text.secondary' }}>
+              <ListItemIcon><DeleteIcon fontSize="small" sx={{ color: 'text.secondary' }} /></ListItemIcon>
               <ListItemText>Delete</ListItemText>
             </MenuItem>
           )}

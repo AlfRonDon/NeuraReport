@@ -109,15 +109,16 @@ const ActionButton = styled(Button)(({ theme }) => ({
   '&.MuiButton-outlined': {
     borderColor: alpha(theme.palette.divider, 0.2),
     '&:hover': {
-      borderColor: theme.palette.primary.main,
-      backgroundColor: alpha(theme.palette.primary.main, 0.04),
+      borderColor: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
+      backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : '#F9F9F8',
     },
   },
   '&.MuiButton-contained': {
-    background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
-    boxShadow: `0 4px 14px ${alpha(theme.palette.primary.main, 0.25)}`,
+    backgroundColor: theme.palette.mode === 'dark' ? '#63635E' : '#21201C',
+    boxShadow: `0 4px 14px ${alpha(theme.palette.common.black, 0.15)}`,
     '&:hover': {
-      boxShadow: `0 6px 20px ${alpha(theme.palette.primary.main, 0.35)}`,
+      backgroundColor: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
+      boxShadow: `0 6px 20px ${alpha(theme.palette.common.black, 0.2)}`,
       transform: 'translateY(-1px)',
     },
   },
@@ -126,8 +127,8 @@ const ActionButton = styled(Button)(({ theme }) => ({
 const SelectionBar = styled(Box)(({ theme }) => ({
   marginBottom: theme.spacing(2),
   padding: theme.spacing(1.5, 2),
-  background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.1)}, ${alpha(theme.palette.primary.main, 0.05)})`,
-  border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
+  background: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8',
+  border: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
   borderRadius: 12,
   display: 'flex',
   alignItems: 'center',
@@ -138,7 +139,7 @@ const SelectionBar = styled(Box)(({ theme }) => ({
 const SelectionText = styled(Typography)(({ theme }) => ({
   fontSize: '0.8125rem',
   fontWeight: 500,
-  color: theme.palette.primary.main,
+  color: theme.palette.text.primary,
   display: 'flex',
   alignItems: 'center',
   gap: theme.spacing(1),
@@ -148,7 +149,7 @@ const SelectionBadge = styled(Box)(({ theme }) => ({
   width: 24,
   height: 24,
   borderRadius: 8,
-  backgroundColor: theme.palette.primary.main,
+  backgroundColor: theme.palette.mode === 'dark' ? '#63635E' : '#21201C',
   color: '#fff',
   display: 'flex',
   alignItems: 'center',
@@ -173,11 +174,11 @@ const SelectionAction = styled(Button)(({ theme }) => ({
 }))
 
 const DeleteAction = styled(SelectionAction)(({ theme }) => ({
-  color: theme.palette.error.main,
-  borderColor: alpha(theme.palette.error.main, 0.3),
+  color: theme.palette.text.secondary,
+  borderColor: alpha(theme.palette.divider, 0.3),
   '&:hover': {
-    borderColor: theme.palette.error.main,
-    backgroundColor: alpha(theme.palette.error.main, 0.08),
+    borderColor: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
   },
 }))
 
@@ -191,13 +192,13 @@ const SearchField = styled(TextField)(({ theme }) => ({
       transition: 'all 0.2s ease',
     },
     '&:hover fieldset': {
-      borderColor: alpha(theme.palette.primary.main, 0.3),
+      borderColor: alpha(theme.palette.divider, 0.3),
     },
     '&.Mui-focused': {
       backgroundColor: theme.palette.background.paper,
-      boxShadow: `0 0 0 3px ${alpha(theme.palette.primary.main, 0.1)}`,
+      boxShadow: `0 0 0 3px ${alpha(theme.palette.divider, 0.1)}`,
       '& fieldset': {
-        borderColor: theme.palette.primary.main,
+        borderColor: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
       },
     },
   },
@@ -220,30 +221,30 @@ const FilterButton = styled(Button)(({ theme }) => ({
   color: theme.palette.text.secondary,
   borderColor: alpha(theme.palette.divider, 0.2),
   '&:hover': {
-    borderColor: alpha(theme.palette.primary.main, 0.3),
-    backgroundColor: alpha(theme.palette.primary.main, 0.04),
+    borderColor: alpha(theme.palette.divider, 0.3),
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : '#F9F9F8',
   },
   '&.active': {
-    color: theme.palette.primary.main,
-    borderColor: alpha(theme.palette.primary.main, 0.5),
-    backgroundColor: alpha(theme.palette.primary.main, 0.08),
+    color: theme.palette.text.primary,
+    borderColor: alpha(theme.palette.divider, 0.5),
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
   },
 }))
 
 const FilterChip = styled(Chip)(({ theme }) => ({
   borderRadius: 8,
   height: 28,
-  backgroundColor: alpha(theme.palette.primary.main, 0.08),
-  border: `1px solid ${alpha(theme.palette.primary.main, 0.15)}`,
-  color: theme.palette.primary.main,
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
+  border: `1px solid ${alpha(theme.palette.divider, 0.15)}`,
+  color: theme.palette.text.secondary,
   fontWeight: 500,
   fontSize: '0.75rem',
   animation: `${slideIn} 0.2s ease-out`,
   '& .MuiChip-deleteIcon': {
-    color: alpha(theme.palette.primary.main, 0.5),
+    color: theme.palette.text.disabled,
     fontSize: 16,
     '&:hover': {
-      color: theme.palette.primary.main,
+      color: theme.palette.text.secondary,
     },
   },
 }))
@@ -253,8 +254,8 @@ const IconButtonStyled = styled(IconButton)(({ theme }) => ({
   color: theme.palette.text.secondary,
   transition: 'all 0.2s ease',
   '&:hover': {
-    color: theme.palette.primary.main,
-    backgroundColor: alpha(theme.palette.primary.main, 0.08),
+    color: theme.palette.text.primary,
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
   },
 }))
 
@@ -290,20 +291,20 @@ const StyledMenuItem = styled(MenuItem)(({ theme }) => ({
   margin: theme.spacing(0, 1),
   transition: 'all 0.15s ease',
   '&:hover': {
-    backgroundColor: alpha(theme.palette.primary.main, 0.08),
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
   },
   '&.Mui-selected': {
-    backgroundColor: alpha(theme.palette.primary.main, 0.12),
-    color: theme.palette.primary.main,
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.12) : '#E9E8E6',
+    color: theme.palette.text.primary,
     '&:hover': {
-      backgroundColor: alpha(theme.palette.primary.main, 0.16),
+      backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.16) : '#E2E1DE',
     },
   },
 }))
 
 const FilterBadge = styled(Badge)(({ theme }) => ({
   '& .MuiBadge-badge': {
-    backgroundColor: theme.palette.primary.main,
+    backgroundColor: theme.palette.mode === 'dark' ? '#63635E' : '#21201C',
     color: '#fff',
     fontSize: '0.65rem',
     fontWeight: 600,
@@ -562,7 +563,7 @@ export default function DataTableToolbar({
                         <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', justifyContent: 'space-between' }}>
                           {option.label}
                           {activeFilters[filter.key] === option.value && (
-                            <CheckIcon sx={{ fontSize: 16, color: 'primary.main', ml: 1 }} />
+                            <CheckIcon sx={{ fontSize: 16, color: 'text.primary', ml: 1 }} />
                           )}
                         </Box>
                       </StyledMenuItem>

@@ -78,20 +78,20 @@ const StepCard = styled(Paper, {
   marginBottom: theme.spacing(1),
   border: `1px solid ${
     status === 'success'
-      ? alpha(theme.palette.success.main, 0.3)
+      ? alpha(theme.palette.mode === 'dark' ? '#82827C' : '#63635E', 0.3)
       : status === 'error'
-      ? alpha(theme.palette.error.main, 0.3)
+      ? alpha(theme.palette.mode === 'dark' ? '#63635E' : '#21201C', 0.3)
       : status === 'running'
-      ? alpha(theme.palette.primary.main, 0.3)
+      ? alpha(theme.palette.mode === 'dark' ? '#8D8D86' : '#82827C', 0.3)
       : alpha(theme.palette.divider, 0.2)
   }`,
   backgroundColor:
     status === 'success'
-      ? alpha(theme.palette.success.main, 0.04)
+      ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : '#F9F9F8')
       : status === 'error'
-      ? alpha(theme.palette.error.main, 0.04)
+      ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : '#F9F9F8')
       : status === 'running'
-      ? alpha(theme.palette.primary.main, 0.04)
+      ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : '#F9F9F8')
       : 'transparent',
   transition: 'all 0.2s ease',
 }))
@@ -113,21 +113,21 @@ const LogLine = styled(Box, {
   padding: theme.spacing(0.25, 0),
   borderLeft: `2px solid ${
     level === 'error'
-      ? theme.palette.error.main
+      ? '#63635E'
       : level === 'warning'
-      ? theme.palette.warning.main
+      ? '#82827C'
       : level === 'success'
-      ? theme.palette.success.main
+      ? '#8D8D86'
       : 'transparent'
   }`,
   paddingLeft: level ? theme.spacing(1) : 0,
   color:
     level === 'error'
-      ? theme.palette.error.light
+      ? '#BCBBB5'
       : level === 'warning'
-      ? theme.palette.warning.light
+      ? '#CFCECA'
       : level === 'success'
-      ? theme.palette.success.light
+      ? '#DAD9D6'
       : alpha(theme.palette.common.white, 0.8),
 }))
 
@@ -233,7 +233,7 @@ function ExecutionStep({ step, isLast, onRetry }) {
                 <StatusChip
                   label={statusConfig.label}
                   size="small"
-                  color={statusConfig.color}
+                  sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6', color: 'text.secondary' }}
                 />
               </Stack>
             </Stack>
@@ -440,8 +440,8 @@ export default function ExecutionViewer({
           <Stack direction="row" spacing={2}>
             <StatusChip
               label={overallStatus.label}
-              color={overallStatus.color}
               size="small"
+              sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6', color: 'text.secondary' }}
             />
             <Typography variant="caption" color="text.secondary">
               {formatTimestamp(execution.startedAt)} • Duration: {formatDuration(execution.duration)}
@@ -457,7 +457,7 @@ export default function ExecutionViewer({
                   </IconButton>
                 </Tooltip>
                 <Tooltip title="Stop">
-                  <IconButton size="small" color="error" onClick={onStop}>
+                  <IconButton size="small" onClick={onStop} sx={{ color: 'text.secondary' }}>
                     <StopIcon fontSize="small" />
                   </IconButton>
                 </Tooltip>
@@ -489,11 +489,11 @@ export default function ExecutionViewer({
         {/* Stats */}
         <Stack direction="row" spacing={3} mt={1.5}>
           <Stack direction="row" alignItems="center" spacing={0.5}>
-            <SuccessIcon sx={{ fontSize: 16, color: 'success.main' }} />
+            <SuccessIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
             <Typography variant="caption">{stats.success} Success</Typography>
           </Stack>
           <Stack direction="row" alignItems="center" spacing={0.5}>
-            <ErrorIcon sx={{ fontSize: 16, color: 'error.main' }} />
+            <ErrorIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
             <Typography variant="caption">{stats.error} Failed</Typography>
           </Stack>
           <Stack direction="row" alignItems="center" spacing={0.5}>

@@ -1,6 +1,7 @@
 import Grid from '@mui/material/Grid2'
 import {
   Alert,
+  alpha,
   Autocomplete,
   Box,
   Button,
@@ -393,7 +394,7 @@ export function TemplatePicker({ selected, onToggle, outputFormats, setOutputFor
                   transition: 'border-color 160ms ease, box-shadow 160ms ease',
                 },
                 selectedState && {
-                  borderColor: 'primary.main',
+                  borderColor: 'text.secondary',
                   boxShadow: '0 0 0 1px rgba(79,70,229,0.28)',
                 },
               ]}
@@ -461,12 +462,12 @@ export function TemplatePicker({ selected, onToggle, outputFormats, setOutputFor
                           <Typography variant="caption" color="text.secondary">
                             SQL & schema assets - {generatorMeta.dialect || 'unknown'}
                           </Typography>
-                          <Chip size="small" color={generatorStatusColor} label={generatorStatusLabel} />
+                          <Chip size="small" sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6', color: 'text.secondary' }} label={generatorStatusLabel} />
                           {!!needsUserFix.length && (
                             <Tooltip title={needsUserFix.join('\\n')}>
                               <Chip
                                 size="small"
-                                color="warning"
+                                sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6', color: 'text.secondary' }}
                                 variant="outlined"
                                 label={`${needsUserFix.length} fix${needsUserFix.length === 1 ? '' : 'es'}`}
                               />
@@ -564,7 +565,7 @@ export function TemplatePicker({ selected, onToggle, outputFormats, setOutputFor
                       <Button
                         size="small"
                         variant="outlined"
-                        color="error"
+                        sx={{ color: 'text.secondary' }}
                         startIcon={
                           deleting === t.id ? (
                             <CircularProgress size={16} color="inherit" />
@@ -689,7 +690,7 @@ export function TemplatePicker({ selected, onToggle, outputFormats, setOutputFor
                       <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
                         {template.name || template.id || 'Template'}
                       </Typography>
-                      <Chip size="small" label={meta.label} color={meta.color} variant={meta.variant} />
+                      <Chip size="small" label={meta.label} sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6', color: 'text.secondary' }} variant={meta.variant} />
                     </Stack>
                     {template.description && (
                       <Typography variant="body2" color="text.secondary">
@@ -924,7 +925,7 @@ export function TemplatePicker({ selected, onToggle, outputFormats, setOutputFor
         </Stack>
       </Stack>
       <Collapse in={showRefreshing} unmountOnExit>
-        <LinearProgress color="secondary" sx={{ borderRadius: 1 }} aria-label="Refreshing templates" />
+        <LinearProgress sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF', '& .MuiLinearProgress-bar': { bgcolor: (theme) => theme.palette.mode === 'dark' ? '#82827C' : '#63635E' }, borderRadius: 1 }} aria-label="Refreshing templates" />
       </Collapse>
       {isLoading ? (
         <LoadingState

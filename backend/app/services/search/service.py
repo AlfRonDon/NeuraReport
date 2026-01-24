@@ -68,6 +68,11 @@ class SearchResponse(BaseModel):
     search_time_ms: float = 0
 
 
+def _utc_now() -> datetime:
+    """Return current UTC time (avoids deprecated utcnow)."""
+    return datetime.now(timezone.utc)
+
+
 class SavedSearch(BaseModel):
     """Saved search configuration."""
     search_id: str
@@ -75,7 +80,7 @@ class SavedSearch(BaseModel):
     query: str
     filters: List[SearchFilter] = Field(default_factory=list)
     notify_on_new: bool = False
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=_utc_now)
     last_run: Optional[datetime] = None
     result_count: int = 0
 
@@ -96,6 +101,8 @@ class SearchService:
     """
 
     def __init__(self):
+        import threading
+        self._lock = threading.Lock()
         self._index: Dict[str, Dict[str, Any]] = {}  # document_id -> document data
         self._inverted_index: Dict[str, Set[str]] = {}  # term -> document_ids
         self._saved_searches: Dict[str, SavedSearch] = {}
@@ -121,39 +128,41 @@ class SearchService:
         Returns:
             True if indexed successfully
         """
-        # Store document
-        self._index[document_id] = {
-            "id": document_id,
-            "title": title,
-            "content": content,
-            "metadata": metadata or {},
-            "indexed_at": datetime.now(timezone.utc).isoformat(),
-        }
+        with self._lock:
+            # Store document
+            self._index[document_id] = {
+                "id": document_id,
+                "title": title,
+                "content": content,
+                "metadata": metadata or {},
+                "indexed_at": datetime.now(timezone.utc).isoformat(),
+            }
 
-        # Build inverted index
-        terms = self._tokenize(f"{title} {content}")
-        for term in terms:
-            if term not in self._inverted_index:
-                self._inverted_index[term] = set()
-            self._inverted_index[term].add(document_id)
+            # Build inverted index
+            terms = self._tokenize(f"{title} {content}")
+            for term in terms:
+                if term not in self._inverted_index:
+                    self._inverted_index[term] = set()
+                self._inverted_index[term].add(document_id)
 
         return True
 
     async def remove_from_index(self, document_id: str) -> bool:
         """Remove a document from the search index."""
-        if document_id not in self._index:
-            return False
+        with self._lock:
+            if document_id not in self._index:
+                return False
 
-        # Remove from inverted index
-        doc = self._index[document_id]
-        terms = self._tokenize(f"{doc['title']} {doc['content']}")
-        for term in terms:
-            if term in self._inverted_index:
-                self._inverted_index[term].discard(document_id)
-                if not self._inverted_index[term]:
-                    del self._inverted_index[term]
+            # Remove from inverted index
+            doc = self._index[document_id]
+            terms = self._tokenize(f"{doc['title']} {doc['content']}")
+            for term in terms:
+                if term in self._inverted_index:
+                    self._inverted_index[term].discard(document_id)
+                    if not self._inverted_index[term]:
+                        del self._inverted_index[term]
 
-        del self._index[document_id]
+            del self._index[document_id]
         return True
 
     async def search(
@@ -830,14 +839,15 @@ class SearchService:
 
     def _track_search(self, query: str, results: int = 0):
         """Track search for analytics."""
-        self._search_history.append({
-            "query": query,
-            "results": results,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-        })
-        # Keep only last 1000 searches
-        if len(self._search_history) > 1000:
-            self._search_history = self._search_history[-1000:]
+        with self._lock:
+            self._search_history.append({
+                "query": query,
+                "results": results,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            })
+            # Keep only last 1000 searches
+            if len(self._search_history) > 1000:
+                self._search_history = self._search_history[-1000:]
 
 
 # Singleton instance

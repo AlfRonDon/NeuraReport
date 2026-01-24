@@ -57,21 +57,21 @@ const EditorContainer = styled(Box)(({ theme }) => ({
     fontSize: '13px',
   },
   '& .handsontable th': {
-    backgroundColor: alpha(theme.palette.primary.main, 0.06),
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8',
     fontWeight: 600,
   },
   '& .handsontable td': {
     verticalAlign: 'middle',
   },
   '& .handsontable td.area': {
-    backgroundColor: alpha(theme.palette.primary.main, 0.08),
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF',
   },
   '& .handsontable .htContextMenu': {
     borderRadius: 8,
     boxShadow: theme.shadows[8],
   },
   '& .handsontable .wtBorder.current': {
-    backgroundColor: theme.palette.primary.main,
+    backgroundColor: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
   },
 }))
 

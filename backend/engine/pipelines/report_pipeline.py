@@ -29,7 +29,11 @@ from backend.engine.adapters.rendering import (
     RenderContext,
 )
 from prefect import flow, task
-from prefect.task_runners import SequentialTaskRunner
+try:
+    from prefect.task_runners import SequentialTaskRunner
+except ImportError:
+    # Prefect 3.x removed SequentialTaskRunner - use default synchronous execution
+    SequentialTaskRunner = None
 from .base import Pipeline, PipelineContext, Step, StepResult
 
 logger = logging.getLogger("neura.pipelines.report")
@@ -757,7 +761,11 @@ def finalize_report_task(ctx: ReportPipelineContext) -> Report:
     return finalize_report(ctx)
 
 
-@flow(name="report_generation", task_runner=SequentialTaskRunner())
+_flow_kwargs = {"name": "report_generation"}
+if SequentialTaskRunner is not None:
+    _flow_kwargs["task_runner"] = SequentialTaskRunner()
+
+@flow(**_flow_kwargs)
 def report_generation_flow(
     request: RenderRequest,
     template_path: Path,

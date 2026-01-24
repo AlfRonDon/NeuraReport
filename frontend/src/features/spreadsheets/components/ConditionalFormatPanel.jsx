@@ -89,7 +89,7 @@ const RuleCard = styled(Paper, {
   opacity: isActive ? 1 : 0.7,
   transition: 'all 0.15s ease',
   '&:hover': {
-    borderColor: theme.palette.primary.main,
+    borderColor: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
   },
 }))
 
@@ -371,8 +371,7 @@ function RuleEditorDialog({ open, rule, onClose, onSave }) {
               <IconButton
                 size="small"
                 onClick={() => handleFormatChange('bold', !localRule.format.bold)}
-                color={localRule.format.bold ? 'primary' : 'default'}
-                sx={{ border: `1px solid ${alpha(theme.palette.divider, 0.2)}` }}
+                sx={{ border: `1px solid ${alpha(theme.palette.divider, 0.2)}`, color: localRule.format.bold ? 'text.primary' : 'text.secondary' }}
               >
                 <BoldIcon fontSize="small" />
               </IconButton>
@@ -381,8 +380,7 @@ function RuleEditorDialog({ open, rule, onClose, onSave }) {
               <IconButton
                 size="small"
                 onClick={() => handleFormatChange('italic', !localRule.format.italic)}
-                color={localRule.format.italic ? 'primary' : 'default'}
-                sx={{ border: `1px solid ${alpha(theme.palette.divider, 0.2)}` }}
+                sx={{ border: `1px solid ${alpha(theme.palette.divider, 0.2)}`, color: localRule.format.italic ? 'text.primary' : 'text.secondary' }}
               >
                 <ItalicIcon fontSize="small" />
               </IconButton>
@@ -501,7 +499,7 @@ export default function ConditionalFormatPanel({
     <PanelContainer>
       <PanelHeader>
         <Stack direction="row" alignItems="center" spacing={1}>
-          <FillIcon sx={{ color: 'primary.main', fontSize: 20 }} />
+          <FillIcon sx={{ color: 'text.secondary', fontSize: 20 }} />
           <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
             Conditional Formatting
           </Typography>
@@ -618,7 +616,7 @@ export default function ConditionalFormatPanel({
                       </Button>
                       <Button
                         size="small"
-                        color="error"
+                        sx={{ color: 'text.secondary' }}
                         startIcon={<DeleteIcon />}
                         onClick={() => handleDeleteRule(rule.id)}
                       >

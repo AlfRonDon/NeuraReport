@@ -45,12 +45,12 @@ const CellReferenceBox = styled(Box)(({ theme }) => ({
   alignItems: 'center',
   minWidth: 80,
   padding: theme.spacing(0.5, 1),
-  backgroundColor: alpha(theme.palette.primary.main, 0.05),
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8',
   borderRadius: 4,
   border: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
   cursor: 'pointer',
   '&:hover': {
-    borderColor: theme.palette.primary.main,
+    borderColor: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
   },
 }))
 
@@ -64,10 +64,10 @@ const FormulaInput = styled(TextField)(({ theme }) => ({
       borderColor: alpha(theme.palette.divider, 0.2),
     },
     '&:hover fieldset': {
-      borderColor: alpha(theme.palette.primary.main, 0.5),
+      borderColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.3) : '#BCBBB5',
     },
     '&.Mui-focused fieldset': {
-      borderColor: theme.palette.primary.main,
+      borderColor: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
     },
   },
 }))
@@ -77,10 +77,10 @@ const FunctionChip = styled(Chip)(({ theme }) => ({
   height: 24,
   fontSize: '0.75rem',
   fontFamily: 'monospace',
-  backgroundColor: alpha(theme.palette.primary.main, 0.1),
-  color: theme.palette.primary.main,
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF',
+  color: 'text.secondary',
   '&:hover': {
-    backgroundColor: alpha(theme.palette.primary.main, 0.2),
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.15) : '#E9E8E6',
   },
 }))
 
@@ -267,7 +267,7 @@ export default function FormulaBar({
         disabled={disabled}
         InputProps={{
           sx: {
-            color: isFormula ? 'primary.main' : 'text.primary',
+            color: 'text.primary',
           },
         }}
       />
@@ -279,7 +279,7 @@ export default function FormulaBar({
             <IconButton
               size="small"
               onClick={handleApply}
-              sx={{ color: 'success.main' }}
+              sx={{ color: 'text.secondary' }}
             >
               <ApplyIcon fontSize="small" />
             </IconButton>
@@ -288,7 +288,7 @@ export default function FormulaBar({
             <IconButton
               size="small"
               onClick={handleCancel}
-              sx={{ color: 'error.main' }}
+              sx={{ color: 'text.secondary' }}
             >
               <CancelIcon fontSize="small" />
             </IconButton>

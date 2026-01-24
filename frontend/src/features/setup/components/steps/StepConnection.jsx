@@ -168,25 +168,25 @@ export default function StepConnection({ wizardState, updateWizardState, onCompl
             sx={{
               flex: 1,
               border: 2,
-              borderColor: selectedId === DEMO_CONNECTION.id ? 'primary.main' : 'divider',
-              bgcolor: selectedId === DEMO_CONNECTION.id ? (theme) => alpha(theme.palette.primary.main, 0.04) : 'transparent',
+              borderColor: selectedId === DEMO_CONNECTION.id ? (theme) => theme.palette.mode === 'dark' ? '#82827C' : '#63635E' : 'divider',
+              bgcolor: selectedId === DEMO_CONNECTION.id ? (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : '#F9F9F8' : 'transparent',
               transition: 'all 0.2s',
               '&:hover': {
-                borderColor: 'primary.main',
-                bgcolor: (theme) => alpha(theme.palette.primary.main, 0.04),
+                borderColor: (theme) => theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
+                bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : '#F9F9F8',
               },
             }}
           >
             <CardActionArea onClick={handleSelectDemo} sx={{ height: '100%' }}>
               <CardContent sx={{ textAlign: 'center', py: 3 }}>
-                <ScienceIcon sx={{ fontSize: 40, color: 'primary.main', mb: 1 }} />
+                <ScienceIcon sx={{ fontSize: 40, color: 'text.secondary', mb: 1 }} />
                 <Typography variant="subtitle1" fontWeight={600}>
                   Try Demo Mode
                 </Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                   Explore with sample data — no setup needed
                 </Typography>
-                <Chip label="Recommended for first-time users" size="small" color="primary" variant="outlined" />
+                <Chip label="Recommended for first-time users" size="small" variant="outlined" sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6', color: 'text.secondary' }} />
               </CardContent>
             </CardActionArea>
           </Card>
@@ -234,7 +234,7 @@ export default function StepConnection({ wizardState, updateWizardState, onCompl
               variant="outlined"
               sx={{
                 border: 2,
-                borderColor: selectedId === conn.id ? 'primary.main' : 'divider',
+                borderColor: selectedId === conn.id ? (theme) => theme.palette.mode === 'dark' ? '#82827C' : '#63635E' : 'divider',
                 transition: 'border-color 0.2s',
               }}
             >
@@ -257,11 +257,11 @@ export default function StepConnection({ wizardState, updateWizardState, onCompl
                     <Chip
                       size="small"
                       label={conn.status === 'connected' ? 'Connected' : 'Disconnected'}
-                      color={conn.status === 'connected' ? 'success' : 'default'}
                       variant="outlined"
+                      sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6', color: 'text.secondary' }}
                     />
                     {selectedId === conn.id && (
-                      <CheckCircleIcon sx={{ color: 'primary.main' }} />
+                      <CheckCircleIcon sx={{ color: 'text.secondary' }} />
                     )}
                   </Stack>
                 </CardContent>

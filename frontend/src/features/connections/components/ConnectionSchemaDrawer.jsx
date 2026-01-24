@@ -169,7 +169,7 @@ export default function ConnectionSchemaDrawer({ open, onClose, connection }) {
                 borderColor: alpha(theme.palette.divider, 0.3),
               },
               '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                borderColor: theme.palette.primary.main,
+                borderColor: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
               },
             },
           }}

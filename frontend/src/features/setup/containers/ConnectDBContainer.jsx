@@ -213,7 +213,7 @@ const dbTypeToggleGroupSx = (theme) => ({
 })
 
 const buildDbTypeButtonSx = (accent) => (theme) => {
-  const accentColor = accent || theme.palette.primary.main
+  const accentColor = accent || (theme.palette.mode === 'dark' ? '#82827C' : '#63635E')
   return {
     justifyContent: 'center',
     alignItems: 'center',
@@ -468,9 +468,9 @@ const SelectField = ({
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        color: accentColor || theme.palette.primary.main,
-                        backgroundColor: alpha(accentColor || theme.palette.primary.main, 0.12),
-                        boxShadow: `0 4px 12px ${alpha(accentColor || theme.palette.primary.main, 0.18)}`,
+                        color: accentColor || (theme.palette.mode === 'dark' ? '#82827C' : '#63635E'),
+                        backgroundColor: alpha(accentColor || (theme.palette.mode === 'dark' ? '#82827C' : '#63635E'), 0.12),
+                        boxShadow: `0 4px 12px ${alpha(accentColor || (theme.palette.mode === 'dark' ? '#82827C' : '#63635E'), 0.18)}`,
                         flexShrink: 0,
                         ml: 0.1,
                       })}
@@ -535,14 +535,14 @@ const SelectField = ({
                   borderRadius: 2,
                   transition: 'background-color 140ms ease, transform 140ms ease',
                   '&:hover': {
-                    backgroundColor: alpha(accentColor || theme.palette.primary.main, 0.08),
+                    backgroundColor: alpha(accentColor || (theme.palette.mode === 'dark' ? '#82827C' : '#63635E'), 0.08),
                     transform: 'translateX(4px)',
                   },
                   '&.Mui-selected': {
-                    backgroundColor: alpha(accentColor || theme.palette.primary.main, 0.12),
-                    color: accentColor || theme.palette.primary.main,
+                    backgroundColor: alpha(accentColor || (theme.palette.mode === 'dark' ? '#82827C' : '#63635E'), 0.12),
+                    color: accentColor || (theme.palette.mode === 'dark' ? '#82827C' : '#63635E'),
                     '&:hover': {
-                      backgroundColor: alpha(accentColor || theme.palette.primary.main, 0.16),
+                      backgroundColor: alpha(accentColor || (theme.palette.mode === 'dark' ? '#82827C' : '#63635E'), 0.16),
                     },
                   },
                 })}
@@ -556,8 +556,8 @@ const SelectField = ({
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      color: accentColor || theme.palette.primary.main,
-                      backgroundColor: alpha(accentColor || theme.palette.primary.main, 0.1),
+                      color: accentColor || (theme.palette.mode === 'dark' ? '#82827C' : '#63635E'),
+                      backgroundColor: alpha(accentColor || (theme.palette.mode === 'dark' ? '#82827C' : '#63635E'), 0.1),
                       flexShrink: 0,
                       ml: 0.15,
                     })}
@@ -1229,7 +1229,7 @@ const portValue = watch('port')
       borderColor: 'divider',
     },
     '& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline': {
-      borderColor: 'primary.main',
+      borderColor: 'text.secondary',
       borderWidth: 2,
     },
     '& .MuiOutlinedInput-input': { py: 1.25 },
@@ -1980,9 +1980,9 @@ const lastHeartbeatLabel = useMemo(() => {
             <Tooltip title="Copy resolved path">
               <IconButton
                 size="small"
-                color="primary"
                 onClick={copySqlitePath}
                 aria-label="Copy resolved path"
+                sx={{ color: 'text.secondary' }}
               >
                 <ContentCopyIcon fontSize="small" />
               </IconButton>
@@ -2064,10 +2064,9 @@ const lastHeartbeatLabel = useMemo(() => {
           >
             <Button
               variant="contained"
-              color="primary"
               disableElevation
               startIcon={<PlayArrowIcon />}
-              sx={{ borderRadius: 2, px: 2.5, textTransform: 'none' }}
+              sx={{ borderRadius: 2, px: 2.5, textTransform: 'none', bgcolor: (theme) => theme.palette.mode === 'dark' ? '#63635E' : '#21201C', color: '#fff', '&:hover': { bgcolor: (theme) => theme.palette.mode === 'dark' ? '#82827C' : '#63635E' } }}
               type="submit"
               disabled={mutation.isPending}
             >
@@ -2075,11 +2074,11 @@ const lastHeartbeatLabel = useMemo(() => {
             </Button>
             <Button
               variant="outlined"
-              color="success"
               type="button"
               onClick={handleSave}
               disabled={mutation.isPending || !canSave}
               startIcon={<ArrowForwardIcon />}
+              sx={{ color: 'text.secondary', borderColor: (theme) => alpha(theme.palette.text.secondary, 0.3), '&:hover': { borderColor: 'text.secondary' } }}
             >
               Save & Continue
             </Button>
@@ -2092,18 +2091,18 @@ const lastHeartbeatLabel = useMemo(() => {
             )}
             {connection.status === 'connected' && (
               <Chip
-                color="success"
                 label="Connected"
                 size="small"
                 onClick={() => setShowDetails((v) => !v)}
+                sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6', color: 'text.secondary' }}
               />
             )}
             {connection.status === 'failed' && (
               <Chip
-                color="error"
                 label="Failed"
                 size="small"
                 onClick={() => setShowDetails((v) => !v)}
+                sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6', color: 'text.secondary' }}
               />
             )}
           </Stack>
@@ -2219,12 +2218,12 @@ const lastHeartbeatLabel = useMemo(() => {
                         p: 2,
                         borderRadius: 2,
                         border: '1px solid',
-                        borderColor: isSelected ? 'primary.main' : 'divider',
+                        borderColor: isSelected ? 'text.secondary' : 'divider',
                         boxShadow: isSelected ? '0 12px 24px rgba(15,23,42,0.12)' : 'none',
                         backgroundColor: 'background.paper',
                         transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
                         '&:hover': {
-                          borderColor: 'primary.main',
+                          borderColor: 'text.secondary',
                           boxShadow: '0 10px 20px rgba(15,23,42,0.18)',
                         },
                       }}
@@ -2234,7 +2233,7 @@ const lastHeartbeatLabel = useMemo(() => {
                           primary={
                             <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0 }}>
                               <Typography variant="subtitle2" noWrap title={c.name}>{c.name}</Typography>
-                              {isActive && <Chip size="small" color="success" label="Active" />}
+                              {isActive && <Chip size="small" label="Active" sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6', color: 'text.secondary' }} />}
                             </Stack>
                           }
                           secondary={
@@ -2382,7 +2381,7 @@ const lastHeartbeatLabel = useMemo(() => {
                   <Stack direction="row" spacing={1} alignItems="center" sx={{ flexShrink: 0 }}>
                     {activeConnectionId === detailConnection.backend_connection_id ||
                     activeConnectionId === detailConnection.id ? (
-                      <Chip size="small" color="success" label="Active" />
+                      <Chip size="small" label="Active" sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6', color: 'text.secondary' }} />
                     ) : null}
                     <HeartbeatBadge
                       withText
@@ -2489,11 +2488,11 @@ const lastHeartbeatLabel = useMemo(() => {
                     Edit Settings
                   </Button>
                   <Button
-                    color="error"
                     variant="text"
                     size="small"
                     startIcon={<DeleteOutlineIcon />}
                     onClick={() => setConfirmDelete(detailConnection.id)}
+                    sx={{ color: 'text.secondary' }}
                   >
                     Delete
                   </Button>

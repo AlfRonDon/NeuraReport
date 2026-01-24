@@ -108,7 +108,7 @@ const RefreshButton = styled(IconButton)(({ theme }) => ({
   borderRadius: 12,
   transition: 'all 0.2s ease',
   '&:hover': {
-    backgroundColor: alpha(theme.palette.primary.main, 0.1),
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF',
     transform: 'rotate(180deg)',
   },
 }))
@@ -120,8 +120,8 @@ const ExportButton = styled(Button)(({ theme }) => ({
   borderColor: alpha(theme.palette.divider, 0.2),
   transition: 'all 0.2s ease',
   '&:hover': {
-    borderColor: theme.palette.success.main,
-    backgroundColor: alpha(theme.palette.success.main, 0.08),
+    borderColor: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
   },
 }))
 
@@ -168,8 +168,7 @@ function StatusChip({ status }) {
       size="small"
       icon={<Icon sx={{ fontSize: 14 }} />}
       label={status?.replace(/_/g, ' ') || 'unknown'}
-      color={cfg.color}
-      sx={{ textTransform: 'capitalize', fontSize: '0.75rem', borderRadius: 2 }}
+      sx={{ textTransform: 'capitalize', fontSize: '0.75rem', borderRadius: 2, bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6', color: 'text.secondary' }}
     />
   )
 }
@@ -186,7 +185,7 @@ function SettingCard({ icon: Icon, title, children }) {
               bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
             }}
           >
-            <Icon sx={{ color: theme.palette.text.secondary, fontSize: 16 }} />
+            <Icon sx={{ color: 'text.secondary', fontSize: 16 }} />
           </IconContainer>
           <Typography variant="subtitle1" fontWeight={600} sx={{ color: theme.palette.text.primary }}>
             {title}
@@ -671,7 +670,7 @@ export default function SettingsPage() {
               <Typography variant="caption" sx={{ color: theme.palette.text.secondary, display: 'block', mb: 1 }}>
                 You're currently logged in on 1 device.
               </Typography>
-              <Button variant="outlined" size="small" color="warning" sx={{ borderRadius: 2 }}>
+              <Button variant="outlined" size="small" sx={{ borderRadius: 2, color: 'text.secondary' }}>
                 Sign Out Other Devices
               </Button>
             </Box>

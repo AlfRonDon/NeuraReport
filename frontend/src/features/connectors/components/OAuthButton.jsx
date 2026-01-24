@@ -34,14 +34,14 @@ const OAuthButtonStyled = styled(Button, {
   fontWeight: 500,
   padding: theme.spacing(1.5, 3),
   backgroundColor: connected
-    ? alpha(theme.palette.success.main, 0.1)
-    : alpha(providerColor || theme.palette.primary.main, 0.1),
+    ? alpha(theme.palette.text.secondary, 0.05)
+    : alpha(providerColor || (theme.palette.mode === 'dark' ? '#82827C' : '#63635E'), 0.1),
   color: connected
-    ? theme.palette.success.main
-    : providerColor || theme.palette.primary.main,
-  border: `1px solid ${alpha(connected ? theme.palette.success.main : providerColor || theme.palette.primary.main, 0.3)}`,
+    ? theme.palette.text.secondary
+    : providerColor || (theme.palette.mode === 'dark' ? '#82827C' : '#63635E'),
+  border: `1px solid ${alpha(connected ? theme.palette.text.secondary : providerColor || (theme.palette.mode === 'dark' ? '#82827C' : '#63635E'), 0.3)}`,
   '&:hover': {
-    backgroundColor: alpha(connected ? theme.palette.success.main : providerColor || theme.palette.primary.main, 0.15),
+    backgroundColor: alpha(connected ? theme.palette.text.secondary : providerColor || (theme.palette.mode === 'dark' ? '#82827C' : '#63635E'), 0.15),
   },
   '&:disabled': {
     opacity: 0.6,
@@ -110,7 +110,7 @@ export default function OAuthButton({
   const config = OAUTH_PROVIDERS[provider] || {
     name: provider,
     icon: CloudIcon,
-    color: theme.palette.primary.main,
+    color: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
     scopes: [],
   }
 

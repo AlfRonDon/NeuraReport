@@ -3,6 +3,7 @@ import {
   Box, Typography, Stack, Button, TextField, Chip, LinearProgress,
   MenuItem, Paper, Dialog, DialogTitle, DialogContent, DialogActions,
   Tabs, Tab, Collapse, IconButton, Badge, Tooltip, Alert,
+  alpha,
 } from '@mui/material'
 import CheckRoundedIcon from '@mui/icons-material/CheckRounded'
 import PlayArrowIcon from '@mui/icons-material/PlayArrow'
@@ -79,7 +80,7 @@ function CollapsibleSection({ title, icon, badge, defaultExpanded = false, child
           {icon}
           <Typography variant="subtitle2" fontWeight={600}>{title}</Typography>
           {badge && (
-            <Chip size="small" label={badge} color="primary" variant="outlined" />
+            <Chip size="small" label={badge} variant="outlined" sx={{ borderColor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.3) : '#E2E1DE', color: 'text.secondary' }} />
           )}
         </Stack>
         <Tooltip title={expanded ? 'Collapse' : 'Expand'}>
@@ -946,23 +947,23 @@ export default function TemplatesPane() {
               size="small"
               icon={<CheckRoundedIcon />}
               label={`${selected.length} design${selected.length !== 1 ? 's' : ''}`}
-              color={selected.length > 0 ? 'primary' : 'default'}
               variant={selected.length > 0 ? 'filled' : 'outlined'}
+              sx={{ bgcolor: selected.length > 0 ? (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6' : undefined, color: 'text.secondary' }}
             />
             <Chip
               size="small"
               icon={<CalendarMonthIcon />}
               label={dateRangeValid ? 'Date set' : 'No date'}
-              color={dateRangeValid ? 'success' : 'default'}
               variant={dateRangeValid ? 'filled' : 'outlined'}
+              sx={{ bgcolor: dateRangeValid ? (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6' : undefined, color: 'text.secondary' }}
             />
             {hasResults && (
               <Chip
                 size="small"
                 icon={<SearchIcon />}
                 label={`${batchCount} batch${batchCount !== 1 ? 'es' : ''}`}
-                color="info"
                 variant="filled"
+                sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6', color: 'text.secondary' }}
               />
             )}
           </Stack>
@@ -1013,7 +1014,7 @@ export default function TemplatesPane() {
             }}
           >
             <Tab
-              icon={<Badge badgeContent={selected.length} color="primary"><CheckRoundedIcon /></Badge>}
+              icon={<Badge badgeContent={selected.length} sx={{ '& .MuiBadge-badge': { bgcolor: (theme) => theme.palette.mode === 'dark' ? '#63635E' : '#21201C', color: '#fff' } }}><CheckRoundedIcon /></Badge>}
               iconPosition="start"
               label="Designs"
             />
@@ -1023,7 +1024,7 @@ export default function TemplatesPane() {
               label="Configure"
             />
             <Tab
-              icon={<Badge badgeContent={schedules.length || undefined} color="secondary"><ScheduleIcon /></Badge>}
+              icon={<Badge badgeContent={schedules.length || undefined} sx={{ '& .MuiBadge-badge': { bgcolor: (theme) => theme.palette.mode === 'dark' ? '#82827C' : '#63635E', color: '#fff' } }}><ScheduleIcon /></Badge>}
               iconPosition="start"
               label="Schedules"
             />
@@ -1178,10 +1179,9 @@ export default function TemplatesPane() {
                     </TextField>
                     <Button
                       variant="contained"
-                      color="secondary"
                       onClick={handleCreateSchedule}
                       disabled={!canSchedule || scheduleSaving}
-                      sx={{ whiteSpace: 'nowrap' }}
+                      sx={{ whiteSpace: 'nowrap', bgcolor: (theme) => theme.palette.mode === 'dark' ? '#63635E' : '#21201C', color: '#fff', '&:hover': { bgcolor: (theme) => theme.palette.mode === 'dark' ? '#82827C' : '#63635E' } }}
                     >
                       {scheduleSaving ? 'Creating...' : 'Create Schedule'}
                     </Button>
@@ -1224,7 +1224,7 @@ export default function TemplatesPane() {
                                 {schedule.name || schedule.template_name || schedule.template_id}
                               </Typography>
                               {schedule.active === false && (
-                                <Chip size="small" label="Paused" color="warning" />
+                                <Chip size="small" label="Paused" sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6', color: 'text.secondary' }} />
                               )}
                             </Stack>
                             <Typography variant="caption" color="text.secondary">
@@ -1241,10 +1241,10 @@ export default function TemplatesPane() {
                             </Button>
                             <Button
                               size="small"
-                              color="error"
                               variant="outlined"
                               onClick={() => handleDeleteScheduleRequest(schedule)}
                               disabled={deletingScheduleId === schedule.id}
+                              sx={{ color: 'text.secondary', borderColor: (theme) => alpha(theme.palette.text.secondary, 0.3) }}
                             >
                               {deletingScheduleId === schedule.id ? '...' : 'Delete'}
                             </Button>
@@ -1336,10 +1336,10 @@ export default function TemplatesPane() {
             Cancel
           </Button>
           <Button
-            color="error"
             variant="contained"
             onClick={handleDeleteScheduleConfirm}
             disabled={Boolean(deletingScheduleId)}
+            sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? '#63635E' : '#21201C', color: '#fff', '&:hover': { bgcolor: (theme) => theme.palette.mode === 'dark' ? '#82827C' : '#63635E' } }}
           >
             Delete
           </Button>

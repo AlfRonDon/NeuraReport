@@ -113,7 +113,7 @@ const NodeCard = styled(Card)(({ theme }) => ({
   marginBottom: theme.spacing(1),
   '&:hover': {
     transform: 'translateX(4px)',
-    boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.15)}`,
+    boxShadow: `0 4px 12px ${alpha(theme.palette.common.black, 0.1)}`,
   },
 }))
 
@@ -121,12 +121,12 @@ const WorkflowNode = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(2),
   minWidth: 200,
   borderRadius: 12,
-  border: `2px solid ${alpha(theme.palette.primary.main, 0.2)}`,
+  border: `2px solid ${alpha(theme.palette.divider, 0.3)}`,
   cursor: 'pointer',
   transition: 'all 0.2s ease',
   '&:hover': {
-    borderColor: theme.palette.primary.main,
-    boxShadow: `0 4px 20px ${alpha(theme.palette.primary.main, 0.2)}`,
+    borderColor: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
+    boxShadow: `0 4px 20px ${alpha(theme.palette.common.black, 0.1)}`,
   },
 }))
 
@@ -135,11 +135,11 @@ const ExecutionCard = styled(Paper)(({ theme, status }) => ({
   marginBottom: theme.spacing(1),
   borderLeft: `4px solid ${
     status === 'completed'
-      ? theme.palette.success.main
+      ? (theme.palette.mode === 'dark' ? '#82827C' : '#63635E')
       : status === 'running'
-      ? theme.palette.info.main
+      ? (theme.palette.mode === 'dark' ? '#BCBBB5' : '#8D8D86')
       : status === 'failed'
-      ? theme.palette.error.main
+      ? theme.palette.text.secondary
       : theme.palette.grey[400]
   }`,
 }))
@@ -431,7 +431,7 @@ export default function WorkflowBuilderPage() {
       {/* Toolbar */}
       <Toolbar>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <WorkflowIcon sx={{ color: 'warning.main' }} />
+          <WorkflowIcon sx={{ color: 'text.secondary' }} />
           <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
             {currentWorkflow?.name || 'Workflows'}
           </Typography>
@@ -457,7 +457,7 @@ export default function WorkflowBuilderPage() {
               <ActionButton
                 size="small"
                 variant="outlined"
-                color="success"
+                sx={{ color: 'text.secondary' }}
                 startIcon={executing ? <StopIcon /> : <RunIcon />}
                 onClick={handleExecute}
                 disabled={executing || workflowNodes.length === 0}
@@ -531,7 +531,6 @@ export default function WorkflowBuilderPage() {
                         <Button
                           size="small"
                           variant="contained"
-                          color="success"
                           onClick={() => handleApproveStep(approval.execution_id, approval.step_id)}
                         >
                           Approve
@@ -539,7 +538,7 @@ export default function WorkflowBuilderPage() {
                         <Button
                           size="small"
                           variant="outlined"
-                          color="error"
+                          sx={{ color: 'text.secondary' }}
                           onClick={() => handleRejectStep(approval.execution_id, approval.step_id)}
                         >
                           Reject
@@ -564,7 +563,7 @@ export default function WorkflowBuilderPage() {
                           onClick={() => handleSelectNode(node)}
                           sx={{
                             borderColor: selectedNode?.id === node.id
-                              ? theme.palette.primary.main
+                              ? (theme.palette.mode === 'dark' ? '#82827C' : '#63635E')
                               : undefined,
                           }}
                         >
@@ -606,7 +605,7 @@ export default function WorkflowBuilderPage() {
                             sx={{
                               width: 2,
                               height: 40,
-                              bgcolor: alpha(theme.palette.primary.main, 0.3),
+                              bgcolor: alpha(theme.palette.divider, 0.5),
                               borderRadius: 1,
                             }}
                           />
@@ -714,12 +713,12 @@ export default function WorkflowBuilderPage() {
                       display: 'flex',
                       alignItems: 'center',
                       gap: 2,
-                      '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.05) },
+                      '&:hover': { bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8' },
                     }}
                     variant="outlined"
                     onClick={() => handleSelectWorkflow(wf.id)}
                   >
-                    <WorkflowIcon color="warning" />
+                    <WorkflowIcon sx={{ color: 'text.secondary' }} />
                     <Box>
                       <Typography variant="body2" sx={{ fontWeight: 500 }}>
                         {wf.name}

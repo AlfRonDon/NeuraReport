@@ -22,6 +22,7 @@ import {
   Alert,
   Divider,
   Button,
+  alpha,
 } from '@mui/material'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import TableChartIcon from '@mui/icons-material/TableChart'
@@ -190,7 +191,7 @@ export default function AnalysisResults({ result }) {
       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
         <Stack direction="row" spacing={1} alignItems="center">
           <Typography variant="h6">{document_name || 'Analysis Results'}</Typography>
-          <Chip label={document_type?.toUpperCase()} size="small" color="primary" variant="outlined" />
+          <Chip label={document_type?.toUpperCase()} size="small" variant="outlined" sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6', color: 'text.secondary' }} />
           {processing_time_ms && (
             <Chip label={`${(processing_time_ms / 1000).toFixed(1)}s`} size="small" variant="outlined" />
           )}

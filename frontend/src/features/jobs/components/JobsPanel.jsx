@@ -13,6 +13,7 @@ import {
   Button,
   Alert,
 } from '@mui/material'
+import { alpha } from '@mui/material'
 import CloseIcon from '@mui/icons-material/Close'
 import RefreshIcon from '@mui/icons-material/Refresh'
 import TaskAltIcon from '@mui/icons-material/TaskAlt'
@@ -43,21 +44,21 @@ const STATUS_FILTERS = [
 const STATUS_CHIP_PROPS = {
   queued: { label: 'Queued', color: 'default', icon: <WorkHistoryOutlinedIcon fontSize="inherit" /> },
   pending: { label: 'Pending', color: 'default', icon: <WorkHistoryOutlinedIcon fontSize="inherit" /> },
-  running: { label: 'Running', color: 'info', icon: <RefreshIcon fontSize="inherit" /> },
-  completed: { label: 'Completed', color: 'success', icon: <TaskAltIcon fontSize="inherit" /> },
-  succeeded: { label: 'Completed', color: 'success', icon: <TaskAltIcon fontSize="inherit" /> },
-  failed: { label: 'Failed', color: 'error', icon: <ErrorOutlineIcon fontSize="inherit" /> },
-  cancelled: { label: 'Cancelled', color: 'warning', icon: <ErrorOutlineIcon fontSize="inherit" /> },
+  running: { label: 'Running', color: 'default', icon: <RefreshIcon fontSize="inherit" /> },
+  completed: { label: 'Completed', color: 'default', icon: <TaskAltIcon fontSize="inherit" /> },
+  succeeded: { label: 'Completed', color: 'default', icon: <TaskAltIcon fontSize="inherit" /> },
+  failed: { label: 'Failed', color: 'default', icon: <ErrorOutlineIcon fontSize="inherit" /> },
+  cancelled: { label: 'Cancelled', color: 'default', icon: <ErrorOutlineIcon fontSize="inherit" /> },
 }
 
 const STEP_STATUS_COLORS = {
   queued: 'default',
   pending: 'default',
-  running: 'info',
-  completed: 'success',
-  succeeded: 'success',
-  failed: 'error',
-  cancelled: 'warning',
+  running: 'default',
+  completed: 'default',
+  succeeded: 'default',
+  failed: 'default',
+  cancelled: 'default',
 }
 
 const formatTimestamp = (value) => {
@@ -310,7 +311,7 @@ function JobCard({ job, onNavigate, onSetupNavigate, connectionName, onCancel, o
               <Button
                 size="small"
                 variant="outlined"
-                color="secondary"
+                sx={{ color: 'text.secondary' }}
                 onClick={() => onSetupNavigate(job.connectionId)}
               >
                 Go to Setup
@@ -321,7 +322,7 @@ function JobCard({ job, onNavigate, onSetupNavigate, connectionName, onCancel, o
                 <Button
                   size="small"
                   variant="outlined"
-                  color="error"
+                  sx={{ color: 'text.secondary' }}
                   startIcon={<CancelIcon fontSize="small" />}
                   onClick={() => onCancel?.(job.id)}
                 >
@@ -330,7 +331,7 @@ function JobCard({ job, onNavigate, onSetupNavigate, connectionName, onCancel, o
                 <Button
                   size="small"
                   variant="text"
-                  color="error"
+                  sx={{ color: 'text.secondary' }}
                   onClick={() => onForceCancel?.(job.id)}
                 >
                   Force stop
@@ -549,7 +550,7 @@ export default function JobsPanel({ open, onClose }) {
                 key={filter.value}
                 size="small"
                 label={filter.label}
-                color={statusFilter === filter.value ? 'primary' : 'default'}
+                sx={statusFilter === filter.value ? { bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6', color: 'text.secondary' } : undefined}
                 variant={statusFilter === filter.value ? 'filled' : 'outlined'}
                 onClick={() => handleFilterChange(filter.value)}
                 data-testid={`jobs-filter-${filter.value}`}
@@ -568,7 +569,7 @@ export default function JobsPanel({ open, onClose }) {
               Failed to load jobs: {error.message || String(error)}
             </Alert>
           )}
-          {(isLoading || isFetching) && <LinearProgress color="secondary" aria-label="Loading jobs" />}
+          {(isLoading || isFetching) && <LinearProgress sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF', '& .MuiLinearProgress-bar': { bgcolor: (theme) => theme.palette.mode === 'dark' ? '#82827C' : '#63635E' } }} aria-label="Loading jobs" />}
         </Stack>
         <Divider />
         {showEmptyState ? (

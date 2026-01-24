@@ -12,19 +12,14 @@ function ToastContent({ state, onClose, onUndo }) {
   const theme = useTheme()
 
   const getSeverityStyles = () => {
-    const severityColors = {
-      success: theme.palette.success.main,
-      error: theme.palette.error.main,
-      warning: theme.palette.warning.main,
-      info: theme.palette.info.main,
-    }
-    const color = severityColors[state.severity] || severityColors.info
+    const neutralColor = theme.palette.text.secondary
+    const neutralBg = theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.12) : '#F1F0EF'
 
     return {
-      bgcolor: alpha(color, 0.15),
-      color: color,
-      border: `1px solid ${alpha(color, 0.3)}`,
-      iconColor: color,
+      bgcolor: neutralBg,
+      color: neutralColor,
+      border: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
+      iconColor: neutralColor,
     }
   }
 

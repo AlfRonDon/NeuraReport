@@ -14,6 +14,7 @@ import {
   LinearProgress,
   IconButton,
   Box,
+  alpha,
 } from '@mui/material'
 import CloseIcon from '@mui/icons-material/Close'
 import { useAppStore } from '@/stores'
@@ -166,8 +167,8 @@ export default function DiscoveryListsPanel({ open, onClose }) {
                     <Chip
                       label={`Template ${index + 1}`}
                       size="small"
-                      color="primary"
                       variant="outlined"
+                      sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6', color: 'text.secondary' }}
                     />
                   </Stack>
                   <Divider sx={{ my: 1.5 }} />

@@ -61,8 +61,8 @@ const WidgetCard = styled(Card)(({ theme }) => ({
   transition: 'all 0.2s ease',
   '&:hover': {
     transform: 'translateY(-2px)',
-    boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.15)}`,
-    borderColor: theme.palette.primary.main,
+    boxShadow: `0 4px 12px ${theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.15) : alpha(theme.palette.text.primary, 0.08)}`,
+    borderColor: theme.palette.divider,
   },
   '&:active': {
     cursor: 'grabbing',
@@ -191,7 +191,7 @@ export default function WidgetPalette({ onAddWidget }) {
                       <widget.icon
                         sx={{
                           fontSize: 20,
-                          color: `${widget.color}.main`,
+                          color: 'text.secondary',
                         }}
                       />
                       <Typography

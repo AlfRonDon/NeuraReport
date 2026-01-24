@@ -61,7 +61,7 @@ const Input = forwardRef(function Input(
           '&.Mui-focused': {
             bgcolor: 'background.paper',
             boxShadow: (theme) =>
-              `0 0 0 2px ${alpha(theme.palette.primary.main, 0.2)}`,
+              `0 0 0 2px ${alpha(theme.palette.text.primary, 0.08)}`,
           },
         },
         ...props.sx,

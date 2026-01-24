@@ -120,12 +120,12 @@ const DocumentItem = styled(Paper, {
   padding: theme.spacing(1.5),
   marginBottom: theme.spacing(1),
   cursor: 'pointer',
-  border: `1px solid ${isActive ? theme.palette.primary.main : 'transparent'}`,
-  backgroundColor: isActive ? alpha(theme.palette.primary.main, 0.04) : 'transparent',
+  border: `1px solid ${isActive ? (theme.palette.mode === 'dark' ? '#82827C' : '#63635E') : 'transparent'}`,
+  backgroundColor: isActive ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : '#F9F9F8') : 'transparent',
   transition: 'all 0.15s ease',
   '&:hover': {
-    backgroundColor: alpha(theme.palette.primary.main, 0.08),
-    borderColor: alpha(theme.palette.primary.main, 0.3),
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
+    borderColor: alpha(theme.palette.divider, 0.3),
   },
 }))
 
@@ -149,8 +149,8 @@ const EmptyState = styled(Box)(({ theme }) => ({
 const AIResultCard = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(2),
   marginTop: theme.spacing(2),
-  backgroundColor: alpha(theme.palette.info.main, 0.04),
-  border: `1px solid ${alpha(theme.palette.info.main, 0.2)}`,
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : '#F9F9F8',
+  border: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
   borderRadius: 12,
 }))
 
@@ -623,11 +623,11 @@ export default function DocumentEditorPage() {
           <IconButton
             size="small"
             onClick={() => setShowDocList(!showDocList)}
-            sx={{ color: showDocList ? 'primary.main' : 'text.secondary' }}
+            sx={{ color: showDocList ? 'text.primary' : 'text.secondary' }}
           >
             <OpenIcon />
           </IconButton>
-          <DocIcon sx={{ color: 'primary.main' }} />
+          <DocIcon sx={{ color: 'text.secondary' }} />
           <Typography variant="h6" sx={{ fontWeight: 600 }}>
             {currentDocument?.name || 'Documents'}
           </Typography>
@@ -659,7 +659,7 @@ export default function DocumentEditorPage() {
                 startIcon={<HistoryIcon />}
                 onClick={handleToggleVersions}
                 sx={{
-                  bgcolor: showVersions ? alpha(theme.palette.primary.main, 0.08) : 'transparent',
+                  bgcolor: showVersions ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF') : 'transparent',
                 }}
               >
                 History
@@ -670,7 +670,7 @@ export default function DocumentEditorPage() {
                 startIcon={<CommentIcon />}
                 onClick={handleToggleComments}
                 sx={{
-                  bgcolor: showComments ? alpha(theme.palette.primary.main, 0.08) : 'transparent',
+                  bgcolor: showComments ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF') : 'transparent',
                 }}
               >
                 Comments {comments.length > 0 && `(${comments.length})`}
@@ -742,7 +742,7 @@ export default function DocumentEditorPage() {
                     onClick={() => handleSelectDocument(doc.id)}
                   >
                     <Stack direction="row" alignItems="center" spacing={1}>
-                      <DocIcon sx={{ fontSize: 18, color: 'primary.main' }} />
+                      <DocIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
                       <Box sx={{ flex: 1, minWidth: 0 }}>
                         <Typography
                           variant="body2"
@@ -793,7 +793,7 @@ export default function DocumentEditorPage() {
               <AIResultCard elevation={0}>
                 <Stack direction="row" alignItems="center" justifyContent="space-between" mb={1}>
                   <Stack direction="row" alignItems="center" spacing={1}>
-                    <AIIcon sx={{ color: 'info.main', fontSize: 18 }} />
+                    <AIIcon sx={{ color: 'text.secondary', fontSize: 18 }} />
                     <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
                       AI Result
                     </Typography>
@@ -968,7 +968,7 @@ export default function DocumentEditorPage() {
           <Button onClick={() => setDeleteConfirmOpen(false)}>Cancel</Button>
           <Button
             variant="contained"
-            color="error"
+            sx={{ color: 'text.secondary' }}
             onClick={handleDeleteDocument}
           >
             Delete

@@ -35,6 +35,7 @@ import {
   Tabs,
   Tab,
   LinearProgress,
+  alpha,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -422,7 +423,7 @@ export default function EnrichmentConfigPage() {
                       variant="outlined"
                       sx={{
                         cursor: 'pointer',
-                        borderColor: selectedSources.includes(source.id) ? 'primary.main' : 'divider',
+                        borderColor: selectedSources.includes(source.id) ? 'text.secondary' : 'divider',
                         bgcolor: selectedSources.includes(source.id) ? 'action.selected' : 'background.paper',
                       }}
                       onClick={() => toggleSource(source.id)}
@@ -437,12 +438,12 @@ export default function EnrichmentConfigPage() {
                           </Box>
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                             {isCustom ? (
-                              <Chip label="Custom" size="small" color="secondary" />
+                              <Chip label="Custom" size="small" sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6', color: 'text.secondary' }} />
                             ) : (
                               <Chip label="Built-in" size="small" variant="outlined" />
                             )}
                             {selectedSources.includes(source.id) && (
-                              <Chip label="Selected" color="primary" size="small" />
+                              <Chip label="Selected" size="small" sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6', color: 'text.secondary' }} />
                             )}
                             {isCustom && (
                               <IconButton
@@ -586,10 +587,10 @@ export default function EnrichmentConfigPage() {
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                 <Button
                   variant="outlined"
-                  color="warning"
                   startIcon={loading ? <CircularProgress size={20} /> : <DeleteIcon />}
                   onClick={() => setClearCacheConfirm({ open: true, sourceId: null, sourceName: 'all sources' })}
                   disabled={loading}
+                  sx={{ color: 'text.secondary', borderColor: 'divider' }}
                 >
                   Clear All Cache
                 </Button>

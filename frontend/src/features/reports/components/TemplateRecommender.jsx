@@ -14,6 +14,7 @@ import {
   LinearProgress,
   Alert,
   Tooltip,
+  alpha,
 } from '@mui/material'
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
@@ -159,7 +160,7 @@ export default function TemplateRecommender({ onSelectTemplate }) {
     <Paper
       sx={{
         border: 1,
-        borderColor: expanded ? 'primary.main' : 'divider',
+        borderColor: 'divider',
         borderStyle: expanded ? 'solid' : 'dashed',
         transition: 'all 0.2s ease',
         overflow: 'hidden',
@@ -290,7 +291,7 @@ export default function TemplateRecommender({ onSelectTemplate }) {
                         cursor: 'pointer',
                         transition: 'all 0.15s ease',
                         '&:hover': {
-                          borderColor: 'primary.main',
+                          borderColor: (theme) => theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
                           bgcolor: 'action.hover',
                         },
                       }}
@@ -306,12 +307,12 @@ export default function TemplateRecommender({ onSelectTemplate }) {
                           sx={{
                             width: 40,
                             height: 40,
-                            bgcolor: `${KIND_COLORS[kind] || 'primary'}.lighter`,
+                            bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
                           }}
                         >
                           <Icon
                             sx={{
-                              color: `${KIND_COLORS[kind] || 'primary'}.main`,
+                              color: 'text.secondary',
                             }}
                           />
                         </Avatar>
@@ -328,16 +329,14 @@ export default function TemplateRecommender({ onSelectTemplate }) {
                             <Chip
                               label={kind.toUpperCase()}
                               size="small"
-                              color={KIND_COLORS[kind] || 'default'}
                               variant="outlined"
-                              sx={{ height: 20, fontSize: '0.65rem' }}
+                              sx={{ height: 20, fontSize: '0.65rem', bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6', color: 'text.secondary' }}
                             />
                             {score !== null && (
                               <Chip
                                 label={`${Math.round(score * 100)}% match`}
                                 size="small"
-                                color="primary"
-                                sx={{ height: 20, fontSize: '0.65rem' }}
+                                sx={{ height: 20, fontSize: '0.65rem', bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6', color: 'text.secondary' }}
                               />
                             )}
                           </Stack>

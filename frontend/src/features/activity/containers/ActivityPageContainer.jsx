@@ -99,7 +99,7 @@ const StyledFormControl = styled(FormControl)(({ theme }) => ({
     },
     '&.Mui-focused': {
       backgroundColor: theme.palette.background.paper,
-      boxShadow: `0 0 0 3px ${alpha(theme.palette.primary.main, 0.1)}`,
+      boxShadow: `0 0 0 3px ${alpha(theme.palette.text.primary, 0.08)}`,
     },
     '& .MuiOutlinedInput-notchedOutline': {
       borderColor: alpha(theme.palette.divider, 0.15),
@@ -114,7 +114,7 @@ const RefreshButton = styled(IconButton)(({ theme }) => ({
   borderRadius: 12,
   transition: 'all 0.2s ease',
   '&:hover': {
-    backgroundColor: alpha(theme.palette.primary.main, 0.1),
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
     transform: 'rotate(180deg)',
   },
 }))
@@ -123,8 +123,8 @@ const DeleteButton = styled(IconButton)(({ theme }) => ({
   borderRadius: 12,
   transition: 'all 0.2s ease',
   '&:hover': {
-    backgroundColor: alpha(theme.palette.error.main, 0.1),
-    color: theme.palette.error.main,
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
+    color: theme.palette.text.primary,
   },
 }))
 
@@ -158,13 +158,13 @@ const ACTION_ICONS = {
 
 const getActionConfig = (theme, action) => {
   const configs = {
-    created: { color: theme.palette.success.main },
-    deleted: { color: theme.palette.error.main },
-    updated: { color: theme.palette.info.main },
-    completed: { color: theme.palette.success.main },
-    failed: { color: theme.palette.error.main },
-    started: { color: theme.palette.warning.main },
-    favorite_added: { color: theme.palette.warning.main },
+    created: { color: theme.palette.text.secondary },
+    deleted: { color: theme.palette.text.secondary },
+    updated: { color: theme.palette.text.secondary },
+    completed: { color: theme.palette.text.secondary },
+    failed: { color: theme.palette.text.secondary },
+    started: { color: theme.palette.text.secondary },
+    favorite_added: { color: theme.palette.text.secondary },
     favorite_removed: { color: theme.palette.text.secondary },
     default: { color: theme.palette.text.secondary },
   }
@@ -237,7 +237,7 @@ function ActivityItem({ activity, onNavigate }) {
         px: 1,
         transition: 'all 0.2s ease',
         '&:hover': isNavigable ? {
-          bgcolor: alpha(theme.palette.primary.main, 0.04),
+          bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : '#F9F9F8',
           transform: 'translateX(4px)',
         } : {},
       }}
@@ -277,7 +277,7 @@ function ActivityItem({ activity, onNavigate }) {
             sx={{
               height: 18,
               fontSize: '0.625rem',
-              bgcolor: alpha(theme.palette.primary.main, 0.08),
+              bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
               color: theme.palette.text.secondary,
               borderRadius: 1,
             }}

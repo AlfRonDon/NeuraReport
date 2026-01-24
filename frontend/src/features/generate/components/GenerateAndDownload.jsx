@@ -782,10 +782,9 @@ function GenerateAndDownload({
             <Tooltip title="Scan your data to see what can be included in this report">
               <Button
                 variant="outlined"
-                color="secondary"
                 onClick={onFind}
                 disabled={!valid || findDisabled}
-                sx={{ width: { xs: '100%', sm: 'auto' } }}
+                sx={{ width: { xs: '100%', sm: 'auto' }, color: 'text.secondary' }}
               >
                 Preview Data
               </Button>
@@ -1281,7 +1280,7 @@ function GenerateAndDownload({
                           sx={{
                             borderColor:
                               selectedChartSource === 'suggestion' && chart.id === selectedChartId
-                                ? 'primary.main'
+                                ? 'text.secondary'
                                 : 'divider',
                             bgcolor:
                               selectedChartSource === 'suggestion' && chart.id === selectedChartId
@@ -1625,7 +1624,6 @@ function GenerateAndDownload({
                       <Button
                         size="small"
                         variant="contained"
-                        color="success"
                         startIcon={<ReplayIcon fontSize="small" />}
                         onClick={d.onRerun}
                         sx={{ width: { xs: '100%', lg: 'auto' }, textTransform: 'none', px: 2.5 }}

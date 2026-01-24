@@ -68,7 +68,9 @@ const BannerBase = styled(Box)(({ theme }) => ({
 }))
 
 const OfflineBannerContainer = styled(BannerBase)(({ theme }) => ({
-  background: `linear-gradient(135deg, ${theme.palette.warning.main}, ${theme.palette.warning.dark})`,
+  background: theme.palette.mode === 'dark'
+    ? `linear-gradient(135deg, #63635E, #21201C)`
+    : `linear-gradient(135deg, #82827C, #63635E)`,
   color: '#fff',
   '&::before': {
     content: '""',
@@ -90,7 +92,9 @@ const OfflineBannerContainer = styled(BannerBase)(({ theme }) => ({
 }))
 
 const ReconnectedBannerContainer = styled(BannerBase)(({ theme }) => ({
-  background: `linear-gradient(135deg, ${theme.palette.success.main}, ${theme.palette.success.dark})`,
+  background: theme.palette.mode === 'dark'
+    ? `linear-gradient(135deg, #82827C, #63635E)`
+    : `linear-gradient(135deg, #63635E, #21201C)`,
   color: '#fff',
   justifyContent: 'center',
 }))

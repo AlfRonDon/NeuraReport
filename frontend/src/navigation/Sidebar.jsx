@@ -536,8 +536,13 @@ export default function Sidebar({ width, collapsed, mobileOpen, onClose, onToggl
                           <NavIcon active={active} highlight={item.highlight}>
                             <Badge
                               badgeContent={badgeContent}
-                              color="primary"
                               invisible={!badgeContent}
+                              sx={{
+                                '& .MuiBadge-badge': {
+                                  bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6',
+                                  color: 'text.secondary',
+                                },
+                              }}
                               sx={{
                                 '& .MuiBadge-badge': {
                                   fontSize: '0.6rem',

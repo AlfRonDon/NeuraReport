@@ -86,7 +86,7 @@ const InfoTooltip = ({
                 : alpha(theme.palette.background.paper, 0.98),
               boxShadow: theme.shadows[6],
               borderRadius: 2,
-              border: `1px solid ${alpha(theme.palette.info.main, 0.35)}`,
+              border: `1px solid ${alpha(theme.palette.text.secondary, 0.35)}`,
             }),
             ...tooltipStyles,
           ],

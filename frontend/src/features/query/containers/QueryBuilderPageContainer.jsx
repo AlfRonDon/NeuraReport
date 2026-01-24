@@ -125,8 +125,8 @@ const HeaderButton = styled(Button)(({ theme }) => ({
   borderColor: alpha(theme.palette.divider, 0.2),
   transition: 'all 0.2s ease',
   '&:hover': {
-    borderColor: theme.palette.primary.main,
-    backgroundColor: alpha(theme.palette.primary.main, 0.08),
+    borderColor: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
   },
 }))
 
@@ -134,12 +134,13 @@ const PrimaryButton = styled(Button)(({ theme }) => ({
   borderRadius: 12,
   textTransform: 'none',
   fontWeight: 600,
-  background: `linear-gradient(135deg, ${theme.palette.success.main}, ${theme.palette.success.dark})`,
+  background: theme.palette.mode === 'dark' ? '#63635E' : '#21201C',
   color: '#fff',
-  boxShadow: `0 4px 14px ${alpha(theme.palette.success.main, 0.3)}`,
+  boxShadow: `0 4px 14px ${alpha(theme.palette.common.black, 0.15)}`,
   transition: 'all 0.2s ease',
   '&:hover': {
-    boxShadow: `0 6px 20px ${alpha(theme.palette.success.main, 0.4)}`,
+    background: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
+    boxShadow: `0 6px 20px ${alpha(theme.palette.common.black, 0.2)}`,
     transform: 'translateY(-1px)',
   },
   '&:active': {
@@ -156,12 +157,13 @@ const ExecuteButton = styled(Button)(({ theme }) => ({
   borderRadius: 12,
   textTransform: 'none',
   fontWeight: 600,
-  background: `linear-gradient(135deg, ${theme.palette.info.main}, ${theme.palette.info.dark})`,
+  background: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
   color: '#fff',
-  boxShadow: `0 4px 14px ${alpha(theme.palette.info.main, 0.3)}`,
+  boxShadow: `0 4px 14px ${alpha(theme.palette.common.black, 0.15)}`,
   transition: 'all 0.2s ease',
   '&:hover': {
-    boxShadow: `0 6px 20px ${alpha(theme.palette.info.main, 0.4)}`,
+    background: theme.palette.mode === 'dark' ? '#8D8D86' : '#82827C',
+    boxShadow: `0 6px 20px ${alpha(theme.palette.common.black, 0.2)}`,
     transform: 'translateY(-1px)',
   },
   '&:disabled': {
@@ -182,7 +184,7 @@ const StyledFormControl = styled(FormControl)(({ theme }) => ({
     },
     '&.Mui-focused': {
       backgroundColor: theme.palette.background.paper,
-      boxShadow: `0 0 0 3px ${alpha(theme.palette.primary.main, 0.1)}`,
+      boxShadow: `0 0 0 3px ${alpha(theme.palette.text.primary, 0.08)}`,
     },
   },
 }))
@@ -197,7 +199,7 @@ const StyledTextField = styled(TextField)(({ theme }) => ({
     },
     '&.Mui-focused': {
       backgroundColor: alpha(theme.palette.background.default, 0.9),
-      boxShadow: `0 0 0 3px ${alpha(theme.palette.primary.main, 0.1)}`,
+      boxShadow: `0 0 0 3px ${alpha(theme.palette.text.primary, 0.08)}`,
     },
   },
 }))
@@ -205,11 +207,11 @@ const StyledTextField = styled(TextField)(({ theme }) => ({
 const SavedQueryItem = styled(Stack)(({ theme }) => ({
   padding: theme.spacing(1),
   borderRadius: 10,
-  backgroundColor: alpha(theme.palette.primary.main, 0.05),
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : '#F9F9F8',
   cursor: 'pointer',
   transition: 'all 0.2s ease',
   '&:hover': {
-    backgroundColor: alpha(theme.palette.primary.main, 0.1),
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
     transform: 'translateX(4px)',
   },
 }))
@@ -217,11 +219,11 @@ const SavedQueryItem = styled(Stack)(({ theme }) => ({
 const HistoryItem = styled(Stack)(({ theme }) => ({
   padding: theme.spacing(1),
   borderRadius: 10,
-  backgroundColor: alpha(theme.palette.primary.main, 0.05),
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : '#F9F9F8',
   cursor: 'pointer',
   transition: 'all 0.2s ease',
   '&:hover': {
-    backgroundColor: alpha(theme.palette.primary.main, 0.1),
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
     transform: 'translateX(4px)',
   },
 }))
@@ -229,20 +231,17 @@ const HistoryItem = styled(Stack)(({ theme }) => ({
 const ExplanationBox = styled(Box)(({ theme }) => ({
   marginTop: theme.spacing(2),
   padding: theme.spacing(1.5),
-  backgroundColor: alpha(theme.palette.info.main, 0.1),
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8',
   borderRadius: 12,
-  border: `1px solid ${alpha(theme.palette.info.main, 0.2)}`,
+  border: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
 }))
 
 const ConfidenceChip = styled(Chip)(({ theme, confidence }) => ({
   height: 20,
   fontSize: '0.7rem',
   fontWeight: 600,
-  backgroundColor: alpha(
-    confidence > 0.8 ? theme.palette.success.main : theme.palette.warning.main,
-    0.2
-  ),
-  color: confidence > 0.8 ? theme.palette.success.main : theme.palette.warning.main,
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF',
+  color: theme.palette.text.secondary,
   borderRadius: 6,
 }))
 
@@ -692,8 +691,8 @@ export default function QueryBuilderPage() {
                           sx={{
                             height: 20,
                             fontSize: '0.7rem',
-                            bgcolor: alpha(theme.palette.success.main, 0.2),
-                            color: theme.palette.success.main,
+                            bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF',
+                            color: theme.palette.text.secondary,
                             borderRadius: 1.5,
                           }}
                         />
@@ -704,8 +703,8 @@ export default function QueryBuilderPage() {
                           sx={{
                             height: 20,
                             fontSize: '0.7rem',
-                            bgcolor: alpha(theme.palette.error.main, 0.2),
-                            color: theme.palette.error.main,
+                            bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF',
+                            color: theme.palette.text.secondary,
                             borderRadius: 1.5,
                           }}
                         />
@@ -854,7 +853,7 @@ export default function QueryBuilderPage() {
           {explanation && (
             <ExplanationBox>
               <Stack direction="row" alignItems="flex-start" spacing={1}>
-                <LightbulbIcon sx={{ color: theme.palette.info.main, fontSize: 18, mt: 0.25 }} />
+                <LightbulbIcon sx={{ color: theme.palette.text.secondary, fontSize: 18, mt: 0.25 }} />
                 <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
                   {explanation}
                 </Typography>
@@ -890,9 +889,8 @@ export default function QueryBuilderPage() {
               {writeOperation && (
                 <Chip
                   size="small"
-                  color="warning"
                   label={`${writeOperation.toUpperCase()} detected`}
-                  sx={{ fontSize: '0.7rem' }}
+                  sx={{ fontSize: '0.7rem', bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6', color: 'text.secondary' }}
                 />
               )}
             </Stack>

@@ -43,6 +43,93 @@ class WorkflowService:
         self._executions: dict[str, dict] = {}
         self._pending_approvals: dict[str, dict] = {}
 
+    def _safe_eval_condition(self, condition: str, context: dict[str, Any]) -> bool:
+        """Safely evaluate a condition expression without using eval().
+
+        Supports simple comparisons like:
+        - "true" / "false"
+        - "input.value > 10"
+        - "input.status == 'active'"
+        - "input.count >= 5 and input.enabled"
+        """
+        import re
+        import operator
+
+        condition = condition.strip().lower()
+
+        # Handle simple boolean literals
+        if condition in ("true", "1", "yes"):
+            return True
+        if condition in ("false", "0", "no", ""):
+            return False
+
+        # Safe operators mapping
+        ops = {
+            "==": operator.eq,
+            "!=": operator.ne,
+            ">=": operator.ge,
+            "<=": operator.le,
+            ">": operator.gt,
+            "<": operator.lt,
+        }
+
+        def get_value(path: str, ctx: dict) -> Any:
+            """Safely get a nested value from context."""
+            parts = path.strip().split(".")
+            value = ctx
+            for part in parts:
+                if isinstance(value, dict):
+                    value = value.get(part)
+                else:
+                    return None
+            return value
+
+        def parse_literal(s: str) -> Any:
+            """Parse a literal value (string, number, bool)."""
+            s = s.strip()
+            if s.startswith(("'", '"')) and s.endswith(("'", '"')):
+                return s[1:-1]
+            if s.lower() == "true":
+                return True
+            if s.lower() == "false":
+                return False
+            if s.lower() == "none":
+                return None
+            try:
+                if "." in s:
+                    return float(s)
+                return int(s)
+            except ValueError:
+                # Treat as context path
+                return get_value(s, context)
+
+        # Handle compound conditions (and/or)
+        if " and " in condition:
+            parts = condition.split(" and ")
+            return all(self._safe_eval_condition(p.strip(), context) for p in parts)
+        if " or " in condition:
+            parts = condition.split(" or ")
+            return any(self._safe_eval_condition(p.strip(), context) for p in parts)
+
+        # Handle negation
+        if condition.startswith("not "):
+            return not self._safe_eval_condition(condition[4:].strip(), context)
+
+        # Handle comparisons
+        for op_str, op_func in ops.items():
+            if op_str in condition:
+                left, right = condition.split(op_str, 1)
+                left_val = parse_literal(left)
+                right_val = parse_literal(right)
+                try:
+                    return op_func(left_val, right_val)
+                except (TypeError, ValueError):
+                    return False
+
+        # Handle simple truthiness check (e.g., "input.enabled")
+        value = parse_literal(condition)
+        return bool(value)
+
     async def create_workflow(
         self,
         request: CreateWorkflowRequest,
@@ -323,10 +410,10 @@ class WorkflowService:
                 result["output"] = context.get("input", {})
 
             elif node_type == NodeType.CONDITION.value:
-                # Evaluate condition
+                # Evaluate condition safely (no eval)
                 condition = config.get("condition", "true")
-                # Simple condition evaluation
-                result["output"] = {"passed": eval(condition, {"input": context})}
+                passed = self._safe_eval_condition(condition, context)
+                result["output"] = {"passed": passed}
 
             elif node_type == NodeType.ACTION.value:
                 # Execute action

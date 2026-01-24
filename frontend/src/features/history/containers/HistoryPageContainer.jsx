@@ -109,7 +109,7 @@ const StyledFormControl = styled(FormControl)(({ theme }) => ({
     },
     '&.Mui-focused': {
       backgroundColor: theme.palette.background.paper,
-      boxShadow: `0 0 0 3px ${alpha(theme.palette.primary.main, 0.1)}`,
+      boxShadow: `0 0 0 3px ${alpha(theme.palette.text.primary, 0.08)}`,
     },
   },
   '& .MuiInputLabel-root': {
@@ -146,8 +146,8 @@ const RefreshButton = styled(IconButton)(({ theme }) => ({
   color: theme.palette.text.secondary,
   transition: 'all 0.2s ease',
   '&:hover': {
-    color: theme.palette.primary.main,
-    backgroundColor: alpha(theme.palette.primary.main, 0.08),
+    color: theme.palette.text.primary,
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
   },
 }))
 
@@ -157,12 +157,13 @@ const PrimaryButton = styled(Button)(({ theme }) => ({
   fontWeight: 600,
   fontSize: '0.875rem',
   padding: theme.spacing(1, 2.5),
-  background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
+  background: theme.palette.mode === 'dark' ? '#63635E' : '#21201C',
   color: '#fff',
-  boxShadow: `0 4px 14px ${alpha(theme.palette.primary.main, 0.3)}`,
+  boxShadow: `0 4px 14px ${alpha(theme.palette.common.black, 0.15)}`,
   transition: 'all 0.2s ease',
   '&:hover': {
-    boxShadow: `0 6px 20px ${alpha(theme.palette.primary.main, 0.4)}`,
+    background: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
+    boxShadow: `0 6px 20px ${alpha(theme.palette.common.black, 0.2)}`,
     transform: 'translateY(-2px)',
   },
 }))
@@ -175,8 +176,8 @@ const SecondaryButton = styled(Button)(({ theme }) => ({
   borderColor: alpha(theme.palette.divider, 0.3),
   transition: 'all 0.2s ease',
   '&:hover': {
-    borderColor: theme.palette.primary.main,
-    backgroundColor: alpha(theme.palette.primary.main, 0.04),
+    borderColor: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : '#F9F9F8',
   },
 }))
 
@@ -222,26 +223,26 @@ const getStatusConfig = (theme, status) => {
   const configs = {
     completed: {
       icon: CheckCircleIcon,
-      color: theme.palette.success.main,
-      bgColor: alpha(theme.palette.success.main, 0.12),
+      color: theme.palette.text.secondary,
+      bgColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF',
       label: 'Completed',
     },
     failed: {
       icon: ErrorIcon,
-      color: theme.palette.error.main,
-      bgColor: alpha(theme.palette.error.main, 0.12),
+      color: theme.palette.text.secondary,
+      bgColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF',
       label: 'Failed',
     },
     running: {
       icon: HourglassEmptyIcon,
-      color: theme.palette.info.main,
-      bgColor: alpha(theme.palette.info.main, 0.12),
+      color: theme.palette.text.secondary,
+      bgColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF',
       label: 'Running',
     },
     pending: {
       icon: HourglassEmptyIcon,
-      color: theme.palette.warning.main,
-      bgColor: alpha(theme.palette.warning.main, 0.12),
+      color: theme.palette.text.secondary,
+      bgColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F9F9F8',
       label: 'Pending',
     },
     cancelled: {
@@ -256,8 +257,8 @@ const getStatusConfig = (theme, status) => {
 
 const getKindConfig = (theme, kind) => {
   const configs = {
-    pdf: { icon: PictureAsPdfIcon, color: theme.palette.error.main },
-    excel: { icon: TableChartIcon, color: theme.palette.success.main },
+    pdf: { icon: PictureAsPdfIcon, color: theme.palette.text.secondary },
+    excel: { icon: TableChartIcon, color: theme.palette.text.secondary },
   }
   return configs[kind] || configs.pdf
 }
@@ -624,7 +625,7 @@ export default function HistoryPage() {
                 <ArtifactButton
                   size="small"
                   onClick={(e) => handleDownloadClick(e, row, 'pdf')}
-                  sx={{ color: 'error.main' }}
+                  sx={{ color: 'text.secondary' }}
                   aria-label="Download PDF"
                 >
                   <PictureAsPdfIcon sx={{ fontSize: 18 }} />
@@ -636,7 +637,7 @@ export default function HistoryPage() {
                 <ArtifactButton
                   size="small"
                   onClick={(e) => handleDownloadClick(e, row, 'html')}
-                  sx={{ color: 'info.main' }}
+                  sx={{ color: 'text.secondary' }}
                   aria-label="View HTML"
                 >
                   <VisibilityIcon sx={{ fontSize: 18 }} />
@@ -648,7 +649,7 @@ export default function HistoryPage() {
                 <ArtifactButton
                   size="small"
                   onClick={(e) => handleDownloadClick(e, row, 'docx')}
-                  sx={{ color: 'info.main' }}
+                  sx={{ color: 'text.secondary' }}
                   aria-label="Download DOCX"
                 >
                   <ArticleIcon sx={{ fontSize: 18 }} />
@@ -660,7 +661,7 @@ export default function HistoryPage() {
                 <ArtifactButton
                   size="small"
                   onClick={(e) => handleDownloadClick(e, row, 'xlsx')}
-                  sx={{ color: 'success.main' }}
+                  sx={{ color: 'text.secondary' }}
                   aria-label="Download XLSX"
                 >
                   <TableChartIcon sx={{ fontSize: 18 }} />

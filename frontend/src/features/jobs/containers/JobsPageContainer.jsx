@@ -115,7 +115,7 @@ const StyledMenuItem = styled(MenuItem)(({ theme }) => ({
   fontSize: '0.8125rem',
   transition: 'all 0.15s ease',
   '&:hover': {
-    backgroundColor: alpha(theme.palette.primary.main, 0.08),
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
   },
   '& .MuiListItemIcon-root': {
     minWidth: 32,
@@ -153,8 +153,8 @@ const CloseButton = styled(IconButton)(({ theme }) => ({
   color: theme.palette.text.secondary,
   transition: 'all 0.2s ease',
   '&:hover': {
-    backgroundColor: alpha(theme.palette.error.main, 0.1),
-    color: theme.palette.error.main,
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
+    color: theme.palette.text.primary,
     transform: 'rotate(90deg)',
   },
 }))
@@ -216,10 +216,10 @@ const TypeChip = styled(Chip)(({ theme }) => ({
 const StyledLinearProgress = styled(LinearProgress)(({ theme }) => ({
   borderRadius: 4,
   height: 6,
-  backgroundColor: alpha(theme.palette.primary.main, 0.1),
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF',
   '& .MuiLinearProgress-bar': {
     borderRadius: 4,
-    background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.success.main})`,
+    background: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
   },
 }))
 
@@ -233,11 +233,12 @@ const ActionButton = styled(Button)(({ theme }) => ({
 }))
 
 const PrimaryButton = styled(ActionButton)(({ theme }) => ({
-  background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
+  background: theme.palette.mode === 'dark' ? '#63635E' : '#21201C',
   color: '#fff',
-  boxShadow: `0 4px 14px ${alpha(theme.palette.primary.main, 0.3)}`,
+  boxShadow: `0 4px 14px ${alpha(theme.palette.common.black, 0.15)}`,
   '&:hover': {
-    boxShadow: `0 6px 20px ${alpha(theme.palette.primary.main, 0.4)}`,
+    background: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
+    boxShadow: `0 6px 20px ${alpha(theme.palette.common.black, 0.2)}`,
     transform: 'translateY(-1px)',
   },
 }))
@@ -273,10 +274,10 @@ const StyledDivider = styled(Divider)(({ theme }) => ({
 
 const ErrorAlert = styled(Alert)(({ theme }) => ({
   borderRadius: 12,
-  backgroundColor: alpha(theme.palette.error.main, 0.1),
-  border: `1px solid ${alpha(theme.palette.error.main, 0.2)}`,
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
+  border: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
   '& .MuiAlert-icon': {
-    color: theme.palette.error.main,
+    color: theme.palette.text.secondary,
   },
 }))
 
@@ -285,7 +286,7 @@ const MoreActionsButton = styled(IconButton)(({ theme }) => ({
   transition: 'all 0.2s ease',
   '&:hover': {
     color: theme.palette.text.primary,
-    backgroundColor: alpha(theme.palette.primary.main, 0.08),
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
   },
 }))
 
@@ -297,38 +298,38 @@ const getStatusConfig = (theme, status) => {
   const configs = {
     pending: {
       icon: HourglassEmptyIcon,
-      color: theme.palette.warning.main,
-      bgColor: alpha(theme.palette.warning.main, 0.12),
+      color: theme.palette.text.secondary,
+      bgColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8',
       label: 'Pending',
     },
     running: {
       icon: PlayArrowIcon,
-      color: theme.palette.info.main,
-      bgColor: alpha(theme.palette.info.main, 0.12),
+      color: theme.palette.text.secondary,
+      bgColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF',
       label: 'Running',
     },
     completed: {
       icon: CheckCircleIcon,
-      color: theme.palette.success.main,
-      bgColor: alpha(theme.palette.success.main, 0.12),
+      color: theme.palette.text.secondary,
+      bgColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF',
       label: 'Completed',
     },
     failed: {
       icon: ErrorIcon,
-      color: theme.palette.error.main,
-      bgColor: alpha(theme.palette.error.main, 0.12),
+      color: theme.palette.text.secondary,
+      bgColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F1F0EF',
       label: 'Failed',
     },
     cancelled: {
       icon: CancelIcon,
       color: theme.palette.text.secondary,
-      bgColor: alpha(theme.palette.text.secondary, 0.08),
+      bgColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8',
       label: 'Cancelled',
     },
     cancelling: {
       icon: HourglassEmptyIcon,
-      color: theme.palette.warning.main,
-      bgColor: alpha(theme.palette.warning.main, 0.12),
+      color: theme.palette.text.secondary,
+      bgColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8',
       label: 'Cancelling...',
     },
   }
@@ -879,7 +880,7 @@ export default function JobsPage() {
       renderCell: (value, row) => {
         if (row.status === JobStatus.COMPLETED) {
           return (
-            <Typography sx={{ fontSize: '0.75rem', color: 'success.main', fontWeight: 600 }}>
+            <Typography sx={{ fontSize: '0.75rem', color: 'text.secondary', fontWeight: 600 }}>
               100%
             </Typography>
           )
@@ -1048,8 +1049,8 @@ export default function JobsPage() {
           </StyledMenuItem>
         )}
         {canCancelJob(menuJob?.status) && (
-          <StyledMenuItem onClick={handleCancelClick} sx={{ color: 'error.main' }}>
-            <ListItemIcon><CancelIcon sx={{ fontSize: 16, color: 'error.main' }} /></ListItemIcon>
+          <StyledMenuItem onClick={handleCancelClick} sx={{ color: 'text.secondary' }}>
+            <ListItemIcon><CancelIcon sx={{ fontSize: 16, color: 'text.secondary' }} /></ListItemIcon>
             <ListItemText primaryTypographyProps={{ fontSize: '0.8125rem' }}>Cancel</ListItemText>
           </StyledMenuItem>
         )}

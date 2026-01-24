@@ -1,5 +1,5 @@
 import Grid from '@mui/material/Grid2'
-import { Box, Typography, Stack, Chip, Alert, Button } from '@mui/material'
+import { Box, Typography, Stack, Chip, Alert, Button, alpha } from '@mui/material'
 import PlayArrowIcon from '@mui/icons-material/PlayArrow'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useLocation } from 'react-router-dom'
@@ -606,14 +606,14 @@ export default function GeneratePage() {
             <Chip
               size="small"
               label={`${selected.length} selected`}
-              color="primary"
+              sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6', color: 'text.secondary' }}
             />
           )}
           <Chip
             size="small"
             label={`${approved.length} available`}
-            color={approved.length > 0 ? 'success' : 'default'}
             variant="outlined"
+            sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6', color: 'text.secondary' }}
           />
         </Stack>
       </Stack>

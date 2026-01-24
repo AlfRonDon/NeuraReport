@@ -65,7 +65,7 @@ const PageContainer = styled(Box)(({ theme }) => ({
 
 const SearchHeader = styled(Box)(({ theme }) => ({
   padding: theme.spacing(3),
-  backgroundColor: alpha(theme.palette.primary.main, 0.03),
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8',
   borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
 }))
 
@@ -94,10 +94,10 @@ const SearchInput = styled(TextField)(({ theme }) => ({
     backgroundColor: theme.palette.background.paper,
     borderRadius: 12,
     '&:hover': {
-      boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.1)}`,
+      boxShadow: `0 4px 12px ${alpha(theme.palette.text.primary, 0.05)}`,
     },
     '&.Mui-focused': {
-      boxShadow: `0 4px 20px ${alpha(theme.palette.primary.main, 0.15)}`,
+      boxShadow: `0 4px 20px ${alpha(theme.palette.text.primary, 0.1)}`,
     },
   },
 }))
@@ -108,8 +108,8 @@ const ResultCard = styled(Paper)(({ theme }) => ({
   cursor: 'pointer',
   transition: 'all 0.2s ease',
   '&:hover': {
-    backgroundColor: alpha(theme.palette.primary.main, 0.02),
-    borderColor: theme.palette.primary.main,
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8',
+    borderColor: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
   },
 }))
 
@@ -385,7 +385,7 @@ export default function SearchPageContainer() {
               {results.map((result, index) => (
                 <ResultCard key={result.id || index} variant="outlined">
                   <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
-                    <DocIcon color="primary" />
+                    <DocIcon color="inherit" />
                     <Box sx={{ flex: 1 }}>
                       <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
                         {result.title || result.filename || 'Untitled'}
@@ -424,7 +424,7 @@ export default function SearchPageContainer() {
                 mx: 'auto',
               }}
             >
-              <SearchIcon sx={{ fontSize: 64, color: 'primary.main', opacity: 0.3, mb: 2 }} />
+              <SearchIcon sx={{ fontSize: 64, color: 'text.secondary', opacity: 0.3, mb: 2 }} />
               <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
                 Search Your Documents
               </Typography>

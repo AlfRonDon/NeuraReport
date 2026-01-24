@@ -299,9 +299,9 @@ export function ValidatedTextField({
 
     let icon = null
     if (validationState === ValidationState.VALID) {
-      icon = <ValidIcon sx={{ color: theme.palette.success.main, fontSize: 20 }} />
+      icon = <ValidIcon sx={{ color: 'text.secondary', fontSize: 20 }} />
     } else if (validationState === ValidationState.INVALID) {
-      icon = <ErrorIcon sx={{ color: theme.palette.error.main, fontSize: 20 }} />
+      icon = <ErrorIcon sx={{ color: 'text.secondary', fontSize: 20 }} />
     }
 
     if (!icon) {
@@ -360,17 +360,17 @@ export function ValidationFeedback({ state, message, successMessage = 'Looks goo
   const config = {
     [ValidationState.VALID]: {
       icon: <ValidIcon fontSize="small" />,
-      color: theme.palette.success.main,
+      color: theme.palette.text.secondary,
       text: successMessage,
     },
     [ValidationState.INVALID]: {
       icon: <ErrorIcon fontSize="small" />,
-      color: theme.palette.error.main,
+      color: theme.palette.text.secondary,
       text: message,
     },
     [ValidationState.WARNING]: {
       icon: <InfoIcon fontSize="small" />,
-      color: theme.palette.warning.main,
+      color: theme.palette.text.secondary,
       text: message,
     },
   }[state]
@@ -405,8 +405,8 @@ export function CharacterCounter({ current, max, warningThreshold = 0.9 }) {
   const ratio = current / max
 
   const color = useMemo(() => {
-    if (current >= max) return theme.palette.error.main
-    if (ratio >= warningThreshold) return theme.palette.warning.main
+    if (current >= max) return theme.palette.text.secondary
+    if (ratio >= warningThreshold) return theme.palette.text.secondary
     return theme.palette.text.secondary
   }, [current, max, ratio, warningThreshold, theme])
 

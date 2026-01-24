@@ -44,6 +44,11 @@ class FileType(str, Enum):
     UNKNOWN = "unknown"
 
 
+def _utc_now() -> datetime:
+    """Return current UTC time (avoids deprecated utcnow)."""
+    return datetime.now(timezone.utc)
+
+
 class IngestionResult(BaseModel):
     """Result of document ingestion."""
     document_id: str
@@ -53,7 +58,7 @@ class IngestionResult(BaseModel):
     pages: Optional[int] = None
     metadata: Dict[str, Any] = Field(default_factory=dict)
     preview_url: Optional[str] = None
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=_utc_now)
     processing_status: str = "completed"
     warnings: List[str] = Field(default_factory=list)
 
