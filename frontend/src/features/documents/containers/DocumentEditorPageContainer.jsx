@@ -1,8 +1,8 @@
 /**
  * Document Editor Page Container
- * Rich text editor with collaboration, comments, and AI writing features.
+ * Rich text editor with TipTap, collaboration, comments, and AI writing features.
  */
-import React, { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import {
   Box,
   Typography,
@@ -22,6 +22,8 @@ import {
   ListItemIcon,
   ListItemText,
   Paper,
+  Stack,
+  CircularProgress,
   useTheme,
   alpha,
   styled,
@@ -41,13 +43,19 @@ import {
   Summarize as SummarizeIcon,
   Edit as RewriteIcon,
   Translate as TranslateIcon,
-  PictureAsPdf as PdfIcon,
-  Merge as MergeIcon,
-  WaterDrop as WatermarkIcon,
+  Expand as ExpandIcon,
+  FormatColorFill as ToneIcon,
+  Close as CloseIcon,
+  FolderOpen as OpenIcon,
+  NoteAdd as NewIcon,
+  ContentCopy as CopyIcon,
 } from '@mui/icons-material'
 import useDocumentStore from '@/stores/documentStore'
 import { useToast } from '@/components/ToastProvider'
 import { useInteraction, InteractionType, Reversibility } from '@/components/ux/governance'
+import TipTapEditor from '../components/TipTapEditor'
+import TrackChangesPanel from '../components/TrackChangesPanel'
+import CommentsPanel from '../components/CommentsPanel'
 
 // =============================================================================
 // STYLED COMPONENTS
@@ -64,10 +72,11 @@ const Toolbar = styled(Box)(({ theme }) => ({
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'space-between',
-  padding: theme.spacing(2, 3),
+  padding: theme.spacing(1.5, 3),
   borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
   backgroundColor: alpha(theme.palette.background.paper, 0.8),
   backdropFilter: 'blur(10px)',
+  gap: theme.spacing(2),
 }))
 
 const EditorArea = styled(Box)(({ theme }) => ({
@@ -79,37 +88,52 @@ const EditorArea = styled(Box)(({ theme }) => ({
 const EditorPane = styled(Box)(({ theme }) => ({
   flex: 1,
   overflow: 'auto',
-  padding: theme.spacing(4),
+  padding: theme.spacing(3),
   backgroundColor: theme.palette.background.default,
 }))
 
-const Sidebar = styled(Box)(({ theme }) => ({
-  width: 300,
-  flexShrink: 0,
-  borderLeft: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-  backgroundColor: alpha(theme.palette.background.paper, 0.6),
+const DocumentsList = styled(Box)(({ theme }) => ({
+  width: 280,
+  borderRight: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+  backgroundColor: alpha(theme.palette.background.paper, 0.5),
   display: 'flex',
   flexDirection: 'column',
 }))
 
-const SidebarHeader = styled(Box)(({ theme }) => ({
+const DocumentsHeader = styled(Box)(({ theme }) => ({
   padding: theme.spacing(2),
   borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
 }))
 
-const DocumentCard = styled(Paper)(({ theme }) => ({
-  padding: theme.spacing(3),
-  maxWidth: 800,
-  margin: '0 auto',
-  minHeight: 600,
-  backgroundColor: theme.palette.background.paper,
-  boxShadow: `0 4px 20px ${alpha(theme.palette.common.black, 0.05)}`,
+const DocumentsContent = styled(Box)(({ theme }) => ({
+  flex: 1,
+  overflow: 'auto',
+  padding: theme.spacing(1),
+}))
+
+const DocumentItem = styled(Paper, {
+  shouldForwardProp: (prop) => prop !== 'isActive',
+})(({ theme, isActive }) => ({
+  padding: theme.spacing(1.5),
+  marginBottom: theme.spacing(1),
+  cursor: 'pointer',
+  border: `1px solid ${isActive ? theme.palette.primary.main : 'transparent'}`,
+  backgroundColor: isActive ? alpha(theme.palette.primary.main, 0.04) : 'transparent',
+  transition: 'all 0.15s ease',
+  '&:hover': {
+    backgroundColor: alpha(theme.palette.primary.main, 0.08),
+    borderColor: alpha(theme.palette.primary.main, 0.3),
+  },
 }))
 
 const ActionButton = styled(Button)(({ theme }) => ({
   borderRadius: 8,
   textTransform: 'none',
   fontWeight: 500,
+  fontSize: '0.8125rem',
 }))
 
 const EmptyState = styled(Box)(({ theme }) => ({
@@ -120,6 +144,14 @@ const EmptyState = styled(Box)(({ theme }) => ({
   justifyContent: 'center',
   padding: theme.spacing(4),
   textAlign: 'center',
+}))
+
+const AIResultCard = styled(Paper)(({ theme }) => ({
+  padding: theme.spacing(2),
+  marginTop: theme.spacing(2),
+  backgroundColor: alpha(theme.palette.info.main, 0.04),
+  border: `1px solid ${alpha(theme.palette.info.main, 0.2)}`,
+  borderRadius: 12,
 }))
 
 // =============================================================================
@@ -138,43 +170,60 @@ export default function DocumentEditorPage() {
     loading,
     saving,
     error,
+    aiResult,
     fetchDocuments,
     createDocument,
     getDocument,
     updateDocument,
     deleteDocument,
     fetchVersions,
+    restoreVersion,
     fetchComments,
     addComment,
+    resolveComment,
+    replyToComment,
+    deleteComment,
     checkGrammar,
     summarize,
     rewrite,
+    expand,
     translate,
+    adjustTone,
+    clearAiResult,
     reset,
   } = useDocumentStore()
 
+  // UI State
+  const [showDocList, setShowDocList] = useState(true)
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [newDocName, setNewDocName] = useState('')
-  const [documentContent, setDocumentContent] = useState('')
+  const [editorContent, setEditorContent] = useState(null)
   const [aiMenuAnchor, setAiMenuAnchor] = useState(null)
   const [selectedText, setSelectedText] = useState('')
   const [showVersions, setShowVersions] = useState(false)
   const [showComments, setShowComments] = useState(false)
+  const [selectedVersion, setSelectedVersion] = useState(null)
+  const [highlightedCommentId, setHighlightedCommentId] = useState(null)
+  const [aiLoading, setAiLoading] = useState(false)
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+  const [docToDelete, setDocToDelete] = useState(null)
 
+  // Initialize
   useEffect(() => {
     fetchDocuments()
     return () => reset()
   }, [fetchDocuments, reset])
 
+  // Load document content
   useEffect(() => {
-    if (currentDocument) {
-      setDocumentContent(
-        currentDocument.content?.content
-          ?.map((block) => block.content?.[0]?.text || '')
-          .join('\n') || ''
-      )
+    if (currentDocument?.content) {
+      setEditorContent(currentDocument.content)
     }
   }, [currentDocument])
+
+  // ==========================================================================
+  // UX Governance helpers
+  // ==========================================================================
 
   const executeUI = useCallback((label, action, intent = {}) => {
     return execute({
@@ -188,127 +237,211 @@ export default function DocumentEditorPage() {
     })
   }, [execute])
 
-  const closeAiMenu = useCallback(() => {
-    setAiMenuAnchor(null)
-  }, [])
+  // ==========================================================================
+  // Document handlers
+  // ==========================================================================
 
   const handleOpenCreateDialog = useCallback(() => {
     return executeUI('Open create document', () => setCreateDialogOpen(true))
   }, [executeUI])
 
   const handleCloseCreateDialog = useCallback(() => {
-    return executeUI('Close create document', () => setCreateDialogOpen(false))
+    return executeUI('Close create document', () => {
+      setCreateDialogOpen(false)
+      setNewDocName('')
+    })
   }, [executeUI])
 
-  const handleCreateDocument = useCallback(() => {
-    if (!newDocName) return undefined
+  const handleCreateDocument = useCallback(async () => {
+    if (!newDocName.trim()) return
     return execute({
       type: InteractionType.CREATE,
       label: 'Create document',
       reversibility: Reversibility.SYSTEM_MANAGED,
+      successMessage: 'Document created',
       intent: { source: 'documents', name: newDocName },
       action: async () => {
         const doc = await createDocument({
-          name: newDocName,
-          content: { type: 'doc', content: [] },
+          name: newDocName.trim(),
+          content: {
+            type: 'doc',
+            content: [{ type: 'paragraph', content: [] }],
+          },
         })
         if (doc) {
           setCreateDialogOpen(false)
           setNewDocName('')
-          toast.show('Document created', 'success')
+          await getDocument(doc.id)
         }
         return doc
       },
     })
-  }, [createDocument, execute, newDocName, toast])
+  }, [createDocument, execute, getDocument, newDocName])
 
-  const handleSave = useCallback(() => {
-    if (!currentDocument) return undefined
+  const handleSelectDocument = useCallback((docId) => {
+    return execute({
+      type: InteractionType.EXECUTE,
+      label: 'Open document',
+      reversibility: Reversibility.FULLY_REVERSIBLE,
+      suppressSuccessToast: true,
+      intent: { source: 'documents', documentId: docId },
+      action: async () => {
+        await getDocument(docId)
+        setShowVersions(false)
+        setShowComments(false)
+      },
+    })
+  }, [execute, getDocument])
+
+  const handleDeleteDocument = useCallback(async () => {
+    if (!docToDelete) return
+    return execute({
+      type: InteractionType.DELETE,
+      label: `Delete document "${docToDelete.name}"`,
+      reversibility: Reversibility.PARTIALLY_REVERSIBLE,
+      successMessage: 'Document deleted',
+      intent: { source: 'documents', documentId: docToDelete.id },
+      action: async () => {
+        await deleteDocument(docToDelete.id)
+        setDeleteConfirmOpen(false)
+        setDocToDelete(null)
+      },
+    })
+  }, [deleteDocument, docToDelete, execute])
+
+  const handleSave = useCallback(async () => {
+    if (!currentDocument || !editorContent) return
     return execute({
       type: InteractionType.UPDATE,
       label: 'Save document',
       reversibility: Reversibility.SYSTEM_MANAGED,
+      successMessage: 'Document saved',
       intent: { source: 'documents', documentId: currentDocument.id },
       action: async () => {
-        const result = await updateDocument(currentDocument.id, {
-          content: {
-            type: 'doc',
-            content: documentContent.split('\n').map((text) => ({
-              type: 'paragraph',
-              content: text ? [{ type: 'text', text }] : [],
-            })),
-          },
-        })
-        if (result) {
-          toast.show('Document saved', 'success')
-        }
-        return result
+        await updateDocument(currentDocument.id, { content: editorContent })
       },
     })
-  }, [currentDocument, documentContent, execute, toast, updateDocument])
+  }, [currentDocument, editorContent, execute, updateDocument])
 
-  const handleAIAction = useCallback((action) => {
-    closeAiMenu()
-    const text = selectedText || documentContent
-    if (!text || !currentDocument) return undefined
+  const handleEditorUpdate = useCallback((content) => {
+    setEditorContent(content)
+  }, [])
 
-    const labelMap = {
-      grammar: 'Check grammar',
-      summarize: 'Summarize document',
-      rewrite: 'Rewrite text',
-      translate: 'Translate text',
-    }
+  const handleSelectionChange = useCallback((text) => {
+    setSelectedText(text)
+  }, [])
 
-    return execute({
-      type: InteractionType.ANALYZE,
-      label: labelMap[action] || 'Run AI action',
-      reversibility: Reversibility.FULLY_REVERSIBLE,
-      blocksNavigation: true,
-      intent: { source: 'documents', action, documentId: currentDocument.id },
-      action: async () => {
-        let result
-        switch (action) {
-          case 'grammar':
-            result = await checkGrammar(currentDocument.id, text)
-            if (result) toast.show('Grammar check complete', 'success')
-            break
-          case 'summarize':
-            result = await summarize(currentDocument.id, text)
-            if (result) toast.show('Summary generated', 'success')
-            break
-          case 'rewrite':
-            result = await rewrite(currentDocument.id, text)
-            if (result) toast.show('Text rewritten', 'success')
-            break
-          case 'translate':
-            result = await translate(currentDocument.id, text, 'Spanish')
-            if (result) toast.show('Translation complete', 'success')
-            break
-        }
-        return result
-      },
-    })
-  }, [checkGrammar, closeAiMenu, currentDocument, documentContent, execute, rewrite, selectedText, summarize, toast, translate])
+  // ==========================================================================
+  // Version handlers
+  // ==========================================================================
 
   const handleToggleVersions = useCallback(() => {
-    if (!currentDocument) return undefined
+    if (!currentDocument) return
     return executeUI('Toggle version history', () => {
       const next = !showVersions
       setShowVersions(next)
       setShowComments(false)
       if (next) fetchVersions(currentDocument.id)
-    }, { documentId: currentDocument.id, open: !showVersions })
+    })
   }, [currentDocument, executeUI, fetchVersions, showVersions])
 
+  const handleSelectVersion = useCallback((version) => {
+    setSelectedVersion(version)
+  }, [])
+
+  const handleRestoreVersion = useCallback(async (version) => {
+    if (!currentDocument || !restoreVersion) return
+    return execute({
+      type: InteractionType.UPDATE,
+      label: `Restore version ${version.version}`,
+      reversibility: Reversibility.PARTIALLY_REVERSIBLE,
+      successMessage: `Restored to version ${version.version}`,
+      intent: { source: 'documents', documentId: currentDocument.id, version: version.version },
+      action: async () => {
+        await restoreVersion(currentDocument.id, version.id)
+        await getDocument(currentDocument.id)
+      },
+    })
+  }, [currentDocument, execute, getDocument, restoreVersion])
+
+  // ==========================================================================
+  // Comment handlers
+  // ==========================================================================
+
   const handleToggleComments = useCallback(() => {
-    if (!currentDocument) return undefined
+    if (!currentDocument) return
     return executeUI('Toggle comments', () => {
       const next = !showComments
       setShowComments(next)
       setShowVersions(false)
       if (next) fetchComments(currentDocument.id)
-    }, { documentId: currentDocument.id, open: !showComments })
+    })
   }, [currentDocument, executeUI, fetchComments, showComments])
+
+  const handleAddComment = useCallback(async ({ text, quoted_text }) => {
+    if (!currentDocument || !addComment) return
+    return execute({
+      type: InteractionType.CREATE,
+      label: 'Add comment',
+      reversibility: Reversibility.FULLY_REVERSIBLE,
+      successMessage: 'Comment added',
+      intent: { source: 'documents', documentId: currentDocument.id },
+      action: async () => {
+        await addComment(currentDocument.id, { text, quoted_text })
+        setSelectedText('')
+      },
+    })
+  }, [addComment, currentDocument, execute])
+
+  const handleResolveComment = useCallback(async (commentId) => {
+    if (!currentDocument || !resolveComment) return
+    return execute({
+      type: InteractionType.UPDATE,
+      label: 'Resolve comment',
+      reversibility: Reversibility.FULLY_REVERSIBLE,
+      successMessage: 'Comment resolved',
+      intent: { source: 'documents', documentId: currentDocument.id, commentId },
+      action: async () => {
+        await resolveComment(currentDocument.id, commentId)
+      },
+    })
+  }, [currentDocument, execute, resolveComment])
+
+  const handleReplyComment = useCallback(async (commentId, text) => {
+    if (!currentDocument || !replyToComment) return
+    return execute({
+      type: InteractionType.CREATE,
+      label: 'Reply to comment',
+      reversibility: Reversibility.FULLY_REVERSIBLE,
+      successMessage: 'Reply added',
+      intent: { source: 'documents', documentId: currentDocument.id, commentId },
+      action: async () => {
+        await replyToComment(currentDocument.id, commentId, { text })
+      },
+    })
+  }, [currentDocument, execute, replyToComment])
+
+  const handleDeleteComment = useCallback(async (commentId) => {
+    if (!currentDocument || !deleteComment) return
+    return execute({
+      type: InteractionType.DELETE,
+      label: 'Delete comment',
+      reversibility: Reversibility.PARTIALLY_REVERSIBLE,
+      successMessage: 'Comment deleted',
+      intent: { source: 'documents', documentId: currentDocument.id, commentId },
+      action: async () => {
+        await deleteComment(currentDocument.id, commentId)
+      },
+    })
+  }, [currentDocument, deleteComment, execute])
+
+  const handleHighlightComment = useCallback((comment) => {
+    setHighlightedCommentId(comment?.id || null)
+  }, [])
+
+  // ==========================================================================
+  // AI handlers
+  // ==========================================================================
 
   const handleOpenAiMenu = useCallback((event) => {
     const anchor = event.currentTarget
@@ -319,43 +452,100 @@ export default function DocumentEditorPage() {
     return executeUI('Close AI tools', () => setAiMenuAnchor(null))
   }, [executeUI])
 
-  const handleSelectDocument = useCallback((docId) => {
+  const handleAIAction = useCallback(async (action) => {
+    setAiMenuAnchor(null)
+    const text = selectedText || ''
+    if (!text || !currentDocument) {
+      toast.show('Select some text to use AI tools', 'warning')
+      return
+    }
+
+    const actionLabels = {
+      grammar: 'Check grammar',
+      summarize: 'Summarize text',
+      rewrite: 'Rewrite text',
+      expand: 'Expand text',
+      translate: 'Translate text',
+      tone: 'Adjust tone',
+    }
+
     return execute({
-      type: InteractionType.EXECUTE,
-      label: 'Open document',
+      type: InteractionType.ANALYZE,
+      label: actionLabels[action] || 'Run AI action',
       reversibility: Reversibility.FULLY_REVERSIBLE,
-      suppressSuccessToast: true,
-      suppressErrorToast: true,
-      intent: { source: 'documents', documentId: docId },
+      blocksNavigation: true,
+      intent: { source: 'documents', action, documentId: currentDocument.id },
       action: async () => {
-        await getDocument(docId)
+        setAiLoading(true)
+        try {
+          switch (action) {
+            case 'grammar':
+              if (checkGrammar) await checkGrammar(currentDocument.id, text)
+              break
+            case 'summarize':
+              if (summarize) await summarize(currentDocument.id, text)
+              break
+            case 'rewrite':
+              if (rewrite) await rewrite(currentDocument.id, text)
+              break
+            case 'expand':
+              if (expand) await expand(currentDocument.id, text)
+              break
+            case 'translate':
+              if (translate) await translate(currentDocument.id, text, 'Spanish')
+              break
+            case 'tone':
+              if (adjustTone) await adjustTone(currentDocument.id, text, 'professional')
+              break
+          }
+          toast.show(`${actionLabels[action]} complete`, 'success')
+        } finally {
+          setAiLoading(false)
+        }
       },
     })
-  }, [execute, getDocument])
+  }, [checkGrammar, currentDocument, execute, expand, rewrite, selectedText, summarize, toast, translate, adjustTone])
 
-  const handleDismissError = useCallback(() => {
-    return executeUI('Dismiss document error', () => reset())
-  }, [executeUI, reset])
+  // ==========================================================================
+  // Render
+  // ==========================================================================
 
   return (
     <PageContainer>
       {/* Toolbar */}
       <Toolbar>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+        <Stack direction="row" alignItems="center" spacing={2}>
+          <IconButton
+            size="small"
+            onClick={() => setShowDocList(!showDocList)}
+            sx={{ color: showDocList ? 'primary.main' : 'text.secondary' }}
+          >
+            <OpenIcon />
+          </IconButton>
           <DocIcon sx={{ color: 'primary.main' }} />
           <Typography variant="h6" sx={{ fontWeight: 600 }}>
             {currentDocument?.name || 'Documents'}
           </Typography>
           {currentDocument && (
-            <Chip
-              size="small"
-              label={`v${currentDocument.version}`}
-              sx={{ borderRadius: 1 }}
-            />
+            <>
+              <Chip
+                size="small"
+                label={`v${currentDocument.version || 1}`}
+                sx={{ borderRadius: 1 }}
+              />
+              {saving && (
+                <Stack direction="row" alignItems="center" spacing={1}>
+                  <CircularProgress size={14} />
+                  <Typography variant="caption" color="text.secondary">
+                    Saving...
+                  </Typography>
+                </Stack>
+              )}
+            </>
           )}
-        </Box>
+        </Stack>
 
-        <Box sx={{ display: 'flex', gap: 1 }}>
+        <Stack direction="row" spacing={1}>
           {currentDocument ? (
             <>
               <ActionButton
@@ -363,6 +553,9 @@ export default function DocumentEditorPage() {
                 size="small"
                 startIcon={<HistoryIcon />}
                 onClick={handleToggleVersions}
+                sx={{
+                  bgcolor: showVersions ? alpha(theme.palette.primary.main, 0.08) : 'transparent',
+                }}
               >
                 History
               </ActionButton>
@@ -371,14 +564,18 @@ export default function DocumentEditorPage() {
                 size="small"
                 startIcon={<CommentIcon />}
                 onClick={handleToggleComments}
+                sx={{
+                  bgcolor: showComments ? alpha(theme.palette.primary.main, 0.08) : 'transparent',
+                }}
               >
-                Comments
+                Comments {comments.length > 0 && `(${comments.length})`}
               </ActionButton>
               <ActionButton
                 variant="outlined"
                 size="small"
-                startIcon={<AIIcon />}
+                startIcon={aiLoading ? <CircularProgress size={16} /> : <AIIcon />}
                 onClick={handleOpenAiMenu}
+                disabled={aiLoading}
               >
                 AI Tools
               </ActionButton>
@@ -389,7 +586,7 @@ export default function DocumentEditorPage() {
                 onClick={handleSave}
                 disabled={saving}
               >
-                {saving ? 'Saving...' : 'Save'}
+                Save
               </ActionButton>
             </>
           ) : (
@@ -402,82 +599,135 @@ export default function DocumentEditorPage() {
               New Document
             </ActionButton>
           )}
-        </Box>
+        </Stack>
       </Toolbar>
 
       {/* Editor Area */}
       <EditorArea>
-        {currentDocument ? (
-          <>
-            <EditorPane>
-              <DocumentCard elevation={0}>
-                <TextField
-                  fullWidth
-                  multiline
-                  minRows={20}
-                  value={documentContent}
-                  onChange={(e) => setDocumentContent(e.target.value)}
-                  onSelect={(e) => {
-                    const selection = window.getSelection()?.toString()
-                    if (selection) setSelectedText(selection)
-                  }}
-                  placeholder="Start writing your document..."
-                  variant="standard"
-                  InputProps={{
-                    disableUnderline: true,
-                    sx: {
-                      fontSize: 16,
-                      lineHeight: 1.8,
-                    },
-                  }}
-                />
-              </DocumentCard>
-            </EditorPane>
-
-            {/* Sidebar for versions/comments */}
-            {(showVersions || showComments) && (
-              <Sidebar>
-                <SidebarHeader>
-                  <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                    {showVersions ? 'Version History' : 'Comments'}
-                  </Typography>
-                </SidebarHeader>
-                <Box sx={{ flex: 1, overflow: 'auto', p: 2 }}>
-                  {showVersions && versions.map((v) => (
-                    <Paper
-                      key={v.id}
-                      sx={{
-                        p: 2,
-                        mb: 1,
-                        cursor: 'pointer',
-                        '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.05) },
-                      }}
-                      variant="outlined"
-                    >
-                      <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                        Version {v.version}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {new Date(v.created_at).toLocaleString()}
-                      </Typography>
-                    </Paper>
-                  ))}
-                  {showComments && comments.map((c) => (
-                    <Paper
-                      key={c.id}
-                      sx={{ p: 2, mb: 1 }}
-                      variant="outlined"
-                    >
-                      <Typography variant="body2">{c.text}</Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {c.author_name || 'Anonymous'}
-                      </Typography>
-                    </Paper>
-                  ))}
+        {/* Documents List Sidebar */}
+        {showDocList && (
+          <DocumentsList>
+            <DocumentsHeader>
+              <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                Documents
+              </Typography>
+              <Tooltip title="New Document">
+                <IconButton size="small" onClick={handleOpenCreateDialog}>
+                  <NewIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            </DocumentsHeader>
+            <DocumentsContent>
+              {loading && documents.length === 0 ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                  <CircularProgress size={24} />
                 </Box>
-              </Sidebar>
+              ) : documents.length === 0 ? (
+                <Box sx={{ textAlign: 'center', py: 4 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    No documents yet
+                  </Typography>
+                </Box>
+              ) : (
+                documents.map((doc) => (
+                  <DocumentItem
+                    key={doc.id}
+                    elevation={0}
+                    isActive={currentDocument?.id === doc.id}
+                    onClick={() => handleSelectDocument(doc.id)}
+                  >
+                    <Stack direction="row" alignItems="center" spacing={1}>
+                      <DocIcon sx={{ fontSize: 18, color: 'primary.main' }} />
+                      <Box sx={{ flex: 1, minWidth: 0 }}>
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            fontWeight: 500,
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                          }}
+                        >
+                          {doc.name}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {new Date(doc.updated_at).toLocaleDateString()}
+                        </Typography>
+                      </Box>
+                      <IconButton
+                        size="small"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setDocToDelete(doc)
+                          setDeleteConfirmOpen(true)
+                        }}
+                        sx={{ opacity: 0.5, '&:hover': { opacity: 1 } }}
+                      >
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    </Stack>
+                  </DocumentItem>
+                ))
+              )}
+            </DocumentsContent>
+          </DocumentsList>
+        )}
+
+        {/* Main Editor */}
+        {currentDocument ? (
+          <EditorPane>
+            <TipTapEditor
+              content={editorContent}
+              onUpdate={handleEditorUpdate}
+              onSelectionChange={handleSelectionChange}
+              placeholder="Start writing your document..."
+            />
+
+            {/* AI Result */}
+            {aiResult && (
+              <AIResultCard elevation={0}>
+                <Stack direction="row" alignItems="center" justifyContent="space-between" mb={1}>
+                  <Stack direction="row" alignItems="center" spacing={1}>
+                    <AIIcon sx={{ color: 'info.main', fontSize: 18 }} />
+                    <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                      AI Result
+                    </Typography>
+                  </Stack>
+                  <IconButton size="small" onClick={() => clearAiResult && clearAiResult()}>
+                    <CloseIcon fontSize="small" />
+                  </IconButton>
+                </Stack>
+                <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+                  {aiResult.result_text}
+                </Typography>
+                {aiResult.suggestions?.length > 0 && (
+                  <Box sx={{ mt: 2 }}>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+                      Suggestions:
+                    </Typography>
+                    {aiResult.suggestions.map((s, i) => (
+                      <Typography key={i} variant="caption" sx={{ display: 'block', mt: 0.5 }}>
+                        • {s}
+                      </Typography>
+                    ))}
+                  </Box>
+                )}
+                <Stack direction="row" spacing={1} mt={2}>
+                  <ActionButton
+                    size="small"
+                    variant="outlined"
+                    startIcon={<CopyIcon />}
+                    onClick={() => {
+                      navigator.clipboard.writeText(aiResult.result_text)
+                      toast.show('Copied to clipboard', 'success')
+                    }}
+                  >
+                    Copy
+                  </ActionButton>
+                </Stack>
+              </AIResultCard>
             )}
-          </>
+          </EditorPane>
         ) : (
           <EmptyState>
             <DocIcon sx={{ fontSize: 80, color: 'text.disabled', mb: 2 }} />
@@ -485,7 +735,7 @@ export default function DocumentEditorPage() {
               No Document Selected
             </Typography>
             <Typography color="text.secondary" sx={{ mb: 3 }}>
-              Create a new document or select one from your library.
+              Create a new document or select one from the list.
             </Typography>
             <ActionButton
               variant="contained"
@@ -494,41 +744,34 @@ export default function DocumentEditorPage() {
             >
               Create Document
             </ActionButton>
-
-            {documents.length > 0 && (
-              <Box sx={{ mt: 4, width: '100%', maxWidth: 400 }}>
-                <Typography variant="subtitle2" sx={{ mb: 2 }}>
-                  Recent Documents
-                </Typography>
-                {documents.slice(0, 5).map((doc) => (
-                  <Paper
-                    key={doc.id}
-                    sx={{
-                      p: 2,
-                      mb: 1,
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 2,
-                      '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.05) },
-                    }}
-                    variant="outlined"
-                    onClick={() => handleSelectDocument(doc.id)}
-                  >
-                    <DocIcon color="primary" />
-                    <Box>
-                      <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                        {doc.name}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {new Date(doc.updated_at).toLocaleDateString()}
-                      </Typography>
-                    </Box>
-                  </Paper>
-                ))}
-              </Box>
-            )}
           </EmptyState>
+        )}
+
+        {/* Sidebars */}
+        {showVersions && currentDocument && (
+          <TrackChangesPanel
+            versions={versions}
+            loading={loading}
+            selectedVersion={selectedVersion}
+            onSelectVersion={handleSelectVersion}
+            onRestoreVersion={handleRestoreVersion}
+            onClose={() => setShowVersions(false)}
+          />
+        )}
+
+        {showComments && currentDocument && (
+          <CommentsPanel
+            comments={comments}
+            loading={loading}
+            highlightedCommentId={highlightedCommentId}
+            selectedText={selectedText}
+            onAddComment={handleAddComment}
+            onResolveComment={handleResolveComment}
+            onReplyComment={handleReplyComment}
+            onDeleteComment={handleDeleteComment}
+            onHighlightComment={handleHighlightComment}
+            onClose={() => setShowComments(false)}
+          />
         )}
       </EditorArea>
 
@@ -537,22 +780,36 @@ export default function DocumentEditorPage() {
         anchorEl={aiMenuAnchor}
         open={Boolean(aiMenuAnchor)}
         onClose={handleCloseAiMenu}
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            minWidth: 200,
+          },
+        }}
       >
         <MenuItem onClick={() => handleAIAction('grammar')}>
-          <ListItemIcon><GrammarIcon /></ListItemIcon>
+          <ListItemIcon><GrammarIcon fontSize="small" /></ListItemIcon>
           <ListItemText>Check Grammar</ListItemText>
         </MenuItem>
         <MenuItem onClick={() => handleAIAction('summarize')}>
-          <ListItemIcon><SummarizeIcon /></ListItemIcon>
+          <ListItemIcon><SummarizeIcon fontSize="small" /></ListItemIcon>
           <ListItemText>Summarize</ListItemText>
         </MenuItem>
         <MenuItem onClick={() => handleAIAction('rewrite')}>
-          <ListItemIcon><RewriteIcon /></ListItemIcon>
+          <ListItemIcon><RewriteIcon fontSize="small" /></ListItemIcon>
           <ListItemText>Rewrite</ListItemText>
         </MenuItem>
+        <MenuItem onClick={() => handleAIAction('expand')}>
+          <ListItemIcon><ExpandIcon fontSize="small" /></ListItemIcon>
+          <ListItemText>Expand</ListItemText>
+        </MenuItem>
         <MenuItem onClick={() => handleAIAction('translate')}>
-          <ListItemIcon><TranslateIcon /></ListItemIcon>
+          <ListItemIcon><TranslateIcon fontSize="small" /></ListItemIcon>
           <ListItemText>Translate</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={() => handleAIAction('tone')}>
+          <ListItemIcon><ToneIcon fontSize="small" /></ListItemIcon>
+          <ListItemText>Adjust Tone</ListItemText>
         </MenuItem>
       </Menu>
 
@@ -562,8 +819,9 @@ export default function DocumentEditorPage() {
         onClose={handleCloseCreateDialog}
         maxWidth="xs"
         fullWidth
+        PaperProps={{ sx: { borderRadius: 3 } }}
       >
-        <DialogTitle>Create New Document</DialogTitle>
+        <DialogTitle sx={{ fontWeight: 600 }}>Create New Document</DialogTitle>
         <DialogContent>
           <TextField
             autoFocus
@@ -571,17 +829,44 @@ export default function DocumentEditorPage() {
             label="Document Name"
             value={newDocName}
             onChange={(e) => setNewDocName(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && handleCreateDocument()}
             sx={{ mt: 2 }}
           />
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={{ p: 2 }}>
           <Button onClick={handleCloseCreateDialog}>Cancel</Button>
           <Button
             variant="contained"
             onClick={handleCreateDocument}
-            disabled={!newDocName || loading}
+            disabled={!newDocName.trim() || loading}
           >
             Create
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={deleteConfirmOpen}
+        onClose={() => setDeleteConfirmOpen(false)}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: 3 } }}
+      >
+        <DialogTitle sx={{ fontWeight: 600 }}>Delete Document</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to delete "{docToDelete?.name}"? This action cannot be undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button onClick={() => setDeleteConfirmOpen(false)}>Cancel</Button>
+          <Button
+            variant="contained"
+            color="error"
+            onClick={handleDeleteDocument}
+          >
+            Delete
           </Button>
         </DialogActions>
       </Dialog>
@@ -590,8 +875,8 @@ export default function DocumentEditorPage() {
       {error && (
         <Alert
           severity="error"
-          onClose={handleDismissError}
-          sx={{ position: 'fixed', bottom: 16, right: 16, maxWidth: 400 }}
+          onClose={() => reset()}
+          sx={{ position: 'fixed', bottom: 16, right: 16, maxWidth: 400, borderRadius: 2 }}
         >
           {error}
         </Alert>

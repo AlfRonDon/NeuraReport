@@ -132,6 +132,15 @@ def _auto_register_connectors():
             except ImportError as e:
                 logger.debug(f"Could not import cloud storage connector {module_name}: {e}")
 
+    # Import storage connectors (alternate folder)
+    storage_dir = package_dir / "storage"
+    if storage_dir.exists():
+        for _, module_name, _ in pkgutil.iter_modules([str(storage_dir)]):
+            try:
+                importlib.import_module(f".storage.{module_name}", __package__)
+            except ImportError as e:
+                logger.debug(f"Could not import storage connector {module_name}: {e}")
+
     # Import productivity connectors
     productivity_dir = package_dir / "productivity"
     if productivity_dir.exists():

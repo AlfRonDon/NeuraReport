@@ -55,7 +55,7 @@ from backend.app.services.reports.discovery_metrics import (
     build_batch_field_catalog_and_stats,
     build_batch_metrics,
 )
-from backend.app.services.state_access import state_store
+import backend.app.services.state_access as state_access
 from backend.app.services.templates.TemplateVerify import get_openai_client
 from backend.app.services.utils import call_chat_completion, get_correlation_id, strip_code_fences
 
@@ -119,7 +119,7 @@ def _wrap(payload: dict, correlation_id: str | None) -> dict:
 
 def _ensure_template_exists(template_id: str) -> tuple[str, dict]:
     normalized = normalize_template_id(template_id)
-    record = state_store.get_template_record(normalized)
+    record = state_access.get_template_record(normalized)
     if not record:
         raise HTTPException(status_code=404, detail="template_not_found")
     return normalized, record
@@ -345,8 +345,8 @@ async def recommend_templates_route(
     correlation_id = _correlation(request)
 
     async def runner(job_id: str) -> None:
-        state_store.record_job_start(job_id)
-        state_store.record_job_step(job_id, "recommend", status="running", label="Generate recommendations")
+        state_access.record_job_start(job_id)
+        state_access.record_job_step(job_id, "recommend", status="running", label="Generate recommendations")
         try:
             response = recommend_templates(payload, _request_with_correlation(correlation_id))
             if hasattr(response, "model_dump"):
@@ -360,15 +360,15 @@ async def recommend_templates_route(
                 if isinstance(result_payload, dict)
                 else result_payload
             )
-            state_store.record_job_step(job_id, "recommend", status="succeeded", progress=100.0)
-            state_store.record_job_completion(
+            state_access.record_job_step(job_id, "recommend", status="succeeded", progress=100.0)
+            state_access.record_job_completion(
                 job_id,
                 status="succeeded",
                 result={"recommendations": result_data},
             )
         except Exception as exc:
-            state_store.record_job_step(job_id, "recommend", status="failed", error=str(exc))
-            state_store.record_job_completion(job_id, status="failed", error=str(exc))
+            state_access.record_job_step(job_id, "recommend", status="failed", error=str(exc))
+            state_access.record_job_completion(job_id, status="failed", error=str(exc))
 
     job = await enqueue_background_job(
         job_type="recommend_templates",

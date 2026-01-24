@@ -40,17 +40,9 @@ def format_bytes(num_bytes: int) -> str:
 def resolve_pdf_upload_limit(default: int | None = _DEFAULT_VERIFY_PDF_BYTES) -> int | None:
     if default is None:
         default = int(get_settings().max_verify_pdf_bytes)
-    raw = os.getenv("NEURA_MAX_VERIFY_PDF_BYTES")
-    if raw is None or raw.strip() == "":
-        return default
-    try:
-        value = int(raw)
-    except ValueError:
-        logger.warning("invalid_pdf_upload_limit", extra={"event": "invalid_pdf_upload_limit", "value": raw})
-        return default
-    if value <= 0:
+    if default <= 0:
         return None
-    return value
+    return default
 
 
 MAX_VERIFY_PDF_BYTES = resolve_pdf_upload_limit()

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { API_BASE } from '../api/client'
+import { checkHealth } from '@/api/health'
 
 /**
  * Hook to detect network connectivity status
@@ -10,34 +10,24 @@ export function useNetworkStatus() {
     typeof navigator !== 'undefined' ? navigator.onLine : true
   )
   const [lastChecked, setLastChecked] = useState(null)
-  const healthUrl = `${API_BASE.replace(/\/+$/, '')}/health`
 
   // Check connectivity by making a lightweight request
   const checkConnectivity = useCallback(async () => {
-    let timeoutId
-    try {
-      // Use a simple HEAD request to check connectivity
-      const controller = new AbortController()
-      timeoutId = setTimeout(() => controller.abort(), 5000)
+    const online = typeof navigator !== 'undefined' ? navigator.onLine : false
+    setIsOnline(online)
+    setLastChecked(new Date())
+    return online
+  }, [])
 
-      await fetch(healthUrl, {
-        method: 'HEAD',
-        signal: controller.signal,
-        cache: 'no-store',
-      })
-      setIsOnline(true)
-      setLastChecked(new Date())
-      return true
+  const checkServer = useCallback(async () => {
+    const browserOnline = typeof navigator !== 'undefined' ? navigator.onLine : false
+    if (!browserOnline) return false
+    try {
+      return await checkHealth({ timeoutMs: 5000 })
     } catch {
-      // If fetch fails, check navigator.onLine as fallback
-      const online = typeof navigator !== 'undefined' ? navigator.onLine : false
-      setIsOnline(online)
-      setLastChecked(new Date())
-      return online
-    } finally {
-      if (timeoutId) clearTimeout(timeoutId)
+      return false
     }
-  }, [healthUrl])
+  }, [])
 
   useEffect(() => {
     const handleOnline = () => {
@@ -66,6 +56,7 @@ export function useNetworkStatus() {
     isOnline,
     lastChecked,
     checkConnectivity,
+    checkServer,
   }
 }
 

@@ -35,8 +35,8 @@ import { useAppStore } from '@/stores'
 import { useToast } from '@/components/ToastProvider'
 import FavoriteButton from '@/features/favorites/components/FavoriteButton.jsx'
 import * as api from '@/api/client'
-import ConnectionForm from './ConnectionForm'
-import ConnectionSchemaDrawer from './ConnectionSchemaDrawer'
+import ConnectionForm from '../components/ConnectionForm'
+import ConnectionSchemaDrawer from '../components/ConnectionSchemaDrawer'
 // UX Governance - Enforced interaction API
 import {
   useInteraction,

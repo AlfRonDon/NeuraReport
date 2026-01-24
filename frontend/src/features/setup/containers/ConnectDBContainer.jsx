@@ -11,13 +11,13 @@ import { useForm, Controller } from 'react-hook-form'
 import { yupResolver } from '@hookform/resolvers/yup'
 import * as yup from 'yup'
 import {
-  API_BASE,
   isMock,
   testConnection as apiTestConnection,
   upsertConnection as apiUpsertConnection,
   deleteConnection as apiDeleteConnection,
   healthcheckConnection as apiHealthcheckConnection,
 } from '@/api/client'
+import { checkHealth } from '@/api/health'
 import * as mock from '@/api/mock'
 import { useMutation } from '@tanstack/react-query'
 import { useAppStore } from '@/stores'
@@ -1291,9 +1291,8 @@ const portValue = watch('port')
         if (isMock) {
           await mock.health()
         } else {
-          const healthUrl = `${API_BASE.replace(/\/+$/, '')}/health`
-          const res = await fetch(healthUrl)
-          if (!res.ok) throw new Error()
+          const ok = await checkHealth({ timeoutMs: 5000 })
+          if (!ok) throw new Error()
         }
         if (!cancelled) setApiStatus('healthy')
       } catch {

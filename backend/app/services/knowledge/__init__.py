@@ -3,14 +3,9 @@
 Services for document library, search, and knowledge graph.
 """
 
-from .service import KnowledgeService
-from .library import LibraryService
-from .search import SearchService
-from .graph import KnowledgeGraphService
+from .service import KnowledgeService, knowledge_service
 
 __all__ = [
     "KnowledgeService",
-    "LibraryService",
-    "SearchService",
-    "KnowledgeGraphService",
+    "knowledge_service",
 ]

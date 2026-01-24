@@ -210,7 +210,7 @@ class StateStore:
             "saved_charts": {},
             "runs": {},
             "activity_log": [],
-            "favorites": {"templates": [], "connections": []},
+            "favorites": {"templates": [], "connections": [], "documents": [], "spreadsheets": [], "dashboards": []},
             "user_preferences": {},
             "notifications": [],
             # AI Features
@@ -222,6 +222,20 @@ class StateStore:
             "docqa_sessions": {},
             "synthesis_sessions": {},
             "summaries": {},
+            # Phase 1-10 Features
+            "documents": {},
+            "spreadsheets": {},
+            "dashboards": {},
+            "dashboard_widgets": {},
+            "connectors": {},
+            "connector_credentials": {},  # Encrypted credentials
+            "workflows": {},
+            "workflow_executions": {},
+            "brand_kits": {},
+            "themes": {},
+            "library": {"documents": {}, "collections": {}, "tags": {}},
+            "export_jobs": {},
+            "docai_results": {},
         }
 
     def _apply_defaults(self, state: dict) -> dict:
@@ -233,7 +247,7 @@ class StateStore:
         state.setdefault("saved_charts", {})
         state.setdefault("runs", {})
         state.setdefault("activity_log", [])
-        state.setdefault("favorites", {"templates": [], "connections": []})
+        state.setdefault("favorites", {"templates": [], "connections": [], "documents": [], "spreadsheets": [], "dashboards": []})
         state.setdefault("user_preferences", {})
         state.setdefault("notifications", [])
         # AI Features
@@ -245,6 +259,20 @@ class StateStore:
         state.setdefault("docqa_sessions", {})
         state.setdefault("synthesis_sessions", {})
         state.setdefault("summaries", {})
+        # Phase 1-10 Features
+        state.setdefault("documents", {})
+        state.setdefault("spreadsheets", {})
+        state.setdefault("dashboards", {})
+        state.setdefault("dashboard_widgets", {})
+        state.setdefault("connectors", {})
+        state.setdefault("connector_credentials", {})
+        state.setdefault("workflows", {})
+        state.setdefault("workflow_executions", {})
+        state.setdefault("brand_kits", {})
+        state.setdefault("themes", {})
+        state.setdefault("library", {"documents": {}, "collections": {}, "tags": {}})
+        state.setdefault("export_jobs", {})
+        state.setdefault("docai_results", {})
         return state
 
     def _read_state(self) -> dict:

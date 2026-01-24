@@ -7,9 +7,8 @@ from fastapi import APIRouter, Depends, Query, Request
 
 from backend.app.services.security import require_api_key
 from backend.app.services.recommendations.service import RecommendationService
-from backend.app.services.state_access import store as state_store_module
 from backend.app.services.background_tasks import enqueue_background_job
-from backend.app.services.state_access import state_store
+import backend.app.services.state_access as state_access
 
 router = APIRouter(dependencies=[Depends(require_api_key)])
 
@@ -25,9 +24,6 @@ class TemplateRecommendRequest(BaseModel):
 def get_service() -> RecommendationService:
     return RecommendationService()
 
-
-def _state_store():
-    return state_store_module.state_store
 
 
 @router.post("/templates")
@@ -62,23 +58,23 @@ async def recommend_templates_post(
         return {"status": "ok", "recommendations": recommendations, "correlation_id": correlation_id}
 
     async def runner(job_id: str) -> None:
-        state_store.record_job_start(job_id)
-        state_store.record_job_step(job_id, "recommend", status="running", label="Generate recommendations")
+        state_access.record_job_start(job_id)
+        state_access.record_job_step(job_id, "recommend", status="running", label="Generate recommendations")
         try:
             recommendations = svc.recommend_templates(
                 context=context,
                 limit=5,
                 correlation_id=correlation_id,
             )
-            state_store.record_job_step(job_id, "recommend", status="succeeded", progress=100.0)
-            state_store.record_job_completion(
+            state_access.record_job_step(job_id, "recommend", status="succeeded", progress=100.0)
+            state_access.record_job_completion(
                 job_id,
                 status="succeeded",
                 result={"recommendations": recommendations},
             )
         except Exception as exc:
-            state_store.record_job_step(job_id, "recommend", status="failed", error=str(exc))
-            state_store.record_job_completion(job_id, status="failed", error=str(exc))
+            state_access.record_job_step(job_id, "recommend", status="failed", error=str(exc))
+            state_access.record_job_completion(job_id, status="failed", error=str(exc))
 
     job = await enqueue_background_job(
         job_type="recommend_templates",
@@ -110,8 +106,8 @@ async def recommend_templates_get(
         return {"status": "ok", "recommendations": recommendations, "correlation_id": correlation_id}
 
     async def runner(job_id: str) -> None:
-        state_store.record_job_start(job_id)
-        state_store.record_job_step(job_id, "recommend", status="running", label="Generate recommendations")
+        state_access.record_job_start(job_id)
+        state_access.record_job_step(job_id, "recommend", status="running", label="Generate recommendations")
         try:
             recommendations = svc.recommend_templates(
                 connection_id=connection_id,
@@ -119,15 +115,15 @@ async def recommend_templates_get(
                 limit=limit,
                 correlation_id=correlation_id,
             )
-            state_store.record_job_step(job_id, "recommend", status="succeeded", progress=100.0)
-            state_store.record_job_completion(
+            state_access.record_job_step(job_id, "recommend", status="succeeded", progress=100.0)
+            state_access.record_job_completion(
                 job_id,
                 status="succeeded",
                 result={"recommendations": recommendations},
             )
         except Exception as exc:
-            state_store.record_job_step(job_id, "recommend", status="failed", error=str(exc))
-            state_store.record_job_completion(job_id, status="failed", error=str(exc))
+            state_access.record_job_step(job_id, "recommend", status="failed", error=str(exc))
+            state_access.record_job_completion(job_id, status="failed", error=str(exc))
 
     job = await enqueue_background_job(
         job_type="recommend_templates",
@@ -145,12 +141,11 @@ async def get_template_catalog(
     """Get template catalog for browsing."""
     correlation_id = getattr(request.state, "correlation_id", None)
 
-    store = _state_store()
-    templates = store._read_state().get("templates", {})
+    templates = state_access.list_templates()
 
     # Build catalog with summary info
     catalog = []
-    for tid, t in templates.items():
+    for t in templates:
         if t.get("status") == "approved":
             catalog.append({
                 "id": t.get("id"),

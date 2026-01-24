@@ -8,18 +8,23 @@ from __future__ import annotations
 from fastapi import FastAPI
 
 from .routes import (
+    ai,
     analytics,
     charts,
     connections,
     connectors,
     dashboards,
+    design,
+    docai,
     docqa,
     documents,
     enrichment,
     excel,
+    export,
     federation,
     health,
     jobs,
+    knowledge,
     legacy,
     nl2sql,
     recommendations,
@@ -30,6 +35,7 @@ from .routes import (
     summary,
     synthesis,
     templates,
+    workflows,
 )
 from backend.app.api.analyze import router as analyze_router
 from backend.app.api.analyze import enhanced_analysis_routes
@@ -58,6 +64,11 @@ def register_routes(app: FastAPI) -> None:
     - /summary - Document summarization
     - /synthesis - Multi-document synthesis
     - /docqa - Document Q&A chat
+    - /docai - Document intelligence (parsing, classification, analysis)
+    - /workflows - Workflow automation
+    - /export - Document export and distribution
+    - /design - Brand kits and themes
+    - /knowledge - Knowledge management and document library
     """
     # Core routes
     app.include_router(fastapi_users.get_auth_router(auth_backend), prefix="/auth/jwt", tags=["auth"])
@@ -80,6 +91,7 @@ def register_routes(app: FastAPI) -> None:
     app.include_router(analytics.router, prefix="/analytics", tags=["analytics"])
 
     # AI Features
+    app.include_router(ai.router, prefix="/ai", tags=["ai"])
     app.include_router(nl2sql.router, prefix="/nl2sql", tags=["nl2sql"])
     app.include_router(enrichment.router, prefix="/enrichment", tags=["enrichment"])
     app.include_router(federation.router, prefix="/federation", tags=["federation"])
@@ -88,12 +100,25 @@ def register_routes(app: FastAPI) -> None:
     app.include_router(summary.router, prefix="/summary", tags=["summary"])
     app.include_router(synthesis.router, prefix="/synthesis", tags=["synthesis"])
     app.include_router(docqa.router, prefix="/docqa", tags=["docqa"])
+    app.include_router(docai.router, prefix="/docai", tags=["docai"])
 
     # Document editing and collaboration
     app.include_router(documents.router, prefix="/documents", tags=["documents"])
     app.include_router(spreadsheets.router, prefix="/spreadsheets", tags=["spreadsheets"])
     app.include_router(dashboards.router, prefix="/dashboards", tags=["dashboards"])
     app.include_router(connectors.router, prefix="/connectors", tags=["connectors"])
+
+    # Workflow automation
+    app.include_router(workflows.router, prefix="/workflows", tags=["workflows"])
+
+    # Export and distribution
+    app.include_router(export.router, prefix="/export", tags=["export"])
+
+    # Design and branding
+    app.include_router(design.router, prefix="/design", tags=["design"])
+
+    # Knowledge management
+    app.include_router(knowledge.router, prefix="/knowledge", tags=["knowledge"])
 
     # Legacy/compatibility routes
     app.include_router(legacy.router)

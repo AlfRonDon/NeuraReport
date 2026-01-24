@@ -28,8 +28,8 @@ import { useInteraction, InteractionType, Reversibility, useNavigateInteraction 
 import Surface from '@/components/layout/Surface.jsx'
 import InfoTooltip from '@/components/common/InfoTooltip.jsx'
 import TOOLTIP_COPY from '@/content/tooltipCopy.jsx'
-import TemplatePicker from '@/features/features/generate/components/TemplatePicker.jsx'
-import GenerateAndDownload from '@/features/features/generate/components/GenerateAndDownload.jsx'
+import TemplatePicker from '@/features/generate/components/TemplatePicker.jsx'
+import GenerateAndDownload from '@/features/generate/components/GenerateAndDownload.jsx'
 import ReportGlossaryNotice from '@/components/ux/ReportGlossaryNotice.jsx'
 import {
   ALL_OPTION,
@@ -41,7 +41,7 @@ import {
   formatTokenLabel,
   getTemplateKind,
 } from '../utils/templatesPaneUtils'
-import { DEFAULT_RESAMPLE_CONFIG } from '@/features/features/generate/utils/generateFeatureUtils'
+import { DEFAULT_RESAMPLE_CONFIG } from '@/features/generate/utils/generateFeatureUtils'
 
 
 function TabPanel({ children, value, index, ...other }) {

@@ -49,7 +49,7 @@ def _load_version_info() -> dict[str, Any]:
 class Settings(BaseSettings):
     api_title: str = "NeuraReport API"
     api_version: str = "4.0"
-    cors_origins: List[str] = Field(default_factory=lambda: ["http://localhost:3000"])
+    cors_origins: List[str] = Field(default_factory=lambda: ["http://localhost:3000"], env="NEURA_CORS_ORIGINS")
     api_key: Optional[str] = Field(default=None, env="NEURA_API_KEY")
     allow_anonymous_api: bool = Field(default=False, env="NEURA_ALLOW_ANON_API")
     jwt_secret: str = Field(default="change-me", env="NEURA_JWT_SECRET")
@@ -59,14 +59,12 @@ class Settings(BaseSettings):
     excel_uploads_dir: Path = Field(default_factory=_default_excel_uploads_root, env="EXCEL_UPLOAD_ROOT")
     state_dir: Path = Field(default_factory=_default_state_dir, env="NEURA_STATE_DIR")
 
-    max_upload_bytes: int = 50 * 1024 * 1024
-    max_verify_pdf_bytes: int = 50 * 1024 * 1024
-    max_zip_entries: int = 2000
-    max_zip_uncompressed_bytes: int = 200 * 1024 * 1024
+    max_upload_bytes: int = Field(default=50 * 1024 * 1024, env="NEURA_MAX_UPLOAD_BYTES")
+    max_verify_pdf_bytes: int = Field(default=50 * 1024 * 1024, env="NEURA_MAX_VERIFY_PDF_BYTES")
+    max_zip_entries: int = Field(default=2000, env="NEURA_MAX_ZIP_ENTRIES")
+    max_zip_uncompressed_bytes: int = Field(default=200 * 1024 * 1024, env="NEURA_MAX_ZIP_UNCOMPRESSED_BYTES")
 
-    job_workers: int = 4
-    job_queue_size: int = 32
-    template_import_max_concurrency: int = 4
+    template_import_max_concurrency: int = Field(default=4, env="NEURA_TEMPLATE_IMPORT_MAX_CONCURRENCY")
 
     openai_api_key: Optional[str] = Field(default=None, env="OPENAI_API_KEY")
     openai_model: str = Field(default="gpt-5", env="OPENAI_MODEL")
@@ -83,20 +81,20 @@ class Settings(BaseSettings):
     rate_limit_burst: int = Field(default=20, env="NEURA_RATE_LIMIT_BURST")
 
     # Security configuration
-    trusted_hosts: List[str] = Field(default_factory=lambda: ["localhost", "127.0.0.1"])
-    allowed_hosts_all: bool = True  # Set to False in production with specific hosts
+    trusted_hosts: List[str] = Field(default_factory=lambda: ["localhost", "127.0.0.1"], env="NEURA_TRUSTED_HOSTS")
+    allowed_hosts_all: bool = Field(default=True, env="NEURA_ALLOWED_HOSTS_ALL")  # Set to False in production
 
     # Request timeout
-    request_timeout_seconds: int = 300  # 5 minutes max for long-running operations
+    request_timeout_seconds: int = Field(default=300, env="NEURA_REQUEST_TIMEOUT_SECONDS")
 
     # Idempotency configuration
     idempotency_enabled: bool = Field(default=True, env="NEURA_IDEMPOTENCY_ENABLED")
     idempotency_ttl_seconds: int = Field(default=86400, env="NEURA_IDEMPOTENCY_TTL_SECONDS")
 
     # Analysis cache configuration
-    analysis_cache_max_items: int = 100
-    analysis_cache_ttl_seconds: int = 3600  # 1 hour
-    analysis_max_concurrency: int = 4
+    analysis_cache_max_items: int = Field(default=100, env="NEURA_ANALYSIS_CACHE_MAX_ITEMS")
+    analysis_cache_ttl_seconds: int = Field(default=3600, env="NEURA_ANALYSIS_CACHE_TTL_SECONDS")  # 1 hour
+    analysis_max_concurrency: int = Field(default=4, env="NEURA_ANALYSIS_MAX_CONCURRENCY")
 
     # Debug/development mode
     debug_mode: bool = Field(default=False, env="NEURA_DEBUG")

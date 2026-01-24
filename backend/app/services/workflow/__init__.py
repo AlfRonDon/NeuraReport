@@ -3,14 +3,9 @@
 Services for workflow automation and execution.
 """
 
-from .service import WorkflowService
-from .engine import WorkflowEngine
-from .triggers import TriggerService
-from .watchers import FolderWatcher
+from .service import WorkflowService, workflow_service
 
 __all__ = [
     "WorkflowService",
-    "WorkflowEngine",
-    "TriggerService",
-    "FolderWatcher",
+    "workflow_service",
 ]

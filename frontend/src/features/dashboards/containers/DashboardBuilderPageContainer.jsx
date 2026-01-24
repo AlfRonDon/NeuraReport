@@ -1,8 +1,8 @@
 /**
  * Dashboard Builder Page Container
- * Drag-and-drop dashboard builder with widgets and analytics.
+ * Drag-and-drop dashboard builder with react-grid-layout and ECharts.
  */
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import {
   Box,
   Typography,
@@ -22,9 +22,13 @@ import {
   ListItemIcon,
   ListItemText,
   Paper,
-  Grid,
-  Card,
-  CardContent,
+  List,
+  ListItem,
+  ListItemButton,
+  CircularProgress,
+  Select,
+  FormControl,
+  InputLabel,
   useTheme,
   alpha,
   styled,
@@ -37,20 +41,21 @@ import {
   Refresh as RefreshIcon,
   Share as ShareIcon,
   Code as EmbedIcon,
-  BarChart as ChartIcon,
-  TableChart as TableIcon,
-  TextFields as TextIcon,
-  FilterList as FilterIcon,
   AutoAwesome as AIIcon,
   TrendingUp as TrendIcon,
   Warning as AnomalyIcon,
-  Link as CorrelationIcon,
   CameraAlt as SnapshotIcon,
   Fullscreen as FullscreenIcon,
+  Edit as EditIcon,
+  ContentCopy as DuplicateIcon,
 } from '@mui/icons-material'
 import useDashboardStore from '@/stores/dashboardStore'
 import { useToast } from '@/components/ToastProvider'
 import { useInteraction, InteractionType, Reversibility } from '@/components/ux/governance'
+import DashboardGridLayout, { generateWidgetId, DEFAULT_WIDGET_SIZES } from '../components/DashboardGridLayout'
+import ChartWidget, { CHART_TYPES } from '../components/ChartWidget'
+import MetricWidget, { METRIC_FORMATS } from '../components/MetricWidget'
+import WidgetPalette, { parseWidgetType } from '../components/WidgetPalette'
 
 // =============================================================================
 // STYLED COMPONENTS
@@ -58,9 +63,34 @@ import { useInteraction, InteractionType, Reversibility } from '@/components/ux/
 
 const PageContainer = styled(Box)(({ theme }) => ({
   display: 'flex',
-  flexDirection: 'column',
   height: 'calc(100vh - 64px)',
   backgroundColor: theme.palette.background.default,
+}))
+
+const Sidebar = styled(Box)(({ theme }) => ({
+  width: 280,
+  display: 'flex',
+  flexDirection: 'column',
+  borderRight: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+  backgroundColor: alpha(theme.palette.background.paper, 0.6),
+}))
+
+const SidebarSection = styled(Box)(({ theme }) => ({
+  padding: theme.spacing(2),
+  borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+}))
+
+const SidebarContent = styled(Box)(({ theme }) => ({
+  flex: 1,
+  overflow: 'auto',
+  padding: theme.spacing(2),
+}))
+
+const MainContent = styled(Box)(({ theme }) => ({
+  flex: 1,
+  display: 'flex',
+  flexDirection: 'column',
+  overflow: 'hidden',
 }))
 
 const Toolbar = styled(Box)(({ theme }) => ({
@@ -72,67 +102,40 @@ const Toolbar = styled(Box)(({ theme }) => ({
   backgroundColor: alpha(theme.palette.background.paper, 0.8),
 }))
 
-const DashboardArea = styled(Box)(({ theme }) => ({
-  flex: 1,
-  display: 'flex',
-  overflow: 'hidden',
-}))
-
-const WidgetPalette = styled(Box)(({ theme }) => ({
-  width: 240,
-  flexShrink: 0,
-  borderRight: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-  backgroundColor: alpha(theme.palette.background.paper, 0.6),
-  padding: theme.spacing(2),
-  overflow: 'auto',
-}))
-
 const Canvas = styled(Box)(({ theme }) => ({
   flex: 1,
-  padding: theme.spacing(3),
+  padding: theme.spacing(2),
   overflow: 'auto',
   backgroundColor: theme.palette.background.default,
-}))
-
-const WidgetCard = styled(Card)(({ theme }) => ({
-  cursor: 'grab',
-  transition: 'all 0.2s ease',
-  '&:hover': {
-    transform: 'translateY(-2px)',
-    boxShadow: `0 4px 20px ${alpha(theme.palette.primary.main, 0.15)}`,
-  },
-}))
-
-const DashboardWidget = styled(Paper)(({ theme }) => ({
-  height: '100%',
-  display: 'flex',
-  flexDirection: 'column',
-  overflow: 'hidden',
-  backgroundColor: theme.palette.background.paper,
-  border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-  borderRadius: 12,
-}))
-
-const WidgetHeader = styled(Box)(({ theme }) => ({
-  padding: theme.spacing(1.5, 2),
-  borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-}))
-
-const WidgetContent = styled(Box)(({ theme }) => ({
-  flex: 1,
-  padding: theme.spacing(2),
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
 }))
 
 const ActionButton = styled(Button)(({ theme }) => ({
   borderRadius: 8,
   textTransform: 'none',
   fontWeight: 500,
+  fontSize: '0.8125rem',
+}))
+
+const DashboardListItem = styled(ListItemButton, {
+  shouldForwardProp: (prop) => prop !== 'active',
+})(({ theme, active }) => ({
+  borderRadius: 8,
+  marginBottom: theme.spacing(0.5),
+  backgroundColor: active ? alpha(theme.palette.primary.main, 0.1) : 'transparent',
+  '&:hover': {
+    backgroundColor: active
+      ? alpha(theme.palette.primary.main, 0.15)
+      : alpha(theme.palette.action.hover, 0.05),
+  },
+}))
+
+const EmptyCanvas = styled(Box)(({ theme }) => ({
+  height: '100%',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  border: `2px dashed ${alpha(theme.palette.divider, 0.3)}`,
+  borderRadius: 12,
 }))
 
 const EmptyState = styled(Box)(({ theme }) => ({
@@ -145,17 +148,26 @@ const EmptyState = styled(Box)(({ theme }) => ({
   textAlign: 'center',
 }))
 
+const InsightCard = styled(Paper)(({ theme }) => ({
+  padding: theme.spacing(1.5),
+  marginBottom: theme.spacing(1),
+  backgroundColor: alpha(theme.palette.info.main, 0.05),
+  border: `1px solid ${alpha(theme.palette.info.main, 0.2)}`,
+}))
+
 // =============================================================================
-// WIDGET TYPES
+// SAMPLE DATA FOR WIDGETS
 // =============================================================================
 
-const WIDGET_TYPES = [
-  { type: 'chart', label: 'Chart', icon: ChartIcon, color: 'primary' },
-  { type: 'metric', label: 'Metric', icon: TrendIcon, color: 'success' },
-  { type: 'table', label: 'Table', icon: TableIcon, color: 'info' },
-  { type: 'text', label: 'Text', icon: TextIcon, color: 'secondary' },
-  { type: 'filter', label: 'Filter', icon: FilterIcon, color: 'warning' },
-]
+const SAMPLE_CHART_DATA = {
+  labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+  datasets: [
+    { label: 'Revenue', data: [12000, 19000, 15000, 25000, 22000, 30000] },
+    { label: 'Expenses', data: [8000, 12000, 10000, 14000, 13000, 16000] },
+  ],
+}
+
+const SAMPLE_SPARKLINE = [65, 70, 68, 75, 82, 78, 85, 90, 88, 95]
 
 // =============================================================================
 // MAIN COMPONENT
@@ -194,14 +206,35 @@ export default function DashboardBuilderPage() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [newDashboardName, setNewDashboardName] = useState('')
   const [addWidgetDialogOpen, setAddWidgetDialogOpen] = useState(false)
-  const [selectedWidgetType, setSelectedWidgetType] = useState(null)
+  const [pendingWidgetType, setPendingWidgetType] = useState(null)
   const [widgetTitle, setWidgetTitle] = useState('')
+  const [widgetChartType, setWidgetChartType] = useState('bar')
   const [aiMenuAnchor, setAiMenuAnchor] = useState(null)
+  const [localLayout, setLocalLayout] = useState([])
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
 
   useEffect(() => {
     fetchDashboards()
     return () => reset()
   }, [fetchDashboards, reset])
+
+  // Sync layout from widgets
+  useEffect(() => {
+    if (widgets.length > 0) {
+      const layout = widgets.map((w) => ({
+        i: w.id,
+        x: w.x ?? 0,
+        y: w.y ?? 0,
+        w: w.w ?? 4,
+        h: w.h ?? 3,
+        minW: w.minW ?? 2,
+        minH: w.minH ?? 2,
+      }))
+      setLocalLayout(layout)
+    } else {
+      setLocalLayout([])
+    }
+  }, [widgets])
 
   const executeUI = useCallback((label, action, intent = {}) => {
     return execute({
@@ -220,27 +253,10 @@ export default function DashboardBuilderPage() {
   }, [executeUI])
 
   const handleCloseCreateDialog = useCallback(() => {
-    return executeUI('Close create dashboard', () => setCreateDialogOpen(false))
-  }, [executeUI])
-
-  const handleOpenAddWidgetDialog = useCallback((type) => {
-    return executeUI('Open add widget', () => {
-      setSelectedWidgetType(type)
-      setAddWidgetDialogOpen(true)
-    }, { widgetType: type })
-  }, [executeUI])
-
-  const handleCloseAddWidgetDialog = useCallback(() => {
-    return executeUI('Close add widget', () => setAddWidgetDialogOpen(false))
-  }, [executeUI])
-
-  const handleOpenAiMenu = useCallback((event) => {
-    const anchor = event.currentTarget
-    return executeUI('Open AI analytics', () => setAiMenuAnchor(anchor))
-  }, [executeUI])
-
-  const handleCloseAiMenu = useCallback(() => {
-    return executeUI('Close AI analytics', () => setAiMenuAnchor(null))
+    return executeUI('Close create dashboard', () => {
+      setCreateDialogOpen(false)
+      setNewDashboardName('')
+    })
   }, [executeUI])
 
   const handleSelectDashboard = useCallback((dashboardId) => {
@@ -253,6 +269,7 @@ export default function DashboardBuilderPage() {
       intent: { source: 'dashboards', dashboardId },
       action: async () => {
         await getDashboard(dashboardId)
+        setHasUnsavedChanges(false)
       },
     })
   }, [execute, getDashboard])
@@ -280,35 +297,80 @@ export default function DashboardBuilderPage() {
     })
   }, [createDashboard, execute, newDashboardName, toast])
 
-  const handleAddWidget = useCallback(() => {
-    if (!currentDashboard || !selectedWidgetType || !widgetTitle) return undefined
+  const handleDeleteDashboard = useCallback((dashboardId) => {
+    return execute({
+      type: InteractionType.DELETE,
+      label: 'Delete dashboard',
+      reversibility: Reversibility.REQUIRES_CONFIRMATION,
+      intent: { source: 'dashboards', dashboardId },
+      action: async () => {
+        const success = await deleteDashboard(dashboardId)
+        if (success) {
+          toast.show('Dashboard deleted', 'success')
+        }
+        return success
+      },
+    })
+  }, [deleteDashboard, execute, toast])
+
+  // Add widget from palette
+  const handleAddWidgetFromPalette = useCallback((widgetType, label) => {
+    setPendingWidgetType(widgetType)
+    setWidgetTitle(label || '')
+    const { category, subtype } = parseWidgetType(widgetType)
+    if (category === 'chart') {
+      setWidgetChartType(subtype)
+    }
+    setAddWidgetDialogOpen(true)
+  }, [])
+
+  const handleCloseAddWidgetDialog = useCallback(() => {
+    return executeUI('Close add widget', () => {
+      setAddWidgetDialogOpen(false)
+      setPendingWidgetType(null)
+      setWidgetTitle('')
+    })
+  }, [executeUI])
+
+  const handleConfirmAddWidget = useCallback(() => {
+    if (!currentDashboard || !pendingWidgetType || !widgetTitle) return undefined
+
+    const { category, subtype } = parseWidgetType(pendingWidgetType)
+    const sizes = DEFAULT_WIDGET_SIZES[category] || { w: 4, h: 3, minW: 2, minH: 2 }
+
     return execute({
       type: InteractionType.UPDATE,
       label: 'Add widget',
       reversibility: Reversibility.SYSTEM_MANAGED,
-      intent: { source: 'dashboards', dashboardId: currentDashboard.id, widgetType: selectedWidgetType },
+      intent: { source: 'dashboards', dashboardId: currentDashboard.id, widgetType: pendingWidgetType },
       action: async () => {
         const widget = await addWidget(currentDashboard.id, {
           config: {
-            type: selectedWidgetType,
+            type: category,
+            subtype: subtype,
+            chartType: category === 'chart' ? widgetChartType : undefined,
             title: widgetTitle,
-            options: {},
+            data: category === 'chart' ? SAMPLE_CHART_DATA : undefined,
+            value: category === 'metric' ? 12500 : undefined,
+            previousValue: category === 'metric' ? 10000 : undefined,
+            sparklineData: category === 'metric' ? SAMPLE_SPARKLINE : undefined,
+            format: category === 'metric' ? 'currency' : undefined,
           },
           x: 0,
           y: widgets.length * 4,
-          w: 4,
-          h: 3,
+          ...sizes,
         })
         if (widget) {
           setAddWidgetDialogOpen(false)
-          setSelectedWidgetType(null)
+          setPendingWidgetType(null)
           setWidgetTitle('')
+          setHasUnsavedChanges(true)
           toast.show('Widget added', 'success')
         }
         return widget
       },
     })
-  }, [addWidget, currentDashboard, execute, selectedWidgetType, toast, widgetTitle, widgets.length])
+  }, [addWidget, currentDashboard, execute, pendingWidgetType, toast, widgetChartType, widgetTitle, widgets.length])
 
   const handleDeleteWidget = useCallback((widgetId) => {
     if (!currentDashboard) return undefined
@@ -319,10 +381,39 @@ export default function DashboardBuilderPage() {
       intent: { source: 'dashboards', dashboardId: currentDashboard.id, widgetId },
       action: async () => {
         await deleteWidget(currentDashboard.id, widgetId)
+        setHasUnsavedChanges(true)
         toast.show('Widget removed', 'success')
       },
     })
   }, [currentDashboard, deleteWidget, execute, toast])
+
+  const handleLayoutChange = useCallback((layout) => {
+    setLocalLayout(layout)
+    setHasUnsavedChanges(true)
+  }, [])
+
+  const handleSave = useCallback(() => {
+    if (!currentDashboard) return undefined
+    return execute({
+      type: InteractionType.UPDATE,
+      label: 'Save dashboard',
+      reversibility: Reversibility.SYSTEM_MANAGED,
+      intent: { source: 'dashboards', dashboardId: currentDashboard.id },
+      action: async () => {
+        // Update widget positions from layout
+        const updatedWidgets = widgets.map((w) => {
+          const layoutItem = localLayout.find((l) => l.i === w.id)
+          if (layoutItem) {
+            return { ...w, x: layoutItem.x, y: layoutItem.y, w: layoutItem.w, h: layoutItem.h }
+          }
+          return w
+        })
+        await updateDashboard(currentDashboard.id, { widgets: updatedWidgets })
+        setHasUnsavedChanges(false)
+        toast.show('Dashboard saved', 'success')
+      },
+    })
+  }, [currentDashboard, execute, localLayout, toast, updateDashboard, widgets])
 
   const handleRefresh = useCallback(() => {
     if (!currentDashboard) return undefined
@@ -340,11 +431,20 @@ export default function DashboardBuilderPage() {
     })
   }, [currentDashboard, execute, refreshDashboard, toast])
 
+  const handleOpenAiMenu = useCallback((event) => {
+    const anchor = event.currentTarget
+    return executeUI('Open AI analytics', () => setAiMenuAnchor(anchor))
+  }, [executeUI])
+
+  const handleCloseAiMenu = useCallback(() => {
+    return executeUI('Close AI analytics', () => setAiMenuAnchor(null))
+  }, [executeUI])
+
   const handleAIAction = useCallback((action) => {
     handleCloseAiMenu()
     if (!currentDashboard) return undefined
 
-    const sampleData = [{ x: 1, y: 10 }, { x: 2, y: 20 }]
+    const sampleData = [{ x: 1, y: 10 }, { x: 2, y: 20 }, { x: 3, y: 15 }, { x: 4, y: 25 }]
     const labelMap = {
       insights: 'Generate insights',
       trends: 'Predict trends',
@@ -419,183 +519,246 @@ export default function DashboardBuilderPage() {
     return executeUI('Dismiss dashboard error', () => reset())
   }, [executeUI, reset])
 
+  // Render widget by type
+  const renderWidget = useCallback((widget) => {
+    const { category } = parseWidgetType(widget.config?.type || 'chart')
+
+    if (category === 'chart' || widget.config?.type === 'chart') {
+      return (
+        <ChartWidget
+          key={widget.id}
+          id={widget.id}
+          title={widget.config?.title}
+          chartType={widget.config?.chartType || widget.config?.subtype || 'bar'}
+          data={widget.config?.data || SAMPLE_CHART_DATA}
+          onDelete={handleDeleteWidget}
+          onRefresh={() => {}}
+          editable
+        />
+      )
+    }
+
+    if (category === 'metric' || widget.config?.type === 'metric') {
+      return (
+        <MetricWidget
+          key={widget.id}
+          id={widget.id}
+          title={widget.config?.title}
+          value={widget.config?.value || 0}
+          previousValue={widget.config?.previousValue}
+          format={widget.config?.format || 'number'}
+          sparklineData={widget.config?.sparklineData || []}
+          onDelete={handleDeleteWidget}
+          editable
+        />
+      )
+    }
+
+    // Default placeholder for other widget types
+    return (
+      <Paper
+        key={widget.id}
+        sx={{
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          p: 2,
+          borderRadius: 3,
+        }}
+        variant="outlined"
+      >
+        <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+          {widget.config?.title || 'Widget'}
+        </Typography>
+        <Box
+          sx={{
+            flex: 1,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: 'text.secondary',
+          }}
+        >
+          <Typography variant="caption">
+            {widget.config?.type} widget coming soon
+          </Typography>
+        </Box>
+      </Paper>
+    )
+  }, [handleDeleteWidget])
+
   return (
     <PageContainer>
-      {/* Toolbar */}
-      <Toolbar>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <DashboardIcon sx={{ color: 'secondary.main' }} />
-          <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-            {currentDashboard?.name || 'Dashboards'}
-          </Typography>
-          {currentDashboard && (
-            <Chip
-              size="small"
-              label={`${widgets.length} widgets`}
-              sx={{ borderRadius: 1 }}
-            />
-          )}
-        </Box>
+      {/* Sidebar */}
+      <Sidebar>
+        <SidebarSection>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+              Dashboards
+            </Typography>
+            <Tooltip title="New Dashboard">
+              <IconButton size="small" onClick={handleOpenCreateDialog}>
+                <AddIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          </Box>
 
-        <Box sx={{ display: 'flex', gap: 1 }}>
-          {currentDashboard ? (
-            <>
-              <ActionButton
-                size="small"
-                startIcon={<RefreshIcon />}
-                onClick={handleRefresh}
-                disabled={refreshing}
-              >
-                Refresh
-              </ActionButton>
-              <ActionButton
-                size="small"
-                startIcon={<AIIcon />}
-                onClick={handleOpenAiMenu}
-              >
-                AI Analytics
-              </ActionButton>
-              <ActionButton
-                size="small"
-                startIcon={<SnapshotIcon />}
-                onClick={handleSnapshot}
-              >
-                Snapshot
-              </ActionButton>
-              <ActionButton
-                size="small"
-                startIcon={<EmbedIcon />}
-                onClick={handleEmbed}
-              >
-                Embed
-              </ActionButton>
-              <ActionButton
-                variant="contained"
-                size="small"
-                startIcon={<SaveIcon />}
-                disabled={saving}
-              >
-                Save
-              </ActionButton>
-            </>
-          ) : (
-            <ActionButton
-              variant="contained"
-              size="small"
-              startIcon={<AddIcon />}
-              onClick={handleOpenCreateDialog}
-            >
-              New Dashboard
-            </ActionButton>
-          )}
-        </Box>
-      </Toolbar>
-
-      <DashboardArea>
-        {currentDashboard ? (
-          <>
-            {/* Widget Palette */}
-            <WidgetPalette>
-              <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600 }}>
-                Add Widget
+          <Box sx={{ mt: 1 }}>
+            {loading && dashboards.length === 0 ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+                <CircularProgress size={20} />
+              </Box>
+            ) : dashboards.length === 0 ? (
+              <Typography variant="caption" color="text.secondary">
+                No dashboards yet
               </Typography>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                {WIDGET_TYPES.map((wt) => (
-                  <WidgetCard
-                    key={wt.type}
-                    variant="outlined"
-                    onClick={() => handleOpenAddWidgetDialog(wt.type)}
+            ) : (
+              <List disablePadding dense>
+                {dashboards.slice(0, 5).map((db) => (
+                  <DashboardListItem
+                    key={db.id}
+                    active={currentDashboard?.id === db.id}
+                    onClick={() => handleSelectDashboard(db.id)}
+                    dense
                   >
-                    <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <wt.icon color={wt.color} fontSize="small" />
-                        <Typography variant="body2">{wt.label}</Typography>
-                      </Box>
-                    </CardContent>
-                  </WidgetCard>
+                    <ListItemIcon sx={{ minWidth: 32 }}>
+                      <DashboardIcon fontSize="small" color="secondary" />
+                    </ListItemIcon>
+                    <ListItemText
+                      primary={db.name}
+                      primaryTypographyProps={{ variant: 'body2', noWrap: true }}
+                    />
+                  </DashboardListItem>
+                ))}
+              </List>
+            )}
+          </Box>
+        </SidebarSection>
+
+        {currentDashboard && (
+          <SidebarContent>
+            <WidgetPalette onAddWidget={handleAddWidgetFromPalette} />
+
+            {insights.length > 0 && (
+              <Box sx={{ mt: 3 }}>
+                <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary' }}>
+                  AI INSIGHTS
+                </Typography>
+                {insights.map((insight, idx) => (
+                  <InsightCard key={idx} elevation={0}>
+                    <Typography variant="caption" sx={{ fontWeight: 600 }}>
+                      {insight.title}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary" display="block">
+                      {insight.description}
+                    </Typography>
+                  </InsightCard>
                 ))}
               </Box>
+            )}
+          </SidebarContent>
+        )}
+      </Sidebar>
 
-              {insights.length > 0 && (
-                <>
-                  <Divider sx={{ my: 2 }} />
-                  <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
-                    AI Insights
-                  </Typography>
-                  {insights.map((insight, idx) => (
-                    <Paper key={idx} variant="outlined" sx={{ p: 1.5, mb: 1 }}>
-                      <Typography variant="caption" sx={{ fontWeight: 500 }}>
-                        {insight.title}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary" display="block">
-                        {insight.description}
-                      </Typography>
-                    </Paper>
-                  ))}
-                </>
-              )}
-            </WidgetPalette>
+      {/* Main Content */}
+      <MainContent>
+        {currentDashboard ? (
+          <>
+            {/* Toolbar */}
+            <Toolbar>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                  {currentDashboard.name}
+                </Typography>
+                <Chip
+                  size="small"
+                  label={`${widgets.length} widgets`}
+                  sx={{ borderRadius: 1, height: 20, fontSize: '0.7rem' }}
+                />
+                {hasUnsavedChanges && (
+                  <Chip
+                    size="small"
+                    label="Unsaved"
+                    color="warning"
+                    sx={{ borderRadius: 1, height: 20, fontSize: '0.7rem' }}
+                  />
+                )}
+              </Box>
+
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                <ActionButton
+                  size="small"
+                  startIcon={<RefreshIcon />}
+                  onClick={handleRefresh}
+                  disabled={refreshing}
+                >
+                  Refresh
+                </ActionButton>
+                <ActionButton
+                  size="small"
+                  startIcon={<AIIcon />}
+                  onClick={handleOpenAiMenu}
+                >
+                  AI Analytics
+                </ActionButton>
+                <ActionButton
+                  size="small"
+                  startIcon={<SnapshotIcon />}
+                  onClick={handleSnapshot}
+                >
+                  Snapshot
+                </ActionButton>
+                <ActionButton
+                  size="small"
+                  startIcon={<EmbedIcon />}
+                  onClick={handleEmbed}
+                >
+                  Embed
+                </ActionButton>
+                <ActionButton
+                  variant="contained"
+                  size="small"
+                  startIcon={<SaveIcon />}
+                  onClick={handleSave}
+                  disabled={saving || !hasUnsavedChanges}
+                >
+                  {saving ? 'Saving...' : 'Save'}
+                </ActionButton>
+              </Box>
+            </Toolbar>
 
             {/* Canvas */}
             <Canvas>
               {widgets.length > 0 ? (
-                <Grid container spacing={2}>
-                  {widgets.map((widget) => (
-                    <Grid item xs={12} md={6} lg={4} key={widget.id}>
-                      <DashboardWidget sx={{ minHeight: 200 }}>
-                        <WidgetHeader>
-                          <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                            {widget.config?.title || 'Untitled Widget'}
-                          </Typography>
-                          <IconButton
-                            size="small"
-                            onClick={() => handleDeleteWidget(widget.id)}
-                          >
-                            <DeleteIcon fontSize="small" />
-                          </IconButton>
-                        </WidgetHeader>
-                        <WidgetContent>
-                          <Box sx={{ textAlign: 'center', color: 'text.secondary' }}>
-                            {widget.config?.type === 'chart' && <ChartIcon sx={{ fontSize: 48 }} />}
-                            {widget.config?.type === 'metric' && <TrendIcon sx={{ fontSize: 48 }} />}
-                            {widget.config?.type === 'table' && <TableIcon sx={{ fontSize: 48 }} />}
-                            {widget.config?.type === 'text' && <TextIcon sx={{ fontSize: 48 }} />}
-                            {widget.config?.type === 'filter' && <FilterIcon sx={{ fontSize: 48 }} />}
-                            <Typography variant="caption" display="block" sx={{ mt: 1 }}>
-                              {widget.config?.type?.charAt(0).toUpperCase() + widget.config?.type?.slice(1)} Widget
-                            </Typography>
-                          </Box>
-                        </WidgetContent>
-                      </DashboardWidget>
-                    </Grid>
-                  ))}
-                </Grid>
-              ) : (
-                <Box
-                  sx={{
-                    height: '100%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    border: `2px dashed ${alpha(theme.palette.divider, 0.3)}`,
-                    borderRadius: 3,
-                  }}
+                <DashboardGridLayout
+                  widgets={widgets}
+                  layout={localLayout}
+                  onLayoutChange={handleLayoutChange}
+                  editable
                 >
+                  {widgets.map((widget) => (
+                    <div key={widget.id}>
+                      {renderWidget(widget)}
+                    </div>
+                  ))}
+                </DashboardGridLayout>
+              ) : (
+                <EmptyCanvas>
                   <Typography color="text.secondary">
                     Add widgets from the palette to build your dashboard
                   </Typography>
-                </Box>
+                </EmptyCanvas>
               )}
             </Canvas>
           </>
         ) : (
-          <EmptyState sx={{ width: '100%' }}>
+          <EmptyState>
             <DashboardIcon sx={{ fontSize: 80, color: 'text.disabled', mb: 2 }} />
             <Typography variant="h5" sx={{ fontWeight: 600, mb: 1 }}>
               No Dashboard Selected
             </Typography>
             <Typography color="text.secondary" sx={{ mb: 3 }}>
-              Create a new dashboard to visualize your data.
+              Create a new dashboard or select one from the sidebar.
             </Typography>
             <ActionButton
               variant="contained"
@@ -604,43 +767,9 @@ export default function DashboardBuilderPage() {
             >
               Create Dashboard
             </ActionButton>
-
-            {dashboards.length > 0 && (
-              <Box sx={{ mt: 4, width: '100%', maxWidth: 400 }}>
-                <Typography variant="subtitle2" sx={{ mb: 2 }}>
-                  Recent Dashboards
-                </Typography>
-                {dashboards.slice(0, 5).map((db) => (
-                  <Paper
-                    key={db.id}
-                    sx={{
-                      p: 2,
-                      mb: 1,
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 2,
-                      '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.05) },
-                    }}
-                    variant="outlined"
-                    onClick={() => handleSelectDashboard(db.id)}
-                  >
-                    <DashboardIcon color="secondary" />
-                    <Box>
-                      <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                        {db.name}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {db.widgets?.length || 0} widgets
-                      </Typography>
-                    </Box>
-                  </Paper>
-                ))}
-              </Box>
-            )}
           </EmptyState>
         )}
-      </DashboardArea>
+      </MainContent>
 
       {/* AI Menu */}
       <Menu
@@ -678,6 +807,11 @@ export default function DashboardBuilderPage() {
             value={newDashboardName}
             onChange={(e) => setNewDashboardName(e.target.value)}
             sx={{ mt: 2 }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && newDashboardName) {
+                handleCreateDashboard()
+              }
+            }}
           />
         </DialogContent>
         <DialogActions>
@@ -699,7 +833,7 @@ export default function DashboardBuilderPage() {
         maxWidth="xs"
         fullWidth
       >
-        <DialogTitle>Add {selectedWidgetType?.charAt(0).toUpperCase()}{selectedWidgetType?.slice(1)} Widget</DialogTitle>
+        <DialogTitle>Add Widget</DialogTitle>
         <DialogContent>
           <TextField
             autoFocus
@@ -709,12 +843,28 @@ export default function DashboardBuilderPage() {
             onChange={(e) => setWidgetTitle(e.target.value)}
             sx={{ mt: 2 }}
           />
+          {pendingWidgetType?.startsWith('chart') && (
+            <FormControl fullWidth sx={{ mt: 2 }}>
+              <InputLabel>Chart Type</InputLabel>
+              <Select
+                value={widgetChartType}
+                label="Chart Type"
+                onChange={(e) => setWidgetChartType(e.target.value)}
+              >
+                {CHART_TYPES.map((ct) => (
+                  <MenuItem key={ct.type} value={ct.type}>
+                    {ct.label}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          )}
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseAddWidgetDialog}>Cancel</Button>
           <Button
             variant="contained"
-            onClick={handleAddWidget}
+            onClick={handleConfirmAddWidget}
             disabled={!widgetTitle}
           >
             Add Widget

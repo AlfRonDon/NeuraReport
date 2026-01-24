@@ -14,7 +14,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
 from backend.app.services.security import require_api_key
 from backend.app.schemas.generate.reports import RunPayload
-from backend.app.services.state_access import state_store
+import backend.app.services.state_access as state_access
 from backend.legacy.services.scheduler_service import get_job, list_active_jobs, list_jobs, cancel_job
 
 router = APIRouter(dependencies=[Depends(require_api_key)])
@@ -67,7 +67,7 @@ async def run_report_job(payload: RunPayload | list[RunPayload], request: Reques
     payloads = payload if isinstance(payload, list) else [payload]
     kinds = set()
     for item in payloads:
-        rec = state_store.get_template_record(item.template_id) or {}
+        rec = state_access.get_template_record(item.template_id) or {}
         kinds.add(str(rec.get("kind") or "pdf").strip().lower() or "pdf")
     if len(kinds) > 1:
         raise HTTPException(

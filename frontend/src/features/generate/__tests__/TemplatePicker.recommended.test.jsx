@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { ThemeProvider } from '@mui/material/styles'
 
 import TemplatePicker from '@/features/generate/components/TemplatePicker.jsx'
-import theme from '@/theme.js'
+import theme from '@/app/theme.js'
 import { ToastProvider } from '@/components/ToastProvider.jsx'
 import { useAppStore } from '@/stores'
 import { recommendTemplates } from '@/api/client'

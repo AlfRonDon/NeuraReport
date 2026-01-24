@@ -13,6 +13,8 @@ from typing import Any, Optional
 
 from pydantic import BaseModel
 
+from backend.app.services.config import get_settings
+
 logger = logging.getLogger("neura.documents")
 
 
@@ -73,7 +75,8 @@ class DocumentService:
 
     def __init__(self, state_store=None, uploads_root: Optional[Path] = None):
         self._state_store = state_store
-        self._uploads_root = uploads_root or Path("uploads/documents")
+        base_root = get_settings().uploads_root
+        self._uploads_root = uploads_root or (base_root / "documents")
         self._uploads_root.mkdir(parents=True, exist_ok=True)
 
     def create(
@@ -103,7 +106,7 @@ class DocumentService:
     def get(self, document_id: str) -> Optional[Document]:
         """Get a document by ID."""
         doc_path = self._get_document_path(document_id)
-        if not doc_path.exists():
+        if not doc_path or not doc_path.exists():
             return None
         with open(doc_path) as f:
             data = json.load(f)
@@ -144,12 +147,13 @@ class DocumentService:
     def delete(self, document_id: str) -> bool:
         """Delete a document."""
         doc_path = self._get_document_path(document_id)
-        if not doc_path.exists():
+        if not doc_path or not doc_path.exists():
             return False
         doc_path.unlink()
         # Also delete versions
-        versions_dir = self._uploads_root / document_id / "versions"
-        if versions_dir.exists():
+        versions_dir = self._get_document_dir(document_id)
+        versions_dir = versions_dir / "versions" if versions_dir else None
+        if versions_dir and versions_dir.exists():
             import shutil
             shutil.rmtree(versions_dir)
         logger.info(f"Deleted document: {document_id}")
@@ -189,7 +193,10 @@ class DocumentService:
 
     def get_versions(self, document_id: str) -> list[DocumentVersion]:
         """Get all versions of a document."""
-        versions_dir = self._uploads_root / document_id / "versions"
+        versions_root = self._get_document_dir(document_id)
+        if not versions_root:
+            return []
+        versions_dir = versions_root / "versions"
         if not versions_dir.exists():
             return []
 
@@ -236,7 +243,10 @@ class DocumentService:
 
     def get_comments(self, document_id: str) -> list[DocumentComment]:
         """Get all comments for a document."""
-        comments_dir = self._uploads_root / document_id / "comments"
+        comments_root = self._get_document_dir(document_id)
+        if not comments_root:
+            return []
+        comments_dir = comments_root / "comments"
         if not comments_dir.exists():
             return []
 
@@ -262,9 +272,24 @@ class DocumentService:
                 return True
         return False
 
-    def _get_document_path(self, document_id: str) -> Path:
+    def _get_document_path(self, document_id: str) -> Optional[Path]:
         """Get path to document JSON file."""
-        return self._uploads_root / document_id / "document.json"
+        doc_dir = self._get_document_dir(document_id)
+        if not doc_dir:
+            return None
+        return doc_dir / "document.json"
+
+    def _get_document_dir(self, document_id: str) -> Optional[Path]:
+        normalized = self._normalize_id(document_id)
+        if not normalized:
+            return None
+        return self._uploads_root / normalized
+
+    def _normalize_id(self, document_id: str) -> Optional[str]:
+        try:
+            return str(uuid.UUID(str(document_id)))
+        except (ValueError, TypeError):
+            return None
 
     def _save_document(self, doc: Document) -> None:
         """Save document to disk."""

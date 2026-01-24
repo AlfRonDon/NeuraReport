@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, Query, Request
 from backend.app.services.security import require_api_key
 from backend.app.services.summary.service import SummaryService
 from backend.app.services.background_tasks import enqueue_background_job
-from backend.app.services.state_access import state_store
+import backend.app.services.state_access as state_access
 
 router = APIRouter(dependencies=[Depends(require_api_key)])
 
@@ -25,7 +25,7 @@ def get_service() -> SummaryService:
 
 
 def _is_cancelled(job_id: str) -> bool:
-    job = state_store.get_job(job_id) or {}
+    job = state_access.get_job(job_id) or {}
     return str(job.get("status") or "").strip().lower() == "cancelled"
 
 
@@ -51,8 +51,8 @@ async def generate_summary(
     async def runner(job_id: str) -> None:
         if _is_cancelled(job_id):
             return
-        state_store.record_job_start(job_id)
-        state_store.record_job_step(job_id, "generate", status="running", label="Generate summary")
+        state_access.record_job_start(job_id)
+        state_access.record_job_step(job_id, "generate", status="running", label="Generate summary")
         try:
             summary = svc.generate_summary(
                 content=payload.content,
@@ -62,20 +62,20 @@ async def generate_summary(
                 correlation_id=correlation_id,
             )
             if _is_cancelled(job_id):
-                state_store.record_job_step(job_id, "generate", status="cancelled", error="Cancelled by user")
+                state_access.record_job_step(job_id, "generate", status="cancelled", error="Cancelled by user")
                 return
-            state_store.record_job_step(job_id, "generate", status="succeeded", progress=100.0)
-            state_store.record_job_completion(
+            state_access.record_job_step(job_id, "generate", status="succeeded", progress=100.0)
+            state_access.record_job_completion(
                 job_id,
                 status="succeeded",
                 result={"summary": summary},
             )
         except Exception as exc:
             if _is_cancelled(job_id):
-                state_store.record_job_step(job_id, "generate", status="cancelled", error="Cancelled by user")
+                state_access.record_job_step(job_id, "generate", status="cancelled", error="Cancelled by user")
                 return
-            state_store.record_job_step(job_id, "generate", status="failed", error=str(exc))
-            state_store.record_job_completion(job_id, status="failed", error=str(exc))
+            state_access.record_job_step(job_id, "generate", status="failed", error=str(exc))
+            state_access.record_job_completion(job_id, status="failed", error=str(exc))
 
     job = await enqueue_background_job(
         job_type="summary_generate",
@@ -102,25 +102,25 @@ async def get_report_summary(
     async def runner(job_id: str) -> None:
         if _is_cancelled(job_id):
             return
-        state_store.record_job_start(job_id)
-        state_store.record_job_step(job_id, "generate", status="running", label="Generate report summary")
+        state_access.record_job_start(job_id)
+        state_access.record_job_step(job_id, "generate", status="running", label="Generate report summary")
         try:
             summary = svc.generate_report_summary(report_id, correlation_id)
             if _is_cancelled(job_id):
-                state_store.record_job_step(job_id, "generate", status="cancelled", error="Cancelled by user")
+                state_access.record_job_step(job_id, "generate", status="cancelled", error="Cancelled by user")
                 return
-            state_store.record_job_step(job_id, "generate", status="succeeded", progress=100.0)
-            state_store.record_job_completion(
+            state_access.record_job_step(job_id, "generate", status="succeeded", progress=100.0)
+            state_access.record_job_completion(
                 job_id,
                 status="succeeded",
                 result={"summary": summary, "report_id": report_id},
             )
         except Exception as exc:
             if _is_cancelled(job_id):
-                state_store.record_job_step(job_id, "generate", status="cancelled", error="Cancelled by user")
+                state_access.record_job_step(job_id, "generate", status="cancelled", error="Cancelled by user")
                 return
-            state_store.record_job_step(job_id, "generate", status="failed", error=str(exc))
-            state_store.record_job_completion(job_id, status="failed", error=str(exc))
+            state_access.record_job_step(job_id, "generate", status="failed", error=str(exc))
+            state_access.record_job_completion(job_id, status="failed", error=str(exc))
 
     job = await enqueue_background_job(
         job_type="summary_report",

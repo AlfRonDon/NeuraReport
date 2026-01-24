@@ -49,14 +49,6 @@ export const IntentStatus = {
 let intentCounter = 0
 let sessionId = `session_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
 
-const generateIdempotencyKey = () => {
-  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-    return crypto.randomUUID()
-  }
-  const rand = Math.random().toString(36).slice(2)
-  return `idem-${Date.now().toString(36)}-${rand}`
-}
-
 export function createIntent(config) {
   const id = `intent_${Date.now()}_${++intentCounter}`
 
@@ -88,7 +80,7 @@ const IntentContext = createContext(null)
 // PROVIDER
 // ============================================================================
 
-export function IntentProvider({ children, onIntentChange, maxHistory = 100 }) {
+export function IntentProvider({ children, onIntentChange, maxHistory = 100, auditClient }) {
   const [intents, setIntents] = useState([])
   const intentMap = useRef(new Map())
 
@@ -107,9 +99,11 @@ export function IntentProvider({ children, onIntentChange, maxHistory = 100 }) {
     })
 
     // Send to backend for audit (async, non-blocking)
-    sendIntentToBackend(intent).catch((err) => {
-      console.warn('Failed to record intent to backend:', err)
-    })
+    if (auditClient?.recordIntent) {
+      auditClient.recordIntent(intent).catch((err) => {
+        console.warn('Failed to record intent to backend:', err)
+      })
+    }
 
     return intent
   }, [maxHistory, onIntentChange])
@@ -143,9 +137,11 @@ export function IntentProvider({ children, onIntentChange, maxHistory = 100 }) {
     })
 
     // Send update to backend
-    sendIntentUpdateToBackend(updatedIntent, status, result).catch((err) => {
-      console.warn('Failed to update intent on backend:', err)
-    })
+    if (auditClient?.updateIntent) {
+      auditClient.updateIntent(updatedIntent, status, result).catch((err) => {
+        console.warn('Failed to update intent on backend:', err)
+      })
+    }
   }, [onIntentChange])
 
   /**
@@ -241,65 +237,6 @@ export function useIntent() {
     throw new Error('useIntent must be used within IntentProvider')
   }
   return context
-}
-
-// ============================================================================
-// BACKEND COMMUNICATION
-// ============================================================================
-
-async function sendIntentToBackend(intent) {
-  // Send intent to backend for audit trail
-  // This is async and non-blocking - failures don't affect UI
-  try {
-    const idemKey = generateIdempotencyKey()
-    const response = await fetch('/api/audit/intent', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Idempotency-Key': idemKey,
-        'X-Idempotency-Key': idemKey,
-        'X-Intent-Id': intent.id,
-        'X-Intent-Type': intent.type,
-        'X-Intent-Label': encodeURIComponent(intent.label || ''),
-        'X-Correlation-Id': intent.correlationId,
-        'X-Session-Id': intent.sessionId,
-      },
-      body: JSON.stringify(intent),
-    })
-
-    if (!response.ok) {
-      console.warn('Failed to record intent:', response.status)
-    }
-  } catch (err) {
-    // Silently fail - audit is best-effort
-    console.debug('Intent audit failed:', err)
-  }
-}
-
-async function sendIntentUpdateToBackend(intent, status, result) {
-  try {
-    const idemKey = generateIdempotencyKey()
-    const response = await fetch(`/api/audit/intent/${intent.id}`, {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-        'Idempotency-Key': idemKey,
-        'X-Idempotency-Key': idemKey,
-        'X-Intent-Id': intent.id,
-        'X-Intent-Type': intent.type,
-        'X-Intent-Label': encodeURIComponent(intent.label || ''),
-        'X-Correlation-Id': intent.correlationId,
-        'X-Session-Id': intent.sessionId,
-      },
-      body: JSON.stringify({ status, result }),
-    })
-
-    if (!response.ok) {
-      console.warn('Failed to update intent:', response.status)
-    }
-  } catch (err) {
-    console.debug('Intent update failed:', err)
-  }
 }
 
 // ============================================================================

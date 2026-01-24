@@ -51,7 +51,7 @@ import { useJobsList } from '../hooks/useJobs'
 import { getShortcutDisplay, SHORTCUTS } from '../hooks/useKeyboardShortcuts'
 import { withBase } from '../api/client'
 import GlobalSearch from './GlobalSearch'
-import NotificationCenter from '../components/notifications/NotificationCenter'
+import NotificationCenter from './NotificationCenter'
 
 // =============================================================================
 // ANIMATIONS

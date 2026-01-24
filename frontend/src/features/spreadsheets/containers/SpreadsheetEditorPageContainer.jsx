@@ -1,8 +1,8 @@
 /**
  * Spreadsheet Editor Page Container
- * Excel-like spreadsheet editor with formulas and pivot tables.
+ * Excel-like spreadsheet editor with Handsontable and HyperFormula.
  */
-import React, { useState, useEffect, useCallback, useRef } from 'react'
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import {
   Box,
   Typography,
@@ -22,8 +22,10 @@ import {
   ListItemIcon,
   ListItemText,
   Paper,
-  Tabs,
-  Tab,
+  List,
+  ListItem,
+  ListItemButton,
+  CircularProgress,
   useTheme,
   alpha,
   styled,
@@ -41,10 +43,19 @@ import {
   FilterList as FilterIcon,
   Sort as SortIcon,
   TextFormat as FormatIcon,
+  MoreVert as MoreIcon,
+  Edit as EditIcon,
+  FileCopy as CopyIcon,
+  ContentCut as CutIcon,
+  ContentPaste as PasteIcon,
+  Undo as UndoIcon,
+  Redo as RedoIcon,
 } from '@mui/icons-material'
 import useSpreadsheetStore from '@/stores/spreadsheetStore'
 import { useToast } from '@/components/ToastProvider'
 import { useInteraction, InteractionType, Reversibility } from '@/components/ux/governance'
+import HandsontableEditor from '../components/HandsontableEditor'
+import FormulaBar from '../components/FormulaBar'
 
 // =============================================================================
 // STYLED COMPONENTS
@@ -52,9 +63,31 @@ import { useInteraction, InteractionType, Reversibility } from '@/components/ux/
 
 const PageContainer = styled(Box)(({ theme }) => ({
   display: 'flex',
-  flexDirection: 'column',
   height: 'calc(100vh - 64px)',
   backgroundColor: theme.palette.background.default,
+}))
+
+const Sidebar = styled(Box)(({ theme }) => ({
+  width: 280,
+  display: 'flex',
+  flexDirection: 'column',
+  borderRight: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+  backgroundColor: alpha(theme.palette.background.paper, 0.6),
+}))
+
+const SidebarHeader = styled(Box)(({ theme }) => ({
+  padding: theme.spacing(2),
+  borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+}))
+
+const MainContent = styled(Box)(({ theme }) => ({
+  flex: 1,
+  display: 'flex',
+  flexDirection: 'column',
+  overflow: 'hidden',
 }))
 
 const Toolbar = styled(Box)(({ theme }) => ({
@@ -64,70 +97,40 @@ const Toolbar = styled(Box)(({ theme }) => ({
   padding: theme.spacing(1, 2),
   borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
   backgroundColor: alpha(theme.palette.background.paper, 0.8),
-}))
-
-const FormulaBar = styled(Box)(({ theme }) => ({
-  display: 'flex',
-  alignItems: 'center',
-  padding: theme.spacing(1, 2),
-  borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-  backgroundColor: theme.palette.background.paper,
-  gap: theme.spacing(2),
-}))
-
-const CellReference = styled(Box)(({ theme }) => ({
-  width: 80,
-  padding: theme.spacing(0.5, 1),
-  backgroundColor: alpha(theme.palette.primary.main, 0.05),
-  borderRadius: 4,
-  textAlign: 'center',
-  fontWeight: 600,
-  fontSize: 13,
+  gap: theme.spacing(1),
 }))
 
 const SpreadsheetArea = styled(Box)(({ theme }) => ({
   flex: 1,
-  overflow: 'auto',
-  backgroundColor: theme.palette.background.default,
+  overflow: 'hidden',
+  backgroundColor: theme.palette.background.paper,
 }))
 
 const SheetTabs = styled(Box)(({ theme }) => ({
   display: 'flex',
   alignItems: 'center',
-  padding: theme.spacing(0, 1),
+  padding: theme.spacing(0.5, 1),
   borderTop: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
   backgroundColor: alpha(theme.palette.background.paper, 0.6),
-  minHeight: 36,
+  minHeight: 40,
+  gap: theme.spacing(0.5),
 }))
 
-const GridContainer = styled(Box)(({ theme }) => ({
-  display: 'grid',
-  gridTemplateColumns: '40px repeat(26, 100px)',
-  gap: 0,
-  padding: theme.spacing(1),
-}))
-
-const HeaderCell = styled(Box)(({ theme }) => ({
-  padding: theme.spacing(0.5),
-  backgroundColor: alpha(theme.palette.primary.main, 0.05),
+const SheetTab = styled(Chip, {
+  shouldForwardProp: (prop) => prop !== 'active',
+})(({ theme, active }) => ({
+  borderRadius: '4px 4px 0 0',
+  height: 28,
+  fontSize: '0.8125rem',
+  backgroundColor: active
+    ? theme.palette.background.paper
+    : alpha(theme.palette.background.default, 0.5),
   border: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
-  textAlign: 'center',
-  fontWeight: 600,
-  fontSize: 12,
-  userSelect: 'none',
-}))
-
-const Cell = styled(Box, {
-  shouldForwardProp: (prop) => prop !== 'selected',
-})(({ theme, selected }) => ({
-  padding: theme.spacing(0.5),
-  border: `1px solid ${selected ? theme.palette.primary.main : alpha(theme.palette.divider, 0.2)}`,
-  backgroundColor: selected ? alpha(theme.palette.primary.main, 0.05) : theme.palette.background.paper,
-  minHeight: 24,
-  fontSize: 13,
-  cursor: 'cell',
+  borderBottom: active ? 'none' : `1px solid ${alpha(theme.palette.divider, 0.2)}`,
   '&:hover': {
-    backgroundColor: alpha(theme.palette.primary.main, 0.02),
+    backgroundColor: active
+      ? theme.palette.background.paper
+      : alpha(theme.palette.primary.main, 0.05),
   },
 }))
 
@@ -136,6 +139,20 @@ const ActionButton = styled(Button)(({ theme }) => ({
   textTransform: 'none',
   fontWeight: 500,
   minWidth: 'auto',
+  fontSize: '0.8125rem',
+}))
+
+const SpreadsheetListItem = styled(ListItemButton, {
+  shouldForwardProp: (prop) => prop !== 'active',
+})(({ theme, active }) => ({
+  borderRadius: 8,
+  marginBottom: theme.spacing(0.5),
+  backgroundColor: active ? alpha(theme.palette.primary.main, 0.1) : 'transparent',
+  '&:hover': {
+    backgroundColor: active
+      ? alpha(theme.palette.primary.main, 0.15)
+      : alpha(theme.palette.action.hover, 0.05),
+  },
 }))
 
 const EmptyState = styled(Box)(({ theme }) => ({
@@ -149,11 +166,25 @@ const EmptyState = styled(Box)(({ theme }) => ({
 }))
 
 // =============================================================================
-// MAIN COMPONENT
+// COLUMN HELPERS
 // =============================================================================
 
 const COLUMNS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
-const ROWS = Array.from({ length: 100 }, (_, i) => i + 1)
+
+const getCellRef = (row, col) => {
+  // Convert col index to letter (0 = A, 25 = Z, 26 = AA, etc.)
+  let colName = ''
+  let tempCol = col
+  while (tempCol >= 0) {
+    colName = String.fromCharCode((tempCol % 26) + 65) + colName
+    tempCol = Math.floor(tempCol / 26) - 1
+  }
+  return `${colName}${row + 1}`
+}
+
+// =============================================================================
+// MAIN COMPONENT
+// =============================================================================
 
 export default function SpreadsheetEditorPage() {
   const theme = useTheme()
@@ -170,35 +201,66 @@ export default function SpreadsheetEditorPage() {
     fetchSpreadsheets,
     createSpreadsheet,
     getSpreadsheet,
+    updateSpreadsheet,
+    deleteSpreadsheet,
     updateCells,
     addSheet,
     deleteSheet,
+    renameSheet,
     setActiveSheetIndex,
     setSelectedCells,
     createPivotTable,
     generateFormula,
     importCsv,
+    importExcel,
     exportSpreadsheet,
     reset,
   } = useSpreadsheetStore()
 
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [newSpreadsheetName, setNewSpreadsheetName] = useState('')
-  const [formulaValue, setFormulaValue] = useState('')
-  const [selectedCell, setSelectedCell] = useState({ row: 1, col: 0 })
-  const [cellData, setCellData] = useState({})
+  const [currentCellRef, setCurrentCellRef] = useState('A1')
+  const [currentCellValue, setCurrentCellValue] = useState('')
+  const [currentCellFormula, setCurrentCellFormula] = useState(null)
+  const [localData, setLocalData] = useState([])
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   const [aiDialogOpen, setAiDialogOpen] = useState(false)
   const [aiPrompt, setAiPrompt] = useState('')
+  const [exportMenuAnchor, setExportMenuAnchor] = useState(null)
+  const [moreMenuAnchor, setMoreMenuAnchor] = useState(null)
+  const [renameDialogOpen, setRenameDialogOpen] = useState(false)
+  const [newSheetName, setNewSheetName] = useState('')
+  const [sheetToRename, setSheetToRename] = useState(null)
   const fileInputRef = useRef(null)
+  const handsontableRef = useRef(null)
 
   useEffect(() => {
     fetchSpreadsheets()
     return () => reset()
   }, [fetchSpreadsheets, reset])
 
+  // Convert sheet data to 2D array for Handsontable
   useEffect(() => {
     if (currentSpreadsheet?.sheets?.[activeSheetIndex]?.data) {
-      setCellData(currentSpreadsheet.sheets[activeSheetIndex].data)
+      const sheetData = currentSpreadsheet.sheets[activeSheetIndex].data
+      // Convert from { A1: { value, formula }, B1: ... } to 2D array
+      const rows = []
+      const maxRow = 100
+      const maxCol = 26
+
+      for (let r = 0; r < maxRow; r++) {
+        const row = []
+        for (let c = 0; c < maxCol; c++) {
+          const cellKey = getCellRef(r, c)
+          const cellData = sheetData[cellKey]
+          row.push(cellData?.formula || cellData?.value || '')
+        }
+        rows.push(row)
+      }
+      setLocalData(rows)
+    } else {
+      // Empty grid
+      setLocalData(Array(100).fill(null).map(() => Array(26).fill('')))
     }
   }, [currentSpreadsheet, activeSheetIndex])
 
@@ -219,7 +281,10 @@ export default function SpreadsheetEditorPage() {
   }, [executeUI])
 
   const handleCloseCreateDialog = useCallback(() => {
-    return executeUI('Close create spreadsheet', () => setCreateDialogOpen(false))
+    return executeUI('Close create spreadsheet', () => {
+      setCreateDialogOpen(false)
+      setNewSpreadsheetName('')
+    })
   }, [executeUI])
 
   const handleOpenAiDialog = useCallback(() => {
@@ -227,7 +292,10 @@ export default function SpreadsheetEditorPage() {
   }, [executeUI])
 
   const handleCloseAiDialog = useCallback(() => {
-    return executeUI('Close AI formula', () => setAiDialogOpen(false))
+    return executeUI('Close AI formula', () => {
+      setAiDialogOpen(false)
+      setAiPrompt('')
+    })
   }, [executeUI])
 
   const handleTriggerImport = useCallback(() => {
@@ -244,6 +312,7 @@ export default function SpreadsheetEditorPage() {
       intent: { source: 'spreadsheets', spreadsheetId },
       action: async () => {
         await getSpreadsheet(spreadsheetId)
+        setHasUnsavedChanges(false)
       },
     })
   }, [execute, getSpreadsheet])
@@ -270,30 +339,92 @@ export default function SpreadsheetEditorPage() {
     })
   }, [createSpreadsheet, execute, newSpreadsheetName, toast])
 
-  const handleCellClick = (row, col) => {
-    setSelectedCell({ row, col })
-    const cellKey = `${COLUMNS[col]}${row}`
-    setFormulaValue(cellData[cellKey]?.formula || cellData[cellKey]?.value || '')
-  }
-
-  const handleCellChange = (row, col, value) => {
-    const cellKey = `${COLUMNS[col]}${row}`
-    const isFormula = value.startsWith('=')
-    setCellData((prev) => ({
-      ...prev,
-      [cellKey]: {
-        value: isFormula ? '' : value,
-        formula: isFormula ? value : null,
-        display: value,
+  const handleDeleteSpreadsheet = useCallback((spreadsheetId) => {
+    return execute({
+      type: InteractionType.DELETE,
+      label: 'Delete spreadsheet',
+      reversibility: Reversibility.REQUIRES_CONFIRMATION,
+      intent: { source: 'spreadsheets', spreadsheetId },
+      action: async () => {
+        const success = await deleteSpreadsheet(spreadsheetId)
+        if (success) {
+          toast.show('Spreadsheet deleted', 'success')
+        }
+        return success
       },
-    }))
-  }
+    })
+  }, [deleteSpreadsheet, execute, toast])
 
-  const handleFormulaChange = (e) => {
-    const value = e.target.value
-    setFormulaValue(value)
-    handleCellChange(selectedCell.row, selectedCell.col, value)
-  }
+  // Handsontable callbacks
+  const handleCellChange = useCallback((changes, source) => {
+    if (source === 'loadData') return
+    if (!changes) return
+
+    setHasUnsavedChanges(true)
+
+    // Update local data
+    setLocalData((prev) => {
+      const newData = prev.map((row) => [...row])
+      changes.forEach(([row, col, oldVal, newVal]) => {
+        if (newData[row]) {
+          newData[row][col] = newVal
+        }
+      })
+      return newData
+    })
+  }, [])
+
+  const handleSelectionChange = useCallback((row, col, row2, col2) => {
+    const cellRef = getCellRef(row, col)
+    setCurrentCellRef(cellRef)
+
+    const value = localData[row]?.[col] || ''
+    setCurrentCellValue(value)
+    setCurrentCellFormula(value.startsWith('=') ? value : null)
+  }, [localData])
+
+  const handleFormulaBarChange = useCallback((value) => {
+    setCurrentCellValue(value)
+  }, [])
+
+  const handleFormulaBarApply = useCallback((value) => {
+    // Parse currentCellRef to get row/col
+    const match = currentCellRef.match(/^([A-Z]+)(\d+)$/)
+    if (!match) return
+
+    const colLetters = match[1]
+    const row = parseInt(match[2], 10) - 1
+    let col = 0
+    for (let i = 0; i < colLetters.length; i++) {
+      col = col * 26 + (colLetters.charCodeAt(i) - 64)
+    }
+    col -= 1
+
+    setLocalData((prev) => {
+      const newData = prev.map((r) => [...r])
+      if (newData[row]) {
+        newData[row][col] = value
+      }
+      return newData
+    })
+    setHasUnsavedChanges(true)
+  }, [currentCellRef])
+
+  const handleFormulaBarCancel = useCallback(() => {
+    // Reset to original value
+    const match = currentCellRef.match(/^([A-Z]+)(\d+)$/)
+    if (!match) return
+
+    const colLetters = match[1]
+    const row = parseInt(match[2], 10) - 1
+    let col = 0
+    for (let i = 0; i < colLetters.length; i++) {
+      col = col * 26 + (colLetters.charCodeAt(i) - 64)
+    }
+    col -= 1
+
+    setCurrentCellValue(localData[row]?.[col] || '')
+  }, [currentCellRef, localData])
 
   const handleSave = useCallback(() => {
     if (!currentSpreadsheet) return undefined
@@ -303,22 +434,43 @@ export default function SpreadsheetEditorPage() {
       reversibility: Reversibility.SYSTEM_MANAGED,
       intent: { source: 'spreadsheets', spreadsheetId: currentSpreadsheet.id },
       action: async () => {
-        await updateCells(currentSpreadsheet.id, activeSheetIndex, cellData)
+        // Convert 2D array back to object format
+        const cellDataObj = {}
+        localData.forEach((row, rowIndex) => {
+          row.forEach((value, colIndex) => {
+            if (value !== '') {
+              const cellKey = getCellRef(rowIndex, colIndex)
+              const isFormula = typeof value === 'string' && value.startsWith('=')
+              cellDataObj[cellKey] = {
+                value: isFormula ? '' : value,
+                formula: isFormula ? value : null,
+              }
+            }
+          })
+        })
+
+        await updateCells(currentSpreadsheet.id, activeSheetIndex, cellDataObj)
+        setHasUnsavedChanges(false)
         toast.show('Spreadsheet saved', 'success')
       },
     })
-  }, [activeSheetIndex, cellData, currentSpreadsheet, execute, toast, updateCells])
+  }, [activeSheetIndex, currentSpreadsheet, execute, localData, toast, updateCells])
 
   const handleImport = useCallback((e) => {
     const file = e.target.files[0]
     if (!file) return
+
+    const isExcel = file.name.endsWith('.xlsx') || file.name.endsWith('.xls')
+
     execute({
       type: InteractionType.UPLOAD,
       label: 'Import spreadsheet',
       reversibility: Reversibility.SYSTEM_MANAGED,
       intent: { source: 'spreadsheets', filename: file.name },
       action: async () => {
-        const result = await importCsv(file)
+        const result = isExcel
+          ? await importExcel(file)
+          : await importCsv(file)
         if (result) {
           toast.show('File imported successfully', 'success')
         }
@@ -326,10 +478,11 @@ export default function SpreadsheetEditorPage() {
     }).finally(() => {
       e.target.value = ''
     })
-  }, [execute, importCsv, toast])
+  }, [execute, importCsv, importExcel, toast])
 
   const handleExport = useCallback((format) => {
     if (!currentSpreadsheet) return undefined
+    setExportMenuAnchor(null)
     return execute({
       type: InteractionType.DOWNLOAD,
       label: 'Export spreadsheet',
@@ -346,6 +499,7 @@ export default function SpreadsheetEditorPage() {
           a.download = `${currentSpreadsheet.name}.${format}`
           a.click()
           URL.revokeObjectURL(url)
+          toast.show(`Exported to ${format.toUpperCase()}`, 'success')
         } else {
           toast.show('Export not available', 'warning')
         }
@@ -364,8 +518,8 @@ export default function SpreadsheetEditorPage() {
       action: async () => {
         const result = await generateFormula(currentSpreadsheet.id, aiPrompt)
         if (result?.formula) {
-          setFormulaValue(result.formula)
-          handleCellChange(selectedCell.row, selectedCell.col, result.formula)
+          setCurrentCellValue(result.formula)
+          handleFormulaBarApply(result.formula)
           toast.show('Formula generated', 'success')
         }
         setAiDialogOpen(false)
@@ -373,13 +527,7 @@ export default function SpreadsheetEditorPage() {
         return result
       },
     })
-  }, [aiPrompt, currentSpreadsheet, execute, generateFormula, selectedCell, toast])
-
-  const handlePivotNotice = useCallback(() => {
-    return executeUI('Open pivot table', () => {
-      toast.show('Pivot table coming soon', 'info')
-    })
-  }, [executeUI, toast])
+  }, [aiPrompt, currentSpreadsheet, execute, generateFormula, handleFormulaBarApply, toast])
 
   const handleSelectSheet = useCallback((index) => {
     return executeUI('Switch sheet', () => setActiveSheetIndex(index), { index })
@@ -395,82 +543,253 @@ export default function SpreadsheetEditorPage() {
       action: async () => {
         const nextIndex = (currentSpreadsheet.sheets?.length || 0) + 1
         await addSheet(currentSpreadsheet.id, `Sheet ${nextIndex}`)
+        toast.show('Sheet added', 'success')
       },
     })
-  }, [addSheet, currentSpreadsheet, execute])
+  }, [addSheet, currentSpreadsheet, execute, toast])
+
+  const handleRenameSheet = useCallback(() => {
+    if (!currentSpreadsheet || sheetToRename === null || !newSheetName) return undefined
+    return execute({
+      type: InteractionType.UPDATE,
+      label: 'Rename sheet',
+      reversibility: Reversibility.SYSTEM_MANAGED,
+      intent: { source: 'spreadsheets', spreadsheetId: currentSpreadsheet.id },
+      action: async () => {
+        await renameSheet(currentSpreadsheet.id, sheetToRename, newSheetName)
+        setRenameDialogOpen(false)
+        setNewSheetName('')
+        setSheetToRename(null)
+        toast.show('Sheet renamed', 'success')
+      },
+    })
+  }, [currentSpreadsheet, execute, newSheetName, renameSheet, sheetToRename, toast])
+
+  const handleDeleteSheet = useCallback((index) => {
+    if (!currentSpreadsheet || currentSpreadsheet.sheets?.length <= 1) {
+      toast.show('Cannot delete the only sheet', 'warning')
+      return undefined
+    }
+    return execute({
+      type: InteractionType.DELETE,
+      label: 'Delete sheet',
+      reversibility: Reversibility.REQUIRES_CONFIRMATION,
+      intent: { source: 'spreadsheets', spreadsheetId: currentSpreadsheet.id, sheetIndex: index },
+      action: async () => {
+        await deleteSheet(currentSpreadsheet.id, index)
+        toast.show('Sheet deleted', 'success')
+      },
+    })
+  }, [currentSpreadsheet, deleteSheet, execute, toast])
 
   const handleDismissError = useCallback(() => {
     return executeUI('Dismiss spreadsheet error', () => reset())
   }, [executeUI, reset])
 
-  const getCellValue = (row, col) => {
-    const cellKey = `${COLUMNS[col]}${row}`
-    return cellData[cellKey]?.display || cellData[cellKey]?.value || ''
-  }
+  const openRenameDialog = useCallback((index) => {
+    setSheetToRename(index)
+    setNewSheetName(currentSpreadsheet?.sheets?.[index]?.name || '')
+    setRenameDialogOpen(true)
+  }, [currentSpreadsheet])
 
   return (
     <PageContainer>
-      {/* Toolbar */}
-      <Toolbar>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <SpreadsheetIcon sx={{ color: 'success.main' }} />
-          <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-            {currentSpreadsheet?.name || 'Spreadsheets'}
+      {/* Sidebar - Spreadsheet List */}
+      <Sidebar>
+        <SidebarHeader>
+          <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+            Spreadsheets
           </Typography>
-        </Box>
+          <Tooltip title="New Spreadsheet">
+            <IconButton size="small" onClick={handleOpenCreateDialog}>
+              <AddIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        </SidebarHeader>
 
-        <Box sx={{ display: 'flex', gap: 1 }}>
-          {currentSpreadsheet ? (
-            <>
+        <Box sx={{ flex: 1, overflow: 'auto', p: 1 }}>
+          {loading && spreadsheets.length === 0 ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+              <CircularProgress size={24} />
+            </Box>
+          ) : spreadsheets.length === 0 ? (
+            <Typography variant="body2" color="text.secondary" sx={{ p: 2, textAlign: 'center' }}>
+              No spreadsheets yet
+            </Typography>
+          ) : (
+            <List disablePadding>
+              {spreadsheets.map((ss) => (
+                <SpreadsheetListItem
+                  key={ss.id}
+                  active={currentSpreadsheet?.id === ss.id}
+                  onClick={() => handleSelectSpreadsheet(ss.id)}
+                >
+                  <ListItemIcon sx={{ minWidth: 36 }}>
+                    <SpreadsheetIcon color="success" fontSize="small" />
+                  </ListItemIcon>
+                  <ListItemText
+                    primary={ss.name}
+                    secondary={`${ss.sheets?.length || 1} sheets`}
+                    primaryTypographyProps={{ variant: 'body2', fontWeight: 500 }}
+                    secondaryTypographyProps={{ variant: 'caption' }}
+                  />
+                  <IconButton
+                    size="small"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleDeleteSpreadsheet(ss.id)
+                    }}
+                  >
+                    <DeleteIcon fontSize="small" />
+                  </IconButton>
+                </SpreadsheetListItem>
+              ))}
+            </List>
+          )}
+        </Box>
+      </Sidebar>
+
+      {/* Main Content */}
+      <MainContent>
+        {currentSpreadsheet ? (
+          <>
+            {/* Toolbar */}
+            <Toolbar>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                  {currentSpreadsheet.name}
+                </Typography>
+                {hasUnsavedChanges && (
+                  <Chip
+                    label="Unsaved"
+                    size="small"
+                    color="warning"
+                    sx={{ height: 20, fontSize: '0.7rem' }}
+                  />
+                )}
+              </Box>
+
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                <Tooltip title="Undo">
+                  <IconButton size="small">
+                    <UndoIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="Redo">
+                  <IconButton size="small">
+                    <RedoIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+
+                <Divider orientation="vertical" flexItem sx={{ mx: 1 }} />
+
+                <ActionButton
+                  size="small"
+                  startIcon={<UploadIcon />}
+                  onClick={handleTriggerImport}
+                >
+                  Import
+                </ActionButton>
+                <ActionButton
+                  size="small"
+                  startIcon={<DownloadIcon />}
+                  onClick={(e) => setExportMenuAnchor(e.currentTarget)}
+                >
+                  Export
+                </ActionButton>
+                <ActionButton
+                  size="small"
+                  startIcon={<AIIcon />}
+                  onClick={handleOpenAiDialog}
+                >
+                  AI Formula
+                </ActionButton>
+                <ActionButton
+                  variant="contained"
+                  size="small"
+                  startIcon={<SaveIcon />}
+                  onClick={handleSave}
+                  disabled={saving || !hasUnsavedChanges}
+                >
+                  {saving ? 'Saving...' : 'Save'}
+                </ActionButton>
+              </Box>
+            </Toolbar>
+
+            {/* Formula Bar */}
+            <FormulaBar
+              cellRef={currentCellRef}
+              value={currentCellValue}
+              formula={currentCellFormula}
+              onChange={handleFormulaBarChange}
+              onApply={handleFormulaBarApply}
+              onCancel={handleFormulaBarCancel}
+              disabled={!currentSpreadsheet}
+            />
+
+            {/* Spreadsheet Grid */}
+            <SpreadsheetArea>
+              <HandsontableEditor
+                ref={handsontableRef}
+                data={localData}
+                onCellChange={handleCellChange}
+                onSelectionChange={handleSelectionChange}
+                formulas={true}
+              />
+            </SpreadsheetArea>
+
+            {/* Sheet Tabs */}
+            <SheetTabs>
+              {currentSpreadsheet.sheets?.map((sheet, index) => (
+                <SheetTab
+                  key={index}
+                  label={sheet.name}
+                  size="small"
+                  active={activeSheetIndex === index}
+                  onClick={() => handleSelectSheet(index)}
+                  onDoubleClick={() => openRenameDialog(index)}
+                  onDelete={
+                    currentSpreadsheet.sheets.length > 1
+                      ? () => handleDeleteSheet(index)
+                      : undefined
+                  }
+                />
+              ))}
+              <Tooltip title="Add Sheet">
+                <IconButton size="small" onClick={handleAddSheet}>
+                  <AddIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            </SheetTabs>
+          </>
+        ) : (
+          <EmptyState>
+            <SpreadsheetIcon sx={{ fontSize: 80, color: 'text.disabled', mb: 2 }} />
+            <Typography variant="h5" sx={{ fontWeight: 600, mb: 1 }}>
+              No Spreadsheet Selected
+            </Typography>
+            <Typography color="text.secondary" sx={{ mb: 3 }}>
+              Create a new spreadsheet or select one from the sidebar.
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 2 }}>
               <ActionButton
-                size="small"
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={handleOpenCreateDialog}
+              >
+                Create Spreadsheet
+              </ActionButton>
+              <ActionButton
+                variant="outlined"
                 startIcon={<UploadIcon />}
                 onClick={handleTriggerImport}
               >
-                Import
+                Import File
               </ActionButton>
-              <ActionButton
-                size="small"
-                startIcon={<DownloadIcon />}
-                onClick={() => handleExport('csv')}
-              >
-                Export
-              </ActionButton>
-              <ActionButton
-                size="small"
-                startIcon={<PivotIcon />}
-                onClick={handlePivotNotice}
-              >
-                Pivot
-              </ActionButton>
-              <ActionButton
-                size="small"
-                startIcon={<AIIcon />}
-                onClick={handleOpenAiDialog}
-              >
-                AI Formula
-              </ActionButton>
-              <ActionButton
-                variant="contained"
-                size="small"
-                startIcon={<SaveIcon />}
-                onClick={handleSave}
-                disabled={saving}
-              >
-                Save
-              </ActionButton>
-            </>
-          ) : (
-            <ActionButton
-              variant="contained"
-              size="small"
-              startIcon={<AddIcon />}
-              onClick={handleOpenCreateDialog}
-            >
-              New Spreadsheet
-            </ActionButton>
-          )}
-        </Box>
+            </Box>
+          </EmptyState>
+        )}
+
         <input
           ref={fileInputRef}
           type="file"
@@ -478,143 +797,7 @@ export default function SpreadsheetEditorPage() {
           accept=".csv,.xlsx,.xls"
           onChange={handleImport}
         />
-      </Toolbar>
-
-      {currentSpreadsheet ? (
-        <>
-          {/* Formula Bar */}
-          <FormulaBar>
-            <CellReference>
-              {COLUMNS[selectedCell.col]}{selectedCell.row}
-            </CellReference>
-            <FormulaIcon sx={{ color: 'text.secondary', fontSize: 20 }} />
-            <TextField
-              fullWidth
-              size="small"
-              value={formulaValue}
-              onChange={handleFormulaChange}
-              placeholder="Enter value or formula (start with =)"
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: 1,
-                  fontSize: 13,
-                },
-              }}
-            />
-          </FormulaBar>
-
-          {/* Spreadsheet Grid */}
-          <SpreadsheetArea>
-            <GridContainer>
-              {/* Header row */}
-              <HeaderCell />
-              {COLUMNS.map((col) => (
-                <HeaderCell key={col}>{col}</HeaderCell>
-              ))}
-
-              {/* Data rows */}
-              {ROWS.slice(0, 50).map((row) => (
-                <React.Fragment key={row}>
-                  <HeaderCell>{row}</HeaderCell>
-                  {COLUMNS.map((col, colIndex) => (
-                    <Cell
-                      key={`${col}${row}`}
-                      selected={selectedCell.row === row && selectedCell.col === colIndex}
-                      onClick={() => handleCellClick(row, colIndex)}
-                      contentEditable
-                      suppressContentEditableWarning
-                      onBlur={(e) => handleCellChange(row, colIndex, e.target.textContent)}
-                    >
-                      {getCellValue(row, colIndex)}
-                    </Cell>
-                  ))}
-                </React.Fragment>
-              ))}
-            </GridContainer>
-          </SpreadsheetArea>
-
-          {/* Sheet Tabs */}
-          <SheetTabs>
-            {currentSpreadsheet.sheets?.map((sheet, index) => (
-              <Chip
-                key={index}
-                label={sheet.name}
-                size="small"
-                variant={activeSheetIndex === index ? 'filled' : 'outlined'}
-                color={activeSheetIndex === index ? 'primary' : 'default'}
-                onClick={() => handleSelectSheet(index)}
-                sx={{ mr: 1, borderRadius: 1 }}
-              />
-            ))}
-            <IconButton
-              size="small"
-              onClick={handleAddSheet}
-            >
-              <AddIcon fontSize="small" />
-            </IconButton>
-          </SheetTabs>
-        </>
-      ) : (
-        <EmptyState>
-          <SpreadsheetIcon sx={{ fontSize: 80, color: 'text.disabled', mb: 2 }} />
-          <Typography variant="h5" sx={{ fontWeight: 600, mb: 1 }}>
-            No Spreadsheet Selected
-          </Typography>
-          <Typography color="text.secondary" sx={{ mb: 3 }}>
-            Create a new spreadsheet or import data from a file.
-          </Typography>
-          <Box sx={{ display: 'flex', gap: 2 }}>
-            <ActionButton
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={handleOpenCreateDialog}
-            >
-              Create Spreadsheet
-            </ActionButton>
-            <ActionButton
-              variant="outlined"
-              startIcon={<UploadIcon />}
-              onClick={handleTriggerImport}
-            >
-              Import CSV
-            </ActionButton>
-          </Box>
-
-          {spreadsheets.length > 0 && (
-            <Box sx={{ mt: 4, width: '100%', maxWidth: 400 }}>
-              <Typography variant="subtitle2" sx={{ mb: 2 }}>
-                Recent Spreadsheets
-              </Typography>
-              {spreadsheets.slice(0, 5).map((ss) => (
-                <Paper
-                  key={ss.id}
-                  sx={{
-                    p: 2,
-                    mb: 1,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 2,
-                    '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.05) },
-                  }}
-                  variant="outlined"
-                  onClick={() => handleSelectSpreadsheet(ss.id)}
-                >
-                  <SpreadsheetIcon color="success" />
-                  <Box>
-                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                      {ss.name}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {ss.sheets?.length || 1} sheets
-                    </Typography>
-                  </Box>
-                </Paper>
-              ))}
-            </Box>
-          )}
-        </EmptyState>
-      )}
+      </MainContent>
 
       {/* Create Dialog */}
       <Dialog
@@ -632,6 +815,11 @@ export default function SpreadsheetEditorPage() {
             value={newSpreadsheetName}
             onChange={(e) => setNewSpreadsheetName(e.target.value)}
             sx={{ mt: 2 }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && newSpreadsheetName) {
+                handleCreateSpreadsheet()
+              }
+            }}
           />
         </DialogContent>
         <DialogActions>
@@ -642,6 +830,41 @@ export default function SpreadsheetEditorPage() {
             disabled={!newSpreadsheetName || loading}
           >
             Create
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Rename Sheet Dialog */}
+      <Dialog
+        open={renameDialogOpen}
+        onClose={() => setRenameDialogOpen(false)}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle>Rename Sheet</DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            fullWidth
+            label="Sheet Name"
+            value={newSheetName}
+            onChange={(e) => setNewSheetName(e.target.value)}
+            sx={{ mt: 2 }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && newSheetName) {
+                handleRenameSheet()
+              }
+            }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setRenameDialogOpen(false)}>Cancel</Button>
+          <Button
+            variant="contained"
+            onClick={handleRenameSheet}
+            disabled={!newSheetName}
+          >
+            Rename
           </Button>
         </DialogActions>
       </Dialog>
@@ -672,6 +895,9 @@ export default function SpreadsheetEditorPage() {
             value={aiPrompt}
             onChange={(e) => setAiPrompt(e.target.value)}
           />
+          <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+            The formula will be inserted into the currently selected cell ({currentCellRef})
+          </Typography>
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseAiDialog}>Cancel</Button>
@@ -685,6 +911,23 @@ export default function SpreadsheetEditorPage() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Export Menu */}
+      <Menu
+        anchorEl={exportMenuAnchor}
+        open={Boolean(exportMenuAnchor)}
+        onClose={() => setExportMenuAnchor(null)}
+      >
+        <MenuItem onClick={() => handleExport('csv')}>
+          <ListItemText primary="CSV" secondary="Comma-separated values" />
+        </MenuItem>
+        <MenuItem onClick={() => handleExport('xlsx')}>
+          <ListItemText primary="Excel (.xlsx)" secondary="Microsoft Excel format" />
+        </MenuItem>
+        <MenuItem onClick={() => handleExport('json')}>
+          <ListItemText primary="JSON" secondary="JavaScript Object Notation" />
+        </MenuItem>
+      </Menu>
 
       {error && (
         <Alert

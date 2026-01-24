@@ -42,7 +42,7 @@ def _build_generate_router() -> APIRouter:
         build_batch_field_catalog_and_stats,
         build_batch_metrics,
     )
-    from backend.app.services.state_access import state_store
+    import backend.app.services.state_access as state_access
     from backend.app.services.templates.TemplateVerify import get_openai_client
     from backend.app.services.utils import call_chat_completion, get_correlation_id, strip_code_fences
     from backend.app.services.utils.artifacts import load_manifest
@@ -97,7 +97,7 @@ def _build_generate_router() -> APIRouter:
 
     def _ensure_template_exists(template_id: str) -> tuple[str, dict]:
         normalized = normalize_template_id(template_id)
-        record = state_store.get_template_record(normalized)
+        record = state_access.get_template_record(normalized)
         if not record:
             raise HTTPException(status_code=404, detail="template_not_found")
         return normalized, record

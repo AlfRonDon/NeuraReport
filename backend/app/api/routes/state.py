@@ -12,7 +12,7 @@ from pydantic import BaseModel
 from typing import Optional
 
 from backend.app.services.security import require_api_key
-from backend.app.services.state_access import store as state_store_module
+import backend.app.services.state_access as state_access
 from backend.legacy.services.template_service import bootstrap_state
 
 router = APIRouter(dependencies=[Depends(require_api_key)])
@@ -30,9 +30,9 @@ def _correlation(request: Request) -> str | None:
 def _state_store():
     try:
         api_mod = importlib.import_module("backend.api")
-        return getattr(api_mod, "state_store", state_store_module.state_store)
+        return getattr(api_mod, "state_store", state_access.state_store)
     except Exception:
-        return state_store_module.state_store
+        return state_access.state_store
 
 
 @router.get("/bootstrap")

@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { ThemeProvider } from '@mui/material/styles'
 import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query'
-import theme from '@/theme.js'
+import theme from '@/app/theme.js'
 import { ToastProvider } from '@/components/ToastProvider.jsx'
 
 const mockNavigate = vi.fn()

@@ -13,6 +13,8 @@ from typing import Any, Optional
 
 from pydantic import BaseModel
 
+from backend.app.services.config import get_settings
+
 logger = logging.getLogger("neura.spreadsheets")
 
 
@@ -111,7 +113,8 @@ class SpreadsheetService:
     """Service for spreadsheet CRUD operations."""
 
     def __init__(self, storage_path: Optional[Path] = None):
-        self._storage_path = storage_path or Path("uploads/spreadsheets")
+        base_root = get_settings().uploads_root
+        self._storage_path = storage_path or (base_root / "spreadsheets")
         self._storage_path.mkdir(parents=True, exist_ok=True)
 
     def create(
@@ -147,7 +150,7 @@ class SpreadsheetService:
     def get(self, spreadsheet_id: str) -> Optional[Spreadsheet]:
         """Get a spreadsheet by ID."""
         file_path = self._get_spreadsheet_path(spreadsheet_id)
-        if not file_path.exists():
+        if not file_path or not file_path.exists():
             return None
         with open(file_path) as f:
             data = json.load(f)
@@ -176,7 +179,7 @@ class SpreadsheetService:
     def delete(self, spreadsheet_id: str) -> bool:
         """Delete a spreadsheet."""
         file_path = self._get_spreadsheet_path(spreadsheet_id)
-        if not file_path.exists():
+        if not file_path or not file_path.exists():
             return False
         file_path.unlink()
         logger.info(f"Deleted spreadsheet: {spreadsheet_id}")
@@ -438,9 +441,18 @@ class SpreadsheetService:
         spreadsheets.sort(key=lambda s: s.updated_at, reverse=True)
         return spreadsheets[offset:offset + limit]
 
-    def _get_spreadsheet_path(self, spreadsheet_id: str) -> Path:
+    def _normalize_id(self, spreadsheet_id: str) -> Optional[str]:
+        try:
+            return str(uuid.UUID(str(spreadsheet_id)))
+        except (ValueError, TypeError):
+            return None
+
+    def _get_spreadsheet_path(self, spreadsheet_id: str) -> Optional[Path]:
         """Get path to spreadsheet JSON file."""
-        return self._storage_path / f"{spreadsheet_id}.json"
+        normalized = self._normalize_id(spreadsheet_id)
+        if not normalized:
+            return None
+        return self._storage_path / f"{normalized}.json"
 
     def _save_spreadsheet(self, spreadsheet: Spreadsheet) -> None:
         """Save spreadsheet to disk."""

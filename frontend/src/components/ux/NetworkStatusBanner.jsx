@@ -25,7 +25,6 @@ import {
   CloudOff as ServerDownIcon,
 } from '@mui/icons-material'
 import { useNetworkStatus } from '@/hooks/useNetworkStatus'
-import { API_BASE } from '@/api/client'
 
 // Animations
 const slideDown = keyframes`
@@ -52,33 +51,12 @@ export const NetworkStatus = {
  */
 export default function NetworkStatusBanner({ onRetry }) {
   const theme = useTheme()
-  const { isOnline, checkConnectivity } = useNetworkStatus()
+  const { isOnline, checkConnectivity, checkServer } = useNetworkStatus()
   const [status, setStatus] = useState(NetworkStatus.ONLINE)
   const [isRetrying, setIsRetrying] = useState(false)
   const [showBanner, setShowBanner] = useState(false)
   const [wasOffline, setWasOffline] = useState(false)
-  const healthUrl = `${API_BASE.replace(/\/+$/, '')}/health`
-
-  // Check server connectivity
-  const checkServer = useCallback(async () => {
-    let timeoutId
-    try {
-      const controller = new AbortController()
-      timeoutId = setTimeout(() => controller.abort(), 5000)
-
-      const response = await fetch(healthUrl, {
-        method: 'HEAD',
-        signal: controller.signal,
-        cache: 'no-store',
-      })
-
-      return response.ok
-    } catch {
-      return false
-    } finally {
-      if (timeoutId) clearTimeout(timeoutId)
-    }
-  }, [healthUrl])
+  // Server connectivity check is provided by the network hook
 
   // Handle retry
   const handleRetry = useCallback(async () => {

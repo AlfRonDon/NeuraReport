@@ -13,7 +13,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 
 from backend.app.services.security import require_api_key
-from backend.app.services.state_access import state_store
+import backend.app.services.state_access as state_access
 from backend.legacy.schemas.report_schema import ScheduleCreatePayload, ScheduleUpdatePayload
 from backend.legacy.services.scheduler_service import (
     create_schedule,
@@ -161,7 +161,7 @@ async def trigger_schedule(schedule_id: str, background_tasks: BackgroundTasks, 
         "docx": bool(payload.get("docx")),
         "xlsx": bool(payload.get("xlsx")),
     }
-    job_record = state_store.create_job(
+    job_record = state_access.create_job(
         job_type="run_report",
         template_id=run_payload.template_id,
         connection_id=run_payload.connection_id,
@@ -193,7 +193,7 @@ async def trigger_schedule(schedule_id: str, background_tasks: BackgroundTasks, 
                 "docx_url": result.get("docx_url"),
                 "xlsx_url": result.get("xlsx_url"),
             }
-            state_store.record_schedule_run(
+            state_access.record_schedule_run(
                 schedule_id,
                 started_at=started.isoformat(),
                 finished_at=finished.isoformat(),
@@ -214,7 +214,7 @@ async def trigger_schedule(schedule_id: str, background_tasks: BackgroundTasks, 
             )
         except Exception as exc:
             finished = datetime.now(timezone.utc)
-            state_store.record_schedule_run(
+            state_access.record_schedule_run(
                 schedule_id,
                 started_at=started.isoformat(),
                 finished_at=finished.isoformat(),

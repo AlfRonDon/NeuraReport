@@ -8,7 +8,7 @@ from pydantic import BaseModel
 
 from backend.app.services.config import get_settings
 from backend.app.services.security import require_api_key
-from backend.app.services.state_access import state_store
+import backend.app.services.state_access as state_access
 
 router = APIRouter(dependencies=[Depends(require_api_key)])
 
@@ -60,10 +60,10 @@ async def get_dashboard_analytics() -> Dict[str, Any]:
     """Get comprehensive dashboard analytics."""
 
     # Get all data from state store
-    connections = state_store.list_connections()
-    templates = state_store.list_templates()
-    jobs = state_store.list_jobs()
-    schedules = state_store.list_schedules()
+    connections = state_access.list_connections()
+    templates = state_access.list_templates()
+    jobs = state_access.list_jobs()
+    schedules = state_access.list_schedules()
 
     # Calculate time boundaries
     now = datetime.now(timezone.utc)
@@ -198,8 +198,8 @@ async def get_usage_statistics(
 ) -> Dict[str, Any]:
     """Get detailed usage statistics over time."""
 
-    jobs = state_store.list_jobs()
-    templates = state_store.list_templates()
+    jobs = state_access.list_jobs()
+    templates = state_access.list_templates()
 
     now = datetime.now(timezone.utc)
 
@@ -267,7 +267,7 @@ async def get_report_history(
 ) -> Dict[str, Any]:
     """Get report generation history with filtering."""
 
-    jobs = state_store.list_jobs()
+    jobs = state_access.list_jobs()
 
     # Filter
     filtered = jobs
@@ -286,7 +286,7 @@ async def get_report_history(
     paginated = filtered[offset:offset + limit]
 
     # Enhance with template info
-    templates = {t.get("id"): t for t in state_store.list_templates()}
+    templates = {t.get("id"): t for t in state_access.list_templates()}
 
     history = []
     for job in paginated:
@@ -328,7 +328,7 @@ async def get_activity_log(
     action: Optional[str] = Query(None),
 ) -> Dict[str, Any]:
     """Get the activity log with optional filtering."""
-    log = state_store.get_activity_log(
+    log = state_access.get_activity_log(
         limit=limit,
         offset=offset,
         entity_type=entity_type,
@@ -350,7 +350,7 @@ async def log_activity(
     details: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """Log an activity event."""
-    entry = state_store.log_activity(
+    entry = state_access.log_activity(
         action=action,
         entity_type=entity_type,
         entity_id=entity_id,
@@ -363,7 +363,7 @@ async def log_activity(
 @router.delete("/activity")
 async def clear_activity_log() -> Dict[str, Any]:
     """Clear all activity log entries."""
-    count = state_store.clear_activity_log()
+    count = state_access.clear_activity_log()
     return {"cleared": count}
 
 
@@ -374,11 +374,11 @@ async def clear_activity_log() -> Dict[str, Any]:
 @router.get("/favorites")
 async def get_favorites() -> Dict[str, Any]:
     """Get all favorites."""
-    favorites = state_store.get_favorites()
+    favorites = state_access.get_favorites()
 
     # Enrich with template/connection details
-    templates = {t.get("id"): t for t in state_store.list_templates()}
-    connections = {c.get("id"): c for c in state_store.list_connections()}
+    templates = {t.get("id"): t for t in state_access.list_templates()}
+    connections = {c.get("id"): c for c in state_access.list_connections()}
 
     enriched_templates = []
     for tid in favorites.get("templates", []):
@@ -415,10 +415,10 @@ async def add_favorite(entity_type: str, entity_id: str) -> Dict[str, Any]:
         from fastapi import HTTPException
         raise HTTPException(status_code=400, detail="Invalid entity type")
 
-    added = state_store.add_favorite(entity_type, entity_id)
+    added = state_access.add_favorite(entity_type, entity_id)
 
     # Log activity
-    state_store.log_activity(
+    state_access.log_activity(
         action="favorite_added",
         entity_type=entity_type.rstrip("s"),  # template or connection
         entity_id=entity_id,
@@ -434,10 +434,10 @@ async def remove_favorite(entity_type: str, entity_id: str) -> Dict[str, Any]:
         from fastapi import HTTPException
         raise HTTPException(status_code=400, detail="Invalid entity type")
 
-    removed = state_store.remove_favorite(entity_type, entity_id)
+    removed = state_access.remove_favorite(entity_type, entity_id)
 
     # Log activity
-    state_store.log_activity(
+    state_access.log_activity(
         action="favorite_removed",
         entity_type=entity_type.rstrip("s"),
         entity_id=entity_id,
@@ -453,7 +453,7 @@ async def check_favorite(entity_type: str, entity_id: str) -> Dict[str, Any]:
         from fastapi import HTTPException
         raise HTTPException(status_code=400, detail="Invalid entity type")
 
-    is_fav = state_store.is_favorite(entity_type, entity_id)
+    is_fav = state_access.is_favorite(entity_type, entity_id)
     return {"isFavorite": is_fav, "entityType": entity_type, "entityId": entity_id}
 
 
@@ -468,14 +468,14 @@ class PreferenceValue(BaseModel):
 @router.get("/preferences")
 async def get_preferences() -> Dict[str, Any]:
     """Get user preferences."""
-    prefs = state_store.get_user_preferences()
+    prefs = state_access.get_user_preferences()
     return {"preferences": prefs}
 
 
 @router.put("/preferences")
 async def update_preferences(updates: Dict[str, Any]) -> Dict[str, Any]:
     """Update user preferences."""
-    prefs = state_store.update_user_preferences(updates)
+    prefs = state_access.update_user_preferences(updates)
     return {"preferences": prefs}
 
 
@@ -492,7 +492,7 @@ async def set_preference(
         pref_value = value
     else:
         raise HTTPException(status_code=422, detail="Preference value is required.")
-    prefs = state_store.set_user_preference(key, pref_value)
+    prefs = state_access.set_user_preference(key, pref_value)
     return {"preferences": prefs}
 
 
@@ -503,11 +503,11 @@ async def set_preference(
 @router.get("/export/config")
 async def export_configuration() -> Dict[str, Any]:
     """Export all configuration (templates, connections, schedules, preferences) as JSON."""
-    connections = state_store.list_connections()
-    templates = state_store.list_templates()
-    schedules = state_store.list_schedules()
-    favorites = state_store.get_favorites()
-    preferences = state_store.get_user_preferences()
+    connections = state_access.list_connections()
+    templates = state_access.list_templates()
+    schedules = state_access.list_schedules()
+    favorites = state_access.get_favorites()
+    preferences = state_access.get_user_preferences()
 
     # Remove sensitive data from connections
     safe_connections = []
@@ -552,7 +552,7 @@ async def global_search(
 
     # Search templates
     if "templates" in type_filter:
-        templates = state_store.list_templates()
+        templates = state_access.list_templates()
         for t in templates:
             name = (t.get("name") or "").lower()
             tid = (t.get("id") or "").lower()
@@ -568,7 +568,7 @@ async def global_search(
 
     # Search connections
     if "connections" in type_filter:
-        connections = state_store.list_connections()
+        connections = state_access.list_connections()
         for c in connections:
             name = (c.get("name") or "").lower()
             cid = (c.get("id") or "").lower()
@@ -585,7 +585,7 @@ async def global_search(
 
     # Search jobs
     if "jobs" in type_filter:
-        jobs = state_store.list_jobs(limit=100)
+        jobs = state_access.list_jobs(limit=100)
         for j in jobs:
             tname = (j.get("templateName") or j.get("template_name") or "").lower()
             jid = (j.get("id") or "").lower()
@@ -622,8 +622,8 @@ async def get_notifications(
     unread_only: bool = Query(False),
 ) -> Dict[str, Any]:
     """Get notifications list."""
-    notifications = state_store.get_notifications(limit=limit, unread_only=unread_only)
-    unread_count = state_store.get_unread_count()
+    notifications = state_access.get_notifications(limit=limit, unread_only=unread_only)
+    unread_count = state_access.get_unread_count()
     return {
         "notifications": notifications,
         "unreadCount": unread_count,
@@ -634,7 +634,7 @@ async def get_notifications(
 @router.get("/notifications/unread-count")
 async def get_unread_count() -> Dict[str, int]:
     """Get count of unread notifications."""
-    return {"unreadCount": state_store.get_unread_count()}
+    return {"unreadCount": state_access.get_unread_count()}
 
 
 @router.post("/notifications")
@@ -647,7 +647,7 @@ async def create_notification(payload: Dict[str, Any]) -> Dict[str, Any]:
     entity_type = payload.get("entityType")
     entity_id = payload.get("entityId")
 
-    notification = state_store.add_notification(
+    notification = state_access.add_notification(
         title=title,
         message=message,
         notification_type=notification_type,
@@ -661,7 +661,7 @@ async def create_notification(payload: Dict[str, Any]) -> Dict[str, Any]:
 @router.put("/notifications/{notification_id}/read")
 async def mark_notification_read(notification_id: str) -> Dict[str, Any]:
     """Mark a notification as read."""
-    found = state_store.mark_notification_read(notification_id)
+    found = state_access.mark_notification_read(notification_id)
     if not found:
         from fastapi import HTTPException
         raise HTTPException(status_code=404, detail="Notification not found")
@@ -671,14 +671,14 @@ async def mark_notification_read(notification_id: str) -> Dict[str, Any]:
 @router.put("/notifications/read-all")
 async def mark_all_read() -> Dict[str, Any]:
     """Mark all notifications as read."""
-    count = state_store.mark_all_notifications_read()
+    count = state_access.mark_all_notifications_read()
     return {"markedCount": count}
 
 
 @router.delete("/notifications/{notification_id}")
 async def delete_notification(notification_id: str) -> Dict[str, Any]:
     """Delete a notification."""
-    found = state_store.delete_notification(notification_id)
+    found = state_access.delete_notification(notification_id)
     if not found:
         from fastapi import HTTPException
         raise HTTPException(status_code=404, detail="Notification not found")
@@ -688,7 +688,7 @@ async def delete_notification(notification_id: str) -> Dict[str, Any]:
 @router.delete("/notifications")
 async def clear_all_notifications() -> Dict[str, Any]:
     """Clear all notifications."""
-    count = state_store.clear_notifications()
+    count = state_access.clear_notifications()
     return {"clearedCount": count}
 
 
@@ -709,9 +709,9 @@ async def bulk_delete_templates(payload: Dict[str, Any]) -> Dict[str, Any]:
 
     for tid in template_ids:
         try:
-            state_store.delete_template(tid)
+            state_access.delete_template(tid)
             deleted.append(tid)
-            state_store.log_activity(
+            state_access.log_activity(
                 action="template_deleted",
                 entity_type="template",
                 entity_id=tid,
@@ -745,12 +745,12 @@ async def bulk_update_template_status(payload: Dict[str, Any]) -> Dict[str, Any]
 
     for tid in template_ids:
         try:
-            record = state_store.get_template_record(tid)
+            record = state_access.get_template_record(tid)
             if not record:
                 failed.append({"id": tid, "error": "Template not found"})
                 continue
 
-            state_store.upsert_template(
+            state_access.upsert_template(
                 tid,
                 name=record.get("name") or tid,
                 status=status,
@@ -762,7 +762,7 @@ async def bulk_update_template_status(payload: Dict[str, Any]) -> Dict[str, Any]
                 description=record.get("description"),
             )
             updated.append(tid)
-            state_store.log_activity(
+            state_access.log_activity(
                 action="template_status_updated",
                 entity_type="template",
                 entity_id=tid,
@@ -797,7 +797,7 @@ async def bulk_add_tags(payload: Dict[str, Any]) -> Dict[str, Any]:
 
     for tid in template_ids:
         try:
-            record = state_store.get_template_record(tid)
+            record = state_access.get_template_record(tid)
             if not record:
                 failed.append({"id": tid, "error": "Template not found"})
                 continue
@@ -805,7 +805,7 @@ async def bulk_add_tags(payload: Dict[str, Any]) -> Dict[str, Any]:
             existing_tags = list(record.get("tags") or [])
             merged_tags = sorted(set(existing_tags + tags_to_add))
 
-            state_store.upsert_template(
+            state_access.upsert_template(
                 tid,
                 name=record.get("name") or tid,
                 status=record.get("status") or "draft",
@@ -841,7 +841,7 @@ async def bulk_cancel_jobs(payload: Dict[str, Any]) -> Dict[str, Any]:
 
     for jid in job_ids:
         try:
-            job = state_store.get_job(jid)
+            job = state_access.get_job(jid)
             if not job:
                 failed.append({"id": jid, "error": "Job not found"})
                 continue
@@ -851,9 +851,9 @@ async def bulk_cancel_jobs(payload: Dict[str, Any]) -> Dict[str, Any]:
                 failed.append({"id": jid, "error": f"Cannot cancel job with status: {status}"})
                 continue
 
-            state_store.update_job(jid, status="cancelled")
+            state_access.update_job(jid, status="cancelled")
             cancelled.append(jid)
-            state_store.log_activity(
+            state_access.log_activity(
                 action="job_cancelled",
                 entity_type="job",
                 entity_id=jid,
@@ -882,7 +882,7 @@ async def bulk_delete_jobs(payload: Dict[str, Any]) -> Dict[str, Any]:
 
     for jid in job_ids:
         try:
-            state_store.delete_job(jid)
+            state_access.delete_job(jid)
             deleted.append(jid)
         except Exception as e:
             failed.append({"id": jid, "error": str(e)})
@@ -893,3 +893,78 @@ async def bulk_delete_jobs(payload: Dict[str, Any]) -> Dict[str, Any]:
         "failed": failed,
         "failedCount": len(failed),
     }
+
+
+# ------------------------------------------------------------------
+# AI Analytics Endpoints
+# ------------------------------------------------------------------
+
+from backend.app.schemas.analytics import (
+    InsightsRequest,
+    InsightsResponse,
+    TrendRequest,
+    TrendResponse,
+    AnomaliesRequest,
+    AnomaliesResponse,
+    CorrelationsRequest,
+    CorrelationsResponse,
+    WhatIfRequest,
+    WhatIfResponse,
+)
+from backend.app.services.analytics import (
+    insight_service,
+    trend_service,
+    anomaly_service,
+    correlation_service,
+    whatif_service,
+)
+
+
+@router.post("/insights", response_model=InsightsResponse)
+async def generate_insights(request: InsightsRequest) -> InsightsResponse:
+    """Generate automated insights from data.
+
+    Analyzes data series to discover trends, anomalies, distributions,
+    and other notable patterns.
+    """
+    return await insight_service.generate_insights(request)
+
+
+@router.post("/trends", response_model=TrendResponse)
+async def analyze_trends(request: TrendRequest) -> TrendResponse:
+    """Analyze trends and generate forecasts.
+
+    Uses linear regression, exponential smoothing, ARIMA, or Prophet
+    to detect trends and forecast future values.
+    """
+    return await trend_service.analyze_trend(request)
+
+
+@router.post("/anomalies", response_model=AnomaliesResponse)
+async def detect_anomalies(request: AnomaliesRequest) -> AnomaliesResponse:
+    """Detect anomalies in data.
+
+    Uses statistical methods to identify point anomalies,
+    contextual anomalies, and collective anomalies.
+    """
+    return await anomaly_service.detect_anomalies(request)
+
+
+@router.post("/correlations", response_model=CorrelationsResponse)
+async def analyze_correlations(request: CorrelationsRequest) -> CorrelationsResponse:
+    """Analyze correlations between data series.
+
+    Calculates Pearson, Spearman, or Kendall correlation coefficients
+    between all pairs of variables.
+    """
+    return await correlation_service.analyze_correlations(request)
+
+
+@router.post("/whatif", response_model=WhatIfResponse)
+async def what_if_analysis(request: WhatIfRequest) -> WhatIfResponse:
+    """Perform what-if scenario analysis.
+
+    Evaluates how changes to input variables might affect
+    a target variable based on historical relationships.
+    """
+    return await whatif_service.analyze_whatif(request)

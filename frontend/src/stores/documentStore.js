@@ -14,6 +14,7 @@ const useDocumentStore = create((set, get) => ({
   loading: false,
   saving: false,
   error: null,
+  aiResult: null,
 
   // Actions
   setLoading: (loading) => set({ loading }),
@@ -163,6 +164,36 @@ const useDocumentStore = create((set, get) => ({
     }
   },
 
+  replyToComment: async (documentId, commentId, data) => {
+    try {
+      const reply = await documentsApi.replyToComment(documentId, commentId, data);
+      set((state) => ({
+        comments: state.comments.map((c) =>
+          c.id === commentId
+            ? { ...c, replies: [...(c.replies || []), reply] }
+            : c
+        ),
+      }));
+      return reply;
+    } catch (err) {
+      set({ error: err.message });
+      return null;
+    }
+  },
+
+  deleteComment: async (documentId, commentId) => {
+    try {
+      await documentsApi.deleteComment(documentId, commentId);
+      set((state) => ({
+        comments: state.comments.filter((c) => c.id !== commentId),
+      }));
+      return true;
+    } catch (err) {
+      set({ error: err.message });
+      return false;
+    }
+  },
+
   // Collaboration
   startCollaboration: async (documentId, data = {}) => {
     try {
@@ -214,6 +245,7 @@ const useDocumentStore = create((set, get) => ({
   checkGrammar: async (documentId, text, options = {}) => {
     try {
       const result = await documentsApi.checkGrammar(documentId, text, options);
+      set({ aiResult: result });
       return result;
     } catch (err) {
       set({ error: err.message });
@@ -224,6 +256,7 @@ const useDocumentStore = create((set, get) => ({
   summarize: async (documentId, text, length = 'medium', style = 'paragraph') => {
     try {
       const result = await documentsApi.summarize(documentId, text, length, style);
+      set({ aiResult: result });
       return result;
     } catch (err) {
       set({ error: err.message });
@@ -234,6 +267,7 @@ const useDocumentStore = create((set, get) => ({
   rewrite: async (documentId, text, tone = 'professional', style = 'clear') => {
     try {
       const result = await documentsApi.rewrite(documentId, text, tone, style);
+      set({ aiResult: result });
       return result;
     } catch (err) {
       set({ error: err.message });
@@ -244,6 +278,7 @@ const useDocumentStore = create((set, get) => ({
   translate: async (documentId, text, targetLanguage) => {
     try {
       const result = await documentsApi.translate(documentId, text, targetLanguage);
+      set({ aiResult: result });
       return result;
     } catch (err) {
       set({ error: err.message });
@@ -251,12 +286,37 @@ const useDocumentStore = create((set, get) => ({
     }
   },
 
+  expand: async (documentId, text, targetLength = 'double') => {
+    try {
+      const result = await documentsApi.expand(documentId, text, targetLength);
+      set({ aiResult: result });
+      return result;
+    } catch (err) {
+      set({ error: err.message });
+      return null;
+    }
+  },
+
+  adjustTone: async (documentId, text, targetTone) => {
+    try {
+      const result = await documentsApi.adjustTone(documentId, text, targetTone);
+      set({ aiResult: result });
+      return result;
+    } catch (err) {
+      set({ error: err.message });
+      return null;
+    }
+  },
+
+  clearAiResult: () => set({ aiResult: null }),
+
   // Reset
   reset: () => set({
     currentDocument: null,
     versions: [],
     comments: [],
     collaborators: [],
+    aiResult: null,
     error: null,
   }),
 

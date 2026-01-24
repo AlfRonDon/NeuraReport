@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, Query, Request
 from backend.app.services.security import require_api_key
 from backend.app.services.charts.auto_chart_service import AutoChartService
 from backend.app.services.background_tasks import enqueue_background_job
-from backend.app.services.state_access import state_store
+import backend.app.services.state_access as state_access
 
 router = APIRouter(dependencies=[Depends(require_api_key)])
 
@@ -50,8 +50,8 @@ async def analyze_for_charts(
         return {"status": "ok", "suggestions": suggestions, "correlation_id": correlation_id}
 
     async def runner(job_id: str) -> None:
-        state_store.record_job_start(job_id)
-        state_store.record_job_step(job_id, "analyze", status="running", label="Analyze chart data")
+        state_access.record_job_start(job_id)
+        state_access.record_job_step(job_id, "analyze", status="running", label="Analyze chart data")
         try:
             suggestions = svc.analyze_data_for_charts(
                 data=payload.data,
@@ -59,15 +59,15 @@ async def analyze_for_charts(
                 max_suggestions=payload.max_suggestions,
                 correlation_id=correlation_id,
             )
-            state_store.record_job_step(job_id, "analyze", status="succeeded", progress=100.0)
-            state_store.record_job_completion(
+            state_access.record_job_step(job_id, "analyze", status="succeeded", progress=100.0)
+            state_access.record_job_completion(
                 job_id,
                 status="succeeded",
                 result={"suggestions": suggestions},
             )
         except Exception as exc:
-            state_store.record_job_step(job_id, "analyze", status="failed", error=str(exc))
-            state_store.record_job_completion(job_id, status="failed", error=str(exc))
+            state_access.record_job_step(job_id, "analyze", status="failed", error=str(exc))
+            state_access.record_job_completion(job_id, status="failed", error=str(exc))
 
     job = await enqueue_background_job(
         job_type="chart_analyze",
@@ -98,8 +98,8 @@ async def generate_chart_config(
         return {"status": "ok", "chart": config, "correlation_id": correlation_id}
 
     async def runner(job_id: str) -> None:
-        state_store.record_job_start(job_id)
-        state_store.record_job_step(job_id, "generate", status="running", label="Generate chart config")
+        state_access.record_job_start(job_id)
+        state_access.record_job_step(job_id, "generate", status="running", label="Generate chart config")
         try:
             config = svc.generate_chart_config(
                 data=payload.data,
@@ -108,15 +108,15 @@ async def generate_chart_config(
                 y_fields=payload.y_fields,
                 title=payload.title,
             )
-            state_store.record_job_step(job_id, "generate", status="succeeded", progress=100.0)
-            state_store.record_job_completion(
+            state_access.record_job_step(job_id, "generate", status="succeeded", progress=100.0)
+            state_access.record_job_completion(
                 job_id,
                 status="succeeded",
                 result={"chart": config},
             )
         except Exception as exc:
-            state_store.record_job_step(job_id, "generate", status="failed", error=str(exc))
-            state_store.record_job_completion(job_id, status="failed", error=str(exc))
+            state_access.record_job_step(job_id, "generate", status="failed", error=str(exc))
+            state_access.record_job_completion(job_id, status="failed", error=str(exc))
 
     job = await enqueue_background_job(
         job_type="chart_generate",

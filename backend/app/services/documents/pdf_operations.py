@@ -12,6 +12,8 @@ from typing import Any, Optional, Sequence
 
 from pydantic import BaseModel
 
+from backend.app.services.config import get_settings
+
 logger = logging.getLogger("neura.pdf_operations")
 
 
@@ -58,7 +60,8 @@ class PDFOperationsService:
     """Service for PDF manipulation operations."""
 
     def __init__(self, output_dir: Optional[Path] = None):
-        self._output_dir = output_dir or Path("uploads/pdf_outputs")
+        base_root = get_settings().uploads_root
+        self._output_dir = output_dir or (base_root / "pdf_outputs")
         self._output_dir.mkdir(parents=True, exist_ok=True)
 
     def get_page_info(self, pdf_path: Path) -> list[PageInfo]:

@@ -53,7 +53,7 @@ import CableIcon from '@mui/icons-material/Cable'
 import AccountTreeIcon from '@mui/icons-material/AccountTree'
 
 import { useAppStore } from '../stores'
-import NotificationCenter from '../components/notifications/NotificationCenter'
+import NotificationCenter from './NotificationCenter'
 
 // =============================================================================
 // ANIMATIONS

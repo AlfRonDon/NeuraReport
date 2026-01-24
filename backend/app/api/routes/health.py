@@ -12,7 +12,7 @@ from backend.app.services.config import get_settings
 from backend.app.api.middleware import limiter
 from backend.app.services.analyze.document_analysis_service import _ANALYSIS_CACHE
 from backend.app.services.utils.mailer import MAILER_CONFIG, refresh_mailer_config
-from backend.app.services.state_access import store as state_store_module
+import backend.app.services.state_access as state_access
 
 router = APIRouter()
 
@@ -199,7 +199,7 @@ async def health_detailed(request: Request) -> Dict[str, Any]:
     checks["memory"] = _get_memory_usage()
 
     # API configuration
-    state_store = state_store_module.state_store.get()
+    state_store = state_access.get_state_store()
     checks["configuration"] = {
         "api_key_configured": settings.api_key is not None,
         "rate_limiting_enabled": settings.rate_limit_enabled,
@@ -373,8 +373,7 @@ async def scheduler_health(request: Request) -> Dict[str, Any]:
     # Get schedule statistics
     schedules_info = {"total": 0, "active": 0, "next_run": None}
     try:
-        from backend.app.services.state_access import state_store
-        schedules = state_store.list_schedules()
+        schedules = state_access.list_schedules()
         schedules_info["total"] = len(schedules)
         schedules_info["active"] = sum(1 for s in schedules if s.get("active", True))
 

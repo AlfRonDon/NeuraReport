@@ -6,7 +6,7 @@ import reactRefresh from 'eslint-plugin-react-refresh'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 const boundaryElements = [
-  { type: 'app', pattern: 'src/*.{js,jsx,css}', mode: 'file' },
+  { type: 'app', pattern: 'src/app/**' },
   { type: 'pages', pattern: 'src/pages/**' },
   { type: 'features', pattern: 'src/features/**' },
   { type: 'layouts', pattern: 'src/layouts/**' },

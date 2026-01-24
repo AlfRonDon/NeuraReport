@@ -108,6 +108,18 @@ export async function handleOAuthCallback(connectorType, code, redirectUri, stat
   return response.data;
 }
 
+// Legacy OAuth popup endpoint (returns auth_url)
+export async function getOAuthPopupUrl(connectorType) {
+  const response = await fetch(`/api/connectors/${connectorType}/oauth/url`, {
+    method: 'GET',
+    headers: { 'Content-Type': 'application/json' },
+  })
+  if (!response.ok) {
+    throw new Error('Failed to get OAuth URL')
+  }
+  return response.json()
+}
+
 // ============================================
 // Cloud Storage Operations
 // ============================================

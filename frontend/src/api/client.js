@@ -1,6 +1,6 @@
 import axios from 'axios'
 import * as mock from './mock'
-import { getActiveIntent } from './intentBridge'
+import { getActiveIntent } from '@/utils/intentBridge'
 
 const runtimeEnv = {
   ...(typeof import.meta !== 'undefined' && import.meta?.env ? import.meta.env : {}),

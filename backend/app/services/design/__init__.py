@@ -3,12 +3,9 @@
 Services for brand kits, themes, and design templates.
 """
 
-from .service import DesignService
-from .brand_kit import BrandKitService
-from .theme_service import ThemeService
+from .service import DesignService, design_service
 
 __all__ = [
     "DesignService",
-    "BrandKitService",
-    "ThemeService",
+    "design_service",
 ]

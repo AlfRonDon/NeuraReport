@@ -16,7 +16,7 @@ import { createContext, useContext, useCallback, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useOperationHistory, OperationType, OperationStatus } from '../OperationHistoryProvider'
 import { useToast } from '@/components/ToastProvider'
-import { pushActiveIntent, popActiveIntent } from '@/api/intentBridge'
+import { pushActiveIntent, popActiveIntent } from '@/utils/intentBridge'
 
 // ============================================================================
 // INTERACTION TYPES - Every action must have a defined type

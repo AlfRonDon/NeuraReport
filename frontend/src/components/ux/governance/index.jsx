@@ -126,9 +126,9 @@ import { BackgroundOperationsProvider } from './BackgroundOperations'
  * 6. IrreversibleBoundaryProvider - Irreversible action confirmation
  * 7. InteractionProvider - Core interaction execution
  */
-export function UXGovernanceProvider({ children }) {
+export function UXGovernanceProvider({ children, auditClient }) {
   return (
-    <IntentProvider>
+    <IntentProvider auditClient={auditClient}>
       <TimeExpectationProvider>
         <WorkflowContractProvider>
           <BackgroundOperationsProvider>

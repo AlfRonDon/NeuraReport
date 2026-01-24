@@ -5,7 +5,7 @@ import { ThemeProvider } from '@mui/material/styles'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 import GeneratePage from '@/features/generate/containers/GeneratePageContainer'
-import theme from '@/theme.js'
+import theme from '@/app/theme.js'
 import { ToastProvider } from '@/components/ToastProvider.jsx'
 import { useAppStore } from '@/stores'
 
