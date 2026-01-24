@@ -45,6 +45,7 @@ import LightbulbIcon from '@mui/icons-material/Lightbulb'
 import BookmarkIcon from '@mui/icons-material/Bookmark'
 import BookmarkBorderIcon from '@mui/icons-material/BookmarkBorder'
 
+import { figmaGrey } from '@/app/theme'
 import { useAppStore } from '@/stores'
 import useQueryStore from '@/stores/queryStore'
 import * as nl2sqlApi from '@/api/nl2sql'
@@ -125,8 +126,8 @@ const HeaderButton = styled(Button)(({ theme }) => ({
   borderColor: alpha(theme.palette.divider, 0.2),
   transition: 'all 0.2s ease',
   '&:hover': {
-    borderColor: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
+    borderColor: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
   },
 }))
 
@@ -134,12 +135,12 @@ const PrimaryButton = styled(Button)(({ theme }) => ({
   borderRadius: 12,
   textTransform: 'none',
   fontWeight: 600,
-  background: theme.palette.mode === 'dark' ? '#63635E' : '#21201C',
+  background: theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200],
   color: '#fff',
   boxShadow: `0 4px 14px ${alpha(theme.palette.common.black, 0.15)}`,
   transition: 'all 0.2s ease',
   '&:hover': {
-    background: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
+    background: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
     boxShadow: `0 6px 20px ${alpha(theme.palette.common.black, 0.2)}`,
     transform: 'translateY(-1px)',
   },
@@ -157,12 +158,12 @@ const ExecuteButton = styled(Button)(({ theme }) => ({
   borderRadius: 12,
   textTransform: 'none',
   fontWeight: 600,
-  background: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
+  background: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
   color: '#fff',
   boxShadow: `0 4px 14px ${alpha(theme.palette.common.black, 0.15)}`,
   transition: 'all 0.2s ease',
   '&:hover': {
-    background: theme.palette.mode === 'dark' ? '#8D8D86' : '#82827C',
+    background: theme.palette.mode === 'dark' ? figmaGrey[900] : figmaGrey[1000],
     boxShadow: `0 6px 20px ${alpha(theme.palette.common.black, 0.2)}`,
     transform: 'translateY(-1px)',
   },
@@ -207,11 +208,11 @@ const StyledTextField = styled(TextField)(({ theme }) => ({
 const SavedQueryItem = styled(Stack)(({ theme }) => ({
   padding: theme.spacing(1),
   borderRadius: 10,
-  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : '#F9F9F8',
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : figmaGrey[200],
   cursor: 'pointer',
   transition: 'all 0.2s ease',
   '&:hover': {
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
     transform: 'translateX(4px)',
   },
 }))
@@ -219,11 +220,11 @@ const SavedQueryItem = styled(Stack)(({ theme }) => ({
 const HistoryItem = styled(Stack)(({ theme }) => ({
   padding: theme.spacing(1),
   borderRadius: 10,
-  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : '#F9F9F8',
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : figmaGrey[200],
   cursor: 'pointer',
   transition: 'all 0.2s ease',
   '&:hover': {
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
     transform: 'translateX(4px)',
   },
 }))
@@ -231,7 +232,7 @@ const HistoryItem = styled(Stack)(({ theme }) => ({
 const ExplanationBox = styled(Box)(({ theme }) => ({
   marginTop: theme.spacing(2),
   padding: theme.spacing(1.5),
-  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8',
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200],
   borderRadius: 12,
   border: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
 }))
@@ -240,7 +241,7 @@ const ConfidenceChip = styled(Chip)(({ theme, confidence }) => ({
   height: 20,
   fontSize: '0.7rem',
   fontWeight: 600,
-  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF',
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300],
   color: theme.palette.text.secondary,
   borderRadius: 6,
 }))
@@ -691,7 +692,7 @@ export default function QueryBuilderPage() {
                           sx={{
                             height: 20,
                             fontSize: '0.7rem',
-                            bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF',
+                            bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300],
                             color: theme.palette.text.secondary,
                             borderRadius: 1.5,
                           }}
@@ -703,7 +704,7 @@ export default function QueryBuilderPage() {
                           sx={{
                             height: 20,
                             fontSize: '0.7rem',
-                            bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF',
+                            bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300],
                             color: theme.palette.text.secondary,
                             borderRadius: 1.5,
                           }}
@@ -890,7 +891,7 @@ export default function QueryBuilderPage() {
                 <Chip
                   size="small"
                   label={`${writeOperation.toUpperCase()} detected`}
-                  sx={{ fontSize: '0.7rem', bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6', color: 'text.secondary' }}
+                  sx={{ fontSize: '0.7rem', bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400], color: 'text.secondary' }}
                 />
               )}
             </Stack>

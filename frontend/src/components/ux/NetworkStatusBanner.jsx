@@ -25,6 +25,7 @@ import {
   CloudOff as ServerDownIcon,
 } from '@mui/icons-material'
 import { useNetworkStatus } from '@/hooks/useNetworkStatus'
+import { figmaGrey } from '@/app/theme'
 
 // Animations
 const slideDown = keyframes`
@@ -111,8 +112,8 @@ export default function NetworkStatusBanner({ onRetry }) {
 
   // Get banner configuration based on status
   const getBannerConfig = () => {
-    const neutralColor = theme.palette.mode === 'dark' ? '#82827C' : '#63635E'
-    const neutralBgColor = theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF'
+    const neutralColor = theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100]
+    const neutralBgColor = theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300]
     switch (status) {
       case NetworkStatus.OFFLINE:
         return {

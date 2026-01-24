@@ -29,6 +29,7 @@ import DocumentUpload from '../components/DocumentUpload'
 import AnalysisResults from '../components/AnalysisResults'
 import { uploadAndAnalyze, suggestAnalysisCharts, normalizeChartSpec } from '../services/analyzeApi'
 import Surface from '@/components/layout/Surface'
+import { figmaGrey } from '@/app/theme'
 import { useToast } from '@/components/ToastProvider'
 import { useInteraction, InteractionType, Reversibility, useNavigateInteraction } from '@/components/ux/governance'
 
@@ -286,7 +287,7 @@ export default function AnalyzePageContainer() {
                 size="small"
                 variant={chip.variant || 'filled'}
                 icon={chip.color === 'success' ? <CheckCircleOutlineIcon /> : undefined}
-                sx={{ fontWeight: 500, bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6', color: 'text.secondary' }}
+                sx={{ fontWeight: 500, bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400], color: 'text.secondary' }}
               />
             ))}
           </Stack>

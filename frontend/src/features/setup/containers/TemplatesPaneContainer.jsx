@@ -5,6 +5,7 @@ import {
   Tabs, Tab, Collapse, IconButton, Badge, Tooltip, Alert,
   alpha,
 } from '@mui/material'
+import { figmaGrey } from '@/app/theme'
 import CheckRoundedIcon from '@mui/icons-material/CheckRounded'
 import PlayArrowIcon from '@mui/icons-material/PlayArrow'
 import SearchIcon from '@mui/icons-material/Search'
@@ -80,7 +81,7 @@ function CollapsibleSection({ title, icon, badge, defaultExpanded = false, child
           {icon}
           <Typography variant="subtitle2" fontWeight={600}>{title}</Typography>
           {badge && (
-            <Chip size="small" label={badge} variant="outlined" sx={{ borderColor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.3) : '#E2E1DE', color: 'text.secondary' }} />
+            <Chip size="small" label={badge} variant="outlined" sx={{ borderColor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.3) : figmaGrey[500], color: 'text.secondary' }} />
           )}
         </Stack>
         <Tooltip title={expanded ? 'Collapse' : 'Expand'}>
@@ -948,14 +949,14 @@ export default function TemplatesPane() {
               icon={<CheckRoundedIcon />}
               label={`${selected.length} design${selected.length !== 1 ? 's' : ''}`}
               variant={selected.length > 0 ? 'filled' : 'outlined'}
-              sx={{ bgcolor: selected.length > 0 ? (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6' : undefined, color: 'text.secondary' }}
+              sx={{ bgcolor: selected.length > 0 ? (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400] : undefined, color: 'text.secondary' }}
             />
             <Chip
               size="small"
               icon={<CalendarMonthIcon />}
               label={dateRangeValid ? 'Date set' : 'No date'}
               variant={dateRangeValid ? 'filled' : 'outlined'}
-              sx={{ bgcolor: dateRangeValid ? (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6' : undefined, color: 'text.secondary' }}
+              sx={{ bgcolor: dateRangeValid ? (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400] : undefined, color: 'text.secondary' }}
             />
             {hasResults && (
               <Chip
@@ -963,7 +964,7 @@ export default function TemplatesPane() {
                 icon={<SearchIcon />}
                 label={`${batchCount} batch${batchCount !== 1 ? 'es' : ''}`}
                 variant="filled"
-                sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6', color: 'text.secondary' }}
+                sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400], color: 'text.secondary' }}
               />
             )}
           </Stack>
@@ -1014,7 +1015,7 @@ export default function TemplatesPane() {
             }}
           >
             <Tab
-              icon={<Badge badgeContent={selected.length} sx={{ '& .MuiBadge-badge': { bgcolor: (theme) => theme.palette.mode === 'dark' ? '#63635E' : '#21201C', color: '#fff' } }}><CheckRoundedIcon /></Badge>}
+              icon={<Badge badgeContent={selected.length} sx={{ '& .MuiBadge-badge': { bgcolor: (theme) => theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200], color: '#fff' } }}><CheckRoundedIcon /></Badge>}
               iconPosition="start"
               label="Designs"
             />
@@ -1024,7 +1025,7 @@ export default function TemplatesPane() {
               label="Configure"
             />
             <Tab
-              icon={<Badge badgeContent={schedules.length || undefined} sx={{ '& .MuiBadge-badge': { bgcolor: (theme) => theme.palette.mode === 'dark' ? '#82827C' : '#63635E', color: '#fff' } }}><ScheduleIcon /></Badge>}
+              icon={<Badge badgeContent={schedules.length || undefined} sx={{ '& .MuiBadge-badge': { bgcolor: (theme) => theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100], color: '#fff' } }}><ScheduleIcon /></Badge>}
               iconPosition="start"
               label="Schedules"
             />
@@ -1181,7 +1182,7 @@ export default function TemplatesPane() {
                       variant="contained"
                       onClick={handleCreateSchedule}
                       disabled={!canSchedule || scheduleSaving}
-                      sx={{ whiteSpace: 'nowrap', bgcolor: (theme) => theme.palette.mode === 'dark' ? '#63635E' : '#21201C', color: '#fff', '&:hover': { bgcolor: (theme) => theme.palette.mode === 'dark' ? '#82827C' : '#63635E' } }}
+                      sx={{ whiteSpace: 'nowrap', bgcolor: (theme) => theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200], color: '#fff', '&:hover': { bgcolor: (theme) => theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100] } }}
                     >
                       {scheduleSaving ? 'Creating...' : 'Create Schedule'}
                     </Button>
@@ -1224,7 +1225,7 @@ export default function TemplatesPane() {
                                 {schedule.name || schedule.template_name || schedule.template_id}
                               </Typography>
                               {schedule.active === false && (
-                                <Chip size="small" label="Paused" sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6', color: 'text.secondary' }} />
+                                <Chip size="small" label="Paused" sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400], color: 'text.secondary' }} />
                               )}
                             </Stack>
                             <Typography variant="caption" color="text.secondary">
@@ -1339,7 +1340,7 @@ export default function TemplatesPane() {
             variant="contained"
             onClick={handleDeleteScheduleConfirm}
             disabled={Boolean(deletingScheduleId)}
-            sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? '#63635E' : '#21201C', color: '#fff', '&:hover': { bgcolor: (theme) => theme.palette.mode === 'dark' ? '#82827C' : '#63635E' } }}
+            sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200], color: '#fff', '&:hover': { bgcolor: (theme) => theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100] } }}
           >
             Delete
           </Button>

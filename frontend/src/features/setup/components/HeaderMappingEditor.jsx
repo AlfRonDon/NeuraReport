@@ -6,6 +6,7 @@ import {
   LinearProgress, TextField, Switch, Tooltip
 } from "@mui/material";
 import { alpha } from "@mui/material/styles";
+import { figmaGrey } from "@/app/theme";
 import { mappingPreview, mappingApprove } from "@/api/client";
 import { useStepTimingEstimator, formatDuration } from "@/hooks/useStepTimingEstimator";
 import CorrectionsPreviewPanel from "./CorrectionsPreviewPanel.jsx";
@@ -937,7 +938,7 @@ export default function HeaderMappingEditor({
             border: "1px solid",
             borderRadius: 1,
             borderColor: (theme) => alpha(theme.palette.divider, 0.4),
-            bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8',
+            bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200],
             color: "text.secondary",
           }}
         >
@@ -969,7 +970,7 @@ export default function HeaderMappingEditor({
                 size="small"
                 onDelete={waiting ? undefined : () => handleToggleKey(token, false)}
                 sx={{
-                  bgcolor: (theme) => theme.palette.mode === 'dark' ? '#63635E' : '#21201C',
+                  bgcolor: (theme) => theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200],
                   color: '#fff',
                   '& .MuiChip-deleteIcon': { color: 'rgba(255,255,255,0.7)' },
                 }}
@@ -1236,7 +1237,7 @@ export default function HeaderMappingEditor({
                     {resolved ? (
                       expressionActive ? (
                         <Stack direction="row" spacing={0.5} alignItems="center">
-                          <Chip size="small" label="Resolved" sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? '#63635E' : '#21201C', color: '#fff' }} />
+                          <Chip size="small" label="Resolved" sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200], color: '#fff' }} />
                           <Chip
                             size="small"
                             label={
@@ -1248,26 +1249,26 @@ export default function HeaderMappingEditor({
                             }
                             variant={exprIssues.length > 0 || isAutoSql ? "filled" : "outlined"}
                             sx={{
-                              bgcolor: exprIssues.length > 0 || isAutoSql ? ((theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6') : 'transparent',
+                              bgcolor: exprIssues.length > 0 || isAutoSql ? ((theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400]) : 'transparent',
                               borderColor: (theme) => alpha(theme.palette.divider, 0.3),
                               color: 'text.secondary',
                             }}
                           />
                         </Stack>
                       ) : (
-                        <Chip size="small" label="Resolved" sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? '#63635E' : '#21201C', color: '#fff' }} />
+                        <Chip size="small" label="Resolved" sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200], color: '#fff' }} />
                       )
                     ) : isSampleChoice ? (
                       <Chip
                         size="small"
                         label={sampleStatusLabel}
                         sx={{
-                          bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
+                          bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
                           color: 'text.secondary',
                         }}
                       />
                     ) : (
-                      <Chip size="small" label="User Input" sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF', color: 'text.secondary' }} />
+                      <Chip size="small" label="User Input" sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300], color: 'text.secondary' }} />
                     )}
                   </TableCell>
                 </TableRow>
@@ -1433,7 +1434,7 @@ export default function HeaderMappingEditor({
               borderRadius: 2,
               border: "1px solid",
               borderColor: (theme) => alpha(theme.palette.divider, 0.2),
-              bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : '#F9F9F8',
+              bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : figmaGrey[200],
             }}
           >
             <Typography variant="subtitle2" sx={{ mb: 1 }}>
@@ -1447,7 +1448,7 @@ export default function HeaderMappingEditor({
             <LinearProgress
               variant="determinate"
               value={approveProgress}
-              sx={{ height: 6, borderRadius: 999, bgcolor: (theme) => alpha(theme.palette.text.primary, 0.1), '& .MuiLinearProgress-bar': { bgcolor: (theme) => theme.palette.mode === 'dark' ? '#82827C' : '#63635E' } }}
+              sx={{ height: 6, borderRadius: 999, bgcolor: (theme) => alpha(theme.palette.text.primary, 0.1), '& .MuiLinearProgress-bar': { bgcolor: (theme) => theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100] } }}
             />
             <Box sx={{ mt: 1.5, display: "grid", gap: 0.5 }}>
               {approveLog.map((entry, idx) => {

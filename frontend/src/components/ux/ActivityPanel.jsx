@@ -47,6 +47,7 @@ import {
   ExpandLess as CollapseIcon,
 } from '@mui/icons-material'
 import { useOperationHistory, OperationStatus, OperationType } from './OperationHistoryProvider'
+import { figmaGrey } from '@/app/theme'
 
 // Simple time ago formatter (no external dependency)
 function formatTimeAgo(date) {
@@ -199,7 +200,7 @@ function OperationItem({ operation, onUndo }) {
                 sx={{
                   color: theme.palette.text.secondary,
                   '&:hover': {
-                    bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
+                    bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
                   },
                 }}
               >
@@ -313,7 +314,7 @@ export default function ActivityPanel({ open, onClose }) {
             <Chip
               size="small"
               label={`${activeCount} active`}
-              sx={{ height: 22, fontSize: '0.6875rem', bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6', color: 'text.secondary' }}
+              sx={{ height: 22, fontSize: '0.6875rem', bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400], color: 'text.secondary' }}
             />
           )}
         </Box>
@@ -330,7 +331,7 @@ export default function ActivityPanel({ open, onClose }) {
             alignItems: 'center',
             gap: 2,
             p: 2,
-            bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.03) : '#F9F9F8',
+            bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.03) : figmaGrey[200],
             borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
           }}
         >

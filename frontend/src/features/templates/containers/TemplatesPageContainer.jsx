@@ -61,6 +61,7 @@ import {
   Reversibility,
   useNavigateInteraction,
 } from '@/components/ux/governance'
+import { figmaGrey } from '@/app/theme'
 
 // =============================================================================
 // ANIMATIONS
@@ -127,7 +128,7 @@ const StyledMenuItem = styled(MenuItem)(({ theme }) => ({
   fontSize: '0.8125rem',
   transition: 'all 0.15s ease',
   '&:hover': {
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
   },
   '& .MuiListItemIcon-root': {
     minWidth: 32,
@@ -207,11 +208,11 @@ const ActionButton = styled(Button)(({ theme }) => ({
 }))
 
 const PrimaryButton = styled(ActionButton)(({ theme }) => ({
-  background: theme.palette.mode === 'dark' ? '#63635E' : '#21201C',
+  background: theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200],
   color: '#fff',
   boxShadow: `0 4px 14px ${alpha(theme.palette.common.black, 0.15)}`,
   '&:hover': {
-    background: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
+    background: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
     boxShadow: `0 6px 20px ${alpha(theme.palette.common.black, 0.2)}`,
     transform: 'translateY(-1px)',
   },
@@ -225,8 +226,8 @@ const PrimaryButton = styled(ActionButton)(({ theme }) => ({
 const SecondaryButton = styled(ActionButton)(({ theme }) => ({
   borderColor: alpha(theme.palette.divider, 0.3),
   '&:hover': {
-    borderColor: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : '#F9F9F8',
+    borderColor: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : figmaGrey[200],
   },
 }))
 
@@ -236,7 +237,7 @@ const KindIconContainer = styled(Box, {
   width: 36,
   height: 36,
   borderRadius: 10,
-  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
@@ -276,7 +277,7 @@ const MoreActionsButton = styled(IconButton)(({ theme }) => ({
   transition: 'all 0.2s ease',
   '&:hover': {
     color: theme.palette.text.primary,
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
   },
 }))
 
@@ -286,7 +287,7 @@ const StyledLinearProgress = styled(LinearProgress)(({ theme }) => ({
   backgroundColor: alpha(theme.palette.text.primary, 0.1),
   '& .MuiLinearProgress-bar': {
     borderRadius: 4,
-    background: theme.palette.mode === 'dark' ? '#82827C' : '#21201C',
+    background: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1200],
   },
 }))
 
@@ -297,8 +298,8 @@ const SimilarTemplateCard = styled(Box)(({ theme }) => ({
   cursor: 'pointer',
   transition: 'all 0.2s ease',
   '&:hover': {
-    borderColor: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : '#F9F9F8',
+    borderColor: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : figmaGrey[200],
     transform: 'translateX(4px)',
   },
 }))
@@ -317,12 +318,12 @@ const getKindConfig = (theme, kind) => {
     pdf: {
       icon: PictureAsPdfIcon,
       color: theme.palette.text.secondary,
-      bgColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF',
+      bgColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300],
     },
     excel: {
       icon: TableChartIcon,
       color: theme.palette.text.secondary,
-      bgColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF',
+      bgColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300],
     },
   }
   return configs[kind] || configs.pdf
@@ -332,15 +333,15 @@ const getStatusConfig = (theme, status) => {
   const configs = {
     approved: {
       color: theme.palette.text.secondary,
-      bgColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF',
+      bgColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300],
     },
     pending: {
       color: theme.palette.text.secondary,
-      bgColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F9F9F8',
+      bgColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[200],
     },
     draft: {
       color: theme.palette.text.secondary,
-      bgColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F9F9F8',
+      bgColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[200],
     },
     archived: {
       color: theme.palette.text.secondary,
@@ -1407,7 +1408,7 @@ export default function TemplatesPage() {
                           label={`${Math.round(template.similarity_score * 100)}% match`}
                           size="small"
                           variant="outlined"
-                          sx={{ borderRadius: 8, bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6', color: 'text.secondary' }}
+                          sx={{ borderRadius: 8, bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400], color: 'text.secondary' }}
                         />
                       )}
                     </Stack>

@@ -56,6 +56,7 @@ import DashboardGridLayout, { generateWidgetId, DEFAULT_WIDGET_SIZES } from '../
 import ChartWidget, { CHART_TYPES } from '../components/ChartWidget'
 import MetricWidget, { METRIC_FORMATS } from '../components/MetricWidget'
 import WidgetPalette, { parseWidgetType } from '../components/WidgetPalette'
+import { figmaGrey } from '@/app/theme'
 
 // =============================================================================
 // STYLED COMPONENTS
@@ -121,10 +122,10 @@ const DashboardListItem = styled(ListItemButton, {
 })(({ theme, active }) => ({
   borderRadius: 8,
   marginBottom: theme.spacing(0.5),
-  backgroundColor: active ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF') : 'transparent',
+  backgroundColor: active ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300]) : 'transparent',
   '&:hover': {
     backgroundColor: active
-      ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.15) : '#F1F0EF')
+      ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.15) : figmaGrey[300])
       : alpha(theme.palette.action.hover, 0.05),
   },
 }))
@@ -151,8 +152,8 @@ const EmptyState = styled(Box)(({ theme }) => ({
 const InsightCard = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(1.5),
   marginBottom: theme.spacing(1),
-  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8',
-  border: `1px solid ${theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF'}`,
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200],
+  border: `1px solid ${theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300]}`,
 }))
 
 // =============================================================================
@@ -679,7 +680,7 @@ export default function DashboardBuilderPage() {
                   <Chip
                     size="small"
                     label="Unsaved"
-                    sx={{ borderRadius: 1, height: 20, fontSize: '0.7rem', bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6', color: 'text.secondary' }}
+                    sx={{ borderRadius: 1, height: 20, fontSize: '0.7rem', bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400], color: 'text.secondary' }}
                   />
                 )}
               </Box>

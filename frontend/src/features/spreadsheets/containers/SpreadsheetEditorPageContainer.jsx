@@ -54,6 +54,7 @@ import {
 import useSpreadsheetStore from '@/stores/spreadsheetStore'
 import { useToast } from '@/components/ToastProvider'
 import { useInteraction, InteractionType, Reversibility } from '@/components/ux/governance'
+import { figmaGrey } from '@/app/theme'
 import HandsontableEditor from '../components/HandsontableEditor'
 import FormulaBar from '../components/FormulaBar'
 
@@ -130,7 +131,7 @@ const SheetTab = styled(Chip, {
   '&:hover': {
     backgroundColor: active
       ? theme.palette.background.paper
-      : theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8',
+      : theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200],
   },
 }))
 
@@ -147,10 +148,10 @@ const SpreadsheetListItem = styled(ListItemButton, {
 })(({ theme, active }) => ({
   borderRadius: 8,
   marginBottom: theme.spacing(0.5),
-  backgroundColor: active ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF') : 'transparent',
+  backgroundColor: active ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300]) : 'transparent',
   '&:hover': {
     backgroundColor: active
-      ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.15) : '#F1F0EF')
+      ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.15) : figmaGrey[300])
       : alpha(theme.palette.action.hover, 0.05),
   },
 }))
@@ -663,7 +664,7 @@ export default function SpreadsheetEditorPage() {
                   <Chip
                     label="Unsaved"
                     size="small"
-                    sx={{ height: 20, fontSize: '0.7rem', bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6', color: 'text.secondary' }}
+                    sx={{ height: 20, fontSize: '0.7rem', bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400], color: 'text.secondary' }}
                   />
                 )}
               </Box>

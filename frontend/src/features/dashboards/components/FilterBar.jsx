@@ -48,6 +48,7 @@ import {
 import { DatePicker } from '@mui/x-date-pickers/DatePicker'
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns'
+import { figmaGrey } from '@/app/theme'
 
 // =============================================================================
 // STYLED COMPONENTS
@@ -75,11 +76,11 @@ const DateRangeButton = styled(Button)(({ theme }) => ({
   borderRadius: 8,
   textTransform: 'none',
   fontWeight: 500,
-  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8',
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200],
   borderColor: 'transparent',
   '&:hover': {
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF',
-    borderColor: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300],
+    borderColor: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
   },
 }))
 
@@ -102,7 +103,7 @@ const SavedFilterItem = styled(ListItemButton)(({ theme }) => ({
   borderRadius: 4,
   margin: theme.spacing(0.5, 1),
   '&:hover': {
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8',
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200],
   },
 }))
 
@@ -420,7 +421,7 @@ export default function FilterBar({
             size="small"
             onClick={() => setExpanded(!expanded)}
           >
-            <Badge badgeContent={activeFilterCount} sx={{ '& .MuiBadge-badge': { bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6', color: 'text.secondary' } }}>
+            <Badge badgeContent={activeFilterCount} sx={{ '& .MuiBadge-badge': { bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400], color: 'text.secondary' } }}>
               <FilterIcon />
             </Badge>
           </IconButton>
@@ -495,8 +496,8 @@ export default function FilterBar({
                 sx={{
                   borderRadius: 2,
                   textTransform: 'none',
-                  borderColor: hasSelection ? (theme.palette.mode === 'dark' ? '#82827C' : '#63635E') : undefined,
-                  backgroundColor: hasSelection ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8') : undefined,
+                  borderColor: hasSelection ? (theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100]) : undefined,
+                  backgroundColor: hasSelection ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200]) : undefined,
                 }}
               >
                 {filter.label}
@@ -504,7 +505,7 @@ export default function FilterBar({
                   <Chip
                     label={selectedValues.length}
                     size="small"
-                    sx={{ ml: 0.5, height: 18, fontSize: '0.7rem', bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6', color: 'text.secondary' }}
+                    sx={{ ml: 0.5, height: 18, fontSize: '0.7rem', bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400], color: 'text.secondary' }}
                   />
                 )}
               </Button>

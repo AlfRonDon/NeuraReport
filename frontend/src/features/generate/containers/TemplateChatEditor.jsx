@@ -28,12 +28,13 @@ import { chatTemplateEdit, applyChatTemplateEdit } from '@/api/client'
 import { useInteraction, InteractionType, Reversibility } from '@/components/ux/governance'
 import { useToast } from '@/components/ToastProvider'
 import ScaledIframePreview from '@/components/ScaledIframePreview'
+import { figmaGrey } from '@/app/theme'
 
 const ROLE_CONFIG = {
   user: {
     icon: PersonOutlineIcon,
     label: 'You',
-    bgcolor: '#21201C',
+    bgcolor: figmaGrey[1200],
     textColor: '#fff',
   },
   assistant: {
@@ -65,7 +66,7 @@ function ChatMessage({ message }) {
           width: 32,
           height: 32,
           borderRadius: '50%',
-          bgcolor: isUser ? '#21201C' : '#8D8D86',
+          bgcolor: isUser ? figmaGrey[1200] : figmaGrey[900],
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -109,7 +110,7 @@ function ChatMessage({ message }) {
             p: 2,
             borderRadius: 3,
             bgcolor: isUser
-              ? '#21201C'
+              ? figmaGrey[1200]
               : 'background.paper',
             color: isUser ? '#fff' : 'text.primary',
             boxShadow: isUser
@@ -178,7 +179,7 @@ function ProposedChangesPanel({ changes, proposedHtml, onApply, onReject, applyi
         borderRadius: 2,
         border: '1px solid',
         borderColor: (theme) => alpha(theme.palette.divider, 0.3),
-        bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : '#F9F9F8',
+        bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : figmaGrey[200],
       }}
     >
       <Stack spacing={2}>
@@ -596,7 +597,7 @@ export default function TemplateChatEditor({
             borderColor: 'divider',
             transition: 'all 150ms ease',
             '&:focus-within': {
-              borderColor: (theme) => theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
+              borderColor: (theme) => theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
               boxShadow: (theme) =>
                 `0 0 0 2px ${alpha(theme.palette.text.primary, 0.08)}`,
             },
@@ -638,14 +639,14 @@ export default function TemplateChatEditor({
             disabled={!inputValue.trim() || isProcessing}
             sx={{
               bgcolor: (theme) => inputValue.trim() && !isProcessing
-                ? (theme.palette.mode === 'dark' ? '#63635E' : '#21201C')
+                ? (theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200])
                 : 'action.disabledBackground',
               color: inputValue.trim() && !isProcessing
                 ? '#fff'
                 : 'text.disabled',
               '&:hover': {
                 bgcolor: (theme) => inputValue.trim() && !isProcessing
-                  ? (theme.palette.mode === 'dark' ? '#82827C' : '#63635E')
+                  ? (theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100])
                   : 'action.disabledBackground',
               },
             }}

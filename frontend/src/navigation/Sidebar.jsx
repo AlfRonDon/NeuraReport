@@ -240,14 +240,14 @@ const NewReportButton = styled(Box)(({ theme }) => ({
   height: 40,
   // Match nav item style from Figma
   backgroundColor: 'transparent',
-  color: theme.palette.mode === 'dark' ? '#8D8D86' : '#63635E',  // Grey/1100
+  color: theme.palette.mode === 'dark' ? figmaGrey[900] : figmaGrey[1100],
   cursor: 'pointer',
   transition: 'background-color 0.15s ease',
 
   '&:hover': {
     backgroundColor: theme.palette.mode === 'dark'
       ? alpha(theme.palette.common.white, 0.04)
-      : '#F1F0EF',  // Grey/300
+      : figmaGrey[300],  // Grey/300
   },
 }))
 
@@ -353,16 +353,16 @@ const CollapseButton = styled(IconButton)(({ theme }) => ({
   top: 72,
   width: 24,
   height: 24,
-  backgroundColor: theme.palette.mode === 'dark' ? '#2A2A2A' : '#FFFFFF',
-  border: `1px solid ${theme.palette.mode === 'dark' ? '#444' : '#E2E1DE'}`,  // Grey/500
+  backgroundColor: theme.palette.mode === 'dark' ? figmaGrey[1200] : '#fff',
+  border: `1px solid ${theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[500]}`,  // Grey/500
   boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
   transition: 'all 0.2s ease',
   zIndex: 1,
-  color: theme.palette.mode === 'dark' ? '#8D8D86' : '#63635E',  // Grey/1100
+  color: theme.palette.mode === 'dark' ? figmaGrey[900] : figmaGrey[1100],
 
   '&:hover': {
-    backgroundColor: theme.palette.mode === 'dark' ? '#444' : '#E9E8E6',  // Grey/400
-    color: theme.palette.mode === 'dark' ? '#F1F0EF' : '#21201C',  // Grey/1200
+    backgroundColor: theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[400],  // Grey/400
+    color: theme.palette.mode === 'dark' ? figmaGrey[300] : figmaGrey[1200],  // Grey/1200
   },
 
   '& svg': {
@@ -592,7 +592,7 @@ export default function Sidebar({ width, collapsed, mobileOpen, onClose, onToggl
                               invisible={!badgeContent}
                               sx={{
                                 '& .MuiBadge-badge': {
-                                  bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6',
+                                  bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400],
                                   color: 'text.secondary',
                                 },
                               }}
@@ -695,7 +695,7 @@ export default function Sidebar({ width, collapsed, mobileOpen, onClose, onToggl
               <Typography
                 sx={{
                   fontSize: '10px',
-                  color: theme.palette.mode === 'dark' ? '#8D8D86' : '#63635E',
+                  color: theme.palette.mode === 'dark' ? figmaGrey[900] : figmaGrey[1100],
                   display: 'block'
                 }}
               >

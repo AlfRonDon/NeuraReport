@@ -36,6 +36,7 @@ import {
   AccordionDetails,
 } from '@mui/material';
 import { alpha } from '@mui/material/styles';
+import { figmaGrey } from '@/app/theme';
 import {
   Add as AddIcon,
   Delete as DeleteIcon,
@@ -533,7 +534,7 @@ export default function SynthesisPage() {
                           <Chip
                             size="small"
                             label={item.severity}
-                            sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6', color: 'text.secondary' }}
+                            sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400], color: 'text.secondary' }}
                           />
                           <Typography>{item.field_or_topic}</Typography>
                         </Box>

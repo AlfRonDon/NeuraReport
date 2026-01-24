@@ -53,6 +53,7 @@ import {
 import useWorkflowStore from '@/stores/workflowStore'
 import { useToast } from '@/components/ToastProvider'
 import { useInteraction, InteractionType, Reversibility } from '@/components/ux/governance'
+import { figmaGrey } from '@/app/theme'
 
 // =============================================================================
 // STYLED COMPONENTS
@@ -125,7 +126,7 @@ const WorkflowNode = styled(Paper)(({ theme }) => ({
   cursor: 'pointer',
   transition: 'all 0.2s ease',
   '&:hover': {
-    borderColor: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
+    borderColor: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
     boxShadow: `0 4px 20px ${alpha(theme.palette.common.black, 0.1)}`,
   },
 }))
@@ -135,9 +136,9 @@ const ExecutionCard = styled(Paper)(({ theme, status }) => ({
   marginBottom: theme.spacing(1),
   borderLeft: `4px solid ${
     status === 'completed'
-      ? (theme.palette.mode === 'dark' ? '#82827C' : '#63635E')
+      ? (theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100])
       : status === 'running'
-      ? (theme.palette.mode === 'dark' ? '#BCBBB5' : '#8D8D86')
+      ? (theme.palette.mode === 'dark' ? figmaGrey[600] : figmaGrey[900])
       : status === 'failed'
       ? theme.palette.text.secondary
       : theme.palette.grey[400]
@@ -563,7 +564,7 @@ export default function WorkflowBuilderPage() {
                           onClick={() => handleSelectNode(node)}
                           sx={{
                             borderColor: selectedNode?.id === node.id
-                              ? (theme.palette.mode === 'dark' ? '#82827C' : '#63635E')
+                              ? (theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100])
                               : undefined,
                           }}
                         >
@@ -713,7 +714,7 @@ export default function WorkflowBuilderPage() {
                       display: 'flex',
                       alignItems: 'center',
                       gap: 2,
-                      '&:hover': { bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8' },
+                      '&:hover': { bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200] },
                     }}
                     variant="outlined"
                     onClick={() => handleSelectWorkflow(wf.id)}

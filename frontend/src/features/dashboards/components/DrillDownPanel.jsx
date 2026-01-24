@@ -47,6 +47,7 @@ import {
   Refresh as RefreshIcon,
   ZoomIn as ZoomInIcon,
 } from '@mui/icons-material'
+import { figmaGrey } from '@/app/theme'
 
 // =============================================================================
 // STYLED COMPONENTS
@@ -78,7 +79,7 @@ const PanelContent = styled(Box)(({ theme }) => ({
 
 const BreadcrumbContainer = styled(Box)(({ theme }) => ({
   padding: theme.spacing(1, 2),
-  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : '#F9F9F8',
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : figmaGrey[200],
   borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
 }))
 
@@ -88,7 +89,7 @@ const DataCard = styled(Paper)(({ theme }) => ({
   border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
   transition: 'all 0.15s ease',
   '&:hover': {
-    borderColor: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
+    borderColor: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
     boxShadow: `0 2px 8px ${alpha(theme.palette.common.black, 0.1)}`,
   },
 }))
@@ -98,8 +99,8 @@ const DrillableRow = styled(ListItemButton)(({ theme }) => ({
   marginBottom: theme.spacing(0.5),
   border: `1px solid transparent`,
   '&:hover': {
-    borderColor: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8',
+    borderColor: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200],
   },
 }))
 
@@ -118,14 +119,14 @@ const ChangeIndicator = styled(Box, {
   borderRadius: 4,
   fontSize: '0.75rem',
   fontWeight: 600,
-  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF',
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300],
   color: theme.palette.text.secondary,
 }))
 
 const ProgressBar = styled(Box)(({ theme }) => ({
   height: 6,
   borderRadius: 3,
-  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6',
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400],
   overflow: 'hidden',
 }))
 
@@ -134,7 +135,7 @@ const ProgressFill = styled(Box, {
 })(({ theme, width }) => ({
   height: '100%',
   borderRadius: 3,
-  backgroundColor: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
+  backgroundColor: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
   width: `${width}%`,
   transition: 'width 0.3s ease',
 }))

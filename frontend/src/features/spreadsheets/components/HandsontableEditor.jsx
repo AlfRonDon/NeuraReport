@@ -18,6 +18,7 @@ import {
   alpha,
   styled,
 } from '@mui/material'
+import { figmaGrey } from '@/app/theme'
 import {
   ContentCopy,
   ContentPaste,
@@ -57,21 +58,21 @@ const EditorContainer = styled(Box)(({ theme }) => ({
     fontSize: '13px',
   },
   '& .handsontable th': {
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8',
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200],
     fontWeight: 600,
   },
   '& .handsontable td': {
     verticalAlign: 'middle',
   },
   '& .handsontable td.area': {
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF',
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300],
   },
   '& .handsontable .htContextMenu': {
     borderRadius: 8,
     boxShadow: theme.shadows[8],
   },
   '& .handsontable .wtBorder.current': {
-    backgroundColor: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
+    backgroundColor: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
   },
 }))
 

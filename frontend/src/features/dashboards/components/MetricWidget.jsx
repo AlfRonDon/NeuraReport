@@ -21,6 +21,7 @@ import {
   Delete as DeleteIcon,
 } from '@mui/icons-material'
 import ReactECharts from 'echarts-for-react'
+import { figmaGrey } from '@/app/theme'
 
 // =============================================================================
 // STYLED COMPONENTS
@@ -74,9 +75,9 @@ const TrendBadge = styled(Box, {
     flat: theme.palette.text.secondary,
   }
   const bgColors = {
-    up: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF',
-    down: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF',
-    flat: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8',
+    up: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300],
+    down: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300],
+    flat: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200],
   }
 
   return {
@@ -170,7 +171,7 @@ const MetricWidget = forwardRef(function MetricWidget({
   const sparklineOptions = useMemo(() => {
     if (!sparklineData.length) return null
 
-    const primaryColor = theme.palette.mode === 'dark' ? '#82827C' : '#63635E'
+    const primaryColor = theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100]
 
     return {
       grid: { left: 0, right: 0, top: 5, bottom: 5 },

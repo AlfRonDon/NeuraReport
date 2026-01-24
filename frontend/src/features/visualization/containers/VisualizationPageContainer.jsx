@@ -48,6 +48,7 @@ import {
 import useVisualizationStore from '@/stores/visualizationStore'
 import { useToast } from '@/components/ToastProvider'
 import { useInteraction, InteractionType, Reversibility } from '@/components/ux/governance'
+import { figmaGrey } from '@/app/theme'
 
 // =============================================================================
 // STYLED COMPONENTS
@@ -95,9 +96,9 @@ const DiagramTypeCard = styled(Card)(({ theme, selected }) => ({
   cursor: 'pointer',
   transition: 'all 0.2s ease',
   marginBottom: theme.spacing(1),
-  border: selected ? `2px solid ${theme.palette.mode === 'dark' ? '#82827C' : '#63635E'}` : `1px solid ${alpha(theme.palette.divider, 0.2)}`,
+  border: selected ? `2px solid ${theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100]}` : `1px solid ${alpha(theme.palette.divider, 0.2)}`,
   '&:hover': {
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8',
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200],
   },
 }))
 

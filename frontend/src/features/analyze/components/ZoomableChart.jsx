@@ -19,6 +19,7 @@ import {
   ReferenceArea,
 } from 'recharts'
 import { Box, IconButton, Stack, Typography, Chip, CircularProgress, Tooltip as MuiTooltip, alpha } from '@mui/material'
+import { figmaGrey } from '@/app/theme'
 import ZoomOutMapIcon from '@mui/icons-material/ZoomOutMap'
 import ZoomInIcon from '@mui/icons-material/ZoomIn'
 import DownloadIcon from '@mui/icons-material/Download'
@@ -368,7 +369,7 @@ export default function ZoomableChart({
           )}
           <Chip label={type.toUpperCase()} size="small" variant="outlined" />
           {zoomState.isZoomed && (
-            <Chip label="Zoomed" size="small" sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6', color: 'text.secondary' }} />
+            <Chip label="Zoomed" size="small" sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400], color: 'text.secondary' }} />
           )}
         </Stack>
 

@@ -43,6 +43,7 @@ import {
   Download as DownloadIcon,
   SmartToy as AgentIcon,
 } from '@mui/icons-material'
+import { figmaGrey } from '@/app/theme'
 import useAgentStore from '@/stores/agentStore'
 import { useToast } from '@/components/ToastProvider'
 import { useInteraction, InteractionType, Reversibility } from '@/components/ux/governance'
@@ -87,7 +88,7 @@ const Sidebar = styled(Box)(({ theme }) => ({
 const AgentCard = styled(Card)(({ theme, selected }) => ({
   cursor: 'pointer',
   transition: 'all 0.2s ease',
-  border: selected ? `2px solid ${theme.palette.mode === 'dark' ? '#82827C' : '#63635E'}` : `1px solid ${alpha(theme.palette.divider, 0.2)}`,
+  border: selected ? `2px solid ${theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100]}` : `1px solid ${alpha(theme.palette.divider, 0.2)}`,
   '&:hover': {
     transform: 'translateY(-2px)',
     boxShadow: `0 8px 24px ${alpha(theme.palette.text.primary, 0.15)}`,
@@ -97,7 +98,7 @@ const AgentCard = styled(Card)(({ theme, selected }) => ({
 const ResultCard = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(2),
   marginTop: theme.spacing(2),
-  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8',
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200],
   border: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
 }))
 
@@ -402,7 +403,7 @@ export default function AgentsPageContainer() {
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8',
+                          bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200],
                         }}
                       >
                         <agent.icon color="inherit" sx={{ color: 'text.secondary' }} />

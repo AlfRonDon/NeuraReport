@@ -1,5 +1,6 @@
 import Grid from '@mui/material/Grid2'
 import { Box, Typography, Stack, Chip, Alert, Button, alpha } from '@mui/material'
+import { figmaGrey } from '@/app/theme'
 import PlayArrowIcon from '@mui/icons-material/PlayArrow'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useLocation } from 'react-router-dom'
@@ -606,14 +607,14 @@ export default function GeneratePage() {
             <Chip
               size="small"
               label={`${selected.length} selected`}
-              sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6', color: 'text.secondary' }}
+              sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400], color: 'text.secondary' }}
             />
           )}
           <Chip
             size="small"
             label={`${approved.length} available`}
             variant="outlined"
-            sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6', color: 'text.secondary' }}
+            sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400], color: 'text.secondary' }}
           />
         </Stack>
       </Stack>

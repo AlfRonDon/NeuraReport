@@ -33,6 +33,7 @@ import {
   alpha,
   styled,
 } from '@mui/material'
+import { figmaGrey } from '@/app/theme'
 import {
   Close as CloseIcon,
   Add as AddIcon,
@@ -89,7 +90,7 @@ const RuleCard = styled(Paper, {
   opacity: isActive ? 1 : 0.7,
   transition: 'all 0.15s ease',
   '&:hover': {
-    borderColor: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
+    borderColor: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
   },
 }))
 

@@ -27,6 +27,7 @@ import {
   styled,
   keyframes,
 } from '@mui/material'
+import { figmaGrey } from '@/app/theme'
 import CloseIcon from '@mui/icons-material/Close'
 import RefreshIcon from '@mui/icons-material/Refresh'
 import MoreVertIcon from '@mui/icons-material/MoreVert'
@@ -115,7 +116,7 @@ const StyledMenuItem = styled(MenuItem)(({ theme }) => ({
   fontSize: '0.8125rem',
   transition: 'all 0.15s ease',
   '&:hover': {
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
   },
   '& .MuiListItemIcon-root': {
     minWidth: 32,
@@ -153,7 +154,7 @@ const CloseButton = styled(IconButton)(({ theme }) => ({
   color: theme.palette.text.secondary,
   transition: 'all 0.2s ease',
   '&:hover': {
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
     color: theme.palette.text.primary,
     transform: 'rotate(90deg)',
   },
@@ -216,10 +217,10 @@ const TypeChip = styled(Chip)(({ theme }) => ({
 const StyledLinearProgress = styled(LinearProgress)(({ theme }) => ({
   borderRadius: 4,
   height: 6,
-  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF',
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300],
   '& .MuiLinearProgress-bar': {
     borderRadius: 4,
-    background: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
+    background: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
   },
 }))
 
@@ -233,11 +234,11 @@ const ActionButton = styled(Button)(({ theme }) => ({
 }))
 
 const PrimaryButton = styled(ActionButton)(({ theme }) => ({
-  background: theme.palette.mode === 'dark' ? '#63635E' : '#21201C',
+  background: theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200],
   color: '#fff',
   boxShadow: `0 4px 14px ${alpha(theme.palette.common.black, 0.15)}`,
   '&:hover': {
-    background: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
+    background: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
     boxShadow: `0 6px 20px ${alpha(theme.palette.common.black, 0.2)}`,
     transform: 'translateY(-1px)',
   },
@@ -274,7 +275,7 @@ const StyledDivider = styled(Divider)(({ theme }) => ({
 
 const ErrorAlert = styled(Alert)(({ theme }) => ({
   borderRadius: 12,
-  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
   border: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
   '& .MuiAlert-icon': {
     color: theme.palette.text.secondary,
@@ -286,7 +287,7 @@ const MoreActionsButton = styled(IconButton)(({ theme }) => ({
   transition: 'all 0.2s ease',
   '&:hover': {
     color: theme.palette.text.primary,
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
   },
 }))
 
@@ -299,37 +300,37 @@ const getStatusConfig = (theme, status) => {
     pending: {
       icon: HourglassEmptyIcon,
       color: theme.palette.text.secondary,
-      bgColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8',
+      bgColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200],
       label: 'Pending',
     },
     running: {
       icon: PlayArrowIcon,
       color: theme.palette.text.secondary,
-      bgColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF',
+      bgColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300],
       label: 'Running',
     },
     completed: {
       icon: CheckCircleIcon,
       color: theme.palette.text.secondary,
-      bgColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF',
+      bgColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300],
       label: 'Completed',
     },
     failed: {
       icon: ErrorIcon,
       color: theme.palette.text.secondary,
-      bgColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F1F0EF',
+      bgColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[300],
       label: 'Failed',
     },
     cancelled: {
       icon: CancelIcon,
       color: theme.palette.text.secondary,
-      bgColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8',
+      bgColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200],
       label: 'Cancelled',
     },
     cancelling: {
       icon: HourglassEmptyIcon,
       color: theme.palette.text.secondary,
-      bgColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8',
+      bgColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200],
       label: 'Cancelling...',
     },
   }

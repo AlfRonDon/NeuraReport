@@ -256,7 +256,12 @@ def add_middlewares(app: FastAPI, settings: Settings) -> None:
         "X-API-Key",
         "X-Correlation-ID",
         "Idempotency-Key",
+        "X-Idempotency-Key",  # Legacy header name
         "Accept",
+        "Accept-Language",
+        "Content-Language",
+        "Cache-Control",
+        "Pragma",
         # UX Governance headers
         IntentHeaders.INTENT_ID,
         IntentHeaders.INTENT_TYPE,

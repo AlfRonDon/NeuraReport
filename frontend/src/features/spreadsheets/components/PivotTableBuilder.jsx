@@ -32,6 +32,7 @@ import {
   alpha,
   styled,
 } from '@mui/material'
+import { figmaGrey } from '@/app/theme'
 import {
   Close as CloseIcon,
   DragIndicator as DragIcon,
@@ -87,9 +88,9 @@ const DropZone = styled(Paper, {
   padding: theme.spacing(1.5),
   marginBottom: theme.spacing(2),
   minHeight: 80,
-  border: `2px dashed ${isDragOver ? (theme.palette.mode === 'dark' ? '#82827C' : '#63635E') : alpha(theme.palette.divider, 0.3)}`,
+  border: `2px dashed ${isDragOver ? (theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100]) : alpha(theme.palette.divider, 0.3)}`,
   borderRadius: 8,
-  backgroundColor: isDragOver ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8') : 'transparent',
+  backgroundColor: isDragOver ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200]) : 'transparent',
   transition: 'all 0.15s ease',
 }))
 
@@ -108,8 +109,8 @@ const DraggableField = styled(ListItemButton)(({ theme }) => ({
   padding: theme.spacing(0.75, 1.5),
   cursor: 'grab',
   '&:hover': {
-    borderColor: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8',
+    borderColor: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200],
   },
   '&:active': {
     cursor: 'grabbing',
@@ -126,7 +127,7 @@ const PreviewTable = styled('table')(({ theme }) => ({
     textAlign: 'left',
   },
   '& th': {
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8',
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200],
     fontWeight: 600,
   },
   '& tbody tr:hover': {

@@ -44,6 +44,7 @@ import {
 import useConnectorStore from '@/stores/connectorStore'
 import { useToast } from '@/components/ToastProvider'
 import { useInteraction, InteractionType, Reversibility } from '@/components/ux/governance'
+import { figmaGrey } from '@/app/theme'
 
 // =============================================================================
 // STYLED COMPONENTS
@@ -93,11 +94,11 @@ const StatusChip = styled(Chip)(({ theme, status }) => ({
   borderRadius: 6,
   fontWeight: 500,
   ...(status === 'connected' && {
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6',
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400],
     color: theme.palette.text.secondary,
   }),
   ...(status === 'error' && {
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
     color: theme.palette.text.secondary,
   }),
 }))
@@ -354,7 +355,7 @@ export default function ConnectorsPage() {
           <Chip
             label={`${connections.length} connections`}
             variant="outlined"
-            sx={{ borderColor: theme.palette.mode === 'dark' ? '#82827C' : '#63635E', color: 'text.secondary' }}
+            sx={{ borderColor: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100], color: 'text.secondary' }}
           />
         </Box>
 

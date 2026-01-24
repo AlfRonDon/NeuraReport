@@ -26,6 +26,7 @@ import { useInteraction, InteractionType, Reversibility } from '@/components/ux/
 import { Drawer } from '@/components/Drawer'
 import ConnectionForm from '@/features/connections/components/ConnectionForm'
 import * as api from '@/api/client'
+import { figmaGrey } from '@/app/theme'
 
 // Demo connection that doesn't require real credentials
 const DEMO_CONNECTION = {
@@ -168,12 +169,12 @@ export default function StepConnection({ wizardState, updateWizardState, onCompl
             sx={{
               flex: 1,
               border: 2,
-              borderColor: selectedId === DEMO_CONNECTION.id ? (theme) => theme.palette.mode === 'dark' ? '#82827C' : '#63635E' : 'divider',
-              bgcolor: selectedId === DEMO_CONNECTION.id ? (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : '#F9F9F8' : 'transparent',
+              borderColor: selectedId === DEMO_CONNECTION.id ? (theme) => theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100] : 'divider',
+              bgcolor: selectedId === DEMO_CONNECTION.id ? (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : figmaGrey[200] : 'transparent',
               transition: 'all 0.2s',
               '&:hover': {
-                borderColor: (theme) => theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
-                bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : '#F9F9F8',
+                borderColor: (theme) => theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
+                bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : figmaGrey[200],
               },
             }}
           >
@@ -186,7 +187,7 @@ export default function StepConnection({ wizardState, updateWizardState, onCompl
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                   Explore with sample data — no setup needed
                 </Typography>
-                <Chip label="Recommended for first-time users" size="small" variant="outlined" sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6', color: 'text.secondary' }} />
+                <Chip label="Recommended for first-time users" size="small" variant="outlined" sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400], color: 'text.secondary' }} />
               </CardContent>
             </CardActionArea>
           </Card>
@@ -234,7 +235,7 @@ export default function StepConnection({ wizardState, updateWizardState, onCompl
               variant="outlined"
               sx={{
                 border: 2,
-                borderColor: selectedId === conn.id ? (theme) => theme.palette.mode === 'dark' ? '#82827C' : '#63635E' : 'divider',
+                borderColor: selectedId === conn.id ? (theme) => theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100] : 'divider',
                 transition: 'border-color 0.2s',
               }}
             >
@@ -258,7 +259,7 @@ export default function StepConnection({ wizardState, updateWizardState, onCompl
                       size="small"
                       label={conn.status === 'connected' ? 'Connected' : 'Disconnected'}
                       variant="outlined"
-                      sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6', color: 'text.secondary' }}
+                      sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400], color: 'text.secondary' }}
                     />
                     {selectedId === conn.id && (
                       <CheckCircleIcon sx={{ color: 'text.secondary' }} />

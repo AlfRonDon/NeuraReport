@@ -201,7 +201,7 @@ const QuickActionCard = styled(Box)(({ theme }) => ({
   transition: 'all 0.15s ease',
 
   '&:hover': {
-    backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.04)' : '#F3F4F6',
+    backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.04)' : figmaGrey[300],
 
     '& .action-arrow': {
       transform: 'translateX(4px)',
@@ -209,7 +209,7 @@ const QuickActionCard = styled(Box)(({ theme }) => ({
     },
 
     '& .action-icon': {
-      color: theme.palette.mode === 'dark' ? '#F1F0EF' : '#374151',
+      color: theme.palette.mode === 'dark' ? figmaGrey[300] : figmaGrey[1200],
     },
   },
 }))
@@ -223,10 +223,10 @@ const OnboardingStep = styled(Box, {
   padding: theme.spacing(2),
   borderRadius: theme.shape.borderRadius * 1.5,
   backgroundColor: completed
-    ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF')
+    ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300])
     : alpha(theme.palette.action.hover, 0.3),
   border: `1px solid ${completed
-    ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.15) : '#E2E1DE')
+    ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.15) : figmaGrey[500])
     : alpha(theme.palette.divider, 0.1)}`,
   cursor: disabled ? 'not-allowed' : 'pointer',
   opacity: disabled ? 0.5 : 1,
@@ -234,8 +234,8 @@ const OnboardingStep = styled(Box, {
 
   ...(!disabled && !completed && {
     '&:hover': {
-      backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8',
-      borderColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.15) : '#E2E1DE',
+      backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200],
+      borderColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.15) : figmaGrey[500],
       transform: 'translateX(4px)',
     },
   }),
@@ -245,10 +245,10 @@ const JobListItem = styled(Box, {
   shouldForwardProp: (prop) => prop !== 'status',
 })(({ theme, status }) => {
   const statusColors = {
-    completed: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
-    running: theme.palette.mode === 'dark' ? '#8D8D86' : '#82827C',
-    pending: theme.palette.mode === 'dark' ? '#BCBBB5' : '#8D8D86',
-    failed: theme.palette.mode === 'dark' ? '#63635E' : '#21201C',
+    completed: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
+    running: theme.palette.mode === 'dark' ? figmaGrey[900] : figmaGrey[1000],
+    pending: theme.palette.mode === 'dark' ? figmaGrey[600] : figmaGrey[900],
+    failed: theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200],
   }
 
   return {
@@ -265,7 +265,7 @@ const JobListItem = styled(Box, {
     },
 
     '&:hover': {
-      backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.02) : '#F9F9F8',
+      backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.02) : figmaGrey[200],
       paddingLeft: theme.spacing(1),
       paddingRight: theme.spacing(1),
       marginLeft: theme.spacing(-1),
@@ -319,7 +319,7 @@ const RecommendationCard = styled(Box)(({ theme }) => ({
     boxShadow: theme.palette.mode === 'dark'
       ? `0 12px 24px ${alpha(theme.palette.common.black, 0.3)}`
       : '0 12px 24px rgba(0,0,0,0.08)',
-    borderColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.15) : '#E2E1DE',
+    borderColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.15) : figmaGrey[500],
 
     '&::before': {
       opacity: 1,
@@ -341,7 +341,7 @@ const ChartBar = styled(Box, {
   flex: 1,
   height: `${height}%`,
   minHeight: 4,
-  backgroundColor: color || (theme.palette.mode === 'dark' ? '#82827C' : '#63635E'),
+  backgroundColor: color || (theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100]),
   borderRadius: 2,
   transition: 'height 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
   transitionDelay: `${delay}ms`,
@@ -360,7 +360,7 @@ function StatCard({ title, value, subtitle, icon: Icon, color = 'inherit', onCli
         <Box sx={{ flex: 1 }}>
           <Typography
             sx={{
-              color: theme.palette.mode === 'dark' ? '#8D8D86' : '#6B7280',  // Grey from Figma
+              color: theme.palette.mode === 'dark' ? figmaGrey[900] : figmaGrey[800],  // Grey from Figma
               fontWeight: 600,
               textTransform: 'uppercase',
               letterSpacing: '0.05em',
@@ -376,13 +376,13 @@ function StatCard({ title, value, subtitle, icon: Icon, color = 'inherit', onCli
               mt: 0.5,
               mb: 0.5,
               // Solid dark color - NO gradient
-              color: theme.palette.mode === 'dark' ? '#F1F0EF' : '#21201C',
+              color: theme.palette.mode === 'dark' ? figmaGrey[300] : figmaGrey[1200],
             }}
           >
             {value}
           </Typography>
           {subtitle && (
-            <Typography sx={{ fontSize: '0.6875rem', color: theme.palette.mode === 'dark' ? '#8D8D86' : '#9CA3AF' }}>
+            <Typography sx={{ fontSize: '0.6875rem', color: theme.palette.mode === 'dark' ? figmaGrey[900] : figmaGrey[700] }}>
               {subtitle}
             </Typography>
           )}
@@ -415,8 +415,8 @@ function StatCard({ title, value, subtitle, icon: Icon, color = 'inherit', onCli
             alignItems: 'center',
             justifyContent: 'center',
             // Muted grey/neutral background for ALL icons - from Figma
-            bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : '#F3F4F6',
-            color: theme.palette.mode === 'dark' ? '#8D8D86' : '#9CA3AF',  // Muted grey icon
+            bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : figmaGrey[300],
+            color: theme.palette.mode === 'dark' ? figmaGrey[900] : figmaGrey[700],  // Muted grey icon
           }}
         >
           <Icon sx={{ fontSize: 24 }} />
@@ -724,7 +724,7 @@ export default function DashboardPage() {
                 width: { xs: '100%', md: 64 },
                 height: 64,
                 borderRadius: 3,
-                background: theme.palette.mode === 'dark' ? '#63635E' : '#21201C',
+                background: theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200],
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -761,7 +761,7 @@ export default function DashboardPage() {
                     </Typography>
                   </Box>
                   {savedConnections.length > 0 && (
-                    <Chip label="Done" size="small" sx={{ fontWeight: 600, bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF', color: 'text.secondary' }} />
+                    <Chip label="Done" size="small" sx={{ fontWeight: 600, bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300], color: 'text.secondary' }} />
                   )}
                 </OnboardingStep>
 
@@ -783,7 +783,7 @@ export default function DashboardPage() {
                     </Typography>
                   </Box>
                   {templates.length > 0 && (
-                    <Chip label="Done" size="small" sx={{ fontWeight: 600, bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF', color: 'text.secondary' }} />
+                    <Chip label="Done" size="small" sx={{ fontWeight: 600, bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300], color: 'text.secondary' }} />
                   )}
                 </OnboardingStep>
 
@@ -810,7 +810,7 @@ export default function DashboardPage() {
                     </Typography>
                   </Box>
                   {(metrics.jobsToday ?? 0) > 0 && (
-                    <Chip label="Done" size="small" sx={{ fontWeight: 600, bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF', color: 'text.secondary' }} />
+                    <Chip label="Done" size="small" sx={{ fontWeight: 600, bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300], color: 'text.secondary' }} />
                   )}
                 </OnboardingStep>
               </Stack>
@@ -945,8 +945,8 @@ export default function DashboardPage() {
                       <ChartBar
                         height={Math.max(10, (item.total / maxTrend) * 100)}
                         color={item.failed > 0
-                          ? (theme.palette.mode === 'dark' ? '#63635E' : '#21201C')
-                          : (theme.palette.mode === 'dark' ? '#82827C' : '#63635E')}
+                          ? (theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200])
+                          : (theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100])}
                         delay={idx * 50}
                       />
                       <Typography variant="caption" sx={{ fontSize: '0.55rem', color: 'text.tertiary', mt: 0.5 }}>
@@ -997,7 +997,7 @@ export default function DashboardPage() {
                   width: 64,
                   height: 64,
                   borderRadius: '50%',
-                  bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
+                  bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -1046,7 +1046,7 @@ export default function DashboardPage() {
                         fontWeight: 600,
                         textTransform: 'capitalize',
                         fontSize: '0.7rem',
-                        bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF',
+                        bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300],
                         color: 'text.secondary',
                       }}
                     />
@@ -1100,7 +1100,7 @@ export default function DashboardPage() {
                       borderRadius: 1.5,
                       transition: 'all 0.15s ease',
                       '&:hover': {
-                        bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F1F0EF',
+                        bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[300],
                       },
                     }}
                   >
@@ -1108,7 +1108,7 @@ export default function DashboardPage() {
                       sx={{
                         width: 32,
                         height: 32,
-                        bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
+                        bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
                         fontSize: '0.75rem',
                       }}
                     >
@@ -1214,7 +1214,7 @@ export default function DashboardPage() {
                 width: 44,
                 height: 44,
                 borderRadius: 2,
-                background: theme.palette.mode === 'dark' ? '#63635E' : '#21201C',
+                background: theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200],
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -1259,7 +1259,7 @@ export default function DashboardPage() {
                 width: 64,
                 height: 64,
                 borderRadius: '50%',
-                bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
+                bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -1301,7 +1301,7 @@ export default function DashboardPage() {
                       sx={{
                         width: 28,
                         height: 28,
-                        bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
+                        bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
                       }}
                     >
                       {rec.kind === 'excel' ? (
@@ -1318,7 +1318,7 @@ export default function DashboardPage() {
                           height: 20,
                           fontSize: '0.6rem',
                           fontWeight: 600,
-                          bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF',
+                          bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300],
                           color: 'text.secondary',
                         }}
                       />
@@ -1356,7 +1356,7 @@ export default function DashboardPage() {
                 sx={{
                   width: 48,
                   height: 48,
-                  bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
+                  bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
                 }}
               >
                 <StorageIcon sx={{ color: 'text.secondary' }} />
@@ -1376,7 +1376,7 @@ export default function DashboardPage() {
                 sx={{
                   fontWeight: 600,
                   animation: `${pulse} 2s ease-in-out infinite`,
-                  bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF',
+                  bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300],
                   color: 'text.secondary',
                 }}
               />

@@ -96,8 +96,9 @@ class Settings(BaseSettings):
     analysis_cache_ttl_seconds: int = Field(default=3600, env="NEURA_ANALYSIS_CACHE_TTL_SECONDS")  # 1 hour
     analysis_max_concurrency: int = Field(default=4, env="NEURA_ANALYSIS_MAX_CONCURRENCY")
 
-    # Debug/development mode
-    debug_mode: bool = Field(default=False, validation_alias="NEURA_DEBUG")
+    # Debug/development mode - defaults to True for local development
+    # Set NEURA_DEBUG=false in production
+    debug_mode: bool = Field(default=True, validation_alias="NEURA_DEBUG")
 
     # File/path safety overrides (use only in trusted environments)
     allow_unsafe_pdf_paths: bool = Field(default=False, validation_alias="NEURA_ALLOW_UNSAFE_PDF_PATHS")

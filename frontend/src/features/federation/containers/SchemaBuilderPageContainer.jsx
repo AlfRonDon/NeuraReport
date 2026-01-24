@@ -47,6 +47,7 @@ import ConfirmModal from '@/components/Modal/ConfirmModal';
 import { getWriteOperation } from '@/utils/sqlSafety';
 import { useConfirmedAction, useInteraction, InteractionType, Reversibility } from '@/components/ux/governance';
 import AiUsageNotice from '@/components/ai/AiUsageNotice';
+import { figmaGrey } from '@/app/theme';
 
 export default function SchemaBuilderPage() {
   const {
@@ -374,7 +375,7 @@ export default function SchemaBuilderPage() {
                             <Chip
                               size="small"
                               label={`${Math.round((suggestion.confidence || 0) * 100)}% confidence`}
-                              sx={{ mt: 1, bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6', color: 'text.secondary' }}
+                              sx={{ mt: 1, bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400], color: 'text.secondary' }}
                             />
                           </CardContent>
                         </Card>
@@ -410,7 +411,7 @@ export default function SchemaBuilderPage() {
                   <Chip
                     size="small"
                     label={`${writeOperation.toUpperCase()} detected`}
-                    sx={{ fontSize: '0.7rem', bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6', color: 'text.secondary' }}
+                    sx={{ fontSize: '0.7rem', bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400], color: 'text.secondary' }}
                   />
                 )}
               </Box>
@@ -495,7 +496,7 @@ export default function SchemaBuilderPage() {
                       <Typography>{conn.name}</Typography>
                     </Box>
                     {selectedConnections.includes(conn.id) && (
-                      <Chip label="Selected" size="small" sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6', color: 'text.secondary' }} />
+                      <Chip label="Selected" size="small" sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400], color: 'text.secondary' }} />
                     )}
                   </Box>
                 </CardContent>

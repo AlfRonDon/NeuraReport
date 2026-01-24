@@ -5,6 +5,7 @@
 import { useState, useCallback, useMemo } from 'react'
 import { Responsive, WidthProvider } from 'react-grid-layout'
 import { Box, styled, alpha } from '@mui/material'
+import { figmaGrey } from '@/app/theme'
 import 'react-grid-layout/css/styles.css'
 import 'react-resizable/css/styles.css'
 
@@ -19,8 +20,8 @@ const GridContainer = styled(Box)(({ theme }) => ({
   '& .react-grid-item': {
     transition: 'transform 200ms ease, all 200ms ease',
     '&.react-grid-placeholder': {
-      backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F1F0EF',
-      border: `2px dashed ${theme.palette.mode === 'dark' ? '#82827C' : '#63635E'}`,
+      backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[300],
+      border: `2px dashed ${theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100]}`,
       borderRadius: 12,
     },
   },
@@ -42,7 +43,7 @@ const GridContainer = styled(Box)(({ theme }) => ({
     },
   },
   '& .react-grid-item:hover > .react-resizable-handle::after': {
-    borderColor: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
+    borderColor: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
   },
 }))
 

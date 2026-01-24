@@ -58,6 +58,7 @@ import useKnowledgeStore from '@/stores/knowledgeStore'
 import { useToast } from '@/components/ToastProvider'
 import { useInteraction, InteractionType, Reversibility } from '@/components/ux/governance'
 import { API_BASE } from '@/api/client'
+import { figmaGrey } from '@/app/theme'
 
 // =============================================================================
 // STYLED COMPONENTS
@@ -108,9 +109,9 @@ const DocumentCard = styled(Card)(({ theme }) => ({
 const CollectionItem = styled(ListItem)(({ theme, selected }) => ({
   borderRadius: 8,
   marginBottom: 4,
-  backgroundColor: selected ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF') : 'transparent',
+  backgroundColor: selected ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300]) : 'transparent',
   '&:hover': {
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8',
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200],
   },
 }))
 
@@ -121,16 +122,16 @@ const ActionButton = styled(Button)(({ theme }) => ({
 }))
 
 const UploadDropzone = styled(Box)(({ theme, isDragActive }) => ({
-  border: `2px dashed ${isDragActive ? (theme.palette.mode === 'dark' ? '#82827C' : '#63635E') : alpha(theme.palette.divider, 0.3)}`,
+  border: `2px dashed ${isDragActive ? (theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100]) : alpha(theme.palette.divider, 0.3)}`,
   borderRadius: 16,
   padding: theme.spacing(6),
   textAlign: 'center',
-  backgroundColor: isDragActive ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8') : alpha(theme.palette.background.paper, 0.5),
+  backgroundColor: isDragActive ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200]) : alpha(theme.palette.background.paper, 0.5),
   cursor: 'pointer',
   transition: 'all 0.2s ease',
   '&:hover': {
-    borderColor: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.02) : '#F9F9F8',
+    borderColor: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.02) : figmaGrey[200],
   },
 }))
 

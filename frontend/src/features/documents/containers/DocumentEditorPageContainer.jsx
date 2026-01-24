@@ -50,6 +50,7 @@ import {
   NoteAdd as NewIcon,
   ContentCopy as CopyIcon,
 } from '@mui/icons-material'
+import { figmaGrey } from '@/app/theme'
 import useDocumentStore from '@/stores/documentStore'
 import { useToast } from '@/components/ToastProvider'
 import { useInteraction, InteractionType, Reversibility } from '@/components/ux/governance'
@@ -120,11 +121,11 @@ const DocumentItem = styled(Paper, {
   padding: theme.spacing(1.5),
   marginBottom: theme.spacing(1),
   cursor: 'pointer',
-  border: `1px solid ${isActive ? (theme.palette.mode === 'dark' ? '#82827C' : '#63635E') : 'transparent'}`,
-  backgroundColor: isActive ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : '#F9F9F8') : 'transparent',
+  border: `1px solid ${isActive ? (theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100]) : 'transparent'}`,
+  backgroundColor: isActive ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : figmaGrey[200]) : 'transparent',
   transition: 'all 0.15s ease',
   '&:hover': {
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
     borderColor: alpha(theme.palette.divider, 0.3),
   },
 }))
@@ -149,7 +150,7 @@ const EmptyState = styled(Box)(({ theme }) => ({
 const AIResultCard = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(2),
   marginTop: theme.spacing(2),
-  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : '#F9F9F8',
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : figmaGrey[200],
   border: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
   borderRadius: 12,
 }))
@@ -659,7 +660,7 @@ export default function DocumentEditorPage() {
                 startIcon={<HistoryIcon />}
                 onClick={handleToggleVersions}
                 sx={{
-                  bgcolor: showVersions ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF') : 'transparent',
+                  bgcolor: showVersions ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300]) : 'transparent',
                 }}
               >
                 History
@@ -670,7 +671,7 @@ export default function DocumentEditorPage() {
                 startIcon={<CommentIcon />}
                 onClick={handleToggleComments}
                 sx={{
-                  bgcolor: showComments ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF') : 'transparent',
+                  bgcolor: showComments ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300]) : 'transparent',
                 }}
               >
                 Comments {comments.length > 0 && `(${comments.length})`}

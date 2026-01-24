@@ -50,6 +50,7 @@ import useEnrichmentStore from '@/stores/enrichmentStore';
 import ConfirmModal from '@/components/Modal/ConfirmModal';
 import AiUsageNotice from '@/components/ai/AiUsageNotice';
 import { useInteraction, InteractionType, Reversibility } from '@/components/ux/governance';
+import { figmaGrey } from '@/app/theme';
 
 // Fallback sources in case API is unavailable
 const FALLBACK_SOURCES = [
@@ -438,12 +439,12 @@ export default function EnrichmentConfigPage() {
                           </Box>
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                             {isCustom ? (
-                              <Chip label="Custom" size="small" sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6', color: 'text.secondary' }} />
+                              <Chip label="Custom" size="small" sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400], color: 'text.secondary' }} />
                             ) : (
                               <Chip label="Built-in" size="small" variant="outlined" />
                             )}
                             {selectedSources.includes(source.id) && (
-                              <Chip label="Selected" size="small" sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6', color: 'text.secondary' }} />
+                              <Chip label="Selected" size="small" sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400], color: 'text.secondary' }} />
                             )}
                             {isCustom && (
                               <IconButton

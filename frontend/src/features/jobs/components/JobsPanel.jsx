@@ -14,6 +14,7 @@ import {
   Alert,
 } from '@mui/material'
 import { alpha } from '@mui/material'
+import { figmaGrey } from '@/app/theme'
 import CloseIcon from '@mui/icons-material/Close'
 import RefreshIcon from '@mui/icons-material/Refresh'
 import TaskAltIcon from '@mui/icons-material/TaskAlt'
@@ -550,7 +551,7 @@ export default function JobsPanel({ open, onClose }) {
                 key={filter.value}
                 size="small"
                 label={filter.label}
-                sx={statusFilter === filter.value ? { bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6', color: 'text.secondary' } : undefined}
+                sx={statusFilter === filter.value ? { bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400], color: 'text.secondary' } : undefined}
                 variant={statusFilter === filter.value ? 'filled' : 'outlined'}
                 onClick={() => handleFilterChange(filter.value)}
                 data-testid={`jobs-filter-${filter.value}`}
@@ -569,7 +570,7 @@ export default function JobsPanel({ open, onClose }) {
               Failed to load jobs: {error.message || String(error)}
             </Alert>
           )}
-          {(isLoading || isFetching) && <LinearProgress sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF', '& .MuiLinearProgress-bar': { bgcolor: (theme) => theme.palette.mode === 'dark' ? '#82827C' : '#63635E' } }} aria-label="Loading jobs" />}
+          {(isLoading || isFetching) && <LinearProgress sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300], '& .MuiLinearProgress-bar': { bgcolor: (theme) => theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100] } }} aria-label="Loading jobs" />}
         </Stack>
         <Divider />
         {showEmptyState ? (

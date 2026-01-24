@@ -44,6 +44,7 @@ import {
   List as ListIcon,
   Functions as FormulaIcon,
 } from '@mui/icons-material'
+import { figmaGrey } from '@/app/theme'
 
 // =============================================================================
 // STYLED COMPONENTS
@@ -79,7 +80,7 @@ const RuleCard = styled(Paper)(({ theme }) => ({
   border: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
   transition: 'all 0.15s ease',
   '&:hover': {
-    borderColor: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
+    borderColor: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
   },
 }))
 
@@ -564,7 +565,7 @@ export default function DataValidationPanel({
                         label={VALIDATION_TYPES.find((t) => t.value === validation.type)?.label}
                         size="small"
                         variant="outlined"
-                        sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6', color: 'text.secondary' }}
+                        sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400], color: 'text.secondary' }}
                       />
                       <Chip
                         label={validation.range}

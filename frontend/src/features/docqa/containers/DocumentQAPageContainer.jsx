@@ -60,6 +60,7 @@ import {
   Close as CloseIcon,
 } from '@mui/icons-material'
 import useDocQAStore from '@/stores/docqaStore'
+import { figmaGrey } from '@/app/theme'
 import ConfirmModal from '@/components/Modal/ConfirmModal'
 import { useToast } from '@/components/ToastProvider'
 // UX Components for premium interactions
@@ -187,7 +188,7 @@ const SessionCard = styled(Box, {
   cursor: 'pointer',
   marginBottom: theme.spacing(1),
   backgroundColor: selected
-    ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF')
+    ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300])
     : alpha(theme.palette.background.paper, 0.4),
   border: `1px solid ${selected ? alpha(theme.palette.divider, 0.3) : 'transparent'}`,
   transition: 'all 0.2s ease',
@@ -195,8 +196,8 @@ const SessionCard = styled(Box, {
   overflow: 'hidden',
   '&:hover': {
     backgroundColor: selected
-      ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.12) : '#E9E8E6')
-      : (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8'),
+      ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.12) : figmaGrey[400])
+      : (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200]),
     transform: 'translateX(4px)',
   },
   '&::before': selected
@@ -208,7 +209,7 @@ const SessionCard = styled(Box, {
         transform: 'translateY(-50%)',
         width: 3,
         height: '60%',
-        background: theme.palette.mode === 'dark' ? '#82827C' : '#21201C',
+        background: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1200],
         borderRadius: '0 4px 4px 0',
       }
     : {},
@@ -217,7 +218,7 @@ const SessionCard = styled(Box, {
 const DocumentChip = styled(Chip)(({ theme }) => ({
   height: 24,
   fontSize: 11,
-  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
   color: theme.palette.text.secondary,
   border: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
   '& .MuiChip-icon': {
@@ -281,7 +282,7 @@ const BubbleContent = styled(Box, {
   padding: theme.spacing(2, 2.5),
   borderRadius: isUser ? '20px 20px 4px 20px' : '20px 20px 20px 4px',
   backgroundColor: isUser
-    ? (theme.palette.mode === 'dark' ? '#63635E' : '#21201C')
+    ? (theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200])
     : alpha(theme.palette.background.paper, 0.8),
   color: isUser ? '#fff' : theme.palette.text.primary,
   backdropFilter: isUser ? 'none' : 'blur(10px)',
@@ -298,8 +299,8 @@ const AvatarStyled = styled(Avatar, {
   width: 36,
   height: 36,
   background: isUser
-    ? (theme.palette.mode === 'dark' ? '#63635E' : '#21201C')
-    : (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF'),
+    ? (theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200])
+    : (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300]),
   border: `2px solid ${alpha(theme.palette.background.paper, 0.8)}`,
   boxShadow: `0 2px 10px ${alpha(theme.palette.common.black, 0.1)}`,
   '& svg': {
@@ -311,7 +312,7 @@ const AvatarStyled = styled(Avatar, {
 const CitationBox = styled(Box)(({ theme }) => ({
   marginTop: theme.spacing(2),
   padding: theme.spacing(1.5),
-  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : '#F9F9F8',
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : figmaGrey[200],
   borderRadius: 12,
   border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
 }))
@@ -327,18 +328,18 @@ const CitationItem = styled(Box)(({ theme }) => ({
   cursor: 'pointer',
   transition: 'all 0.2s ease',
   '&:hover': {
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8',
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200],
   },
 }))
 
 const FollowUpChip = styled(Chip)(({ theme }) => ({
   borderRadius: 20,
-  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
   border: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
   color: theme.palette.text.primary,
   transition: 'all 0.2s ease',
   '&:hover': {
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.12) : '#E9E8E6',
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.12) : figmaGrey[400],
     transform: 'translateY(-2px)',
     boxShadow: `0 4px 12px ${alpha(theme.palette.common.black, 0.1)}`,
   },
@@ -385,12 +386,12 @@ const StyledTextField = styled(TextField)(({ theme }) => ({
 const SendButton = styled(IconButton)(({ theme }) => ({
   width: 44,
   height: 44,
-  background: theme.palette.mode === 'dark' ? '#63635E' : '#21201C',
+  background: theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200],
   color: '#fff',
   transition: 'all 0.2s ease',
   '&:hover': {
     transform: 'scale(1.05)',
-    background: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
+    background: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
     boxShadow: `0 4px 20px ${alpha(theme.palette.common.black, 0.2)}`,
   },
   '&:disabled': {
@@ -421,7 +422,7 @@ const ThinkingBox = styled(Box)(({ theme }) => ({
   alignItems: 'center',
   gap: theme.spacing(1.5),
   padding: theme.spacing(1.5, 2),
-  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
   borderRadius: 16,
   marginBottom: theme.spacing(1),
   animation: `${pulse} 2s infinite ease-in-out`,
@@ -441,7 +442,7 @@ const EmptyIcon = styled(Box)(({ theme }) => ({
   width: 120,
   height: 120,
   borderRadius: '50%',
-  background: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
+  background: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
@@ -461,7 +462,7 @@ const SuggestionCard = styled(Box)(({ theme }) => ({
   cursor: 'pointer',
   transition: 'all 0.2s ease',
   '&:hover': {
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8',
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200],
     borderColor: alpha(theme.palette.divider, 0.2),
     transform: 'translateY(-2px)',
   },
@@ -473,14 +474,14 @@ const ActionButton = styled(IconButton)(({ theme }) => ({
   color: alpha(theme.palette.text.secondary, 0.6),
   '&:hover': {
     color: theme.palette.text.primary,
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
   },
 }))
 
 const NewSessionButton = styled(Button)(({ theme }) => ({
   borderRadius: 12,
   padding: theme.spacing(1.5, 2),
-  background: theme.palette.mode === 'dark' ? '#63635E' : '#21201C',
+  background: theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200],
   color: '#fff',
   fontWeight: 600,
   textTransform: 'none',
@@ -488,7 +489,7 @@ const NewSessionButton = styled(Button)(({ theme }) => ({
   transition: 'all 0.2s ease',
   '&:hover': {
     transform: 'translateY(-2px)',
-    background: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
+    background: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
     boxShadow: `0 6px 28px ${alpha(theme.palette.common.black, 0.2)}`,
   },
 }))

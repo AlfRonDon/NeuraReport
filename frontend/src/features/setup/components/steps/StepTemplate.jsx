@@ -18,6 +18,7 @@ import {
   Grid,
   Radio,
 } from '@mui/material'
+import { figmaGrey } from '@/app/theme'
 import CloudUploadIcon from '@mui/icons-material/CloudUpload'
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf'
 import TableChartIcon from '@mui/icons-material/TableChart'
@@ -420,11 +421,11 @@ export default function StepTemplate({ wizardState, updateWizardState, onComplet
                     sx={{
                       height: '100%',
                       border: 2,
-                      borderColor: isSelected ? (theme) => theme.palette.mode === 'dark' ? '#82827C' : '#63635E' : 'divider',
-                      bgcolor: isSelected ? (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : '#F9F9F8' : 'transparent',
+                      borderColor: isSelected ? (theme) => theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100] : 'divider',
+                      bgcolor: isSelected ? (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : figmaGrey[200] : 'transparent',
                       transition: 'all 0.2s',
                       '&:hover': {
-                        borderColor: (theme) => theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
+                        borderColor: (theme) => theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
                         transform: 'translateY(-2px)',
                         boxShadow: 2,
                       },
@@ -447,14 +448,14 @@ export default function StepTemplate({ wizardState, updateWizardState, onComplet
                                 {template.name}
                               </Typography>
                               {template.popular && (
-                                <Chip label="Popular" size="small" sx={{ height: 18, fontSize: '0.65rem', bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6', color: 'text.secondary' }} />
+                                <Chip label="Popular" size="small" sx={{ height: 18, fontSize: '0.65rem', bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400], color: 'text.secondary' }} />
                               )}
                             </Stack>
                             <Chip
                               label={template.kind.toUpperCase()}
                               size="small"
                               variant="outlined"
-                              sx={{ height: 18, fontSize: '0.6rem', mt: 0.5, bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6', color: 'text.secondary' }}
+                              sx={{ height: 18, fontSize: '0.6rem', mt: 0.5, bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400], color: 'text.secondary' }}
                             />
                           </Box>
                         </Stack>
@@ -539,7 +540,7 @@ export default function StepTemplate({ wizardState, updateWizardState, onComplet
             p: 3,
             border: 2,
             borderColor: (theme) => alpha(theme.palette.divider, 0.3),
-            bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : '#F9F9F8',
+            bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : figmaGrey[200],
           }}
         >
           <Stack direction="row" alignItems="center" spacing={2}>
@@ -571,8 +572,8 @@ export default function StepTemplate({ wizardState, updateWizardState, onComplet
             cursor: 'pointer',
             transition: 'border-color 0.2s, background-color 0.2s',
             '&:hover': {
-              borderColor: (theme) => theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
-              bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : '#F9F9F8',
+              borderColor: (theme) => theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
+              bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : figmaGrey[200],
             },
           }}
           onClick={handleBrowseClick}
@@ -606,7 +607,7 @@ export default function StepTemplate({ wizardState, updateWizardState, onComplet
               <LinearProgress
                 variant="determinate"
                 value={uploadProgress}
-                sx={{ maxWidth: 300, mx: 'auto', bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF', '& .MuiLinearProgress-bar': { bgcolor: (theme) => theme.palette.mode === 'dark' ? '#82827C' : '#63635E' } }}
+                sx={{ maxWidth: 300, mx: 'auto', bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300], '& .MuiLinearProgress-bar': { bgcolor: (theme) => theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100] } }}
               />
               <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
                 {uploadProgress}%

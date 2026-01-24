@@ -31,6 +31,7 @@ import LoadingState from '@/components/feedback/LoadingState.jsx'
 import InfoTooltip from '@/components/common/InfoTooltip.jsx'
 import TOOLTIP_COPY from '@/content/tooltipCopy.jsx'
 import { getTemplateKind, previewFrameSx, surfaceStackSx } from '../utils/templatesPaneUtils'
+import { figmaGrey } from '@/app/theme'
 
 function TemplatePicker({ selected, onToggle, tagFilter, setTagFilter }) {
 
@@ -518,7 +519,7 @@ function TemplatePicker({ selected, onToggle, tagFilter, setTagFilter }) {
 
                             size="small"
 
-                            sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6', color: 'text.secondary' }}
+                            sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400], color: 'text.secondary' }}
 
                             variant="outlined"
 
@@ -745,7 +746,7 @@ function TemplatePicker({ selected, onToggle, tagFilter, setTagFilter }) {
       </Grid>
       <Collapse in={isFetching && !isLoading} unmountOnExit>
 
-        <LinearProgress sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF', '& .MuiLinearProgress-bar': { bgcolor: (theme) => theme.palette.mode === 'dark' ? '#82827C' : '#63635E' }, borderRadius: 1 }} aria-label="Refreshing templates" />
+        <LinearProgress sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300], '& .MuiLinearProgress-bar': { bgcolor: (theme) => theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100] }, borderRadius: 1 }} aria-label="Refreshing templates" />
 
       </Collapse>
 

@@ -12,6 +12,7 @@ import {
   keyframes,
 } from '@mui/material'
 import { Inbox as InboxIcon, Add as AddIcon } from '@mui/icons-material'
+import { figmaGrey } from '@/app/theme'
 
 // =============================================================================
 // ANIMATIONS
@@ -64,7 +65,7 @@ const IconContainer = styled(Box)(({ theme }) => ({
   width: 80,
   height: 80,
   borderRadius: 24,
-  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
   border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
   display: 'flex',
   alignItems: 'center',
@@ -104,12 +105,12 @@ const ActionButton = styled(Button)(({ theme }) => ({
   fontWeight: 600,
   fontSize: '0.875rem',
   padding: theme.spacing(1.25, 3),
-  backgroundColor: theme.palette.mode === 'dark' ? '#63635E' : '#21201C',
+  backgroundColor: theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200],
   color: '#fff',
   boxShadow: `0 4px 16px ${alpha(theme.palette.common.black, 0.15)}`,
   transition: 'all 0.2s ease',
   '&:hover': {
-    backgroundColor: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
+    backgroundColor: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
     transform: 'translateY(-2px)',
     boxShadow: `0 8px 24px ${alpha(theme.palette.common.black, 0.2)}`,
   },
@@ -127,8 +128,8 @@ const SecondaryButton = styled(Button)(({ theme }) => ({
   color: theme.palette.text.secondary,
   borderColor: alpha(theme.palette.divider, 0.2),
   '&:hover': {
-    borderColor: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : '#F9F9F8',
+    borderColor: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : figmaGrey[200],
     color: theme.palette.text.primary,
   },
 }))

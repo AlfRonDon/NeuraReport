@@ -61,6 +61,7 @@ import {
   InteractionType,
   Reversibility,
 } from '@/components/ux/governance'
+import { figmaGrey } from '@/app/theme'
 
 // =============================================================================
 // ANIMATIONS
@@ -117,7 +118,7 @@ const DialogIconContainer = styled(Box)(({ theme }) => ({
   width: 48,
   height: 48,
   borderRadius: 14,
-  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
@@ -159,11 +160,11 @@ const StyledTextField = styled(TextField)(({ theme }) => ({
     borderRadius: 12,
     transition: 'all 0.2s ease',
     '&:hover .MuiOutlinedInput-notchedOutline': {
-      borderColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.3) : '#BCBBB5',
+      borderColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.3) : figmaGrey[600],
     },
     '&.Mui-focused': {
       '& .MuiOutlinedInput-notchedOutline': {
-        borderColor: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
+        borderColor: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
         borderWidth: 2,
       },
     },
@@ -183,11 +184,11 @@ const StatusChip = styled(Chip, {
   fontWeight: 500,
   fontSize: '0.75rem',
   backgroundColor: active
-    ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF')
-    : (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.06) : '#F9F9F8'),
+    ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300])
+    : (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.06) : figmaGrey[200]),
   color: theme.palette.text.secondary,
   border: `1px solid ${active
-    ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.15) : '#E2E1DE')
+    ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.15) : figmaGrey[500])
     : alpha(theme.palette.divider, 0.2)}`,
 }))
 
@@ -195,16 +196,16 @@ const FrequencyChip = styled(Chip)(({ theme }) => ({
   borderRadius: 8,
   fontWeight: 500,
   fontSize: '0.75rem',
-  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
   color: theme.palette.text.secondary,
-  border: `1px solid ${theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.12) : '#E2E1DE'}`,
+  border: `1px solid ${theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.12) : figmaGrey[500]}`,
 }))
 
 const StyledSwitch = styled(Switch)(({ theme }) => ({
   '& .MuiSwitch-switchBase.Mui-checked': {
-    color: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
+    color: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
     '& + .MuiSwitch-track': {
-      backgroundColor: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
+      backgroundColor: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
     },
   },
 }))
@@ -226,19 +227,19 @@ const StyledMenuItem = styled(MenuItem)(({ theme }) => ({
   padding: theme.spacing(1, 1.5),
   transition: 'all 0.15s ease',
   '&:hover': {
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F9F9F8',
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[200],
   },
 }))
 
 const SchedulerStatusBanner = styled(Box, {
   shouldForwardProp: (prop) => prop !== 'status',
 })(({ theme, status }) => {
-  const neutralColor = theme.palette.mode === 'dark' ? '#82827C' : '#63635E'
-  const neutralBg = theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF'
+  const neutralColor = theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100]
+  const neutralBg = theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300]
   const colors = {
     ok: { bg: neutralBg, border: neutralColor, text: neutralColor },
     warning: { bg: neutralBg, border: neutralColor, text: neutralColor },
-    disabled: { bg: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.06) : '#F9F9F8', border: alpha(theme.palette.divider, 0.3), text: theme.palette.text.secondary },
+    disabled: { bg: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.06) : figmaGrey[200], border: alpha(theme.palette.divider, 0.3), text: theme.palette.text.secondary },
     error: { bg: neutralBg, border: neutralColor, text: neutralColor },
   }
   const colorScheme = colors[status] || colors.warning
@@ -264,11 +265,11 @@ const ActionButton = styled(Button)(({ theme }) => ({
 }))
 
 const PrimaryButton = styled(ActionButton)(({ theme }) => ({
-  background: theme.palette.mode === 'dark' ? '#63635E' : '#21201C',
+  background: theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200],
   color: '#fff',
   boxShadow: `0 4px 14px ${alpha(theme.palette.common.black, 0.15)}`,
   '&:hover': {
-    background: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
+    background: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
     boxShadow: `0 6px 20px ${alpha(theme.palette.common.black, 0.2)}`,
     transform: 'translateY(-1px)',
   },

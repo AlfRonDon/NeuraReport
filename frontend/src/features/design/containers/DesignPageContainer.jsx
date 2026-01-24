@@ -34,6 +34,7 @@ import {
   alpha,
   styled,
 } from '@mui/material'
+import { figmaGrey } from '@/app/theme'
 import {
   Palette as PaletteIcon,
   Brush as BrushIcon,
@@ -79,7 +80,7 @@ const ContentArea = styled(Box)(({ theme }) => ({
 const BrandKitCard = styled(Card)(({ theme, isDefault }) => ({
   cursor: 'pointer',
   transition: 'all 0.2s ease',
-  border: isDefault ? `2px solid ${theme.palette.mode === 'dark' ? '#82827C' : '#63635E'}` : `1px solid ${alpha(theme.palette.divider, 0.2)}`,
+  border: isDefault ? `2px solid ${theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100]}` : `1px solid ${alpha(theme.palette.divider, 0.2)}`,
   '&:hover': {
     transform: 'translateY(-2px)',
     boxShadow: `0 8px 24px ${alpha(theme.palette.text.primary, 0.15)}`,
@@ -103,9 +104,9 @@ const ThemeCard = styled(Paper)(({ theme, isActive }) => ({
   padding: theme.spacing(2),
   cursor: 'pointer',
   transition: 'all 0.2s ease',
-  border: isActive ? `2px solid ${theme.palette.mode === 'dark' ? '#82827C' : '#63635E'}` : `1px solid ${alpha(theme.palette.divider, 0.2)}`,
+  border: isActive ? `2px solid ${theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100]}` : `1px solid ${alpha(theme.palette.divider, 0.2)}`,
   '&:hover': {
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8',
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200],
   },
 }))
 
@@ -340,7 +341,7 @@ export default function DesignPageContainer() {
                         {kit.name}
                       </Typography>
                       {kit.is_default && (
-                        <Chip size="small" label="Default" icon={<DefaultIcon />} sx={{ bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6', color: 'text.secondary' }} />
+                        <Chip size="small" label="Default" icon={<DefaultIcon />} sx={{ bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400], color: 'text.secondary' }} />
                       )}
                     </Box>
 

@@ -43,6 +43,7 @@ import {
   InteractionType,
   Reversibility,
 } from '@/components/ux/governance'
+import { figmaGrey } from '@/app/theme'
 
 // =============================================================================
 // ANIMATIONS
@@ -92,7 +93,7 @@ const StyledMenuItem = styled(MenuItem)(({ theme }) => ({
   fontSize: '0.8125rem',
   transition: 'all 0.2s ease',
   '&:hover': {
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
   },
 }))
 
@@ -110,7 +111,7 @@ const ActionButton = styled(IconButton)(({ theme }) => ({
   borderRadius: 10,
   transition: 'all 0.2s ease',
   '&:hover': {
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
     transform: 'scale(1.05)',
   },
 }))
@@ -362,7 +363,7 @@ export default function ConnectionsPage() {
           />
           <IconContainer
             sx={{
-              bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
+              bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
             }}
           >
             <StorageIcon sx={{ color: theme.palette.text.secondary, fontSize: 16 }} />
@@ -373,7 +374,7 @@ export default function ConnectionsPage() {
                 {value}
               </Box>
               {activeConnectionId === row.id && (
-                <Chip size="small" label="Active" sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6', color: 'text.secondary' }} />
+                <Chip size="small" label="Active" sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400], color: 'text.secondary' }} />
               )}
             </Stack>
             <Box sx={{ fontSize: '0.75rem', color: theme.palette.text.secondary }}>
@@ -392,7 +393,7 @@ export default function ConnectionsPage() {
           label={value || 'Unknown'}
           size="small"
           sx={{
-            bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
+            bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
             color: theme.palette.text.secondary,
             fontSize: '0.75rem',
             borderRadius: 2,
@@ -416,7 +417,7 @@ export default function ConnectionsPage() {
             fontSize: '0.75rem',
             textTransform: 'capitalize',
             borderRadius: 2,
-            bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6',
+            bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400],
             color: 'text.secondary',
           }}
         />

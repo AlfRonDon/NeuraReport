@@ -26,6 +26,7 @@ import {
   Close as CancelIcon,
   KeyboardArrowDown as DropdownIcon,
 } from '@mui/icons-material'
+import { figmaGrey } from '@/app/theme'
 
 // =============================================================================
 // STYLED COMPONENTS
@@ -45,12 +46,12 @@ const CellReferenceBox = styled(Box)(({ theme }) => ({
   alignItems: 'center',
   minWidth: 80,
   padding: theme.spacing(0.5, 1),
-  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8',
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200],
   borderRadius: 4,
   border: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
   cursor: 'pointer',
   '&:hover': {
-    borderColor: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
+    borderColor: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
   },
 }))
 
@@ -64,10 +65,10 @@ const FormulaInput = styled(TextField)(({ theme }) => ({
       borderColor: alpha(theme.palette.divider, 0.2),
     },
     '&:hover fieldset': {
-      borderColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.3) : '#BCBBB5',
+      borderColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.3) : figmaGrey[600],
     },
     '&.Mui-focused fieldset': {
-      borderColor: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
+      borderColor: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
     },
   },
 }))
@@ -77,10 +78,10 @@ const FunctionChip = styled(Chip)(({ theme }) => ({
   height: 24,
   fontSize: '0.75rem',
   fontFamily: 'monospace',
-  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF',
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300],
   color: 'text.secondary',
   '&:hover': {
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.15) : '#E9E8E6',
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.15) : figmaGrey[400],
   },
 }))
 

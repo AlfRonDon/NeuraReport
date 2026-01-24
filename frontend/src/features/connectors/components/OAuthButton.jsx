@@ -21,6 +21,7 @@ import {
 } from '@mui/icons-material'
 import { useInteraction, InteractionType, Reversibility } from '@/components/ux/governance'
 import { getOAuthPopupUrl } from '@/api/connectors'
+import { figmaGrey } from '@/app/theme'
 
 // =============================================================================
 // STYLED COMPONENTS
@@ -35,13 +36,13 @@ const OAuthButtonStyled = styled(Button, {
   padding: theme.spacing(1.5, 3),
   backgroundColor: connected
     ? alpha(theme.palette.text.secondary, 0.05)
-    : alpha(providerColor || (theme.palette.mode === 'dark' ? '#82827C' : '#63635E'), 0.1),
+    : alpha(providerColor || (theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100]), 0.1),
   color: connected
     ? theme.palette.text.secondary
-    : providerColor || (theme.palette.mode === 'dark' ? '#82827C' : '#63635E'),
-  border: `1px solid ${alpha(connected ? theme.palette.text.secondary : providerColor || (theme.palette.mode === 'dark' ? '#82827C' : '#63635E'), 0.3)}`,
+    : providerColor || (theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100]),
+  border: `1px solid ${alpha(connected ? theme.palette.text.secondary : providerColor || (theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100]), 0.3)}`,
   '&:hover': {
-    backgroundColor: alpha(connected ? theme.palette.text.secondary : providerColor || (theme.palette.mode === 'dark' ? '#82827C' : '#63635E'), 0.15),
+    backgroundColor: alpha(connected ? theme.palette.text.secondary : providerColor || (theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100]), 0.15),
   },
   '&:disabled': {
     opacity: 0.6,
@@ -110,7 +111,7 @@ export default function OAuthButton({
   const config = OAUTH_PROVIDERS[provider] || {
     name: provider,
     icon: CloudIcon,
-    color: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
+    color: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
     scopes: [],
   }
 

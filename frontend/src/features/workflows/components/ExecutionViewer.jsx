@@ -44,6 +44,7 @@ import {
   Fullscreen as FullscreenIcon,
   ContentCopy as CopyIcon,
 } from '@mui/icons-material'
+import { figmaGrey } from '@/app/theme'
 
 // =============================================================================
 // STYLED COMPONENTS
@@ -78,20 +79,20 @@ const StepCard = styled(Paper, {
   marginBottom: theme.spacing(1),
   border: `1px solid ${
     status === 'success'
-      ? alpha(theme.palette.mode === 'dark' ? '#82827C' : '#63635E', 0.3)
+      ? alpha(theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100], 0.3)
       : status === 'error'
-      ? alpha(theme.palette.mode === 'dark' ? '#63635E' : '#21201C', 0.3)
+      ? alpha(theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200], 0.3)
       : status === 'running'
-      ? alpha(theme.palette.mode === 'dark' ? '#8D8D86' : '#82827C', 0.3)
+      ? alpha(theme.palette.mode === 'dark' ? figmaGrey[900] : figmaGrey[1000], 0.3)
       : alpha(theme.palette.divider, 0.2)
   }`,
   backgroundColor:
     status === 'success'
-      ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : '#F9F9F8')
+      ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : figmaGrey[200])
       : status === 'error'
-      ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : '#F9F9F8')
+      ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : figmaGrey[200])
       : status === 'running'
-      ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : '#F9F9F8')
+      ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : figmaGrey[200])
       : 'transparent',
   transition: 'all 0.2s ease',
 }))
@@ -113,17 +114,17 @@ const LogLine = styled(Box, {
   padding: theme.spacing(0.25, 0),
   borderLeft: `2px solid ${
     level === 'error'
-      ? '#63635E'
+      ? figmaGrey[1100]
       : level === 'warning'
-      ? '#82827C'
+      ? figmaGrey[1000]
       : level === 'success'
-      ? '#8D8D86'
+      ? figmaGrey[900]
       : 'transparent'
   }`,
   paddingLeft: level ? theme.spacing(1) : 0,
   color:
     level === 'error'
-      ? '#BCBBB5'
+      ? figmaGrey[600]
       : level === 'warning'
       ? '#CFCECA'
       : level === 'success'
@@ -233,7 +234,7 @@ function ExecutionStep({ step, isLast, onRetry }) {
                 <StatusChip
                   label={statusConfig.label}
                   size="small"
-                  sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6', color: 'text.secondary' }}
+                  sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400], color: 'text.secondary' }}
                 />
               </Stack>
             </Stack>
@@ -441,7 +442,7 @@ export default function ExecutionViewer({
             <StatusChip
               label={overallStatus.label}
               size="small"
-              sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6', color: 'text.secondary' }}
+              sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400], color: 'text.secondary' }}
             />
             <Typography variant="caption" color="text.secondary">
               {formatTimestamp(execution.startedAt)} • Duration: {formatDuration(execution.duration)}

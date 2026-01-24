@@ -48,6 +48,7 @@ import {
   readPreferences,
   emitPreferencesChanged,
 } from '@/utils/preferences'
+import { figmaGrey } from '@/app/theme'
 
 // =============================================================================
 // ANIMATIONS
@@ -108,7 +109,7 @@ const RefreshButton = styled(IconButton)(({ theme }) => ({
   borderRadius: 12,
   transition: 'all 0.2s ease',
   '&:hover': {
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF',
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300],
     transform: 'rotate(180deg)',
   },
 }))
@@ -120,8 +121,8 @@ const ExportButton = styled(Button)(({ theme }) => ({
   borderColor: alpha(theme.palette.divider, 0.2),
   transition: 'all 0.2s ease',
   '&:hover': {
-    borderColor: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
+    borderColor: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
   },
 }))
 
@@ -168,7 +169,7 @@ function StatusChip({ status }) {
       size="small"
       icon={<Icon sx={{ fontSize: 14 }} />}
       label={status?.replace(/_/g, ' ') || 'unknown'}
-      sx={{ textTransform: 'capitalize', fontSize: '0.75rem', borderRadius: 2, bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6', color: 'text.secondary' }}
+      sx={{ textTransform: 'capitalize', fontSize: '0.75rem', borderRadius: 2, bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400], color: 'text.secondary' }}
     />
   )
 }
@@ -182,7 +183,7 @@ function SettingCard({ icon: Icon, title, children }) {
         <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 2 }}>
           <IconContainer
             sx={{
-              bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
+              bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
             }}
           >
             <Icon sx={{ color: 'text.secondary', fontSize: 16 }} />

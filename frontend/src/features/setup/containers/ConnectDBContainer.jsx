@@ -47,6 +47,7 @@ import TOOLTIP_COPY from '@/content/tooltipCopy.jsx'
 import { savePersistedCache } from '@/hooks/useBootstrapState.js'
 import useFormErrorFocus from '@/hooks/useFormErrorFocus.js'
 import { useInteraction, InteractionType, Reversibility } from '@/components/ux/governance'
+import { figmaGrey } from '@/app/theme'
 const sanitizeDbType = (value) => (typeof value === 'string' ? value.trim().toLowerCase() : '')
 const trimString = (value) => (typeof value === 'string' ? value.trim() : '')
 const formatHostPort = (host, port) => {
@@ -123,22 +124,22 @@ const DB_TYPE_META = {
   sqlite: {
     label: DB_CONFIG.sqlite.label,
     icon: StorageIcon,
-    accent: '#63635E',  // Grey/1100
+    accent: figmaGrey[1100],  // Grey/1100
   },
   postgres: {
     label: DB_CONFIG.postgres.label,
     icon: DnsIcon,
-    accent: '#82827C',  // Grey/1000
+    accent: figmaGrey[1000],  // Grey/1000
   },
   mysql: {
     label: DB_CONFIG.mysql.label,
     icon: LanIcon,
-    accent: '#8D8D86',  // Grey/900
+    accent: figmaGrey[900],  // Grey/900
   },
   mssql: {
     label: DB_CONFIG.mssql.label,
     icon: HubIcon,
-    accent: '#BCBBB5',  // Grey/800
+    accent: figmaGrey[600],  // Grey/800
   },
 }
 
@@ -214,12 +215,12 @@ const dbTypeToggleGroupSx = (theme) => ({
 })
 
 const buildDbTypeButtonSx = (accent) => (theme) => {
-  const accentColor = accent || (theme.palette.mode === 'dark' ? '#82827C' : '#63635E')
+  const accentColor = accent || (theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100])
   return {
     justifyContent: 'center',
     alignItems: 'center',
     textTransform: 'none',
-    borderRadius: 12,
+    borderRadius: 8,
     border: `1px solid ${alpha(theme.palette.divider, 0.75)}`,
     padding: theme.spacing(1.1, 1.5),
     minHeight: 68,
@@ -325,7 +326,7 @@ const SelectField = ({
     PaperProps: {
       elevation: 0,
       style: {
-        borderRadius: '12px',
+        borderRadius: '8px',
         borderTopLeftRadius: '12px',
         borderTopRightRadius: '12px',
         borderBottomRightRadius: '12px',
@@ -335,7 +336,7 @@ const SelectField = ({
         mt: 1.25,
         maxHeight: 320,
         minWidth: 360,
-        borderRadius: '12px !important',
+        borderRadius: '8px !important',
         borderTopLeftRadius: '12px !important',
         borderTopRightRadius: '12px !important',
         borderBottomRightRadius: '12px !important',
@@ -346,7 +347,7 @@ const SelectField = ({
         boxShadow: '0 22px 52px rgba(15,23,42,0.22)',
         overflow: 'hidden',
         '&.MuiPaper-rounded': {
-          borderRadius: '12px !important',
+          borderRadius: '8px !important',
           borderTopLeftRadius: '12px !important',
           borderTopRightRadius: '12px !important',
           borderBottomRightRadius: '12px !important',
@@ -469,9 +470,9 @@ const SelectField = ({
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        color: accentColor || (theme.palette.mode === 'dark' ? '#82827C' : '#63635E'),
-                        backgroundColor: alpha(accentColor || (theme.palette.mode === 'dark' ? '#82827C' : '#63635E'), 0.12),
-                        boxShadow: `0 4px 12px ${alpha(accentColor || (theme.palette.mode === 'dark' ? '#82827C' : '#63635E'), 0.18)}`,
+                        color: accentColor || (theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100]),
+                        backgroundColor: alpha(accentColor || (theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100]), 0.12),
+                        boxShadow: `0 4px 12px ${alpha(accentColor || (theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100]), 0.18)}`,
                         flexShrink: 0,
                         ml: 0.1,
                       })}
@@ -536,14 +537,14 @@ const SelectField = ({
                   borderRadius: 2,
                   transition: 'background-color 140ms ease, transform 140ms ease',
                   '&:hover': {
-                    backgroundColor: alpha(accentColor || (theme.palette.mode === 'dark' ? '#82827C' : '#63635E'), 0.08),
+                    backgroundColor: alpha(accentColor || (theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100]), 0.08),
                     transform: 'translateX(4px)',
                   },
                   '&.Mui-selected': {
-                    backgroundColor: alpha(accentColor || (theme.palette.mode === 'dark' ? '#82827C' : '#63635E'), 0.12),
-                    color: accentColor || (theme.palette.mode === 'dark' ? '#82827C' : '#63635E'),
+                    backgroundColor: alpha(accentColor || (theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100]), 0.12),
+                    color: accentColor || (theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100]),
                     '&:hover': {
-                      backgroundColor: alpha(accentColor || (theme.palette.mode === 'dark' ? '#82827C' : '#63635E'), 0.16),
+                      backgroundColor: alpha(accentColor || (theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100]), 0.16),
                     },
                   },
                 })}
@@ -557,8 +558,8 @@ const SelectField = ({
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      color: accentColor || (theme.palette.mode === 'dark' ? '#82827C' : '#63635E'),
-                      backgroundColor: alpha(accentColor || (theme.palette.mode === 'dark' ? '#82827C' : '#63635E'), 0.1),
+                      color: accentColor || (theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100]),
+                      backgroundColor: alpha(accentColor || (theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100]), 0.1),
                       flexShrink: 0,
                       ml: 0.15,
                     })}
@@ -2067,7 +2068,7 @@ const lastHeartbeatLabel = useMemo(() => {
               variant="contained"
               disableElevation
               startIcon={<PlayArrowIcon />}
-              sx={{ borderRadius: 2, px: 2.5, textTransform: 'none', bgcolor: (theme) => theme.palette.mode === 'dark' ? '#63635E' : '#21201C', color: '#fff', '&:hover': { bgcolor: (theme) => theme.palette.mode === 'dark' ? '#82827C' : '#63635E' } }}
+              sx={{ borderRadius: 2, px: 2.5, textTransform: 'none', bgcolor: (theme) => theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200], color: '#fff', '&:hover': { bgcolor: (theme) => theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100] } }}
               type="submit"
               disabled={mutation.isPending}
             >
@@ -2095,7 +2096,7 @@ const lastHeartbeatLabel = useMemo(() => {
                 label="Connected"
                 size="small"
                 onClick={() => setShowDetails((v) => !v)}
-                sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6', color: 'text.secondary' }}
+                sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400], color: 'text.secondary' }}
               />
             )}
             {connection.status === 'failed' && (
@@ -2103,7 +2104,7 @@ const lastHeartbeatLabel = useMemo(() => {
                 label="Failed"
                 size="small"
                 onClick={() => setShowDetails((v) => !v)}
-                sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6', color: 'text.secondary' }}
+                sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400], color: 'text.secondary' }}
               />
             )}
           </Stack>
@@ -2234,7 +2235,7 @@ const lastHeartbeatLabel = useMemo(() => {
                           primary={
                             <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0 }}>
                               <Typography variant="subtitle2" noWrap title={c.name}>{c.name}</Typography>
-                              {isActive && <Chip size="small" label="Active" sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6', color: 'text.secondary' }} />}
+                              {isActive && <Chip size="small" label="Active" sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400], color: 'text.secondary' }} />}
                             </Stack>
                           }
                           secondary={
@@ -2382,7 +2383,7 @@ const lastHeartbeatLabel = useMemo(() => {
                   <Stack direction="row" spacing={1} alignItems="center" sx={{ flexShrink: 0 }}>
                     {activeConnectionId === detailConnection.backend_connection_id ||
                     activeConnectionId === detailConnection.id ? (
-                      <Chip size="small" label="Active" sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6', color: 'text.secondary' }} />
+                      <Chip size="small" label="Active" sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400], color: 'text.secondary' }} />
                     ) : null}
                     <HeartbeatBadge
                       withText

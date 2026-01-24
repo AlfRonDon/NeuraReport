@@ -4,6 +4,7 @@ import {
   Tooltip, Alert, Autocomplete, IconButton,
 } from '@mui/material'
 import { alpha } from '@mui/material/styles'
+import { figmaGrey } from '@/app/theme'
 import ListAltIcon from '@mui/icons-material/ListAlt'
 import OpenInNewIcon from '@mui/icons-material/OpenInNew'
 import RocketLaunchIcon from '@mui/icons-material/RocketLaunch'
@@ -251,7 +252,7 @@ function GenerateAndDownload({
                   onClick={onGenerate}
                   disabled={!canGenerate}
                   aria-label={generateTooltip || generateLabel}
-                  sx={{ width: { xs: '100%', sm: 'auto' }, bgcolor: (theme) => theme.palette.mode === 'dark' ? '#63635E' : '#21201C', color: '#fff', '&:hover': { bgcolor: (theme) => theme.palette.mode === 'dark' ? '#82827C' : '#63635E' } }}
+                  sx={{ width: { xs: '100%', sm: 'auto' }, bgcolor: (theme) => theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200], color: '#fff', '&:hover': { bgcolor: (theme) => theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100] } }}
                 >
                   {generateLabel}
                 </Button>
@@ -546,7 +547,7 @@ function GenerateAndDownload({
                     href={item.pdfUrl ? buildDownloadUrl(item.pdfUrl) : '#'}
                     target="_blank"
                     rel="noopener"
-                    sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? '#63635E' : '#21201C', color: '#fff', '&:hover': { bgcolor: (theme) => theme.palette.mode === 'dark' ? '#82827C' : '#63635E' } }}
+                    sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200], color: '#fff', '&:hover': { bgcolor: (theme) => theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100] } }}
                   >
                     Download
                   </Button>
@@ -560,7 +561,7 @@ function GenerateAndDownload({
                       href={buildDownloadUrl(item.docxUrl)}
                       target="_blank"
                       rel="noopener"
-                      sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? '#82827C' : '#63635E', color: '#fff', '&:hover': { bgcolor: (theme) => theme.palette.mode === 'dark' ? '#8D8D86' : '#82827C' } }}
+                      sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100], color: '#fff', '&:hover': { bgcolor: (theme) => theme.palette.mode === 'dark' ? figmaGrey[900] : figmaGrey[1000] } }}
                     >
                       Download DOCX
                     </Button>
@@ -575,7 +576,7 @@ function GenerateAndDownload({
                       href={buildDownloadUrl(item.xlsxUrl)}
                       target="_blank"
                       rel="noopener"
-                      sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? '#8D8D86' : '#82827C', color: '#fff', '&:hover': { bgcolor: (theme) => theme.palette.mode === 'dark' ? '#BCBBB5' : '#8D8D86' } }}
+                      sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? figmaGrey[900] : figmaGrey[1000], color: '#fff', '&:hover': { bgcolor: (theme) => theme.palette.mode === 'dark' ? figmaGrey[600] : figmaGrey[900] } }}
                     >
                       Download XLSX
                     </Button>
@@ -759,7 +760,7 @@ function GenerateAndDownload({
                         disableElevation
                         startIcon={<ReplayIcon />}
                         onClick={d.onRerun}
-                        sx={{ width: { xs: '100%', lg: 'auto' }, textTransform: 'none', px: 2.5, bgcolor: (theme) => theme.palette.mode === 'dark' ? '#63635E' : '#21201C', color: '#fff', '&:hover': { bgcolor: (theme) => theme.palette.mode === 'dark' ? '#82827C' : '#63635E' } }}
+                        sx={{ width: { xs: '100%', lg: 'auto' }, textTransform: 'none', px: 2.5, bgcolor: (theme) => theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200], color: '#fff', '&:hover': { bgcolor: (theme) => theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100] } }}
                       >
                         Re-run
                       </Button>

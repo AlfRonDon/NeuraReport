@@ -32,6 +32,7 @@ import BarChartIcon from '@mui/icons-material/BarChart'
 import DownloadIcon from '@mui/icons-material/Download'
 
 import ZoomableChart from './ZoomableChart'
+import { figmaGrey } from '@/app/theme'
 
 function TabPanel({ children, value, index, ...other }) {
   return (
@@ -191,7 +192,7 @@ export default function AnalysisResults({ result }) {
       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
         <Stack direction="row" spacing={1} alignItems="center">
           <Typography variant="h6">{document_name || 'Analysis Results'}</Typography>
-          <Chip label={document_type?.toUpperCase()} size="small" variant="outlined" sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6', color: 'text.secondary' }} />
+          <Chip label={document_type?.toUpperCase()} size="small" variant="outlined" sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400], color: 'text.secondary' }} />
           {processing_time_ms && (
             <Chip label={`${(processing_time_ms / 1000).toFixed(1)}s`} size="small" variant="outlined" />
           )}

@@ -53,6 +53,7 @@ import {
   HelpOutline as HelpIcon,
   ContentCopy as CopyIcon,
 } from '@mui/icons-material'
+import { figmaGrey } from '@/app/theme'
 
 // =============================================================================
 // STYLED COMPONENTS
@@ -106,10 +107,10 @@ const VariableChip = styled(Chip)(({ theme }) => ({
   height: 24,
   fontSize: '0.7rem',
   fontFamily: 'monospace',
-  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF',
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300],
   cursor: 'pointer',
   '&:hover': {
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.15) : '#E9E8E6',
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.15) : figmaGrey[400],
   },
 }))
 
@@ -542,7 +543,7 @@ export default function NodeConfigPanel({
           <NodeTypeChip
             label={nodeTypeInfo?.label || node.type}
             size="small"
-            sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6', color: 'text.secondary' }}
+            sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400], color: 'text.secondary' }}
           />
           <Chip label={`ID: ${node.id}`} size="small" variant="outlined" />
         </Stack>

@@ -57,6 +57,7 @@ import {
   Preview as PreviewIcon,
   Save as SaveIcon,
 } from '@mui/icons-material'
+import { figmaGrey } from '@/app/theme'
 
 // =============================================================================
 // STYLED COMPONENTS
@@ -97,16 +98,16 @@ const FieldCard = styled(Paper, {
   marginBottom: theme.spacing(1.5),
   border: `1px solid ${
     isSelected
-      ? (theme.palette.mode === 'dark' ? '#82827C' : '#21201C')
+      ? (theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1200])
       : alpha(theme.palette.divider, 0.2)
   }`,
   backgroundColor: isDragging
-    ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8')
+    ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200])
     : theme.palette.background.paper,
   cursor: 'grab',
   transition: 'all 0.15s ease',
   '&:hover': {
-    borderColor: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
+    borderColor: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
     boxShadow: `0 2px 8px ${alpha(theme.palette.common.black, 0.1)}`,
   },
 }))
@@ -116,8 +117,8 @@ const PaletteItem = styled(ListItemButton)(({ theme }) => ({
   marginBottom: theme.spacing(0.5),
   border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
   '&:hover': {
-    borderColor: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8',
+    borderColor: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200],
   },
 }))
 
@@ -316,7 +317,7 @@ function FieldPropertiesPanel({ field, onChange }) {
         <Chip
           label={FIELD_TYPES.find((f) => f.type === field.type)?.label || field.type}
           size="small"
-          sx={{ borderRadius: 1, bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6', color: 'text.secondary' }}
+          sx={{ borderRadius: 1, bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400], color: 'text.secondary' }}
         />
       </Box>
 

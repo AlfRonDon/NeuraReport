@@ -17,6 +17,7 @@ import {
   alpha,
 } from '@mui/material'
 import CloseIcon from '@mui/icons-material/Close'
+import { figmaGrey } from '@/app/theme'
 import { useAppStore } from '@/stores'
 
 const formatCount = (value) => {
@@ -168,7 +169,7 @@ export default function DiscoveryListsPanel({ open, onClose }) {
                       label={`Template ${index + 1}`}
                       size="small"
                       variant="outlined"
-                      sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6', color: 'text.secondary' }}
+                      sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400], color: 'text.secondary' }}
                     />
                   </Stack>
                   <Divider sx={{ my: 1.5 }} />

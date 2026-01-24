@@ -40,6 +40,7 @@ import { useToast } from '@/components/ToastProvider.jsx';
 import { useInteraction, InteractionType, Reversibility, useNavigateInteraction } from '@/components/ux/governance';
 import ConfirmModal from '@/components/Modal/ConfirmModal';
 import AiUsageNotice from '@/components/ai/AiUsageNotice';
+import { figmaGrey } from '@/app/theme';
 
 const TONE_OPTIONS = [
   { value: 'formal', label: 'Formal', description: 'Professional, business-appropriate tone' },
@@ -472,7 +473,7 @@ export default function SummaryPage() {
                     label={focus}
                     size="small"
                     onDelete={() => handleRemoveFocus(focus)}
-                    sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6', color: 'text.secondary' }}
+                    sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400], color: 'text.secondary' }}
                   />
                 ))}
               </Box>

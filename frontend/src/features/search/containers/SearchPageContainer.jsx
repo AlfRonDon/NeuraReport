@@ -48,6 +48,7 @@ import {
   Psychology as SemanticIcon,
   DataObject as BooleanIcon,
 } from '@mui/icons-material'
+import { figmaGrey } from '@/app/theme'
 import useSearchStore from '@/stores/searchStore'
 import { useToast } from '@/components/ToastProvider'
 import { useInteraction, InteractionType, Reversibility } from '@/components/ux/governance'
@@ -65,7 +66,7 @@ const PageContainer = styled(Box)(({ theme }) => ({
 
 const SearchHeader = styled(Box)(({ theme }) => ({
   padding: theme.spacing(3),
-  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8',
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200],
   borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
 }))
 
@@ -108,8 +109,8 @@ const ResultCard = styled(Paper)(({ theme }) => ({
   cursor: 'pointer',
   transition: 'all 0.2s ease',
   '&:hover': {
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8',
-    borderColor: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200],
+    borderColor: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
   },
 }))
 

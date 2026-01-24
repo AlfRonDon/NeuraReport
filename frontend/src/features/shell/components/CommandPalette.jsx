@@ -37,6 +37,7 @@ import ChatOutlinedIcon from '@mui/icons-material/ChatOutlined'
 import SummarizeOutlinedIcon from '@mui/icons-material/SummarizeOutlined'
 import BarChartOutlinedIcon from '@mui/icons-material/BarChartOutlined'
 import AdminPanelSettingsOutlinedIcon from '@mui/icons-material/AdminPanelSettingsOutlined'
+import { figmaGrey } from '@/app/theme'
 import { useAppStore } from '@/stores'
 import { useInteraction, InteractionType, Reversibility } from '@/components/ux/governance'
 import { Kbd } from '@/ui'
@@ -672,10 +673,10 @@ export default function CommandPalette({ open, onClose }) {
                         mx: 1,
                         borderRadius: 1.5,
                         '&.Mui-selected': {
-                          bgcolor: (theme) => theme.palette.mode === 'dark' ? '#63635E' : '#21201C',
+                          bgcolor: (theme) => theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200],
                           color: 'primary.contrastText',
                           '&:hover': {
-                            bgcolor: (theme) => theme.palette.mode === 'dark' ? '#63635E' : '#21201C',
+                            bgcolor: (theme) => theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200],
                           },
                           '& .MuiListItemIcon-root': {
                             color: 'inherit',
