@@ -9,17 +9,17 @@ import { api } from './client';
 // ============================================
 
 export async function addDocument(data) {
-  const response = await api.post('/knowledge/library/documents', data);
+  const response = await api.post('/knowledge/documents', data);
   return response.data;
 }
 
 export async function getDocument(documentId) {
-  const response = await api.get(`/knowledge/library/documents/${documentId}`);
+  const response = await api.get(`/knowledge/documents/${documentId}`);
   return response.data;
 }
 
 export async function listDocuments(options = {}) {
-  const response = await api.get('/knowledge/library/documents', {
+  const response = await api.get('/knowledge/documents', {
     params: {
       collection_id: options.collectionId,
       tags: options.tags,
@@ -34,17 +34,17 @@ export async function listDocuments(options = {}) {
 }
 
 export async function updateDocument(documentId, data) {
-  const response = await api.put(`/knowledge/library/documents/${documentId}`, data);
+  const response = await api.put(`/knowledge/documents/${documentId}`, data);
   return response.data;
 }
 
 export async function deleteDocument(documentId) {
-  const response = await api.delete(`/knowledge/library/documents/${documentId}`);
+  const response = await api.delete(`/knowledge/documents/${documentId}`);
   return response.data;
 }
 
 export async function toggleFavorite(documentId) {
-  const response = await api.post(`/knowledge/library/documents/${documentId}/favorite`);
+  const response = await api.post(`/knowledge/documents/${documentId}/favorite`);
   return response.data;
 }
 
@@ -53,39 +53,39 @@ export async function toggleFavorite(documentId) {
 // ============================================
 
 export async function createCollection(data) {
-  const response = await api.post('/knowledge/library/collections', data);
+  const response = await api.post('/knowledge/collections', data);
   return response.data;
 }
 
 export async function getCollection(collectionId) {
-  const response = await api.get(`/knowledge/library/collections/${collectionId}`);
+  const response = await api.get(`/knowledge/collections/${collectionId}`);
   return response.data;
 }
 
 export async function listCollections() {
-  const response = await api.get('/knowledge/library/collections');
+  const response = await api.get('/knowledge/collections');
   return response.data;
 }
 
 export async function updateCollection(collectionId, data) {
-  const response = await api.put(`/knowledge/library/collections/${collectionId}`, data);
+  const response = await api.put(`/knowledge/collections/${collectionId}`, data);
   return response.data;
 }
 
 export async function deleteCollection(collectionId) {
-  const response = await api.delete(`/knowledge/library/collections/${collectionId}`);
+  const response = await api.delete(`/knowledge/collections/${collectionId}`);
   return response.data;
 }
 
 export async function addDocumentToCollection(collectionId, documentId) {
-  const response = await api.post(`/knowledge/library/collections/${collectionId}/documents`, {
+  const response = await api.post(`/knowledge/collections/${collectionId}/documents`, {
     document_id: documentId,
   });
   return response.data;
 }
 
 export async function removeDocumentFromCollection(collectionId, documentId) {
-  const response = await api.delete(`/knowledge/library/collections/${collectionId}/documents/${documentId}`);
+  const response = await api.delete(`/knowledge/collections/${collectionId}/documents/${documentId}`);
   return response.data;
 }
 
@@ -94,29 +94,29 @@ export async function removeDocumentFromCollection(collectionId, documentId) {
 // ============================================
 
 export async function createTag(name, color = null) {
-  const response = await api.post('/knowledge/library/tags', { name, color });
+  const response = await api.post('/knowledge/tags', { name, color });
   return response.data;
 }
 
 export async function listTags() {
-  const response = await api.get('/knowledge/library/tags');
+  const response = await api.get('/knowledge/tags');
   return response.data;
 }
 
 export async function deleteTag(tagId) {
-  const response = await api.delete(`/knowledge/library/tags/${tagId}`);
+  const response = await api.delete(`/knowledge/tags/${tagId}`);
   return response.data;
 }
 
 export async function addTagToDocument(documentId, tagId) {
-  const response = await api.post(`/knowledge/library/documents/${documentId}/tags`, {
+  const response = await api.post(`/knowledge/documents/${documentId}/tags`, {
     tag_id: tagId,
   });
   return response.data;
 }
 
 export async function removeTagFromDocument(documentId, tagId) {
-  const response = await api.delete(`/knowledge/library/documents/${documentId}/tags/${tagId}`);
+  const response = await api.delete(`/knowledge/documents/${documentId}/tags/${tagId}`);
   return response.data;
 }
 
@@ -125,7 +125,7 @@ export async function removeTagFromDocument(documentId, tagId) {
 // ============================================
 
 export async function searchDocuments(query, options = {}) {
-  const response = await api.post('/knowledge/library/search', {
+  const response = await api.post('/knowledge/search', {
     query,
     collection_id: options.collectionId,
     tags: options.tags,
@@ -138,7 +138,7 @@ export async function searchDocuments(query, options = {}) {
 }
 
 export async function semanticSearch(query, options = {}) {
-  const response = await api.post('/knowledge/library/search/semantic', {
+  const response = await api.post('/knowledge/search/semantic', {
     query,
     limit: options.limit || 10,
     min_similarity: options.minSimilarity || 0.5,
@@ -151,12 +151,12 @@ export async function semanticSearch(query, options = {}) {
 // ============================================
 
 export async function autoTag(documentId) {
-  const response = await api.post(`/knowledge/library/documents/${documentId}/auto-tag`);
+  const response = await api.post(`/knowledge/documents/${documentId}/auto-tag`);
   return response.data;
 }
 
 export async function findRelated(documentId, options = {}) {
-  const response = await api.get(`/knowledge/library/documents/${documentId}/related`, {
+  const response = await api.get(`/knowledge/documents/${documentId}/related`, {
     params: {
       limit: options.limit || 5,
     },
@@ -165,7 +165,7 @@ export async function findRelated(documentId, options = {}) {
 }
 
 export async function buildKnowledgeGraph(options = {}) {
-  const response = await api.post('/knowledge/library/knowledge-graph', {
+  const response = await api.post('/knowledge/knowledge-graph', {
     collection_id: options.collectionId,
     max_documents: options.maxDocuments || 100,
     include_entities: options.includeEntities !== false,
@@ -174,7 +174,7 @@ export async function buildKnowledgeGraph(options = {}) {
 }
 
 export async function generateFaq(options = {}) {
-  const response = await api.post('/knowledge/library/faq', {
+  const response = await api.post('/knowledge/faq', {
     collection_id: options.collectionId,
     document_ids: options.documentIds,
     max_questions: options.maxQuestions || 10,
@@ -187,12 +187,12 @@ export async function generateFaq(options = {}) {
 // ============================================
 
 export async function getLibraryStats() {
-  const response = await api.get('/knowledge/library/stats');
+  const response = await api.get('/knowledge/stats');
   return response.data;
 }
 
 export async function getDocumentActivity(documentId, options = {}) {
-  const response = await api.get(`/knowledge/library/documents/${documentId}/activity`, {
+  const response = await api.get(`/knowledge/documents/${documentId}/activity`, {
     params: {
       days: options.days || 30,
     },

@@ -104,17 +104,27 @@ class SpreadsheetAIService:
     def _call_openai(self, system_prompt: str, user_prompt: str, max_tokens: int = 2000) -> str:
         """Make a call to OpenAI API."""
         client = self._get_client()
+        model = self._settings.openai_model or "gpt-4"
 
         try:
-            response = client.chat.completions.create(
-                model=self._settings.openai_model or "gpt-4",
-                messages=[
+            # Newer models (o1, gpt-4o, etc.) use max_completion_tokens instead of max_tokens
+            uses_new_param = any(m in model.lower() for m in ["o1", "gpt-4o", "o3"])
+
+            create_params = {
+                "model": model,
+                "messages": [
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt}
                 ],
-                max_tokens=max_tokens,
-                temperature=0.3,  # Lower temperature for more precise formula generation
-            )
+            }
+
+            if uses_new_param:
+                create_params["max_completion_tokens"] = max_tokens
+            else:
+                create_params["max_tokens"] = max_tokens
+                create_params["temperature"] = 0.3  # Lower temperature for precise formulas
+
+            response = client.chat.completions.create(**create_params)
             return response.choices[0].message.content or ""
         except Exception as e:
             logger.error(f"OpenAI API call failed: {e}")

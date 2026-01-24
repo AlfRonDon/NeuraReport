@@ -116,6 +116,37 @@ class BaseAgent(ABC):
         from backend.app.services.config import get_settings
         return get_settings().openai_model or "gpt-4"
 
+    def _call_openai(
+        self,
+        system_prompt: str,
+        user_prompt: str,
+        max_tokens: int = 2000,
+        temperature: float = 0.7,
+    ) -> str:
+        """Make an OpenAI API call with proper parameter handling for different models."""
+        client = self._get_client()
+        model = self._get_model()
+
+        # Newer models (o1, gpt-4o, etc.) use max_completion_tokens instead of max_tokens
+        uses_new_param = any(m in model.lower() for m in ["o1", "gpt-4o", "o3"])
+
+        create_params = {
+            "model": model,
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ],
+        }
+
+        if uses_new_param:
+            create_params["max_completion_tokens"] = max_tokens
+        else:
+            create_params["max_tokens"] = max_tokens
+            create_params["temperature"] = temperature
+
+        response = client.chat.completions.create(**create_params)
+        return response.choices[0].message.content or ""
+
     @abstractmethod
     async def execute(self, **kwargs) -> Any:
         """Execute the agent's task."""
@@ -180,17 +211,12 @@ Structure your response as JSON:
 Limit to {max_sections} main sections."""
 
         try:
-            response = client.chat.completions.create(
-                model=model,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": f"Research topic: {topic}"}
-                ],
+            content = self._call_openai(
+                system_prompt=system_prompt,
+                user_prompt=f"Research topic: {topic}",
                 max_tokens=4000,
                 temperature=0.7,
             )
-
-            content = response.choices[0].message.content or "{}"
             import json
 
             # Handle markdown code blocks
@@ -275,17 +301,12 @@ Provide your response as JSON:
 }}"""
 
         try:
-            response = client.chat.completions.create(
-                model=model,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": f"Data sample:\n{data_sample}\n\nQuestion: {question}"}
-                ],
+            content = self._call_openai(
+                system_prompt=system_prompt,
+                user_prompt=f"Data sample:\n{data_sample}\n\nQuestion: {question}",
                 max_tokens=2000,
                 temperature=0.3,
             )
-
-            content = response.choices[0].message.content or "{}"
             import json
 
             if content.startswith("```"):
@@ -370,17 +391,12 @@ Provide your response as JSON:
 }}"""
 
         try:
-            response = client.chat.completions.create(
-                model=model,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": f"Context: {context}\n\nPurpose: {purpose}"}
-                ],
+            content = self._call_openai(
+                system_prompt=system_prompt,
+                user_prompt=f"Context: {context}\n\nPurpose: {purpose}",
                 max_tokens=1500,
                 temperature=0.7,
             )
-
-            content = response.choices[0].message.content or "{}"
             import json
 
             if content.startswith("```"):
@@ -466,17 +482,12 @@ Guidelines: {guidelines}
 Return ONLY the transformed content, no explanations."""
 
             try:
-                response = client.chat.completions.create(
-                    model=model,
-                    messages=[
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": content}
-                    ],
+                transformed = self._call_openai(
+                    system_prompt=system_prompt,
+                    user_prompt=content,
                     max_tokens=2000,
                     temperature=0.7,
                 )
-
-                transformed = response.choices[0].message.content or ""
 
                 outputs.append({
                     "format": target_format,
@@ -556,17 +567,12 @@ Provide your response as JSON:
 }}"""
 
         try:
-            response = client.chat.completions.create(
-                model=model,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": text}
-                ],
+            content = self._call_openai(
+                system_prompt=system_prompt,
+                user_prompt=text,
                 max_tokens=4000,
                 temperature=0.3,
             )
-
-            content = response.choices[0].message.content or "{}"
             import json
 
             if content.startswith("```"):

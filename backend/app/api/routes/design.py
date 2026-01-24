@@ -19,7 +19,7 @@ from backend.app.schemas.design.brand_kit import (
 )
 from backend.app.services.design.service import design_service
 
-router = APIRouter(prefix="/design", tags=["design"])
+router = APIRouter(tags=["design"])
 
 
 # Brand Kit endpoints

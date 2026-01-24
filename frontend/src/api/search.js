@@ -23,27 +23,30 @@ export async function search(query, options = {}) {
 }
 
 export async function semanticSearch(query, options = {}) {
-  const response = await api.post('/search/search/semantic', {
+  const response = await api.post('/search/semantic', {
     query,
-    filters: options.filters || null,
-    limit: options.limit || 20,
+    search_type: 'semantic',
+    filters: options.filters || [],
+    page: options.page || 1,
+    page_size: options.limit || 20,
   });
   return response.data;
 }
 
 export async function regexSearch(pattern, options = {}) {
-  const response = await api.post('/search/search/regex', {
-    pattern,
-    case_sensitive: options.caseSensitive || false,
-    filters: options.filters || null,
+  const response = await api.post('/search/regex', {
+    query: pattern,
+    search_type: 'regex',
+    filters: options.filters || [],
   });
   return response.data;
 }
 
 export async function booleanSearch(query, options = {}) {
-  const response = await api.post('/search/search/boolean', {
+  const response = await api.post('/search/boolean', {
     query,
-    filters: options.filters || null,
+    search_type: 'boolean',
+    filters: options.filters || [],
   });
   return response.data;
 }
@@ -53,12 +56,11 @@ export async function booleanSearch(query, options = {}) {
 // ============================================
 
 export async function searchAndReplace(searchQuery, replaceWith, options = {}) {
-  const response = await api.post('/search/search/replace', {
+  const response = await api.post('/search/replace', {
     search_query: searchQuery,
     replace_with: replaceWith,
-    scope: options.scope || 'all',
-    preview_only: options.previewOnly !== false,
-    case_sensitive: options.caseSensitive || false,
+    document_ids: options.documentIds || null,
+    dry_run: options.previewOnly !== false,
   });
   return response.data;
 }

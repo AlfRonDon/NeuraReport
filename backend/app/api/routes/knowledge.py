@@ -31,7 +31,7 @@ from backend.app.schemas.knowledge.library import (
 )
 from backend.app.services.knowledge.service import knowledge_service
 
-router = APIRouter(prefix="/library", tags=["knowledge"])
+router = APIRouter(tags=["knowledge"])
 
 
 # Document endpoints

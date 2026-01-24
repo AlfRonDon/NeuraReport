@@ -152,11 +152,11 @@ export async function exportDiagramAsPng(diagramId) {
 // ============================================
 
 export async function listDiagramTypes() {
-  const response = await api.get('/visualization/diagrams/types');
+  const response = await api.get('/visualization/types/diagrams');
   return response.data;
 }
 
 export async function listChartTypes() {
-  const response = await api.get('/visualization/charts/types');
+  const response = await api.get('/visualization/types/charts');
   return response.data;
 }
