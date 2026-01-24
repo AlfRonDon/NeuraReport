@@ -14,7 +14,7 @@ from sqlalchemy.types import JSON
 from sqlmodel import Field, Session, SQLModel, create_engine, select
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from .config import get_settings
+from backend.app.services.config import get_settings
 
 
 class IdempotencyRecord(SQLModel, table=True):

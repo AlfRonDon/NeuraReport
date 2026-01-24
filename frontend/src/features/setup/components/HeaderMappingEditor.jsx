@@ -936,9 +936,9 @@ export default function HeaderMappingEditor({
             p: 1,
             border: "1px solid",
             borderRadius: 1,
-            borderColor: (theme) => alpha(theme.palette.warning.main, 0.4),
-            bgcolor: (theme) => alpha(theme.palette.warning.main, 0.12),
-            color: "warning.dark",
+            borderColor: (theme) => alpha(theme.palette.divider, 0.4),
+            bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8',
+            color: "text.secondary",
           }}
         >
           <Typography variant="subtitle2" color="warning.dark">Auto-mapping items to review</Typography>
@@ -966,9 +966,13 @@ export default function HeaderMappingEditor({
               <Chip
                 key={`key-token-${token}`}
                 label={token}
-                color="primary"
                 size="small"
                 onDelete={waiting ? undefined : () => handleToggleKey(token, false)}
+                sx={{
+                  bgcolor: (theme) => theme.palette.mode === 'dark' ? '#63635E' : '#21201C',
+                  color: '#fff',
+                  '& .MuiChip-deleteIcon': { color: 'rgba(255,255,255,0.7)' },
+                }}
               />
             ))}
           </Stack>
@@ -1232,7 +1236,7 @@ export default function HeaderMappingEditor({
                     {resolved ? (
                       expressionActive ? (
                         <Stack direction="row" spacing={0.5} alignItems="center">
-                          <Chip size="small" label="Resolved" color="success" />
+                          <Chip size="small" label="Resolved" sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? '#63635E' : '#21201C', color: '#fff' }} />
                           <Chip
                             size="small"
                             label={
@@ -1242,28 +1246,28 @@ export default function HeaderMappingEditor({
                                 ? "Auto (SQL)"
                                 : "SQL (manual)"
                             }
-                            color={exprIssues.length > 0 ? "warning" : isAutoSql ? "info" : "default"}
                             variant={exprIssues.length > 0 || isAutoSql ? "filled" : "outlined"}
+                            sx={{
+                              bgcolor: exprIssues.length > 0 || isAutoSql ? ((theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6') : 'transparent',
+                              borderColor: (theme) => alpha(theme.palette.divider, 0.3),
+                              color: 'text.secondary',
+                            }}
                           />
                         </Stack>
                       ) : (
-                        <Chip size="small" label="Resolved" color="success" />
+                        <Chip size="small" label="Resolved" sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? '#63635E' : '#21201C', color: '#fff' }} />
                       )
                     ) : isSampleChoice ? (
                       <Chip
                         size="small"
                         label={sampleStatusLabel}
-                        {...(sampleStatusLabel === SAMPLE_STATUS_LATER
-                          ? {
-                              sx: {
-                                bgcolor: "#f8bbd0",
-                                color: "#7a1f48",
-                              },
-                            }
-                          : { color: "info" })}
+                        sx={{
+                          bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
+                          color: 'text.secondary',
+                        }}
                       />
                     ) : (
-                      <Chip size="small" label="User Input" color="warning" />
+                      <Chip size="small" label="User Input" sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF', color: 'text.secondary' }} />
                     )}
                   </TableCell>
                 </TableRow>
@@ -1289,7 +1293,7 @@ export default function HeaderMappingEditor({
           }}
         >
           <Stack spacing={0.5} sx={{ flexGrow: 1, minWidth: 0 }}>
-            <Typography variant="body2" color={unresolvedCount ? "warning.main" : "success.main"}>
+            <Typography variant="body2" color="text.secondary">
               {headersAll.length === 0
                 ? "No headers detected in template"
                 : (unresolvedCount ? `${unresolvedCount} unresolved` : "All resolved")}
@@ -1428,8 +1432,8 @@ export default function HeaderMappingEditor({
               p: 2,
               borderRadius: 2,
               border: "1px solid",
-              borderColor: (theme) => alpha(theme.palette.primary.main, 0.18),
-              bgcolor: (theme) => alpha(theme.palette.primary.main, 0.04),
+              borderColor: (theme) => alpha(theme.palette.divider, 0.2),
+              bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : '#F9F9F8',
             }}
           >
             <Typography variant="subtitle2" sx={{ mb: 1 }}>
@@ -1487,8 +1491,8 @@ export default function HeaderMappingEditor({
       <DialogActions sx={{ justifyContent: "space-between" }}>
         <Button
           onClick={() => setLlm4Instructions("")}
-          color="warning"
           disabled={saving || !llm4Instructions.trim()}
+          sx={{ color: 'text.secondary' }}
         >
           Clear
         </Button>

@@ -78,10 +78,10 @@ function SearchResult({ result, onSelect, isSelected, theme }) {
         px: 2,
         py: 1.5,
         cursor: 'pointer',
-        bgcolor: isSelected ? alpha(theme.palette.primary.main, 0.08) : 'transparent',
+        bgcolor: isSelected ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF') : 'transparent',
         transition: 'all 0.15s ease',
         '&:hover': {
-          bgcolor: alpha(theme.palette.primary.main, 0.08),
+          bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
         },
       }}
     >
@@ -91,13 +91,13 @@ function SearchResult({ result, onSelect, isSelected, theme }) {
             width: 28,
             height: 28,
             borderRadius: '8px',
-            bgcolor: alpha(config.color, 0.15),
+            bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
           }}
         >
-          <Icon sx={{ fontSize: 14, color: config.color }} />
+          <Icon sx={{ fontSize: 14, color: 'text.secondary' }} />
         </Box>
       </ListItemIcon>
       <ListItemText

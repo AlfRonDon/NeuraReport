@@ -117,13 +117,13 @@ const DialogIconContainer = styled(Box)(({ theme }) => ({
   width: 48,
   height: 48,
   borderRadius: 14,
-  background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.1)}, ${alpha(theme.palette.secondary.main, 0.1)})`,
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
   '& svg': {
     fontSize: 24,
-    color: theme.palette.primary.main,
+    color: theme.palette.text.secondary,
   },
 }))
 

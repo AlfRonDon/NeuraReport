@@ -10,7 +10,7 @@ from fastapi import APIRouter, Request
 
 from backend.app.services.config import get_settings
 from backend.app.api.middleware import limiter
-from backend.app.services.analyze.document_analysis_service import _ANALYSIS_CACHE
+from backend.app.services.analyze.document_analysis_service import _analysis_cache
 from backend.app.services.utils.mailer import MAILER_CONFIG, refresh_mailer_config
 import backend.app.services.state_access as state_access
 
@@ -188,11 +188,12 @@ async def health_detailed(request: Request) -> Dict[str, Any]:
         issues.append("OpenAI API error")
 
     # Check cache status
+    cache = _analysis_cache()
     checks["analysis_cache"] = {
         "status": "healthy",
-        "current_size": _ANALYSIS_CACHE.size(),
-        "max_size": _ANALYSIS_CACHE.max_items,
-        "ttl_seconds": _ANALYSIS_CACHE.ttl_seconds,
+        "current_size": cache.size(),
+        "max_size": cache.max_items,
+        "ttl_seconds": cache.ttl_seconds,
     }
 
     # Memory usage

@@ -84,6 +84,29 @@ const palette = {
 const fontFamilyUI = '"Lato", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
 const fontFamilyMono = '"JetBrains Mono", "SF Mono", Monaco, "Cascadia Code", Consolas, monospace'
 
+// Figma Grey Scale (exact values from design variables)
+const figmaGrey = {
+  white: '#FFFFFF',
+  200: '#F9F9F8',   // Surface/panel background
+  300: '#F1F0EF',   // Input backgrounds
+  400: '#E9E8E6',   // Active/selected backgrounds
+  500: '#E2E1DE',   // Borders, dividers
+  600: '#DAD9D6',   // Subtle borders
+  700: '#CFCECA',   // Muted borders
+  800: '#BCBBB5',   // Muted text, icons
+  900: '#8D8D86',   // Main grey (icons)
+  1000: '#82827C',  // Secondary icons
+  1100: '#63635E',  // Secondary text
+  1200: '#21201C',  // Primary text
+}
+
+// Neutral colors from Figma
+const figmaNeutral = {
+  200: '#E5E7EB',
+  400: '#9CA3AF',
+  500: '#6B7280',
+}
+
 // Create dark theme (Supabase default)
 const darkTheme = {
   palette: {
@@ -153,11 +176,11 @@ const darkTheme = {
   },
 }
 
-// Create light theme (Neuract UI visual style from Figma - warm earthy palette)
+// Create light theme (EXACT match to Figma Neuract UI)
 const lightTheme = {
   palette: {
     mode: 'light',
-    // Primary green - Neuract brand (from Figma Primary/300)
+    // Primary green - ONLY for primary CTA and success states
     primary: {
       main: '#08C18F',
       light: '#3DD9A8',
@@ -165,16 +188,16 @@ const lightTheme = {
       lighter: '#D1F4E0',
       contrastText: '#FFFFFF',
     },
-    // Secondary is warm neutral - used for most buttons
+    // Secondary is neutral grey - for most UI elements
     secondary: {
-      main: '#697483',      // Gray Typography/400 from Figma
-      light: '#8D8D86',
-      dark: '#4B5563',
-      lighter: '#F5F6F7',
+      main: figmaGrey[1100],     // #63635E
+      light: figmaGrey[900],     // #8D8D86
+      dark: figmaGrey[1200],     // #21201C
+      lighter: figmaGrey[300],   // #F1F0EF
       contrastText: '#FFFFFF',
     },
     success: {
-      main: '#22C55E',      // Success/500 from Figma
+      main: '#22C55E',
       light: '#4ADE80',
       dark: '#16A34A',
       lighter: '#D1F4E0',
@@ -201,29 +224,32 @@ const lightTheme = {
       lighter: '#DBEAFE',
       contrastText: '#FFFFFF',
     },
-    // Backgrounds - warm cream tones from Figma Neuract UI
+    // Backgrounds from Figma variables - distinct layers
     background: {
-      default: '#F9F9F8',   // App background - warm off-white (grey/200 from Figma)
-      paper: '#FFFFFF',     // Cards, panels, modals - pure white
-      surface: '#FFF5EB',   // Warm cream surface
-      overlay: '#F5EBE1',   // Warm beige overlay
+      default: figmaGrey[200],   // #F9F9F8 - Main content area (Grey/200)
+      paper: figmaGrey.white,    // #FFFFFF - Cards, panels
+      surface: figmaGrey.white,  // #FFFFFF
+      overlay: figmaGrey[300],   // #F1F0EF - Overlay/input backgrounds
+      sidebar: figmaGrey.white,  // #FFFFFF - White sidebar (no cream)
     },
-    // Text colors from Figma - Neutral and Gray Typography
+    // Text colors from Figma variables
     text: {
-      primary: '#1B2533',   // Gray Typography/800 from Figma
-      secondary: '#697483', // Gray Typography/400 from Figma
-      disabled: '#8D8D86',  // grey/900 from Figma
+      primary: figmaGrey[1200],    // #21201C - Primary text (Grey/1200)
+      secondary: figmaGrey[1100],  // #63635E - Secondary text (Grey/1100)
+      disabled: figmaGrey[800],    // #BCBBB5 - Disabled/muted (Grey/800)
     },
-    divider: '#E5D4C3',     // Warm border color from Figma
-    // Action states
+    divider: figmaGrey[500],       // #E2E1DE - Divider (Grey/500)
+    // Action states - neutral, no green tint
     action: {
-      hover: 'rgba(0, 0, 0, 0.02)',
-      selected: 'rgba(8, 193, 143, 0.08)',  // Primary with transparency
+      hover: 'rgba(0, 0, 0, 0.04)',
+      selected: 'rgba(0, 0, 0, 0.06)',
       disabled: 'rgba(0, 0, 0, 0.26)',
       disabledBackground: 'rgba(0, 0, 0, 0.06)',
-      focus: 'rgba(8, 193, 143, 0.12)',
+      focus: 'rgba(0, 0, 0, 0.08)',
     },
     grey: palette.scale,
+    // Expose Figma grey scale
+    figmaGrey: figmaGrey,
   },
 }
 
@@ -244,87 +270,102 @@ function createAppTheme(mode = 'dark') {
       fontWeightRegular: 400,
       fontWeightMedium: 500,
       fontWeightBold: 600,
-      // Page titles: 18-20px, MEDIUM weight (not bold except for numbers)
+      // Page title - 24px from Figma "Plugged Devices" heading
       h1: {
-        fontSize: '1.25rem',
+        fontSize: '1.5rem',      // 24px
         fontWeight: 500,
-        letterSpacing: '-0.01em',
-        lineHeight: 1.2,
+        letterSpacing: 0,
+        lineHeight: 1.2,         // ~29px
       },
+      // Section header - 20px from Figma "Settings" sidebar header
       h2: {
-        fontSize: '1.125rem',
+        fontSize: '1.25rem',     // 20px
         fontWeight: 500,
-        letterSpacing: '-0.01em',
-        lineHeight: 1.2,
+        letterSpacing: 0,
+        lineHeight: 1.2,         // ~24px
       },
+      // Subsection - 18px
       h3: {
-        fontSize: '1rem',
+        fontSize: '1.125rem',    // 18px
         fontWeight: 500,
-        letterSpacing: '-0.01em',
-        lineHeight: 1.2,
+        letterSpacing: 0,
+        lineHeight: 1.22,        // ~22px
       },
-      // Card titles: 14-16px, medium
+      // Nav items / Card titles - 16px from Figma sidebar nav
       h4: {
-        fontSize: '0.9375rem',
+        fontSize: '1rem',        // 16px
         fontWeight: 500,
         letterSpacing: 0,
-        lineHeight: 1.2,
+        lineHeight: 1.1875,      // 19px (from Figma h-[19px])
       },
+      // Label Medium - 14px from Figma Label/Medium/Medium
       h5: {
-        fontSize: '0.875rem',
+        fontSize: '0.875rem',    // 14px
         fontWeight: 500,
         letterSpacing: 0,
-        lineHeight: 1.2,
+        lineHeight: 1.143,       // 16px (from Figma lineHeight: 16)
       },
+      // Small label - 12px
       h6: {
-        fontSize: '0.8125rem',
+        fontSize: '0.75rem',     // 12px
         fontWeight: 500,
         letterSpacing: 0,
-        lineHeight: 1.2,
+        lineHeight: 1.33,        // 16px
       },
+      // Subtitle - 14px medium
       subtitle1: {
-        fontSize: '0.875rem',
+        fontSize: '0.875rem',    // 14px
         fontWeight: 500,
-        lineHeight: 1.4,
-      },
-      subtitle2: {
-        fontSize: '0.8125rem',
-        fontWeight: 500,
-        lineHeight: 1.4,
-      },
-      // Body text: 13-14px, regular weight
-      body1: {
-        fontSize: '0.8125rem',  // 13px
-        fontWeight: 400,
-        lineHeight: 1.4,
-      },
-      body2: {
-        fontSize: '0.75rem',  // 12px
-        fontWeight: 400,
-        lineHeight: 1.4,
-      },
-      // Meta/helper text: 12px, muted
-      caption: {
-        fontSize: '0.75rem',
-        fontWeight: 400,
-        lineHeight: 1.4,
+        lineHeight: 1.143,       // 16px
         letterSpacing: 0,
       },
+      // Subtitle small - 12px medium
+      subtitle2: {
+        fontSize: '0.75rem',     // 12px
+        fontWeight: 500,
+        lineHeight: 1.33,        // 16px
+        letterSpacing: 0,
+      },
+      // Body text - Paragraph/Small/Regular from Figma: 14px, 400, line-height 20px
+      body1: {
+        fontSize: '0.875rem',    // 14px
+        fontWeight: 400,
+        lineHeight: 1.43,        // 20px (from Figma lineHeight: 20)
+        letterSpacing: 0,
+      },
+      // Body small - 12px regular
+      body2: {
+        fontSize: '0.75rem',     // 12px
+        fontWeight: 400,
+        lineHeight: 1.5,         // 18px
+        letterSpacing: 0,
+      },
+      // Caption/Meta - 10px from Figma "Running" status text
+      caption: {
+        fontSize: '0.625rem',    // 10px
+        fontWeight: 500,
+        lineHeight: 1.4,         // 14px
+        letterSpacing: 0,
+      },
+      // Overline - 11px uppercase
       overline: {
-        fontSize: '0.6875rem',
+        fontSize: '0.6875rem',   // 11px
         fontWeight: 500,
         letterSpacing: '0.05em',
         textTransform: 'uppercase',
-        lineHeight: 1.4,
+        lineHeight: 1.45,        // 16px
       },
+      // Button text - 14px medium from Figma
       button: {
+        fontSize: '0.875rem',    // 14px
         fontWeight: 500,
         letterSpacing: 0,
+        lineHeight: 1.143,       // 16px
         textTransform: 'none',
       },
       code: {
         fontFamily: fontFamilyMono,
-        fontSize: '0.8125rem',
+        fontSize: '0.8125rem',   // 13px
       },
     },
     components: {
@@ -334,8 +375,9 @@ function createAppTheme(mode = 'dark') {
             colorScheme: mode,
             '--font-ui': fontFamilyUI,
             '--font-mono': fontFamilyMono,
-            '--border-color': isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
-            '--surface-color': isDark ? palette.scale[900] : '#F5F5F5',
+            '--border-color': isDark ? 'rgba(255,255,255,0.08)' : figmaGrey[500],  // #E2E1DE
+            '--surface-color': isDark ? palette.scale[900] : '#FFFFFF',
+            '--sidebar-color': isDark ? palette.scale[1000] : '#FFFFFF',  // White sidebar
           },
           html: {
             WebkitFontSmoothing: 'antialiased',
@@ -344,12 +386,12 @@ function createAppTheme(mode = 'dark') {
           body: {
             margin: 0,
             padding: 0,
-            // App background MUST differ from card surfaces
-            backgroundColor: isDark ? palette.scale[1100] : '#F6F7F8',
-            color: isDark ? palette.scale[100] : '#374151',
+            // Light grey background from Figma Grey/200
+            backgroundColor: isDark ? palette.scale[1100] : figmaGrey[200],  // #F9F9F8
+            color: isDark ? palette.scale[100] : '#1F2937',
             fontFamily: fontFamilyUI,
-            fontSize: '0.8125rem',  // 13px base
-            lineHeight: 1.4,
+            fontSize: '0.875rem',  // 14px base (from Figma)
+            lineHeight: 1.5,
           },
           '#root': {
             minHeight: '100vh',
@@ -390,48 +432,56 @@ function createAppTheme(mode = 'dark') {
       },
       MuiPaper: {
         defaultProps: {
-          elevation: 0,
+          elevation: 1,
         },
         styleOverrides: {
           root: {
             backgroundImage: 'none',
             backgroundColor: isDark ? palette.scale[1000] : '#FFFFFF',
-            borderRadius: 8,
-            // Warm border in light mode (from Figma)
-            border: isDark ? 'none' : '1px solid #E5D4C3',
+            borderRadius: 8,  // Consistent 8px radius
+            // SHADOW-ONLY - NO BORDERS (per design requirement)
+            border: 'none',
           },
           outlined: {
-            border: `1px solid ${isDark ? alpha(palette.scale[100], 0.08) : '#D9C7B5'}`,
+            border: `1px solid ${isDark ? alpha(palette.scale[100], 0.08) : '#E5E7EB'}`,
+            boxShadow: 'none',
+          },
+          elevation0: {
+            boxShadow: 'none',
           },
           elevation1: {
-            // Multi-layered soft shadow from Figma
-            boxShadow: isDark ? '0 4px 12px rgba(0,0,0,0.3)' : '3px 3px 8px rgba(0,0,0,0.12), 1px 2px 4px rgba(0,0,0,0.05)',
+            // Shadow-only cards from Figma
+            boxShadow: isDark ? '0 4px 12px rgba(0,0,0,0.3)' : '0 1px 3px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.05)',
           },
           elevation2: {
-            boxShadow: isDark ? '0 6px 16px rgba(0,0,0,0.35)' : '-1px 1px 8px rgba(0,0,0,0.12), -1px 1px 24px rgba(0,0,0,0.12)',
+            boxShadow: isDark ? '0 6px 16px rgba(0,0,0,0.35)' : '0 2px 8px rgba(0,0,0,0.08), 0 8px 24px rgba(0,0,0,0.06)',
+          },
+          elevation3: {
+            boxShadow: isDark ? '0 8px 24px rgba(0,0,0,0.4)' : '0 4px 12px rgba(0,0,0,0.1), 0 12px 32px rgba(0,0,0,0.08)',
           },
         },
       },
       MuiCard: {
         defaultProps: {
-          elevation: 0,
+          elevation: 1,
         },
         styleOverrides: {
           root: {
-            borderRadius: 8,
+            borderRadius: 8,  // Consistent 8px radius for ALL cards
             backgroundColor: isDark ? palette.scale[1000] : '#FFFFFF',
-            // Warm border with soft shadow from Figma
-            border: isDark ? `1px solid ${alpha(palette.scale[100], 0.08)}` : '1px solid #D9C7B5',
-            boxShadow: isDark ? 'none' : '1px 1px 4px rgba(64,55,47,0.12)',
+            // SHADOW-ONLY - NO BORDERS (per design requirement)
+            border: 'none',
+            boxShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.05)',
           },
         },
       },
       MuiCardContent: {
         styleOverrides: {
           root: {
-            padding: 16,  // Consistent 16px padding
+            // Increased padding for more whitespace (per design requirement)
+            padding: 24,
             '&:last-child': {
-              paddingBottom: 16,
+              paddingBottom: 24,
             },
           },
         },
@@ -447,70 +497,72 @@ function createAppTheme(mode = 'dark') {
         },
         styleOverrides: {
           root: {
-            borderRadius: 6,
+            borderRadius: 8,  // 8px radius from Figma
             fontWeight: 500,
-            fontSize: '0.8125rem',  // 13px
-            padding: '8px 16px',
-            minHeight: 36,
-            transition: 'opacity 150ms ease, box-shadow 150ms ease',
-            // Neutral focus state - NOT green
+            fontSize: '0.875rem',  // 14px from Figma
+            lineHeight: 1.143,     // 16px line-height from Figma
+            padding: '8px 12px',   // Match Figma 40px height buttons
+            minHeight: 40,
+            transition: 'all 150ms ease',
+            // Neutral focus state
             '&:focus-visible': {
-              outline: `2px solid ${isDark ? palette.scale[400] : '#374151'}`,
+              outline: `2px solid ${isDark ? palette.scale[400] : figmaGrey[1200]}`,
               outlineOffset: 2,
             },
           },
-          // Primary - solid fill, Neuract green from Figma
+          // Primary - solid fill, brand green (use sparingly)
           contained: {
             backgroundColor: '#08C18F',
             color: '#FFFFFF',
             '&:hover': {
               backgroundColor: '#06A077',
-              opacity: 1,
             },
             '&:active': {
               backgroundColor: '#058A68',
             },
             '&.Mui-disabled': {
-              backgroundColor: isDark ? palette.scale[800] : '#E5E5E5',
-              color: isDark ? palette.scale[600] : '#9CA3A8',
+              backgroundColor: isDark ? palette.scale[800] : figmaGrey[400],
+              color: isDark ? palette.scale[600] : figmaGrey[800],
             },
           },
-          // Secondary - flat/light grey, NO outlines, low contrast
+          // Secondary - FLAT/LIGHT from Figma (Grey/300 bg, Grey/500 border)
           containedSecondary: {
-            backgroundColor: isDark ? palette.scale[800] : '#F3F4F6',
-            color: isDark ? palette.scale[100] : '#6B7280',
-            border: 'none',
+            backgroundColor: isDark ? palette.scale[800] : figmaGrey[300],
+            color: isDark ? palette.scale[100] : figmaGrey[1100],
+            border: `1px solid ${isDark ? palette.scale[700] : figmaGrey[500]}`,
+            boxShadow: 'none',
             '&:hover': {
-              backgroundColor: isDark ? palette.scale[700] : '#E5E7EB',
+              backgroundColor: isDark ? palette.scale[700] : figmaGrey[400],
               boxShadow: 'none',
             },
           },
-          // Outlined - convert to flat style (no outlines per design)
+          // Outlined - flat style with border from Figma
           outlined: {
-            borderColor: 'transparent',
-            color: isDark ? palette.scale[100] : '#6B7280',
-            backgroundColor: isDark ? alpha(palette.scale[100], 0.05) : '#F3F4F6',
+            borderColor: isDark ? palette.scale[700] : figmaGrey[500],
+            color: isDark ? palette.scale[100] : figmaGrey[1100],
+            backgroundColor: isDark ? alpha(palette.scale[100], 0.05) : figmaGrey[300],
             '&:hover': {
-              backgroundColor: isDark ? alpha(palette.scale[100], 0.08) : '#E5E7EB',
-              borderColor: 'transparent',
+              backgroundColor: isDark ? alpha(palette.scale[100], 0.08) : figmaGrey[400],
+              borderColor: isDark ? palette.scale[600] : figmaGrey[600],
             },
           },
+          // Text button - muted
           text: {
-            color: isDark ? palette.scale[400] : '#9CA3A8',
+            color: isDark ? palette.scale[400] : figmaGrey[1100],
             '&:hover': {
-              backgroundColor: isDark ? alpha(palette.scale[100], 0.05) : 'rgba(0,0,0,0.03)',
-              color: isDark ? palette.scale[200] : '#6B7280',
+              backgroundColor: isDark ? alpha(palette.scale[100], 0.05) : 'rgba(0,0,0,0.04)',
+              color: isDark ? palette.scale[200] : figmaGrey[1200],
             },
           },
           sizeSmall: {
-            padding: '6px 12px',
-            fontSize: '0.8125rem',
+            padding: '6px 8px',
+            fontSize: '0.75rem',   // 12px
             minHeight: 32,
           },
           sizeLarge: {
-            padding: '10px 20px',
-            fontSize: '0.875rem',
-            minHeight: 40,
+            padding: '12px 16px',
+            fontSize: '1rem',      // 16px
+            minHeight: 44,
           },
         },
       },
@@ -551,7 +603,7 @@ function createAppTheme(mode = 'dark') {
             backgroundColor: isDark ? alpha(palette.scale[100], 0.1) : '#F5F6F7',  // Badge background from Figma
           },
           outlined: {
-            borderColor: isDark ? alpha(palette.scale[100], 0.15) : '#E5D4C3',  // Warm border
+            borderColor: isDark ? alpha(palette.scale[100], 0.15) : figmaGrey[500],  // Warm border
           },
           // Status pills with soft pastel backgrounds
           colorSuccess: {
@@ -589,19 +641,20 @@ function createAppTheme(mode = 'dark') {
       MuiOutlinedInput: {
         styleOverrides: {
           root: {
-            borderRadius: 8,  // Consistent 8px from Figma
+            borderRadius: 8,
             fontSize: '0.875rem',  // 14px from Figma
-            backgroundColor: isDark ? palette.scale[900] : '#FFF5EB',  // Warm cream from Figma
+            // Grey background for search/input fields (from Figma Grey/300)
+            backgroundColor: isDark ? palette.scale[900] : figmaGrey[300],
             '& .MuiOutlinedInput-notchedOutline': {
-              borderColor: isDark ? alpha(palette.scale[100], 0.12) : '#D9C7B5',  // Warm border from Figma
+              borderColor: isDark ? alpha(palette.scale[100], 0.12) : figmaGrey[500],  // Grey/500
               transition: 'border-color 150ms ease',
             },
             '&:hover .MuiOutlinedInput-notchedOutline': {
-              borderColor: isDark ? alpha(palette.scale[100], 0.25) : '#C4B5A5',
+              borderColor: isDark ? alpha(palette.scale[100], 0.25) : figmaGrey[600],  // Grey/600
             },
-            // Focus state - primary green accent
+            // Focus state - subtle darkening, NO green
             '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-              borderColor: isDark ? palette.scale[300] : '#08C18F',
+              borderColor: isDark ? palette.scale[300] : figmaGrey[700],  // Grey/700
               borderWidth: 1,
             },
             '&.Mui-error .MuiOutlinedInput-notchedOutline': {
@@ -610,13 +663,15 @@ function createAppTheme(mode = 'dark') {
           },
           input: {
             padding: '10px 12px',
+            height: '20px',  // Match Figma 40px total height (padding + height)
             '&::placeholder': {
-              color: isDark ? palette.scale[500] : '#8D8D86',  // grey/900 from Figma
+              color: isDark ? palette.scale[500] : figmaNeutral[400],  // #9CA3AF from Figma
               opacity: 1,
             },
           },
           inputSizeSmall: {
             padding: '8px 12px',
+            height: '16px',
           },
         },
       },
@@ -654,7 +709,7 @@ function createAppTheme(mode = 'dark') {
           paper: {
             borderRadius: 8,
             backgroundColor: isDark ? palette.scale[900] : '#FFFFFF',
-            border: `1px solid ${isDark ? alpha(palette.scale[100], 0.1) : '#D9C7B5'}`,  // Warm border from Figma
+            border: `1px solid ${isDark ? alpha(palette.scale[100], 0.1) : figmaGrey[600]}`,  // Warm border from Figma
             boxShadow: isDark
               ? '0 4px 24px rgba(0,0,0,0.4)'
               : '-1px 1px 8px rgba(0,0,0,0.12), -1px 1px 24px rgba(0,0,0,0.12)',  // Multi-layer shadow from Figma
@@ -693,18 +748,18 @@ function createAppTheme(mode = 'dark') {
         styleOverrides: {
           root: {
             borderRadius: 6,
-            padding: '8px 12px',
+            padding: '10px 16px',
             transition: 'all 150ms ease',
-            // Muted by default
-            color: isDark ? palette.scale[400] : '#9CA3A8',
+            // Muted grey by default (from Figma)
+            color: isDark ? palette.scale[400] : '#6B7280',
             '&:hover': {
-              backgroundColor: isDark ? alpha(palette.scale[100], 0.05) : 'rgba(0,0,0,0.02)',
-              color: isDark ? palette.scale[200] : '#6B7280',
+              backgroundColor: isDark ? alpha(palette.scale[100], 0.05) : 'rgba(0,0,0,0.03)',
+              color: isDark ? palette.scale[200] : '#4B5563',
             },
-            // Subtle active state - NO strong fills, no brand green background
+            // SUBTLE active state - very light tint, no strong fills (from Figma)
             '&.Mui-selected': {
               backgroundColor: isDark ? alpha(palette.scale[100], 0.08) : 'rgba(0,0,0,0.04)',
-              color: isDark ? palette.scale[100] : '#3F3F3F',
+              color: isDark ? palette.scale[100] : '#1F2937',
               '&:hover': {
                 backgroundColor: isDark ? alpha(palette.scale[100], 0.1) : 'rgba(0,0,0,0.05)',
               },
@@ -715,9 +770,9 @@ function createAppTheme(mode = 'dark') {
       MuiListItemIcon: {
         styleOverrides: {
           root: {
-            minWidth: 36,
-            // Muted icons by default
-            color: isDark ? palette.scale[500] : '#9CA3A8',
+            minWidth: 32,
+            // Muted grey icons (from Figma)
+            color: isDark ? palette.scale[500] : '#9CA3AF',
             '.Mui-selected &': {
               color: isDark ? palette.scale[200] : '#6B7280',
             },
@@ -727,20 +782,20 @@ function createAppTheme(mode = 'dark') {
       MuiListItemText: {
         styleOverrides: {
           primary: {
-            fontSize: '0.875rem',
-            fontWeight: 400,  // Regular weight, not medium
+            fontSize: '0.875rem',  // 14px
+            fontWeight: 400,  // Regular weight
             color: 'inherit',
           },
           secondary: {
             fontSize: '0.8125rem',
-            color: isDark ? palette.scale[500] : '#9CA3A8',
+            color: isDark ? palette.scale[500] : '#9CA3AF',
           },
         },
       },
       MuiDivider: {
         styleOverrides: {
           root: {
-            borderColor: isDark ? alpha(palette.scale[100], 0.08) : '#E5D4C3',  // Warm divider from Figma
+            borderColor: isDark ? alpha(palette.scale[100], 0.08) : figmaGrey[500],  // Warm divider from Figma
           },
         },
       },
@@ -781,7 +836,7 @@ function createAppTheme(mode = 'dark') {
           paper: {
             borderRadius: 12,
             backgroundColor: isDark ? palette.scale[1000] : '#FFFFFF',
-            border: `1px solid ${isDark ? alpha(palette.scale[100], 0.1) : '#D9C7B5'}`,  // Warm border from Figma
+            border: `1px solid ${isDark ? alpha(palette.scale[100], 0.1) : figmaGrey[600]}`,  // Warm border from Figma
             boxShadow: isDark
               ? '0 16px 48px rgba(0,0,0,0.4)'
               : '-1px 1px 8px rgba(0,0,0,0.12), -1px 1px 24px rgba(0,0,0,0.12)',  // Multi-layer shadow
@@ -816,9 +871,9 @@ function createAppTheme(mode = 'dark') {
       MuiDrawer: {
         styleOverrides: {
           paper: {
-            backgroundColor: isDark ? palette.scale[1000] : '#FFF5EB',  // Warm cream from Figma
-            // Warm border for sidebar
-            borderRight: `1px solid ${isDark ? alpha(palette.scale[100], 0.08) : '#E5D4C3'}`,
+            // White sidebar - no cream
+            backgroundColor: isDark ? palette.scale[1000] : '#FFFFFF',
+            borderRight: `1px solid ${isDark ? alpha(palette.scale[100], 0.08) : figmaGrey[500]}`,  // Grey/500
             boxShadow: 'none',
           },
         },
@@ -826,9 +881,10 @@ function createAppTheme(mode = 'dark') {
       MuiAppBar: {
         styleOverrides: {
           root: {
-            backgroundColor: isDark ? palette.scale[1000] : '#F5EBE1',  // Warm beige header from Figma
-            borderBottom: `1px solid ${isDark ? alpha(palette.scale[100], 0.08) : '#E5D4C3'}`,
-            boxShadow: isDark ? 'none' : '0 1px 4px rgba(0,0,0,0.06)',  // Subtle shadow from Figma
+            // White header with subtle border (from Figma main content area)
+            backgroundColor: isDark ? palette.scale[1000] : '#FFFFFF',
+            borderBottom: `1px solid ${isDark ? alpha(palette.scale[100], 0.08) : '#E5E7EB'}`,
+            boxShadow: 'none',
           },
         },
       },
@@ -845,13 +901,13 @@ function createAppTheme(mode = 'dark') {
       MuiTabs: {
         styleOverrides: {
           root: {
-            minHeight: 40,
+            minHeight: 44,
           },
           indicator: {
             height: 2,
             borderRadius: 1,
-            // Neutral indicator - NOT green
-            backgroundColor: isDark ? palette.scale[100] : '#374151',
+            // Dark grey underline (from Figma)
+            backgroundColor: isDark ? palette.scale[100] : '#1F2937',
           },
         },
       },
@@ -860,17 +916,18 @@ function createAppTheme(mode = 'dark') {
           root: {
             textTransform: 'none',
             fontWeight: 400,
-            fontSize: '0.8125rem',  // 13px
-            minHeight: 40,
-            padding: '8px 16px',
-            // Muted by default
-            color: isDark ? palette.scale[500] : '#9CA3AF',
+            fontSize: '0.875rem',  // 14px from Figma
+            minHeight: 44,
+            padding: '12px 20px',
+            // Muted grey by default
+            color: isDark ? palette.scale[500] : '#6B7280',
             '&.Mui-selected': {
               fontWeight: 500,
-              color: isDark ? palette.scale[100] : '#374151',
+              color: isDark ? palette.scale[100] : '#1F2937',
             },
             '&:hover': {
-              color: isDark ? palette.scale[300] : '#6B7280',
+              color: isDark ? palette.scale[300] : '#4B5563',
+              backgroundColor: 'transparent',
             },
           },
         },
@@ -903,7 +960,7 @@ function createAppTheme(mode = 'dark') {
               color: isDark ? palette.scale[400] : '#697483',  // Gray Typography/400 from Figma
               textTransform: 'none',
               letterSpacing: 'normal',
-              borderBottom: `1px solid ${isDark ? alpha(palette.scale[100], 0.08) : '#E5D4C3'}`,  // Warm border
+              borderBottom: `1px solid ${isDark ? alpha(palette.scale[100], 0.08) : figmaGrey[500]}`,  // Warm border
               height: 48,
               padding: '0 16px',
             },
@@ -936,7 +993,7 @@ function createAppTheme(mode = 'dark') {
             padding: '0 16px',
             height: 48,
             // Warm horizontal separator from Figma
-            borderBottom: `1px solid ${isDark ? alpha(palette.scale[100], 0.06) : '#F2E0CE'}`,
+            borderBottom: `1px solid ${isDark ? alpha(palette.scale[100], 0.06) : figmaGrey[400]}`,
             borderLeft: 'none',
             borderRight: 'none',
           },
@@ -960,7 +1017,7 @@ function createAppTheme(mode = 'dark') {
       MuiCheckbox: {
         styleOverrides: {
           root: {
-            color: isDark ? palette.scale[600] : '#D9C7B5',  // Warm unchecked color
+            color: isDark ? palette.scale[600] : figmaGrey[600],  // Warm unchecked color
             // Neuract green for checked state
             '&.Mui-checked': {
               color: '#08C18F',  // Primary green from Figma
@@ -996,7 +1053,7 @@ function createAppTheme(mode = 'dark') {
           },
           track: {
             borderRadius: 12,
-            backgroundColor: isDark ? palette.scale[700] : '#D9C7B5',  // Warm track color
+            backgroundColor: isDark ? palette.scale[700] : figmaGrey[600],  // Warm track color
             opacity: 1,
           },
         },
@@ -1037,31 +1094,37 @@ function createAppTheme(mode = 'dark') {
             fontSize: '0.8125rem',
             alignItems: 'flex-start',
             padding: '12px 16px',
+            // Neutral grey background for all alert variants
+            backgroundColor: isDark ? alpha(palette.scale[100], 0.05) : figmaGrey[200],
+            color: isDark ? palette.scale[200] : figmaGrey[1200],
+            border: `1px solid ${isDark ? alpha(palette.scale[100], 0.1) : figmaGrey[500]}`,
           },
           standardSuccess: {
-            backgroundColor: alpha(palette.green[400], 0.1),
-            color: palette.green[400],
-            border: `1px solid ${alpha(palette.green[400], 0.2)}`,
+            backgroundColor: isDark ? alpha(palette.scale[100], 0.05) : figmaGrey[200],
+            color: isDark ? palette.scale[200] : figmaGrey[1200],
+            border: `1px solid ${isDark ? alpha(palette.scale[100], 0.1) : figmaGrey[500]}`,
           },
           standardError: {
-            backgroundColor: alpha(palette.red[500], 0.1),
-            color: palette.red[400],
-            border: `1px solid ${alpha(palette.red[500], 0.2)}`,
+            backgroundColor: isDark ? alpha(palette.scale[100], 0.05) : figmaGrey[200],
+            color: isDark ? palette.scale[200] : figmaGrey[1200],
+            border: `1px solid ${isDark ? alpha(palette.scale[100], 0.1) : figmaGrey[500]}`,
           },
           standardWarning: {
-            backgroundColor: alpha(palette.yellow[400], 0.1),
-            color: palette.yellow[400],
-            border: `1px solid ${alpha(palette.yellow[400], 0.2)}`,
+            backgroundColor: isDark ? alpha(palette.scale[100], 0.05) : figmaGrey[200],
+            color: isDark ? palette.scale[200] : figmaGrey[1200],
+            border: `1px solid ${isDark ? alpha(palette.scale[100], 0.1) : figmaGrey[500]}`,
           },
           standardInfo: {
-            backgroundColor: alpha(palette.blue[400], 0.1),
-            color: palette.blue[400],
-            border: `1px solid ${alpha(palette.blue[400], 0.2)}`,
+            backgroundColor: isDark ? alpha(palette.scale[100], 0.05) : figmaGrey[200],
+            color: isDark ? palette.scale[200] : figmaGrey[1200],
+            border: `1px solid ${isDark ? alpha(palette.scale[100], 0.1) : figmaGrey[500]}`,
           },
           icon: {
             marginRight: 12,
             padding: 0,
             opacity: 1,
+            // Neutral grey icons
+            color: isDark ? palette.scale[400] : figmaGrey[900],
           },
         },
       },

@@ -78,13 +78,7 @@ const PageContainer = styled(Box)(({ theme }) => ({
   margin: '0 auto',
   width: '100%',
   minHeight: '100vh',
-  background: theme.palette.mode === 'dark'
-    ? `radial-gradient(ellipse at 20% 0%, ${alpha(theme.palette.primary.dark, 0.15)} 0%, transparent 50%),
-       radial-gradient(ellipse at 80% 100%, ${alpha(theme.palette.secondary.dark, 0.1)} 0%, transparent 50%),
-       ${theme.palette.background.default}`
-    : `radial-gradient(ellipse at 20% 0%, ${alpha(theme.palette.primary.light, 0.08)} 0%, transparent 50%),
-       radial-gradient(ellipse at 80% 100%, ${alpha(theme.palette.secondary.light, 0.05)} 0%, transparent 50%),
-       ${theme.palette.background.default}`,
+  backgroundColor: theme.palette.background.default,
 }))
 
 const PageHeader = styled(Box)(({ theme }) => ({
@@ -96,10 +90,7 @@ const PageTitle = styled(Typography)(({ theme }) => ({
   fontSize: '1.75rem',
   fontWeight: 700,
   letterSpacing: '-0.02em',
-  background: `linear-gradient(135deg, ${theme.palette.text.primary} 0%, ${theme.palette.primary.main} 100%)`,
-  WebkitBackgroundClip: 'text',
-  WebkitTextFillColor: 'transparent',
-  backgroundClip: 'text',
+  color: theme.palette.mode === 'dark' ? '#F1F0EF' : '#21201C',
 }))
 
 const FilterContainer = styled(Stack)(({ theme }) => ({
@@ -191,11 +182,11 @@ const SecondaryButton = styled(Button)(({ theme }) => ({
 
 const KindIconContainer = styled(Box, {
   shouldForwardProp: (prop) => prop !== 'iconColor',
-})(({ theme, iconColor }) => ({
+})(({ theme }) => ({
   width: 36,
   height: 36,
   borderRadius: 10,
-  backgroundColor: alpha(iconColor || theme.palette.primary.main, 0.12),
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
@@ -559,8 +550,8 @@ export default function HistoryPage() {
         const Icon = cfg.icon
         return (
           <Stack direction="row" alignItems="center" spacing={1.5}>
-            <KindIconContainer iconColor={cfg.color}>
-              <Icon sx={{ fontSize: 18, color: cfg.color }} />
+            <KindIconContainer>
+              <Icon sx={{ fontSize: 18, color: 'text.secondary' }} />
             </KindIconContainer>
             <Box>
               <Typography sx={{ fontSize: '0.8125rem', fontWeight: 500, color: 'text.primary' }}>

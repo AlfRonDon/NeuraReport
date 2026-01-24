@@ -173,9 +173,9 @@ const SidebarContainer = styled(Box)(({ theme }) => ({
   display: 'flex',
   flexDirection: 'column',
   height: '100%',
-  // Clean, flat background - NO blur or gradients
-  backgroundColor: theme.palette.background.paper,
-  borderRight: `1px solid ${theme.palette.divider}`,
+  // White sidebar from Figma - no cream
+  backgroundColor: theme.palette.mode === 'dark' ? '#1A1A1A' : '#FFFFFF',
+  borderRight: `1px solid ${theme.palette.mode === 'dark' ? '#333' : '#E2E1DE'}`,  // Grey/500 border
   position: 'relative',
 }))
 
@@ -185,51 +185,32 @@ const LogoContainer = styled(Box, {
   display: 'flex',
   alignItems: 'center',
   justifyContent: collapsed ? 'center' : 'space-between',
-  padding: theme.spacing(2),
+  padding: theme.spacing(2.5, 2),
   minHeight: 64,
-  borderBottom: `1px solid ${alpha(theme.palette.divider, 0.08)}`,
+  borderBottom: 'none',
 }))
 
 const LogoBox = styled(Box)(({ theme }) => ({
-  width: 32,
-  height: 32,
-  borderRadius: 8,
-  // Simple solid background - NO gradients
-  backgroundColor: theme.palette.mode === 'dark' ? theme.palette.grey[800] : '#3F3F3F',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  fontSize: '0.75rem',
-  fontWeight: 600,
-  color: '#FFFFFF',
-  letterSpacing: '-0.02em',
-  cursor: 'pointer',
-  transition: 'opacity 0.15s ease',
-
-  '&:hover': {
-    opacity: 0.9,
-  },
+  display: 'none',  // Hide logo box - Figma shows text only header
 }))
 
 const NewReportButton = styled(Box)(({ theme }) => ({
   display: 'flex',
   alignItems: 'center',
-  gap: theme.spacing(1.5),
+  gap: theme.spacing(1),
   padding: theme.spacing(1, 1.5),
-  borderRadius: 6,
-  // Flat, muted button - no dashed borders
-  backgroundColor: theme.palette.mode === 'dark'
-    ? alpha(theme.palette.common.white, 0.05)
-    : '#F3F4F6',
-  color: theme.palette.text.secondary,
+  borderRadius: 0,
+  height: 40,
+  // Match nav item style from Figma
+  backgroundColor: 'transparent',
+  color: theme.palette.mode === 'dark' ? '#8D8D86' : '#63635E',  // Grey/1100
   cursor: 'pointer',
   transition: 'background-color 0.15s ease',
 
   '&:hover': {
     backgroundColor: theme.palette.mode === 'dark'
-      ? alpha(theme.palette.common.white, 0.08)
-      : '#E5E7EB',
-    color: theme.palette.text.primary,
+      ? alpha(theme.palette.common.white, 0.04)
+      : '#F1F0EF',  // Grey/300
   },
 }))
 
@@ -256,59 +237,47 @@ const NavItemButton = styled(Box, {
 })(({ theme, active, collapsed, highlight }) => ({
   display: 'flex',
   alignItems: 'center',
-  gap: theme.spacing(1.5),
-  padding: theme.spacing(1, 1.5),
-  margin: theme.spacing(0.25, 1),
-  borderRadius: 6,
+  gap: theme.spacing(1),
+  padding: theme.spacing(1.25, 0),  // 40px height like Figma
+  margin: theme.spacing(0, 0),
+  borderRadius: 0,
   cursor: 'pointer',
   position: 'relative',
   transition: 'all 0.15s ease',
   justifyContent: collapsed ? 'center' : 'flex-start',
+  height: 40,
 
-  // Active state - subtle, NO brand green background
+  // Active state from Figma - Grey/400 background
   ...(active && {
     backgroundColor: theme.palette.mode === 'dark'
       ? alpha(theme.palette.common.white, 0.08)
-      : 'rgba(0, 0, 0, 0.04)',
-    color: theme.palette.text.primary,
-
-    // Subtle left indicator
-    '&::before': {
-      content: '""',
-      position: 'absolute',
-      left: 0,
-      top: '25%',
-      bottom: '25%',
-      width: 2,
-      borderRadius: '0 2px 2px 0',
-      backgroundColor: theme.palette.text.primary,
-    },
+      : '#E9E8E6',  // Grey/400 from Figma
+    color: theme.palette.mode === 'dark'
+      ? '#F1F0EF'
+      : '#63635E',  // Grey/1100 from Figma
   }),
 
-  // Inactive/muted state
+  // Inactive state - muted Grey/1100
   ...(!active && {
     color: theme.palette.mode === 'dark'
-      ? theme.palette.grey[500]
-      : '#9CA3A8',
+      ? '#8D8D86'  // Grey/900
+      : '#63635E',  // Grey/1100 from Figma
 
     '&:hover': {
       backgroundColor: theme.palette.mode === 'dark'
         ? alpha(theme.palette.common.white, 0.04)
-        : 'rgba(0, 0, 0, 0.02)',
-      color: theme.palette.mode === 'dark'
-        ? theme.palette.grey[300]
-        : '#6B7280',
+        : '#F1F0EF',  // Grey/300 on hover
     },
   }),
 
-  // Highlight items - subtle, no gradients
+  // Highlight items - same as regular, no special treatment
   ...(highlight && !active && {
     backgroundColor: 'transparent',
 
     '&:hover': {
       backgroundColor: theme.palette.mode === 'dark'
         ? alpha(theme.palette.common.white, 0.04)
-        : 'rgba(0, 0, 0, 0.02)',
+        : '#F1F0EF',
     },
   }),
 }))
@@ -319,18 +288,17 @@ const NavIcon = styled(Box, {
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  width: 24,
-  height: 24,
+  width: 20,
+  height: 20,
   flexShrink: 0,
   transition: 'transform 0.2s ease',
 
   '& svg': {
-    fontSize: 18,
-    color: active ? theme.palette.primary.main : 'inherit',
-
-    ...(highlight && !active && {
-      color: theme.palette.primary.main,
-    }),
+    fontSize: 20,
+    // ALL icons use muted grey - NO green (from Figma)
+    color: active
+      ? (theme.palette.mode === 'dark' ? '#E9E8E6' : '#63635E')  // Grey/1100 when active
+      : 'inherit',
   },
 }))
 
@@ -340,18 +308,16 @@ const CollapseButton = styled(IconButton)(({ theme }) => ({
   top: 72,
   width: 24,
   height: 24,
-  backgroundColor: theme.palette.background.paper,
-  border: `1px solid ${alpha(theme.palette.divider, 0.15)}`,
-  boxShadow: theme.palette.mode === 'dark'
-    ? `0 2px 8px ${alpha('#000', 0.3)}`
-    : `0 2px 8px ${alpha('#000', 0.08)}`,
+  backgroundColor: theme.palette.mode === 'dark' ? '#2A2A2A' : '#FFFFFF',
+  border: `1px solid ${theme.palette.mode === 'dark' ? '#444' : '#E2E1DE'}`,  // Grey/500
+  boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
   transition: 'all 0.2s ease',
   zIndex: 1,
+  color: theme.palette.mode === 'dark' ? '#8D8D86' : '#63635E',  // Grey/1100
 
   '&:hover': {
-    backgroundColor: theme.palette.primary.main,
-    color: theme.palette.primary.contrastText,
-    transform: 'scale(1.1)',
+    backgroundColor: theme.palette.mode === 'dark' ? '#444' : '#E9E8E6',  // Grey/400
+    color: theme.palette.mode === 'dark' ? '#F1F0EF' : '#21201C',  // Grey/1200
   },
 
   '& svg': {
@@ -448,14 +414,12 @@ export default function Sidebar({ width, collapsed, mobileOpen, onClose, onToggl
           >
             <LogoBox>NR</LogoBox>
             <Typography
-              variant="subtitle1"
-              fontWeight={700}
               sx={{
-                background: `linear-gradient(135deg, ${theme.palette.text.primary} 0%, ${theme.palette.primary.main} 100%)`,
-                backgroundClip: 'text',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                letterSpacing: '-0.02em',
+                fontSize: '20px',
+                fontWeight: 500,
+                color: theme.palette.mode === 'dark' ? '#F1F0EF' : '#21201C',  // Grey/1200 from Figma
+                letterSpacing: 0,
+                fontFamily: '"Lato", sans-serif',
               }}
             >
               NeuraReport
@@ -521,13 +485,12 @@ export default function Sidebar({ width, collapsed, mobileOpen, onClose, onToggl
                     onClick={() => section.collapsible && handleToggleSection(section.section)}
                   >
                   <Typography
-                    variant="caption"
-                    fontWeight={600}
                     sx={{
-                      color: 'text.tertiary',
+                      color: theme.palette.mode === 'dark' ? '#8D8D86' : '#63635E',  // Grey/1100 from Figma
                       textTransform: 'uppercase',
-                      letterSpacing: '0.08em',
-                      fontSize: '0.65rem',
+                      letterSpacing: '0.05em',
+                      fontSize: '0.6875rem',  // 11px
+                      fontWeight: 600,
                     }}
                   >
                     {section.section}
@@ -604,15 +567,7 @@ export default function Sidebar({ width, collapsed, mobileOpen, onClose, onToggl
                             </Typography>
                           )}
 
-                          {!collapsed && item.highlight && (
-                            <SparklesIcon
-                              sx={{
-                                fontSize: 14,
-                                color: 'primary.main',
-                                animation: `${pulse} 2s ease-in-out infinite`,
-                              }}
-                            />
-                          )}
+                          {/* Removed sparkle icons - not in Figma design */}
                         </NavItemButton>
                       </Tooltip>
                     )
@@ -640,7 +595,7 @@ export default function Sidebar({ width, collapsed, mobileOpen, onClose, onToggl
       <Box
         sx={{
           p: 2,
-          borderTop: `1px solid ${alpha(theme.palette.divider, 0.08)}`,
+          borderTop: 'none',
         }}
       >
         {!collapsed ? (
@@ -650,15 +605,15 @@ export default function Sidebar({ width, collapsed, mobileOpen, onClose, onToggl
               alignItems: 'center',
               gap: 1.5,
               p: 1,
-              borderRadius: 2,
-              bgcolor: alpha(theme.palette.action.hover, 0.3),
+              borderRadius: 1,
+              bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : '#E9E8E6',  // Grey/400
             }}
           >
             <Avatar
               sx={{
                 width: 32,
                 height: 32,
-                bgcolor: 'primary.main',
+                bgcolor: theme.palette.mode === 'dark' ? '#444' : '#8D8D86',  // Neutral grey (Grey/900)
                 fontSize: '0.75rem',
                 fontWeight: 600,
               }}
@@ -666,10 +621,23 @@ export default function Sidebar({ width, collapsed, mobileOpen, onClose, onToggl
               U
             </Avatar>
             <Box sx={{ flex: 1, minWidth: 0 }}>
-              <Typography variant="caption" fontWeight={600} noWrap>
+              <Typography
+                sx={{
+                  fontSize: '12px',
+                  fontWeight: 500,
+                  color: theme.palette.mode === 'dark' ? '#F1F0EF' : '#21201C',
+                }}
+                noWrap
+              >
                 NeuraReport
               </Typography>
-              <Typography variant="caption" color="text.tertiary" sx={{ display: 'block' }}>
+              <Typography
+                sx={{
+                  fontSize: '10px',
+                  color: theme.palette.mode === 'dark' ? '#8D8D86' : '#63635E',
+                  display: 'block'
+                }}
+              >
                 v1.0
               </Typography>
             </Box>
@@ -679,7 +647,7 @@ export default function Sidebar({ width, collapsed, mobileOpen, onClose, onToggl
             sx={{
               width: 32,
               height: 32,
-              bgcolor: 'primary.main',
+              bgcolor: theme.palette.mode === 'dark' ? '#444' : '#8D8D86',  // Neutral grey (Grey/900)
               fontSize: '0.75rem',
               fontWeight: 600,
               mx: 'auto',

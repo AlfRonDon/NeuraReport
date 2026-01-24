@@ -393,7 +393,7 @@ async def suggest_formulas(spreadsheet_id: str, request: SuggestFormulasRequest)
 # UTILITY ENDPOINTS
 # =============================================================================
 
-@router.get("/ai/tones")
+@router.get("/tones")
 async def get_available_tones():
     """Get list of available writing tones."""
     return {
@@ -404,7 +404,7 @@ async def get_available_tones():
     }
 
 
-@router.get("/ai/health")
+@router.get("/health")
 async def check_ai_health():
     """Check if AI services are configured and available."""
     from backend.app.services.config import get_settings

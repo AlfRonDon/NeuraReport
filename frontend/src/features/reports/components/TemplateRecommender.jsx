@@ -186,10 +186,10 @@ export default function TemplateRecommender({ onSelectTemplate }) {
             sx={{
               width: 32,
               height: 32,
-              bgcolor: 'primary.lighter',
+              bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : '#F1F0EF',
             }}
           >
-            <AutoAwesomeIcon sx={{ color: 'primary.main', fontSize: 18 }} />
+            <AutoAwesomeIcon sx={{ color: 'text.secondary', fontSize: 18 }} />
           </Avatar>
           <Box>
             <Typography variant="subtitle2" fontWeight={600}>

@@ -14,7 +14,7 @@ from slowapi.middleware import SlowAPIMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
-from backend.app.services.idempotency import IdempotencyMiddleware, IdempotencyStore
+from backend.app.api.idempotency import IdempotencyMiddleware, IdempotencyStore
 from backend.app.services.utils.context import set_correlation_id
 from backend.app.services.config import Settings
 from .ux_governance import UXGovernanceMiddleware, IntentHeaders
@@ -81,14 +81,15 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         # Referrer policy
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
 
-        # Content Security Policy (adjust as needed for your frontend)
+        # Content Security Policy - allow frontend to connect
+        # In development, allow localhost connections on common ports
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; "
-            "script-src 'self' 'unsafe-inline'; "
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval'; "
             "style-src 'self' 'unsafe-inline'; "
-            "img-src 'self' data: blob:; "
-            "font-src 'self'; "
-            "connect-src 'self'"
+            "img-src 'self' data: blob: http: https:; "
+            "font-src 'self' data:; "
+            "connect-src 'self' http://localhost:* http://127.0.0.1:* ws://localhost:* ws://127.0.0.1:*"
         )
 
         # Permissions Policy
@@ -199,9 +200,56 @@ class CorrelationIdMiddleware(BaseHTTPMiddleware):
 
 
 def add_middlewares(app: FastAPI, settings: Settings) -> None:
-    """Configure all application middlewares."""
+    """Configure all application middlewares.
 
-    # CORS middleware - be more restrictive in production
+    NOTE: Middleware is executed in REVERSE order of addition.
+    The LAST middleware added is the FIRST to process requests.
+    CORS must be added LAST so it handles OPTIONS preflight requests FIRST.
+    """
+
+    # Correlation ID and logging middleware (added first, executes last)
+    app.add_middleware(CorrelationIdMiddleware)
+
+    # UX Governance middleware - enforces intent headers on mutating requests
+    # Set strict_mode=False initially to log warnings without rejecting requests
+    # Change to strict_mode=True when frontend is fully compliant
+    app.add_middleware(
+        UXGovernanceMiddleware,
+        strict_mode=settings.ux_governance_strict if hasattr(settings, 'ux_governance_strict') else False,
+    )
+
+    # Rate limiting middleware
+    if settings.rate_limit_enabled:
+        _configure_limiter(settings)
+        app.state.limiter = limiter
+        app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+        app.add_middleware(SlowAPIMiddleware)
+
+    # Request timeout middleware
+    app.add_middleware(
+        RequestTimeoutMiddleware,
+        timeout_seconds=settings.request_timeout_seconds,
+    )
+
+    # Security headers middleware
+    app.add_middleware(SecurityHeadersMiddleware)
+
+    # Trusted host middleware - configure properly in production
+    if settings.allowed_hosts_all:
+        allowed_hosts = ["*"]
+    else:
+        allowed_hosts = settings.trusted_hosts
+    app.add_middleware(TrustedHostMiddleware, allowed_hosts=allowed_hosts)
+
+    if settings.idempotency_enabled:
+        app.add_middleware(
+            IdempotencyMiddleware,
+            store=IdempotencyStore(),
+            ttl_seconds=settings.idempotency_ttl_seconds,
+        )
+
+    # CORS middleware - MUST be added LAST so it executes FIRST
+    # This ensures OPTIONS preflight requests are handled before any other middleware
     cors_origins = settings.cors_origins
     if settings.debug_mode:
         # In debug mode, allow more origins for development
@@ -238,44 +286,3 @@ def add_middlewares(app: FastAPI, settings: Settings) -> None:
             "X-Intent-Processed",
         ],
     )
-
-    if settings.idempotency_enabled:
-        app.add_middleware(
-            IdempotencyMiddleware,
-            store=IdempotencyStore(),
-            ttl_seconds=settings.idempotency_ttl_seconds,
-        )
-
-    # Trusted host middleware - configure properly in production
-    if settings.allowed_hosts_all:
-        allowed_hosts = ["*"]
-    else:
-        allowed_hosts = settings.trusted_hosts
-    app.add_middleware(TrustedHostMiddleware, allowed_hosts=allowed_hosts)
-
-    # Security headers middleware
-    app.add_middleware(SecurityHeadersMiddleware)
-
-    # Request timeout middleware
-    app.add_middleware(
-        RequestTimeoutMiddleware,
-        timeout_seconds=settings.request_timeout_seconds,
-    )
-
-    # Rate limiting middleware
-    if settings.rate_limit_enabled:
-        _configure_limiter(settings)
-        app.state.limiter = limiter
-        app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
-        app.add_middleware(SlowAPIMiddleware)
-
-    # UX Governance middleware - enforces intent headers on mutating requests
-    # Set strict_mode=False initially to log warnings without rejecting requests
-    # Change to strict_mode=True when frontend is fully compliant
-    app.add_middleware(
-        UXGovernanceMiddleware,
-        strict_mode=settings.ux_governance_strict if hasattr(settings, 'ux_governance_strict') else False,
-    )
-
-    # Correlation ID and logging middleware (should be last to wrap everything)
-    app.add_middleware(CorrelationIdMiddleware)

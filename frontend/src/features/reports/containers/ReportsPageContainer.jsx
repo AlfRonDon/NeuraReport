@@ -87,13 +87,7 @@ const glow = keyframes`
 const PageContainer = styled(Box)(({ theme }) => ({
   minHeight: '100vh',
   padding: theme.spacing(3),
-  background: theme.palette.mode === 'dark'
-    ? `radial-gradient(ellipse at 20% 0%, ${alpha(theme.palette.primary.dark, 0.15)} 0%, transparent 50%),
-       radial-gradient(ellipse at 80% 100%, ${alpha(theme.palette.secondary.dark, 0.1)} 0%, transparent 50%),
-       ${theme.palette.background.default}`
-    : `radial-gradient(ellipse at 20% 0%, ${alpha(theme.palette.primary.light, 0.08)} 0%, transparent 50%),
-       radial-gradient(ellipse at 80% 100%, ${alpha(theme.palette.secondary.light, 0.05)} 0%, transparent 50%),
-       ${theme.palette.background.default}`,
+  backgroundColor: theme.palette.background.default,
 }))
 
 const PageHeader = styled(Box)(({ theme }) => ({
@@ -105,10 +99,7 @@ const PageTitle = styled(Typography)(({ theme }) => ({
   fontSize: '1.75rem',
   fontWeight: 700,
   letterSpacing: '-0.02em',
-  background: `linear-gradient(135deg, ${theme.palette.text.primary} 0%, ${theme.palette.primary.main} 100%)`,
-  WebkitBackgroundClip: 'text',
-  WebkitTextFillColor: 'transparent',
-  backgroundClip: 'text',
+  color: theme.palette.mode === 'dark' ? '#F1F0EF' : '#21201C',
 }))
 
 const GlassCard = styled(Paper)(({ theme }) => ({
@@ -121,16 +112,6 @@ const GlassCard = styled(Paper)(({ theme }) => ({
   animation: `${fadeInUp} 0.6s ease-out`,
   position: 'relative',
   overflow: 'hidden',
-  '&::before': {
-    content: '""',
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 80,
-    background: `linear-gradient(180deg, ${alpha(theme.palette.primary.main, 0.03)} 0%, transparent 100%)`,
-    pointerEvents: 'none',
-  },
 }))
 
 const SectionLabel = styled(Typography)(({ theme }) => ({
@@ -138,7 +119,7 @@ const SectionLabel = styled(Typography)(({ theme }) => ({
   fontWeight: 700,
   textTransform: 'uppercase',
   letterSpacing: '0.1em',
-  color: theme.palette.primary.main,
+  color: theme.palette.text.secondary,
   marginBottom: theme.spacing(1.5),
   display: 'flex',
   alignItems: 'center',
@@ -147,7 +128,7 @@ const SectionLabel = styled(Typography)(({ theme }) => ({
     content: '""',
     flex: 1,
     height: 1,
-    background: `linear-gradient(90deg, ${alpha(theme.palette.primary.main, 0.3)} 0%, transparent 100%)`,
+    backgroundColor: alpha(theme.palette.divider, 0.3),
   },
 }))
 
@@ -220,9 +201,9 @@ const DiscoveryChip = styled(Chip)(({ theme }) => ({
   borderRadius: 8,
   fontWeight: 600,
   fontSize: '0.75rem',
-  backgroundColor: alpha(theme.palette.info.main, 0.1),
-  color: theme.palette.info.main,
-  border: `1px solid ${alpha(theme.palette.info.main, 0.2)}`,
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
+  color: theme.palette.text.secondary,
+  border: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
 }))
 
 const BatchListContainer = styled(Box)(({ theme }) => ({
@@ -359,34 +340,42 @@ const StyledLinearProgress = styled(LinearProgress)(({ theme }) => ({
 
 const WarningAlert = styled(Alert)(({ theme }) => ({
   borderRadius: 12,
-  backgroundColor: alpha(theme.palette.warning.main, 0.1),
-  border: `1px solid ${alpha(theme.palette.warning.main, 0.2)}`,
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8',
+  border: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
   '& .MuiAlert-icon': {
-    color: theme.palette.warning.main,
+    color: theme.palette.text.secondary,
+  },
+  '& .MuiAlert-message': {
+    color: theme.palette.text.primary,
   },
 }))
 
 const SuccessAlert = styled(Alert)(({ theme }) => ({
   borderRadius: 12,
-  backgroundColor: alpha(theme.palette.success.main, 0.1),
-  border: `1px solid ${alpha(theme.palette.success.main, 0.2)}`,
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8',
+  border: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
   '& .MuiAlert-icon': {
-    color: theme.palette.success.main,
+    color: theme.palette.text.secondary,
+  },
+  '& .MuiAlert-message': {
+    color: theme.palette.text.primary,
   },
 }))
 
 const ErrorAlert = styled(Alert)(({ theme }) => ({
   borderRadius: 12,
-  backgroundColor: alpha(theme.palette.error.main, 0.1),
-  border: `1px solid ${alpha(theme.palette.error.main, 0.2)}`,
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8',
+  border: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
   '& .MuiAlert-icon': {
-    color: theme.palette.error.main,
+    color: theme.palette.text.secondary,
+  },
+  '& .MuiAlert-message': {
+    color: theme.palette.text.primary,
   },
 }))
 
 const AiIcon = styled(AutoAwesomeIcon)(({ theme }) => ({
-  color: theme.palette.primary.main,
-  animation: `${pulse} 2s infinite ease-in-out`,
+  color: theme.palette.text.secondary,
 }))
 
 const DownloadButton = styled(Button)(({ theme }) => ({

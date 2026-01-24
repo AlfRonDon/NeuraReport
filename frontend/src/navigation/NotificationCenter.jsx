@@ -352,7 +352,7 @@ export default function NotificationCenter() {
             transition: 'all 0.2s ease',
             '&:hover': {
               color: theme.palette.text.primary,
-              bgcolor: alpha(theme.palette.primary.main, 0.08),
+              bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
             },
           }}
         >
@@ -523,9 +523,9 @@ export default function NotificationCenter() {
                           px: 2,
                           bgcolor: notification.read
                             ? 'transparent'
-                            : alpha(theme.palette.info.main, 0.05),
+                            : (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.03) : '#F9F9F8'),
                           '&:hover': {
-                            bgcolor: alpha(theme.palette.primary.main, 0.05),
+                            bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F1F0EF',
                           },
                         }}
                       >

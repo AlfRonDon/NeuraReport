@@ -14,7 +14,7 @@ except Exception:  # pragma: no cover - auth optional
         return None
 
 from .config import get_settings
-from .errors import AppError
+from backend.app.utils.errors import AppError
 
 
 def constant_time_compare(a: str | None, b: str | None) -> bool:

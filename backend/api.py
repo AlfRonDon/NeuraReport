@@ -7,6 +7,36 @@ import warnings
 from contextlib import asynccontextmanager
 from pathlib import Path
 
+# Load environment variables FIRST, before any backend imports
+# This ensures settings are loaded with correct env values
+def _load_env_early():
+    """Load .env file before any pydantic imports."""
+    env_paths = [
+        Path(__file__).resolve().parent / ".env",  # backend/.env
+        Path(__file__).resolve().parent.parent / ".env",  # project root/.env
+    ]
+    loaded_from = None
+    for env_path in env_paths:
+        if env_path.exists():
+            loaded_from = env_path
+            for line in env_path.read_text(encoding="utf-8").splitlines():
+                line = line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                if "=" in line:
+                    key, value = line.split("=", 1)
+                    key = key.strip()
+                    value = value.strip().strip('"').strip("'")
+                    if key and not key.startswith("#"):
+                        os.environ.setdefault(key, value)
+            break
+    # Debug: print to stderr to see in uvicorn output
+    import sys
+    print(f"[ENV] Loaded from: {loaded_from}", file=sys.stderr)
+    print(f"[ENV] NEURA_DEBUG={os.environ.get('NEURA_DEBUG')}", file=sys.stderr)
+
+_load_env_early()
+
 # Silence noisy deprecations from dependencies during import/test
 warnings.filterwarnings("ignore", message=".*on_event is deprecated.*", category=DeprecationWarning)
 warnings.filterwarnings("ignore", message=".*Support for class-based `config` is deprecated.*", category=DeprecationWarning)
@@ -18,7 +48,7 @@ from fastapi import FastAPI, UploadFile
 from backend.app.services.static_files import UploadsStaticFiles
 
 from backend.app.utils.event_bus import EventBus, logging_middleware, metrics_middleware
-from backend.app.services.errors import add_exception_handlers
+from backend.app.api.error_handlers import add_exception_handlers
 from backend.app.api.middleware import add_middlewares  # ARCH-EXC-002
 from backend.app.api.router import register_routes  # ARCH-EXC-002
 from backend.legacy.services.report_service import (
@@ -33,7 +63,6 @@ from backend.legacy.services import report_service as report_service
 
 from backend.app.services.config import get_settings, log_settings
 from backend.app.services.auth import init_auth_db
-from backend.app.utils.env_loader import load_env_file
 
 from backend.app.services.jobs.report_scheduler import ReportScheduler
 from backend.app.services.background_tasks import mark_incomplete_jobs_failed
@@ -72,8 +101,6 @@ def _configure_error_log_handler(target_logger: logging.Logger | None = None) ->
     return log_file
 
 # ---------- App & CORS ----------
-load_env_file()
-
 logger = logging.getLogger("neura.api")
 EVENT_BUS = EventBus(middlewares=[logging_middleware(logger), metrics_middleware(logger)])
 SETTINGS = get_settings()

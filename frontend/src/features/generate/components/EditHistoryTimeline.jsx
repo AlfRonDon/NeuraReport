@@ -25,22 +25,22 @@ const EDIT_TYPE_CONFIG = {
   manual: {
     icon: EditIcon,
     label: 'Manual',
-    color: 'primary',
+    color: 'default',
   },
   ai: {
     icon: SmartToyIcon,
     label: 'AI',
-    color: 'secondary',
+    color: 'default',
   },
   chat: {
     icon: ChatIcon,
     label: 'Chat AI',
-    color: 'info',
+    color: 'default',
   },
   undo: {
     icon: UndoIcon,
     label: 'Undo',
-    color: 'warning',
+    color: 'default',
   },
   default: {
     icon: HistoryIcon,
@@ -85,7 +85,7 @@ function HistoryEntry({ entry, isLatest }) {
         py: 1,
         px: 1.5,
         borderRadius: 1,
-        bgcolor: isLatest ? (theme) => alpha(theme.palette.primary.main, 0.04) : 'transparent',
+        bgcolor: isLatest ? (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : '#F9F9F8' : 'transparent',
         '&:hover': {
           bgcolor: 'action.hover',
         },
@@ -105,7 +105,7 @@ function HistoryEntry({ entry, isLatest }) {
             width: 28,
             height: 28,
             borderRadius: '50%',
-            bgcolor: (theme) => alpha(theme.palette[config.color]?.main || theme.palette.grey[500], 0.12),
+            bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -114,7 +114,7 @@ function HistoryEntry({ entry, isLatest }) {
           <Icon
             sx={{
               fontSize: 16,
-              color: `${config.color}.main`,
+              color: 'text.secondary',
             }}
           />
         </Box>
@@ -135,16 +135,24 @@ function HistoryEntry({ entry, isLatest }) {
           <Chip
             label={config.label}
             size="small"
-            color={config.color}
             variant="outlined"
-            sx={{ height: 20, fontSize: '0.7rem' }}
+            sx={{
+              height: 20,
+              fontSize: '0.7rem',
+              borderColor: (theme) => alpha(theme.palette.divider, 0.3),
+              color: 'text.secondary',
+            }}
           />
           {isLatest && (
             <Chip
               label="Latest"
               size="small"
-              color="success"
-              sx={{ height: 20, fontSize: '0.7rem' }}
+              sx={{
+                height: 20,
+                fontSize: '0.7rem',
+                bgcolor: (theme) => theme.palette.mode === 'dark' ? '#63635E' : '#21201C',
+                color: '#fff',
+              }}
             />
           )}
         </Stack>

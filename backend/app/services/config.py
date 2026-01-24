@@ -49,7 +49,7 @@ def _load_version_info() -> dict[str, Any]:
 class Settings(BaseSettings):
     api_title: str = "NeuraReport API"
     api_version: str = "4.0"
-    cors_origins: List[str] = Field(default_factory=lambda: ["http://localhost:3000"], env="NEURA_CORS_ORIGINS")
+    cors_origins: List[str] = Field(default_factory=lambda: ["http://localhost:3000", "http://localhost:5173", "http://127.0.0.1:3000", "http://127.0.0.1:5173"], env="NEURA_CORS_ORIGINS")
     api_key: Optional[str] = Field(default=None, env="NEURA_API_KEY")
     allow_anonymous_api: bool = Field(default=False, env="NEURA_ALLOW_ANON_API")
     jwt_secret: str = Field(default="change-me", env="NEURA_JWT_SECRET")
@@ -97,14 +97,15 @@ class Settings(BaseSettings):
     analysis_max_concurrency: int = Field(default=4, env="NEURA_ANALYSIS_MAX_CONCURRENCY")
 
     # Debug/development mode
-    debug_mode: bool = Field(default=False, env="NEURA_DEBUG")
+    debug_mode: bool = Field(default=False, validation_alias="NEURA_DEBUG")
 
     # File/path safety overrides (use only in trusted environments)
-    allow_unsafe_pdf_paths: bool = Field(default=False, env="NEURA_ALLOW_UNSAFE_PDF_PATHS")
+    allow_unsafe_pdf_paths: bool = Field(default=False, validation_alias="NEURA_ALLOW_UNSAFE_PDF_PATHS")
 
     # UX Governance configuration
     # Set to True when frontend is fully compliant with governance headers
-    ux_governance_strict: bool = Field(default=True, env="NEURA_UX_GOVERNANCE_STRICT")
+    # Default is False to allow development without strict UX headers
+    ux_governance_strict: bool = Field(default=False, validation_alias="NEURA_UX_GOVERNANCE_STRICT")
 
     @property
     def uploads_root(self) -> Path:
@@ -115,11 +116,12 @@ class Settings(BaseSettings):
         return self.excel_uploads_dir
 
     if _V2_SETTINGS:
-        # Pydantic Settings v2
-        model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+        # Pydantic Settings v2 - use absolute path to backend/.env
+        _env_file = Path(__file__).resolve().parents[2] / ".env"
+        model_config = SettingsConfigDict(env_file=str(_env_file), extra="ignore")
     else:  # pragma: no cover - Pydantic v1 fallback
         class Config:
-            env_file = ".env"
+            env_file = str(Path(__file__).resolve().parents[2] / ".env")
             extra = "ignore"
 
 

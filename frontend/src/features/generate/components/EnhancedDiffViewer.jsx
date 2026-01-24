@@ -173,19 +173,19 @@ function DiffLine({ item, viewMode, expanded, onToggleExpand, syntaxHighlight })
           justifyContent: 'center',
           py: 0.5,
           px: 2,
-          bgcolor: (theme) => alpha(theme.palette.info.main, 0.08),
+          bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : '#F9F9F8',
           borderTop: '1px dashed',
           borderBottom: '1px dashed',
           borderColor: 'divider',
           cursor: 'pointer',
           '&:hover': {
-            bgcolor: (theme) => alpha(theme.palette.info.main, 0.12),
+            bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
           },
         }}
         onClick={() => onToggleExpand?.(item.startLine)}
       >
-        <UnfoldMoreIcon fontSize="small" sx={{ mr: 1, color: 'info.main' }} />
-        <Typography variant="caption" color="info.main">
+        <UnfoldMoreIcon fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} />
+        <Typography variant="caption" color="text.secondary">
           {item.count} unchanged lines (click to expand)
         </Typography>
       </Box>
@@ -206,12 +206,12 @@ function DiffLine({ item, viewMode, expanded, onToggleExpand, syntaxHighlight })
 
   if (item.type === 'removed') {
     return (
-      <Box sx={{ display: 'flex', bgcolor: (theme) => alpha(theme.palette.error.main, 0.08) }}>
-        <Box sx={{ ...lineNumberSx, bgcolor: (theme) => alpha(theme.palette.error.main, 0.15) }}>
+      <Box sx={{ display: 'flex', bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : '#F9F9F8' }}>
+        <Box sx={{ ...lineNumberSx, bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF' }}>
           {item.lineNumber.before}
         </Box>
         {viewMode === 'split' && <Box sx={lineNumberSx} />}
-        <Box sx={{ ...contentSx, color: 'error.main' }}>
+        <Box sx={{ ...contentSx, color: 'text.secondary', textDecoration: 'line-through' }}>
           <RemoveIcon sx={{ fontSize: 14, mr: 0.5, verticalAlign: 'middle' }} />
           {syntaxHighlight ? highlightHtml(item.content) : item.content}
         </Box>
@@ -221,14 +221,14 @@ function DiffLine({ item, viewMode, expanded, onToggleExpand, syntaxHighlight })
 
   if (item.type === 'added') {
     return (
-      <Box sx={{ display: 'flex', bgcolor: (theme) => alpha(theme.palette.success.main, 0.08) }}>
+      <Box sx={{ display: 'flex', bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.06) : '#E9E8E6' }}>
         <Box sx={lineNumberSx} />
         {viewMode === 'split' && (
-          <Box sx={{ ...lineNumberSx, bgcolor: (theme) => alpha(theme.palette.success.main, 0.15) }}>
+          <Box sx={{ ...lineNumberSx, bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E2E1DE' }}>
             {item.lineNumber.after}
           </Box>
         )}
-        <Box sx={{ ...contentSx, color: 'success.main' }}>
+        <Box sx={{ ...contentSx, color: 'text.primary' }}>
           <AddIcon sx={{ fontSize: 14, mr: 0.5, verticalAlign: 'middle' }} />
           {syntaxHighlight ? highlightHtml(item.content) : item.content}
         </Box>
@@ -240,17 +240,17 @@ function DiffLine({ item, viewMode, expanded, onToggleExpand, syntaxHighlight })
     if (viewMode === 'split') {
       return (
         <>
-          <Box sx={{ display: 'flex', bgcolor: (theme) => alpha(theme.palette.error.main, 0.08) }}>
-            <Box sx={{ ...lineNumberSx, bgcolor: (theme) => alpha(theme.palette.error.main, 0.15) }}>
+          <Box sx={{ display: 'flex', bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : '#F9F9F8' }}>
+            <Box sx={{ ...lineNumberSx, bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF' }}>
               {item.lineNumber.before}
             </Box>
-            <Box sx={{ ...contentSx, color: 'error.main', flex: 0.5 }}>
+            <Box sx={{ ...contentSx, color: 'text.secondary', textDecoration: 'line-through', flex: 0.5 }}>
               {syntaxHighlight ? highlightHtml(item.beforeContent) : item.beforeContent}
             </Box>
-            <Box sx={{ ...lineNumberSx, bgcolor: (theme) => alpha(theme.palette.success.main, 0.15) }}>
+            <Box sx={{ ...lineNumberSx, bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E2E1DE' }}>
               {item.lineNumber.after}
             </Box>
-            <Box sx={{ ...contentSx, color: 'success.main', flex: 0.5 }}>
+            <Box sx={{ ...contentSx, color: 'text.primary', flex: 0.5 }}>
               {syntaxHighlight ? highlightHtml(item.afterContent) : item.afterContent}
             </Box>
           </Box>
@@ -260,20 +260,20 @@ function DiffLine({ item, viewMode, expanded, onToggleExpand, syntaxHighlight })
 
     return (
       <>
-        <Box sx={{ display: 'flex', bgcolor: (theme) => alpha(theme.palette.error.main, 0.08) }}>
-          <Box sx={{ ...lineNumberSx, bgcolor: (theme) => alpha(theme.palette.error.main, 0.15) }}>
+        <Box sx={{ display: 'flex', bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : '#F9F9F8' }}>
+          <Box sx={{ ...lineNumberSx, bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF' }}>
             {item.lineNumber.before}
           </Box>
-          <Box sx={{ ...contentSx, color: 'error.main' }}>
+          <Box sx={{ ...contentSx, color: 'text.secondary', textDecoration: 'line-through' }}>
             <RemoveIcon sx={{ fontSize: 14, mr: 0.5, verticalAlign: 'middle' }} />
             {syntaxHighlight ? highlightHtml(item.beforeContent) : item.beforeContent}
           </Box>
         </Box>
-        <Box sx={{ display: 'flex', bgcolor: (theme) => alpha(theme.palette.success.main, 0.08) }}>
-          <Box sx={{ ...lineNumberSx, bgcolor: (theme) => alpha(theme.palette.success.main, 0.15) }}>
+        <Box sx={{ display: 'flex', bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.06) : '#E9E8E6' }}>
+          <Box sx={{ ...lineNumberSx, bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E2E1DE' }}>
             {item.lineNumber.after}
           </Box>
-          <Box sx={{ ...contentSx, color: 'success.main' }}>
+          <Box sx={{ ...contentSx, color: 'text.primary' }}>
             <AddIcon sx={{ fontSize: 14, mr: 0.5, verticalAlign: 'middle' }} />
             {syntaxHighlight ? highlightHtml(item.afterContent) : item.afterContent}
           </Box>
@@ -366,23 +366,23 @@ export default function EnhancedDiffViewer({ beforeText, afterText, contextLines
             size="small"
             icon={<AddIcon />}
             label={`+${stats.added}`}
-            color="success"
             variant="outlined"
+            sx={{ borderColor: (theme) => alpha(theme.palette.divider, 0.3), color: 'text.secondary' }}
           />
           <Chip
             size="small"
             icon={<RemoveIcon />}
             label={`-${stats.removed}`}
-            color="error"
             variant="outlined"
+            sx={{ borderColor: (theme) => alpha(theme.palette.divider, 0.3), color: 'text.secondary' }}
           />
           {stats.modified > 0 && (
             <Chip
               size="small"
               icon={<CompareArrowsIcon />}
               label={`~${stats.modified}`}
-              color="warning"
               variant="outlined"
+              sx={{ borderColor: (theme) => alpha(theme.palette.divider, 0.3), color: 'text.secondary' }}
             />
           )}
         </Stack>

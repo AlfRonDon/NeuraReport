@@ -99,13 +99,7 @@ const PageContainer = styled(Box)(({ theme }) => ({
   margin: '0 auto',
   width: '100%',
   minHeight: '100vh',
-  background: theme.palette.mode === 'dark'
-    ? `radial-gradient(ellipse at 20% 0%, ${alpha(theme.palette.primary.dark, 0.15)} 0%, transparent 50%),
-       radial-gradient(ellipse at 80% 100%, ${alpha(theme.palette.secondary.dark, 0.1)} 0%, transparent 50%),
-       ${theme.palette.background.default}`
-    : `radial-gradient(ellipse at 20% 0%, ${alpha(theme.palette.primary.light, 0.08)} 0%, transparent 50%),
-       radial-gradient(ellipse at 80% 100%, ${alpha(theme.palette.secondary.light, 0.05)} 0%, transparent 50%),
-       ${theme.palette.background.default}`,
+  backgroundColor: theme.palette.background.default,
 }))
 
 const HeaderContainer = styled(Stack)(({ theme }) => ({

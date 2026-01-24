@@ -141,8 +141,8 @@ export default function ConnectionSchemaDrawer({ open, onClose, connection }) {
               borderColor: alpha(theme.palette.divider, 0.2),
               color: theme.palette.text.secondary,
               '&:hover': {
-                borderColor: theme.palette.primary.main,
-                bgcolor: alpha(theme.palette.primary.main, 0.08),
+                borderColor: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
+                bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
               },
             }}
           >
@@ -216,7 +216,7 @@ export default function ConnectionSchemaDrawer({ open, onClose, connection }) {
                 sx={{
                   borderRadius: 3,
                   '&:hover': {
-                    bgcolor: alpha(theme.palette.primary.main, 0.05),
+                    bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8',
                   },
                 }}
               >
@@ -228,7 +228,7 @@ export default function ConnectionSchemaDrawer({ open, onClose, connection }) {
                     size="small"
                     label={`${formatRowCount(table.row_count)} rows`}
                     sx={{
-                      bgcolor: alpha(theme.palette.primary.main, 0.1),
+                      bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
                       color: theme.palette.text.secondary,
                       fontSize: '0.7rem',
                       height: 22,
@@ -250,7 +250,7 @@ export default function ConnectionSchemaDrawer({ open, onClose, connection }) {
                       size="small"
                       sx={{
                         '& .MuiTableCell-head': {
-                          bgcolor: alpha(theme.palette.primary.main, 0.05),
+                          bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8',
                           fontWeight: 600,
                           fontSize: '0.75rem',
                           color: theme.palette.text.secondary,
@@ -301,8 +301,8 @@ export default function ConnectionSchemaDrawer({ open, onClose, connection }) {
                           fontSize: '0.75rem',
                           borderColor: alpha(theme.palette.divider, 0.2),
                           '&:hover': {
-                            borderColor: theme.palette.primary.main,
-                            bgcolor: alpha(theme.palette.primary.main, 0.08),
+                            borderColor: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
+                            bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
                           },
                         }}
                       >
@@ -321,7 +321,7 @@ export default function ConnectionSchemaDrawer({ open, onClose, connection }) {
                         sx={{
                           mt: 1,
                           '& .MuiTableCell-head': {
-                            bgcolor: alpha(theme.palette.info.main, 0.05),
+                            bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8',
                             fontWeight: 600,
                             fontSize: '0.75rem',
                             color: theme.palette.text.secondary,

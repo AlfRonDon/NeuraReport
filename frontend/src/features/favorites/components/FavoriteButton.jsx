@@ -111,17 +111,17 @@ export default function FavoriteButton({
         onClick={handleToggle}
         disabled={loading}
         sx={{
-          color: isFavorite ? theme.palette.warning.main : theme.palette.text.secondary,
+          color: isFavorite ? (theme.palette.mode === 'dark' ? '#BCBBB5' : '#21201C') : theme.palette.text.secondary,
           transition: 'all 0.2s ease',
           '&:hover': {
-            color: theme.palette.warning.main,
-            bgcolor: alpha(theme.palette.warning.main, 0.1),
+            color: theme.palette.mode === 'dark' ? '#BCBBB5' : '#21201C',
+            bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
             transform: 'scale(1.1)',
           },
         }}
       >
         {loading ? (
-          <CircularProgress size={iconSize - 4} sx={{ color: theme.palette.warning.main }} />
+          <CircularProgress size={iconSize - 4} sx={{ color: theme.palette.text.secondary }} />
         ) : isFavorite ? (
           <StarIcon sx={{ fontSize: iconSize }} />
         ) : (

@@ -24,7 +24,7 @@ const IconButton = forwardRef(function IconButton(
         borderRadius: 2,
         transition: 'all 150ms ease',
         '&:hover': {
-          bgcolor: (theme) => alpha(theme.palette.primary.main, 0.08),
+          bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
         },
         ...props.sx,
       }}

@@ -72,15 +72,15 @@ const CommentCard = styled(Paper, {
   marginBottom: theme.spacing(1.5),
   border: `1px solid ${
     isHighlighted
-      ? theme.palette.primary.main
+      ? (theme.palette.mode === 'dark' ? '#82827C' : '#63635E')
       : isResolved
-      ? alpha(theme.palette.success.main, 0.3)
+      ? alpha(theme.palette.divider, 0.3)
       : alpha(theme.palette.divider, 0.1)
   }`,
   backgroundColor: isResolved
-    ? alpha(theme.palette.success.main, 0.02)
+    ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.02) : '#FAFAF9')
     : isHighlighted
-    ? alpha(theme.palette.primary.main, 0.04)
+    ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : '#F9F9F8')
     : 'transparent',
   opacity: isResolved ? 0.7 : 1,
   transition: 'all 0.15s ease',
@@ -90,14 +90,14 @@ const ReplyCard = styled(Box)(({ theme }) => ({
   marginTop: theme.spacing(1.5),
   paddingTop: theme.spacing(1.5),
   paddingLeft: theme.spacing(2),
-  borderLeft: `2px solid ${alpha(theme.palette.primary.main, 0.2)}`,
+  borderLeft: `2px solid ${alpha(theme.palette.divider, 0.3)}`,
 }))
 
 const QuotedText = styled(Box)(({ theme }) => ({
   padding: theme.spacing(1),
   marginBottom: theme.spacing(1),
-  backgroundColor: alpha(theme.palette.warning.main, 0.08),
-  borderLeft: `3px solid ${theme.palette.warning.main}`,
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8',
+  borderLeft: `3px solid ${theme.palette.mode === 'dark' ? '#82827C' : '#BCBBB5'}`,
   borderRadius: '0 4px 4px 0',
   fontSize: '0.75rem',
   fontStyle: 'italic',
@@ -188,8 +188,8 @@ function CommentItem({
             width: 28,
             height: 28,
             fontSize: '0.75rem',
-            bgcolor: alpha(theme.palette.primary.main, 0.2),
-            color: theme.palette.primary.main,
+            bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF',
+            color: theme.palette.text.secondary,
           }}
         >
           {getInitials(comment.author_name)}
@@ -206,8 +206,13 @@ function CommentItem({
           <Chip
             label="Resolved"
             size="small"
-            color="success"
-            sx={{ borderRadius: 1, fontSize: '0.65rem', height: 20 }}
+            sx={{
+              borderRadius: 1,
+              fontSize: '0.65rem',
+              height: 20,
+              bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
+              color: 'text.secondary',
+            }}
           />
         )}
       </Stack>
@@ -245,7 +250,7 @@ function CommentItem({
                   onResolve?.(comment.id)
                 }}
               >
-                <ResolveIcon sx={{ fontSize: 16, color: 'success.main' }} />
+                <ResolveIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
               </IconButton>
             </Tooltip>
           </>
@@ -258,7 +263,7 @@ function CommentItem({
               onDelete?.(comment.id)
             }}
           >
-            <DeleteIcon sx={{ fontSize: 16, color: 'error.main' }} />
+            <DeleteIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
           </IconButton>
         </Tooltip>
 
@@ -328,8 +333,8 @@ function CommentItem({
                   width: 22,
                   height: 22,
                   fontSize: '0.65rem',
-                  bgcolor: alpha(theme.palette.secondary.main, 0.2),
-                  color: theme.palette.secondary.main,
+                  bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#E9E8E6',
+                  color: theme.palette.text.secondary,
                 }}
               >
                 {getInitials(reply.author_name)}
@@ -394,7 +399,7 @@ export default function CommentsPanel({
     <PanelContainer>
       <PanelHeader>
         <Stack direction="row" alignItems="center" spacing={1}>
-          <CommentIcon sx={{ color: 'primary.main', fontSize: 20 }} />
+          <CommentIcon sx={{ color: 'text.secondary', fontSize: 20 }} />
           <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
             Comments
           </Typography>
@@ -416,25 +421,40 @@ export default function CommentsPanel({
             label={`All (${comments.length})`}
             size="small"
             onClick={() => setFilter('all')}
-            color={filter === 'all' ? 'primary' : 'default'}
             variant={filter === 'all' ? 'filled' : 'outlined'}
-            sx={{ borderRadius: 1, fontSize: '0.7rem' }}
+            sx={{
+              borderRadius: 1,
+              fontSize: '0.7rem',
+              bgcolor: filter === 'all' ? (theme.palette.mode === 'dark' ? '#63635E' : '#21201C') : 'transparent',
+              color: filter === 'all' ? '#fff' : 'text.secondary',
+              borderColor: filter === 'all' ? 'transparent' : alpha(theme.palette.divider, 0.3),
+            }}
           />
           <Chip
             label={`Open (${openCount})`}
             size="small"
             onClick={() => setFilter('open')}
-            color={filter === 'open' ? 'primary' : 'default'}
             variant={filter === 'open' ? 'filled' : 'outlined'}
-            sx={{ borderRadius: 1, fontSize: '0.7rem' }}
+            sx={{
+              borderRadius: 1,
+              fontSize: '0.7rem',
+              bgcolor: filter === 'open' ? (theme.palette.mode === 'dark' ? '#63635E' : '#21201C') : 'transparent',
+              color: filter === 'open' ? '#fff' : 'text.secondary',
+              borderColor: filter === 'open' ? 'transparent' : alpha(theme.palette.divider, 0.3),
+            }}
           />
           <Chip
             label={`Resolved (${resolvedCount})`}
             size="small"
             onClick={() => setFilter('resolved')}
-            color={filter === 'resolved' ? 'primary' : 'default'}
             variant={filter === 'resolved' ? 'filled' : 'outlined'}
-            sx={{ borderRadius: 1, fontSize: '0.7rem' }}
+            sx={{
+              borderRadius: 1,
+              fontSize: '0.7rem',
+              bgcolor: filter === 'resolved' ? (theme.palette.mode === 'dark' ? '#63635E' : '#21201C') : 'transparent',
+              color: filter === 'resolved' ? '#fff' : 'text.secondary',
+              borderColor: filter === 'resolved' ? 'transparent' : alpha(theme.palette.divider, 0.3),
+            }}
           />
         </Stack>
       </Box>

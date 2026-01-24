@@ -77,7 +77,7 @@ class ErrorBoundary extends Component {
                 width: 72,
                 height: 72,
                 borderRadius: '50%',
-                bgcolor: (theme) => alpha(theme.palette.error.main, 0.15),
+                bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -85,7 +85,7 @@ class ErrorBoundary extends Component {
                 mb: 3,
               }}
             >
-              <ErrorOutlineIcon sx={{ fontSize: 36, color: 'error.main' }} />
+              <ErrorOutlineIcon sx={{ fontSize: 36, color: 'text.secondary' }} />
             </Box>
 
             <Typography
@@ -104,9 +104,9 @@ class ErrorBoundary extends Component {
             {import.meta.env?.DEV && this.state.error && (
               <Box
                 sx={{
-                  bgcolor: (theme) => alpha(theme.palette.error.main, 0.1),
+                  bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8',
                   border: 1,
-                  borderColor: (theme) => alpha(theme.palette.error.main, 0.2),
+                  borderColor: (theme) => alpha(theme.palette.divider, 0.2),
                   borderRadius: 2,
                   p: 2,
                   mb: 3,
@@ -119,7 +119,7 @@ class ErrorBoundary extends Component {
                   sx={{
                     fontFamily: 'monospace',
                     fontSize: '0.75rem',
-                    color: 'error.main',
+                    color: 'text.secondary',
                     whiteSpace: 'pre-wrap',
                     wordBreak: 'break-all',
                   }}
@@ -158,14 +158,15 @@ class ErrorBoundary extends Component {
                 variant="contained"
                 startIcon={<RefreshIcon />}
                 onClick={reloadHandler}
-                color="primary"
                 sx={{
                   borderRadius: 3,
                   textTransform: 'none',
                   fontWeight: 600,
-                  boxShadow: (theme) => `0 4px 14px ${alpha(theme.palette.primary.main, 0.3)}`,
+                  bgcolor: (theme) => theme.palette.mode === 'dark' ? '#63635E' : '#21201C',
+                  boxShadow: (theme) => `0 4px 14px ${alpha(theme.palette.common.black, 0.15)}`,
                   '&:hover': {
-                    boxShadow: (theme) => `0 6px 20px ${alpha(theme.palette.primary.main, 0.4)}`,
+                    bgcolor: (theme) => theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
+                    boxShadow: (theme) => `0 6px 20px ${alpha(theme.palette.common.black, 0.2)}`,
                   },
                 }}
               >

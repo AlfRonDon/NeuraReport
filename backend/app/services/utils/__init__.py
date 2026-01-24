@@ -12,7 +12,7 @@ from .context import get_correlation_id, set_correlation_id
 # Re-export convenience functions for tidy imports.
 from backend.app.utils.fs import write_json_atomic, write_text_atomic
 from .html import sanitize_html
-from .llm import call_chat_completion
+from .llm import call_chat_completion, append_raw_llm_output
 from .lock import TemplateLockError, acquire_template_lock
 from .prompts import available_prompts, load_prompt
 from .render import render_html_to_png

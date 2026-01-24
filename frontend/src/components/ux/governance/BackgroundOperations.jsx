@@ -295,13 +295,13 @@ export function BackgroundOperationsProvider({ children }) {
   const getStatusIcon = (status) => {
     switch (status) {
       case BackgroundOperationStatus.COMPLETED:
-        return <SuccessIcon sx={{ color: theme.palette.success.main }} />
+        return <SuccessIcon sx={{ color: theme.palette.text.secondary }} />
       case BackgroundOperationStatus.FAILED:
-        return <ErrorIcon sx={{ color: theme.palette.error.main }} />
+        return <ErrorIcon sx={{ color: theme.palette.text.secondary }} />
       case BackgroundOperationStatus.RUNNING:
-        return <RunningIcon sx={{ color: theme.palette.primary.main }} />
+        return <RunningIcon sx={{ color: theme.palette.mode === 'dark' ? '#BCBBB5' : '#21201C' }} />
       case BackgroundOperationStatus.CANCELLED:
-        return <CancelIcon sx={{ color: theme.palette.warning.main }} />
+        return <CancelIcon sx={{ color: theme.palette.text.secondary }} />
       default:
         return <PendingIcon sx={{ color: theme.palette.text.secondary }} />
     }
@@ -388,7 +388,7 @@ export function BackgroundOperationsProvider({ children }) {
           }}
         >
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-            <NotifyIcon color="primary" />
+            <NotifyIcon sx={{ color: 'text.secondary' }} />
             <Typography variant="h6" fontWeight={600}>
               Background Tasks
             </Typography>
@@ -396,8 +396,12 @@ export function BackgroundOperationsProvider({ children }) {
               <Chip
                 size="small"
                 label={`${activeCount} active`}
-                color="primary"
-                sx={{ height: 22, fontSize: '0.6875rem' }}
+                sx={{
+                  height: 22,
+                  fontSize: '0.6875rem',
+                  bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
+                  color: 'text.primary',
+                }}
               />
             )}
           </Box>
@@ -452,11 +456,12 @@ export function BackgroundOperationsProvider({ children }) {
                         width: 36,
                         height: 36,
                         borderRadius: 2,
-                        bgcolor: alpha(theme.palette.primary.main, 0.1),
+                        bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         flexShrink: 0,
+                        color: 'text.secondary',
                       }}
                     >
                       {getTypeIcon(op.type)}
@@ -482,9 +487,9 @@ export function BackgroundOperationsProvider({ children }) {
                           size="small"
                           onClick={() => cancelOperation(op.id)}
                           sx={{
-                            color: theme.palette.error.main,
+                            color: theme.palette.text.secondary,
                             '&:hover': {
-                              bgcolor: alpha(theme.palette.error.main, 0.1),
+                              bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
                             },
                           }}
                         >
@@ -501,7 +506,10 @@ export function BackgroundOperationsProvider({ children }) {
                       sx={{
                         height: 4,
                         borderRadius: 2,
-                        bgcolor: alpha(theme.palette.primary.main, 0.1),
+                        bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
+                        '& .MuiLinearProgress-bar': {
+                          bgcolor: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
+                        },
                       }}
                     />
                   )}
@@ -620,18 +628,19 @@ export function BackgroundTasksButton() {
     <IconButton
       onClick={openDrawer}
       sx={{
-        color: activeCount > 0 ? theme.palette.primary.main : theme.palette.text.secondary,
+        color: activeCount > 0 ? (theme.palette.mode === 'dark' ? '#BCBBB5' : '#21201C') : theme.palette.text.secondary,
       }}
     >
       <Badge
         badgeContent={activeCount}
-        color="primary"
         max={99}
         sx={{
           '& .MuiBadge-badge': {
             fontSize: '0.6rem',
             height: 16,
             minWidth: 16,
+            bgcolor: theme.palette.mode === 'dark' ? '#63635E' : '#21201C',
+            color: '#fff',
           },
         }}
       >

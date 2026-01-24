@@ -77,9 +77,10 @@ const shimmer = keyframes`
 // =============================================================================
 
 const StyledAppBar = styled(AppBar)(({ theme }) => ({
-  backgroundColor: alpha(theme.palette.background.paper, 0.7),
-  backdropFilter: 'blur(20px)',
-  borderBottom: `1px solid ${alpha(theme.palette.divider, 0.08)}`,
+  // Solid white header from Figma - no blur
+  backgroundColor: theme.palette.mode === 'dark' ? '#1A1A1A' : '#FFFFFF',
+  backdropFilter: 'none',
+  borderBottom: `1px solid ${theme.palette.mode === 'dark' ? '#333' : '#E5E7EB'}`,
   boxShadow: 'none',
 }))
 
@@ -95,16 +96,16 @@ const StyledToolbar = styled(Toolbar)(({ theme }) => ({
 const NavIconButton = styled(IconButton)(({ theme }) => ({
   width: 36,
   height: 36,
-  borderRadius: 10,
-  color: theme.palette.text.secondary,
-  transition: 'all 0.2s ease',
+  borderRadius: 8,
+  // Muted grey icons from Figma
+  color: theme.palette.mode === 'dark' ? '#8D8D86' : '#9CA3AF',
+  transition: 'all 0.15s ease',
   '&:hover': {
-    backgroundColor: alpha(theme.palette.primary.main, 0.08),
-    color: theme.palette.primary.main,
-    transform: 'translateY(-1px)',
+    backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)',
+    color: theme.palette.mode === 'dark' ? '#F1F0EF' : '#374151',
   },
   '&:active': {
-    transform: 'translateY(0)',
+    transform: 'none',
   },
 }))
 
@@ -146,14 +147,15 @@ const StatusDot = styled(Box, {
 
 const StyledBadge = styled(Badge)(({ theme }) => ({
   '& .MuiBadge-badge': {
-    backgroundColor: theme.palette.primary.main,
+    // Neutral badge color - not green
+    backgroundColor: theme.palette.mode === 'dark' ? '#63635E' : '#6B7280',
     color: '#fff',
     fontSize: '0.65rem',
     fontWeight: 600,
     minWidth: 18,
     height: 18,
     borderRadius: 9,
-    boxShadow: `0 2px 8px ${alpha(theme.palette.primary.main, 0.4)}`,
+    boxShadow: 'none',
     animation: `${fadeIn} 0.3s ease-out`,
   },
 }))

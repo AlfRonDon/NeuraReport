@@ -128,8 +128,8 @@ export default function Drawer({
               borderRadius: 2,
               transition: 'all 0.2s ease',
               '&:hover': {
-                bgcolor: alpha(theme.palette.error.main, 0.1),
-                color: theme.palette.error.main,
+                bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
+                color: theme.palette.text.primary,
                 transform: 'rotate(90deg)',
               },
             }}
@@ -190,11 +190,12 @@ export default function Drawer({
                     borderRadius: 2.5,
                     textTransform: 'none',
                     fontWeight: 600,
-                    background: `linear-gradient(135deg, ${theme.palette.success.main}, ${theme.palette.success.dark})`,
-                    boxShadow: `0 4px 14px ${alpha(theme.palette.success.main, 0.3)}`,
+                    bgcolor: theme.palette.mode === 'dark' ? '#63635E' : '#21201C',
+                    boxShadow: `0 4px 14px ${alpha(theme.palette.common.black, 0.15)}`,
                     transition: 'all 0.2s ease',
                     '&:hover': {
-                      boxShadow: `0 6px 20px ${alpha(theme.palette.success.main, 0.4)}`,
+                      bgcolor: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
+                      boxShadow: `0 6px 20px ${alpha(theme.palette.common.black, 0.2)}`,
                       transform: 'translateY(-1px)',
                     },
                     '&:active': {

@@ -5,29 +5,29 @@
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 :root {
-  /* Font families - Lato from Figma Neuract UI */
+  /* Font families - Lato from Figma */
   --font-ui: 'Lato', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
   --font-mono: 'JetBrains Mono', 'SF Mono', Monaco, 'Cascadia Code', Consolas, monospace;
 
-  /* Colors - Warm earthy theme (from Neuract UI Figma) */
-  --color-bg-primary: #F9F9F8;    /* App background - warm off-white (grey/200) */
+  /* Colors - EXACT match to Figma Neuract UI */
+  --color-bg-primary: #F9F9F8;    /* Main content background - Grey/200 from Figma */
   --color-bg-surface: #FFFFFF;    /* Cards, panels - pure white */
-  --color-bg-tertiary: #FFF5EB;   /* Warm cream surface */
-  --color-bg-warm: #F5EBE1;       /* Warm beige overlay */
-  --color-border: #E5D4C3;        /* Warm borders from Figma */
-  --color-border-hover: #D9C7B5;  /* Darker warm border */
+  --color-bg-sidebar: #FFFFFF;    /* White sidebar - no cream */
+  --color-bg-input: #F1F0EF;      /* Input field background - Grey/300 */
+  --color-border: #E2E1DE;        /* Standard border - Grey/500 */
+  --color-border-subtle: #E9E8E6; /* Subtle border - Grey/400 */
 
-  /* Text colors from Figma - Gray Typography scale */
-  --color-text-primary: #1B2533;   /* Gray Typography/800 */
-  --color-text-secondary: #697483; /* Gray Typography/400 */
-  --color-text-muted: #8D8D86;     /* grey/900 */
+  /* Text colors from Figma */
+  --color-text-primary: #1F2937;   /* Dark grey headings */
+  --color-text-secondary: #6B7280; /* Muted body text */
+  --color-text-muted: #9CA3AF;     /* Very muted/disabled */
 
-  /* Brand color - Neuract green (Primary/300 from Figma) */
+  /* Brand color - use sparingly */
   --color-brand: #08C18F;
   --color-brand-hover: #06A077;
 
   /* Status colors */
-  --color-success: #22C55E;        /* Success/500 from Figma */
+  --color-success: #22C55E;
   --color-success-bg: #D1F4E0;
   --color-warning: #F59E0B;
   --color-warning-bg: #FEF3C7;
@@ -43,22 +43,23 @@
   --space-2: 16px;
   --space-3: 24px;
   --space-4: 32px;
+  --space-5: 40px;
 
-  /* Border radius from Figma */
+  /* Border radius */
   --radius-sm: 4px;
   --radius-md: 6px;
   --radius-lg: 8px;
   --radius-xl: 12px;
 
-  /* Shadows from Figma - multi-layered soft shadows */
-  --shadow-card: 1px 1px 4px rgba(64,55,47,0.12);
-  --shadow-elevated: 3px 3px 8px rgba(0,0,0,0.12), 1px 2px 4px rgba(0,0,0,0.05);
-  --shadow-modal: -1px 1px 8px rgba(0,0,0,0.12), -1px 1px 24px rgba(0,0,0,0.12);
+  /* Shadows - clean, subtle */
+  --shadow-card: 0 1px 3px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.05);
+  --shadow-elevated: 0 2px 8px rgba(0,0,0,0.08), 0 8px 24px rgba(0,0,0,0.06);
+  --shadow-modal: 0 4px 12px rgba(0,0,0,0.1), 0 12px 32px rgba(0,0,0,0.08);
 
   font-family: var(--font-ui);
-  line-height: 1.4;
+  line-height: 1.5;
   font-weight: 400;
-  font-size: 14px;  /* 14px base font from Figma */
+  font-size: 14px;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -80,8 +81,9 @@ body {
   min-width: 320px;
   min-height: 100vh;
   font-family: var(--font-ui);
-  background-color: var(--color-bg-primary);
-  color: var(--color-text-primary);
+  /* Light grey background from Figma Grey/200 */
+  background-color: #F9F9F8;
+  color: #21201C;  /* Grey/1200 from Figma */
 }
 
 body[data-compact-tables="true"] .MuiTableCell-root {
@@ -129,13 +131,13 @@ code {
   background-color: var(--color-bg-tertiary);
 }
 
-/* Selection - brand green accent */
+/* Selection - neutral */
 ::selection {
-  background-color: rgba(8, 193, 143, 0.2);
+  background-color: rgba(31, 41, 55, 0.15);
   color: inherit;
 }
 
-/* Scrollbar - warm tones */
+/* Scrollbar - neutral grey */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -146,17 +148,17 @@ code {
 }
 
 ::-webkit-scrollbar-thumb {
-  background-color: rgba(217, 199, 181, 0.6);  /* Warm scrollbar from border color */
+  background-color: rgba(156, 163, 175, 0.5);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(197, 181, 165, 0.8);
+  background-color: rgba(107, 114, 128, 0.6);
 }
 
-/* Focus states - brand green accent */
+/* Focus states - neutral dark grey */
 :focus-visible {
-  outline: 2px solid var(--color-brand);
+  outline: 2px solid #1F2937;
   outline-offset: 2px;
 }
 

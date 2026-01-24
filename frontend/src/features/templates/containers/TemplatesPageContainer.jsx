@@ -92,13 +92,7 @@ const PageContainer = styled(Box)(({ theme }) => ({
   margin: '0 auto',
   width: '100%',
   minHeight: '100vh',
-  background: theme.palette.mode === 'dark'
-    ? `radial-gradient(ellipse at 20% 0%, ${alpha(theme.palette.primary.dark, 0.15)} 0%, transparent 50%),
-       radial-gradient(ellipse at 80% 100%, ${alpha(theme.palette.secondary.dark, 0.1)} 0%, transparent 50%),
-       ${theme.palette.background.default}`
-    : `radial-gradient(ellipse at 20% 0%, ${alpha(theme.palette.primary.light, 0.08)} 0%, transparent 50%),
-       radial-gradient(ellipse at 80% 100%, ${alpha(theme.palette.secondary.light, 0.05)} 0%, transparent 50%),
-       ${theme.palette.background.default}`,
+  backgroundColor: theme.palette.background.default,
 }))
 
 const QuickFilterChip = styled(Chip)(({ theme }) => ({
@@ -237,11 +231,11 @@ const SecondaryButton = styled(ActionButton)(({ theme }) => ({
 
 const KindIconContainer = styled(Box, {
   shouldForwardProp: (prop) => prop !== 'iconColor',
-})(({ theme, iconColor }) => ({
+})(({ theme }) => ({
   width: 36,
   height: 36,
   borderRadius: 10,
-  backgroundColor: alpha(iconColor || theme.palette.primary.main, 0.12),
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
@@ -913,8 +907,8 @@ export default function TemplatesPage() {
               initialFavorite={favorites.has(row.id)}
               onToggle={(isFav) => handleFavoriteToggle(row.id, isFav)}
             />
-            <KindIconContainer iconColor={config.color}>
-              <Icon sx={{ color: config.color, fontSize: 18 }} />
+            <KindIconContainer>
+              <Icon sx={{ color: 'text.secondary', fontSize: 18 }} />
             </KindIconContainer>
             <Box>
               <Typography sx={{ fontWeight: 500, fontSize: '0.8125rem', color: 'text.primary' }}>
@@ -1398,8 +1392,8 @@ export default function TemplatesPage() {
                     onClick={() => handleSelectSimilarTemplate(template)}
                   >
                     <Stack direction="row" alignItems="center" spacing={2}>
-                      <KindIconContainer iconColor={config.color}>
-                        <Icon sx={{ color: config.color, fontSize: 18 }} />
+                      <KindIconContainer>
+                        <Icon sx={{ color: 'text.secondary', fontSize: 18 }} />
                       </KindIconContainer>
                       <Box sx={{ flex: 1 }}>
                         <Typography variant="subtitle2">{template.name || template.id}</Typography>

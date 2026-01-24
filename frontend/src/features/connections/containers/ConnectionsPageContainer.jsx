@@ -69,13 +69,7 @@ const PageContainer = styled(Box)(({ theme }) => ({
   margin: '0 auto',
   width: '100%',
   minHeight: '100vh',
-  background: theme.palette.mode === 'dark'
-    ? `radial-gradient(ellipse at 20% 0%, ${alpha(theme.palette.primary.dark, 0.15)} 0%, transparent 50%),
-       radial-gradient(ellipse at 80% 100%, ${alpha(theme.palette.secondary.dark, 0.1)} 0%, transparent 50%),
-       ${theme.palette.background.default}`
-    : `radial-gradient(ellipse at 20% 0%, ${alpha(theme.palette.primary.light, 0.08)} 0%, transparent 50%),
-       radial-gradient(ellipse at 80% 100%, ${alpha(theme.palette.secondary.light, 0.05)} 0%, transparent 50%),
-       ${theme.palette.background.default}`,
+  backgroundColor: theme.palette.background.default,
   animation: `${fadeInUp} 0.5s ease-out`,
 }))
 
@@ -368,10 +362,10 @@ export default function ConnectionsPage() {
           />
           <IconContainer
             sx={{
-              bgcolor: alpha(theme.palette.success.main, 0.15),
+              bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
             }}
           >
-            <StorageIcon sx={{ color: theme.palette.success.main, fontSize: 16 }} />
+            <StorageIcon sx={{ color: theme.palette.text.secondary, fontSize: 16 }} />
           </IconContainer>
           <Box sx={{ minWidth: 0 }}>
             <Stack direction="row" spacing={1} alignItems="center">

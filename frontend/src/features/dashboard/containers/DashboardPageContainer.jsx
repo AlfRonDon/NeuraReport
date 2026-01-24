@@ -132,24 +132,25 @@ const PageContainer = styled(Box)(({ theme }) => ({
 
 const GlassCard = styled(Box)(({ theme }) => ({
   padding: theme.spacing(3),
-  borderRadius: theme.shape.borderRadius * 2,
+  borderRadius: 8,
+  // Figma: white cards, shadow-only, NO borders
   backgroundColor: theme.palette.mode === 'dark'
     ? alpha(theme.palette.background.paper, 0.6)
-    : theme.palette.background.paper,
-  backdropFilter: 'blur(20px)',
-  border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+    : '#FFFFFF',
+  backdropFilter: 'none',
+  border: 'none',
+  // Shadow from Figma
   boxShadow: theme.palette.mode === 'dark'
     ? `0 8px 32px ${alpha('#000', 0.2)}`
-    : `0 4px 20px ${alpha('#000', 0.05)}`,
-  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+    : '0 1px 3px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.05)',
+  transition: 'all 0.2s ease',
   animation: `${fadeInUp} 0.4s ease-out`,
 
   '&:hover': {
-    transform: 'translateY(-2px)',
+    transform: 'none',
     boxShadow: theme.palette.mode === 'dark'
       ? `0 12px 40px ${alpha('#000', 0.3)}`
-      : `0 8px 30px ${alpha('#000', 0.08)}`,
-    borderColor: alpha(theme.palette.primary.main, 0.15),
+      : '0 2px 8px rgba(0,0,0,0.08), 0 8px 24px rgba(0,0,0,0.06)',
   },
 }))
 
@@ -158,41 +159,25 @@ const StatCardStyled = styled(Box, {
 })(({ theme, color = 'primary', delay = 0 }) => ({
   position: 'relative',
   padding: theme.spacing(2.5),
-  borderRadius: theme.shape.borderRadius * 2,
+  borderRadius: 8,
+  // Figma: white cards, shadow-only, NO borders
   backgroundColor: theme.palette.mode === 'dark'
     ? alpha(theme.palette.background.paper, 0.6)
-    : theme.palette.background.paper,
-  backdropFilter: 'blur(12px)',
-  border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+    : '#FFFFFF',
+  backdropFilter: 'none',
+  border: 'none',
+  boxShadow: theme.palette.mode === 'dark'
+    ? 'none'
+    : '0 1px 3px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.05)',
   cursor: 'pointer',
   overflow: 'hidden',
-  transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+  transition: 'all 0.2s ease',
   animation: `${fadeInUp} 0.5s ease-out ${delay}ms both`,
 
-  '&::before': {
-    content: '""',
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 3,
-    background: `linear-gradient(90deg, ${theme.palette[color].main}, ${theme.palette[color].light})`,
-    opacity: 0,
-    transition: 'opacity 0.25s ease',
-  },
-
   '&:hover': {
-    transform: 'translateY(-4px)',
-    boxShadow: `0 12px 32px ${alpha(theme.palette[color].main, 0.15)}`,
-    borderColor: alpha(theme.palette[color].main, 0.2),
-
-    '&::before': {
-      opacity: 1,
-    },
-
-    '& .stat-icon': {
-      transform: 'scale(1.1) rotate(5deg)',
-    },
+    boxShadow: theme.palette.mode === 'dark'
+      ? '0 4px 12px rgba(0,0,0,0.3)'
+      : '0 2px 8px rgba(0,0,0,0.08), 0 8px 24px rgba(0,0,0,0.06)',
   },
 }))
 
@@ -201,16 +186,14 @@ const QuickActionCard = styled(Box)(({ theme }) => ({
   alignItems: 'center',
   gap: theme.spacing(1.5),
   padding: theme.spacing(1.5, 2),
-  borderRadius: theme.shape.borderRadius * 1.5,
+  borderRadius: 8,
   backgroundColor: 'transparent',
-  border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+  border: 'none',
   cursor: 'pointer',
-  transition: 'all 0.2s ease',
+  transition: 'all 0.15s ease',
 
   '&:hover': {
-    backgroundColor: alpha(theme.palette.primary.main, 0.05),
-    borderColor: alpha(theme.palette.primary.main, 0.2),
-    transform: 'translateX(4px)',
+    backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.04)' : '#F3F4F6',
 
     '& .action-arrow': {
       transform: 'translateX(4px)',
@@ -218,7 +201,7 @@ const QuickActionCard = styled(Box)(({ theme }) => ({
     },
 
     '& .action-icon': {
-      color: theme.palette.primary.main,
+      color: theme.palette.mode === 'dark' ? '#F1F0EF' : '#374151',
     },
   },
 }))
@@ -364,9 +347,8 @@ function StatCard({ title, value, subtitle, icon: Icon, color = 'primary', onCli
       <Stack direction="row" alignItems="flex-start" justifyContent="space-between">
         <Box sx={{ flex: 1 }}>
           <Typography
-            variant="caption"
             sx={{
-              color: 'text.secondary',
+              color: theme.palette.mode === 'dark' ? '#8D8D86' : '#6B7280',  // Grey from Figma
               fontWeight: 600,
               textTransform: 'uppercase',
               letterSpacing: '0.05em',
@@ -376,21 +358,19 @@ function StatCard({ title, value, subtitle, icon: Icon, color = 'primary', onCli
             {title}
           </Typography>
           <Typography
-            variant="h4"
             sx={{
-              fontWeight: 700,
+              fontWeight: 600,
+              fontSize: '1.5rem',
               mt: 0.5,
               mb: 0.5,
-              background: `linear-gradient(135deg, ${theme.palette.text.primary} 0%, ${theme.palette[color].main} 100%)`,
-              backgroundClip: 'text',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
+              // Solid dark color - NO gradient
+              color: theme.palette.mode === 'dark' ? '#F1F0EF' : '#21201C',
             }}
           >
             {value}
           </Typography>
           {subtitle && (
-            <Typography variant="caption" color="text.tertiary" sx={{ fontSize: '0.6875rem' }}>
+            <Typography sx={{ fontSize: '0.6875rem', color: theme.palette.mode === 'dark' ? '#8D8D86' : '#9CA3AF' }}>
               {subtitle}
             </Typography>
           )}
@@ -402,9 +382,9 @@ function StatCard({ title, value, subtitle, icon: Icon, color = 'primary', onCli
                 <TrendingDownIcon sx={{ fontSize: 14, color: 'error.main' }} />
               )}
               <Typography
-                variant="caption"
                 sx={{
                   fontWeight: 600,
+                  fontSize: '0.75rem',
                   color: trend >= 0 ? 'success.main' : 'error.main',
                 }}
               >
@@ -422,9 +402,9 @@ function StatCard({ title, value, subtitle, icon: Icon, color = 'primary', onCli
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            bgcolor: alpha(theme.palette[color].main, 0.12),
-            color: `${color}.main`,
-            transition: 'transform 0.25s ease',
+            // Muted grey/neutral background for ALL icons - from Figma
+            bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : '#F3F4F6',
+            color: theme.palette.mode === 'dark' ? '#8D8D86' : '#9CA3AF',  // Muted grey icon
           }}
         >
           <Icon sx={{ fontSize: 24 }} />
@@ -639,23 +619,20 @@ export default function DashboardPage() {
         <Box sx={{ animation: `${fadeInUp} 0.4s ease-out` }}>
           <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 0.5 }}>
             <Typography
-              variant="h4"
               sx={{
-                fontWeight: 700,
-                letterSpacing: '-0.02em',
-                background: `linear-gradient(135deg, ${theme.palette.text.primary} 0%, ${theme.palette.primary.main} 100%)`,
-                backgroundClip: 'text',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
+                fontWeight: 500,
+                fontSize: '1.5rem',  // 24px from Figma
+                letterSpacing: 0,
+                // Solid dark color - NO gradient
+                color: theme.palette.mode === 'dark' ? '#F1F0EF' : '#21201C',
               }}
             >
               Welcome back
             </Typography>
             <WavingHandIcon
               sx={{
-                fontSize: 28,
-                color: 'warning.main',
-                animation: `${float} 2s ease-in-out infinite`,
+                fontSize: 24,
+                color: '#FBBF24',  // Neutral warm yellow
               }}
             />
           </Stack>
@@ -706,12 +683,13 @@ export default function DashboardPage() {
             onClick={() => handleNavigate('/setup/wizard', 'Open setup wizard')}
             sx={{
               px: 3,
-              py: 1.25,
-              borderRadius: 2,
-              fontWeight: 600,
-              boxShadow: `0 4px 14px ${alpha(theme.palette.primary.main, 0.3)}`,
+              py: 1,
+              borderRadius: '8px',
+              fontWeight: 500,
+              fontSize: '0.875rem',
+              boxShadow: 'none',
               '&:hover': {
-                boxShadow: `0 6px 20px ${alpha(theme.palette.primary.main, 0.4)}`,
+                boxShadow: 'none',
               },
             }}
           >
@@ -1017,7 +995,7 @@ export default function DashboardPage() {
                   width: 64,
                   height: 64,
                   borderRadius: '50%',
-                  bgcolor: alpha(theme.palette.primary.main, 0.1),
+                  bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -1123,7 +1101,7 @@ export default function DashboardPage() {
                       borderRadius: 1.5,
                       transition: 'all 0.15s ease',
                       '&:hover': {
-                        bgcolor: alpha(theme.palette.primary.main, 0.05),
+                        bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F1F0EF',
                       },
                     }}
                   >
@@ -1131,17 +1109,14 @@ export default function DashboardPage() {
                       sx={{
                         width: 32,
                         height: 32,
-                        bgcolor: alpha(
-                          tpl.kind === 'excel' ? theme.palette.success.main : theme.palette.error.main,
-                          0.15
-                        ),
+                        bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
                         fontSize: '0.75rem',
                       }}
                     >
                       {tpl.kind === 'excel' ? (
-                        <TableChartIcon sx={{ fontSize: 16, color: 'success.main' }} />
+                        <TableChartIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
                       ) : (
-                        <PictureAsPdfIcon sx={{ fontSize: 16, color: 'error.main' }} />
+                        <PictureAsPdfIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
                       )}
                     </Avatar>
                     <Box sx={{ flex: 1, minWidth: 0 }}>
@@ -1285,7 +1260,7 @@ export default function DashboardPage() {
                 width: 64,
                 height: 64,
                 borderRadius: '50%',
-                bgcolor: alpha(theme.palette.primary.main, 0.1),
+                bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -1347,8 +1322,8 @@ export default function DashboardPage() {
                           height: 20,
                           fontSize: '0.6rem',
                           fontWeight: 600,
-                          bgcolor: alpha(theme.palette.success.main, 0.15),
-                          color: 'success.main',
+                          bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF',
+                          color: 'text.secondary',
                         }}
                       />
                     )}
@@ -1385,10 +1360,10 @@ export default function DashboardPage() {
                 sx={{
                   width: 48,
                   height: 48,
-                  bgcolor: alpha(theme.palette.success.main, 0.15),
+                  bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
                 }}
               >
-                <StorageIcon sx={{ color: 'success.main' }} />
+                <StorageIcon sx={{ color: 'text.secondary' }} />
               </Avatar>
               <Box sx={{ flex: 1 }}>
                 <Typography variant="subtitle2" fontWeight={700}>

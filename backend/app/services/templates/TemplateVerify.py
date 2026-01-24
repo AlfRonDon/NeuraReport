@@ -47,26 +47,25 @@ try:
 except ImportError:  # pragma: no cover
     OpenAI = None  # type: ignore
 
+from backend.app.services.config import get_settings
+
 logger = logging.getLogger("neura.template_verify")
 
-_FORCE_GPT5 = os.getenv("NEURA_FORCE_GPT5", "true").lower() in {"1", "true", "yes"}
+
+def _get_model() -> str:
+    """Use centralized config for model selection."""
+    return get_settings().openai_model
 
 
-def _force_gpt5(model_name: str | None) -> str:
-    if not _FORCE_GPT5:
-        return str(model_name or "gpt-5").strip() or "gpt-5"
-    normalized = str(model_name or "").strip()
-    if normalized.lower().startswith("gpt-5"):
-        return normalized
-    if normalized:
-        logger.warning(
-            "llm_model_overridden",
-            extra={"event": "llm_model_overridden", "requested": normalized, "forced": "gpt-5"},
-        )
-    return "gpt-5"
+# Lazy evaluation - will be called when needed, not at import time
+MODEL = None
 
 
-MODEL = _force_gpt5(os.getenv("OPENAI_MODEL", "gpt-5"))
+def _ensure_model() -> str:
+    global MODEL
+    if MODEL is None:
+        MODEL = _get_model()
+    return MODEL
 
 
 _client: Optional["OpenAI"] = None
@@ -482,7 +481,7 @@ def request_initial_html(
     client = get_openai_client()
     resp = call_chat_completion(
         client,
-        model=MODEL,
+        model=_ensure_model(),
         messages=[{"role": "user", "content": content}],
         description="template_initial_html",
     )
@@ -574,7 +573,7 @@ def request_fix_html(
     client = get_openai_client()
     response = call_chat_completion(
         client,
-        model=MODEL,
+        model=_ensure_model(),
         messages=[
             {
                 "role": "user",

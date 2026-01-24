@@ -31,6 +31,7 @@ from pydantic import BaseModel
 
 from .config import LLMConfig, LLMProvider, get_llm_config
 from .providers import BaseProvider, LiteLLMProvider, get_provider
+from backend.app.services.utils.llm import append_raw_llm_output as _append_raw_output
 
 logger = logging.getLogger("neura.llm.client")
 
@@ -455,13 +456,7 @@ class UsageTracker:
 # Global usage tracker
 _usage_tracker = UsageTracker()
 
-# Raw output logging
-_LOG_PATH_ENV = os.getenv("LLM_RAW_OUTPUT_PATH")
-if _LOG_PATH_ENV:
-    _RAW_OUTPUT_PATH = Path(_LOG_PATH_ENV).expanduser()
-else:
-    _RAW_OUTPUT_PATH = Path(__file__).resolve().parents[3] / "llm_raw_outputs.md"
-_RAW_OUTPUT_LOCK = threading.Lock()
+# Raw output logging is handled by backend.app.services.utils.llm
 
 
 class LLMClient:
@@ -1126,48 +1121,7 @@ def health_check() -> Dict[str, Any]:
 
 
 # Helper functions
-
-def _append_raw_output(description: str, response: Any) -> None:
-    """Append the raw LLM response to a Markdown log file."""
-    timestamp = datetime.now(timezone.utc).isoformat(timespec="seconds") + "Z"
-    entry = _coerce_jsonable(response)
-
-    try:
-        with _RAW_OUTPUT_LOCK:
-            _RAW_OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
-            with _RAW_OUTPUT_PATH.open("a", encoding="utf-8") as handle:
-                handle.write(f"## {timestamp} - {description}\n\n")
-                handle.write("```json\n")
-                handle.write(json.dumps(entry, indent=2))
-                handle.write("\n```\n\n")
-    except Exception as exc:
-        logger.debug(
-            "llm_raw_output_log_failed",
-            extra={"event": "llm_raw_output_log_failed"},
-            exc_info=(type(exc), exc, exc.__traceback__),
-        )
-
-
-def _coerce_jsonable(value: Any) -> Any:
-    """Best-effort conversion to JSON-serializable data."""
-    if isinstance(value, (str, int, float, bool)) or value is None:
-        return value
-
-    if isinstance(value, dict):
-        return {str(k): _coerce_jsonable(v) for k, v in value.items()}
-
-    if isinstance(value, (list, tuple, set)):
-        return [_coerce_jsonable(v) for v in value]
-
-    for attr in ("model_dump", "to_dict", "dict"):
-        method = getattr(value, attr, None)
-        if callable(method):
-            try:
-                return _coerce_jsonable(method())
-            except Exception:
-                continue
-
-    return repr(value)
+# NOTE: _append_raw_output is imported from backend.app.services.utils.llm
 
 
 def _is_quota_exceeded_error(exc: BaseException) -> bool:

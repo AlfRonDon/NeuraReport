@@ -88,7 +88,7 @@ export function FullPageProgress({
                 size={80}
                 thickness={4}
                 sx={{
-                  color: theme.palette.primary.main,
+                  color: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
                 }}
               />
               <Box
@@ -128,7 +128,10 @@ export function FullPageProgress({
                 width: '100%',
                 height: 8,
                 borderRadius: 4,
-                bgcolor: alpha(theme.palette.primary.main, 0.1),
+                bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
+                '& .MuiLinearProgress-bar': {
+                  bgcolor: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
+                },
               }}
             />
           )}
@@ -136,7 +139,7 @@ export function FullPageProgress({
           {cancellable && onCancel && (
             <Typography
               variant="body2"
-              color="primary"
+              color="text.secondary"
               sx={{
                 cursor: 'pointer',
                 '&:hover': { textDecoration: 'underline' },
@@ -297,12 +300,12 @@ export function OperationComplete({
   const config = success
     ? {
         icon: SuccessIcon,
-        color: theme.palette.success.main,
+        color: theme.palette.text.secondary,
         defaultMessage: 'Done!',
       }
     : {
         icon: ErrorIcon,
-        color: theme.palette.error.main,
+        color: theme.palette.text.secondary,
         defaultMessage: 'Something went wrong',
       }
 
@@ -347,11 +350,11 @@ export function StepProgress({
   const getStepColor = (stepStatus) => {
     switch (stepStatus) {
       case 'completed':
-        return theme.palette.success.main
+        return theme.palette.mode === 'dark' ? '#82827C' : '#63635E'
       case 'in_progress':
-        return theme.palette.primary.main
+        return theme.palette.mode === 'dark' ? '#BCBBB5' : '#21201C'
       case 'error':
-        return theme.palette.error.main
+        return theme.palette.text.secondary
       default:
         return alpha(theme.palette.text.primary, 0.3)
     }

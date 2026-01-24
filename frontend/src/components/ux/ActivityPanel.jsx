@@ -197,9 +197,9 @@ function OperationItem({ operation, onUndo }) {
                 size="small"
                 onClick={() => onUndo(operation.id)}
                 sx={{
-                  color: theme.palette.warning.main,
+                  color: theme.palette.text.secondary,
                   '&:hover': {
-                    bgcolor: alpha(theme.palette.warning.main, 0.1),
+                    bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
                   },
                 }}
               >
@@ -331,7 +331,7 @@ export default function ActivityPanel({ open, onClose }) {
             alignItems: 'center',
             gap: 2,
             p: 2,
-            bgcolor: alpha(theme.palette.primary.main, 0.05),
+            bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.03) : '#F9F9F8',
             borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
           }}
         >
