@@ -606,7 +606,7 @@ export default function StepTemplate({ wizardState, updateWizardState, onComplet
               <LinearProgress
                 variant="determinate"
                 value={uploadProgress}
-                sx={{ maxWidth: 300, mx: 'auto' }}
+                sx={{ maxWidth: 300, mx: 'auto', bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF', '& .MuiLinearProgress-bar': { bgcolor: (theme) => theme.palette.mode === 'dark' ? '#82827C' : '#63635E' } }}
               />
               <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
                 {uploadProgress}%

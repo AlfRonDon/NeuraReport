@@ -46,6 +46,7 @@ import {
   OpenInNew as OpenInNewIcon,
 } from '@mui/icons-material'
 import Breadcrumbs from './Breadcrumbs'
+import { figmaGrey } from '@/app/theme'
 import { useAppStore } from '../stores'
 import { useJobsList } from '../hooks/useJobs'
 import { getShortcutDisplay, SHORTCUTS } from '../hooks/useKeyboardShortcuts'
@@ -78,9 +79,9 @@ const shimmer = keyframes`
 
 const StyledAppBar = styled(AppBar)(({ theme }) => ({
   // Solid white header from Figma - no blur
-  backgroundColor: theme.palette.mode === 'dark' ? '#1A1A1A' : '#FFFFFF',
+  backgroundColor: theme.palette.mode === 'dark' ? figmaGrey[1200] : '#FFFFFF',
   backdropFilter: 'none',
-  borderBottom: `1px solid ${theme.palette.mode === 'dark' ? '#333' : '#E5E7EB'}`,
+  borderBottom: `1px solid ${theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[500]}`,
   boxShadow: 'none',
 }))
 
@@ -98,11 +99,11 @@ const NavIconButton = styled(IconButton)(({ theme }) => ({
   height: 36,
   borderRadius: 8,
   // Muted grey icons from Figma
-  color: theme.palette.mode === 'dark' ? '#8D8D86' : '#9CA3AF',
+  color: theme.palette.mode === 'dark' ? figmaGrey[900] : figmaGrey[700],
   transition: 'all 0.15s ease',
   '&:hover': {
-    backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)',
-    color: theme.palette.mode === 'dark' ? '#F1F0EF' : '#374151',
+    backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : figmaGrey[300],
+    color: theme.palette.mode === 'dark' ? figmaGrey[300] : figmaGrey[1200],
   },
   '&:active': {
     transform: 'none',
@@ -115,10 +116,10 @@ const ConnectionChip = styled(Chip, {
   height: 30,
   borderRadius: 10,
   backgroundColor: connected
-    ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF')
-    : (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.06) : '#F9F9F8'),
+    ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300])
+    : (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.06) : figmaGrey[200]),
   border: `1px solid ${connected
-    ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.15) : '#E2E1DE')
+    ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.15) : figmaGrey[500])
     : alpha(theme.palette.divider, 0.2)}`,
   color: theme.palette.text.secondary,
   fontWeight: 500,
@@ -128,7 +129,7 @@ const ConnectionChip = styled(Chip, {
     marginLeft: 6,
   },
   '&:hover': {
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.12) : '#E9E8E6',
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.12) : figmaGrey[400],
   },
 }))
 
@@ -139,10 +140,10 @@ const StatusDot = styled(Box, {
   height: 8,
   borderRadius: '50%',
   backgroundColor: connected
-    ? (theme.palette.mode === 'dark' ? '#82827C' : '#63635E')
-    : (theme.palette.mode === 'dark' ? '#BCBBB5' : '#8D8D86'),
+    ? (theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100])
+    : (theme.palette.mode === 'dark' ? figmaGrey[600] : figmaGrey[900]),
   boxShadow: connected
-    ? `0 0 0 3px ${theme.palette.mode === 'dark' ? alpha('#82827C', 0.2) : alpha('#63635E', 0.2)}`
+    ? `0 0 0 3px ${theme.palette.mode === 'dark' ? alpha(figmaGrey[1000], 0.2) : alpha(figmaGrey[1100], 0.2)}`
     : 'none',
   animation: connected ? `${pulse} 2s infinite ease-in-out` : 'none',
 }))
@@ -150,7 +151,7 @@ const StatusDot = styled(Box, {
 const StyledBadge = styled(Badge)(({ theme }) => ({
   '& .MuiBadge-badge': {
     // Neutral badge color - not green
-    backgroundColor: theme.palette.mode === 'dark' ? '#63635E' : '#6B7280',
+    backgroundColor: theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[800],
     color: '#fff',
     fontSize: '0.65rem',
     fontWeight: 600,
@@ -180,7 +181,7 @@ const StyledMenuItem = styled(MenuItem)(({ theme }) => ({
   padding: theme.spacing(1, 1.5),
   transition: 'all 0.15s ease',
   '&:hover': {
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
   },
 }))
 
@@ -218,8 +219,8 @@ const HelpCard = styled(Box)(({ theme }) => ({
   border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
   transition: 'all 0.2s ease',
   '&:hover': {
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : '#F9F9F8',
-    borderColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.12) : '#E2E1DE',
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : figmaGrey[200],
+    borderColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.12) : figmaGrey[500],
   },
 }))
 

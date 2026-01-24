@@ -61,6 +61,29 @@ import CloudUploadIcon from '@mui/icons-material/CloudUpload'
 import { useAppStore } from '../stores'
 import NotificationCenter from './NotificationCenter'
 
+// Import Figma design tokens
+import {
+  figmaGrey,
+  figmaAccent,
+  figmaSpacing,
+  fontFamilyHeading,
+  fontFamilyUI,
+  fontFamilyBody,
+} from '@/app/theme'
+
+// =============================================================================
+// FIGMA DESIGN CONSTANTS (EXACT from Figma specs)
+// =============================================================================
+const FIGMA_SIDEBAR = {
+  width: figmaSpacing.sidebarWidth,  // 250px
+  background: figmaGrey[200],         // #F9F9F8
+  padding: { horizontal: 16, vertical: 20 },
+  borderRadius: 8,
+  itemHeight: 40,
+  itemGap: 12,
+  iconSize: 20,
+}
+
 // =============================================================================
 // ANIMATIONS
 // =============================================================================
@@ -173,9 +196,12 @@ const SidebarContainer = styled(Box)(({ theme }) => ({
   display: 'flex',
   flexDirection: 'column',
   height: '100%',
-  // White sidebar from Figma - no cream
-  backgroundColor: theme.palette.mode === 'dark' ? '#1A1A1A' : '#FFFFFF',
-  borderRight: `1px solid ${theme.palette.mode === 'dark' ? '#333' : '#E2E1DE'}`,  // Grey/500 border
+  width: FIGMA_SIDEBAR.width,  // 250px from Figma
+  // Sidebar background from Figma - Grey/200
+  backgroundColor: theme.palette.mode === 'dark' ? '#1A1A1A' : figmaGrey[200],
+  borderRight: 'none',  // No border per Figma design
+  borderRadius: FIGMA_SIDEBAR.borderRadius,  // 8px from Figma
+  padding: `${FIGMA_SIDEBAR.padding.vertical}px ${FIGMA_SIDEBAR.padding.horizontal}px`,
   position: 'relative',
 }))
 
@@ -191,7 +217,18 @@ const LogoContainer = styled(Box, {
 }))
 
 const LogoBox = styled(Box)(({ theme }) => ({
-  display: 'none',  // Hide logo box - Figma shows text only header
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  width: 32,
+  height: 32,
+  borderRadius: 6,
+  overflow: 'hidden',
+  '& img': {
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover',
+  },
 }))
 
 const NewReportButton = styled(Box)(({ theme }) => ({
@@ -232,41 +269,48 @@ const SectionHeader = styled(Box, {
   }),
 }))
 
+// FIGMA NAV ITEM BUTTON (EXACT from Figma sidebar navigation specs)
+// Height: 40px, Gap: 8px (icon to text), Border-radius: 8px
+// Active: #E9E8E6 background, Text: Inter Medium 16px
 const NavItemButton = styled(Box, {
   shouldForwardProp: (prop) => !['active', 'collapsed', 'highlight'].includes(prop),
 })(({ theme, active, collapsed, highlight }) => ({
   display: 'flex',
   alignItems: 'center',
-  gap: theme.spacing(1),
-  padding: theme.spacing(1.25, 0),  // 40px height like Figma
-  margin: theme.spacing(0, 0),
-  borderRadius: 0,
+  gap: 8,  // 8px gap from Figma
+  padding: '10px 12px',
+  margin: 0,
+  borderRadius: 8,  // 8px from Figma
   cursor: 'pointer',
   position: 'relative',
   transition: 'all 0.15s ease',
   justifyContent: collapsed ? 'center' : 'flex-start',
-  height: 40,
+  height: FIGMA_SIDEBAR.itemHeight,  // 40px from Figma
+  fontFamily: fontFamilyUI,  // Inter from Figma
 
   // Active state from Figma - Grey/400 background
   ...(active && {
     backgroundColor: theme.palette.mode === 'dark'
       ? alpha(theme.palette.common.white, 0.08)
-      : '#E9E8E6',  // Grey/400 from Figma
+      : figmaGrey[400],  // #E9E8E6 from Figma
     color: theme.palette.mode === 'dark'
-      ? '#F1F0EF'
-      : '#63635E',  // Grey/1100 from Figma
+      ? figmaGrey[300]
+      : figmaGrey[1200],  // #21201C from Figma
   }),
 
-  // Inactive state - muted Grey/1100
+  // Inactive state - Grey/1100 text
   ...(!active && {
     color: theme.palette.mode === 'dark'
-      ? '#8D8D86'  // Grey/900
-      : '#63635E',  // Grey/1100 from Figma
+      ? figmaGrey[900]  // #8D8D86
+      : figmaGrey[1100],  // #63635E from Figma
 
     '&:hover': {
       backgroundColor: theme.palette.mode === 'dark'
         ? alpha(theme.palette.common.white, 0.04)
-        : '#F1F0EF',  // Grey/300 on hover
+        : figmaGrey[300],  // #F1F0EF on hover
+      color: theme.palette.mode === 'dark'
+        ? figmaGrey[300]
+        : figmaGrey[1200],  // #21201C on hover
     },
   }),
 
@@ -277,28 +321,29 @@ const NavItemButton = styled(Box, {
     '&:hover': {
       backgroundColor: theme.palette.mode === 'dark'
         ? alpha(theme.palette.common.white, 0.04)
-        : '#F1F0EF',
+        : figmaGrey[300],
     },
   }),
 }))
 
+// FIGMA NAV ICON (EXACT from Figma: 20x20px)
 const NavIcon = styled(Box, {
   shouldForwardProp: (prop) => !['active', 'highlight'].includes(prop),
 })(({ theme, active, highlight }) => ({
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  width: 20,
-  height: 20,
+  width: FIGMA_SIDEBAR.iconSize,  // 20px from Figma
+  height: FIGMA_SIDEBAR.iconSize,  // 20px from Figma
   flexShrink: 0,
   transition: 'transform 0.2s ease',
 
   '& svg': {
-    fontSize: 20,
-    // ALL icons use muted grey - NO green (from Figma)
+    fontSize: FIGMA_SIDEBAR.iconSize,  // 20px from Figma
+    // Icon color from Figma - Grey/900 for inactive, Grey/1100 for active
     color: active
-      ? (theme.palette.mode === 'dark' ? '#E9E8E6' : '#63635E')  // Grey/1100 when active
-      : 'inherit',
+      ? (theme.palette.mode === 'dark' ? figmaGrey[300] : figmaGrey[1100])
+      : (theme.palette.mode === 'dark' ? figmaGrey[900] : figmaGrey[900]),
   },
 }))
 
@@ -412,14 +457,18 @@ export default function Sidebar({ width, collapsed, mobileOpen, onClose, onToggl
             }}
             onClick={() => handleNavigate('/')}
           >
-            <LogoBox>NR</LogoBox>
+            <LogoBox>
+              <img src="/logo.png" alt="NeuraReport" />
+            </LogoBox>
             <Typography
               sx={{
+                // FIGMA: Section Title - Tomorrow Medium 20px
+                fontFamily: fontFamilyHeading,
                 fontSize: '20px',
                 fontWeight: 500,
-                color: theme.palette.mode === 'dark' ? '#F1F0EF' : '#21201C',  // Grey/1200 from Figma
+                lineHeight: 'normal',
                 letterSpacing: 0,
-                fontFamily: '"Lato", sans-serif',
+                color: theme.palette.mode === 'dark' ? figmaGrey[300] : figmaGrey[1200],
               }}
             >
               NeuraReport
@@ -428,7 +477,9 @@ export default function Sidebar({ width, collapsed, mobileOpen, onClose, onToggl
         )}
 
         {collapsed && (
-          <LogoBox onClick={() => handleNavigate('/')}>NR</LogoBox>
+          <LogoBox onClick={() => handleNavigate('/')} sx={{ cursor: 'pointer' }}>
+            <img src="/logo.png" alt="NeuraReport" />
+          </LogoBox>
         )}
 
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
@@ -486,11 +537,13 @@ export default function Sidebar({ width, collapsed, mobileOpen, onClose, onToggl
                   >
                   <Typography
                     sx={{
-                      color: theme.palette.mode === 'dark' ? '#8D8D86' : '#63635E',  // Grey/1100 from Figma
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.05em',
-                      fontSize: '0.6875rem',  // 11px
+                      // FIGMA: Small Text style - Inter Medium
+                      fontFamily: fontFamilyUI,
+                      fontSize: '11px',
                       fontWeight: 600,
+                      letterSpacing: '0.05em',
+                      textTransform: 'uppercase',
+                      color: theme.palette.mode === 'dark' ? figmaGrey[900] : figmaGrey[1100],
                     }}
                   >
                     {section.section}
@@ -559,9 +612,12 @@ export default function Sidebar({ width, collapsed, mobileOpen, onClose, onToggl
 
                           {!collapsed && (
                             <Typography
-                              variant="body2"
-                              fontWeight={active ? 600 : 500}
                               sx={{
+                                // FIGMA: Navigation Item - Inter Medium 16px
+                                fontFamily: fontFamilyUI,
+                                fontSize: '16px',
+                                fontWeight: 500,
+                                lineHeight: 'normal',
                                 flex: 1,
                                 whiteSpace: 'nowrap',
                                 overflow: 'hidden',
@@ -611,14 +667,14 @@ export default function Sidebar({ width, collapsed, mobileOpen, onClose, onToggl
               gap: 1.5,
               p: 1,
               borderRadius: 1,
-              bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : '#E9E8E6',  // Grey/400
+              bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : figmaGrey[400],
             }}
           >
             <Avatar
               sx={{
                 width: 32,
                 height: 32,
-                bgcolor: theme.palette.mode === 'dark' ? '#444' : '#8D8D86',  // Neutral grey (Grey/900)
+                bgcolor: theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[900],
                 fontSize: '0.75rem',
                 fontWeight: 600,
               }}
@@ -630,7 +686,7 @@ export default function Sidebar({ width, collapsed, mobileOpen, onClose, onToggl
                 sx={{
                   fontSize: '12px',
                   fontWeight: 500,
-                  color: theme.palette.mode === 'dark' ? '#F1F0EF' : '#21201C',
+                  color: theme.palette.mode === 'dark' ? figmaGrey[300] : figmaGrey[1200],
                 }}
                 noWrap
               >
@@ -652,7 +708,7 @@ export default function Sidebar({ width, collapsed, mobileOpen, onClose, onToggl
             sx={{
               width: 32,
               height: 32,
-              bgcolor: theme.palette.mode === 'dark' ? '#444' : '#8D8D86',  // Neutral grey (Grey/900)
+              bgcolor: theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[900],
               fontSize: '0.75rem',
               fontWeight: 600,
               mx: 'auto',

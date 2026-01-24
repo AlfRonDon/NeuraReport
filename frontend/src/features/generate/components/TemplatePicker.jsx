@@ -552,7 +552,6 @@ export function TemplatePicker({ selected, onToggle, outputFormats, setOutputFor
                       <Button
                         size="small"
                         variant={selectedState ? 'contained' : 'outlined'}
-                        color="primary"
                         onClick={(e) => {
                           e.preventDefault()
                           e.stopPropagation()

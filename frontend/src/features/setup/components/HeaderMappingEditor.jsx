@@ -1447,7 +1447,7 @@ export default function HeaderMappingEditor({
             <LinearProgress
               variant="determinate"
               value={approveProgress}
-              sx={{ height: 6, borderRadius: 999 }}
+              sx={{ height: 6, borderRadius: 999, bgcolor: (theme) => alpha(theme.palette.text.primary, 0.1), '& .MuiLinearProgress-bar': { bgcolor: (theme) => theme.palette.mode === 'dark' ? '#82827C' : '#63635E' } }}
             />
             <Box sx={{ mt: 1.5, display: "grid", gap: 0.5 }}>
               {approveLog.map((entry, idx) => {
@@ -1504,7 +1504,7 @@ export default function HeaderMappingEditor({
             variant="contained"
             onClick={handleApproveFromDialog}
             disabled={approveActionDisabled}
-            startIcon={saving ? <CircularProgress size={18} /> : null}
+            startIcon={saving ? <CircularProgress size={18} sx={{ color: 'text.secondary' }} /> : null}
           >
             {saving ? "Saving..." : "Approve Design"}
           </Button>

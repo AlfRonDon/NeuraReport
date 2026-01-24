@@ -14,7 +14,7 @@ import ErrorBoundary from '@/components/ErrorBoundary.jsx'
 import JobsPanel from '@/features/jobs/components/JobsPanel.jsx'
 import CommandPalette from '@/features/shell/components/CommandPalette.jsx'
 import { recordIntent, updateIntent } from '@/api/intentAudit'
-import theme from './theme.js'
+import theme, { figmaGrey } from './theme.js'
 import { useBootstrapState } from '@/hooks/useBootstrapState.js'
 import { useKeyboardShortcuts, SHORTCUTS } from '@/hooks/useKeyboardShortcuts.js'
 import ProjectLayout from '@/layouts/ProjectLayout.jsx'
@@ -235,7 +235,7 @@ function AppContent() {
           top: -40,
           left: 16,
           zIndex: 9999,
-          bgcolor: (theme) => theme.palette.mode === 'dark' ? '#63635E' : '#21201C',
+          bgcolor: (theme) => theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200],
           color: 'primary.contrastText',
           px: 2,
           py: 1,

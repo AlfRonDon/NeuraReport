@@ -35,6 +35,22 @@ import {
 import DataTableToolbar from './DataTableToolbar'
 import DataTableEmptyState from './DataTableEmptyState'
 
+// Import Figma design tokens
+import {
+  figmaGrey,
+  figmaComponents,
+  fontFamilyBody,
+} from '@/app/theme'
+
+// =============================================================================
+// FIGMA DATA TABLE CONSTANTS (EXACT from Figma specs)
+// =============================================================================
+const FIGMA_TABLE = {
+  headerHeight: figmaComponents.dataTable.headerHeight,  // 60px
+  rowHeight: figmaComponents.dataTable.rowHeight,        // 60px
+  cellPadding: figmaComponents.dataTable.cellPadding,    // 16px
+}
+
 // =============================================================================
 // ANIMATIONS
 // =============================================================================
@@ -105,42 +121,51 @@ const StyledTableContainer = styled(TableContainer)(({ theme }) => ({
   },
 }))
 
+// FIGMA STYLED TABLE HEAD (EXACT from Figma: 60px height, 16px padding)
 const StyledTableHead = styled(TableHead)(({ theme }) => ({
   '& .MuiTableCell-head': {
-    backgroundColor: alpha(theme.palette.background.paper, 0.5),
-    backdropFilter: 'blur(10px)',
-    fontWeight: 600,
-    fontSize: 12,
-    textTransform: 'uppercase',
-    letterSpacing: '0.05em',
-    color: theme.palette.text.secondary,
-    borderBottom: `1px solid ${alpha(theme.palette.divider, 0.08)}`,
-    padding: theme.spacing(1.5, 2),
+    backgroundColor: theme.palette.mode === 'dark'
+      ? alpha(theme.palette.background.paper, 0.5)
+      : figmaGrey[200],  // #F9F9F8 from Figma
+    fontFamily: fontFamilyBody,  // Lato from Figma
+    fontWeight: 500,
+    fontSize: '14px',
+    textTransform: 'none',  // No uppercase per Figma
+    letterSpacing: 'normal',
+    color: theme.palette.mode === 'dark' ? theme.palette.text.secondary : figmaGrey[1100],  // #63635E
+    borderBottom: `1px solid ${theme.palette.mode === 'dark' ? alpha(theme.palette.divider, 0.08) : figmaGrey[500]}`,
+    height: FIGMA_TABLE.headerHeight,  // 60px from Figma
+    padding: `0 ${FIGMA_TABLE.cellPadding}px`,  // 16px from Figma
     transition: 'background-color 0.2s ease',
     '&:hover': {
-      backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : '#F9F9F8',
+      backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : figmaGrey[300],
     },
   },
 }))
 
+// FIGMA STYLED TABLE ROW (EXACT from Figma: 60px height)
 const StyledTableRow = styled(TableRow, {
   shouldForwardProp: (prop) => !['rowIndex', 'isClickable'].includes(prop),
 })(({ theme, rowIndex, isClickable }) => ({
+  height: FIGMA_TABLE.rowHeight,  // 60px from Figma
   animation: `${fadeInUp} 0.4s ease-out`,
   animationDelay: `${rowIndex * 0.03}s`,
   animationFillMode: 'both',
   transition: 'all 0.2s ease',
   cursor: isClickable ? 'pointer' : 'default',
   '& .MuiTableCell-body': {
-    borderBottom: `1px solid ${alpha(theme.palette.divider, 0.05)}`,
-    padding: theme.spacing(1.5, 2),
-    fontSize: 14,
+    fontFamily: fontFamilyBody,  // Lato from Figma
+    borderBottom: `1px solid ${theme.palette.mode === 'dark' ? alpha(theme.palette.divider, 0.05) : figmaGrey[400]}`,
+    padding: `0 ${FIGMA_TABLE.cellPadding}px`,  // 16px from Figma
+    height: FIGMA_TABLE.rowHeight,  // 60px from Figma
+    fontSize: '14px',
+    color: theme.palette.mode === 'dark' ? theme.palette.text.primary : figmaGrey[1200],  // #21201C
     transition: 'all 0.2s ease',
   },
   '&:hover': {
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : '#F9F9F8',
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : alpha(figmaGrey[300], 0.5),
     '& .MuiTableCell-body': {
-      color: theme.palette.text.primary,
+      color: theme.palette.mode === 'dark' ? theme.palette.text.primary : figmaGrey[1200],
     },
     '& .row-actions': {
       opacity: 1,
@@ -148,9 +173,9 @@ const StyledTableRow = styled(TableRow, {
     },
   },
   '&.Mui-selected': {
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
     '&:hover': {
-      backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.12) : '#E9E8E6',
+      backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.12) : figmaGrey[400],
     },
   },
   '&:last-child .MuiTableCell-body': {

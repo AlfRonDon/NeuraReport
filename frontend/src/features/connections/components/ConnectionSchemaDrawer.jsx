@@ -174,7 +174,7 @@ export default function ConnectionSchemaDrawer({ open, onClose, connection }) {
             },
           }}
         />
-        {loading && <LinearProgress sx={{ borderRadius: 1 }} />}
+        {loading && <LinearProgress sx={{ borderRadius: 1, bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF', '& .MuiLinearProgress-bar': { bgcolor: (theme) => theme.palette.mode === 'dark' ? '#82827C' : '#63635E' } }} />}
         {error && (
           <Alert
             severity="error"
@@ -309,7 +309,7 @@ export default function ConnectionSchemaDrawer({ open, onClose, connection }) {
                         Load preview
                       </Button>
                     </Stack>
-                    {preview.loading && <LinearProgress sx={{ mt: 1, borderRadius: 1 }} />}
+                    {preview.loading && <LinearProgress sx={{ mt: 1, borderRadius: 1, bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF', '& .MuiLinearProgress-bar': { bgcolor: (theme) => theme.palette.mode === 'dark' ? '#82827C' : '#63635E' } }} />}
                     {preview.error && (
                       <Alert severity="error" sx={{ mt: 1, borderRadius: 2 }}>
                         {preview.error}

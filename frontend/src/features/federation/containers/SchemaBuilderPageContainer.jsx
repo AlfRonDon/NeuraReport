@@ -260,9 +260,9 @@ export default function SchemaBuilderPage() {
         title="AI join suggestions"
         description="Join suggestions are generated from schema metadata. Review before running cross-database queries."
         chips={[
-          { label: 'Source: Selected schemas', color: 'info', variant: 'outlined' },
-          { label: 'Confidence: Provided per suggestion', color: 'warning', variant: 'outlined' },
-          { label: 'Read-only recommended', color: 'success', variant: 'outlined' },
+          { label: 'Source: Selected schemas', variant: 'outlined' },
+          { label: 'Confidence: Provided per suggestion', variant: 'outlined' },
+          { label: 'Read-only recommended', variant: 'outlined' },
         ]}
         dense
         sx={{ mb: 2 }}

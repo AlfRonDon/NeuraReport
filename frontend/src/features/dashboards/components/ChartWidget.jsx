@@ -121,17 +121,18 @@ const generateChartOptions = (chartType, data, config, theme) => {
         fontSize: 12,
       },
     },
+    // Chart colors - all neutral greys per Figma design (no colored accents)
     color: [
-      theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
-      theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
-      theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
-      theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
-      theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
-      theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
-      '#8B5CF6',
-      '#EC4899',
-      '#06B6D4',
-      '#84CC16',
+      theme.palette.mode === 'dark' ? '#82827C' : '#63635E',  // Grey/1000 : Grey/1100
+      theme.palette.mode === 'dark' ? '#A1A19A' : '#8D8D86',  // Lighter grey
+      theme.palette.mode === 'dark' ? '#6B6B66' : '#4A4A46',  // Darker grey
+      theme.palette.mode === 'dark' ? '#BCBBB5' : '#CFCECA',  // Grey/800 : Grey/700
+      theme.palette.mode === 'dark' ? '#DAD9D6' : '#E2E1DE',  // Grey/600 : Grey/500
+      theme.palette.mode === 'dark' ? '#52524E' : '#3A3A36',  // Very dark grey
+      theme.palette.mode === 'dark' ? '#C8C8C2' : '#B5B5AF',  // Mid grey
+      theme.palette.mode === 'dark' ? '#9A9A94' : '#7A7A74',  // Medium grey
+      theme.palette.mode === 'dark' ? '#E5E5DF' : '#D5D5CF',  // Light grey
+      theme.palette.mode === 'dark' ? '#707068' : '#555550',  // Dark grey
     ],
   }
 

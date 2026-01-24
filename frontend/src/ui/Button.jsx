@@ -1,5 +1,19 @@
+/**
+ * Button Component - FIGMA Design System
+ * Height: 40px, Border-radius: 8px, Font: Lato Medium 14px
+ */
 import { forwardRef } from 'react'
 import { Button as MuiButton, CircularProgress } from '@mui/material'
+
+// FIGMA Button Constants
+const FIGMA_BUTTON = {
+  height: 40,           // 40px from Figma
+  heightSmall: 32,      // Compact size
+  heightLarge: 44,      // Large size
+  borderRadius: 8,      // 8px from Figma
+  fontSize: 14,         // 14px from Figma
+  fontWeight: 500,      // Medium from Figma
+}
 
 const Button = forwardRef(function Button(
   {
@@ -16,6 +30,14 @@ const Button = forwardRef(function Button(
   },
   ref
 ) {
+  const getHeight = () => {
+    switch (size) {
+      case 'small': return FIGMA_BUTTON.heightSmall
+      case 'large': return FIGMA_BUTTON.heightLarge
+      default: return FIGMA_BUTTON.height
+    }
+  }
+
   return (
     <MuiButton
       ref={ref}
@@ -27,17 +49,19 @@ const Button = forwardRef(function Button(
       fullWidth={fullWidth}
       color={color}
       sx={{
+        // FIGMA Button Specs
         textTransform: 'none',
-        fontWeight: 600,
-        borderRadius: 2,
-        px: size === 'small' ? 2 : 3,
+        fontWeight: FIGMA_BUTTON.fontWeight,
+        fontSize: `${FIGMA_BUTTON.fontSize}px`,
+        lineHeight: '16px',
+        borderRadius: `${FIGMA_BUTTON.borderRadius}px`,
+        minHeight: getHeight(),
+        px: size === 'small' ? 1.5 : 2,
         py: size === 'small' ? 0.75 : 1,
-        boxShadow: variant === 'contained' ? '0 2px 8px rgba(0,0,0,0.1)' : 'none',
+        // No box-shadow on buttons (clean Figma style)
+        boxShadow: 'none',
         '&:hover': {
-          boxShadow:
-            variant === 'contained'
-              ? '0 4px 12px rgba(79, 70, 229, 0.25)'
-              : 'none',
+          boxShadow: 'none',
         },
         '&.Mui-disabled': {
           bgcolor: variant === 'contained' ? 'action.disabledBackground' : 'transparent',

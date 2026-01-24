@@ -118,26 +118,27 @@ const DB_CONFIG = {
 }
 const SUPPORTED_DB_TYPES = Object.keys(DB_CONFIG)
 
+// Neutral grey accents per Figma design (no colored accents)
 const DB_TYPE_META = {
   sqlite: {
     label: DB_CONFIG.sqlite.label,
     icon: StorageIcon,
-    accent: '#7C3AED',
+    accent: '#63635E',  // Grey/1100
   },
   postgres: {
     label: DB_CONFIG.postgres.label,
     icon: DnsIcon,
-    accent: '#2563EB',
+    accent: '#82827C',  // Grey/1000
   },
   mysql: {
     label: DB_CONFIG.mysql.label,
     icon: LanIcon,
-    accent: '#0EA5E9',
+    accent: '#8D8D86',  // Grey/900
   },
   mssql: {
     label: DB_CONFIG.mssql.label,
     icon: HubIcon,
-    accent: '#DB2777',
+    accent: '#BCBBB5',  // Grey/800
   },
 }
 

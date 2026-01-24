@@ -61,6 +61,14 @@ import ReportGlossaryNotice from '@/components/ux/ReportGlossaryNotice'
 import * as api from '@/api/client'
 import * as recommendationsApi from '@/api/recommendations'
 
+// Import Figma design tokens for consistency
+import {
+  figmaGrey,
+  figmaSpacing,
+  fontFamilyHeading,
+  fontFamilyBody,
+} from '@/app/theme'
+
 // =============================================================================
 // ANIMATIONS
 // =============================================================================
@@ -156,7 +164,7 @@ const GlassCard = styled(Box)(({ theme }) => ({
 
 const StatCardStyled = styled(Box, {
   shouldForwardProp: (prop) => !['color', 'delay'].includes(prop),
-})(({ theme, color = 'primary', delay = 0 }) => ({
+})(({ theme, color = 'inherit', delay = 0 }) => ({
   position: 'relative',
   padding: theme.spacing(2.5),
   borderRadius: 8,
@@ -343,7 +351,7 @@ const ChartBar = styled(Box, {
 // HELPER COMPONENTS
 // =============================================================================
 
-function StatCard({ title, value, subtitle, icon: Icon, color = 'primary', onClick, trend, delay = 0 }) {
+function StatCard({ title, value, subtitle, icon: Icon, color = 'inherit', onClick, trend, delay = 0 }) {
   const theme = useTheme()
 
   return (
@@ -621,25 +629,20 @@ export default function DashboardPage() {
         sx={{ mb: 4 }}
       >
         <Box sx={{ animation: `${fadeInUp} 0.4s ease-out` }}>
-          <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 0.5 }}>
-            <Typography
-              sx={{
-                fontWeight: 500,
-                fontSize: '1.5rem',  // 24px from Figma
-                letterSpacing: 0,
-                // Solid dark color - NO gradient
-                color: theme.palette.mode === 'dark' ? '#F1F0EF' : '#21201C',
-              }}
-            >
-              Welcome back
-            </Typography>
-            <WavingHandIcon
-              sx={{
-                fontSize: 24,
-                color: '#FBBF24',  // Neutral warm yellow
-              }}
-            />
-          </Stack>
+          <Typography
+            sx={{
+              // FIGMA: Page Title - Tomorrow Medium 24px
+              fontFamily: fontFamilyHeading,
+              fontWeight: 500,
+              fontSize: '24px',
+              lineHeight: 'normal',
+              letterSpacing: 0,
+              mb: 0.5,
+              color: theme.palette.mode === 'dark' ? figmaGrey[300] : figmaGrey[1200],
+            }}
+          >
+            Welcome back
+          </Typography>
           <Typography variant="body2" color="text.secondary">
             Generate intelligent reports from your data with AI-powered insights
           </Typography>

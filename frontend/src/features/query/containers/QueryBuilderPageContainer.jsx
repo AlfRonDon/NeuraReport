@@ -598,9 +598,9 @@ export default function QueryBuilderPage() {
         title="AI query draft"
         description="AI turns questions into SQL using the selected connection's schema. Review the SQL before executing."
         chips={[
-          { label: `Source: ${selectedConnectionLabel}`, color: 'info', variant: 'outlined' },
-          { label: 'Confidence: Varies per query', color: 'warning', variant: 'outlined' },
-          { label: 'Read-only recommended', color: 'success', variant: 'outlined' },
+          { label: `Source: ${selectedConnectionLabel}`, variant: 'outlined' },
+          { label: 'Confidence: Varies per query', variant: 'outlined' },
+          { label: 'Read-only recommended', variant: 'outlined' },
         ]}
         dense
         sx={{ mb: 2 }}

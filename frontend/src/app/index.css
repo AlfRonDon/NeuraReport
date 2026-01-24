@@ -1,65 +1,164 @@
-/* Global Styles - Neuract UI Theme (from Figma) */
+/* ============================================================================
+   NEURACT DEMO - Global Styles
+   EXACT match to Figma design (File: 1Hp9IvJjDcsI4MXJdbOqyo)
+   ============================================================================ */
 
-/* Import Lato font from Google Fonts (per Figma Neuract UI) */
+/* ============================================================================
+   FIGMA FONT IMPORTS
+   Tomorrow - Headings, Inter - UI elements, Lato - Body text
+   ============================================================================ */
+@import url('https://fonts.googleapis.com/css2?family=Tomorrow:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Lato:wght@300;400;500;600;700&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 :root {
-  /* Font families - Lato from Figma */
-  --font-ui: 'Lato', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+  /* ============================================================================
+     FIGMA FONT FAMILIES
+     ============================================================================ */
+  --font-heading: 'Tomorrow', system-ui, -apple-system, sans-serif;
+  --font-ui: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-body: 'Lato', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'JetBrains Mono', 'SF Mono', Monaco, 'Cascadia Code', Consolas, monospace;
 
-  /* Colors - EXACT match to Figma Neuract UI */
-  --color-bg-primary: #F9F9F8;    /* Main content background - Grey/200 from Figma */
-  --color-bg-surface: #FFFFFF;    /* Cards, panels - pure white */
-  --color-bg-sidebar: #FFFFFF;    /* White sidebar - no cream */
-  --color-bg-input: #F1F0EF;      /* Input field background - Grey/300 */
-  --color-bg-tertiary: #F3F4F6;   /* Tertiary background for code blocks */
-  --color-border: #E2E1DE;        /* Standard border - Grey/500 */
-  --color-border-subtle: #E9E8E6; /* Subtle border - Grey/400 */
+  /* ============================================================================
+     FIGMA GREY SCALE (EXACT from design variables)
+     ============================================================================ */
+  --grey-white: #FFFFFF;
+  --grey-200: #F9F9F8;
+  --grey-300: #F1F0EF;
+  --grey-400: #E9E8E6;
+  --grey-500: #E2E1DE;
+  --grey-600: #DAD9D6;
+  --grey-700: #CFCECA;
+  --grey-800: #BCBBB5;
+  --grey-900: #8D8D86;
+  --grey-1000: #82827C;
+  --grey-1100: #63635E;
+  --grey-1200: #21201C;
 
-  /* Text colors - EXACT from Figma Grey scale */
-  --color-text-primary: #21201C;   /* Grey/1200 - Primary text */
-  --color-text-secondary: #63635E; /* Grey/1100 - Secondary text */
-  --color-text-muted: #8D8D86;     /* Grey/900(main) - Muted text */
-  --color-text-disabled: #BCBBB5;  /* Grey/800 - Disabled text */
+  /* ============================================================================
+     FIGMA NEUTRAL SCALE
+     ============================================================================ */
+  --neutral-50: #F9FAFB;
+  --neutral-100: #F3F4F6;
+  --neutral-200: #E5E7EB;
+  --neutral-300: #D1D5DB;
+  --neutral-400: #9CA3AF;
+  --neutral-500: #6B7280;
+  --neutral-600: #4B5563;
+  --neutral-700: #374151;
+  --neutral-800: #1F2937;
 
-  /* Brand color - use sparingly */
-  --color-brand: #08C18F;
-  --color-brand-hover: #06A077;
+  /* ============================================================================
+     FIGMA ACCENT COLORS (Tabs, Active states)
+     ============================================================================ */
+  --accent-primary-green: #007E60;
+  --accent-green-bg: #EBFEF6;
+  --accent-green-text: #02634E;
+  --accent-dark-text: #374151;
 
-  /* Status colors */
+  /* ============================================================================
+     FIGMA STATUS COLORS
+     ============================================================================ */
+  --status-reachable: #22C55E;
+  --status-unreachable: #EF4444;
+  --status-running: #8D8D86;
+
+  /* ============================================================================
+     FIGMA GRADIENTS
+     ============================================================================ */
+  --gradient-ai-assistant: linear-gradient(180deg, #F9F9F8 0%, #88A6FF 258.88%);
+  --gradient-notification: linear-gradient(180deg, #F1F0EF 0%, #A1D3FF 258.88%);
+
+  /* ============================================================================
+     FIGMA BACKGROUND COLORS
+     ============================================================================ */
+  --color-bg-primary: #F9F9F8;    /* Grey/200 - Main content background */
+  --color-bg-surface: #FFFFFF;    /* White - Cards, panels */
+  --color-bg-sidebar: #F9F9F8;    /* Grey/200 - Sidebar background */
+  --color-bg-input: #F1F0EF;      /* Grey/300 - Input backgrounds */
+  --color-bg-hover: #E9E8E6;      /* Grey/400 - Hover states */
+  --color-bg-active: #E9E8E6;     /* Grey/400 - Active states */
+
+  /* ============================================================================
+     FIGMA BORDER COLORS
+     ============================================================================ */
+  --color-border: #E2E1DE;        /* Grey/500 - Standard borders */
+  --color-border-subtle: #DAD9D6; /* Grey/600 - Subtle borders */
+  --color-border-muted: #CFCECA;  /* Grey/700 - Muted borders */
+
+  /* ============================================================================
+     FIGMA TEXT COLORS
+     ============================================================================ */
+  --color-text-primary: #21201C;   /* Grey/1200 - Headings, titles */
+  --color-text-secondary: #63635E; /* Grey/1100 - Labels, primary text */
+  --color-text-muted: #8D8D86;     /* Grey/900 - Muted, icons */
+  --color-text-disabled: #BCBBB5;  /* Grey/800 - Disabled */
+  --color-text-placeholder: #9CA3AF; /* Neutral/400 - Placeholder */
+
+  /* ============================================================================
+     FIGMA STATUS/SEMANTIC COLORS
+     ============================================================================ */
   --color-success: #22C55E;
-  --color-success-bg: #D1F4E0;
+  --color-success-bg: #DCFCE7;
   --color-warning: #F59E0B;
   --color-warning-bg: #FEF3C7;
   --color-error: #EF4444;
   --color-error-bg: #FEE2E2;
+  --color-info: #8D8D86;
+  --color-info-bg: #F1F0EF;
 
-  /* Transitions */
-  --transition-fast: 150ms ease;
-  --transition-normal: 200ms ease;
+  /* ============================================================================
+     FIGMA SPACING & DIMENSIONS
+     ============================================================================ */
+  --sidebar-width: 250px;
+  --details-panel-width: 400px;
+  --taskbar-height: 48px;
+  --content-padding: 20px;
 
-  /* Spacing - 8px grid */
-  --space-1: 8px;
-  --space-2: 16px;
-  --space-3: 24px;
-  --space-4: 32px;
-  --space-5: 40px;
+  /* ============================================================================
+     FIGMA BORDER RADIUS
+     ============================================================================ */
+  --radius-card: 8px;
+  --radius-button: 8px;
+  --radius-pill: 24px;
+  --radius-circle: 100px;
+  --radius-zoom: 35px;
 
-  /* Border radius */
-  --radius-sm: 4px;
-  --radius-md: 6px;
-  --radius-lg: 8px;
-  --radius-xl: 12px;
+  /* ============================================================================
+     FIGMA COMPONENT DIMENSIONS
+     ============================================================================ */
+  --tab-height: 40px;
+  --button-height: 40px;
+  --input-height: 40px;
+  --nav-item-height: 40px;
+  --table-header-height: 60px;
+  --table-row-height: 60px;
+  --avatar-size: 28px;
+  --icon-size: 20px;
+  --status-dot-size: 8px;
 
-  /* Shadows - EXACT from Figma Drop shadow/XSmall: #1018280A, offset (0,1), radius 2 */
+  /* ============================================================================
+     FIGMA SHADOWS
+     ============================================================================ */
   --shadow-xsmall: 0 1px 2px rgba(16, 24, 40, 0.04);
   --shadow-card: 0 1px 2px rgba(16, 24, 40, 0.04);
   --shadow-elevated: 0 1px 2px rgba(16, 24, 40, 0.04), 0 4px 8px rgba(16, 24, 40, 0.04);
   --shadow-modal: 0 1px 2px rgba(16, 24, 40, 0.04), 0 8px 24px rgba(16, 24, 40, 0.12);
+  --shadow-ai-panel: 0px 4px 8.4px rgba(0, 0, 0, 0.25);
 
-  font-family: var(--font-ui);
+  /* ============================================================================
+     TRANSITIONS
+     ============================================================================ */
+  --transition-fast: 150ms ease;
+  --transition-normal: 200ms ease;
+  --transition-slow: 300ms ease;
+
+  /* ============================================================================
+     BASE TYPOGRAPHY (Lato body default)
+     ============================================================================ */
+  font-family: var(--font-body);
   line-height: 1.5;
   font-weight: 400;
   font-size: 14px;
@@ -69,6 +168,9 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* ============================================================================
+   RESET & BASE STYLES
+   ============================================================================ */
 * {
   box-sizing: border-box;
   margin: 0;
@@ -83,19 +185,9 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  font-family: var(--font-ui);
-  /* Light grey background from Figma Grey/200 */
-  background-color: #F9F9F8;
-  color: #21201C;  /* Grey/1200 from Figma */
-}
-
-body[data-compact-tables="true"] .MuiTableCell-root {
-  padding: 6px 10px !important;
-  font-size: 0.8125rem;
-}
-
-body[data-compact-tables="true"] .MuiTableRow-root {
-  height: 36px;
+  font-family: var(--font-body);
+  background-color: var(--grey-200);
+  color: var(--grey-1200);
 }
 
 #root {
@@ -104,7 +196,209 @@ body[data-compact-tables="true"] .MuiTableRow-root {
   flex-direction: column;
 }
 
-/* Links - neutral color, NOT green */
+/* ============================================================================
+   FIGMA TYPOGRAPHY CLASSES
+   ============================================================================ */
+.text-page-title {
+  font-family: var(--font-heading);
+  font-weight: 500;
+  font-size: 24px;
+  line-height: normal;
+}
+
+.text-section-title {
+  font-family: var(--font-heading);
+  font-weight: 500;
+  font-size: 20px;
+  line-height: normal;
+}
+
+.text-nav-item {
+  font-family: var(--font-ui);
+  font-weight: 500;
+  font-size: 16px;
+  line-height: normal;
+}
+
+.text-label-medium {
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: 14px;
+  line-height: 16px;
+}
+
+.text-paragraph-small {
+  font-family: var(--font-body);
+  font-weight: 400;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.text-paragraph-16 {
+  font-family: var(--font-body);
+  font-weight: 400;
+  font-size: 16px;
+  line-height: 1.4;
+  letter-spacing: 0.64px;
+}
+
+.text-small {
+  font-family: var(--font-ui);
+  font-weight: 500;
+  font-size: 12px;
+  line-height: normal;
+}
+
+.text-tiny {
+  font-family: var(--font-ui);
+  font-weight: 500;
+  font-size: 10px;
+  line-height: normal;
+}
+
+.text-mono {
+  font-family: var(--font-mono);
+}
+
+/* ============================================================================
+   FIGMA TAB STYLES
+   ============================================================================ */
+.tab-active {
+  background-color: var(--accent-green-bg);
+  border-bottom: 2px solid var(--accent-primary-green);
+  color: var(--accent-green-text);
+}
+
+.tab-inactive {
+  background-color: transparent;
+  border-bottom: 1px solid var(--neutral-200);
+  color: var(--accent-dark-text);
+}
+
+/* ============================================================================
+   FIGMA STATUS INDICATORS
+   ============================================================================ */
+.status-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.status-dot {
+  width: var(--status-dot-size);
+  height: var(--status-dot-size);
+  border-radius: 50%;
+}
+
+.status-dot-reachable {
+  background-color: var(--status-reachable);
+}
+
+.status-dot-unreachable {
+  background-color: var(--status-unreachable);
+}
+
+.status-dot-running {
+  background-color: var(--status-running);
+}
+
+/* ============================================================================
+   FIGMA AI ASSISTANT PANEL
+   ============================================================================ */
+.ai-assistant-panel {
+  width: 394px;
+  min-height: 114px;
+  background: var(--gradient-ai-assistant);
+  border-radius: 4px 4px 0 0;
+  box-shadow: var(--shadow-ai-panel);
+  padding: 16px;
+}
+
+.ai-assistant-input {
+  height: 48px;
+  background: var(--grey-300);
+  border: 1px solid var(--grey-900);
+  border-radius: 8px;
+  padding: 16px;
+}
+
+/* ============================================================================
+   FIGMA NOTIFICATION CARD
+   ============================================================================ */
+.notification-card {
+  width: 394px;
+  background: var(--gradient-notification);
+  border-radius: 4px 4px 0 0;
+  padding: 16px;
+}
+
+/* ============================================================================
+   FIGMA ZOOM CONTROLS
+   ============================================================================ */
+.zoom-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 40px;
+  background: rgba(77, 69, 61, 0.28);
+  border: 1px solid #CFCFCF;
+  border-radius: 35px;
+  padding: 8px 12px;
+}
+
+.zoom-controls svg {
+  width: 24px;
+  height: 24px;
+}
+
+/* ============================================================================
+   FIGMA VIEW TOGGLE (Map/Table)
+   ============================================================================ */
+.view-toggle {
+  display: flex;
+  background: var(--grey-white);
+  border: 1px solid var(--grey-700);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.view-toggle-item {
+  padding: 6px 8px;
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+}
+
+.view-toggle-item:hover {
+  background-color: var(--grey-300);
+}
+
+.view-toggle-item.active {
+  background-color: var(--grey-500);
+}
+
+/* ============================================================================
+   FIGMA FILTER BUTTON
+   ============================================================================ */
+.filter-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 4px 12px;
+  background: var(--grey-300);
+  border: 1px solid var(--grey-500);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+}
+
+.filter-button:hover {
+  background-color: var(--grey-400);
+}
+
+/* ============================================================================
+   LINKS
+   ============================================================================ */
 a {
   color: inherit;
   text-decoration: none;
@@ -115,7 +409,9 @@ a:hover {
   color: var(--color-text-primary);
 }
 
-/* Code */
+/* ============================================================================
+   CODE
+   ============================================================================ */
 code, pre {
   font-family: var(--font-mono);
   font-size: 0.875em;
@@ -124,23 +420,27 @@ code, pre {
 pre {
   overflow-x: auto;
   padding: 1rem;
-  border-radius: var(--radius-md);
-  background-color: var(--color-bg-tertiary);
+  border-radius: var(--radius-card);
+  background-color: var(--grey-300);
 }
 
 code {
   padding: 0.125em 0.375em;
-  border-radius: var(--radius-sm);
-  background-color: var(--color-bg-tertiary);
+  border-radius: 4px;
+  background-color: var(--grey-300);
 }
 
-/* Selection - neutral */
+/* ============================================================================
+   SELECTION
+   ============================================================================ */
 ::selection {
-  background-color: rgba(31, 41, 55, 0.15);
+  background-color: rgba(0, 126, 96, 0.15);
   color: inherit;
 }
 
-/* Scrollbar - neutral grey */
+/* ============================================================================
+   SCROLLBAR (Figma specs: 20.156px width, #D9D9D9, 4px radius)
+   ============================================================================ */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -151,21 +451,37 @@ code {
 }
 
 ::-webkit-scrollbar-thumb {
-  background-color: rgba(156, 163, 175, 0.5);
+  background-color: #D9D9D9;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(107, 114, 128, 0.6);
+  background-color: var(--grey-800);
 }
 
-/* Focus states - neutral dark grey */
+/* ============================================================================
+   FOCUS STATES
+   ============================================================================ */
 :focus-visible {
-  outline: 2px solid #1F2937;
+  outline: 2px solid var(--grey-1200);
   outline-offset: 2px;
 }
 
-/* Animations */
+/* ============================================================================
+   COMPACT TABLE MODE
+   ============================================================================ */
+body[data-compact-tables="true"] .MuiTableCell-root {
+  padding: 6px 10px !important;
+  font-size: 0.8125rem;
+}
+
+body[data-compact-tables="true"] .MuiTableRow-root {
+  height: 36px;
+}
+
+/* ============================================================================
+   ANIMATIONS
+   ============================================================================ */
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
@@ -193,12 +509,30 @@ code {
   }
 }
 
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(400px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
 @keyframes pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.5; }
 }
 
-/* Utility classes */
+@keyframes pulseScale {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+/* ============================================================================
+   ANIMATION UTILITIES
+   ============================================================================ */
 .animate-fadeIn {
   animation: fadeIn 200ms ease;
 }
@@ -207,22 +541,21 @@ code {
   animation: slideUp 200ms ease;
 }
 
+.animate-slideDown {
+  animation: slideDown 200ms ease;
+}
+
+.animate-slideInRight {
+  animation: slideInRight 300ms ease;
+}
+
 .animate-pulse {
   animation: pulse 2s infinite;
 }
 
-/* Typography utilities */
-.text-mono {
-  font-family: var(--font-mono);
-}
-
-.text-truncate {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* Layout utilities */
+/* ============================================================================
+   LAYOUT UTILITIES
+   ============================================================================ */
 .flex-center {
   display: flex;
   align-items: center;
@@ -235,7 +568,38 @@ code {
   justify-content: space-between;
 }
 
-/* Hide scrollbar but keep functionality */
+.flex-start {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.flex-end {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+/* ============================================================================
+   TEXT UTILITIES
+   ============================================================================ */
+.text-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.text-right {
+  text-align: right;
+}
+
+/* ============================================================================
+   SCROLLBAR UTILITIES
+   ============================================================================ */
 .scrollbar-hide {
   -ms-overflow-style: none;
   scrollbar-width: none;
@@ -245,7 +609,9 @@ code {
   display: none;
 }
 
-/* Print styles */
+/* ============================================================================
+   PRINT STYLES
+   ============================================================================ */
 @media print {
   body {
     background-color: white;
