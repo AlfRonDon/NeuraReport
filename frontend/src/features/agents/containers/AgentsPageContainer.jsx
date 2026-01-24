@@ -131,8 +131,9 @@ const AGENTS = [
     icon: DataIcon,
     color: 'info',
     fields: [
-      { name: 'question', label: 'Question', type: 'text', required: true, multiline: true },
-      { name: 'data', label: 'Data (JSON)', type: 'text', required: true, multiline: true, rows: 6 },
+      { name: 'question', label: 'What do you want to know?', type: 'text', required: true, multiline: true, placeholder: 'e.g., What are the top 5 products by revenue? Which month had the highest sales?' },
+      { name: 'dataSource', label: 'Data Source', type: 'select', options: ['paste_spreadsheet', 'sample_sales', 'sample_inventory', 'custom_json'], default: 'paste_spreadsheet' },
+      { name: 'data', label: 'Paste your data here (from Excel or Google Sheets)', type: 'spreadsheet', required: true, multiline: true, rows: 8, placeholder: 'Tip: Copy cells from Excel or Google Sheets and paste here. We\'ll convert it automatically!' },
     ],
   },
   {
@@ -237,10 +238,62 @@ export default function AgentsPageContainer() {
           break
         case 'data_analyst':
           try {
-            const data = JSON.parse(formData.data)
+            let data
+            const dataSource = formData.dataSource || 'paste_spreadsheet'
+
+            // Handle different data sources
+            if (dataSource === 'sample_sales') {
+              data = [
+                { product: 'Widget A', revenue: 15000, units: 300, month: 'January' },
+                { product: 'Widget B', revenue: 22000, units: 440, month: 'January' },
+                { product: 'Widget A', revenue: 18000, units: 360, month: 'February' },
+                { product: 'Widget B', revenue: 25000, units: 500, month: 'February' },
+                { product: 'Widget C', revenue: 12000, units: 200, month: 'February' },
+              ]
+            } else if (dataSource === 'sample_inventory') {
+              data = [
+                { item: 'SKU-001', stock: 150, reorder_point: 50, supplier: 'Acme Corp' },
+                { item: 'SKU-002', stock: 25, reorder_point: 30, supplier: 'Beta Inc' },
+                { item: 'SKU-003', stock: 200, reorder_point: 75, supplier: 'Acme Corp' },
+                { item: 'SKU-004', stock: 10, reorder_point: 20, supplier: 'Gamma Ltd' },
+              ]
+            } else if (dataSource === 'custom_json') {
+              // User provided raw JSON
+              data = JSON.parse(formData.data)
+            } else {
+              // paste_spreadsheet - parse tab/comma separated values
+              const rawData = formData.data || ''
+              const lines = rawData.trim().split('\n')
+              if (lines.length < 2) {
+                toast.show('Please paste data with at least a header row and one data row', 'warning')
+                return null
+              }
+              // Detect delimiter (tab or comma)
+              const delimiter = lines[0].includes('\t') ? '\t' : ','
+              const headers = lines[0].split(delimiter).map(h => h.trim().replace(/^["']|["']$/g, ''))
+              data = lines.slice(1).map(line => {
+                const values = line.split(delimiter).map(v => {
+                  const trimmed = v.trim().replace(/^["']|["']$/g, '')
+                  // Try to parse as number
+                  const num = parseFloat(trimmed)
+                  return isNaN(num) ? trimmed : num
+                })
+                const row = {}
+                headers.forEach((header, i) => {
+                  row[header] = values[i] ?? ''
+                })
+                return row
+              }).filter(row => Object.values(row).some(v => v !== ''))
+            }
+
+            if (!data || !data.length) {
+              toast.show('No valid data found. Please check your input.', 'warning')
+              return null
+            }
+
             taskResult = await runDataAnalysis(formData.question, data)
-          } catch {
-            toast.show('Invalid JSON data', 'error')
+          } catch (parseError) {
+            toast.show('Could not parse data. For custom JSON, ensure it\'s valid JSON format.', 'error')
             return null
           }
           break
@@ -376,70 +429,110 @@ export default function AgentsPageContainer() {
               </Typography>
               <Paper sx={{ p: 3 }}>
                 <Grid container spacing={2}>
-                  {selectedAgent.fields.map((field) => (
-                    <Grid item xs={12} md={field.multiline ? 12 : 6} key={field.name}>
-                      {field.type === 'select' ? (
-                        <FormControl fullWidth>
-                          <InputLabel>{field.label}</InputLabel>
-                          <Select
-                            value={formData[field.name] || field.default || ''}
+                  {selectedAgent.fields.map((field) => {
+                    // For data_analyst, hide data field if using sample data
+                    if (selectedAgent.type === 'data_analyst' && field.name === 'data') {
+                      const dataSource = formData.dataSource || 'paste_spreadsheet'
+                      if (dataSource === 'sample_sales' || dataSource === 'sample_inventory') {
+                        return (
+                          <Grid item xs={12} key={field.name}>
+                            <Alert severity="info" sx={{ mt: 1 }}>
+                              Using sample {dataSource === 'sample_sales' ? 'sales' : 'inventory'} data. Just enter your question above!
+                            </Alert>
+                          </Grid>
+                        )
+                      }
+                    }
+
+                    return (
+                      <Grid item xs={12} md={field.multiline ? 12 : 6} key={field.name}>
+                        {field.type === 'select' ? (
+                          <FormControl fullWidth>
+                            <InputLabel>{field.label}</InputLabel>
+                            <Select
+                              value={formData[field.name] || field.default || ''}
+                              label={field.label}
+                              onChange={(e) => handleFieldChange(field.name, e.target.value)}
+                            >
+                              {field.options.map((opt) => {
+                                // More user-friendly labels for data source options
+                                let label = opt.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())
+                                if (opt === 'paste_spreadsheet') label = 'Paste from Spreadsheet (Recommended)'
+                                if (opt === 'sample_sales') label = 'Use Sample Sales Data'
+                                if (opt === 'sample_inventory') label = 'Use Sample Inventory Data'
+                                if (opt === 'custom_json') label = 'Enter Raw JSON (Advanced)'
+                                return (
+                                  <MenuItem key={opt} value={opt}>
+                                    {label}
+                                  </MenuItem>
+                                )
+                              })}
+                            </Select>
+                          </FormControl>
+                        ) : field.type === 'multiselect' ? (
+                          <FormControl fullWidth>
+                            <InputLabel>{field.label}</InputLabel>
+                            <Select
+                              multiple
+                              value={formData[field.name] || []}
+                              label={field.label}
+                              onChange={(e) => handleFieldChange(field.name, e.target.value)}
+                              renderValue={(selected) => (
+                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                  {selected.map((value) => (
+                                    <Chip key={value} label={value.replace(/_/g, ' ')} size="small" />
+                                  ))}
+                                </Box>
+                              )}
+                            >
+                              {field.options.map((opt) => (
+                                <MenuItem key={opt} value={opt}>
+                                  {opt.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}
+                                </MenuItem>
+                              ))}
+                            </Select>
+                          </FormControl>
+                        ) : field.type === 'number' ? (
+                          <TextField
+                            fullWidth
+                            type="number"
                             label={field.label}
+                            value={formData[field.name] ?? field.default ?? ''}
+                            onChange={(e) => handleFieldChange(field.name, parseInt(e.target.value))}
+                            inputProps={{ min: field.min, max: field.max }}
+                            required={field.required}
+                          />
+                        ) : field.type === 'spreadsheet' ? (
+                          <TextField
+                            fullWidth
+                            label={formData.dataSource === 'custom_json' ? 'JSON Data' : field.label}
+                            value={formData[field.name] || ''}
                             onChange={(e) => handleFieldChange(field.name, e.target.value)}
-                          >
-                            {field.options.map((opt) => (
-                              <MenuItem key={opt} value={opt}>
-                                {opt.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}
-                              </MenuItem>
-                            ))}
-                          </Select>
-                        </FormControl>
-                      ) : field.type === 'multiselect' ? (
-                        <FormControl fullWidth>
-                          <InputLabel>{field.label}</InputLabel>
-                          <Select
-                            multiple
-                            value={formData[field.name] || []}
+                            multiline
+                            rows={field.rows || 4}
+                            required={field.required}
+                            placeholder={formData.dataSource === 'custom_json'
+                              ? '[{"name": "John", "value": 100}, {"name": "Jane", "value": 200}]'
+                              : field.placeholder || 'Copy from Excel/Sheets and paste here...'}
+                            helperText={formData.dataSource === 'custom_json'
+                              ? 'Enter valid JSON array of objects'
+                              : 'Supports tab-separated (Excel) or comma-separated (CSV) data'}
+                          />
+                        ) : (
+                          <TextField
+                            fullWidth
                             label={field.label}
+                            value={formData[field.name] || ''}
                             onChange={(e) => handleFieldChange(field.name, e.target.value)}
-                            renderValue={(selected) => (
-                              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                                {selected.map((value) => (
-                                  <Chip key={value} label={value.replace(/_/g, ' ')} size="small" />
-                                ))}
-                              </Box>
-                            )}
-                          >
-                            {field.options.map((opt) => (
-                              <MenuItem key={opt} value={opt}>
-                                {opt.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}
-                              </MenuItem>
-                            ))}
-                          </Select>
-                        </FormControl>
-                      ) : field.type === 'number' ? (
-                        <TextField
-                          fullWidth
-                          type="number"
-                          label={field.label}
-                          value={formData[field.name] ?? field.default ?? ''}
-                          onChange={(e) => handleFieldChange(field.name, parseInt(e.target.value))}
-                          inputProps={{ min: field.min, max: field.max }}
-                          required={field.required}
-                        />
-                      ) : (
-                        <TextField
-                          fullWidth
-                          label={field.label}
-                          value={formData[field.name] || ''}
-                          onChange={(e) => handleFieldChange(field.name, e.target.value)}
-                          multiline={field.multiline}
-                          rows={field.rows || 4}
-                          required={field.required}
-                          placeholder={field.name === 'data' ? '[{"name": "John", "value": 100}, ...]' : undefined}
-                        />
-                      )}
-                    </Grid>
-                  ))}
+                            multiline={field.multiline}
+                            rows={field.rows || 4}
+                            required={field.required}
+                            placeholder={field.placeholder}
+                          />
+                        )}
+                      </Grid>
+                    )
+                  })}
                 </Grid>
 
                 <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end' }}>

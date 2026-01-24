@@ -96,6 +96,15 @@ async def lifespan(app: FastAPI):
     except Exception as exc:
         logger.warning("auth_db_init_failed", extra={"event": "auth_db_init_failed", "error": str(exc)})
 
+    # Seed sample data for new installations
+    seed_enabled = os.getenv("NEURA_SEED_DATA", "true").lower() in {"1", "true", "yes"}
+    if seed_enabled:
+        try:
+            from backend.app.services.seed_data import seed_all
+            await seed_all()
+        except Exception as exc:
+            logger.warning("seed_data_failed", extra={"event": "seed_data_failed", "error": str(exc)})
+
     if not SCHEDULER_DISABLED and SCHEDULER is None:
         poll_seconds = max(int(os.getenv("NEURA_SCHEDULER_INTERVAL", "60") or "60"), 15)
         SCHEDULER = ReportScheduler(_scheduler_runner, poll_seconds=poll_seconds)

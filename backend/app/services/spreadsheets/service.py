@@ -7,7 +7,7 @@ from __future__ import annotations
 import json
 import logging
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
 
@@ -124,7 +124,7 @@ class SpreadsheetService:
         initial_data: Optional[list[list[Any]]] = None,
     ) -> Spreadsheet:
         """Create a new spreadsheet."""
-        now = datetime.utcnow().isoformat()
+        now = datetime.now(timezone.utc).isoformat()
 
         # Create initial sheet
         initial_sheet = Sheet(
@@ -172,7 +172,7 @@ class SpreadsheetService:
         if metadata:
             spreadsheet.metadata.update(metadata)
 
-        spreadsheet.updated_at = datetime.utcnow().isoformat()
+        spreadsheet.updated_at = datetime.now(timezone.utc).isoformat()
         self._save_spreadsheet(spreadsheet)
         return spreadsheet
 
@@ -214,7 +214,7 @@ class SpreadsheetService:
 
             sheet.data[row][col] = value
 
-        spreadsheet.updated_at = datetime.utcnow().isoformat()
+        spreadsheet.updated_at = datetime.now(timezone.utc).isoformat()
         self._save_spreadsheet(spreadsheet)
         return spreadsheet
 
@@ -239,7 +239,7 @@ class SpreadsheetService:
         )
 
         spreadsheet.sheets.append(sheet)
-        spreadsheet.updated_at = datetime.utcnow().isoformat()
+        spreadsheet.updated_at = datetime.now(timezone.utc).isoformat()
         self._save_spreadsheet(spreadsheet)
 
         logger.info(f"Added sheet {sheet_name} to spreadsheet {spreadsheet_id}")
@@ -261,7 +261,7 @@ class SpreadsheetService:
         for i, sheet in enumerate(spreadsheet.sheets):
             sheet.index = i
 
-        spreadsheet.updated_at = datetime.utcnow().isoformat()
+        spreadsheet.updated_at = datetime.now(timezone.utc).isoformat()
         self._save_spreadsheet(spreadsheet)
         return True
 
@@ -279,7 +279,7 @@ class SpreadsheetService:
         for sheet in spreadsheet.sheets:
             if sheet.id == sheet_id:
                 sheet.name = new_name
-                spreadsheet.updated_at = datetime.utcnow().isoformat()
+                spreadsheet.updated_at = datetime.now(timezone.utc).isoformat()
                 self._save_spreadsheet(spreadsheet)
                 return True
 
@@ -309,7 +309,7 @@ class SpreadsheetService:
                 if not updated:
                     sheet.conditional_formats.append(conditional_format)
 
-                spreadsheet.updated_at = datetime.utcnow().isoformat()
+                spreadsheet.updated_at = datetime.now(timezone.utc).isoformat()
                 self._save_spreadsheet(spreadsheet)
                 return True
 
@@ -339,7 +339,7 @@ class SpreadsheetService:
                 if not updated:
                     sheet.data_validations.append(validation)
 
-                spreadsheet.updated_at = datetime.utcnow().isoformat()
+                spreadsheet.updated_at = datetime.now(timezone.utc).isoformat()
                 self._save_spreadsheet(spreadsheet)
                 return True
 
@@ -361,7 +361,7 @@ class SpreadsheetService:
             if sheet.id == sheet_id:
                 sheet.frozen_rows = rows
                 sheet.frozen_cols = cols
-                spreadsheet.updated_at = datetime.utcnow().isoformat()
+                spreadsheet.updated_at = datetime.now(timezone.utc).isoformat()
                 self._save_spreadsheet(spreadsheet)
                 return True
 

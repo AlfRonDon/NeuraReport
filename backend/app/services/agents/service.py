@@ -7,7 +7,7 @@ from __future__ import annotations
 import logging
 import hashlib
 from abc import ABC, abstractmethod
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 from enum import Enum
 
@@ -147,6 +147,58 @@ class BaseAgent(ABC):
         response = client.chat.completions.create(**create_params)
         return response.choices[0].message.content or ""
 
+    def _safe_parse_json(self, content: str, default: dict | None = None) -> dict:
+        """Safely parse JSON from LLM output, handling code blocks and malformed JSON.
+
+        Args:
+            content: Raw LLM output that may contain JSON
+            default: Default value if parsing fails
+
+        Returns:
+            Parsed JSON dict or default value
+        """
+        import json
+        import re
+
+        if default is None:
+            default = {}
+
+        if not content or not content.strip():
+            return default
+
+        # Try to extract JSON from markdown code blocks
+        cleaned = content.strip()
+
+        # Handle ```json ... ``` blocks
+        json_block_match = re.search(r"```(?:json)?\s*\n?(.*?)\n?```", cleaned, re.DOTALL)
+        if json_block_match:
+            cleaned = json_block_match.group(1).strip()
+        elif cleaned.startswith("```"):
+            # Handle case where ``` is at start but no closing
+            parts = cleaned.split("```", 2)
+            if len(parts) >= 2:
+                cleaned = parts[1].strip()
+                if cleaned.startswith("json"):
+                    cleaned = cleaned[4:].strip()
+
+        # Try direct parse
+        try:
+            return json.loads(cleaned)
+        except json.JSONDecodeError:
+            pass
+
+        # Try to find JSON object or array in the content
+        for pattern in [r"\{.*\}", r"\[.*\]"]:
+            match = re.search(pattern, cleaned, re.DOTALL)
+            if match:
+                try:
+                    return json.loads(match.group())
+                except json.JSONDecodeError:
+                    continue
+
+        logger.warning(f"Failed to parse JSON from LLM output: {content[:200]}...")
+        return default
+
     @abstractmethod
     async def execute(self, **kwargs) -> Any:
         """Execute the agent's task."""
@@ -217,15 +269,15 @@ Limit to {max_sections} main sections."""
                 max_tokens=4000,
                 temperature=0.7,
             )
-            import json
 
-            # Handle markdown code blocks
-            if content.startswith("```"):
-                content = content.split("```")[1]
-                if content.startswith("json"):
-                    content = content[4:]
-
-            result = json.loads(content)
+            # Safely parse JSON from LLM output
+            result = self._safe_parse_json(content, default={
+                "summary": "Unable to parse research results",
+                "sections": [],
+                "sources": [],
+                "key_findings": [],
+                "recommendations": [],
+            })
 
             return ResearchReport(
                 topic=topic,
@@ -251,6 +303,71 @@ class DataAnalystAgent(BaseAgent):
     Answers questions about data and generates insights.
     """
 
+    def _compute_column_stats(self, data: List[Dict[str, Any]], columns: List[str]) -> Dict[str, Any]:
+        """Compute summary statistics for all columns in the dataset."""
+        stats = {}
+        for col in columns:
+            values = [row.get(col) for row in data if row.get(col) is not None]
+            if not values:
+                stats[col] = {"type": "empty", "count": 0}
+                continue
+
+            # Determine column type and compute appropriate stats
+            numeric_values = []
+            for v in values:
+                try:
+                    numeric_values.append(float(v))
+                except (ValueError, TypeError):
+                    pass
+
+            if len(numeric_values) > len(values) * 0.5:  # More than 50% numeric
+                import statistics
+                stats[col] = {
+                    "type": "numeric",
+                    "count": len(numeric_values),
+                    "min": min(numeric_values),
+                    "max": max(numeric_values),
+                    "mean": round(statistics.mean(numeric_values), 2),
+                    "median": round(statistics.median(numeric_values), 2),
+                    "std": round(statistics.stdev(numeric_values), 2) if len(numeric_values) > 1 else 0,
+                }
+            else:
+                # Categorical column
+                from collections import Counter
+                value_counts = Counter(str(v) for v in values)
+                top_values = value_counts.most_common(5)
+                stats[col] = {
+                    "type": "categorical",
+                    "count": len(values),
+                    "unique": len(value_counts),
+                    "top_values": [{"value": v, "count": c} for v, c in top_values],
+                }
+        return stats
+
+    def _stratified_sample(self, data: List[Dict[str, Any]], sample_size: int = 50) -> List[Dict[str, Any]]:
+        """Get a stratified sample from the data to ensure representation."""
+        if len(data) <= sample_size:
+            return data
+
+        # Take samples from beginning, middle, and end to capture distribution
+        n = len(data)
+        indices = set()
+
+        # First 10 rows
+        indices.update(range(min(10, n)))
+        # Last 10 rows
+        indices.update(range(max(0, n - 10), n))
+        # Evenly spaced samples from the middle
+        remaining = sample_size - len(indices)
+        if remaining > 0:
+            step = max(1, n // remaining)
+            for i in range(0, n, step):
+                indices.add(i)
+                if len(indices) >= sample_size:
+                    break
+
+        return [data[i] for i in sorted(indices)][:sample_size]
+
     async def execute(
         self,
         question: str,
@@ -273,22 +390,34 @@ class DataAnalystAgent(BaseAgent):
         client = self._get_client()
         model = self._get_model()
 
-        # Prepare data sample
         import json
-        data_sample = json.dumps(data[:20], indent=2, default=str)
 
-        # Get column info
+        # Get column info and compute full dataset statistics
         if data:
             columns = list(data[0].keys())
             column_info = f"Columns: {', '.join(columns)}"
+
+            # Compute statistics from FULL dataset (not just sample)
+            full_stats = self._compute_column_stats(data, columns)
+            stats_summary = json.dumps(full_stats, indent=2, default=str)
+
+            # Get stratified sample for detailed inspection
+            sample = self._stratified_sample(data, sample_size=30)
+            data_sample = json.dumps(sample, indent=2, default=str)
         else:
             column_info = "No data provided"
+            stats_summary = "{}"
+            data_sample = "[]"
 
         system_prompt = f"""You are an expert data analyst. Analyze the provided data and answer the question.
 
 Data Description: {data_description or 'Not provided'}
 {column_info}
 Total rows: {len(data)}
+
+IMPORTANT: The statistics below are computed from the FULL dataset, not just the sample.
+Column Statistics (full dataset):
+{stats_summary}
 
 Provide your response as JSON:
 {{
@@ -303,18 +432,20 @@ Provide your response as JSON:
         try:
             content = self._call_openai(
                 system_prompt=system_prompt,
-                user_prompt=f"Data sample:\n{data_sample}\n\nQuestion: {question}",
+                user_prompt=f"Data sample (stratified from full dataset):\n{data_sample}\n\nQuestion: {question}",
                 max_tokens=2000,
                 temperature=0.3,
             )
-            import json
 
-            if content.startswith("```"):
-                content = content.split("```")[1]
-                if content.startswith("json"):
-                    content = content[4:]
-
-            result = json.loads(content)
+            # Safely parse JSON from LLM output
+            result = self._safe_parse_json(content, default={
+                "answer": "Unable to parse analysis results",
+                "data_summary": {},
+                "insights": [],
+                "charts": [],
+                "sql_queries": [],
+                "confidence": 0.0,
+            })
 
             return DataAnalysisResult(
                 query=question,
@@ -397,14 +528,16 @@ Provide your response as JSON:
                 max_tokens=1500,
                 temperature=0.7,
             )
-            import json
 
-            if content.startswith("```"):
-                content = content.split("```")[1]
-                if content.startswith("json"):
-                    content = content[4:]
-
-            result = json.loads(content)
+            # Safely parse JSON from LLM output
+            result = self._safe_parse_json(content, default={
+                "subject": "",
+                "body": "Unable to generate email draft",
+                "tone": tone,
+                "suggested_recipients": [],
+                "attachments_suggested": [],
+                "follow_up_actions": [],
+            })
 
             return EmailDraft(
                 subject=result.get("subject", ""),
@@ -573,14 +706,15 @@ Provide your response as JSON:
                 max_tokens=4000,
                 temperature=0.3,
             )
-            import json
 
-            if content.startswith("```"):
-                content = content.split("```")[1]
-                if content.startswith("json"):
-                    content = content[4:]
-
-            result = json.loads(content)
+            # Safely parse JSON from LLM output
+            result = self._safe_parse_json(content, default={
+                "corrected_text": text,
+                "issues_found": [],
+                "style_suggestions": [],
+                "readability_score": 0,
+                "reading_level": "",
+            })
 
             return ProofreadingResult(
                 original_text=text,
@@ -606,6 +740,11 @@ class AgentService:
     Central service for managing AI agents.
     """
 
+    # Maximum number of completed tasks to keep in memory
+    MAX_COMPLETED_TASKS = 100
+    # Maximum age of completed tasks in seconds (1 hour)
+    MAX_TASK_AGE_SECONDS = 3600
+
     def __init__(self):
         self._agents = {
             AgentType.RESEARCH: ResearchAgent(),
@@ -615,6 +754,36 @@ class AgentService:
             AgentType.PROOFREADING: ProofreadingAgent(),
         }
         self._tasks: Dict[str, AgentTask] = {}
+
+    def _cleanup_old_tasks(self) -> None:
+        """Remove old completed tasks to prevent memory leaks."""
+        now = datetime.now(timezone.utc)
+        completed_tasks = [
+            (task_id, task) for task_id, task in self._tasks.items()
+            if task.status in (AgentStatus.COMPLETED, AgentStatus.FAILED)
+        ]
+
+        # Remove tasks older than MAX_TASK_AGE_SECONDS
+        for task_id, task in completed_tasks:
+            if task.completed_at:
+                age_seconds = (now - task.completed_at).total_seconds()
+                if age_seconds > self.MAX_TASK_AGE_SECONDS:
+                    del self._tasks[task_id]
+
+        # If still too many tasks, remove oldest completed ones
+        completed_tasks = [
+            (task_id, task) for task_id, task in self._tasks.items()
+            if task.status in (AgentStatus.COMPLETED, AgentStatus.FAILED)
+        ]
+        if len(completed_tasks) > self.MAX_COMPLETED_TASKS:
+            # Sort by completion time, oldest first
+            sorted_tasks = sorted(
+                completed_tasks,
+                key=lambda x: x[1].completed_at or datetime.min
+            )
+            # Remove oldest tasks until we're under the limit
+            for task_id, _ in sorted_tasks[:len(completed_tasks) - self.MAX_COMPLETED_TASKS]:
+                del self._tasks[task_id]
 
     async def run_agent(
         self,
@@ -631,7 +800,10 @@ class AgentService:
         Returns:
             AgentTask with results
         """
-        task_id = hashlib.sha256(f"{agent_type}:{datetime.utcnow().isoformat()}".encode()).hexdigest()[:12]
+        # Clean up old tasks before adding new ones
+        self._cleanup_old_tasks()
+
+        task_id = hashlib.sha256(f"{agent_type}:{datetime.now(timezone.utc).isoformat()}".encode()).hexdigest()[:12]
 
         task = AgentTask(
             task_id=task_id,
@@ -655,19 +827,29 @@ class AgentService:
             task.error = str(e)
             logger.error(f"Agent {agent_type} failed: {e}")
 
-        task.completed_at = datetime.utcnow()
+        task.completed_at = datetime.now(timezone.utc)
         return task
 
     def get_task(self, task_id: str) -> Optional[AgentTask]:
         """Get task by ID."""
         return self._tasks.get(task_id)
 
-    def list_tasks(self, agent_type: Optional[AgentType] = None) -> List[AgentTask]:
-        """List all tasks, optionally filtered by agent type."""
+    def list_tasks(self, agent_type: Optional[AgentType] = None, limit: int = 50) -> List[AgentTask]:
+        """List recent tasks, optionally filtered by agent type."""
         tasks = list(self._tasks.values())
         if agent_type:
             tasks = [t for t in tasks if t.agent_type == agent_type]
-        return sorted(tasks, key=lambda t: t.created_at, reverse=True)
+        return sorted(tasks, key=lambda t: t.created_at, reverse=True)[:limit]
+
+    def clear_completed_tasks(self) -> int:
+        """Clear all completed and failed tasks. Returns count of cleared tasks."""
+        to_remove = [
+            task_id for task_id, task in self._tasks.items()
+            if task.status in (AgentStatus.COMPLETED, AgentStatus.FAILED)
+        ]
+        for task_id in to_remove:
+            del self._tasks[task_id]
+        return len(to_remove)
 
 
 # Singleton instances

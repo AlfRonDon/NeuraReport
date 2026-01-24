@@ -1129,7 +1129,7 @@ def health_check() -> Dict[str, Any]:
 
 def _append_raw_output(description: str, response: Any) -> None:
     """Append the raw LLM response to a Markdown log file."""
-    timestamp = datetime.utcnow().isoformat(timespec="seconds") + "Z"
+    timestamp = datetime.now(timezone.utc).isoformat(timespec="seconds") + "Z"
     entry = _coerce_jsonable(response)
 
     try:

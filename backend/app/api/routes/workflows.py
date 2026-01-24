@@ -21,7 +21,7 @@ from backend.app.schemas.workflows.workflow import (
 )
 from backend.app.services.workflow.service import workflow_service
 
-router = APIRouter(prefix="/workflows", tags=["workflows"])
+router = APIRouter(tags=["workflows"])
 
 
 @router.post("", response_model=WorkflowResponse)

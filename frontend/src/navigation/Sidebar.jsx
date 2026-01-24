@@ -95,70 +95,75 @@ const glow = keyframes`
 // NAVIGATION STRUCTURE
 // =============================================================================
 
+// Simplified, user-friendly navigation structure
+// Reduced from 30+ items to essential items with clear labels
 const NAV_ITEMS = [
   {
-    section: 'Overview',
+    section: 'Home',
     items: [
-      { key: 'dashboard', label: 'Dashboard', icon: DashboardIcon, path: '/' },
+      { key: 'dashboard', label: 'Dashboard', icon: DashboardIcon, path: '/', description: 'Overview & quick actions' },
+    ],
+  },
+  {
+    section: 'Reports',
+    items: [
+      { key: 'reports', label: 'My Reports', icon: AssessmentIcon, path: '/reports', description: 'View and download reports' },
+      { key: 'templates', label: 'Templates', icon: DescriptionIcon, path: '/templates', description: 'Report designs & layouts' },
+      { key: 'jobs', label: 'Running Jobs', icon: WorkIcon, path: '/jobs', badge: true, description: 'Report generation progress' },
+      { key: 'schedules', label: 'Schedules', icon: ScheduleIcon, path: '/schedules', description: 'Automated report runs' },
+    ],
+  },
+  {
+    section: 'Data',
+    items: [
+      { key: 'connections', label: 'Data Sources', icon: StorageIcon, path: '/connections', description: 'Database connections' },
+      { key: 'search', label: 'Search', icon: SearchIcon, path: '/search', description: 'Find anything' },
+    ],
+  },
+  {
+    section: 'AI Assistant',
+    collapsible: true,
+    items: [
+      { key: 'docqa', label: 'Chat with Docs', icon: ChatIcon, path: '/docqa', highlight: true, description: 'Ask questions about your documents' },
+      { key: 'agents', label: 'AI Agents', icon: SmartToyIcon, path: '/agents', description: 'Research, analyze, write' },
+      { key: 'knowledge', label: 'Knowledge Base', icon: LibraryBooksIcon, path: '/knowledge', description: 'Document library' },
     ],
   },
   {
     section: 'Create',
     collapsible: true,
     items: [
-      { key: 'documents', label: 'Documents', icon: EditNoteIcon, path: '/documents', highlight: true },
-      { key: 'spreadsheets', label: 'Spreadsheets', icon: TableChartIcon, path: '/spreadsheets' },
-      { key: 'dashboard-builder', label: 'Dashboards', icon: DashboardCustomizeIcon, path: '/dashboard-builder' },
-      { key: 'visualization', label: 'Visualization', icon: BubbleChartIcon, path: '/visualization' },
-      { key: 'workflows', label: 'Workflows', icon: AccountTreeIcon, path: '/workflows' },
+      { key: 'documents', label: 'Documents', icon: EditNoteIcon, path: '/documents', description: 'Write with AI help' },
+      { key: 'spreadsheets', label: 'Spreadsheets', icon: TableChartIcon, path: '/spreadsheets', description: 'Data & formulas' },
+      { key: 'dashboard-builder', label: 'Dashboards', icon: DashboardCustomizeIcon, path: '/dashboard-builder', description: 'Visual analytics' },
     ],
   },
   {
-    section: 'Setup',
-    collapsible: true,
+    section: 'Settings',
     items: [
-      { key: 'connections', label: 'Data Sources', icon: StorageIcon, path: '/connections' },
-      { key: 'connectors', label: 'Connectors', icon: CableIcon, path: '/connectors' },
-      { key: 'ingestion', label: 'Import Data', icon: CloudUploadIcon, path: '/ingestion' },
-      { key: 'templates', label: 'Report Designs', icon: DescriptionIcon, path: '/templates' },
-      { key: 'design', label: 'Brand Kit', icon: PaletteIcon, path: '/design' },
-      { key: 'query', label: 'Query Builder', icon: QuestionAnswerIcon, path: '/query' },
-      { key: 'enrichment', label: 'Data Enrichment', icon: AutoFixHighIcon, path: '/enrichment' },
-      { key: 'federation', label: 'Combine Sources', icon: JoinInnerIcon, path: '/federation' },
-    ],
-  },
-  {
-    section: 'AI Tools',
-    collapsible: true,
-    items: [
-      { key: 'agents', label: 'AI Agents', icon: SmartToyIcon, path: '/agents', highlight: true },
-      { key: 'search', label: 'Smart Search', icon: SearchIcon, path: '/search' },
-      { key: 'knowledge', label: 'Knowledge Base', icon: LibraryBooksIcon, path: '/knowledge' },
-      { key: 'synthesis', label: 'Combine Docs', icon: MergeIcon, path: '/synthesis' },
-      { key: 'docqa', label: 'Ask Documents', icon: ChatIcon, path: '/docqa' },
-      { key: 'summary', label: 'Summarize', icon: SummarizeIcon, path: '/summary' },
-    ],
-  },
-  {
-    section: 'Reports',
-    items: [
-      { key: 'reports', label: 'My Reports', icon: AssessmentIcon, path: '/reports' },
-      { key: 'schedules', label: 'Scheduled', icon: ScheduleIcon, path: '/schedules' },
-      { key: 'jobs', label: 'In Progress', icon: WorkIcon, path: '/jobs', badge: true },
-      { key: 'analyze', label: 'Insights', icon: AutoAwesomeIcon, path: '/analyze', highlight: true },
-      { key: 'history', label: 'History', icon: HistoryIcon, path: '/history' },
-    ],
-  },
-  {
-    section: 'System',
-    items: [
-      { key: 'stats', label: 'Usage Stats', icon: BarChartIcon, path: '/stats' },
-      { key: 'ops', label: 'Ops Console', icon: AdminPanelSettingsIcon, path: '/ops' },
-      { key: 'activity', label: 'Activity Log', icon: TimelineIcon, path: '/activity' },
-      { key: 'settings', label: 'Settings', icon: SettingsIcon, path: '/settings' },
+      { key: 'settings', label: 'Settings', icon: SettingsIcon, path: '/settings', description: 'Preferences & account' },
     ],
   },
 ]
+
+// Legacy routes map for backward compatibility - these redirect to main sections
+const LEGACY_ROUTES = {
+  '/connectors': '/connections',
+  '/ingestion': '/connections',
+  '/design': '/templates',
+  '/query': '/connections',
+  '/enrichment': '/connections',
+  '/federation': '/connections',
+  '/synthesis': '/knowledge',
+  '/summary': '/docqa',
+  '/analyze': '/reports',
+  '/history': '/reports',
+  '/stats': '/settings',
+  '/ops': '/settings',
+  '/activity': '/settings',
+  '/visualization': '/dashboard-builder',
+  '/workflows': '/dashboard-builder',
+}
 
 // =============================================================================
 // STYLED COMPONENTS
@@ -168,26 +173,10 @@ const SidebarContainer = styled(Box)(({ theme }) => ({
   display: 'flex',
   flexDirection: 'column',
   height: '100%',
-  backgroundColor: theme.palette.mode === 'dark'
-    ? alpha(theme.palette.background.paper, 0.75)
-    : theme.palette.background.paper,
-  backdropFilter: 'blur(20px)',
-  borderRight: `1px solid ${alpha(theme.palette.divider, 0.08)}`,
+  // Clean, flat background - NO blur or gradients
+  backgroundColor: theme.palette.background.paper,
+  borderRight: `1px solid ${theme.palette.divider}`,
   position: 'relative',
-
-  // Subtle gradient overlay
-  '&::before': {
-    content: '""',
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    background: theme.palette.mode === 'dark'
-      ? `radial-gradient(ellipse at top left, ${alpha(theme.palette.primary.main, 0.05)} 0%, transparent 50%)`
-      : 'none',
-    pointerEvents: 'none',
-  },
 }))
 
 const LogoContainer = styled(Box, {
@@ -202,24 +191,23 @@ const LogoContainer = styled(Box, {
 }))
 
 const LogoBox = styled(Box)(({ theme }) => ({
-  width: 36,
-  height: 36,
-  borderRadius: 10,
-  background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
+  width: 32,
+  height: 32,
+  borderRadius: 8,
+  // Simple solid background - NO gradients
+  backgroundColor: theme.palette.mode === 'dark' ? theme.palette.grey[800] : '#3F3F3F',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  fontSize: '0.875rem',
-  fontWeight: 700,
-  color: 'white',
+  fontSize: '0.75rem',
+  fontWeight: 600,
+  color: '#FFFFFF',
   letterSpacing: '-0.02em',
-  boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.3)}`,
-  transition: 'transform 0.2s ease, box-shadow 0.2s ease',
   cursor: 'pointer',
+  transition: 'opacity 0.15s ease',
 
   '&:hover': {
-    transform: 'scale(1.05)',
-    boxShadow: `0 6px 16px ${alpha(theme.palette.primary.main, 0.4)}`,
+    opacity: 0.9,
   },
 }))
 
@@ -227,20 +215,21 @@ const NewReportButton = styled(Box)(({ theme }) => ({
   display: 'flex',
   alignItems: 'center',
   gap: theme.spacing(1.5),
-  padding: theme.spacing(1.25, 1.5),
-  borderRadius: theme.shape.borderRadius * 1.5,
-  border: `1px dashed ${alpha(theme.palette.primary.main, 0.3)}`,
-  backgroundColor: alpha(theme.palette.primary.main, 0.04),
+  padding: theme.spacing(1, 1.5),
+  borderRadius: 6,
+  // Flat, muted button - no dashed borders
+  backgroundColor: theme.palette.mode === 'dark'
+    ? alpha(theme.palette.common.white, 0.05)
+    : '#F3F4F6',
   color: theme.palette.text.secondary,
   cursor: 'pointer',
-  transition: 'all 0.2s ease',
+  transition: 'background-color 0.15s ease',
 
   '&:hover': {
-    borderColor: theme.palette.primary.main,
-    backgroundColor: alpha(theme.palette.primary.main, 0.08),
-    color: theme.palette.primary.main,
-    transform: 'translateY(-1px)',
-    boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.15)}`,
+    backgroundColor: theme.palette.mode === 'dark'
+      ? alpha(theme.palette.common.white, 0.08)
+      : '#E5E7EB',
+    color: theme.palette.text.primary,
   },
 }))
 
@@ -270,44 +259,56 @@ const NavItemButton = styled(Box, {
   gap: theme.spacing(1.5),
   padding: theme.spacing(1, 1.5),
   margin: theme.spacing(0.25, 1),
-  borderRadius: theme.shape.borderRadius * 1.5,
+  borderRadius: 6,
   cursor: 'pointer',
   position: 'relative',
-  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+  transition: 'all 0.15s ease',
   justifyContent: collapsed ? 'center' : 'flex-start',
 
+  // Active state - subtle, NO brand green background
   ...(active && {
-    backgroundColor: alpha(theme.palette.primary.main, 0.1),
-    color: theme.palette.primary.main,
+    backgroundColor: theme.palette.mode === 'dark'
+      ? alpha(theme.palette.common.white, 0.08)
+      : 'rgba(0, 0, 0, 0.04)',
+    color: theme.palette.text.primary,
 
+    // Subtle left indicator
     '&::before': {
       content: '""',
       position: 'absolute',
       left: 0,
       top: '25%',
       bottom: '25%',
-      width: 3,
-      borderRadius: '0 3px 3px 0',
-      backgroundColor: theme.palette.primary.main,
+      width: 2,
+      borderRadius: '0 2px 2px 0',
+      backgroundColor: theme.palette.text.primary,
     },
   }),
 
+  // Inactive/muted state
   ...(!active && {
-    color: theme.palette.text.secondary,
+    color: theme.palette.mode === 'dark'
+      ? theme.palette.grey[500]
+      : '#9CA3A8',
 
     '&:hover': {
-      backgroundColor: alpha(theme.palette.action.hover, 0.6),
-      color: theme.palette.text.primary,
-      transform: 'translateX(2px)',
+      backgroundColor: theme.palette.mode === 'dark'
+        ? alpha(theme.palette.common.white, 0.04)
+        : 'rgba(0, 0, 0, 0.02)',
+      color: theme.palette.mode === 'dark'
+        ? theme.palette.grey[300]
+        : '#6B7280',
     },
   }),
 
+  // Highlight items - subtle, no gradients
   ...(highlight && !active && {
-    background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.08)} 0%, ${alpha(theme.palette.secondary.main, 0.08)} 100%)`,
-    border: `1px solid ${alpha(theme.palette.primary.main, 0.15)}`,
+    backgroundColor: 'transparent',
 
     '&:hover': {
-      background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.12)} 0%, ${alpha(theme.palette.secondary.main, 0.12)} 100%)`,
+      backgroundColor: theme.palette.mode === 'dark'
+        ? alpha(theme.palette.common.white, 0.04)
+        : 'rgba(0, 0, 0, 0.02)',
     },
   }),
 }))

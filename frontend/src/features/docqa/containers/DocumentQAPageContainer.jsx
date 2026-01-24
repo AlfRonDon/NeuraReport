@@ -589,6 +589,12 @@ export default function DocumentQAPage() {
     docId: null,
     docName: '',
   })
+  const [clearChatConfirm, setClearChatConfirm] = useState({
+    open: false,
+    sessionId: null,
+    sessionName: '',
+    messageCount: 0,
+  })
   const [searchQuery, setSearchQuery] = useState('')
   const toast = useToast()
   const [initialLoading, setInitialLoading] = useState(true)
@@ -1042,7 +1048,12 @@ export default function DocumentQAPage() {
                 <Button
                   size="small"
                   startIcon={<ClearIcon />}
-                  onClick={() => clearHistory(currentSession.id)}
+                  onClick={() => setClearChatConfirm({
+                    open: true,
+                    sessionId: currentSession.id,
+                    sessionName: currentSession.name,
+                    messageCount: messages.length,
+                  })}
                   sx={{
                     borderRadius: 2,
                     textTransform: 'none',
@@ -1603,6 +1614,35 @@ export default function DocumentQAPage() {
         title="Remove Document"
         message={`Are you sure you want to remove "${removeDocConfirm.docName}" from this session?`}
         confirmLabel="Remove"
+        severity="warning"
+      />
+
+      {/* Clear Chat Confirmation */}
+      <ConfirmModal
+        open={clearChatConfirm.open}
+        onClose={() =>
+          setClearChatConfirm({ open: false, sessionId: null, sessionName: '', messageCount: 0 })
+        }
+        onConfirm={() => {
+          const sessionId = clearChatConfirm.sessionId
+          const sessionName = clearChatConfirm.sessionName
+          setClearChatConfirm({ open: false, sessionId: null, sessionName: '', messageCount: 0 })
+
+          // UX Governance: Clear action with tracking
+          execute({
+            type: InteractionType.DELETE,
+            label: `Clear chat history for "${sessionName}"`,
+            reversibility: Reversibility.PARTIALLY_REVERSIBLE,
+            successMessage: 'Chat history cleared',
+            errorMessage: 'Failed to clear chat history',
+            action: async () => {
+              await clearHistory(sessionId)
+            },
+          })
+        }}
+        title="Clear Chat History"
+        message={`Are you sure you want to clear all ${clearChatConfirm.messageCount} messages from "${clearChatConfirm.sessionName}"? This action cannot be undone.`}
+        confirmLabel="Clear History"
         severity="warning"
       />
     </PageContainer>

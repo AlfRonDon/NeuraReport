@@ -246,35 +246,42 @@ export default function ConnectionsPage() {
       successMessage: `"${connectionToDelete.name}" removed`,
       errorMessage: 'Failed to delete connection',
       action: async () => {
-        // Optimistically remove from UI
+        // Remove from UI immediately
         removeSavedConnection(connectionToDelete.id)
 
-        // Set up delayed actual delete with undo capability
-        let undone = false
-        const deleteTimeout = setTimeout(async () => {
-          if (undone) return
-          try {
-            await api.deleteConnection(connectionToDelete.id)
-          } catch (err) {
-            // If delete fails, restore the connection
-            if (connectionData) {
-              setSavedConnections((prev) => [...prev, connectionData])
-            }
-            throw err
+        // Delete from backend immediately (no delayed timeout)
+        try {
+          await api.deleteConnection(connectionToDelete.id)
+        } catch (err) {
+          // If delete fails, restore the connection to UI
+          if (connectionData) {
+            setSavedConnections((prev) => [...prev, connectionData])
           }
-        }, 5000)
+          throw err
+        }
 
-        // Show undo toast
+        // Show undo toast - undo will re-create the connection
         toast.showWithUndo(
           `"${connectionToDelete.name}" removed`,
-          () => {
-            undone = true
-            clearTimeout(deleteTimeout)
-            // Restore connection
+          async () => {
+            // Undo: re-create the connection via API
             if (connectionData) {
-              setSavedConnections((prev) => [...prev, connectionData])
+              try {
+                const restored = await api.upsertConnection({
+                  name: connectionData.name,
+                  dbType: connectionData.db_type,
+                  dbUrl: connectionData.db_url,
+                  database: connectionData.database || connectionData.summary,
+                  status: connectionData.status || 'connected',
+                  latencyMs: connectionData.latency_ms,
+                })
+                setSavedConnections((prev) => [...prev, restored])
+                toast.show('Data source restored', 'success')
+              } catch (restoreErr) {
+                console.error('Failed to restore connection:', restoreErr)
+                toast.show('Failed to restore connection', 'error')
+              }
             }
-            toast.show('Data source restored', 'success')
           },
           { severity: 'info' }
         )

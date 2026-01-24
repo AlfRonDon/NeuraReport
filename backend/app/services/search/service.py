@@ -7,7 +7,7 @@ from __future__ import annotations
 import logging
 import re
 import hashlib
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Set, Tuple
 from enum import Enum
 
@@ -127,7 +127,7 @@ class SearchService:
             "title": title,
             "content": content,
             "metadata": metadata or {},
-            "indexed_at": datetime.utcnow().isoformat(),
+            "indexed_at": datetime.now(timezone.utc).isoformat(),
         }
 
         # Build inverted index
@@ -183,7 +183,7 @@ class SearchService:
         Returns:
             SearchResponse with results
         """
-        start_time = datetime.utcnow()
+        start_time = datetime.now(timezone.utc)
 
         # Track search
         self._track_search(query)
@@ -249,7 +249,7 @@ class SearchService:
         if total == 0 and typo_tolerance:
             did_you_mean = await self._get_spelling_suggestion(query)
 
-        elapsed_ms = (datetime.utcnow() - start_time).total_seconds() * 1000
+        elapsed_ms = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
 
         return SearchResponse(
             query=query,
@@ -388,7 +388,7 @@ class SearchService:
         Returns:
             SavedSearch configuration
         """
-        search_id = hashlib.sha256(f"{name}:{query}:{datetime.utcnow().isoformat()}".encode()).hexdigest()[:12]
+        search_id = hashlib.sha256(f"{name}:{query}:{datetime.now(timezone.utc).isoformat()}".encode()).hexdigest()[:12]
 
         saved = SavedSearch(
             search_id=search_id,
@@ -413,7 +413,7 @@ class SearchService:
         )
 
         # Update saved search
-        saved.last_run = datetime.utcnow()
+        saved.last_run = datetime.now(timezone.utc)
         saved.result_count = result.total_results
 
         return result
@@ -833,7 +833,7 @@ class SearchService:
         self._search_history.append({
             "query": query,
             "results": results,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         })
         # Keep only last 1000 searches
         if len(self._search_history) > 1000:

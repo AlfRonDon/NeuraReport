@@ -10,6 +10,8 @@ jobs:
     runs-on: ubuntu-latest
     env:
       OPENAI_API_KEY: dummy-ci-key
+      NEURA_ALLOW_MISSING_OPENAI: "true"
+      NEURA_FORCE_GPT5: "false"
       ARTIFACT_WARN_BYTES: "5242880"
       ARTIFACT_WARN_RENDER_MS: "2000"
 
@@ -65,4 +67,16 @@ jobs:
 
       - name: Run lint
         run: npm run lint
+        working-directory: frontend
+
+      - name: Run theme lint
+        run: npm run lint:theme
+        working-directory: frontend
+
+      - name: Run unit tests
+        run: npm test -- --run
+        working-directory: frontend
+
+      - name: Build
+        run: npm run build
         working-directory: frontend

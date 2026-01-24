@@ -7,6 +7,8 @@ Thumbs.db
 .vscode/
 .history/
 .claude/
+.anima/
+.mcp.json
 nul
 
 # Environment files
@@ -76,7 +78,11 @@ test_counter.html
 # Local state snapshots / diagnostics
 backend/state/state.json
 backend/state/.secret
+backend/state/backups/
 backend/llm_raw_outputs.md
+
+# Orphaned directories (from path misconfiguration)
+backend/backend/
 
 # Build artifacts
 build/

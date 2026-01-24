@@ -17,8 +17,10 @@ class CreateSessionRequest(BaseModel):
 
 
 class AddDocumentRequest(BaseModel):
+    # Limit content to 500KB to prevent memory exhaustion
+    # For larger documents, use file upload with chunked processing
     name: str = Field(..., min_length=1, max_length=200)
-    content: str = Field(..., min_length=10, max_length=5 * 1024 * 1024)
+    content: str = Field(..., min_length=10, max_length=500 * 1024)
     page_count: Optional[int] = None
 
 

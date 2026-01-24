@@ -217,7 +217,7 @@ class AzureBlobConnector(ConnectorBase):
         if not self._connected:
             await self.connect()
 
-        from datetime import datetime, timedelta
+        from datetime import datetime, timedelta, timezone
         from azure.storage.blob import generate_blob_sas, BlobSasPermissions
 
         blob_client = self._container_client.get_blob_client(file_id)
@@ -228,7 +228,7 @@ class AzureBlobConnector(ConnectorBase):
             blob_name=file_id,
             account_key=self.config.get("account_key"),
             permission=BlobSasPermissions(read=True),
-            expiry=datetime.utcnow() + timedelta(seconds=expires_in),
+            expiry=datetime.now(timezone.utc) + timedelta(seconds=expires_in),
         )
 
         return f"{blob_client.url}?{sas_token}"

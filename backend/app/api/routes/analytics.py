@@ -8,6 +8,13 @@ from pydantic import BaseModel
 
 from backend.app.services.config import get_settings
 from backend.app.services.security import require_api_key
+from backend.app.utils.job_status import (
+    normalize_job_status as _normalize_job_status,
+    STATUS_SUCCEEDED,
+    STATUS_FAILED,
+    STATUS_RUNNING,
+    STATUS_QUEUED,
+)
 import backend.app.services.state_access as state_access
 
 router = APIRouter(dependencies=[Depends(require_api_key)])
@@ -39,22 +46,6 @@ def _get_date_bucket(date_str: Optional[str], bucket: str = "day") -> Optional[s
     return dt.strftime("%Y-%m-%d")
 
 
-def _normalize_job_status(status: Optional[str]) -> str:
-    """Normalize job status to consistent UI-friendly values."""
-    value = (status or "").strip().lower()
-    if value in {"succeeded", "completed"}:
-        return "completed"
-    if value in {"queued", "pending"}:
-        return "pending"
-    if value in {"running", "in_progress"}:
-        return "running"
-    if value in {"failed", "error"}:
-        return "failed"
-    if value in {"cancelled", "canceled"}:
-        return "cancelled"
-    return value or "pending"
-
-
 @router.get("/dashboard")
 async def get_dashboard_analytics() -> Dict[str, Any]:
     """Get comprehensive dashboard analytics."""
@@ -71,12 +62,12 @@ async def get_dashboard_analytics() -> Dict[str, Any]:
     week_start = today_start - timedelta(days=today_start.weekday())
     month_start = today_start.replace(day=1)
 
-    # Job statistics
+    # Job statistics - use canonical status constants
     total_jobs = len(jobs)
-    completed_jobs = [j for j in jobs if _normalize_job_status(j.get("status")) == "completed"]
-    failed_jobs = [j for j in jobs if _normalize_job_status(j.get("status")) == "failed"]
-    running_jobs = [j for j in jobs if _normalize_job_status(j.get("status")) == "running"]
-    pending_jobs = [j for j in jobs if _normalize_job_status(j.get("status")) == "pending"]
+    completed_jobs = [j for j in jobs if _normalize_job_status(j.get("status")) == STATUS_SUCCEEDED]
+    failed_jobs = [j for j in jobs if _normalize_job_status(j.get("status")) == STATUS_FAILED]
+    running_jobs = [j for j in jobs if _normalize_job_status(j.get("status")) == STATUS_RUNNING]
+    pending_jobs = [j for j in jobs if _normalize_job_status(j.get("status")) == STATUS_QUEUED]
 
     # Jobs by time period
     def count_jobs_after(job_list: list, after: datetime) -> int:
@@ -139,8 +130,8 @@ async def get_dashboard_analytics() -> Dict[str, Any]:
             j for j in jobs
             if (created := _parse_iso(j.get("created_at"))) and day <= created < day_end
         ]
-        day_completed = len([j for j in day_jobs if _normalize_job_status(j.get("status")) == "completed"])
-        day_failed = len([j for j in day_jobs if _normalize_job_status(j.get("status")) == "failed"])
+        day_completed = len([j for j in day_jobs if _normalize_job_status(j.get("status")) == STATUS_SUCCEEDED])
+        day_failed = len([j for j in day_jobs if _normalize_job_status(j.get("status")) == STATUS_FAILED])
 
         jobs_trend.append({
             "date": day_str,
@@ -486,12 +477,37 @@ async def set_preference(
     value: Any = Query(default=None),
 ) -> Dict[str, Any]:
     """Set a single user preference."""
+    import json
+
+    # Size limits to prevent bloated state files
+    MAX_KEY_LENGTH = 100
+    MAX_VALUE_SIZE_BYTES = 10000  # 10KB per preference value
+
+    # Validate key length
+    if len(key) > MAX_KEY_LENGTH:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Preference key too long (max {MAX_KEY_LENGTH} characters)"
+        )
+
     if payload is not None and payload.value is not None:
         pref_value = payload.value
     elif value is not None:
         pref_value = value
     else:
         raise HTTPException(status_code=422, detail="Preference value is required.")
+
+    # Validate value size
+    try:
+        value_json = json.dumps(pref_value, default=str)
+        if len(value_json.encode('utf-8')) > MAX_VALUE_SIZE_BYTES:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Preference value too large (max {MAX_VALUE_SIZE_BYTES} bytes)"
+            )
+    except (TypeError, ValueError) as e:
+        raise HTTPException(status_code=400, detail=f"Invalid preference value: {str(e)}")
+
     prefs = state_access.set_user_preference(key, pref_value)
     return {"preferences": prefs}
 
@@ -556,13 +572,14 @@ async def global_search(
         for t in templates:
             name = (t.get("name") or "").lower()
             tid = (t.get("id") or "").lower()
+            template_id = t.get("id")
             if query in name or query in tid:
                 results.append({
                     "type": "template",
-                    "id": t.get("id"),
+                    "id": template_id,
                     "name": t.get("name"),
                     "description": f"{t.get('kind', 'pdf').upper()} Template",
-                    "url": f"/templates",
+                    "url": f"/templates/{template_id}/edit" if template_id else "/templates",
                     "meta": {"kind": t.get("kind"), "status": t.get("status")},
                 })
 
@@ -573,13 +590,14 @@ async def global_search(
             name = (c.get("name") or "").lower()
             cid = (c.get("id") or "").lower()
             summary = (c.get("summary") or "").lower()
+            connection_id = c.get("id")
             if query in name or query in cid or query in summary:
                 results.append({
                     "type": "connection",
-                    "id": c.get("id"),
+                    "id": connection_id,
                     "name": c.get("name"),
                     "description": c.get("summary") or c.get("db_type"),
-                    "url": f"/connections",
+                    "url": f"/connections?selected={connection_id}" if connection_id else "/connections",
                     "meta": {"dbType": c.get("db_type"), "status": c.get("status")},
                 })
 
@@ -589,13 +607,14 @@ async def global_search(
         for j in jobs:
             tname = (j.get("templateName") or j.get("template_name") or "").lower()
             jid = (j.get("id") or "").lower()
+            job_id = j.get("id")
             if query in tname or query in jid:
                 results.append({
                     "type": "job",
-                    "id": j.get("id"),
-                    "name": j.get("templateName") or j.get("template_name") or j.get("id")[:12],
+                    "id": job_id,
+                    "name": j.get("templateName") or j.get("template_name") or (job_id[:12] if job_id else "Job"),
                     "description": f"Job - {_normalize_job_status(j.get('status'))}",
-                    "url": f"/jobs",
+                    "url": f"/jobs?selected={job_id}" if job_id else "/jobs",
                     "meta": {
                         "status": _normalize_job_status(j.get("status")),
                         "createdAt": j.get("createdAt") or j.get("created_at"),
@@ -640,12 +659,23 @@ async def get_unread_count() -> Dict[str, int]:
 @router.post("/notifications")
 async def create_notification(payload: Dict[str, Any]) -> Dict[str, Any]:
     """Create a new notification."""
+    # Valid notification types
+    VALID_NOTIFICATION_TYPES = {"info", "success", "warning", "error"}
+
     title = payload.get("title", "Notification")
     message = payload.get("message", "")
     notification_type = payload.get("type", "info")
     link = payload.get("link")
     entity_type = payload.get("entityType")
     entity_id = payload.get("entityId")
+
+    # Validate notification type
+    if notification_type not in VALID_NOTIFICATION_TYPES:
+        from fastapi import HTTPException
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid notification type '{notification_type}'. Must be one of: {', '.join(VALID_NOTIFICATION_TYPES)}"
+        )
 
     notification = state_access.add_notification(
         title=title,

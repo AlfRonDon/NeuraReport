@@ -20,6 +20,9 @@ export function useJobDetails(jobId, { enabled = true } = {}) {
   })
 }
 
+// Canonical terminal statuses - job is done, no more polling needed
+const TERMINAL_STATUSES = new Set(['succeeded', 'failed', 'cancelled'])
+
 export function useTrackedJobs(jobIds = [], { refetchInterval = 4000 } = {}) {
   const ids = Array.isArray(jobIds) ? jobIds.filter(Boolean) : []
   const queries = useQueries({
@@ -30,7 +33,8 @@ export function useTrackedJobs(jobIds = [], { refetchInterval = 4000 } = {}) {
       refetchOnWindowFocus: false,
       refetchInterval: (data) => {
         const status = (data?.status || '').toLowerCase()
-        if (status === 'succeeded' || status === 'completed' || status === 'failed' || status === 'cancelled') {
+        // Stop polling for terminal statuses
+        if (TERMINAL_STATUSES.has(status)) {
           return false
         }
         return refetchInterval

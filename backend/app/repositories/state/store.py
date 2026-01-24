@@ -20,6 +20,7 @@ from sqlalchemy.types import JSON
 from sqlmodel import Field, Session, SQLModel, create_engine, select
 
 from backend.app.utils.fs import write_json_atomic
+from backend.app.utils.job_status import normalize_job_status as _normalize_job_status
 
 logger = logging.getLogger("neura.state.store")
 
@@ -38,30 +39,6 @@ def _compute_checksum(data: dict) -> str:
     """Compute SHA256 checksum of state data."""
     content = json.dumps(data, sort_keys=True, default=str)
     return hashlib.sha256(content.encode()).hexdigest()[:16]
-
-
-def _normalize_job_status(status: Optional[str]) -> str:
-    """Normalize job status to consistent UI-friendly values.
-
-    Maps internal/variant statuses to standard frontend statuses:
-    - queued/pending → pending
-    - running/in_progress → running
-    - succeeded/completed → completed
-    - failed/error → failed
-    - cancelled/canceled → cancelled
-    """
-    value = (status or "").strip().lower()
-    if value in {"succeeded", "success", "done", "completed"}:
-        return "succeeded"
-    if value in {"queued", "pending"}:
-        return "queued"
-    if value in {"running", "in_progress", "started"}:
-        return "running"
-    if value in {"failed", "error"}:
-        return "failed"
-    if value in {"cancelled", "canceled"}:
-        return "cancelled"
-    return value or "queued"
 
 
 def _normalize_mapping_keys(values: Optional[Iterable[str]]) -> list[str]:

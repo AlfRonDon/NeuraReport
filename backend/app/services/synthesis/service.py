@@ -6,7 +6,7 @@ import json
 import logging
 import re
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Callable, Dict, List, Optional
 
 from backend.app.services.llm.client import get_llm_client
@@ -67,8 +67,8 @@ class DocumentSynthesisService:
         session = SynthesisSession(
             id=str(uuid.uuid4()),
             name=name,
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc),
         )
 
         self._update_sessions(lambda sessions: sessions.__setitem__(session.id, session.model_dump(mode="json")))
@@ -117,11 +117,11 @@ class DocumentSynthesisService:
             content_hash=content_hash,
             extracted_text=content[:50000],  # Limit stored text
             metadata=metadata or {},
-            added_at=datetime.utcnow(),
+            added_at=datetime.now(timezone.utc),
         )
 
         session.documents.append(document)
-        session.updated_at = datetime.utcnow()
+        session.updated_at = datetime.now(timezone.utc)
 
         self._update_sessions(lambda sessions: sessions.__setitem__(session_id, session.model_dump(mode="json")))
 
@@ -134,7 +134,7 @@ class DocumentSynthesisService:
             return False
 
         session.documents = [d for d in session.documents if d.id != document_id]
-        session.updated_at = datetime.utcnow()
+        session.updated_at = datetime.now(timezone.utc)
 
         self._update_sessions(lambda sessions: sessions.__setitem__(session_id, session.model_dump(mode="json")))
 
@@ -218,7 +218,7 @@ Return ONLY the JSON array. Return [] if no inconsistencies found."""
 
                 # Update session with inconsistencies
                 session.inconsistencies = inconsistencies
-                session.updated_at = datetime.utcnow()
+                session.updated_at = datetime.now(timezone.utc)
 
                 self._update_sessions(
                     lambda sessions: sessions.__setitem__(session_id, session.model_dump(mode="json"))
@@ -335,13 +335,13 @@ Return ONLY the JSON object."""
                     inconsistencies=session.inconsistencies,
                     source_references=source_refs,
                     confidence=synthesis_data.get("confidence", 0.8),
-                    generated_at=datetime.utcnow(),
+                    generated_at=datetime.now(timezone.utc),
                 )
 
                 # Update session
                 session.synthesis_result = synthesis_data
                 session.status = "completed"
-                session.updated_at = datetime.utcnow()
+                session.updated_at = datetime.now(timezone.utc)
 
                 self._update_sessions(
                     lambda sessions: sessions.__setitem__(session_id, session.model_dump(mode="json"))

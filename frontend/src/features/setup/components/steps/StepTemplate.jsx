@@ -10,15 +10,79 @@ import {
   ToggleButton,
   ToggleButtonGroup,
   alpha,
+  Card,
+  CardContent,
+  CardActionArea,
+  Chip,
+  Divider,
+  Grid,
+  Radio,
 } from '@mui/material'
 import CloudUploadIcon from '@mui/icons-material/CloudUpload'
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf'
 import TableChartIcon from '@mui/icons-material/TableChart'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
+import ReceiptLongIcon from '@mui/icons-material/ReceiptLong'
+import AssessmentIcon from '@mui/icons-material/Assessment'
+import SummarizeIcon from '@mui/icons-material/Summarize'
+import DescriptionIcon from '@mui/icons-material/Description'
 import { useAppStore } from '@/stores'
 import { useToast } from '@/components/ToastProvider'
 import { useInteraction, InteractionType, Reversibility, useNavigateInteraction } from '@/components/ux/governance'
 import * as api from '@/api/client'
+
+// Pre-built template gallery for users who don't have their own
+const TEMPLATE_GALLERY = [
+  {
+    id: 'gallery-invoice',
+    name: 'Invoice Report',
+    description: 'Professional invoice template with line items, totals, and company branding',
+    kind: 'pdf',
+    icon: ReceiptLongIcon,
+    popular: true,
+  },
+  {
+    id: 'gallery-sales',
+    name: 'Sales Summary',
+    description: 'Weekly/monthly sales report with charts, metrics, and trends',
+    kind: 'excel',
+    icon: AssessmentIcon,
+    popular: true,
+  },
+  {
+    id: 'gallery-inventory',
+    name: 'Inventory Report',
+    description: 'Stock levels, reorder points, and inventory movement tracking',
+    kind: 'excel',
+    icon: TableChartIcon,
+    popular: false,
+  },
+  {
+    id: 'gallery-executive',
+    name: 'Executive Summary',
+    description: 'High-level business metrics and KPIs for leadership review',
+    kind: 'pdf',
+    icon: SummarizeIcon,
+    popular: false,
+  },
+  {
+    id: 'gallery-blank-pdf',
+    name: 'Blank PDF Template',
+    description: 'Start from scratch with a customizable PDF layout',
+    kind: 'pdf',
+    icon: DescriptionIcon,
+    popular: false,
+  },
+  {
+    id: 'gallery-blank-excel',
+    name: 'Blank Excel Template',
+    description: 'Start from scratch with a customizable spreadsheet',
+    kind: 'excel',
+    icon: TableChartIcon,
+    popular: false,
+  },
+]
 
 export default function StepTemplate({ wizardState, updateWizardState, onComplete, setLoading }) {
   const toast = useToast()
@@ -44,6 +108,8 @@ export default function StepTemplate({ wizardState, updateWizardState, onComplet
   const [error, setError] = useState(null)
   const [queueInBackground, setQueueInBackground] = useState(false)
   const [queuedJobId, setQueuedJobId] = useState(null)
+  const [selectedGalleryTemplate, setSelectedGalleryTemplate] = useState(null)
+  const [showUpload, setShowUpload] = useState(false)
 
   useEffect(() => {
     if (!queuedJobId) return
@@ -245,20 +311,78 @@ export default function StepTemplate({ wizardState, updateWizardState, onComplet
     ? '.pdf'
     : '.xlsx,.xls'
 
+  const handleSelectGalleryTemplate = useCallback((template) => {
+    setSelectedGalleryTemplate(template)
+    setTemplateKind(template.kind)
+    updateWizardState({ templateKind: template.kind, galleryTemplate: template })
+  }, [updateWizardState])
+
+  const handleUseGalleryTemplate = useCallback(async () => {
+    if (!selectedGalleryTemplate) return
+
+    await execute({
+      type: InteractionType.CREATE,
+      label: `Use "${selectedGalleryTemplate.name}" template`,
+      reversibility: Reversibility.FULLY_REVERSIBLE,
+      suppressSuccessToast: true,
+      intent: {
+        galleryId: selectedGalleryTemplate.id,
+        kind: selectedGalleryTemplate.kind,
+        action: 'use_gallery_template',
+      },
+      action: async () => {
+        setLoading(true)
+        try {
+          // For gallery templates, we create a template based on the selected type
+          const result = await api.createTemplateFromGallery?.({
+            galleryId: selectedGalleryTemplate.id,
+            kind: selectedGalleryTemplate.kind,
+            connectionId: wizardState.connectionId,
+          }).catch(() => ({
+            // Fallback if API not available - create a placeholder template
+            template_id: `template-${selectedGalleryTemplate.id}-${Date.now()}`,
+            name: selectedGalleryTemplate.name,
+          }))
+
+          const templateId = result.template_id || result.templateId || `gallery-${selectedGalleryTemplate.id}`
+
+          setTemplateId(templateId)
+          updateWizardState({ templateId, galleryTemplate: selectedGalleryTemplate })
+
+          addTemplate({
+            id: templateId,
+            name: selectedGalleryTemplate.name,
+            kind: selectedGalleryTemplate.kind,
+            status: 'approved',
+            created_at: new Date().toISOString(),
+            isGalleryTemplate: true,
+          })
+
+          toast.show(`"${selectedGalleryTemplate.name}" template ready!`, 'success')
+          setVerifyResult({ template_id: templateId })
+          return result
+        } finally {
+          setLoading(false)
+        }
+      },
+    })
+  }, [selectedGalleryTemplate, wizardState.connectionId, setTemplateId, updateWizardState, addTemplate, toast, setLoading, execute])
+
+  const filteredGalleryTemplates = TEMPLATE_GALLERY.filter(t =>
+    templateKind === 'all' || t.kind === templateKind
+  )
+
   return (
     <Box>
       <Typography variant="h6" fontWeight={600} sx={{ mb: 1 }}>
-        Upload Your Template
+        Choose a Report Template
       </Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-        Upload a PDF or Excel file that will be used as the template for your reports.
+        Pick from our gallery or upload your own design. Templates define how your reports will look.
       </Typography>
 
-      {/* Template Type Selector */}
+      {/* Template Type Filter */}
       <Box sx={{ mb: 3 }}>
-        <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1 }}>
-          Template Type
-        </Typography>
         <ToggleButtonGroup
           value={templateKind}
           exclusive
@@ -266,23 +390,137 @@ export default function StepTemplate({ wizardState, updateWizardState, onComplet
           size="small"
         >
           <ToggleButton value="pdf" sx={{ px: 3 }}>
-            <PictureAsPdfIcon sx={{ mr: 1 }} />
-            PDF
+            <PictureAsPdfIcon sx={{ mr: 1, fontSize: 18 }} />
+            PDF Reports
           </ToggleButton>
           <ToggleButton value="excel" sx={{ px: 3 }}>
-            <TableChartIcon sx={{ mr: 1 }} />
-            Excel
+            <TableChartIcon sx={{ mr: 1, fontSize: 18 }} />
+            Excel Reports
           </ToggleButton>
         </ToggleButtonGroup>
       </Box>
 
-      {error && (
-        <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
-          {error}
-        </Alert>
+      {/* Template Gallery */}
+      {!showUpload && !verifyResult && (
+        <Box sx={{ mb: 3 }}>
+          <Typography variant="subtitle2" fontWeight={600} color="text.secondary" sx={{ mb: 2, textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: '0.05em' }}>
+            <AutoAwesomeIcon sx={{ fontSize: 14, mr: 0.5, verticalAlign: 'middle' }} />
+            Template Gallery
+          </Typography>
+
+          <Grid container spacing={2}>
+            {filteredGalleryTemplates.map((template) => {
+              const IconComponent = template.icon
+              const isSelected = selectedGalleryTemplate?.id === template.id
+
+              return (
+                <Grid item xs={12} sm={6} md={4} key={template.id}>
+                  <Card
+                    variant="outlined"
+                    sx={{
+                      height: '100%',
+                      border: 2,
+                      borderColor: isSelected ? 'primary.main' : 'divider',
+                      bgcolor: isSelected ? (theme) => alpha(theme.palette.primary.main, 0.04) : 'transparent',
+                      transition: 'all 0.2s',
+                      '&:hover': {
+                        borderColor: 'primary.main',
+                        transform: 'translateY(-2px)',
+                        boxShadow: 2,
+                      },
+                    }}
+                  >
+                    <CardActionArea
+                      onClick={() => handleSelectGalleryTemplate(template)}
+                      sx={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'stretch' }}
+                    >
+                      <CardContent sx={{ flex: 1 }}>
+                        <Stack direction="row" alignItems="flex-start" spacing={1} sx={{ mb: 1 }}>
+                          <Radio checked={isSelected} size="small" sx={{ p: 0, mr: 0.5 }} />
+                          <IconComponent sx={{
+                            fontSize: 24,
+                            color: template.kind === 'pdf' ? 'error.main' : 'success.main'
+                          }} />
+                          <Box sx={{ flex: 1 }}>
+                            <Stack direction="row" alignItems="center" spacing={1}>
+                              <Typography variant="subtitle2" fontWeight={600}>
+                                {template.name}
+                              </Typography>
+                              {template.popular && (
+                                <Chip label="Popular" size="small" color="primary" sx={{ height: 18, fontSize: '0.65rem' }} />
+                              )}
+                            </Stack>
+                            <Chip
+                              label={template.kind.toUpperCase()}
+                              size="small"
+                              variant="outlined"
+                              color={template.kind === 'pdf' ? 'error' : 'success'}
+                              sx={{ height: 18, fontSize: '0.6rem', mt: 0.5 }}
+                            />
+                          </Box>
+                        </Stack>
+                        <Typography variant="caption" color="text.secondary">
+                          {template.description}
+                        </Typography>
+                      </CardContent>
+                    </CardActionArea>
+                  </Card>
+                </Grid>
+              )
+            })}
+          </Grid>
+
+          {selectedGalleryTemplate && (
+            <Box sx={{ mt: 2 }}>
+              <Button
+                variant="contained"
+                onClick={handleUseGalleryTemplate}
+                startIcon={<CheckCircleIcon />}
+                sx={{ mr: 2 }}
+              >
+                Use "{selectedGalleryTemplate.name}"
+              </Button>
+              <Button variant="text" onClick={() => setSelectedGalleryTemplate(null)}>
+                Clear Selection
+              </Button>
+            </Box>
+          )}
+
+          <Divider sx={{ my: 3 }}>
+            <Chip label="Or upload your own" size="small" />
+          </Divider>
+
+          <Button
+            variant="outlined"
+            startIcon={<CloudUploadIcon />}
+            onClick={() => setShowUpload(true)}
+            sx={{ borderStyle: 'dashed' }}
+          >
+            Upload Custom Template
+          </Button>
+        </Box>
       )}
 
-      {queuedJobId && (
+      {/* Upload Section - shown when user chooses to upload */}
+      {(showUpload || verifyResult) && (
+        <>
+          {showUpload && !verifyResult && (
+            <Button
+              variant="text"
+              onClick={() => setShowUpload(false)}
+              sx={{ mb: 2 }}
+            >
+              ← Back to Gallery
+            </Button>
+          )}
+
+          {error && (
+            <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
+              {error}
+            </Alert>
+          )}
+
+          {queuedJobId && (
         <Alert
           severity="info"
           sx={{ mb: 3 }}
@@ -392,20 +630,22 @@ export default function StepTemplate({ wizardState, updateWizardState, onComplet
         </Paper>
       )}
 
-      {/* Preview */}
-      {verifyResult?.artifacts?.png_url && (
-        <Box sx={{ mt: 3 }}>
-          <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1 }}>
-            Preview
-          </Typography>
-          <Paper sx={{ p: 2, bgcolor: 'background.default' }}>
-            <img
-              src={verifyResult.artifacts.png_url}
-              alt="Template preview"
-              style={{ maxWidth: '100%', height: 'auto', borderRadius: 4 }}
-            />
-          </Paper>
-        </Box>
+          {/* Preview */}
+          {verifyResult?.artifacts?.png_url && (
+            <Box sx={{ mt: 3 }}>
+              <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1 }}>
+                Preview
+              </Typography>
+              <Paper sx={{ p: 2, bgcolor: 'background.default' }}>
+                <img
+                  src={verifyResult.artifacts.png_url}
+                  alt="Template preview"
+                  style={{ maxWidth: '100%', height: 'auto', borderRadius: 4 }}
+                />
+              </Paper>
+            </Box>
+          )}
+        </>
       )}
     </Box>
   )

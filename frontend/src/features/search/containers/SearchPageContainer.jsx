@@ -420,15 +420,41 @@ export default function SearchPageContainer() {
                 alignItems: 'center',
                 justifyContent: 'center',
                 textAlign: 'center',
+                maxWidth: 500,
+                mx: 'auto',
               }}
             >
-              <SearchIcon sx={{ fontSize: 80, color: 'text.disabled', mb: 2 }} />
-              <Typography variant="h6" color="text.secondary">
-                Search across all your documents
+              <SearchIcon sx={{ fontSize: 64, color: 'primary.main', opacity: 0.3, mb: 2 }} />
+              <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
+                Search Your Documents
               </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Use full-text, semantic, regex, or boolean search
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                Find what you need across all your documents using different search modes.
               </Typography>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, width: '100%', maxWidth: 300 }}>
+                <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'left', mb: 0.5 }}>
+                  Try these example searches:
+                </Typography>
+                {[
+                  { query: 'quarterly revenue', type: 'fulltext', label: 'Full Text' },
+                  { query: 'documents about marketing strategy', type: 'semantic', label: 'Semantic' },
+                  { query: '(budget AND 2024) OR forecast', type: 'boolean', label: 'Boolean' },
+                ].map((example) => (
+                  <Button
+                    key={example.query}
+                    variant="outlined"
+                    size="small"
+                    onClick={() => {
+                      setQuery(example.query)
+                      setSearchType(example.type)
+                    }}
+                    sx={{ justifyContent: 'flex-start', textTransform: 'none', textAlign: 'left' }}
+                  >
+                    <Chip size="small" label={example.label} sx={{ mr: 1, pointerEvents: 'none' }} />
+                    <Typography variant="body2" noWrap>{example.query}</Typography>
+                  </Button>
+                ))}
+              </Box>
             </Box>
           ) : null}
         </MainPanel>

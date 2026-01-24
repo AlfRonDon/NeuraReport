@@ -18,7 +18,7 @@ import json
 import logging
 import time
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, AsyncGenerator, Dict, List, Optional
 
@@ -266,7 +266,7 @@ class EnhancedAnalysisOrchestrator:
                 analysis_id=analysis_id,
                 document_name=file_name,
                 document_type=document_type,
-                created_at=datetime.utcnow(),
+                created_at=datetime.now(timezone.utc),
                 processing_time_ms=processing_time_ms,
 
                 # Extraction

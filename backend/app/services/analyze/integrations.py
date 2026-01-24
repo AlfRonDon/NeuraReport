@@ -13,12 +13,10 @@ import asyncio
 import hashlib
 import json
 import logging
-import os
-import re
 import uuid
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
@@ -258,7 +256,7 @@ class DataSourceManager:
 
         connection = self._connections.get(connection_id)
         if connection:
-            connection.last_used = datetime.utcnow()
+            connection.last_used = datetime.now(timezone.utc)
 
         await connector.connect()
         result = await connector.fetch(query)
@@ -364,7 +362,7 @@ class WorkflowAutomationService:
         execution = PipelineExecution(
             id=f"exec_{uuid.uuid4().hex[:12]}",
             pipeline_id=pipeline_id,
-            started_at=datetime.utcnow(),
+            started_at=datetime.now(timezone.utc),
         )
         self._executions[execution.id] = execution
 
@@ -400,12 +398,12 @@ class WorkflowAutomationService:
                 context[step_id] = result
 
             execution.status = "completed"
-            execution.completed_at = datetime.utcnow()
+            execution.completed_at = datetime.now(timezone.utc)
 
         except Exception as e:
             execution.status = "failed"
             execution.error = str(e)
-            execution.completed_at = datetime.utcnow()
+            execution.completed_at = datetime.now(timezone.utc)
             logger.error(f"Pipeline execution failed: {e}")
 
         return execution

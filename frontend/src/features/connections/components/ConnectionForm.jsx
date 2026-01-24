@@ -61,7 +61,11 @@ import {
 } from '@/utils/validation'
 
 const DB_TYPES = [
-  { value: 'sqlite', label: 'SQLite', port: null },
+  { value: 'sqlite', label: 'SQLite', port: null, requiresAuth: false },
+  { value: 'postgresql', label: 'PostgreSQL', port: 5432, requiresAuth: true },
+  { value: 'mysql', label: 'MySQL', port: 3306, requiresAuth: true },
+  { value: 'mssql', label: 'SQL Server', port: 1433, requiresAuth: true },
+  { value: 'mariadb', label: 'MariaDB', port: 3306, requiresAuth: true },
 ]
 
 // Field validators

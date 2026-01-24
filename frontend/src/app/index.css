@@ -1,41 +1,64 @@
-/* Supabase-inspired Global Styles */
+/* Global Styles - Neuract UI Theme (from Figma) */
 
-/* Import Inter font from Google Fonts */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+/* Import Lato font from Google Fonts (per Figma Neuract UI) */
+@import url('https://fonts.googleapis.com/css2?family=Lato:wght@300;400;500;600;700&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 :root {
-  /* Font families */
-  --font-ui: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  /* Font families - Lato from Figma Neuract UI */
+  --font-ui: 'Lato', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
   --font-mono: 'JetBrains Mono', 'SF Mono', Monaco, 'Cascadia Code', Consolas, monospace;
 
-  /* Colors - Dark mode */
-  --color-bg-primary: #111111;
-  --color-bg-secondary: #1A1A1A;
-  --color-bg-tertiary: #1F1F1F;
-  --color-border: rgba(255, 255, 255, 0.08);
-  --color-border-hover: rgba(255, 255, 255, 0.15);
+  /* Colors - Warm earthy theme (from Neuract UI Figma) */
+  --color-bg-primary: #F9F9F8;    /* App background - warm off-white (grey/200) */
+  --color-bg-surface: #FFFFFF;    /* Cards, panels - pure white */
+  --color-bg-tertiary: #FFF5EB;   /* Warm cream surface */
+  --color-bg-warm: #F5EBE1;       /* Warm beige overlay */
+  --color-border: #E5D4C3;        /* Warm borders from Figma */
+  --color-border-hover: #D9C7B5;  /* Darker warm border */
 
-  --color-text-primary: #EDEDED;
-  --color-text-secondary: #999999;
-  --color-text-muted: #656565;
+  /* Text colors from Figma - Gray Typography scale */
+  --color-text-primary: #1B2533;   /* Gray Typography/800 */
+  --color-text-secondary: #697483; /* Gray Typography/400 */
+  --color-text-muted: #8D8D86;     /* grey/900 */
 
-  --color-brand: #3ECF8E;
-  --color-brand-hover: #6EDAA6;
+  /* Brand color - Neuract green (Primary/300 from Figma) */
+  --color-brand: #08C18F;
+  --color-brand-hover: #06A077;
+
+  /* Status colors */
+  --color-success: #22C55E;        /* Success/500 from Figma */
+  --color-success-bg: #D1F4E0;
+  --color-warning: #F59E0B;
+  --color-warning-bg: #FEF3C7;
+  --color-error: #EF4444;
+  --color-error-bg: #FEE2E2;
 
   /* Transitions */
   --transition-fast: 150ms ease;
   --transition-normal: 200ms ease;
 
-  /* Border radius */
+  /* Spacing - 8px grid */
+  --space-1: 8px;
+  --space-2: 16px;
+  --space-3: 24px;
+  --space-4: 32px;
+
+  /* Border radius from Figma */
   --radius-sm: 4px;
   --radius-md: 6px;
   --radius-lg: 8px;
   --radius-xl: 12px;
 
+  /* Shadows from Figma - multi-layered soft shadows */
+  --shadow-card: 1px 1px 4px rgba(64,55,47,0.12);
+  --shadow-elevated: 3px 3px 8px rgba(0,0,0,0.12), 1px 2px 4px rgba(0,0,0,0.05);
+  --shadow-modal: -1px 1px 8px rgba(0,0,0,0.12), -1px 1px 24px rgba(0,0,0,0.12);
+
   font-family: var(--font-ui);
-  line-height: 1.6;
+  line-height: 1.4;
   font-weight: 400;
+  font-size: 14px;  /* 14px base font from Figma */
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -76,7 +99,7 @@ body[data-compact-tables="true"] .MuiTableRow-root {
   flex-direction: column;
 }
 
-/* Links */
+/* Links - neutral color, NOT green */
 a {
   color: inherit;
   text-decoration: none;
@@ -84,7 +107,7 @@ a {
 }
 
 a:hover {
-  color: var(--color-brand);
+  color: var(--color-text-primary);
 }
 
 /* Code */
@@ -106,13 +129,13 @@ code {
   background-color: var(--color-bg-tertiary);
 }
 
-/* Selection */
+/* Selection - brand green accent */
 ::selection {
-  background-color: rgba(62, 207, 142, 0.3);
+  background-color: rgba(8, 193, 143, 0.2);
   color: inherit;
 }
 
-/* Scrollbar */
+/* Scrollbar - warm tones */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -123,17 +146,17 @@ code {
 }
 
 ::-webkit-scrollbar-thumb {
-  background-color: rgba(255, 255, 255, 0.15);
+  background-color: rgba(217, 199, 181, 0.6);  /* Warm scrollbar from border color */
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(255, 255, 255, 0.25);
+  background-color: rgba(197, 181, 165, 0.8);
 }
 
-/* Focus states */
+/* Focus states - neutral, not green */
 :focus-visible {
-  outline: 2px solid var(--color-brand);
+  outline: 2px solid var(--color-text-primary);
   outline-offset: 2px;
 }
 

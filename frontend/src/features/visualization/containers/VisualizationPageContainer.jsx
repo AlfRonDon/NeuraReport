@@ -131,6 +131,66 @@ const DIAGRAM_TYPES = [
   { type: 'wordcloud', name: 'Word Cloud', description: 'Text frequency visualization', icon: WordcloudIcon, color: 'info' },
 ]
 
+// Sample data for each diagram type
+const SAMPLE_DATA = {
+  flowchart: `Start Application
+Validate Input
+Check Database?
+Process Request
+Return Response
+End`,
+  mindmap: `Product Strategy
+  Market Research
+    Competitor Analysis
+    Customer Interviews
+  Product Development
+    Feature Planning
+    Technical Design
+  Go-to-Market
+    Pricing Strategy
+    Launch Campaign`,
+  org_chart: `[
+  {"name": "Sarah Chen", "role": "CEO", "id": "ceo"},
+  {"name": "John Smith", "role": "CTO", "reports_to": "ceo", "id": "cto"},
+  {"name": "Lisa Wong", "role": "CFO", "reports_to": "ceo", "id": "cfo"},
+  {"name": "Mike Johnson", "role": "VP Engineering", "reports_to": "cto", "id": "vp-eng"},
+  {"name": "Amy Liu", "role": "VP Finance", "reports_to": "cfo", "id": "vp-fin"}
+]`,
+  timeline: `2023-01: Project Kickoff
+2023-03: Requirements Complete
+2023-06: Design Phase Complete
+2023-09: Development Complete
+2023-11: Beta Launch
+2024-01: Public Release`,
+  gantt: `[
+  {"id": "design", "name": "Design Phase", "start": "2024-01-01", "end": "2024-01-31", "progress": 100},
+  {"id": "dev", "name": "Development", "start": "2024-02-01", "end": "2024-04-15", "progress": 60, "dependencies": ["design"]},
+  {"id": "test", "name": "Testing", "start": "2024-04-01", "end": "2024-05-01", "progress": 20, "dependencies": ["dev"]},
+  {"id": "launch", "name": "Launch", "start": "2024-05-01", "end": "2024-05-15", "progress": 0, "dependencies": ["test"]}
+]`,
+  kanban: `To Do: Research competitors
+To Do: Define user personas
+In Progress: Design landing page
+In Progress: Set up analytics
+Review: API documentation
+Done: Project kickoff
+Done: Team onboarding`,
+  network: `Marketing -> Sales
+Sales -> Support
+Support -> Product
+Product -> Engineering
+Engineering -> QA
+QA -> Product
+Marketing -> Product`,
+  sequence: `User -> Frontend: Click Login
+Frontend -> Auth Service: POST /login
+Auth Service -> Database: Query User
+Database -> Auth Service: User Data
+Auth Service -> Frontend: JWT Token
+Frontend -> User: Redirect to Dashboard`,
+  wordcloud: `innovation technology growth digital transformation customer experience data analytics cloud computing artificial intelligence machine learning automation efficiency productivity collaboration strategy innovation digital growth`,
+}
+
 // =============================================================================
 // MAIN COMPONENT
 // =============================================================================
@@ -378,6 +438,18 @@ export default function VisualizationPageContainer() {
               onChange={(e) => setTitle(e.target.value)}
               sx={{ mb: 2 }}
             />
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
+              <Button
+                size="small"
+                onClick={() => {
+                  setInputData(SAMPLE_DATA[selectedType.type] || '')
+                  setTitle(`Sample ${selectedType.name}`)
+                }}
+                sx={{ textTransform: 'none' }}
+              >
+                Use Example Data
+              </Button>
+            </Box>
             <TextField
               fullWidth
               multiline
@@ -423,14 +495,25 @@ export default function VisualizationPageContainer() {
               )}
             </PreviewCard>
           ) : (
-            <Box sx={{ textAlign: 'center' }}>
-              <ChartIcon sx={{ fontSize: 100, color: 'text.disabled', mb: 2 }} />
-              <Typography variant="h6" color="text.secondary">
-                Select a diagram type and enter data
+            <Box sx={{ textAlign: 'center', maxWidth: 400 }}>
+              <ChartIcon sx={{ fontSize: 80, color: 'primary.main', opacity: 0.3, mb: 2 }} />
+              <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
+                Create Your First Diagram
               </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Your visualization will appear here
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                Select a diagram type from the sidebar, enter your data, and click Generate.
+                Not sure how to format your data?
               </Typography>
+              <Button
+                variant="outlined"
+                onClick={() => {
+                  setInputData(SAMPLE_DATA[selectedType.type] || '')
+                  setTitle(`Sample ${selectedType.name}`)
+                }}
+                sx={{ textTransform: 'none' }}
+              >
+                Try with Example Data
+              </Button>
             </Box>
           )}
         </PreviewArea>

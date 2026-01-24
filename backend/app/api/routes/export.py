@@ -23,7 +23,7 @@ from backend.app.schemas.export.export import (
 )
 from backend.app.services.export.service import distribution_service, export_service
 
-router = APIRouter(prefix="/export", tags=["export"])
+router = APIRouter(tags=["export"])
 
 
 @router.post("/{document_id}/pdf")

@@ -21,7 +21,7 @@ from ...services.connectors import (
 
 logger = logging.getLogger("neura.api.connectors")
 
-router = APIRouter(prefix="/connectors", tags=["connectors"])
+router = APIRouter(tags=["connectors"])
 
 
 # ============================================

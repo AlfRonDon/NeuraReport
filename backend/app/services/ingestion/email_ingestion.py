@@ -9,7 +9,7 @@ import email
 import imaplib
 import hashlib
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 from email.header import decode_header
 from email.utils import parseaddr, parsedate_to_datetime
 from typing import Any, Dict, List, Optional, Tuple
@@ -88,7 +88,7 @@ class EmailIngestionService:
             Unique email address for forwarding
         """
         # Generate unique identifier
-        unique_part = hashlib.sha256(f"{user_id}:{purpose}:{datetime.utcnow().isoformat()}".encode()).hexdigest()[:12]
+        unique_part = hashlib.sha256(f"{user_id}:{purpose}:{datetime.now(timezone.utc).isoformat()}".encode()).hexdigest()[:12]
         # Format: ingest+{unique}@neurareport.io
         return f"ingest+{unique_part}@neurareport.io"
 
@@ -279,7 +279,7 @@ class EmailIngestionService:
         content = self._format_thread_as_document(parsed_emails, thread_title)
 
         # Generate document
-        doc_id = hashlib.sha256(f"thread:{thread_title}:{datetime.utcnow().isoformat()}".encode()).hexdigest()[:16]
+        doc_id = hashlib.sha256(f"thread:{thread_title}:{datetime.now(timezone.utc).isoformat()}".encode()).hexdigest()[:16]
 
         result = await ingestion_service.ingest_file(
             filename=f"{self._sanitize_filename(thread_title or 'Email Thread')}.html",

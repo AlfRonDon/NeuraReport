@@ -7,7 +7,7 @@ from __future__ import annotations
 import logging
 import asyncio
 import hashlib
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Set
 from enum import Enum
@@ -44,7 +44,7 @@ class FileEvent(BaseModel):
     event_type: WatcherEvent
     path: str
     filename: str
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     size_bytes: Optional[int] = None
     document_id: Optional[str] = None
     error: Optional[str] = None
@@ -342,7 +342,7 @@ class FolderWatcherService:
                 self._stats[watcher_id]["errors"].append(f"{path.name}: {e}")
                 logger.error(f"Failed to import {file_path}: {e}")
 
-        self._stats[watcher_id]["last_event"] = datetime.utcnow()
+        self._stats[watcher_id]["last_event"] = datetime.now(timezone.utc)
         return event
 
     async def _poll_folder(self, watcher_id: str, interval: float = 5.0):

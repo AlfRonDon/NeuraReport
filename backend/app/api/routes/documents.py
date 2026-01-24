@@ -34,7 +34,7 @@ from ...services.documents import (
 
 logger = logging.getLogger("neura.api.documents")
 
-router = APIRouter(prefix="/documents", tags=["documents"])
+router = APIRouter(tags=["documents"])
 
 # Service instances (would use dependency injection in production)
 _doc_service: Optional[DocumentService] = None

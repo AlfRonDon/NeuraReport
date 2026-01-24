@@ -6,7 +6,7 @@ import logging
 import os
 import threading
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any, Callable, Dict, Iterable, Tuple
@@ -79,7 +79,7 @@ def _coerce_jsonable(value: Any) -> Any:
 
 def _append_raw_output(description: str, response: Any) -> None:
     """Append the raw LLM response to a Markdown log file."""
-    timestamp = datetime.utcnow().isoformat(timespec="seconds") + "Z"
+    timestamp = datetime.now(timezone.utc).isoformat(timespec="seconds") + "Z"
     entry = _coerce_jsonable(response)
 
     try:

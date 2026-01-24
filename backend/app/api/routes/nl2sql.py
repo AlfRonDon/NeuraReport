@@ -88,7 +88,7 @@ async def save_query(
     saved = svc.save_query(payload, correlation_id)
     return {
         "status": "ok",
-        "query": saved.dict(),
+        "query": saved.model_dump(mode="json"),
         "correlation_id": correlation_id,
     }
 
@@ -105,7 +105,7 @@ async def list_saved_queries(
     queries = svc.list_saved_queries(connection_id=connection_id, tags=tags)
     return {
         "status": "ok",
-        "queries": [q.dict() for q in queries],
+        "queries": [q.model_dump(mode="json") for q in queries],
         "correlation_id": correlation_id,
     }
 
@@ -128,7 +128,7 @@ async def get_saved_query(
         }
     return {
         "status": "ok",
-        "query": query.dict(),
+        "query": query.model_dump(mode="json"),
         "correlation_id": correlation_id,
     }
 
@@ -162,7 +162,7 @@ async def get_query_history(
     history = svc.get_query_history(connection_id=connection_id, limit=limit)
     return {
         "status": "ok",
-        "history": [h.dict() for h in history],
+        "history": [h.model_dump(mode="json") for h in history],
         "correlation_id": correlation_id,
     }
 

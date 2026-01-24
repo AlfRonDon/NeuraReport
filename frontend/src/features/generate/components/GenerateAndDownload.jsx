@@ -779,15 +779,17 @@ function GenerateAndDownload({
             alignItems={{ xs: 'stretch', sm: 'center' }}
             sx={{ width: { xs: '100%', sm: 'auto' } }}
           >
-            <Button
-              variant="outlined"
-              color="secondary"
-              onClick={onFind}
-              disabled={!valid || findDisabled}
-              sx={{ width: { xs: '100%', sm: 'auto' } }}
-            >
-              Find Reports
-            </Button>
+            <Tooltip title="Scan your data to see what can be included in this report">
+              <Button
+                variant="outlined"
+                color="secondary"
+                onClick={onFind}
+                disabled={!valid || findDisabled}
+                sx={{ width: { xs: '100%', sm: 'auto' } }}
+              >
+                Preview Data
+              </Button>
+            </Tooltip>
             <Tooltip title={generateLabel}>
               <span>
                 <Button
@@ -985,9 +987,9 @@ function GenerateAndDownload({
               justifyContent="space-between"
             >
               <Stack spacing={0.5}>
-                <Typography variant="subtitle1">Resampling</Typography>
+                <Typography variant="subtitle1">Filter & Group Data</Typography>
                 <Typography variant="body2" color="text.secondary">
-                  Filter discovery batches before generating charts and reports.
+                  Narrow down your data before generating reports. Use the chart below to select specific time periods or groups.
                 </Typography>
               </Stack>
               <Button
@@ -1125,7 +1127,7 @@ function GenerateAndDownload({
                     {totalBatchCount && totalBatchCount !== filteredBatchCount
                       ? ` / ${totalBatchCount}`
                       : ''}{' '}
-                    {filteredBatchCount === 1 ? 'batch' : 'batches'}
+                    {filteredBatchCount === 1 ? 'data section' : 'data sections'}
                   </Typography>
                   {safeResampleConfig.dimension === 'time' && resampleBucketHelper && (
                     <Typography variant="caption" color="text.secondary">
@@ -1145,12 +1147,18 @@ function GenerateAndDownload({
         {(finding || Object.keys(results).length > 0) && (
           <Box>
             <Divider sx={{ my: 2 }} />
-            <Typography variant="subtitle1">Discovery Results</Typography>
+            <Stack direction="row" alignItems="center" spacing={1}>
+              <Typography variant="subtitle1">Data Preview</Typography>
+              <InfoTooltip
+                content="This shows the data sections found in your date range. Each section represents a logical grouping of data (like a time period or category) that will become part of your report."
+                ariaLabel="Data preview explanation"
+              />
+            </Stack>
             {finding ? (
               <Stack spacing={1.25} sx={{ mt: 1.5 }}>
-                <LinearProgress aria-label="Finding matching reports" />
+                <LinearProgress aria-label="Scanning your data" />
                 <Typography variant="body2" color="text.secondary">
-                  Searching data...
+                  Scanning your data...
                 </Typography>
               </Stack>
             ) : (
@@ -1162,8 +1170,8 @@ function GenerateAndDownload({
                   const filteredRows = r.batches.reduce((acc, batch) => acc + (batch.rows || 0), 0)
                   const summary =
                     originalCount === filteredCount
-                      ? `${filteredCount} ${filteredCount === 1 ? 'batch' : 'batches'} \u2022 ${filteredRows} rows`
-                      : `${filteredCount} / ${originalCount} batches \u2022 ${filteredRows} rows`
+                      ? `${filteredCount} ${filteredCount === 1 ? 'section' : 'sections'} \u2022 ${filteredRows.toLocaleString()} records`
+                      : `${filteredCount} / ${originalCount} sections \u2022 ${filteredRows.toLocaleString()} records`
                   return (
                     <Box
                       key={tid}
@@ -1184,23 +1192,23 @@ function GenerateAndDownload({
                       {r.batches.length ? (
                         <Stack spacing={1} sx={{ mt: 1.25 }}>
                           <Typography variant="body2" color="text.secondary">
-                            Select the batches to include in the run.
+                            Select which data sections to include in your report:
                           </Typography>
                           {r.batches.map((b, idx) => (
                             <Stack key={b.id || idx} direction="row" spacing={1} alignItems="center">
                               <Checkbox
                                 checked={b.selected}
                                 onChange={(e) => onToggleBatch(tid, idx, e.target.checked)}
-                                inputProps={{ 'aria-label': `Toggle batch ${idx + 1} for ${r.name}` }}
+                                inputProps={{ 'aria-label': `Include section ${idx + 1} for ${r.name}` }}
                               />
                               <Typography variant="body2">
-                                Batch {idx + 1} {'\u2022'} {(b.parent ?? 1)} {(b.parent ?? 1) === 1 ? 'parent' : 'parents'} {'\u2022'} {b.rows} rows
+                                Section {idx + 1} {'\u2022'} {(b.parent ?? 1)} {(b.parent ?? 1) === 1 ? 'group' : 'groups'} {'\u2022'} {b.rows.toLocaleString()} records
                               </Typography>
                             </Stack>
                           ))}
                         </Stack>
                       ) : (
-                        <Typography variant="body2" color="text.secondary">No data found for this range.</Typography>
+                        <Typography variant="body2" color="text.secondary">No data found for this date range. Try adjusting your dates.</Typography>
                       )}
                     </Box>
                   )

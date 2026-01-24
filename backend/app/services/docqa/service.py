@@ -6,7 +6,7 @@ import logging
 import re
 import time
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Callable, Dict, List, Optional
 
 from backend.app.services.llm.client import get_llm_client
@@ -72,8 +72,8 @@ class DocumentQAService:
         session = DocQASession(
             id=str(uuid.uuid4()),
             name=name,
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc),
         )
 
         self._update_sessions(lambda sessions: sessions.__setitem__(session.id, session.model_dump(mode="json")))
@@ -118,11 +118,11 @@ class DocumentQAService:
             content_preview=content[:500] + "..." if len(content) > 500 else content,
             full_content=content[:100000],  # Limit stored content
             page_count=page_count,
-            added_at=datetime.utcnow(),
+            added_at=datetime.now(timezone.utc),
         )
 
         session.documents.append(document)
-        session.updated_at = datetime.utcnow()
+        session.updated_at = datetime.now(timezone.utc)
 
         self._update_sessions(lambda sessions: sessions.__setitem__(session_id, session.model_dump(mode="json")))
 
@@ -135,7 +135,7 @@ class DocumentQAService:
             return False
 
         session.documents = [d for d in session.documents if d.id != document_id]
-        session.updated_at = datetime.utcnow()
+        session.updated_at = datetime.now(timezone.utc)
 
         self._update_sessions(lambda sessions: sessions.__setitem__(session_id, session.model_dump(mode="json")))
 
@@ -165,7 +165,7 @@ class DocumentQAService:
                 role=MessageRole.ASSISTANT,
                 content="No documents have been added to this session yet. Please add documents first.",
                 citations=[],
-                timestamp=datetime.utcnow(),
+                timestamp=datetime.now(timezone.utc),
             )
             return AskResponse(
                 message=no_docs_message,
@@ -177,14 +177,27 @@ class DocumentQAService:
             id=str(uuid.uuid4()),
             role=MessageRole.USER,
             content=request.question,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(timezone.utc),
         )
         session.messages.append(user_message)
 
-        # Build context from documents
+        # Build context from documents with total budget limit
+        # Limit total context to prevent memory explosion with many documents
+        MAX_TOTAL_CONTEXT = 50000  # ~50KB total context budget
+        MAX_PER_DOC = 15000  # Max per document
+
         doc_context = []
+        total_chars = 0
         for doc in session.documents:
-            doc_context.append(f"[Document: {doc.name} (ID: {doc.id})]\n{doc.full_content[:15000]}")
+            remaining_budget = MAX_TOTAL_CONTEXT - total_chars
+            if remaining_budget <= 0:
+                doc_context.append(f"[Document: {doc.name} (ID: {doc.id})]\n(Skipped due to context limit)")
+                continue
+            # Take the lesser of per-doc limit or remaining budget
+            chunk_size = min(MAX_PER_DOC, remaining_budget)
+            content_chunk = doc.full_content[:chunk_size]
+            doc_context.append(f"[Document: {doc.name} (ID: {doc.id})]\n{content_chunk}")
+            total_chars += len(content_chunk)
 
         # Build conversation history (last N messages)
         history_messages = session.messages[-(session.context_window * 2):-1]  # Exclude current message
@@ -269,7 +282,7 @@ Return ONLY the JSON object."""
                     role=MessageRole.ASSISTANT,
                     content=response_data.get("answer", "I couldn't generate an answer."),
                     citations=citations,
-                    timestamp=datetime.utcnow(),
+                    timestamp=datetime.now(timezone.utc),
                     metadata={
                         "confidence": response_data.get("confidence", 0.8),
                         "follow_up_questions": response_data.get("follow_up_questions", []),
@@ -278,7 +291,7 @@ Return ONLY the JSON object."""
 
                 # Add to session history
                 session.messages.append(assistant_message)
-                session.updated_at = datetime.utcnow()
+                session.updated_at = datetime.now(timezone.utc)
 
                 self._update_sessions(
                     lambda sessions: sessions.__setitem__(session_id, session.model_dump(mode="json"))
@@ -299,7 +312,7 @@ Return ONLY the JSON object."""
                 id=str(uuid.uuid4()),
                 role=MessageRole.ASSISTANT,
                 content=f"I encountered an error processing your question. Please try again.",
-                timestamp=datetime.utcnow(),
+                timestamp=datetime.now(timezone.utc),
             )
 
             return AskResponse(
@@ -337,14 +350,14 @@ Return ONLY the JSON object."""
 
         feedback = MessageFeedback(
             feedback_type=request.feedback_type,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(timezone.utc),
             comment=request.comment,
         )
         target.feedback = feedback
         meta = dict(target.metadata or {})
         meta["feedback"] = feedback.model_dump(mode="json")
         target.metadata = meta
-        session.updated_at = datetime.utcnow()
+        session.updated_at = datetime.now(timezone.utc)
 
         self._update_sessions(lambda sessions: sessions.__setitem__(session_id, session.model_dump(mode="json")))
 
@@ -388,9 +401,21 @@ Return ONLY the JSON object."""
         if not session.documents:
             return None
 
+        # Build context from documents with total budget limit
+        MAX_TOTAL_CONTEXT = 50000  # ~50KB total context budget
+        MAX_PER_DOC = 15000  # Max per document
+
         doc_context = []
+        total_chars = 0
         for doc in session.documents:
-            doc_context.append(f"[Document: {doc.name} (ID: {doc.id})]\n{doc.full_content[:15000]}")
+            remaining_budget = MAX_TOTAL_CONTEXT - total_chars
+            if remaining_budget <= 0:
+                doc_context.append(f"[Document: {doc.name} (ID: {doc.id})]\n(Skipped due to context limit)")
+                continue
+            chunk_size = min(MAX_PER_DOC, remaining_budget)
+            content_chunk = doc.full_content[:chunk_size]
+            doc_context.append(f"[Document: {doc.name} (ID: {doc.id})]\n{content_chunk}")
+            total_chars += len(content_chunk)
 
         history_window = session.context_window * 2
         history_start = max(0, (question_index or 0) - history_window)
@@ -477,7 +502,7 @@ Return ONLY the JSON object."""
                 role=MessageRole.ASSISTANT,
                 content=response_data.get("answer", "I couldn't generate an answer."),
                 citations=citations,
-                timestamp=datetime.utcnow(),
+                timestamp=datetime.now(timezone.utc),
                 metadata={
                     "confidence": response_data.get("confidence", 0.8),
                     "follow_up_questions": response_data.get("follow_up_questions", []),
@@ -487,7 +512,7 @@ Return ONLY the JSON object."""
             )
 
             session.messages[message_index] = assistant_message
-            session.updated_at = datetime.utcnow()
+            session.updated_at = datetime.now(timezone.utc)
 
             self._update_sessions(
                 lambda sessions: sessions.__setitem__(session_id, session.model_dump(mode="json"))
@@ -524,7 +549,7 @@ Return ONLY the JSON object."""
             return False
 
         session.messages = []
-        session.updated_at = datetime.utcnow()
+        session.updated_at = datetime.now(timezone.utc)
 
         store = _state_store()
         state = store._read_state()

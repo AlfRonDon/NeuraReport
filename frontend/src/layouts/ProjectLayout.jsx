@@ -41,30 +41,9 @@ const fadeIn = keyframes`
 const LayoutRoot = styled(Box)(({ theme }) => ({
   display: 'flex',
   minHeight: '100vh',
+  // Clean, flat background - NO gradients
   backgroundColor: theme.palette.background.default,
   position: 'relative',
-
-  // Sophisticated background pattern
-  '&::before': {
-    content: '""',
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    background: theme.palette.mode === 'dark'
-      ? `
-        radial-gradient(ellipse at 0% 0%, ${alpha(theme.palette.primary.main, 0.08)} 0%, transparent 50%),
-        radial-gradient(ellipse at 100% 0%, ${alpha(theme.palette.secondary.main, 0.06)} 0%, transparent 50%),
-        radial-gradient(ellipse at 50% 100%, ${alpha(theme.palette.primary.main, 0.04)} 0%, transparent 50%)
-      `
-      : `
-        radial-gradient(ellipse at 0% 0%, ${alpha(theme.palette.primary.main, 0.03)} 0%, transparent 50%),
-        radial-gradient(ellipse at 100% 100%, ${alpha(theme.palette.secondary.main, 0.03)} 0%, transparent 50%)
-      `,
-    pointerEvents: 'none',
-    zIndex: 0,
-  },
 }))
 
 const MainContent = styled(Box, {

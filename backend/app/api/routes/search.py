@@ -5,6 +5,7 @@ Endpoints for full-text, semantic, and advanced search.
 from __future__ import annotations
 
 import logging
+import re
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, HTTPException, status
@@ -15,6 +16,55 @@ from backend.app.services.search.service import SearchType, SearchFilter
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+
+# Regex validation to prevent ReDoS attacks
+MAX_REGEX_LENGTH = 100
+DANGEROUS_PATTERNS = [
+    r"\(\?\#",  # Comments
+    r"\(\?\<",  # Named groups (can be complex)
+    r"\(\?\(",  # Conditional patterns
+    r"\(\?\P",  # Python named groups
+]
+
+
+def validate_regex_pattern(pattern: str) -> tuple[bool, str]:
+    """Validate a regex pattern to prevent ReDoS attacks.
+
+    Returns:
+        Tuple of (is_valid, error_message)
+    """
+    if not pattern:
+        return False, "Empty pattern"
+
+    if len(pattern) > MAX_REGEX_LENGTH:
+        return False, f"Pattern too long (max {MAX_REGEX_LENGTH} characters)"
+
+    # Check for dangerous patterns that could cause exponential backtracking
+    for dangerous in DANGEROUS_PATTERNS:
+        if re.search(dangerous, pattern, re.IGNORECASE):
+            return False, "Pattern contains unsupported constructs"
+
+    # Check for nested quantifiers (common ReDoS pattern)
+    if re.search(r"(\+|\*|\{[0-9,]+\})\s*(\+|\*|\?|\{[0-9,]+\})", pattern):
+        return False, "Nested quantifiers not allowed"
+
+    # Check for overlapping alternation with quantifiers
+    if re.search(r"\([^)]*\|[^)]*\)[\+\*]", pattern):
+        # Allow simple alternation but flag potentially dangerous ones
+        pass
+
+    # Try to compile the pattern with a timeout-safe test
+    try:
+        compiled = re.compile(pattern)
+        # Test with a simple string to catch obvious issues
+        compiled.search("test" * 10)
+    except re.error as e:
+        return False, f"Invalid regex: {str(e)}"
+    except Exception as e:
+        return False, f"Regex error: {str(e)}"
+
+    return True, ""
 
 
 # =============================================================================
@@ -56,6 +106,25 @@ class SaveSearchRequest(BaseModel):
 # =============================================================================
 # SEARCH ENDPOINTS
 # =============================================================================
+
+@router.get("/types")
+async def get_search_types():
+    """
+    Get available search types.
+
+    Returns:
+        List of search types with descriptions
+    """
+    return {
+        "types": [
+            {"id": "fulltext", "name": "Full-Text", "description": "Standard keyword search with stemming"},
+            {"id": "semantic", "name": "Semantic", "description": "AI-powered meaning-based search"},
+            {"id": "fuzzy", "name": "Fuzzy", "description": "Tolerant search with typo handling"},
+            {"id": "regex", "name": "Regex", "description": "Regular expression pattern matching"},
+            {"id": "boolean", "name": "Boolean", "description": "AND/OR/NOT logical operators"},
+        ]
+    }
+
 
 @router.post("/search")
 async def search(request: SearchRequest):
@@ -104,7 +173,18 @@ async def regex_search(request: SearchRequest):
 
     Returns:
         SearchResponse with regex matches
+
+    Raises:
+        HTTPException 400: If regex pattern is invalid or potentially dangerous
     """
+    # Validate regex pattern to prevent ReDoS attacks
+    is_valid, error_msg = validate_regex_pattern(request.query)
+    if not is_valid:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid regex pattern: {error_msg}"
+        )
+
     request.search_type = "regex"
     return await search(request)
 

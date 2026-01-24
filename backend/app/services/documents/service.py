@@ -6,8 +6,9 @@ from __future__ import annotations
 
 import json
 import logging
+import threading
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
 
@@ -16,6 +17,11 @@ from pydantic import BaseModel
 from backend.app.services.config import get_settings
 
 logger = logging.getLogger("neura.documents")
+
+
+def _utcnow() -> datetime:
+    """Get current UTC time with timezone info."""
+    return datetime.now(timezone.utc)
 
 
 class DocumentContent(BaseModel):
@@ -78,6 +84,8 @@ class DocumentService:
         base_root = get_settings().uploads_root
         self._uploads_root = uploads_root or (base_root / "documents")
         self._uploads_root.mkdir(parents=True, exist_ok=True)
+        # Lock for file operations to prevent race conditions
+        self._lock = threading.Lock()
 
     def create(
         self,
@@ -88,7 +96,7 @@ class DocumentService:
         metadata: Optional[dict] = None,
     ) -> Document:
         """Create a new document."""
-        now = datetime.utcnow().isoformat()
+        now = _utcnow().isoformat()
         doc = Document(
             id=str(uuid.uuid4()),
             name=name,
@@ -99,7 +107,8 @@ class DocumentService:
             is_template=is_template,
             metadata=metadata or {},
         )
-        self._save_document(doc)
+        with self._lock:
+            self._save_document(doc)
         logger.info(f"Created document: {doc.id}")
         return doc
 
@@ -108,8 +117,9 @@ class DocumentService:
         doc_path = self._get_document_path(document_id)
         if not doc_path or not doc_path.exists():
             return None
-        with open(doc_path) as f:
-            data = json.load(f)
+        with self._lock:
+            with open(doc_path) as f:
+                data = json.load(f)
         return Document(**data)
 
     def update(
@@ -121,43 +131,60 @@ class DocumentService:
         create_version: bool = True,
     ) -> Optional[Document]:
         """Update an existing document."""
-        doc = self.get(document_id)
-        if not doc:
+        with self._lock:
+            doc = self._get_unlocked(document_id)
+            if not doc:
+                return None
+
+            # Create version snapshot before update
+            if create_version:
+                self._create_version(doc)
+
+            # Update fields
+            if name is not None:
+                doc.name = name
+            if content is not None:
+                doc.content = content
+            if metadata is not None:
+                doc.metadata.update(metadata)
+
+            doc.updated_at = _utcnow().isoformat()
+            doc.version += 1
+
+            self._save_document(doc)
+            logger.info(f"Updated document: {doc.id} to version {doc.version}")
+            return doc
+
+    def _get_unlocked(self, document_id: str) -> Optional[Document]:
+        """Get document without acquiring lock (for internal use when lock is held)."""
+        doc_path = self._get_document_path(document_id)
+        if not doc_path or not doc_path.exists():
             return None
-
-        # Create version snapshot before update
-        if create_version:
-            self._create_version(doc)
-
-        # Update fields
-        if name is not None:
-            doc.name = name
-        if content is not None:
-            doc.content = content
-        if metadata is not None:
-            doc.metadata.update(metadata)
-
-        doc.updated_at = datetime.utcnow().isoformat()
-        doc.version += 1
-
-        self._save_document(doc)
-        logger.info(f"Updated document: {doc.id} to version {doc.version}")
-        return doc
+        with open(doc_path) as f:
+            data = json.load(f)
+        return Document(**data)
 
     def delete(self, document_id: str) -> bool:
         """Delete a document."""
-        doc_path = self._get_document_path(document_id)
-        if not doc_path or not doc_path.exists():
-            return False
-        doc_path.unlink()
-        # Also delete versions
-        versions_dir = self._get_document_dir(document_id)
-        versions_dir = versions_dir / "versions" if versions_dir else None
-        if versions_dir and versions_dir.exists():
-            import shutil
-            shutil.rmtree(versions_dir)
-        logger.info(f"Deleted document: {document_id}")
-        return True
+        with self._lock:
+            doc_path = self._get_document_path(document_id)
+            if not doc_path or not doc_path.exists():
+                return False
+            doc_path.unlink()
+            # Also delete versions and comments
+            doc_dir = self._get_document_dir(document_id)
+            if doc_dir and doc_dir.exists():
+                import shutil
+                # Delete versions subdirectory
+                versions_dir = doc_dir / "versions"
+                if versions_dir.exists():
+                    shutil.rmtree(versions_dir)
+                # Delete comments subdirectory
+                comments_dir = doc_dir / "comments"
+                if comments_dir.exists():
+                    shutil.rmtree(comments_dir)
+            logger.info(f"Deleted document: {document_id}")
+            return True
 
     def list_documents(
         self,
@@ -222,24 +249,25 @@ class DocumentService:
         author_name: Optional[str] = None,
     ) -> Optional[DocumentComment]:
         """Add a comment to a document."""
-        doc = self.get(document_id)
-        if not doc:
-            return None
+        with self._lock:
+            doc = self._get_unlocked(document_id)
+            if not doc:
+                return None
 
-        comment = DocumentComment(
-            id=str(uuid.uuid4()),
-            document_id=document_id,
-            selection_start=selection_start,
-            selection_end=selection_end,
-            text=text,
-            author_id=author_id,
-            author_name=author_name,
-            created_at=datetime.utcnow().isoformat(),
-        )
+            comment = DocumentComment(
+                id=str(uuid.uuid4()),
+                document_id=document_id,
+                selection_start=selection_start,
+                selection_end=selection_end,
+                text=text,
+                author_id=author_id,
+                author_name=author_name,
+                created_at=_utcnow().isoformat(),
+            )
 
-        self._save_comment(comment)
-        logger.info(f"Added comment {comment.id} to document {document_id}")
-        return comment
+            self._save_comment(comment)
+            logger.info(f"Added comment {comment.id} to document {document_id}")
+            return comment
 
     def get_comments(self, document_id: str) -> list[DocumentComment]:
         """Get all comments for a document."""
@@ -306,7 +334,7 @@ class DocumentService:
             document_id=doc.id,
             version=doc.version,
             content=doc.content,
-            created_at=datetime.utcnow().isoformat(),
+            created_at=_utcnow().isoformat(),
         )
 
         versions_dir = self._uploads_root / doc.id / "versions"

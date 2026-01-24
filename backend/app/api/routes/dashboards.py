@@ -14,7 +14,7 @@ from pydantic import BaseModel, Field
 
 logger = logging.getLogger("neura.api.dashboards")
 
-router = APIRouter(prefix="/dashboards", tags=["dashboards"])
+router = APIRouter(tags=["dashboards"])
 
 
 # ============================================

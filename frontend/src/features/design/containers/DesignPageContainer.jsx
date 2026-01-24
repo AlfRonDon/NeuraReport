@@ -25,6 +25,7 @@ import {
   Tab,
   Divider,
   List,
+  MenuItem,
   ListItem,
   ListItemText,
   ListItemSecondaryAction,
@@ -268,12 +269,22 @@ export default function DesignPageContainer() {
   }, [deleteBrandKit, execute, toast])
 
   const handleGeneratePalette = useCallback(async () => {
-    const palette = await generateColorPalette(baseColor, colorScheme)
-    if (palette) {
-      setGeneratedPalette(palette)
-      toast.show('Palette generated', 'success')
-    }
-  }, [baseColor, colorScheme, generateColorPalette, toast])
+    return execute({
+      type: InteractionType.GENERATE,
+      label: 'Generate color palette',
+      reversibility: Reversibility.FULLY_REVERSIBLE,
+      suppressSuccessToast: true,
+      intent: { source: 'design', baseColor, colorScheme, action: 'generate_palette' },
+      action: async () => {
+        const palette = await generateColorPalette(baseColor, colorScheme)
+        if (palette) {
+          setGeneratedPalette(palette)
+          toast.show('Palette generated', 'success')
+        }
+        return palette
+      },
+    })
+  }, [baseColor, colorScheme, generateColorPalette, toast, execute])
 
   const handleCopyColor = (color) => {
     navigator.clipboard.writeText(color)
@@ -437,11 +448,12 @@ export default function DesignPageContainer() {
                   value={colorScheme}
                   onChange={(e) => setColorScheme(e.target.value)}
                   sx={{ mb: 3 }}
+                  SelectProps={{ native: false }}
                 >
                   {COLOR_SCHEMES.map((scheme) => (
-                    <option key={scheme.value} value={scheme.value}>
+                    <MenuItem key={scheme.value} value={scheme.value}>
                       {scheme.name}
-                    </option>
+                    </MenuItem>
                   ))}
                 </TextField>
                 <ActionButton

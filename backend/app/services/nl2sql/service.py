@@ -226,8 +226,9 @@ class NL2SQLService:
                 cur = con.execute(limited_sql)
                 rows_raw = cur.fetchall()
 
-                columns = list(rows_raw[0].keys()) if rows_raw else []
-                rows = [{col: _coerce_value(row[col]) for col in columns} for row in rows_raw]
+                # Get column names from cursor description (reliable across all Row types)
+                columns = [desc[0] for desc in cur.description] if cur.description else []
+                rows = [{col: _coerce_value(row[i]) for i, col in enumerate(columns)} for row in rows_raw]
 
         except sqlite_shim.OperationalError as exc:
             execution_time_ms = int((time.time() - started) * 1000)
@@ -307,7 +308,7 @@ class NL2SQLService:
 
         # Persist to state store
         store = _state_store()
-        store.save_query(saved_query.dict())
+        store.save_query(saved_query.model_dump(mode="json"))
 
         return saved_query
 

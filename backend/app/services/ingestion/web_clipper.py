@@ -7,7 +7,7 @@ from __future__ import annotations
 import logging
 import re
 import hashlib
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 from urllib.parse import urljoin, urlparse
 
@@ -39,7 +39,7 @@ class ClippedContent(BaseModel):
     metadata: WebPageMetadata
     images: List[str] = Field(default_factory=list)
     links: List[Dict[str, str]] = Field(default_factory=list)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class WebClipperService:
@@ -115,7 +115,7 @@ class WebClipperService:
         links = self._extract_links(content_element, url)
 
         # Generate document ID
-        doc_id = hashlib.sha256(f"{url}:{datetime.utcnow().isoformat()}".encode()).hexdigest()[:16]
+        doc_id = hashlib.sha256(f"{url}:{datetime.now(timezone.utc).isoformat()}".encode()).hexdigest()[:16]
 
         return ClippedContent(
             document_id=doc_id,
@@ -152,7 +152,7 @@ class WebClipperService:
         clean_html = self._clean_content(soup, url)
         plain_text = self._extract_text(soup)
 
-        doc_id = hashlib.sha256(f"{url}:selection:{datetime.utcnow().isoformat()}".encode()).hexdigest()[:16]
+        doc_id = hashlib.sha256(f"{url}:selection:{datetime.now(timezone.utc).isoformat()}".encode()).hexdigest()[:16]
 
         metadata = WebPageMetadata(
             title=page_title or "Clipped Selection",

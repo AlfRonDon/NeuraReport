@@ -4,44 +4,15 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Query, Request
 
+from backend.app.utils.job_status import normalize_job_status, normalize_job
 from backend.legacy.services.scheduler_service import get_job, list_active_jobs, list_jobs, cancel_job
 
 router = APIRouter()
 
 
-def _normalize_job_status(status: Optional[str]) -> str:
-    """Normalize job status to consistent UI-friendly values.
-
-    Maps backend status values (succeeded, queued, in_progress, etc.)
-    to canonical frontend values (completed, pending, running, etc.).
-    """
-    value = (status or "").strip().lower()
-    if value in {"succeeded", "success", "done"}:
-        return "completed"
-    if value in {"queued"}:
-        return "pending"
-    if value in {"in_progress", "started"}:
-        return "running"
-    if value in {"error"}:
-        return "failed"
-    if value in {"canceled"}:
-        return "cancelled"
-    # Return as-is for known statuses
-    if value in {"pending", "running", "completed", "failed", "cancelled", "cancelling"}:
-        return value
-    return value or "pending"
-
-
-def _normalize_job(job: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
-    """Normalize a job record for consistent API responses."""
-    if not job:
-        return job
-    normalized = dict(job)
-    if "status" in normalized:
-        normalized["status"] = _normalize_job_status(normalized["status"])
-    if "state" in normalized and "status" not in normalized:
-        normalized["status"] = _normalize_job_status(normalized["state"])
-    return normalized
+# Use shared normalize_job_status and normalize_job from backend.app.utils.job_status
+_normalize_job_status = normalize_job_status
+_normalize_job = normalize_job
 
 
 def _correlation(request: Request) -> str | None:

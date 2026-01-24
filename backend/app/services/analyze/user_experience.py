@@ -14,7 +14,7 @@ import json
 import logging
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, AsyncGenerator, Callable, Dict, List, Optional
 
 from backend.app.schemas.analyze.enhanced_analysis import (
@@ -264,8 +264,8 @@ class CollaborationService:
             content=data.get("content", ""),
             element_type=data.get("element_type"),
             element_id=data.get("element_id"),
-            created_at=self._parse_dt(data.get("created_at")) or datetime.utcnow(),
-            updated_at=self._parse_dt(data.get("updated_at")) or datetime.utcnow(),
+            created_at=self._parse_dt(data.get("created_at")) or datetime.now(timezone.utc),
+            updated_at=self._parse_dt(data.get("updated_at")) or datetime.now(timezone.utc),
             replies=replies,
             resolved=bool(data.get("resolved", False)),
         )
@@ -291,7 +291,7 @@ class CollaborationService:
             share_type=data.get("share_type", "link"),
             access_level=data.get("access_level", "view"),
             created_by=data.get("created_by", "api"),
-            created_at=self._parse_dt(data.get("created_at")) or datetime.utcnow(),
+            created_at=self._parse_dt(data.get("created_at")) or datetime.now(timezone.utc),
             expires_at=self._parse_dt(data.get("expires_at")),
             password_protected=bool(data.get("password_protected", False)),
             access_count=int(data.get("access_count", 0) or 0),
@@ -315,7 +315,7 @@ class CollaborationService:
             version_id=data.get("version_id", f"v_{uuid.uuid4().hex[:12]}"),
             analysis_id=data.get("analysis_id", ""),
             version_number=int(data.get("version_number", 1) or 1),
-            created_at=self._parse_dt(data.get("created_at")) or datetime.utcnow(),
+            created_at=self._parse_dt(data.get("created_at")) or datetime.now(timezone.utc),
             created_by=data.get("created_by", "api"),
             description=data.get("description", ""),
             changes=list(data.get("changes") or []),
@@ -401,7 +401,7 @@ class CollaborationService:
             share_type="link",
             access_level=access_level,
             created_by=created_by,
-            expires_at=datetime.utcnow() + timedelta(hours=expires_hours) if expires_hours else None,
+            expires_at=datetime.now(timezone.utc) + timedelta(hours=expires_hours) if expires_hours else None,
             password_protected=password_protected,
             allowed_emails=allowed_emails or [],
         )
@@ -465,7 +465,7 @@ class CollaborationService:
             version_id=f"v_{uuid.uuid4().hex[:12]}",
             analysis_id=analysis_id,
             version_number=version_number,
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
             created_by=created_by,
             description=description,
             changes=changes,
@@ -513,7 +513,7 @@ class StreamingAnalysisSession:
 
     def __init__(self, session_id: str):
         self.session_id = session_id
-        self.started_at = datetime.utcnow()
+        self.started_at = datetime.now(timezone.utc)
         self.progress = 0.0
         self.current_stage = "initializing"
         self.is_cancelled = False
@@ -589,7 +589,7 @@ async def stream_analysis_progress(
                 "event": "progress",
                 "stage": session.current_stage,
                 "progress": session.progress,
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
             }
 
         # Check for new incremental results
@@ -605,9 +605,9 @@ async def stream_analysis_progress(
         await asyncio.sleep(0.1)
 
     if session.is_cancelled:
-        yield {"event": "cancelled", "timestamp": datetime.utcnow().isoformat()}
+        yield {"event": "cancelled", "timestamp": datetime.now(timezone.utc).isoformat()}
     else:
-        yield {"event": "complete", "progress": 100, "timestamp": datetime.utcnow().isoformat()}
+        yield {"event": "complete", "progress": 100, "timestamp": datetime.now(timezone.utc).isoformat()}
 
 
 # =============================================================================

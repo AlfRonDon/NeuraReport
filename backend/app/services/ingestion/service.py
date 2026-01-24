@@ -12,7 +12,7 @@ import io
 import json
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, BinaryIO
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 
 from pydantic import BaseModel, Field
@@ -423,7 +423,7 @@ class IngestionService:
 
     def _generate_document_id(self, filename: str, content: bytes) -> str:
         """Generate unique document ID."""
-        hash_input = f"{filename}:{len(content)}:{datetime.utcnow().isoformat()}"
+        hash_input = f"{filename}:{len(content)}:{datetime.now(timezone.utc).isoformat()}"
         return hashlib.sha256(hash_input.encode()).hexdigest()[:16]
 
     async def _extract_metadata(self, file_path: Path, file_type: FileType) -> Dict[str, Any]:
@@ -431,7 +431,7 @@ class IngestionService:
         metadata = {
             "original_filename": file_path.name,
             "file_type": file_type.value,
-            "ingested_at": datetime.utcnow().isoformat(),
+            "ingested_at": datetime.now(timezone.utc).isoformat(),
         }
 
         try:

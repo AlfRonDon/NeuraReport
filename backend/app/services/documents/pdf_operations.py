@@ -66,9 +66,10 @@ class PDFOperationsService:
 
     def get_page_info(self, pdf_path: Path) -> list[PageInfo]:
         """Get information about all pages in a PDF."""
-        try:
-            import fitz  # PyMuPDF
+        import fitz  # PyMuPDF
 
+        doc = None
+        try:
             doc = fitz.open(str(pdf_path))
             pages = []
             for i, page in enumerate(doc):
@@ -79,11 +80,13 @@ class PDFOperationsService:
                     height=rect.height,
                     rotation=page.rotation,
                 ))
-            doc.close()
             return pages
         except Exception as e:
             logger.error(f"Error getting page info: {e}")
             raise
+        finally:
+            if doc:
+                doc.close()
 
     def reorder_pages(
         self,
@@ -92,9 +95,11 @@ class PDFOperationsService:
         output_path: Optional[Path] = None,
     ) -> Path:
         """Reorder pages in a PDF according to new_order list."""
-        try:
-            import fitz
+        import fitz
 
+        doc = None
+        new_doc = None
+        try:
             doc = fitz.open(str(pdf_path))
 
             # Validate page numbers
@@ -113,14 +118,16 @@ class PDFOperationsService:
                 output_path = self._output_dir / f"{uuid.uuid4()}_reordered.pdf"
 
             new_doc.save(str(output_path))
-            new_doc.close()
-            doc.close()
-
             logger.info(f"Reordered pages to: {output_path}")
             return output_path
         except Exception as e:
             logger.error(f"Error reordering pages: {e}")
             raise
+        finally:
+            if new_doc:
+                new_doc.close()
+            if doc:
+                doc.close()
 
     def add_watermark(
         self,
@@ -129,9 +136,10 @@ class PDFOperationsService:
         output_path: Optional[Path] = None,
     ) -> Path:
         """Add a watermark to all pages of a PDF."""
-        try:
-            import fitz
+        import fitz
 
+        doc = None
+        try:
             doc = fitz.open(str(pdf_path))
 
             for page in doc:
@@ -173,13 +181,14 @@ class PDFOperationsService:
                 output_path = self._output_dir / f"{uuid.uuid4()}_watermarked.pdf"
 
             doc.save(str(output_path))
-            doc.close()
-
             logger.info(f"Added watermark to: {output_path}")
             return output_path
         except Exception as e:
             logger.error(f"Error adding watermark: {e}")
             raise
+        finally:
+            if doc:
+                doc.close()
 
     def redact_regions(
         self,
@@ -188,9 +197,10 @@ class PDFOperationsService:
         output_path: Optional[Path] = None,
     ) -> Path:
         """Redact specified regions in a PDF."""
-        try:
-            import fitz
+        import fitz
 
+        doc = None
+        try:
             doc = fitz.open(str(pdf_path))
 
             for region in regions:
@@ -217,13 +227,14 @@ class PDFOperationsService:
                 output_path = self._output_dir / f"{uuid.uuid4()}_redacted.pdf"
 
             doc.save(str(output_path))
-            doc.close()
-
             logger.info(f"Applied redactions to: {output_path}")
             return output_path
         except Exception as e:
             logger.error(f"Error applying redactions: {e}")
             raise
+        finally:
+            if doc:
+                doc.close()
 
     def merge_pdfs(
         self,
@@ -231,9 +242,10 @@ class PDFOperationsService:
         output_path: Optional[Path] = None,
     ) -> PDFMergeResult:
         """Merge multiple PDFs into one."""
-        try:
-            import fitz
+        import fitz
 
+        merged_doc = None
+        try:
             merged_doc = fitz.open()
             source_files = []
 
@@ -242,10 +254,14 @@ class PDFOperationsService:
                     logger.warning(f"PDF not found, skipping: {pdf_path}")
                     continue
 
-                doc = fitz.open(str(pdf_path))
-                merged_doc.insert_pdf(doc)
-                doc.close()
-                source_files.append(str(pdf_path))
+                doc = None
+                try:
+                    doc = fitz.open(str(pdf_path))
+                    merged_doc.insert_pdf(doc)
+                    source_files.append(str(pdf_path))
+                finally:
+                    if doc:
+                        doc.close()
 
             # Save to output path
             if output_path is None:
@@ -253,7 +269,6 @@ class PDFOperationsService:
 
             merged_doc.save(str(output_path))
             page_count = merged_doc.page_count
-            merged_doc.close()
 
             logger.info(f"Merged {len(source_files)} PDFs to: {output_path}")
             return PDFMergeResult(
@@ -264,6 +279,9 @@ class PDFOperationsService:
         except Exception as e:
             logger.error(f"Error merging PDFs: {e}")
             raise
+        finally:
+            if merged_doc:
+                merged_doc.close()
 
     def split_pdf(
         self,
@@ -272,9 +290,10 @@ class PDFOperationsService:
         output_dir: Optional[Path] = None,
     ) -> list[Path]:
         """Split a PDF into multiple files based on page ranges."""
-        try:
-            import fitz
+        import fitz
 
+        doc = None
+        try:
             doc = fitz.open(str(pdf_path))
             output_dir = output_dir or self._output_dir
             output_paths = []
@@ -288,20 +307,26 @@ class PDFOperationsService:
                     continue
 
                 # Create new document with range
-                new_doc = fitz.open()
-                new_doc.insert_pdf(doc, from_page=start, to_page=end)
+                new_doc = None
+                try:
+                    new_doc = fitz.open()
+                    new_doc.insert_pdf(doc, from_page=start, to_page=end)
 
-                output_path = output_dir / f"{uuid.uuid4()}_split_{i+1}.pdf"
-                new_doc.save(str(output_path))
-                new_doc.close()
-                output_paths.append(output_path)
+                    output_path = output_dir / f"{uuid.uuid4()}_split_{i+1}.pdf"
+                    new_doc.save(str(output_path))
+                    output_paths.append(output_path)
+                finally:
+                    if new_doc:
+                        new_doc.close()
 
-            doc.close()
             logger.info(f"Split PDF into {len(output_paths)} files")
             return output_paths
         except Exception as e:
             logger.error(f"Error splitting PDF: {e}")
             raise
+        finally:
+            if doc:
+                doc.close()
 
     def rotate_pages(
         self,
@@ -311,9 +336,10 @@ class PDFOperationsService:
         output_path: Optional[Path] = None,
     ) -> Path:
         """Rotate pages in a PDF."""
-        try:
-            import fitz
+        import fitz
 
+        doc = None
+        try:
             doc = fitz.open(str(pdf_path))
 
             # Normalize rotation to 0, 90, 180, or 270
@@ -334,13 +360,14 @@ class PDFOperationsService:
                 output_path = self._output_dir / f"{uuid.uuid4()}_rotated.pdf"
 
             doc.save(str(output_path))
-            doc.close()
-
             logger.info(f"Rotated pages to: {output_path}")
             return output_path
         except Exception as e:
             logger.error(f"Error rotating pages: {e}")
             raise
+        finally:
+            if doc:
+                doc.close()
 
     def extract_pages(
         self,
@@ -349,9 +376,11 @@ class PDFOperationsService:
         output_path: Optional[Path] = None,
     ) -> Path:
         """Extract specific pages from a PDF."""
-        try:
-            import fitz
+        import fitz
 
+        doc = None
+        new_doc = None
+        try:
             doc = fitz.open(str(pdf_path))
             new_doc = fitz.open()
 
@@ -364,14 +393,16 @@ class PDFOperationsService:
                 output_path = self._output_dir / f"{uuid.uuid4()}_extracted.pdf"
 
             new_doc.save(str(output_path))
-            new_doc.close()
-            doc.close()
-
             logger.info(f"Extracted {len(pages)} pages to: {output_path}")
             return output_path
         except Exception as e:
             logger.error(f"Error extracting pages: {e}")
             raise
+        finally:
+            if new_doc:
+                new_doc.close()
+            if doc:
+                doc.close()
 
     def _hex_to_rgb(self, hex_color: str) -> tuple[float, float, float]:
         """Convert hex color to RGB tuple (0-1 range)."""

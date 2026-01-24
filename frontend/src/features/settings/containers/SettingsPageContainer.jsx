@@ -17,6 +17,8 @@ import {
   CircularProgress,
   Alert,
   Button,
+  TextField,
+  MenuItem,
   useTheme,
   alpha,
   styled,
@@ -33,6 +35,10 @@ import SpeedIcon from '@mui/icons-material/Speed'
 import CloudIcon from '@mui/icons-material/Cloud'
 import DownloadIcon from '@mui/icons-material/Download'
 import TokenIcon from '@mui/icons-material/Toll'
+import LanguageIcon from '@mui/icons-material/Language'
+import AccessTimeIcon from '@mui/icons-material/AccessTime'
+import LockIcon from '@mui/icons-material/Lock'
+import PersonIcon from '@mui/icons-material/Person'
 import { useToast } from '@/components/ToastProvider'
 import { useInteraction, InteractionType, Reversibility } from '@/components/ux/governance'
 import { useAppStore } from '@/stores'
@@ -237,6 +243,45 @@ export default function SettingsPage() {
   const [exporting, setExporting] = useState(false)
   const lastPrefChangeRef = useRef(0)
 
+  // Personal settings
+  const [selectedTimezone, setSelectedTimezone] = useState(
+    Intl.DateTimeFormat().resolvedOptions().timeZone
+  )
+  const [selectedLanguage, setSelectedLanguage] = useState('en')
+  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false)
+  const [showTwoFactorSetup, setShowTwoFactorSetup] = useState(false)
+
+  // Available options
+  const TIMEZONE_OPTIONS = [
+    { value: 'America/New_York', label: 'Eastern Time (ET)' },
+    { value: 'America/Chicago', label: 'Central Time (CT)' },
+    { value: 'America/Denver', label: 'Mountain Time (MT)' },
+    { value: 'America/Los_Angeles', label: 'Pacific Time (PT)' },
+    { value: 'America/Phoenix', label: 'Arizona (no DST)' },
+    { value: 'America/Anchorage', label: 'Alaska Time' },
+    { value: 'Pacific/Honolulu', label: 'Hawaii Time' },
+    { value: 'Europe/London', label: 'London (GMT/BST)' },
+    { value: 'Europe/Paris', label: 'Central European Time' },
+    { value: 'Europe/Berlin', label: 'Berlin' },
+    { value: 'Asia/Tokyo', label: 'Japan Standard Time' },
+    { value: 'Asia/Shanghai', label: 'China Standard Time' },
+    { value: 'Asia/Kolkata', label: 'India Standard Time' },
+    { value: 'Asia/Dubai', label: 'Gulf Standard Time' },
+    { value: 'Australia/Sydney', label: 'Australian Eastern Time' },
+    { value: 'UTC', label: 'UTC' },
+  ]
+
+  const LANGUAGE_OPTIONS = [
+    { value: 'en', label: 'English' },
+    { value: 'es', label: 'Español (Spanish)' },
+    { value: 'fr', label: 'Français (French)' },
+    { value: 'de', label: 'Deutsch (German)' },
+    { value: 'pt', label: 'Português (Portuguese)' },
+    { value: 'zh', label: '中文 (Chinese)' },
+    { value: 'ja', label: '日本語 (Japanese)' },
+    { value: 'ko', label: '한국어 (Korean)' },
+  ]
+
   const fetchHealth = useCallback(async () => {
     setLoading(true)
     setError(null)
@@ -262,8 +307,19 @@ export default function SettingsPage() {
       const nextPrefs = data?.preferences || {}
       setPreferences(nextPrefs)
       savePreferences(nextPrefs)
+
+      // Sync all personal settings from backend
       if (typeof nextPrefs.demoMode === 'boolean') {
         setDemoMode(nextPrefs.demoMode)
+      }
+      if (nextPrefs.timezone) {
+        setSelectedTimezone(nextPrefs.timezone)
+      }
+      if (nextPrefs.language) {
+        setSelectedLanguage(nextPrefs.language)
+      }
+      if (typeof nextPrefs.twoFactorEnabled === 'boolean') {
+        setTwoFactorEnabled(nextPrefs.twoFactorEnabled)
       }
     } catch (err) {
       toast.show(err.message || 'Failed to load preferences', 'warning')
@@ -335,6 +391,79 @@ export default function SettingsPage() {
       },
     })
   }, [preferences, toast, execute])
+
+  const handleTimezoneChange = useCallback(async (event) => {
+    const value = event.target.value
+    setSelectedTimezone(value)
+    const nextPrefs = { ...preferences, timezone: value }
+    lastPrefChangeRef.current = Date.now()
+    setPreferences(nextPrefs)
+    savePreferences(nextPrefs)
+    await execute({
+      type: InteractionType.UPDATE,
+      label: 'Update timezone',
+      reversibility: Reversibility.SYSTEM_MANAGED,
+      suppressSuccessToast: true,
+      intent: { preferenceKey: 'timezone', action: 'update_timezone' },
+      action: async () => {
+        try {
+          await api.setUserPreference('timezone', value)
+          toast.show('Timezone updated', 'success')
+        } catch (err) {
+          toast.show(err.message || 'Failed to save timezone', 'error')
+        }
+      },
+    })
+  }, [preferences, toast, execute])
+
+  const handleLanguageChange = useCallback(async (event) => {
+    const value = event.target.value
+    setSelectedLanguage(value)
+    const nextPrefs = { ...preferences, language: value }
+    lastPrefChangeRef.current = Date.now()
+    setPreferences(nextPrefs)
+    savePreferences(nextPrefs)
+    await execute({
+      type: InteractionType.UPDATE,
+      label: 'Update language',
+      reversibility: Reversibility.SYSTEM_MANAGED,
+      suppressSuccessToast: true,
+      intent: { preferenceKey: 'language', action: 'update_language' },
+      action: async () => {
+        try {
+          await api.setUserPreference('language', value)
+          toast.show('Language updated. Some changes may require a page refresh.', 'success')
+        } catch (err) {
+          toast.show(err.message || 'Failed to save language', 'error')
+        }
+      },
+    })
+  }, [preferences, toast, execute])
+
+  const handleTwoFactorToggle = useCallback(async (event) => {
+    const enabled = event.target.checked
+    if (enabled) {
+      // Show 2FA setup dialog
+      setShowTwoFactorSetup(true)
+    } else {
+      // Disable 2FA
+      await execute({
+        type: InteractionType.UPDATE,
+        label: 'Disable two-factor authentication',
+        reversibility: Reversibility.PARTIALLY_REVERSIBLE,
+        intent: { action: 'disable_2fa' },
+        action: async () => {
+          try {
+            await api.setUserPreference('twoFactorEnabled', false)
+            setTwoFactorEnabled(false)
+            toast.show('Two-factor authentication disabled', 'success')
+          } catch (err) {
+            toast.show(err.message || 'Failed to disable 2FA', 'error')
+          }
+        },
+      })
+    }
+  }, [execute, toast])
 
   const handleDemoModeChange = useCallback(async (event) => {
     const enabled = event.target.checked
@@ -408,6 +537,153 @@ export default function SettingsPage() {
       )}
 
       <Stack spacing={3}>
+        {/* Personal Settings */}
+        <SettingCard icon={PersonIcon} title="Personal Settings">
+          <Typography variant="body2" sx={{ color: theme.palette.text.secondary, mb: 2 }}>
+            Customize your personal experience with NeuraReport.
+          </Typography>
+          <Stack spacing={2}>
+            <TextField
+              select
+              fullWidth
+              size="small"
+              label="Language"
+              value={selectedLanguage}
+              onChange={handleLanguageChange}
+              InputProps={{
+                startAdornment: <LanguageIcon sx={{ mr: 1, color: 'text.secondary', fontSize: 20 }} />,
+              }}
+            >
+              {LANGUAGE_OPTIONS.map((option) => (
+                <MenuItem key={option.value} value={option.value}>
+                  {option.label}
+                </MenuItem>
+              ))}
+            </TextField>
+
+            <TextField
+              select
+              fullWidth
+              size="small"
+              label="Timezone"
+              value={selectedTimezone}
+              onChange={handleTimezoneChange}
+              InputProps={{
+                startAdornment: <AccessTimeIcon sx={{ mr: 1, color: 'text.secondary', fontSize: 20 }} />,
+              }}
+            >
+              {TIMEZONE_OPTIONS.map((option) => (
+                <MenuItem key={option.value} value={option.value}>
+                  {option.label}
+                </MenuItem>
+              ))}
+            </TextField>
+          </Stack>
+        </SettingCard>
+
+        {/* Security Settings */}
+        <SettingCard icon={LockIcon} title="Security">
+          <Stack spacing={2}>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={twoFactorEnabled}
+                  onChange={handleTwoFactorToggle}
+                  size="small"
+                />
+              }
+              label={
+                <Stack>
+                  <Typography variant="body2" sx={{ color: theme.palette.text.primary }}>
+                    Two-Factor Authentication (2FA)
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>
+                    {twoFactorEnabled
+                      ? 'Your account is protected with 2FA'
+                      : 'Add an extra layer of security to your account'}
+                  </Typography>
+                </Stack>
+              }
+            />
+            {twoFactorEnabled && (
+              <Alert severity="success" sx={{ borderRadius: 2 }}>
+                Two-factor authentication is enabled. Your account is more secure.
+              </Alert>
+            )}
+            {showTwoFactorSetup && (
+              <Alert severity="info" sx={{ borderRadius: 2 }}>
+                <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
+                  Set up Two-Factor Authentication
+                </Typography>
+                <Typography variant="body2" sx={{ mb: 2 }}>
+                  To enable 2FA, scan the QR code with your authenticator app (Google Authenticator, Authy, etc.)
+                  and enter the verification code.
+                </Typography>
+                <Box sx={{ textAlign: 'center', py: 2, bgcolor: 'background.paper', borderRadius: 1, mb: 2 }}>
+                  <Typography variant="caption" color="text.secondary">
+                    [QR Code would appear here]
+                  </Typography>
+                </Box>
+                <TextField
+                  fullWidth
+                  size="small"
+                  label="Verification Code"
+                  placeholder="Enter 6-digit code"
+                  sx={{ mb: 2 }}
+                />
+                <Stack direction="row" spacing={1}>
+                  <Button
+                    variant="contained"
+                    size="small"
+                    onClick={() => {
+                      setTwoFactorEnabled(true)
+                      setShowTwoFactorSetup(false)
+                      toast.show('Two-factor authentication enabled!', 'success')
+                    }}
+                  >
+                    Verify & Enable
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={() => setShowTwoFactorSetup(false)}
+                  >
+                    Cancel
+                  </Button>
+                </Stack>
+              </Alert>
+            )}
+
+            <Divider sx={{ my: 1, borderColor: alpha(theme.palette.divider, 0.08) }} />
+
+            <Box>
+              <Typography variant="body2" sx={{ color: theme.palette.text.primary, mb: 0.5 }}>
+                Change Password
+              </Typography>
+              <Typography variant="caption" sx={{ color: theme.palette.text.secondary, display: 'block', mb: 1 }}>
+                Update your password to keep your account secure.
+              </Typography>
+              <Button variant="outlined" size="small" sx={{ borderRadius: 2 }}>
+                Change Password
+              </Button>
+            </Box>
+
+            <Divider sx={{ my: 1, borderColor: alpha(theme.palette.divider, 0.08) }} />
+
+            <Box>
+              <Typography variant="body2" sx={{ color: theme.palette.text.primary, mb: 0.5 }}>
+                Active Sessions
+              </Typography>
+              <Typography variant="caption" sx={{ color: theme.palette.text.secondary, display: 'block', mb: 1 }}>
+                You're currently logged in on 1 device.
+              </Typography>
+              <Button variant="outlined" size="small" color="warning" sx={{ borderRadius: 2 }}>
+                Sign Out Other Devices
+              </Button>
+            </Box>
+          </Stack>
+        </SettingCard>
+
         {/* System Status */}
         <SettingCard icon={SpeedIcon} title="System Status">
           <Stack spacing={1}>

@@ -208,6 +208,40 @@ export default function DocumentEditorPage() {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [docToDelete, setDocToDelete] = useState(null)
 
+  // AI Tool Settings
+  const [translateDialogOpen, setTranslateDialogOpen] = useState(false)
+  const [toneDialogOpen, setToneDialogOpen] = useState(false)
+  const [selectedLanguage, setSelectedLanguage] = useState('Spanish')
+  const [selectedTone, setSelectedTone] = useState('professional')
+
+  // Auto-save
+  const [autoSaveEnabled, setAutoSaveEnabled] = useState(true)
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+  const [lastSaved, setLastSaved] = useState(null)
+
+  // Language and tone options
+  const LANGUAGE_OPTIONS = [
+    { value: 'Spanish', label: 'Spanish' },
+    { value: 'French', label: 'French' },
+    { value: 'German', label: 'German' },
+    { value: 'Italian', label: 'Italian' },
+    { value: 'Portuguese', label: 'Portuguese' },
+    { value: 'Chinese', label: 'Chinese (Simplified)' },
+    { value: 'Japanese', label: 'Japanese' },
+    { value: 'Korean', label: 'Korean' },
+    { value: 'Arabic', label: 'Arabic' },
+    { value: 'Hindi', label: 'Hindi' },
+  ]
+
+  const TONE_OPTIONS = [
+    { value: 'professional', label: 'Professional', description: 'Formal and business-appropriate' },
+    { value: 'casual', label: 'Casual', description: 'Friendly and conversational' },
+    { value: 'formal', label: 'Formal', description: 'Very formal and official' },
+    { value: 'simplified', label: 'Simplified', description: 'Easy to understand, plain language' },
+    { value: 'persuasive', label: 'Persuasive', description: 'Compelling and convincing' },
+    { value: 'empathetic', label: 'Empathetic', description: 'Warm and understanding' },
+  ]
+
   // Initialize
   useEffect(() => {
     fetchDocuments()
@@ -218,8 +252,26 @@ export default function DocumentEditorPage() {
   useEffect(() => {
     if (currentDocument?.content) {
       setEditorContent(currentDocument.content)
+      setHasUnsavedChanges(false)
     }
   }, [currentDocument])
+
+  // Auto-save effect
+  useEffect(() => {
+    if (!autoSaveEnabled || !currentDocument || !hasUnsavedChanges || saving) return
+
+    const autoSaveTimer = setTimeout(async () => {
+      try {
+        await updateDocument(currentDocument.id, { content: editorContent })
+        setHasUnsavedChanges(false)
+        setLastSaved(new Date())
+      } catch (err) {
+        console.error('Auto-save failed:', err)
+      }
+    }, 2000) // Auto-save after 2 seconds of inactivity
+
+    return () => clearTimeout(autoSaveTimer)
+  }, [autoSaveEnabled, currentDocument, editorContent, hasUnsavedChanges, saving, updateDocument])
 
   // ==========================================================================
   // UX Governance helpers
@@ -325,6 +377,7 @@ export default function DocumentEditorPage() {
 
   const handleEditorUpdate = useCallback((content) => {
     setEditorContent(content)
+    setHasUnsavedChanges(true)
   }, [])
 
   const handleSelectionChange = useCallback((text) => {
@@ -460,13 +513,21 @@ export default function DocumentEditorPage() {
       return
     }
 
+    // For translate and tone, show a dialog to select options first
+    if (action === 'translate') {
+      setTranslateDialogOpen(true)
+      return
+    }
+    if (action === 'tone') {
+      setToneDialogOpen(true)
+      return
+    }
+
     const actionLabels = {
       grammar: 'Check grammar',
       summarize: 'Summarize text',
       rewrite: 'Rewrite text',
       expand: 'Expand text',
-      translate: 'Translate text',
-      tone: 'Adjust tone',
     }
 
     return execute({
@@ -491,12 +552,6 @@ export default function DocumentEditorPage() {
             case 'expand':
               if (expand) await expand(currentDocument.id, text)
               break
-            case 'translate':
-              if (translate) await translate(currentDocument.id, text, 'Spanish')
-              break
-            case 'tone':
-              if (adjustTone) await adjustTone(currentDocument.id, text, 'professional')
-              break
           }
           toast.show(`${actionLabels[action]} complete`, 'success')
         } finally {
@@ -504,7 +559,57 @@ export default function DocumentEditorPage() {
         }
       },
     })
-  }, [checkGrammar, currentDocument, execute, expand, rewrite, selectedText, summarize, toast, translate, adjustTone])
+  }, [checkGrammar, currentDocument, execute, expand, rewrite, selectedText, summarize, toast])
+
+  const handleTranslate = useCallback(async () => {
+    const text = selectedText || ''
+    if (!text || !currentDocument) return
+
+    setTranslateDialogOpen(false)
+
+    return execute({
+      type: InteractionType.ANALYZE,
+      label: `Translate to ${selectedLanguage}`,
+      reversibility: Reversibility.FULLY_REVERSIBLE,
+      blocksNavigation: true,
+      intent: { source: 'documents', action: 'translate', documentId: currentDocument.id, language: selectedLanguage },
+      action: async () => {
+        setAiLoading(true)
+        try {
+          if (translate) await translate(currentDocument.id, text, selectedLanguage)
+          toast.show(`Translated to ${selectedLanguage}`, 'success')
+        } finally {
+          setAiLoading(false)
+        }
+      },
+    })
+  }, [currentDocument, execute, selectedLanguage, selectedText, toast, translate])
+
+  const handleAdjustTone = useCallback(async () => {
+    const text = selectedText || ''
+    if (!text || !currentDocument) return
+
+    setToneDialogOpen(false)
+
+    const toneLabel = TONE_OPTIONS.find(t => t.value === selectedTone)?.label || selectedTone
+
+    return execute({
+      type: InteractionType.ANALYZE,
+      label: `Adjust tone to ${toneLabel}`,
+      reversibility: Reversibility.FULLY_REVERSIBLE,
+      blocksNavigation: true,
+      intent: { source: 'documents', action: 'tone', documentId: currentDocument.id, tone: selectedTone },
+      action: async () => {
+        setAiLoading(true)
+        try {
+          if (adjustTone) await adjustTone(currentDocument.id, text, selectedTone)
+          toast.show(`Tone adjusted to ${toneLabel}`, 'success')
+        } finally {
+          setAiLoading(false)
+        }
+      },
+    })
+  }, [adjustTone, currentDocument, execute, selectedText, selectedTone, toast])
 
   // ==========================================================================
   // Render
@@ -871,6 +976,89 @@ export default function DocumentEditorPage() {
         </DialogActions>
       </Dialog>
 
+      {/* Translate Dialog */}
+      <Dialog
+        open={translateDialogOpen}
+        onClose={() => setTranslateDialogOpen(false)}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: 3 } }}
+      >
+        <DialogTitle sx={{ fontWeight: 600 }}>Translate Text</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Select the language you want to translate the selected text into.
+          </Typography>
+          <TextField
+            select
+            fullWidth
+            label="Target Language"
+            value={selectedLanguage}
+            onChange={(e) => setSelectedLanguage(e.target.value)}
+          >
+            {LANGUAGE_OPTIONS.map((option) => (
+              <MenuItem key={option.value} value={option.value}>
+                {option.label}
+              </MenuItem>
+            ))}
+          </TextField>
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button onClick={() => setTranslateDialogOpen(false)}>Cancel</Button>
+          <Button
+            variant="contained"
+            onClick={handleTranslate}
+            startIcon={<TranslateIcon />}
+          >
+            Translate
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Tone Dialog */}
+      <Dialog
+        open={toneDialogOpen}
+        onClose={() => setToneDialogOpen(false)}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: 3 } }}
+      >
+        <DialogTitle sx={{ fontWeight: 600 }}>Adjust Tone</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Select the tone you want to apply to the selected text.
+          </Typography>
+          <TextField
+            select
+            fullWidth
+            label="Tone"
+            value={selectedTone}
+            onChange={(e) => setSelectedTone(e.target.value)}
+          >
+            {TONE_OPTIONS.map((option) => (
+              <MenuItem key={option.value} value={option.value}>
+                <Box>
+                  <Typography variant="body2">{option.label}</Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {option.description}
+                  </Typography>
+                </Box>
+              </MenuItem>
+            ))}
+          </TextField>
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button onClick={() => setToneDialogOpen(false)}>Cancel</Button>
+          <Button
+            variant="contained"
+            onClick={handleAdjustTone}
+            startIcon={<ToneIcon />}
+          >
+            Apply Tone
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       {/* Error Alert */}
       {error && (
         <Alert
@@ -880,6 +1068,22 @@ export default function DocumentEditorPage() {
         >
           {error}
         </Alert>
+      )}
+
+      {/* Auto-save indicator */}
+      {autoSaveEnabled && lastSaved && (
+        <Typography
+          variant="caption"
+          color="text.secondary"
+          sx={{
+            position: 'fixed',
+            bottom: 16,
+            left: 16,
+            opacity: 0.7,
+          }}
+        >
+          Auto-saved {lastSaved.toLocaleTimeString()}
+        </Typography>
       )}
     </PageContainer>
   )

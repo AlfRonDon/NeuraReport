@@ -12,16 +12,31 @@ import {
   Collapse,
   Divider,
   Chip,
+  alpha,
 } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
 import StorageIcon from '@mui/icons-material/Storage'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
+import ScienceIcon from '@mui/icons-material/Science'
+import CloudIcon from '@mui/icons-material/Cloud'
+import TableChartIcon from '@mui/icons-material/TableChart'
 import { useAppStore } from '@/stores'
 import { useToast } from '@/components/ToastProvider'
 import { useInteraction, InteractionType, Reversibility } from '@/components/ux/governance'
 import { Drawer } from '@/components/Drawer'
 import ConnectionForm from '@/features/connections/components/ConnectionForm'
 import * as api from '@/api/client'
+
+// Demo connection that doesn't require real credentials
+const DEMO_CONNECTION = {
+  id: 'demo-connection',
+  name: 'Sample Database (Demo)',
+  db_type: 'demo',
+  database: 'sample_data',
+  status: 'connected',
+  summary: 'Pre-loaded sample data for testing',
+  isDemo: true,
+}
 
 export default function StepConnection({ wizardState, updateWizardState, onComplete, setLoading }) {
   const toast = useToast()
@@ -116,18 +131,100 @@ export default function StepConnection({ wizardState, updateWizardState, onCompl
     }
   }, [selectedId, onComplete])
 
+  const handleSelectDemo = useCallback(() => {
+    setSelectedId(DEMO_CONNECTION.id)
+    updateWizardState({ connectionId: DEMO_CONNECTION.id, isDemo: true })
+    // Add demo connection to store temporarily
+    if (!savedConnections.find(c => c.id === DEMO_CONNECTION.id)) {
+      addSavedConnection(DEMO_CONNECTION)
+    }
+    setActiveConnectionId(DEMO_CONNECTION.id)
+    toast.show('Demo mode activated! Using sample data.', 'success')
+  }, [updateWizardState, savedConnections, addSavedConnection, setActiveConnectionId, toast])
+
+  const handleSkipConnection = useCallback(() => {
+    // Allow users to skip if they just want to explore
+    updateWizardState({ connectionId: null, skippedConnection: true })
+    onComplete()
+  }, [updateWizardState, onComplete])
+
   return (
     <Box>
       <Typography variant="h6" fontWeight={600} sx={{ mb: 1 }}>
-        Select a Database Connection
+        Connect Your Data
       </Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-        Choose an existing connection or create a new one to fetch data for your reports.
+        Choose where your report data comes from. You can always change this later.
       </Typography>
 
-      {savedConnections.length === 0 ? (
+      {/* Quick Start Options */}
+      <Box sx={{ mb: 4 }}>
+        <Typography variant="subtitle2" fontWeight={600} color="text.secondary" sx={{ mb: 2, textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: '0.05em' }}>
+          Quick Start
+        </Typography>
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+          <Card
+            variant="outlined"
+            sx={{
+              flex: 1,
+              border: 2,
+              borderColor: selectedId === DEMO_CONNECTION.id ? 'primary.main' : 'divider',
+              bgcolor: selectedId === DEMO_CONNECTION.id ? (theme) => alpha(theme.palette.primary.main, 0.04) : 'transparent',
+              transition: 'all 0.2s',
+              '&:hover': {
+                borderColor: 'primary.main',
+                bgcolor: (theme) => alpha(theme.palette.primary.main, 0.04),
+              },
+            }}
+          >
+            <CardActionArea onClick={handleSelectDemo} sx={{ height: '100%' }}>
+              <CardContent sx={{ textAlign: 'center', py: 3 }}>
+                <ScienceIcon sx={{ fontSize: 40, color: 'primary.main', mb: 1 }} />
+                <Typography variant="subtitle1" fontWeight={600}>
+                  Try Demo Mode
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                  Explore with sample data — no setup needed
+                </Typography>
+                <Chip label="Recommended for first-time users" size="small" color="primary" variant="outlined" />
+              </CardContent>
+            </CardActionArea>
+          </Card>
+
+          <Card
+            variant="outlined"
+            sx={{
+              flex: 1,
+              border: 2,
+              borderColor: 'divider',
+              transition: 'all 0.2s',
+              '&:hover': {
+                borderColor: 'secondary.main',
+              },
+            }}
+          >
+            <CardActionArea onClick={handleSkipConnection} sx={{ height: '100%' }}>
+              <CardContent sx={{ textAlign: 'center', py: 3 }}>
+                <CloudIcon sx={{ fontSize: 40, color: 'text.secondary', mb: 1 }} />
+                <Typography variant="subtitle1" fontWeight={600}>
+                  Skip for Now
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Set up data source later and explore templates first
+                </Typography>
+              </CardContent>
+            </CardActionArea>
+          </Card>
+        </Stack>
+      </Box>
+
+      <Divider sx={{ my: 3 }}>
+        <Chip label="Or connect your own data" size="small" />
+      </Divider>
+
+      {savedConnections.length === 0 || savedConnections.every(c => c.isDemo) ? (
         <Alert severity="info" sx={{ mb: 3 }}>
-          No connections found. Create a new connection to get started.
+          No database connections yet. Add one below or try demo mode above.
         </Alert>
       ) : (
         <Stack spacing={2} sx={{ mb: 3 }}>

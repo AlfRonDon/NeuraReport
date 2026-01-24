@@ -36,7 +36,7 @@ from ...services.spreadsheets import (
 
 logger = logging.getLogger("neura.api.spreadsheets")
 
-router = APIRouter(prefix="/spreadsheets", tags=["spreadsheets"])
+router = APIRouter(tags=["spreadsheets"])
 
 # Service instances
 _spreadsheet_service: Optional[SpreadsheetService] = None

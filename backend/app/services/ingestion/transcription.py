@@ -7,7 +7,7 @@ from __future__ import annotations
 import logging
 import hashlib
 import tempfile
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 from enum import Enum
@@ -162,7 +162,7 @@ class TranscriptionService:
             full_text = result["text"].strip()
 
             # Create document
-            doc_id = hashlib.sha256(f"{filename}:{datetime.utcnow().isoformat()}".encode()).hexdigest()[:16]
+            doc_id = hashlib.sha256(f"{filename}:{datetime.now(timezone.utc).isoformat()}".encode()).hexdigest()[:16]
 
             return TranscriptionResult(
                 document_id=doc_id,

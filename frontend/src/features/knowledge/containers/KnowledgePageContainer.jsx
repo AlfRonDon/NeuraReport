@@ -52,6 +52,7 @@ import {
   AccountTree as GraphIcon,
   QuestionAnswer as FaqIcon,
   FilterList as FilterIcon,
+  CloudUpload as UploadIcon,
 } from '@mui/icons-material'
 import useKnowledgeStore from '@/stores/knowledgeStore'
 import { useToast } from '@/components/ToastProvider'
@@ -118,6 +119,20 @@ const ActionButton = styled(Button)(({ theme }) => ({
   fontWeight: 500,
 }))
 
+const UploadDropzone = styled(Box)(({ theme, isDragActive }) => ({
+  border: `2px dashed ${isDragActive ? theme.palette.primary.main : alpha(theme.palette.divider, 0.3)}`,
+  borderRadius: 16,
+  padding: theme.spacing(6),
+  textAlign: 'center',
+  backgroundColor: isDragActive ? alpha(theme.palette.primary.main, 0.05) : alpha(theme.palette.background.paper, 0.5),
+  cursor: 'pointer',
+  transition: 'all 0.2s ease',
+  '&:hover': {
+    borderColor: theme.palette.primary.main,
+    backgroundColor: alpha(theme.palette.primary.main, 0.02),
+  },
+}))
+
 // =============================================================================
 // MAIN COMPONENT
 // =============================================================================
@@ -163,6 +178,10 @@ export default function KnowledgePageContainer() {
   const [newCollectionName, setNewCollectionName] = useState('')
   const [menuAnchor, setMenuAnchor] = useState(null)
   const [selectedDoc, setSelectedDoc] = useState(null)
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false)
+  const [uploadFile, setUploadFile] = useState(null)
+  const [uploadTitle, setUploadTitle] = useState('')
+  const [uploading, setUploading] = useState(false)
 
   useEffect(() => {
     fetchDocuments()
@@ -299,6 +318,61 @@ export default function KnowledgePageContainer() {
     setSelectedDoc(null)
   }
 
+  const handleUploadDocument = useCallback(async () => {
+    if (!uploadFile) {
+      toast.show('Please select a file to upload', 'warning')
+      return
+    }
+
+    return execute({
+      type: InteractionType.CREATE,
+      label: 'Upload document',
+      reversibility: Reversibility.SYSTEM_MANAGED,
+      blocksNavigation: true,
+      intent: { source: 'knowledge', fileName: uploadFile.name },
+      action: async () => {
+        setUploading(true)
+        try {
+          const formData = new FormData()
+          formData.append('file', uploadFile)
+          formData.append('title', uploadTitle || uploadFile.name)
+          if (selectedCollection) {
+            formData.append('collection_id', selectedCollection.id)
+          }
+
+          const response = await fetch('/api/knowledge/documents', {
+            method: 'POST',
+            body: formData,
+          })
+
+          if (!response.ok) {
+            throw new Error('Upload failed')
+          }
+
+          toast.show('Document uploaded successfully!', 'success')
+          setUploadDialogOpen(false)
+          setUploadFile(null)
+          setUploadTitle('')
+          fetchDocuments()
+        } catch (err) {
+          toast.show(err.message || 'Failed to upload document', 'error')
+        } finally {
+          setUploading(false)
+        }
+      },
+    })
+  }, [execute, fetchDocuments, selectedCollection, toast, uploadFile, uploadTitle])
+
+  const handleFileSelect = (event) => {
+    const file = event.target.files?.[0]
+    if (file) {
+      setUploadFile(file)
+      if (!uploadTitle) {
+        setUploadTitle(file.name.replace(/\.[^/.]+$/, ''))
+      }
+    }
+  }
+
   const displayedDocs = view === 'favorites'
     ? documents.filter((d) => d.is_favorite)
     : searchQuery && searchResults.length > 0
@@ -321,6 +395,14 @@ export default function KnowledgePageContainer() {
             </Box>
           </Box>
           <Box sx={{ display: 'flex', gap: 1 }}>
+            <ActionButton
+              variant="contained"
+              color="primary"
+              startIcon={<UploadIcon />}
+              onClick={() => setUploadDialogOpen(true)}
+            >
+              Upload Document
+            </ActionButton>
             <ActionButton
               startIcon={<GraphIcon />}
               onClick={handleBuildGraph}
@@ -493,9 +575,22 @@ export default function KnowledgePageContainer() {
               }}
             >
               <FolderOpenIcon sx={{ fontSize: 80, color: 'text.disabled', mb: 2 }} />
-              <Typography variant="h6" color="text.secondary">
+              <Typography variant="h6" color="text.secondary" gutterBottom>
                 No documents found
               </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 3, textAlign: 'center', maxWidth: 400 }}>
+                Upload your first document to start building your knowledge base.
+                We support PDF, Word, Text, and Markdown files.
+              </Typography>
+              <ActionButton
+                variant="contained"
+                color="primary"
+                size="large"
+                startIcon={<UploadIcon />}
+                onClick={() => setUploadDialogOpen(true)}
+              >
+                Upload Your First Document
+              </ActionButton>
             </Box>
           )}
         </MainPanel>
@@ -538,6 +633,82 @@ export default function KnowledgePageContainer() {
         <DialogActions>
           <Button onClick={() => setCreateCollectionOpen(false)}>Cancel</Button>
           <Button variant="contained" onClick={handleCreateCollection}>Create</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Upload Document Dialog */}
+      <Dialog
+        open={uploadDialogOpen}
+        onClose={() => !uploading && setUploadDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Upload Document</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+            Upload a document to add it to your knowledge library. Supported formats: PDF, DOCX, TXT, MD, HTML
+          </Typography>
+
+          <UploadDropzone
+            onClick={() => document.getElementById('document-upload-input')?.click()}
+            sx={{ mb: 3 }}
+          >
+            <input
+              id="document-upload-input"
+              type="file"
+              accept=".pdf,.docx,.doc,.txt,.md,.html"
+              onChange={handleFileSelect}
+              style={{ display: 'none' }}
+            />
+            <UploadIcon sx={{ fontSize: 48, color: 'text.disabled', mb: 2 }} />
+            {uploadFile ? (
+              <>
+                <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                  {uploadFile.name}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {(uploadFile.size / 1024 / 1024).toFixed(2)} MB - Click to change
+                </Typography>
+              </>
+            ) : (
+              <>
+                <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                  Click to select a file
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  or drag and drop here
+                </Typography>
+              </>
+            )}
+          </UploadDropzone>
+
+          <TextField
+            fullWidth
+            label="Document Title"
+            value={uploadTitle}
+            onChange={(e) => setUploadTitle(e.target.value)}
+            placeholder="Enter a title for this document"
+            sx={{ mb: 2 }}
+          />
+
+          {selectedCollection && (
+            <Alert severity="info">
+              This document will be added to the "{selectedCollection.name}" collection.
+            </Alert>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setUploadDialogOpen(false)} disabled={uploading}>
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleUploadDocument}
+            disabled={!uploadFile || uploading}
+            startIcon={uploading ? <CircularProgress size={16} /> : <UploadIcon />}
+          >
+            {uploading ? 'Uploading...' : 'Upload'}
+          </Button>
         </DialogActions>
       </Dialog>
 

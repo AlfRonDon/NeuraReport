@@ -614,12 +614,20 @@ class KnowledgeService:
         )
 
     def _load_library(self) -> None:
-        """Load library data from state store."""
+        """Load library data from state store.
+
+        Clears local state first to avoid stale data, then loads from store.
+        """
         try:
             from backend.app.repositories.state.store import state_store
             with state_store._lock:
                 state = state_store._read_state()
                 library = state.get("library", {})
+                # Clear stale data before loading
+                self._documents.clear()
+                self._collections.clear()
+                self._tags.clear()
+                # Load fresh data from store
                 self._documents.update(library.get("documents", {}))
                 self._collections.update(library.get("collections", {}))
                 self._tags.update(library.get("tags", {}))
@@ -627,7 +635,11 @@ class KnowledgeService:
             logger.warning(f"Failed to load library from state: {e}")
 
     def _persist_library(self) -> None:
-        """Persist library data to state store."""
+        """Persist library data to state store.
+
+        Raises:
+            RuntimeError: If persistence fails, so caller knows the operation did not complete.
+        """
         try:
             from backend.app.repositories.state.store import state_store
             with state_store.transaction() as state:
@@ -637,7 +649,8 @@ class KnowledgeService:
                     "tags": self._tags,
                 }
         except Exception as e:
-            logger.warning(f"Failed to persist library to state: {e}")
+            logger.error(f"Failed to persist library to state: {e}")
+            raise RuntimeError(f"Library persistence failed: {e}") from e
 
     def _to_document_response(self, doc: dict) -> LibraryDocumentResponse:
         """Convert document dict to response model."""

@@ -7,7 +7,7 @@ from __future__ import annotations
 import logging
 import json
 import hashlib
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
 from enum import Enum
 
@@ -682,7 +682,7 @@ class VisualizationService:
 
     def _generate_id(self, content: str) -> str:
         """Generate unique ID from content."""
-        return hashlib.sha256(f"{content}:{datetime.utcnow().isoformat()}".encode()).hexdigest()[:12]
+        return hashlib.sha256(f"{content}:{datetime.now(timezone.utc).isoformat()}".encode()).hexdigest()[:12]
 
     async def _parse_process_description(
         self,
