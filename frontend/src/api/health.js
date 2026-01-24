@@ -1,6 +1,6 @@
 import { API_BASE } from './client'
 
-const getHealthUrl = () => `${API_BASE.replace(/\\/+$/, '')}/health`
+const getHealthUrl = () => `${API_BASE.replace(/[\\/]+$/, '')}/health`
 
 export async function checkHealth({ timeoutMs = 5000, signal } = {}) {
   const controller = signal ? null : new AbortController()
@@ -22,4 +22,3 @@ export async function checkHealth({ timeoutMs = 5000, signal } = {}) {
     if (timeoutId) clearTimeout(timeoutId)
   }
 }
-

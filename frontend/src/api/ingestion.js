@@ -1,0 +1,217 @@
+/**
+ * Ingestion API Client
+ * Handles document ingestion and import operations.
+ */
+import { api } from './client';
+
+// ============================================
+// File Upload
+// ============================================
+
+export async function uploadFile(file, options = {}) {
+  const formData = new FormData();
+  formData.append('file', file);
+  if (options.autoDetect !== false) {
+    formData.append('auto_detect', 'true');
+  }
+  if (options.extractText !== false) {
+    formData.append('extract_text', 'true');
+  }
+  if (options.targetFormat) {
+    formData.append('target_format', options.targetFormat);
+  }
+
+  const response = await api.post('/ingestion/upload', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    onUploadProgress: options.onProgress,
+  });
+  return response.data;
+}
+
+export async function uploadBulk(files, options = {}) {
+  const formData = new FormData();
+  files.forEach((file, index) => {
+    formData.append(`files`, file);
+  });
+  if (options.autoDetect !== false) {
+    formData.append('auto_detect', 'true');
+  }
+
+  const response = await api.post('/ingestion/upload/bulk', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    onUploadProgress: options.onProgress,
+  });
+  return response.data;
+}
+
+export async function uploadZip(file, options = {}) {
+  const formData = new FormData();
+  formData.append('file', file);
+  if (options.flattenFolders) {
+    formData.append('flatten_folders', 'true');
+  }
+
+  const response = await api.post('/ingestion/upload/zip', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    onUploadProgress: options.onProgress,
+  });
+  return response.data;
+}
+
+// ============================================
+// URL Import
+// ============================================
+
+export async function importFromUrl(url, options = {}) {
+  const response = await api.post('/ingestion/url', {
+    url,
+    extract_text: options.extractText !== false,
+    follow_links: options.followLinks || false,
+    max_depth: options.maxDepth || 1,
+  });
+  return response.data;
+}
+
+// ============================================
+// Structured Data Import
+// ============================================
+
+export async function importStructuredData(data, format, options = {}) {
+  const response = await api.post('/ingestion/structured', {
+    data,
+    format, // 'json', 'csv', 'xml', 'yaml'
+    schema: options.schema || null,
+    validate: options.validate !== false,
+  });
+  return response.data;
+}
+
+// ============================================
+// Web Clipper
+// ============================================
+
+export async function clipUrl(url, options = {}) {
+  const response = await api.post('/ingestion/clip/url', {
+    url,
+    include_images: options.includeImages !== false,
+    clean_content: options.cleanContent !== false,
+    capture_screenshot: options.captureScreenshot || false,
+  });
+  return response.data;
+}
+
+export async function clipSelection(content, sourceUrl, options = {}) {
+  const response = await api.post('/ingestion/clip/selection', {
+    content,
+    source_url: sourceUrl,
+    title: options.title || null,
+    tags: options.tags || null,
+  });
+  return response.data;
+}
+
+// ============================================
+// Folder Watchers
+// ============================================
+
+export async function createWatcher(folderPath, options = {}) {
+  const response = await api.post('/ingestion/watchers', {
+    folder_path: folderPath,
+    patterns: options.patterns || ['*'],
+    recursive: options.recursive !== false,
+    auto_import: options.autoImport !== false,
+    move_after_import: options.moveAfterImport || false,
+    destination_folder: options.destinationFolder || null,
+  });
+  return response.data;
+}
+
+export async function listWatchers() {
+  const response = await api.get('/ingestion/watchers');
+  return response.data;
+}
+
+export async function getWatcher(watcherId) {
+  const response = await api.get(`/ingestion/watchers/${watcherId}`);
+  return response.data;
+}
+
+export async function startWatcher(watcherId) {
+  const response = await api.post(`/ingestion/watchers/${watcherId}/start`);
+  return response.data;
+}
+
+export async function stopWatcher(watcherId) {
+  const response = await api.post(`/ingestion/watchers/${watcherId}/stop`);
+  return response.data;
+}
+
+export async function deleteWatcher(watcherId) {
+  const response = await api.delete(`/ingestion/watchers/${watcherId}`);
+  return response.data;
+}
+
+export async function scanFolder(watcherId) {
+  const response = await api.post(`/ingestion/watchers/${watcherId}/scan`);
+  return response.data;
+}
+
+// ============================================
+// Transcription
+// ============================================
+
+export async function transcribeFile(file, options = {}) {
+  const formData = new FormData();
+  formData.append('file', file);
+  if (options.language) {
+    formData.append('language', options.language);
+  }
+  if (options.model) {
+    formData.append('model', options.model);
+  }
+  if (options.timestamps) {
+    formData.append('timestamps', 'true');
+  }
+
+  const response = await api.post('/ingestion/transcribe', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    onUploadProgress: options.onProgress,
+  });
+  return response.data;
+}
+
+export async function getTranscriptionStatus(jobId) {
+  const response = await api.get(`/ingestion/transcribe/${jobId}`);
+  return response.data;
+}
+
+// ============================================
+// Email Import
+// ============================================
+
+export async function parseEmail(emailContent, options = {}) {
+  const response = await api.post('/ingestion/email/parse', {
+    content: emailContent,
+    extract_attachments: options.extractAttachments !== false,
+  });
+  return response.data;
+}
+
+export async function connectImapAccount(config) {
+  const response = await api.post('/ingestion/email/imap/connect', config);
+  return response.data;
+}
+
+export async function listImapAccounts() {
+  const response = await api.get('/ingestion/email/imap/accounts');
+  return response.data;
+}
+
+export async function syncImapAccount(accountId, options = {}) {
+  const response = await api.post(`/ingestion/email/imap/accounts/${accountId}/sync`, {
+    folder: options.folder || 'INBOX',
+    since_date: options.sinceDate || null,
+    limit: options.limit || 100,
+  });
+  return response.data;
+}

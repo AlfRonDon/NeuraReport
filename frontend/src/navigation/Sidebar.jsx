@@ -51,6 +51,12 @@ import TableChartIcon from '@mui/icons-material/TableChart'
 import DashboardCustomizeIcon from '@mui/icons-material/DashboardCustomize'
 import CableIcon from '@mui/icons-material/Cable'
 import AccountTreeIcon from '@mui/icons-material/AccountTree'
+import SmartToyIcon from '@mui/icons-material/SmartToy'
+import SearchIcon from '@mui/icons-material/Search'
+import BubbleChartIcon from '@mui/icons-material/BubbleChart'
+import LibraryBooksIcon from '@mui/icons-material/LibraryBooks'
+import PaletteIcon from '@mui/icons-material/Palette'
+import CloudUploadIcon from '@mui/icons-material/CloudUpload'
 
 import { useAppStore } from '../stores'
 import NotificationCenter from './NotificationCenter'
@@ -103,6 +109,7 @@ const NAV_ITEMS = [
       { key: 'documents', label: 'Documents', icon: EditNoteIcon, path: '/documents', highlight: true },
       { key: 'spreadsheets', label: 'Spreadsheets', icon: TableChartIcon, path: '/spreadsheets' },
       { key: 'dashboard-builder', label: 'Dashboards', icon: DashboardCustomizeIcon, path: '/dashboard-builder' },
+      { key: 'visualization', label: 'Visualization', icon: BubbleChartIcon, path: '/visualization' },
       { key: 'workflows', label: 'Workflows', icon: AccountTreeIcon, path: '/workflows' },
     ],
   },
@@ -112,7 +119,9 @@ const NAV_ITEMS = [
     items: [
       { key: 'connections', label: 'Data Sources', icon: StorageIcon, path: '/connections' },
       { key: 'connectors', label: 'Connectors', icon: CableIcon, path: '/connectors' },
+      { key: 'ingestion', label: 'Import Data', icon: CloudUploadIcon, path: '/ingestion' },
       { key: 'templates', label: 'Report Designs', icon: DescriptionIcon, path: '/templates' },
+      { key: 'design', label: 'Brand Kit', icon: PaletteIcon, path: '/design' },
       { key: 'query', label: 'Query Builder', icon: QuestionAnswerIcon, path: '/query' },
       { key: 'enrichment', label: 'Data Enrichment', icon: AutoFixHighIcon, path: '/enrichment' },
       { key: 'federation', label: 'Combine Sources', icon: JoinInnerIcon, path: '/federation' },
@@ -122,6 +131,9 @@ const NAV_ITEMS = [
     section: 'AI Tools',
     collapsible: true,
     items: [
+      { key: 'agents', label: 'AI Agents', icon: SmartToyIcon, path: '/agents', highlight: true },
+      { key: 'search', label: 'Smart Search', icon: SearchIcon, path: '/search' },
+      { key: 'knowledge', label: 'Knowledge Base', icon: LibraryBooksIcon, path: '/knowledge' },
       { key: 'synthesis', label: 'Combine Docs', icon: MergeIcon, path: '/synthesis' },
       { key: 'docqa', label: 'Ask Documents', icon: ChatIcon, path: '/docqa' },
       { key: 'summary', label: 'Summarize', icon: SummarizeIcon, path: '/summary' },

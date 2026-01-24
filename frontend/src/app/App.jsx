@@ -62,6 +62,14 @@ const DashboardBuilderPage = lazy(() => import('@/pages/dashboards/DashboardBuil
 const ConnectorsPage = lazy(() => import('@/pages/connectors/ConnectorsPage.jsx'))
 const WorkflowBuilderPage = lazy(() => import('@/pages/workflows/WorkflowBuilderPage.jsx'))
 
+// New Feature Pages
+const AgentsPage = lazy(() => import('@/pages/agents/AgentsPage.jsx'))
+const SearchPage = lazy(() => import('@/pages/search/SearchPage.jsx'))
+const VisualizationPage = lazy(() => import('@/pages/visualization/VisualizationPage.jsx'))
+const KnowledgePage = lazy(() => import('@/pages/knowledge/KnowledgePage.jsx'))
+const DesignPage = lazy(() => import('@/pages/design/DesignPage.jsx'))
+const IngestionPage = lazy(() => import('@/pages/ingestion/IngestionPage.jsx'))
+
 // Lazy-loaded pages - Setup and editing
 const SetupWizard = lazy(() => import('@/pages/Setup/SetupWizard.jsx'))
 const TemplateEditorPage = lazy(() => import('@/pages/Generate/TemplateEditor.jsx'))
@@ -298,6 +306,13 @@ function AppContent() {
               <Route path="/dashboard-builder" element={<DashboardBuilderPage />} />
               <Route path="/connectors" element={<ConnectorsPage />} />
               <Route path="/workflows" element={<WorkflowBuilderPage />} />
+              {/* New Feature Pages */}
+              <Route path="/agents" element={<AgentsPage />} />
+              <Route path="/search" element={<SearchPage />} />
+              <Route path="/visualization" element={<VisualizationPage />} />
+              <Route path="/knowledge" element={<KnowledgePage />} />
+              <Route path="/design" element={<DesignPage />} />
+              <Route path="/ingestion" element={<IngestionPage />} />
             </Route>
 
             <Route path="*" element={<Navigate to="/" replace />} />

@@ -8,6 +8,7 @@ from __future__ import annotations
 from fastapi import FastAPI
 
 from .routes import (
+    agents,
     ai,
     analytics,
     charts,
@@ -23,6 +24,7 @@ from .routes import (
     export,
     federation,
     health,
+    ingestion,
     jobs,
     knowledge,
     legacy,
@@ -30,11 +32,13 @@ from .routes import (
     recommendations,
     reports,
     schedules,
+    search,
     spreadsheets,
     state,
     summary,
     synthesis,
     templates,
+    visualization,
     workflows,
 )
 from backend.app.api.analyze import router as analyze_router
@@ -69,6 +73,10 @@ def register_routes(app: FastAPI) -> None:
     - /export - Document export and distribution
     - /design - Brand kits and themes
     - /knowledge - Knowledge management and document library
+    - /ingestion - Document ingestion and import
+    - /search - Search and discovery
+    - /visualization - Visualization and diagram generation
+    - /agents - AI agents (research, data analysis, email, content)
     """
     # Core routes
     app.include_router(fastapi_users.get_auth_router(auth_backend), prefix="/auth/jwt", tags=["auth"])
@@ -119,6 +127,18 @@ def register_routes(app: FastAPI) -> None:
 
     # Knowledge management
     app.include_router(knowledge.router, prefix="/knowledge", tags=["knowledge"])
+
+    # Document ingestion
+    app.include_router(ingestion.router, prefix="/ingestion", tags=["ingestion"])
+
+    # Search and discovery
+    app.include_router(search.router, prefix="/search", tags=["search"])
+
+    # Visualization and diagrams
+    app.include_router(visualization.router, prefix="/visualization", tags=["visualization"])
+
+    # AI Agents
+    app.include_router(agents.router, prefix="/agents", tags=["agents"])
 
     # Legacy/compatibility routes
     app.include_router(legacy.router)
