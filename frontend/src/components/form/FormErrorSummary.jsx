@@ -71,7 +71,7 @@ export default function FormErrorSummary({
         tabIndex={-1}
         sx={[
           {
-            borderRadius: 2,
+            borderRadius: 1,  // Figma spec: 8px
             alignItems: 'stretch',
           },
           ...sxArray,

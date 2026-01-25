@@ -50,7 +50,7 @@ function ToastContent({ state, onClose, onUndo }) {
       }
       sx={{
         ...styles,
-        borderRadius: '12px',
+        borderRadius: '8px',  // Figma spec: 8px
         fontSize: '0.8125rem',
         fontWeight: 500,
         boxShadow: `0 8px 32px ${alpha(theme.palette.common.black, 0.3)}`,

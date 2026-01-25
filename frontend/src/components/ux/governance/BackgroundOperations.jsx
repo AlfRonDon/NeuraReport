@@ -446,7 +446,7 @@ export function BackgroundOperationsProvider({ children }) {
                     py: 1.5,
                     px: 2,
                     bgcolor: alpha(theme.palette.background.paper, 0.4),
-                    borderRadius: 2,
+                    borderRadius: 1,  // Figma spec: 8px
                     mb: 1,
                   }}
                 >
@@ -456,7 +456,7 @@ export function BackgroundOperationsProvider({ children }) {
                       sx={{
                         width: 36,
                         height: 36,
-                        borderRadius: 2,
+                        borderRadius: 1,  // Figma spec: 8px
                         bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
                         display: 'flex',
                         alignItems: 'center',
@@ -506,7 +506,7 @@ export function BackgroundOperationsProvider({ children }) {
                       value={op.progress}
                       sx={{
                         height: 4,
-                        borderRadius: 2,
+                        borderRadius: 1,  // Figma spec: 8px
                         bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
                         '& .MuiLinearProgress-bar': {
                           bgcolor: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],

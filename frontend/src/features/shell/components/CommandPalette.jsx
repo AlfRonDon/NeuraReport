@@ -596,7 +596,7 @@ export default function CommandPalette({ open, onClose }) {
       fullWidth
       PaperProps={{
         sx: {
-          borderRadius: 3,
+          borderRadius: 1,  // Figma spec: 8px
           overflow: 'hidden',
           maxHeight: '70vh',
         },
@@ -639,7 +639,7 @@ export default function CommandPalette({ open, onClose }) {
           sx={{
             '& .MuiInputBase-root': {
               bgcolor: 'action.hover',
-              borderRadius: 2,
+              borderRadius: 1,  // Figma spec: 8px
             },
           }}
         />
@@ -671,7 +671,7 @@ export default function CommandPalette({ open, onClose }) {
                       onMouseEnter={() => setSelectedIndex(index)}
                       sx={{
                         mx: 1,
-                        borderRadius: 1.5,
+                        borderRadius: 1,  // Figma spec: 8px
                         '&.Mui-selected': {
                           bgcolor: (theme) => theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200],
                           color: 'primary.contrastText',

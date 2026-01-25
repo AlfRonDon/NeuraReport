@@ -77,7 +77,7 @@ export function FullPageProgress({
             minWidth: 320,
             maxWidth: 400,
             bgcolor: alpha(theme.palette.background.paper, 0.9),
-            borderRadius: 3,
+            borderRadius: 1,  // Figma spec: 8px
             border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
           }}
         >
@@ -265,7 +265,7 @@ export function SkeletonLoader({
         sx={{
           width: width || '100%',
           height: height || 120,
-          borderRadius: 2,
+          borderRadius: 1,  // Figma spec: 8px
           ...animationStyle,
         }}
       />

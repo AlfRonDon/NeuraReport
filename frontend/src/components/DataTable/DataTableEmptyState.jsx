@@ -100,7 +100,7 @@ const Description = styled(Typography)(({ theme }) => ({
 }))
 
 const ActionButton = styled(Button)(({ theme }) => ({
-  borderRadius: 12,
+  borderRadius: 8,  // Figma spec: 8px
   textTransform: 'none',
   fontWeight: 600,
   fontSize: '0.875rem',
@@ -120,7 +120,7 @@ const ActionButton = styled(Button)(({ theme }) => ({
 }))
 
 const SecondaryButton = styled(Button)(({ theme }) => ({
-  borderRadius: 12,
+  borderRadius: 8,  // Figma spec: 8px
   textTransform: 'none',
   fontWeight: 500,
   fontSize: '0.875rem',
@@ -160,7 +160,7 @@ const IllustrationLines = styled(Box)(({ theme }) => ({
   opacity: 0.3,
   '& span': {
     height: 4,
-    borderRadius: 2,
+    borderRadius: 1,  // Figma spec: 8px
     backgroundColor: alpha(theme.palette.text.primary, 0.1),
     '&:nth-of-type(1)': { width: 120 },
     '&:nth-of-type(2)': { width: 80, marginLeft: 20 },

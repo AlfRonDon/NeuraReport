@@ -494,7 +494,7 @@ export default function FilterBar({
                 endIcon={<DropdownIcon />}
                 onClick={(e) => handleOpenFilter(filter.id, e)}
                 sx={{
-                  borderRadius: 2,
+                  borderRadius: 1,  // Figma spec: 8px
                   textTransform: 'none',
                   borderColor: hasSelection ? (theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100]) : undefined,
                   backgroundColor: hasSelection ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200]) : undefined,

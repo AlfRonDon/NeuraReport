@@ -13,6 +13,19 @@ export async function addDocument(data) {
   return response.data;
 }
 
+export async function uploadDocument(file, title, collectionId = null) {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('title', title || file.name);
+  if (collectionId) {
+    formData.append('collection_id', collectionId);
+  }
+  const response = await api.post('/knowledge/documents', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return response.data;
+}
+
 export async function getDocument(documentId) {
   const response = await api.get(`/knowledge/documents/${documentId}`);
   return response.data;

@@ -105,7 +105,7 @@ const PageTitle = styled(Typography)(({ theme }) => ({
 
 const GlassCard = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(3),
-  borderRadius: 20,
+  borderRadius: 8,  // Figma spec: 8px
   backgroundColor: alpha(theme.palette.background.paper, 0.8),
   backdropFilter: 'blur(20px)',
   border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,

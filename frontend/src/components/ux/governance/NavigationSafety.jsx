@@ -201,7 +201,7 @@ export function NavigationSafetyProvider({ children }) {
           sx: {
             bgcolor: alpha(theme.palette.background.paper, 0.95),
             backdropFilter: 'blur(10px)',
-            borderRadius: 3,
+            borderRadius: 1,  // Figma spec: 8px
           },
         }}
       >

@@ -136,7 +136,7 @@ const EmptyCanvas = styled(Box)(({ theme }) => ({
   alignItems: 'center',
   justifyContent: 'center',
   border: `2px dashed ${alpha(theme.palette.divider, 0.3)}`,
-  borderRadius: 12,
+  borderRadius: 8,  // Figma spec: 8px
 }))
 
 const EmptyState = styled(Box)(({ theme }) => ({
@@ -564,7 +564,7 @@ export default function DashboardBuilderPage() {
           display: 'flex',
           flexDirection: 'column',
           p: 2,
-          borderRadius: 3,
+          borderRadius: 1,  // Figma spec: 8px
         }}
         variant="outlined"
       >

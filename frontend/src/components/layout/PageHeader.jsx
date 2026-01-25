@@ -31,7 +31,7 @@ function renderCrumb(crumb, index) {
           display: 'inline-flex',
           alignItems: 'center',
           gap: 0.5,
-          fontFamily: 'var(--font-secondary, "Work Sans", "Segoe UI", "Helvetica Neue", Arial, sans-serif)',
+          fontFamily: 'var(--font-ui, "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif)',
           fontSize: 'inherit',
           letterSpacing: '-0.005em',
         }}
@@ -50,7 +50,7 @@ function renderCrumb(crumb, index) {
         display: 'inline-flex',
         alignItems: 'center',
         gap: 0.5,
-        fontFamily: 'var(--font-secondary, "Work Sans", "Segoe UI", "Helvetica Neue", Arial, sans-serif)',
+        fontFamily: 'var(--font-ui, "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif)',
         letterSpacing: '-0.005em',
       }}
     >

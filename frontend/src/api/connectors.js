@@ -109,15 +109,12 @@ export async function handleOAuthCallback(connectorType, code, redirectUri, stat
 }
 
 // Legacy OAuth popup endpoint (returns auth_url)
-export async function getOAuthPopupUrl(connectorType) {
-  const response = await fetch(`/api/connectors/${connectorType}/oauth/url`, {
-    method: 'GET',
-    headers: { 'Content-Type': 'application/json' },
+// Uses the /oauth/authorize endpoint which is the actual backend route
+export async function getOAuthPopupUrl(connectorType, redirectUri = window.location.origin + '/oauth/callback') {
+  const response = await api.get(`/connectors/${connectorType}/oauth/authorize`, {
+    params: { redirect_uri: redirectUri },
   })
-  if (!response.ok) {
-    throw new Error('Failed to get OAuth URL')
-  }
-  return response.json()
+  return response.data
 }
 
 // ============================================

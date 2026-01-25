@@ -126,7 +126,7 @@ export default function Drawer({
             size="small"
             sx={{
               color: theme.palette.text.secondary,
-              borderRadius: 2,
+              borderRadius: 1,  // 8px via theme spacing
               transition: 'all 0.2s ease',
               '&:hover': {
                 bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
@@ -168,7 +168,7 @@ export default function Drawer({
                   onClick={handleCancel}
                   disabled={loading}
                   sx={{
-                    borderRadius: 2.5,
+                    borderRadius: 1,  // 8px via theme spacing
                     textTransform: 'none',
                     fontWeight: 500,
                     color: theme.palette.text.secondary,
@@ -188,7 +188,7 @@ export default function Drawer({
                   disabled={confirmDisabled || loading}
                   startIcon={loading ? <CircularProgress size={16} color="inherit" /> : null}
                   sx={{
-                    borderRadius: 2.5,
+                    borderRadius: 1,  // 8px via theme spacing
                     textTransform: 'none',
                     fontWeight: 600,
                     bgcolor: theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200],

@@ -139,7 +139,7 @@ function OperationItem({ operation, onUndo }) {
         py: 1.5,
         px: 2,
         bgcolor: alpha(theme.palette.background.paper, 0.4),
-        borderRadius: 2,
+        borderRadius: 1,  // Figma spec: 8px
         mb: 1,
         '&:hover': {
           bgcolor: alpha(theme.palette.background.paper, 0.6),
@@ -153,7 +153,7 @@ function OperationItem({ operation, onUndo }) {
           sx={{
             width: 36,
             height: 36,
-            borderRadius: 2,
+            borderRadius: 1,  // Figma spec: 8px
             bgcolor: alpha(statusConfig.color, 0.1),
             display: 'flex',
             alignItems: 'center',
@@ -223,7 +223,7 @@ function OperationItem({ operation, onUndo }) {
           value={operation.progress}
           sx={{
             height: 4,
-            borderRadius: 2,
+            borderRadius: 1,  // Figma spec: 8px
             bgcolor: alpha(statusConfig.color, 0.1),
             '& .MuiLinearProgress-bar': {
               bgcolor: statusConfig.color,

@@ -152,7 +152,7 @@ const AIResultCard = styled(Paper)(({ theme }) => ({
   marginTop: theme.spacing(2),
   backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : figmaGrey[200],
   border: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
-  borderRadius: 12,
+  borderRadius: 8,  // Figma spec: 8px
 }))
 
 // =============================================================================
@@ -888,7 +888,7 @@ export default function DocumentEditorPage() {
         onClose={handleCloseAiMenu}
         PaperProps={{
           sx: {
-            borderRadius: 2,
+            borderRadius: 1,  // Figma spec: 8px
             minWidth: 200,
           },
         }}
@@ -925,7 +925,7 @@ export default function DocumentEditorPage() {
         onClose={handleCloseCreateDialog}
         maxWidth="xs"
         fullWidth
-        PaperProps={{ sx: { borderRadius: 3 } }}
+        PaperProps={{ sx: { borderRadius: 1 } }}
       >
         <DialogTitle sx={{ fontWeight: 600 }}>Create New Document</DialogTitle>
         <DialogContent>
@@ -957,7 +957,7 @@ export default function DocumentEditorPage() {
         onClose={() => setDeleteConfirmOpen(false)}
         maxWidth="xs"
         fullWidth
-        PaperProps={{ sx: { borderRadius: 3 } }}
+        PaperProps={{ sx: { borderRadius: 1 } }}
       >
         <DialogTitle sx={{ fontWeight: 600 }}>Delete Document</DialogTitle>
         <DialogContent>
@@ -983,7 +983,7 @@ export default function DocumentEditorPage() {
         onClose={() => setTranslateDialogOpen(false)}
         maxWidth="xs"
         fullWidth
-        PaperProps={{ sx: { borderRadius: 3 } }}
+        PaperProps={{ sx: { borderRadius: 1 } }}
       >
         <DialogTitle sx={{ fontWeight: 600 }}>Translate Text</DialogTitle>
         <DialogContent>
@@ -1022,7 +1022,7 @@ export default function DocumentEditorPage() {
         onClose={() => setToneDialogOpen(false)}
         maxWidth="xs"
         fullWidth
-        PaperProps={{ sx: { borderRadius: 3 } }}
+        PaperProps={{ sx: { borderRadius: 1 } }}
       >
         <DialogTitle sx={{ fontWeight: 600 }}>Adjust Tone</DialogTitle>
         <DialogContent>
@@ -1065,7 +1065,7 @@ export default function DocumentEditorPage() {
         <Alert
           severity="error"
           onClose={() => reset()}
-          sx={{ position: 'fixed', bottom: 16, right: 16, maxWidth: 400, borderRadius: 2 }}
+          sx={{ position: 'fixed', bottom: 16, right: 16, maxWidth: 400, borderRadius: 1 }}
         >
           {error}
         </Alert>

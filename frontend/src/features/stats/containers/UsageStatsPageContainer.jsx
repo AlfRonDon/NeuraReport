@@ -59,7 +59,7 @@ import {
 import { useToast } from '@/components/ToastProvider'
 import { useInteraction, InteractionType, Reversibility, useNavigateInteraction } from '@/components/ux/governance'
 import * as api from '@/api/client'
-import { figmaGrey } from '@/app/theme'
+import { figmaGrey, figmaAccent } from '@/app/theme'
 
 // =============================================================================
 // ANIMATIONS
@@ -146,22 +146,27 @@ const RefreshButton = styled(IconButton)(({ theme }) => ({
 const StyledTabs = styled(Tabs)(({ theme }) => ({
   marginBottom: theme.spacing(3),
   '& .MuiTab-root': {
-    color: theme.palette.text.secondary,
+    // Figma spec: Inactive tab - #374151 text, transparent bg
+    color: theme.palette.mode === 'dark' ? theme.palette.text.secondary : figmaAccent.darkText,
     textTransform: 'none',
     minWidth: 100,
     fontWeight: 500,
     transition: 'all 0.2s ease',
+    padding: '8px 32px',  // Figma spec
     '&.Mui-selected': {
-      color: theme.palette.text.primary,
+      // Figma spec: Active tab - #02634E text, #EBFEF6 bg
+      color: theme.palette.mode === 'dark' ? theme.palette.text.primary : figmaAccent.greenText,
+      backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaAccent.greenBackground,
     },
     '&:hover': {
-      color: theme.palette.text.primary,
+      color: theme.palette.mode === 'dark' ? theme.palette.text.primary : figmaAccent.greenText,
+      backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : alpha(figmaAccent.greenBackground, 0.5),
     },
   },
   '& .MuiTabs-indicator': {
-    backgroundColor: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1200],
-    borderRadius: 2,
-    height: 3,
+    // Figma spec: Active tab border - #007E60 (2px height)
+    backgroundColor: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaAccent.primaryGreen,
+    height: 2,
   },
 }))
 
@@ -169,7 +174,7 @@ const GlassCard = styled(Card)(({ theme }) => ({
   backgroundColor: alpha(theme.palette.background.paper, 0.8),
   backdropFilter: 'blur(20px)',
   border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-  borderRadius: 16,
+  borderRadius: 8,  // Figma spec: 8px
   boxShadow: `0 8px 32px ${alpha(theme.palette.common.black, 0.08)}`,
   transition: 'all 0.3s ease',
   '&:hover': {

@@ -22,7 +22,8 @@ import { useAppStore } from '../stores'
 // CONSTANTS
 // =============================================================================
 
-const SIDEBAR_WIDTH = 240
+// FIGMA SPEC: Sidebar width = 250px
+const SIDEBAR_WIDTH = 250
 const SIDEBAR_COLLAPSED_WIDTH = 64
 
 // =============================================================================

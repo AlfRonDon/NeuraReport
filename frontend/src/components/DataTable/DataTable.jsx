@@ -94,7 +94,7 @@ const slideIn = keyframes`
 const TableWrapper = styled(Box)(({ theme }) => ({
   backgroundColor: alpha(theme.palette.background.paper, 0.7),
   backdropFilter: 'blur(20px)',
-  borderRadius: 16,
+  borderRadius: 8,  // Figma spec: 8px
   border: `1px solid ${alpha(theme.palette.divider, 0.08)}`,
   overflow: 'hidden',
   boxShadow: `0 4px 24px ${alpha(theme.palette.common.black, 0.06)}`,

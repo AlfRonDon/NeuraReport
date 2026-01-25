@@ -137,7 +137,7 @@ export default function ConnectionSchemaDrawer({ open, onClose, connection }) {
             onClick={handleRefreshSchema}
             startIcon={<RefreshIcon />}
             sx={{
-              borderRadius: 2,
+              borderRadius: 1,  // Figma spec: 8px
               textTransform: 'none',
               borderColor: alpha(theme.palette.divider, 0.2),
               color: theme.palette.text.secondary,
@@ -161,7 +161,7 @@ export default function ConnectionSchemaDrawer({ open, onClose, connection }) {
           fullWidth
           sx={{
             '& .MuiOutlinedInput-root': {
-              borderRadius: 2,
+              borderRadius: 1,  // Figma spec: 8px
               bgcolor: alpha(theme.palette.background.paper, 0.5),
               '& .MuiOutlinedInput-notchedOutline': {
                 borderColor: alpha(theme.palette.divider, 0.15),
@@ -179,7 +179,7 @@ export default function ConnectionSchemaDrawer({ open, onClose, connection }) {
         {error && (
           <Alert
             severity="error"
-            sx={{ borderRadius: 2 }}
+            sx={{ borderRadius: 1 }}  // Figma spec: 8px
             action={
               <Button color="inherit" size="small" onClick={handleRefreshSchema}>
                 Retry
@@ -205,7 +205,7 @@ export default function ConnectionSchemaDrawer({ open, onClose, connection }) {
               sx={{
                 bgcolor: alpha(theme.palette.background.paper, 0.5),
                 border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-                borderRadius: '12px !important',
+                borderRadius: '8px !important',  // Figma spec: 8px
                 '&:before': { display: 'none' },
                 '&.Mui-expanded': {
                   margin: 0,
@@ -215,7 +215,7 @@ export default function ConnectionSchemaDrawer({ open, onClose, connection }) {
               <AccordionSummary
                 expandIcon={<ExpandMoreIcon sx={{ color: theme.palette.text.secondary }} />}
                 sx={{
-                  borderRadius: 3,
+                  borderRadius: 1,  // Figma spec: 8px
                   '&:hover': {
                     bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200],
                   },
@@ -233,7 +233,7 @@ export default function ConnectionSchemaDrawer({ open, onClose, connection }) {
                       color: theme.palette.text.secondary,
                       fontSize: '0.7rem',
                       height: 22,
-                      borderRadius: 1.5,
+                      borderRadius: 1,  // Figma spec: 8px
                     }}
                   />
                 </Stack>
@@ -297,7 +297,7 @@ export default function ConnectionSchemaDrawer({ open, onClose, connection }) {
                         startIcon={<VisibilityIcon />}
                         onClick={() => handlePreview(table.name)}
                         sx={{
-                          borderRadius: 2,
+                          borderRadius: 1,  // Figma spec: 8px
                           textTransform: 'none',
                           fontSize: '0.75rem',
                           borderColor: alpha(theme.palette.divider, 0.2),
@@ -312,7 +312,7 @@ export default function ConnectionSchemaDrawer({ open, onClose, connection }) {
                     </Stack>
                     {preview.loading && <LinearProgress sx={{ mt: 1, borderRadius: 1, bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300], '& .MuiLinearProgress-bar': { bgcolor: (theme) => theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100] } }} />}
                     {preview.error && (
-                      <Alert severity="error" sx={{ mt: 1, borderRadius: 2 }}>
+                      <Alert severity="error" sx={{ mt: 1, borderRadius: 1 }}>  {/* Figma spec: 8px */}
                         {preview.error}
                       </Alert>
                     )}

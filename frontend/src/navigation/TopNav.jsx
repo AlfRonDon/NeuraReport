@@ -114,7 +114,7 @@ const ConnectionChip = styled(Chip, {
   shouldForwardProp: (prop) => prop !== 'connected',
 })(({ theme, connected }) => ({
   height: 30,
-  borderRadius: 10,
+  borderRadius: 8,  // Figma spec: 8px
   backgroundColor: connected
     ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300])
     : (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.06) : figmaGrey[200]),
@@ -214,7 +214,7 @@ const HelpCard = styled(Box)(({ theme }) => ({
   justifyContent: 'space-between',
   gap: theme.spacing(2),
   padding: theme.spacing(2),
-  borderRadius: 12,
+  borderRadius: 8,  // Figma spec: 8px
   backgroundColor: alpha(theme.palette.background.paper, 0.5),
   border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
   transition: 'all 0.2s ease',
@@ -228,7 +228,7 @@ const StyledDialog = styled(Dialog)(({ theme }) => ({
   '& .MuiDialog-paper': {
     backgroundColor: alpha(theme.palette.background.paper, 0.95),
     backdropFilter: 'blur(20px)',
-    borderRadius: 20,
+    borderRadius: 8,  // Figma spec: 8px
     border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
   },
   '& .MuiBackdrop-root': {
@@ -611,7 +611,7 @@ export default function TopNav({ onMenuClick, showMenuButton, connection }) {
           <DialogActions sx={{ borderTop: `1px solid ${alpha(theme.palette.divider, 0.1)}`, p: 2 }}>
             <Button
               onClick={handleCloseShortcuts}
-              sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 500 }}
+              sx={{ borderRadius: 1, textTransform: 'none', fontWeight: 500 }}
             >
               Close
             </Button>
@@ -650,7 +650,7 @@ export default function TopNav({ onMenuClick, showMenuButton, connection }) {
                       handleNavigate(action.path, `Open ${action.label}`)
                     }}
                     sx={{
-                      borderRadius: 2,
+                      borderRadius: 1,  // Figma spec: 8px
                       textTransform: 'none',
                       fontWeight: 500,
                       whiteSpace: 'nowrap',
@@ -666,7 +666,7 @@ export default function TopNav({ onMenuClick, showMenuButton, connection }) {
           <DialogActions sx={{ borderTop: `1px solid ${alpha(theme.palette.divider, 0.1)}`, p: 2 }}>
             <Button
               onClick={handleCloseHelp}
-              sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 500 }}
+              sx={{ borderRadius: 1, textTransform: 'none', fontWeight: 500 }}
             >
               Close
             </Button>

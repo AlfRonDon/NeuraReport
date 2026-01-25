@@ -130,7 +130,7 @@ export default function LoadingState({
           value={progress ?? undefined}
           color={color}
           aria-label={label}
-          sx={{ borderRadius: 2, height: size === 'small' ? 3 : size === 'large' ? 6 : 4 }}
+          sx={{ borderRadius: 1, height: size === 'small' ? 3 : size === 'large' ? 6 : 4 }}  // Figma spec: 8px
         />
         {description && (
           <Typography variant="caption" color="text.secondary">
@@ -218,7 +218,7 @@ export function Skeleton({
           {
             width: width || '100%',
             height: height || 120,
-            borderRadius: 2,
+            borderRadius: 1,  // Figma spec: 8px
             ...animationStyle,
           },
           ...sxArray,

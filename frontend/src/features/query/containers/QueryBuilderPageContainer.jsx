@@ -112,7 +112,7 @@ const GlassCard = styled(Paper)(({ theme }) => ({
   backgroundColor: alpha(theme.palette.background.paper, 0.8),
   backdropFilter: 'blur(20px)',
   border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-  borderRadius: 16,
+  borderRadius: 8,  // Figma spec: 8px
   padding: theme.spacing(2),
   boxShadow: `0 8px 32px ${alpha(theme.palette.common.black, 0.08)}`,
   animation: `${fadeInUp} 0.5s ease-out`,
@@ -255,7 +255,7 @@ const StyledDialog = styled(Dialog)(({ theme }) => ({
     backgroundColor: alpha(theme.palette.background.paper, 0.95),
     backdropFilter: 'blur(20px)',
     border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-    borderRadius: 20,
+    borderRadius: 8,  // Figma spec: 8px
     boxShadow: `0 24px 64px ${alpha(theme.palette.common.black, 0.25)}`,
   },
 }))

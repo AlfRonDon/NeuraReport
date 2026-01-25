@@ -14,7 +14,7 @@ export default function AiUsageNotice({
       icon={<AutoAwesomeIcon fontSize="small" />}
       severity={severity}
       sx={{
-        borderRadius: 2,
+        borderRadius: 1,  // Figma spec: 8px
         alignItems: 'flex-start',
         '& .MuiAlert-message': { width: '100%' },
         ...sx,

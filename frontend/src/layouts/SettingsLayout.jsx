@@ -28,7 +28,7 @@ export default function SettingsLayout({ children }) {
           sx={{
             border: 1,
             borderColor: 'divider',
-            borderRadius: 2,
+            borderRadius: 1,  // Figma spec: 8px
             overflow: 'hidden',
           }}
         >

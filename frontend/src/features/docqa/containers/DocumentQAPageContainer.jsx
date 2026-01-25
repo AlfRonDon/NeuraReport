@@ -173,7 +173,7 @@ const SessionList = styled(Box)(({ theme }) => ({
   },
   '&::-webkit-scrollbar-thumb': {
     backgroundColor: alpha(theme.palette.text.primary, 0.1),
-    borderRadius: 3,
+    borderRadius: 1,  // Figma spec: 8px
     '&:hover': {
       backgroundColor: alpha(theme.palette.text.primary, 0.2),
     },
@@ -184,7 +184,7 @@ const SessionCard = styled(Box, {
   shouldForwardProp: (prop) => prop !== 'selected',
 })(({ theme, selected }) => ({
   padding: theme.spacing(1.5),
-  borderRadius: 12,
+  borderRadius: 8,  // Figma spec: 8px
   cursor: 'pointer',
   marginBottom: theme.spacing(1),
   backgroundColor: selected
@@ -313,7 +313,7 @@ const CitationBox = styled(Box)(({ theme }) => ({
   marginTop: theme.spacing(2),
   padding: theme.spacing(1.5),
   backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : figmaGrey[200],
-  borderRadius: 12,
+  borderRadius: 8,  // Figma spec: 8px
   border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
 }))
 
@@ -423,7 +423,7 @@ const ThinkingBox = styled(Box)(({ theme }) => ({
   gap: theme.spacing(1.5),
   padding: theme.spacing(1.5, 2),
   backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
-  borderRadius: 16,
+  borderRadius: 8,  // Figma spec: 8px
   marginBottom: theme.spacing(1),
   animation: `${pulse} 2s infinite ease-in-out`,
 }))
@@ -456,7 +456,7 @@ const EmptyIcon = styled(Box)(({ theme }) => ({
 
 const SuggestionCard = styled(Box)(({ theme }) => ({
   padding: theme.spacing(2),
-  borderRadius: 16,
+  borderRadius: 8,  // Figma spec: 8px
   backgroundColor: alpha(theme.palette.background.paper, 0.6),
   border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
   cursor: 'pointer',
@@ -479,7 +479,7 @@ const ActionButton = styled(IconButton)(({ theme }) => ({
 }))
 
 const NewSessionButton = styled(Button)(({ theme }) => ({
-  borderRadius: 12,
+  borderRadius: 8,  // Figma spec: 8px
   padding: theme.spacing(1.5, 2),
   background: theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200],
   color: '#fff',
@@ -536,7 +536,7 @@ const GlassDialog = styled(Dialog)(({ theme }) => ({
   '& .MuiDialog-paper': {
     backgroundColor: alpha(theme.palette.background.paper, 0.9),
     backdropFilter: 'blur(20px)',
-    borderRadius: 20,
+    borderRadius: 8,  // Figma spec: 8px
     border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
   },
 }))
@@ -836,7 +836,7 @@ export default function DocumentQAPage() {
               sx={{
                 width: 40,
                 height: 40,
-                borderRadius: 2,
+                borderRadius: 1,  // Figma spec: 8px
                 background: theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200],
                 display: 'flex',
                 alignItems: 'center',
@@ -877,7 +877,7 @@ export default function DocumentQAPage() {
                 </InputAdornment>
               ),
               sx: {
-                borderRadius: 2,
+                borderRadius: 1,  // Figma spec: 8px
                 backgroundColor: alpha(theme.palette.background.paper, 0.5),
                 '& fieldset': {
                   borderColor: alpha(theme.palette.divider, 0.1),
@@ -1026,7 +1026,7 @@ export default function DocumentQAPage() {
                   sx={{
                     width: 36,
                     height: 36,
-                    borderRadius: 2,
+                    borderRadius: 1,  // Figma spec: 8px
                     bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
                     display: 'flex',
                     alignItems: 'center',
@@ -1056,7 +1056,7 @@ export default function DocumentQAPage() {
                     messageCount: messages.length,
                   })}
                   sx={{
-                    borderRadius: 2,
+                    borderRadius: 1,  // Figma spec: 8px
                     textTransform: 'none',
                     color: 'text.secondary',
                   }}
@@ -1115,7 +1115,7 @@ export default function DocumentQAPage() {
                       startIcon={<UploadIcon />}
                       onClick={() => setAddDocDialogOpen(true)}
                       sx={{
-                        borderRadius: 3,
+                        borderRadius: 1,  // Figma spec: 8px
                         textTransform: 'none',
                         px: 4,
                         py: 1.5,
@@ -1295,7 +1295,7 @@ export default function DocumentQAPage() {
                 <Alert
                   severity="error"
                   onClose={() => reset()}
-                  sx={{ mb: 2, borderRadius: 2 }}
+                  sx={{ mb: 2, borderRadius: 1 }}
                 >
                   {error}
                 </Alert>
@@ -1434,14 +1434,14 @@ export default function DocumentQAPage() {
             sx={{ mt: 2 }}
             inputProps={{ maxLength: MAX_NAME_LENGTH }}
             InputProps={{
-              sx: { borderRadius: 2 },
+              sx: { borderRadius: 1 },
             }}
           />
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 3 }}>
           <Button
             onClick={() => setCreateDialogOpen(false)}
-            sx={{ borderRadius: 2, textTransform: 'none' }}
+            sx={{ borderRadius: 1,  // Figma spec: 8px textTransform: 'none' }}
           >
             Cancel
           </Button>
@@ -1450,7 +1450,7 @@ export default function DocumentQAPage() {
             onClick={handleCreateSession}
             disabled={!newSessionName}
             sx={{
-              borderRadius: 2,
+              borderRadius: 1,  // Figma spec: 8px
               textTransform: 'none',
               px: 3,
               background: theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200],
@@ -1482,7 +1482,7 @@ export default function DocumentQAPage() {
               mt: 2,
               p: 4,
               border: `2px dashed ${alpha(theme.palette.divider, 0.4)}`,
-              borderRadius: 3,
+              borderRadius: 1,  // Figma spec: 8px
               textAlign: 'center',
               cursor: 'pointer',
               transition: 'all 0.2s ease',
@@ -1522,7 +1522,7 @@ export default function DocumentQAPage() {
             onChange={(e) => setDocName(e.target.value)}
             sx={{ mb: 2 }}
             inputProps={{ maxLength: MAX_NAME_LENGTH }}
-            InputProps={{ sx: { borderRadius: 2 } }}
+            InputProps={{ sx: { borderRadius: 1 } }}
           />
           <TextField
             fullWidth
@@ -1533,13 +1533,13 @@ export default function DocumentQAPage() {
             onChange={(e) => setDocContent(e.target.value)}
             placeholder="Paste your document content here..."
             inputProps={{ maxLength: MAX_DOC_SIZE }}
-            InputProps={{ sx: { borderRadius: 2 } }}
+            InputProps={{ sx: { borderRadius: 1 } }}
           />
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 3 }}>
           <Button
             onClick={() => setAddDocDialogOpen(false)}
-            sx={{ borderRadius: 2, textTransform: 'none' }}
+            sx={{ borderRadius: 1,  // Figma spec: 8px textTransform: 'none' }}
           >
             Cancel
           </Button>
@@ -1548,7 +1548,7 @@ export default function DocumentQAPage() {
             onClick={handleAddDocument}
             disabled={!docName || !docContent}
             sx={{
-              borderRadius: 2,
+              borderRadius: 1,  // Figma spec: 8px
               textTransform: 'none',
               px: 3,
               background: theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200],

@@ -108,7 +108,7 @@ class ErrorBoundary extends Component {
                   bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200],
                   border: 1,
                   borderColor: (theme) => alpha(theme.palette.divider, 0.2),
-                  borderRadius: 2,
+                  borderRadius: 1,  // Figma spec: 8px
                   p: 2,
                   mb: 3,
                   textAlign: 'left',
@@ -142,7 +142,7 @@ class ErrorBoundary extends Component {
                 startIcon={<HomeIcon />}
                 onClick={goHomeHandler}
                 sx={{
-                  borderRadius: 3,
+                  borderRadius: 1,  // Figma spec: 8px
                   textTransform: 'none',
                   fontWeight: 500,
                   borderColor: 'divider',
@@ -160,7 +160,7 @@ class ErrorBoundary extends Component {
                 startIcon={<RefreshIcon />}
                 onClick={reloadHandler}
                 sx={{
-                  borderRadius: 3,
+                  borderRadius: 1,  // Figma spec: 8px
                   textTransform: 'none',
                   fontWeight: 600,
                   bgcolor: (theme) => theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200],

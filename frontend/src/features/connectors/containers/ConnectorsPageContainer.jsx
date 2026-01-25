@@ -83,7 +83,7 @@ const ConnectorCard = styled(Card)(({ theme }) => ({
 const ConnectorIcon = styled(Box)(({ theme }) => ({
   width: 48,
   height: 48,
-  borderRadius: 12,
+  borderRadius: 8,  // Figma spec: 8px
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',

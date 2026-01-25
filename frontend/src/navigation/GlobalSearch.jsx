@@ -317,7 +317,7 @@ export default function GlobalSearch({
                     px: 0.5,
                     py: 0.25,
                     bgcolor: alpha(theme.palette.text.primary, 0.08),
-                    borderRadius: 0.5,
+                    borderRadius: 1,  // Figma spec: 8px
                   }}
                 >
                   <KeyboardIcon sx={{ fontSize: 12, color: theme.palette.text.disabled }} />
@@ -327,7 +327,7 @@ export default function GlobalSearch({
             ),
             sx: {
               bgcolor: alpha(theme.palette.background.paper, 0.5),
-              borderRadius: 2,
+              borderRadius: 1,  // Figma spec: 8px
               transition: 'all 0.2s ease',
               '& .MuiOutlinedInput-notchedOutline': {
                 borderColor: alpha(theme.palette.divider, 0.15),
@@ -362,7 +362,7 @@ export default function GlobalSearch({
               bgcolor: alpha(theme.palette.background.paper, 0.98),
               backdropFilter: 'blur(20px)',
               border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-              borderRadius: 2,
+              borderRadius: 1,  // Figma spec: 8px
               boxShadow: `0 8px 32px ${alpha(theme.palette.common.black, 0.2)}`,
               maxHeight: 400,
               overflow: 'auto',

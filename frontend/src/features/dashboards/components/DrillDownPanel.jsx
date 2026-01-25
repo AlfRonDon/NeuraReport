@@ -125,7 +125,7 @@ const ChangeIndicator = styled(Box, {
 
 const ProgressBar = styled(Box)(({ theme }) => ({
   height: 6,
-  borderRadius: 3,
+  borderRadius: 1,  // Figma spec: 8px
   backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400],
   overflow: 'hidden',
 }))
@@ -134,7 +134,7 @@ const ProgressFill = styled(Box, {
   shouldForwardProp: (prop) => prop !== 'width',
 })(({ theme, width }) => ({
   height: '100%',
-  borderRadius: 3,
+  borderRadius: 1,  // Figma spec: 8px
   backgroundColor: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
   width: `${width}%`,
   transition: 'width 0.3s ease',

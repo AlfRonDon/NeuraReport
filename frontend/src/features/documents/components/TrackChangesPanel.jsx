@@ -74,7 +74,7 @@ const DiffAddition = styled('span')(({ theme }) => ({
   backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400],
   color: theme.palette.text.primary,
   padding: '0 2px',
-  borderRadius: 2,
+  borderRadius: 1,  // Figma spec: 8px
 }))
 
 const DiffDeletion = styled('span')(({ theme }) => ({
@@ -82,7 +82,7 @@ const DiffDeletion = styled('span')(({ theme }) => ({
   color: theme.palette.text.secondary,
   textDecoration: 'line-through',
   padding: '0 2px',
-  borderRadius: 2,
+  borderRadius: 1,  // Figma spec: 8px
 }))
 
 const ActionButton = styled(Button)(({ theme }) => ({

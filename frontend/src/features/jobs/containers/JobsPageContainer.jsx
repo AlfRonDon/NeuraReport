@@ -102,7 +102,7 @@ const StyledMenu = styled(Menu)(({ theme }) => ({
     backgroundColor: alpha(theme.palette.background.paper, 0.95),
     backdropFilter: 'blur(20px)',
     border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-    borderRadius: 12,
+    borderRadius: 8,  // Figma spec: 8px
     boxShadow: `0 8px 32px ${alpha(theme.palette.common.black, 0.15)}`,
     minWidth: 180,
     animation: `${fadeInUp} 0.2s ease-out`,
@@ -132,7 +132,7 @@ const StyledDialog = styled(Dialog)(({ theme }) => ({
     backgroundColor: alpha(theme.palette.background.paper, 0.95),
     backdropFilter: 'blur(20px)',
     border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-    borderRadius: 20,
+    borderRadius: 8,  // Figma spec: 8px
     boxShadow: `0 24px 64px ${alpha(theme.palette.common.black, 0.25)}`,
     animation: `${fadeInUp} 0.3s ease-out`,
   },
@@ -150,7 +150,7 @@ const DialogHeader = styled(DialogTitle)(({ theme }) => ({
 const CloseButton = styled(IconButton)(({ theme }) => ({
   width: 32,
   height: 32,
-  borderRadius: 10,
+  borderRadius: 8,  // Figma spec: 8px
   color: theme.palette.text.secondary,
   transition: 'all 0.2s ease',
   '&:hover': {
@@ -225,7 +225,7 @@ const StyledLinearProgress = styled(LinearProgress)(({ theme }) => ({
 }))
 
 const ActionButton = styled(Button)(({ theme }) => ({
-  borderRadius: 10,
+  borderRadius: 8,  // Figma spec: 8px
   textTransform: 'none',
   fontWeight: 500,
   fontSize: '0.8125rem',
@@ -248,7 +248,7 @@ const ResultBox = styled(Box)(({ theme }) => ({
   marginTop: theme.spacing(1),
   padding: theme.spacing(1.5),
   backgroundColor: alpha(theme.palette.background.paper, 0.4),
-  borderRadius: 12,
+  borderRadius: 8,  // Figma spec: 8px
   border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
   fontFamily: 'var(--font-mono, monospace)',
   fontSize: '0.75rem',
@@ -264,7 +264,7 @@ const ResultBox = styled(Box)(({ theme }) => ({
   },
   '&::-webkit-scrollbar-thumb': {
     background: alpha(theme.palette.text.primary, 0.2),
-    borderRadius: 3,
+    borderRadius: 1,  // Figma spec: 8px
   },
 }))
 
@@ -274,7 +274,7 @@ const StyledDivider = styled(Divider)(({ theme }) => ({
 }))
 
 const ErrorAlert = styled(Alert)(({ theme }) => ({
-  borderRadius: 12,
+  borderRadius: 8,  // Figma spec: 8px
   backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
   border: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
   '& .MuiAlert-icon': {
@@ -979,7 +979,7 @@ export default function JobsPage() {
 
   return (
     <PageContainer>
-      <Alert severity="info" sx={{ mb: 2, borderRadius: 2 }}>
+      <Alert severity="info" sx={{ mb: 2, borderRadius: 1 }}>
         Jobs track background report runs. Removing a job only clears it from this list; downloaded files remain in
         History.
       </Alert>

@@ -92,13 +92,22 @@ const Sidebar = styled(Box)(({ theme }) => ({
 
 const SearchInput = styled(TextField)(({ theme }) => ({
   '& .MuiOutlinedInput-root': {
-    backgroundColor: theme.palette.background.paper,
-    borderRadius: 12,
+    // Figma spec: Background #F1F0EF, Border 1px solid #E2E1DE, Border-radius 8px
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.background.paper, 0.6) : figmaGrey[300],
+    borderRadius: 8,  // Figma spec: 8px
+    '& fieldset': {
+      borderColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.12) : figmaGrey[500],
+    },
     '&:hover': {
-      boxShadow: `0 4px 12px ${alpha(theme.palette.text.primary, 0.05)}`,
+      '& fieldset': {
+        borderColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.2) : figmaGrey[600],
+      },
     },
     '&.Mui-focused': {
-      boxShadow: `0 4px 20px ${alpha(theme.palette.text.primary, 0.1)}`,
+      '& fieldset': {
+        borderColor: theme.palette.mode === 'dark' ? theme.palette.text.secondary : figmaGrey[900],
+        borderWidth: 1,
+      },
     },
   },
 }))

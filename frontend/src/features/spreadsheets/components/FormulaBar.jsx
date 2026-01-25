@@ -47,7 +47,7 @@ const CellReferenceBox = styled(Box)(({ theme }) => ({
   minWidth: 80,
   padding: theme.spacing(0.5, 1),
   backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200],
-  borderRadius: 4,
+  borderRadius: 8,  // Figma spec: 8px
   border: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
   cursor: 'pointer',
   '&:hover': {
@@ -58,7 +58,7 @@ const CellReferenceBox = styled(Box)(({ theme }) => ({
 const FormulaInput = styled(TextField)(({ theme }) => ({
   flex: 1,
   '& .MuiOutlinedInput-root': {
-    borderRadius: 4,
+    borderRadius: 8,  // Figma spec: 8px
     fontSize: '13px',
     fontFamily: 'monospace',
     '& fieldset': {
@@ -74,7 +74,7 @@ const FormulaInput = styled(TextField)(({ theme }) => ({
 }))
 
 const FunctionChip = styled(Chip)(({ theme }) => ({
-  borderRadius: 4,
+  borderRadius: 8,  // Figma spec: 8px
   height: 24,
   fontSize: '0.75rem',
   fontFamily: 'monospace',
@@ -304,7 +304,7 @@ export default function FormulaBar({
         onClose={handleCloseFunctionMenu}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
         PaperProps={{
-          sx: { width: 320, maxHeight: 400, borderRadius: 2 },
+          sx: { width: 320, maxHeight: 400, borderRadius: 1 },  // Figma spec: 8px
         }}
       >
         <Box sx={{ p: 1.5 }}>
@@ -346,7 +346,7 @@ export default function FormulaBar({
         disableAutoFocus
         disableEnforceFocus
         PaperProps={{
-          sx: { width: 250, maxHeight: 200, borderRadius: 2 },
+          sx: { width: 250, maxHeight: 200, borderRadius: 1 },  // Figma spec: 8px
         }}
       >
         <List dense>

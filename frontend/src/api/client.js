@@ -8,8 +8,9 @@ const runtimeEnv = {
 }
 
 // base URL from env, with fallback
-
-export const API_BASE = runtimeEnv.VITE_API_BASE_URL || 'http://127.0.0.1:8000'
+// Use 'proxy' value in development to route through Vite's dev server proxy (avoids CORS)
+const envBaseUrl = runtimeEnv.VITE_API_BASE_URL
+export const API_BASE = envBaseUrl === 'proxy' ? '' : (envBaseUrl || 'http://127.0.0.1:8000')
 
 
 

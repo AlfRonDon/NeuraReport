@@ -57,7 +57,7 @@ import {
 import useKnowledgeStore from '@/stores/knowledgeStore'
 import { useToast } from '@/components/ToastProvider'
 import { useInteraction, InteractionType, Reversibility } from '@/components/ux/governance'
-import { API_BASE } from '@/api/client'
+import { uploadDocument } from '@/api/knowledge'
 import { figmaGrey } from '@/app/theme'
 
 // =============================================================================
@@ -123,7 +123,7 @@ const ActionButton = styled(Button)(({ theme }) => ({
 
 const UploadDropzone = styled(Box)(({ theme, isDragActive }) => ({
   border: `2px dashed ${isDragActive ? (theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100]) : alpha(theme.palette.divider, 0.3)}`,
-  borderRadius: 16,
+  borderRadius: 8,  // Figma spec: 8px
   padding: theme.spacing(6),
   textAlign: 'center',
   backgroundColor: isDragActive ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200]) : alpha(theme.palette.background.paper, 0.5),
@@ -335,21 +335,11 @@ export default function KnowledgePageContainer() {
       action: async () => {
         setUploading(true)
         try {
-          const formData = new FormData()
-          formData.append('file', uploadFile)
-          formData.append('title', uploadTitle || uploadFile.name)
-          if (selectedCollection) {
-            formData.append('collection_id', selectedCollection.id)
-          }
-
-          const response = await fetch(`${API_BASE}/knowledge/documents`, {
-            method: 'POST',
-            body: formData,
-          })
-
-          if (!response.ok) {
-            throw new Error('Upload failed')
-          }
+          await uploadDocument(
+            uploadFile,
+            uploadTitle || uploadFile.name,
+            selectedCollection?.id
+          )
 
           toast.show('Document uploaded successfully!', 'success')
           setUploadDialogOpen(false)
@@ -357,7 +347,7 @@ export default function KnowledgePageContainer() {
           setUploadTitle('')
           fetchDocuments()
         } catch (err) {
-          toast.show(err.message || 'Failed to upload document', 'error')
+          toast.show(err.userMessage || err.message || 'Failed to upload document', 'error')
         } finally {
           setUploading(false)
         }

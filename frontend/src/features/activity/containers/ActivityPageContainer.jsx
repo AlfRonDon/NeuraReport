@@ -81,7 +81,7 @@ const FilterContainer = styled(Stack)(({ theme }) => ({
 const ActivityListContainer = styled(Box)(({ theme }) => ({
   backgroundColor: alpha(theme.palette.background.paper, 0.8),
   backdropFilter: 'blur(20px)',
-  borderRadius: 16,
+  borderRadius: 8,  // Figma spec: 8px
   border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
   padding: theme.spacing(2),
   boxShadow: `0 8px 32px ${alpha(theme.palette.common.black, 0.08)}`,
@@ -91,7 +91,7 @@ const ActivityListContainer = styled(Box)(({ theme }) => ({
 const StyledFormControl = styled(FormControl)(({ theme }) => ({
   minWidth: 150,
   '& .MuiOutlinedInput-root': {
-    borderRadius: 12,
+    borderRadius: 8,  // Figma spec: 8px
     backgroundColor: alpha(theme.palette.background.paper, 0.6),
     backdropFilter: 'blur(8px)',
     transition: 'all 0.2s ease',
@@ -112,7 +112,7 @@ const StyledFormControl = styled(FormControl)(({ theme }) => ({
 }))
 
 const RefreshButton = styled(IconButton)(({ theme }) => ({
-  borderRadius: 12,
+  borderRadius: 8,  // Figma spec: 8px
   transition: 'all 0.2s ease',
   '&:hover': {
     backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
@@ -121,7 +121,7 @@ const RefreshButton = styled(IconButton)(({ theme }) => ({
 }))
 
 const DeleteButton = styled(IconButton)(({ theme }) => ({
-  borderRadius: 12,
+  borderRadius: 8,  // Figma spec: 8px
   transition: 'all 0.2s ease',
   '&:hover': {
     backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
@@ -233,7 +233,7 @@ function ActivityItem({ activity, onNavigate }) {
         borderBottom: `1px solid ${alpha(theme.palette.divider, 0.06)}`,
         '&:last-child': { borderBottom: 'none' },
         cursor: isNavigable ? 'pointer' : 'default',
-        borderRadius: 2,
+        borderRadius: 1,  // Figma spec: 8px
         mx: -1,
         px: 1,
         transition: 'all 0.2s ease',
@@ -247,7 +247,7 @@ function ActivityItem({ activity, onNavigate }) {
         sx={{
           width: 36,
           height: 36,
-          borderRadius: 2,
+          borderRadius: 1,  // Figma spec: 8px
           bgcolor: alpha(accentColor, 0.15),
           display: 'flex',
           alignItems: 'center',

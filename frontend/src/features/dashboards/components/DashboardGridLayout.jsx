@@ -22,7 +22,7 @@ const GridContainer = styled(Box)(({ theme }) => ({
     '&.react-grid-placeholder': {
       backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[300],
       border: `2px dashed ${theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100]}`,
-      borderRadius: 12,
+      borderRadius: 8,  // Figma spec: 8px
     },
   },
   '& .react-grid-item.cssTransforms': {

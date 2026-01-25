@@ -399,7 +399,7 @@ export default function AgentsPageContainer() {
                         sx={{
                           width: 40,
                           height: 40,
-                          borderRadius: 2,
+                          borderRadius: 1,  // Figma spec: 8px
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',

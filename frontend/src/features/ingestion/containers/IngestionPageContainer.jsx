@@ -82,7 +82,7 @@ const DropZone = styled(Paper)(({ theme, isDragging }) => ({
   padding: theme.spacing(6),
   border: `2px dashed ${isDragging ? (theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100]) : alpha(theme.palette.divider, 0.3)}`,
   backgroundColor: isDragging ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200]) : 'transparent',
-  borderRadius: 16,
+  borderRadius: 8,  // Figma spec: 8px
   textAlign: 'center',
   cursor: 'pointer',
   transition: 'all 0.2s ease',
@@ -532,7 +532,7 @@ export default function IngestionPageContainer() {
                     sx={{
                       width: 48,
                       height: 48,
-                      borderRadius: 2,
+                      borderRadius: 1,  // Figma spec: 8px
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',

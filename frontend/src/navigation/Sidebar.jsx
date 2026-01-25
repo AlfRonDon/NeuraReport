@@ -519,7 +519,7 @@ export default function Sidebar({ width, collapsed, mobileOpen, onClose, onToggl
           '&::-webkit-scrollbar-track': { backgroundColor: 'transparent' },
           '&::-webkit-scrollbar-thumb': {
             backgroundColor: alpha(theme.palette.text.primary, 0.1),
-            borderRadius: 2,
+            borderRadius: 1,  // Figma spec: 8px
           },
         }}
       >

@@ -369,7 +369,7 @@ export function TimeExpectationProvider({ children }) {
         fullWidth
         PaperProps={{
           sx: {
-            borderRadius: 3,
+            borderRadius: 1,  // Figma spec: 8px
             border: `2px solid ${escalationConfig?.color || theme.palette.divider}`,
           },
         }}

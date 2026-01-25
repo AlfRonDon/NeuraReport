@@ -63,7 +63,7 @@ const DialogPaper = styled(Box)(({ theme }) => ({
   backgroundColor: alpha(theme.palette.background.paper, 0.95),
   backdropFilter: 'blur(20px)',
   border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-  borderRadius: 20,
+  borderRadius: 8,  // Figma spec: 8px
   boxShadow: `
     0 0 0 1px ${alpha(theme.palette.common.white, 0.05)} inset,
     0 24px 64px ${alpha(theme.palette.common.black, 0.25)},
@@ -109,7 +109,7 @@ const SubtitleText = styled(Typography)(({ theme }) => ({
 const CloseButton = styled(IconButton)(({ theme }) => ({
   width: 32,
   height: 32,
-  borderRadius: 10,
+  borderRadius: 8,  // Figma spec: 8px
   color: theme.palette.text.secondary,
   transition: 'all 0.2s ease',
   '&:hover': {
@@ -138,7 +138,7 @@ const StyledDialogActions = styled(DialogActions)(({ theme }) => ({
 }))
 
 const CancelButton = styled(Button)(({ theme }) => ({
-  borderRadius: 12,
+  borderRadius: 8,  // Figma spec: 8px
   textTransform: 'none',
   fontWeight: 500,
   fontSize: '0.875rem',
@@ -153,7 +153,7 @@ const CancelButton = styled(Button)(({ theme }) => ({
 }))
 
 const ConfirmButton = styled(Button)(({ theme }) => ({
-  borderRadius: 12,
+  borderRadius: 8,  // Figma spec: 8px
   textTransform: 'none',
   fontWeight: 600,
   fontSize: '0.875rem',

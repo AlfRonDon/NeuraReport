@@ -43,13 +43,13 @@ const STATUS_FILTERS = [
 ]
 
 const STATUS_CHIP_PROPS = {
-  queued: { label: 'Queued', color: 'default', icon: <WorkHistoryOutlinedIcon fontSize="inherit" /> },
-  pending: { label: 'Pending', color: 'default', icon: <WorkHistoryOutlinedIcon fontSize="inherit" /> },
-  running: { label: 'Running', color: 'default', icon: <RefreshIcon fontSize="inherit" /> },
-  completed: { label: 'Completed', color: 'default', icon: <TaskAltIcon fontSize="inherit" /> },
-  succeeded: { label: 'Completed', color: 'default', icon: <TaskAltIcon fontSize="inherit" /> },
-  failed: { label: 'Failed', color: 'default', icon: <ErrorOutlineIcon fontSize="inherit" /> },
-  cancelled: { label: 'Cancelled', color: 'default', icon: <ErrorOutlineIcon fontSize="inherit" /> },
+  queued: { label: 'Queued', color: 'default', Icon: WorkHistoryOutlinedIcon },
+  pending: { label: 'Pending', color: 'default', Icon: WorkHistoryOutlinedIcon },
+  running: { label: 'Running', color: 'default', Icon: RefreshIcon },
+  completed: { label: 'Completed', color: 'default', Icon: TaskAltIcon },
+  succeeded: { label: 'Completed', color: 'default', Icon: TaskAltIcon },
+  failed: { label: 'Failed', color: 'default', Icon: ErrorOutlineIcon },
+  cancelled: { label: 'Cancelled', color: 'default', Icon: ErrorOutlineIcon },
 }
 
 const STEP_STATUS_COLORS = {
@@ -220,7 +220,7 @@ function JobCard({ job, onNavigate, onSetupNavigate, connectionName, onCancel, o
   return (
     <Box
       sx={{
-        borderRadius: 2,
+        borderRadius: 1,  // Figma spec: 8px
         border: '1px solid',
         borderColor: 'divider',
         p: 2,
@@ -246,7 +246,7 @@ function JobCard({ job, onNavigate, onSetupNavigate, connectionName, onCancel, o
           </Box>
           <Chip
             size="small"
-            icon={chip.icon}
+            icon={<chip.Icon fontSize="inherit" />}
             label={chip.label}
             color={chip.color === 'default' ? 'default' : chip.color}
             variant={chip.color === 'default' ? 'outlined' : 'filled'}
@@ -284,7 +284,7 @@ function JobCard({ job, onNavigate, onSetupNavigate, connectionName, onCancel, o
         <LinearProgress
           variant="determinate"
           value={Math.min(100, Math.max(0, progressValue || 0))}
-          sx={{ mt: 1, borderRadius: 10 }}
+          sx={{ mt: 1, borderRadius: 1 }}
         />
         <Stack spacing={0.5} sx={{ mt: 1 }}>
           {steps.map((step) => (

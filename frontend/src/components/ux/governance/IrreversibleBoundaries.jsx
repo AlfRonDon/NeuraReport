@@ -339,7 +339,7 @@ export function IrreversibleBoundaryProvider({ children }) {
         PaperProps={{
           sx: {
             bgcolor: alpha(theme.palette.background.paper, 0.98),
-            borderRadius: 3,
+            borderRadius: 1,  // Figma spec: 8px
             border: `2px solid ${severityConfig?.color || theme.palette.divider}`,
           },
         }}

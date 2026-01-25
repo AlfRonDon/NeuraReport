@@ -626,7 +626,7 @@ export function WorkflowProgress({ compact = false }) {
       sx={{
         p: 2,
         bgcolor: alpha(theme.palette.background.paper, 0.8),
-        borderRadius: 2,
+        borderRadius: 1,  // Figma spec: 8px
       }}
     >
       <Typography variant="subtitle2" gutterBottom>

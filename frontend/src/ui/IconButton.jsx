@@ -22,7 +22,7 @@ const IconButton = forwardRef(function IconButton(
       disabled={disabled}
       aria-label={ariaLabel || tooltip}
       sx={{
-        borderRadius: 2,
+        borderRadius: 1,  // Figma spec: 8px
         transition: 'all 150ms ease',
         '&:hover': {
           bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],

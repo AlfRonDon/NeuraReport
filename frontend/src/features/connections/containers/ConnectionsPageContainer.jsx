@@ -79,7 +79,7 @@ const StyledMenu = styled(Menu)(({ theme }) => ({
     backgroundColor: alpha(theme.palette.background.paper, 0.95),
     backdropFilter: 'blur(20px)',
     border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-    borderRadius: 12,
+    borderRadius: 8,  // Figma spec: 8px
     boxShadow: `0 8px 32px ${alpha(theme.palette.common.black, 0.15)}`,
     minWidth: 160,
     animation: `${fadeInUp} 0.2s ease-out`,
@@ -108,7 +108,7 @@ const IconContainer = styled(Box)(({ theme }) => ({
 }))
 
 const ActionButton = styled(IconButton)(({ theme }) => ({
-  borderRadius: 10,
+  borderRadius: 8,  // Figma spec: 8px
   transition: 'all 0.2s ease',
   '&:hover': {
     backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
@@ -396,7 +396,7 @@ export default function ConnectionsPage() {
             bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
             color: theme.palette.text.secondary,
             fontSize: '0.75rem',
-            borderRadius: 2,
+            borderRadius: 1,  // Figma spec: 8px
           }}
         />
       ),
@@ -416,7 +416,7 @@ export default function ConnectionsPage() {
           sx={{
             fontSize: '0.75rem',
             textTransform: 'capitalize',
-            borderRadius: 2,
+            borderRadius: 1,  // Figma spec: 8px
             bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400],
             color: 'text.secondary',
           }}
@@ -466,7 +466,7 @@ export default function ConnectionsPage() {
 
   return (
     <PageContainer>
-      <Alert severity="info" sx={{ mb: 2, borderRadius: 2 }}>
+      <Alert severity="info" sx={{ mb: 2, borderRadius: 1 }}>
         Data sources power report runs and AI tools. Use a read-only account when possible. Active sources are labeled
         and can be switched anytime.
       </Alert>

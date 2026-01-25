@@ -47,7 +47,7 @@ const WidgetContainer = styled(Box)(({ theme }) => ({
   display: 'flex',
   flexDirection: 'column',
   backgroundColor: theme.palette.background.paper,
-  borderRadius: 12,
+  borderRadius: 8,  // Figma spec: 8px
   border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
   overflow: 'hidden',
   transition: 'box-shadow 0.2s ease',

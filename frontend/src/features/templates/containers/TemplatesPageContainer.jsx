@@ -114,7 +114,7 @@ const StyledMenu = styled(Menu)(({ theme }) => ({
     backgroundColor: alpha(theme.palette.background.paper, 0.95),
     backdropFilter: 'blur(20px)',
     border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-    borderRadius: 12,
+    borderRadius: 8,  // Figma spec: 8px
     boxShadow: `0 8px 32px ${alpha(theme.palette.common.black, 0.15)}`,
     minWidth: 180,
     animation: `${fadeInUp} 0.2s ease-out`,
@@ -144,7 +144,7 @@ const StyledDialog = styled(Dialog)(({ theme }) => ({
     backgroundColor: alpha(theme.palette.background.paper, 0.95),
     backdropFilter: 'blur(20px)',
     border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-    borderRadius: 20,
+    borderRadius: 8,  // Figma spec: 8px
     boxShadow: `0 24px 64px ${alpha(theme.palette.common.black, 0.25)}`,
     animation: `${fadeInUp} 0.3s ease-out`,
   },
@@ -170,7 +170,7 @@ const StyledDialogActions = styled(DialogActions)(({ theme }) => ({
 
 const StyledTextField = styled(TextField)(({ theme }) => ({
   '& .MuiOutlinedInput-root': {
-    borderRadius: 12,
+    borderRadius: 8,  // Figma spec: 8px
     backgroundColor: alpha(theme.palette.background.paper, 0.6),
     transition: 'all 0.2s ease',
     '&:hover': {
@@ -185,7 +185,7 @@ const StyledTextField = styled(TextField)(({ theme }) => ({
 
 const StyledFormControl = styled(FormControl)(({ theme }) => ({
   '& .MuiOutlinedInput-root': {
-    borderRadius: 12,
+    borderRadius: 8,  // Figma spec: 8px
     backgroundColor: alpha(theme.palette.background.paper, 0.6),
     transition: 'all 0.2s ease',
     '&:hover': {
@@ -199,7 +199,7 @@ const StyledFormControl = styled(FormControl)(({ theme }) => ({
 }))
 
 const ActionButton = styled(Button)(({ theme }) => ({
-  borderRadius: 12,
+  borderRadius: 8,  // Figma spec: 8px
   textTransform: 'none',
   fontWeight: 500,
   fontSize: '0.875rem',
@@ -293,7 +293,7 @@ const StyledLinearProgress = styled(LinearProgress)(({ theme }) => ({
 
 const SimilarTemplateCard = styled(Box)(({ theme }) => ({
   padding: theme.spacing(2),
-  borderRadius: 12,
+  borderRadius: 8,  // Figma spec: 8px
   border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
   cursor: 'pointer',
   transition: 'all 0.2s ease',

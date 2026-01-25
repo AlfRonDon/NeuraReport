@@ -96,7 +96,7 @@ const StyledDialog = styled(Dialog)(({ theme }) => ({
   '& .MuiDialog-paper': {
     backgroundColor: alpha(theme.palette.background.paper, 0.95),
     backdropFilter: 'blur(20px)',
-    borderRadius: 20,
+    borderRadius: 8,  // Figma spec: 8px
     border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
     boxShadow: `0 24px 48px ${alpha(theme.palette.common.black, 0.2)}`,
   },

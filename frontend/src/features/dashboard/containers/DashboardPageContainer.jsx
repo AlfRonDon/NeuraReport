@@ -342,7 +342,7 @@ const ChartBar = styled(Box, {
   height: `${height}%`,
   minHeight: 4,
   backgroundColor: color || (theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100]),
-  borderRadius: 2,
+  borderRadius: 1,  // Figma spec: 8px
   transition: 'height 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
   transitionDelay: `${delay}ms`,
 }))
@@ -410,7 +410,7 @@ function StatCard({ title, value, subtitle, icon: Icon, color = 'inherit', onCli
           sx={{
             width: 48,
             height: 48,
-            borderRadius: 2,
+            borderRadius: 1,  // Figma spec: 8px
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -723,7 +723,7 @@ export default function DashboardPage() {
               sx={{
                 width: { xs: '100%', md: 64 },
                 height: 64,
-                borderRadius: 3,
+                borderRadius: 1,  // Figma spec: 8px
                 background: theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200],
                 display: 'flex',
                 alignItems: 'center',
@@ -820,7 +820,7 @@ export default function DashboardPage() {
                   variant="contained"
                   onClick={() => handleNavigate('/setup/wizard', 'Open setup wizard')}
                   startIcon={<BoltIcon />}
-                  sx={{ borderRadius: 2 }}
+                  sx={{ borderRadius: 1 }}
                 >
                   Run Setup Wizard
                 </Button>
@@ -1014,7 +1014,7 @@ export default function DashboardPage() {
                 variant="outlined"
                 size="small"
                 onClick={() => handleNavigate('/setup/wizard', 'Open setup wizard')}
-                sx={{ borderRadius: 2 }}
+                sx={{ borderRadius: 1 }}
               >
                 Run First Report
               </Button>
@@ -1213,7 +1213,7 @@ export default function DashboardPage() {
               sx={{
                 width: 44,
                 height: 44,
-                borderRadius: 2,
+                borderRadius: 1,  // Figma spec: 8px
                 background: theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200],
                 display: 'flex',
                 alignItems: 'center',
@@ -1246,7 +1246,7 @@ export default function DashboardPage() {
           <Box
             sx={{
               height: 120,
-              borderRadius: 2,
+              borderRadius: 1,  // Figma spec: 8px
               background: `linear-gradient(90deg, ${alpha(theme.palette.action.hover, 0.5)} 25%, ${alpha(theme.palette.action.hover, 0.8)} 50%, ${alpha(theme.palette.action.hover, 0.5)} 75%)`,
               backgroundSize: '200% 100%',
               animation: `${shimmer} 1.5s ease-in-out infinite`,
@@ -1276,7 +1276,7 @@ export default function DashboardPage() {
               variant="outlined"
               size="small"
               onClick={handleRefreshRecommendations}
-              sx={{ borderRadius: 2 }}
+              sx={{ borderRadius: 1 }}
             >
               Get AI Recommendations
             </Button>

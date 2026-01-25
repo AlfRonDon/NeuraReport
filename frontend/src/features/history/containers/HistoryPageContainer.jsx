@@ -102,7 +102,7 @@ const FilterContainer = styled(Stack)(({ theme }) => ({
 const StyledFormControl = styled(FormControl)(({ theme }) => ({
   minWidth: 150,
   '& .MuiOutlinedInput-root': {
-    borderRadius: 12,
+    borderRadius: 8,  // Figma spec: 8px
     backgroundColor: alpha(theme.palette.background.paper, 0.6),
     transition: 'all 0.2s ease',
     '&:hover': {
@@ -121,7 +121,7 @@ const StyledFormControl = styled(FormControl)(({ theme }) => ({
 const TableContainer = styled(Box)(({ theme }) => ({
   backgroundColor: alpha(theme.palette.background.paper, 0.8),
   backdropFilter: 'blur(20px)',
-  borderRadius: 20,
+  borderRadius: 8,  // Figma spec: 8px
   border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
   boxShadow: `0 8px 32px ${alpha(theme.palette.common.black, 0.08)}`,
   overflow: 'hidden',
@@ -153,7 +153,7 @@ const RefreshButton = styled(IconButton)(({ theme }) => ({
 }))
 
 const PrimaryButton = styled(Button)(({ theme }) => ({
-  borderRadius: 12,
+  borderRadius: 8,  // Figma spec: 8px
   textTransform: 'none',
   fontWeight: 600,
   fontSize: '0.875rem',
@@ -170,7 +170,7 @@ const PrimaryButton = styled(Button)(({ theme }) => ({
 }))
 
 const SecondaryButton = styled(Button)(({ theme }) => ({
-  borderRadius: 12,
+  borderRadius: 8,  // Figma spec: 8px
   textTransform: 'none',
   fontWeight: 500,
   fontSize: '0.875rem',
@@ -187,7 +187,7 @@ const KindIconContainer = styled(Box, {
 })(({ theme }) => ({
   width: 36,
   height: 36,
-  borderRadius: 10,
+  borderRadius: 8,  // Figma spec: 8px
   backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
   display: 'flex',
   alignItems: 'center',
@@ -721,7 +721,7 @@ export default function HistoryPage() {
         </Stack>
       </PageHeader>
 
-      <Alert severity="info" sx={{ mb: 2, borderRadius: 2 }}>
+      <Alert severity="info" sx={{ mb: 2, borderRadius: 1 }}>
         History lists completed report outputs. Deleting a history record only removes the entry here; downloaded files
         are not affected.
       </Alert>

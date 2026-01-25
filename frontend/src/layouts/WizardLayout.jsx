@@ -139,7 +139,7 @@ export default function WizardLayout({
               p: 4,
               border: 1,
               borderColor: 'divider',
-              borderRadius: 2,
+              borderRadius: 1,  // Figma spec: 8px
             }}
           >
             {children}

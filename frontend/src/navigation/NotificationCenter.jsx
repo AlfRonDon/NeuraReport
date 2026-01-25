@@ -399,7 +399,7 @@ export default function NotificationCenter() {
             bgcolor: alpha(theme.palette.background.paper, 0.98),
             backdropFilter: 'blur(20px)',
             border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-            borderRadius: 3,
+            borderRadius: 1,  // Figma spec: 8px
             overflow: 'hidden',
             boxShadow: `0 8px 32px ${alpha(theme.palette.common.black, 0.2)}`,
             animation: `${fadeInUp} 0.2s ease-out`,

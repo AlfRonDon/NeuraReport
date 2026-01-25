@@ -101,7 +101,7 @@ const Subtitle = styled(Typography)(({ theme }) => ({
 }))
 
 const ActionButton = styled(Button)(({ theme }) => ({
-  borderRadius: 10,
+  borderRadius: 8,  // Figma spec: 8px
   textTransform: 'none',
   fontWeight: 500,
   fontSize: '0.8125rem',
@@ -130,7 +130,7 @@ const SelectionBar = styled(Box)(({ theme }) => ({
   padding: theme.spacing(1.5, 2),
   background: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200],
   border: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
-  borderRadius: 12,
+  borderRadius: 8,  // Figma spec: 8px
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'space-between',
@@ -185,7 +185,7 @@ const DeleteAction = styled(SelectionAction)(({ theme }) => ({
 
 const SearchField = styled(TextField)(({ theme }) => ({
   '& .MuiOutlinedInput-root': {
-    borderRadius: 12,
+    borderRadius: 8,  // Figma spec: 8px
     backgroundColor: alpha(theme.palette.background.paper, 0.6),
     transition: 'all 0.2s ease',
     '& fieldset': {
@@ -214,7 +214,7 @@ const SearchField = styled(TextField)(({ theme }) => ({
 }))
 
 const FilterButton = styled(Button)(({ theme }) => ({
-  borderRadius: 10,
+  borderRadius: 8,  // Figma spec: 8px
   textTransform: 'none',
   fontWeight: 500,
   fontSize: '0.8125rem',
@@ -251,7 +251,7 @@ const FilterChip = styled(Chip)(({ theme }) => ({
 }))
 
 const IconButtonStyled = styled(IconButton)(({ theme }) => ({
-  borderRadius: 10,
+  borderRadius: 8,  // Figma spec: 8px
   color: theme.palette.text.secondary,
   transition: 'all 0.2s ease',
   '&:hover': {
@@ -264,7 +264,7 @@ const StyledMenu = styled(Menu)(({ theme }) => ({
   '& .MuiPaper-root': {
     backgroundColor: alpha(theme.palette.background.paper, 0.95),
     backdropFilter: 'blur(20px)',
-    borderRadius: 12,
+    borderRadius: 8,  // Figma spec: 8px
     border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
     boxShadow: `0 8px 32px ${alpha(theme.palette.common.black, 0.12)}`,
     minWidth: 200,

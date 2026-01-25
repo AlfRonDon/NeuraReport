@@ -542,7 +542,7 @@ export default function PivotTableBuilder({
               p: 4,
               textAlign: 'center',
               border: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
-              borderRadius: 2,
+              borderRadius: 1,  // Figma spec: 8px
             }}
           >
             <CalculateIcon sx={{ fontSize: 64, color: 'text.disabled', mb: 2 }} />
@@ -558,7 +558,7 @@ export default function PivotTableBuilder({
             elevation={0}
             sx={{
               border: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
-              borderRadius: 2,
+              borderRadius: 1,  // Figma spec: 8px
               overflow: 'auto',
             }}
           >

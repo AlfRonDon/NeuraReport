@@ -145,7 +145,7 @@ function StatCard({ icon, label, value, delay = 0 }) {
             ? `linear-gradient(135deg, ${alpha(theme.palette.text.primary, 0.08)} 0%, ${alpha(theme.palette.text.primary, 0.03)} 100%)`
             : `linear-gradient(135deg, ${figmaGrey[300]} 0%, ${figmaGrey[200]} 100%)`,
           border: `1px solid ${alpha(theme.palette.divider, 0.15)}`,
-          borderRadius: 3,
+          borderRadius: 1,  // Figma spec: 8px
           transition: 'all 0.3s ease',
           '&:hover': {
             transform: 'scale(1.05)',
@@ -193,7 +193,7 @@ function MetricCard({ metric, index }) {
           minWidth: 220,
           background: `linear-gradient(145deg, ${theme.palette.background.paper} 0%, ${alpha(theme.palette.text.primary, 0.02)} 100%)`,
           border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-          borderRadius: 3,
+          borderRadius: 1,  // Figma spec: 8px
           overflow: 'hidden',
           position: 'relative',
           transition: 'all 0.3s ease',
@@ -327,7 +327,7 @@ function InsightCard({ insight, type = 'insight', index = 0 }) {
           mb: 2,
           background: gradient,
           borderLeft: `4px solid ${borderColor}`,
-          borderRadius: 3,
+          borderRadius: 1,  // Figma spec: 8px
           overflow: 'hidden',
           transition: 'all 0.3s ease',
           '&:hover': {
@@ -380,7 +380,7 @@ function InsightCard({ insight, type = 'insight', index = 0 }) {
                 {insight.description}
               </Typography>
               {insight.suggested_actions?.length > 0 && (
-                <Box sx={{ mt: 2, p: 2, bgcolor: alpha(borderColor, 0.08), borderRadius: 2 }}>
+                <Box sx={{ mt: 2, p: 2, bgcolor: alpha(borderColor, 0.08), borderRadius: 1 }}>
                   <Typography variant="caption" fontWeight={700} color={borderColor}>
                     SUGGESTED ACTIONS
                   </Typography>
@@ -573,7 +573,7 @@ function DataQualityGauge({ quality }) {
           </Box>
         </Stack>
         {quality.recommendations?.length > 0 && (
-          <Box sx={{ p: 1.5, bgcolor: alpha(color, 0.1), borderRadius: 2 }}>
+          <Box sx={{ p: 1.5, bgcolor: alpha(color, 0.1), borderRadius: 1 }}>
             <Typography variant="caption" color="text.secondary">
               {quality.recommendations[0]}
             </Typography>
@@ -1003,7 +1003,7 @@ export default function EnhancedAnalyzePageContainer() {
                   onClick={(e) => setExportMenuAnchor(e.currentTarget)}
                   disabled={isExporting}
                   sx={{
-                    borderRadius: 2,
+                    borderRadius: 1,
                     textTransform: 'none',
                     fontWeight: 600,
                     borderWidth: 2,
@@ -1017,7 +1017,7 @@ export default function EnhancedAnalyzePageContainer() {
                   open={Boolean(exportMenuAnchor)}
                   onClose={() => setExportMenuAnchor(null)}
                   PaperProps={{
-                    sx: { borderRadius: 2, minWidth: 140 },
+                    sx: { borderRadius: 1, minWidth: 140 },
                   }}
                 >
                   {['json', 'excel', 'pdf', 'csv', 'markdown', 'html'].map((fmt) => (
@@ -1031,7 +1031,7 @@ export default function EnhancedAnalyzePageContainer() {
                   startIcon={<RefreshIcon />}
                   onClick={handleReset}
                   sx={{
-                    borderRadius: 2,
+                    borderRadius: 1,
                     textTransform: 'none',
                     fontWeight: 600,
                     background: theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200],
@@ -1169,7 +1169,7 @@ export default function EnhancedAnalyzePageContainer() {
                       sx={{
                         px: 6,
                         py: 2,
-                        borderRadius: 3,
+                        borderRadius: 1,  // Figma spec: 8px
                         fontWeight: 700,
                         fontSize: '1.1rem',
                         textTransform: 'none',
@@ -1258,7 +1258,7 @@ export default function EnhancedAnalyzePageContainer() {
                         e.stopPropagation()
                         handleCancelAnalysis()
                       }}
-                      sx={{ mt: 3, borderRadius: 2, textTransform: 'none' }}
+                      sx={{ mt: 3, borderRadius: 1, textTransform: 'none' }}
                     >
                       Cancel
                     </Button>
@@ -1273,7 +1273,7 @@ export default function EnhancedAnalyzePageContainer() {
                     p: 2,
                     bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
                     border: `1px solid ${alpha(theme.palette.divider, 0.3)}`,
-                    borderRadius: 2,
+                    borderRadius: 1,
                   }}
                 >
                   <Typography color="text.primary">{error}</Typography>
@@ -1352,7 +1352,7 @@ export default function EnhancedAnalyzePageContainer() {
                             mt: 3,
                             p: 2.5,
                             bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200],
-                            borderRadius: 3,
+                            borderRadius: 1,  // Figma spec: 8px
                             border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
                           }}
                         >
@@ -1483,7 +1483,7 @@ export default function EnhancedAnalyzePageContainer() {
                           mb: 3,
                           p: 2,
                           bgcolor: alpha(theme.palette.background.default, 0.5),
-                          borderRadius: 3,
+                          borderRadius: 1,  // Figma spec: 8px
                         }}
                       >
                         {qaHistory.length === 0 ? (
@@ -1522,7 +1522,7 @@ export default function EnhancedAnalyzePageContainer() {
                           disabled={isAskingQuestion}
                           sx={{
                             '& .MuiOutlinedInput-root': {
-                              borderRadius: 3,
+                              borderRadius: 1,  // Figma spec: 8px
                               bgcolor: alpha(theme.palette.background.paper, 0.8),
                             },
                           }}
@@ -1533,7 +1533,7 @@ export default function EnhancedAnalyzePageContainer() {
                           disabled={!question.trim() || isAskingQuestion}
                           sx={{
                             minWidth: 56,
-                            borderRadius: 3,
+                            borderRadius: 1,  // Figma spec: 8px
                             background: theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200],
                             '&:hover': {
                               background: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
@@ -1562,7 +1562,7 @@ export default function EnhancedAnalyzePageContainer() {
                               textTransform: 'none',
                               justifyContent: 'flex-start',
                               textAlign: 'left',
-                              borderRadius: 2,
+                              borderRadius: 1,
                               py: 1.5,
                               px: 2,
                               fontWeight: 500,
@@ -1608,7 +1608,7 @@ export default function EnhancedAnalyzePageContainer() {
                       disabled={isGeneratingCharts}
                       sx={{
                         '& .MuiOutlinedInput-root': {
-                          borderRadius: 3,
+                          borderRadius: 1,  // Figma spec: 8px
                         },
                       }}
                     />
@@ -1619,7 +1619,7 @@ export default function EnhancedAnalyzePageContainer() {
                       startIcon={isGeneratingCharts ? <CircularProgress size={16} color="inherit" /> : <BarChartIcon />}
                       sx={{
                         minWidth: 160,
-                        borderRadius: 3,
+                        borderRadius: 1,  // Figma spec: 8px
                         textTransform: 'none',
                         fontWeight: 600,
                         background: theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200],
@@ -1656,7 +1656,7 @@ export default function EnhancedAnalyzePageContainer() {
                                   mt: 2,
                                   p: 2,
                                   bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
-                                  borderRadius: 2,
+                                  borderRadius: 1,
                                   border: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
                                 }}
                               >
@@ -1795,7 +1795,7 @@ export default function EnhancedAnalyzePageContainer() {
                             spacing={1.5}
                             sx={{
                               p: 1.5,
-                              borderRadius: 2,
+                              borderRadius: 1,
                               bgcolor: alpha(theme.palette.background.default, 0.5),
                               transition: 'all 0.2s ease',
                               '&:hover': {
@@ -1846,7 +1846,7 @@ export default function EnhancedAnalyzePageContainer() {
                               sx={{
                                 p: 2,
                                 mb: 2,
-                                borderRadius: 2,
+                                borderRadius: 1,
                                 bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200],
                                 border: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
                               }}
@@ -1880,7 +1880,7 @@ export default function EnhancedAnalyzePageContainer() {
                               key={contract.id}
                               sx={{
                                 p: 2,
-                                borderRadius: 2,
+                                borderRadius: 1,
                                 bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200],
                                 border: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
                               }}

@@ -381,7 +381,7 @@ export default function AnalyzePageContainer() {
                       fontWeight: 700,
                       fontSize: '1rem',
                       textTransform: 'none',
-                      borderRadius: 2,
+                      borderRadius: 1,  // Figma spec: 8px
                       boxShadow: '0 4px 14px rgba(79, 70, 229, 0.25)',
                       '&:hover': {
                         boxShadow: '0 6px 20px rgba(79, 70, 229, 0.35)',
@@ -435,13 +435,13 @@ export default function AnalyzePageContainer() {
               value={analysisProgress}
               sx={{
                 height: 6,
-                borderRadius: 3,
+                borderRadius: 1,  // Figma spec: 8px
                 maxWidth: 400,
                 mx: 'auto',
                 mb: 3,
                 bgcolor: 'action.hover',
                 '& .MuiLinearProgress-bar': {
-                  borderRadius: 3,
+                  borderRadius: 1,  // Figma spec: 8px
                 },
               }}
             />

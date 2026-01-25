@@ -9,7 +9,7 @@ export default function ReportGlossaryNotice({
   sx,
 }) {
   return (
-    <Alert severity="info" sx={{ borderRadius: 2, ...sx }}>
+    <Alert severity="info" sx={{ borderRadius: 1, ...sx }}>  {/* Figma spec: 8px */}
       <Stack spacing={dense ? 0.5 : 0.75}>
         <Typography variant={dense ? 'subtitle2' : 'subtitle1'} fontWeight={600}>
           Report designs vs reports

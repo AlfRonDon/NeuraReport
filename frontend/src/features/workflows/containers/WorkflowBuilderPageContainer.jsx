@@ -121,7 +121,7 @@ const NodeCard = styled(Card)(({ theme }) => ({
 const WorkflowNode = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(2),
   minWidth: 200,
-  borderRadius: 12,
+  borderRadius: 8,  // Figma spec: 8px
   border: `2px solid ${alpha(theme.palette.divider, 0.3)}`,
   cursor: 'pointer',
   transition: 'all 0.2s ease',
@@ -573,7 +573,7 @@ export default function WorkflowBuilderPage() {
                               sx={{
                                 width: 36,
                                 height: 36,
-                                borderRadius: 2,
+                                borderRadius: 1,  // Figma spec: 8px
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
