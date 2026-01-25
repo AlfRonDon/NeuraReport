@@ -126,9 +126,9 @@ const LogLine = styled(Box, {
     level === 'error'
       ? figmaGrey[600]
       : level === 'warning'
-      ? '#CFCECA'
+      ? figmaGrey[700]
       : level === 'success'
-      ? '#DAD9D6'
+      ? figmaGrey[600]
       : alpha(theme.palette.common.white, 0.8),
 }))
 

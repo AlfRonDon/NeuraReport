@@ -25,6 +25,7 @@ import {
   History as HistoryIcon,
   Person as PersonIcon,
 } from '@mui/icons-material'
+import { figmaGrey } from '@/app/theme'
 
 // =============================================================================
 // STYLED COMPONENTS
@@ -61,23 +62,23 @@ const VersionCard = styled(Paper, {
   marginBottom: theme.spacing(1.5),
   cursor: 'pointer',
   transition: 'all 0.15s ease',
-  border: `1px solid ${isSelected ? (theme.palette.mode === 'dark' ? '#82827C' : '#63635E') : alpha(theme.palette.divider, 0.1)}`,
-  backgroundColor: isSelected ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : '#F9F9F8') : 'transparent',
+  border: `1px solid ${isSelected ? (theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100]) : alpha(theme.palette.divider, 0.1)}`,
+  backgroundColor: isSelected ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : figmaGrey[200]) : 'transparent',
   '&:hover': {
-    borderColor: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : '#F9F9F8',
+    borderColor: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : figmaGrey[200],
   },
 }))
 
 const DiffAddition = styled('span')(({ theme }) => ({
-  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E9E8E6',
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400],
   color: theme.palette.text.primary,
   padding: '0 2px',
   borderRadius: 2,
 }))
 
 const DiffDeletion = styled('span')(({ theme }) => ({
-  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F1F0EF',
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[300],
   color: theme.palette.text.secondary,
   textDecoration: 'line-through',
   padding: '0 2px',
@@ -167,8 +168,8 @@ export default function TrackChangesPanel({
               size="small"
               onClick={toggleCompareMode}
               sx={{
-                color: compareMode ? (theme.palette.mode === 'dark' ? '#BCBBB5' : '#21201C') : 'text.secondary',
-                bgcolor: compareMode ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF') : 'transparent',
+                color: compareMode ? (theme.palette.mode === 'dark' ? figmaGrey[600] : figmaGrey[1200]) : 'text.secondary',
+                bgcolor: compareMode ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300]) : 'transparent',
               }}
             >
               <CompareIcon fontSize="small" />
@@ -233,7 +234,7 @@ export default function TrackChangesPanel({
                       borderRadius: 1,
                       fontWeight: 600,
                       fontSize: '0.7rem',
-                      bgcolor: index === 0 ? (theme.palette.mode === 'dark' ? '#63635E' : '#21201C') : (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF'),
+                      bgcolor: index === 0 ? (theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200]) : (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300]),
                       color: index === 0 ? '#fff' : 'text.secondary',
                     }}
                   />

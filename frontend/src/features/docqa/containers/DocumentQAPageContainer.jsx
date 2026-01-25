@@ -837,7 +837,7 @@ export default function DocumentQAPage() {
                 width: 40,
                 height: 40,
                 borderRadius: 2,
-                background: theme.palette.mode === 'dark' ? '#63635E' : '#21201C',
+                background: theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200],
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -967,8 +967,8 @@ export default function DocumentQAPage() {
                   onClick={() => setAddDocDialogOpen(true)}
                   aria-label="Add document"
                   sx={{
-                    bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
-                    '&:hover': { bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.12) : '#E9E8E6' },
+                    bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
+                    '&:hover': { bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.12) : figmaGrey[400] },
                   }}
                 >
                   <AddIcon fontSize="small" />
@@ -986,7 +986,7 @@ export default function DocumentQAPage() {
                     p: 1,
                     borderRadius: 1.5,
                     bgcolor: alpha(theme.palette.background.paper, 0.5),
-                    '&:hover': { bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8' },
+                    '&:hover': { bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200] },
                   }}
                 >
                   <DocIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
@@ -1027,7 +1027,7 @@ export default function DocumentQAPage() {
                     width: 36,
                     height: 36,
                     borderRadius: 2,
-                    bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
+                    bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -1220,7 +1220,7 @@ export default function DocumentQAPage() {
                                       ? 'text.primary'
                                       : undefined,
                                     bgcolor: msg.feedback?.feedback_type === 'helpful'
-                                      ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF')
+                                      ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300])
                                       : undefined,
                                   }}
                                 >
@@ -1236,7 +1236,7 @@ export default function DocumentQAPage() {
                                       ? 'text.primary'
                                       : undefined,
                                     bgcolor: msg.feedback?.feedback_type === 'not_helpful'
-                                      ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF')
+                                      ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300])
                                       : undefined,
                                   }}
                                 >
@@ -1453,7 +1453,7 @@ export default function DocumentQAPage() {
               borderRadius: 2,
               textTransform: 'none',
               px: 3,
-              background: theme.palette.mode === 'dark' ? '#63635E' : '#21201C',
+              background: theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200],
             }}
           >
             Create Session
@@ -1486,10 +1486,10 @@ export default function DocumentQAPage() {
               textAlign: 'center',
               cursor: 'pointer',
               transition: 'all 0.2s ease',
-              bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.02) : '#F9F9F8',
+              bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.02) : figmaGrey[200],
               '&:hover': {
-                borderColor: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
-                bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F1F0EF',
+                borderColor: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
+                bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[300],
               },
             }}
             component="label"
@@ -1551,7 +1551,7 @@ export default function DocumentQAPage() {
               borderRadius: 2,
               textTransform: 'none',
               px: 3,
-              background: theme.palette.mode === 'dark' ? '#63635E' : '#21201C',
+              background: theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200],
             }}
           >
             Add Document

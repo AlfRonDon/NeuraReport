@@ -31,6 +31,7 @@ import {
   styled,
   keyframes,
 } from '@mui/material'
+import { figmaGrey } from '@/app/theme'
 import {
   Search as SearchIcon,
   FilterList as FilterListIcon,
@@ -109,15 +110,15 @@ const ActionButton = styled(Button)(({ theme }) => ({
   '&.MuiButton-outlined': {
     borderColor: alpha(theme.palette.divider, 0.2),
     '&:hover': {
-      borderColor: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
-      backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : '#F9F9F8',
+      borderColor: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
+      backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : figmaGrey[200],
     },
   },
   '&.MuiButton-contained': {
-    backgroundColor: theme.palette.mode === 'dark' ? '#63635E' : '#21201C',
+    backgroundColor: theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200],
     boxShadow: `0 4px 14px ${alpha(theme.palette.common.black, 0.15)}`,
     '&:hover': {
-      backgroundColor: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
+      backgroundColor: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
       boxShadow: `0 6px 20px ${alpha(theme.palette.common.black, 0.2)}`,
       transform: 'translateY(-1px)',
     },
@@ -127,7 +128,7 @@ const ActionButton = styled(Button)(({ theme }) => ({
 const SelectionBar = styled(Box)(({ theme }) => ({
   marginBottom: theme.spacing(2),
   padding: theme.spacing(1.5, 2),
-  background: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8',
+  background: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200],
   border: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
   borderRadius: 12,
   display: 'flex',
@@ -149,7 +150,7 @@ const SelectionBadge = styled(Box)(({ theme }) => ({
   width: 24,
   height: 24,
   borderRadius: 8,
-  backgroundColor: theme.palette.mode === 'dark' ? '#63635E' : '#21201C',
+  backgroundColor: theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200],
   color: '#fff',
   display: 'flex',
   alignItems: 'center',
@@ -177,8 +178,8 @@ const DeleteAction = styled(SelectionAction)(({ theme }) => ({
   color: theme.palette.text.secondary,
   borderColor: alpha(theme.palette.divider, 0.3),
   '&:hover': {
-    borderColor: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
+    borderColor: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
   },
 }))
 
@@ -198,7 +199,7 @@ const SearchField = styled(TextField)(({ theme }) => ({
       backgroundColor: theme.palette.background.paper,
       boxShadow: `0 0 0 3px ${alpha(theme.palette.divider, 0.1)}`,
       '& fieldset': {
-        borderColor: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
+        borderColor: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
       },
     },
   },
@@ -222,19 +223,19 @@ const FilterButton = styled(Button)(({ theme }) => ({
   borderColor: alpha(theme.palette.divider, 0.2),
   '&:hover': {
     borderColor: alpha(theme.palette.divider, 0.3),
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : '#F9F9F8',
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : figmaGrey[200],
   },
   '&.active': {
     color: theme.palette.text.primary,
     borderColor: alpha(theme.palette.divider, 0.5),
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
   },
 }))
 
 const FilterChip = styled(Chip)(({ theme }) => ({
   borderRadius: 8,
   height: 28,
-  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
   border: `1px solid ${alpha(theme.palette.divider, 0.15)}`,
   color: theme.palette.text.secondary,
   fontWeight: 500,
@@ -255,7 +256,7 @@ const IconButtonStyled = styled(IconButton)(({ theme }) => ({
   transition: 'all 0.2s ease',
   '&:hover': {
     color: theme.palette.text.primary,
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
   },
 }))
 
@@ -291,20 +292,20 @@ const StyledMenuItem = styled(MenuItem)(({ theme }) => ({
   margin: theme.spacing(0, 1),
   transition: 'all 0.15s ease',
   '&:hover': {
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
   },
   '&.Mui-selected': {
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.12) : '#E9E8E6',
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.12) : figmaGrey[400],
     color: theme.palette.text.primary,
     '&:hover': {
-      backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.16) : '#E2E1DE',
+      backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.16) : figmaGrey[500],
     },
   },
 }))
 
 const FilterBadge = styled(Badge)(({ theme }) => ({
   '& .MuiBadge-badge': {
-    backgroundColor: theme.palette.mode === 'dark' ? '#63635E' : '#21201C',
+    backgroundColor: theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200],
     color: '#fff',
     fontSize: '0.65rem',
     fontWeight: 600,

@@ -21,6 +21,7 @@ import {
   ClickAwayListener,
   keyframes,
 } from '@mui/material'
+import { figmaGrey } from '@/app/theme'
 import SearchIcon from '@mui/icons-material/Search'
 import DescriptionIcon from '@mui/icons-material/Description'
 import StorageIcon from '@mui/icons-material/Storage'
@@ -78,10 +79,10 @@ function SearchResult({ result, onSelect, isSelected, theme }) {
         px: 2,
         py: 1.5,
         cursor: 'pointer',
-        bgcolor: isSelected ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF') : 'transparent',
+        bgcolor: isSelected ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300]) : 'transparent',
         transition: 'all 0.15s ease',
         '&:hover': {
-          bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
+          bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
         },
       }}
     >
@@ -91,7 +92,7 @@ function SearchResult({ result, onSelect, isSelected, theme }) {
             width: 28,
             height: 28,
             borderRadius: '8px',
-            bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
+            bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -117,7 +118,7 @@ function SearchResult({ result, onSelect, isSelected, theme }) {
         label={config.label}
         size="small"
         sx={{
-          bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
+          bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
           color: 'text.secondary',
           fontSize: '0.625rem',
           height: 20,
@@ -335,7 +336,7 @@ export default function GlobalSearch({
                 borderColor: alpha(theme.palette.divider, 0.3),
               },
               '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                borderColor: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
+                borderColor: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
               },
               '& input': {
                 fontSize: '0.8125rem',

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Box, keyframes } from '@mui/material'
+import { figmaGrey } from '@/app/theme'
 
 // Subtle pulse animation for success indicator
 const pulse = keyframes`
@@ -53,7 +54,7 @@ export default function SuccessCelebration({ trigger, onComplete }) {
         width: 80,
         height: 80,
         borderRadius: '50%',
-        bgcolor: '#21201C',
+        bgcolor: figmaGrey[1200],
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',

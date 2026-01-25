@@ -14,6 +14,7 @@ import {
   styled,
   keyframes,
 } from '@mui/material'
+import { figmaGrey } from '@/app/theme'
 import {
   SignalWifiOff as OfflineIcon,
   Refresh as RefreshIcon,
@@ -69,8 +70,8 @@ const BannerBase = styled(Box)(({ theme }) => ({
 
 const OfflineBannerContainer = styled(BannerBase)(({ theme }) => ({
   background: theme.palette.mode === 'dark'
-    ? `linear-gradient(135deg, #63635E, #21201C)`
-    : `linear-gradient(135deg, #82827C, #63635E)`,
+    ? `linear-gradient(135deg, ${figmaGrey[1100]}, ${figmaGrey[1200]})`
+    : `linear-gradient(135deg, ${figmaGrey[1000]}, ${figmaGrey[1100]})`,
   color: '#fff',
   '&::before': {
     content: '""',
@@ -93,8 +94,8 @@ const OfflineBannerContainer = styled(BannerBase)(({ theme }) => ({
 
 const ReconnectedBannerContainer = styled(BannerBase)(({ theme }) => ({
   background: theme.palette.mode === 'dark'
-    ? `linear-gradient(135deg, #82827C, #63635E)`
-    : `linear-gradient(135deg, #63635E, #21201C)`,
+    ? `linear-gradient(135deg, ${figmaGrey[1000]}, ${figmaGrey[1100]})`
+    : `linear-gradient(135deg, ${figmaGrey[1100]}, ${figmaGrey[1200]})`,
   color: '#fff',
   justifyContent: 'center',
 }))

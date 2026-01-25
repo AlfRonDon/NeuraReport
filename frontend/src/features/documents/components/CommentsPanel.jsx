@@ -30,6 +30,7 @@ import {
   ExpandMore as ExpandIcon,
   ExpandLess as CollapseIcon,
 } from '@mui/icons-material'
+import { figmaGrey } from '@/app/theme'
 
 // =============================================================================
 // STYLED COMPONENTS
@@ -72,7 +73,7 @@ const CommentCard = styled(Paper, {
   marginBottom: theme.spacing(1.5),
   border: `1px solid ${
     isHighlighted
-      ? (theme.palette.mode === 'dark' ? '#82827C' : '#63635E')
+      ? (theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100])
       : isResolved
       ? alpha(theme.palette.divider, 0.3)
       : alpha(theme.palette.divider, 0.1)
@@ -80,7 +81,7 @@ const CommentCard = styled(Paper, {
   backgroundColor: isResolved
     ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.02) : '#FAFAF9')
     : isHighlighted
-    ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : '#F9F9F8')
+    ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : figmaGrey[200])
     : 'transparent',
   opacity: isResolved ? 0.7 : 1,
   transition: 'all 0.15s ease',
@@ -96,8 +97,8 @@ const ReplyCard = styled(Box)(({ theme }) => ({
 const QuotedText = styled(Box)(({ theme }) => ({
   padding: theme.spacing(1),
   marginBottom: theme.spacing(1),
-  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F9F9F8',
-  borderLeft: `3px solid ${theme.palette.mode === 'dark' ? '#82827C' : '#BCBBB5'}`,
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200],
+  borderLeft: `3px solid ${theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[600]}`,
   borderRadius: '0 4px 4px 0',
   fontSize: '0.75rem',
   fontStyle: 'italic',
@@ -188,7 +189,7 @@ function CommentItem({
             width: 28,
             height: 28,
             fontSize: '0.75rem',
-            bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF',
+            bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300],
             color: theme.palette.text.secondary,
           }}
         >
@@ -210,7 +211,7 @@ function CommentItem({
               borderRadius: 1,
               fontSize: '0.65rem',
               height: 20,
-              bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
+              bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
               color: 'text.secondary',
             }}
           />
@@ -333,7 +334,7 @@ function CommentItem({
                   width: 22,
                   height: 22,
                   fontSize: '0.65rem',
-                  bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#E9E8E6',
+                  bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[400],
                   color: theme.palette.text.secondary,
                 }}
               >
@@ -425,7 +426,7 @@ export default function CommentsPanel({
             sx={{
               borderRadius: 1,
               fontSize: '0.7rem',
-              bgcolor: filter === 'all' ? (theme.palette.mode === 'dark' ? '#63635E' : '#21201C') : 'transparent',
+              bgcolor: filter === 'all' ? (theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200]) : 'transparent',
               color: filter === 'all' ? '#fff' : 'text.secondary',
               borderColor: filter === 'all' ? 'transparent' : alpha(theme.palette.divider, 0.3),
             }}
@@ -438,7 +439,7 @@ export default function CommentsPanel({
             sx={{
               borderRadius: 1,
               fontSize: '0.7rem',
-              bgcolor: filter === 'open' ? (theme.palette.mode === 'dark' ? '#63635E' : '#21201C') : 'transparent',
+              bgcolor: filter === 'open' ? (theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200]) : 'transparent',
               color: filter === 'open' ? '#fff' : 'text.secondary',
               borderColor: filter === 'open' ? 'transparent' : alpha(theme.palette.divider, 0.3),
             }}
@@ -451,7 +452,7 @@ export default function CommentsPanel({
             sx={{
               borderRadius: 1,
               fontSize: '0.7rem',
-              bgcolor: filter === 'resolved' ? (theme.palette.mode === 'dark' ? '#63635E' : '#21201C') : 'transparent',
+              bgcolor: filter === 'resolved' ? (theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200]) : 'transparent',
               color: filter === 'resolved' ? '#fff' : 'text.secondary',
               borderColor: filter === 'resolved' ? 'transparent' : alpha(theme.palette.divider, 0.3),
             }}

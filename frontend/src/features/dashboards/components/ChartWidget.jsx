@@ -127,8 +127,8 @@ const generateChartOptions = (chartType, data, config, theme) => {
       theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],  // Grey/1000 : Grey/1100
       theme.palette.mode === 'dark' ? '#A1A19A' : figmaGrey[900],  // Lighter grey
       theme.palette.mode === 'dark' ? '#6B6B66' : '#4A4A46',  // Darker grey
-      theme.palette.mode === 'dark' ? figmaGrey[600] : '#CFCECA',  // Grey/800 : Grey/700
-      theme.palette.mode === 'dark' ? '#DAD9D6' : figmaGrey[500],  // Grey/600 : Grey/500
+      theme.palette.mode === 'dark' ? figmaGrey[600] : figmaGrey[700],  // Grey/600 : Grey/700
+      theme.palette.mode === 'dark' ? figmaGrey[600] : figmaGrey[500],  // Grey/600 : Grey/500
       theme.palette.mode === 'dark' ? '#52524E' : '#3A3A36',  // Very dark grey
       theme.palette.mode === 'dark' ? '#C8C8C2' : '#B5B5AF',  // Mid grey
       theme.palette.mode === 'dark' ? '#9A9A94' : '#7A7A74',  // Medium grey

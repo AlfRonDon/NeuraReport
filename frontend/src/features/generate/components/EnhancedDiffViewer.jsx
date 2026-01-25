@@ -11,6 +11,7 @@ import {
   ToggleButton,
   alpha,
 } from '@mui/material'
+import { figmaGrey } from '@/app/theme'
 import UnfoldLessIcon from '@mui/icons-material/UnfoldLess'
 import UnfoldMoreIcon from '@mui/icons-material/UnfoldMore'
 import AddIcon from '@mui/icons-material/Add'
@@ -173,13 +174,13 @@ function DiffLine({ item, viewMode, expanded, onToggleExpand, syntaxHighlight })
           justifyContent: 'center',
           py: 0.5,
           px: 2,
-          bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : '#F9F9F8',
+          bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : figmaGrey[200],
           borderTop: '1px dashed',
           borderBottom: '1px dashed',
           borderColor: 'divider',
           cursor: 'pointer',
           '&:hover': {
-            bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
+            bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
           },
         }}
         onClick={() => onToggleExpand?.(item.startLine)}
@@ -206,8 +207,8 @@ function DiffLine({ item, viewMode, expanded, onToggleExpand, syntaxHighlight })
 
   if (item.type === 'removed') {
     return (
-      <Box sx={{ display: 'flex', bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : '#F9F9F8' }}>
-        <Box sx={{ ...lineNumberSx, bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF' }}>
+      <Box sx={{ display: 'flex', bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : figmaGrey[200] }}>
+        <Box sx={{ ...lineNumberSx, bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300] }}>
           {item.lineNumber.before}
         </Box>
         {viewMode === 'split' && <Box sx={lineNumberSx} />}
@@ -221,10 +222,10 @@ function DiffLine({ item, viewMode, expanded, onToggleExpand, syntaxHighlight })
 
   if (item.type === 'added') {
     return (
-      <Box sx={{ display: 'flex', bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.06) : '#E9E8E6' }}>
+      <Box sx={{ display: 'flex', bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.06) : figmaGrey[400] }}>
         <Box sx={lineNumberSx} />
         {viewMode === 'split' && (
-          <Box sx={{ ...lineNumberSx, bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E2E1DE' }}>
+          <Box sx={{ ...lineNumberSx, bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[500] }}>
             {item.lineNumber.after}
           </Box>
         )}
@@ -240,14 +241,14 @@ function DiffLine({ item, viewMode, expanded, onToggleExpand, syntaxHighlight })
     if (viewMode === 'split') {
       return (
         <>
-          <Box sx={{ display: 'flex', bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : '#F9F9F8' }}>
-            <Box sx={{ ...lineNumberSx, bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF' }}>
+          <Box sx={{ display: 'flex', bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : figmaGrey[200] }}>
+            <Box sx={{ ...lineNumberSx, bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300] }}>
               {item.lineNumber.before}
             </Box>
             <Box sx={{ ...contentSx, color: 'text.secondary', textDecoration: 'line-through', flex: 0.5 }}>
               {syntaxHighlight ? highlightHtml(item.beforeContent) : item.beforeContent}
             </Box>
-            <Box sx={{ ...lineNumberSx, bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E2E1DE' }}>
+            <Box sx={{ ...lineNumberSx, bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[500] }}>
               {item.lineNumber.after}
             </Box>
             <Box sx={{ ...contentSx, color: 'text.primary', flex: 0.5 }}>
@@ -260,8 +261,8 @@ function DiffLine({ item, viewMode, expanded, onToggleExpand, syntaxHighlight })
 
     return (
       <>
-        <Box sx={{ display: 'flex', bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : '#F9F9F8' }}>
-          <Box sx={{ ...lineNumberSx, bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF' }}>
+        <Box sx={{ display: 'flex', bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : figmaGrey[200] }}>
+          <Box sx={{ ...lineNumberSx, bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300] }}>
             {item.lineNumber.before}
           </Box>
           <Box sx={{ ...contentSx, color: 'text.secondary', textDecoration: 'line-through' }}>
@@ -269,8 +270,8 @@ function DiffLine({ item, viewMode, expanded, onToggleExpand, syntaxHighlight })
             {syntaxHighlight ? highlightHtml(item.beforeContent) : item.beforeContent}
           </Box>
         </Box>
-        <Box sx={{ display: 'flex', bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.06) : '#E9E8E6' }}>
-          <Box sx={{ ...lineNumberSx, bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#E2E1DE' }}>
+        <Box sx={{ display: 'flex', bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.06) : figmaGrey[400] }}>
+          <Box sx={{ ...lineNumberSx, bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[500] }}>
             {item.lineNumber.after}
           </Box>
           <Box sx={{ ...contentSx, color: 'text.primary' }}>

@@ -198,7 +198,7 @@ const StyledCheckbox = styled(Checkbox)(({ theme }) => ({
   padding: theme.spacing(0.5),
   transition: 'all 0.2s ease',
   '&:hover': {
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : '#F1F0EF',
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300],
   },
   '&.Mui-checked': {
     color: theme.palette.text.primary,
@@ -261,7 +261,7 @@ const StyledPagination = styled(TablePagination)(({ theme }) => ({
     '& .MuiIconButton-root': {
       color: theme.palette.text.secondary,
       '&:hover': {
-        backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
+        backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
         color: theme.palette.text.primary,
       },
       '&.Mui-disabled': {

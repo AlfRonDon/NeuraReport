@@ -42,6 +42,7 @@ import {
   CloudSync as SyncIcon,
   Settings as SystemIcon,
 } from '@mui/icons-material'
+import { figmaGrey } from '@/app/theme'
 
 // ============================================================================
 // BACKGROUND OPERATION TYPES
@@ -299,7 +300,7 @@ export function BackgroundOperationsProvider({ children }) {
       case BackgroundOperationStatus.FAILED:
         return <ErrorIcon sx={{ color: theme.palette.text.secondary }} />
       case BackgroundOperationStatus.RUNNING:
-        return <RunningIcon sx={{ color: theme.palette.mode === 'dark' ? '#BCBBB5' : '#21201C' }} />
+        return <RunningIcon sx={{ color: theme.palette.mode === 'dark' ? figmaGrey[600] : figmaGrey[1200] }} />
       case BackgroundOperationStatus.CANCELLED:
         return <CancelIcon sx={{ color: theme.palette.text.secondary }} />
       default:
@@ -399,7 +400,7 @@ export function BackgroundOperationsProvider({ children }) {
                 sx={{
                   height: 22,
                   fontSize: '0.6875rem',
-                  bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
+                  bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
                   color: 'text.primary',
                 }}
               />
@@ -456,7 +457,7 @@ export function BackgroundOperationsProvider({ children }) {
                         width: 36,
                         height: 36,
                         borderRadius: 2,
-                        bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
+                        bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -489,7 +490,7 @@ export function BackgroundOperationsProvider({ children }) {
                           sx={{
                             color: theme.palette.text.secondary,
                             '&:hover': {
-                              bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
+                              bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
                             },
                           }}
                         >
@@ -506,9 +507,9 @@ export function BackgroundOperationsProvider({ children }) {
                       sx={{
                         height: 4,
                         borderRadius: 2,
-                        bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
+                        bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
                         '& .MuiLinearProgress-bar': {
-                          bgcolor: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
+                          bgcolor: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
                         },
                       }}
                     />
@@ -628,7 +629,7 @@ export function BackgroundTasksButton() {
     <IconButton
       onClick={openDrawer}
       sx={{
-        color: activeCount > 0 ? (theme.palette.mode === 'dark' ? '#BCBBB5' : '#21201C') : theme.palette.text.secondary,
+        color: activeCount > 0 ? (theme.palette.mode === 'dark' ? figmaGrey[600] : figmaGrey[1200]) : theme.palette.text.secondary,
       }}
     >
       <Badge
@@ -639,7 +640,7 @@ export function BackgroundTasksButton() {
             fontSize: '0.6rem',
             height: 16,
             minWidth: 16,
-            bgcolor: theme.palette.mode === 'dark' ? '#63635E' : '#21201C',
+            bgcolor: theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200],
             color: '#fff',
           },
         }}

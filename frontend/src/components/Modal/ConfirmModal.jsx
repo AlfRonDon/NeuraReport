@@ -20,6 +20,7 @@ import {
   HelpOutline as QuestionIcon,
 } from '@mui/icons-material'
 import Modal from './Modal'
+import { figmaGrey } from '@/app/theme'
 
 // =============================================================================
 // ANIMATIONS
@@ -105,7 +106,7 @@ const MessageText = styled(Typography)(({ theme }) => ({
 
 const getSeverityConfig = (theme, severity) => {
   const neutralColor = theme.palette.text.secondary
-  const neutralBg = theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF'
+  const neutralBg = theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300]
   const configs = {
     warning: {
       icon: WarningIcon,

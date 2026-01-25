@@ -33,6 +33,7 @@ import { useToast } from '@/components/ToastProvider'
 import { useInteraction, InteractionType, Reversibility, useNavigateInteraction } from '@/components/ux/governance'
 import { ConfirmModal } from '@/components/Modal'
 import * as api from '@/api/client'
+import { figmaGrey } from '@/app/theme'
 
 // =============================================================================
 // ANIMATIONS
@@ -114,7 +115,7 @@ const RefreshButton = styled(IconButton)(({ theme }) => ({
   borderRadius: 12,
   transition: 'all 0.2s ease',
   '&:hover': {
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
     transform: 'rotate(180deg)',
   },
 }))
@@ -123,7 +124,7 @@ const DeleteButton = styled(IconButton)(({ theme }) => ({
   borderRadius: 12,
   transition: 'all 0.2s ease',
   '&:hover': {
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
     color: theme.palette.text.primary,
   },
 }))
@@ -237,7 +238,7 @@ function ActivityItem({ activity, onNavigate }) {
         px: 1,
         transition: 'all 0.2s ease',
         '&:hover': isNavigable ? {
-          bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : '#F9F9F8',
+          bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : figmaGrey[200],
           transform: 'translateX(4px)',
         } : {},
       }}
@@ -277,7 +278,7 @@ function ActivityItem({ activity, onNavigate }) {
             sx={{
               height: 18,
               fontSize: '0.625rem',
-              bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
+              bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
               color: theme.palette.text.secondary,
               borderRadius: 1,
             }}

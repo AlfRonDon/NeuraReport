@@ -11,6 +11,7 @@ import {
   ToggleButton,
   alpha,
 } from '@mui/material'
+import { figmaGrey } from '@/app/theme'
 import HistoryIcon from '@mui/icons-material/History'
 import EditIcon from '@mui/icons-material/Edit'
 import SmartToyIcon from '@mui/icons-material/SmartToy'
@@ -85,7 +86,7 @@ function HistoryEntry({ entry, isLatest }) {
         py: 1,
         px: 1.5,
         borderRadius: 1,
-        bgcolor: isLatest ? (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : '#F9F9F8' : 'transparent',
+        bgcolor: isLatest ? (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : figmaGrey[200] : 'transparent',
         '&:hover': {
           bgcolor: 'action.hover',
         },
@@ -105,7 +106,7 @@ function HistoryEntry({ entry, isLatest }) {
             width: 28,
             height: 28,
             borderRadius: '50%',
-            bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
+            bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -150,7 +151,7 @@ function HistoryEntry({ entry, isLatest }) {
               sx={{
                 height: 20,
                 fontSize: '0.7rem',
-                bgcolor: (theme) => theme.palette.mode === 'dark' ? '#63635E' : '#21201C',
+                bgcolor: (theme) => theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200],
                 color: '#fff',
               }}
             />

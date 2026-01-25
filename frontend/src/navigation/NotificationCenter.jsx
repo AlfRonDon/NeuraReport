@@ -23,6 +23,7 @@ import {
   alpha,
   keyframes,
 } from '@mui/material'
+import { figmaGrey } from '@/app/theme'
 import NotificationsIcon from '@mui/icons-material/Notifications'
 import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive'
 import NotificationsOffIcon from '@mui/icons-material/NotificationsOff'
@@ -352,7 +353,7 @@ export default function NotificationCenter() {
             transition: 'all 0.2s ease',
             '&:hover': {
               color: theme.palette.text.primary,
-              bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
+              bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
             },
           }}
         >
@@ -361,7 +362,7 @@ export default function NotificationCenter() {
             max={99}
             sx={{
               '& .MuiBadge-badge': {
-                bgcolor: theme.palette.mode === 'dark' ? '#63635E' : '#21201C',
+                bgcolor: theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200],
                 color: '#fff',
                 fontSize: '0.65rem',
                 fontWeight: 600,
@@ -522,9 +523,9 @@ export default function NotificationCenter() {
                           px: 2,
                           bgcolor: notification.read
                             ? 'transparent'
-                            : (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.03) : '#F9F9F8'),
+                            : (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.03) : figmaGrey[200]),
                           '&:hover': {
-                            bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : '#F1F0EF',
+                            bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[300],
                           },
                         }}
                       >
@@ -592,7 +593,7 @@ export default function NotificationCenter() {
                               width: 8,
                               height: 8,
                               borderRadius: '50%',
-                              bgcolor: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
+                              bgcolor: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
                               ml: 1,
                               flexShrink: 0,
                             }}

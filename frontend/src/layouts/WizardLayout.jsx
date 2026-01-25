@@ -1,4 +1,5 @@
 import { Box, Container, Paper, Typography, LinearProgress, Stack, Button } from '@mui/material'
+import { figmaGrey } from '@/app/theme'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward'
 import CheckIcon from '@mui/icons-material/Check'
@@ -60,7 +61,7 @@ export default function WizardLayout({
           height: 4,
           bgcolor: 'action.hover',
           '& .MuiLinearProgress-bar': {
-            bgcolor: (theme) => theme.palette.mode === 'dark' ? '#82827C' : '#21201C',
+            bgcolor: (theme) => theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1200],
           },
         }}
       />
@@ -88,9 +89,9 @@ export default function WizardLayout({
                     alignItems: 'center',
                     justifyContent: 'center',
                     bgcolor: (theme) => index < currentStep
-                      ? (theme.palette.mode === 'dark' ? '#63635E' : '#21201C')
+                      ? (theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200])
                       : index === currentStep
-                        ? (theme.palette.mode === 'dark' ? '#82827C' : '#63635E')
+                        ? (theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100])
                         : 'action.disabledBackground',
                     color: index <= currentStep ? 'white' : 'text.disabled',
                     fontSize: '0.75rem',
@@ -118,7 +119,7 @@ export default function WizardLayout({
                     sx={{
                       width: 40,
                       height: 2,
-                      bgcolor: (theme) => index < currentStep ? (theme.palette.mode === 'dark' ? '#63635E' : '#21201C') : theme.palette.divider,
+                      bgcolor: (theme) => index < currentStep ? (theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200]) : theme.palette.divider,
                       mx: 1,
                     }}
                   />

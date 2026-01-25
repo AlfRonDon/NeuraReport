@@ -143,7 +143,7 @@ function StatCard({ icon, label, value, delay = 0 }) {
           minWidth: 140,
           background: theme.palette.mode === 'dark'
             ? `linear-gradient(135deg, ${alpha(theme.palette.text.primary, 0.08)} 0%, ${alpha(theme.palette.text.primary, 0.03)} 100%)`
-            : 'linear-gradient(135deg, #F1F0EF 0%, #F9F9F8 100%)',
+            : `linear-gradient(135deg, ${figmaGrey[300]} 0%, ${figmaGrey[200]} 100%)`,
           border: `1px solid ${alpha(theme.palette.divider, 0.15)}`,
           borderRadius: 3,
           transition: 'all 0.3s ease',
@@ -278,7 +278,7 @@ function InsightCard({ insight, type = 'insight', index = 0 }) {
     insight: {
       gradient: theme.palette.mode === 'dark'
         ? `linear-gradient(135deg, ${alpha(theme.palette.text.primary, 0.08)} 0%, ${alpha(theme.palette.text.primary, 0.04)} 100%)`
-        : 'linear-gradient(135deg, #F1F0EF 0%, #F9F9F8 100%)',
+        : `linear-gradient(135deg, ${figmaGrey[300]} 0%, ${figmaGrey[200]} 100%)`,
       borderColor: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
       icon: <LightbulbIcon />,
       iconBg: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400],
@@ -286,7 +286,7 @@ function InsightCard({ insight, type = 'insight', index = 0 }) {
     risk: {
       gradient: theme.palette.mode === 'dark'
         ? `linear-gradient(135deg, ${alpha(theme.palette.text.primary, 0.08)} 0%, ${alpha(theme.palette.text.primary, 0.04)} 100%)`
-        : 'linear-gradient(135deg, #F1F0EF 0%, #F9F9F8 100%)',
+        : `linear-gradient(135deg, ${figmaGrey[300]} 0%, ${figmaGrey[200]} 100%)`,
       borderColor: theme.palette.mode === 'dark' ? figmaGrey[900] : figmaGrey[1100],
       icon: <SecurityIcon />,
       iconBg: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400],
@@ -294,7 +294,7 @@ function InsightCard({ insight, type = 'insight', index = 0 }) {
     opportunity: {
       gradient: theme.palette.mode === 'dark'
         ? `linear-gradient(135deg, ${alpha(theme.palette.text.primary, 0.08)} 0%, ${alpha(theme.palette.text.primary, 0.04)} 100%)`
-        : 'linear-gradient(135deg, #F1F0EF 0%, #F9F9F8 100%)',
+        : `linear-gradient(135deg, ${figmaGrey[300]} 0%, ${figmaGrey[200]} 100%)`,
       borderColor: theme.palette.mode === 'dark' ? figmaGrey[600] : figmaGrey[1000],
       icon: <RocketLaunchIcon />,
       iconBg: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400],
@@ -302,7 +302,7 @@ function InsightCard({ insight, type = 'insight', index = 0 }) {
     action: {
       gradient: theme.palette.mode === 'dark'
         ? `linear-gradient(135deg, ${alpha(theme.palette.text.primary, 0.08)} 0%, ${alpha(theme.palette.text.primary, 0.04)} 100%)`
-        : 'linear-gradient(135deg, #F1F0EF 0%, #F9F9F8 100%)',
+        : `linear-gradient(135deg, ${figmaGrey[300]} 0%, ${figmaGrey[200]} 100%)`,
       borderColor: theme.palette.mode === 'dark' ? figmaGrey[600] : figmaGrey[900],
       icon: <PlaylistAddCheckIcon />,
       iconBg: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400],
@@ -411,7 +411,7 @@ function SentimentDisplay({ sentiment }) {
     const neutralColor = theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100]
     const neutralGradient = theme.palette.mode === 'dark'
       ? `linear-gradient(135deg, ${alpha(theme.palette.text.primary, 0.12)} 0%, ${alpha(theme.palette.text.primary, 0.06)} 100%)`
-      : 'linear-gradient(135deg, #E9E8E6 0%, #F1F0EF 100%)'
+      : `linear-gradient(135deg, ${figmaGrey[400]} 0%, ${figmaGrey[300]} 100%)`
     if (level?.includes('positive')) {
       return {
         icon: <SentimentSatisfiedAltIcon sx={{ fontSize: 32 }} />,
@@ -954,7 +954,7 @@ export default function EnhancedAnalyzePageContainer() {
         minHeight: '100vh',
         background: theme.palette.mode === 'dark'
           ? `linear-gradient(180deg, ${alpha(theme.palette.text.primary, 0.02)} 0%, ${theme.palette.background.default} 50%)`
-          : `linear-gradient(180deg, #F9F9F8 0%, ${theme.palette.background.default} 50%)`,
+          : `linear-gradient(180deg, ${figmaGrey[200]} 0%, ${theme.palette.background.default} 50%)`,
       }}
     >
       {/* Hero Header */}
@@ -965,7 +965,7 @@ export default function EnhancedAnalyzePageContainer() {
           px: 4,
           background: theme.palette.mode === 'dark'
             ? `linear-gradient(135deg, ${alpha(theme.palette.text.primary, 0.06)} 0%, ${alpha(theme.palette.text.primary, 0.03)} 50%, transparent 100%)`
-            : 'linear-gradient(135deg, #F1F0EF 0%, #F9F9F8 50%, transparent 100%)',
+            : `linear-gradient(135deg, ${figmaGrey[300]} 0%, ${figmaGrey[200]} 50%, transparent 100%)`,
           borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
         }}
       >

@@ -15,6 +15,7 @@ import {
   keyframes,
 } from '@mui/material'
 import CloseIcon from '@mui/icons-material/Close'
+import { figmaGrey } from '@/app/theme'
 
 // =============================================================================
 // ANIMATIONS
@@ -128,7 +129,7 @@ export default function Drawer({
               borderRadius: 2,
               transition: 'all 0.2s ease',
               '&:hover': {
-                bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
+                bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
                 color: theme.palette.text.primary,
                 transform: 'rotate(90deg)',
               },
@@ -190,11 +191,11 @@ export default function Drawer({
                     borderRadius: 2.5,
                     textTransform: 'none',
                     fontWeight: 600,
-                    bgcolor: theme.palette.mode === 'dark' ? '#63635E' : '#21201C',
+                    bgcolor: theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200],
                     boxShadow: `0 4px 14px ${alpha(theme.palette.common.black, 0.15)}`,
                     transition: 'all 0.2s ease',
                     '&:hover': {
-                      bgcolor: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
+                      bgcolor: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
                       boxShadow: `0 6px 20px ${alpha(theme.palette.common.black, 0.2)}`,
                       transform: 'translateY(-1px)',
                     },

@@ -24,6 +24,7 @@ import {
   CheckCircle as SuccessIcon,
   Error as ErrorIcon,
 } from '@mui/icons-material'
+import { figmaGrey } from '@/app/theme'
 
 // Animations
 const shimmer = keyframes`
@@ -88,7 +89,7 @@ export function FullPageProgress({
                 size={80}
                 thickness={4}
                 sx={{
-                  color: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
+                  color: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
                 }}
               />
               <Box
@@ -128,9 +129,9 @@ export function FullPageProgress({
                 width: '100%',
                 height: 8,
                 borderRadius: 4,
-                bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : '#F1F0EF',
+                bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
                 '& .MuiLinearProgress-bar': {
-                  bgcolor: theme.palette.mode === 'dark' ? '#82827C' : '#63635E',
+                  bgcolor: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
                 },
               }}
             />
@@ -350,9 +351,9 @@ export function StepProgress({
   const getStepColor = (stepStatus) => {
     switch (stepStatus) {
       case 'completed':
-        return theme.palette.mode === 'dark' ? '#82827C' : '#63635E'
+        return theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100]
       case 'in_progress':
-        return theme.palette.mode === 'dark' ? '#BCBBB5' : '#21201C'
+        return theme.palette.mode === 'dark' ? figmaGrey[600] : figmaGrey[1200]
       case 'error':
         return theme.palette.text.secondary
       default:
