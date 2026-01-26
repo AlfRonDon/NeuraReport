@@ -115,6 +115,13 @@ const ConnectionChip = styled(Chip, {
 })(({ theme, connected }) => ({
   height: 30,
   borderRadius: 8,  // Figma spec: 8px
+  // Prevent long connection names from forcing horizontal overflow on small screens.
+  flexShrink: 1,
+  minWidth: 0,
+  maxWidth: 240,
+  [theme.breakpoints.down('sm')]: {
+    maxWidth: 140,
+  },
   backgroundColor: connected
     ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300])
     : (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.06) : figmaGrey[200]),
@@ -127,6 +134,12 @@ const ConnectionChip = styled(Chip, {
   transition: 'all 0.2s ease',
   '& .MuiChip-icon': {
     marginLeft: 6,
+  },
+  '& .MuiChip-label': {
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+    maxWidth: '100%',
   },
   '&:hover': {
     backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.12) : figmaGrey[400],

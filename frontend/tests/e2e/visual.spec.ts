@@ -8,32 +8,37 @@ const breakpoints = [
 
 const surfaces = [
   {
-    name: 'setup-connect',
+    name: 'dashboard',
     prepare: async (page) => {
       await page.goto('/')
-      await page.getByRole('tab', { name: 'Connect' }).click()
+      await expect(page.getByRole('heading', { name: 'Welcome back' })).toBeVisible()
     },
   },
   {
-    name: 'setup-upload',
+    name: 'connections',
     prepare: async (page) => {
-      await page.goto('/')
-      await page.getByRole('tab', { name: 'Generate Templates' }).click()
-      await page.waitForTimeout(150)
+      await page.goto('/connections')
+      await expect(page.getByText('Data Sources', { exact: true })).toBeVisible()
     },
   },
   {
-    name: 'setup-templates',
+    name: 'templates',
     prepare: async (page) => {
-      await page.goto('/')
-      await page.getByRole('tab', { name: 'Generate Report' }).click()
-      await page.waitForTimeout(150)
+      await page.goto('/templates')
+      await expect(page.getByText('Templates', { exact: true })).toBeVisible()
     },
   },
   {
-    name: 'generate-page',
+    name: 'reports-page',
     prepare: async (page) => {
-      await page.goto('/generate')
+      await page.goto('/reports')
+      await expect(page.getByRole('heading', { name: 'Run a Report' })).toBeVisible()
+    },
+  },
+  {
+    name: 'setup-wizard',
+    prepare: async (page) => {
+      await page.goto('/setup/wizard')
       await page.waitForTimeout(150)
     },
   },

@@ -48,17 +48,15 @@ const LayoutRoot = styled(Box)(({ theme }) => ({
 }))
 
 const MainContent = styled(Box, {
-  shouldForwardProp: (prop) => !['sidebarWidth', 'isMobile'].includes(prop),
-})(({ theme, sidebarWidth, isMobile }) => ({
+  shouldForwardProp: (prop) => prop !== 'isMobile',
+})(({ theme, isMobile }) => ({
   flexGrow: 1,
+  minWidth: 0, // allow flex children to shrink instead of forcing horizontal overflow
   display: 'flex',
   flexDirection: 'column',
   minHeight: '100vh',
-  marginLeft: isMobile ? 0 : sidebarWidth,
-  transition: theme.transitions.create(['margin'], {
-    easing: theme.transitions.easing.easeInOut,
-    duration: 250,
-  }),
+  // The permanent MUI Drawer already reserves layout space; avoid double-offsetting.
+  marginLeft: 0,
   position: 'relative',
   zIndex: 1,
 }))
@@ -125,7 +123,7 @@ export default function ProjectLayout({ children }) {
       />
 
       {/* Main Content */}
-      <MainContent sidebarWidth={sidebarWidth} isMobile={isMobile}>
+      <MainContent isMobile={isMobile}>
         {/* Offline Banner */}
         <OfflineBanner />
 

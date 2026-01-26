@@ -181,37 +181,57 @@ export async function exportSpreadsheet(spreadsheetId, format) {
 // AI Features
 // ============================================
 
-export async function generateFormula(spreadsheetId, naturalLanguage, context = {}) {
+export async function generateFormula(spreadsheetId, description, options = {}) {
   const response = await api.post(`/spreadsheets/${spreadsheetId}/ai/formula`, {
-    instruction: naturalLanguage,
-    context,
+    description,
+    available_columns: options.availableColumns || [],
+    sheet_context: options.context || null,
   });
   return response.data;
 }
 
 export async function explainFormula(spreadsheetId, formula) {
-  const response = await api.post(`/spreadsheets/${spreadsheetId}/ai/explain`, { formula });
-  return response.data;
-}
-
-export async function suggestDataCleaning(spreadsheetId, sheetIndex) {
-  const response = await api.post(`/spreadsheets/${spreadsheetId}/ai/clean`, { sheet_index: sheetIndex });
-  return response.data;
-}
-
-export async function detectAnomalies(spreadsheetId, sheetIndex, columns) {
-  const response = await api.post(`/spreadsheets/${spreadsheetId}/ai/anomalies`, {
-    sheet_index: sheetIndex,
-    columns,
+  const response = await api.post(`/spreadsheets/${spreadsheetId}/ai/explain`, null, {
+    params: { formula },
   });
   return response.data;
 }
 
-export async function predictColumn(spreadsheetId, sheetIndex, sourceColumns, targetColumn) {
-  const response = await api.post(`/spreadsheets/${spreadsheetId}/ai/predict`, {
-    sheet_index: sheetIndex,
-    source_columns: sourceColumns,
-    target_column: targetColumn,
+export async function suggestDataCleaning(spreadsheetId, sheetIndex = 0, column = null) {
+  const response = await api.post(`/spreadsheets/${spreadsheetId}/ai/clean`, null, {
+    params: { sheet_index: sheetIndex, column },
+  });
+  return response.data;
+}
+
+export async function detectAnomalies(spreadsheetId, column, options = {}) {
+  const response = await api.post(`/spreadsheets/${spreadsheetId}/ai/anomalies`, null, {
+    params: {
+      column,
+      sheet_index: options.sheetIndex || 0,
+      sensitivity: options.sensitivity || 'medium',
+    },
+  });
+  return response.data;
+}
+
+export async function predictColumn(spreadsheetId, targetDescription, basedOnColumns, options = {}) {
+  const response = await api.post(`/spreadsheets/${spreadsheetId}/ai/predict`, null, {
+    params: {
+      target_description: targetDescription,
+      based_on_columns: Array.isArray(basedOnColumns) ? basedOnColumns.join(',') : basedOnColumns,
+      sheet_index: options.sheetIndex || 0,
+    },
+  });
+  return response.data;
+}
+
+export async function suggestFormulas(spreadsheetId, options = {}) {
+  const response = await api.post(`/spreadsheets/${spreadsheetId}/ai/suggest`, null, {
+    params: {
+      sheet_index: options.sheetIndex || 0,
+      analysis_goals: options.analysisGoals || null,
+    },
   });
   return response.data;
 }

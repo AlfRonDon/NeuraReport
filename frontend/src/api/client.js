@@ -10,8 +10,25 @@ const runtimeEnv = {
 // base URL from env, with fallback
 // Use 'proxy' value in development to route through Vite's dev server proxy (avoids CORS)
 const envBaseUrl = runtimeEnv.VITE_API_BASE_URL
-export const API_BASE = envBaseUrl === 'proxy' ? '' : (envBaseUrl || 'http://127.0.0.1:8000')
+// IMPORTANT: use an `/api` prefix when proxying so SPA routes like `/connections`
+// do not collide with backend endpoints during full-page navigations/deep links.
+export const API_BASE = envBaseUrl === 'proxy' ? '/api' : (envBaseUrl || 'http://127.0.0.1:8000')
 
+// Normalize relative API paths to an absolute URL (when API_BASE is a full origin)
+// or a dev-proxy-prefixed path (when API_BASE is '/api').
+const isAbsoluteUrl = (url) => /^([a-z][a-z\d+\-.]*:)?\/\//i.test(url)
+const joinUrl = (base, path) => {
+  const b = base.endsWith('/') ? base.slice(0, -1) : base
+  const p = path.startsWith('/') ? path : `/${path}`
+  return `${b}${p}`
+}
+export const toApiUrl = (url) => {
+  if (!url) return url
+  if (isAbsoluteUrl(url)) return url
+  // Avoid double-prefixing if callers already included API_BASE (legacy behavior).
+  if (url === API_BASE || url.startsWith(`${API_BASE}/`)) return url
+  return joinUrl(API_BASE, url)
+}
 
 
 // preconfigured axios instance
@@ -102,7 +119,7 @@ export const fetchWithIntent = async (url, options = {}) => {
   const method = (options.method || 'get').toLowerCase()
   const headers = applyIntentAndIdempotency(options.headers, method)
   try {
-    return await fetch(url, { ...options, headers })
+    return await fetch(toApiUrl(url), { ...options, headers })
   } catch (error) {
     const err = error instanceof Error ? error : new Error('Network error')
     err.userMessage = getUserFriendlyError(err)
@@ -218,38 +235,38 @@ const normalizeKind = (kind) => (kind === 'excel' ? 'excel' : 'pdf')
 
 const TEMPLATE_ROUTES = {
   pdf: {
-    verify: () => `${API_BASE}/templates/verify`,
-    mappingPreview: (id) => `${API_BASE}/templates/${encodeURIComponent(id)}/mapping/preview`,
-    corrections: (id) => `${API_BASE}/templates/${encodeURIComponent(id)}/mapping/corrections-preview`,
-    approve: (id) => `${API_BASE}/templates/${encodeURIComponent(id)}/mapping/approve`,
-    generator: (id) => `${API_BASE}/templates/${encodeURIComponent(id)}/generator-assets/v1`,
-    chartSuggest: (id) => `${API_BASE}/templates/${encodeURIComponent(id)}/charts/suggest`,
-    savedCharts: (id) => `${API_BASE}/templates/${encodeURIComponent(id)}/charts/saved`,
-    manifest: (id) => `${API_BASE}/templates/${encodeURIComponent(id)}/artifacts/manifest`,
+    verify: () => `/templates/verify`,
+    mappingPreview: (id) => `/templates/${encodeURIComponent(id)}/mapping/preview`,
+    corrections: (id) => `/templates/${encodeURIComponent(id)}/mapping/corrections-preview`,
+    approve: (id) => `/templates/${encodeURIComponent(id)}/mapping/approve`,
+    generator: (id) => `/templates/${encodeURIComponent(id)}/generator-assets/v1`,
+    chartSuggest: (id) => `/templates/${encodeURIComponent(id)}/charts/suggest`,
+    savedCharts: (id) => `/templates/${encodeURIComponent(id)}/charts/saved`,
+    manifest: (id) => `/templates/${encodeURIComponent(id)}/artifacts/manifest`,
     head: (id, name) =>
-      `${API_BASE}/templates/${encodeURIComponent(id)}/artifacts/head?name=${encodeURIComponent(name)}`,
-    keys: (id) => `${API_BASE}/templates/${encodeURIComponent(id)}/keys/options`,
-    discover: () => `${API_BASE}/reports/discover`,
-    run: () => `${API_BASE}/reports/run`,
-    runJob: () => `${API_BASE}/reports/jobs/run-report`,
+      `/templates/${encodeURIComponent(id)}/artifacts/head?name=${encodeURIComponent(name)}`,
+    keys: (id) => `/templates/${encodeURIComponent(id)}/keys/options`,
+    discover: () => `/reports/discover`,
+    run: () => `/reports/run`,
+    runJob: () => `/reports/jobs/run-report`,
     uploadsBase: '/uploads',
     manifestBase: '/templates',
   },
   excel: {
-    verify: () => `${API_BASE}/excel/verify`,
-    mappingPreview: (id) => `${API_BASE}/excel/${encodeURIComponent(id)}/mapping/preview`,
-    corrections: (id) => `${API_BASE}/excel/${encodeURIComponent(id)}/mapping/corrections-preview`,
-    approve: (id) => `${API_BASE}/excel/${encodeURIComponent(id)}/mapping/approve`,
-    generator: (id) => `${API_BASE}/excel/${encodeURIComponent(id)}/generator-assets/v1`,
-    chartSuggest: (id) => `${API_BASE}/excel/${encodeURIComponent(id)}/charts/suggest`,
-    savedCharts: (id) => `${API_BASE}/excel/${encodeURIComponent(id)}/charts/saved`,
-    manifest: (id) => `${API_BASE}/excel/${encodeURIComponent(id)}/artifacts/manifest`,
+    verify: () => `/excel/verify`,
+    mappingPreview: (id) => `/excel/${encodeURIComponent(id)}/mapping/preview`,
+    corrections: (id) => `/excel/${encodeURIComponent(id)}/mapping/corrections-preview`,
+    approve: (id) => `/excel/${encodeURIComponent(id)}/mapping/approve`,
+    generator: (id) => `/excel/${encodeURIComponent(id)}/generator-assets/v1`,
+    chartSuggest: (id) => `/excel/${encodeURIComponent(id)}/charts/suggest`,
+    savedCharts: (id) => `/excel/${encodeURIComponent(id)}/charts/saved`,
+    manifest: (id) => `/excel/${encodeURIComponent(id)}/artifacts/manifest`,
     head: (id, name) =>
-      `${API_BASE}/excel/${encodeURIComponent(id)}/artifacts/head?name=${encodeURIComponent(name)}`,
-    keys: (id) => `${API_BASE}/excel/${encodeURIComponent(id)}/keys/options`,
-    discover: () => `${API_BASE}/excel/reports/discover`,
-    run: () => `${API_BASE}/excel/reports/run`,
-    runJob: () => `${API_BASE}/excel/jobs/run-report`,
+      `/excel/${encodeURIComponent(id)}/artifacts/head?name=${encodeURIComponent(name)}`,
+    keys: (id) => `/excel/${encodeURIComponent(id)}/keys/options`,
+    discover: () => `/excel/reports/discover`,
+    run: () => `/excel/reports/run`,
+    runJob: () => `/excel/jobs/run-report`,
     uploadsBase: '/excel-uploads',
     manifestBase: '/excel',
   },
@@ -291,7 +308,7 @@ const prepareKeyValues = (values) => {
 // Build absolute URLs for artifacts the API returns (e.g. /uploads/...)
 
 export const withBase = (pathOrUrl) =>
-  /^https?:\/\//.test(pathOrUrl) ? pathOrUrl : `${API_BASE}${pathOrUrl}`
+  isAbsoluteUrl(pathOrUrl) ? pathOrUrl : toApiUrl(pathOrUrl)
 
 
 /**
@@ -3284,4 +3301,3 @@ export async function bulkDeleteJobs(jobIds) {
 }
 
 export default api
-

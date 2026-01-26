@@ -21,6 +21,7 @@ import {
   Fade,
   Collapse,
   useTheme,
+  useMediaQuery,
   alpha,
   styled,
   keyframes,
@@ -97,6 +98,9 @@ const TableWrapper = styled(Box)(({ theme }) => ({
   borderRadius: 8,  // Figma spec: 8px
   border: `1px solid ${alpha(theme.palette.divider, 0.08)}`,
   overflow: 'hidden',
+  // In flex layouts, allow the table wrapper to shrink so wide tables don't force horizontal page scroll.
+  minWidth: 0,
+  maxWidth: '100%',
   boxShadow: `0 4px 24px ${alpha(theme.palette.common.black, 0.06)}`,
   transition: 'all 0.3s ease',
   '&:hover': {
@@ -105,6 +109,7 @@ const TableWrapper = styled(Box)(({ theme }) => ({
 }))
 
 const StyledTableContainer = styled(TableContainer)(({ theme }) => ({
+  overflowX: 'auto',
   '&::-webkit-scrollbar': {
     width: 8,
     height: 8,
@@ -348,6 +353,8 @@ export default function DataTable({
   rowHeight = 'medium', // 'compact', 'medium', 'comfortable'
 }) {
   const theme = useTheme()
+  // Enable a responsive table layout for phones + tablets (and smaller laptops) to avoid page-level horizontal scrolling.
+  const isNarrow = useMediaQuery(theme.breakpoints.down('lg'))
   const persisted = loadPersistedState(persistKey)
 
   const [order, setOrder] = useState(persisted?.order || defaultSortOrder)
@@ -682,7 +689,14 @@ export default function DataTable({
       />
 
       <StyledTableContainer sx={{ maxHeight: stickyHeader ? 600 : 'none' }}>
-        <Table stickyHeader={stickyHeader} size={rowHeight === 'compact' ? 'small' : 'medium'}>
+        <Table
+          stickyHeader={stickyHeader}
+          size={rowHeight === 'compact' ? 'small' : 'medium'}
+          sx={{
+            width: '100%',
+            tableLayout: isNarrow ? 'fixed' : 'auto',
+          }}
+        >
           <StyledTableHead>
             <TableRow>
               {expandable && <TableCell sx={{ width: 48 }} />}
@@ -701,8 +715,9 @@ export default function DataTable({
                   key={column.field}
                   align={column.align || 'left'}
                   sx={{
-                    width: column.width,
-                    minWidth: column.minWidth,
+                    ...(isNarrow
+                      ? { width: 'auto', minWidth: 0, whiteSpace: 'normal' }
+                      : { width: column.width, minWidth: column.minWidth }),
                   }}
                   sortDirection={orderBy === column.field ? order : false}
                 >
@@ -739,7 +754,13 @@ export default function DataTable({
                     </TableCell>
                   )}
                   {visibleColumns.map((column) => (
-                    <TableCell key={column.field} sx={{ p: cellPadding }}>
+                    <TableCell
+                      key={column.field}
+                      sx={{
+                        p: cellPadding,
+                        ...(isNarrow ? { whiteSpace: 'normal', overflowWrap: 'anywhere' } : null),
+                      }}
+                    >
                       <ShimmerSkeleton
                         variant="text"
                         width={column.width || '80%'}
@@ -805,7 +826,14 @@ export default function DataTable({
                         </TableCell>
                       )}
                       {visibleColumns.map((column) => (
-                        <TableCell key={column.field} align={column.align || 'left'} sx={{ p: cellPadding }}>
+                        <TableCell
+                          key={column.field}
+                          align={column.align || 'left'}
+                          sx={{
+                            p: cellPadding,
+                            ...(isNarrow ? { whiteSpace: 'normal', overflowWrap: 'anywhere' } : null),
+                          }}
+                        >
                           {column.renderCell
                             ? column.renderCell(row[column.field], row)
                             : row[column.field]}

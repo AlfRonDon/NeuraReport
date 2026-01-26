@@ -33,6 +33,10 @@ from ...services.spreadsheets import (
     FormulaEngine,
     PivotService,
 )
+from ...services.ai.spreadsheet_ai_service import (
+    spreadsheet_ai_service,
+    SpreadsheetAIService,
+)
 
 logger = logging.getLogger("neura.api.spreadsheets")
 
@@ -469,34 +473,58 @@ async def generate_formula(
     if not spreadsheet:
         raise HTTPException(status_code=404, detail="Spreadsheet not found")
 
-    # TODO: Implement with OpenAI
-    # For now, return a placeholder
-    return AIFormulaResponse(
-        formula=f"=SUM(A:A)",
-        explanation=f"This formula calculates: {request.description}",
-        example_result="100",
-        confidence=0.9,
-        alternatives=["=AVERAGE(A:A)", "=COUNT(A:A)"],
-    )
+    try:
+        # Get context from spreadsheet data
+        context = None
+        if spreadsheet.sheets:
+            sheet = spreadsheet.sheets[0]
+            if sheet.data and len(sheet.data) > 0:
+                # Extract column headers for context
+                headers = sheet.data[0] if sheet.data[0] else []
+                context = f"Columns: {', '.join(str(h) for h in headers if h)}"
+
+        result = await spreadsheet_ai_service.natural_language_to_formula(
+            description=request.description,
+            context=context,
+            spreadsheet_type=request.spreadsheet_type if hasattr(request, 'spreadsheet_type') else "excel",
+        )
+
+        return AIFormulaResponse(
+            formula=result.formula,
+            explanation=result.explanation,
+            example_result=result.examples[0] if result.examples else "",
+            confidence=0.9,
+            alternatives=result.alternative_formulas,
+        )
+    except Exception as e:
+        logger.error(f"Formula generation failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Formula generation failed: {str(e)}")
 
 
 @router.post("/{spreadsheet_id}/ai/explain")
-async def explain_formula(
+async def explain_formula_endpoint(
     spreadsheet_id: str,
     formula: str = Query(..., min_length=2),
+    svc: SpreadsheetService = Depends(get_spreadsheet_service),
 ):
     """Explain what a formula does in plain language."""
-    # TODO: Implement with OpenAI
-    return {
-        "formula": formula,
-        "explanation": f"This formula performs calculations.",
-        "step_by_step": [
-            "Step 1: Parse the formula",
-            "Step 2: Evaluate references",
-            "Step 3: Calculate result",
-        ],
-        "functions_used": [],
-    }
+    spreadsheet = svc.get(spreadsheet_id)
+    if not spreadsheet:
+        raise HTTPException(status_code=404, detail="Spreadsheet not found")
+
+    try:
+        result = await spreadsheet_ai_service.explain_formula(formula)
+
+        return {
+            "formula": result.formula,
+            "explanation": result.summary,
+            "step_by_step": result.step_by_step,
+            "components": result.components,
+            "potential_issues": result.potential_issues,
+        }
+    except Exception as e:
+        logger.error(f"Formula explanation failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Formula explanation failed: {str(e)}")
 
 
 @router.post("/{spreadsheet_id}/ai/clean")
@@ -511,18 +539,47 @@ async def suggest_data_cleaning(
     if not spreadsheet:
         raise HTTPException(status_code=404, detail="Spreadsheet not found")
 
-    # TODO: Implement with OpenAI
-    return {
-        "issues": [],
-        "suggestions": [],
-    }
+    if sheet_index >= len(spreadsheet.sheets):
+        raise HTTPException(status_code=400, detail="Sheet index out of range")
+
+    try:
+        sheet = spreadsheet.sheets[sheet_index]
+
+        # Convert sheet data to list of dicts
+        if not sheet.data or len(sheet.data) < 2:
+            return {
+                "suggestions": [],
+                "quality_score": 100.0,
+                "summary": "Not enough data for analysis",
+            }
+
+        headers = sheet.data[0]
+        data_sample = []
+        for row in sheet.data[1:21]:  # Sample first 20 rows
+            row_dict = {}
+            for i, val in enumerate(row):
+                if i < len(headers) and headers[i]:
+                    row_dict[str(headers[i])] = val
+            data_sample.append(row_dict)
+
+        result = await spreadsheet_ai_service.analyze_data_quality(data_sample)
+
+        return {
+            "suggestions": [s.model_dump() for s in result.suggestions],
+            "quality_score": result.quality_score,
+            "summary": result.summary,
+        }
+    except Exception as e:
+        logger.error(f"Data cleaning analysis failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Data cleaning analysis failed: {str(e)}")
 
 
 @router.post("/{spreadsheet_id}/ai/anomalies")
-async def detect_anomalies(
+async def detect_anomalies_endpoint(
     spreadsheet_id: str,
     sheet_index: int = Query(0, ge=0),
     column: str = Query(...),
+    sensitivity: str = Query("medium", pattern="^(low|medium|high)$"),
     svc: SpreadsheetService = Depends(get_spreadsheet_service),
 ):
     """Detect anomalies in a column."""
@@ -530,12 +587,156 @@ async def detect_anomalies(
     if not spreadsheet:
         raise HTTPException(status_code=404, detail="Spreadsheet not found")
 
-    # TODO: Implement anomaly detection
-    return {
-        "anomalies": [],
-        "statistics": {},
-        "narrative": "No anomalies detected.",
-    }
+    if sheet_index >= len(spreadsheet.sheets):
+        raise HTTPException(status_code=400, detail="Sheet index out of range")
+
+    try:
+        sheet = spreadsheet.sheets[sheet_index]
+
+        # Convert sheet data to list of dicts
+        if not sheet.data or len(sheet.data) < 2:
+            return {
+                "anomalies": [],
+                "total_rows_analyzed": 0,
+                "anomaly_count": 0,
+                "summary": "Not enough data for analysis",
+            }
+
+        headers = sheet.data[0]
+        data_sample = []
+        for row in sheet.data[1:]:
+            row_dict = {}
+            for i, val in enumerate(row):
+                if i < len(headers) and headers[i]:
+                    row_dict[str(headers[i])] = val
+            data_sample.append(row_dict)
+
+        result = await spreadsheet_ai_service.detect_anomalies(
+            data=data_sample,
+            columns_to_analyze=[column] if column else None,
+            sensitivity=sensitivity,
+        )
+
+        return {
+            "anomalies": [a.model_dump() for a in result.anomalies],
+            "total_rows_analyzed": result.total_rows_analyzed,
+            "anomaly_count": result.anomaly_count,
+            "summary": result.summary,
+        }
+    except Exception as e:
+        logger.error(f"Anomaly detection failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Anomaly detection failed: {str(e)}")
+
+
+@router.post("/{spreadsheet_id}/ai/predict")
+async def generate_predictions(
+    spreadsheet_id: str,
+    target_description: str = Query(..., min_length=1),
+    based_on_columns: str = Query(..., min_length=1),
+    sheet_index: int = Query(0, ge=0),
+    svc: SpreadsheetService = Depends(get_spreadsheet_service),
+):
+    """Generate predictive column based on existing data patterns."""
+    spreadsheet = svc.get(spreadsheet_id)
+    if not spreadsheet:
+        raise HTTPException(status_code=404, detail="Spreadsheet not found")
+
+    if sheet_index >= len(spreadsheet.sheets):
+        raise HTTPException(status_code=400, detail="Sheet index out of range")
+
+    try:
+        sheet = spreadsheet.sheets[sheet_index]
+
+        # Convert sheet data to list of dicts
+        if not sheet.data or len(sheet.data) < 2:
+            return {
+                "column_name": "",
+                "predictions": [],
+                "confidence_scores": [],
+                "methodology": "Insufficient data",
+                "accuracy_estimate": 0,
+            }
+
+        headers = sheet.data[0]
+        data_sample = []
+        for row in sheet.data[1:]:
+            row_dict = {}
+            for i, val in enumerate(row):
+                if i < len(headers) and headers[i]:
+                    row_dict[str(headers[i])] = val
+            data_sample.append(row_dict)
+
+        # Parse columns
+        columns = [c.strip() for c in based_on_columns.split(",")]
+
+        result = await spreadsheet_ai_service.generate_predictive_column(
+            data=data_sample,
+            target_description=target_description,
+            based_on_columns=columns,
+        )
+
+        return {
+            "column_name": result.column_name,
+            "predictions": result.predictions,
+            "confidence_scores": result.confidence_scores,
+            "methodology": result.methodology,
+            "accuracy_estimate": result.accuracy_estimate,
+        }
+    except Exception as e:
+        logger.error(f"Prediction generation failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Prediction generation failed: {str(e)}")
+
+
+@router.post("/{spreadsheet_id}/ai/suggest")
+async def suggest_formulas_endpoint(
+    spreadsheet_id: str,
+    sheet_index: int = Query(0, ge=0),
+    analysis_goals: Optional[str] = Query(None),
+    svc: SpreadsheetService = Depends(get_spreadsheet_service),
+):
+    """Get AI-suggested formulas based on data structure."""
+    spreadsheet = svc.get(spreadsheet_id)
+    if not spreadsheet:
+        raise HTTPException(status_code=404, detail="Spreadsheet not found")
+
+    if sheet_index >= len(spreadsheet.sheets):
+        raise HTTPException(status_code=400, detail="Sheet index out of range")
+
+    try:
+        sheet = spreadsheet.sheets[sheet_index]
+
+        # Convert sheet data to list of dicts
+        if not sheet.data or len(sheet.data) < 2:
+            return {"suggestions": []}
+
+        headers = sheet.data[0]
+        data_sample = []
+        for row in sheet.data[1:11]:  # Sample first 10 rows
+            row_dict = {}
+            for i, val in enumerate(row):
+                if i < len(headers) and headers[i]:
+                    row_dict[str(headers[i])] = val
+            data_sample.append(row_dict)
+
+        results = await spreadsheet_ai_service.suggest_formulas(
+            data_sample=data_sample,
+            analysis_goals=analysis_goals,
+        )
+
+        return {
+            "suggestions": [
+                {
+                    "formula": r.formula,
+                    "explanation": r.explanation,
+                    "examples": r.examples,
+                    "alternatives": r.alternative_formulas,
+                }
+                for r in results
+            ]
+        }
+    except Exception as e:
+        logger.error(f"Formula suggestion failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Formula suggestion failed: {str(e)}")
 
 
 # ============================================

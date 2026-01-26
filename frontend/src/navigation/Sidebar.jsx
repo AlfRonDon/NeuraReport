@@ -232,6 +232,7 @@ const LogoBox = styled(Box)(({ theme }) => ({
 }))
 
 const NewReportButton = styled(Box)(({ theme }) => ({
+  border: 'none',
   display: 'flex',
   alignItems: 'center',
   gap: theme.spacing(1),
@@ -243,11 +244,19 @@ const NewReportButton = styled(Box)(({ theme }) => ({
   color: theme.palette.mode === 'dark' ? figmaGrey[900] : figmaGrey[1100],
   cursor: 'pointer',
   transition: 'background-color 0.15s ease',
+  width: '100%',
+  textAlign: 'left',
+  font: 'inherit',
 
   '&:hover': {
     backgroundColor: theme.palette.mode === 'dark'
       ? alpha(theme.palette.common.white, 0.04)
       : figmaGrey[300],  // Grey/300
+  },
+
+  '&:focus-visible': {
+    outline: `2px solid ${alpha(theme.palette.text.primary, 0.35)}`,
+    outlineOffset: 2,
   },
 }))
 
@@ -275,6 +284,8 @@ const SectionHeader = styled(Box, {
 const NavItemButton = styled(Box, {
   shouldForwardProp: (prop) => !['active', 'collapsed', 'highlight'].includes(prop),
 })(({ theme, active, collapsed, highlight }) => ({
+  border: 'none',
+  backgroundColor: 'transparent',
   display: 'flex',
   alignItems: 'center',
   gap: 8,  // 8px gap from Figma
@@ -287,6 +298,9 @@ const NavItemButton = styled(Box, {
   justifyContent: collapsed ? 'center' : 'flex-start',
   height: FIGMA_SIDEBAR.itemHeight,  // 40px from Figma
   fontFamily: fontFamilyUI,  // Inter from Figma
+  width: '100%',
+  textAlign: 'left',
+  font: 'inherit',
 
   // Active state from Figma - Grey/400 background
   ...(active && {
@@ -324,6 +338,11 @@ const NavItemButton = styled(Box, {
         : figmaGrey[300],
     },
   }),
+
+  '&:focus-visible': {
+    outline: `2px solid ${alpha(theme.palette.text.primary, 0.35)}`,
+    outlineOffset: 2,
+  },
 }))
 
 // FIGMA NAV ICON (EXACT from Figma: 20x20px)
@@ -496,6 +515,8 @@ export default function Sidebar({ width, collapsed, mobileOpen, onClose, onToggl
       <Box sx={{ p: 1.5, pt: 2 }}>
         <Tooltip title={collapsed ? 'New Report' : ''} placement="right" arrow>
           <NewReportButton
+            component="button"
+            type="button"
             onClick={() => handleNavigate('/setup/wizard')}
             sx={{ justifyContent: collapsed ? 'center' : 'flex-start' }}
           >
@@ -581,6 +602,9 @@ export default function Sidebar({ width, collapsed, mobileOpen, onClose, onToggl
                           active={active}
                           collapsed={collapsed}
                           highlight={item.highlight}
+                          component="button"
+                          type="button"
+                          aria-current={active ? 'page' : undefined}
                           onClick={() => handleNavigate(item.path)}
                           sx={{
                             animation: `${slideIn} 0.2s ease-out ${itemIndex * 30}ms both`,

@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import { fileURLToPath } from 'url'
 import { dirname, resolve } from 'path'
@@ -6,7 +6,17 @@ import { dirname, resolve } from 'path'
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
 // https://vite.dev/config/
-export default defineConfig({
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), '')
+  // Prefer explicit env override for local dev/e2e; fall back to the historical default.
+  // NOTE: backend commonly runs on 8001 in this repo's manual validation flow.
+  const backendTarget =
+    env.NEURA_BACKEND_URL ||
+    env.VITE_API_PROXY_TARGET ||
+    env.VITE_BACKEND_URL ||
+    'http://127.0.0.1:8000'
+
+  return {
   plugins: [react()],
   resolve: {
     alias: {
@@ -18,48 +28,17 @@ export default defineConfig({
   },
   server: {
     proxy: {
-      // Proxy all API requests to the backend server
-      // This eliminates CORS issues in development
-      // All routes from backend/app/api/router.py
-      '/auth': { target: 'http://127.0.0.1:8000', changeOrigin: true },
-      '/users': { target: 'http://127.0.0.1:8000', changeOrigin: true },
-      '/health': { target: 'http://127.0.0.1:8000', changeOrigin: true },
-      '/healthz': { target: 'http://127.0.0.1:8000', changeOrigin: true },
-      '/ready': { target: 'http://127.0.0.1:8000', changeOrigin: true },
-      '/readyz': { target: 'http://127.0.0.1:8000', changeOrigin: true },
-      '/connections': { target: 'http://127.0.0.1:8000', changeOrigin: true },
-      '/templates': { target: 'http://127.0.0.1:8000', changeOrigin: true },
-      '/excel': { target: 'http://127.0.0.1:8000', changeOrigin: true },
-      '/reports': { target: 'http://127.0.0.1:8000', changeOrigin: true },
-      '/jobs': { target: 'http://127.0.0.1:8000', changeOrigin: true },
-      '/state': { target: 'http://127.0.0.1:8000', changeOrigin: true },
-      '/analyze': { target: 'http://127.0.0.1:8000', changeOrigin: true },
-      '/analytics': { target: 'http://127.0.0.1:8000', changeOrigin: true },
-      '/ai': { target: 'http://127.0.0.1:8000', changeOrigin: true },
-      '/nl2sql': { target: 'http://127.0.0.1:8000', changeOrigin: true },
-      '/enrichment': { target: 'http://127.0.0.1:8000', changeOrigin: true },
-      '/federation': { target: 'http://127.0.0.1:8000', changeOrigin: true },
-      '/recommendations': { target: 'http://127.0.0.1:8000', changeOrigin: true },
-      '/charts': { target: 'http://127.0.0.1:8000', changeOrigin: true },
-      '/summary': { target: 'http://127.0.0.1:8000', changeOrigin: true },
-      '/synthesis': { target: 'http://127.0.0.1:8000', changeOrigin: true },
-      '/docqa': { target: 'http://127.0.0.1:8000', changeOrigin: true },
-      '/docai': { target: 'http://127.0.0.1:8000', changeOrigin: true },
-      '/documents': { target: 'http://127.0.0.1:8000', changeOrigin: true },
-      '/spreadsheets': { target: 'http://127.0.0.1:8000', changeOrigin: true },
-      '/dashboards': { target: 'http://127.0.0.1:8000', changeOrigin: true },
-      '/connectors': { target: 'http://127.0.0.1:8000', changeOrigin: true },
-      '/workflows': { target: 'http://127.0.0.1:8000', changeOrigin: true },
-      '/export': { target: 'http://127.0.0.1:8000', changeOrigin: true },
-      '/design': { target: 'http://127.0.0.1:8000', changeOrigin: true },
-      '/knowledge': { target: 'http://127.0.0.1:8000', changeOrigin: true },
-      '/ingestion': { target: 'http://127.0.0.1:8000', changeOrigin: true },
-      '/search': { target: 'http://127.0.0.1:8000', changeOrigin: true },
-      '/visualization': { target: 'http://127.0.0.1:8000', changeOrigin: true },
-      '/agents': { target: 'http://127.0.0.1:8000', changeOrigin: true },
-      '/audit': { target: 'http://127.0.0.1:8000', changeOrigin: true },
-      '/uploads': { target: 'http://127.0.0.1:8000', changeOrigin: true },
-      '/excel-uploads': { target: 'http://127.0.0.1:8000', changeOrigin: true },
+      // Proxy backend API behind a dedicated prefix to avoid colliding with SPA routes.
+      '/api': {
+        target: backendTarget,
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, ''),
+      },
+      // Static artifacts served by the backend.
+      '/uploads': { target: backendTarget, changeOrigin: true },
+      '/excel-uploads': { target: backendTarget, changeOrigin: true },
+      // WebSockets (collaboration).
+      '/ws': { target: backendTarget, changeOrigin: true, ws: true },
     },
   },
   optimizeDeps: {
@@ -97,4 +76,5 @@ export default defineConfig({
       },
     },
   },
+  }
 })

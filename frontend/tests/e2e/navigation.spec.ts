@@ -34,15 +34,15 @@ test.describe('Keyboard navigation', () => {
     const consoleMessages = captureConsole(page)
     await page.goto('/')
 
-    // Skip to main content first
+    // From the top of the page, keyboard users should be able to reach the primary sidebar navigation.
+    // (Do not activate the skip link; that intentionally bypasses navigation.)
     await page.keyboard.press('Tab')
-    await page.keyboard.press('Enter')
 
-    const navTab = page.getByRole('tab', { name: 'Connect' })
+    const navItem = page.getByRole('button', { name: 'Data Sources' })
     let focused = false
-    for (let i = 0; i < 6; i += 1) {
+    for (let i = 0; i < 40; i += 1) {
       await page.keyboard.press('Tab')
-      const isFocused = await navTab.evaluate((el) => el === document.activeElement)
+      const isFocused = await navItem.evaluate((el) => el === document.activeElement)
       if (isFocused) {
         focused = true
         break
@@ -50,11 +50,11 @@ test.describe('Keyboard navigation', () => {
     }
     expect(focused).toBe(true)
 
-    const generateTab = page.getByRole('tab', { name: 'Generate Templates' })
+    const reportsItem = page.getByRole('button', { name: 'My Reports' })
     let reached = false
-    for (let i = 0; i < 6; i += 1) {
+    for (let i = 0; i < 40; i += 1) {
       await page.keyboard.press('Tab')
-      const isFocused = await generateTab.evaluate((el) => el === document.activeElement)
+      const isFocused = await reportsItem.evaluate((el) => el === document.activeElement)
       if (isFocused) {
         reached = true
         break

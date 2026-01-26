@@ -153,7 +153,9 @@ export default function ConnectionForm({ connection, onSave, onCancel, loading }
 
   const buildConnectionUrl = useCallback(() => {
     if (formData.db_type === 'sqlite') {
-      return `sqlite:///${formData.database}`
+      // For SQLite we rely on the explicit `database` path field (sent as `database`)
+      // because `sqlite:///relative/path.db` parses as an absolute path on Windows.
+      return null
     }
     const auth = formData.username
       ? `${formData.username}${formData.password ? `:${formData.password}` : ''}@`

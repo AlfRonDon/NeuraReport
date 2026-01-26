@@ -5,6 +5,7 @@ to formula conversion, data cleaning, anomaly detection, and predictions.
 """
 from __future__ import annotations
 
+import json
 import logging
 from typing import Any, Dict, List, Optional
 from enum import Enum
@@ -165,7 +166,6 @@ Respond in JSON format:
 
         try:
             response = self._call_openai(system_prompt, user_prompt)
-            import json
             result = json.loads(response)
 
             return FormulaResult(
@@ -206,7 +206,6 @@ Respond in JSON format:
             )
 
         # Prepare data summary for analysis
-        import json
         data_preview = json.dumps(data_sample[:20], indent=2, default=str)
         column_context = ""
         if column_info:
@@ -240,7 +239,6 @@ Respond in JSON format:
 
         try:
             response = self._call_openai(system_prompt, user_prompt)
-            import json
             result = json.loads(response)
 
             return DataCleaningResult(
@@ -280,7 +278,6 @@ Respond in JSON format:
                 summary="No data provided",
             )
 
-        import json
         data_preview = json.dumps(data[:50], indent=2, default=str)
         columns_context = ""
         if columns_to_analyze:
@@ -322,7 +319,6 @@ Respond in JSON format:
 
         try:
             response = self._call_openai(system_prompt, user_prompt)
-            import json
             result = json.loads(response)
 
             anomalies = [Anomaly(**a) for a in result.get("anomalies", [])]
@@ -367,7 +363,6 @@ Respond in JSON format:
                 accuracy_estimate=0,
             )
 
-        import json
         data_preview = json.dumps(data[:30], indent=2, default=str)
 
         system_prompt = """You are a predictive analytics expert.
@@ -390,7 +385,6 @@ Data sample:
 
         try:
             response = self._call_openai(system_prompt, user_prompt, max_tokens=4000)
-            import json
             result = json.loads(response)
 
             return PredictionColumn(
@@ -444,7 +438,6 @@ Respond in JSON format:
 
         try:
             response = self._call_openai(system_prompt, user_prompt)
-            import json
             result = json.loads(response)
 
             return FormulaExplanation(
@@ -481,7 +474,6 @@ Respond in JSON format:
         if not data_sample:
             return []
 
-        import json
         data_preview = json.dumps(data_sample[:10], indent=2, default=str)
         goals_context = f"\n\nAnalysis goals: {analysis_goals}" if analysis_goals else ""
 
@@ -504,7 +496,6 @@ Respond in JSON format:
 
         try:
             response = self._call_openai(system_prompt, user_prompt)
-            import json
             result = json.loads(response)
 
             return [

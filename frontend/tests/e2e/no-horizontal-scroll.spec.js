@@ -12,37 +12,32 @@ const viewports = [
 
 const scenarios = [
   {
-    name: 'Setup - Connect',
+    name: 'Dashboard',
     path: '/',
     prepare: async (page) => {
-      await expect(page.getByRole('heading', { name: 'Connect Database' })).toBeVisible()
+      // On smaller viewports this is rendered as a paragraph, not a heading.
+      await expect(page.getByText('Welcome back')).toBeVisible()
     },
   },
   {
-    name: 'Setup - Generate Templates',
-    path: '/',
+    name: 'Data Sources',
+    path: '/connections',
     prepare: async (page) => {
-      await page.waitForFunction(() => typeof window.__NEURA_APP_STORE__ !== 'undefined')
-      await page.evaluate(() => window.__NEURA_APP_STORE__?.setState({ setupNav: 'generate' }))
-      await page.waitForFunction(() => window.__NEURA_APP_STORE__?.getState()?.setupNav === 'generate')
-      await page.waitForTimeout(150)
+      await expect(page.getByRole('button', { name: 'Add Data Source' })).toBeVisible()
     },
   },
   {
-    name: 'Setup - Generate Report',
-    path: '/',
+    name: 'Templates',
+    path: '/templates',
     prepare: async (page) => {
-      await page.waitForFunction(() => typeof window.__NEURA_APP_STORE__ !== 'undefined')
-      await page.evaluate(() => window.__NEURA_APP_STORE__?.setState({ setupNav: 'templates' }))
-      await page.waitForFunction(() => window.__NEURA_APP_STORE__?.getState()?.setupNav === 'templates')
-      await expect(page.getByRole('heading', { name: 'Generate Report' })).toBeVisible()
+      await expect(page.getByRole('button', { name: 'Upload Design' })).toBeVisible()
     },
   },
   {
-    name: 'Generate Route',
-    path: '/generate',
+    name: 'Reports',
+    path: '/reports',
     prepare: async (page) => {
-      await expect(page.getByRole('heading', { name: 'Template Picker' })).toBeVisible()
+      await expect(page.getByText(/Run a Report/i).first()).toBeVisible()
     },
   },
 ]
@@ -58,14 +53,39 @@ test.describe('@ui Layout has no horizontal scroll', () => {
           await scenario.prepare(page)
           await page.waitForTimeout(100)
 
-          const { scrollWidth, clientWidth } = await page.evaluate(() => {
+          const { scrollWidth, clientWidth, offenders } = await page.evaluate(() => {
             const { documentElement } = document
+            // Find elements that extend beyond the viewport; keep this list small for debugging.
+            const offenders = []
+            const maxOffenders = 10
+            const viewportWidth = documentElement.clientWidth
+            const elements = Array.from(document.body.querySelectorAll('*'))
+            for (const el of elements) {
+              if (offenders.length >= maxOffenders) break
+              const style = window.getComputedStyle(el)
+              if (style.display === 'none') continue
+              const r = el.getBoundingClientRect()
+              if (r.width <= viewportWidth + 1) continue
+              if (r.right <= viewportWidth + 1) continue
+              // Skip SVG paths etc.
+              if (!el.tagName) continue
+              offenders.push({
+                tag: el.tagName.toLowerCase(),
+                id: el.id || null,
+                className: (el.className && typeof el.className === 'string') ? el.className.slice(0, 120) : null,
+                width: Math.round(r.width),
+                right: Math.round(r.right),
+              })
+            }
             return {
               scrollWidth: documentElement.scrollWidth,
               clientWidth: documentElement.clientWidth,
+              offenders,
             }
           })
 
+          // Helpful debug if a layout regresses.
+          expect.soft(offenders, `${scenario.name} overflow offenders`).toEqual([])
           expect.soft(scrollWidth, `${scenario.name} width`).toBeLessThanOrEqual(clientWidth + 1)
         })
       }

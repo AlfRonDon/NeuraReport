@@ -2,6 +2,9 @@ import { defineConfig, devices } from '@playwright/test'
 
 export default defineConfig({
   testDir: './tests',
+  // Playwright's glob matching is conservative; keep this explicit to avoid
+  // "No tests found" on some shells/platforms.
+  testMatch: ['**/*.spec.ts', '**/*.spec.js'],
   fullyParallel: true,
   timeout: 60_000,
   expect: {
@@ -31,5 +34,12 @@ export default defineConfig({
     reuseExistingServer: !process.env.CI,
     stdout: 'pipe',
     stderr: 'pipe',
+    env: {
+      // Ensure e2e runs against the real backend via Vite proxy (no cross-origin/CORS).
+      VITE_API_BASE_URL: 'proxy',
+      VITE_USE_MOCK: 'false',
+      // Backend runs on 8001 in our manual validation environment.
+      NEURA_BACKEND_URL: process.env.NEURA_BACKEND_URL || 'http://127.0.0.1:8001',
+    },
   },
 })

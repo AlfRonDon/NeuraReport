@@ -8,6 +8,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+import re
+
 from backend.app.utils.errors import AppError
 from backend.app.utils.sql_safety import get_write_operation, is_select_or_with
 from backend.app.repositories.connections.db_connection import resolve_db_path, verify_sqlite
@@ -27,6 +29,13 @@ from backend.app.schemas.nl2sql import (
 )
 
 logger = logging.getLogger("neura.domain.nl2sql")
+
+_TRAILING_SEMICOLONS_RE = re.compile(r";+\s*$")
+
+
+def _strip_trailing_semicolons(sql: str) -> str:
+    # Users commonly paste SQL ending with ';'. That breaks subquery wrapping/pagination.
+    return _TRAILING_SEMICOLONS_RE.sub("", (sql or "").strip())
 
 
 def _now_iso() -> str:
@@ -196,15 +205,17 @@ class NL2SQLService:
         # Ensure DataFrames are loaded for this connection
         ensure_connection_loaded(request.connection_id, db_path)
 
+        sql_clean = _strip_trailing_semicolons(request.sql)
+
         # Validate SQL (read-only safety check)
-        if not is_select_or_with(request.sql):
+        if not is_select_or_with(sql_clean):
             raise AppError(
                 code="invalid_query",
                 message="Only SELECT queries are allowed",
                 status_code=400,
             )
 
-        write_op = get_write_operation(request.sql)
+        write_op = get_write_operation(sql_clean)
         if write_op:
             raise AppError(
                 code="dangerous_query",
@@ -220,14 +231,14 @@ class NL2SQLService:
 
                 total_count = None
                 if request.include_total:
-                    count_sql = f"SELECT COUNT(*) as cnt FROM ({request.sql}) AS subq"
+                    count_sql = f"SELECT COUNT(*) as cnt FROM ({sql_clean}) AS subq"
                     try:
                         total_count = con.execute(count_sql).fetchone()["cnt"]
                     except Exception:
                         total_count = None
 
                 # Execute with limit and offset
-                limited_sql = f"{request.sql} LIMIT {request.limit} OFFSET {request.offset}"
+                limited_sql = f"SELECT * FROM ({sql_clean}) AS subq LIMIT {request.limit} OFFSET {request.offset}"
                 cur = con.execute(limited_sql)
                 rows_raw = cur.fetchall()
 

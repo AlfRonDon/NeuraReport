@@ -47,6 +47,8 @@ frontend/.vitest-localstorage.*
 *.bak
 *.orig
 *.local
+.tmp_*.json
+.tmp_*.txt
 AUDIT_FINDINGS.md
 MagicMock/
 features_copy.md

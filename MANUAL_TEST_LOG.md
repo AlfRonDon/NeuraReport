@@ -2,7 +2,7 @@
 
 Date: 2026-01-26
 Environment: Windows 11 (PowerShell), Python 3.14.0, backend http://127.0.0.1:8001
-Notes: Frontend dependencies not installed yet (npm EPERM). Python full requirements not installed; testing will install/enable deps as needed.
+Notes: Frontend dependencies installed; Playwright UI (@ui) suite passing. Python full requirements not installed; testing will install/enable deps as needed.
 
 ---
 
@@ -450,5 +450,32 @@ Results:
 
 **Automated Tests:**
 - Frontend (Vitest): 117 tests passing
-- Backend (Pytest): 368 tests passing
+- Backend (Pytest): 1900 tests passing
+  - Feature 1: Report Generation: 119 tests
+  - Feature 2: Database Connectivity: 190 tests
+  - Feature 3: Template Management: 203 tests
+  - Feature 4: Document Management: 301 tests
+  - Feature 5: Ingestion & Import: 301 tests
+  - Feature 6: AI Writing Services: 282 tests (models, service, API, concurrency, error injection)
+  - Other services: 504+ tests
 - E2E (Playwright): Tests executed
+  - UI suite (@ui): 31 tests passing (navigation, responsive no-horizontal-scroll, end-user flow: add SQLite connection -> discover batches -> run report)
+
+---
+
+## Frontend Validation (Manual + E2E)
+
+### Windows npm EPERM fix
+- Symptom: `npm ci` failed with EPERM unlink of `node_modules/@esbuild/.../esbuild.exe` (locked by a running process).
+- Fix: terminate locking `node` / `esbuild` process, then rerun `npm ci`.
+
+### Frontend-backend integration fixes (Vite proxy mode)
+- Fixed SPA route collisions by proxying backend behind `/api` and updating frontend API base to use `/api` in proxy mode.
+- Made backend proxy target configurable (`NEURA_BACKEND_URL`) and set Playwright webServer env to use backend `http://127.0.0.1:8001`.
+- Ensured static artifacts proxy (`/uploads`, `/excel-uploads`) and WS proxy (`/ws`) route correctly to backend.
+
+### UI flow verification (Playwright)
+- Added/updated Playwright UI flows to behave like end users (not just unit tests):
+  - Create SQLite connection (absolute db path), test connection, set as active.
+  - Load templates list, select "Orders Template", discover batches, and start report generation.
+  - Verified navigation and responsive layout constraints across common viewports.
