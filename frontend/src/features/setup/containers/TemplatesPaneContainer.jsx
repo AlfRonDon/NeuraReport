@@ -63,7 +63,7 @@ function TabPanel({ children, value, index, ...other }) {
 function CollapsibleSection({ title, icon, badge, defaultExpanded = false, children }) {
   const [expanded, setExpanded] = useState(defaultExpanded)
   return (
-    <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1,  // Figma spec: 8px overflow: 'hidden' }}>
+    <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, overflow: 'hidden' }}>
       <Box
         onClick={() => setExpanded(!expanded)}
         sx={{
@@ -1057,7 +1057,7 @@ export default function TemplatesPane() {
         <TabPanel value={activeTab} index={1}>
           <Box sx={{ px: 2, pb: 2 }}>
             <Stack spacing={2}>
-              <Alert severity="info" sx={{ borderRadius: 1 }}  // Figma spec: 8px>
+              <Alert severity="info" sx={{ borderRadius: 1 }}>
                 Runs start as background jobs. Track progress in Jobs, and download outputs from History.
               </Alert>
               {queuedJobs.length > 0 && (
@@ -1147,7 +1147,7 @@ export default function TemplatesPane() {
         <TabPanel value={activeTab} index={2}>
           <Box sx={{ px: 2, pb: 2 }}>
             <Stack spacing={2}>
-              <Alert severity="info" sx={{ borderRadius: 1 }}  // Figma spec: 8px>
+              <Alert severity="info" sx={{ borderRadius: 1 }}>
                 Schedules create future report runs. Deleting a schedule stops future runs and does not remove past downloads.
               </Alert>
               {/* Create Schedule */}

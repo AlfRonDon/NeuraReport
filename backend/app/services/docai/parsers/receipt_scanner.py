@@ -168,7 +168,7 @@ class ReceiptScanner:
             except Exception:
                 pass
 
-        return ""
+        return content.decode("utf-8", errors="ignore")
 
     async def _extract_from_pdf(self, path: Path) -> str:
         """Extract text from a PDF file."""
@@ -394,9 +394,9 @@ class ReceiptScanner:
         """Extract or calculate total from receipt."""
         # Try to find total directly
         total_patterns = [
-            r"(?:grand\s+)?total\s*:?\s*\$?([\d,]+\.[\d]{2})",
-            r"amount\s+due\s*:?\s*\$?([\d,]+\.[\d]{2})",
-            r"balance\s+due\s*:?\s*\$?([\d,]+\.[\d]{2})",
+            r"(?m)^\s*(?:grand\s+)?total\b\s*:?\s*\$?([\d,]+\.[\d]{2})",
+            r"(?m)^\s*amount\s+due\b\s*:?\s*\$?([\d,]+\.[\d]{2})",
+            r"(?m)^\s*balance\s+due\b\s*:?\s*\$?([\d,]+\.[\d]{2})",
         ]
 
         for pattern in total_patterns:
@@ -445,17 +445,18 @@ class ReceiptScanner:
 
     def _detect_currency(self, text: str) -> str:
         """Detect currency from receipt."""
-        if "€" in text or "EUR" in text.upper():
+        text_upper = text.upper()
+        if "$" in text or re.search(r"\bUSD\b", text_upper):
+            return "USD"
+        if re.search(r"\bEUR\b", text_upper):
             return "EUR"
-        elif "£" in text or "GBP" in text.upper():
+        if re.search(r"\bGBP\b", text_upper):
             return "GBP"
-        elif "¥" in text:
+        if re.search(r"\bJPY\b", text_upper):
             return "JPY"
-        elif "CAD" in text.upper() or "C$" in text:
+        if re.search(r"\bCAD\b", text_upper) or "C$" in text:
             return "CAD"
-
         return "USD"
-
     def _categorize_receipt(
         self, text: str, merchant_name: Optional[str]
     ) -> Optional[str]:

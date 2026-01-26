@@ -878,10 +878,35 @@ def _run_report_job_sync(
     if _is_job_cancelled(job_id):
         logger.info("report_job_skipped_cancelled", extra={"event": "report_job_skipped_cancelled", "job_id": job_id})
         return
+
+    # Import retry/webhook services
+    try:
+        from backend.app.services.jobs.error_classifier import is_retriable_error
+        from backend.app.services.jobs.webhook_service import send_job_webhook_sync
+    except ImportError:
+        is_retriable_error = lambda e: True  # Default to retriable
+        send_job_webhook_sync = None
+
     _register_job_thread(job_id)
     tracker = JobRunTracker(job_id, correlation_id=correlation_id, step_progress=step_progress)
     tracker.start()
     _publish_event_safe(Event(name="job.started", payload={"job_id": job_id, "kind": kind}, correlation_id=correlation_id))
+
+    # Start heartbeat thread to indicate worker is alive
+    heartbeat_stop = threading.Event()
+    worker_id = f"worker-{threading.get_ident()}"
+
+    def _heartbeat_worker():
+        while not heartbeat_stop.is_set():
+            try:
+                _state_store().update_job_heartbeat(job_id, worker_id=worker_id)
+            except Exception:
+                logger.debug("heartbeat_update_failed", extra={"job_id": job_id})
+            heartbeat_stop.wait(timeout=30)
+
+    heartbeat_thread = threading.Thread(target=_heartbeat_worker, daemon=True, name=f"heartbeat-{job_id[:8]}")
+    heartbeat_thread.start()
+
     @contextlib.contextmanager
     def _patch_subprocess_tracking():
         if not job_id:
@@ -899,6 +924,9 @@ def _run_report_job_sync(
                     _SUBPROCESS_JOB_CONTEXT.job_id = None
             _remove_subprocess_patch()
 
+    job_succeeded = False
+    job_error: str | None = None
+
     try:
         api_mod = importlib.import_module("backend.api")
         run_fn = getattr(api_mod, "_run_report_with_email", _run_report_with_email)
@@ -908,10 +936,13 @@ def _run_report_job_sync(
         run_payload = RunPayload(**payload_data)
     except Exception as exc:
         tracker.fail(f"Invalid payload: {exc}")
+        job_error = f"Invalid payload: {exc}"
         logger.exception(
             "report_job_payload_invalid",
             extra={"event": "report_job_payload_invalid", "job_id": job_id, "error": str(exc)},
         )
+        # Mark as non-retriable since payload is invalid
+        _state_store().record_job_completion(job_id, status="failed", error=job_error)
         return
     try:
         with _patch_subprocess_tracking():
@@ -920,15 +951,16 @@ def _run_report_job_sync(
         error_message = _job_error_message(exc.detail)
         error_code = str(exc.detail.get("code") or "").lower() if isinstance(exc.detail, Mapping) else ""
         is_cancelled = error_code == "job_cancelled"
-        tracker.fail(error_message, status="cancelled" if is_cancelled else "failed")
-        log_extra = {
-            "event": "report_job_cancelled" if is_cancelled else "report_job_http_error",
-            "job_id": job_id,
-            "template_id": run_payload.template_id,
-            "correlation_id": correlation_id,
-        }
+        job_error = error_message
+
         if is_cancelled:
-            logger.info("report_job_cancelled", extra=log_extra)
+            tracker.fail(error_message, status="cancelled")
+            logger.info("report_job_cancelled", extra={
+                "event": "report_job_cancelled",
+                "job_id": job_id,
+                "template_id": run_payload.template_id,
+                "correlation_id": correlation_id,
+            })
             _publish_event_safe(
                 Event(
                     name="job.cancelled",
@@ -937,16 +969,42 @@ def _run_report_job_sync(
                 )
             )
         else:
-            logger.exception("report_job_http_error", extra=log_extra)
-            _publish_event_safe(
-                Event(
-                    name="job.failed",
-                    payload={"job_id": job_id, "kind": kind, "error": error_message},
-                    correlation_id=correlation_id,
+            # Check if error is retriable
+            retriable = is_retriable_error(error_message)
+            if retriable:
+                # Mark for retry instead of permanent failure
+                _state_store().mark_job_for_retry(job_id, reason=error_message, is_retriable=True)
+                logger.warning("report_job_marked_for_retry", extra={
+                    "event": "report_job_marked_for_retry",
+                    "job_id": job_id,
+                    "error": error_message,
+                    "correlation_id": correlation_id,
+                })
+                _publish_event_safe(
+                    Event(
+                        name="job.retry_scheduled",
+                        payload={"job_id": job_id, "kind": kind, "error": error_message},
+                        correlation_id=correlation_id,
+                    )
                 )
-            )
+            else:
+                tracker.fail(error_message, status="failed")
+                logger.exception("report_job_http_error", extra={
+                    "event": "report_job_http_error",
+                    "job_id": job_id,
+                    "template_id": run_payload.template_id,
+                    "correlation_id": correlation_id,
+                })
+                _publish_event_safe(
+                    Event(
+                        name="job.failed",
+                        payload={"job_id": job_id, "kind": kind, "error": error_message},
+                        correlation_id=correlation_id,
+                    )
+                )
     except (asyncio.CancelledError, KeyboardInterrupt, SystemExit) as exc:
         tracker.fail("Job cancelled", status="cancelled")
+        job_error = "Job cancelled"
         logger.info(
             "report_job_force_cancelled",
             extra={
@@ -965,24 +1023,47 @@ def _run_report_job_sync(
             )
         )
     except Exception as exc:
-        tracker.fail(str(exc))
-        logger.exception(
-            "report_job_failed",
-            extra={
-                "event": "report_job_failed",
+        error_str = str(exc)
+        job_error = error_str
+
+        # Check if error is retriable
+        retriable = is_retriable_error(error_str)
+        if retriable:
+            # Mark for retry instead of permanent failure
+            _state_store().mark_job_for_retry(job_id, reason=error_str, is_retriable=True)
+            logger.warning("report_job_marked_for_retry", extra={
+                "event": "report_job_marked_for_retry",
                 "job_id": job_id,
-                "template_id": run_payload.template_id,
+                "error": error_str,
                 "correlation_id": correlation_id,
-            },
-        )
-        _publish_event_safe(
-            Event(
-                name="job.failed",
-                payload={"job_id": job_id, "kind": kind, "error": str(exc)},
-                correlation_id=correlation_id,
+            })
+            _publish_event_safe(
+                Event(
+                    name="job.retry_scheduled",
+                    payload={"job_id": job_id, "kind": kind, "error": error_str},
+                    correlation_id=correlation_id,
+                )
             )
-        )
+        else:
+            tracker.fail(error_str)
+            logger.exception(
+                "report_job_failed",
+                extra={
+                    "event": "report_job_failed",
+                    "job_id": job_id,
+                    "template_id": run_payload.template_id,
+                    "correlation_id": correlation_id,
+                },
+            )
+            _publish_event_safe(
+                Event(
+                    name="job.failed",
+                    payload={"job_id": job_id, "kind": kind, "error": error_str},
+                    correlation_id=correlation_id,
+                )
+            )
     else:
+        job_succeeded = True
         tracker.succeed(result)
         _publish_event_safe(
             Event(
@@ -992,8 +1073,32 @@ def _run_report_job_sync(
             )
         )
     finally:
+        # Stop heartbeat thread
+        heartbeat_stop.set()
+        heartbeat_thread.join(timeout=5)
+
         _clear_job_thread(job_id)
         _clear_job_processes(job_id)
+
+        # Send webhook notification if job completed (success or permanent failure)
+        if send_job_webhook_sync is not None:
+            try:
+                job_record = _state_store().get_job(job_id)
+                if job_record and job_record.get("webhookUrl"):
+                    job_status = str(job_record.get("status") or "").lower()
+                    # Only send webhook for terminal states (not pending_retry)
+                    if job_status in {"succeeded", "failed", "cancelled"}:
+                        webhook_result = send_job_webhook_sync(job_record)
+                        if webhook_result.success:
+                            _state_store().mark_webhook_sent(job_id)
+                            logger.info("webhook_sent", extra={"job_id": job_id, "status": job_status})
+                        else:
+                            logger.warning("webhook_failed", extra={
+                                "job_id": job_id,
+                                "error": webhook_result.error,
+                            })
+            except Exception:
+                logger.exception("webhook_send_error", extra={"job_id": job_id})
 
 
 def _schedule_report_job(

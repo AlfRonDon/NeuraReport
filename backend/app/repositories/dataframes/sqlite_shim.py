@@ -60,6 +60,7 @@ class DataFrameCursor:
         self._df: pd.DataFrame | None = None
         self._columns: list[str] = []
         self._pos = 0
+        self.description: list[tuple[str]] | None = None
 
     def execute(self, sql: str, params: Any | None = None) -> "DataFrameCursor":
         meta_df = self._try_meta_query(sql)
@@ -67,6 +68,7 @@ class DataFrameCursor:
             self._df = meta_df
             self._columns = list(meta_df.columns)
             self._pos = 0
+            self.description = [(col,) for col in self._columns]
             return self
         try:
             df = self.connection._query.execute(sql, params)
@@ -75,6 +77,7 @@ class DataFrameCursor:
         self._df = df
         self._columns = list(df.columns)
         self._pos = 0
+        self.description = [(col,) for col in self._columns]
         return self
 
     def _try_meta_query(self, sql: str) -> pd.DataFrame | None:

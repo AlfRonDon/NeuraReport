@@ -36,8 +36,8 @@ class InvoiceParser:
     ]
 
     AMOUNT_PATTERNS = [
-        r"(?:total|amount\s+due|balance\s+due|grand\s+total)\s*[:\s]*[$€£¥]?\s*([\d,]+\.?\d*)",
-        r"[$€£¥]\s*([\d,]+\.?\d*)\s*(?:total|due)",
+        r"(?m)^\s*(?:grand\s+total|total|amount\s+due|balance\s+due)\b\s*[:\s]*(?:[$]|[A-Z]{3})?\s*([\d,]+\.?\d*)",
+        r"(?:[$]|[A-Z]{3})\s*([\d,]+\.?\d*)\s*(?:total|due)\b",
     ]
 
     def __init__(self) -> None:
@@ -145,7 +145,7 @@ class InvoiceParser:
             except Exception:
                 pass
 
-        return ""
+        return content.decode("utf-8", errors="ignore")
 
     async def _extract_from_pdf(self, path: Path) -> str:
         """Extract text from a PDF file."""
@@ -329,16 +329,16 @@ class InvoiceParser:
 
     def _detect_currency(self, text: str) -> str:
         """Detect currency from text."""
-        if "$" in text or "USD" in text.upper():
+        text_upper = text.upper()
+        if "$" in text or re.search(r"\bUSD\b", text_upper):
             return "USD"
-        elif "€" in text or "EUR" in text.upper():
+        if re.search(r"\bEUR\b", text_upper):
             return "EUR"
-        elif "£" in text or "GBP" in text.upper():
+        if re.search(r"\bGBP\b", text_upper):
             return "GBP"
-        elif "¥" in text or "JPY" in text.upper() or "CNY" in text.upper():
+        if re.search(r"\b(?:JPY|CNY)\b", text_upper):
             return "JPY"
         return "USD"
-
     def _extract_payment_terms(self, text: str) -> Optional[str]:
         """Extract payment terms from invoice."""
         terms_match = re.search(

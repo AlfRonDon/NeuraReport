@@ -5,6 +5,16 @@ Services for database and cloud storage connectors.
 
 from .base import ConnectorBase, ConnectorType, AuthType, ConnectorCapability
 from .registry import get_connector, list_connectors, register_connector
+from .resilience import (
+    with_retry,
+    retry_on_connection_error,
+    retry_with_longer_backoff,
+    is_transient_error,
+    is_permanent_error,
+    ConnectionHealth,
+    TRANSIENT_ERRORS,
+    PERMANENT_ERRORS,
+)
 
 # Database Connectors
 from .databases import (
@@ -37,6 +47,15 @@ __all__ = [
     "get_connector",
     "list_connectors",
     "register_connector",
+    # Resilience
+    "with_retry",
+    "retry_on_connection_error",
+    "retry_with_longer_backoff",
+    "is_transient_error",
+    "is_permanent_error",
+    "ConnectionHealth",
+    "TRANSIENT_ERRORS",
+    "PERMANENT_ERRORS",
     # Database Connectors
     "PostgreSQLConnector",
     "MySQLConnector",

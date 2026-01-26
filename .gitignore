@@ -29,6 +29,7 @@ backend/.pytest_cache/
 backend/.mypy_cache/
 .ruff_cache/
 backend/.ruff_cache/
+.hypothesis/
 
 # Coverage reports
 htmlcov/
@@ -48,6 +49,7 @@ frontend/.vitest-localstorage.*
 *.local
 AUDIT_FINDINGS.md
 MagicMock/
+features_copy.md
 
 # Frontend generated content
 frontend/node_modules/
@@ -80,6 +82,8 @@ backend/state/state.json
 backend/state/.secret
 backend/state/backups/
 backend/llm_raw_outputs.md
+backend/docs/
+backend/tests/*VALIDATION_REPORT*.md
 
 # Orphaned directories (from path misconfiguration)
 backend/backend/
@@ -96,6 +100,13 @@ _tauri_sync_pr/
 
 # Large local artifacts / data
 Coastal feeds/
+backend/tools/ffmpeg_extracted/
+backend/tools/ffmpeg.zip
+samples/docai/
+samples/excel/
+samples/ingestion/
+samples/knowledge/
+samples/templates/
 uploads_excel/*
 !uploads_excel/.gitkeep
 debug_tmp_root/

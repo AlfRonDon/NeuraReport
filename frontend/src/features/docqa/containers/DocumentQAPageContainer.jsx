@@ -1441,7 +1441,7 @@ export default function DocumentQAPage() {
         <DialogActions sx={{ px: 3, pb: 3 }}>
           <Button
             onClick={() => setCreateDialogOpen(false)}
-            sx={{ borderRadius: 1,  // Figma spec: 8px textTransform: 'none' }}
+            sx={{ borderRadius: 1, textTransform: 'none' }}
           >
             Cancel
           </Button>
@@ -1539,7 +1539,7 @@ export default function DocumentQAPage() {
         <DialogActions sx={{ px: 3, pb: 3 }}>
           <Button
             onClick={() => setAddDocDialogOpen(false)}
-            sx={{ borderRadius: 1,  // Figma spec: 8px textTransform: 'none' }}
+            sx={{ borderRadius: 1, textTransform: 'none' }}
           >
             Cancel
           </Button>

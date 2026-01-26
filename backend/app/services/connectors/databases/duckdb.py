@@ -7,7 +7,7 @@ from __future__ import annotations
 import time
 from typing import Any, Optional
 
-from backend.app.services.connectors.base import (
+from ..base import (
     AuthType,
     ColumnInfo,
     ConnectionTest,
@@ -18,8 +18,10 @@ from backend.app.services.connectors.base import (
     SchemaInfo,
     TableInfo,
 )
+from ..registry import register_connector
 
 
+@register_connector
 class DuckDBConnector(ConnectorBase):
     """DuckDB database connector."""
 

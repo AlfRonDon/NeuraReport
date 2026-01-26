@@ -692,6 +692,14 @@ def fill_and_print(
     parent_date = DATE_COLUMNS.get(parent_table, "")
     child_date = DATE_COLUMNS.get(child_table, "")
     order_col = ROW_ORDER[0] if ROW_ORDER else "ROWID"
+    if isinstance(order_col, str) and order_col.upper() != "ROWID":
+        mapped_order = PLACEHOLDER_TO_COL.get(order_col, order_col)
+        if isinstance(mapped_order, str):
+            mapped_order = mapped_order.strip()
+            if "." in mapped_order:
+                mapped_order = mapped_order.split(".", 1)[1].strip()
+            if mapped_order:
+                order_col = mapped_order
 
     def _normalize_token_name(name: str) -> str:
         return re.sub(r"[^a-z0-9]", "", name.lower())

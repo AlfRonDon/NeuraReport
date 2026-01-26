@@ -5,6 +5,7 @@ This module contains endpoints for job management:
 - Get job details
 - Cancel jobs
 - Retry failed jobs
+- Dead Letter Queue management
 """
 from __future__ import annotations
 
@@ -74,6 +75,106 @@ def list_active_jobs_route(request: Request, limit: int = Query(20, ge=1, le=200
     normalized_jobs = [_normalize_job(job) for job in jobs] if jobs else []
     return {"jobs": normalized_jobs, "correlation_id": _correlation(request)}
 
+
+# =============================================================================
+# Dead Letter Queue Endpoints
+# IMPORTANT: These must be defined BEFORE /{job_id} routes to avoid path conflicts
+# =============================================================================
+
+@router.get("/dead-letter")
+def list_dead_letter_jobs_route(
+    request: Request,
+    limit: int = Query(50, ge=1, le=200),
+):
+    """List jobs in the Dead Letter Queue."""
+    dlq_jobs = state_access.list_dead_letter_jobs(limit=limit)
+    stats = state_access.get_dlq_stats()
+    return {
+        "jobs": dlq_jobs,
+        "stats": stats,
+        "correlation_id": _correlation(request),
+    }
+
+
+@router.get("/dead-letter/{job_id}")
+def get_dead_letter_job_route(job_id: str, request: Request):
+    """Get a specific job from the Dead Letter Queue."""
+    dlq_job = state_access.get_dead_letter_job(job_id)
+    if not dlq_job:
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "status": "error",
+                "code": "dlq_job_not_found",
+                "message": "Job not found in Dead Letter Queue",
+            }
+        )
+    return {"job": dlq_job, "correlation_id": _correlation(request)}
+
+
+@router.post("/dead-letter/{job_id}/requeue")
+async def requeue_from_dlq_route(job_id: str, request: Request):
+    """
+    Requeue a job from the Dead Letter Queue.
+
+    Creates a new job with reset retry count and state.
+    """
+    dlq_job = state_access.get_dead_letter_job(job_id)
+    if not dlq_job:
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "status": "error",
+                "code": "dlq_job_not_found",
+                "message": "Job not found in Dead Letter Queue",
+            }
+        )
+
+    # Create new job from DLQ record
+    new_job = state_access.requeue_from_dlq(job_id)
+    if not new_job:
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "status": "error",
+                "code": "requeue_failed",
+                "message": "Failed to requeue job",
+            }
+        )
+
+    return {
+        "status": "ok",
+        "message": "Job requeued from Dead Letter Queue",
+        "original_job_id": job_id,
+        "new_job": new_job,
+        "correlation_id": _correlation(request),
+    }
+
+
+@router.delete("/dead-letter/{job_id}")
+def delete_from_dlq_route(job_id: str, request: Request):
+    """Permanently delete a job from the Dead Letter Queue."""
+    deleted = state_access.delete_from_dlq(job_id)
+    if not deleted:
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "status": "error",
+                "code": "dlq_job_not_found",
+                "message": "Job not found in Dead Letter Queue",
+            }
+        )
+    return {
+        "status": "ok",
+        "message": "Job deleted from Dead Letter Queue",
+        "job_id": job_id,
+        "correlation_id": _correlation(request),
+    }
+
+
+# =============================================================================
+# Job Instance Endpoints (must come AFTER static routes like /dead-letter)
+# =============================================================================
 
 @router.get("/{job_id}")
 def get_job_route(job_id: str, request: Request):

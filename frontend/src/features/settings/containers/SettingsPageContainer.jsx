@@ -169,7 +169,7 @@ function StatusChip({ status }) {
       size="small"
       icon={<Icon sx={{ fontSize: 14 }} />}
       label={status?.replace(/_/g, ' ') || 'unknown'}
-      sx={{ textTransform: 'capitalize', fontSize: '0.75rem', borderRadius: 1, bgcolor:  // Figma spec: 8px (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400], color: 'text.secondary' }}
+      sx={{ textTransform: 'capitalize', fontSize: '0.75rem', borderRadius: 1, bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400], color: 'text.secondary' }}
     />
   )
 }
@@ -525,7 +525,7 @@ export default function SettingsPage() {
       </HeaderContainer>
 
       {error && (
-        <Alert severity="error" sx={{ mb: 3, borderRadius: 1 }}  // Figma spec: 8px>
+        <Alert severity="error" sx={{ mb: 3, borderRadius: 1 }}>
           {error}
         </Alert>
       )}
@@ -600,12 +600,12 @@ export default function SettingsPage() {
               }
             />
             {twoFactorEnabled && (
-              <Alert severity="success" sx={{ borderRadius: 1 }}  // Figma spec: 8px>
+              <Alert severity="success" sx={{ borderRadius: 1 }}>
                 Two-factor authentication is enabled. Your account is more secure.
               </Alert>
             )}
             {showTwoFactorSetup && (
-              <Alert severity="info" sx={{ borderRadius: 1 }}  // Figma spec: 8px>
+              <Alert severity="info" sx={{ borderRadius: 1 }}>
                 <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
                   Set up Two-Factor Authentication
                 </Typography>

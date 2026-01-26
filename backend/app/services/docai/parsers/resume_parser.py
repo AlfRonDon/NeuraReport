@@ -268,22 +268,38 @@ class ResumeParser:
 
     def _extract_linkedin(self, text: str) -> Optional[str]:
         """Extract LinkedIn URL from resume."""
-        linkedin_match = re.search(
-            r"(?:linkedin\.com/in/|linkedin:\s*)([a-zA-Z0-9-]+)",
+        url_match = re.search(
+            r"(https?://(?:www\.)?linkedin\.com/in/[a-zA-Z0-9-]+)",
             text, re.IGNORECASE
         )
-        if linkedin_match:
-            return f"https://linkedin.com/in/{linkedin_match.group(1)}"
+        if url_match:
+            return url_match.group(1)
+
+        bare_match = re.search(r"linkedin\.com/in/([a-zA-Z0-9-]+)", text, re.IGNORECASE)
+        if bare_match:
+            return f"https://linkedin.com/in/{bare_match.group(1)}"
+
+        label_match = re.search(r"linkedin:\s*([a-zA-Z0-9-]+)", text, re.IGNORECASE)
+        if label_match:
+            return f"https://linkedin.com/in/{label_match.group(1)}"
         return None
 
     def _extract_github(self, text: str) -> Optional[str]:
         """Extract GitHub URL from resume."""
-        github_match = re.search(
-            r"(?:github\.com/|github:\s*)([a-zA-Z0-9-]+)",
+        url_match = re.search(
+            r"(https?://(?:www\.)?github\.com/[a-zA-Z0-9-]+)",
             text, re.IGNORECASE
         )
-        if github_match:
-            return f"https://github.com/{github_match.group(1)}"
+        if url_match:
+            return url_match.group(1)
+
+        bare_match = re.search(r"github\.com/([a-zA-Z0-9-]+)", text, re.IGNORECASE)
+        if bare_match:
+            return f"https://github.com/{bare_match.group(1)}"
+
+        label_match = re.search(r"github:\s*([a-zA-Z0-9-]+)", text, re.IGNORECASE)
+        if label_match:
+            return f"https://github.com/{label_match.group(1)}"
         return None
 
     def _extract_portfolio(self, text: str) -> Optional[str]:
@@ -301,7 +317,7 @@ class ResumeParser:
         # Find summary section
         for pattern in self.SECTION_HEADERS["summary"]:
             match = re.search(
-                rf"{pattern}\s*:?\s*\n(.+?)(?:\n\n|experience|education|skills)",
+                rf"{pattern}\s*:?\s*\n(.+?)(?=\n\s*\n|\n\s*(?:experience|education|skills|certif|certifications)\b|$)",
                 text, re.IGNORECASE | re.DOTALL
             )
             if match:
@@ -509,9 +525,9 @@ class ResumeParser:
 
         # Look for common certification patterns
         cert_patterns = [
-            r"(?:AWS|Azure|Google\s+Cloud|GCP)\s+Certified\s+[^,\n]+",
+            r"(?:AWS|Azure|Google[ \t]+Cloud|GCP)[ \t]+Certified[ \t]+[^,\n]+",
             r"(?:PMP|CISSP|CISM|CEH|CompTIA|CCNA|CCNP)[^,\n]*",
-            r"Certified\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*",
+            r"Certified[ \t]+[A-Z][a-z]+(?:[ \t]+[A-Z][a-z]+)*",
         ]
 
         for pattern in cert_patterns:

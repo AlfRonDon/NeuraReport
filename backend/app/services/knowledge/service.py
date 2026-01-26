@@ -369,8 +369,8 @@ class KnowledgeService:
             score = 0
             highlights = []
 
-            title = doc.get("title", "").lower()
-            description = doc.get("description", "").lower()
+            title = str(doc.get("title") or "").lower()
+            description = str(doc.get("description") or "").lower()
 
             if query_lower in title:
                 score += 2.0

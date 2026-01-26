@@ -168,6 +168,50 @@ def get() -> dict:
     return _call("get")
 
 
+# =============================================================================
+# Idempotency key management
+# =============================================================================
+
+def check_idempotency_key(key: str, request_hash: str) -> tuple[bool, dict | None]:
+    return _call("check_idempotency_key", key, request_hash)
+
+
+def store_idempotency_key(key: str, job_id: str, request_hash: str, response: dict) -> dict:
+    return _call("store_idempotency_key", key, job_id, request_hash, response)
+
+
+def clean_expired_idempotency_keys() -> int:
+    return _call("clean_expired_idempotency_keys")
+
+
+# =============================================================================
+# Dead Letter Queue management
+# =============================================================================
+
+def list_dead_letter_jobs(limit: int = 50) -> list[dict]:
+    return _call("list_dead_letter_jobs", limit=limit)
+
+
+def get_dead_letter_job(job_id: str) -> dict | None:
+    return _call("get_dead_letter_job", job_id)
+
+
+def move_job_to_dlq(job_id: str, failure_history: list[dict] | None = None) -> dict | None:
+    return _call("move_job_to_dlq", job_id, failure_history)
+
+
+def requeue_from_dlq(job_id: str) -> dict | None:
+    return _call("requeue_from_dlq", job_id)
+
+
+def delete_from_dlq(job_id: str) -> bool:
+    return _call("delete_from_dlq", job_id)
+
+
+def get_dlq_stats() -> dict:
+    return _call("get_dlq_stats")
+
+
 state_store = _state_store_proxy
 
 
@@ -214,4 +258,15 @@ __all__ = [
     "get_last_used",
     "set_last_used",
     "get",
+    # Idempotency key management
+    "check_idempotency_key",
+    "store_idempotency_key",
+    "clean_expired_idempotency_keys",
+    # Dead Letter Queue management
+    "list_dead_letter_jobs",
+    "get_dead_letter_job",
+    "move_job_to_dlq",
+    "requeue_from_dlq",
+    "delete_from_dlq",
+    "get_dlq_stats",
 ]

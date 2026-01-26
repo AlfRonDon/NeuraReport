@@ -5,6 +5,8 @@ Handles audio/video transcription for document creation.
 from __future__ import annotations
 
 import logging
+import os
+import shutil
 import hashlib
 import tempfile
 from datetime import datetime, timedelta, timezone
@@ -96,6 +98,21 @@ class TranscriptionService:
                 raise RuntimeError("Whisper not installed")
         return self._whisper_model
 
+    def _ensure_ffmpeg(self) -> bool:
+        """Ensure ffmpeg is discoverable on PATH for Whisper."""
+        if shutil.which("ffmpeg"):
+            return True
+
+        backend_root = Path(__file__).resolve().parents[3]
+        tools_dir = backend_root / "tools"
+        candidates = list(tools_dir.glob("ffmpeg_extracted/**/bin/ffmpeg.exe"))
+        if not candidates:
+            return False
+
+        bin_dir = candidates[0].parent
+        os.environ["PATH"] = f"{bin_dir}{os.pathsep}{os.environ.get('PATH', '')}"
+        return True
+
     async def transcribe_file(
         self,
         filename: str,
@@ -117,6 +134,8 @@ class TranscriptionService:
         Returns:
             TranscriptionResult with full transcript
         """
+        self._ensure_ffmpeg()
+
         # Save to temp file for processing
         ext = Path(filename).suffix.lower()
         with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as tmp:

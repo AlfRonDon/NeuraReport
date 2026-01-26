@@ -1818,7 +1818,7 @@ const lastHeartbeatLabel = useMemo(() => {
           }
         />
 
-        <Alert severity="info" sx={{ borderRadius: 1 }}  // Figma spec: 8px>
+        <Alert severity="info" sx={{ borderRadius: 1 }}>
           <Stack spacing={0.5}>
             <Typography variant="subtitle2">Safe defaults</Typography>
             <Typography variant="body2">
@@ -1964,7 +1964,7 @@ const lastHeartbeatLabel = useMemo(() => {
             direction={{ xs: 'column', sm: 'row' }}
             spacing={1}
             alignItems={{ xs: 'flex-start', sm: 'center' }}
-            sx={{ mb: 2, backgroundColor: 'background.default', borderRadius: 1,  // Figma spec: 8px px: 1.5, py: 1.25, border: '1px solid', borderColor: 'divider' }}
+            sx={{ mb: 2, backgroundColor: 'background.default', borderRadius: 1, px: 1.5, py: 1.25, border: '1px solid', borderColor: 'divider' }}
           >
             <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
               Resolved path:
@@ -2068,7 +2068,7 @@ const lastHeartbeatLabel = useMemo(() => {
               variant="contained"
               disableElevation
               startIcon={<PlayArrowIcon />}
-              sx={{ borderRadius: 1,  // Figma spec: 8px px: 2.5, textTransform: 'none', bgcolor: (theme) => theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200], color: '#fff', '&:hover': { bgcolor: (theme) => theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100] } }}
+              sx={{ borderRadius: 1, px: 2.5, textTransform: 'none', bgcolor: (theme) => theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200], color: '#fff', '&:hover': { bgcolor: (theme) => theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100] } }}
               type="submit"
               disabled={mutation.isPending}
             >

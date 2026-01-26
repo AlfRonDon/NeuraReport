@@ -866,7 +866,7 @@ export default function UploadVerify() {
           ))}
         </Stepper>
 
-        <Alert severity="info" sx={{ borderRadius: 1 }}  // Figma spec: 8px>
+        <Alert severity="info" sx={{ borderRadius: 1 }}>
           Upload a report design, verify the preview, then map fields to your data.
           SQL expressions and AI corrections are optional. Approving saves the design for report runs.
         </Alert>

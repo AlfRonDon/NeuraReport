@@ -594,10 +594,6 @@ export default function Sidebar({ width, collapsed, mobileOpen, onClose, onToggl
                                 '& .MuiBadge-badge': {
                                   bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400],
                                   color: 'text.secondary',
-                                },
-                              }}
-                              sx={{
-                                '& .MuiBadge-badge': {
                                   fontSize: '0.6rem',
                                   fontWeight: 700,
                                   minWidth: 14,

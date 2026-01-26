@@ -844,7 +844,7 @@ export default function QueryBuilderPage() {
           {warnings.length > 0 && (
             <Stack spacing={0.5} mt={1}>
               {warnings.map((w, i) => (
-                <Alert key={i} severity="warning" sx={{ py: 0, borderRadius: 1 }}  // Figma spec: 8px}>
+                <Alert key={i} severity="warning" sx={{ py: 0, borderRadius: 1 }}>
                   {w}
                 </Alert>
               ))}
@@ -921,7 +921,7 @@ export default function QueryBuilderPage() {
             </DisabledTooltip>
           </Stack>
           {writeOperation && (
-            <Alert severity="warning" sx={{ mt: 1.5, borderRadius: 1 }}  // Figma spec: 8px}>
+            <Alert severity="warning" sx={{ mt: 1.5, borderRadius: 1 }}>
               Write queries can modify data and may not be reversible. You will be asked to confirm before execution.
             </Alert>
           )}

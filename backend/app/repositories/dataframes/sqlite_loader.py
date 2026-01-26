@@ -76,6 +76,10 @@ class SQLiteDataFrameLoader:
                 df = pd.read_sql_query(f'SELECT rowid AS "__rowid__", * FROM "{quoted}"', con)
         except Exception as exc:  # pragma: no cover - surfaced to caller
             raise RuntimeError(f"Failed loading table {table_name!r} into DataFrame: {exc}") from exc
+        # DuckDB fails to register DataFrames with string dtypes; coerce to object.
+        for col in df.columns:
+            if pd.api.types.is_string_dtype(df[col].dtype):
+                df[col] = df[col].astype("object")
         if "__rowid__" in df.columns:
             rowid_series = df["__rowid__"].copy()
             if "rowid" not in df.columns:

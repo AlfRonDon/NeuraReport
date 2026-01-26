@@ -64,7 +64,7 @@ export default function EditorSkeleton({ mode = 'manual' }) {
                         variant="rectangular"
                         width="80%"
                         height={60}
-                        sx={{ borderRadius: 1,  // Figma spec: 8px mt: 0.5 }}
+                        sx={{ borderRadius: 1, mt: 0.5 }}
                       />
                     </Box>
                   </Stack>
@@ -74,7 +74,7 @@ export default function EditorSkeleton({ mode = 'manual' }) {
 
             {/* Chat input skeleton */}
             <Box sx={{ p: 2, borderTop: '1px solid', borderColor: 'divider' }}>
-              <Skeleton variant="rectangular" height={56} sx={{ borderRadius: 1 }}  // Figma spec: 8px />
+              <Skeleton variant="rectangular" height={56} sx={{ borderRadius: 1 }} />
             </Box>
           </Box>
         ) : (

@@ -10,7 +10,7 @@ import threading
 import time
 import uuid
 from contextlib import contextmanager
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, Generator, Iterable, Mapping, Optional, Sequence
 
@@ -213,6 +213,9 @@ class StateStore:
             "library": {"documents": {}, "collections": {}, "tags": {}},
             "export_jobs": {},
             "docai_results": {},
+            # Job system enhancements (state-of-the-art patterns)
+            "idempotency_keys": {},  # {key: {job_id, response, request_hash, created_at, expires_at}}
+            "dead_letter_jobs": {},  # {job_id: {original_job, failure_history, moved_at}}
         }
 
     def _apply_defaults(self, state: dict) -> dict:
@@ -250,6 +253,9 @@ class StateStore:
         state.setdefault("library", {"documents": {}, "collections": {}, "tags": {}})
         state.setdefault("export_jobs", {})
         state.setdefault("docai_results", {})
+        # Job system enhancements (state-of-the-art patterns)
+        state.setdefault("idempotency_keys", {})
+        state.setdefault("dead_letter_jobs", {})
         return state
 
     def _read_state(self) -> dict:
@@ -1209,6 +1215,16 @@ class StateStore:
             "finishedAt": rec.get("finished_at"),
             "updatedAt": rec.get("updated_at"),
             "steps": steps,
+            # Retry and recovery fields
+            "retryCount": rec.get("retry_count") or 0,
+            "maxRetries": rec.get("max_retries") or 3,
+            "retryAt": rec.get("retry_at"),
+            "failureReason": rec.get("failure_reason"),
+            "lastHeartbeatAt": rec.get("last_heartbeat_at"),
+            "workerId": rec.get("worker_id"),
+            # Webhook fields
+            "webhookUrl": rec.get("webhook_url"),
+            "notificationSentAt": rec.get("notification_sent_at"),
         }
 
     def create_job(
@@ -1223,6 +1239,14 @@ class StateStore:
         correlation_id: Optional[str] = None,
         steps: Optional[Iterable[Mapping[str, Any]]] = None,
         meta: Optional[Mapping[str, Any]] = None,
+        # New retry configuration parameters
+        max_retries: Optional[int] = None,
+        retry_backoff_seconds: Optional[int] = None,
+        # New webhook parameters
+        webhook_url: Optional[str] = None,
+        webhook_secret: Optional[str] = None,
+        # Priority (for future queue ordering)
+        priority: int = 0,
     ) -> dict:
         job_id = str(uuid.uuid4())
         now = _now_iso()
@@ -1282,6 +1306,21 @@ class StateStore:
                 "finished_at": None,
                 "updated_at": now,
                 "meta": dict(meta or {}),
+                # Retry configuration
+                "retry_count": 0,
+                "max_retries": max_retries if max_retries is not None else self.DEFAULT_MAX_RETRIES,
+                "retry_backoff_seconds": retry_backoff_seconds if retry_backoff_seconds is not None else self.DEFAULT_RETRY_BACKOFF_SECONDS,
+                "retry_at": None,
+                "failure_reason": None,
+                # Heartbeat tracking
+                "last_heartbeat_at": None,
+                "worker_id": None,
+                # Webhook configuration
+                "webhook_url": webhook_url,
+                "webhook_secret": webhook_secret,
+                "notification_sent_at": None,
+                # Priority
+                "priority": max(-10, min(10, priority)),
             }
             jobs[job_id] = record
             state["jobs"] = jobs
@@ -1491,6 +1530,494 @@ class StateStore:
 
     def cancel_job(self, job_id: str) -> Optional[dict]:
         return self.record_job_completion(job_id, status="cancelled", error="Cancelled by user", result=None)
+
+    # ------------------------------------------------------------------
+    # Job retry and recovery helpers
+    # ------------------------------------------------------------------
+    DEFAULT_MAX_RETRIES = 3
+    DEFAULT_RETRY_BACKOFF_SECONDS = 30
+    DEFAULT_HEARTBEAT_TIMEOUT_SECONDS = 120
+
+    def update_job_heartbeat(self, job_id: str, worker_id: Optional[str] = None) -> Optional[dict]:
+        """Update the job's heartbeat timestamp to indicate worker is alive."""
+        def mutator(rec: dict) -> bool:
+            now = _now_iso()
+            rec["last_heartbeat_at"] = now
+            if worker_id:
+                rec["worker_id"] = worker_id
+            rec["updated_at"] = now
+            return True
+
+        return self._update_job_record(job_id, mutator)
+
+    def mark_job_for_retry(
+        self,
+        job_id: str,
+        *,
+        reason: str,
+        retry_at: Optional[str] = None,
+        is_retriable: bool = True,
+    ) -> Optional[dict]:
+        """
+        Mark a failed job for retry. Calculates backoff if retry_at not provided.
+        Sets status to 'pending_retry' if retriable and under max retries.
+        """
+        import random
+
+        def mutator(rec: dict) -> bool:
+            now = _now_iso()
+            retry_count = int(rec.get("retry_count") or 0)
+            max_retries = int(rec.get("max_retries") or self.DEFAULT_MAX_RETRIES)
+
+            # Check if we can retry
+            if not is_retriable or retry_count >= max_retries:
+                rec["status"] = "failed"
+                rec["error"] = f"{reason} (max retries exceeded)" if retry_count >= max_retries else reason
+                rec["finished_at"] = now
+                rec["updated_at"] = now
+                return True
+
+            # Calculate retry time with exponential backoff + jitter
+            base_backoff = int(rec.get("retry_backoff_seconds") or self.DEFAULT_RETRY_BACKOFF_SECONDS)
+            backoff = base_backoff * (2 ** retry_count)  # 30s, 60s, 120s, 240s
+            jitter = random.uniform(0, backoff * 0.2)    # ±20% jitter
+            delay = backoff + jitter
+
+            if retry_at:
+                computed_retry_at = retry_at
+            else:
+                retry_time = datetime.now(timezone.utc) + timedelta(seconds=delay)
+                computed_retry_at = retry_time.isoformat()
+
+            rec["status"] = "pending_retry"
+            rec["retry_count"] = retry_count + 1
+            rec["retry_at"] = computed_retry_at
+            rec["failure_reason"] = reason
+            rec["started_at"] = None  # Reset for next attempt
+            rec["last_heartbeat_at"] = None
+            rec["worker_id"] = None
+            rec["updated_at"] = now
+            return True
+
+        return self._update_job_record(job_id, mutator)
+
+    def find_stale_running_jobs(
+        self,
+        heartbeat_timeout_seconds: Optional[int] = None,
+    ) -> list[dict]:
+        """
+        Find jobs in 'running' state whose heartbeat has expired.
+        These are likely orphaned due to worker crash.
+        """
+        timeout = heartbeat_timeout_seconds or self.DEFAULT_HEARTBEAT_TIMEOUT_SECONDS
+        cutoff = datetime.now(timezone.utc) - timedelta(seconds=timeout)
+        cutoff_iso = cutoff.isoformat()
+
+        with self._lock:
+            state = self._read_state()
+            jobs = state.get("jobs") or {}
+            stale: list[dict] = []
+
+            for job in jobs.values():
+                status = str(job.get("status") or "").strip().lower()
+                if status != "running":
+                    continue
+
+                # Check heartbeat
+                heartbeat = job.get("last_heartbeat_at")
+                if heartbeat is None:
+                    # No heartbeat ever recorded - check started_at
+                    started = job.get("started_at")
+                    if started and started < cutoff_iso:
+                        stale.append(dict(job))
+                elif heartbeat < cutoff_iso:
+                    stale.append(dict(job))
+
+            return stale
+
+    def find_jobs_ready_for_retry(self) -> list[dict]:
+        """
+        Find jobs in 'pending_retry' state whose retry_at time has passed.
+        These are ready to be re-queued.
+        """
+        now_iso = _now_iso()
+
+        with self._lock:
+            state = self._read_state()
+            jobs = state.get("jobs") or {}
+            ready: list[dict] = []
+
+            for job in jobs.values():
+                status = str(job.get("status") or "").strip().lower()
+                if status != "pending_retry":
+                    continue
+
+                retry_at = job.get("retry_at")
+                if retry_at and retry_at <= now_iso:
+                    ready.append(dict(job))
+
+            return ready
+
+    def requeue_job_for_retry(self, job_id: str) -> Optional[dict]:
+        """
+        Move a job from 'pending_retry' back to 'queued' state.
+        Called when retry_at time has passed.
+        """
+        def mutator(rec: dict) -> bool:
+            now = _now_iso()
+            status = str(rec.get("status") or "").strip().lower()
+            if status != "pending_retry":
+                return False
+
+            rec["status"] = "queued"
+            rec["queued_at"] = now
+            rec["retry_at"] = None
+            rec["updated_at"] = now
+            return True
+
+        return self._update_job_record(job_id, mutator)
+
+    def update_job_webhook(
+        self,
+        job_id: str,
+        *,
+        webhook_url: Optional[str] = None,
+        webhook_secret: Optional[str] = None,
+    ) -> Optional[dict]:
+        """Update job's webhook configuration."""
+        def mutator(rec: dict) -> bool:
+            now = _now_iso()
+            if webhook_url is not None:
+                rec["webhook_url"] = webhook_url
+            if webhook_secret is not None:
+                rec["webhook_secret"] = webhook_secret
+            rec["updated_at"] = now
+            return True
+
+        return self._update_job_record(job_id, mutator)
+
+    def mark_webhook_sent(self, job_id: str) -> Optional[dict]:
+        """Mark that webhook notification was sent for this job."""
+        def mutator(rec: dict) -> bool:
+            now = _now_iso()
+            rec["notification_sent_at"] = now
+            rec["updated_at"] = now
+            return True
+
+        return self._update_job_record(job_id, mutator)
+
+    def get_jobs_pending_webhook(self) -> list[dict]:
+        """
+        Find completed jobs that have a webhook_url but no notification_sent_at.
+        These need webhook delivery.
+        """
+        with self._lock:
+            state = self._read_state()
+            jobs = state.get("jobs") or {}
+            pending: list[dict] = []
+
+            for job in jobs.values():
+                status = str(job.get("status") or "").strip().lower()
+                if status not in {"succeeded", "failed", "cancelled"}:
+                    continue
+
+                webhook_url = job.get("webhook_url")
+                if not webhook_url:
+                    continue
+
+                if job.get("notification_sent_at"):
+                    continue
+
+                pending.append(dict(job))
+
+            return pending
+
+    # ------------------------------------------------------------------
+    # Idempotency key management (state-of-the-art pattern)
+    # ------------------------------------------------------------------
+    IDEMPOTENCY_KEY_TTL_HOURS = 24
+
+    def check_idempotency_key(
+        self,
+        key: str,
+        request_hash: str,
+    ) -> tuple[bool, Optional[dict]]:
+        """
+        Check if an idempotency key exists and is valid.
+
+        Returns:
+            (exists, cached_response) where:
+            - exists=True, cached_response=dict: Key found, return cached response
+            - exists=True, cached_response=None: Key found but hash mismatch (error)
+            - exists=False, cached_response=None: Key not found, proceed with request
+        """
+        if not key:
+            return False, None
+
+        with self._lock:
+            state = self._read_state()
+            keys = state.get("idempotency_keys") or {}
+            record = keys.get(key)
+
+            if not record:
+                return False, None
+
+            # Check if expired
+            expires_at = record.get("expires_at")
+            if expires_at:
+                try:
+                    exp_dt = datetime.fromisoformat(expires_at.replace("Z", "+00:00"))
+                    if exp_dt < datetime.now(timezone.utc):
+                        # Expired, remove it
+                        del keys[key]
+                        state["idempotency_keys"] = keys
+                        self._write_state(state)
+                        return False, None
+                except (ValueError, TypeError):
+                    pass
+
+            # Check hash match
+            stored_hash = record.get("request_hash")
+            if stored_hash != request_hash:
+                # Hash mismatch - key reused for different request
+                return True, None
+
+            return True, record.get("response")
+
+    def store_idempotency_key(
+        self,
+        key: str,
+        job_id: str,
+        request_hash: str,
+        response: dict,
+    ) -> dict:
+        """
+        Store an idempotency key with its cached response.
+        Keys expire after IDEMPOTENCY_KEY_TTL_HOURS hours.
+        """
+        now = datetime.now(timezone.utc)
+        expires_at = now + timedelta(hours=self.IDEMPOTENCY_KEY_TTL_HOURS)
+
+        record = {
+            "key": key,
+            "job_id": job_id,
+            "request_hash": request_hash,
+            "response": response,
+            "created_at": now.isoformat(),
+            "expires_at": expires_at.isoformat(),
+        }
+
+        with self._lock:
+            state = self._read_state()
+            keys = state.get("idempotency_keys") or {}
+            keys[key] = record
+            state["idempotency_keys"] = keys
+            self._write_state(state)
+            return record
+
+    def clean_expired_idempotency_keys(self) -> int:
+        """
+        Remove expired idempotency keys.
+        Called by recovery daemon periodically.
+
+        Returns:
+            Number of keys removed.
+        """
+        now = datetime.now(timezone.utc)
+        removed = 0
+
+        with self._lock:
+            state = self._read_state()
+            keys = state.get("idempotency_keys") or {}
+
+            for key_id in list(keys.keys()):
+                record = keys[key_id]
+                expires_at = record.get("expires_at")
+                if not expires_at:
+                    continue
+                try:
+                    exp_dt = datetime.fromisoformat(expires_at.replace("Z", "+00:00"))
+                    if exp_dt < now:
+                        del keys[key_id]
+                        removed += 1
+                except (ValueError, TypeError):
+                    pass
+
+            if removed > 0:
+                state["idempotency_keys"] = keys
+                self._write_state(state)
+
+        return removed
+
+    # ------------------------------------------------------------------
+    # Dead Letter Queue management (state-of-the-art pattern)
+    # ------------------------------------------------------------------
+    def move_job_to_dlq(
+        self,
+        job_id: str,
+        failure_history: Optional[list[dict]] = None,
+    ) -> Optional[dict]:
+        """
+        Move a permanently failed job to the Dead Letter Queue.
+        Preserves the original job state and failure history for debugging.
+
+        Returns:
+            The DLQ record, or None if job not found.
+        """
+        now = _now_iso()
+
+        with self._lock:
+            state = self._read_state()
+            jobs = state.get("jobs") or {}
+            dlq = state.get("dead_letter_jobs") or {}
+
+            job = jobs.get(job_id)
+            if not job:
+                return None
+
+            # Build failure history if not provided
+            if failure_history is None:
+                failure_history = [{
+                    "attempt": job.get("retry_count", 0),
+                    "error": job.get("error") or "Unknown error",
+                    "timestamp": now,
+                    "category": "unknown",
+                }]
+
+            dlq_record = {
+                "id": job_id,
+                "original_job": dict(job),
+                "failure_history": failure_history,
+                "moved_at": now,
+                "requeued_at": None,
+                "requeue_count": 0,
+            }
+
+            dlq[job_id] = dlq_record
+
+            # Update original job to mark it as moved to DLQ
+            job["dead_letter_at"] = now
+            job["status"] = "failed"
+            jobs[job_id] = job
+
+            state["jobs"] = jobs
+            state["dead_letter_jobs"] = dlq
+            self._write_state(state)
+
+            return dlq_record
+
+    def list_dead_letter_jobs(self, limit: int = 50) -> list[dict]:
+        """List jobs in the Dead Letter Queue, newest first."""
+        with self._lock:
+            state = self._read_state()
+            dlq = list((state.get("dead_letter_jobs") or {}).values())
+            dlq.sort(key=lambda r: r.get("moved_at") or "", reverse=True)
+            return dlq[:limit]
+
+    def get_dead_letter_job(self, job_id: str) -> Optional[dict]:
+        """Get a specific DLQ job by ID."""
+        with self._lock:
+            state = self._read_state()
+            return (state.get("dead_letter_jobs") or {}).get(job_id)
+
+    def requeue_from_dlq(self, job_id: str) -> Optional[dict]:
+        """
+        Requeue a job from the Dead Letter Queue.
+        Creates a new job record with reset retry count.
+
+        Returns:
+            The new job record, or None if DLQ job not found.
+        """
+        now = _now_iso()
+
+        with self._lock:
+            state = self._read_state()
+            dlq = state.get("dead_letter_jobs") or {}
+
+            dlq_record = dlq.get(job_id)
+            if not dlq_record:
+                return None
+
+            original_job = dlq_record.get("original_job") or {}
+
+            # Create new job from original
+            new_job_id = str(uuid.uuid4())
+            new_job = dict(original_job)
+            new_job["id"] = new_job_id
+            new_job["status"] = "queued"
+            new_job["progress"] = 0.0
+            new_job["error"] = None
+            new_job["result"] = {}
+            new_job["created_at"] = now
+            new_job["queued_at"] = now
+            new_job["started_at"] = None
+            new_job["finished_at"] = None
+            new_job["updated_at"] = now
+            new_job["retry_count"] = 0
+            new_job["retry_at"] = None
+            new_job["failure_reason"] = None
+            new_job["last_heartbeat_at"] = None
+            new_job["worker_id"] = None
+            new_job["dead_letter_at"] = None
+            new_job["meta"] = dict(original_job.get("meta") or {})
+            new_job["meta"]["requeued_from_dlq"] = job_id
+            new_job["meta"]["dlq_requeue_count"] = dlq_record.get("requeue_count", 0) + 1
+
+            # Reset steps
+            for step in new_job.get("steps") or []:
+                step["status"] = "queued"
+                step["progress"] = 0.0
+                step["started_at"] = None
+                step["finished_at"] = None
+                step["error"] = None
+
+            # Update DLQ record
+            dlq_record["requeued_at"] = now
+            dlq_record["requeue_count"] = dlq_record.get("requeue_count", 0) + 1
+
+            # Save changes
+            jobs = state.get("jobs") or {}
+            jobs[new_job_id] = new_job
+            state["jobs"] = jobs
+            dlq[job_id] = dlq_record
+            state["dead_letter_jobs"] = dlq
+            self._write_state(state)
+
+            return self._sanitize_job(new_job)
+
+    def delete_from_dlq(self, job_id: str) -> bool:
+        """
+        Permanently delete a job from the Dead Letter Queue.
+
+        Returns:
+            True if deleted, False if not found.
+        """
+        with self._lock:
+            state = self._read_state()
+            dlq = state.get("dead_letter_jobs") or {}
+
+            if job_id not in dlq:
+                return False
+
+            del dlq[job_id]
+            state["dead_letter_jobs"] = dlq
+            self._write_state(state)
+            return True
+
+    def get_dlq_stats(self) -> dict:
+        """Get statistics about the Dead Letter Queue."""
+        with self._lock:
+            state = self._read_state()
+            dlq = state.get("dead_letter_jobs") or {}
+
+            total = len(dlq)
+            requeued = sum(1 for r in dlq.values() if r.get("requeued_at"))
+
+            return {
+                "total": total,
+                "pending": total - requeued,
+                "requeued": requeued,
+            }
 
     # ------------------------------------------------------------------
     # last-used helpers

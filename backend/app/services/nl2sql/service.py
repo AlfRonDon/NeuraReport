@@ -45,6 +45,11 @@ def _coerce_value(value: Any) -> Any:
     """Convert bytes and other non-JSON types to serializable formats."""
     if isinstance(value, (bytes, bytearray, memoryview)):
         return bytes(value).hex()
+    try:
+        if hasattr(value, "item"):
+            return value.item()
+    except Exception:
+        pass
     return value
 
 

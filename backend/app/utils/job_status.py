@@ -25,12 +25,16 @@ STATUS_SUCCEEDED = "succeeded"
 STATUS_FAILED = "failed"
 STATUS_CANCELLED = "cancelled"
 STATUS_CANCELLING = "cancelling"
+STATUS_PENDING_RETRY = "pending_retry"  # Job failed but will be retried
 
 # All valid terminal statuses (job is done, no more updates expected)
 TERMINAL_STATUSES = frozenset({STATUS_SUCCEEDED, STATUS_FAILED, STATUS_CANCELLED})
 
 # All valid active statuses (job may still update)
-ACTIVE_STATUSES = frozenset({STATUS_QUEUED, STATUS_RUNNING, STATUS_CANCELLING})
+ACTIVE_STATUSES = frozenset({STATUS_QUEUED, STATUS_RUNNING, STATUS_CANCELLING, STATUS_PENDING_RETRY})
+
+# Statuses that indicate the job will be retried
+RETRY_STATUSES = frozenset({STATUS_PENDING_RETRY})
 
 
 def normalize_job_status(status: Optional[str]) -> str:
@@ -80,6 +84,10 @@ def normalize_job_status(status: Optional[str]) -> str:
     # Preserve 'cancelling' as-is
     if value == "cancelling":
         return STATUS_CANCELLING
+
+    # Map to canonical 'pending_retry'
+    if value in {"pending_retry", "retry_pending", "retry_scheduled", "awaiting_retry"}:
+        return STATUS_PENDING_RETRY
 
     # Default to queued for unknown/empty statuses
     return STATUS_QUEUED
@@ -131,3 +139,43 @@ def is_active_status(status: Optional[str]) -> bool:
         True if the job is still active
     """
     return normalize_job_status(status) in ACTIVE_STATUSES
+
+
+def is_pending_retry(status: Optional[str]) -> bool:
+    """Check if a status indicates the job is waiting for retry.
+
+    Args:
+        status: Status string (will be normalized)
+
+    Returns:
+        True if the job is pending retry
+    """
+    return normalize_job_status(status) in RETRY_STATUSES
+
+
+def can_retry(job: Optional[Dict[str, Any]]) -> bool:
+    """Check if a job can be retried.
+
+    A job can be retried if:
+    - It exists
+    - Its status is 'failed' (not pending_retry, which auto-retries)
+    - It has not exceeded max retries
+
+    Args:
+        job: Job dictionary from storage
+
+    Returns:
+        True if the job can be manually retried
+    """
+    if not job:
+        return False
+
+    status = normalize_job_status(job.get("status"))
+    if status != STATUS_FAILED:
+        return False
+
+    # Check retry count vs max retries
+    retry_count = job.get("retryCount") or job.get("retry_count") or 0
+    max_retries = job.get("maxRetries") or job.get("max_retries") or 3
+
+    return retry_count < max_retries
