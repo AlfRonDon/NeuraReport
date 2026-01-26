@@ -362,7 +362,7 @@ function CustomTooltip({ active, payload, label }) {
         bgcolor: alpha(theme.palette.background.paper, 0.95),
         backdropFilter: 'blur(8px)',
         border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-        borderRadius: 2,
+        borderRadius: 1,  // Figma spec: 8px
         p: 1.5,
         boxShadow: `0 4px 12px ${alpha(theme.palette.common.black, 0.15)}`,
       }}

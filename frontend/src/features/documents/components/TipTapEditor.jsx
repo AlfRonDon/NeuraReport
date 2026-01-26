@@ -71,7 +71,7 @@ const EditorContainer = styled(Box)(({ theme }) => ({
   flexDirection: 'column',
   height: '100%',
   backgroundColor: theme.palette.background.paper,
-  borderRadius: 12,
+  borderRadius: 8,  // Figma spec: 8px
   overflow: 'hidden',
   border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
 }))
@@ -92,7 +92,7 @@ const ToolbarDivider = styled(Divider)(({ theme }) => ({
 }))
 
 const ToolbarButton = styled(IconButton)(({ theme }) => ({
-  borderRadius: 6,
+  borderRadius: 8,  // Figma spec: 8px
   padding: 6,
   '&.active': {
     backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300],

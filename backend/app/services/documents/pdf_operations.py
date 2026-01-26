@@ -160,8 +160,11 @@ class PDFOperationsService:
                 # Parse color
                 color = self._hex_to_rgb(config.color)
 
-                # Add text with rotation for diagonal
-                rotate = config.rotation if config.position == "diagonal" else 0
+                rotate = 0
+                morph = None
+                if config.position == "diagonal":
+                    angle = config.rotation or -45
+                    morph = (point, fitz.Matrix(1, 1).prerotate(angle))
 
                 page.insert_text(
                     point,
@@ -169,6 +172,7 @@ class PDFOperationsService:
                     fontsize=config.font_size,
                     color=color,
                     rotate=rotate,
+                    morph=morph,
                     overlay=True,
                 )
 

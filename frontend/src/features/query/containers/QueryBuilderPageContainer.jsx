@@ -789,7 +789,7 @@ export default function QueryBuilderPage() {
       {error && (
         <Alert
           severity="error"
-          sx={{ mb: 2, borderRadius: 3 }}
+          sx={{ mb: 2, borderRadius: 1 }}  // Figma spec: 8px
           onClose={() => setError(null)}
         >
           {error}
@@ -844,7 +844,7 @@ export default function QueryBuilderPage() {
           {warnings.length > 0 && (
             <Stack spacing={0.5} mt={1}>
               {warnings.map((w, i) => (
-                <Alert key={i} severity="warning" sx={{ py: 0, borderRadius: 2 }}>
+                <Alert key={i} severity="warning" sx={{ py: 0, borderRadius: 1 }}  // Figma spec: 8px}>
                   {w}
                 </Alert>
               ))}
@@ -921,7 +921,7 @@ export default function QueryBuilderPage() {
             </DisabledTooltip>
           </Stack>
           {writeOperation && (
-            <Alert severity="warning" sx={{ mt: 1.5, borderRadius: 2 }}>
+            <Alert severity="warning" sx={{ mt: 1.5, borderRadius: 1 }}  // Figma spec: 8px}>
               Write queries can modify data and may not be reversible. You will be asked to confirm before execution.
             </Alert>
           )}
@@ -979,7 +979,7 @@ export default function QueryBuilderPage() {
         <DialogActions sx={{ p: 2.5 }}>
           <Button
             onClick={() => setShowSaveDialog(false)}
-            sx={{ borderRadius: 2, textTransform: 'none' }}
+            sx={{ borderRadius: 1, textTransform: 'none' }}  // Figma spec: 8px
           >
             Cancel
           </Button>

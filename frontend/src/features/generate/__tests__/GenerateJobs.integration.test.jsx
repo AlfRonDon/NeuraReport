@@ -6,6 +6,8 @@ import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query'
 import theme from '@/app/theme.js'
 import { ToastProvider } from '@/components/ToastProvider.jsx'
+import { OperationHistoryProvider } from '@/components/ux/OperationHistoryProvider'
+import { InteractionProvider } from '@/components/ux/governance'
 
 const mockNavigate = vi.fn()
 
@@ -17,6 +19,51 @@ vi.mock('react-router-dom', async () => {
     MemoryRouter: actual.MemoryRouter,
   }
 })
+
+// Mock the UX governance hooks to avoid context issues with dynamic imports
+vi.mock('@/components/ux/governance', () => ({
+  InteractionProvider: ({ children }) => children,
+  useInteraction: () => ({
+    execute: async (contract) => {
+      // Execute the action and return the result
+      if (contract.action) {
+        return contract.action()
+      }
+      return {}
+    },
+    start: vi.fn().mockResolvedValue({}),
+    handleUserAction: vi.fn().mockResolvedValue({}),
+    handleBackendResponse: vi.fn().mockResolvedValue({}),
+    isExecuting: false,
+    currentIntent: null,
+  }),
+  useNavigateInteraction: () => vi.fn(),
+  InteractionType: {
+    CREATE: 'create',
+    UPDATE: 'update',
+    DELETE: 'delete',
+    UPLOAD: 'upload',
+    DOWNLOAD: 'download',
+    GENERATE: 'generate',
+    ANALYZE: 'analyze',
+    EXECUTE: 'execute',
+    NAVIGATE: 'navigate',
+    LOGIN: 'login',
+    LOGOUT: 'logout',
+  },
+  Reversibility: {
+    FULLY_REVERSIBLE: 'fully_reversible',
+    PARTIALLY_REVERSIBLE: 'partially_reversible',
+    IRREVERSIBLE: 'irreversible',
+    SYSTEM_MANAGED: 'system_managed',
+  },
+  FeedbackType: {
+    SUCCESS: 'success',
+    ERROR: 'error',
+    WARNING: 'warning',
+    INFO: 'info',
+  },
+}))
 
 let JobsPanel
 let runReportAsJobFn
@@ -129,13 +176,17 @@ function TestShell({ queryClient }) {
     <MemoryRouter initialEntries={['/generate']}>
       <ThemeProvider theme={theme}>
         <QueryClientProvider client={queryClient}>
-          <ToastProvider>
-            <TestGenerateDriver />
-            <button type="button" aria-label="Open jobs panel" onClick={() => setJobsOpen(true)}>
-              Open jobs panel
-            </button>
-            <JobsPanel open={jobsOpen} onClose={() => setJobsOpen(false)} />
-          </ToastProvider>
+          <OperationHistoryProvider>
+            <InteractionProvider>
+              <ToastProvider>
+                <TestGenerateDriver />
+                <button type="button" aria-label="Open jobs panel" onClick={() => setJobsOpen(true)}>
+                  Open jobs panel
+                </button>
+                <JobsPanel open={jobsOpen} onClose={() => setJobsOpen(false)} />
+              </ToastProvider>
+            </InteractionProvider>
+          </OperationHistoryProvider>
         </QueryClientProvider>
       </ThemeProvider>
     </MemoryRouter>
@@ -166,6 +217,7 @@ describe('Generate to JobsPanel integration (mock mode)', () => {
     const completedCard = completedHeadings[0].closest('[data-testid="job-card"]')
     expect(completedCard).toBeTruthy()
     fireEvent.click(within(completedCard).getByRole('button', { name: /Open Report/i }))
-    expect(mockNavigate).toHaveBeenCalledWith('/reports?template=tpl_success_mock')
+    expect(mockNavigate).toHaveBeenCalled()
+    expect(mockNavigate.mock.calls[0][0]).toBe('/reports?template=tpl_success_mock')
   }, 10000)
 })

@@ -1431,7 +1431,7 @@ export default function HeaderMappingEditor({
             sx={{
               mt: 3,
               p: 2,
-              borderRadius: 2,
+              borderRadius: 1,  // Figma spec: 8px
               border: "1px solid",
               borderColor: (theme) => alpha(theme.palette.divider, 0.2),
               bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : figmaGrey[200],

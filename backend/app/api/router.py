@@ -112,6 +112,7 @@ def register_routes(app: FastAPI) -> None:
 
     # Document editing and collaboration
     app.include_router(documents.router, prefix="/documents", tags=["documents"])
+    app.include_router(documents.ws_router)
     app.include_router(spreadsheets.router, prefix="/spreadsheets", tags=["spreadsheets"])
     app.include_router(dashboards.router, prefix="/dashboards", tags=["dashboards"])
     app.include_router(connectors.router, prefix="/connectors", tags=["connectors"])

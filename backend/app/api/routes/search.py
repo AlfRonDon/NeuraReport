@@ -24,7 +24,7 @@ DANGEROUS_PATTERNS = [
     r"\(\?\#",  # Comments
     r"\(\?\<",  # Named groups (can be complex)
     r"\(\?\(",  # Conditional patterns
-    r"\(\?\P",  # Python named groups
+    r"\(\?P<",  # Python named groups
 ]
 
 

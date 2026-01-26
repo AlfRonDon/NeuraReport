@@ -244,19 +244,14 @@ def force_cancel_job(job_id: str, *, force: bool = False) -> bool:
 
 def _publish_event_safe(event: Event) -> None:
     try:
-        loop = asyncio.get_event_loop()
-        if loop.is_running():
-            asyncio.run_coroutine_threadsafe(EVENT_BUS.publish(event), loop)
-        else:
-            loop.run_until_complete(EVENT_BUS.publish(event))
-    except RuntimeError:
+        # Try to get the running loop (Python 3.10+ safe approach)
         try:
+            loop = asyncio.get_running_loop()
+            # We're in an async context, schedule the coroutine
+            asyncio.run_coroutine_threadsafe(EVENT_BUS.publish(event), loop)
+        except RuntimeError:
+            # No running loop, create a new one
             asyncio.run(EVENT_BUS.publish(event))
-        except Exception:
-            logger.exception(
-                "event_bus_publish_failed",
-                extra={"event": event.name, "correlation_id": event.correlation_id},
-            )
     except Exception:
         logger.exception(
             "event_bus_publish_failed",

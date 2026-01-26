@@ -221,7 +221,7 @@ const BatchListContainer = styled(Box)(({ theme }) => ({
   },
   '&::-webkit-scrollbar-thumb': {
     background: alpha(theme.palette.text.primary, 0.2),
-    borderRadius: 3,
+    borderRadius: 8,  // Figma spec: 8px (styled component)
   },
 }))
 
@@ -833,7 +833,7 @@ export default function ReportsPage() {
               <Stack spacing={3}>
                 <Alert
                   severity="info"
-                  sx={{ borderRadius: 2 }}
+                  sx={{ borderRadius: 1 }}  // Figma spec: 8px
                   action={(
                     <Button
                       size="small"
@@ -850,7 +850,7 @@ export default function ReportsPage() {
                 <Box
                   sx={{
                     p: 1.5,
-                    borderRadius: 2,
+                    borderRadius: 1,  // Figma spec: 8px
                     border: '1px solid',
                     borderColor: 'divider',
                     bgcolor: alpha(theme.palette.background.paper, 0.6),

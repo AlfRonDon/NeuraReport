@@ -92,7 +92,7 @@ class ContractAnalyzer:
         try:
             import spacy  # noqa: F401
             return True
-        except ImportError:
+        except Exception:
             return False
 
     async def analyze(self, request: ContractAnalyzeRequest) -> ContractAnalyzeResponse:

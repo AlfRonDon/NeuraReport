@@ -14,6 +14,8 @@ import backend.legacy.services.template_service as template_service  # noqa: E40
 
 @pytest.fixture
 def client(tmp_path, monkeypatch):
+    # Clear NEURA_STATE_DIR to prevent .env override
+    monkeypatch.delenv("NEURA_STATE_DIR", raising=False)
     state_dir = tmp_path / "state"
     state_dir.mkdir()
     store = StateStore(base_dir=state_dir)

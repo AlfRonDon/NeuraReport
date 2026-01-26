@@ -254,7 +254,7 @@ export function ContentSkeleton({ type = 'card', count = 1 }) {
     return (
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
         {items.map((_, i) => (
-          <Box key={i} sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
+          <Box key={i} sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>  {/* Figma spec: 8px */}
             <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
               <Skeleton variant="circular" width={48} height={48} />
               <Box sx={{ flex: 1 }}>

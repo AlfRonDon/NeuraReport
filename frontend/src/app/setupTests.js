@@ -1,5 +1,7 @@
-import '@testing-library/jest-dom/vitest'
+// Set act environment flag for React 19
+globalThis.IS_REACT_ACT_ENVIRONMENT = true
 
+import '@testing-library/jest-dom/vitest'
 import { cleanup } from '@testing-library/react'
 import { afterEach } from 'vitest'
 

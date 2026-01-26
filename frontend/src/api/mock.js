@@ -1,4 +1,4 @@
-import { sleep } from './client'
+import { sleep } from './client.js'
 
 const TEMPLATE_HTML_CACHE = new Map()
 const ACTIVE_STATUS_SET = new Set(['queued', 'running'])

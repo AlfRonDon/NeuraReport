@@ -5,6 +5,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 import GenerateAndDownload from '../GenerateAndDownload.jsx'
 import theme from '@/app/theme.js'
+import { OperationHistoryProvider } from '@/components/ux/OperationHistoryProvider'
+import { InteractionProvider } from '@/components/ux/governance'
 
 vi.mock('@/hooks/useJobs', () => ({
   useTrackedJobs: () => ({ jobsById: {} }),
@@ -35,7 +37,9 @@ describe('GenerateAndDownload date range display', () => {
     render(
       <QueryClientProvider client={queryClient}>
         <ThemeProvider theme={theme}>
-          <GenerateAndDownload
+          <OperationHistoryProvider>
+            <InteractionProvider>
+              <GenerateAndDownload
             selected={['tpl-1']}
             selectedTemplates={[template]}
             autoType="PDF"
@@ -67,7 +71,9 @@ describe('GenerateAndDownload date range display', () => {
             keyOptions={{}}
             keyOptionsLoading={{}}
             onResampleFilter={() => {}}
-          />
+              />
+            </InteractionProvider>
+          </OperationHistoryProvider>
         </ThemeProvider>
       </QueryClientProvider>,
     )

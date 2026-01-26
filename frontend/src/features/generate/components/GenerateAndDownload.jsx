@@ -780,14 +780,16 @@ function GenerateAndDownload({
             sx={{ width: { xs: '100%', sm: 'auto' } }}
           >
             <Tooltip title="Scan your data to see what can be included in this report">
-              <Button
-                variant="outlined"
-                onClick={onFind}
-                disabled={!valid || findDisabled}
-                sx={{ width: { xs: '100%', sm: 'auto' }, color: 'text.secondary' }}
-              >
-                Preview Data
-              </Button>
+              <span>
+                <Button
+                  variant="outlined"
+                  onClick={onFind}
+                  disabled={!valid || findDisabled}
+                  sx={{ width: { xs: '100%', sm: 'auto' }, color: 'text.secondary' }}
+                >
+                  Preview Data
+                </Button>
+              </span>
             </Tooltip>
             <Tooltip title={generateLabel}>
               <span>
@@ -1526,7 +1528,7 @@ function GenerateAndDownload({
                 key={`${d.filename}-${i}`}
                 sx={{
                   p: { xs: 1.5, md: 2 },
-                  borderRadius: 2,
+                  borderRadius: 1,  // Figma spec: 8px
                   border: '1px solid',
                   borderColor: 'divider',
                   bgcolor: 'background.paper',

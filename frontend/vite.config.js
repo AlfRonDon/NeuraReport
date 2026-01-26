@@ -12,6 +12,8 @@ export default defineConfig({
     alias: {
       '@': resolve(__dirname, 'src'),
       '@mui/material/Grid2': '@mui/material/Grid',
+      // React 19 compatibility: redirect react-dom/test-utils to our shim
+      'react-dom/test-utils': resolve(__dirname, 'src/app/react-test-utils-shim.js'),
     },
   },
   server: {
@@ -87,5 +89,12 @@ export default defineConfig({
     css: true,
     include: ['src/**/*.{test,spec}.{js,jsx,ts,tsx}'],
     exclude: ['tests/**/*'],
+    // Ensure development mode for React.act
+    mode: 'development',
+    server: {
+      deps: {
+        inline: ['react', 'react-dom', '@testing-library/react'],
+      },
+    },
   },
 })

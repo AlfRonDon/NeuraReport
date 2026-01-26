@@ -612,7 +612,7 @@ export default function FormBuilder({
             mx: 'auto',
             p: 3,
             border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-            borderRadius: 2,
+            borderRadius: 1,  // Figma spec: 8px
           }}
         >
           {/* Form Header */}

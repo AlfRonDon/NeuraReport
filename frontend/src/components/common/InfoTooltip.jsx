@@ -85,7 +85,7 @@ const InfoTooltip = ({
                 ? alpha(theme.palette.grey[900], 0.9)
                 : alpha(theme.palette.background.paper, 0.98),
               boxShadow: theme.shadows[6],
-              borderRadius: 2,
+              borderRadius: 1,  // Figma spec: 8px
               border: `1px solid ${alpha(theme.palette.text.secondary, 0.35)}`,
             }),
             ...tooltipStyles,

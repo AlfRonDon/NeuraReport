@@ -1,5 +1,5 @@
 import axios from 'axios'
-import * as mock from './mock'
+import * as mock from './mock.js'
 import { getActiveIntent } from '@/utils/intentBridge'
 
 const runtimeEnv = {
@@ -1773,7 +1773,7 @@ export async function listTemplates({ status, kind = 'all' } = {}) {
 
 export async function listApprovedTemplates({ kind = 'all' } = {}) {
   if (isMock) {
-    const templates = mock.listTemplates() || []
+    const templates = (await mock.listTemplates()) || []
     if (kind === 'excel') return templates.filter((tpl) => (tpl.kind || 'pdf') === 'excel')
     if (kind === 'pdf') return templates.filter((tpl) => (tpl.kind || 'pdf') === 'pdf')
     return templates

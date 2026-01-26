@@ -14,6 +14,8 @@ from typing import Any, Optional
 
 from pydantic import BaseModel
 
+from backend.app.schemas.documents.document import DocumentContent as SchemaDocumentContent
+
 from backend.app.services.config import get_settings
 
 logger = logging.getLogger("neura.documents")
@@ -24,11 +26,7 @@ def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
 
 
-class DocumentContent(BaseModel):
-    """Document content model."""
-
-    type: str = "doc"
-    content: list[dict[str, Any]] = []
+DocumentContent = SchemaDocumentContent
 
 
 class Document(BaseModel):
@@ -36,7 +34,7 @@ class Document(BaseModel):
 
     id: str
     name: str
-    content: DocumentContent
+    content: DocumentContent | dict[str, Any]
     content_type: str = "tiptap"  # tiptap, html, markdown
     version: int = 1
     created_at: str
@@ -55,7 +53,7 @@ class DocumentVersion(BaseModel):
     id: str
     document_id: str
     version: int
-    content: DocumentContent
+    content: DocumentContent | dict[str, Any]
     created_at: str
     created_by: Optional[str] = None
     change_summary: Optional[str] = None
@@ -87,6 +85,18 @@ class DocumentService:
         # Lock for file operations to prevent race conditions
         self._lock = threading.Lock()
 
+    def _normalize_content(self, content: Optional[Any]) -> dict[str, Any]:
+        """Normalize incoming content payloads to a plain dict."""
+        if content is None:
+            return {"type": "doc", "content": []}
+        if hasattr(content, "model_dump"):
+            return content.model_dump()
+        if isinstance(content, DocumentContent):
+            return content.model_dump()
+        if isinstance(content, dict):
+            return content
+        return {"type": "doc", "content": []}
+
     def create(
         self,
         name: str,
@@ -100,7 +110,7 @@ class DocumentService:
         doc = Document(
             id=str(uuid.uuid4()),
             name=name,
-            content=content or DocumentContent(),
+            content=self._normalize_content(content),
             created_at=now,
             updated_at=now,
             owner_id=owner_id,
@@ -149,7 +159,7 @@ class DocumentService:
             if name is not None:
                 doc.name = name
             if content is not None:
-                doc.content = content
+                doc.content = DocumentContent(**self._normalize_content(content))
             if metadata is not None:
                 doc.metadata.update(metadata)
 

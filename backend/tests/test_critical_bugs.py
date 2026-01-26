@@ -134,8 +134,10 @@ class TestStateStoreThreadSafety:
     """Test state store thread safety."""
 
     @pytest.fixture
-    def fresh_state(self, tmp_path):
+    def fresh_state(self, tmp_path, monkeypatch):
         from backend.app.repositories.state import store as state_store_module
+        # Clear NEURA_STATE_DIR to prevent .env override
+        monkeypatch.delenv("NEURA_STATE_DIR", raising=False)
         base_dir = tmp_path / "state"
         store = state_store_module.StateStore(base_dir=base_dir)
         return store

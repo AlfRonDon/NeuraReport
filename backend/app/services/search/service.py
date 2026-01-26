@@ -194,9 +194,6 @@ class SearchService:
         """
         start_time = datetime.now(timezone.utc)
 
-        # Track search
-        self._track_search(query)
-
         # Get matching documents based on search type
         if search_type == SearchType.SEMANTIC:
             matches = await self._semantic_search(query)
@@ -218,6 +215,7 @@ class SearchService:
 
         # Pagination
         total = len(matches)
+        self._track_search(query, results=total)
         start_idx = (page - 1) * page_size
         end_idx = start_idx + page_size
         page_matches = matches[start_idx:end_idx]

@@ -42,6 +42,8 @@ from ..app.repositories.state import store as state_store_module  # noqa: E402
 
 @pytest.fixture
 def fresh_state(tmp_path, monkeypatch):
+    # Clear NEURA_STATE_DIR to prevent .env override
+    monkeypatch.delenv("NEURA_STATE_DIR", raising=False)
     base_dir = tmp_path / "state"
     store = state_store_module.StateStore(base_dir=base_dir)
     state_store_module.set_state_store(store)

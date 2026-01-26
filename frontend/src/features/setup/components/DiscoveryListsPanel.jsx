@@ -75,7 +75,7 @@ export default function DiscoveryListsPanel({ open, onClose }) {
       maxWidth="md"
       PaperProps={{
         sx: {
-          borderRadius: 3,
+          borderRadius: 1,  // Figma spec: 8px
           width: '100%',
           maxWidth: 1040,
         },
@@ -146,7 +146,7 @@ export default function DiscoveryListsPanel({ open, onClose }) {
                   sx={{
                     border: '1px solid',
                     borderColor: 'divider',
-                    borderRadius: 2,
+                    borderRadius: 1,  // Figma spec: 8px
                     p: { xs: 1.5, sm: 2 },
                     bgcolor: 'background.paper',
                   }}

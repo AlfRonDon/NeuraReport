@@ -155,7 +155,8 @@ describe('JobsPanel', () => {
     const card = screen.getByText('Template Beta').closest('[data-testid="job-card"]')
     expect(card).toBeTruthy()
     fireEvent.click(within(card).getByRole('button', { name: /Open Report/i }))
-    expect(mockNavigate).toHaveBeenCalledWith('/reports?template=tpl-2')
+    expect(mockNavigate).toHaveBeenCalled()
+    expect(mockNavigate.mock.calls[0][0]).toBe('/reports?template=tpl-2')
     expect(onClose).toHaveBeenCalled()
   })
 
@@ -164,7 +165,8 @@ describe('JobsPanel', () => {
     const card = screen.getByText('Template Alpha').closest('[data-testid="job-card"]')
     expect(card).toBeTruthy()
     fireEvent.click(within(card).getByRole('button', { name: /Go to Setup/i }))
-    expect(mockNavigate).toHaveBeenCalledWith('/setup/wizard')
+    expect(mockNavigate).toHaveBeenCalled()
+    expect(mockNavigate.mock.calls[0][0]).toBe('/setup/wizard')
     expect(onClose).toHaveBeenCalled()
   })
 

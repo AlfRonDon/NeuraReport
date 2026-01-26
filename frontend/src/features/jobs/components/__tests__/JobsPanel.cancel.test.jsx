@@ -7,6 +7,8 @@ import JobsPanel from '../JobsPanel.jsx'
 import theme from '@/app/theme.js'
 import { useAppStore } from '@/stores'
 import { MemoryRouter } from 'react-router-dom'
+import { OperationHistoryProvider } from '@/components/ux/OperationHistoryProvider'
+import { InteractionProvider } from '@/components/ux/governance'
 
 const setQueryData = vi.fn()
 const getQueriesData = vi.fn(() => [])
@@ -70,7 +72,11 @@ describe('JobsPanel cancel', () => {
     render(
       <MemoryRouter>
         <ThemeProvider theme={theme}>
-          <JobsPanel open onClose={() => {}} />
+          <OperationHistoryProvider>
+            <InteractionProvider>
+              <JobsPanel open onClose={() => {}} />
+            </InteractionProvider>
+          </OperationHistoryProvider>
         </ThemeProvider>
       </MemoryRouter>,
     )
@@ -86,7 +92,11 @@ describe('JobsPanel cancel', () => {
     render(
       <MemoryRouter>
         <ThemeProvider theme={theme}>
-          <JobsPanel open onClose={() => {}} />
+          <OperationHistoryProvider>
+            <InteractionProvider>
+              <JobsPanel open onClose={() => {}} />
+            </InteractionProvider>
+          </OperationHistoryProvider>
         </ThemeProvider>
       </MemoryRouter>,
     )

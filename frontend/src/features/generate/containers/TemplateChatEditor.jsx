@@ -108,7 +108,7 @@ function ChatMessage({ message }) {
         <Box
           sx={{
             p: 2,
-            borderRadius: 3,
+            borderRadius: 1,  // Figma spec: 8px
             bgcolor: isUser
               ? figmaGrey[1200]
               : 'background.paper',
@@ -176,7 +176,7 @@ function ProposedChangesPanel({ changes, proposedHtml, onApply, onReject, applyi
         p: 2,
         mx: 2,
         mb: 2,
-        borderRadius: 2,
+        borderRadius: 1,  // Figma spec: 8px
         border: '1px solid',
         borderColor: (theme) => alpha(theme.palette.divider, 0.3),
         bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : figmaGrey[200],
@@ -222,7 +222,7 @@ function ProposedChangesPanel({ changes, proposedHtml, onApply, onReject, applyi
             <Collapse in={showPreview}>
               <Box
                 sx={{
-                  borderRadius: 1.5,
+                  borderRadius: 1,  // Figma spec: 8px
                   border: '1px solid',
                   borderColor: 'divider',
                   bgcolor: 'background.paper',
@@ -512,7 +512,7 @@ export default function TemplateChatEditor({
         display: 'flex',
         flexDirection: 'column',
         bgcolor: 'background.default',
-        borderRadius: 2,
+        borderRadius: 1,  // Figma spec: 8px
         border: '1px solid',
         borderColor: 'divider',
         overflow: 'hidden',
@@ -591,7 +591,7 @@ export default function TemplateChatEditor({
             display: 'flex',
             gap: 1,
             p: 1.5,
-            borderRadius: 3,
+            borderRadius: 1,  // Figma spec: 8px
             bgcolor: (theme) => alpha(theme.palette.action.hover, 0.5),
             border: 1,
             borderColor: 'divider',

@@ -13,6 +13,7 @@ from datetime import datetime, timezone
 from typing import Any, Optional
 
 from pydantic import BaseModel
+from fastapi import WebSocket, WebSocketDisconnect
 
 logger = logging.getLogger("neura.collaboration")
 
@@ -67,6 +68,16 @@ class CollaborationService:
         self._color_index = 0
         # Thread lock for protecting shared state
         self._lock = threading.Lock()
+
+    def set_websocket_base_url(self, websocket_base_url: str) -> None:
+        """Update the base URL used to build websocket session links."""
+        if not websocket_base_url:
+            return
+        with self._lock:
+            self._websocket_base_url = websocket_base_url
+            for session in self._sessions.values():
+                if session.is_active:
+                    session.websocket_url = f"{self._websocket_base_url}/ws/collab/{session.document_id}"
 
     def start_session(
         self,
@@ -237,7 +248,7 @@ class YjsWebSocketHandler:
 
     async def handle_connection(
         self,
-        websocket,
+        websocket: WebSocket,
         document_id: str,
         user_id: str,
     ):
@@ -246,14 +257,17 @@ class YjsWebSocketHandler:
         if document_id not in self._connections:
             self._connections[document_id] = set()
 
+        await websocket.accept()
         self._connections[document_id].add(websocket)
 
         # Get or create session
         session = self._collab_service.start_session(document_id, user_id)
 
         try:
-            async for message in websocket:
+            async for message in websocket.iter_bytes():
                 await self._handle_message(websocket, document_id, user_id, message)
+        except WebSocketDisconnect:
+            pass
         finally:
             self._connections[document_id].discard(websocket)
             self._collab_service.leave_session(session.id, user_id)
@@ -271,7 +285,10 @@ class YjsWebSocketHandler:
             for conn in self._connections[document_id]:
                 if conn != websocket:
                     try:
-                        await conn.send(message)
+                        if isinstance(message, bytes):
+                            await conn.send_bytes(message)
+                        else:
+                            await conn.send_text(str(message))
                     except Exception as e:
                         logger.warning(f"Failed to send to connection: {e}")
 
@@ -283,6 +300,6 @@ class YjsWebSocketHandler:
         message = json.dumps({"type": "presence", "data": presence_data})
         for conn in self._connections[document_id]:
             try:
-                await conn.send(message)
+                await conn.send_text(message)
             except Exception as e:
                 logger.warning(f"Failed to broadcast presence: {e}")

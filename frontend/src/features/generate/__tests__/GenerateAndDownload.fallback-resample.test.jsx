@@ -6,6 +6,8 @@ import { MemoryRouter } from 'react-router-dom'
 
 import GenerateAndDownload from '@/features/generate/components/GenerateAndDownload.jsx'
 import { ToastProvider } from '@/components/ToastProvider.jsx'
+import { OperationHistoryProvider } from '@/components/ux/OperationHistoryProvider'
+import { InteractionProvider } from '@/components/ux/governance'
 import theme from '@/app/theme.js'
 import { useAppStore } from '@/stores'
 import { DEFAULT_RESAMPLE_CONFIG } from '@/features/generate/utils/generateFeatureUtils.js'
@@ -155,9 +157,13 @@ const renderGenerateAndDownload = (overrides = {}) => {
       <MemoryRouter>
         <QueryClientProvider client={queryClient}>
           <ThemeProvider theme={theme}>
-            <ToastProvider>
-              <GenerateAndDownload {...props} />
-            </ToastProvider>
+            <OperationHistoryProvider>
+              <InteractionProvider>
+                <ToastProvider>
+                  <GenerateAndDownload {...props} />
+                </ToastProvider>
+              </InteractionProvider>
+            </OperationHistoryProvider>
           </ThemeProvider>
         </QueryClientProvider>
       </MemoryRouter>,

@@ -26,6 +26,8 @@ cleaned.push(`--localstorage-file=${storageFile}`)
 const env = {
   ...process.env,
   NODE_OPTIONS: cleaned.join(' '),
+  // Ensure React development build is used (required for React.act)
+  NODE_ENV: 'development',
 }
 
 const child = spawn(process.execPath, [vitestPath, ...args], {

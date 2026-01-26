@@ -44,6 +44,8 @@ from backend.legacy.services.report_service import _extract_excel_print_scale_fr
 
 @pytest.fixture
 def fresh_state(tmp_path, monkeypatch):
+    # Clear NEURA_STATE_DIR to prevent .env override
+    monkeypatch.delenv("NEURA_STATE_DIR", raising=False)
     base_dir = tmp_path / "state"
     store = state_store_module.StateStore(base_dir=base_dir)
     state_store_module.set_state_store(store)

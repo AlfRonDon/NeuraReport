@@ -984,7 +984,7 @@ export default function SchedulesPage() {
     <PageContainer>
       <Container maxWidth="xl">
         {renderSchedulerStatusBanner()}
-        <Alert severity="info" sx={{ mb: 2, borderRadius: 2 }}>
+        <Alert severity="info" sx={{ mb: 2, borderRadius: 1 }}  // Figma spec: 8px>
           Schedules create future report runs. Progress appears in Jobs and finished reports show up in History.
         </Alert>
         <DataTable

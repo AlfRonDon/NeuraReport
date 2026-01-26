@@ -2,6 +2,7 @@
 import asyncio
 import contextlib
 import json
+import logging
 import os
 import re
 from backend.app.repositories.dataframes import DuckDBDataFrameQuery, SQLiteDataFrameLoader, sqlite_shim as sqlite3
@@ -11,6 +12,8 @@ from decimal import Decimal, InvalidOperation
 from itertools import product
 from pathlib import Path
 from typing import Any, Iterable, Mapping, Sequence
+
+logger = logging.getLogger(__name__)
 
 try:
     from PIL import Image
@@ -140,16 +143,9 @@ def fill_and_print(
     OUT_DIR = OUT_HTML.parent
     OUT_DIR.mkdir(parents=True, exist_ok=True)
 
-    log_file_path = Path(__file__).with_name("fill_and_print.log")
-
     def _log_debug(*parts: object) -> None:
         message = " ".join(str(part) for part in parts)
-        print(message)
-        try:
-            with log_file_path.open("a", encoding="utf-8") as fh:
-                fh.write(f"[{datetime.now().isoformat()}] {message}\n")
-        except Exception:
-            pass
+        logger.debug(message)
 
     _log_debug(
         "=== fill_and_print call ===",
@@ -370,7 +366,7 @@ def fill_and_print(
 
     async def html_to_pdf_async(html_path: Path, pdf_path: Path, base_dir: Path, pdf_scale: float | None = None):
         if async_playwright is None:
-            print("Playwright not available; skipping PDF generation.")
+            logger.warning("Playwright not available; skipping PDF generation.")
             return
 
         html_path_resolved = html_path.resolve()
@@ -1185,14 +1181,14 @@ def fill_and_print(
             try:
                 generator_results = _run_generator_entrypoints(entrypoints, sql_params, dataframe_loader)
             except Exception as exc:  # pragma: no cover - defensive logging
-                print(f"Generator SQL execution failed; falling back to contract mapping: {exc}")
+                logger.warning("Generator SQL execution failed; falling back to contract mapping: %s", exc)
                 generator_results = None
 
     if generator_results is None and not multi_key_selected:
         try:
             default_sql_pack = contract_adapter.build_default_sql_pack()
         except Exception as exc:  # pragma: no cover - defensive logging
-            print(f"Contract-derived SQL synthesis failed: {exc}")
+            logger.warning("Contract-derived SQL synthesis failed: %s", exc)
         else:
             default_params = default_sql_pack.get("params") or {}
             required_default = list(default_params.get("required") or [])
@@ -1207,7 +1203,7 @@ def fill_and_print(
                     dataframe_loader,
                 )
             except Exception as exc:  # pragma: no cover - defensive logging
-                print(f"Contract SQL execution failed; continuing with discovery fallback: {exc}")
+                logger.warning("Contract SQL execution failed; continuing with discovery fallback: %s", exc)
             else:
                 if any(fallback_results.get(section) for section in ("rows", "header", "totals")):
                     generator_results = fallback_results
@@ -1229,7 +1225,7 @@ def fill_and_print(
                 existing = list(existing)
                 if len(pcols) > 1:
                     if any(not _looks_like_composite_id(i, len(pcols)) for i in existing):
-                        print("Provided BATCH_IDS do not match composite key format; falling back to auto-discovery.")
+                        logger.debug("Provided BATCH_IDS do not match composite key format; falling back to auto-discovery.")
                         need_discover = True
 
         if need_discover:
@@ -1246,7 +1242,7 @@ def fill_and_print(
     else:
         BATCH_IDS = ["__GENERATOR_SINGLE__"]
 
-    print("BATCH_IDS:", len(BATCH_IDS or []), (BATCH_IDS or [])[:20] if BATCH_IDS else [])
+    _log_debug("BATCH_IDS:", len(BATCH_IDS or []), (BATCH_IDS or [])[:20] if BATCH_IDS else [])
     # ---- Only touch tokens outside <style>/<script> ----
     def format_token_value(token: str, raw_value: Any) -> str:
         return contract_adapter.format_value(token, raw_value)
@@ -1909,7 +1905,7 @@ def fill_and_print(
 
             rendered_blocks.append(block_html)
         else:
-            print("Generator SQL produced no usable row data after filtering; skipping block.")
+            logger.debug("Generator SQL produced no usable row data after filtering; skipping block.")
 
     else:
         for batch_id in BATCH_IDS or []:
@@ -1929,7 +1925,7 @@ def fill_and_print(
 
             # (b) Row repeater (child rows)
             if not row_tokens_in_template:
-                print(f"No row tokens found for batch {batch_id}; skipping block.")
+                logger.debug("No row tokens found for batch %s; skipping block.", batch_id)
                 continue
 
             rows = [dict(r) for r in prefetched_rows.get(batch_id, [])]
@@ -1957,10 +1953,10 @@ def fill_and_print(
                         cur = _get_fallback_cursor()
                         cur.execute(sql_fb, (START_DATE, END_DATE))
                         rows = [dict(r) for r in cur.fetchall()]
-                        print(f"Row fallback used: table={maj_table}, rows={len(rows)}")
+                        logger.debug("Row fallback used: table=%s, rows=%d", maj_table, len(rows))
 
             if not rows:
-                print(f"No child rows found for batch {batch_id}; skipping block.")
+                logger.debug("No child rows found for batch %s; skipping block.", batch_id)
                 continue
 
             significant_cols = [
@@ -1982,7 +1978,7 @@ def fill_and_print(
                     f"[multi-debug] sql rows: total={len(rows)}, filtered={len(filtered_rows)}, key_values={KEY_VALUES}"
                 )
             if not filtered_rows:
-                print(f"No significant child rows for batch {batch_id}; skipping block.")
+                logger.debug("No significant child rows for batch %s; skipping block.", batch_id)
                 continue
 
             _reindex_serial_fields(filtered_rows, row_tokens_in_template, row_cols_needed)
@@ -2036,7 +2032,7 @@ def fill_and_print(
     # ---- Assemble full document ----
     rows_rendered = bool(rendered_blocks)
     if not rows_rendered:
-        print("No rendered blocks generated for this selection.")
+        logger.debug("No rendered blocks generated for this selection.")
 
     html_multi = shell_prefix + "\n".join(rendered_blocks) + shell_suffix
 
@@ -2067,12 +2063,12 @@ def fill_and_print(
 
     # write to the path requested by the API
     OUT_HTML.write_text(html_multi, encoding="utf-8")
-    print("Wrote HTML:", OUT_HTML)
+    _log_debug("Wrote HTML:", OUT_HTML)
 
-    print("BATCH_IDS:", len(BATCH_IDS or []), (BATCH_IDS or [])[:20] if BATCH_IDS else [])
+    _log_debug("BATCH_IDS:", len(BATCH_IDS or []), (BATCH_IDS or [])[:20] if BATCH_IDS else [])
 
     asyncio.run(html_to_pdf_async(OUT_HTML, OUT_PDF, TEMPLATE_PATH.parent))
-    print("Wrote PDF via Playwright:", OUT_PDF)
+    _log_debug("Wrote PDF via Playwright:", OUT_PDF)
 
     if fallback_con is not None:
         with contextlib.suppress(Exception):

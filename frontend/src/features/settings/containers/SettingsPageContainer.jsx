@@ -169,7 +169,7 @@ function StatusChip({ status }) {
       size="small"
       icon={<Icon sx={{ fontSize: 14 }} />}
       label={status?.replace(/_/g, ' ') || 'unknown'}
-      sx={{ textTransform: 'capitalize', fontSize: '0.75rem', borderRadius: 2, bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400], color: 'text.secondary' }}
+      sx={{ textTransform: 'capitalize', fontSize: '0.75rem', borderRadius: 1, bgcolor:  // Figma spec: 8px (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400], color: 'text.secondary' }}
     />
   )
 }
@@ -525,7 +525,7 @@ export default function SettingsPage() {
       </HeaderContainer>
 
       {error && (
-        <Alert severity="error" sx={{ mb: 3, borderRadius: 3 }}>
+        <Alert severity="error" sx={{ mb: 3, borderRadius: 1 }}  // Figma spec: 8px>
           {error}
         </Alert>
       )}
@@ -600,12 +600,12 @@ export default function SettingsPage() {
               }
             />
             {twoFactorEnabled && (
-              <Alert severity="success" sx={{ borderRadius: 2 }}>
+              <Alert severity="success" sx={{ borderRadius: 1 }}  // Figma spec: 8px>
                 Two-factor authentication is enabled. Your account is more secure.
               </Alert>
             )}
             {showTwoFactorSetup && (
-              <Alert severity="info" sx={{ borderRadius: 2 }}>
+              <Alert severity="info" sx={{ borderRadius: 1 }}  // Figma spec: 8px>
                 <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
                   Set up Two-Factor Authentication
                 </Typography>
@@ -657,7 +657,7 @@ export default function SettingsPage() {
               <Typography variant="caption" sx={{ color: theme.palette.text.secondary, display: 'block', mb: 1 }}>
                 Update your password to keep your account secure.
               </Typography>
-              <Button variant="outlined" size="small" sx={{ borderRadius: 2 }}>
+              <Button variant="outlined" size="small" sx={{ borderRadius: 1 }}>
                 Change Password
               </Button>
             </Box>
@@ -671,7 +671,7 @@ export default function SettingsPage() {
               <Typography variant="caption" sx={{ color: theme.palette.text.secondary, display: 'block', mb: 1 }}>
                 You're currently logged in on 1 device.
               </Typography>
-              <Button variant="outlined" size="small" sx={{ borderRadius: 2, color: 'text.secondary' }}>
+              <Button variant="outlined" size="small" sx={{ borderRadius: 1, color: 'text.secondary' }}>
                 Sign Out Other Devices
               </Button>
             </Box>

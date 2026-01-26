@@ -17,7 +17,7 @@ describe('jobs API client', () => {
   })
 
   it('posts payloads to the run-report job endpoint', async () => {
-    const client = await loadClient()
+    const client = await loadClient({ VITE_USE_MOCK: 'false' })
     const postSpy = vi.spyOn(client.api, 'post').mockResolvedValue({ data: { job_id: 'job-123' } })
     const payload = {
       templateId: 'tpl-123',
@@ -48,7 +48,7 @@ describe('jobs API client', () => {
   })
 
   it('builds query params for listJobs and getJob requests', async () => {
-    const client = await loadClient()
+    const client = await loadClient({ VITE_USE_MOCK: 'false' })
     const getSpy = vi.spyOn(client.api, 'get').mockResolvedValue({
       data: { jobs: [{ id: 'j1', status: 'running' }] },
     })

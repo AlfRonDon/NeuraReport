@@ -158,7 +158,7 @@ export default function UploadTemplate() {
           sx={{
             border: '1px dashed',
             borderColor: isDragging ? 'text.secondary' : 'divider',
-            borderRadius: 2,
+            borderRadius: 1,  // Figma spec: 8px
             p: 3,
             textAlign: 'center',
             bgcolor: isDragging ? 'action.hover' : 'transparent',

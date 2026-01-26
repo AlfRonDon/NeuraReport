@@ -73,7 +73,7 @@ class ResumeParser:
         try:
             import spacy  # noqa: F401
             return True
-        except ImportError:
+        except Exception:
             return False
 
     async def parse(self, request: ResumeParseRequest) -> ResumeParseResponse:

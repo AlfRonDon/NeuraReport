@@ -866,7 +866,7 @@ export default function UploadVerify() {
           ))}
         </Stepper>
 
-        <Alert severity="info" sx={{ borderRadius: 2 }}>
+        <Alert severity="info" sx={{ borderRadius: 1 }}  // Figma spec: 8px>
           Upload a report design, verify the preview, then map fields to your data.
           SQL expressions and AI corrections are optional. Approving saves the design for report runs.
         </Alert>
@@ -902,7 +902,7 @@ export default function UploadVerify() {
           onDrop={dropDisabled ? undefined : handleDrop}
           sx={{
             position: 'relative',
-            borderRadius: 2,
+            borderRadius: 1,  // Figma spec: 8px
             border: '1px dashed',
             borderColor: (theme) => {
               if (dropDisabled) return alpha(theme.palette.action.disabled, 0.4)
@@ -990,7 +990,7 @@ export default function UploadVerify() {
             mt: 2,
             px: { xs: 2, sm: 2.5 },
             py: { xs: 1.75, sm: 2 },
-            borderRadius: 2,
+            borderRadius: 1,  // Figma spec: 8px
             border: '1px solid',
             borderColor: (theme) => alpha(theme.palette.divider, 0.3),
             bgcolor: 'common.white',
@@ -1071,7 +1071,7 @@ export default function UploadVerify() {
           sx={{
             mt: 2,
             p: 2,
-            borderRadius: 2,
+            borderRadius: 1,  // Figma spec: 8px
             border: '1px solid',
             borderColor: 'divider',
             bgcolor: 'background.paper',
@@ -1133,7 +1133,7 @@ export default function UploadVerify() {
                 sx={{
                   border: '1px solid',
                   borderColor: 'divider',
-                  borderRadius: 2,
+                  borderRadius: 1,  // Figma spec: 8px
                   overflow: 'hidden',
                   aspectRatio: '210 / 297',
                   display: 'flex',
@@ -1169,7 +1169,7 @@ export default function UploadVerify() {
                   justifyContent: 'center',
                   border: '1px solid',
                   borderColor: 'divider',
-                  borderRadius: 2,
+                  borderRadius: 1,  // Figma spec: 8px
                   overflow: 'hidden',
                   bgcolor: 'background.paper',
                   boxShadow: '0 16px 38px rgba(15, 23, 42, 0.08)',
@@ -1217,7 +1217,7 @@ export default function UploadVerify() {
                     sx={{
                       height: '100%',
                       width: '100%',
-                      borderRadius: 2,
+                      borderRadius: 1,  // Figma spec: 8px
                       border: '1px dashed',
                       borderColor: 'divider',
                       display: 'flex',

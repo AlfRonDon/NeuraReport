@@ -958,7 +958,7 @@ export default function OpsConsolePage() {
               sx={{
                 mt: 1,
                 p: 2,
-                borderRadius: 2,
+                borderRadius: 1,  // Figma spec: 8px
                 backgroundColor: 'background.default',
                 border: '1px solid',
                 borderColor: 'divider',

@@ -40,7 +40,7 @@ export default function DraftRecoveryBanner({
         icon={<RestoreIcon />}
         sx={{
           mb: 2,
-          borderRadius: 2,
+          borderRadius: 1,  // Figma spec: 8px
           '& .MuiAlert-message': { width: '100%' },
         }}
         action={

@@ -60,7 +60,7 @@ class DocAIService:
         try:
             import spacy  # noqa: F401
             return True
-        except ImportError:
+        except Exception:
             return False
 
     def _check_embeddings(self) -> bool:

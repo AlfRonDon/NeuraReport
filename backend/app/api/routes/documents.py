@@ -8,7 +8,9 @@ import logging
 from pathlib import Path
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, UploadFile, File
+import uuid
+
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, UploadFile, File, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel
 
 from backend.app.services.config import get_settings
@@ -33,15 +35,18 @@ from ...services.documents import (
     CollaborationService,
     PDFOperationsService,
 )
+from ...services.documents.collaboration import YjsWebSocketHandler
 
 logger = logging.getLogger("neura.api.documents")
 
 router = APIRouter(tags=["documents"])
+ws_router = APIRouter()
 
 # Service instances (would use dependency injection in production)
 _doc_service: Optional[DocumentService] = None
 _collab_service: Optional[CollaborationService] = None
 _pdf_service: Optional[PDFOperationsService] = None
+_ws_handler: Optional[YjsWebSocketHandler] = None
 
 
 def get_document_service() -> DocumentService:
@@ -56,6 +61,19 @@ def get_collaboration_service() -> CollaborationService:
     if _collab_service is None:
         _collab_service = CollaborationService()
     return _collab_service
+
+
+def get_ws_handler() -> YjsWebSocketHandler:
+    global _ws_handler
+    if _ws_handler is None:
+        _ws_handler = YjsWebSocketHandler(get_collaboration_service())
+    return _ws_handler
+
+
+def _resolve_ws_base_url(request: Request) -> str:
+    scheme = "wss" if request.url.scheme == "https" else "ws"
+    host = request.headers.get("x-forwarded-host") or request.headers.get("host") or "localhost:8000"
+    return f"{scheme}://{host}"
 
 
 def get_pdf_service() -> PDFOperationsService:
@@ -116,9 +134,10 @@ async def create_document(
     doc_service: DocumentService = Depends(get_document_service),
 ):
     """Create a new document."""
+    content_payload = request.content.model_dump() if request.content else None
     doc = doc_service.create(
         name=request.name,
-        content=request.content,
+        content=content_payload,
         is_template=request.is_template,
         metadata=request.metadata,
     )
@@ -168,10 +187,11 @@ async def update_document(
     doc_service: DocumentService = Depends(get_document_service),
 ):
     """Update a document."""
+    content_payload = request.content.model_dump() if request.content else None
     doc = doc_service.update(
         document_id=document_id,
         name=request.name,
-        content=request.content,
+        content=content_payload,
         metadata=request.metadata,
     )
     if not doc:
@@ -275,6 +295,7 @@ async def resolve_comment(
 @router.post("/{document_id}/collaborate", response_model=CollaborationSessionResponse)
 async def start_collaboration(
     document_id: str,
+    request: Request,
     collab_service: CollaborationService = Depends(get_collaboration_service),
     doc_service: DocumentService = Depends(get_document_service),
 ):
@@ -283,6 +304,7 @@ async def start_collaboration(
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
 
+    collab_service.set_websocket_base_url(_resolve_ws_base_url(request))
     session = collab_service.start_session(document_id)
     return CollaborationSessionResponse(**session.model_dump())
 
@@ -299,6 +321,25 @@ async def get_collaboration_presence(
 
     presence = collab_service.get_presence(session.id)
     return {"collaborators": [p.model_dump() for p in presence]}
+
+
+# ============================================
+# Collaboration WebSocket Endpoint
+# ============================================
+
+@ws_router.websocket("/ws/collab/{document_id}")
+async def collaboration_socket(
+    websocket: WebSocket,
+    document_id: str,
+    user_id: str | None = Query(None),
+):
+    """WebSocket endpoint for Y.js collaboration."""
+    handler = get_ws_handler()
+    session_user_id = user_id or str(uuid.uuid4())
+    try:
+        await handler.handle_connection(websocket, document_id, session_user_id)
+    except WebSocketDisconnect:
+        return
 
 
 # ============================================

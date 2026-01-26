@@ -1,0 +1,2 @@
+NeuraReport ingestion test file.
+Second line.

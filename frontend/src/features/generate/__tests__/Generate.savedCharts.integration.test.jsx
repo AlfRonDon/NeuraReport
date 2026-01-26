@@ -7,6 +7,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import GeneratePage from '@/features/generate/containers/GeneratePageContainer'
 import theme from '@/app/theme.js'
 import { ToastProvider } from '@/components/ToastProvider.jsx'
+import { OperationHistoryProvider } from '@/components/ux/OperationHistoryProvider'
+import { InteractionProvider } from '@/components/ux/governance'
 import { useAppStore } from '@/stores'
 
 if (!global.ResizeObserver) {
@@ -168,13 +170,17 @@ const renderGeneratePage = () => {
   return render(
     <QueryClientProvider client={queryClient}>
       <ThemeProvider theme={theme}>
-        <ToastProvider>
-          <MemoryRouter initialEntries={['/generate']}>
-            <Routes>
-              <Route path="/generate" element={<GeneratePage />} />
-            </Routes>
-          </MemoryRouter>
-        </ToastProvider>
+        <OperationHistoryProvider>
+          <InteractionProvider>
+            <ToastProvider>
+              <MemoryRouter initialEntries={['/generate']}>
+                <Routes>
+                  <Route path="/generate" element={<GeneratePage />} />
+                </Routes>
+              </MemoryRouter>
+            </ToastProvider>
+          </InteractionProvider>
+        </OperationHistoryProvider>
       </ThemeProvider>
     </QueryClientProvider>,
   )
@@ -185,9 +191,9 @@ describe('GeneratePage saved chart integration', () => {
     savedChartsStore.length = 0
     useAppStore.setState((state) => ({
       ...state,
-      templates: [],
+      templates: templatesMock,
       selectedTemplates: [],
-      savedConnections: [],
+      savedConnections: [{ id: 'conn-1', name: 'Test Connection' }],
       lastUsed: {},
     }))
   })
@@ -212,8 +218,8 @@ describe('GeneratePage saved chart integration', () => {
     fireEvent.change(screen.getByLabelText(/Start Date & Time/i), { target: { value: '2024-01-01T00:00' } })
     fireEvent.change(screen.getByLabelText(/End Date & Time/i), { target: { value: '2024-01-02T00:00' } })
 
-    const findButton = screen.getByRole('button', { name: /Find Reports/i })
-    await waitFor(() => expect(findButton).not.toBeDisabled())
+    const findButton = await screen.findByRole('button', { name: /Preview Data/i })
+    await waitFor(() => expect(findButton).not.toBeDisabled(), { timeout: 3000 })
     fireEvent.click(findButton)
     await waitFor(() => expect(discoverReportsMock).toHaveBeenCalled())
 

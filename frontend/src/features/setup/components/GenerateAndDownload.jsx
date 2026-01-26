@@ -659,7 +659,7 @@ function GenerateAndDownload({
                 key={`${d.filename}-${i}`}
                 sx={{
                   p: { xs: 1.5, md: 2 },
-                  borderRadius: 2,
+                  borderRadius: 1,  // Figma spec: 8px
                   border: '1px solid',
                   borderColor: 'divider',
                   bgcolor: 'background.paper',
