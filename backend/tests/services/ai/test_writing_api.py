@@ -299,9 +299,8 @@ class TestRewriteEndpoint:
             json={"text": "text", "tone": "invalid_tone"}
         )
 
-        assert response.status_code == 200
-        call_kwargs = mock_writing_service.rewrite.call_args[1]
-        assert call_kwargs["tone"] == WritingTone.PROFESSIONAL
+        # Invalid tones are now properly rejected at the validation layer
+        assert response.status_code == 422
 
     def test_rewrite_with_preserve_meaning(self, client, mock_writing_service):
         """Rewrite with preserve_meaning parameter."""
@@ -745,7 +744,8 @@ class TestRequestValidation:
             json={"text": ""}
         )
 
-        assert response.status_code == 200
+        # Empty text is now rejected at validation layer (min_length=1)
+        assert response.status_code == 422
 
     def test_rewrite_default_tone(self, client, mock_writing_service):
         """Rewrite uses default tone when not specified."""

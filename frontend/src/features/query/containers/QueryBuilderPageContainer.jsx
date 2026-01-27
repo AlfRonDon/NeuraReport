@@ -318,6 +318,7 @@ export default function QueryBuilderPage() {
   const writeOperation = getWriteOperation(generatedSQL)
   const selectedConnectionLabel = connections.find((conn) => conn.id === selectedConnectionId)?.name
     || (selectedConnectionId ? 'Selected connection' : 'No connection selected')
+  const connectionLabelId = 'query-builder-connection-label'
 
   // Fetch connections on mount
   useEffect(() => {
@@ -731,10 +732,12 @@ export default function QueryBuilderPage() {
       {/* Connection Selector */}
       <GlassCard>
         <StyledFormControl fullWidth size="small">
-          <InputLabel>Database Connection</InputLabel>
+          <InputLabel id={connectionLabelId}>Database Connection</InputLabel>
           <Select
             value={selectedConnectionId || ''}
             label="Database Connection"
+            labelId={connectionLabelId}
+            id="query-builder-connection-select"
             onChange={(e) => setSelectedConnection(e.target.value)}
             startAdornment={<StorageIcon sx={{ mr: 1, color: theme.palette.text.secondary }} />}
           >

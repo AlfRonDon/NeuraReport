@@ -1,6 +1,7 @@
 """
 Spreadsheet AI API Tests
 Tests for spreadsheet AI API endpoints focusing on service integration.
+Updated for unified LLMClient architecture.
 """
 import json
 import pytest
@@ -18,6 +19,9 @@ from backend.app.services.ai.spreadsheet_ai_service import (
     Anomaly,
     PredictionColumn,
     FormulaExplanation,
+)
+from backend.app.services.ai.writing_service import (
+    LLMResponseError,
 )
 
 
@@ -55,14 +59,15 @@ class TestFormulaGenerationIntegration:
     @pytest.mark.asyncio
     async def test_formula_generation_with_context(self, service):
         """Formula generation includes context in prompt."""
-        with patch.object(service, '_call_openai') as mock_call:
-            mock_call.return_value = json.dumps({
+        async def mock_call(*args, **kwargs):
+            return json.dumps({
                 "formula": "=SUM(C:C)",
                 "explanation": "Sums all salaries",
                 "examples": [],
                 "alternative_formulas": [],
             })
 
+        with patch.object(service, '_call_llm', side_effect=mock_call) as mock_llm:
             result = await service.natural_language_to_formula(
                 "Sum all salaries",
                 context="Columns: Name, Age, Salary, Department"
@@ -70,47 +75,49 @@ class TestFormulaGenerationIntegration:
 
             assert result.formula == "=SUM(C:C)"
             # Verify context was passed to the prompt
-            call_args = mock_call.call_args[0]
+            call_args = mock_llm.call_args[0]
             assert "Salary" in call_args[1] or "salaries" in call_args[1].lower()
 
     @pytest.mark.asyncio
     async def test_formula_generation_excel_type(self, service):
         """Formula generation uses Excel syntax by default."""
-        with patch.object(service, '_call_openai') as mock_call:
-            mock_call.return_value = json.dumps({
+        async def mock_call(*args, **kwargs):
+            return json.dumps({
                 "formula": "=VLOOKUP(A1,B:C,2,FALSE)",
                 "explanation": "Lookup formula",
                 "examples": [],
                 "alternative_formulas": [],
             })
 
+        with patch.object(service, '_call_llm', side_effect=mock_call) as mock_llm:
             result = await service.natural_language_to_formula(
                 "Lookup value from column B",
                 spreadsheet_type="excel"
             )
 
             # Verify Excel is mentioned in prompt
-            call_args = mock_call.call_args[0]
+            call_args = mock_llm.call_args[0]
             assert "excel" in call_args[0].lower()
 
     @pytest.mark.asyncio
     async def test_formula_generation_google_sheets(self, service):
         """Formula generation uses Google Sheets syntax."""
-        with patch.object(service, '_call_openai') as mock_call:
-            mock_call.return_value = json.dumps({
+        async def mock_call(*args, **kwargs):
+            return json.dumps({
                 "formula": "=ARRAYFORMULA(A:A*B:B)",
                 "explanation": "Array formula",
                 "examples": [],
                 "alternative_formulas": [],
             })
 
+        with patch.object(service, '_call_llm', side_effect=mock_call) as mock_llm:
             result = await service.natural_language_to_formula(
                 "Multiply columns",
                 spreadsheet_type="google_sheets"
             )
 
             # Verify Google Sheets is mentioned
-            call_args = mock_call.call_args[0]
+            call_args = mock_llm.call_args[0]
             assert "google_sheets" in call_args[0].lower()
 
 
@@ -125,8 +132,8 @@ class TestDataQualityIntegration:
     @pytest.mark.asyncio
     async def test_data_quality_with_issues(self, service, sample_data):
         """Data quality analysis detects issues."""
-        with patch.object(service, '_call_openai') as mock_call:
-            mock_call.return_value = json.dumps({
+        async def mock_call(*args, **kwargs):
+            return json.dumps({
                 "suggestions": [
                     {
                         "column": "Salary",
@@ -141,6 +148,7 @@ class TestDataQualityIntegration:
                 "summary": "Found 1 potential data quality issue",
             })
 
+        with patch.object(service, '_call_llm', side_effect=mock_call):
             result = await service.analyze_data_quality(sample_data)
 
             assert len(result.suggestions) == 1
@@ -150,33 +158,35 @@ class TestDataQualityIntegration:
     @pytest.mark.asyncio
     async def test_data_quality_with_column_info(self, service, sample_data):
         """Data quality uses column type info."""
-        with patch.object(service, '_call_openai') as mock_call:
-            mock_call.return_value = json.dumps({
+        async def mock_call(*args, **kwargs):
+            return json.dumps({
                 "suggestions": [],
                 "quality_score": 100.0,
                 "summary": "No issues",
             })
 
+        with patch.object(service, '_call_llm', side_effect=mock_call) as mock_llm:
             await service.analyze_data_quality(
                 sample_data,
                 column_info={"Age": "integer", "Salary": "currency"}
             )
 
             # Verify column info was included
-            call_args = mock_call.call_args[0]
+            call_args = mock_llm.call_args[0]
             assert "integer" in call_args[1]
             assert "currency" in call_args[1]
 
     @pytest.mark.asyncio
     async def test_data_quality_perfect_data(self, service, sample_data):
         """Data quality returns 100 for perfect data."""
-        with patch.object(service, '_call_openai') as mock_call:
-            mock_call.return_value = json.dumps({
+        async def mock_call(*args, **kwargs):
+            return json.dumps({
                 "suggestions": [],
                 "quality_score": 100.0,
                 "summary": "Data quality is excellent",
             })
 
+        with patch.object(service, '_call_llm', side_effect=mock_call):
             result = await service.analyze_data_quality(sample_data)
 
             assert result.quality_score == 100.0
@@ -194,8 +204,8 @@ class TestAnomalyDetectionIntegration:
     @pytest.mark.asyncio
     async def test_anomaly_detection_finds_outliers(self, service, sample_data):
         """Anomaly detection identifies outliers."""
-        with patch.object(service, '_call_openai') as mock_call:
-            mock_call.return_value = json.dumps({
+        async def mock_call(*args, **kwargs):
+            return json.dumps({
                 "anomalies": [
                     {
                         "location": "Row 3",
@@ -210,6 +220,7 @@ class TestAnomalyDetectionIntegration:
                 "summary": "Found 1 potential outlier",
             })
 
+        with patch.object(service, '_call_llm', side_effect=mock_call):
             result = await service.detect_anomalies(sample_data)
 
             assert result.anomaly_count == 1
@@ -219,27 +230,28 @@ class TestAnomalyDetectionIntegration:
     @pytest.mark.asyncio
     async def test_anomaly_detection_column_filter(self, service, sample_data):
         """Anomaly detection focuses on specified columns."""
-        with patch.object(service, '_call_openai') as mock_call:
-            mock_call.return_value = json.dumps({
+        async def mock_call(*args, **kwargs):
+            return json.dumps({
                 "anomalies": [],
                 "total_rows_analyzed": 5,
                 "summary": "No anomalies in Age column",
             })
 
+        with patch.object(service, '_call_llm', side_effect=mock_call) as mock_llm:
             await service.detect_anomalies(
                 sample_data,
                 columns_to_analyze=["Age"]
             )
 
             # Verify column filter was included
-            call_args = mock_call.call_args[0]
+            call_args = mock_llm.call_args[0]
             assert "Age" in call_args[1]
 
     @pytest.mark.asyncio
     async def test_anomaly_detection_high_sensitivity(self, service, sample_data):
         """High sensitivity detects more anomalies."""
-        with patch.object(service, '_call_openai') as mock_call:
-            mock_call.return_value = json.dumps({
+        async def mock_call(*args, **kwargs):
+            return json.dumps({
                 "anomalies": [
                     {
                         "location": "Row 2",
@@ -262,6 +274,7 @@ class TestAnomalyDetectionIntegration:
                 "summary": "High sensitivity detected 2 potential anomalies",
             })
 
+        with patch.object(service, '_call_llm', side_effect=mock_call) as mock_llm:
             result = await service.detect_anomalies(
                 sample_data,
                 sensitivity="high"
@@ -269,7 +282,7 @@ class TestAnomalyDetectionIntegration:
 
             assert result.anomaly_count == 2
             # Verify sensitivity was included
-            call_args = mock_call.call_args[0]
+            call_args = mock_llm.call_args[0]
             assert "high" in call_args[0].lower()
 
 
@@ -284,8 +297,8 @@ class TestPredictionGenerationIntegration:
     @pytest.mark.asyncio
     async def test_prediction_generation(self, service, sample_data):
         """Prediction generation creates valid predictions."""
-        with patch.object(service, '_call_openai') as mock_call:
-            mock_call.return_value = json.dumps({
+        async def mock_call(*args, **kwargs):
+            return json.dumps({
                 "column_name": "Predicted_Bonus",
                 "predictions": [5000, 4500, 6000, 4800, 5500],
                 "confidence_scores": [0.9, 0.88, 0.92, 0.87, 0.89],
@@ -293,6 +306,7 @@ class TestPredictionGenerationIntegration:
                 "accuracy_estimate": 0.85,
             })
 
+        with patch.object(service, '_call_llm', side_effect=mock_call):
             result = await service.generate_predictive_column(
                 sample_data,
                 "Predict annual bonus",
@@ -306,8 +320,8 @@ class TestPredictionGenerationIntegration:
     @pytest.mark.asyncio
     async def test_prediction_with_multiple_columns(self, service, sample_data):
         """Prediction uses multiple source columns."""
-        with patch.object(service, '_call_openai') as mock_call:
-            mock_call.return_value = json.dumps({
+        async def mock_call(*args, **kwargs):
+            return json.dumps({
                 "column_name": "Performance_Score",
                 "predictions": [85, 78, 92, 80, 88],
                 "confidence_scores": [0.85, 0.82, 0.9, 0.83, 0.87],
@@ -315,6 +329,7 @@ class TestPredictionGenerationIntegration:
                 "accuracy_estimate": 0.8,
             })
 
+        with patch.object(service, '_call_llm', side_effect=mock_call) as mock_llm:
             await service.generate_predictive_column(
                 sample_data,
                 "Predict performance score",
@@ -322,7 +337,7 @@ class TestPredictionGenerationIntegration:
             )
 
             # Verify all columns were included
-            call_args = mock_call.call_args[0]
+            call_args = mock_llm.call_args[0]
             assert "Salary" in call_args[1]
             assert "Age" in call_args[1]
 
@@ -338,8 +353,8 @@ class TestFormulaExplanationIntegration:
     @pytest.mark.asyncio
     async def test_explain_complex_formula(self, service):
         """Explain a complex nested formula."""
-        with patch.object(service, '_call_openai') as mock_call:
-            mock_call.return_value = json.dumps({
+        async def mock_call(*args, **kwargs):
+            return json.dumps({
                 "formula": "=IF(VLOOKUP(A1,B:C,2,FALSE)>100,\"High\",\"Low\")",
                 "summary": "Looks up a value and returns High if over 100, else Low",
                 "step_by_step": [
@@ -358,6 +373,7 @@ class TestFormulaExplanationIntegration:
                 ],
             })
 
+        with patch.object(service, '_call_llm', side_effect=mock_call):
             result = await service.explain_formula(
                 "=IF(VLOOKUP(A1,B:C,2,FALSE)>100,\"High\",\"Low\")"
             )
@@ -369,8 +385,8 @@ class TestFormulaExplanationIntegration:
     @pytest.mark.asyncio
     async def test_explain_with_context(self, service):
         """Formula explanation includes context."""
-        with patch.object(service, '_call_openai') as mock_call:
-            mock_call.return_value = json.dumps({
+        async def mock_call(*args, **kwargs):
+            return json.dumps({
                 "formula": "=SUM(C:C)",
                 "summary": "Sums all values in the Salary column",
                 "step_by_step": ["Adds up all salary values"],
@@ -378,13 +394,14 @@ class TestFormulaExplanationIntegration:
                 "potential_issues": [],
             })
 
+        with patch.object(service, '_call_llm', side_effect=mock_call) as mock_llm:
             await service.explain_formula(
                 "=SUM(C:C)",
                 context="Column C contains salaries"
             )
 
             # Verify context was included
-            call_args = mock_call.call_args[0]
+            call_args = mock_llm.call_args[0]
             assert "salaries" in call_args[1].lower()
 
 
@@ -399,8 +416,8 @@ class TestFormulaSuggestionIntegration:
     @pytest.mark.asyncio
     async def test_suggest_formulas_for_data(self, service, sample_data):
         """Suggest relevant formulas for data structure."""
-        with patch.object(service, '_call_openai') as mock_call:
-            mock_call.return_value = json.dumps({
+        async def mock_call(*args, **kwargs):
+            return json.dumps({
                 "suggestions": [
                     {
                         "formula": "=SUM(Salary)",
@@ -423,6 +440,7 @@ class TestFormulaSuggestionIntegration:
                 ]
             })
 
+        with patch.object(service, '_call_llm', side_effect=mock_call):
             result = await service.suggest_formulas(sample_data)
 
             assert len(result) == 3
@@ -432,8 +450,8 @@ class TestFormulaSuggestionIntegration:
     @pytest.mark.asyncio
     async def test_suggest_formulas_with_goals(self, service, sample_data):
         """Suggest formulas aligned with analysis goals."""
-        with patch.object(service, '_call_openai') as mock_call:
-            mock_call.return_value = json.dumps({
+        async def mock_call(*args, **kwargs):
+            return json.dumps({
                 "suggestions": [
                     {
                         "formula": "=CORREL(Age,Salary)",
@@ -444,13 +462,14 @@ class TestFormulaSuggestionIntegration:
                 ]
             })
 
+        with patch.object(service, '_call_llm', side_effect=mock_call) as mock_llm:
             await service.suggest_formulas(
                 sample_data,
                 analysis_goals="Find relationships between variables"
             )
 
             # Verify goals were included
-            call_args = mock_call.call_args[0]
+            call_args = mock_llm.call_args[0]
             assert "relationships" in call_args[1].lower()
 
 
@@ -464,23 +483,23 @@ class TestErrorScenarios:
 
     @pytest.mark.asyncio
     async def test_api_error_propagates(self, service):
-        """API errors propagate correctly."""
-        with patch.object(service, '_call_openai') as mock_call:
-            mock_call.side_effect = Exception("OpenAI API Error")
+        """API errors propagate as LLMResponseError."""
+        async def mock_call(*args, **kwargs):
+            raise LLMResponseError("LLM API Error")
 
-            with pytest.raises(Exception, match="OpenAI"):
+        with patch.object(service, '_call_llm', side_effect=mock_call):
+            with pytest.raises(LLMResponseError, match="LLM"):
                 await service.natural_language_to_formula("Sum column A")
 
     @pytest.mark.asyncio
     async def test_graceful_json_fallback(self, service):
-        """Invalid JSON responses handled gracefully."""
-        with patch.object(service, '_call_openai') as mock_call:
-            mock_call.return_value = "=SUM(A:A)"  # Plain text, not JSON
+        """Invalid JSON responses raise LLMResponseError."""
+        async def mock_call(*args, **kwargs):
+            return "=SUM(A:A)"  # Plain text, not JSON
 
-            result = await service.natural_language_to_formula("Sum column A")
-
-            # Should use the raw response
-            assert "SUM" in result.formula
+        with patch.object(service, '_call_llm', side_effect=mock_call):
+            with pytest.raises(LLMResponseError, match="invalid JSON"):
+                await service.natural_language_to_formula("Sum column A")
 
     @pytest.mark.asyncio
     async def test_empty_data_handled(self, service):
@@ -493,12 +512,13 @@ class TestErrorScenarios:
     @pytest.mark.asyncio
     async def test_missing_fields_handled(self, service):
         """Missing response fields handled with defaults."""
-        with patch.object(service, '_call_openai') as mock_call:
-            mock_call.return_value = json.dumps({
+        async def mock_call(*args, **kwargs):
+            return json.dumps({
                 "formula": "=SUM(A:A)",
                 # Missing other fields
             })
 
+        with patch.object(service, '_call_llm', side_effect=mock_call):
             result = await service.natural_language_to_formula("Sum")
 
             assert result.formula == "=SUM(A:A)"
@@ -517,14 +537,15 @@ class TestValidation:
     @pytest.mark.asyncio
     async def test_formula_result_structure(self, service):
         """FormulaResult has correct structure."""
-        with patch.object(service, '_call_openai') as mock_call:
-            mock_call.return_value = json.dumps({
+        async def mock_call(*args, **kwargs):
+            return json.dumps({
                 "formula": "=SUM(A:A)",
                 "explanation": "Sums column A",
                 "examples": ["1+2=3"],
                 "alternative_formulas": ["=A1+A2+A3"],
             })
 
+        with patch.object(service, '_call_llm', side_effect=mock_call):
             result = await service.natural_language_to_formula("Sum")
 
             assert isinstance(result, FormulaResult)
@@ -535,8 +556,8 @@ class TestValidation:
     @pytest.mark.asyncio
     async def test_data_cleaning_result_structure(self, service, sample_data):
         """DataCleaningResult has correct structure."""
-        with patch.object(service, '_call_openai') as mock_call:
-            mock_call.return_value = json.dumps({
+        async def mock_call(*args, **kwargs):
+            return json.dumps({
                 "suggestions": [
                     {
                         "column": "A",
@@ -551,6 +572,7 @@ class TestValidation:
                 "summary": "Found issue",
             })
 
+        with patch.object(service, '_call_llm', side_effect=mock_call):
             result = await service.analyze_data_quality(sample_data)
 
             assert isinstance(result, DataCleaningResult)
@@ -561,8 +583,8 @@ class TestValidation:
     @pytest.mark.asyncio
     async def test_anomaly_result_structure(self, service, sample_data):
         """AnomalyDetectionResult has correct structure."""
-        with patch.object(service, '_call_openai') as mock_call:
-            mock_call.return_value = json.dumps({
+        async def mock_call(*args, **kwargs):
+            return json.dumps({
                 "anomalies": [
                     {
                         "location": "A1",
@@ -577,6 +599,7 @@ class TestValidation:
                 "summary": "Found anomaly",
             })
 
+        with patch.object(service, '_call_llm', side_effect=mock_call):
             result = await service.detect_anomalies(sample_data)
 
             assert isinstance(result, AnomalyDetectionResult)

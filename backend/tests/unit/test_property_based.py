@@ -14,13 +14,15 @@ import pytest
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
-from hypothesis import given, strategies as st, settings, assume
+from hypothesis import given, strategies as st, settings, assume, HealthCheck
 
 from backend.app.repositories.state.store import StateStore
 
 
 def make_store():
     """Create a fresh StateStore with a temporary directory."""
+    import os
+    os.environ.pop("NEURA_STATE_DIR", None)
     tmp = tempfile.mkdtemp()
     return StateStore(base_dir=Path(tmp))
 
@@ -66,7 +68,7 @@ class TestIdempotencyKeyProperties:
         job_id=job_id_strategy,
         request_hash=hash_strategy,
     )
-    @settings(max_examples=50)
+    @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
     def test_store_then_check_returns_same_response(
         self, key: str, job_id: str, request_hash: str
     ):

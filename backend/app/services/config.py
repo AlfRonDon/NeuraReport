@@ -67,7 +67,7 @@ class Settings(BaseSettings):
     template_import_max_concurrency: int = Field(default=4, env="NEURA_TEMPLATE_IMPORT_MAX_CONCURRENCY")
 
     openai_api_key: Optional[str] = Field(default=None, env="OPENAI_API_KEY")
-    openai_model: str = Field(default="gpt-5", env="OPENAI_MODEL")
+    openai_model: str = Field(default="gpt-4o", env="OPENAI_MODEL")
 
     artifact_warn_bytes: int = Field(default=5 * 1024 * 1024, env="ARTIFACT_WARN_BYTES")
     artifact_warn_render_ms: int = Field(default=2000, env="ARTIFACT_WARN_RENDER_MS")
@@ -82,7 +82,7 @@ class Settings(BaseSettings):
 
     # Security configuration
     trusted_hosts: List[str] = Field(default_factory=lambda: ["localhost", "127.0.0.1"], env="NEURA_TRUSTED_HOSTS")
-    allowed_hosts_all: bool = Field(default=True, env="NEURA_ALLOWED_HOSTS_ALL")  # Set to False in production
+    allowed_hosts_all: bool = Field(default=False, env="NEURA_ALLOWED_HOSTS_ALL")  # Set to True only for local development
 
     # Request timeout
     request_timeout_seconds: int = Field(default=300, env="NEURA_REQUEST_TIMEOUT_SECONDS")
@@ -96,9 +96,9 @@ class Settings(BaseSettings):
     analysis_cache_ttl_seconds: int = Field(default=3600, env="NEURA_ANALYSIS_CACHE_TTL_SECONDS")  # 1 hour
     analysis_max_concurrency: int = Field(default=4, env="NEURA_ANALYSIS_MAX_CONCURRENCY")
 
-    # Debug/development mode - defaults to True for local development
-    # Set NEURA_DEBUG=false in production
-    debug_mode: bool = Field(default=True, validation_alias="NEURA_DEBUG")
+    # Debug/development mode - defaults to False for safety.
+    # Set NEURA_DEBUG=true explicitly for local development.
+    debug_mode: bool = Field(default=False, validation_alias="NEURA_DEBUG")
 
     # File/path safety overrides (use only in trusted environments)
     allow_unsafe_pdf_paths: bool = Field(default=False, validation_alias="NEURA_ALLOW_UNSAFE_PDF_PATHS")
@@ -139,7 +139,7 @@ def _apply_runtime_defaults(settings: Settings) -> Settings:
             "OPENAI_API_KEY is required. Set NEURA_ALLOW_MISSING_OPENAI=true to bypass for tests (not for production)."
         )
 
-    force_gpt5 = os.getenv("NEURA_FORCE_GPT5", "true").lower() in {"1", "true", "yes"}
+    force_gpt5 = os.getenv("NEURA_FORCE_GPT5", "false").lower() in {"1", "true", "yes"}
     if force_gpt5 and not str(settings.openai_model or "").lower().startswith("gpt-5"):
         logger.warning(
             "openai_model_overridden",
@@ -152,10 +152,16 @@ def _apply_runtime_defaults(settings: Settings) -> Settings:
         settings.openai_model = "gpt-5"
 
     if settings.jwt_secret.strip().lower() in {"", "change-me"}:
-        logger.warning(
-            "jwt_secret_default",
-            extra={"event": "jwt_secret_default"},
-        )
+        if settings.debug_mode:
+            logger.warning(
+                "jwt_secret_default",
+                extra={"event": "jwt_secret_default"},
+            )
+        else:
+            raise RuntimeError(
+                "NEURA_JWT_SECRET must be set to a strong secret in production "
+                "(debug_mode is off). Set NEURA_DEBUG=true to bypass for local development."
+            )
 
     if not os.getenv("NEURA_VERSION") or not os.getenv("NEURA_COMMIT"):
         version_info = _load_version_info()

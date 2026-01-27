@@ -25,15 +25,12 @@ test.describe('AI feature groups', () => {
     await page.goto('/query')
 
     // Pick a connection (required to enable Generate SQL).
-    const label = page.locator('label', { hasText: 'Database Connection' }).first()
-    await expect(label).toBeVisible()
-    const labelId = await label.getAttribute('id')
-    const connectionSelect = labelId
-      ? page.locator(`[role="combobox"][aria-labelledby*="${labelId}"]`)
-      : page.getByRole('combobox').first()
-    await expect(connectionSelect.first()).toBeVisible()
+    // MUI Select renders options in a portal, so wait explicitly for an option to appear after opening.
+    const connectionSelect = page.getByRole('combobox', { name: /Database Connection/i })
+    await expect(connectionSelect).toBeVisible()
+    await connectionSelect.click()
+    await expect(page.getByRole('option').first()).toBeVisible({ timeout: 20_000 })
 
-    await connectionSelect.first().click()
     const sampleOption = page.getByRole('option', { name: /sample\.db/i })
     if (await sampleOption.count()) {
       await sampleOption.first().click()

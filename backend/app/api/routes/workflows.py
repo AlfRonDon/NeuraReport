@@ -4,9 +4,10 @@ REST API endpoints for workflow automation.
 """
 from __future__ import annotations
 
+import logging
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 from backend.app.schemas.workflows.workflow import (
     ApprovalRequest,
@@ -19,9 +20,12 @@ from backend.app.schemas.workflows.workflow import (
     WorkflowListResponse,
     WorkflowResponse,
 )
+from backend.app.services.security import require_api_key
 from backend.app.services.workflow.service import workflow_service
 
-router = APIRouter(tags=["workflows"])
+logger = logging.getLogger("neura.api.workflows")
+
+router = APIRouter(tags=["workflows"], dependencies=[Depends(require_api_key)])
 
 
 @router.post("", response_model=WorkflowResponse)
@@ -43,6 +47,41 @@ async def list_workflows(
         offset=offset,
     )
     return WorkflowListResponse(workflows=workflows, total=total)
+
+
+# --- Static-prefix routes (must be declared before /{workflow_id}) ---
+
+
+@router.get("/approvals/pending")
+async def get_pending_approvals(workflow_id: Optional[str] = None):
+    """Get all pending approvals."""
+    return await workflow_service.get_pending_approvals(workflow_id=workflow_id)
+
+
+@router.get("/executions/{execution_id}", response_model=WorkflowExecutionResponse)
+async def get_execution(execution_id: str):
+    """Get execution status."""
+    execution = await workflow_service.get_execution(execution_id)
+    if not execution:
+        raise HTTPException(status_code=404, detail="Execution not found")
+    return execution
+
+
+@router.post("/executions/{execution_id}/approve")
+async def approve_execution(execution_id: str, request: ApprovalRequest):
+    """Approve or reject a pending approval."""
+    result = await workflow_service.approve_execution(
+        execution_id,
+        node_id=request.node_id,
+        approved=request.approved,
+        comment=request.comment,
+    )
+    if not result:
+        raise HTTPException(status_code=404, detail="Pending approval not found")
+    return result
+
+
+# --- Parameterized routes ---
 
 
 @router.get("/{workflow_id}", response_model=WorkflowResponse)
@@ -83,6 +122,12 @@ async def execute_workflow(workflow_id: str, request: ExecuteWorkflowRequest):
         )
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        logger.error("Workflow execution failed: %s", e, exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail="Workflow execution failed due to an internal error.",
+        )
 
 
 @router.get("/{workflow_id}/executions", response_model=list[WorkflowExecutionResponse])
@@ -97,35 +142,6 @@ async def list_executions(
         status=status,
         limit=limit,
     )
-
-
-@router.get("/executions/{execution_id}", response_model=WorkflowExecutionResponse)
-async def get_execution(execution_id: str):
-    """Get execution status."""
-    execution = await workflow_service.get_execution(execution_id)
-    if not execution:
-        raise HTTPException(status_code=404, detail="Execution not found")
-    return execution
-
-
-@router.post("/executions/{execution_id}/approve")
-async def approve_execution(execution_id: str, request: ApprovalRequest):
-    """Approve or reject a pending approval."""
-    result = await workflow_service.approve_execution(
-        execution_id,
-        node_id=request.node_id,
-        approved=request.approved,
-        comment=request.comment,
-    )
-    if not result:
-        raise HTTPException(status_code=404, detail="Pending approval not found")
-    return result
-
-
-@router.get("/approvals/pending")
-async def get_pending_approvals(workflow_id: Optional[str] = None):
-    """Get all pending approvals."""
-    return await workflow_service.get_pending_approvals(workflow_id=workflow_id)
 
 
 @router.post("/{workflow_id}/trigger", response_model=WorkflowResponse)

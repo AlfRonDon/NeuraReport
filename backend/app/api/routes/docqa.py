@@ -1,9 +1,12 @@
 """API routes for Document Q&A Chat."""
 from __future__ import annotations
 
+import logging
 from typing import Optional
 from pydantic import BaseModel, Field
-from fastapi import APIRouter, Depends, Request, HTTPException
+from fastapi import APIRouter, Depends, Query, Request, HTTPException
+
+logger = logging.getLogger("neura.api.docqa")
 
 from backend.app.services.security import require_api_key
 from backend.app.services.docqa.service import DocumentQAService
@@ -46,14 +49,18 @@ async def create_session(
 @router.get("/sessions")
 async def list_sessions(
     request: Request,
+    limit: int = Query(50, ge=1, le=500),
+    offset: int = Query(0, ge=0),
     svc: DocumentQAService = Depends(get_service),
 ):
     """List all Q&A sessions."""
     correlation_id = getattr(request.state, "correlation_id", None)
     sessions = svc.list_sessions()
+    page = sessions[offset:offset + limit]
     return {
         "status": "ok",
-        "sessions": [s.model_dump(mode="json") for s in sessions],
+        "sessions": [s.model_dump(mode="json") for s in page],
+        "total": len(sessions),
         "correlation_id": correlation_id,
     }
 
@@ -212,6 +219,12 @@ async def regenerate_response(
         )
     except RuntimeError as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
+    except Exception as exc:
+        logger.error("Response regeneration failed: %s", exc, exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail="Response regeneration failed.",
+        ) from exc
 
     if not response:
         raise HTTPException(status_code=404, detail="Message not found")
@@ -227,7 +240,7 @@ async def regenerate_response(
 async def get_chat_history(
     session_id: str,
     request: Request,
-    limit: int = 50,
+    limit: int = Query(50, ge=1, le=500),
     svc: DocumentQAService = Depends(get_service),
 ):
     """Get chat history for a session."""

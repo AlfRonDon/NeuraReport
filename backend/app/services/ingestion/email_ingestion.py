@@ -49,7 +49,7 @@ class EmailDocumentResult(BaseModel):
     document_id: str
     email_subject: str
     from_address: str
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     attachment_count: int = 0
     attachment_documents: List[str] = Field(default_factory=list)
 

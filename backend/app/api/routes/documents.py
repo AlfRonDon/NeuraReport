@@ -36,10 +36,11 @@ from ...services.documents import (
     PDFOperationsService,
 )
 from ...services.documents.collaboration import YjsWebSocketHandler
+from backend.app.services.security import require_api_key
 
 logger = logging.getLogger("neura.api.documents")
 
-router = APIRouter(tags=["documents"])
+router = APIRouter(tags=["documents"], dependencies=[Depends(require_api_key)])
 ws_router = APIRouter()
 
 # Service instances (would use dependency injection in production)
@@ -154,7 +155,7 @@ async def list_documents(
 ):
     """List documents with optional filters."""
     tag_list = tags.split(",") if tags else None
-    documents = doc_service.list_documents(
+    documents, total = doc_service.list_documents(
         is_template=is_template,
         tags=tag_list,
         limit=limit,
@@ -162,7 +163,7 @@ async def list_documents(
     )
     return DocumentListResponse(
         documents=[DocumentResponse(**d.model_dump()) for d in documents],
-        total=len(documents),
+        total=total,
         offset=offset,
         limit=limit,
     )

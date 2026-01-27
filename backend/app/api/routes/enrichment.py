@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
 from backend.app.services.security import require_api_key
 from backend.app.schemas.enrichment import (
@@ -163,12 +163,10 @@ async def get_source(
     # Check custom sources
     source = svc.get_source(source_id)
     if not source:
-        return {
-            "status": "error",
-            "code": "not_found",
-            "message": "Source not found",
-            "correlation_id": correlation_id,
-        }
+        raise HTTPException(
+            status_code=404,
+            detail={"code": "not_found", "message": "Source not found"},
+        )
     return {
         "status": "ok",
         "source": source.dict(),
@@ -185,9 +183,14 @@ async def delete_source(
     """Delete a custom enrichment source."""
     correlation_id = getattr(request.state, "correlation_id", None)
     deleted = svc.delete_source(source_id)
+    if not deleted:
+        raise HTTPException(
+            status_code=404,
+            detail={"code": "not_found", "message": f"Source {source_id} not found or cannot be deleted"},
+        )
     return {
-        "status": "ok" if deleted else "error",
-        "deleted": deleted,
+        "status": "ok",
+        "deleted": True,
         "source_id": source_id,
         "correlation_id": correlation_id,
     }

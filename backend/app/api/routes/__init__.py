@@ -28,6 +28,7 @@ AI Features:
 
 from . import (
     agents,
+    agents_v2,
     ai,
     analytics,
     charts,
@@ -63,6 +64,7 @@ from . import (
 
 __all__ = [
     "agents",
+    "agents_v2",
     "ai",
     "analytics",
     "charts",

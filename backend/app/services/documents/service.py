@@ -238,7 +238,7 @@ class DocumentService:
 
         # Sort by updated_at descending
         documents.sort(key=lambda d: d.updated_at, reverse=True)
-        return documents[offset:offset + limit]
+        return documents[offset:offset + limit], len(documents)
 
     def get_versions(self, document_id: str) -> list[DocumentVersion]:
         """Get all versions of a document."""

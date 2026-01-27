@@ -1,6 +1,7 @@
 """
 Writing Service Concurrency Tests
 Tests for concurrent request handling and thread safety.
+Updated for unified LLMClient architecture.
 """
 import json
 import asyncio
@@ -19,6 +20,7 @@ from backend.app.services.ai.writing_service import (
     RewriteResult,
     ExpandResult,
     TranslateResult,
+    LLMResponseError,
 )
 
 
@@ -33,12 +35,12 @@ def service():
     return WritingService()
 
 
-@pytest.fixture
-def mock_openai_json_response():
-    """Create mock OpenAI responses."""
-    def _create(content: dict):
-        return json.dumps(content)
-    return _create
+def _make_llm_response(content: str) -> dict:
+    """Create an OpenAI-compatible response dict."""
+    return {
+        "choices": [{"message": {"content": content}}],
+        "usage": {"prompt_tokens": 100, "completion_tokens": 50},
+    }
 
 
 # =============================================================================
@@ -54,7 +56,7 @@ class TestConcurrentAsyncOperations:
         """Multiple concurrent grammar checks."""
         call_count = 0
 
-        def mock_call(*args, **kwargs):
+        async def mock_call(*args, **kwargs):
             nonlocal call_count
             call_count += 1
             return json.dumps({
@@ -63,7 +65,7 @@ class TestConcurrentAsyncOperations:
                 "score": 100.0,
             })
 
-        with patch.object(service, '_call_openai', side_effect=mock_call):
+        with patch.object(service, '_call_llm', side_effect=mock_call):
             tasks = [
                 service.check_grammar(f"text {i}")
                 for i in range(5)
@@ -79,7 +81,7 @@ class TestConcurrentAsyncOperations:
         """Multiple concurrent summarizations."""
         call_count = 0
 
-        def mock_call(*args, **kwargs):
+        async def mock_call(*args, **kwargs):
             nonlocal call_count
             call_count += 1
             return json.dumps({
@@ -87,7 +89,7 @@ class TestConcurrentAsyncOperations:
                 "key_points": [f"Point {call_count}"],
             })
 
-        with patch.object(service, '_call_openai', side_effect=mock_call):
+        with patch.object(service, '_call_llm', side_effect=mock_call):
             tasks = [
                 service.summarize(f"long text " * 50)
                 for _ in range(5)
@@ -102,7 +104,7 @@ class TestConcurrentAsyncOperations:
         """Multiple concurrent rewrites."""
         call_count = 0
 
-        def mock_call(*args, **kwargs):
+        async def mock_call(*args, **kwargs):
             nonlocal call_count
             call_count += 1
             return json.dumps({
@@ -110,7 +112,7 @@ class TestConcurrentAsyncOperations:
                 "changes_made": ["Change"],
             })
 
-        with patch.object(service, '_call_openai', side_effect=mock_call):
+        with patch.object(service, '_call_llm', side_effect=mock_call):
             tasks = [
                 service.rewrite(f"text {i}", tone=WritingTone.PROFESSIONAL)
                 for i in range(5)
@@ -125,7 +127,7 @@ class TestConcurrentAsyncOperations:
         """Multiple concurrent expansions."""
         call_count = 0
 
-        def mock_call(*args, **kwargs):
+        async def mock_call(*args, **kwargs):
             nonlocal call_count
             call_count += 1
             return json.dumps({
@@ -133,7 +135,7 @@ class TestConcurrentAsyncOperations:
                 "sections_added": ["Section"],
             })
 
-        with patch.object(service, '_call_openai', side_effect=mock_call):
+        with patch.object(service, '_call_llm', side_effect=mock_call):
             tasks = [
                 service.expand(f"short {i}")
                 for i in range(5)
@@ -148,7 +150,7 @@ class TestConcurrentAsyncOperations:
         """Multiple concurrent translations."""
         call_count = 0
 
-        def mock_call(*args, **kwargs):
+        async def mock_call(*args, **kwargs):
             nonlocal call_count
             call_count += 1
             return json.dumps({
@@ -157,7 +159,7 @@ class TestConcurrentAsyncOperations:
                 "confidence": 0.95,
             })
 
-        with patch.object(service, '_call_openai', side_effect=mock_call):
+        with patch.object(service, '_call_llm', side_effect=mock_call):
             tasks = [
                 service.translate(f"text {i}", "Spanish")
                 for i in range(5)
@@ -181,12 +183,10 @@ class TestMixedConcurrentOperations:
         """Different operations run concurrently."""
         call_count = 0
 
-        def mock_call(*args, **kwargs):
+        async def mock_call(system_prompt, user_prompt, **kwargs):
             nonlocal call_count
             call_count += 1
 
-            # Return different responses based on system prompt content
-            system_prompt = args[0] if args else ""
             if "grammar" in system_prompt.lower():
                 return json.dumps({
                     "issues": [], "corrected_text": "text", "score": 100.0,
@@ -212,7 +212,7 @@ class TestMixedConcurrentOperations:
             else:
                 return "Generated content"
 
-        with patch.object(service, '_call_openai', side_effect=mock_call):
+        with patch.object(service, '_call_llm', side_effect=mock_call):
             tasks = [
                 service.check_grammar("text"),
                 service.summarize("long text " * 50),
@@ -234,14 +234,14 @@ class TestMixedConcurrentOperations:
         """High number of concurrent operations."""
         call_count = 0
 
-        def mock_call(*args, **kwargs):
+        async def mock_call(*args, **kwargs):
             nonlocal call_count
             call_count += 1
             return json.dumps({
                 "issues": [], "corrected_text": "text", "score": 100.0,
             })
 
-        with patch.object(service, '_call_openai', side_effect=mock_call):
+        with patch.object(service, '_call_llm', side_effect=mock_call):
             tasks = [
                 service.check_grammar(f"text {i}")
                 for i in range(50)
@@ -258,50 +258,39 @@ class TestMixedConcurrentOperations:
 
 
 class TestClientSharing:
-    """Tests for OpenAI client sharing across operations."""
+    """Tests for LLM client sharing across operations."""
 
     @pytest.mark.asyncio
     async def test_client_reused_across_operations(self, service):
-        """Same client reused for all operations."""
-        with patch('openai.OpenAI') as mock_class:
-            mock_client = Mock()
-            mock_class.return_value = mock_client
-            mock_response = Mock()
-            mock_response.choices = [Mock()]
-            mock_response.choices[0].message.content = json.dumps({
-                "issues": [], "corrected_text": "text", "score": 100.0,
-            })
-            mock_client.chat.completions.create.return_value = mock_response
+        """Same LLM client reused for all operations."""
+        mock_client = Mock()
+        mock_client.complete.return_value = _make_llm_response(
+            json.dumps({"issues": [], "corrected_text": "text", "score": 100.0})
+        )
+        service._llm_client = mock_client
 
-            # Multiple operations
-            await service.check_grammar("text1")
-            await service.check_grammar("text2")
-            await service.check_grammar("text3")
+        await service.check_grammar("text1")
+        await service.check_grammar("text2")
+        await service.check_grammar("text3")
 
-            # Client created only once
-            mock_class.assert_called_once()
+        assert mock_client.complete.call_count == 3
 
     @pytest.mark.asyncio
     async def test_client_reused_across_concurrent_operations(self, service):
-        """Same client reused for concurrent operations."""
-        with patch('openai.OpenAI') as mock_class:
-            mock_client = Mock()
-            mock_class.return_value = mock_client
-            mock_response = Mock()
-            mock_response.choices = [Mock()]
-            mock_response.choices[0].message.content = json.dumps({
-                "issues": [], "corrected_text": "text", "score": 100.0,
-            })
-            mock_client.chat.completions.create.return_value = mock_response
+        """Same LLM client reused for concurrent operations."""
+        mock_client = Mock()
+        mock_client.complete.return_value = _make_llm_response(
+            json.dumps({"issues": [], "corrected_text": "text", "score": 100.0})
+        )
+        service._llm_client = mock_client
 
-            tasks = [
-                service.check_grammar(f"text {i}")
-                for i in range(10)
-            ]
-            await asyncio.gather(*tasks)
+        tasks = [
+            service.check_grammar(f"text {i}")
+            for i in range(10)
+        ]
+        await asyncio.gather(*tasks)
 
-            # Client still created only once
-            mock_class.assert_called_once()
+        assert mock_client.complete.call_count == 10
 
 
 # =============================================================================
@@ -317,16 +306,16 @@ class TestConcurrentErrorHandling:
         """Some operations fail while others succeed."""
         call_count = 0
 
-        def mock_call(*args, **kwargs):
+        async def mock_call(*args, **kwargs):
             nonlocal call_count
             call_count += 1
             if call_count == 3:
-                raise Exception("Simulated failure")
+                raise LLMResponseError("Simulated failure")
             return json.dumps({
                 "issues": [], "corrected_text": "text", "score": 100.0,
             })
 
-        with patch.object(service, '_call_openai', side_effect=mock_call):
+        with patch.object(service, '_call_llm', side_effect=mock_call):
             tasks = [
                 service.check_grammar(f"text {i}")
                 for i in range(5)
@@ -334,7 +323,6 @@ class TestConcurrentErrorHandling:
 
             results = await asyncio.gather(*tasks, return_exceptions=True)
 
-            # 4 successes, 1 failure
             successes = [r for r in results if isinstance(r, GrammarCheckResult)]
             failures = [r for r in results if isinstance(r, Exception)]
 
@@ -346,7 +334,7 @@ class TestConcurrentErrorHandling:
         """JSON parse errors don't affect other operations."""
         call_count = 0
 
-        def mock_call(*args, **kwargs):
+        async def mock_call(*args, **kwargs):
             nonlocal call_count
             call_count += 1
             if call_count == 2:
@@ -355,16 +343,18 @@ class TestConcurrentErrorHandling:
                 "issues": [], "corrected_text": "text", "score": 100.0,
             })
 
-        with patch.object(service, '_call_openai', side_effect=mock_call):
+        with patch.object(service, '_call_llm', side_effect=mock_call):
             tasks = [
                 service.check_grammar(f"text {i}")
                 for i in range(5)
             ]
-            results = await asyncio.gather(*tasks)
+            results = await asyncio.gather(*tasks, return_exceptions=True)
 
-            # All should complete (with fallback for the one with bad JSON)
-            assert len(results) == 5
-            assert all(isinstance(r, GrammarCheckResult) for r in results)
+            successes = [r for r in results if isinstance(r, GrammarCheckResult)]
+            failures = [r for r in results if isinstance(r, LLMResponseError)]
+
+            assert len(successes) == 4
+            assert len(failures) == 1
 
 
 # =============================================================================
@@ -378,27 +368,13 @@ class TestRateLimitingSimulation:
     @pytest.mark.asyncio
     async def test_delayed_responses(self, service):
         """Handle delayed responses gracefully."""
-        call_count = 0
-
-        async def slow_mock_call(*args, **kwargs):
-            nonlocal call_count
-            call_count += 1
+        async def mock_call(*args, **kwargs):
             await asyncio.sleep(0.01)  # Small delay
             return json.dumps({
                 "issues": [], "corrected_text": "text", "score": 100.0,
             })
 
-        # Wrap the async mock
-        def sync_wrapper(*args, **kwargs):
-            return asyncio.get_event_loop().run_until_complete(
-                slow_mock_call(*args, **kwargs)
-            )
-
-        with patch.object(service, '_call_openai') as mock_call:
-            mock_call.return_value = json.dumps({
-                "issues": [], "corrected_text": "text", "score": 100.0,
-            })
-
+        with patch.object(service, '_call_llm', side_effect=mock_call):
             tasks = [
                 service.check_grammar(f"text {i}")
                 for i in range(5)
@@ -418,18 +394,17 @@ class TestThreadPoolExecution:
 
     def test_multiple_services_in_threads(self):
         """Multiple service instances in thread pool."""
-        results = []
-
         def run_grammar_check(text: str):
             service = WritingService()
-            with patch.object(service, '_call_openai') as mock_call:
-                mock_call.return_value = json.dumps({
+
+            async def mock_call(*args, **kwargs):
+                return json.dumps({
                     "issues": [], "corrected_text": text, "score": 100.0,
                 })
 
+            with patch.object(service, '_call_llm', side_effect=mock_call):
                 async def run():
                     return await service.check_grammar(text)
-
                 return asyncio.run(run())
 
         with ThreadPoolExecutor(max_workers=5) as executor:
@@ -443,20 +418,21 @@ class TestThreadPoolExecution:
         assert all(isinstance(r, GrammarCheckResult) for r in results)
 
     def test_shared_service_in_threads(self):
-        """Shared service instance across threads (not recommended but should work)."""
+        """Shared service instance across threads."""
         service = WritingService()
-        results = []
+
+        # Assign mock directly to avoid patch.object thread-safety issues
+        async def mock_call(*args, **kwargs):
+            return json.dumps({
+                "issues": [], "corrected_text": "text", "score": 100.0,
+            })
+
+        service._call_llm = mock_call
 
         def run_grammar_check(text: str):
-            with patch.object(service, '_call_openai') as mock_call:
-                mock_call.return_value = json.dumps({
-                    "issues": [], "corrected_text": text, "score": 100.0,
-                })
-
-                async def run():
-                    return await service.check_grammar(text)
-
-                return asyncio.run(run())
+            async def run():
+                return await service.check_grammar(text)
+            return asyncio.run(run())
 
         with ThreadPoolExecutor(max_workers=3) as executor:
             futures = [
@@ -479,16 +455,13 @@ class TestStressScenarios:
     @pytest.mark.asyncio
     async def test_many_small_requests(self, service):
         """Many small requests in parallel."""
-        def mock_call(*args, **kwargs):
+        async def mock_call(*args, **kwargs):
             return json.dumps({
                 "issues": [], "corrected_text": "x", "score": 100.0,
             })
 
-        with patch.object(service, '_call_openai', side_effect=mock_call):
-            tasks = [
-                service.check_grammar("x")
-                for _ in range(100)
-            ]
+        with patch.object(service, '_call_llm', side_effect=mock_call):
+            tasks = [service.check_grammar("x") for _ in range(100)]
             results = await asyncio.gather(*tasks)
 
             assert len(results) == 100
@@ -498,17 +471,14 @@ class TestStressScenarios:
         """Few large requests in parallel."""
         large_text = "word " * 10000
 
-        def mock_call(*args, **kwargs):
+        async def mock_call(*args, **kwargs):
             return json.dumps({
                 "summary": "Summary of large text",
                 "key_points": ["Point 1", "Point 2"],
             })
 
-        with patch.object(service, '_call_openai', side_effect=mock_call):
-            tasks = [
-                service.summarize(large_text)
-                for _ in range(5)
-            ]
+        with patch.object(service, '_call_llm', side_effect=mock_call):
+            tasks = [service.summarize(large_text) for _ in range(5)]
             results = await asyncio.gather(*tasks)
 
             assert len(results) == 5
@@ -517,12 +487,12 @@ class TestStressScenarios:
     @pytest.mark.asyncio
     async def test_mixed_size_requests(self, service):
         """Mixed size requests in parallel."""
-        def mock_call(*args, **kwargs):
+        async def mock_call(*args, **kwargs):
             return json.dumps({
                 "issues": [], "corrected_text": "text", "score": 100.0,
             })
 
-        with patch.object(service, '_call_openai', side_effect=mock_call):
+        with patch.object(service, '_call_llm', side_effect=mock_call):
             texts = [
                 "x",                    # Tiny
                 "word " * 10,           # Small
@@ -555,8 +525,6 @@ class TestSingletonBehavior:
     def test_singleton_reuses_client(self):
         """Singleton reuses client across imports."""
         from backend.app.services.ai.writing_service import writing_service
-
-        # Both should be same instance
         from backend.app.services.ai import writing_service as ws2
 
         assert writing_service is ws2

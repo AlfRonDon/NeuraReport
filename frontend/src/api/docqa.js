@@ -14,8 +14,11 @@ export async function createSession(name) {
 /**
  * List all Q&A sessions
  */
-export async function listSessions() {
-  const response = await apiClient.get('/docqa/sessions');
+export async function listSessions({ limit, offset } = {}) {
+  const params = {};
+  if (limit != null) params.limit = limit;
+  if (offset != null) params.offset = offset;
+  const response = await apiClient.get('/docqa/sessions', { params });
   return response.data;
 }
 

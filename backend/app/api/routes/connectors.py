@@ -12,16 +12,18 @@ from typing import Any, Optional
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from pydantic import BaseModel, Field
 
+from backend.app.services.security import require_api_key
 from ...services.connectors import (
     get_connector,
     list_connectors as list_available_connectors,
     ConnectorBase,
     ConnectorType,
 )
+from backend.app.utils.validation import is_read_only_sql
 
 logger = logging.getLogger("neura.api.connectors")
 
-router = APIRouter(tags=["connectors"])
+router = APIRouter(tags=["connectors"], dependencies=[Depends(require_api_key)])
 
 
 # ============================================
@@ -324,6 +326,11 @@ async def execute_query(
     request: QueryRequest,
 ):
     """Execute a query on a connection."""
+    # Validate query is read-only before execution
+    is_safe, sql_error = is_read_only_sql(request.query)
+    if not is_safe:
+        raise HTTPException(status_code=400, detail=sql_error)
+
     if connection_id not in _connections:
         raise HTTPException(status_code=404, detail="Connection not found")
 

@@ -6,7 +6,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Depends, Request
+
+from backend.app.services.security import require_api_key
 
 from backend.app.services.config import get_settings
 from backend.app.api.middleware import limiter
@@ -52,7 +54,6 @@ def _check_openai_connection() -> Dict[str, Any]:
             return {
                 "status": "configured",
                 "message": "OpenAI client initialized",
-                "key_prefix": settings.openai_api_key[:8] + "..." if settings.openai_api_key else None,
             }
         return {"status": "error", "message": "Failed to initialize OpenAI client"}
     except Exception as e:
@@ -161,8 +162,16 @@ async def token_usage(request: Request) -> Dict[str, Any]:
         }
 
 
+def _redact_directory_check(check: Dict[str, Any]) -> Dict[str, Any]:
+    """Remove raw paths from directory health checks."""
+    return {
+        "status": check["status"],
+        "writable": check.get("writable"),
+    }
+
+
 @limiter.exempt
-@router.get("/health/detailed")
+@router.get("/health/detailed", dependencies=[Depends(require_api_key)])
 async def health_detailed(request: Request) -> Dict[str, Any]:
     """Comprehensive health check with all dependencies."""
     settings = get_settings()
@@ -171,15 +180,19 @@ async def health_detailed(request: Request) -> Dict[str, Any]:
     checks: Dict[str, Any] = {}
     issues: list[str] = []
 
-    # Check critical directories
-    checks["uploads_dir"] = _check_directory_access(settings.uploads_dir)
-    if checks["uploads_dir"]["status"] == "error":
+    # Check critical directories (redact paths)
+    uploads_check = _check_directory_access(settings.uploads_dir)
+    checks["uploads_dir"] = _redact_directory_check(uploads_check)
+    if uploads_check["status"] == "error":
         issues.append("Uploads directory not accessible")
 
-    checks["excel_uploads_dir"] = _check_directory_access(settings.excel_uploads_dir)
+    checks["excel_uploads_dir"] = _redact_directory_check(
+        _check_directory_access(settings.excel_uploads_dir)
+    )
 
-    checks["state_dir"] = _check_directory_access(settings.state_dir)
-    if checks["state_dir"]["status"] == "error":
+    state_check = _check_directory_access(settings.state_dir)
+    checks["state_dir"] = _redact_directory_check(state_check)
+    if state_check["status"] == "error":
         issues.append("State directory not accessible")
 
     # Check OpenAI connection
@@ -199,21 +212,13 @@ async def health_detailed(request: Request) -> Dict[str, Any]:
     # Memory usage
     checks["memory"] = _get_memory_usage()
 
-    # API configuration
-    state_store = state_access.get_state_store()
+    # API configuration (redact sensitive details)
     checks["configuration"] = {
         "api_key_configured": settings.api_key is not None,
         "rate_limiting_enabled": settings.rate_limit_enabled,
         "rate_limit": f"{settings.rate_limit_requests}/{settings.rate_limit_window_seconds}s",
         "request_timeout": settings.request_timeout_seconds,
         "max_upload_size_mb": settings.max_upload_bytes / 1024 / 1024,
-        "max_zip_entries": settings.max_zip_entries,
-        "max_zip_uncompressed_mb": settings.max_zip_uncompressed_bytes / 1024 / 1024,
-        "template_import_max_concurrency": settings.template_import_max_concurrency,
-        "analysis_max_concurrency": settings.analysis_max_concurrency,
-        "debug_mode": settings.debug_mode,
-        "state_backend": getattr(state_store, "backend_name", os.getenv("NEURA_STATE_BACKEND", "sqlite")),
-        "state_backend_fallback": bool(getattr(state_store, "backend_fallback", False)),
     }
 
     elapsed_ms = int((time.time() - started) * 1000)

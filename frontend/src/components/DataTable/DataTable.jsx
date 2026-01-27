@@ -638,6 +638,15 @@ export default function DataTable({
 
   // Empty state
   if (!loading && data.length === 0 && emptyState) {
+    // Avoid rendering duplicate CTAs when both toolbar actions and emptyState define the same label.
+    // This commonly happens during first-load (empty list before data arrives) and creates confusing UX
+    // + strict-mode selector collisions in e2e.
+    const emptyActionLabel = emptyState?.actionLabel
+    const actionsForEmpty =
+      emptyActionLabel && Array.isArray(actions)
+        ? actions.filter((action) => action?.label !== emptyActionLabel)
+        : actions
+
     return (
       <TableWrapper>
         <DataTableToolbar
@@ -646,7 +655,7 @@ export default function DataTable({
           searchPlaceholder={searchPlaceholder}
           onSearch={handleSearch}
           filters={filters}
-          actions={actions}
+          actions={actionsForEmpty}
           bulkActions={bulkActions}
           onBulkDelete={onBulkDelete}
           numSelected={numSelected}

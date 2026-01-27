@@ -1,19 +1,34 @@
 """
 AI Writing Service
-Provides AI-powered writing assistance using OpenAI for grammar checking,
-summarization, rewriting, expansion, and translation.
+Provides AI-powered writing assistance using the unified LLM client for grammar
+checking, summarization, rewriting, expansion, and translation.
+
+Uses the unified LLMClient which provides:
+- Circuit breaker for fault tolerance
+- Response caching (memory + disk)
+- Token usage tracking
+- Automatic retry with exponential backoff
+- Multi-provider support (OpenAI, Claude, Gemini, DeepSeek, Ollama, Azure)
 """
 from __future__ import annotations
 
+import asyncio
+import json
 import logging
+import re
 from typing import Any, List, Optional
 from enum import Enum
 
 from pydantic import BaseModel, Field
 
-from backend.app.services.config import get_settings
-
 logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Input limits
+# ---------------------------------------------------------------------------
+MAX_TEXT_CHARS = 100_000  # ~25K tokens — hard cap to prevent token overflow
+MAX_TEXT_CHARS_EXPAND = 50_000  # Expansion needs output room
+MIN_TEXT_CHARS = 1  # Minimum non-whitespace chars
 
 
 class WritingTone(str, Enum):
@@ -27,6 +42,10 @@ class WritingTone(str, Enum):
     PERSUASIVE = "persuasive"
     CONCISE = "concise"
 
+
+# ---------------------------------------------------------------------------
+# Result models
+# ---------------------------------------------------------------------------
 
 class GrammarIssue(BaseModel):
     """Represents a grammar or style issue found in text."""
@@ -44,7 +63,7 @@ class GrammarCheckResult(BaseModel):
     issues: List[GrammarIssue] = Field(default_factory=list)
     corrected_text: str = Field(..., description="Text with all corrections applied")
     issue_count: int = Field(..., description="Total number of issues found")
-    score: float = Field(..., description="Quality score 0-100")
+    score: float = Field(..., description="Quality score 0-100", ge=0, le=100)
 
 
 class SummarizeResult(BaseModel):
@@ -76,62 +95,144 @@ class TranslateResult(BaseModel):
     translated_text: str = Field(..., description="Translated text")
     source_language: str = Field(..., description="Detected or specified source language")
     target_language: str = Field(..., description="Target language")
-    confidence: float = Field(default=1.0, description="Translation confidence 0-1")
+    confidence: float = Field(default=1.0, description="Translation confidence 0-1", ge=0, le=1)
 
+
+# ---------------------------------------------------------------------------
+# Service errors
+# ---------------------------------------------------------------------------
+
+class WritingServiceError(Exception):
+    """Base error for writing service."""
+
+
+class InputValidationError(WritingServiceError):
+    """Raised when input text fails validation."""
+
+
+class LLMResponseError(WritingServiceError):
+    """Raised when LLM returns an unparseable or invalid response."""
+
+
+class LLMUnavailableError(WritingServiceError):
+    """Raised when the LLM service is unavailable (circuit breaker open)."""
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+def _extract_json(raw: str) -> dict:
+    """Extract JSON from an LLM response that may contain markdown fences.
+
+    Returns:
+        Parsed dict from the JSON content.
+
+    Raises:
+        json.JSONDecodeError: If the response is not valid JSON.
+        ValueError: If the parsed result is not a JSON object (dict).
+    """
+    text = raw.strip()
+    # Strip markdown code fences
+    if text.startswith("```"):
+        # Remove opening fence (optionally with language tag)
+        text = re.sub(r"^```(?:json)?\s*\n?", "", text, count=1)
+        text = re.sub(r"\n?```\s*$", "", text, count=1)
+    parsed = json.loads(text)
+    if not isinstance(parsed, dict):
+        raise ValueError(f"Expected JSON object, got {type(parsed).__name__}")
+    return parsed
+
+
+def _validate_grammar_positions(issues: list[dict], text_length: int) -> list[dict]:
+    """Validate and fix grammar issue positions to be within text bounds."""
+    valid = []
+    for issue in issues:
+        start = issue.get("start", 0)
+        end = issue.get("end", 0)
+
+        # Clamp to valid range
+        start = max(0, min(start, text_length))
+        end = max(start, min(end, text_length))
+
+        issue["start"] = start
+        issue["end"] = end
+        valid.append(issue)
+    return valid
+
+
+# ---------------------------------------------------------------------------
+# Service
+# ---------------------------------------------------------------------------
 
 class WritingService:
     """
     AI-powered writing assistance service.
-    Uses OpenAI for grammar checking, summarization, rewriting, expansion, and translation.
+
+    Uses the unified LLMClient for all LLM interactions, which provides
+    circuit breaker, caching, retry, multi-provider support, and token tracking.
     """
 
     def __init__(self):
-        self._client = None
-        self._settings = get_settings()
+        self._llm_client = None
 
-    def _get_client(self):
-        """Lazy-load OpenAI client."""
-        if self._client is None:
-            try:
-                from openai import OpenAI
-                self._client = OpenAI(api_key=self._settings.openai_api_key)
-            except ImportError:
-                logger.warning("OpenAI package not installed. Install with: pip install openai")
-                raise RuntimeError("OpenAI package not installed")
-            except Exception as e:
-                logger.error(f"Failed to initialize OpenAI client: {e}")
-                raise
-        return self._client
+    def _get_llm_client(self):
+        """Get the unified LLM client (lazy-loaded, singleton)."""
+        if self._llm_client is None:
+            from backend.app.services.llm.client import get_llm_client
+            self._llm_client = get_llm_client()
+        return self._llm_client
 
-    def _call_openai(self, system_prompt: str, user_prompt: str, max_tokens: int = 2000) -> str:
-        """Make a call to OpenAI API."""
-        client = self._get_client()
-        model = self._settings.openai_model or "gpt-5"
+    async def _call_llm(
+        self,
+        system_prompt: str,
+        user_prompt: str,
+        max_tokens: int = 2000,
+        description: str = "writing_service",
+    ) -> str:
+        """
+        Make an LLM call through the unified client.
+
+        Runs the synchronous LLMClient.complete() in a thread pool
+        to avoid blocking the async event loop.
+
+        Raises:
+            LLMUnavailableError: When circuit breaker is open / service down.
+            LLMResponseError: When the LLM returns empty content.
+        """
+        client = self._get_llm_client()
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ]
 
         try:
-            # Newer models (gpt-5, o1, etc.) use max_completion_tokens instead of max_tokens
-            # Check if model requires the new parameter
-            uses_new_param = any(m in model.lower() for m in ["gpt-5", "o1", "o3"])
+            response = await asyncio.to_thread(
+                client.complete,
+                messages=messages,
+                description=description,
+                max_tokens=max_tokens,
+            )
+        except RuntimeError as exc:
+            # Circuit breaker open or provider unavailable
+            if "temporarily unavailable" in str(exc).lower():
+                raise LLMUnavailableError(str(exc)) from exc
+            raise LLMResponseError(str(exc)) from exc
+        except Exception as exc:
+            raise LLMResponseError(f"LLM call failed: {exc}") from exc
 
-            create_params = {
-                "model": model,
-                "messages": [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
-                ],
-            }
+        # Extract content from OpenAI-compatible response dict
+        content = (
+            response.get("choices", [{}])[0]
+            .get("message", {})
+            .get("content", "")
+        )
+        if not content:
+            raise LLMResponseError("LLM returned empty response")
 
-            if uses_new_param:
-                create_params["max_completion_tokens"] = max_tokens
-            else:
-                create_params["max_tokens"] = max_tokens
-                create_params["temperature"] = 0.7
+        return content
 
-            response = client.chat.completions.create(**create_params)
-            return response.choices[0].message.content or ""
-        except Exception as e:
-            logger.error(f"OpenAI API call failed: {e}")
-            raise
+    # ----- Grammar Check -----
 
     async def check_grammar(
         self,
@@ -143,14 +244,20 @@ class WritingService:
         Check text for grammar, spelling, and style issues.
 
         Args:
-            text: Text to check
+            text: Text to check (1 to 100,000 chars)
             language: Language code (default: en)
             strict: Enable strict mode for additional style checks
 
         Returns:
             GrammarCheckResult with issues and corrected text
+
+        Raises:
+            InputValidationError: If text is empty or too long.
+            LLMResponseError: If LLM returns unparseable result.
+            LLMUnavailableError: If LLM service is down.
         """
-        if not text.strip():
+        stripped = text.strip()
+        if not stripped:
             return GrammarCheckResult(
                 issues=[],
                 corrected_text=text,
@@ -158,19 +265,25 @@ class WritingService:
                 score=100.0,
             )
 
+        if len(text) > MAX_TEXT_CHARS:
+            raise InputValidationError(
+                f"Text exceeds maximum length of {MAX_TEXT_CHARS:,} characters "
+                f"(got {len(text):,}). Split into smaller chunks."
+            )
+
         system_prompt = f"""You are an expert grammar and style checker for {language} text.
 Analyze the text for:
 1. Grammar errors
 2. Spelling mistakes
 3. Punctuation issues
-4. Style improvements{' (be strict)' if strict else ''}
+4. Style improvements{' (be strict — flag all style issues including passive voice, wordiness, and informal language)' if strict else ''}
 
-Respond in JSON format:
+Respond ONLY with valid JSON (no markdown fences):
 {{
     "issues": [
         {{
-            "start": <position>,
-            "end": <position>,
+            "start": <character position>,
+            "end": <character position>,
             "original": "<original text>",
             "suggestion": "<corrected text>",
             "issue_type": "<grammar|spelling|punctuation|style>",
@@ -184,25 +297,43 @@ Respond in JSON format:
 
         user_prompt = f"Check this text:\n\n{text}"
 
-        try:
-            response = self._call_openai(system_prompt, user_prompt)
-            import json
-            result = json.loads(response)
+        raw = await self._call_llm(
+            system_prompt,
+            user_prompt,
+            description="grammar_check",
+        )
 
-            return GrammarCheckResult(
-                issues=[GrammarIssue(**issue) for issue in result.get("issues", [])],
-                corrected_text=result.get("corrected_text", text),
-                issue_count=len(result.get("issues", [])),
-                score=result.get("score", 100.0),
-            )
-        except json.JSONDecodeError:
-            # Fallback if JSON parsing fails
-            return GrammarCheckResult(
-                issues=[],
-                corrected_text=text,
-                issue_count=0,
-                score=100.0,
-            )
+        try:
+            result = _extract_json(raw)
+        except (json.JSONDecodeError, ValueError) as exc:
+            raise LLMResponseError(
+                f"Grammar check returned invalid JSON: {exc}"
+            ) from exc
+
+        raw_issues = result.get("issues", [])
+        if not isinstance(raw_issues, list):
+            raw_issues = []
+        validated_issues = _validate_grammar_positions(raw_issues, len(text))
+
+        issues = []
+        for issue_data in validated_issues:
+            try:
+                issues.append(GrammarIssue(**issue_data))
+            except Exception:
+                # Skip malformed individual issues but don't fail the whole check
+                logger.warning("Skipping malformed grammar issue: %s", issue_data)
+
+        score = result.get("score", 100.0)
+        score = max(0.0, min(100.0, float(score)))
+
+        return GrammarCheckResult(
+            issues=issues,
+            corrected_text=result.get("corrected_text", text),
+            issue_count=len(issues),
+            score=score,
+        )
+
+    # ----- Summarize -----
 
     async def summarize(
         self,
@@ -221,13 +352,19 @@ Respond in JSON format:
         Returns:
             SummarizeResult with summary and key points
         """
-        if not text.strip():
+        stripped = text.strip()
+        if not stripped:
             return SummarizeResult(
                 summary="",
                 key_points=[],
                 word_count_original=0,
                 word_count_summary=0,
                 compression_ratio=1.0,
+            )
+
+        if len(text) > MAX_TEXT_CHARS:
+            raise InputValidationError(
+                f"Text exceeds maximum length of {MAX_TEXT_CHARS:,} characters."
             )
 
         word_count_original = len(text.split())
@@ -243,7 +380,7 @@ Respond in JSON format:
 {style_instructions.get(style, style_instructions['paragraph'])}
 {length_instruction}
 
-Respond in JSON format:
+Respond ONLY with valid JSON (no markdown fences):
 {{
     "summary": "<the summary>",
     "key_points": ["<point 1>", "<point 2>", ...]
@@ -251,29 +388,31 @@ Respond in JSON format:
 
         user_prompt = f"Summarize this text:\n\n{text}"
 
+        raw = await self._call_llm(
+            system_prompt,
+            user_prompt,
+            description="summarize",
+        )
+
         try:
-            response = self._call_openai(system_prompt, user_prompt)
-            import json
-            result = json.loads(response)
+            result = _extract_json(raw)
+        except (json.JSONDecodeError, ValueError) as exc:
+            raise LLMResponseError(
+                f"Summarization returned invalid JSON: {exc}"
+            ) from exc
 
-            summary = result.get("summary", "")
-            word_count_summary = len(summary.split())
+        summary = result.get("summary", "")
+        word_count_summary = len(summary.split()) if summary else 0
 
-            return SummarizeResult(
-                summary=summary,
-                key_points=result.get("key_points", []),
-                word_count_original=word_count_original,
-                word_count_summary=word_count_summary,
-                compression_ratio=word_count_summary / word_count_original if word_count_original > 0 else 1.0,
-            )
-        except json.JSONDecodeError:
-            return SummarizeResult(
-                summary=text[:500] + "..." if len(text) > 500 else text,
-                key_points=[],
-                word_count_original=word_count_original,
-                word_count_summary=word_count_original,
-                compression_ratio=1.0,
-            )
+        return SummarizeResult(
+            summary=summary,
+            key_points=result.get("key_points", []),
+            word_count_original=word_count_original,
+            word_count_summary=word_count_summary,
+            compression_ratio=word_count_summary / word_count_original if word_count_original > 0 else 1.0,
+        )
+
+    # ----- Rewrite -----
 
     async def rewrite(
         self,
@@ -292,11 +431,17 @@ Respond in JSON format:
         Returns:
             RewriteResult with rewritten text
         """
-        if not text.strip():
+        stripped = text.strip()
+        if not stripped:
             return RewriteResult(
                 rewritten_text=text,
                 tone=tone.value,
                 changes_made=[],
+            )
+
+        if len(text) > MAX_TEXT_CHARS:
+            raise InputValidationError(
+                f"Text exceeds maximum length of {MAX_TEXT_CHARS:,} characters."
             )
 
         tone_descriptions = {
@@ -313,7 +458,7 @@ Respond in JSON format:
         system_prompt = f"""You are an expert writer. Rewrite the text to be {tone_descriptions.get(tone, 'professional')}.
 {'Preserve the original meaning.' if preserve_meaning else 'You may adjust the meaning for clarity.'}
 
-Respond in JSON format:
+Respond ONLY with valid JSON (no markdown fences):
 {{
     "rewritten_text": "<rewritten text>",
     "changes_made": ["<change 1>", "<change 2>", ...]
@@ -321,22 +466,26 @@ Respond in JSON format:
 
         user_prompt = f"Rewrite this text:\n\n{text}"
 
-        try:
-            response = self._call_openai(system_prompt, user_prompt)
-            import json
-            result = json.loads(response)
+        raw = await self._call_llm(
+            system_prompt,
+            user_prompt,
+            description="rewrite",
+        )
 
-            return RewriteResult(
-                rewritten_text=result.get("rewritten_text", text),
-                tone=tone.value,
-                changes_made=result.get("changes_made", []),
-            )
-        except json.JSONDecodeError:
-            return RewriteResult(
-                rewritten_text=text,
-                tone=tone.value,
-                changes_made=[],
-            )
+        try:
+            result = _extract_json(raw)
+        except (json.JSONDecodeError, ValueError) as exc:
+            raise LLMResponseError(
+                f"Rewrite returned invalid JSON: {exc}"
+            ) from exc
+
+        return RewriteResult(
+            rewritten_text=result.get("rewritten_text", text),
+            tone=tone.value,
+            changes_made=result.get("changes_made", []),
+        )
+
+    # ----- Expand -----
 
     async def expand(
         self,
@@ -357,12 +506,18 @@ Respond in JSON format:
         Returns:
             ExpandResult with expanded text
         """
-        if not text.strip():
+        stripped = text.strip()
+        if not stripped:
             return ExpandResult(
                 expanded_text=text,
                 sections_added=[],
                 word_count_original=0,
                 word_count_expanded=0,
+            )
+
+        if len(text) > MAX_TEXT_CHARS_EXPAND:
+            raise InputValidationError(
+                f"Text exceeds maximum length of {MAX_TEXT_CHARS_EXPAND:,} characters for expansion."
             )
 
         word_count_original = len(text.split())
@@ -378,7 +533,7 @@ Respond in JSON format:
         system_prompt = f"""You are an expert content writer. Expand the text with more depth.
 Instructions: {', '.join(instructions) if instructions else 'Expand naturally'}
 
-Respond in JSON format:
+Respond ONLY with valid JSON (no markdown fences):
 {{
     "expanded_text": "<expanded text>",
     "sections_added": ["<section/topic added 1>", "<section/topic added 2>", ...]
@@ -386,26 +541,30 @@ Respond in JSON format:
 
         user_prompt = f"Expand this text:\n\n{text}"
 
+        raw = await self._call_llm(
+            system_prompt,
+            user_prompt,
+            max_tokens=4000,
+            description="expand",
+        )
+
         try:
-            response = self._call_openai(system_prompt, user_prompt, max_tokens=4000)
-            import json
-            result = json.loads(response)
+            result = _extract_json(raw)
+        except (json.JSONDecodeError, ValueError) as exc:
+            raise LLMResponseError(
+                f"Expansion returned invalid JSON: {exc}"
+            ) from exc
 
-            expanded = result.get("expanded_text", text)
+        expanded = result.get("expanded_text", text)
 
-            return ExpandResult(
-                expanded_text=expanded,
-                sections_added=result.get("sections_added", []),
-                word_count_original=word_count_original,
-                word_count_expanded=len(expanded.split()),
-            )
-        except json.JSONDecodeError:
-            return ExpandResult(
-                expanded_text=text,
-                sections_added=[],
-                word_count_original=word_count_original,
-                word_count_expanded=word_count_original,
-            )
+        return ExpandResult(
+            expanded_text=expanded,
+            sections_added=result.get("sections_added", []),
+            word_count_original=word_count_original,
+            word_count_expanded=len(expanded.split()),
+        )
+
+    # ----- Translate -----
 
     async def translate(
         self,
@@ -426,7 +585,8 @@ Respond in JSON format:
         Returns:
             TranslateResult with translated text
         """
-        if not text.strip():
+        stripped = text.strip()
+        if not stripped:
             return TranslateResult(
                 translated_text=text,
                 source_language=source_language or "unknown",
@@ -434,12 +594,17 @@ Respond in JSON format:
                 confidence=1.0,
             )
 
+        if len(text) > MAX_TEXT_CHARS:
+            raise InputValidationError(
+                f"Text exceeds maximum length of {MAX_TEXT_CHARS:,} characters."
+            )
+
         source_instruction = f"from {source_language}" if source_language else "(detect source language)"
 
         system_prompt = f"""You are an expert translator. Translate the text {source_instruction} to {target_language}.
 {'Preserve the original formatting (line breaks, bullet points, etc.).' if preserve_formatting else ''}
 
-Respond in JSON format:
+Respond ONLY with valid JSON (no markdown fences):
 {{
     "translated_text": "<translated text>",
     "source_language": "<detected or specified source language>",
@@ -448,24 +613,31 @@ Respond in JSON format:
 
         user_prompt = f"Translate:\n\n{text}"
 
-        try:
-            response = self._call_openai(system_prompt, user_prompt, max_tokens=4000)
-            import json
-            result = json.loads(response)
+        raw = await self._call_llm(
+            system_prompt,
+            user_prompt,
+            max_tokens=4000,
+            description="translate",
+        )
 
-            return TranslateResult(
-                translated_text=result.get("translated_text", text),
-                source_language=result.get("source_language", source_language or "auto"),
-                target_language=target_language,
-                confidence=result.get("confidence", 0.9),
-            )
-        except json.JSONDecodeError:
-            return TranslateResult(
-                translated_text=text,
-                source_language=source_language or "unknown",
-                target_language=target_language,
-                confidence=0.0,
-            )
+        try:
+            result = _extract_json(raw)
+        except (json.JSONDecodeError, ValueError) as exc:
+            raise LLMResponseError(
+                f"Translation returned invalid JSON: {exc}"
+            ) from exc
+
+        confidence = result.get("confidence", 0.9)
+        confidence = max(0.0, min(1.0, float(confidence)))
+
+        return TranslateResult(
+            translated_text=result.get("translated_text", text),
+            source_language=result.get("source_language", source_language or "auto"),
+            target_language=target_language,
+            confidence=confidence,
+        )
+
+    # ----- Content Generation -----
 
     async def generate_content(
         self,
@@ -486,6 +658,14 @@ Respond in JSON format:
         Returns:
             Generated content string
         """
+        if not prompt.strip():
+            raise InputValidationError("Prompt cannot be empty.")
+
+        if len(prompt) > MAX_TEXT_CHARS:
+            raise InputValidationError(
+                f"Prompt exceeds maximum length of {MAX_TEXT_CHARS:,} characters."
+            )
+
         tone_desc = {
             WritingTone.PROFESSIONAL: "professional",
             WritingTone.CASUAL: "casual",
@@ -502,11 +682,12 @@ Generate content that is {tone_desc.get(tone, 'professional')} in tone.
 {f'Keep the response under {max_length} words.' if max_length else ''}
 {f'Context: {context}' if context else ''}"""
 
-        try:
-            return self._call_openai(system_prompt, prompt, max_tokens=4000)
-        except Exception as e:
-            logger.error(f"Content generation failed: {e}")
-            raise
+        return await self._call_llm(
+            system_prompt,
+            prompt,
+            max_tokens=4000,
+            description="generate_content",
+        )
 
 
 # Singleton instance

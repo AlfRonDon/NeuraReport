@@ -56,7 +56,7 @@ class TranscriptionResult(BaseModel):
     full_text: str
     word_count: int
     speaker_count: int = 1
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     metadata: Dict[str, Any] = Field(default_factory=dict)
 
 
@@ -68,7 +68,7 @@ class VoiceMemoResult(BaseModel):
     duration_seconds: float
     action_items: List[str] = Field(default_factory=list)
     key_points: List[str] = Field(default_factory=list)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class TranscriptionService:

@@ -9,6 +9,7 @@ from fastapi import FastAPI
 
 from .routes import (
     agents,
+    agents_v2,
     ai,
     analytics,
     charts,
@@ -140,6 +141,8 @@ def register_routes(app: FastAPI) -> None:
 
     # AI Agents
     app.include_router(agents.router, prefix="/agents", tags=["agents"])
+    # AI Agents v2 - Production-grade with persistent storage
+    app.include_router(agents_v2.router, prefix="/agents/v2", tags=["agents-v2"])
 
     # Legacy/compatibility routes
     app.include_router(legacy.router)

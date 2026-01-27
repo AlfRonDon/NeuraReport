@@ -23,6 +23,10 @@ from backend.app.services.ingestion.transcription import TranscriptionLanguage
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
+# Maximum upload sizes
+MAX_SINGLE_FILE_BYTES = 200 * 1024 * 1024  # 200 MB
+MAX_BULK_TOTAL_BYTES = 500 * 1024 * 1024   # 500 MB total for bulk
+
 
 # =============================================================================
 # REQUEST/RESPONSE MODELS
@@ -97,9 +101,20 @@ async def upload_file(
     """
     try:
         content = await file.read()
+        if len(content) > MAX_SINGLE_FILE_BYTES:
+            raise HTTPException(
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                detail=f"File exceeds maximum size of {MAX_SINGLE_FILE_BYTES // (1024*1024)} MB",
+            )
+        if len(content) == 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Uploaded file is empty",
+            )
+
         metadata = {}
         if tags:
-            metadata["tags"] = [t.strip() for t in tags.split(",")]
+            metadata["tags"] = [t.strip() for t in tags.split(",") if t.strip()]
         if collection:
             metadata["collection"] = collection
 
@@ -111,6 +126,8 @@ async def upload_file(
             generate_preview=generate_preview,
         )
         return result.model_dump()
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Upload failed: {e}")
         raise HTTPException(
@@ -312,9 +329,9 @@ async def create_folder_watcher(request: CreateWatcherRequest):
         WatcherStatus
     """
     import hashlib
-    from datetime import datetime
+    from datetime import datetime, timezone
 
-    watcher_id = hashlib.sha256(f"{request.path}:{datetime.utcnow().isoformat()}".encode()).hexdigest()[:12]
+    watcher_id = hashlib.sha256(f"{request.path}:{datetime.now(timezone.utc).isoformat()}".encode()).hexdigest()[:12]
 
     config = WatcherConfig(
         watcher_id=watcher_id,
@@ -329,8 +346,8 @@ async def create_folder_watcher(request: CreateWatcherRequest):
     )
 
     try:
-        status = await folder_watcher_service.create_watcher(config)
-        return status.model_dump()
+        watcher_status = await folder_watcher_service.create_watcher(config)
+        return watcher_status.model_dump()
     except Exception as e:
         logger.error(f"Failed to create watcher: {e}")
         raise HTTPException(
@@ -360,8 +377,8 @@ async def get_watcher_status(watcher_id: str):
         WatcherStatus
     """
     try:
-        status = folder_watcher_service.get_status(watcher_id)
-        return status.model_dump()
+        watcher_info = folder_watcher_service.get_status(watcher_id)
+        return watcher_info.model_dump()
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 

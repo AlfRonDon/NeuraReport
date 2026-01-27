@@ -23,8 +23,16 @@ test.describe('User flows', () => {
     await expect(page.getByLabel('Connection Name')).toHaveValue(connName)
     await expect(dbPathInput).toHaveValue(dbPath)
 
-    await page.getByRole('button', { name: 'Test Connection' }).click()
-    await expect(page.getByText('Connection successful! Database is reachable.')).toBeVisible({ timeout: 20_000 })
+    // Cold-start + DataFrame-based verification can be slow on Windows; wait on the network response
+    // (and then the success toast) instead of relying on a short fixed timeout.
+    const testBtn = page.getByRole('button', { name: 'Test Connection' })
+    await expect(testBtn).toBeEnabled()
+    const [testResp] = await Promise.all([
+      page.waitForResponse((r) => r.url().includes('/connections/test') && r.request().method() === 'POST', { timeout: 60_000 }),
+      testBtn.click(),
+    ])
+    expect(testResp.ok()).toBeTruthy()
+    await expect(page.getByText('Connection successful! Database is reachable.')).toBeVisible({ timeout: 60_000 })
 
     await page.getByRole('button', { name: 'Add Connection' }).click()
     // The connections table is virtualized; use the search box to reliably locate the new record.

@@ -1,20 +1,50 @@
 """
 Dashboard API Routes - Dashboard building and analytics endpoints.
+
+All CRUD is delegated to persistent service classes backed by the
+StateStore.  No in-memory dicts — dashboards survive server restarts.
 """
 
 from __future__ import annotations
 
 import logging
-import uuid
-from datetime import datetime
 from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
+from backend.app.services.dashboards.service import DashboardService
+from backend.app.services.dashboards.widget_service import WidgetService
+from backend.app.services.dashboards.snapshot_service import SnapshotService
+from backend.app.services.dashboards.embed_service import EmbedService
+from backend.app.services.security import require_api_key
+from backend.app.services.analytics import (
+    insight_service,
+    trend_service,
+    anomaly_service,
+    correlation_service,
+)
+from backend.app.schemas.analytics import (
+    DataSeries,
+    InsightsRequest,
+    TrendRequest,
+    AnomaliesRequest,
+    CorrelationsRequest,
+    ForecastMethod,
+)
+from backend.app.services.nl2sql.service import NL2SQLService
+from backend.app.schemas.nl2sql import NL2SQLExecuteRequest
+
 logger = logging.getLogger("neura.api.dashboards")
 
-router = APIRouter(tags=["dashboards"])
+router = APIRouter(tags=["dashboards"], dependencies=[Depends(require_api_key)])
+
+# Service singletons
+_dashboard_svc = DashboardService()
+_widget_svc = WidgetService()
+_snapshot_svc = SnapshotService()
+_embed_svc = EmbedService()
+_nl2sql_svc = NL2SQLService()
 
 
 # ============================================
@@ -88,10 +118,6 @@ class DashboardResponse(BaseModel):
     updated_at: str
 
 
-# In-memory storage (would use state store in production)
-_dashboards: dict[str, dict] = {}
-
-
 # ============================================
 # Dashboard CRUD Endpoints
 # ============================================
@@ -99,19 +125,13 @@ _dashboards: dict[str, dict] = {}
 @router.post("", response_model=DashboardResponse)
 async def create_dashboard(request: CreateDashboardRequest):
     """Create a new dashboard."""
-    now = datetime.utcnow().isoformat()
-    dashboard = {
-        "id": str(uuid.uuid4()),
-        "name": request.name,
-        "description": request.description,
-        "widgets": [w.model_dump() for w in request.widgets],
-        "filters": request.filters,
-        "theme": request.theme,
-        "refresh_interval": None,
-        "created_at": now,
-        "updated_at": now,
-    }
-    _dashboards[dashboard["id"]] = dashboard
+    dashboard = _dashboard_svc.create_dashboard(
+        name=request.name,
+        description=request.description,
+        widgets=[w.model_dump() for w in request.widgets],
+        filters=request.filters,
+        theme=request.theme,
+    )
     return DashboardResponse(**dashboard)
 
 
@@ -121,54 +141,41 @@ async def list_dashboards(
     offset: int = Query(0, ge=0),
 ):
     """List all dashboards."""
-    dashboards = list(_dashboards.values())
-    dashboards.sort(key=lambda d: d["updated_at"], reverse=True)
-    return {
-        "dashboards": dashboards[offset:offset + limit],
-        "total": len(dashboards),
-        "offset": offset,
-        "limit": limit,
-    }
+    return _dashboard_svc.list_dashboards(limit=limit, offset=offset)
 
 
 @router.get("/{dashboard_id}", response_model=DashboardResponse)
 async def get_dashboard(dashboard_id: str):
     """Get a dashboard by ID."""
-    if dashboard_id not in _dashboards:
+    dashboard = _dashboard_svc.get_dashboard(dashboard_id)
+    if dashboard is None:
         raise HTTPException(status_code=404, detail="Dashboard not found")
-    return DashboardResponse(**_dashboards[dashboard_id])
+    return DashboardResponse(**dashboard)
 
 
 @router.put("/{dashboard_id}", response_model=DashboardResponse)
 async def update_dashboard(dashboard_id: str, request: UpdateDashboardRequest):
     """Update a dashboard."""
-    if dashboard_id not in _dashboards:
+    widgets = [w.model_dump() for w in request.widgets] if request.widgets is not None else None
+    dashboard = _dashboard_svc.update_dashboard(
+        dashboard_id,
+        name=request.name,
+        description=request.description,
+        widgets=widgets,
+        filters=request.filters,
+        theme=request.theme,
+        refresh_interval=request.refresh_interval,
+    )
+    if dashboard is None:
         raise HTTPException(status_code=404, detail="Dashboard not found")
-
-    dashboard = _dashboards[dashboard_id]
-    if request.name is not None:
-        dashboard["name"] = request.name
-    if request.description is not None:
-        dashboard["description"] = request.description
-    if request.widgets is not None:
-        dashboard["widgets"] = [w.model_dump() for w in request.widgets]
-    if request.filters is not None:
-        dashboard["filters"] = request.filters
-    if request.theme is not None:
-        dashboard["theme"] = request.theme
-    if request.refresh_interval is not None:
-        dashboard["refresh_interval"] = request.refresh_interval
-
-    dashboard["updated_at"] = datetime.utcnow().isoformat()
     return DashboardResponse(**dashboard)
 
 
 @router.delete("/{dashboard_id}")
 async def delete_dashboard(dashboard_id: str):
     """Delete a dashboard."""
-    if dashboard_id not in _dashboards:
+    if not _dashboard_svc.delete_dashboard(dashboard_id):
         raise HTTPException(status_code=404, detail="Dashboard not found")
-    del _dashboards[dashboard_id]
     return {"status": "ok", "message": "Dashboard deleted"}
 
 
@@ -179,23 +186,18 @@ async def delete_dashboard(dashboard_id: str):
 @router.post("/{dashboard_id}/widgets")
 async def add_widget(dashboard_id: str, request: AddWidgetRequest):
     """Add a widget to a dashboard."""
-    if dashboard_id not in _dashboards:
+    try:
+        widget = _widget_svc.add_widget(
+            dashboard_id,
+            config=request.config.model_dump(),
+            x=request.x,
+            y=request.y,
+            w=request.w,
+            h=request.h,
+        )
+    except ValueError:
         raise HTTPException(status_code=404, detail="Dashboard not found")
-
-    widget = DashboardWidget(
-        id=str(uuid.uuid4()),
-        config=request.config,
-        x=request.x,
-        y=request.y,
-        w=request.w,
-        h=request.h,
-    )
-
-    dashboard = _dashboards[dashboard_id]
-    dashboard["widgets"].append(widget.model_dump())
-    dashboard["updated_at"] = datetime.utcnow().isoformat()
-
-    return widget.model_dump()
+    return widget
 
 
 @router.put("/{dashboard_id}/widgets/{widget_id}")
@@ -205,40 +207,25 @@ async def update_widget(
     request: AddWidgetRequest,
 ):
     """Update a widget."""
-    if dashboard_id not in _dashboards:
-        raise HTTPException(status_code=404, detail="Dashboard not found")
-
-    dashboard = _dashboards[dashboard_id]
-    for i, w in enumerate(dashboard["widgets"]):
-        if w["id"] == widget_id:
-            dashboard["widgets"][i] = {
-                "id": widget_id,
-                "config": request.config.model_dump(),
-                "x": request.x,
-                "y": request.y,
-                "w": request.w,
-                "h": request.h,
-            }
-            dashboard["updated_at"] = datetime.utcnow().isoformat()
-            return dashboard["widgets"][i]
-
-    raise HTTPException(status_code=404, detail="Widget not found")
+    widget = _widget_svc.update_widget(
+        dashboard_id,
+        widget_id,
+        config=request.config.model_dump(),
+        x=request.x,
+        y=request.y,
+        w=request.w,
+        h=request.h,
+    )
+    if widget is None:
+        raise HTTPException(status_code=404, detail="Widget not found")
+    return widget
 
 
 @router.delete("/{dashboard_id}/widgets/{widget_id}")
 async def delete_widget(dashboard_id: str, widget_id: str):
     """Delete a widget from a dashboard."""
-    if dashboard_id not in _dashboards:
-        raise HTTPException(status_code=404, detail="Dashboard not found")
-
-    dashboard = _dashboards[dashboard_id]
-    original_len = len(dashboard["widgets"])
-    dashboard["widgets"] = [w for w in dashboard["widgets"] if w["id"] != widget_id]
-
-    if len(dashboard["widgets"]) == original_len:
+    if not _widget_svc.delete_widget(dashboard_id, widget_id):
         raise HTTPException(status_code=404, detail="Widget not found")
-
-    dashboard["updated_at"] = datetime.utcnow().isoformat()
     return {"status": "ok", "message": "Widget deleted"}
 
 
@@ -251,15 +238,23 @@ async def create_snapshot(
     dashboard_id: str,
     format: str = Query("png", pattern="^(png|pdf)$"),
 ):
-    """Create a snapshot of the dashboard."""
-    if dashboard_id not in _dashboards:
+    """Create a snapshot of the dashboard and trigger rendering."""
+    try:
+        snapshot = _snapshot_svc.create_snapshot(dashboard_id, format=format)
+    except ValueError:
         raise HTTPException(status_code=404, detail="Dashboard not found")
 
-    # TODO: Implement snapshot generation with Playwright
+    # Attempt rendering synchronously — updates status to completed/failed
+    rendered = _snapshot_svc.render_snapshot(snapshot["id"])
+
     return {
         "status": "ok",
-        "message": "Snapshot generation not yet implemented",
-        "snapshot_id": str(uuid.uuid4()),
+        "snapshot_id": rendered["id"],
+        "format": rendered["format"],
+        "render_status": rendered.get("status", "pending"),
+        "content_hash": rendered["content_hash"],
+        "file_path": rendered.get("file_path"),
+        "created_at": rendered["created_at"],
     }
 
 
@@ -269,16 +264,19 @@ async def generate_embed_token(
     expires_hours: int = Query(24, ge=1, le=720),
 ):
     """Generate an embed token for the dashboard."""
-    if dashboard_id not in _dashboards:
+    try:
+        result = _embed_svc.generate_embed_token(
+            dashboard_id,
+            expires_hours=expires_hours,
+        )
+    except ValueError:
         raise HTTPException(status_code=404, detail="Dashboard not found")
-
-    # TODO: Generate JWT token for embedding
-    embed_token = str(uuid.uuid4())
     return {
         "status": "ok",
-        "embed_token": embed_token,
-        "embed_url": f"/embed/dashboard/{dashboard_id}?token={embed_token}",
-        "expires_hours": expires_hours,
+        "embed_token": result["embed_token"],
+        "embed_url": result["embed_url"],
+        "expires_hours": result["expires_hours"],
+        "expires_at": result["expires_at"],
     }
 
 
@@ -293,20 +291,53 @@ async def execute_widget_query(
     filters: Optional[dict[str, Any]] = None,
 ):
     """Execute a widget's query with optional filters."""
-    if dashboard_id not in _dashboards:
+    dashboard = _dashboard_svc.get_dashboard(dashboard_id)
+    if dashboard is None:
         raise HTTPException(status_code=404, detail="Dashboard not found")
 
-    dashboard = _dashboards[dashboard_id]
-    widget = next((w for w in dashboard["widgets"] if w["id"] == widget_id), None)
-    if not widget:
+    widget = _widget_svc.get_widget(dashboard_id, widget_id)
+    if widget is None:
         raise HTTPException(status_code=404, detail="Widget not found")
 
-    # TODO: Execute actual query
-    return {
-        "widget_id": widget_id,
-        "data": [],
-        "metadata": {},
-    }
+    config = widget.get("config", {})
+    sql_query = config.get("query")
+    connection_id = config.get("data_source")
+
+    if not sql_query or not connection_id:
+        return {
+            "widget_id": widget_id,
+            "data": [],
+            "metadata": {"reason": "Widget has no query or data_source configured"},
+        }
+
+    try:
+        result = _nl2sql_svc.execute_query(
+            NL2SQLExecuteRequest(
+                sql=sql_query,
+                connection_id=connection_id,
+            ),
+        )
+        return {
+            "widget_id": widget_id,
+            "data": result.rows,
+            "metadata": {
+                "columns": result.columns,
+                "row_count": result.row_count,
+                "execution_time_ms": result.execution_time_ms,
+                "truncated": result.truncated,
+            },
+        }
+    except Exception as exc:
+        logger.warning(
+            "widget_query_failed",
+            extra={
+                "event": "widget_query_failed",
+                "dashboard_id": dashboard_id,
+                "widget_id": widget_id,
+                "error": str(exc),
+            },
+        )
+        raise HTTPException(status_code=422, detail=f"Query execution failed: {exc}")
 
 
 @router.post("/analytics/insights")
@@ -314,18 +345,18 @@ async def generate_insights(
     data: list[dict[str, Any]],
     context: Optional[str] = None,
 ):
-    """Generate AI insights from data."""
-    # TODO: Implement with OpenAI
-    return {
-        "insights": [
-            {
-                "type": "observation",
-                "title": "Sample Insight",
-                "description": "This is a placeholder insight.",
-                "confidence": 0.9,
-            }
-        ],
-    }
+    """Generate AI insights from data.
+
+    Converts raw data dicts into DataSeries and delegates to the
+    analytics InsightService.
+    """
+    series = _dicts_to_series(data)
+    if not series:
+        raise HTTPException(status_code=422, detail="No numeric data series found in input")
+
+    request = InsightsRequest(data=series, context=context)
+    result = await insight_service.generate_insights(request)
+    return result.model_dump()
 
 
 @router.post("/analytics/trends")
@@ -335,13 +366,26 @@ async def predict_trends(
     value_column: str,
     periods: int = Query(12, ge=1, le=100),
 ):
-    """Predict future trends from time series data."""
-    # TODO: Implement with statsmodels/Prophet
-    return {
-        "predictions": [],
-        "confidence_intervals": [],
-        "narrative": "Trend prediction not yet implemented.",
-    }
+    """Predict future trends from time series data.
+
+    Extracts the named value column from the data dicts and delegates
+    to the analytics TrendService.
+    """
+    values = [
+        float(row[value_column])
+        for row in data
+        if value_column in row and _is_numeric(row[value_column])
+    ]
+    if len(values) < 2:
+        raise HTTPException(status_code=422, detail=f"Need at least 2 numeric values in '{value_column}'")
+
+    request = TrendRequest(
+        data=DataSeries(name=value_column, values=values),
+        forecast_periods=periods,
+        method=ForecastMethod.AUTO,
+    )
+    result = await trend_service.analyze_trend(request)
+    return result.model_dump()
 
 
 @router.post("/analytics/anomalies")
@@ -350,12 +394,33 @@ async def detect_anomalies(
     columns: list[str],
     method: str = Query("zscore", pattern="^(zscore|iqr|isolation_forest)$"),
 ):
-    """Detect anomalies in data."""
-    # TODO: Implement anomaly detection
+    """Detect anomalies in data.
+
+    Runs anomaly detection on each requested column via the
+    analytics AnomalyService.  Results are aggregated across columns.
+    """
+    all_anomalies: list[dict[str, Any]] = []
+    all_stats: dict[str, Any] = {}
+
+    for col in columns:
+        values = [
+            float(row[col])
+            for row in data
+            if col in row and _is_numeric(row[col])
+        ]
+        if len(values) < 3:
+            continue
+        request = AnomaliesRequest(data=DataSeries(name=col, values=values))
+        result = await anomaly_service.detect_anomalies(request)
+        all_anomalies.extend([a.model_dump() for a in result.anomalies])
+        all_stats[col] = result.baseline_stats
+
     return {
-        "anomalies": [],
-        "statistics": {},
-        "narrative": "No anomalies detected.",
+        "anomalies": all_anomalies,
+        "statistics": all_stats,
+        "narrative": f"Detected {len(all_anomalies)} anomalies across {len(columns)} columns."
+        if all_anomalies
+        else "No anomalies detected.",
     }
 
 
@@ -364,10 +429,61 @@ async def find_correlations(
     data: list[dict[str, Any]],
     columns: Optional[list[str]] = None,
 ):
-    """Find correlations between columns."""
-    # TODO: Implement correlation analysis
-    return {
-        "correlations": [],
-        "significant_pairs": [],
-        "narrative": "Correlation analysis not yet implemented.",
-    }
+    """Find correlations between columns.
+
+    Extracts numeric columns from the data dicts and delegates to the
+    analytics CorrelationService.
+    """
+    target_cols = columns
+    if not target_cols and data:
+        target_cols = [
+            k for k in data[0]
+            if _is_numeric(data[0][k])
+        ]
+
+    if not target_cols or len(target_cols) < 2:
+        raise HTTPException(status_code=422, detail="Need at least 2 numeric columns for correlation analysis")
+
+    series = []
+    for col in target_cols:
+        values = [
+            float(row.get(col, float("nan")))
+            if _is_numeric(row.get(col))
+            else float("nan")
+            for row in data
+        ]
+        series.append(DataSeries(name=col, values=values))
+
+    request = CorrelationsRequest(data=series)
+    result = await correlation_service.analyze_correlations(request)
+    return result.model_dump()
+
+
+# ── Helpers ──────────────────────────────────────────────────────────
+
+def _is_numeric(value: Any) -> bool:
+    """Return True if value can be cast to float."""
+    if isinstance(value, (int, float)):
+        return True
+    if isinstance(value, str):
+        try:
+            float(value)
+            return True
+        except (ValueError, TypeError):
+            return False
+    return False
+
+
+def _dicts_to_series(data: list[dict[str, Any]]) -> list[DataSeries]:
+    """Convert a list of row-dicts to DataSeries (one per numeric column)."""
+    if not data:
+        return []
+    cols = [k for k in data[0] if _is_numeric(data[0][k])]
+    series = []
+    for col in cols:
+        values = [
+            float(row[col]) if col in row and _is_numeric(row[col]) else float("nan")
+            for row in data
+        ]
+        series.append(DataSeries(name=col, values=values))
+    return series

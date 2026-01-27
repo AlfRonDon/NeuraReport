@@ -18,6 +18,8 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable, List, Optional, Tuple, TypeVar, Union
+import ipaddress
+import socket
 from urllib.parse import urlparse
 
 T = TypeVar("T")
@@ -254,6 +256,74 @@ def is_valid_url(value: str, require_https: bool = False) -> bool:
         return False
 
 
+_PRIVATE_NETWORKS = [
+    ipaddress.ip_network("127.0.0.0/8"),
+    ipaddress.ip_network("10.0.0.0/8"),
+    ipaddress.ip_network("172.16.0.0/12"),
+    ipaddress.ip_network("192.168.0.0/16"),
+    ipaddress.ip_network("169.254.0.0/16"),
+    ipaddress.ip_network("::1/128"),
+    ipaddress.ip_network("fc00::/7"),
+    ipaddress.ip_network("fe80::/10"),
+]
+
+
+def is_safe_external_url(url: str) -> tuple[bool, str | None]:
+    """Validate that a URL is safe for server-side requests (anti-SSRF).
+
+    Blocks:
+    - Non-HTTP(S) schemes (file://, ftp://, etc.)
+    - localhost, 127.0.0.0/8, ::1
+    - Private networks (10.x, 172.16-31.x, 192.168.x)
+    - Link-local / cloud metadata (169.254.x.x)
+    - 0.0.0.0
+
+    Returns (is_safe, error_message).
+    """
+    if not url or not isinstance(url, str):
+        return False, "URL is required"
+
+    try:
+        parsed = urlparse(url.strip())
+    except Exception:
+        return False, "Invalid URL"
+
+    # Scheme check
+    if parsed.scheme not in ("http", "https"):
+        return False, f"Scheme '{parsed.scheme}' is not allowed; use http or https"
+
+    hostname = parsed.hostname
+    if not hostname:
+        return False, "URL has no hostname"
+
+    # Obvious hostname check
+    if hostname in ("localhost", "0.0.0.0"):
+        return False, f"Hostname '{hostname}' is not allowed"
+
+    # Resolve hostname to IP and check against private ranges
+    try:
+        addr_infos = socket.getaddrinfo(hostname, None, socket.AF_UNSPEC, socket.SOCK_STREAM)
+    except socket.gaierror:
+        return False, f"Could not resolve hostname '{hostname}'"
+
+    for family, _type, _proto, _canon, sockaddr in addr_infos:
+        ip_str = sockaddr[0]
+        try:
+            ip = ipaddress.ip_address(ip_str)
+        except ValueError:
+            continue
+
+        for network in _PRIVATE_NETWORKS:
+            if ip in network:
+                return False, f"URL resolves to private/reserved address ({ip_str})"
+
+        # Also block unspecified address (0.0.0.0 / ::)
+        if ip == ipaddress.ip_address("0.0.0.0") or ip == ipaddress.ip_address("::"):
+            return False, "URL resolves to unspecified address"
+
+    return True, None
+
+
 def contains_sql_injection(value: str) -> bool:
     """Check if a string contains potential SQL injection patterns."""
     if not value:
@@ -264,6 +334,47 @@ def contains_sql_injection(value: str) -> bool:
         if re.search(pattern, lower_value, re.IGNORECASE):
             return True
     return False
+
+
+_BLOCKED_SQL_KEYWORDS = re.compile(
+    r"\b(DROP|ALTER|TRUNCATE|CREATE|INSERT|UPDATE|DELETE|GRANT|REVOKE|EXEC|EXECUTE|MERGE|REPLACE|CALL)\b",
+    re.IGNORECASE,
+)
+
+_SQL_LINE_COMMENT = re.compile(r"--[^\n]*")
+_SQL_BLOCK_COMMENT = re.compile(r"/\*.*?\*/", re.DOTALL)
+
+
+def is_read_only_sql(query: str) -> tuple[bool, str | None]:
+    """Check whether a SQL query is read-only (SELECT / WITH only).
+
+    Returns (is_safe, error_message).
+    Strips comments before analysis.  Blocks DDL, DML, and admin
+    statements: DROP, ALTER, TRUNCATE, CREATE, INSERT, UPDATE, DELETE,
+    GRANT, REVOKE, EXEC, EXECUTE, MERGE, REPLACE, CALL.
+    """
+    if not query or not query.strip():
+        return False, "Query is empty"
+
+    # Strip comments
+    cleaned = _SQL_LINE_COMMENT.sub(" ", query)
+    cleaned = _SQL_BLOCK_COMMENT.sub(" ", cleaned)
+    cleaned = cleaned.strip()
+
+    if not cleaned:
+        return False, "Query is empty after removing comments"
+
+    # Check first keyword
+    first_word = cleaned.split()[0].upper()
+    if first_word not in ("SELECT", "WITH"):
+        return False, f"Only SELECT queries are allowed (got {first_word})"
+
+    # Scan for blocked keywords anywhere (e.g. sub-statements)
+    match = _BLOCKED_SQL_KEYWORDS.search(cleaned)
+    if match:
+        return False, f"Query contains blocked keyword: {match.group(0).upper()}"
+
+    return True, None
 
 
 def contains_xss(value: str) -> bool:

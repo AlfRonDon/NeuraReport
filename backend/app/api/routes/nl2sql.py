@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
 from backend.app.services.security import require_api_key
 from backend.app.schemas.nl2sql import (
@@ -120,12 +120,14 @@ async def get_saved_query(
     correlation_id = getattr(request.state, "correlation_id", None)
     query = svc.get_saved_query(query_id)
     if not query:
-        return {
-            "status": "error",
-            "code": "not_found",
-            "message": "Query not found",
-            "correlation_id": correlation_id,
-        }
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "status": "error",
+                "code": "not_found",
+                "message": "Query not found",
+            },
+        )
     return {
         "status": "ok",
         "query": query.model_dump(mode="json"),

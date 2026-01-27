@@ -1,7 +1,7 @@
 """API routes for Cross-Database Federation feature."""
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
 from backend.app.services.security import require_api_key
 from backend.app.schemas.federation import VirtualSchemaCreate, SuggestJoinsRequest, FederatedQueryRequest
@@ -29,12 +29,20 @@ async def create_virtual_schema(
 @router.get("/schemas")
 async def list_virtual_schemas(
     request: Request,
+    limit: int = Query(100, ge=1, le=500),
+    offset: int = Query(0, ge=0),
     svc: FederationService = Depends(get_service),
 ):
     """List all virtual schemas."""
     correlation_id = getattr(request.state, "correlation_id", None)
-    schemas = svc.list_virtual_schemas()
-    return {"status": "ok", "schemas": [s.dict() for s in schemas], "correlation_id": correlation_id}
+    all_schemas = svc.list_virtual_schemas()
+    page = all_schemas[offset:offset + limit]
+    return {
+        "status": "ok",
+        "schemas": [s.dict() for s in page],
+        "total": len(all_schemas),
+        "correlation_id": correlation_id,
+    }
 
 
 @router.get("/schemas/{schema_id}")
@@ -47,7 +55,7 @@ async def get_virtual_schema(
     correlation_id = getattr(request.state, "correlation_id", None)
     schema = svc.get_virtual_schema(schema_id)
     if not schema:
-        return {"status": "error", "code": "not_found", "correlation_id": correlation_id}
+        raise HTTPException(status_code=404, detail={"code": "not_found", "message": f"Schema {schema_id} not found"})
     return {"status": "ok", "schema": schema.dict(), "correlation_id": correlation_id}
 
 
@@ -60,7 +68,9 @@ async def delete_virtual_schema(
     """Delete a virtual schema."""
     correlation_id = getattr(request.state, "correlation_id", None)
     deleted = svc.delete_virtual_schema(schema_id)
-    return {"status": "ok" if deleted else "error", "deleted": deleted, "correlation_id": correlation_id}
+    if not deleted:
+        raise HTTPException(status_code=404, detail={"code": "not_found", "message": f"Schema {schema_id} not found"})
+    return {"status": "ok", "deleted": True, "correlation_id": correlation_id}
 
 
 @router.post("/suggest-joins")

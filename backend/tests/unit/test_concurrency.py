@@ -19,8 +19,9 @@ from backend.app.repositories.state.store import StateStore
 
 
 @pytest.fixture
-def state_store(tmp_path: Path) -> StateStore:
+def state_store(tmp_path: Path, monkeypatch) -> StateStore:
     """Create a temporary StateStore for testing."""
+    monkeypatch.delenv("NEURA_STATE_DIR", raising=False)
     return StateStore(base_dir=tmp_path)
 
 

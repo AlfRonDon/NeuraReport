@@ -18,8 +18,11 @@ export async function getBrandKit(brandKitId) {
   return response.data;
 }
 
-export async function listBrandKits() {
-  const response = await api.get('/design/brand-kits');
+export async function listBrandKits({ limit, offset } = {}) {
+  const params = {};
+  if (limit != null) params.limit = limit;
+  if (offset != null) params.offset = offset;
+  const response = await api.get('/design/brand-kits', { params });
   return response.data;
 }
 
@@ -59,8 +62,11 @@ export async function getTheme(themeId) {
   return response.data;
 }
 
-export async function listThemes() {
-  const response = await api.get('/design/themes');
+export async function listThemes({ limit, offset } = {}) {
+  const params = {};
+  if (limit != null) params.limit = limit;
+  if (offset != null) params.offset = offset;
+  const response = await api.get('/design/themes', { params });
   return response.data;
 }
 

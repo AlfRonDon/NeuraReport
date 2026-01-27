@@ -23,7 +23,10 @@ from backend.app.schemas.export.export import (
 )
 from backend.app.services.export.service import distribution_service, export_service
 
-router = APIRouter(tags=["export"])
+from backend.app.services.security import require_api_key
+from fastapi import Depends
+
+router = APIRouter(tags=["export"], dependencies=[Depends(require_api_key)])
 
 
 @router.post("/{document_id}/pdf")

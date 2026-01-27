@@ -8,7 +8,9 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+from backend.app.utils.validation import is_safe_external_url
 
 
 class ExportFormat(str, Enum):
@@ -189,6 +191,14 @@ class WebhookDeliveryRequest(BaseModel):
     include_content: bool = True
     payload_template: Optional[str] = None
 
+    @field_validator("webhook_url")
+    @classmethod
+    def validate_webhook_url(cls, v: str) -> str:
+        is_safe, error = is_safe_external_url(v)
+        if not is_safe:
+            raise ValueError(f"Unsafe webhook URL: {error}")
+        return v
+
 
 class SlackMessageRequest(BaseModel):
     """Request to send to Slack."""
@@ -206,6 +216,14 @@ class TeamsMessageRequest(BaseModel):
     title: Optional[str] = None
     message: Optional[str] = None
     mention_users: list[str] = Field(default_factory=list)
+
+    @field_validator("webhook_url")
+    @classmethod
+    def validate_webhook_url(cls, v: str) -> str:
+        is_safe, error = is_safe_external_url(v)
+        if not is_safe:
+            raise ValueError(f"Unsafe webhook URL: {error}")
+        return v
 
 
 class DistributionResponse(BaseModel):

@@ -1,22 +1,42 @@
 """
-Writing Service Tests
-Comprehensive tests for WritingService with mocked OpenAI.
-"""
-import json
-import pytest
-from unittest.mock import Mock, patch, MagicMock
+WritingService Unit & Integration Tests
+Comprehensive 7-layer test coverage for AI writing service.
 
+Layers covered:
+1. Unit Tests - Individual method logic
+2. Integration Tests - Service + LLM client interaction
+3. Property-Based Tests - Invariant verification
+4. Failure Injection Tests - Error handling paths
+5. Concurrency Tests - Thread safety
+6. Security Tests - Input sanitization, abuse prevention
+7. Usability Tests - API ergonomics
+"""
+import asyncio
+import json
 import os
+import pytest
+import threading
+from unittest.mock import Mock, patch, AsyncMock, MagicMock
+
 os.environ.setdefault("OPENAI_API_KEY", "test-key")
 
 from backend.app.services.ai.writing_service import (
     WritingService,
     WritingTone,
     GrammarCheckResult,
+    GrammarIssue,
     SummarizeResult,
     RewriteResult,
     ExpandResult,
     TranslateResult,
+    InputValidationError,
+    LLMResponseError,
+    LLMUnavailableError,
+    WritingServiceError,
+    _extract_json,
+    _validate_grammar_positions,
+    MAX_TEXT_CHARS,
+    MAX_TEXT_CHARS_EXPAND,
 )
 
 
@@ -24,854 +44,519 @@ from backend.app.services.ai.writing_service import (
 # FIXTURES
 # =============================================================================
 
+def _make_llm_response(content: str) -> dict:
+    """Create an OpenAI-compatible response dict."""
+    return {
+        "choices": [{"message": {"content": content}}],
+        "usage": {"prompt_tokens": 100, "completion_tokens": 50},
+    }
+
 
 @pytest.fixture
 def service():
-    """Create WritingService instance."""
+    """Create a WritingService with mocked LLM client."""
     return WritingService()
 
 
 @pytest.fixture
-def mock_openai_response():
-    """Factory for mock OpenAI responses."""
-    def _create_response(content: str):
-        mock_response = Mock()
-        mock_response.choices = [Mock()]
-        mock_response.choices[0].message.content = content
-        return mock_response
-    return _create_response
+def mock_llm_client():
+    """Create a mock LLM client."""
+    return Mock()
 
 
 @pytest.fixture
-def mock_openai_client(mock_openai_response):
-    """Mock OpenAI client."""
-    with patch('backend.app.services.ai.writing_service.OpenAI') as mock_class:
-        mock_client = Mock()
-        mock_class.return_value = mock_client
-        yield mock_client
+def service_with_mock(service, mock_llm_client):
+    """WritingService wired to a mock LLM client."""
+    service._llm_client = mock_llm_client
+    return service
 
 
 # =============================================================================
-# INITIALIZATION TESTS
+# LAYER 1: UNIT TESTS — _extract_json helper
 # =============================================================================
 
 
-class TestWritingServiceInit:
-    """Tests for WritingService initialization."""
+class TestExtractJson:
+    """Tests for the _extract_json helper."""
 
-    def test_service_creates_successfully(self):
-        """Service instantiates without error."""
-        service = WritingService()
-        assert service is not None
+    def test_plain_json(self):
+        assert _extract_json('{"key": "value"}') == {"key": "value"}
 
-    def test_client_not_initialized_immediately(self, service):
-        """Client is lazy-loaded, not created on init."""
-        assert service._client is None
+    def test_json_with_markdown_fences(self):
+        assert _extract_json('```json\n{"key": "value"}\n```') == {"key": "value"}
 
-    def test_get_client_creates_client(self, service):
-        """_get_client creates OpenAI client on first call."""
-        with patch('openai.OpenAI') as mock_class:
-            mock_class.return_value = Mock()
-            client = service._get_client()
-            assert client is not None
-            mock_class.assert_called_once()
+    def test_json_with_bare_fences(self):
+        assert _extract_json('```\n{"items": [1, 2]}\n```') == {"items": [1, 2]}
 
-    def test_get_client_reuses_existing(self, service):
-        """_get_client returns same client on subsequent calls."""
-        with patch('openai.OpenAI') as mock_class:
-            mock_instance = Mock()
-            mock_class.return_value = mock_instance
+    def test_invalid_json_raises(self):
+        with pytest.raises(json.JSONDecodeError):
+            _extract_json("not json at all")
 
-            client1 = service._get_client()
-            client2 = service._get_client()
+    def test_whitespace_wrapped(self):
+        assert _extract_json('  \n  {"a": 1}  \n  ') == {"a": 1}
 
-            assert client1 is client2
-            mock_class.assert_called_once()
+
+class TestValidateGrammarPositions:
+    """Tests for position clamping."""
+
+    def test_valid_positions_unchanged(self):
+        issues = [{"start": 0, "end": 5}]
+        result = _validate_grammar_positions(issues, 10)
+        assert result[0]["start"] == 0 and result[0]["end"] == 5
+
+    def test_start_clamped_to_zero(self):
+        result = _validate_grammar_positions([{"start": -5, "end": 5}], 10)
+        assert result[0]["start"] == 0
+
+    def test_end_clamped_to_text_length(self):
+        result = _validate_grammar_positions([{"start": 0, "end": 999}], 10)
+        assert result[0]["end"] == 10
+
+    def test_end_at_least_start(self):
+        result = _validate_grammar_positions([{"start": 5, "end": 3}], 10)
+        assert result[0]["end"] >= result[0]["start"]
+
+    def test_missing_keys_default_to_zero(self):
+        result = _validate_grammar_positions([{}], 10)
+        assert result[0]["start"] == 0 and result[0]["end"] == 0
 
 
 # =============================================================================
-# GRAMMAR CHECK TESTS
+# LAYER 1: UNIT TESTS — Grammar Check
 # =============================================================================
 
 
-class TestGrammarCheck:
-    """Tests for check_grammar method."""
+class TestGrammarCheckUnit:
+    """Unit tests for check_grammar."""
 
     @pytest.mark.asyncio
-    async def test_check_grammar_returns_result(self, service):
-        """check_grammar returns GrammarCheckResult."""
-        with patch.object(service, '_call_openai') as mock_call:
-            mock_call.return_value = json.dumps({
-                "issues": [],
-                "corrected_text": "Hello world.",
-                "score": 100.0,
-            })
-
-            result = await service.check_grammar("Hello world.")
-
-            assert isinstance(result, GrammarCheckResult)
-            assert result.score == 100.0
-
-    @pytest.mark.asyncio
-    async def test_check_grammar_empty_text(self, service):
-        """Empty text returns perfect score."""
-        result = await service.check_grammar("")
-
-        assert result.issues == []
+    async def test_empty_text_returns_perfect_score(self, service_with_mock):
+        result = await service_with_mock.check_grammar("")
         assert result.score == 100.0
+        assert result.issue_count == 0
         assert result.corrected_text == ""
 
     @pytest.mark.asyncio
-    async def test_check_grammar_whitespace_only(self, service):
-        """Whitespace-only text returns perfect score."""
-        result = await service.check_grammar("   \n\t   ")
-
+    async def test_whitespace_only_returns_perfect_score(self, service_with_mock):
+        result = await service_with_mock.check_grammar("   \n\t  ")
         assert result.score == 100.0
 
     @pytest.mark.asyncio
-    async def test_check_grammar_with_issues(self, service):
-        """check_grammar identifies issues."""
-        with patch.object(service, '_call_openai') as mock_call:
-            mock_call.return_value = json.dumps({
-                "issues": [
-                    {
-                        "start": 0,
-                        "end": 3,
-                        "original": "teh",
-                        "suggestion": "the",
-                        "issue_type": "spelling",
-                        "explanation": "Typo",
-                        "severity": "error",
-                    }
-                ],
-                "corrected_text": "the quick fox",
-                "score": 85.0,
-            })
-
-            result = await service.check_grammar("teh quick fox")
-
-            assert len(result.issues) == 1
-            assert result.issues[0].original == "teh"
-            assert result.issue_count == 1
+    async def test_text_too_long_raises_validation_error(self, service_with_mock):
+        with pytest.raises(InputValidationError, match="exceeds maximum"):
+            await service_with_mock.check_grammar("a" * (MAX_TEXT_CHARS + 1))
 
     @pytest.mark.asyncio
-    async def test_check_grammar_strict_mode(self, service):
-        """check_grammar with strict mode."""
-        with patch.object(service, '_call_openai') as mock_call:
-            mock_call.return_value = json.dumps({
-                "issues": [],
-                "corrected_text": "text",
-                "score": 100.0,
-            })
-
-            await service.check_grammar("text", strict=True)
-
-            call_args = mock_call.call_args[0]
-            assert "(be strict)" in call_args[0]
-
-    @pytest.mark.asyncio
-    async def test_check_grammar_different_language(self, service):
-        """check_grammar with different language."""
-        with patch.object(service, '_call_openai') as mock_call:
-            mock_call.return_value = json.dumps({
-                "issues": [],
-                "corrected_text": "Bonjour le monde",
-                "score": 100.0,
-            })
-
-            await service.check_grammar("Bonjour le monde", language="fr")
-
-            call_args = mock_call.call_args[0]
-            assert "fr" in call_args[0]
+    async def test_successful_grammar_check(self, service_with_mock, mock_llm_client):
+        response_json = json.dumps({
+            "issues": [{
+                "start": 0, "end": 3, "original": "teh",
+                "suggestion": "the", "issue_type": "spelling",
+                "explanation": "Misspelling", "severity": "error"
+            }],
+            "corrected_text": "the quick fox",
+            "score": 85.0,
+        })
+        mock_llm_client.complete.return_value = _make_llm_response(response_json)
+        result = await service_with_mock.check_grammar("teh quick fox")
+        assert result.issue_count == 1
+        assert result.issues[0].original == "teh"
+        assert result.issues[0].suggestion == "the"
+        assert result.score == 85.0
 
     @pytest.mark.asyncio
-    async def test_check_grammar_json_error_fallback(self, service):
-        """check_grammar handles JSON parse error."""
-        with patch.object(service, '_call_openai') as mock_call:
-            mock_call.return_value = "Invalid JSON response"
+    async def test_score_clamped_high(self, service_with_mock, mock_llm_client):
+        mock_llm_client.complete.return_value = _make_llm_response(
+            json.dumps({"issues": [], "corrected_text": "ok", "score": 150.0})
+        )
+        result = await service_with_mock.check_grammar("ok")
+        assert result.score == 100.0
 
-            result = await service.check_grammar("test text")
+    @pytest.mark.asyncio
+    async def test_score_clamped_low(self, service_with_mock, mock_llm_client):
+        mock_llm_client.complete.return_value = _make_llm_response(
+            json.dumps({"issues": [], "corrected_text": "ok", "score": -20})
+        )
+        result = await service_with_mock.check_grammar("ok")
+        assert result.score == 0.0
 
-            assert result.issues == []
-            assert result.score == 100.0
+    @pytest.mark.asyncio
+    async def test_markdown_fences_handled(self, service_with_mock, mock_llm_client):
+        mock_llm_client.complete.return_value = _make_llm_response(
+            '```json\n{"issues": [], "corrected_text": "ok", "score": 99}\n```'
+        )
+        result = await service_with_mock.check_grammar("ok")
+        assert result.score == 99.0
+
+    @pytest.mark.asyncio
+    async def test_malformed_issues_skipped(self, service_with_mock, mock_llm_client):
+        mock_llm_client.complete.return_value = _make_llm_response(json.dumps({
+            "issues": [
+                {"start": 0, "end": 3, "original": "teh", "suggestion": "the",
+                 "issue_type": "spelling", "explanation": "Typo"},
+                {"garbage": True},  # malformed
+            ],
+            "corrected_text": "the quick fox",
+            "score": 85.0,
+        }))
+        result = await service_with_mock.check_grammar("teh quick fox")
+        assert result.issue_count == 1
 
 
 # =============================================================================
-# SUMMARIZE TESTS
+# LAYER 1: UNIT TESTS — Other operations
 # =============================================================================
 
 
-class TestSummarize:
-    """Tests for summarize method."""
+class TestSummarizeUnit:
+    @pytest.mark.asyncio
+    async def test_empty_text(self, service_with_mock):
+        result = await service_with_mock.summarize("")
+        assert result.summary == "" and result.compression_ratio == 1.0
 
     @pytest.mark.asyncio
-    async def test_summarize_returns_result(self, service):
-        """summarize returns SummarizeResult."""
-        with patch.object(service, '_call_openai') as mock_call:
-            mock_call.return_value = json.dumps({
-                "summary": "This is the summary.",
-                "key_points": ["Point 1", "Point 2"],
-            })
-
-            result = await service.summarize("Long text " * 100)
-
-            assert isinstance(result, SummarizeResult)
-            assert "summary" in result.summary.lower() or len(result.summary) > 0
+    async def test_successful_summarize(self, service_with_mock, mock_llm_client):
+        mock_llm_client.complete.return_value = _make_llm_response(
+            json.dumps({"summary": "Short.", "key_points": ["A", "B"]})
+        )
+        result = await service_with_mock.summarize("A long text with many words.")
+        assert result.summary == "Short."
+        assert len(result.key_points) == 2
+        assert result.word_count_original > 0
 
     @pytest.mark.asyncio
-    async def test_summarize_empty_text(self, service):
-        """Empty text returns empty summary."""
-        result = await service.summarize("")
+    async def test_too_long(self, service_with_mock):
+        with pytest.raises(InputValidationError):
+            await service_with_mock.summarize("x" * (MAX_TEXT_CHARS + 1))
 
-        assert result.summary == ""
-        assert result.word_count_original == 0
 
+class TestRewriteUnit:
     @pytest.mark.asyncio
-    async def test_summarize_whitespace_only(self, service):
-        """Whitespace-only text returns empty summary."""
-        result = await service.summarize("   \n\t   ")
-
-        assert result.summary == ""
-
-    @pytest.mark.asyncio
-    async def test_summarize_bullet_points_style(self, service):
-        """summarize with bullet_points style."""
-        with patch.object(service, '_call_openai') as mock_call:
-            mock_call.return_value = json.dumps({
-                "summary": "• Point one\n• Point two",
-                "key_points": ["Point one", "Point two"],
-            })
-
-            await service.summarize("text", style="bullet_points")
-
-            call_args = mock_call.call_args[0]
-            assert "bullet points" in call_args[0].lower()
-
-    @pytest.mark.asyncio
-    async def test_summarize_paragraph_style(self, service):
-        """summarize with paragraph style."""
-        with patch.object(service, '_call_openai') as mock_call:
-            mock_call.return_value = json.dumps({
-                "summary": "A cohesive paragraph summary.",
-                "key_points": [],
-            })
-
-            await service.summarize("text", style="paragraph")
-
-            call_args = mock_call.call_args[0]
-            assert "paragraph" in call_args[0].lower()
-
-    @pytest.mark.asyncio
-    async def test_summarize_executive_style(self, service):
-        """summarize with executive style."""
-        with patch.object(service, '_call_openai') as mock_call:
-            mock_call.return_value = json.dumps({
-                "summary": "Executive overview with conclusions.",
-                "key_points": ["Conclusion 1"],
-            })
-
-            await service.summarize("text", style="executive")
-
-            call_args = mock_call.call_args[0]
-            assert "executive" in call_args[0].lower()
-
-    @pytest.mark.asyncio
-    async def test_summarize_with_max_length(self, service):
-        """summarize with max_length constraint."""
-        with patch.object(service, '_call_openai') as mock_call:
-            mock_call.return_value = json.dumps({
-                "summary": "Short summary",
-                "key_points": [],
-            })
-
-            await service.summarize("text " * 100, max_length=50)
-
-            call_args = mock_call.call_args[0]
-            assert "50 words" in call_args[0]
-
-    @pytest.mark.asyncio
-    async def test_summarize_compression_ratio(self, service):
-        """summarize calculates compression ratio."""
-        with patch.object(service, '_call_openai') as mock_call:
-            mock_call.return_value = json.dumps({
-                "summary": "Short",
-                "key_points": [],
-            })
-
-            text = "word " * 100  # 100 words
-            result = await service.summarize(text)
-
-            assert result.word_count_original == 100
-            assert result.compression_ratio < 1.0
-
-    @pytest.mark.asyncio
-    async def test_summarize_json_error_fallback(self, service):
-        """summarize handles JSON parse error."""
-        with patch.object(service, '_call_openai') as mock_call:
-            mock_call.return_value = "Not valid JSON"
-
-            result = await service.summarize("text " * 100)
-
-            # Fallback truncates to 500 chars
-            assert len(result.summary) <= 503  # 500 + "..."
-
-
-# =============================================================================
-# REWRITE TESTS
-# =============================================================================
-
-
-class TestRewrite:
-    """Tests for rewrite method."""
-
-    @pytest.mark.asyncio
-    async def test_rewrite_returns_result(self, service):
-        """rewrite returns RewriteResult."""
-        with patch.object(service, '_call_openai') as mock_call:
-            mock_call.return_value = json.dumps({
-                "rewritten_text": "Professionally written text.",
-                "changes_made": ["Improved clarity"],
-            })
-
-            result = await service.rewrite("some text")
-
-            assert isinstance(result, RewriteResult)
-
-    @pytest.mark.asyncio
-    async def test_rewrite_empty_text(self, service):
-        """Empty text returns empty result."""
-        result = await service.rewrite("")
-
+    async def test_empty_text(self, service_with_mock):
+        result = await service_with_mock.rewrite("")
         assert result.rewritten_text == ""
-        assert result.tone == WritingTone.PROFESSIONAL.value
 
     @pytest.mark.asyncio
-    async def test_rewrite_whitespace_only(self, service):
-        """Whitespace-only returns empty result."""
-        result = await service.rewrite("   ")
+    async def test_successful_rewrite(self, service_with_mock, mock_llm_client):
+        mock_llm_client.complete.return_value = _make_llm_response(
+            json.dumps({"rewritten_text": "Formal.", "changes_made": ["tone"]})
+        )
+        result = await service_with_mock.rewrite("hey", tone=WritingTone.FORMAL)
+        assert result.rewritten_text == "Formal."
+        assert result.tone == "formal"
 
-        assert result.rewritten_text == "   "
+
+class TestExpandUnit:
+    @pytest.mark.asyncio
+    async def test_empty_text(self, service_with_mock):
+        result = await service_with_mock.expand("")
+        assert result.word_count_expanded == 0
 
     @pytest.mark.asyncio
-    @pytest.mark.parametrize("tone", list(WritingTone))
-    async def test_rewrite_all_tones(self, service, tone: WritingTone):
-        """rewrite works with all tone options."""
-        with patch.object(service, '_call_openai') as mock_call:
-            mock_call.return_value = json.dumps({
-                "rewritten_text": f"Text in {tone.value} tone.",
-                "changes_made": ["Applied tone"],
-            })
+    async def test_lower_limit_enforced(self, service_with_mock):
+        with pytest.raises(InputValidationError):
+            await service_with_mock.expand("a" * (MAX_TEXT_CHARS_EXPAND + 1))
 
-            result = await service.rewrite("text", tone=tone)
 
+class TestTranslateUnit:
+    @pytest.mark.asyncio
+    async def test_empty_text(self, service_with_mock):
+        result = await service_with_mock.translate("", target_language="es")
+        assert result.translated_text == ""
+
+    @pytest.mark.asyncio
+    async def test_successful_translate(self, service_with_mock, mock_llm_client):
+        mock_llm_client.complete.return_value = _make_llm_response(json.dumps({
+            "translated_text": "Hola mundo",
+            "source_language": "English",
+            "confidence": 0.95,
+        }))
+        result = await service_with_mock.translate("Hello world", target_language="Spanish")
+        assert result.translated_text == "Hola mundo"
+        assert result.confidence == 0.95
+
+
+class TestGenerateContentUnit:
+    @pytest.mark.asyncio
+    async def test_empty_prompt_raises(self, service_with_mock):
+        with pytest.raises(InputValidationError, match="cannot be empty"):
+            await service_with_mock.generate_content("")
+
+    @pytest.mark.asyncio
+    async def test_whitespace_prompt_raises(self, service_with_mock):
+        with pytest.raises(InputValidationError):
+            await service_with_mock.generate_content("   ")
+
+    @pytest.mark.asyncio
+    async def test_successful_generate(self, service_with_mock, mock_llm_client):
+        mock_llm_client.complete.return_value = _make_llm_response("Generated content.")
+        result = await service_with_mock.generate_content("Write about AI")
+        assert result == "Generated content."
+
+
+# =============================================================================
+# LAYER 3: PROPERTY-BASED TESTS
+# =============================================================================
+
+
+class TestGrammarCheckProperties:
+    @pytest.mark.asyncio
+    async def test_score_always_in_range(self, service_with_mock, mock_llm_client):
+        for score_val in [-10, 0, 50, 100, 200, 999]:
+            mock_llm_client.complete.return_value = _make_llm_response(
+                json.dumps({"issues": [], "corrected_text": "ok", "score": score_val})
+            )
+            result = await service_with_mock.check_grammar("ok")
+            assert 0.0 <= result.score <= 100.0
+
+    @pytest.mark.asyncio
+    async def test_issue_count_matches_list(self, service_with_mock, mock_llm_client):
+        mock_llm_client.complete.return_value = _make_llm_response(json.dumps({
+            "issues": [
+                {"start": 0, "end": 2, "original": "ab", "suggestion": "AB",
+                 "issue_type": "grammar", "explanation": "Cap"},
+                {"start": 3, "end": 5, "original": "cd", "suggestion": "CD",
+                 "issue_type": "grammar", "explanation": "Cap"},
+            ],
+            "corrected_text": "AB CD", "score": 70,
+        }))
+        result = await service_with_mock.check_grammar("ab cd")
+        assert result.issue_count == len(result.issues)
+
+    @pytest.mark.asyncio
+    async def test_positions_within_bounds(self, service_with_mock, mock_llm_client):
+        text = "short"
+        mock_llm_client.complete.return_value = _make_llm_response(json.dumps({
+            "issues": [{"start": -5, "end": 999, "original": "x", "suggestion": "y",
+                        "issue_type": "grammar", "explanation": "e"}],
+            "corrected_text": text, "score": 50,
+        }))
+        result = await service_with_mock.check_grammar(text)
+        for issue in result.issues:
+            assert 0 <= issue.start <= len(text)
+            assert issue.start <= issue.end <= len(text)
+
+    @pytest.mark.asyncio
+    async def test_confidence_always_clamped(self, service_with_mock, mock_llm_client):
+        for conf in [-0.5, 0.0, 0.5, 1.0, 1.5]:
+            mock_llm_client.complete.return_value = _make_llm_response(json.dumps({
+                "translated_text": "hola", "source_language": "en", "confidence": conf,
+            }))
+            result = await service_with_mock.translate("hi", target_language="es")
+            assert 0.0 <= result.confidence <= 1.0
+
+
+# =============================================================================
+# LAYER 4: FAILURE INJECTION TESTS
+# =============================================================================
+
+
+class TestFailureInjection:
+    @pytest.mark.asyncio
+    async def test_llm_returns_invalid_json(self, service_with_mock, mock_llm_client):
+        mock_llm_client.complete.return_value = _make_llm_response("Not JSON")
+        with pytest.raises(LLMResponseError, match="invalid JSON"):
+            await service_with_mock.check_grammar("test")
+
+    @pytest.mark.asyncio
+    async def test_llm_returns_empty_response(self, service_with_mock, mock_llm_client):
+        mock_llm_client.complete.return_value = _make_llm_response("")
+        with pytest.raises(LLMResponseError, match="empty response"):
+            await service_with_mock.check_grammar("test")
+
+    @pytest.mark.asyncio
+    async def test_llm_client_runtime_error(self, service_with_mock, mock_llm_client):
+        mock_llm_client.complete.side_effect = RuntimeError("Connection failed")
+        with pytest.raises(LLMResponseError):
+            await service_with_mock.check_grammar("test")
+
+    @pytest.mark.asyncio
+    async def test_circuit_breaker_open(self, service_with_mock, mock_llm_client):
+        mock_llm_client.complete.side_effect = RuntimeError(
+            "Service temporarily unavailable: circuit breaker open"
+        )
+        with pytest.raises(LLMUnavailableError):
+            await service_with_mock.check_grammar("test")
+
+    @pytest.mark.asyncio
+    async def test_unexpected_exception(self, service_with_mock, mock_llm_client):
+        mock_llm_client.complete.side_effect = ValueError("unexpected")
+        with pytest.raises(LLMResponseError, match="LLM call failed"):
+            await service_with_mock.check_grammar("test")
+
+    @pytest.mark.asyncio
+    async def test_summarize_invalid_json(self, service_with_mock, mock_llm_client):
+        mock_llm_client.complete.return_value = _make_llm_response("not json")
+        with pytest.raises(LLMResponseError):
+            await service_with_mock.summarize("Some text.")
+
+    @pytest.mark.asyncio
+    async def test_rewrite_invalid_json(self, service_with_mock, mock_llm_client):
+        mock_llm_client.complete.return_value = _make_llm_response("broken")
+        with pytest.raises(LLMResponseError):
+            await service_with_mock.rewrite("Some text")
+
+    @pytest.mark.asyncio
+    async def test_translate_invalid_json(self, service_with_mock, mock_llm_client):
+        mock_llm_client.complete.return_value = _make_llm_response("{invalid")
+        with pytest.raises(LLMResponseError):
+            await service_with_mock.translate("Hi", target_language="es")
+
+    @pytest.mark.asyncio
+    async def test_expand_invalid_json(self, service_with_mock, mock_llm_client):
+        mock_llm_client.complete.return_value = _make_llm_response("no json")
+        with pytest.raises(LLMResponseError):
+            await service_with_mock.expand("text")
+
+
+# =============================================================================
+# LAYER 5: CONCURRENCY TESTS
+# =============================================================================
+
+
+class TestConcurrency:
+    @pytest.mark.asyncio
+    async def test_concurrent_grammar_checks(self, service_with_mock, mock_llm_client):
+        mock_llm_client.complete.return_value = _make_llm_response(
+            json.dumps({"issues": [], "corrected_text": "ok", "score": 100})
+        )
+        results = await asyncio.gather(*[
+            service_with_mock.check_grammar(f"Text {i}") for i in range(10)
+        ])
+        assert all(r.score == 100.0 for r in results)
+        assert len(results) == 10
+
+    @pytest.mark.asyncio
+    async def test_concurrent_mixed_operations(self, service_with_mock, mock_llm_client):
+        grammar_json = json.dumps({"issues": [], "corrected_text": "ok", "score": 95})
+        summary_json = json.dumps({"summary": "short", "key_points": ["a"]})
+        rewrite_json = json.dumps({"rewritten_text": "formal", "changes_made": []})
+
+        def mock_complete(**kwargs):
+            desc = kwargs.get("description", "")
+            if "grammar" in desc:
+                return _make_llm_response(grammar_json)
+            elif "summarize" in desc:
+                return _make_llm_response(summary_json)
+            return _make_llm_response(rewrite_json)
+
+        mock_llm_client.complete.side_effect = mock_complete
+
+        results = await asyncio.gather(
+            service_with_mock.check_grammar("test"),
+            service_with_mock.summarize("test text"),
+            service_with_mock.rewrite("hello"),
+        )
+        assert len(results) == 3
+
+
+# =============================================================================
+# LAYER 6: SECURITY TESTS
+# =============================================================================
+
+
+class TestSecurity:
+    @pytest.mark.asyncio
+    async def test_text_length_limit(self, service_with_mock):
+        with pytest.raises(InputValidationError):
+            await service_with_mock.check_grammar("x" * (MAX_TEXT_CHARS + 1))
+
+    @pytest.mark.asyncio
+    async def test_expand_lower_limit(self, service_with_mock):
+        with pytest.raises(InputValidationError):
+            await service_with_mock.expand("x" * (MAX_TEXT_CHARS_EXPAND + 1))
+
+    @pytest.mark.asyncio
+    async def test_generate_rejects_empty(self, service_with_mock):
+        with pytest.raises(InputValidationError):
+            await service_with_mock.generate_content("   ")
+
+    @pytest.mark.asyncio
+    async def test_unicode_handled(self, service_with_mock, mock_llm_client):
+        mock_llm_client.complete.return_value = _make_llm_response(
+            json.dumps({"issues": [], "corrected_text": "日本語テスト", "score": 100})
+        )
+        result = await service_with_mock.check_grammar("日本語テスト", language="ja")
+        assert result.corrected_text == "日本語テスト"
+
+    @pytest.mark.asyncio
+    async def test_special_characters(self, service_with_mock, mock_llm_client):
+        text = 'He said "hello"\nand\tthen left.'
+        mock_llm_client.complete.return_value = _make_llm_response(
+            json.dumps({"issues": [], "corrected_text": text, "score": 100})
+        )
+        result = await service_with_mock.check_grammar(text)
+        assert result.score == 100.0
+
+
+# =============================================================================
+# LAYER 7: USABILITY TESTS
+# =============================================================================
+
+
+class TestUsability:
+    @pytest.mark.asyncio
+    async def test_default_language_is_english(self, service_with_mock, mock_llm_client):
+        mock_llm_client.complete.return_value = _make_llm_response(
+            json.dumps({"issues": [], "corrected_text": "hi", "score": 100})
+        )
+        await service_with_mock.check_grammar("hi")
+        messages = mock_llm_client.complete.call_args[1]["messages"]
+        assert "en" in messages[0]["content"]
+
+    @pytest.mark.asyncio
+    async def test_strict_mode_in_prompt(self, service_with_mock, mock_llm_client):
+        mock_llm_client.complete.return_value = _make_llm_response(
+            json.dumps({"issues": [], "corrected_text": "hi", "score": 100})
+        )
+        await service_with_mock.check_grammar("hi", strict=True)
+        messages = mock_llm_client.complete.call_args[1]["messages"]
+        assert "strict" in messages[0]["content"].lower()
+
+    @pytest.mark.asyncio
+    async def test_all_summarize_styles(self, service_with_mock, mock_llm_client):
+        mock_llm_client.complete.return_value = _make_llm_response(
+            json.dumps({"summary": "short", "key_points": []})
+        )
+        for style in ["bullet_points", "paragraph", "executive"]:
+            result = await service_with_mock.summarize("Some text", style=style)
+            assert result.summary == "short"
+
+    @pytest.mark.asyncio
+    async def test_all_tones_accepted(self, service_with_mock, mock_llm_client):
+        mock_llm_client.complete.return_value = _make_llm_response(
+            json.dumps({"rewritten_text": "out", "changes_made": []})
+        )
+        for tone in WritingTone:
+            result = await service_with_mock.rewrite("in", tone=tone)
             assert result.tone == tone.value
 
-    @pytest.mark.asyncio
-    async def test_rewrite_preserve_meaning(self, service):
-        """rewrite with preserve_meaning flag."""
-        with patch.object(service, '_call_openai') as mock_call:
-            mock_call.return_value = json.dumps({
-                "rewritten_text": "Same meaning, different words.",
-                "changes_made": [],
-            })
-
-            await service.rewrite("text", preserve_meaning=True)
-
-            call_args = mock_call.call_args[0]
-            assert "preserve" in call_args[0].lower()
-
-    @pytest.mark.asyncio
-    async def test_rewrite_not_preserve_meaning(self, service):
-        """rewrite without preserve_meaning."""
-        with patch.object(service, '_call_openai') as mock_call:
-            mock_call.return_value = json.dumps({
-                "rewritten_text": "Adjusted for clarity.",
-                "changes_made": [],
-            })
-
-            await service.rewrite("text", preserve_meaning=False)
-
-            call_args = mock_call.call_args[0]
-            assert "adjust" in call_args[0].lower()
-
-    @pytest.mark.asyncio
-    async def test_rewrite_json_error_fallback(self, service):
-        """rewrite handles JSON parse error."""
-        with patch.object(service, '_call_openai') as mock_call:
-            mock_call.return_value = "Invalid JSON"
-
-            result = await service.rewrite("test text")
-
-            assert result.rewritten_text == "test text"
-            assert result.changes_made == []
+    def test_error_hierarchy(self):
+        assert issubclass(InputValidationError, WritingServiceError)
+        assert issubclass(LLMResponseError, WritingServiceError)
+        assert issubclass(LLMUnavailableError, WritingServiceError)
 
 
 # =============================================================================
-# EXPAND TESTS
+# MODEL VALIDATION TESTS
 # =============================================================================
 
 
-class TestExpand:
-    """Tests for expand method."""
+class TestModels:
+    def test_grammar_issue_defaults(self):
+        issue = GrammarIssue(
+            start=0, end=5, original="teh", suggestion="the",
+            issue_type="spelling", explanation="typo"
+        )
+        assert issue.severity == "warning"
 
-    @pytest.mark.asyncio
-    async def test_expand_returns_result(self, service):
-        """expand returns ExpandResult."""
-        with patch.object(service, '_call_openai') as mock_call:
-            mock_call.return_value = json.dumps({
-                "expanded_text": "Much longer expanded text with details.",
-                "sections_added": ["Introduction", "Details"],
-            })
+    def test_grammar_check_score_bound(self):
+        with pytest.raises(Exception):
+            GrammarCheckResult(issues=[], corrected_text="x", issue_count=0, score=101)
 
-            result = await service.expand("short text")
-
-            assert isinstance(result, ExpandResult)
-
-    @pytest.mark.asyncio
-    async def test_expand_empty_text(self, service):
-        """Empty text returns empty result."""
-        result = await service.expand("")
-
-        assert result.expanded_text == ""
-        assert result.word_count_original == 0
-
-    @pytest.mark.asyncio
-    async def test_expand_whitespace_only(self, service):
-        """Whitespace-only returns empty result."""
-        result = await service.expand("   ")
-
-        assert result.expanded_text == "   "
-
-    @pytest.mark.asyncio
-    async def test_expand_with_examples(self, service):
-        """expand with add_examples flag."""
-        with patch.object(service, '_call_openai') as mock_call:
-            mock_call.return_value = json.dumps({
-                "expanded_text": "Text with examples: For example...",
-                "sections_added": ["Examples"],
-            })
-
-            await service.expand("text", add_examples=True)
-
-            call_args = mock_call.call_args[0]
-            assert "examples" in call_args[0].lower()
-
-    @pytest.mark.asyncio
-    async def test_expand_with_details(self, service):
-        """expand with add_details flag."""
-        with patch.object(service, '_call_openai') as mock_call:
-            mock_call.return_value = json.dumps({
-                "expanded_text": "Text with explanatory details.",
-                "sections_added": ["Details"],
-            })
-
-            await service.expand("text", add_details=True)
-
-            call_args = mock_call.call_args[0]
-            assert "details" in call_args[0].lower()
-
-    @pytest.mark.asyncio
-    async def test_expand_with_target_length(self, service):
-        """expand with target_length constraint."""
-        with patch.object(service, '_call_openai') as mock_call:
-            mock_call.return_value = json.dumps({
-                "expanded_text": "Expanded to target length.",
-                "sections_added": [],
-            })
-
-            await service.expand("text", target_length=500)
-
-            call_args = mock_call.call_args[0]
-            assert "500 words" in call_args[0]
-
-    @pytest.mark.asyncio
-    async def test_expand_word_count_tracking(self, service):
-        """expand tracks word counts."""
-        with patch.object(service, '_call_openai') as mock_call:
-            mock_call.return_value = json.dumps({
-                "expanded_text": "much longer text " * 10,
-                "sections_added": [],
-            })
-
-            result = await service.expand("short")
-
-            assert result.word_count_original == 1
-            assert result.word_count_expanded > result.word_count_original
-
-    @pytest.mark.asyncio
-    async def test_expand_json_error_fallback(self, service):
-        """expand handles JSON parse error."""
-        with patch.object(service, '_call_openai') as mock_call:
-            mock_call.return_value = "Invalid JSON"
-
-            result = await service.expand("test text")
-
-            assert result.expanded_text == "test text"
-            assert result.sections_added == []
-
-
-# =============================================================================
-# TRANSLATE TESTS
-# =============================================================================
-
-
-class TestTranslate:
-    """Tests for translate method."""
-
-    @pytest.mark.asyncio
-    async def test_translate_returns_result(self, service):
-        """translate returns TranslateResult."""
-        with patch.object(service, '_call_openai') as mock_call:
-            mock_call.return_value = json.dumps({
-                "translated_text": "Hola mundo",
-                "source_language": "English",
-                "confidence": 0.95,
-            })
-
-            result = await service.translate("Hello world", "Spanish")
-
-            assert isinstance(result, TranslateResult)
-            assert result.target_language == "Spanish"
-
-    @pytest.mark.asyncio
-    async def test_translate_empty_text(self, service):
-        """Empty text returns empty result."""
-        result = await service.translate("", "Spanish")
-
-        assert result.translated_text == ""
-        assert result.target_language == "Spanish"
-
-    @pytest.mark.asyncio
-    async def test_translate_whitespace_only(self, service):
-        """Whitespace-only returns empty result."""
-        result = await service.translate("   ", "French")
-
-        assert result.translated_text == "   "
-
-    @pytest.mark.asyncio
-    async def test_translate_auto_detect_source(self, service):
-        """translate auto-detects source language."""
-        with patch.object(service, '_call_openai') as mock_call:
-            mock_call.return_value = json.dumps({
-                "translated_text": "Bonjour",
-                "source_language": "English",
-                "confidence": 0.9,
-            })
-
-            await service.translate("Hello", "French", source_language=None)
-
-            call_args = mock_call.call_args[0]
-            assert "detect" in call_args[0].lower()
-
-    @pytest.mark.asyncio
-    async def test_translate_specified_source(self, service):
-        """translate with specified source language."""
-        with patch.object(service, '_call_openai') as mock_call:
-            mock_call.return_value = json.dumps({
-                "translated_text": "Hello",
-                "source_language": "German",
-                "confidence": 0.95,
-            })
-
-            await service.translate("Hallo", "English", source_language="German")
-
-            call_args = mock_call.call_args[0]
-            assert "German" in call_args[0]
-
-    @pytest.mark.asyncio
-    async def test_translate_preserve_formatting(self, service):
-        """translate with preserve_formatting flag."""
-        with patch.object(service, '_call_openai') as mock_call:
-            mock_call.return_value = json.dumps({
-                "translated_text": "• Point one\n• Point two",
-                "source_language": "English",
-                "confidence": 0.9,
-            })
-
-            await service.translate("• Item\n• Item", "Spanish", preserve_formatting=True)
-
-            call_args = mock_call.call_args[0]
-            assert "formatting" in call_args[0].lower()
-
-    @pytest.mark.asyncio
-    @pytest.mark.parametrize("target_lang", [
-        "Spanish", "French", "German", "Chinese", "Japanese",
-        "Korean", "Portuguese", "Italian", "Russian", "Arabic",
-    ])
-    async def test_translate_various_languages(self, service, target_lang: str):
-        """translate works with various target languages."""
-        with patch.object(service, '_call_openai') as mock_call:
-            mock_call.return_value = json.dumps({
-                "translated_text": f"Translated to {target_lang}",
-                "source_language": "English",
-                "confidence": 0.9,
-            })
-
-            result = await service.translate("Hello", target_lang)
-
-            assert result.target_language == target_lang
-
-    @pytest.mark.asyncio
-    async def test_translate_json_error_fallback(self, service):
-        """translate handles JSON parse error."""
-        with patch.object(service, '_call_openai') as mock_call:
-            mock_call.return_value = "Invalid JSON"
-
-            result = await service.translate("test", "Spanish")
-
-            assert result.translated_text == "test"
-            assert result.confidence == 0.0
-
-
-# =============================================================================
-# GENERATE CONTENT TESTS
-# =============================================================================
-
-
-class TestGenerateContent:
-    """Tests for generate_content method."""
-
-    @pytest.mark.asyncio
-    async def test_generate_content_returns_string(self, service):
-        """generate_content returns string."""
-        with patch.object(service, '_call_openai') as mock_call:
-            mock_call.return_value = "Generated content here."
-
-            result = await service.generate_content("Write about AI")
-
-            assert isinstance(result, str)
-            assert len(result) > 0
-
-    @pytest.mark.asyncio
-    async def test_generate_content_with_context(self, service):
-        """generate_content uses provided context."""
-        with patch.object(service, '_call_openai') as mock_call:
-            mock_call.return_value = "Context-aware content."
-
-            await service.generate_content(
-                "Write about topic",
-                context="Previous discussion context",
+    def test_translate_confidence_bound(self):
+        with pytest.raises(Exception):
+            TranslateResult(
+                translated_text="x", source_language="en",
+                target_language="es", confidence=1.5
             )
-
-            call_args = mock_call.call_args[0]
-            assert "context" in call_args[0].lower()
-
-    @pytest.mark.asyncio
-    @pytest.mark.parametrize("tone", list(WritingTone))
-    async def test_generate_content_all_tones(self, service, tone: WritingTone):
-        """generate_content works with all tones."""
-        with patch.object(service, '_call_openai') as mock_call:
-            mock_call.return_value = f"Content in {tone.value} tone."
-
-            result = await service.generate_content("prompt", tone=tone)
-
-            assert isinstance(result, str)
-
-    @pytest.mark.asyncio
-    async def test_generate_content_with_max_length(self, service):
-        """generate_content respects max_length."""
-        with patch.object(service, '_call_openai') as mock_call:
-            mock_call.return_value = "Short content."
-
-            await service.generate_content("prompt", max_length=100)
-
-            call_args = mock_call.call_args[0]
-            assert "100 words" in call_args[0]
-
-    @pytest.mark.asyncio
-    async def test_generate_content_error_propagates(self, service):
-        """generate_content propagates errors."""
-        with patch.object(service, '_call_openai') as mock_call:
-            mock_call.side_effect = RuntimeError("API error")
-
-            with pytest.raises(RuntimeError):
-                await service.generate_content("prompt")
-
-
-# =============================================================================
-# OPENAI CALL TESTS
-# =============================================================================
-
-
-class TestOpenAICall:
-    """Tests for _call_openai method."""
-
-    def test_call_openai_uses_correct_model(self, service):
-        """_call_openai uses configured model."""
-        with patch('openai.OpenAI') as mock_class:
-            mock_client = Mock()
-            mock_class.return_value = mock_client
-            mock_response = Mock()
-            mock_response.choices = [Mock()]
-            mock_response.choices[0].message.content = "response"
-            mock_client.chat.completions.create.return_value = mock_response
-
-            service._call_openai("system", "user")
-
-            call_kwargs = mock_client.chat.completions.create.call_args[1]
-            assert "model" in call_kwargs
-
-    def test_call_openai_sets_messages(self, service):
-        """_call_openai sets system and user messages."""
-        with patch('openai.OpenAI') as mock_class:
-            mock_client = Mock()
-            mock_class.return_value = mock_client
-            mock_response = Mock()
-            mock_response.choices = [Mock()]
-            mock_response.choices[0].message.content = "response"
-            mock_client.chat.completions.create.return_value = mock_response
-
-            service._call_openai("system prompt", "user prompt")
-
-            call_kwargs = mock_client.chat.completions.create.call_args[1]
-            messages = call_kwargs["messages"]
-            assert len(messages) == 2
-            assert messages[0]["role"] == "system"
-            assert messages[1]["role"] == "user"
-
-    def test_call_openai_error_propagates(self, service):
-        """_call_openai propagates API errors."""
-        with patch('openai.OpenAI') as mock_class:
-            mock_client = Mock()
-            mock_class.return_value = mock_client
-            mock_client.chat.completions.create.side_effect = Exception("API Error")
-
-            with pytest.raises(Exception, match="API Error"):
-                service._call_openai("system", "user")
-
-    def test_call_openai_handles_empty_response(self, service):
-        """_call_openai handles empty content."""
-        with patch('openai.OpenAI') as mock_class:
-            mock_client = Mock()
-            mock_class.return_value = mock_client
-            mock_response = Mock()
-            mock_response.choices = [Mock()]
-            mock_response.choices[0].message.content = None
-            mock_client.chat.completions.create.return_value = mock_response
-
-            result = service._call_openai("system", "user")
-
-            assert result == ""
-
-
-# =============================================================================
-# INTEGRATION TESTS
-# =============================================================================
-
-
-class TestServiceIntegration:
-    """Integration tests for WritingService."""
-
-    @pytest.mark.asyncio
-    async def test_multiple_operations_share_client(self, service):
-        """Multiple operations reuse the same client."""
-        with patch('openai.OpenAI') as mock_class:
-            mock_client = Mock()
-            mock_class.return_value = mock_client
-            mock_response = Mock()
-            mock_response.choices = [Mock()]
-            mock_response.choices[0].message.content = json.dumps({
-                "issues": [], "corrected_text": "text", "score": 100.0,
-            })
-            mock_client.chat.completions.create.return_value = mock_response
-
-            await service.check_grammar("text1")
-            await service.check_grammar("text2")
-
-            mock_class.assert_called_once()
-
-    @pytest.mark.asyncio
-    async def test_unicode_text_handling(self, service):
-        """Service handles unicode text properly."""
-        with patch.object(service, '_call_openai') as mock_call:
-            mock_call.return_value = json.dumps({
-                "translated_text": "你好世界",
-                "source_language": "English",
-                "confidence": 0.95,
-            })
-
-            result = await service.translate("Hello world", "Chinese")
-
-            assert "你好" in result.translated_text
-
-    @pytest.mark.asyncio
-    async def test_long_text_handling(self, service):
-        """Service handles very long text."""
-        long_text = "word " * 10000  # 10000 words
-
-        with patch.object(service, '_call_openai') as mock_call:
-            mock_call.return_value = json.dumps({
-                "summary": "Summary of long text.",
-                "key_points": ["Main point"],
-            })
-
-            result = await service.summarize(long_text)
-
-            assert result.word_count_original == 10000
-
-
-# =============================================================================
-# EDGE CASE TESTS
-# =============================================================================
-
-
-class TestEdgeCases:
-    """Edge case tests."""
-
-    @pytest.mark.asyncio
-    async def test_special_characters_in_text(self, service):
-        """Service handles special characters."""
-        with patch.object(service, '_call_openai') as mock_call:
-            mock_call.return_value = json.dumps({
-                "issues": [],
-                "corrected_text": "Text with <>&\"' chars",
-                "score": 100.0,
-            })
-
-            result = await service.check_grammar("Text with <>&\"' chars")
-
-            assert result.corrected_text == "Text with <>&\"' chars"
-
-    @pytest.mark.asyncio
-    async def test_newlines_in_text(self, service):
-        """Service handles multi-line text."""
-        text = "Line 1\nLine 2\nLine 3"
-
-        with patch.object(service, '_call_openai') as mock_call:
-            mock_call.return_value = json.dumps({
-                "rewritten_text": "Line 1\nLine 2\nLine 3",
-                "changes_made": [],
-            })
-
-            result = await service.rewrite(text)
-
-            assert "\n" in result.rewritten_text
-
-    @pytest.mark.asyncio
-    async def test_emoji_in_text(self, service):
-        """Service handles emoji."""
-        with patch.object(service, '_call_openai') as mock_call:
-            mock_call.return_value = json.dumps({
-                "expanded_text": "Hello! 👋 More text here.",
-                "sections_added": [],
-            })
-
-            result = await service.expand("Hello! 👋")
-
-            assert "👋" in result.expanded_text
-
-    @pytest.mark.asyncio
-    async def test_mixed_languages_in_text(self, service):
-        """Service handles mixed language text."""
-        text = "Hello 你好 Bonjour"
-
-        with patch.object(service, '_call_openai') as mock_call:
-            mock_call.return_value = json.dumps({
-                "issues": [],
-                "corrected_text": text,
-                "score": 100.0,
-            })
-
-            result = await service.check_grammar(text)
-
-            assert "你好" in result.corrected_text

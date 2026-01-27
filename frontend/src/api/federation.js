@@ -18,8 +18,11 @@ export async function createVirtualSchema({ name, connectionIds, description }) 
 /**
  * List virtual schemas
  */
-export async function listVirtualSchemas() {
-  const response = await apiClient.get('/federation/schemas');
+export async function listVirtualSchemas({ limit, offset } = {}) {
+  const params = {};
+  if (limit != null) params.limit = limit;
+  if (offset != null) params.offset = offset;
+  const response = await apiClient.get('/federation/schemas', { params });
   return response.data;
 }
 

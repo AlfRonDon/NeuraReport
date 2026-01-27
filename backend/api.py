@@ -7,35 +7,14 @@ import warnings
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-# Load environment variables FIRST, before any backend imports
-# This ensures settings are loaded with correct env values
-def _load_env_early():
-    """Load .env file before any pydantic imports."""
-    env_paths = [
-        Path(__file__).resolve().parent / ".env",  # backend/.env
-        Path(__file__).resolve().parent.parent / ".env",  # project root/.env
-    ]
-    loaded_from = None
-    for env_path in env_paths:
-        if env_path.exists():
-            loaded_from = env_path
-            for line in env_path.read_text(encoding="utf-8").splitlines():
-                line = line.strip()
-                if not line or line.startswith("#"):
-                    continue
-                if "=" in line:
-                    key, value = line.split("=", 1)
-                    key = key.strip()
-                    value = value.strip().strip('"').strip("'")
-                    if key and not key.startswith("#"):
-                        os.environ.setdefault(key, value)
-            break
-    # Debug: print to stderr to see in uvicorn output
-    import sys
-    print(f"[ENV] Loaded from: {loaded_from}", file=sys.stderr)
-    print(f"[ENV] NEURA_DEBUG={os.environ.get('NEURA_DEBUG')}", file=sys.stderr)
+# Load environment variables FIRST, before any backend imports.
+# env_loader uses only stdlib — safe for early import.
+import sys as _sys
+from backend.app.utils.env_loader import load_env_file as _load_env_file
 
-_load_env_early()
+_loaded_from = _load_env_file()
+print(f"[ENV] Loaded from: {_loaded_from}", file=_sys.stderr)
+print(f"[ENV] NEURA_DEBUG={os.environ.get('NEURA_DEBUG')}", file=_sys.stderr)
 
 # Silence noisy deprecations from dependencies during import/test
 warnings.filterwarnings("ignore", message=".*on_event is deprecated.*", category=DeprecationWarning)
@@ -66,6 +45,8 @@ from backend.app.services.auth import init_auth_db
 
 from backend.app.services.jobs.report_scheduler import ReportScheduler
 from backend.app.services.background_tasks import mark_incomplete_jobs_failed
+from backend.app.services.agents import agent_service_v2
+from backend.app.services.agents.agent_service import agent_task_worker
 
 
 def _configure_error_log_handler(target_logger: logging.Logger | None = None) -> Path | None:
@@ -165,7 +146,29 @@ async def lifespan(app: FastAPI):
                 extra={"event": "background_job_cleanup_failed", "error": str(exc)},
             )
 
+    # Agent task recovery and worker startup (Trade-off 1 + 3)
+    agent_worker_disabled = os.getenv("NEURA_AGENT_WORKER_DISABLED", "false").lower() == "true"
+    try:
+        recovered = agent_service_v2.recover_stale_tasks()
+        if recovered:
+            logger.info(
+                "agent_tasks_recovered",
+                extra={"event": "agent_tasks_recovered", "count": recovered},
+            )
+    except Exception as exc:
+        logger.warning(
+            "agent_task_recovery_failed",
+            extra={"event": "agent_task_recovery_failed", "error": str(exc)},
+        )
+
+    if not agent_worker_disabled:
+        agent_task_worker.start()
+
     yield
+
+    # Shutdown: stop agent task worker
+    if agent_task_worker.is_running:
+        agent_task_worker.stop()
 
     if SCHEDULER and not SCHEDULER_DISABLED:
         await SCHEDULER.stop()
