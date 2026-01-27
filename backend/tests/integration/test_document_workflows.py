@@ -299,8 +299,8 @@ class TestTemplateWorkflow:
         doc_service.create(name="Regular Doc 2")
         doc_service.create(name="Template 2", is_template=True)
 
-        templates = doc_service.list_documents(is_template=True)
-        regular = doc_service.list_documents(is_template=False)
+        templates, templates_total = doc_service.list_documents(is_template=True)
+        regular, regular_total = doc_service.list_documents(is_template=False)
 
         assert len(templates) == 2
         assert len(regular) == 2
@@ -366,8 +366,8 @@ class TestFilterAndSearchWorkflow:
         doc_service.create(name="User1 Doc 2", owner_id="user-1")
         doc_service.create(name="User2 Doc", owner_id="user-2")
 
-        user1_docs = doc_service.list_documents(owner_id="user-1")
-        user2_docs = doc_service.list_documents(owner_id="user-2")
+        user1_docs, user1_total = doc_service.list_documents(owner_id="user-1")
+        user2_docs, user2_total = doc_service.list_documents(owner_id="user-2")
 
         assert len(user1_docs) == 2
         assert len(user2_docs) == 1
@@ -378,15 +378,16 @@ class TestFilterAndSearchWorkflow:
             doc_service.create(name=f"Doc {i:02d}")
 
         # First page
-        page1 = doc_service.list_documents(limit=10, offset=0)
+        page1, total1 = doc_service.list_documents(limit=10, offset=0)
         assert len(page1) == 10
+        assert total1 == 25
 
         # Second page
-        page2 = doc_service.list_documents(limit=10, offset=10)
+        page2, total2 = doc_service.list_documents(limit=10, offset=10)
         assert len(page2) == 10
 
         # Third page (partial)
-        page3 = doc_service.list_documents(limit=10, offset=20)
+        page3, total3 = doc_service.list_documents(limit=10, offset=20)
         assert len(page3) == 5
 
         # No overlap between pages

@@ -4,7 +4,9 @@ REST API endpoints for document export and distribution.
 """
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
+
+from backend.app.api.middleware import limiter, RATE_LIMIT_STRICT, RATE_LIMIT_STANDARD
 
 from backend.app.schemas.export.export import (
     BulkExportRequest,
@@ -29,8 +31,9 @@ from fastapi import Depends
 router = APIRouter(tags=["export"], dependencies=[Depends(require_api_key)])
 
 
+@limiter.limit(RATE_LIMIT_STANDARD)
 @router.post("/{document_id}/pdf")
-async def export_to_pdf(document_id: str, options: dict = None):
+async def export_to_pdf(request: Request, document_id: str, options: dict = None):
     """Export document to PDF format."""
     job = await export_service.create_export_job(
         document_id=document_id,
@@ -53,8 +56,9 @@ async def export_to_pdfa(document_id: str, options: dict = None):
     return job
 
 
+@limiter.limit(RATE_LIMIT_STANDARD)
 @router.post("/{document_id}/docx")
-async def export_to_docx(document_id: str, options: dict = None):
+async def export_to_docx(request: Request, document_id: str, options: dict = None):
     """Export document to Word DOCX format."""
     job = await export_service.create_export_job(
         document_id=document_id,
@@ -64,8 +68,9 @@ async def export_to_docx(document_id: str, options: dict = None):
     return job
 
 
+@limiter.limit(RATE_LIMIT_STANDARD)
 @router.post("/{document_id}/pptx")
-async def export_to_pptx(document_id: str, options: dict = None):
+async def export_to_pptx(request: Request, document_id: str, options: dict = None):
     """Export document to PowerPoint format."""
     job = await export_service.create_export_job(
         document_id=document_id,
@@ -119,13 +124,14 @@ async def export_to_html(document_id: str, options: dict = None):
     return job
 
 
+@limiter.limit(RATE_LIMIT_STRICT)
 @router.post("/bulk")
-async def bulk_export(request: BulkExportRequest):
+async def bulk_export(request: Request, req: BulkExportRequest):
     """Export multiple documents as a ZIP file."""
     job = await export_service.bulk_export(
-        document_ids=request.document_ids,
-        format=request.format.value,
-        options=request.options,
+        document_ids=req.document_ids,
+        format=req.format.value,
+        options=req.options,
     )
     return job
 
@@ -209,14 +215,15 @@ async def send_to_slack(request: SlackMessageRequest):
     return result
 
 
+@limiter.limit(RATE_LIMIT_STANDARD)
 @router.post("/distribution/teams")
-async def send_to_teams(request: TeamsMessageRequest):
+async def send_to_teams(request: Request, req: TeamsMessageRequest):
     """Send document to Microsoft Teams."""
     result = await distribution_service.send_to_teams(
-        document_id=request.document_id,
-        webhook_url=request.webhook_url,
-        title=request.title,
-        message=request.message,
+        document_id=req.document_id,
+        webhook_url=req.webhook_url,
+        title=req.title,
+        message=req.message,
     )
     return result
 

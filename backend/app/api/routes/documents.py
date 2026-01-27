@@ -36,7 +36,8 @@ from ...services.documents import (
     PDFOperationsService,
 )
 from ...services.documents.collaboration import YjsWebSocketHandler
-from backend.app.services.security import require_api_key
+from backend.app.services.security import require_api_key, verify_ws_token
+from backend.app.api.middleware import limiter, RATE_LIMIT_STANDARD
 
 logger = logging.getLogger("neura.api.documents")
 
@@ -129,18 +130,20 @@ def validate_pdf_path(pdf_path: str | None) -> Path:
 # Document CRUD Endpoints
 # ============================================
 
+@limiter.limit(RATE_LIMIT_STANDARD)
 @router.post("", response_model=DocumentResponse)
 async def create_document(
-    request: CreateDocumentRequest,
+    request: Request,
+    req: CreateDocumentRequest,
     doc_service: DocumentService = Depends(get_document_service),
 ):
     """Create a new document."""
-    content_payload = request.content.model_dump() if request.content else None
+    content_payload = req.content.model_dump() if req.content else None
     doc = doc_service.create(
-        name=request.name,
+        name=req.name,
         content=content_payload,
-        is_template=request.is_template,
-        metadata=request.metadata,
+        is_template=req.is_template,
+        metadata=req.metadata,
     )
     return DocumentResponse(**doc.model_dump())
 
@@ -181,27 +184,31 @@ async def get_document(
     return DocumentResponse(**doc.model_dump())
 
 
+@limiter.limit(RATE_LIMIT_STANDARD)
 @router.put("/{document_id}", response_model=DocumentResponse)
 async def update_document(
+    request: Request,
     document_id: str,
-    request: UpdateDocumentRequest,
+    req: UpdateDocumentRequest,
     doc_service: DocumentService = Depends(get_document_service),
 ):
     """Update a document."""
-    content_payload = request.content.model_dump() if request.content else None
+    content_payload = req.content.model_dump() if req.content else None
     doc = doc_service.update(
         document_id=document_id,
-        name=request.name,
+        name=req.name,
         content=content_payload,
-        metadata=request.metadata,
+        metadata=req.metadata,
     )
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
     return DocumentResponse(**doc.model_dump())
 
 
+@limiter.limit(RATE_LIMIT_STANDARD)
 @router.delete("/{document_id}")
 async def delete_document(
+    request: Request,
     document_id: str,
     doc_service: DocumentService = Depends(get_document_service),
 ):
@@ -333,8 +340,19 @@ async def collaboration_socket(
     websocket: WebSocket,
     document_id: str,
     user_id: str | None = Query(None),
+    token: str | None = Query(None),
 ):
-    """WebSocket endpoint for Y.js collaboration."""
+    """
+    WebSocket endpoint for Y.js collaboration.
+
+    Requires authentication via token query parameter (e.g., ?token=YOUR_API_KEY).
+    WebSocket connections cannot use HTTP headers for auth, so the token is passed as a query param.
+    """
+    # Verify authentication before accepting the WebSocket connection
+    if not verify_ws_token(token):
+        await websocket.close(code=1008, reason="Unauthorized")
+        return
+
     handler = get_ws_handler()
     session_user_id = user_id or str(uuid.uuid4())
     try:

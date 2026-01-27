@@ -56,12 +56,12 @@ class TestQuoteIdentifier:
 class TestDescribeTableSafety:
     """Verify DESCRIBE TABLE uses quoted identifiers."""
 
-    def _get_table_source(self):
+    def _get_columns_source(self):
         from backend.app.services.connectors.databases.snowflake import SnowflakeConnector
-        return inspect.getsource(SnowflakeConnector._get_tables)
+        return inspect.getsource(SnowflakeConnector._get_columns)
 
     def test_uses_quote_identifier(self):
-        src = self._get_table_source()
+        src = self._get_columns_source()
         assert "_quote_identifier" in src
 
 

@@ -9,8 +9,8 @@ from unittest.mock import Mock, patch
 import os
 os.environ.setdefault("OPENAI_API_KEY", "test-key")
 
-from backend.app.services.agents import agent_service
 from backend.app.services.agents.service import (
+    AgentService,
     AgentType,
     AgentStatus,
     ResearchReport,
@@ -29,7 +29,7 @@ from backend.app.services.agents.service import (
 @pytest.fixture
 def service():
     """Get agent service instance."""
-    return agent_service
+    return AgentService()
 
 
 # =============================================================================

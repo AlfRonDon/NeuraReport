@@ -7,8 +7,10 @@ from __future__ import annotations
 import logging
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, File, Form, HTTPException, UploadFile, status
+from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile, status
 from pydantic import BaseModel, Field
+
+from backend.app.api.middleware import limiter, RATE_LIMIT_STRICT
 
 from backend.app.services.ingestion import (
     ingestion_service,
@@ -85,8 +87,10 @@ class GenerateInboxRequest(BaseModel):
 # FILE INGESTION ENDPOINTS
 # =============================================================================
 
+@limiter.limit(RATE_LIMIT_STRICT)
 @router.post("/upload")
 async def upload_file(
+    request: Request,
     file: UploadFile = File(...),
     auto_ocr: bool = Form(default=True),
     generate_preview: bool = Form(default=True),
@@ -136,8 +140,10 @@ async def upload_file(
         )
 
 
+@limiter.limit(RATE_LIMIT_STRICT)
 @router.post("/upload/bulk")
 async def upload_bulk(
+    request: Request,
     files: List[UploadFile] = File(...),
     tags: str = Form(default=""),
     collection: str = Form(default=""),
@@ -178,8 +184,10 @@ async def upload_bulk(
     }
 
 
+@limiter.limit(RATE_LIMIT_STRICT)
 @router.post("/upload/zip")
 async def upload_zip(
+    request: Request,
     file: UploadFile = File(...),
     preserve_structure: bool = Form(default=True),
     flatten: bool = Form(default=False),
@@ -426,8 +434,10 @@ async def delete_watcher(watcher_id: str):
 # TRANSCRIPTION ENDPOINTS
 # =============================================================================
 
+@limiter.limit(RATE_LIMIT_STRICT)
 @router.post("/transcribe")
 async def transcribe_file(
+    request: Request,
     file: UploadFile = File(...),
     language: str = Form(default="auto"),
     include_timestamps: bool = Form(default=True),

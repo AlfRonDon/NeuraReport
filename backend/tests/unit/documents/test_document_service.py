@@ -330,15 +330,17 @@ class TestDocumentList:
 
     def test_list_empty(self, doc_service: DocumentService):
         """List with no documents returns empty list."""
-        docs = doc_service.list_documents()
+        docs, total = doc_service.list_documents()
         assert docs == []
+        assert total == 0
 
     def test_list_all_documents(self, doc_service: DocumentService):
         """List returns all documents."""
         for i in range(5):
             doc_service.create(name=f"Doc {i}")
-        docs = doc_service.list_documents()
+        docs, total = doc_service.list_documents()
         assert len(docs) == 5
+        assert total == 5
 
     def test_list_filter_by_owner(self, doc_service: DocumentService):
         """List can filter by owner_id."""
@@ -346,8 +348,9 @@ class TestDocumentList:
         doc_service.create(name="User2 Doc", owner_id="user-2")
         doc_service.create(name="User1 Doc 2", owner_id="user-1")
 
-        docs = doc_service.list_documents(owner_id="user-1")
+        docs, total = doc_service.list_documents(owner_id="user-1")
         assert len(docs) == 2
+        assert total == 2
         assert all(d.owner_id == "user-1" for d in docs)
 
     def test_list_filter_by_is_template(self, doc_service: DocumentService):
@@ -356,7 +359,7 @@ class TestDocumentList:
         doc_service.create(name="Template", is_template=True)
         doc_service.create(name="Regular 2", is_template=False)
 
-        docs = doc_service.list_documents(is_template=True)
+        docs, total = doc_service.list_documents(is_template=True)
         assert len(docs) == 1
         assert docs[0].name == "Template"
 
@@ -369,7 +372,7 @@ class TestDocumentList:
         doc_service._save_document(d1)
 
         # List with tag filter - documents with any matching tag
-        docs = doc_service.list_documents(tags=["important"])
+        docs, total = doc_service.list_documents(tags=["important"])
         assert len(docs) == 1
         assert docs[0].name == "Tagged"
 
@@ -377,22 +380,25 @@ class TestDocumentList:
         """List respects limit parameter."""
         for i in range(10):
             doc_service.create(name=f"Doc {i}")
-        docs = doc_service.list_documents(limit=5)
+        docs, total = doc_service.list_documents(limit=5)
         assert len(docs) == 5
+        assert total == 10
 
     def test_list_with_offset(self, doc_service: DocumentService):
         """List respects offset parameter."""
         for i in range(10):
             doc_service.create(name=f"Doc {i}")
-        docs = doc_service.list_documents(offset=5)
+        docs, total = doc_service.list_documents(offset=5)
         assert len(docs) == 5
+        assert total == 10
 
     def test_list_with_limit_and_offset(self, doc_service: DocumentService):
         """List respects both limit and offset."""
         for i in range(20):
             doc_service.create(name=f"Doc {i}")
-        docs = doc_service.list_documents(limit=5, offset=10)
+        docs, total = doc_service.list_documents(limit=5, offset=10)
         assert len(docs) == 5
+        assert total == 20
 
     def test_list_sorted_by_updated_at(self, doc_service: DocumentService):
         """List should be sorted by updated_at descending."""
@@ -402,7 +408,7 @@ class TestDocumentList:
         time.sleep(0.01)
         d3 = doc_service.create(name="Third")
 
-        docs = doc_service.list_documents()
+        docs, total = doc_service.list_documents()
         assert docs[0].name == "Third"
         assert docs[1].name == "Second"
         assert docs[2].name == "First"

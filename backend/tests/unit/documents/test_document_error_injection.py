@@ -122,7 +122,7 @@ class TestFileSystemErrors:
 
         with patch("builtins.open", side_effect=delete_during_read):
             # Should not raise, just skip missing files
-            result = doc_service.list_documents()
+            result, total = doc_service.list_documents()
             # May have fewer documents due to deletion
             assert len(result) <= 5
 
@@ -470,8 +470,9 @@ class TestRecoveryScenarios:
 
     def test_list_documents_with_empty_directory(self, doc_service: DocumentService):
         """List should work with empty directory."""
-        docs = doc_service.list_documents()
+        docs, total = doc_service.list_documents()
         assert docs == []
+        assert total == 0
 
     def test_get_versions_with_no_versions_directory(
         self, doc_service: DocumentService

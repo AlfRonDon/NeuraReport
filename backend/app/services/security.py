@@ -49,3 +49,30 @@ async def require_api_key(
         return
     if not constant_time_compare(x_api_key, settings.api_key):
         raise AppError(code="unauthorized", message="Invalid API key", status_code=401)
+
+
+def verify_ws_token(token: str | None) -> bool:
+    """
+    Verify WebSocket token from query parameter.
+    Returns True if token is valid or if auth is bypassed.
+
+    WebSocket connections can't use FastAPI Depends() with Header(),
+    so this function provides standalone token verification using query parameters.
+    Mirrors bypass logic from require_api_key: test mode, debug mode, anonymous API, no key configured.
+    """
+    settings = get_settings()
+
+    # Bypass in test mode
+    if os.getenv("PYTEST_CURRENT_TEST"):
+        return True
+
+    # Bypass if anonymous API is allowed or debug mode is enabled
+    if settings.allow_anonymous_api or settings.debug_mode:
+        return True
+
+    # If no API key is configured (development), allow access
+    if not settings.api_key:
+        return True
+
+    # Verify token matches configured API key using constant-time comparison
+    return constant_time_compare(token, settings.api_key)

@@ -36,11 +36,12 @@ def state_store(tmp_path: Path, monkeypatch) -> StateStore:
 class TestProcessCrashScenarios:
     """Simulate process crashes at various points."""
 
-    def test_crash_during_idempotency_store(self, tmp_path: Path):
+    def test_crash_during_idempotency_store(self, tmp_path: Path, monkeypatch):
         """
         Simulate crash during idempotency key storage.
         System should recover gracefully on restart.
         """
+        monkeypatch.delenv("NEURA_STATE_DIR", raising=False)
         store = StateStore(base_dir=tmp_path)
 
         # Store a valid key first
@@ -134,8 +135,9 @@ class TestProcessCrashScenarios:
 class TestStateCorruptionRecovery:
     """Test recovery from various state corruption scenarios."""
 
-    def test_empty_state_file_recovery(self, tmp_path: Path):
+    def test_empty_state_file_recovery(self, tmp_path: Path, monkeypatch):
         """System should handle empty state file."""
+        monkeypatch.delenv("NEURA_STATE_DIR", raising=False)
         state_file = tmp_path / "state.json"
         state_file.write_text("")
 
@@ -147,8 +149,9 @@ class TestStateCorruptionRecovery:
         job = store.create_job(job_type="run_report", template_id="t1")
         assert job is not None
 
-    def test_invalid_json_recovery(self, tmp_path: Path):
+    def test_invalid_json_recovery(self, tmp_path: Path, monkeypatch):
         """System should handle invalid JSON in state file."""
+        monkeypatch.delenv("NEURA_STATE_DIR", raising=False)
         state_file = tmp_path / "state.json"
         state_file.write_text("not valid json {{{")
 
@@ -162,8 +165,9 @@ class TestStateCorruptionRecovery:
             # Also acceptable - depends on implementation
             pass
 
-    def test_missing_required_sections_recovery(self, tmp_path: Path):
+    def test_missing_required_sections_recovery(self, tmp_path: Path, monkeypatch):
         """System should handle state file missing required sections."""
+        monkeypatch.delenv("NEURA_STATE_DIR", raising=False)
         state_file = tmp_path / "state.json"
         state_file.write_text('{"random": "data"}')
 
@@ -174,8 +178,9 @@ class TestStateCorruptionRecovery:
         assert job is not None
         assert job["status"] == "queued"
 
-    def test_recovery_preserves_valid_data(self, tmp_path: Path):
+    def test_recovery_preserves_valid_data(self, tmp_path: Path, monkeypatch):
         """Recovery should preserve any valid data that exists."""
+        monkeypatch.delenv("NEURA_STATE_DIR", raising=False)
         # Create valid state with some jobs
         store = StateStore(base_dir=tmp_path)
         job1 = store.create_job(job_type="run_report", template_id="t1")
@@ -325,8 +330,9 @@ class TestCascadingFailures:
 class TestSystemRestartScenarios:
     """Test behavior after system restart."""
 
-    def test_running_jobs_become_stale_after_restart(self, tmp_path: Path):
+    def test_running_jobs_become_stale_after_restart(self, tmp_path: Path, monkeypatch):
         """Jobs that were running should be detected as stale after restart."""
+        monkeypatch.delenv("NEURA_STATE_DIR", raising=False)
         store = StateStore(base_dir=tmp_path)
 
         # Create running jobs
@@ -353,8 +359,9 @@ class TestSystemRestartScenarios:
         stale = new_store.find_stale_running_jobs(heartbeat_timeout_seconds=900)
         assert len(stale) == 5
 
-    def test_state_persistence_across_restarts(self, tmp_path: Path):
+    def test_state_persistence_across_restarts(self, tmp_path: Path, monkeypatch):
         """State should persist across store restarts."""
+        monkeypatch.delenv("NEURA_STATE_DIR", raising=False)
         # Create initial state
         store1 = StateStore(base_dir=tmp_path)
         job = store1.create_job(job_type="run_report", template_id="persist-1")
@@ -373,8 +380,9 @@ class TestSystemRestartScenarios:
         assert exists is True
         assert cached["test"] is True
 
-    def test_pending_retry_jobs_after_restart(self, tmp_path: Path):
+    def test_pending_retry_jobs_after_restart(self, tmp_path: Path, monkeypatch):
         """Jobs pending retry should be picked up after restart."""
+        monkeypatch.delenv("NEURA_STATE_DIR", raising=False)
         store = StateStore(base_dir=tmp_path)
 
         # Create jobs pending retry

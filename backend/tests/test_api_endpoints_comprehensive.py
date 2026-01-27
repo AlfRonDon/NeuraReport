@@ -43,18 +43,25 @@ sys.modules.setdefault("cryptography.fernet", fernet_module)
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from .. import api
+from ..app.repositories.connections import db_connection as db_conn_module
 from ..app.repositories.state import store as state_store_module
 
 
 @pytest.fixture
 def fresh_state(tmp_path, monkeypatch):
     """Create a fresh state store for each test."""
-    # Clear NEURA_STATE_DIR to prevent .env override
+    # Clear env vars that override StateStore base_dir or backend selection
     monkeypatch.delenv("NEURA_STATE_DIR", raising=False)
+    monkeypatch.delenv("NEURA_STATE_BACKEND", raising=False)
+    monkeypatch.delenv("NEURA_STATE_DB_PATH", raising=False)
     base_dir = tmp_path / "state"
     store = state_store_module.StateStore(base_dir=base_dir)
     state_store_module.set_state_store(store)
     api.state_store = store
+    # Also patch the db_connection module-level reference so that
+    # resolve_db_path() uses the same fresh store (test_persistence.py
+    # may have overwritten it with a stale instance).
+    monkeypatch.setattr(db_conn_module, "state_store", store)
 
     # Disable scheduler
     api.SCHEDULER_DISABLED = True

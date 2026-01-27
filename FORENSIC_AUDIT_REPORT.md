@@ -1211,12 +1211,26 @@ All 39 service modules and 8 infrastructure components verified and marked DONE.
 
 ## FRONTEND STORES (21 stores) [DONE — 2026-01-27]
 <!-- All 21 stores verified present in frontend/src/stores/ via Glob search. -->
-<!-- FIXES APPLIED: -->
+<!-- FIXES APPLIED (Session 2): -->
 <!--   1. ingestionStore.js: uploadProgress used get() — switched to state-updater to prevent stale reads -->
 <!--   2. documentStore.js: comment ops lacked loading flag — added savingComment state -->
 <!--   3. useAppStore.js: no size guard on localStorage read — added DISCOVERY_MAX_SIZE_BYTES check -->
 <!--   4. queryStore.js: persisted selectedConnectionId never validated — added onRehydrateStorage -->
-<!-- Tests: store-governance-hardening.spec.ts (14 Playwright source-inspection tests) -->
+<!-- FIXES APPLIED (Session 3 — unbounded array growth): -->
+<!--   5. exportStore.js: exportJobs + embedTokens — .slice(0, 200) -->
+<!--   6. agentStore.js: tasks — .slice(0, 200) (5 occurrences) -->
+<!--   7. docqaStore.js: sessions .slice(0, 100), messages .slice(-500) -->
+<!--   8. workflowStore.js: workflows + executions — .slice(0, 200) -->
+<!--   9. visualizationStore.js: diagrams — .slice(0, 200) (9 occurrences) -->
+<!--  10. knowledgeStore.js: documents .slice(0, 500), collections .slice(0, 200), tags .slice(0, 500) -->
+<!--  11. spreadsheetStore.js: spreadsheets .slice(0, 200), pivotTables .slice(0, 100) -->
+<!--  12. dashboardStore.js: dashboards .slice(0, 100), widgets .slice(0, 200) -->
+<!--  13. synthesisStore.js: sessions .slice(0, 100) -->
+<!--  14. connectorStore.js: connections .slice(0, 200) -->
+<!--  15. federationStore.js: schemas .slice(0, 200) -->
+<!--  16. enrichmentStore.js: customSources .slice(0, 200) -->
+<!--  17. templateChatStore.js: messages .slice(-500) (3 occurrences) -->
+<!-- Tests: store-governance-hardening.spec.ts (46 Playwright source-inspection tests) -->
 
 - agentStore.js - Agent state management [DONE]
 - connectionStore.js - Connection state [DONE]
@@ -1244,21 +1258,28 @@ All 39 service modules and 8 infrastructure components verified and marked DONE.
 
 ## FRONTEND UX GOVERNANCE COMPONENTS [DONE — 2026-01-27]
 <!-- All 9 components verified present in frontend/src/components/ux/governance/. -->
-<!-- FIXES APPLIED: -->
+<!-- FIXES APPLIED (Session 2): -->
 <!--   1. useEnforcement.js: removed dead analyzeHandler function, added MAX_CHECKED_COMPONENTS cap with Set.clear() -->
 <!--   2. WorkflowContracts.jsx: added WorkflowContracts[parsed.activeWorkflow] validation before dispatch -->
 <!--   3. InteractionAPI.jsx: truncated navigator.userAgent to 512 chars via .slice(0, 512) -->
-<!-- Tests: frontend/tests/e2e/store-governance-hardening.spec.ts (14 source-inspection tests) -->
+<!-- FIXES APPLIED (Session 3): -->
+<!--   4. BackgroundOperations.jsx: operations array capped .slice(0, 200), removed dead poll useEffect -->
+<!--   5. IntentSystem.jsx: intentMap Map eviction when size > maxHistory -->
+<!--   6. TimeExpectations.jsx: activeOperations Map eviction at MAX_TRACKED_OPERATIONS (200) -->
+<!--   7. IrreversibleBoundaries.jsx: added useEffect cleanup for cooldownInterval on unmount -->
+<!--   8. NavigationSafety.jsx: wrapped forceNavigation callback in try-catch-finally -->
+<!--   9. RegressionGuards.js: wrapped pattern.test() calls in try-catch for both violation and required patterns -->
+<!-- Tests: frontend/tests/e2e/store-governance-hardening.spec.ts (46 source-inspection tests) -->
 
 ### frontend/src/components/ux/governance/
 **Features discovered:**
-- BackgroundOperations.jsx - Background task tracking UI [DONE]
-- IntentSystem.jsx - Intent-based action tracking [DONE]
+- BackgroundOperations.jsx - Background task tracking UI [DONE — FIX: ops array capped .slice(0,200), dead poll removed]
+- IntentSystem.jsx - Intent-based action tracking [DONE — FIX: Map eviction when size > maxHistory]
 - InteractionAPI.jsx - Interaction audit API [DONE — FIX: userAgent truncated to 512 chars]
-- IrreversibleBoundaries.jsx - Confirmation for destructive actions [DONE]
-- NavigationSafety.jsx - Prevent unsaved changes loss [DONE]
-- RegressionGuards.js - Regression prevention utilities [DONE]
-- TimeExpectations.jsx - Time estimation display [DONE]
+- IrreversibleBoundaries.jsx - Confirmation for destructive actions [DONE — FIX: useEffect cleanup for cooldownInterval]
+- NavigationSafety.jsx - Prevent unsaved changes loss [DONE — FIX: try-catch-finally in forceNavigation]
+- RegressionGuards.js - Regression prevention utilities [DONE — FIX: try-catch around pattern.test() calls]
+- TimeExpectations.jsx - Time estimation display [DONE — FIX: Map eviction at MAX_TRACKED_OPERATIONS]
 - WorkflowContracts.jsx - Workflow contract enforcement [DONE — FIX: validate workflowId exists in WorkflowContracts before dispatch]
 - useEnforcement.js - Enforcement hook [DONE — FIX: removed dead analyzeHandler, added MAX_CHECKED_COMPONENTS cap with Set.clear()]
 
@@ -1270,13 +1291,34 @@ All 39 service modules and 8 infrastructure components verified and marked DONE.
 <!-- 15 response-cache tests, 12 PDF-signing tests, 11 OneDrive path-safety tests, -->
 <!-- 7 image-URL-safety tests (79 total, all passing). -->
 <!-- Dual camelCase/snake_case in state store confirmed intentional. -->
-<!-- FIXES APPLIED: -->
+<!-- FIXES APPLIED (Session 2): -->
 <!--   1. onedrive.py: path traversal via ".." — added _safe_path() with posixpath.normpath -->
 <!--   2. providers.py: malformed data: URL (no comma) crashed Ollama+Anthropic — added "," guard -->
 <!--   3. providers.py: exception messages leaked API keys — added _sanitize_error() with regex redaction -->
 <!--   4. providers.py: Ollama non-localhost HTTP URL not flagged — added urlparse validation + warning -->
 <!--   5. CommandPalette.jsx: unbounded search query length — added cappedQuery with .slice(0, 200) -->
-<!-- Tests: test_provider_safety.py (12), store-governance-hardening.spec.ts (14) -->
+<!-- FIXES APPLIED (Session 3 — CRITICAL backend security): -->
+<!--   6. duckdb.py: SQL injection in _get_columns, load_parquet, load_csv — added _validate_identifier() -->
+<!--      + parameterised queries (? placeholders); path traversal in connect() — reject ".." in path -->
+<!--      + ConnectionError sanitised (no internal exception leak) -->
+<!--   7. snowflake.py: SQL injection in DESCRIBE TABLE — added _quote_identifier() with regex validation; -->
+<!--      ConnectionError sanitised (no password leak) -->
+<!--   8. bigquery.py: credentials JSON leak — added try/except JSONDecodeError with clean error; -->
+<!--      ConnectionError sanitised (no credential leak) -->
+<!--   9. webhook_service.py: SSRF via unvalidated URLs — added _validate_webhook_url() blocking -->
+<!--      RFC 1918, loopback, link-local, cloud metadata IPs; default secret warning log; -->
+<!--      error messages sanitised (generic msg + error_type, no str(e)) -->
+<!--  10. client.py: fallback/retry error logs leaked API keys — applied _sanitize_error() to 5 log points; -->
+<!--      LLM_CACHE_DIR rejects ".." traversal; LLM_CACHE_MAX_ITEMS clamped to [1, 10000] -->
+<!-- FIXES APPLIED (Session 3 — frontend features): -->
+<!--  11. useKeyboardShortcuts.js: handler invocation wrapped in try-catch -->
+<!--  12. NetworkStatusBanner.jsx: setTimeout tracked via successTimeoutRef + useEffect cleanup on unmount -->
+<!--  13. EditHistoryTimeline.jsx: history array capped at MAX_HISTORY_ENTRIES (500) -->
+<!-- Tests (Session 2): test_provider_safety.py (12), store-governance-hardening.spec.ts (14) -->
+<!-- Tests (Session 3): test_duckdb_safety.py (19), test_snowflake_safety.py (8), -->
+<!--   test_bigquery_safety.py (4), test_webhook_ssrf.py (16), test_client_safety.py (5), -->
+<!--   store-governance-hardening.spec.ts extended to 46 tests. -->
+<!--   Backend total: 4,288 passed (51 new), Frontend total: 46 passed (32 new). -->
 
 ### Backend
 1. **Recovery daemon** (backend/app/services/jobs/recovery_daemon.py) - Automatic retry for transient failures [DONE — tests: test_recovery_daemon.py (19)]

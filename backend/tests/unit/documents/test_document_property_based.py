@@ -463,7 +463,7 @@ class TestBoundaryProperties:
         for i in range(5):
             doc_service.create(name=f"Doc {i}")
 
-        docs = doc_service.list_documents(offset=offset, limit=limit)
+        docs, total = doc_service.list_documents(offset=offset, limit=limit)
         assert len(docs) <= limit
         assert len(docs) <= max(0, 5 - offset)
 
@@ -478,5 +478,6 @@ class TestBoundaryProperties:
         for i in range(num_docs):
             doc_service.create(name=f"Doc {i}")
 
-        docs = doc_service.list_documents(limit=100)
+        docs, total = doc_service.list_documents(limit=100)
         assert len(docs) == num_docs
+        assert total == num_docs

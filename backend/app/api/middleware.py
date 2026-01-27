@@ -58,6 +58,10 @@ def _build_default_limits(settings: Settings) -> list[str]:
 
 limiter = Limiter(key_func=_get_client_key, default_limits=[], headers_enabled=True)
 
+# Rate limit tier constants for per-endpoint rate limiting
+RATE_LIMIT_STRICT = "10/minute"    # AI endpoints, color generation, ingestion
+RATE_LIMIT_STANDARD = "60/minute"  # Mutations, exports
+
 
 def _configure_limiter(settings: Settings) -> None:
     limiter.default_limits = _build_default_limits(settings)
@@ -65,6 +69,53 @@ def _configure_limiter(settings: Settings) -> None:
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     """Middleware to add security headers to all responses."""
+
+    def __init__(self, app, debug_mode: bool = False, csp_connect_origins: list[str] | None = None):
+        super().__init__(app)
+        self.debug_mode = debug_mode
+        self.csp_connect_origins = csp_connect_origins or []
+
+    @staticmethod
+    def _build_csp(debug_mode: bool, connect_origins: list[str]) -> str:
+        """
+        Build Content Security Policy string with configurable connect-src.
+
+        Security improvements from default:
+        - Removed 'unsafe-eval' from script-src
+        - Restricted img-src to 'self' data: blob: (no wildcard http:/https:)
+        - Added frame-ancestors 'none' to prevent embedding
+        - Added base-uri 'self' to prevent base tag injection
+        - Added form-action 'self' to restrict form submissions
+        - Added object-src 'none' to block plugins
+        """
+        # Base CSP directives
+        csp_parts = [
+            "default-src 'self'",
+            "script-src 'self' 'unsafe-inline'",  # Keep unsafe-inline for inline event handlers
+            "style-src 'self' 'unsafe-inline'",
+            "img-src 'self' data: blob:",  # Removed wildcard http:/https:
+            "font-src 'self' data:",
+            "frame-ancestors 'none'",  # Prevent embedding in iframes
+            "base-uri 'self'",         # Prevent base tag injection
+            "form-action 'self'",      # Restrict form submissions
+            "object-src 'none'",       # Block plugins (Flash, etc)
+        ]
+
+        # Build connect-src with configurable origins
+        connect_src_origins = ["'self'"]
+        if debug_mode:
+            # In debug mode, add localhost/127.0.0.1 for all ports
+            connect_src_origins.extend([
+                "http://localhost:*",
+                "http://127.0.0.1:*",
+                "ws://localhost:*",
+                "ws://127.0.0.1:*"
+            ])
+        # Add custom origins from config
+        connect_src_origins.extend(connect_origins)
+        csp_parts.append(f"connect-src {' '.join(connect_src_origins)}")
+
+        return "; ".join(csp_parts)
 
     async def dispatch(self, request: Request, call_next):
         response = await call_next(request)
@@ -81,15 +132,10 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         # Referrer policy
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
 
-        # Content Security Policy - allow frontend to connect
-        # In development, allow localhost connections on common ports
-        response.headers["Content-Security-Policy"] = (
-            "default-src 'self'; "
-            "script-src 'self' 'unsafe-inline' 'unsafe-eval'; "
-            "style-src 'self' 'unsafe-inline'; "
-            "img-src 'self' data: blob: http: https:; "
-            "font-src 'self' data:; "
-            "connect-src 'self' http://localhost:* http://127.0.0.1:* ws://localhost:* ws://127.0.0.1:*"
+        # Content Security Policy - configurable and tightened
+        response.headers["Content-Security-Policy"] = self._build_csp(
+            self.debug_mode,
+            self.csp_connect_origins
         )
 
         # Permissions Policy
@@ -231,8 +277,12 @@ def add_middlewares(app: FastAPI, settings: Settings) -> None:
         timeout_seconds=settings.request_timeout_seconds,
     )
 
-    # Security headers middleware
-    app.add_middleware(SecurityHeadersMiddleware)
+    # Security headers middleware - pass debug mode and CSP origins
+    app.add_middleware(
+        SecurityHeadersMiddleware,
+        debug_mode=settings.debug_mode,
+        csp_connect_origins=settings.csp_connect_origins
+    )
 
     # Trusted host middleware - configure properly in production
     if settings.allowed_hosts_all:

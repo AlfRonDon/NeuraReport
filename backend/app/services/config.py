@@ -91,6 +91,12 @@ class Settings(BaseSettings):
     idempotency_enabled: bool = Field(default=True, env="NEURA_IDEMPOTENCY_ENABLED")
     idempotency_ttl_seconds: int = Field(default=86400, env="NEURA_IDEMPOTENCY_TTL_SECONDS")
 
+    # Content Security Policy configuration
+    csp_connect_origins: List[str] = Field(
+        default_factory=lambda: ["http://localhost:*", "ws://localhost:*"],
+        env="NEURA_CSP_CONNECT_ORIGINS"
+    )
+
     # Analysis cache configuration
     analysis_cache_max_items: int = Field(default=100, env="NEURA_ANALYSIS_CACHE_MAX_ITEMS")
     analysis_cache_ttl_seconds: int = Field(default=3600, env="NEURA_ANALYSIS_CACHE_TTL_SECONDS")  # 1 hour
