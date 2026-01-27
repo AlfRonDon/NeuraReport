@@ -30,7 +30,7 @@ from typing import Any, Callable, Dict, Iterator, List, Optional, Tuple, Union
 from pydantic import BaseModel
 
 from .config import LLMConfig, LLMProvider, get_llm_config
-from .providers import BaseProvider, LiteLLMProvider, get_provider
+from .providers import BaseProvider, LiteLLMProvider, _sanitize_error, get_provider
 from backend.app.services.utils.llm import append_raw_llm_output as _append_raw_output
 
 logger = logging.getLogger("neura.llm.client")
@@ -507,11 +507,17 @@ class LLMClient:
             enable_cache = os.getenv("LLM_CACHE_ENABLED", "false").lower() in {"1", "true", "yes"}
 
         if enable_cache:
-            default_cache_dir = cache_dir or Path(
-                os.getenv("LLM_CACHE_DIR", "")
-            ) if os.getenv("LLM_CACHE_DIR") else None
+            default_cache_dir = cache_dir
+            if not default_cache_dir and os.getenv("LLM_CACHE_DIR"):
+                _raw_dir = Path(os.getenv("LLM_CACHE_DIR", ""))
+                # Reject paths with traversal components
+                if ".." not in str(_raw_dir):
+                    default_cache_dir = _raw_dir
+                else:
+                    logger.warning("llm_cache_dir_rejected", extra={"reason": "path contains '..'"})
+            _max_items = min(max(1, int(os.getenv("LLM_CACHE_MAX_ITEMS", "100"))), 10000)
             self._cache = ResponseCache(
-                max_memory_items=int(os.getenv("LLM_CACHE_MAX_ITEMS", "100")),
+                max_memory_items=_max_items,
                 default_ttl_seconds=float(os.getenv("LLM_CACHE_TTL_SECONDS", "3600")),
                 cache_dir=default_cache_dir,
             )
@@ -704,7 +710,7 @@ class LLMClient:
                         "attempt": attempt,
                         "max_attempts": self.config.max_retries,
                         "retry_in": delay if attempt < self.config.max_retries else None,
-                        "error": str(exc),
+                        "error": _sanitize_error(exc),
                         "error_type": type(exc).__name__,
                     }
                 )
@@ -727,8 +733,8 @@ class LLMClient:
                     extra={
                         "event": "llm_fallback_also_failed",
                         "description": description,
-                        "primary_error": str(last_exc),
-                        "fallback_error": str(fb_exc),
+                        "primary_error": _sanitize_error(last_exc),
+                        "fallback_error": _sanitize_error(fb_exc),
                     }
                 )
 
@@ -744,7 +750,7 @@ class LLMClient:
                 "model": model,
                 "error_type": type(last_exc).__name__,
                 "fallback_attempted": fallback_attempted,
-                "fallback_error": str(fallback_exc) if fallback_exc else None,
+                "fallback_error": _sanitize_error(fallback_exc) if fallback_exc else None,
             },
             exc_info=last_exc,
         )
@@ -859,7 +865,7 @@ class LLMClient:
                 extra={
                     "event": "llm_fallback_failed",
                     "description": description,
-                    "error": str(fallback_exc),
+                    "error": _sanitize_error(fallback_exc),
                 }
             )
             raise
@@ -949,7 +955,7 @@ class LLMClient:
                 extra={
                     "event": "llm_stream_failed",
                     "description": description,
-                    "error": str(exc),
+                    "error": _sanitize_error(exc),
                 }
             )
             raise

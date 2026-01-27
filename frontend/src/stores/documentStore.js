@@ -13,6 +13,7 @@ const useDocumentStore = create((set, get) => ({
   collaborators: [],
   loading: false,
   saving: false,
+  savingComment: false,
   error: null,
   aiResult: null,
 
@@ -137,34 +138,39 @@ const useDocumentStore = create((set, get) => ({
   },
 
   addComment: async (documentId, data) => {
+    set({ savingComment: true, error: null });
     try {
       const comment = await documentsApi.addComment(documentId, data);
       set((state) => ({
         comments: [...state.comments, comment],
+        savingComment: false,
       }));
       return comment;
     } catch (err) {
-      set({ error: err.message });
+      set({ error: err.message, savingComment: false });
       return null;
     }
   },
 
   resolveComment: async (documentId, commentId, resolved = true) => {
+    set({ savingComment: true, error: null });
     try {
       await documentsApi.resolveComment(documentId, commentId, resolved);
       set((state) => ({
         comments: state.comments.map((c) =>
           c.id === commentId ? { ...c, resolved } : c
         ),
+        savingComment: false,
       }));
       return true;
     } catch (err) {
-      set({ error: err.message });
+      set({ error: err.message, savingComment: false });
       return false;
     }
   },
 
   replyToComment: async (documentId, commentId, data) => {
+    set({ savingComment: true, error: null });
     try {
       const reply = await documentsApi.replyToComment(documentId, commentId, data);
       set((state) => ({
@@ -173,23 +179,26 @@ const useDocumentStore = create((set, get) => ({
             ? { ...c, replies: [...(c.replies || []), reply] }
             : c
         ),
+        savingComment: false,
       }));
       return reply;
     } catch (err) {
-      set({ error: err.message });
+      set({ error: err.message, savingComment: false });
       return null;
     }
   },
 
   deleteComment: async (documentId, commentId) => {
+    set({ savingComment: true, error: null });
     try {
       await documentsApi.deleteComment(documentId, commentId);
       set((state) => ({
         comments: state.comments.filter((c) => c.id !== commentId),
+        savingComment: false,
       }));
       return true;
     } catch (err) {
-      set({ error: err.message });
+      set({ error: err.message, savingComment: false });
       return false;
     }
   },

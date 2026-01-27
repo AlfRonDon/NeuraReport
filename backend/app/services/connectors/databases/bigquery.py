@@ -54,7 +54,10 @@ class BigQueryConnector(ConnectorBase):
             if credentials_json:
                 import json
                 if isinstance(credentials_json, str):
-                    credentials_json = json.loads(credentials_json)
+                    try:
+                        credentials_json = json.loads(credentials_json)
+                    except json.JSONDecodeError:
+                        raise ConnectionError("Invalid credentials JSON format")
                 credentials = service_account.Credentials.from_service_account_info(
                     credentials_json
                 )
@@ -72,9 +75,12 @@ class BigQueryConnector(ConnectorBase):
             )
             self._connected = True
             return True
+        except ConnectionError:
+            self._connected = False
+            raise
         except Exception as e:
             self._connected = False
-            raise ConnectionError(f"Failed to connect to BigQuery: {e}")
+            raise ConnectionError("Failed to connect to BigQuery") from e
 
     async def disconnect(self) -> None:
         """Close the connection."""

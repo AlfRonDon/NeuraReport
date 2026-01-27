@@ -1258,3 +1258,199 @@ class TestWidgetQueryWiring:
         assert req.connection_id == "test-conn"
         assert req.limit == 100  # default
         assert req.offset == 0  # default
+
+
+# =============================================================================
+# ROUND-3 FIX TESTS — Anomalies method, CSS int-cast, tempfile, async render,
+#                       correlation multi-row detect
+# =============================================================================
+
+
+class TestAnomaliesMethodHandling:
+    """Verify anomalies endpoint properly surfaces the method parameter."""
+
+    def test_anomalies_endpoint_has_method_parameter(self):
+        """The route function should accept a method parameter."""
+        import inspect
+        from backend.app.api.routes.dashboards import detect_anomalies
+
+        sig = inspect.signature(detect_anomalies)
+        assert "method" in sig.parameters
+
+    def test_anomalies_method_used_in_response_shape(self):
+        """The response should include a method_used field."""
+        import inspect
+        from backend.app.api.routes.dashboards import detect_anomalies
+
+        source = inspect.getsource(detect_anomalies)
+        assert "method_used" in source, (
+            "The anomalies endpoint should return method_used in the response"
+        )
+
+    def test_anomalies_logs_unsupported_method(self):
+        """Non-zscore methods should trigger a warning log."""
+        import inspect
+        from backend.app.api.routes.dashboards import detect_anomalies
+
+        source = inspect.getsource(detect_anomalies)
+        assert "anomaly_method_unsupported" in source, (
+            "The endpoint should log unsupported method warnings"
+        )
+
+
+class TestCssInjectionPrevention:
+    """Verify widget w/h are cast to int to prevent CSS injection."""
+
+    def test_numeric_string_w_h_cast_to_int(self):
+        """Numeric string w/h values should be safely cast to int."""
+        from backend.app.services.dashboards.snapshot_service import _dashboard_to_html
+
+        html = _dashboard_to_html({
+            "name": "CSS Test",
+            "widgets": [
+                {"config": {"title": "W", "type": "chart"}, "w": "6", "h": "3"},
+            ],
+        })
+        # Numeric strings cast fine through int()
+        assert "grid-column: span 6" in html
+        assert "grid-row: span 3" in html
+
+    def test_w_h_are_integer_in_html_output(self):
+        """Verify the grid-column/row span values are plain integers."""
+        from backend.app.services.dashboards.snapshot_service import _dashboard_to_html
+
+        html = _dashboard_to_html({
+            "name": "Int Cast Test",
+            "widgets": [
+                {"config": {"title": "W", "type": "chart"}, "w": 6.9, "h": 3.1},
+            ],
+        })
+        # int(6.9) = 6, int(3.1) = 3
+        assert "grid-column: span 6" in html
+        assert "grid-row: span 3" in html
+
+    def test_malicious_w_h_raises_on_non_numeric(self):
+        """CSS injection attempt via non-numeric w/h should raise ValueError."""
+        from backend.app.services.dashboards.snapshot_service import _dashboard_to_html
+
+        with pytest.raises((ValueError, TypeError)):
+            _dashboard_to_html({
+                "name": "Injection Attempt",
+                "widgets": [
+                    {"config": {"title": "Evil", "type": "chart"},
+                     "w": "4; background:url(evil)", "h": 3},
+                ],
+            })
+
+
+class TestTempfileNotDeprecated:
+    """Verify render_snapshot uses NamedTemporaryFile, not deprecated mktemp."""
+
+    def test_no_mktemp_in_snapshot_service(self):
+        """snapshot_service.py should not use the deprecated tempfile.mktemp."""
+        import inspect
+        from backend.app.services.dashboards import snapshot_service
+
+        source = inspect.getsource(snapshot_service)
+        assert "mktemp" not in source, (
+            "tempfile.mktemp is deprecated; use NamedTemporaryFile(delete=False)"
+        )
+
+    def test_uses_named_temporary_file(self):
+        """snapshot_service.py should use NamedTemporaryFile."""
+        import inspect
+        from backend.app.services.dashboards import snapshot_service
+
+        source = inspect.getsource(snapshot_service)
+        assert "NamedTemporaryFile" in source
+
+
+class TestAsyncRenderNotBlocking:
+    """Verify the snapshot route uses run_in_executor for sync rendering."""
+
+    def test_snapshot_route_uses_run_in_executor(self):
+        """The create_snapshot route should call run_in_executor to avoid
+        blocking the ASGI event loop with synchronous Playwright."""
+        import inspect
+        from backend.app.api.routes.dashboards import create_snapshot
+
+        source = inspect.getsource(create_snapshot)
+        assert "run_in_executor" in source, (
+            "Snapshot rendering must use run_in_executor to avoid blocking "
+            "the async event loop"
+        )
+
+    def test_snapshot_route_is_async(self):
+        """The create_snapshot route must be an async function."""
+        import inspect
+        from backend.app.api.routes.dashboards import create_snapshot
+
+        assert inspect.iscoroutinefunction(create_snapshot), (
+            "create_snapshot should be an async function"
+        )
+
+    def test_asyncio_imported_in_dashboards(self):
+        """The dashboards route module must import asyncio."""
+        import backend.app.api.routes.dashboards as mod
+
+        assert hasattr(mod, "asyncio"), (
+            "dashboards.py must import asyncio for run_in_executor"
+        )
+
+
+class TestCorrelationMultiRowDetect:
+    """Verify numeric column detection scans all rows, not just the first."""
+
+    def test_detect_numeric_columns_scans_all_rows(self):
+        """A column that's non-numeric in row 0 but numeric in later rows
+        should still be detected."""
+        from backend.app.api.routes.dashboards import _detect_numeric_columns
+
+        data = [
+            {"a": "N/A", "b": 1},
+            {"a": 42,     "b": 2},
+            {"a": 99,     "b": 3},
+        ]
+        cols = _detect_numeric_columns(data)
+        assert "a" in cols, "Column 'a' is numeric in rows 1-2, should be detected"
+        assert "b" in cols
+
+    def test_detect_numeric_columns_empty(self):
+        from backend.app.api.routes.dashboards import _detect_numeric_columns
+        assert _detect_numeric_columns([]) == []
+
+    def test_detect_numeric_columns_all_non_numeric(self):
+        from backend.app.api.routes.dashboards import _detect_numeric_columns
+
+        data = [
+            {"x": "hello", "y": "world"},
+            {"x": "foo",   "y": "bar"},
+        ]
+        assert _detect_numeric_columns(data) == []
+
+    def test_dicts_to_series_uses_multi_row_detection(self):
+        """_dicts_to_series should find columns that become numeric after row 0."""
+        from backend.app.api.routes.dashboards import _dicts_to_series
+
+        data = [
+            {"val": "missing", "num": 10},
+            {"val": 42,        "num": 20},
+            {"val": 99,        "num": 30},
+        ]
+        series = _dicts_to_series(data)
+        names = {s.name for s in series}
+        assert "val" in names, (
+            "_dicts_to_series should detect 'val' as numeric (rows 1-2 have numbers)"
+        )
+        assert "num" in names
+
+    def test_correlation_auto_detect_uses_all_rows(self):
+        """The correlation endpoint source should call _detect_numeric_columns."""
+        import inspect
+        from backend.app.api.routes.dashboards import find_correlations
+
+        source = inspect.getsource(find_correlations)
+        assert "_detect_numeric_columns" in source, (
+            "Correlation auto-detect should use _detect_numeric_columns "
+            "which scans all rows"
+        )

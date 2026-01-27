@@ -81,7 +81,7 @@ export async function deleteTheme(themeId) {
 }
 
 export async function setActiveTheme(themeId) {
-  const response = await api.post(`/design/themes/${themeId}/set-active`);
+  const response = await api.post(`/design/themes/${themeId}/activate`);
   return response.data;
 }
 
@@ -89,10 +89,11 @@ export async function setActiveTheme(themeId) {
 // Color Palettes
 // ============================================
 
-export async function generateColorPalette(baseColor, scheme = 'complementary') {
-  const response = await api.post('/design/colors/generate', {
+export async function generateColorPalette(baseColor, harmonyType = 'complementary', count = 5) {
+  const response = await api.post('/design/color-palette', {
     base_color: baseColor,
-    scheme, // 'complementary', 'analogous', 'triadic', 'split-complementary', 'tetradic'
+    harmony_type: harmonyType, // 'complementary', 'analogous', 'triadic', 'split-complementary', 'tetradic'
+    count,
   });
   return response.data;
 }

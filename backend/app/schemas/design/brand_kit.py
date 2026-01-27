@@ -140,3 +140,94 @@ class ApplyBrandKitRequest(BaseModel):
     """Request to apply brand kit to a document."""
     document_id: str
     elements: list[str] = Field(default_factory=list)  # Which elements to apply to
+
+
+# ---------------------------------------------------------------------------
+# Color utility schemas
+# ---------------------------------------------------------------------------
+
+
+class ColorContrastRequest(BaseModel):
+    """Request to compute WCAG contrast ratio between two colors."""
+    color1: str
+    color2: str
+
+
+class ColorContrastResponse(BaseModel):
+    """WCAG contrast ratio result."""
+    color1: str
+    color2: str
+    contrast_ratio: float
+    wcag_aa_normal: bool
+    wcag_aa_large: bool
+    wcag_aaa_normal: bool
+    wcag_aaa_large: bool
+
+
+class AccessibleColorsRequest(BaseModel):
+    """Request to suggest accessible text colors for a background."""
+    background_color: str
+
+
+class AccessibleColorSuggestion(BaseModel):
+    """A single accessible color suggestion."""
+    hex: str
+    label: str
+    contrast_ratio: float
+
+
+class AccessibleColorsResponse(BaseModel):
+    """Suggested accessible text colors for a background."""
+    background_color: str
+    colors: list[AccessibleColorSuggestion]
+
+
+# ---------------------------------------------------------------------------
+# Typography schemas
+# ---------------------------------------------------------------------------
+
+
+class FontInfo(BaseModel):
+    """Information about a font."""
+    name: str
+    category: str  # serif, sans-serif, monospace, display, handwriting
+    weights: list[int] = Field(default_factory=lambda: [400, 700])
+
+
+class FontPairing(BaseModel):
+    """A font pairing suggestion."""
+    font: str
+    category: str
+    reason: str
+
+
+class FontPairingsResponse(BaseModel):
+    """Font pairing suggestions for a primary font."""
+    primary: str
+    pairings: list[FontPairing]
+
+
+# ---------------------------------------------------------------------------
+# Asset schemas
+# ---------------------------------------------------------------------------
+
+
+class AssetResponse(BaseModel):
+    """An uploaded design asset."""
+    id: str
+    filename: str
+    brand_kit_id: str
+    asset_type: str  # logo, icon, image
+    size_bytes: int
+    created_at: datetime
+
+
+# ---------------------------------------------------------------------------
+# Import / Export schemas
+# ---------------------------------------------------------------------------
+
+
+class BrandKitExport(BaseModel):
+    """Exported brand kit data."""
+    format: str = "json"
+    brand_kit: BrandKitResponse

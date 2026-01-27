@@ -24,6 +24,20 @@ from backend.app.services.config import get_settings
 
 logger = logging.getLogger("neura.llm.providers")
 
+# Patterns that may appear in exception messages containing secrets
+import re as _re
+
+_SECRET_PATTERNS = _re.compile(
+    r"(sk-[A-Za-z0-9]{8,}|Bearer\s+\S{8,}|api[_-]?key[=:]\s*\S+)",
+    _re.IGNORECASE,
+)
+
+
+def _sanitize_error(exc: Exception) -> str:
+    """Return error string with possible API keys/tokens redacted."""
+    msg = str(exc)
+    return _SECRET_PATTERNS.sub("[REDACTED]", msg)
+
 
 def _force_gpt5(model_name: Optional[str]) -> str:
     """Use centralized config for model selection."""
@@ -314,7 +328,7 @@ class OpenAIProvider(BaseProvider):
             models = client.models.list()
             return [m.id for m in models.data]
         except Exception as e:
-            logger.warning("list_models_failed", extra={"error": str(e)})
+            logger.warning("list_models_failed", extra={"error": _sanitize_error(e)})
             return []
 
     def health_check(self) -> bool:
@@ -335,6 +349,22 @@ class OllamaProvider(BaseProvider):
 
         # Ollama can be used via OpenAI-compatible API or native client
         base_url = self.config.base_url or "http://localhost:11434"
+
+        # Warn if a remote (non-localhost) URL uses plain HTTP
+        from urllib.parse import urlparse as _urlparse
+
+        _parsed = _urlparse(base_url)
+        if (
+            _parsed.scheme == "http"
+            and _parsed.hostname not in ("localhost", "127.0.0.1", "::1")
+        ):
+            logger.warning(
+                "ollama_insecure_url",
+                extra={
+                    "url_host": _parsed.hostname,
+                    "hint": "Remote Ollama URL uses plain HTTP; consider HTTPS",
+                },
+            )
 
         try:
             from openai import OpenAI
@@ -404,7 +434,7 @@ class OllamaProvider(BaseProvider):
                         text_parts.append(part.get("text", ""))
                     elif part.get("type") == "image_url":
                         img_url = part.get("image_url", {}).get("url", "")
-                        if img_url.startswith("data:"):
+                        if img_url.startswith("data:") and "," in img_url:
                             # Extract base64 data
                             _, b64_data = img_url.split(",", 1)
                             images.append(b64_data)
@@ -499,7 +529,7 @@ class OllamaProvider(BaseProvider):
 
             return [m["name"] for m in result.get("models", [])]
         except Exception as e:
-            logger.warning("ollama_list_models_failed", extra={"error": str(e)})
+            logger.warning("ollama_list_models_failed", extra={"error": _sanitize_error(e)})
             return []
 
     def health_check(self) -> bool:
@@ -701,7 +731,7 @@ class AnthropicProvider(BaseProvider):
                         })
                     elif part.get("type") == "image_url":
                         img_url = part.get("image_url", {}).get("url", "")
-                        if img_url.startswith("data:"):
+                        if img_url.startswith("data:") and "," in img_url:
                             # Extract media type and base64 data
                             meta, b64_data = img_url.split(",", 1)
                             media_type = meta.split(";")[0].replace("data:", "")

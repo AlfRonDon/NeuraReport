@@ -120,7 +120,7 @@ export function BackgroundOperationsProvider({ children }) {
       createdAt: Date.now(),
     }
 
-    setOperations((prev) => [newOp, ...prev])
+    setOperations((prev) => [newOp, ...prev].slice(0, 200))
 
     // Notify user
     setNotification({
@@ -263,29 +263,7 @@ export function BackgroundOperationsProvider({ children }) {
       op.status === BackgroundOperationStatus.RUNNING
   ).length
 
-  /**
-   * Poll backend for operation status updates
-   */
-  useEffect(() => {
-    const poll = async () => {
-      const runningOps = operations.filter(
-        (op) => op.status === BackgroundOperationStatus.RUNNING
-      )
-
-      if (runningOps.length === 0) return
-
-      // In a real implementation, this would fetch status from backend
-      // For now, we rely on manual updates
-    }
-
-    pollingRef.current = setInterval(poll, 5000)
-
-    return () => {
-      if (pollingRef.current) {
-        clearInterval(pollingRef.current)
-      }
-    }
-  }, [operations])
+  // Polling placeholder removed — status updates come from manual updateOperation calls
 
   // Close notification
   const closeNotification = useCallback(() => {

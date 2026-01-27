@@ -63,7 +63,7 @@ const useConnectorStore = create((set, get) => ({
     try {
       const connection = await connectorsApi.createConnection(connectorType, name, config);
       set((state) => ({
-        connections: [connection, ...state.connections],
+        connections: [connection, ...state.connections].slice(0, 200),
         currentConnection: connection,
         loading: false,
       }));

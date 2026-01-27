@@ -376,11 +376,15 @@ export default function CommandPalette({ open, onClose }) {
 
   // Debounced search effect
   useEffect(() => {
-    if (!query.trim() || query.length < 2) {
+    const trimmed = query.trim()
+    if (!trimmed || trimmed.length < 2) {
       setSearchResults([])
       setIsSearching(false)
       return
     }
+
+    // Cap query length to prevent oversized requests
+    const cappedQuery = trimmed.length > 200 ? trimmed.slice(0, 200) : trimmed
 
     setIsSearching(true)
 
@@ -397,10 +401,10 @@ export default function CommandPalette({ open, onClose }) {
         reversibility: Reversibility.FULLY_REVERSIBLE,
         suppressSuccessToast: true,
         suppressErrorToast: true,
-        intent: { source: 'command-palette', query },
+        intent: { source: 'command-palette', query: cappedQuery },
         action: async () => {
           try {
-            const result = await globalSearch(query, { limit: 10 })
+            const result = await globalSearch(cappedQuery, { limit: 10 })
             setSearchResults(result.results || [])
           } catch (err) {
             console.error('Search failed:', err)

@@ -35,7 +35,7 @@ const useSynthesisStore = create((set, get) => ({
       const response = await synthesisApi.createSession(name);
       const session = response.session;
       set((state) => ({
-        sessions: [...state.sessions, session],
+        sessions: [...state.sessions, session].slice(0, 100),
         currentSession: session,
         loading: false,
       }));

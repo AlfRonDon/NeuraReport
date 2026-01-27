@@ -24,7 +24,7 @@ const useAgentStore = create((set, get) => ({
     try {
       const task = await agentsApi.runResearchAgent(topic, options);
       set((state) => ({
-        tasks: [task, ...state.tasks],
+        tasks: [task, ...state.tasks].slice(0, 200),
         currentTask: task,
         executing: false,
       }));
@@ -41,7 +41,7 @@ const useAgentStore = create((set, get) => ({
     try {
       const task = await agentsApi.runDataAnalystAgent(question, data, options);
       set((state) => ({
-        tasks: [task, ...state.tasks],
+        tasks: [task, ...state.tasks].slice(0, 200),
         currentTask: task,
         executing: false,
       }));
@@ -58,7 +58,7 @@ const useAgentStore = create((set, get) => ({
     try {
       const task = await agentsApi.runEmailDraftAgent(context, purpose, options);
       set((state) => ({
-        tasks: [task, ...state.tasks],
+        tasks: [task, ...state.tasks].slice(0, 200),
         currentTask: task,
         executing: false,
       }));
@@ -75,7 +75,7 @@ const useAgentStore = create((set, get) => ({
     try {
       const task = await agentsApi.runContentRepurposeAgent(content, sourceFormat, targetFormats, options);
       set((state) => ({
-        tasks: [task, ...state.tasks],
+        tasks: [task, ...state.tasks].slice(0, 200),
         currentTask: task,
         executing: false,
       }));
@@ -92,7 +92,7 @@ const useAgentStore = create((set, get) => ({
     try {
       const task = await agentsApi.runProofreadingAgent(text, options);
       set((state) => ({
-        tasks: [task, ...state.tasks],
+        tasks: [task, ...state.tasks].slice(0, 200),
         currentTask: task,
         executing: false,
       }));

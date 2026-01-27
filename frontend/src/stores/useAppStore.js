@@ -11,6 +11,11 @@ const loadDiscoveryFromStorage = () => {
   try {
     const raw = window.localStorage.getItem(DISCOVERY_STORAGE_KEY)
     if (!raw) return defaultDiscoveryState
+    if (raw.length > DISCOVERY_MAX_SIZE_BYTES) {
+      console.warn('[useAppStore] Stored discovery data exceeds size limit, resetting')
+      window.localStorage.removeItem(DISCOVERY_STORAGE_KEY)
+      return defaultDiscoveryState
+    }
     const parsed = JSON.parse(raw)
     const results =
       parsed && parsed.results && typeof parsed.results === 'object' ? parsed.results : {}

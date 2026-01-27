@@ -268,6 +268,15 @@ export function IrreversibleBoundaryProvider({ children }) {
     }
   }, [])
 
+  // Clean up cooldown interval on unmount
+  useEffect(() => {
+    return () => {
+      if (cooldownInterval.current) {
+        clearInterval(cooldownInterval.current)
+      }
+    }
+  }, [])
+
   // Compute if confirmation is valid
   const isConfirmationValid = useMemo(() => {
     if (!dialogState.action) return false

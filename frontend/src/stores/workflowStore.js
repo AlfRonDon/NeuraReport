@@ -38,7 +38,7 @@ const useWorkflowStore = create((set, get) => ({
     try {
       const workflow = await workflowsApi.createWorkflow(data);
       set((state) => ({
-        workflows: [workflow, ...state.workflows],
+        workflows: [workflow, ...state.workflows].slice(0, 200),
         currentWorkflow: workflow,
         loading: false,
       }));
@@ -99,7 +99,7 @@ const useWorkflowStore = create((set, get) => ({
     try {
       const execution = await workflowsApi.executeWorkflow(workflowId, inputs);
       set((state) => ({
-        executions: [execution, ...state.executions],
+        executions: [execution, ...state.executions].slice(0, 200),
         currentExecution: execution,
         executing: false,
       }));
@@ -282,7 +282,7 @@ const useWorkflowStore = create((set, get) => ({
     try {
       const workflow = await workflowsApi.createFromTemplate(templateId, name);
       set((state) => ({
-        workflows: [workflow, ...state.workflows],
+        workflows: [workflow, ...state.workflows].slice(0, 200),
         currentWorkflow: workflow,
         loading: false,
       }));

@@ -4,6 +4,7 @@ Connector for Microsoft OneDrive using MSAL and Graph API.
 """
 from __future__ import annotations
 
+import posixpath
 import time
 from typing import Any, Optional
 
@@ -38,6 +39,25 @@ class OneDriveConnector(ConnectorBase):
         super().__init__(config)
         self._access_token = None
         self._session = None
+
+    @staticmethod
+    def _safe_path(path: str) -> str:
+        """Normalise *path* and reject directory-traversal attempts.
+
+        Strips leading/trailing slashes, collapses ``..`` via
+        ``posixpath.normpath`` and raises ``ValueError`` if the result
+        still escapes the root (i.e. starts with ``..``).
+        """
+        cleaned = path.strip("/")
+        if not cleaned:
+            return ""
+        normalised = posixpath.normpath(cleaned)
+        # normpath("../../x") → "../../x"  — still escapes root
+        if normalised.startswith(".."):
+            raise ValueError(
+                f"Path traversal not allowed: {path!r}"
+            )
+        return normalised
 
     async def connect(self) -> bool:
         """Establish connection to OneDrive."""
@@ -117,7 +137,8 @@ class OneDriveConnector(ConnectorBase):
         if path == "/" or path == "root":
             url = f"{self.GRAPH_API_URL}/me/drive/root/children"
         else:
-            url = f"{self.GRAPH_API_URL}/me/drive/root:/{path.strip('/')}:/children"
+            safe = self._safe_path(path)
+            url = f"{self.GRAPH_API_URL}/me/drive/root:/{safe}:/children"
 
         while url:
             response = await self._session.get(url)
@@ -174,7 +195,8 @@ class OneDriveConnector(ConnectorBase):
         if not self._connected:
             await self.connect()
 
-        upload_path = f"{path.strip('/')}/{filename}" if path and path != "/" else filename
+        safe_dir = self._safe_path(path) if path and path != "/" else ""
+        upload_path = f"{safe_dir}/{filename}" if safe_dir else filename
 
         response = await self._session.put(
             f"{self.GRAPH_API_URL}/me/drive/root:/{upload_path}:/content",

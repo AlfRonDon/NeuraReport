@@ -55,7 +55,7 @@ const useEnrichmentStore = create((set, get) => ({
         customSources: [
           ...state.customSources.filter((source) => source.id !== newSource.id),
           newSource,
-        ],
+        ].slice(0, 200),
         loading: false,
       }));
       return newSource;

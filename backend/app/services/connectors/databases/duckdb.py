@@ -4,8 +4,27 @@ Connector for DuckDB - an in-process analytical database.
 """
 from __future__ import annotations
 
+import logging
+import os
+import re
 import time
 from typing import Any, Optional
+
+logger = logging.getLogger("neura.connectors.duckdb")
+
+# Identifiers must be alphanumeric / underscores (with optional dots for schema.table)
+_SAFE_IDENTIFIER_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+
+
+def _validate_identifier(value: str, label: str = "identifier") -> str:
+    """Validate a SQL identifier to prevent injection.
+
+    Only allows alphanumeric characters and underscores.
+    Returns the value double-quoted for safe use in SQL.
+    """
+    if not value or not _SAFE_IDENTIFIER_RE.match(value):
+        raise ValueError(f"Invalid SQL {label}: {value!r}")
+    return f'"{value}"'
 
 from ..base import (
     AuthType,
@@ -49,15 +68,23 @@ class DuckDBConnector(ConnectorBase):
             database_path = self.config.get("database", ":memory:")
             read_only = self.config.get("read_only", False)
 
+            # Validate database_path: reject path traversal for non-memory DBs
+            if database_path != ":memory:":
+                normalised = os.path.normpath(database_path)
+                if ".." in normalised.split(os.sep):
+                    raise ValueError("Database path traversal not allowed")
+
             self._connection = duckdb.connect(
                 database=database_path,
                 read_only=read_only,
             )
             self._connected = True
             return True
+        except ValueError:
+            raise
         except Exception as e:
             self._connected = False
-            raise ConnectionError(f"Failed to connect to DuckDB: {e}")
+            raise ConnectionError("Failed to connect to DuckDB") from e
 
     async def disconnect(self) -> None:
         """Close the connection."""
@@ -79,7 +106,7 @@ class DuckDBConnector(ConnectorBase):
             latency = (time.time() - start_time) * 1000
             return ConnectionTest(success=True, latency_ms=latency)
         except Exception as e:
-            return ConnectionTest(success=False, error=str(e))
+            return ConnectionTest(success=False, error="Connection test failed")
 
     async def discover_schema(self) -> SchemaInfo:
         """Discover database schema."""
@@ -126,15 +153,18 @@ class DuckDBConnector(ConnectorBase):
 
     async def _get_columns(self, schema_name: str, table_name: str) -> list[ColumnInfo]:
         """Get columns for a table."""
-        result = self._connection.execute(f"""
+        result = self._connection.execute(
+            """
             SELECT
                 column_name,
                 data_type,
                 is_nullable
             FROM information_schema.columns
-            WHERE table_schema = '{schema_name}' AND table_name = '{table_name}'
+            WHERE table_schema = ? AND table_name = ?
             ORDER BY ordinal_position
-        """)
+            """,
+            [schema_name, table_name],
+        )
 
         columns = []
         for name, dtype, nullable in result.fetchall():
@@ -199,11 +229,12 @@ class DuckDBConnector(ConnectorBase):
         if not self._connected:
             await self.connect()
 
+        safe_table = _validate_identifier(table_name, "table name")
         try:
-            self._connection.execute(f"""
-                CREATE OR REPLACE TABLE {table_name} AS
-                SELECT * FROM read_parquet('{file_path}')
-            """)
+            self._connection.execute(
+                f"CREATE OR REPLACE TABLE {safe_table} AS SELECT * FROM read_parquet(?)",
+                [file_path],
+            )
             return True
         except Exception:
             return False
@@ -219,13 +250,16 @@ class DuckDBConnector(ConnectorBase):
         if not self._connected:
             await self.connect()
 
+        safe_table = _validate_identifier(table_name, "table name")
+        # Delimiter must be a single character
+        if len(delimiter) != 1:
+            raise ValueError("CSV delimiter must be a single character")
+        header_str = "true" if header else "false"
         try:
-            self._connection.execute(f"""
-                CREATE OR REPLACE TABLE {table_name} AS
-                SELECT * FROM read_csv('{file_path}',
-                    header={str(header).lower()},
-                    delim='{delimiter}')
-            """)
+            self._connection.execute(
+                f"CREATE OR REPLACE TABLE {safe_table} AS SELECT * FROM read_csv(?, header={header_str}, delim=?)",
+                [file_path, delimiter],
+            )
             return True
         except Exception:
             return False

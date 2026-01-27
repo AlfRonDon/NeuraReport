@@ -23,13 +23,13 @@ const useIngestionStore = create((set, get) => ({
   // File Upload
   uploadFile: async (file, options = {}) => {
     const fileId = crypto.randomUUID();
-    set({ uploading: true, error: null, uploadProgress: { ...get().uploadProgress, [fileId]: 0 } });
+    set((state) => ({ uploading: true, error: null, uploadProgress: { ...state.uploadProgress, [fileId]: 0 } }));
     try {
       const result = await ingestionApi.uploadFile(file, {
         ...options,
         onProgress: (event) => {
           const progress = Math.round((event.loaded * 100) / event.total);
-          set({ uploadProgress: { ...get().uploadProgress, [fileId]: progress } });
+          set((state) => ({ uploadProgress: { ...state.uploadProgress, [fileId]: progress } }));
         },
       });
       set((state) => ({

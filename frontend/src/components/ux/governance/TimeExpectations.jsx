@@ -158,7 +158,8 @@ export function TimeExpectationProvider({ children }) {
     operation: null,
   })
 
-  // Interval refs for cleanup
+  // Interval refs for cleanup (capped to prevent unbounded growth)
+  const MAX_TRACKED_OPERATIONS = 200
   const checkIntervals = useRef(new Map())
 
   /**
@@ -182,6 +183,11 @@ export function TimeExpectationProvider({ children }) {
 
     setActiveOperations((prev) => {
       const next = new Map(prev)
+      // Evict oldest entries if cap reached
+      if (next.size >= MAX_TRACKED_OPERATIONS) {
+        const oldest = next.keys().next().value
+        next.delete(oldest)
+      }
       next.set(operationId, operation)
       return next
     })

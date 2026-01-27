@@ -135,6 +135,17 @@ const useQueryStore = create(
         selectedConnectionId: state.selectedConnectionId,
         queryHistory: state.queryHistory.slice(0, 20), // Only persist recent history
       }),
+      onRehydrateStorage: () => (state) => {
+        // Validate persisted selectedConnectionId is a non-empty string.
+        // The actual connection-existence check happens when the connection
+        // list loads; here we only reject clearly invalid values.
+        if (state && state.selectedConnectionId != null) {
+          const id = state.selectedConnectionId
+          if (typeof id !== 'string' || id.trim() === '') {
+            state.selectedConnectionId = null
+          }
+        }
+      },
     }
   )
 )

@@ -24,7 +24,7 @@ const useVisualizationStore = create((set, get) => ({
     try {
       const diagram = await visualizationApi.generateFlowchart(data, options);
       set((state) => ({
-        diagrams: [diagram, ...state.diagrams],
+        diagrams: [diagram, ...state.diagrams].slice(0, 200),
         currentDiagram: diagram,
         generating: false,
       }));
@@ -40,7 +40,7 @@ const useVisualizationStore = create((set, get) => ({
     try {
       const diagram = await visualizationApi.generateMindmap(data, options);
       set((state) => ({
-        diagrams: [diagram, ...state.diagrams],
+        diagrams: [diagram, ...state.diagrams].slice(0, 200),
         currentDiagram: diagram,
         generating: false,
       }));
@@ -56,7 +56,7 @@ const useVisualizationStore = create((set, get) => ({
     try {
       const diagram = await visualizationApi.generateOrgChart(data, options);
       set((state) => ({
-        diagrams: [diagram, ...state.diagrams],
+        diagrams: [diagram, ...state.diagrams].slice(0, 200),
         currentDiagram: diagram,
         generating: false,
       }));
@@ -72,7 +72,7 @@ const useVisualizationStore = create((set, get) => ({
     try {
       const diagram = await visualizationApi.generateTimeline(data, options);
       set((state) => ({
-        diagrams: [diagram, ...state.diagrams],
+        diagrams: [diagram, ...state.diagrams].slice(0, 200),
         currentDiagram: diagram,
         generating: false,
       }));
@@ -88,7 +88,7 @@ const useVisualizationStore = create((set, get) => ({
     try {
       const diagram = await visualizationApi.generateGantt(data, options);
       set((state) => ({
-        diagrams: [diagram, ...state.diagrams],
+        diagrams: [diagram, ...state.diagrams].slice(0, 200),
         currentDiagram: diagram,
         generating: false,
       }));
@@ -104,7 +104,7 @@ const useVisualizationStore = create((set, get) => ({
     try {
       const diagram = await visualizationApi.generateNetworkGraph(data, options);
       set((state) => ({
-        diagrams: [diagram, ...state.diagrams],
+        diagrams: [diagram, ...state.diagrams].slice(0, 200),
         currentDiagram: diagram,
         generating: false,
       }));
@@ -120,7 +120,7 @@ const useVisualizationStore = create((set, get) => ({
     try {
       const diagram = await visualizationApi.generateKanban(data, options);
       set((state) => ({
-        diagrams: [diagram, ...state.diagrams],
+        diagrams: [diagram, ...state.diagrams].slice(0, 200),
         currentDiagram: diagram,
         generating: false,
       }));
@@ -136,7 +136,7 @@ const useVisualizationStore = create((set, get) => ({
     try {
       const diagram = await visualizationApi.generateSequenceDiagram(data, options);
       set((state) => ({
-        diagrams: [diagram, ...state.diagrams],
+        diagrams: [diagram, ...state.diagrams].slice(0, 200),
         currentDiagram: diagram,
         generating: false,
       }));
@@ -152,7 +152,7 @@ const useVisualizationStore = create((set, get) => ({
     try {
       const diagram = await visualizationApi.generateWordcloud(data, options);
       set((state) => ({
-        diagrams: [diagram, ...state.diagrams],
+        diagrams: [diagram, ...state.diagrams].slice(0, 200),
         currentDiagram: diagram,
         generating: false,
       }));

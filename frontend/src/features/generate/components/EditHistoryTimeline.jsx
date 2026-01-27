@@ -184,13 +184,19 @@ function HistoryEntry({ entry, isLatest }) {
   )
 }
 
+const MAX_HISTORY_ENTRIES = 500
+
 export default function EditHistoryTimeline({ history = [], maxVisible = 5 }) {
   const [expanded, setExpanded] = useState(false)
   const [filter, setFilter] = useState('all')
 
   const filteredHistory = useMemo(() => {
     if (!Array.isArray(history)) return []
-    let filtered = [...history].reverse() // Most recent first
+    // Cap to prevent rendering unbounded entries
+    const capped = history.length > MAX_HISTORY_ENTRIES
+      ? history.slice(-MAX_HISTORY_ENTRIES)
+      : history
+    let filtered = [...capped].reverse() // Most recent first
     if (filter !== 'all') {
       filtered = filtered.filter((entry) => entry.type === filter)
     }

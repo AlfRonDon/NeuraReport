@@ -727,3 +727,290 @@ class TestDesignPagination:
     def test_themes_default_pagination(self, client):
         resp = client.get("/design/themes")
         assert resp.status_code == 200
+
+
+# =============================================================================
+# COLOR CONTRAST
+# =============================================================================
+
+
+class TestColorContrast:
+    def test_black_on_white(self, client):
+        resp = client.post("/design/colors/contrast", json={
+            "color1": "#000000",
+            "color2": "#ffffff",
+        })
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["contrast_ratio"] == 21.0
+        assert data["wcag_aa_normal"] is True
+        assert data["wcag_aa_large"] is True
+        assert data["wcag_aaa_normal"] is True
+        assert data["wcag_aaa_large"] is True
+
+    def test_same_color_is_1(self, client):
+        resp = client.post("/design/colors/contrast", json={
+            "color1": "#ff0000",
+            "color2": "#ff0000",
+        })
+        assert resp.status_code == 200
+        assert resp.json()["contrast_ratio"] == 1.0
+
+    def test_low_contrast_fails_wcag(self, client):
+        # Light gray on white — poor contrast
+        resp = client.post("/design/colors/contrast", json={
+            "color1": "#cccccc",
+            "color2": "#ffffff",
+        })
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["wcag_aa_normal"] is False
+        assert data["wcag_aaa_normal"] is False
+
+    def test_response_includes_input_colors(self, client):
+        resp = client.post("/design/colors/contrast", json={
+            "color1": "#1a2b3c",
+            "color2": "#f0e0d0",
+        })
+        data = resp.json()
+        assert data["color1"] == "#1a2b3c"
+        assert data["color2"] == "#f0e0d0"
+
+
+# =============================================================================
+# ACCESSIBLE COLORS
+# =============================================================================
+
+
+class TestAccessibleColors:
+    def test_white_background(self, client):
+        resp = client.post("/design/colors/accessible", json={
+            "background_color": "#ffffff",
+        })
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["background_color"] == "#ffffff"
+        assert len(data["colors"]) > 0
+        # All suggestions must meet WCAG AA (4.5:1)
+        for c in data["colors"]:
+            assert c["contrast_ratio"] >= 4.5
+
+    def test_dark_background(self, client):
+        resp = client.post("/design/colors/accessible", json={
+            "background_color": "#000000",
+        })
+        assert resp.status_code == 200
+        data = resp.json()
+        assert len(data["colors"]) > 0
+        for c in data["colors"]:
+            assert c["contrast_ratio"] >= 4.5
+
+    def test_sorted_by_contrast(self, client):
+        resp = client.post("/design/colors/accessible", json={
+            "background_color": "#ffffff",
+        })
+        ratios = [c["contrast_ratio"] for c in resp.json()["colors"]]
+        assert ratios == sorted(ratios, reverse=True)
+
+
+# =============================================================================
+# FONTS
+# =============================================================================
+
+
+class TestFonts:
+    def test_list_fonts(self, client):
+        resp = client.get("/design/fonts")
+        assert resp.status_code == 200
+        fonts = resp.json()
+        assert len(fonts) > 0
+        for f in fonts:
+            assert "name" in f
+            assert "category" in f
+            assert "weights" in f
+
+    def test_fonts_include_inter(self, client):
+        resp = client.get("/design/fonts")
+        names = [f["name"] for f in resp.json()]
+        assert "Inter" in names
+
+    def test_font_categories(self, client):
+        resp = client.get("/design/fonts")
+        categories = {f["category"] for f in resp.json()}
+        # Should have at least sans-serif, serif, monospace
+        assert "sans-serif" in categories
+        assert "serif" in categories
+        assert "monospace" in categories
+
+
+class TestFontPairings:
+    def test_pairings_for_serif(self, client):
+        resp = client.get("/design/fonts/pairings", params={"primary": "Merriweather"})
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["primary"] == "Merriweather"
+        assert len(data["pairings"]) > 0
+        for p in data["pairings"]:
+            assert "font" in p
+            assert "category" in p
+            assert "reason" in p
+
+    def test_pairings_for_sans_serif(self, client):
+        resp = client.get("/design/fonts/pairings", params={"primary": "Inter"})
+        assert resp.status_code == 200
+        assert len(resp.json()["pairings"]) > 0
+
+    def test_pairings_for_unknown_font(self, client):
+        """Unknown fonts get default sans-serif pairings."""
+        resp = client.get("/design/fonts/pairings", params={"primary": "UnknownFont"})
+        assert resp.status_code == 200
+        assert len(resp.json()["pairings"]) > 0
+
+    def test_pairings_requires_primary(self, client):
+        resp = client.get("/design/fonts/pairings")
+        assert resp.status_code == 422  # missing required query param
+
+
+# =============================================================================
+# ASSETS
+# =============================================================================
+
+
+class TestAssets:
+    def test_upload_logo(self, client):
+        resp = client.post(
+            "/design/assets/logo",
+            files={"file": ("logo.png", b"fake-png-content", "image/png")},
+            data={"brand_kit_id": "kit-123"},
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["filename"] == "logo.png"
+        assert data["brand_kit_id"] == "kit-123"
+        assert data["asset_type"] == "logo"
+        assert data["size_bytes"] == len(b"fake-png-content")
+        assert "id" in data
+        assert "created_at" in data
+
+    def test_list_assets_empty(self, client):
+        resp = client.get("/design/brand-kits/no-kit/assets")
+        assert resp.status_code == 200
+        assert resp.json() == []
+
+    def test_list_assets_after_upload(self, client):
+        client.post(
+            "/design/assets/logo",
+            files={"file": ("logo1.png", b"data1", "image/png")},
+            data={"brand_kit_id": "kit-abc"},
+        )
+        client.post(
+            "/design/assets/logo",
+            files={"file": ("logo2.png", b"data2", "image/png")},
+            data={"brand_kit_id": "kit-abc"},
+        )
+        resp = client.get("/design/brand-kits/kit-abc/assets")
+        assert resp.status_code == 200
+        assert len(resp.json()) == 2
+
+    def test_delete_asset(self, client):
+        upload = client.post(
+            "/design/assets/logo",
+            files={"file": ("logo.png", b"data", "image/png")},
+            data={"brand_kit_id": "kit-del"},
+        )
+        asset_id = upload.json()["id"]
+
+        resp = client.delete(f"/design/assets/{asset_id}")
+        assert resp.status_code == 200
+        assert resp.json()["status"] == "deleted"
+
+        # Verify gone
+        assets = client.get("/design/brand-kits/kit-del/assets")
+        assert len(assets.json()) == 0
+
+    def test_delete_nonexistent_asset(self, client):
+        resp = client.delete("/design/assets/no-such-asset")
+        assert resp.status_code == 404
+
+    def test_assets_filtered_by_kit(self, client):
+        """Assets for one kit don't appear in another's list."""
+        client.post(
+            "/design/assets/logo",
+            files={"file": ("a.png", b"data", "image/png")},
+            data={"brand_kit_id": "kit-A"},
+        )
+        client.post(
+            "/design/assets/logo",
+            files={"file": ("b.png", b"data", "image/png")},
+            data={"brand_kit_id": "kit-B"},
+        )
+        resp_a = client.get("/design/brand-kits/kit-A/assets")
+        resp_b = client.get("/design/brand-kits/kit-B/assets")
+        assert len(resp_a.json()) == 1
+        assert len(resp_b.json()) == 1
+
+
+# =============================================================================
+# EXPORT / IMPORT
+# =============================================================================
+
+
+class TestExportImport:
+    def test_export_brand_kit(self, client):
+        create = client.post("/design/brand-kits", json=_brand_kit_payload())
+        kit_id = create.json()["id"]
+
+        resp = client.get(f"/design/brand-kits/{kit_id}/export")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["format"] == "json"
+        assert data["brand_kit"]["id"] == kit_id
+        assert data["brand_kit"]["name"] == "Test Brand"
+
+    def test_export_nonexistent(self, client):
+        resp = client.get("/design/brand-kits/no-kit/export")
+        assert resp.status_code == 404
+
+    def test_export_with_format_param(self, client):
+        create = client.post("/design/brand-kits", json=_brand_kit_payload())
+        kit_id = create.json()["id"]
+
+        resp = client.get(f"/design/brand-kits/{kit_id}/export", params={"format": "css"})
+        assert resp.status_code == 200
+        assert resp.json()["format"] == "css"
+
+    def test_import_brand_kit(self, client):
+        resp = client.post("/design/brand-kits/import", json={
+            "name": "Imported Kit",
+            "primary_color": "#aabbcc",
+            "secondary_color": "#112233",
+            "accent_color": "#ff9900",
+        })
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["name"] == "Imported Kit"
+        assert data["primary_color"] == "#aabbcc"
+        assert "id" in data
+
+    def test_import_minimal(self, client):
+        resp = client.post("/design/brand-kits/import", json={
+            "name": "Bare Import",
+        })
+        assert resp.status_code == 200
+        assert resp.json()["name"] == "Bare Import"
+
+    def test_roundtrip_export_import(self, client):
+        """Export then import should produce equivalent kit."""
+        create = client.post("/design/brand-kits", json=_brand_kit_payload(
+            name="Roundtrip",
+            primary_color="#112233",
+        ))
+        kit_id = create.json()["id"]
+
+        exported = client.get(f"/design/brand-kits/{kit_id}/export").json()
+        kit_data = exported["brand_kit"]
+
+        imported = client.post("/design/brand-kits/import", json=kit_data).json()
+        assert imported["name"] == "Roundtrip"
+        assert imported["primary_color"] == "#112233"
+        assert imported["id"] != kit_id  # new ID assigned

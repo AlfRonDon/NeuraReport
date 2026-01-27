@@ -62,6 +62,7 @@ frontend/.cache/
 frontend/playwright-report/
 frontend/playwright-results/
 frontend/test-output.txt
+test-results/
 
 # Generated runtime data
 uploads/*

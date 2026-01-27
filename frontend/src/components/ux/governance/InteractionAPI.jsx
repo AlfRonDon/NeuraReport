@@ -191,7 +191,7 @@ export function InteractionProvider({ children }) {
       label: contract.label,
       reversibility: contract.reversibility,
       timestamp: new Date().toISOString(),
-      userAgent: navigator.userAgent,
+      userAgent: (navigator.userAgent || '').slice(0, 512),
       ...contract.intent,
     }
 

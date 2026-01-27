@@ -101,7 +101,11 @@ export function useKeyboardShortcuts(shortcuts, options = {}) {
           if (preventDefault) {
             event.preventDefault()
           }
-          handler(event)
+          try {
+            handler(event)
+          } catch (err) {
+            console.error(`[useKeyboardShortcuts] handler for "${shortcut}" threw:`, err)
+          }
           return
         }
       }

@@ -121,7 +121,7 @@ const useExportStore = create((set, get) => ({
     try {
       const job = await exportApi.bulkExport(documentIds, format, options);
       set((state) => ({
-        exportJobs: [job, ...state.exportJobs],
+        exportJobs: [job, ...state.exportJobs].slice(0, 200),
         currentJob: job,
         exporting: false,
       }));
@@ -223,7 +223,7 @@ const useExportStore = create((set, get) => ({
     try {
       const token = await exportApi.generateEmbedToken(documentId, options);
       set((state) => ({
-        embedTokens: [token, ...state.embedTokens],
+        embedTokens: [token, ...state.embedTokens].slice(0, 200),
         loading: false,
       }));
       return token;

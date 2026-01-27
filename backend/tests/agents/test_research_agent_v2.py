@@ -42,15 +42,17 @@ from backend.app.repositories.agent_tasks.repository import (
     TaskConflictError,
     TaskNotFoundError,
 )
-from backend.app.services.agents.research_agent import (
+from backend.app.services.agents.base_agent import (
     AgentError,
     LLMRateLimitError,
     LLMResponseError,
     LLMTimeoutError,
+    ValidationError,
+)
+from backend.app.services.agents.research_agent import (
     ResearchAgent,
     ResearchInput,
     ResearchReport,
-    ValidationError,
 )
 
 

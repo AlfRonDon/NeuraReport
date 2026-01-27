@@ -4,8 +4,19 @@ Connector for Snowflake using snowflake-connector-python.
 """
 from __future__ import annotations
 
+import re
 import time
 from typing import Any, Optional
+
+# Identifiers must be alphanumeric / underscores
+_SAFE_IDENTIFIER_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+
+
+def _quote_identifier(value: str, label: str = "identifier") -> str:
+    """Validate and double-quote a SQL identifier to prevent injection."""
+    if not value or not _SAFE_IDENTIFIER_RE.match(value):
+        raise ValueError(f"Invalid SQL {label}: {value!r}")
+    return f'"{value}"'
 
 from ..base import (
     AuthType,
@@ -59,7 +70,7 @@ class SnowflakeConnector(ConnectorBase):
             return True
         except Exception as e:
             self._connected = False
-            raise ConnectionError(f"Failed to connect to Snowflake: {e}")
+            raise ConnectionError("Failed to connect to Snowflake") from e
 
     async def disconnect(self) -> None:
         """Close the connection."""
@@ -127,8 +138,10 @@ class SnowflakeConnector(ConnectorBase):
 
     async def _get_columns(self, schema_name: str, table_name: str) -> list[ColumnInfo]:
         """Get columns for a table."""
+        safe_schema = _quote_identifier(schema_name, "schema name")
+        safe_table = _quote_identifier(table_name, "table name")
         cursor = self._connection.cursor()
-        cursor.execute(f"DESCRIBE TABLE {schema_name}.{table_name}")
+        cursor.execute(f"DESCRIBE TABLE {safe_schema}.{safe_table}")
 
         columns = []
         for row in cursor.fetchall():

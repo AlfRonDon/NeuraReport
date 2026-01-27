@@ -7,7 +7,7 @@
  * - Never leave the user guessing
  * - Safe defaults (user can do nothing and be fine)
  */
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import {
   Box,
   Typography,
@@ -57,6 +57,7 @@ export default function NetworkStatusBanner({ onRetry }) {
   const [isRetrying, setIsRetrying] = useState(false)
   const [showBanner, setShowBanner] = useState(false)
   const [wasOffline, setWasOffline] = useState(false)
+  const successTimeoutRef = useRef(null)
   // Server connectivity check is provided by the network hook
 
   // Handle retry
@@ -74,7 +75,8 @@ export default function NetworkStatusBanner({ onRetry }) {
           setStatus(NetworkStatus.ONLINE)
           setWasOffline(true)
           // Keep banner briefly to show success
-          setTimeout(() => {
+          clearTimeout(successTimeoutRef.current)
+          successTimeoutRef.current = setTimeout(() => {
             setShowBanner(false)
             setWasOffline(false)
           }, 2000)
@@ -109,6 +111,11 @@ export default function NetworkStatusBanner({ onRetry }) {
       return () => clearInterval(interval)
     }
   }, [status, handleRetry])
+
+  // Cleanup success timeout on unmount
+  useEffect(() => {
+    return () => clearTimeout(successTimeoutRef.current)
+  }, [])
 
   // Get banner configuration based on status
   const getBannerConfig = () => {

@@ -91,6 +91,11 @@ export function IntentProvider({ children, onIntentChange, maxHistory = 100, aud
     const intent = createIntent(config)
 
     intentMap.current.set(intent.id, intent)
+    // Evict oldest entries when Map exceeds history cap
+    if (intentMap.current.size > maxHistory) {
+      const oldest = intentMap.current.keys().next().value
+      intentMap.current.delete(oldest)
+    }
 
     setIntents((prev) => {
       const updated = [intent, ...prev].slice(0, maxHistory)

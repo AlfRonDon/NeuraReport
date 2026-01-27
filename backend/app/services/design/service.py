@@ -11,11 +11,19 @@ from datetime import datetime, timezone
 from typing import Any, Optional
 
 from backend.app.schemas.design.brand_kit import (
+    AccessibleColorSuggestion,
+    AccessibleColorsResponse,
+    AssetResponse,
     BrandColor,
     BrandKitCreate,
+    BrandKitExport,
     BrandKitResponse,
     BrandKitUpdate,
+    ColorContrastResponse,
     ColorPaletteResponse,
+    FontInfo,
+    FontPairing,
+    FontPairingsResponse,
     ThemeCreate,
     ThemeResponse,
     ThemeUpdate,
@@ -54,12 +62,78 @@ def _hsl_to_rgb(h: float, s: float, l: float) -> tuple[int, int, int]:
     return int(r * 255), int(g * 255), int(b * 255)
 
 
+def _relative_luminance(r: int, g: int, b: int) -> float:
+    """Compute WCAG 2.1 relative luminance from sRGB values (0-255)."""
+    def _linearize(c: int) -> float:
+        s = c / 255.0
+        return s / 12.92 if s <= 0.04045 else ((s + 0.055) / 1.055) ** 2.4
+    return 0.2126 * _linearize(r) + 0.7152 * _linearize(g) + 0.0722 * _linearize(b)
+
+
+def _contrast_ratio(rgb1: tuple[int, int, int], rgb2: tuple[int, int, int]) -> float:
+    """Compute WCAG contrast ratio between two RGB colors."""
+    l1 = _relative_luminance(*rgb1)
+    l2 = _relative_luminance(*rgb2)
+    lighter = max(l1, l2)
+    darker = min(l1, l2)
+    return (lighter + 0.05) / (darker + 0.05)
+
+
+# Curated font list — common web-safe / Google Fonts families.
+_FONTS: list[dict] = [
+    {"name": "Inter", "category": "sans-serif", "weights": [100, 200, 300, 400, 500, 600, 700, 800, 900]},
+    {"name": "Roboto", "category": "sans-serif", "weights": [100, 300, 400, 500, 700, 900]},
+    {"name": "Open Sans", "category": "sans-serif", "weights": [300, 400, 600, 700, 800]},
+    {"name": "Lato", "category": "sans-serif", "weights": [100, 300, 400, 700, 900]},
+    {"name": "Montserrat", "category": "sans-serif", "weights": [100, 200, 300, 400, 500, 600, 700, 800, 900]},
+    {"name": "Poppins", "category": "sans-serif", "weights": [100, 200, 300, 400, 500, 600, 700, 800, 900]},
+    {"name": "Playfair Display", "category": "serif", "weights": [400, 500, 600, 700, 800, 900]},
+    {"name": "Merriweather", "category": "serif", "weights": [300, 400, 700, 900]},
+    {"name": "Georgia", "category": "serif", "weights": [400, 700]},
+    {"name": "Lora", "category": "serif", "weights": [400, 500, 600, 700]},
+    {"name": "Source Code Pro", "category": "monospace", "weights": [200, 300, 400, 500, 600, 700, 900]},
+    {"name": "Fira Code", "category": "monospace", "weights": [300, 400, 500, 600, 700]},
+    {"name": "JetBrains Mono", "category": "monospace", "weights": [100, 200, 300, 400, 500, 600, 700, 800]},
+    {"name": "Pacifico", "category": "handwriting", "weights": [400]},
+    {"name": "Dancing Script", "category": "handwriting", "weights": [400, 500, 600, 700]},
+    {"name": "Oswald", "category": "display", "weights": [200, 300, 400, 500, 600, 700]},
+    {"name": "Bebas Neue", "category": "display", "weights": [400]},
+]
+
+# Font pairing rules — maps a category to recommended body-text pairings.
+_PAIRING_RULES: dict[str, list[dict]] = {
+    "serif": [
+        {"font": "Inter", "category": "sans-serif", "reason": "Clean sans-serif balances ornate serif headings"},
+        {"font": "Roboto", "category": "sans-serif", "reason": "Neutral sans-serif for readable body text"},
+        {"font": "Open Sans", "category": "sans-serif", "reason": "Friendly sans-serif with high legibility"},
+    ],
+    "sans-serif": [
+        {"font": "Merriweather", "category": "serif", "reason": "Elegant serif adds contrast to sans-serif headings"},
+        {"font": "Lora", "category": "serif", "reason": "Modern serif pairs well with geometric sans-serifs"},
+        {"font": "Georgia", "category": "serif", "reason": "Classic serif for traditional body text"},
+    ],
+    "display": [
+        {"font": "Inter", "category": "sans-serif", "reason": "Neutral body font keeps focus on display heading"},
+        {"font": "Lato", "category": "sans-serif", "reason": "Warm sans-serif balances bold display fonts"},
+    ],
+    "handwriting": [
+        {"font": "Open Sans", "category": "sans-serif", "reason": "Clean body text contrasts with casual headings"},
+        {"font": "Roboto", "category": "sans-serif", "reason": "Neutral body preserves readability"},
+    ],
+    "monospace": [
+        {"font": "Inter", "category": "sans-serif", "reason": "Modern sans-serif for non-code sections"},
+        {"font": "Roboto", "category": "sans-serif", "reason": "Clean sans-serif for surrounding text"},
+    ],
+}
+
+
 class DesignService:
     """Service for managing brand kits and themes."""
 
     def __init__(self):
         self._brand_kits: dict[str, dict] = {}
         self._themes: dict[str, dict] = {}
+        self._assets: dict[str, dict] = {}
         self._default_brand_kit_id: Optional[str] = None
         self._active_theme_id: Optional[str] = None
 
@@ -447,6 +521,138 @@ class DesignService:
         self._active_theme_id = theme_id
 
         return self._to_theme_response(theme)
+
+    # ------------------------------------------------------------------
+    # Color utility methods
+    # ------------------------------------------------------------------
+
+    def get_color_contrast(self, color1: str, color2: str) -> ColorContrastResponse:
+        """Compute WCAG contrast ratio between two colors."""
+        rgb1 = _hex_to_rgb(color1)
+        rgb2 = _hex_to_rgb(color2)
+        ratio = _contrast_ratio(rgb1, rgb2)
+        return ColorContrastResponse(
+            color1=color1,
+            color2=color2,
+            contrast_ratio=round(ratio, 2),
+            wcag_aa_normal=ratio >= 4.5,
+            wcag_aa_large=ratio >= 3.0,
+            wcag_aaa_normal=ratio >= 7.0,
+            wcag_aaa_large=ratio >= 4.5,
+        )
+
+    def suggest_accessible_colors(self, background_color: str) -> AccessibleColorsResponse:
+        """Suggest text colors that meet WCAG AA against the given background."""
+        bg_rgb = _hex_to_rgb(background_color)
+        suggestions: list[AccessibleColorSuggestion] = []
+
+        candidates = [
+            ("#000000", "Black"),
+            ("#ffffff", "White"),
+            ("#333333", "Dark Gray"),
+            ("#1a1a1a", "Near Black"),
+            ("#f5f5f5", "Near White"),
+            ("#0d47a1", "Dark Blue"),
+            ("#1b5e20", "Dark Green"),
+            ("#b71c1c", "Dark Red"),
+            ("#4a148c", "Dark Purple"),
+            ("#e65100", "Dark Orange"),
+        ]
+        for hex_color, label in candidates:
+            c_rgb = _hex_to_rgb(hex_color)
+            ratio = _contrast_ratio(bg_rgb, c_rgb)
+            if ratio >= 4.5:
+                suggestions.append(AccessibleColorSuggestion(
+                    hex=hex_color, label=label, contrast_ratio=round(ratio, 2),
+                ))
+
+        suggestions.sort(key=lambda s: s.contrast_ratio, reverse=True)
+        return AccessibleColorsResponse(
+            background_color=background_color,
+            colors=suggestions,
+        )
+
+    # ------------------------------------------------------------------
+    # Typography methods
+    # ------------------------------------------------------------------
+
+    def list_fonts(self) -> list[FontInfo]:
+        """Return a curated list of available fonts."""
+        return [FontInfo(**f) for f in _FONTS]
+
+    def get_font_pairings(self, primary_font: str) -> FontPairingsResponse:
+        """Suggest body-text font pairings for a primary heading font."""
+        # Find the category of the requested font
+        category = "sans-serif"
+        for f in _FONTS:
+            if f["name"].lower() == primary_font.lower():
+                category = f["category"]
+                break
+
+        rules = _PAIRING_RULES.get(category, _PAIRING_RULES["sans-serif"])
+        pairings = [FontPairing(**r) for r in rules]
+        return FontPairingsResponse(primary=primary_font, pairings=pairings)
+
+    # ------------------------------------------------------------------
+    # Asset methods
+    # ------------------------------------------------------------------
+
+    async def upload_logo(self, filename: str, content: bytes, brand_kit_id: str) -> AssetResponse:
+        """Store a logo asset reference."""
+        asset_id = str(uuid.uuid4())
+        now = _now()
+        asset = {
+            "id": asset_id,
+            "filename": filename,
+            "brand_kit_id": brand_kit_id,
+            "asset_type": "logo",
+            "size_bytes": len(content),
+            "created_at": now,
+        }
+        self._assets[asset_id] = asset
+        return AssetResponse(**asset)
+
+    async def list_assets(self, brand_kit_id: str) -> list[AssetResponse]:
+        """List assets for a brand kit."""
+        return [
+            AssetResponse(**a)
+            for a in self._assets.values()
+            if a["brand_kit_id"] == brand_kit_id
+        ]
+
+    async def delete_asset(self, asset_id: str) -> bool:
+        """Delete an asset."""
+        if asset_id not in self._assets:
+            return False
+        del self._assets[asset_id]
+        return True
+
+    # ------------------------------------------------------------------
+    # Import / Export methods
+    # ------------------------------------------------------------------
+
+    async def export_brand_kit(self, kit_id: str, fmt: str = "json") -> Optional[BrandKitExport]:
+        """Export a brand kit."""
+        kit = self._brand_kits.get(kit_id)
+        if not kit:
+            return None
+        return BrandKitExport(
+            format=fmt,
+            brand_kit=self._to_brand_kit_response(kit),
+        )
+
+    async def import_brand_kit(self, data: dict) -> BrandKitResponse:
+        """Import a brand kit from exported data."""
+        from backend.app.schemas.design.brand_kit import BrandKitCreate as _Create
+        create_req = _Create(**{
+            k: v for k, v in data.items()
+            if k in _Create.model_fields
+        })
+        return await self.create_brand_kit(create_req)
+
+    # ------------------------------------------------------------------
+    # Internal helpers
+    # ------------------------------------------------------------------
 
     def _to_brand_kit_response(self, kit: dict) -> BrandKitResponse:
         """Convert brand kit dict to response model."""

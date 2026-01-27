@@ -35,7 +35,7 @@ const useDocQAStore = create((set, get) => ({
       const response = await docqaApi.createSession(name);
       const session = response.session;
       set((state) => ({
-        sessions: [...state.sessions, session],
+        sessions: [...state.sessions, session].slice(0, 100),
         currentSession: session,
         messages: [],
         loading: false,
@@ -131,7 +131,7 @@ const useDocQAStore = create((set, get) => ({
     };
 
     set((state) => ({
-      messages: [...state.messages, userMessage],
+      messages: [...state.messages, userMessage].slice(-500),
       asking: true,
       error: null,
     }));

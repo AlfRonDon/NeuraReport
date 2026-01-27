@@ -9,8 +9,20 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from backend.app.api.routes.connectors import router, _connections
+from backend.app.api.routes.connectors import router
 from backend.app.services.security import require_api_key
+
+
+_FAKE_CONN = {
+    "id": "test-conn-id",
+    "name": "test-conn",
+    "connector_type": "postgres",
+    "config": {"host": "localhost", "database": "testdb"},
+    "status": "connected",
+    "created_at": "2025-01-01T00:00:00",
+    "last_used": None,
+    "latency_ms": 5.0,
+}
 
 
 @pytest.fixture
@@ -28,21 +40,12 @@ def client(app):
 
 @pytest.fixture
 def sample_connection():
-    """Inject a fake connection into the in-memory store."""
-    conn_id = str(uuid.uuid4())
-    conn = {
-        "id": conn_id,
-        "name": "test-conn",
-        "connector_type": "postgres",
-        "config": {"host": "localhost", "database": "testdb"},
-        "status": "connected",
-        "created_at": "2025-01-01T00:00:00",
-        "last_used": None,
-        "latency_ms": 5.0,
-    }
-    _connections[conn_id] = conn
-    yield conn_id
-    _connections.pop(conn_id, None)
+    """Patch _store_get to return a fake connection."""
+    with patch(
+        "backend.app.api.routes.connectors._store_get",
+        return_value=_FAKE_CONN,
+    ):
+        yield _FAKE_CONN["id"]
 
 
 class TestSQLInjectionProtection:
@@ -109,8 +112,12 @@ class TestSQLInjectionProtection:
         assert resp.status_code == 400
 
     def test_connection_not_found(self, client):
-        resp = client.post(
-            "/connectors/nonexistent-id/query",
-            json={"query": "SELECT 1", "limit": 100},
-        )
-        assert resp.status_code == 404
+        with patch(
+            "backend.app.api.routes.connectors._store_get",
+            return_value=None,
+        ):
+            resp = client.post(
+                "/connectors/nonexistent-id/query",
+                json={"query": "SELECT 1", "limit": 100},
+            )
+            assert resp.status_code == 404

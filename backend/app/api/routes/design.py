@@ -7,15 +7,23 @@ from __future__ import annotations
 import asyncio
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
 
 from backend.app.schemas.design.brand_kit import (
+    AccessibleColorsRequest,
+    AccessibleColorsResponse,
     ApplyBrandKitRequest,
+    AssetResponse,
     BrandKitCreate,
+    BrandKitExport,
     BrandKitResponse,
     BrandKitUpdate,
+    ColorContrastRequest,
+    ColorContrastResponse,
     ColorPaletteRequest,
     ColorPaletteResponse,
+    FontInfo,
+    FontPairingsResponse,
     ThemeCreate,
     ThemeResponse,
     ThemeUpdate,
@@ -242,3 +250,138 @@ async def activate_theme(theme_id: str):
         raise
     except Exception as exc:
         raise _handle_design_error(exc, "Theme activation") from exc
+
+
+# Color utility endpoints
+
+
+@router.post("/colors/contrast", response_model=ColorContrastResponse)
+async def get_color_contrast(request: ColorContrastRequest):
+    """Compute WCAG contrast ratio between two colors."""
+    try:
+        return await asyncio.to_thread(
+            design_service.get_color_contrast,
+            color1=request.color1,
+            color2=request.color2,
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise _handle_design_error(exc, "Color contrast check") from exc
+
+
+@router.post("/colors/accessible", response_model=AccessibleColorsResponse)
+async def suggest_accessible_colors(request: AccessibleColorsRequest):
+    """Suggest accessible text colors for a given background."""
+    try:
+        return await asyncio.to_thread(
+            design_service.suggest_accessible_colors,
+            background_color=request.background_color,
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise _handle_design_error(exc, "Accessible color suggestion") from exc
+
+
+# Typography endpoints
+
+
+@router.get("/fonts", response_model=list[FontInfo])
+async def list_fonts():
+    """List available fonts."""
+    try:
+        return await asyncio.to_thread(design_service.list_fonts)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise _handle_design_error(exc, "Font listing") from exc
+
+
+@router.get("/fonts/pairings", response_model=FontPairingsResponse)
+async def get_font_pairings(primary: str = Query(..., description="Primary font name")):
+    """Get font pairing suggestions for a primary font."""
+    try:
+        return await asyncio.to_thread(
+            design_service.get_font_pairings,
+            primary_font=primary,
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise _handle_design_error(exc, "Font pairing suggestion") from exc
+
+
+# Asset endpoints
+
+
+@router.post("/assets/logo", response_model=AssetResponse)
+async def upload_logo(
+    file: UploadFile = File(...),
+    brand_kit_id: str = Form(...),
+):
+    """Upload a logo asset for a brand kit."""
+    try:
+        content = await file.read()
+        return await design_service.upload_logo(
+            filename=file.filename or "logo",
+            content=content,
+            brand_kit_id=brand_kit_id,
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise _handle_design_error(exc, "Logo upload") from exc
+
+
+@router.get("/brand-kits/{kit_id}/assets", response_model=list[AssetResponse])
+async def list_assets(kit_id: str):
+    """List assets for a brand kit."""
+    try:
+        return await design_service.list_assets(kit_id)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise _handle_design_error(exc, "Asset listing") from exc
+
+
+@router.delete("/assets/{asset_id}")
+async def delete_asset(asset_id: str):
+    """Delete a design asset."""
+    try:
+        deleted = await design_service.delete_asset(asset_id)
+        if not deleted:
+            raise HTTPException(status_code=404, detail="Asset not found")
+        return {"status": "deleted", "id": asset_id}
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise _handle_design_error(exc, "Asset deletion") from exc
+
+
+# Import / Export endpoints
+
+
+@router.get("/brand-kits/{kit_id}/export", response_model=BrandKitExport)
+async def export_brand_kit(kit_id: str, format: str = Query("json")):
+    """Export a brand kit."""
+    try:
+        result = await design_service.export_brand_kit(kit_id, fmt=format)
+        if not result:
+            raise HTTPException(status_code=404, detail="Brand kit not found")
+        return result
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise _handle_design_error(exc, "Brand kit export") from exc
+
+
+@router.post("/brand-kits/import", response_model=BrandKitResponse)
+async def import_brand_kit(data: dict):
+    """Import a brand kit from exported data."""
+    try:
+        return await design_service.import_brand_kit(data)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise _handle_design_error(exc, "Brand kit import") from exc

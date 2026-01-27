@@ -9,12 +9,14 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import hmac
+import ipaddress
 import json
 import logging
 import os
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
+from urllib.parse import urlparse
 
 logger = logging.getLogger("neura.jobs.webhook")
 
@@ -86,6 +88,18 @@ class WebhookService:
     # Environment-based secret for signing (can be overridden per-job)
     DEFAULT_WEBHOOK_SECRET = os.getenv("NEURA_WEBHOOK_SECRET", "neura-default-webhook-secret")
 
+    # Private/loopback networks that must not be used as webhook targets
+    _BLOCKED_NETWORKS = [
+        ipaddress.ip_network("10.0.0.0/8"),
+        ipaddress.ip_network("172.16.0.0/12"),
+        ipaddress.ip_network("192.168.0.0/16"),
+        ipaddress.ip_network("127.0.0.0/8"),
+        ipaddress.ip_network("169.254.0.0/16"),
+        ipaddress.ip_network("::1/128"),
+        ipaddress.ip_network("fc00::/7"),
+        ipaddress.ip_network("fe80::/10"),
+    ]
+
     def __init__(
         self,
         timeout_seconds: int = DEFAULT_TIMEOUT_SECONDS,
@@ -95,6 +109,37 @@ class WebhookService:
         self.timeout_seconds = timeout_seconds
         self.max_retries = max_retries
         self.initial_backoff_seconds = initial_backoff_seconds
+
+    @classmethod
+    def _validate_webhook_url(cls, url: str) -> None:
+        """Validate webhook URL to prevent SSRF attacks.
+
+        Rejects private/loopback IPs, non-HTTP(S) schemes, and bare IPs
+        that resolve to internal networks.
+        """
+        parsed = urlparse(url)
+        if parsed.scheme not in ("http", "https"):
+            raise ValueError(f"Webhook URL must use http or https scheme, got {parsed.scheme!r}")
+
+        hostname = parsed.hostname
+        if not hostname:
+            raise ValueError("Webhook URL has no hostname")
+
+        # Check if hostname is an IP address in a blocked range
+        try:
+            addr = ipaddress.ip_address(hostname)
+            for network in cls._BLOCKED_NETWORKS:
+                if addr in network:
+                    raise ValueError("Webhook URL must not target private/loopback addresses")
+        except ValueError as ve:
+            if "private" in str(ve).lower() or "loopback" in str(ve).lower() or "must not" in str(ve):
+                raise
+            # hostname is not an IP literal — that's fine, allow DNS names
+            pass
+
+        # Block well-known cloud metadata endpoints
+        if hostname in ("metadata.google.internal", "metadata.google.com"):
+            raise ValueError("Webhook URL must not target cloud metadata services")
 
     def compute_signature(self, payload: Dict[str, Any], secret: str) -> str:
         """
@@ -169,7 +214,24 @@ class WebhookService:
                 error="No webhook URL configured",
             )
 
+        # SSRF protection: validate URL before making any request
+        try:
+            self._validate_webhook_url(webhook_url)
+        except ValueError as ve:
+            logger.warning("webhook_url_rejected", extra={"reason": str(ve), "url": webhook_url[:100]})
+            return WebhookResult(
+                success=False,
+                status_code=None,
+                attempts=0,
+                error=f"Invalid webhook URL: {ve}",
+            )
+
         secret = secret or self.DEFAULT_WEBHOOK_SECRET
+        if secret == "neura-default-webhook-secret":
+            logger.warning(
+                "webhook_using_default_secret",
+                extra={"hint": "Set NEURA_WEBHOOK_SECRET env var for production use"},
+            )
         payload_dict = payload.to_dict()
         headers = self.build_headers(payload_dict, secret)
 
@@ -236,29 +298,28 @@ class WebhookService:
                     )
 
             except httpx.TimeoutException as e:
-                last_error = f"Timeout: {str(e)}"
+                last_error = "Timeout during webhook delivery"
                 logger.warning(
                     "webhook_delivery_timeout",
                     extra={
                         "job_id": payload.job_id,
                         "attempt": attempt + 1,
-                        "error": str(e),
                     }
                 )
 
             except httpx.RequestError as e:
-                last_error = f"Request error: {str(e)}"
+                last_error = "Request error during webhook delivery"
                 logger.warning(
                     "webhook_delivery_error",
                     extra={
                         "job_id": payload.job_id,
                         "attempt": attempt + 1,
-                        "error": str(e),
+                        "error_type": type(e).__name__,
                     }
                 )
 
             except Exception as e:
-                last_error = f"Unexpected error: {str(e)}"
+                last_error = "Unexpected error during webhook delivery"
                 logger.exception(
                     "webhook_delivery_unexpected_error",
                     extra={

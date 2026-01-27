@@ -31,7 +31,7 @@ const useKnowledgeStore = create((set, get) => ({
     try {
       const doc = await knowledgeApi.addDocument(data);
       set((state) => ({
-        documents: [doc, ...state.documents],
+        documents: [doc, ...state.documents].slice(0, 500),
         currentDocument: doc,
         loading: false,
       }));
@@ -126,7 +126,7 @@ const useKnowledgeStore = create((set, get) => ({
     try {
       const collection = await knowledgeApi.createCollection(data);
       set((state) => ({
-        collections: [collection, ...state.collections],
+        collections: [collection, ...state.collections].slice(0, 200),
         currentCollection: collection,
         loading: false,
       }));
@@ -223,7 +223,7 @@ const useKnowledgeStore = create((set, get) => ({
     try {
       const tag = await knowledgeApi.createTag(name, color);
       set((state) => ({
-        tags: [tag, ...state.tags],
+        tags: [tag, ...state.tags].slice(0, 500),
         loading: false,
       }));
       return tag;

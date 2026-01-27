@@ -39,7 +39,7 @@ const useDashboardStore = create((set, get) => ({
     try {
       const dashboard = await dashboardsApi.createDashboard(data);
       set((state) => ({
-        dashboards: [dashboard, ...state.dashboards],
+        dashboards: [dashboard, ...state.dashboards].slice(0, 100),
         currentDashboard: dashboard,
         widgets: dashboard.widgets || [],
         filters: dashboard.filters || [],
@@ -112,7 +112,7 @@ const useDashboardStore = create((set, get) => ({
     try {
       const newWidget = await dashboardsApi.addWidget(dashboardId, widget);
       set((state) => ({
-        widgets: [...state.widgets, newWidget],
+        widgets: [...state.widgets, newWidget].slice(0, 200),
         saving: false,
       }));
       return newWidget;
@@ -266,7 +266,7 @@ const useDashboardStore = create((set, get) => ({
     try {
       const dashboard = await dashboardsApi.createFromTemplate(templateId, name);
       set((state) => ({
-        dashboards: [dashboard, ...state.dashboards],
+        dashboards: [dashboard, ...state.dashboards].slice(0, 100),
         currentDashboard: dashboard,
         loading: false,
       }));

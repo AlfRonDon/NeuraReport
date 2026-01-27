@@ -35,7 +35,7 @@ const useFederationStore = create((set, get) => ({
       const response = await federationApi.createVirtualSchema(data);
       const schema = response.schema;
       set((state) => ({
-        schemas: [...state.schemas, schema],
+        schemas: [...state.schemas, schema].slice(0, 200),
         currentSchema: schema,
         loading: false,
       }));

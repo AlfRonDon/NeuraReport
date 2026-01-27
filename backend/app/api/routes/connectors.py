@@ -1,5 +1,9 @@
 """
 Connector API Routes - Database and cloud storage connector endpoints.
+
+All connector-connection CRUD is backed by the persistent StateStore
+(``state["connectors"]`` / ``state["connector_credentials"]``).
+No in-memory dicts — connections survive server restarts.
 """
 
 from __future__ import annotations
@@ -20,6 +24,7 @@ from ...services.connectors import (
     ConnectorType,
 )
 from backend.app.utils.validation import is_read_only_sql
+from backend.app.repositories.state import state_store
 
 logger = logging.getLogger("neura.api.connectors")
 
@@ -97,8 +102,35 @@ class QueryResponse(BaseModel):
     error: Optional[str]
 
 
-# In-memory storage for connections
-_connections: dict[str, dict] = {}
+# ---------------------------------------------------------------------------
+# Persistent connection helpers (StateStore-backed)
+# ---------------------------------------------------------------------------
+
+def _store_get_all() -> dict[str, dict]:
+    """Return all connector connections from state."""
+    return dict(state_store.read_state().get("connectors", {}))
+
+
+def _store_get(connection_id: str) -> dict | None:
+    """Return a single connector connection or *None*."""
+    return state_store.read_state().get("connectors", {}).get(connection_id)
+
+
+def _store_put(connection: dict) -> None:
+    """Persist a connector connection (create or update)."""
+    with state_store.transaction() as state:
+        state.setdefault("connectors", {})[connection["id"]] = connection
+        # Keep config secrets in a separate namespace for future encryption.
+        if "config" in connection:
+            state.setdefault("connector_credentials", {})[connection["id"]] = connection["config"]
+
+
+def _store_delete(connection_id: str) -> bool:
+    """Remove a connector connection. Return *True* if found."""
+    with state_store.transaction() as state:
+        removed = state.get("connectors", {}).pop(connection_id, None) is not None
+        state.get("connector_credentials", {}).pop(connection_id, None)
+        return removed
 
 
 # ============================================
@@ -184,13 +216,13 @@ async def create_connection(
             "id": str(uuid.uuid4()),
             "name": request.name,
             "connector_type": connector_type,
-            "config": request.config,  # Would encrypt in production
+            "config": request.config,
             "status": "connected",
             "created_at": now,
             "last_used": now,
             "latency_ms": test_result.latency_ms,
         }
-        _connections[connection["id"]] = connection
+        _store_put(connection)
 
         return ConnectionResponse(
             id=connection["id"],
@@ -212,7 +244,7 @@ async def list_connections(
     offset: int = Query(0, ge=0),
 ):
     """List saved connections."""
-    connections = list(_connections.values())
+    connections = list(_store_get_all().values())
     if connector_type:
         connections = [c for c in connections if c["connector_type"] == connector_type]
     connections.sort(key=lambda c: c["created_at"], reverse=True)
@@ -238,9 +270,9 @@ async def list_connections(
 @router.get("/{connection_id}", response_model=ConnectionResponse)
 async def get_connection(connection_id: str):
     """Get a connection by ID."""
-    if connection_id not in _connections:
+    c = _store_get(connection_id)
+    if c is None:
         raise HTTPException(status_code=404, detail="Connection not found")
-    c = _connections[connection_id]
     return ConnectionResponse(
         id=c["id"],
         name=c["name"],
@@ -255,9 +287,8 @@ async def get_connection(connection_id: str):
 @router.delete("/{connection_id}")
 async def delete_connection(connection_id: str):
     """Delete a connection."""
-    if connection_id not in _connections:
+    if not _store_delete(connection_id):
         raise HTTPException(status_code=404, detail="Connection not found")
-    del _connections[connection_id]
     return {"status": "ok", "message": "Connection deleted"}
 
 
@@ -268,17 +299,18 @@ async def delete_connection(connection_id: str):
 @router.post("/{connection_id}/health", response_model=TestConnectionResponse)
 async def check_connection_health(connection_id: str):
     """Check if a connection is healthy."""
-    if connection_id not in _connections:
+    conn = _store_get(connection_id)
+    if conn is None:
         raise HTTPException(status_code=404, detail="Connection not found")
 
-    conn = _connections[connection_id]
     try:
         connector = get_connector(conn["connector_type"], conn["config"])
         result = await connector.test_connection()
 
-        # Update connection status
+        # Persist updated health status
         conn["status"] = "connected" if result.success else "error"
         conn["latency_ms"] = result.latency_ms
+        _store_put(conn)
 
         return TestConnectionResponse(
             success=result.success,
@@ -288,6 +320,7 @@ async def check_connection_health(connection_id: str):
         )
     except Exception as e:
         conn["status"] = "error"
+        _store_put(conn)
         return TestConnectionResponse(
             success=False,
             error=str(e),
@@ -297,10 +330,9 @@ async def check_connection_health(connection_id: str):
 @router.get("/{connection_id}/schema")
 async def get_connection_schema(connection_id: str):
     """Get schema information for a connection."""
-    if connection_id not in _connections:
+    conn = _store_get(connection_id)
+    if conn is None:
         raise HTTPException(status_code=404, detail="Connection not found")
-
-    conn = _connections[connection_id]
     try:
         connector = get_connector(conn["connector_type"], conn["config"])
         await connector.connect()
@@ -331,10 +363,10 @@ async def execute_query(
     if not is_safe:
         raise HTTPException(status_code=400, detail=sql_error)
 
-    if connection_id not in _connections:
+    conn = _store_get(connection_id)
+    if conn is None:
         raise HTTPException(status_code=404, detail="Connection not found")
 
-    conn = _connections[connection_id]
     try:
         connector = get_connector(conn["connector_type"], conn["config"])
         await connector.connect()
@@ -345,8 +377,9 @@ async def execute_query(
         )
         await connector.disconnect()
 
-        # Update last used
+        # Persist last-used timestamp
         conn["last_used"] = datetime.utcnow().isoformat()
+        _store_put(conn)
 
         return QueryResponse(
             columns=result.columns,

@@ -451,7 +451,7 @@ export function WorkflowContractProvider({ children }) {
     if (saved) {
       try {
         const parsed = JSON.parse(saved)
-        if (parsed.activeWorkflow) {
+        if (parsed.activeWorkflow && WorkflowContracts[parsed.activeWorkflow]) {
           dispatch({ type: 'START_WORKFLOW', workflowId: parsed.activeWorkflow })
           // Restore step states
           Object.entries(parsed.stepStates || {}).forEach(([stepId, stepState]) => {

@@ -32,7 +32,7 @@ from backend.app.repositories.agent_tasks.repository import (
     TaskNotFoundError,
 )
 from backend.app.services.agents import agent_service_v2
-from backend.app.services.agents.research_agent import (
+from backend.app.services.agents.base_agent import (
     AgentError,
     ValidationError,
 )

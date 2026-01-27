@@ -138,11 +138,16 @@ export function NavigationSafetyProvider({ children }) {
    * Force navigation (bypasses blockers)
    */
   const forceNavigation = useCallback(() => {
-    if (pendingNavigation) {
-      pendingNavigation()
+    try {
+      if (pendingNavigation) {
+        pendingNavigation()
+      }
+    } catch (err) {
+      console.error('[NavigationSafety] forceNavigation callback failed:', err)
+    } finally {
       setPendingNavigation(null)
+      setDialogOpen(false)
     }
-    setDialogOpen(false)
   }, [pendingNavigation])
 
   /**

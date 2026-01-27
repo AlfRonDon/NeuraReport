@@ -40,7 +40,7 @@ const useSpreadsheetStore = create((set, get) => ({
     try {
       const spreadsheet = await spreadsheetsApi.createSpreadsheet(data);
       set((state) => ({
-        spreadsheets: [spreadsheet, ...state.spreadsheets],
+        spreadsheets: [spreadsheet, ...state.spreadsheets].slice(0, 200),
         currentSpreadsheet: spreadsheet,
         activeSheetIndex: 0,
         loading: false,
@@ -170,7 +170,7 @@ const useSpreadsheetStore = create((set, get) => ({
     try {
       const pivot = await spreadsheetsApi.createPivotTable(spreadsheetId, config);
       set((state) => ({
-        pivotTables: [...state.pivotTables, pivot],
+        pivotTables: [...state.pivotTables, pivot].slice(0, 100),
         loading: false,
       }));
       return pivot;
@@ -210,7 +210,7 @@ const useSpreadsheetStore = create((set, get) => ({
     try {
       const spreadsheet = await spreadsheetsApi.importCsv(file, options);
       set((state) => ({
-        spreadsheets: [spreadsheet, ...state.spreadsheets],
+        spreadsheets: [spreadsheet, ...state.spreadsheets].slice(0, 200),
         currentSpreadsheet: spreadsheet,
         loading: false,
       }));
@@ -226,7 +226,7 @@ const useSpreadsheetStore = create((set, get) => ({
     try {
       const spreadsheet = await spreadsheetsApi.importExcel(file, options);
       set((state) => ({
-        spreadsheets: [spreadsheet, ...state.spreadsheets],
+        spreadsheets: [spreadsheet, ...state.spreadsheets].slice(0, 200),
         currentSpreadsheet: spreadsheet,
         loading: false,
       }));

@@ -166,9 +166,12 @@ async def lifespan(app: FastAPI):
 
     yield
 
-    # Shutdown: stop agent task worker
+    # Shutdown: stop agent task worker, then drain the executor
     if agent_task_worker.is_running:
         agent_task_worker.stop()
+
+    from backend.app.services.agents.agent_service import _AGENT_EXECUTOR
+    _AGENT_EXECUTOR.shutdown(wait=True, cancel_futures=False)
 
     if SCHEDULER and not SCHEDULER_DISABLED:
         await SCHEDULER.stop()

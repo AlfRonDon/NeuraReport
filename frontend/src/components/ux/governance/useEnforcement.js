@@ -15,7 +15,8 @@
 
 import { useEffect, useRef } from 'react'
 
-// Track components that have been checked
+// Track components that have been checked (capped to prevent unbounded growth)
+const MAX_CHECKED_COMPONENTS = 500
 const checkedComponents = new Set()
 
 // Non-compliant patterns to detect
@@ -24,23 +25,6 @@ const NON_COMPLIANT_PATTERNS = {
   asyncHandler: /onClick\s*=\s*{\s*async\s*\(\)/,
   directMutate: /\.mutate\s*\(\s*{/,
   unconfirmedDelete: /delete.*onClick\s*=\s*{\s*\(\)\s*=>/i,
-}
-
-/**
- * Check if a handler function contains non-compliant patterns
- */
-function analyzeHandler(handlerString) {
-  const violations = []
-
-  if (handlerString.includes('fetch(') || handlerString.includes('axios.')) {
-    violations.push('Direct API call in handler without interaction tracking')
-  }
-
-  if (handlerString.includes('.mutate(')) {
-    violations.push('Direct React Query mutation without interaction tracking')
-  }
-
-  return violations
 }
 
 /**
@@ -61,8 +45,11 @@ export function useEnforceGovernance(componentName, options = {}) {
     // Only run in development
     if (!import.meta.env?.DEV) return
 
-    // Only check each component once
+    // Only check each component once (cap prevents unbounded memory growth)
     if (checkedComponents.has(componentName)) return
+    if (checkedComponents.size >= MAX_CHECKED_COMPONENTS) {
+      checkedComponents.clear()
+    }
     checkedComponents.add(componentName)
 
     // Delayed check to allow hooks to be called

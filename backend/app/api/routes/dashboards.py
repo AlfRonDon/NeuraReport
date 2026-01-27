@@ -7,6 +7,7 @@ StateStore.  No in-memory dicts — dashboards survive server restarts.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from typing import Any, Optional
 
@@ -244,8 +245,12 @@ async def create_snapshot(
     except ValueError:
         raise HTTPException(status_code=404, detail="Dashboard not found")
 
-    # Attempt rendering synchronously — updates status to completed/failed
-    rendered = _snapshot_svc.render_snapshot(snapshot["id"])
+    # Render in a thread so the sync Playwright call doesn't block the
+    # ASGI event loop.
+    loop = asyncio.get_event_loop()
+    rendered = await loop.run_in_executor(
+        None, _snapshot_svc.render_snapshot, snapshot["id"]
+    )
 
     return {
         "status": "ok",
@@ -398,7 +403,21 @@ async def detect_anomalies(
 
     Runs anomaly detection on each requested column via the
     analytics AnomalyService.  Results are aggregated across columns.
+
+    Note: only ``zscore`` method is currently implemented in the
+    analytics engine.  ``iqr`` and ``isolation_forest`` are accepted
+    for forward compatibility but fall back to z-score with a warning.
     """
+    if method != "zscore":
+        logger.warning(
+            "anomaly_method_unsupported",
+            extra={
+                "event": "anomaly_method_unsupported",
+                "requested": method,
+                "fallback": "zscore",
+            },
+        )
+
     all_anomalies: list[dict[str, Any]] = []
     all_stats: dict[str, Any] = {}
 
@@ -418,9 +437,12 @@ async def detect_anomalies(
     return {
         "anomalies": all_anomalies,
         "statistics": all_stats,
-        "narrative": f"Detected {len(all_anomalies)} anomalies across {len(columns)} columns."
-        if all_anomalies
-        else "No anomalies detected.",
+        "method_used": "zscore",
+        "narrative": (
+            f"Detected {len(all_anomalies)} anomalies across {len(columns)} columns."
+            if all_anomalies
+            else "No anomalies detected."
+        ),
     }
 
 
@@ -436,10 +458,7 @@ async def find_correlations(
     """
     target_cols = columns
     if not target_cols and data:
-        target_cols = [
-            k for k in data[0]
-            if _is_numeric(data[0][k])
-        ]
+        target_cols = _detect_numeric_columns(data)
 
     if not target_cols or len(target_cols) < 2:
         raise HTTPException(status_code=422, detail="Need at least 2 numeric columns for correlation analysis")
@@ -474,11 +493,21 @@ def _is_numeric(value: Any) -> bool:
     return False
 
 
-def _dicts_to_series(data: list[dict[str, Any]]) -> list[DataSeries]:
-    """Convert a list of row-dicts to DataSeries (one per numeric column)."""
+def _detect_numeric_columns(data: list[dict[str, Any]]) -> list[str]:
+    """Return column names that contain at least one numeric value across all rows."""
     if not data:
         return []
-    cols = [k for k in data[0] if _is_numeric(data[0][k])]
+    all_keys: dict[str, bool] = {}
+    for row in data:
+        for k, v in row.items():
+            if k not in all_keys and _is_numeric(v):
+                all_keys[k] = True
+    return list(all_keys)
+
+
+def _dicts_to_series(data: list[dict[str, Any]]) -> list[DataSeries]:
+    """Convert a list of row-dicts to DataSeries (one per numeric column)."""
+    cols = _detect_numeric_columns(data)
     series = []
     for col in cols:
         values = [

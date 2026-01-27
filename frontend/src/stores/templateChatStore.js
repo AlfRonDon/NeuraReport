@@ -69,7 +69,7 @@ export const useTemplateChatStore = create((set, get) => ({
           ...state.sessions,
           [templateId]: {
             ...session,
-            messages: [...session.messages, message],
+            messages: [...session.messages, message].slice(-500),
             updatedAt: Date.now(),
           },
         },
@@ -89,7 +89,7 @@ export const useTemplateChatStore = create((set, get) => ({
           ...state.sessions,
           [templateId]: {
             ...session,
-            messages: [...session.messages, message],
+            messages: [...session.messages, message].slice(-500),
             updatedAt: Date.now(),
             // Update proposed changes if provided
             ...(metadata.proposedChanges !== undefined && {
@@ -119,7 +119,7 @@ export const useTemplateChatStore = create((set, get) => ({
           ...state.sessions,
           [templateId]: {
             ...session,
-            messages: [...session.messages, message],
+            messages: [...session.messages, message].slice(-500),
             updatedAt: Date.now(),
           },
         },

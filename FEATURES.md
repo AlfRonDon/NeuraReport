@@ -452,6 +452,11 @@ A comprehensive document outlining all features (major and minor) in the NeuraRe
 - Anthropic Claude support (optional)
 - Google Gemini support (optional)
 - liteLLM abstraction layer
+- DeepSeek provider support
+- Ollama local LLM support
+- Azure OpenAI support
+- LLM circuit breaker pattern (automatic failover)
+- LLM response disk caching
 
 ### 39. Cloud Storage Services
 - Google Cloud Storage
@@ -459,13 +464,14 @@ A comprehensive document outlining all features (major and minor) in the NeuraRe
 - Microsoft Azure Blob Storage
 - Dropbox
 - SFTP
+- OneDrive
 
 ### 40. Productivity Integrations
-- Notion API
 - Slack
 - Microsoft Teams
-- Google Docs (OAuth)
-- Outlook/Gmail
+- Notion API *(planned — not yet implemented)*
+- Google Docs OAuth *(planned — not yet implemented)*
+- Outlook/Gmail integration *(planned — not yet implemented)*
 
 ### 41. Database Support
 - SQLite (local)
@@ -474,6 +480,9 @@ A comprehensive document outlining all features (major and minor) in the NeuraRe
 - MSSQL
 - MongoDB
 - Elasticsearch
+- Snowflake
+- BigQuery
+- DuckDB
 
 ---
 
@@ -507,7 +516,7 @@ A comprehensive document outlining all features (major and minor) in the NeuraRe
 
 ## Backend Service Architecture
 
-### 45. Service Layers (88+ Service Directories)
+### 45. Service Layers (93+ Service Directories)
 - Agent services (5 agent types)
 - AI services (writing, spreadsheet, LLM integration)
 - Analytics services
@@ -552,6 +561,53 @@ A comprehensive document outlining all features (major and minor) in the NeuraRe
 
 ---
 
+## Additional Features (Discovered via Forensic Audit — January 2026)
+
+### Document Security
+- PDF digital signing capability
+
+### Jobs & Background Processing
+- Recovery daemon for automatic retry of failed/stale jobs
+- Error classifier (transient vs. permanent failure detection)
+- HMAC-SHA256 webhook signing for job notifications
+- Webhook retry with exponential backoff
+
+### Enhanced Analysis
+- Enhanced analysis orchestrator (multi-stage document analysis)
+- Enhanced extraction service (advanced content extraction)
+- Connector resilience (circuit breaker pattern for external connectors)
+
+### API Infrastructure
+- Idempotency endpoint support (request deduplication)
+- UX governance API (frontend safety contracts)
+- State namespace API (key-value state storage)
+- Governance guards service (irreversible action protection)
+
+### Frontend UX Governance
+- Intent audit tracking system
+- Idempotency key generation (client-side)
+- Command palette (keyboard-driven navigation)
+- Keyboard shortcuts system
+- Network status banner (connectivity awareness)
+- Offline mode banner
+- Draft recovery system (auto-save and restore)
+- Edit history timeline
+- Success celebration animation
+- Heartbeat status badge
+- Favorite/bookmark button
+- Global search in navigation
+- Notification center
+- Breadcrumbs navigation
+- AI usage notice component
+- Irreversible boundaries (confirmation gates)
+- Navigation safety guards (unsaved changes protection)
+- Regression guards (prevent accidental downgrades)
+- Time expectations UI (estimated durations)
+- Workflow contracts enforcement
+- Background operations tracking
+
+---
+
 ## Technical Libraries & Frameworks
 
 ### 46. Frontend Stack
@@ -592,7 +648,7 @@ A comprehensive document outlining all features (major and minor) in the NeuraRe
 | Category | Count |
 |----------|-------|
 | Core/Major Features | 26 |
-| AI-Powered Features | 15 |
+| AI-Powered Features | 16 |
 | Document Intelligence | 12 |
 | Knowledge Management | 8 |
 | Search Features | 8 |
@@ -603,11 +659,12 @@ A comprehensive document outlining all features (major and minor) in the NeuraRe
 | Workflow Features | 6 |
 | Frontend Pages | 31 |
 | UI Components | 8 |
-| Security Features | 11 |
-| Integrations | 15 |
-| Backend Services | 88+ |
+| Security Features | 12 |
+| Integrations | 22 |
+| Backend Services | 93+ |
+| Additional Discovered Features | 33 |
 
-**Total Features Identified: 150+**
+**Total Features Identified: 190+**
 
 ---
 

@@ -255,8 +255,12 @@ class SnapshotService:
         html_content = _dashboard_to_html(dashboard_data)
         tmp_html = None
         try:
-            tmp_html = Path(tempfile.mktemp(suffix=".html", dir=str(out_dir)))
-            tmp_html.write_text(html_content, encoding="utf-8")
+            tmp_fd = tempfile.NamedTemporaryFile(
+                suffix=".html", dir=str(out_dir), delete=False, mode="w", encoding="utf-8",
+            )
+            tmp_html = Path(tmp_fd.name)
+            tmp_fd.write(html_content)
+            tmp_fd.close()
 
             _render_png(tmp_html, out_path)
 
@@ -305,9 +309,12 @@ def _dashboard_to_html(dashboard_data: Dict[str, Any]) -> str:
         config = w.get("config", {})
         w_title = html_mod.escape(config.get("title", "Widget"))
         w_type = html_mod.escape(config.get("type", "unknown"))
+        # Cast to int to prevent CSS injection via non-integer values
+        col_span = int(w.get("w", 4))
+        row_span = int(w.get("h", 3))
         widget_cards.append(
-            f'<div class="widget" style="grid-column: span {w.get("w", 4)}; '
-            f'grid-row: span {w.get("h", 3)};">'
+            f'<div class="widget" style="grid-column: span {col_span}; '
+            f'grid-row: span {row_span};">'
             f'<h3>{w_title}</h3>'
             f'<span class="badge">{w_type}</span>'
             f'</div>'

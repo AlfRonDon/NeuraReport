@@ -100,40 +100,48 @@ export function guardAgainstViolations(code, filename = 'unknown') {
 
   // Check violation patterns
   for (const [name, { pattern, message, severity }] of Object.entries(VIOLATION_PATTERNS)) {
-    if (pattern.test(code)) {
-      violations.push({
-        type: name,
-        message,
-        severity,
-        filename,
-      })
+    try {
+      if (pattern.test(code)) {
+        violations.push({
+          type: name,
+          message,
+          severity,
+          filename,
+        })
+      }
+    } catch {
+      // Regex execution failed — skip this pattern rather than crashing the guard
     }
   }
 
   // Check required patterns based on file type
   for (const [name, config] of Object.entries(REQUIRED_PATTERNS)) {
-    if (config.filePattern && config.filePattern.test(filename)) {
-      if (!config.pattern.test(code)) {
-        violations.push({
-          type: name,
-          message: config.message,
-          severity: config.severity,
-          filename,
-        })
-      }
-
-      if (config.requiredAlongside) {
-        const hasPattern = config.pattern.test(code)
-        const hasRequired = config.requiredAlongside.test(code)
-        if (hasPattern && !hasRequired) {
+    try {
+      if (config.filePattern && config.filePattern.test(filename)) {
+        if (!config.pattern.test(code)) {
           violations.push({
-            type: `${name}_MISSING_ALONGSIDE`,
+            type: name,
             message: config.message,
             severity: config.severity,
             filename,
           })
         }
+
+        if (config.requiredAlongside) {
+          const hasPattern = config.pattern.test(code)
+          const hasRequired = config.requiredAlongside.test(code)
+          if (hasPattern && !hasRequired) {
+            violations.push({
+              type: `${name}_MISSING_ALONGSIDE`,
+              message: config.message,
+              severity: config.severity,
+              filename,
+            })
+          }
+        }
       }
+    } catch {
+      // Regex execution failed — skip this pattern rather than crashing the guard
     }
   }
 
