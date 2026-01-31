@@ -114,7 +114,6 @@ NeuraReport-tauri-sync/
 _tauri_sync_pr/
 
 # Large local artifacts / data
-Gemini_Generated_Image_*.png
 *.fig
 Coastal feeds/
 backend/tools/ffmpeg_extracted/
