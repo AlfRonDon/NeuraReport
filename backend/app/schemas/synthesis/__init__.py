@@ -55,7 +55,7 @@ class SynthesisSession(BaseModel):
 class SynthesisRequest(BaseModel):
     """Request to synthesize documents in a session."""
 
-    focus_topics: Optional[List[str]] = Field(None, max_items=10)
+    focus_topics: Optional[List[str]] = Field(None, max_length=10)
     output_format: str = Field(default="structured", pattern="^(structured|narrative|comparison)$")
     include_sources: bool = Field(default=True)
     max_length: int = Field(default=5000, ge=500, le=20000)

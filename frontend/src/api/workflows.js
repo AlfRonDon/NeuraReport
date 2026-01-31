@@ -38,12 +38,12 @@ export async function listWorkflows(params = {}) {
 // ============================================
 
 export async function executeWorkflow(workflowId, inputs = {}) {
-  const response = await api.post(`/workflows/${workflowId}/execute`, { inputs });
+  const response = await api.post(`/workflows/${workflowId}/execute`, { input_data: inputs });
   return response.data;
 }
 
 export async function getExecution(workflowId, executionId) {
-  const response = await api.get(`/workflows/${workflowId}/executions/${executionId}`);
+  const response = await api.get(`/workflows/executions/${executionId}`);
   return response.data;
 }
 
@@ -67,7 +67,10 @@ export async function retryExecution(workflowId, executionId) {
 // ============================================
 
 export async function addTrigger(workflowId, trigger) {
-  const response = await api.post(`/workflows/${workflowId}/triggers`, trigger);
+  const response = await api.post(`/workflows/${workflowId}/trigger`, {
+    trigger_type: trigger.type || trigger.trigger_type,
+    config: trigger.config || {},
+  });
   return response.data;
 }
 
@@ -134,12 +137,22 @@ export async function getPendingApprovals(params = {}) {
 }
 
 export async function approveStep(executionId, stepId, comment = null) {
-  const response = await api.post(`/workflows/approvals/${executionId}/${stepId}/approve`, { comment });
+  const response = await api.post(`/workflows/executions/${executionId}/approve`, {
+    execution_id: executionId,
+    node_id: stepId,
+    approved: true,
+    comment,
+  });
   return response.data;
 }
 
 export async function rejectStep(executionId, stepId, reason) {
-  const response = await api.post(`/workflows/approvals/${executionId}/${stepId}/reject`, { reason });
+  const response = await api.post(`/workflows/executions/${executionId}/approve`, {
+    execution_id: executionId,
+    node_id: stepId,
+    approved: false,
+    comment: reason,
+  });
   return response.data;
 }
 

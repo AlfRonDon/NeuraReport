@@ -20,13 +20,13 @@ router = APIRouter(dependencies=[Depends(require_api_key)])
 
 
 class ChartAnalyzeRequest(BaseModel):
-    data: List[Dict[str, Any]] = Field(..., min_items=1, max_items=100)
+    data: List[Dict[str, Any]] = Field(..., min_length=1, max_length=100)
     column_descriptions: Optional[Dict[str, str]] = None
     max_suggestions: int = Field(default=3, ge=1, le=10)
 
 
 class ChartGenerateRequest(BaseModel):
-    data: List[Dict[str, Any]] = Field(..., min_items=1, max_items=1000)
+    data: List[Dict[str, Any]] = Field(..., min_length=1, max_length=1000)
     chart_type: str
     x_field: str
     y_fields: List[str] = Field(..., min_length=1, max_length=20)

@@ -16,7 +16,7 @@ router = APIRouter(dependencies=[Depends(require_api_key)])
 class TemplateRecommendRequest(BaseModel):
     """Request payload for template recommendations (frontend format)."""
     data_description: Optional[str] = Field(None, max_length=1000)
-    data_columns: Optional[List[str]] = Field(None, max_items=100)
+    data_columns: Optional[List[str]] = Field(None, max_length=100)
     industry: Optional[str] = Field(None, max_length=100)
     output_format: Optional[str] = Field(None, max_length=50)
 

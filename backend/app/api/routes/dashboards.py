@@ -261,7 +261,7 @@ async def create_snapshot(
 
     # Render in a thread so the sync Playwright call doesn't block the
     # ASGI event loop.
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
     rendered = await loop.run_in_executor(
         None, _snapshot_svc.render_snapshot, snapshot["id"]
     )

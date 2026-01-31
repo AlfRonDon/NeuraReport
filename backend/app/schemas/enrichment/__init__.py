@@ -50,14 +50,14 @@ class EnrichmentFieldMapping(BaseModel):
     """Mapping of source field to enrichment lookup."""
     source_field: str = Field(..., min_length=1, max_length=128)
     enrichment_source_id: str = Field(..., min_length=1, max_length=64)
-    target_fields: List[str] = Field(..., min_items=1, max_items=20)
+    target_fields: List[str] = Field(..., min_length=1, max_length=20)
     lookup_key: Optional[str] = None  # Optional override for the lookup key
 
 
 class EnrichmentRequest(BaseModel):
     """Request to enrich data."""
-    data: List[Dict[str, Any]] = Field(..., min_items=1, max_items=1000)
-    mappings: List[EnrichmentFieldMapping] = Field(..., min_items=1, max_items=20)
+    data: List[Dict[str, Any]] = Field(..., min_length=1, max_length=1000)
+    mappings: List[EnrichmentFieldMapping] = Field(..., min_length=1, max_length=20)
     use_cache: bool = Field(default=True)
 
 
@@ -90,8 +90,8 @@ class EnrichmentResponse(BaseModel):
 
 class EnrichmentPreviewRequest(BaseModel):
     """Request to preview enrichment without persisting."""
-    sample_data: List[Dict[str, Any]] = Field(..., min_items=1, max_items=10)
-    mappings: List[EnrichmentFieldMapping] = Field(..., min_items=1, max_items=20)
+    sample_data: List[Dict[str, Any]] = Field(..., min_length=1, max_length=10)
+    mappings: List[EnrichmentFieldMapping] = Field(..., min_length=1, max_length=20)
 
 
 class EnrichmentConfig(BaseModel):
@@ -104,13 +104,13 @@ class EnrichmentConfig(BaseModel):
 # Simplified request schemas for frontend compatibility
 class SimpleEnrichmentRequest(BaseModel):
     """Simplified request to enrich data (frontend-compatible)."""
-    data: List[Dict[str, Any]] = Field(..., min_items=1, max_items=1000)
-    sources: List[str] = Field(..., min_items=1, max_items=10)  # Source type names
+    data: List[Dict[str, Any]] = Field(..., min_length=1, max_length=1000)
+    sources: List[str] = Field(..., min_length=1, max_length=10)  # Source type names
     options: Dict[str, Any] = Field(default_factory=dict)
 
 
 class SimplePreviewRequest(BaseModel):
     """Simplified preview request (frontend-compatible)."""
-    data: List[Dict[str, Any]] = Field(..., min_items=1, max_items=100)
-    sources: List[str] = Field(..., min_items=1, max_items=10)  # Source type names
+    data: List[Dict[str, Any]] = Field(..., min_length=1, max_length=100)
+    sources: List[str] = Field(..., min_length=1, max_length=10)  # Source type names
     sample_size: int = Field(default=5, ge=1, le=10)

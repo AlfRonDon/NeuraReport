@@ -50,12 +50,12 @@ class VirtualSchemaCreate(BaseModel):
     """Request to create a virtual schema."""
     name: str = Field(..., min_length=1, max_length=100)
     description: Optional[str] = Field(None, max_length=500)
-    connection_ids: List[str] = Field(..., min_items=1, max_items=10)
+    connection_ids: List[str] = Field(..., min_length=1, max_length=10)
 
 
 class SuggestJoinsRequest(BaseModel):
     """Request to suggest joins between connections."""
-    connection_ids: List[str] = Field(..., min_items=2, max_items=10)
+    connection_ids: List[str] = Field(..., min_length=2, max_length=10)
 
 
 class FederatedQueryRequest(BaseModel):

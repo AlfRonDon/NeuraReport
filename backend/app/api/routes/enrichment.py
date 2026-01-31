@@ -30,7 +30,7 @@ async def list_available_sources(
     """List available enrichment source types."""
     correlation_id = getattr(request.state, "correlation_id", None)
     builtin = EnrichmentService.get_builtin_sources()
-    custom_sources = [source.dict() for source in svc.list_sources()]
+    custom_sources = [source.model_dump() for source in svc.list_sources()]
     return {
         "status": "ok",
         "sources": [*builtin, *custom_sources],
@@ -112,7 +112,7 @@ async def create_source(
     source = svc.create_source(payload, correlation_id)
     return {
         "status": "ok",
-        "source": source.dict(),
+        "source": source.model_dump(),
         "correlation_id": correlation_id,
     }
 
@@ -142,7 +142,7 @@ async def get_source(
         )
     return {
         "status": "ok",
-        "source": source.dict(),
+        "source": source.model_dump(),
         "correlation_id": correlation_id,
     }
 

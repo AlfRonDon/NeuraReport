@@ -14,7 +14,7 @@ from backend.app.services.security import require_api_key
 
 
 _FAKE_CONN = {
-    "id": "test-conn-id",
+    "id": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
     "name": "test-conn",
     "connector_type": "postgres",
     "config": {"host": "localhost", "database": "testdb"},
@@ -40,10 +40,13 @@ def client(app):
 
 @pytest.fixture
 def sample_connection():
-    """Patch _store_get to return a fake connection."""
+    """Patch _store_get and _store_get_config to return a fake connection."""
     with patch(
         "backend.app.api.routes.connectors._store_get",
         return_value=_FAKE_CONN,
+    ), patch(
+        "backend.app.api.routes.connectors._store_get_config",
+        return_value=_FAKE_CONN.get("config", {}),
     ):
         yield _FAKE_CONN["id"]
 
@@ -117,7 +120,7 @@ class TestSQLInjectionProtection:
             return_value=None,
         ):
             resp = client.post(
-                "/connectors/nonexistent-id/query",
+                "/connectors/00000000-0000-0000-0000-000000000000/query",
                 json={"query": "SELECT 1", "limit": 100},
             )
             assert resp.status_code == 404

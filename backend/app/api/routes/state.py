@@ -31,7 +31,7 @@ def _state_store():
     try:
         api_mod = importlib.import_module("backend.api")
         return getattr(api_mod, "state_store", state_access.state_store)
-    except Exception:
+    except (ImportError, AttributeError):
         return state_access.state_store
 
 

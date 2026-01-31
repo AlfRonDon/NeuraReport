@@ -62,9 +62,8 @@ export async function updateWidgetLayout(dashboardId, layouts) {
 // ============================================
 
 export async function executeWidgetQuery(dashboardId, widgetId, filters = {}) {
-  const response = await api.post(`/dashboards/${dashboardId}/query`, null, {
+  const response = await api.post(`/dashboards/${dashboardId}/query`, { filters }, {
     params: { widget_id: widgetId },
-    data: { filters },
   });
   return response.data;
 }
@@ -135,7 +134,8 @@ export async function predictTrends(data, dateColumn, valueColumn, periods = 12)
     data,
     date_column: dateColumn,
     value_column: valueColumn,
-    periods,
+  }, {
+    params: { periods },
   });
   return response.data;
 }
@@ -144,7 +144,8 @@ export async function detectAnomalies(data, columns, method = 'zscore') {
   const response = await api.post('/dashboards/analytics/anomalies', {
     data,
     columns,
-    method,
+  }, {
+    params: { method },
   });
   return response.data;
 }

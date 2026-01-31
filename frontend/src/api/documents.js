@@ -72,7 +72,7 @@ export async function replyToComment(documentId, commentId, data) {
 }
 
 export async function resolveComment(documentId, commentId, resolved = true) {
-  const response = await api.put(`/documents/${documentId}/comments/${commentId}/resolve`, { resolved });
+  const response = await api.patch(`/documents/${documentId}/comments/${commentId}/resolve`, { resolved });
   return response.data;
 }
 
@@ -91,7 +91,7 @@ export async function startCollaboration(documentId, data = {}) {
 }
 
 export async function getCollaborators(documentId) {
-  const response = await api.get(`/documents/${documentId}/collaborators`);
+  const response = await api.get(`/documents/${documentId}/collaborate/presence`);
   return response.data;
 }
 
@@ -144,25 +144,37 @@ export async function checkGrammar(documentId, text, options = {}) {
 }
 
 export async function summarize(documentId, text, length = 'medium', style = 'paragraph') {
-  const response = await api.post(`/documents/${documentId}/ai/summarize`, { text, length, style });
+  const response = await api.post(`/documents/${documentId}/ai/summarize`, {
+    text,
+    instruction: 'summarize',
+    options: { length, style },
+  });
   return response.data;
 }
 
 export async function rewrite(documentId, text, tone = 'professional', style = 'clear') {
-  const response = await api.post(`/documents/${documentId}/ai/rewrite`, { text, tone, style });
+  const response = await api.post(`/documents/${documentId}/ai/rewrite`, {
+    text,
+    instruction: 'rewrite',
+    options: { tone, style },
+  });
   return response.data;
 }
 
 export async function expand(documentId, text, targetLength = 'double') {
-  const response = await api.post(`/documents/${documentId}/ai/expand`, { text, target_length: targetLength });
+  const response = await api.post(`/documents/${documentId}/ai/expand`, {
+    text,
+    instruction: 'expand',
+    options: { target_length: targetLength },
+  });
   return response.data;
 }
 
 export async function translate(documentId, text, targetLanguage, preserveFormatting = true) {
   const response = await api.post(`/documents/${documentId}/ai/translate`, {
     text,
-    target_language: targetLanguage,
-    preserve_formatting: preserveFormatting,
+    instruction: 'translate',
+    options: { target_language: targetLanguage, preserve_formatting: preserveFormatting },
   });
   return response.data;
 }

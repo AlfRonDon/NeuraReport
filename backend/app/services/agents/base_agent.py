@@ -208,7 +208,7 @@ class BaseAgentV2(ABC):
             create_params["temperature"] = temperature
 
         try:
-            loop = asyncio.get_event_loop()
+            loop = asyncio.get_running_loop()
             response = await asyncio.wait_for(
                 loop.run_in_executor(
                     None,

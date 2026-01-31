@@ -17,7 +17,7 @@ class SummaryRequest(BaseModel):
     content: str = Field(..., min_length=10, max_length=50000)
     tone: str = Field(default="formal", pattern="^(formal|conversational|technical)$")
     max_sentences: int = Field(default=5, ge=2, le=15)
-    focus_areas: Optional[List[str]] = Field(None, max_items=5)
+    focus_areas: Optional[List[str]] = Field(None, max_length=5)
 
 
 def get_service() -> SummaryService:

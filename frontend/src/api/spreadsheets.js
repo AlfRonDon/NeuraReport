@@ -38,9 +38,8 @@ export async function listSpreadsheets(params = {}) {
 // ============================================
 
 export async function updateCells(spreadsheetId, sheetIndex, updates) {
-  const response = await api.put(`/spreadsheets/${spreadsheetId}/cells`, {
-    sheet_index: sheetIndex,
-    updates,
+  const response = await api.put(`/spreadsheets/${spreadsheetId}/cells`, { updates }, {
+    params: { sheet_index: sheetIndex },
   });
   return response.data;
 }
@@ -66,15 +65,17 @@ export async function deleteSheet(spreadsheetId, sheetIndex) {
   return response.data;
 }
 
-export async function renameSheet(spreadsheetId, sheetIndex, newName) {
-  const response = await api.put(`/spreadsheets/${spreadsheetId}/sheets/${sheetIndex}`, { name: newName });
+export async function renameSheet(spreadsheetId, sheetId, newName) {
+  const response = await api.put(`/spreadsheets/${spreadsheetId}/sheets/${sheetId}/rename`, null, {
+    params: { name: newName },
+  });
   return response.data;
 }
 
-export async function freezePanes(spreadsheetId, sheetIndex, rows, columns) {
-  const response = await api.put(`/spreadsheets/${spreadsheetId}/sheets/${sheetIndex}/freeze`, {
-    frozen_rows: rows,
-    frozen_columns: columns,
+export async function freezePanes(spreadsheetId, sheetId, rows, columns) {
+  const response = await api.put(`/spreadsheets/${spreadsheetId}/sheets/${sheetId}/freeze`, {
+    rows,
+    cols: columns,
   });
   return response.data;
 }
@@ -84,7 +85,7 @@ export async function freezePanes(spreadsheetId, sheetIndex, rows, columns) {
 // ============================================
 
 export async function addConditionalFormat(spreadsheetId, sheetIndex, format) {
-  const response = await api.post(`/spreadsheets/${spreadsheetId}/sheets/${sheetIndex}/conditional-formats`, format);
+  const response = await api.post(`/spreadsheets/${spreadsheetId}/sheets/${sheetIndex}/conditional-format`, format);
   return response.data;
 }
 
@@ -94,7 +95,7 @@ export async function removeConditionalFormat(spreadsheetId, sheetIndex, formatI
 }
 
 export async function addDataValidation(spreadsheetId, sheetIndex, validation) {
-  const response = await api.post(`/spreadsheets/${spreadsheetId}/sheets/${sheetIndex}/validations`, validation);
+  const response = await api.post(`/spreadsheets/${spreadsheetId}/sheets/${sheetIndex}/validation`, validation);
   return response.data;
 }
 
@@ -126,8 +127,10 @@ export async function refreshPivotTable(spreadsheetId, pivotId) {
 // Formula Engine
 // ============================================
 
-export async function evaluateFormula(spreadsheetId, formula, context = {}) {
-  const response = await api.post(`/spreadsheets/${spreadsheetId}/formula/evaluate`, { formula, context });
+export async function evaluateFormula(spreadsheetId, formula, sheetIndex = 0) {
+  const response = await api.post(`/spreadsheets/${spreadsheetId}/evaluate`, null, {
+    params: { formula, sheet_index: sheetIndex },
+  });
   return response.data;
 }
 
@@ -151,7 +154,7 @@ export async function importCsv(file, options = {}) {
   Object.entries(options).forEach(([key, value]) => {
     formData.append(key, value);
   });
-  const response = await api.post('/spreadsheets/import/csv', formData, {
+  const response = await api.post('/spreadsheets/import', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   });
   return response.data;
@@ -163,7 +166,7 @@ export async function importExcel(file, options = {}) {
   Object.entries(options).forEach(([key, value]) => {
     formData.append(key, value);
   });
-  const response = await api.post('/spreadsheets/import/xlsx', formData, {
+  const response = await api.post('/spreadsheets/import', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   });
   return response.data;

@@ -50,7 +50,7 @@ class IdempotencyStore:
             _idempotency_db_url(),
             connect_args={"check_same_thread": False},
         )
-        SQLModel.metadata.create_all(self._engine)
+        SQLModel.metadata.create_all(self._engine, tables=[IdempotencyRecord.__table__])
 
     def get(self, key: str, request_hash: str) -> Optional[IdempotencyRecord]:
         now = datetime.now(timezone.utc)
@@ -177,7 +177,6 @@ class IdempotencyMiddleware(BaseHTTPMiddleware):
         payload: bytes,
         headers: dict,
     ) -> None:
-        settings = get_settings()
         await self._run_in_thread(
             self._store.set,
             key,
@@ -185,13 +184,13 @@ class IdempotencyMiddleware(BaseHTTPMiddleware):
             status_code,
             payload,
             headers,
-            settings.idempotency_ttl_seconds,
+            self._ttl_seconds,
         )
 
     async def _consume_body(self, response: Response) -> bytes:
         body = b""
         async for chunk in response.body_iterator:
-            body += chunk
+            body += chunk if isinstance(chunk, bytes) else chunk.encode("utf-8")
         return body
 
     async def _run_in_thread(self, fn, *args):

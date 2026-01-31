@@ -36,11 +36,9 @@ export async function listDocuments(options = {}) {
     params: {
       collection_id: options.collectionId,
       tags: options.tags,
-      favorites_only: options.favoritesOnly,
-      page: options.page || 1,
-      page_size: options.pageSize || 20,
-      sort_by: options.sortBy || 'updated_at',
-      sort_order: options.sortOrder || 'desc',
+      document_type: options.documentType,
+      limit: options.pageSize || 50,
+      offset: options.offset || 0,
     },
   });
   return response.data;
@@ -140,12 +138,12 @@ export async function removeTagFromDocument(documentId, tagId) {
 export async function searchDocuments(query, options = {}) {
   const response = await api.post('/knowledge/search', {
     query,
-    collection_id: options.collectionId,
-    tags: options.tags,
+    collections: options.collectionId ? [options.collectionId] : [],
+    tags: options.tags || [],
     date_from: options.dateFrom,
     date_to: options.dateTo,
-    page: options.page || 1,
-    page_size: options.pageSize || 20,
+    limit: options.pageSize || 50,
+    offset: options.offset || 0,
   });
   return response.data;
 }
@@ -153,8 +151,8 @@ export async function searchDocuments(query, options = {}) {
 export async function semanticSearch(query, options = {}) {
   const response = await api.post('/knowledge/search/semantic', {
     query,
-    limit: options.limit || 10,
-    min_similarity: options.minSimilarity || 0.5,
+    top_k: options.limit || 10,
+    threshold: options.minSimilarity || 0.5,
   });
   return response.data;
 }
@@ -163,24 +161,26 @@ export async function semanticSearch(query, options = {}) {
 // AI Features
 // ============================================
 
-export async function autoTag(documentId) {
-  const response = await api.post(`/knowledge/documents/${documentId}/auto-tag`);
+export async function autoTag(documentId, maxTags = 5) {
+  const response = await api.post('/knowledge/auto-tag', {
+    document_id: documentId,
+    max_tags: maxTags,
+  });
   return response.data;
 }
 
 export async function findRelated(documentId, options = {}) {
-  const response = await api.get(`/knowledge/documents/${documentId}/related`, {
-    params: {
-      limit: options.limit || 5,
-    },
+  const response = await api.post('/knowledge/related', {
+    document_id: documentId,
+    limit: options.limit || 10,
   });
   return response.data;
 }
 
 export async function buildKnowledgeGraph(options = {}) {
   const response = await api.post('/knowledge/knowledge-graph', {
-    collection_id: options.collectionId,
-    max_documents: options.maxDocuments || 100,
+    document_ids: options.documentIds || [],
+    depth: options.depth || 2,
     include_entities: options.includeEntities !== false,
   });
   return response.data;

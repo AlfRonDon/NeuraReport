@@ -34,7 +34,7 @@ async def create_virtual_schema(
     except Exception as exc:
         logger.exception("federation_create_schema_failed", extra={"event": "federation_create_schema_failed"})
         raise HTTPException(status_code=500, detail="Failed to create virtual schema")
-    return {"status": "ok", "schema": schema.dict(), "correlation_id": correlation_id}
+    return {"status": "ok", "schema": schema.model_dump(), "correlation_id": correlation_id}
 
 
 @router.get("/schemas")
@@ -50,7 +50,7 @@ async def list_virtual_schemas(
     page = all_schemas[offset:offset + limit]
     return {
         "status": "ok",
-        "schemas": [s.dict() for s in page],
+        "schemas": [s.model_dump() for s in page],
         "total": len(all_schemas),
         "correlation_id": correlation_id,
     }
@@ -67,7 +67,7 @@ async def get_virtual_schema(
     schema = svc.get_virtual_schema(schema_id)
     if not schema:
         raise HTTPException(status_code=404, detail={"code": "not_found", "message": f"Schema {schema_id} not found"})
-    return {"status": "ok", "schema": schema.dict(), "correlation_id": correlation_id}
+    return {"status": "ok", "schema": schema.model_dump(), "correlation_id": correlation_id}
 
 
 @router.delete("/schemas/{schema_id}")
@@ -99,7 +99,7 @@ async def suggest_joins(
     except Exception as exc:
         logger.exception("federation_suggest_joins_failed", extra={"event": "federation_suggest_joins_failed"})
         raise HTTPException(status_code=500, detail="Join suggestion failed")
-    return {"status": "ok", "suggestions": [s.dict() for s in suggestions], "correlation_id": correlation_id}
+    return {"status": "ok", "suggestions": [s.model_dump() for s in suggestions], "correlation_id": correlation_id}
 
 
 @router.post("/query")

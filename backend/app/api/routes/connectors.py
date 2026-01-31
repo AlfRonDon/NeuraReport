@@ -130,12 +130,14 @@ class QueryResponse(BaseModel):
 
 def _store_get_all() -> dict[str, dict]:
     """Return all connector connections from state."""
-    return dict(state_store.read_state().get("connectors", {}))
+    with state_store.transaction() as state:
+        return dict(state.get("connectors", {}))
 
 
 def _store_get(connection_id: str) -> dict | None:
     """Return a single connector connection or *None*."""
-    return state_store.read_state().get("connectors", {}).get(connection_id)
+    with state_store.transaction() as state:
+        return state.get("connectors", {}).get(connection_id)
 
 
 def _store_put(connection: dict) -> None:
@@ -157,7 +159,8 @@ def _store_put(connection: dict) -> None:
 
 def _store_get_config(connection_id: str) -> dict[str, Any]:
     """Retrieve raw config (credentials) for a connection."""
-    return state_store.read_state().get("connector_credentials", {}).get(connection_id, {})
+    with state_store.transaction() as state:
+        return state.get("connector_credentials", {}).get(connection_id, {})
 
 
 def _store_delete(connection_id: str) -> bool:

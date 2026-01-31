@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Optional
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator, validator
 
 from backend.app.utils.validation import is_safe_id, is_safe_name, sanitize_id, sanitize_filename
 
@@ -34,7 +34,7 @@ class ConnectionUpsertRequest(ConnectionTestRequest):
     name: Optional[str] = Field(None, max_length=100)
     status: Optional[str] = Field(None, max_length=50)
     latency_ms: Optional[float] = Field(None, ge=0, le=1000000)
-    tags: Optional[list[str]] = Field(None, max_items=20)
+    tags: Optional[list[str]] = Field(None, max_length=20)
 
     @validator("id")
     def validate_id(cls, value: Optional[str]) -> Optional[str]:
@@ -52,11 +52,16 @@ class ConnectionUpsertRequest(ConnectionTestRequest):
             raise ValueError("Name contains invalid characters")
         return value
 
-    @validator("tags", each_item=True)
-    def validate_tag(cls, value: str) -> str:
-        if len(value) > 50:
-            raise ValueError("Tag must be 50 characters or less")
-        return value.strip()
+    @field_validator("tags")
+    @classmethod
+    def validate_tag(cls, value: list[str] | None) -> list[str] | None:
+        if value is None:
+            return value
+        for i, tag in enumerate(value):
+            if len(tag) > 50:
+                raise ValueError("Tag must be 50 characters or less")
+            value[i] = tag.strip()
+        return value
 
 
 class ConnectionResponse(BaseModel):

@@ -12,18 +12,17 @@ export async function search(query, options = {}) {
   const response = await api.post('/search/search', {
     query,
     search_type: options.searchType || 'fulltext',
-    filters: options.filters || null,
-    sort_by: options.sortBy || 'relevance',
+    filters: options.filters || [],
     page: options.page || 1,
     page_size: options.pageSize || 20,
     highlight: options.highlight !== false,
-    facets: options.facets || null,
+    facet_fields: options.facets || [],
   });
   return response.data;
 }
 
 export async function semanticSearch(query, options = {}) {
-  const response = await api.post('/search/semantic', {
+  const response = await api.post('/search/search/semantic', {
     query,
     search_type: 'semantic',
     filters: options.filters || [],
@@ -34,7 +33,7 @@ export async function semanticSearch(query, options = {}) {
 }
 
 export async function regexSearch(pattern, options = {}) {
-  const response = await api.post('/search/regex', {
+  const response = await api.post('/search/search/regex', {
     query: pattern,
     search_type: 'regex',
     filters: options.filters || [],
@@ -43,7 +42,7 @@ export async function regexSearch(pattern, options = {}) {
 }
 
 export async function booleanSearch(query, options = {}) {
-  const response = await api.post('/search/boolean', {
+  const response = await api.post('/search/search/boolean', {
     query,
     search_type: 'boolean',
     filters: options.filters || [],
@@ -56,7 +55,7 @@ export async function booleanSearch(query, options = {}) {
 // ============================================
 
 export async function searchAndReplace(searchQuery, replaceWith, options = {}) {
-  const response = await api.post('/search/replace', {
+  const response = await api.post('/search/search/replace', {
     search_query: searchQuery,
     replace_with: replaceWith,
     document_ids: options.documentIds || null,
@@ -83,9 +82,10 @@ export async function findSimilar(documentId, options = {}) {
 // Index Management
 // ============================================
 
-export async function indexDocument(documentId, content, metadata = {}) {
+export async function indexDocument(documentId, title, content, metadata = {}) {
   const response = await api.post('/search/index', {
     document_id: documentId,
+    title,
     content,
     metadata,
   });
@@ -110,10 +110,8 @@ export async function saveSearch(name, query, options = {}) {
   const response = await api.post('/search/saved-searches', {
     name,
     query,
-    search_type: options.searchType || 'fulltext',
-    filters: options.filters || null,
-    is_alert: options.isAlert || false,
-    alert_frequency: options.alertFrequency || null,
+    filters: options.filters || [],
+    notify_on_new: options.isAlert || false,
   });
   return response.data;
 }

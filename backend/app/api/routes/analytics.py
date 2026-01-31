@@ -822,7 +822,7 @@ async def bulk_update_template_status(payload: BulkTemplateRequest) -> Dict[str,
                 details={"status": status},
             )
         except Exception as e:
-            failed.append({"id": tid, "error": f"Delete failed: {type(e).__name__}"})
+            failed.append({"id": tid, "error": f"Status update failed: {type(e).__name__}"})
 
     return {
         "updated": updated,
@@ -867,7 +867,7 @@ async def bulk_add_tags(payload: BulkTemplateRequest) -> Dict[str, Any]:
             )
             updated.append(tid)
         except Exception as e:
-            failed.append({"id": tid, "error": f"Delete failed: {type(e).__name__}"})
+            failed.append({"id": tid, "error": f"Tag update failed: {type(e).__name__}"})
 
     return {
         "updated": updated,
@@ -893,7 +893,7 @@ async def bulk_cancel_jobs(payload: BulkJobRequest) -> Dict[str, Any]:
                 continue
 
             status = _normalize_job_status(job.get("status"))
-            if status in ("completed", "failed", "cancelled"):
+            if status in ("succeeded", "failed", "cancelled"):
                 failed.append({"id": jid, "error": f"Cannot cancel job with status: {status}"})
                 continue
 
@@ -905,7 +905,7 @@ async def bulk_cancel_jobs(payload: BulkJobRequest) -> Dict[str, Any]:
                 entity_id=jid,
             )
         except Exception as e:
-            failed.append({"id": jid, "error": f"Delete failed: {type(e).__name__}"})
+            failed.append({"id": jid, "error": f"Cancel failed: {type(e).__name__}"})
 
     return {
         "cancelled": cancelled,

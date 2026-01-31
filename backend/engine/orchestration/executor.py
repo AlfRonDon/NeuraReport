@@ -91,7 +91,7 @@ class JobExecutor:
         )
 
         # Run in thread pool
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         future = loop.run_in_executor(
             self._pool,
             self._run_job,

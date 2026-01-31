@@ -66,13 +66,13 @@ export async function bulkExport(documentIds, format, options = {}) {
   const response = await api.post('/export/bulk', {
     document_ids: documentIds,
     format,
-    ...options,
+    options,
   });
   return response.data;
 }
 
 export async function getBulkExportStatus(jobId) {
-  const response = await api.get(`/export/bulk/${jobId}`);
+  const response = await api.get(`/export/jobs/${jobId}`);
   return response.data;
 }
 
@@ -87,56 +87,64 @@ export async function downloadBulkExport(jobId) {
 // Distribution
 // ============================================
 
-export async function sendEmail(documentId, options) {
-  const response = await api.post('/export/distribute/email', {
-    document_id: documentId,
+export async function sendEmail(documentIds, options) {
+  const response = await api.post('/export/distribution/email-campaign', {
+    document_ids: Array.isArray(documentIds) ? documentIds : [documentIds],
     recipients: options.recipients,
     subject: options.subject,
-    body: options.body,
-    format: options.format || 'pdf',
-    include_link: options.includeLink || false,
+    message: options.message || options.body || '',
+    from_name: options.fromName || null,
+    reply_to: options.replyTo || null,
+    attach_documents: options.attachDocuments !== false,
+    track_opens: options.trackOpens !== false,
   });
   return response.data;
 }
 
 export async function sendToSlack(documentId, options) {
-  const response = await api.post('/export/distribute/slack', {
+  const response = await api.post('/export/distribution/slack', {
     document_id: documentId,
     channel: options.channel,
     message: options.message,
-    format: options.format || 'pdf',
+    thread_ts: options.threadTs || null,
+    upload_file: options.uploadFile !== false,
   });
   return response.data;
 }
 
 export async function sendToTeams(documentId, options) {
-  const response = await api.post('/export/distribute/teams', {
+  const response = await api.post('/export/distribution/teams', {
     document_id: documentId,
-    channel: options.channel,
-    message: options.message,
-    format: options.format || 'pdf',
+    webhook_url: options.webhookUrl,
+    title: options.title || null,
+    message: options.message || null,
+    mention_users: options.mentionUsers || [],
   });
   return response.data;
 }
 
 export async function sendWebhook(documentId, options) {
-  const response = await api.post('/export/distribute/webhook', {
+  const response = await api.post('/export/distribution/webhook', {
     document_id: documentId,
     webhook_url: options.webhookUrl,
-    payload: options.payload,
-    format: options.format || 'pdf',
+    method: options.method || 'POST',
+    headers: options.headers || {},
+    include_content: options.includeContent !== false,
+    payload_template: options.payloadTemplate || null,
   });
   return response.data;
 }
 
 export async function publishToPortal(documentId, options = {}) {
-  const response = await api.post('/export/distribute/portal', {
+  const response = await api.post(`/export/distribution/portal/${documentId}`, {
     document_id: documentId,
-    title: options.title,
-    description: options.description,
-    visibility: options.visibility || 'private',
-    password: options.password,
-    expires_at: options.expiresAt,
+    portal_path: options.portalPath || `/${documentId}`,
+    title: options.title || null,
+    description: options.description || null,
+    tags: options.tags || [],
+    public: options.public || false,
+    password: options.password || null,
+    expires_at: options.expiresAt || null,
   });
   return response.data;
 }
@@ -146,10 +154,14 @@ export async function publishToPortal(documentId, options = {}) {
 // ============================================
 
 export async function generateEmbedToken(documentId, options = {}) {
-  const response = await api.post(`/export/${documentId}/embed`, {
-    expires_in: options.expiresIn || 3600,
+  const response = await api.post(`/export/distribution/embed/${documentId}`, {
+    document_id: documentId,
+    width: options.width || 800,
+    height: options.height || 600,
     allow_download: options.allowDownload || false,
-    password_protected: options.passwordProtected || false,
+    allow_print: options.allowPrint || false,
+    show_toolbar: options.showToolbar !== false,
+    theme: options.theme || 'light',
   });
   return response.data;
 }

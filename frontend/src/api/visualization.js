@@ -10,92 +10,75 @@ import { api } from './client';
 
 export async function generateFlowchart(data, options = {}) {
   const response = await api.post('/visualization/diagrams/flowchart', {
-    data,
+    description: data,
     title: options.title || null,
-    orientation: options.orientation || 'vertical',
-    style: options.style || 'default',
   });
   return response.data;
 }
 
 export async function generateMindmap(data, options = {}) {
   const response = await api.post('/visualization/diagrams/mindmap', {
-    data,
+    content: data,
     title: options.title || null,
-    max_depth: options.maxDepth || null,
-    style: options.style || 'default',
+    max_depth: options.maxDepth || 3,
   });
   return response.data;
 }
 
 export async function generateOrgChart(data, options = {}) {
   const response = await api.post('/visualization/diagrams/org-chart', {
-    data,
+    org_data: data,
     title: options.title || null,
-    show_photos: options.showPhotos || false,
-    style: options.style || 'default',
   });
   return response.data;
 }
 
 export async function generateTimeline(data, options = {}) {
   const response = await api.post('/visualization/diagrams/timeline', {
-    data,
+    events: data,
     title: options.title || null,
-    date_format: options.dateFormat || 'YYYY-MM-DD',
-    style: options.style || 'default',
   });
   return response.data;
 }
 
 export async function generateGantt(data, options = {}) {
   const response = await api.post('/visualization/diagrams/gantt', {
-    data,
+    tasks: data,
     title: options.title || null,
-    show_dependencies: options.showDependencies !== false,
-    show_progress: options.showProgress !== false,
-    style: options.style || 'default',
   });
   return response.data;
 }
 
 export async function generateNetworkGraph(data, options = {}) {
   const response = await api.post('/visualization/diagrams/network', {
-    data,
+    relationships: data,
     title: options.title || null,
-    layout: options.layout || 'force',
-    show_labels: options.showLabels !== false,
-    style: options.style || 'default',
   });
   return response.data;
 }
 
 export async function generateKanban(data, options = {}) {
   const response = await api.post('/visualization/diagrams/kanban', {
-    data,
-    title: options.title || null,
+    items: data,
     columns: options.columns || null,
-    style: options.style || 'default',
+    title: options.title || null,
   });
   return response.data;
 }
 
 export async function generateSequenceDiagram(data, options = {}) {
   const response = await api.post('/visualization/diagrams/sequence', {
-    data,
+    interactions: data,
     title: options.title || null,
-    style: options.style || 'default',
   });
   return response.data;
 }
 
 export async function generateWordcloud(data, options = {}) {
   const response = await api.post('/visualization/diagrams/wordcloud', {
-    data,
-    title: options.title || null,
+    text: data,
     max_words: options.maxWords || 100,
-    min_frequency: options.minFrequency || 1,
-    colormap: options.colormap || 'viridis',
+    title: options.title || null,
   });
   return response.data;
 }
@@ -106,8 +89,8 @@ export async function generateWordcloud(data, options = {}) {
 
 export async function tableToChart(tableData, options = {}) {
   const response = await api.post('/visualization/charts/from-table', {
-    table_data: tableData,
-    chart_type: options.chartType || 'auto',
+    data: tableData,
+    chart_type: options.chartType || 'bar',
     x_column: options.xColumn || null,
     y_columns: options.yColumns || null,
     title: options.title || null,
@@ -115,13 +98,10 @@ export async function tableToChart(tableData, options = {}) {
   return response.data;
 }
 
-export async function generateSparklines(data, options = {}) {
+export async function generateSparklines(data, valueColumns, options = {}) {
   const response = await api.post('/visualization/charts/sparklines', {
     data,
-    width: options.width || 100,
-    height: options.height || 30,
-    color: options.color || '#3b82f6',
-    show_min_max: options.showMinMax || false,
+    value_columns: valueColumns,
   });
   return response.data;
 }

@@ -12,13 +12,16 @@ export async function uploadFile(file, options = {}) {
   const formData = new FormData();
   formData.append('file', file);
   if (options.autoDetect !== false) {
-    formData.append('auto_detect', 'true');
+    formData.append('auto_ocr', 'true');
   }
-  if (options.extractText !== false) {
-    formData.append('extract_text', 'true');
+  if (options.generatePreview !== false) {
+    formData.append('generate_preview', 'true');
   }
-  if (options.targetFormat) {
-    formData.append('target_format', options.targetFormat);
+  if (options.tags) {
+    formData.append('tags', options.tags);
+  }
+  if (options.collection) {
+    formData.append('collection', options.collection);
   }
 
   const response = await api.post('/ingestion/upload', formData, {
@@ -78,10 +81,9 @@ export async function importFromUrl(url, options = {}) {
 
 export async function importStructuredData(data, format, options = {}) {
   const response = await api.post('/ingestion/structured', {
-    data,
-    format, // 'json', 'csv', 'xml', 'yaml'
-    schema: options.schema || null,
-    validate: options.validate !== false,
+    content: typeof data === 'string' ? data : JSON.stringify(data),
+    filename: options.filename || `import.${format || 'json'}`,
+    format_hint: format || null,
   });
   return response.data;
 }
@@ -102,10 +104,9 @@ export async function clipUrl(url, options = {}) {
 
 export async function clipSelection(content, sourceUrl, options = {}) {
   const response = await api.post('/ingestion/clip/selection', {
-    content,
-    source_url: sourceUrl,
-    title: options.title || null,
-    tags: options.tags || null,
+    selected_html: content,
+    url: sourceUrl,
+    page_title: options.title || null,
   });
   return response.data;
 }
@@ -116,12 +117,14 @@ export async function clipSelection(content, sourceUrl, options = {}) {
 
 export async function createWatcher(folderPath, options = {}) {
   const response = await api.post('/ingestion/watchers', {
-    folder_path: folderPath,
+    path: folderPath,
     patterns: options.patterns || ['*'],
     recursive: options.recursive !== false,
     auto_import: options.autoImport !== false,
-    move_after_import: options.moveAfterImport || false,
-    destination_folder: options.destinationFolder || null,
+    delete_after_import: options.deleteAfterImport || false,
+    target_collection: options.targetCollection || null,
+    ignore_patterns: options.ignorePatterns || [],
+    tags: options.tags || [],
   });
   return response.data;
 }
@@ -189,10 +192,13 @@ export async function getTranscriptionStatus(jobId) {
 // Email Import
 // ============================================
 
-export async function parseEmail(emailContent, options = {}) {
-  const response = await api.post('/ingestion/email/parse', {
-    content: emailContent,
-    extract_attachments: options.extractAttachments !== false,
+export async function parseEmail(emailFile, options = {}) {
+  const formData = new FormData();
+  formData.append('file', emailFile);
+  formData.append('extract_action_items', options.extractActionItems !== false ? 'true' : 'false');
+
+  const response = await api.post('/ingestion/email/parse', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
   });
   return response.data;
 }

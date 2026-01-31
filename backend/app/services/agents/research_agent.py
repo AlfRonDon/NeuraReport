@@ -523,7 +523,7 @@ Return JSON only:
             create_params["temperature"] = 0.7
 
         # Run in thread pool to avoid blocking event loop
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         response = await asyncio.wait_for(
             loop.run_in_executor(
                 None,

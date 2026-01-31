@@ -70,7 +70,7 @@ async def upsert_connection(
 ):
     try:
         connection = svc.upsert(payload, _corr(request))
-        return {"status": "ok", "connection": connection.dict(), "correlation_id": _corr(request)}
+        return {"status": "ok", "connection": connection.model_dump(), "correlation_id": _corr(request)}
     except (HTTPException, AppError):
         raise
     except Exception as exc:

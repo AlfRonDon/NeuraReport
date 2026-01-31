@@ -4,7 +4,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator, validator
 
 from backend.app.utils.validation import is_safe_id, is_safe_name
 
@@ -13,7 +13,7 @@ class NL2SQLGenerateRequest(BaseModel):
     """Request to generate SQL from natural language."""
     question: str = Field(..., min_length=3, max_length=2000)
     connection_id: str = Field(..., min_length=1, max_length=64)
-    tables: Optional[List[str]] = Field(None, max_items=50)
+    tables: Optional[List[str]] = Field(None, max_length=50)
     context: Optional[str] = Field(None, max_length=1000)
 
     @validator("connection_id")
@@ -22,11 +22,16 @@ class NL2SQLGenerateRequest(BaseModel):
             raise ValueError("Connection ID must be alphanumeric with dashes/underscores only")
         return value
 
-    @validator("tables", each_item=True)
-    def validate_table_name(cls, value: str) -> str:
-        if not value or len(value) > 128:
-            raise ValueError("Table name must be 1-128 characters")
-        return value.strip()
+    @field_validator("tables")
+    @classmethod
+    def validate_table_name(cls, value: list[str] | None) -> list[str] | None:
+        if value is None:
+            return value
+        for i, name in enumerate(value):
+            if not name or len(name) > 128:
+                raise ValueError("Table name must be 1-128 characters")
+            value[i] = name.strip()
+        return value
 
 
 class NL2SQLExecuteRequest(BaseModel):
@@ -51,7 +56,7 @@ class NL2SQLSaveRequest(BaseModel):
     sql: str = Field(..., min_length=1, max_length=10000)
     connection_id: str = Field(..., min_length=1, max_length=64)
     original_question: Optional[str] = Field(None, max_length=2000)
-    tags: Optional[List[str]] = Field(None, max_items=20)
+    tags: Optional[List[str]] = Field(None, max_length=20)
 
     @validator("name")
     def validate_name(cls, value: str) -> str:
@@ -65,11 +70,16 @@ class NL2SQLSaveRequest(BaseModel):
             raise ValueError("Connection ID must be alphanumeric with dashes/underscores only")
         return value
 
-    @validator("tags", each_item=True)
-    def validate_tag(cls, value: str) -> str:
-        if len(value) > 50:
-            raise ValueError("Tag must be 50 characters or less")
-        return value.strip()
+    @field_validator("tags")
+    @classmethod
+    def validate_tag(cls, value: list[str] | None) -> list[str] | None:
+        if value is None:
+            return value
+        for i, tag in enumerate(value):
+            if len(tag) > 50:
+                raise ValueError("Tag must be 50 characters or less")
+            value[i] = tag.strip()
+        return value
 
 
 class NL2SQLResult(BaseModel):

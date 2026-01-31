@@ -384,13 +384,11 @@ class WebhookService:
         Returns:
             WebhookResult with delivery status
         """
-        try:
-            loop = asyncio.get_event_loop()
-        except RuntimeError:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-
-        return loop.run_until_complete(self.deliver(webhook_url, payload, secret))
+        import concurrent.futures
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+            return pool.submit(
+                asyncio.run, self.deliver(webhook_url, payload, secret)
+            ).result()
 
 
 # Singleton instance
@@ -401,7 +399,14 @@ def get_webhook_service() -> WebhookService:
     """Get the singleton webhook service instance."""
     global _webhook_service
     if _webhook_service is None:
-        _webhook_service = WebhookService()
+        try:
+            _webhook_service = WebhookService()
+        except RuntimeError:
+            logger.error(
+                "webhook_service_init_failed",
+                extra={"event": "webhook_service_init_failed"},
+            )
+            raise
     return _webhook_service
 
 
@@ -463,10 +468,8 @@ def send_job_webhook_sync(
     Returns:
         WebhookResult with delivery status
     """
-    try:
-        loop = asyncio.get_event_loop()
-    except RuntimeError:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-
-    return loop.run_until_complete(send_job_webhook(job, webhook_url, webhook_secret))
+    import concurrent.futures
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+        return pool.submit(
+            asyncio.run, send_job_webhook(job, webhook_url, webhook_secret)
+        ).result()
