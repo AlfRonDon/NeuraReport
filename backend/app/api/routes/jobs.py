@@ -15,14 +15,14 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
 from backend.app.services.security import require_api_key
 from backend.app.schemas.generate.reports import RunPayload
-from backend.app.utils.job_status import normalize_job_status, normalize_job
+from backend.app.services.job_status import normalize_job_status, normalize_job
 import backend.app.services.state_access as state_access
 from backend.legacy.services.scheduler_service import get_job, list_active_jobs, list_jobs, cancel_job
 
 router = APIRouter(dependencies=[Depends(require_api_key)])
 
 
-# Use shared normalize_job_status and normalize_job from backend.app.utils.job_status
+# Use shared normalize_job_status and normalize_job from backend.app.services.job_status
 _normalize_job_status = normalize_job_status
 _normalize_job = normalize_job
 

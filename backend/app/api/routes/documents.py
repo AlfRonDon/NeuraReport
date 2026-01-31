@@ -14,7 +14,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, UploadFil
 from pydantic import BaseModel
 
 from backend.app.services.config import get_settings
-from backend.app.utils.validation import validate_path_safety
+from backend.app.services.validation import validate_path_safety
 from ...schemas.documents import (
     CreateDocumentRequest,
     UpdateDocumentRequest,

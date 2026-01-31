@@ -15,6 +15,7 @@ import os
 import threading
 from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
+from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, Generator, List, Optional, Tuple
 
@@ -31,6 +32,28 @@ from backend.app.repositories.agent_tasks.models import (
 )
 
 logger = logging.getLogger("neura.agent_tasks.repository")
+
+
+def _serialize_for_json(obj: Any) -> Any:
+    """Recursively serialize objects to JSON-safe format.
+
+    Converts:
+    - datetime → ISO 8601 string
+    - Enum → value
+    - dict → recursively serialize values
+    - list/tuple → recursively serialize elements
+    - other → pass through
+    """
+    if isinstance(obj, datetime):
+        return obj.isoformat()
+    elif isinstance(obj, Enum):
+        return obj.value
+    elif isinstance(obj, dict):
+        return {k: _serialize_for_json(v) for k, v in obj.items()}
+    elif isinstance(obj, (list, tuple)):
+        return type(obj)(_serialize_for_json(item) for item in obj)
+    else:
+        return obj
 
 
 class TaskNotFoundError(Exception):
@@ -685,7 +708,7 @@ class AgentTaskRepository:
 
             old_status = task.status
             task.status = AgentTaskStatus.COMPLETED
-            task.result = result
+            task.result = _serialize_for_json(result)
             task.progress_percent = 100
             task.progress_message = "Completed"
             task.completed_at = _utc_now()
@@ -776,7 +799,7 @@ class AgentTaskRepository:
                         "error": error_message[:500],
                         "error_code": error_code,
                         "attempt": task.attempt_count,
-                        "next_retry_at": task.next_retry_at.isoformat(),
+                        "next_retry_at": task.next_retry_at,
                     }
                 )
                 logger.warning(
@@ -941,7 +964,7 @@ class AgentTaskRepository:
             event_type=event_type,
             previous_status=previous_status,
             new_status=new_status,
-            event_data=data,
+            event_data=_serialize_for_json(data) if data else None,
         )
         session.add(event)
         return event

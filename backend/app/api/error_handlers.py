@@ -5,7 +5,7 @@ import logging
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse
 
-from backend.app.utils.errors import AppError
+from backend.app.services.errors import AppError
 
 logger = logging.getLogger("neura.api.errors")
 

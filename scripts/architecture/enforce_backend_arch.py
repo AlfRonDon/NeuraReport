@@ -260,8 +260,9 @@ def _violations_for_file(
             allowed_layers=tuple(sorted(APP_LAYERS)),
         )
 
-    # Global rule: only backend/app/api/* may import backend.app.api.*
-    if "backend/app/api/" not in rel:
+    # Global rule: only backend/app/api/* (and tests) may import backend.app.api.*
+    # Tests are exempt because they must import routers/middleware to test them.
+    if "backend/app/api/" not in rel and not rel.startswith("backend/tests/"):
         for imp in _imports_with_prefix(imports, "backend.app.api"):
             add_violation(
                 RULE_APP_API_IMPORT_SCOPE,

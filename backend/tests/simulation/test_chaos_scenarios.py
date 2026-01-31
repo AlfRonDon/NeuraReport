@@ -188,6 +188,7 @@ class TestStateCorruptionRecovery:
 
         # Read state, corrupt one section, write back
         state_file = tmp_path / "state.json"
+        assert state_file.exists(), f"State file not created at {state_file}"
         with open(state_file, "r") as f:
             state = json.load(f)
 
@@ -333,7 +334,10 @@ class TestSystemRestartScenarios:
     def test_running_jobs_become_stale_after_restart(self, tmp_path: Path, monkeypatch):
         """Jobs that were running should be detected as stale after restart."""
         monkeypatch.delenv("NEURA_STATE_DIR", raising=False)
-        store = StateStore(base_dir=tmp_path)
+        # Use unique subdirectory to ensure test isolation
+        test_dir = tmp_path / "test_stale_jobs"
+        test_dir.mkdir(exist_ok=True)
+        store = StateStore(base_dir=test_dir)
 
         # Create running jobs
         running_jobs = []
@@ -353,7 +357,7 @@ class TestSystemRestartScenarios:
             store._write_state(state)
 
         # Create new store (simulating restart)
-        new_store = StateStore(base_dir=tmp_path)
+        new_store = StateStore(base_dir=test_dir)
 
         # Check for stale jobs (30 minutes = 1800 seconds, timeout is 15 minutes = 900 seconds)
         stale = new_store.find_stale_running_jobs(heartbeat_timeout_seconds=900)
@@ -383,7 +387,10 @@ class TestSystemRestartScenarios:
     def test_pending_retry_jobs_after_restart(self, tmp_path: Path, monkeypatch):
         """Jobs pending retry should be picked up after restart."""
         monkeypatch.delenv("NEURA_STATE_DIR", raising=False)
-        store = StateStore(base_dir=tmp_path)
+        # Use unique subdirectory to ensure test isolation
+        test_dir = tmp_path / "test_pending_retry"
+        test_dir.mkdir(exist_ok=True)
+        store = StateStore(base_dir=test_dir)
 
         # Create jobs pending retry
         pending_retry_ids = []
@@ -407,7 +414,7 @@ class TestSystemRestartScenarios:
             pending_retry_ids.append(job["id"])
 
         # Create new store instance (simulating restart)
-        new_store = StateStore(base_dir=tmp_path)
+        new_store = StateStore(base_dir=test_dir)
 
         # Find jobs ready for retry
         ready = new_store.find_jobs_ready_for_retry()

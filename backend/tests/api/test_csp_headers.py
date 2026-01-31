@@ -144,7 +144,7 @@ def test_csp_debug_mode_adds_localhost(client):
 
 def test_csp_custom_origins_respected(client):
     """Test that custom CSP origins from config are included."""
-    with patch.dict(os.environ, {"NEURA_CSP_CONNECT_ORIGINS": "https://api.example.com,wss://realtime.example.com"}):
+    with patch.dict(os.environ, {"NEURA_CSP_CONNECT_ORIGINS": '["https://api.example.com","wss://realtime.example.com"]'}):
         get_settings.cache_clear()
 
         try:

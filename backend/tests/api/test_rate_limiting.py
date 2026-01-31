@@ -15,9 +15,12 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
 
-@pytest.fixture
+@pytest.fixture(scope="function")
 def app():
     """Test app fixture with rate limiting."""
+    # Reset limiter storage FIRST to ensure test isolation
+    limiter.reset()
+
     _app = FastAPI()
     _app.include_router(ai_router)
     _app.include_router(design_router, prefix="/design")
@@ -26,6 +29,8 @@ def app():
     # Configure rate limiter
     settings = get_settings()
     _configure_limiter(settings)
+
+    # Set up rate limiting with middleware
     _app.state.limiter = limiter
     _app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
     _app.add_middleware(SlowAPIMiddleware)
@@ -76,7 +81,7 @@ def test_strict_rate_limit_enforced(client, api_key_1):
         json=payload,
         headers={"X-API-Key": api_key_1}
     )
-    assert response.status_code == 429, "Expected 429 Too Many Requests on 11th request"
+    assert response.status_code == 429, f"Expected 429 Too Many Requests on 11th request, got {response.status_code}"
 
 
 def test_rate_limit_response_headers(client, api_key_1):

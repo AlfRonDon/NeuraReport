@@ -8,7 +8,7 @@ from pydantic import BaseModel
 
 from backend.app.services.config import get_settings
 from backend.app.services.security import require_api_key
-from backend.app.utils.job_status import (
+from backend.app.services.job_status import (
     normalize_job_status as _normalize_job_status,
     STATUS_SUCCEEDED,
     STATUS_FAILED,

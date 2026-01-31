@@ -13,4 +13,14 @@ def validate_file_extension(filename: str, allowed_extensions: list[str]) -> tup
     return _validation.validate_file_extension(filename, allowed_extensions)
 
 
-__all__ = ["is_safe_name", "validate_file_extension"]
+def is_read_only_sql(query: str) -> tuple[bool, str | None]:
+    """Service-layer validation boundary for SQL read-only checks."""
+    return _validation.is_read_only_sql(query)
+
+
+def validate_path_safety(path: str) -> tuple[bool, str | None]:
+    """Service-layer validation boundary for file path safety."""
+    return _validation.validate_path_safety(path)
+
+
+__all__ = ["is_safe_name", "validate_file_extension", "is_read_only_sql", "validate_path_safety"]

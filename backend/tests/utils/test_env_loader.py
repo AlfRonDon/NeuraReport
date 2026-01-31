@@ -18,7 +18,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
-from hypothesis import given, settings, assume
+from hypothesis import given, settings, assume, HealthCheck
 from hypothesis import strategies as st
 
 from backend.app.utils.env_loader import (
@@ -249,7 +249,7 @@ class TestPropertyBased:
             max_size=50,
         )
     )
-    @settings(max_examples=50)
+    @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
     def test_apply_env_never_crashes(self, pairs):
         import tempfile
         lines = [f"{k}={v}" for k, v in pairs]

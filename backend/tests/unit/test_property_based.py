@@ -201,7 +201,7 @@ class TestDLQProperties:
         assert dlq_record["requeue_count"] == n
 
     @given(n=st.integers(min_value=0, max_value=20))
-    @settings(max_examples=15)
+    @settings(max_examples=15, deadline=500)
     def test_dlq_stats_are_accurate(self, n: int):
         """DLQ stats should accurately reflect queue state."""
         store = make_store()

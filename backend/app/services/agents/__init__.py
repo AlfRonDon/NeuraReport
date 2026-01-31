@@ -36,6 +36,12 @@ from .agent_service import (
     agent_service,
     agent_task_worker,
 )
+# Repository types re-exported for api layer access
+from backend.app.repositories.agent_tasks import AgentTaskStatus
+from backend.app.repositories.agent_tasks.repository import (
+    TaskConflictError,
+    TaskNotFoundError,
+)
 from .base_agent import BaseAgentV2
 from .research_agent import (
     ResearchAgent,
@@ -113,6 +119,10 @@ __all__ = [
     "EmailDraftAgent",
     "ContentRepurposingAgent",
     "ProofreadingAgent",
+    # Repository types (re-exported for api layer)
+    "AgentTaskStatus",
+    "TaskConflictError",
+    "TaskNotFoundError",
     # Shared types
     "AgentType",
     "AgentStatus",

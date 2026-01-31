@@ -23,11 +23,9 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field, field_validator
 
 from backend.app.api.middleware import limiter
-from backend.app.repositories.agent_tasks import (
+from backend.app.services.agents import (
     AgentTaskStatus,
-)
-from backend.app.repositories.agent_tasks.models import AgentType
-from backend.app.repositories.agent_tasks.repository import (
+    AgentType,
     TaskConflictError,
     TaskNotFoundError,
 )

@@ -15,7 +15,7 @@ from backend.app.services.config import get_settings
 @pytest.fixture(autouse=True)
 def _set_jwt_secret(monkeypatch):
     """Ensure NEURA_JWT_SECRET is set so the production guard in config.py does not raise."""
-    monkeypatch.setenv("JWT_SECRET", "test-secret-for-ws-auth-tests")
+    monkeypatch.setenv("NEURA_JWT_SECRET", "test-secret-for-ws-auth-tests")
     get_settings.cache_clear()
     yield
     get_settings.cache_clear()
@@ -56,8 +56,8 @@ def test_websocket_with_valid_token(client, valid_api_key):
 
 def test_websocket_with_invalid_token(client):
     """Test WebSocket connection with invalid token is rejected with 1008."""
-    env_vars = {"API_KEY": "secret-key", "JWT_SECRET": "test-secret-for-ws-auth-tests", "NEURA_DEBUG": "false", "ALLOW_ANONYMOUS_API": "false"}
-    with patch.dict(os.environ, env_vars):
+    env_vars = {"NEURA_API_KEY": "secret-key", "NEURA_JWT_SECRET": "test-secret-for-ws-auth-tests", "NEURA_DEBUG": "false", "NEURA_ALLOW_ANON_API": "false"}
+    with patch.dict(os.environ, env_vars, clear=False):
         # Remove PYTEST_CURRENT_TEST so verify_ws_token doesn't auto-bypass
         saved = os.environ.pop("PYTEST_CURRENT_TEST", None)
         get_settings.cache_clear()
@@ -77,8 +77,8 @@ def test_websocket_with_invalid_token(client):
 
 def test_websocket_with_no_token(client):
     """Test WebSocket connection with no token is rejected with 1008."""
-    env_vars = {"API_KEY": "secret-key", "JWT_SECRET": "test-secret-for-ws-auth-tests", "NEURA_DEBUG": "false", "ALLOW_ANONYMOUS_API": "false"}
-    with patch.dict(os.environ, env_vars):
+    env_vars = {"NEURA_API_KEY": "secret-key", "NEURA_JWT_SECRET": "test-secret-for-ws-auth-tests", "NEURA_DEBUG": "false", "NEURA_ALLOW_ANON_API": "false"}
+    with patch.dict(os.environ, env_vars, clear=False):
         saved = os.environ.pop("PYTEST_CURRENT_TEST", None)
         get_settings.cache_clear()
 
@@ -97,7 +97,7 @@ def test_websocket_with_no_token(client):
 
 def test_websocket_debug_mode_bypass(client):
     """Test WebSocket connection allowed in debug mode without token."""
-    with patch.dict(os.environ, {"API_KEY": "secret-key", "NEURA_DEBUG": "true"}):
+    with patch.dict(os.environ, {"NEURA_API_KEY": "secret-key", "NEURA_DEBUG": "true"}, clear=False):
         get_settings.cache_clear()
 
         try:
@@ -110,7 +110,7 @@ def test_websocket_debug_mode_bypass(client):
 
 def test_websocket_no_api_key_configured(client):
     """Test WebSocket connection allowed when no API key is configured."""
-    with patch.dict(os.environ, {"API_KEY": "", "JWT_SECRET": "test-secret-for-ws-auth-tests", "NEURA_DEBUG": "false", "ALLOW_ANONYMOUS_API": "false"}, clear=False):
+    with patch.dict(os.environ, {"NEURA_API_KEY": "", "NEURA_JWT_SECRET": "test-secret-for-ws-auth-tests", "NEURA_DEBUG": "false", "NEURA_ALLOW_ANON_API": "false"}, clear=False):
         get_settings.cache_clear()
 
         try:
@@ -123,7 +123,7 @@ def test_websocket_no_api_key_configured(client):
 
 def test_websocket_anonymous_api_allowed(client):
     """Test WebSocket connection allowed when anonymous API is enabled."""
-    with patch.dict(os.environ, {"API_KEY": "secret-key", "JWT_SECRET": "test-secret-for-ws-auth-tests", "NEURA_DEBUG": "false", "ALLOW_ANONYMOUS_API": "true"}):
+    with patch.dict(os.environ, {"NEURA_API_KEY": "secret-key", "NEURA_JWT_SECRET": "test-secret-for-ws-auth-tests", "NEURA_DEBUG": "false", "NEURA_ALLOW_ANON_API": "true"}, clear=False):
         get_settings.cache_clear()
 
         try:
@@ -136,7 +136,7 @@ def test_websocket_anonymous_api_allowed(client):
 
 def test_websocket_pytest_environment_bypass(client):
     """Test WebSocket connection allowed in pytest environment."""
-    with patch.dict(os.environ, {"PYTEST_CURRENT_TEST": "test_websocket_auth.py::test_websocket_pytest_environment_bypass", "API_KEY": "secret-key"}):
+    with patch.dict(os.environ, {"PYTEST_CURRENT_TEST": "test_websocket_auth.py::test_websocket_pytest_environment_bypass", "NEURA_API_KEY": "secret-key"}, clear=False):
         get_settings.cache_clear()
 
         try:
@@ -153,7 +153,7 @@ def test_websocket_pytest_environment_bypass(client):
 
 def test_verify_ws_token_with_valid_token():
     """Test verify_ws_token returns True for valid token."""
-    with patch.dict(os.environ, {"API_KEY": "test-key", "JWT_SECRET": "test-secret-for-ws-auth-tests", "NEURA_DEBUG": "false", "ALLOW_ANONYMOUS_API": "false"}):
+    with patch.dict(os.environ, {"NEURA_API_KEY": "test-key", "NEURA_JWT_SECRET": "test-secret-for-ws-auth-tests", "NEURA_DEBUG": "false", "NEURA_ALLOW_ANON_API": "false"}, clear=False):
         get_settings.cache_clear()
 
         try:
@@ -164,7 +164,7 @@ def test_verify_ws_token_with_valid_token():
 
 def test_verify_ws_token_with_invalid_token():
     """Test verify_ws_token returns False for invalid token."""
-    with patch.dict(os.environ, {"API_KEY": "test-key", "JWT_SECRET": "test-secret-for-ws-auth-tests", "NEURA_DEBUG": "false", "ALLOW_ANONYMOUS_API": "false"}):
+    with patch.dict(os.environ, {"NEURA_API_KEY": "test-key", "NEURA_JWT_SECRET": "test-secret-for-ws-auth-tests", "NEURA_DEBUG": "false", "NEURA_ALLOW_ANON_API": "false"}, clear=False):
         saved = os.environ.pop("PYTEST_CURRENT_TEST", None)
         get_settings.cache_clear()
 
@@ -178,7 +178,7 @@ def test_verify_ws_token_with_invalid_token():
 
 def test_verify_ws_token_with_none_token():
     """Test verify_ws_token returns False for None token when API key is configured."""
-    with patch.dict(os.environ, {"API_KEY": "test-key", "JWT_SECRET": "test-secret-for-ws-auth-tests", "NEURA_DEBUG": "false", "ALLOW_ANONYMOUS_API": "false"}):
+    with patch.dict(os.environ, {"NEURA_API_KEY": "test-key", "NEURA_JWT_SECRET": "test-secret-for-ws-auth-tests", "NEURA_DEBUG": "false", "NEURA_ALLOW_ANON_API": "false"}, clear=False):
         saved = os.environ.pop("PYTEST_CURRENT_TEST", None)
         get_settings.cache_clear()
 
@@ -192,7 +192,7 @@ def test_verify_ws_token_with_none_token():
 
 def test_verify_ws_token_debug_mode():
     """Test verify_ws_token returns True in debug mode regardless of token."""
-    with patch.dict(os.environ, {"API_KEY": "test-key", "NEURA_DEBUG": "true"}):
+    with patch.dict(os.environ, {"NEURA_API_KEY": "test-key", "NEURA_DEBUG": "true"}, clear=False):
         get_settings.cache_clear()
 
         try:
