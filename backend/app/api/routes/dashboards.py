@@ -12,7 +12,7 @@ import logging
 from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from backend.app.services.dashboards.service import DashboardService
 from backend.app.services.dashboards.widget_service import WidgetService
@@ -35,10 +35,14 @@ from backend.app.schemas.analytics import (
 )
 from backend.app.services.nl2sql.service import NL2SQLService
 from backend.app.schemas.nl2sql import NL2SQLExecuteRequest
+from backend.app.services.validation import is_read_only_sql
 
 logger = logging.getLogger("neura.api.dashboards")
 
 router = APIRouter(tags=["dashboards"], dependencies=[Depends(require_api_key)])
+
+# Maximum rows accepted by inline analytics endpoints
+MAX_ANALYTICS_ROWS = 10_000
 
 # Service singletons
 _dashboard_svc = DashboardService()
@@ -56,11 +60,21 @@ class WidgetConfig(BaseModel):
     """Widget configuration."""
 
     type: str = Field(..., pattern="^(chart|metric|table|text|filter|map)$")
-    title: str
+    title: str = Field(..., min_length=1, max_length=255)
     data_source: Optional[str] = None
-    query: Optional[str] = None
+    query: Optional[str] = Field(None, max_length=10_000)
     chart_type: Optional[str] = None
     options: dict[str, Any] = {}
+
+    @field_validator("query")
+    @classmethod
+    def validate_query_is_read_only(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        ok, reason = is_read_only_sql(v)
+        if not ok:
+            raise ValueError(f"Widget query must be read-only: {reason}")
+        return v
 
 
 class DashboardWidget(BaseModel):
@@ -92,7 +106,7 @@ class UpdateDashboardRequest(BaseModel):
     widgets: Optional[list[DashboardWidget]] = None
     filters: Optional[list[dict[str, Any]]] = None
     theme: Optional[str] = None
-    refresh_interval: Optional[int] = None
+    refresh_interval: Optional[int] = Field(None, ge=5, le=86400)
 
 
 class AddWidgetRequest(BaseModel):
@@ -355,6 +369,8 @@ async def generate_insights(
     Converts raw data dicts into DataSeries and delegates to the
     analytics InsightService.
     """
+    if len(data) > MAX_ANALYTICS_ROWS:
+        raise HTTPException(status_code=422, detail=f"Data exceeds maximum of {MAX_ANALYTICS_ROWS} rows")
     series = _dicts_to_series(data)
     if not series:
         raise HTTPException(status_code=422, detail="No numeric data series found in input")
@@ -376,6 +392,8 @@ async def predict_trends(
     Extracts the named value column from the data dicts and delegates
     to the analytics TrendService.
     """
+    if len(data) > MAX_ANALYTICS_ROWS:
+        raise HTTPException(status_code=422, detail=f"Data exceeds maximum of {MAX_ANALYTICS_ROWS} rows")
     values = [
         float(row[value_column])
         for row in data
@@ -408,6 +426,8 @@ async def detect_anomalies(
     analytics engine.  ``iqr`` and ``isolation_forest`` are accepted
     for forward compatibility but fall back to z-score with a warning.
     """
+    if len(data) > MAX_ANALYTICS_ROWS:
+        raise HTTPException(status_code=422, detail=f"Data exceeds maximum of {MAX_ANALYTICS_ROWS} rows")
     if method != "zscore":
         logger.warning(
             "anomaly_method_unsupported",
@@ -456,6 +476,8 @@ async def find_correlations(
     Extracts numeric columns from the data dicts and delegates to the
     analytics CorrelationService.
     """
+    if len(data) > MAX_ANALYTICS_ROWS:
+        raise HTTPException(status_code=422, detail=f"Data exceeds maximum of {MAX_ANALYTICS_ROWS} rows")
     target_cols = columns
     if not target_cols and data:
         target_cols = _detect_numeric_columns(data)

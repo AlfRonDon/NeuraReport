@@ -87,8 +87,8 @@ class GenerateInboxRequest(BaseModel):
 # FILE INGESTION ENDPOINTS
 # =============================================================================
 
-@limiter.limit(RATE_LIMIT_STRICT)
 @router.post("/upload")
+@limiter.limit(RATE_LIMIT_STRICT)
 async def upload_file(
     request: Request,
     file: UploadFile = File(...),
@@ -140,8 +140,8 @@ async def upload_file(
         )
 
 
-@limiter.limit(RATE_LIMIT_STRICT)
 @router.post("/upload/bulk")
+@limiter.limit(RATE_LIMIT_STRICT)
 async def upload_bulk(
     request: Request,
     files: List[UploadFile] = File(...),
@@ -184,8 +184,8 @@ async def upload_bulk(
     }
 
 
-@limiter.limit(RATE_LIMIT_STRICT)
 @router.post("/upload/zip")
+@limiter.limit(RATE_LIMIT_STRICT)
 async def upload_zip(
     request: Request,
     file: UploadFile = File(...),
@@ -434,8 +434,8 @@ async def delete_watcher(watcher_id: str):
 # TRANSCRIPTION ENDPOINTS
 # =============================================================================
 
-@limiter.limit(RATE_LIMIT_STRICT)
 @router.post("/transcribe")
+@limiter.limit(RATE_LIMIT_STRICT)
 async def transcribe_file(
     request: Request,
     file: UploadFile = File(...),

@@ -63,7 +63,11 @@ from backend.legacy.utils.connection_utils import db_path_from_payload_or_defaul
 from backend.legacy.utils.schedule_utils import clean_key_values
 from backend.legacy.utils.template_utils import normalize_template_id, template_dir
 
+logger = logging.getLogger("neura.api.excel")
+
 router = APIRouter(dependencies=[Depends(require_api_key)])
+
+MAX_UPLOAD_SIZE_BYTES = 100 * 1024 * 1024  # 100 MB
 
 
 def _correlation(request: Request) -> str | None:
@@ -92,18 +96,36 @@ def _ensure_template_exists(template_id: str) -> tuple[str, dict]:
 async def _persist_upload(file: UploadFile, suffix: str) -> tuple[Path, str]:
     filename = Path(file.filename or f"upload{suffix}").name
     tmp = tempfile.NamedTemporaryFile(prefix="nr-upload-", suffix=suffix, delete=False)
+    tmp_path = Path(tmp.name)
     try:
+        total_bytes = 0
         with tmp:
             file.file.seek(0)
             while True:
                 chunk = file.file.read(1024 * 1024)
                 if not chunk:
                     break
+                total_bytes += len(chunk)
+                if total_bytes > MAX_UPLOAD_SIZE_BYTES:
+                    raise HTTPException(
+                        status_code=413,
+                        detail=f"File exceeds maximum upload size of {MAX_UPLOAD_SIZE_BYTES // (1024 * 1024)} MB",
+                    )
                 tmp.write(chunk)
+    except HTTPException:
+        # Clean up temp file on size rejection
+        with contextlib.suppress(FileNotFoundError):
+            tmp_path.unlink(missing_ok=True)
+        raise
+    except Exception:
+        # Clean up temp file on any failure
+        with contextlib.suppress(FileNotFoundError):
+            tmp_path.unlink(missing_ok=True)
+        raise
     finally:
         with contextlib.suppress(Exception):
             await file.close()
-    return Path(tmp.name), filename
+    return tmp_path, filename
 
 
 # =============================================================================
@@ -193,7 +215,7 @@ def mapping_key_options_excel(
     request: Request,
     connection_id: str | None = None,
     tokens: str | None = None,
-    limit: int = 500,
+    limit: int = Query(500, ge=1, le=5000),
     start_date: str | None = None,
     end_date: str | None = None,
     debug: bool = False,

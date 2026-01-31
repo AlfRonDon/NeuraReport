@@ -8,6 +8,7 @@ import asyncio
 import logging
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile
+from fastapi.responses import JSONResponse
 
 from backend.app.api.middleware import limiter, RATE_LIMIT_STRICT
 
@@ -153,17 +154,18 @@ async def apply_brand_kit(kit_id: str, request: ApplyBrandKitRequest):
 # Color palette endpoints
 
 
-@limiter.limit(RATE_LIMIT_STRICT)
 @router.post("/color-palette", response_model=ColorPaletteResponse)
+@limiter.limit(RATE_LIMIT_STRICT)
 async def generate_color_palette(request: Request, req: ColorPaletteRequest):
     """Generate a color palette based on color harmony."""
     try:
-        return await asyncio.to_thread(
+        result = await asyncio.to_thread(
             design_service.generate_color_palette,
             base_color=req.base_color,
             harmony_type=req.harmony_type,
             count=req.count,
         )
+        return JSONResponse(content=result.model_dump() if hasattr(result, 'model_dump') else result)
     except HTTPException:
         raise
     except Exception as exc:
@@ -258,31 +260,33 @@ async def activate_theme(theme_id: str):
 # Color utility endpoints
 
 
-@limiter.limit(RATE_LIMIT_STRICT)
 @router.post("/colors/contrast", response_model=ColorContrastResponse)
+@limiter.limit(RATE_LIMIT_STRICT)
 async def get_color_contrast(request: Request, req: ColorContrastRequest):
     """Compute WCAG contrast ratio between two colors."""
     try:
-        return await asyncio.to_thread(
+        result = await asyncio.to_thread(
             design_service.get_color_contrast,
             color1=req.color1,
             color2=req.color2,
         )
+        return JSONResponse(content=result.model_dump() if hasattr(result, 'model_dump') else result)
     except HTTPException:
         raise
     except Exception as exc:
         raise _handle_design_error(exc, "Color contrast check") from exc
 
 
-@limiter.limit(RATE_LIMIT_STRICT)
 @router.post("/colors/accessible", response_model=AccessibleColorsResponse)
+@limiter.limit(RATE_LIMIT_STRICT)
 async def suggest_accessible_colors(request: Request, req: AccessibleColorsRequest):
     """Suggest accessible text colors for a given background."""
     try:
-        return await asyncio.to_thread(
+        result = await asyncio.to_thread(
             design_service.suggest_accessible_colors,
             background_color=req.background_color,
         )
+        return JSONResponse(content=result.model_dump() if hasattr(result, 'model_dump') else result)
     except HTTPException:
         raise
     except Exception as exc:

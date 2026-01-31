@@ -27,26 +27,48 @@ from backend.app.services.export.service import distribution_service, export_ser
 
 from backend.app.services.security import require_api_key
 from fastapi import Depends
+from pydantic import BaseModel, Field
+from typing import Any, Optional
+
+
+class ExportOptions(BaseModel):
+    """Typed export options for format endpoints.
+
+    Known fields are validated; additional fields are passed through
+    to the export service to maintain forward compatibility.
+    """
+    model_config = {"extra": "allow"}
+
+    page_size: Optional[str] = Field(None, max_length=20)
+    orientation: Optional[str] = Field(None, pattern="^(portrait|landscape)$")
+    include_toc: Optional[bool] = None
+    include_cover: Optional[bool] = None
+    watermark: Optional[str] = Field(None, max_length=100)
+    header: Optional[str] = Field(None, max_length=500)
+    footer: Optional[str] = Field(None, max_length=500)
+    margin_mm: Optional[int] = Field(None, ge=0, le=100)
+    quality: Optional[str] = Field(None, pattern="^(draft|standard|high)$")
+
 
 router = APIRouter(tags=["export"], dependencies=[Depends(require_api_key)])
 
 
-@limiter.limit(RATE_LIMIT_STANDARD)
 @router.post("/{document_id}/pdf")
-async def export_to_pdf(request: Request, document_id: str, options: dict = None):
+@limiter.limit(RATE_LIMIT_STANDARD)
+async def export_to_pdf(request: Request, document_id: str, options: Optional[ExportOptions] = None):
     """Export document to PDF format."""
     job = await export_service.create_export_job(
         document_id=document_id,
         format="pdf",
-        options=options or {},
+        options=options.model_dump(exclude_none=True) if options else {},
     )
     return job
 
 
 @router.post("/{document_id}/pdfa")
-async def export_to_pdfa(document_id: str, options: dict = None):
+async def export_to_pdfa(document_id: str, options: Optional[ExportOptions] = None):
     """Export document to PDF/A archival format."""
-    opts = options or {}
+    opts = options.model_dump(exclude_none=True) if options else {}
     opts["pdfa_compliant"] = True
     job = await export_service.create_export_job(
         document_id=document_id,
@@ -56,76 +78,76 @@ async def export_to_pdfa(document_id: str, options: dict = None):
     return job
 
 
-@limiter.limit(RATE_LIMIT_STANDARD)
 @router.post("/{document_id}/docx")
-async def export_to_docx(request: Request, document_id: str, options: dict = None):
+@limiter.limit(RATE_LIMIT_STANDARD)
+async def export_to_docx(request: Request, document_id: str, options: Optional[ExportOptions] = None):
     """Export document to Word DOCX format."""
     job = await export_service.create_export_job(
         document_id=document_id,
         format="docx",
-        options=options or {},
+        options=options.model_dump(exclude_none=True) if options else {},
     )
     return job
 
 
-@limiter.limit(RATE_LIMIT_STANDARD)
 @router.post("/{document_id}/pptx")
-async def export_to_pptx(request: Request, document_id: str, options: dict = None):
+@limiter.limit(RATE_LIMIT_STANDARD)
+async def export_to_pptx(request: Request, document_id: str, options: Optional[ExportOptions] = None):
     """Export document to PowerPoint format."""
     job = await export_service.create_export_job(
         document_id=document_id,
         format="pptx",
-        options=options or {},
+        options=options.model_dump(exclude_none=True) if options else {},
     )
     return job
 
 
 @router.post("/{document_id}/epub")
-async def export_to_epub(document_id: str, options: dict = None):
+async def export_to_epub(document_id: str, options: Optional[ExportOptions] = None):
     """Export document to ePub format."""
     job = await export_service.create_export_job(
         document_id=document_id,
         format="epub",
-        options=options or {},
+        options=options.model_dump(exclude_none=True) if options else {},
     )
     return job
 
 
 @router.post("/{document_id}/latex")
-async def export_to_latex(document_id: str, options: dict = None):
+async def export_to_latex(document_id: str, options: Optional[ExportOptions] = None):
     """Export document to LaTeX format."""
     job = await export_service.create_export_job(
         document_id=document_id,
         format="latex",
-        options=options or {},
+        options=options.model_dump(exclude_none=True) if options else {},
     )
     return job
 
 
 @router.post("/{document_id}/markdown")
-async def export_to_markdown(document_id: str, options: dict = None):
+async def export_to_markdown(document_id: str, options: Optional[ExportOptions] = None):
     """Export document to Markdown format."""
     job = await export_service.create_export_job(
         document_id=document_id,
         format="markdown",
-        options=options or {},
+        options=options.model_dump(exclude_none=True) if options else {},
     )
     return job
 
 
 @router.post("/{document_id}/html")
-async def export_to_html(document_id: str, options: dict = None):
+async def export_to_html(document_id: str, options: Optional[ExportOptions] = None):
     """Export document to HTML format."""
     job = await export_service.create_export_job(
         document_id=document_id,
         format="html",
-        options=options or {},
+        options=options.model_dump(exclude_none=True) if options else {},
     )
     return job
 
 
-@limiter.limit(RATE_LIMIT_STRICT)
 @router.post("/bulk")
+@limiter.limit(RATE_LIMIT_STRICT)
 async def bulk_export(request: Request, req: BulkExportRequest):
     """Export multiple documents as a ZIP file."""
     job = await export_service.bulk_export(
@@ -184,6 +206,13 @@ async def publish_to_portal(document_id: str, request: PortalPublishRequest):
             "expires_at": request.expires_at,
         },
     )
+    # Never echo the password back in the response
+    if isinstance(result, dict):
+        result.pop("password", None)
+        opts = result.get("options", {})
+        if isinstance(opts, dict):
+            opts.pop("password", None)
+        result["password_protected"] = request.password is not None
     return result
 
 
@@ -215,8 +244,8 @@ async def send_to_slack(request: SlackMessageRequest):
     return result
 
 
-@limiter.limit(RATE_LIMIT_STANDARD)
 @router.post("/distribution/teams")
+@limiter.limit(RATE_LIMIT_STANDARD)
 async def send_to_teams(request: Request, req: TeamsMessageRequest):
     """Send document to Microsoft Teams."""
     result = await distribution_service.send_to_teams(

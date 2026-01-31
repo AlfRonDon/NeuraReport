@@ -33,6 +33,19 @@ def _intent_headers() -> dict[str, str]:
     }
 
 
+@pytest.fixture(autouse=True)
+def _disable_rate_limiter(request):
+    """Disable slowapi rate limiter for all tests except rate-limiting tests."""
+    # Skip disabling for tests that explicitly test rate limiting behaviour
+    if "test_rate_limiting" in request.node.nodeid:
+        yield
+        return
+    from backend.app.api.middleware import limiter
+    limiter.enabled = False
+    yield
+    limiter.enabled = True
+
+
 @pytest.fixture(autouse=True, scope="session")
 def _inject_intent_headers():
     def _patched_request(self, method, url, **kwargs):

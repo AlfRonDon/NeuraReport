@@ -8,7 +8,6 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from backend.app.services.security import require_api_key
 from backend.app.schemas.enrichment import (
     EnrichmentSourceCreate,
-    EnrichmentSourceType,
     SimpleEnrichmentRequest,
     SimplePreviewRequest,
 )
@@ -21,33 +20,6 @@ def get_service() -> EnrichmentService:
     return EnrichmentService()
 
 
-# Available source types (what the frontend expects from GET /sources)
-AVAILABLE_SOURCES = [
-    {
-        "id": "company",
-        "name": "Company Information",
-        "type": EnrichmentSourceType.COMPANY_INFO.value,
-        "description": "Enrich with company details (industry, size, revenue)",
-        "required_fields": ["company_name"],
-        "output_fields": ["industry", "company_size", "estimated_revenue", "founded_year"],
-    },
-    {
-        "id": "address",
-        "name": "Address Standardization",
-        "type": EnrichmentSourceType.ADDRESS.value,
-        "description": "Standardize and validate addresses",
-        "required_fields": ["address"],
-        "output_fields": ["formatted_address", "city", "state", "postal_code", "country"],
-    },
-    {
-        "id": "exchange",
-        "name": "Currency Exchange",
-        "type": EnrichmentSourceType.EXCHANGE_RATE.value,
-        "description": "Convert currencies to target currency",
-        "required_fields": ["amount", "currency"],
-        "output_fields": ["converted_amount", "exchange_rate", "target_currency"],
-    },
-]
 
 
 @router.get("/sources")
@@ -57,10 +29,11 @@ async def list_available_sources(
 ):
     """List available enrichment source types."""
     correlation_id = getattr(request.state, "correlation_id", None)
+    builtin = EnrichmentService.get_builtin_sources()
     custom_sources = [source.dict() for source in svc.list_sources()]
     return {
         "status": "ok",
-        "sources": [*AVAILABLE_SOURCES, *custom_sources],
+        "sources": [*builtin, *custom_sources],
         "correlation_id": correlation_id,
     }
 
@@ -153,7 +126,7 @@ async def get_source(
     """Get an enrichment source by ID."""
     correlation_id = getattr(request.state, "correlation_id", None)
     # Check built-in sources first
-    for source in AVAILABLE_SOURCES:
+    for source in EnrichmentService.get_builtin_sources():
         if source["id"] == source_id:
             return {
                 "status": "ok",

@@ -32,10 +32,13 @@ from backend.app.services.ai.writing_service import (
 def app():
     """Create test FastAPI app with AI routes."""
     from backend.app.api.routes.ai import router
+    from backend.app.api.middleware import limiter
 
     test_app = FastAPI()
     test_app.include_router(router, prefix="/api")
-    return test_app
+    limiter.enabled = False
+    yield test_app
+    limiter.enabled = True
 
 
 @pytest.fixture

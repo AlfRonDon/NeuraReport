@@ -109,7 +109,7 @@ class ExportRequest(BaseModel):
 
 class BulkExportRequest(BaseModel):
     """Request to export multiple documents."""
-    document_ids: list[str]
+    document_ids: list[str] = Field(..., min_length=1, max_length=100)
     format: ExportFormat
     options: dict[str, Any] = Field(default_factory=dict)
     zip_filename: Optional[str] = None
@@ -141,10 +141,10 @@ class DistributionRequest(BaseModel):
 
 class EmailCampaignRequest(BaseModel):
     """Request for bulk email distribution."""
-    document_ids: list[str]
-    recipients: list[str]
-    subject: str
-    message: str
+    document_ids: list[str] = Field(..., min_length=1, max_length=50)
+    recipients: list[str] = Field(..., min_length=1, max_length=500)
+    subject: str = Field(..., min_length=1, max_length=500)
+    message: str = Field(..., max_length=10_000)
     from_name: Optional[str] = None
     reply_to: Optional[str] = None
     attach_documents: bool = True

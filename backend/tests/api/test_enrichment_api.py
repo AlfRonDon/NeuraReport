@@ -9,7 +9,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from backend.app.api.routes.enrichment import router, get_service, AVAILABLE_SOURCES
+from backend.app.api.routes.enrichment import router, get_service
 from backend.app.services.enrichment.service import EnrichmentService
 from backend.app.services.security import require_api_key
 
@@ -1057,7 +1057,8 @@ class TestEdgeCases:
         assert resp.status_code == 200
 
     def test_builtin_sources_match_expected_constant(self, client):
-        """Verify AVAILABLE_SOURCES constant contains exactly 3 entries."""
-        assert len(AVAILABLE_SOURCES) == 3
-        ids = [s["id"] for s in AVAILABLE_SOURCES]
+        """Verify get_builtin_sources() returns exactly 3 entries."""
+        builtin = EnrichmentService.get_builtin_sources()
+        assert len(builtin) == 3
+        ids = [s["id"] for s in builtin]
         assert ids == ["company", "address", "exchange"]

@@ -14,6 +14,7 @@ import logging
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, HTTPException, Request, status
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, field_validator
 
 from backend.app.api.middleware import limiter, RATE_LIMIT_STRICT
@@ -188,8 +189,8 @@ class SuggestFormulasRequest(BaseModel):
 # WRITING AI ENDPOINTS
 # =============================================================================
 
-@limiter.limit(RATE_LIMIT_STRICT)
 @router.post("/documents/{document_id}/ai/grammar")
+@limiter.limit(RATE_LIMIT_STRICT)
 async def check_grammar(request: Request, document_id: str, req: GrammarCheckRequest):
     """
     Check text for grammar, spelling, and style issues.
@@ -208,15 +209,15 @@ async def check_grammar(request: Request, document_id: str, req: GrammarCheckReq
             language=req.language,
             strict=req.strict,
         )
-        return result.model_dump()
+        return JSONResponse(content=result.model_dump())
     except WritingServiceError as e:
         raise _handle_service_error(e, "Grammar check")
     except Exception as e:
         raise _handle_service_error(e, "Grammar check")
 
 
-@limiter.limit(RATE_LIMIT_STRICT)
 @router.post("/documents/{document_id}/ai/summarize")
+@limiter.limit(RATE_LIMIT_STRICT)
 async def summarize_text(request: Request, document_id: str, req: SummarizeRequest):
     """
     Summarize text with optional length limit.
@@ -230,15 +231,15 @@ async def summarize_text(request: Request, document_id: str, req: SummarizeReque
             max_length=req.max_length,
             style=req.style,
         )
-        return result.model_dump()
+        return JSONResponse(content=result.model_dump())
     except WritingServiceError as e:
         raise _handle_service_error(e, "Summarization")
     except Exception as e:
         raise _handle_service_error(e, "Summarization")
 
 
-@limiter.limit(RATE_LIMIT_STRICT)
 @router.post("/documents/{document_id}/ai/rewrite")
+@limiter.limit(RATE_LIMIT_STRICT)
 async def rewrite_text(request: Request, document_id: str, req: RewriteRequest):
     """
     Rewrite text with specified tone.
@@ -253,15 +254,15 @@ async def rewrite_text(request: Request, document_id: str, req: RewriteRequest):
             tone=tone,
             preserve_meaning=req.preserve_meaning,
         )
-        return result.model_dump()
+        return JSONResponse(content=result.model_dump())
     except WritingServiceError as e:
         raise _handle_service_error(e, "Rewrite")
     except Exception as e:
         raise _handle_service_error(e, "Rewrite")
 
 
-@limiter.limit(RATE_LIMIT_STRICT)
 @router.post("/documents/{document_id}/ai/expand")
+@limiter.limit(RATE_LIMIT_STRICT)
 async def expand_text(request: Request, document_id: str, req: ExpandRequest):
     """
     Expand text with additional details and examples.
@@ -276,15 +277,15 @@ async def expand_text(request: Request, document_id: str, req: ExpandRequest):
             add_examples=req.add_examples,
             add_details=req.add_details,
         )
-        return result.model_dump()
+        return JSONResponse(content=result.model_dump())
     except WritingServiceError as e:
         raise _handle_service_error(e, "Expansion")
     except Exception as e:
         raise _handle_service_error(e, "Expansion")
 
 
-@limiter.limit(RATE_LIMIT_STRICT)
 @router.post("/documents/{document_id}/ai/translate")
+@limiter.limit(RATE_LIMIT_STRICT)
 async def translate_text(request: Request, document_id: str, req: TranslateRequest):
     """
     Translate text to target language.
@@ -299,15 +300,15 @@ async def translate_text(request: Request, document_id: str, req: TranslateReque
             source_language=req.source_language,
             preserve_formatting=req.preserve_formatting,
         )
-        return result.model_dump()
+        return JSONResponse(content=result.model_dump())
     except WritingServiceError as e:
         raise _handle_service_error(e, "Translation")
     except Exception as e:
         raise _handle_service_error(e, "Translation")
 
 
-@limiter.limit(RATE_LIMIT_STRICT)
 @router.post("/ai/generate")
+@limiter.limit(RATE_LIMIT_STRICT)
 async def generate_content(request: Request, req: GenerateContentRequest):
     """
     Generate new content based on a prompt.
@@ -323,7 +324,7 @@ async def generate_content(request: Request, req: GenerateContentRequest):
             tone=tone,
             max_length=req.max_length,
         )
-        return {"content": content}
+        return JSONResponse(content={"content": content})
     except WritingServiceError as e:
         raise _handle_service_error(e, "Content generation")
     except Exception as e:
@@ -334,8 +335,8 @@ async def generate_content(request: Request, req: GenerateContentRequest):
 # SPREADSHEET AI ENDPOINTS
 # =============================================================================
 
-@limiter.limit(RATE_LIMIT_STRICT)
 @router.post("/spreadsheets/{spreadsheet_id}/formula")
+@limiter.limit(RATE_LIMIT_STRICT)
 async def natural_language_to_formula(request: Request, spreadsheet_id: str, req: FormulaRequest):
     """
     Convert natural language description to spreadsheet formula.
@@ -349,13 +350,13 @@ async def natural_language_to_formula(request: Request, spreadsheet_id: str, req
             context=req.context,
             spreadsheet_type=req.spreadsheet_type,
         )
-        return result.model_dump()
+        return JSONResponse(content=result.model_dump())
     except Exception as e:
         raise _handle_service_error(e, "Formula generation")
 
 
-@limiter.limit(RATE_LIMIT_STRICT)
 @router.post("/spreadsheets/{spreadsheet_id}/clean")
+@limiter.limit(RATE_LIMIT_STRICT)
 async def analyze_data_quality(request: Request, spreadsheet_id: str, req: DataQualityRequest):
     """
     Analyze data for quality issues and provide cleaning suggestions.
@@ -368,13 +369,13 @@ async def analyze_data_quality(request: Request, spreadsheet_id: str, req: DataQ
             data_sample=req.data_sample,
             column_info=req.column_info,
         )
-        return result.model_dump()
+        return JSONResponse(content=result.model_dump())
     except Exception as e:
         raise _handle_service_error(e, "Data quality analysis")
 
 
-@limiter.limit(RATE_LIMIT_STRICT)
 @router.post("/spreadsheets/{spreadsheet_id}/anomalies")
+@limiter.limit(RATE_LIMIT_STRICT)
 async def detect_anomalies(request: Request, spreadsheet_id: str, req: AnomalyRequest):
     """
     Detect anomalies in spreadsheet data.
@@ -388,13 +389,13 @@ async def detect_anomalies(request: Request, spreadsheet_id: str, req: AnomalyRe
             columns_to_analyze=req.columns_to_analyze,
             sensitivity=req.sensitivity,
         )
-        return result.model_dump()
+        return JSONResponse(content=result.model_dump())
     except Exception as e:
         raise _handle_service_error(e, "Anomaly detection")
 
 
-@limiter.limit(RATE_LIMIT_STRICT)
 @router.post("/spreadsheets/{spreadsheet_id}/predict")
+@limiter.limit(RATE_LIMIT_STRICT)
 async def generate_predictions(request: Request, spreadsheet_id: str, req: PredictionRequest):
     """
     Generate predictions for a new column based on existing data.
@@ -408,13 +409,13 @@ async def generate_predictions(request: Request, spreadsheet_id: str, req: Predi
             target_description=req.target_description,
             based_on_columns=req.based_on_columns,
         )
-        return result.model_dump()
+        return JSONResponse(content=result.model_dump())
     except Exception as e:
         raise _handle_service_error(e, "Prediction generation")
 
 
-@limiter.limit(RATE_LIMIT_STRICT)
 @router.post("/spreadsheets/{spreadsheet_id}/explain")
+@limiter.limit(RATE_LIMIT_STRICT)
 async def explain_formula(request: Request, spreadsheet_id: str, req: ExplainFormulaRequest):
     """
     Explain what a formula does in plain language.
@@ -427,13 +428,13 @@ async def explain_formula(request: Request, spreadsheet_id: str, req: ExplainFor
             formula=req.formula,
             context=req.context,
         )
-        return result.model_dump()
+        return JSONResponse(content=result.model_dump())
     except Exception as e:
         raise _handle_service_error(e, "Formula explanation")
 
 
-@limiter.limit(RATE_LIMIT_STRICT)
 @router.post("/spreadsheets/{spreadsheet_id}/suggest")
+@limiter.limit(RATE_LIMIT_STRICT)
 async def suggest_formulas(request: Request, spreadsheet_id: str, req: SuggestFormulasRequest):
     """
     Suggest useful formulas based on data structure.
@@ -446,7 +447,7 @@ async def suggest_formulas(request: Request, spreadsheet_id: str, req: SuggestFo
             data_sample=req.data_sample,
             analysis_goals=req.analysis_goals,
         )
-        return {"suggestions": [r.model_dump() for r in results]}
+        return JSONResponse(content={"suggestions": [r.model_dump() for r in results]})
     except Exception as e:
         raise _handle_service_error(e, "Formula suggestion")
 

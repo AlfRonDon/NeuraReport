@@ -301,6 +301,36 @@ class EnrichmentService:
             })
         return result
 
+    @staticmethod
+    def get_builtin_sources() -> List[Dict[str, Any]]:
+        """Return the catalog of built-in enrichment sources."""
+        return [
+            {
+                "id": "company",
+                "name": "Company Information",
+                "type": EnrichmentSourceType.COMPANY_INFO.value,
+                "description": "Enrich with company details (industry, size, revenue)",
+                "required_fields": ["company_name"],
+                "output_fields": ["industry", "company_size", "estimated_revenue", "founded_year"],
+            },
+            {
+                "id": "address",
+                "name": "Address Standardization",
+                "type": EnrichmentSourceType.ADDRESS.value,
+                "description": "Standardize and validate addresses",
+                "required_fields": ["address"],
+                "output_fields": ["formatted_address", "city", "state", "postal_code", "country"],
+            },
+            {
+                "id": "exchange",
+                "name": "Currency Exchange",
+                "type": EnrichmentSourceType.EXCHANGE_RATE.value,
+                "description": "Convert currencies to target currency",
+                "required_fields": ["amount", "currency"],
+                "output_fields": ["converted_amount", "exchange_rate", "target_currency"],
+            },
+        ]
+
     async def simple_enrich(
         self,
         data: List[Dict[str, Any]],

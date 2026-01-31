@@ -130,8 +130,8 @@ def validate_pdf_path(pdf_path: str | None) -> Path:
 # Document CRUD Endpoints
 # ============================================
 
-@limiter.limit(RATE_LIMIT_STANDARD)
 @router.post("", response_model=DocumentResponse)
+@limiter.limit(RATE_LIMIT_STANDARD)
 async def create_document(
     request: Request,
     req: CreateDocumentRequest,
@@ -184,8 +184,8 @@ async def get_document(
     return DocumentResponse(**doc.model_dump())
 
 
-@limiter.limit(RATE_LIMIT_STANDARD)
 @router.put("/{document_id}", response_model=DocumentResponse)
+@limiter.limit(RATE_LIMIT_STANDARD)
 async def update_document(
     request: Request,
     document_id: str,
@@ -205,8 +205,8 @@ async def update_document(
     return DocumentResponse(**doc.model_dump())
 
 
-@limiter.limit(RATE_LIMIT_STANDARD)
 @router.delete("/{document_id}")
+@limiter.limit(RATE_LIMIT_STANDARD)
 async def delete_document(
     request: Request,
     document_id: str,
@@ -384,7 +384,8 @@ async def reorder_pdf_pages(
         output_path = pdf_service.reorder_pages(pdf_path, request.page_order)
         return {"status": "ok", "output_path": str(output_path)}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception("pdf_reorder_failed", extra={"document_id": document_id})
+        raise HTTPException(status_code=500, detail="PDF page reorder failed")
 
 
 @router.post("/{document_id}/pdf/watermark")
@@ -414,7 +415,8 @@ async def add_watermark(
         output_path = pdf_service.add_watermark(pdf_path, config)
         return {"status": "ok", "output_path": str(output_path)}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception("pdf_watermark_failed", extra={"document_id": document_id})
+        raise HTTPException(status_code=500, detail="PDF watermark failed")
 
 
 @router.post("/{document_id}/pdf/redact")
@@ -447,7 +449,8 @@ async def redact_pdf(
         output_path = pdf_service.redact_regions(pdf_path, regions)
         return {"status": "ok", "output_path": str(output_path)}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception("pdf_redact_failed", extra={"document_id": document_id})
+        raise HTTPException(status_code=500, detail="PDF redaction failed")
 
 
 @router.post("/merge")
@@ -474,7 +477,8 @@ async def merge_pdfs(
             "page_count": result.page_count,
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception("pdf_merge_failed")
+        raise HTTPException(status_code=500, detail="PDF merge failed")
 
 
 # ============================================

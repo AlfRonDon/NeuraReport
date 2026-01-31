@@ -18,6 +18,8 @@ from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 from urllib.parse import urlparse
 
+from backend.app.services.config import get_settings
+
 logger = logging.getLogger("neura.jobs.webhook")
 
 # Try to import httpx, fall back gracefully if not available
@@ -109,6 +111,20 @@ class WebhookService:
         self.timeout_seconds = timeout_seconds
         self.max_retries = max_retries
         self.initial_backoff_seconds = initial_backoff_seconds
+
+        # Production guard: ensure webhook secret is set in production
+        settings = get_settings()
+        if self.DEFAULT_WEBHOOK_SECRET == "neura-default-webhook-secret":
+            if settings.debug_mode:
+                logger.warning(
+                    "webhook_secret_default",
+                    extra={"event": "webhook_secret_default"},
+                )
+            else:
+                raise RuntimeError(
+                    "NEURA_WEBHOOK_SECRET must be set to a strong secret in production "
+                    "(debug_mode is off). Set NEURA_DEBUG=true to bypass for local development."
+                )
 
     @classmethod
     def _validate_webhook_url(cls, url: str) -> None:

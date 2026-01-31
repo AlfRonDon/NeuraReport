@@ -21,6 +21,7 @@ from backend.app.api.routes.connectors import (
     _store_delete,
     _store_get,
     _store_get_all,
+    _store_get_config,
     _store_put,
     router,
 )
@@ -89,13 +90,13 @@ def client(app):
 
 @pytest.fixture
 def sample_connection():
-    return _make_connection(connection_id="conn-abc-123")
+    return _make_connection(connection_id="00000000-aaaa-bbbb-cccc-123456789abc")
 
 
 @pytest.fixture
 def sample_connection_b():
     return _make_connection(
-        connection_id="conn-xyz-456",
+        connection_id="11111111-aaaa-bbbb-cccc-456789abcdef",
         name="second-conn",
         connector_type="mysql",
         created_at="2025-07-01T00:00:00",
@@ -147,7 +148,10 @@ def patch_store_delete_false():
 
 
 def _mock_state_store(state: dict):
-    """Build a MagicMock that behaves like the state_store singleton."""
+    """Build a MagicMock that behaves like the state_store singleton.
+
+    Supports both 'connectors' and 'connector_credentials' namespaces.
+    """
     store = MagicMock()
     store.read_state.return_value = state
 
@@ -176,7 +180,12 @@ class TestStoreGetAll:
     def test_returns_all_connectors(self):
         conn_a = _make_connection(connection_id="a")
         conn_b = _make_connection(connection_id="b")
-        state = {"connectors": {"a": conn_a, "b": conn_b}}
+        # Simulate storage: connections stored without config
+        safe_a = {k: v for k, v in conn_a.items() if k != "config"}
+        safe_a["has_credentials"] = True
+        safe_b = {k: v for k, v in conn_b.items() if k != "config"}
+        safe_b["has_credentials"] = True
+        state = {"connectors": {"a": safe_a, "b": safe_b}}
         mock_store = _mock_state_store(state)
         with patch("backend.app.api.routes.connectors.state_store", mock_store):
             result = _store_get_all()
@@ -186,7 +195,9 @@ class TestStoreGetAll:
 
     def test_returns_copy_not_reference(self):
         conn = _make_connection(connection_id="x")
-        state = {"connectors": {"x": conn}}
+        safe = {k: v for k, v in conn.items() if k != "config"}
+        safe["has_credentials"] = True
+        state = {"connectors": {"x": safe}}
         mock_store = _mock_state_store(state)
         with patch("backend.app.api.routes.connectors.state_store", mock_store):
             result = _store_get_all()
@@ -194,8 +205,11 @@ class TestStoreGetAll:
         assert result is not state["connectors"]
 
     def test_ignores_other_namespaces(self):
+        conn = _make_connection(connection_id="a")
+        safe = {k: v for k, v in conn.items() if k != "config"}
+        safe["has_credentials"] = True
         state = {
-            "connectors": {"a": _make_connection(connection_id="a")},
+            "connectors": {"a": safe},
             "connector_credentials": {"a": {"password": "secret"}},
             "templates": {"tpl-1": {}},
         }
@@ -226,7 +240,7 @@ class TestStoreGet:
     def test_returns_none_when_connectors_namespace_missing(self):
         mock_store = _mock_state_store({})
         with patch("backend.app.api.routes.connectors.state_store", mock_store):
-            result = _store_get("any-id")
+            result = _store_get("44444444-aaaa-bbbb-cccc-000000000000")
         assert result is None
 
     def test_returns_correct_connection_among_many(self):
@@ -242,14 +256,17 @@ class TestStoreGet:
 class TestStorePut:
     """Unit tests for _store_put()."""
 
-    def test_stores_connection_in_connectors_namespace(self):
+    def test_stores_connection_without_config_in_connectors_namespace(self):
         state: dict[str, Any] = {}
         mock_store = _mock_state_store(state)
         conn = _make_connection(connection_id="new-1")
         with patch("backend.app.api.routes.connectors.state_store", mock_store):
             _store_put(conn)
         assert "new-1" in state["connectors"]
-        assert state["connectors"]["new-1"] is conn
+        # Verify config is stripped from the connection record
+        assert "config" not in state["connectors"]["new-1"]
+        # Verify has_credentials flag is set
+        assert state["connectors"]["new-1"]["has_credentials"] is True
 
     def test_stores_config_in_credentials_namespace(self):
         state: dict[str, Any] = {}
@@ -265,16 +282,28 @@ class TestStorePut:
 
     def test_overwrites_existing_connection(self):
         old = _make_connection(connection_id="upd-1", name="Old Name")
-        state: dict[str, Any] = {"connectors": {"upd-1": old}}
+        old_safe = {k: v for k, v in old.items() if k != "config"}
+        old_safe["has_credentials"] = True
+        state: dict[str, Any] = {
+            "connectors": {"upd-1": old_safe},
+            "connector_credentials": {"upd-1": old["config"]},
+        }
         mock_store = _mock_state_store(state)
         updated = _make_connection(connection_id="upd-1", name="New Name")
         with patch("backend.app.api.routes.connectors.state_store", mock_store):
             _store_put(updated)
         assert state["connectors"]["upd-1"]["name"] == "New Name"
+        assert "config" not in state["connectors"]["upd-1"]
+        assert state["connectors"]["upd-1"]["has_credentials"] is True
 
     def test_preserves_other_connections(self):
         existing = _make_connection(connection_id="keep")
-        state: dict[str, Any] = {"connectors": {"keep": existing}}
+        existing_safe = {k: v for k, v in existing.items() if k != "config"}
+        existing_safe["has_credentials"] = True
+        state: dict[str, Any] = {
+            "connectors": {"keep": existing_safe},
+            "connector_credentials": {"keep": existing["config"]},
+        }
         mock_store = _mock_state_store(state)
         new_conn = _make_connection(connection_id="new")
         with patch("backend.app.api.routes.connectors.state_store", mock_store):
@@ -282,19 +311,23 @@ class TestStorePut:
         assert "keep" in state["connectors"]
         assert "new" in state["connectors"]
 
-    def test_skips_credentials_when_no_config_key(self):
+    def test_sets_has_credentials_false_when_no_config_key(self):
         state: dict[str, Any] = {}
         mock_store = _mock_state_store(state)
         conn = {"id": "no-cfg", "name": "test"}
         with patch("backend.app.api.routes.connectors.state_store", mock_store):
             _store_put(conn)
         assert "no-cfg" in state["connectors"]
+        assert state["connectors"]["no-cfg"]["has_credentials"] is False
         assert "connector_credentials" not in state
 
     def test_updates_credentials_on_overwrite(self):
         old_cfg = {"host": "old.host"}
+        old_conn = _make_connection(connection_id="c1", config=old_cfg)
+        old_safe = {k: v for k, v in old_conn.items() if k != "config"}
+        old_safe["has_credentials"] = True
         state: dict[str, Any] = {
-            "connectors": {"c1": _make_connection(connection_id="c1", config=old_cfg)},
+            "connectors": {"c1": old_safe},
             "connector_credentials": {"c1": old_cfg},
         }
         mock_store = _mock_state_store(state)
@@ -303,6 +336,7 @@ class TestStorePut:
         with patch("backend.app.api.routes.connectors.state_store", mock_store):
             _store_put(updated)
         assert state["connector_credentials"]["c1"] == new_cfg
+        assert state["connectors"]["c1"]["has_credentials"] is True
 
     def test_stores_multiple_connections_sequentially(self):
         state: dict[str, Any] = {}
@@ -313,6 +347,44 @@ class TestStorePut:
             _store_put(_make_connection(connection_id="s3"))
         assert len(state["connectors"]) == 3
         assert len(state["connector_credentials"]) == 3
+        # Verify all connections have config stripped and has_credentials set
+        for conn_id in ["s1", "s2", "s3"]:
+            assert "config" not in state["connectors"][conn_id]
+            assert state["connectors"][conn_id]["has_credentials"] is True
+
+
+class TestStoreGetConfig:
+    """Unit tests for _store_get_config()."""
+
+    def test_returns_config_for_existing_connection(self):
+        config = {"host": "db.example.com", "password": "s3cret"}
+        state = {"connector_credentials": {"c1": config}}
+        mock_store = _mock_state_store(state)
+        with patch("backend.app.api.routes.connectors.state_store", mock_store):
+            result = _store_get_config("c1")
+        assert result == config
+
+    def test_returns_empty_dict_for_missing_connection(self):
+        state = {"connector_credentials": {}}
+        mock_store = _mock_state_store(state)
+        with patch("backend.app.api.routes.connectors.state_store", mock_store):
+            result = _store_get_config("nonexistent")
+        assert result == {}
+
+    def test_returns_empty_dict_when_namespace_missing(self):
+        mock_store = _mock_state_store({})
+        with patch("backend.app.api.routes.connectors.state_store", mock_store):
+            result = _store_get_config("44444444-aaaa-bbbb-cccc-000000000000")
+        assert result == {}
+
+    def test_returns_correct_config_among_many(self):
+        config_a = {"host": "a.example.com"}
+        config_b = {"host": "b.example.com", "port": 3306}
+        state = {"connector_credentials": {"a": config_a, "b": config_b}}
+        mock_store = _mock_state_store(state)
+        with patch("backend.app.api.routes.connectors.state_store", mock_store):
+            result = _store_get_config("b")
+        assert result == config_b
 
 
 class TestStoreDelete:
@@ -602,24 +674,29 @@ class TestTestConnection:
         assert resp.status_code == 400
         assert "Unknown connector" in resp.json()["detail"]
 
-    def test_generic_exception_propagates_as_server_error(self, client):
+    def test_generic_exception_returns_failed_response(self, client):
         """When test_connection raises a non-ValueError, the exception handler
-        constructs TestConnectionResponse without required Optional fields
-        (latency_ms, details) which causes a Pydantic ValidationError,
-        resulting in a 500 server error."""
+        catches it and returns a TestConnectionResponse with success=False
+        and a sanitized error message (no internal details leaked)."""
         mock_connector = AsyncMock()
         mock_connector.test_connection.side_effect = RuntimeError("Unexpected error")
         with patch(
             "backend.app.api.routes.connectors.get_connector",
             return_value=mock_connector,
-        ), pytest.raises(Exception):
-            client.post(
+        ):
+            resp = client.post(
                 "/connectors/postgresql/test",
                 json={
                     "connector_type": "postgresql",
                     "config": {"host": "localhost"},
                 },
             )
+            assert resp.status_code == 200
+            data = resp.json()
+            assert data["success"] is False
+            assert "RuntimeError" in data["error"]
+            # Ensure internal error message is NOT leaked
+            assert "Unexpected error" not in data["error"]
 
     def test_test_with_empty_config(self, client):
         mock_connector = AsyncMock()
@@ -959,7 +1036,7 @@ class TestGetConnection:
         assert data["status"] == sample_connection["status"]
 
     def test_returns_404_for_missing_connection(self, client, patch_store_get_none):
-        resp = client.get("/connectors/nonexistent-id")
+        resp = client.get("/connectors/99999999-0000-0000-0000-000000000000")
         assert resp.status_code == 404
         assert "not found" in resp.json()["detail"].lower()
 
@@ -990,14 +1067,14 @@ class TestDeleteConnection:
     """Tests for DELETE /connectors/{connection_id}."""
 
     def test_deletes_existing_connection(self, client, patch_store_delete_true):
-        resp = client.delete("/connectors/conn-to-delete")
+        resp = client.delete("/connectors/22222222-aaaa-bbbb-cccc-000000000000")
         assert resp.status_code == 200
         data = resp.json()
         assert data["status"] == "ok"
         assert data["message"] == "Connection deleted"
 
     def test_returns_404_for_missing_connection(self, client, patch_store_delete_false):
-        resp = client.delete("/connectors/nonexistent")
+        resp = client.delete("/connectors/99999999-0000-0000-0000-999999999999")
         assert resp.status_code == 404
         assert "not found" in resp.json()["detail"].lower()
 
@@ -1006,8 +1083,8 @@ class TestDeleteConnection:
             "backend.app.api.routes.connectors._store_delete",
             return_value=True,
         ) as mock_del:
-            client.delete("/connectors/my-conn-id")
-        mock_del.assert_called_once_with("my-conn-id")
+            client.delete("/connectors/33333333-aaaa-bbbb-cccc-000000000000")
+        mock_del.assert_called_once_with("33333333-aaaa-bbbb-cccc-000000000000")
 
 
 # =============================================================================
@@ -1023,9 +1100,15 @@ class TestCheckConnectionHealth:
         mock_connector.test_connection.return_value = MagicMock(
             success=True, latency_ms=3.2, error=None, details=None,
         )
+        conn = deepcopy(sample_connection)
+        config = conn.pop("config", {})
+        conn["has_credentials"] = True
         with patch(
             "backend.app.api.routes.connectors._store_get",
-            return_value=deepcopy(sample_connection),
+            return_value=conn,
+        ), patch(
+            "backend.app.api.routes.connectors._store_get_config",
+            return_value=config,
         ), patch(
             "backend.app.api.routes.connectors.get_connector",
             return_value=mock_connector,
@@ -1043,9 +1126,15 @@ class TestCheckConnectionHealth:
         mock_connector.test_connection.return_value = MagicMock(
             success=True, latency_ms=5.0, error=None, details=None,
         )
+        conn = deepcopy(sample_connection)
+        config = conn.pop("config", {})
+        conn["has_credentials"] = True
         with patch(
             "backend.app.api.routes.connectors._store_get",
-            return_value=deepcopy(sample_connection),
+            return_value=conn,
+        ), patch(
+            "backend.app.api.routes.connectors._store_get_config",
+            return_value=config,
         ), patch(
             "backend.app.api.routes.connectors.get_connector",
             return_value=mock_connector,
@@ -1061,9 +1150,15 @@ class TestCheckConnectionHealth:
         mock_connector.test_connection.return_value = MagicMock(
             success=False, latency_ms=None, error="Timeout", details=None,
         )
+        conn = deepcopy(sample_connection)
+        config = conn.pop("config", {})
+        conn["has_credentials"] = True
         with patch(
             "backend.app.api.routes.connectors._store_get",
-            return_value=deepcopy(sample_connection),
+            return_value=conn,
+        ), patch(
+            "backend.app.api.routes.connectors._store_get_config",
+            return_value=config,
         ), patch(
             "backend.app.api.routes.connectors.get_connector",
             return_value=mock_connector,
@@ -1080,9 +1175,15 @@ class TestCheckConnectionHealth:
         mock_connector.test_connection.return_value = MagicMock(
             success=True, latency_ms=42.0, error=None, details=None,
         )
+        conn = deepcopy(sample_connection)
+        config = conn.pop("config", {})
+        conn["has_credentials"] = True
         with patch(
             "backend.app.api.routes.connectors._store_get",
-            return_value=deepcopy(sample_connection),
+            return_value=conn,
+        ), patch(
+            "backend.app.api.routes.connectors._store_get_config",
+            return_value=config,
         ), patch(
             "backend.app.api.routes.connectors.get_connector",
             return_value=mock_connector,
@@ -1094,27 +1195,38 @@ class TestCheckConnectionHealth:
         assert stored["latency_ms"] == 42.0
 
     def test_health_returns_404_for_missing_connection(self, client, patch_store_get_none):
-        resp = client.post("/connectors/nonexistent/health")
+        resp = client.post("/connectors/99999999-0000-0000-0000-999999999999/health")
         assert resp.status_code == 404
 
     def test_health_handles_exception_sets_error_status(self, client, sample_connection):
         """When health check raises a non-ValueError, the exception handler
-        constructs TestConnectionResponse without required Optional fields,
-        causing a Pydantic ValidationError. But _store_put is called first
-        to persist the error status."""
+        catches it, persists error status, and returns a failed response
+        with sanitized error message."""
         mock_connector = AsyncMock()
         mock_connector.test_connection.side_effect = RuntimeError("Driver crash")
+        conn = deepcopy(sample_connection)
+        config = conn.pop("config", {})
+        conn["has_credentials"] = True
         with patch(
             "backend.app.api.routes.connectors._store_get",
-            return_value=deepcopy(sample_connection),
+            return_value=conn,
+        ), patch(
+            "backend.app.api.routes.connectors._store_get_config",
+            return_value=config,
         ), patch(
             "backend.app.api.routes.connectors.get_connector",
             return_value=mock_connector,
         ), patch(
             "backend.app.api.routes.connectors._store_put",
-        ) as mock_put, pytest.raises(Exception):
-            client.post(f"/connectors/{sample_connection['id']}/health")
-        # Even though the response construction fails, status was persisted
+        ) as mock_put:
+            resp = client.post(f"/connectors/{sample_connection['id']}/health")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["success"] is False
+        assert "RuntimeError" in data["error"]
+        # Ensure internal error message is NOT leaked
+        assert "Driver crash" not in data["error"]
+        # Verify error status was persisted
         stored = mock_put.call_args[0][0]
         assert stored["status"] == "error"
 
@@ -1124,9 +1236,15 @@ class TestCheckConnectionHealth:
         mock_connector.test_connection.return_value = MagicMock(
             success=True, latency_ms=7.0, error=None, details=None,
         )
+        conn = deepcopy(sample_connection)
+        config = conn.pop("config", {})
+        conn["has_credentials"] = True
         with patch(
             "backend.app.api.routes.connectors._store_get",
-            return_value=deepcopy(sample_connection),
+            return_value=conn,
+        ), patch(
+            "backend.app.api.routes.connectors._store_get_config",
+            return_value=config,
         ), patch(
             "backend.app.api.routes.connectors.get_connector",
             return_value=mock_connector,
@@ -1137,21 +1255,28 @@ class TestCheckConnectionHealth:
         mock_put.assert_called_once()
 
     def test_health_persists_on_exception(self, client, sample_connection):
-        """Verify _store_put is called even when connector throws.
-        The exception handler calls _store_put before attempting to construct
-        the response (which may itself fail due to missing Optional fields)."""
+        """Verify _store_put is called even when connector throws,
+        and a sanitized error response is returned."""
         mock_connector = AsyncMock()
         mock_connector.test_connection.side_effect = Exception("Network")
+        conn = deepcopy(sample_connection)
+        config = conn.pop("config", {})
+        conn["has_credentials"] = True
         with patch(
             "backend.app.api.routes.connectors._store_get",
-            return_value=deepcopy(sample_connection),
+            return_value=conn,
+        ), patch(
+            "backend.app.api.routes.connectors._store_get_config",
+            return_value=config,
         ), patch(
             "backend.app.api.routes.connectors.get_connector",
             return_value=mock_connector,
         ), patch(
             "backend.app.api.routes.connectors._store_put",
-        ) as mock_put, pytest.raises(Exception):
-            client.post(f"/connectors/{sample_connection['id']}/health")
+        ) as mock_put:
+            resp = client.post(f"/connectors/{sample_connection['id']}/health")
+        assert resp.status_code == 200
+        assert resp.json()["success"] is False
         mock_put.assert_called_once()
 
 
@@ -1177,9 +1302,15 @@ class TestGetConnectionSchema:
         mock_connector.connect = AsyncMock()
         mock_connector.discover_schema = AsyncMock(return_value=mock_schema)
         mock_connector.disconnect = AsyncMock()
+        conn = deepcopy(sample_connection)
+        config = conn.pop("config", {})
+        conn["has_credentials"] = True
         with patch(
             "backend.app.api.routes.connectors._store_get",
-            return_value=sample_connection,
+            return_value=conn,
+        ), patch(
+            "backend.app.api.routes.connectors._store_get_config",
+            return_value=config,
         ), patch(
             "backend.app.api.routes.connectors.get_connector",
             return_value=mock_connector,
@@ -1197,9 +1328,15 @@ class TestGetConnectionSchema:
         mock_connector.connect = AsyncMock()
         mock_connector.discover_schema = AsyncMock(return_value=mock_schema)
         mock_connector.disconnect = AsyncMock()
+        conn = deepcopy(sample_connection)
+        config = conn.pop("config", {})
+        conn["has_credentials"] = True
         with patch(
             "backend.app.api.routes.connectors._store_get",
-            return_value=sample_connection,
+            return_value=conn,
+        ), patch(
+            "backend.app.api.routes.connectors._store_get_config",
+            return_value=config,
         ), patch(
             "backend.app.api.routes.connectors.get_connector",
             return_value=mock_connector,
@@ -1209,22 +1346,29 @@ class TestGetConnectionSchema:
         mock_connector.disconnect.assert_awaited_once()
 
     def test_schema_returns_404_for_missing_connection(self, client, patch_store_get_none):
-        resp = client.get("/connectors/nonexistent/schema")
+        resp = client.get("/connectors/99999999-0000-0000-0000-999999999999/schema")
         assert resp.status_code == 404
 
     def test_schema_returns_500_on_connector_error(self, client, sample_connection):
         mock_connector = AsyncMock()
         mock_connector.connect = AsyncMock(side_effect=RuntimeError("Cannot connect"))
+        mock_connector.disconnect = AsyncMock()
+        conn = deepcopy(sample_connection)
+        config = conn.pop("config", {})
+        conn["has_credentials"] = True
         with patch(
             "backend.app.api.routes.connectors._store_get",
-            return_value=sample_connection,
+            return_value=conn,
+        ), patch(
+            "backend.app.api.routes.connectors._store_get_config",
+            return_value=config,
         ), patch(
             "backend.app.api.routes.connectors.get_connector",
             return_value=mock_connector,
         ):
             resp = client.get(f"/connectors/{sample_connection['id']}/schema")
         assert resp.status_code == 500
-        assert "Cannot connect" in resp.json()["detail"]
+        assert "Failed to retrieve schema" in resp.json()["detail"]
 
     def test_schema_empty_tables_and_views(self, client, sample_connection):
         mock_schema = MagicMock(tables=[], views=[], schemas=[])
@@ -1232,9 +1376,15 @@ class TestGetConnectionSchema:
         mock_connector.connect = AsyncMock()
         mock_connector.discover_schema = AsyncMock(return_value=mock_schema)
         mock_connector.disconnect = AsyncMock()
+        conn = deepcopy(sample_connection)
+        config = conn.pop("config", {})
+        conn["has_credentials"] = True
         with patch(
             "backend.app.api.routes.connectors._store_get",
-            return_value=sample_connection,
+            return_value=conn,
+        ), patch(
+            "backend.app.api.routes.connectors._store_get_config",
+            return_value=config,
         ), patch(
             "backend.app.api.routes.connectors.get_connector",
             return_value=mock_connector,
@@ -1272,9 +1422,15 @@ class TestExecuteQuery:
             error=None,
         )
         connector = self._mock_query_connector(result)
+        conn = deepcopy(sample_connection)
+        config = conn.pop("config", {})
+        conn["has_credentials"] = True
         with patch(
             "backend.app.api.routes.connectors._store_get",
-            return_value=deepcopy(sample_connection),
+            return_value=conn,
+        ), patch(
+            "backend.app.api.routes.connectors._store_get_config",
+            return_value=config,
         ), patch(
             "backend.app.api.routes.connectors.get_connector",
             return_value=connector,
@@ -1297,9 +1453,15 @@ class TestExecuteQuery:
             execution_time_ms=5.0, truncated=False, error=None,
         )
         connector = self._mock_query_connector(result)
+        conn = deepcopy(sample_connection)
+        config = conn.pop("config", {})
+        conn["has_credentials"] = True
         with patch(
             "backend.app.api.routes.connectors._store_get",
-            return_value=deepcopy(sample_connection),
+            return_value=conn,
+        ), patch(
+            "backend.app.api.routes.connectors._store_get_config",
+            return_value=config,
         ), patch(
             "backend.app.api.routes.connectors.get_connector",
             return_value=connector,
@@ -1328,10 +1490,15 @@ class TestExecuteQuery:
         )
         connector = self._mock_query_connector(result)
         conn = deepcopy(sample_connection)
+        config = conn.pop("config", {})
+        conn["has_credentials"] = True
         conn["last_used"] = None
         with patch(
             "backend.app.api.routes.connectors._store_get",
             return_value=conn,
+        ), patch(
+            "backend.app.api.routes.connectors._store_get_config",
+            return_value=config,
         ), patch(
             "backend.app.api.routes.connectors.get_connector",
             return_value=connector,
@@ -1353,9 +1520,15 @@ class TestExecuteQuery:
             execution_time_ms=0, truncated=False, error=None,
         )
         connector = self._mock_query_connector(result)
+        conn = deepcopy(sample_connection)
+        config = conn.pop("config", {})
+        conn["has_credentials"] = True
         with patch(
             "backend.app.api.routes.connectors._store_get",
-            return_value=deepcopy(sample_connection),
+            return_value=conn,
+        ), patch(
+            "backend.app.api.routes.connectors._store_get_config",
+            return_value=config,
         ), patch(
             "backend.app.api.routes.connectors.get_connector",
             return_value=connector,
@@ -1431,9 +1604,15 @@ class TestExecuteQuery:
             execution_time_ms=10.0, truncated=False, error=None,
         )
         connector = self._mock_query_connector(result)
+        conn = deepcopy(sample_connection)
+        config = conn.pop("config", {})
+        conn["has_credentials"] = True
         with patch(
             "backend.app.api.routes.connectors._store_get",
-            return_value=deepcopy(sample_connection),
+            return_value=conn,
+        ), patch(
+            "backend.app.api.routes.connectors._store_get_config",
+            return_value=config,
         ), patch(
             "backend.app.api.routes.connectors.get_connector",
             return_value=connector,
@@ -1452,7 +1631,7 @@ class TestExecuteQuery:
 
     def test_query_returns_404_for_missing_connection(self, client, patch_store_get_none):
         resp = client.post(
-            "/connectors/nonexistent/query",
+            "/connectors/99999999-0000-0000-0000-999999999999/query",
             json={"query": "SELECT 1", "limit": 10},
         )
         assert resp.status_code == 404
@@ -1460,9 +1639,16 @@ class TestExecuteQuery:
     def test_query_handles_connector_exception(self, client, sample_connection):
         mock_connector = AsyncMock()
         mock_connector.connect = AsyncMock(side_effect=RuntimeError("Connection lost"))
+        mock_connector.disconnect = AsyncMock()
+        conn = deepcopy(sample_connection)
+        config = conn.pop("config", {})
+        conn["has_credentials"] = True
         with patch(
             "backend.app.api.routes.connectors._store_get",
-            return_value=deepcopy(sample_connection),
+            return_value=conn,
+        ), patch(
+            "backend.app.api.routes.connectors._store_get_config",
+            return_value=config,
         ), patch(
             "backend.app.api.routes.connectors.get_connector",
             return_value=mock_connector,
@@ -1476,7 +1662,7 @@ class TestExecuteQuery:
         assert resp.status_code == 200
         data = resp.json()
         assert data["error"] is not None
-        assert "Connection lost" in data["error"]
+        assert "RuntimeError" in data["error"]
         assert data["row_count"] == 0
 
     def test_query_default_limit(self, client, sample_connection):
@@ -1485,9 +1671,15 @@ class TestExecuteQuery:
             execution_time_ms=0, truncated=False, error=None,
         )
         connector = self._mock_query_connector(result)
+        conn = deepcopy(sample_connection)
+        config = conn.pop("config", {})
+        conn["has_credentials"] = True
         with patch(
             "backend.app.api.routes.connectors._store_get",
-            return_value=deepcopy(sample_connection),
+            return_value=conn,
+        ), patch(
+            "backend.app.api.routes.connectors._store_get_config",
+            return_value=config,
         ), patch(
             "backend.app.api.routes.connectors.get_connector",
             return_value=connector,
@@ -1514,9 +1706,15 @@ class TestExecuteQuery:
             error=None,
         )
         connector = self._mock_query_connector(result)
+        conn = deepcopy(sample_connection)
+        config = conn.pop("config", {})
+        conn["has_credentials"] = True
         with patch(
             "backend.app.api.routes.connectors._store_get",
-            return_value=deepcopy(sample_connection),
+            return_value=conn,
+        ), patch(
+            "backend.app.api.routes.connectors._store_get_config",
+            return_value=config,
         ), patch(
             "backend.app.api.routes.connectors.get_connector",
             return_value=connector,
@@ -1536,7 +1734,7 @@ class TestExecuteQuery:
             "backend.app.api.routes.connectors._store_get",
         ) as mock_get:
             resp = client.post(
-                "/connectors/any-id/query",
+                "/connectors/44444444-aaaa-bbbb-cccc-000000000000/query",
                 json={"query": "DROP TABLE users", "limit": 10},
             )
         assert resp.status_code == 400
@@ -1558,6 +1756,8 @@ class TestGetOAuthURL:
         with patch(
             "backend.app.api.routes.connectors.get_connector",
             return_value=mock_connector,
+        ), patch(
+            "backend.app.api.routes.connectors._validate_redirect_uri",
         ):
             resp = client.get(
                 "/connectors/gdrive/oauth/authorize",
@@ -1574,6 +1774,8 @@ class TestGetOAuthURL:
         with patch(
             "backend.app.api.routes.connectors.get_connector",
             return_value=mock_connector,
+        ), patch(
+            "backend.app.api.routes.connectors._validate_redirect_uri",
         ):
             resp = client.get(
                 "/connectors/gdrive/oauth/authorize",
@@ -1591,6 +1793,8 @@ class TestGetOAuthURL:
         with patch(
             "backend.app.api.routes.connectors.get_connector",
             return_value=mock_connector,
+        ), patch(
+            "backend.app.api.routes.connectors._validate_redirect_uri",
         ):
             resp = client.get(
                 "/connectors/gdrive/oauth/authorize",
@@ -1606,6 +1810,8 @@ class TestGetOAuthURL:
         with patch(
             "backend.app.api.routes.connectors.get_connector",
             return_value=mock_connector,
+        ), patch(
+            "backend.app.api.routes.connectors._validate_redirect_uri",
         ):
             resp = client.get(
                 "/connectors/postgresql/oauth/authorize",
@@ -1659,6 +1865,8 @@ class TestHandleOAuthCallback:
         with patch(
             "backend.app.api.routes.connectors.get_connector",
             return_value=mock_connector,
+        ), patch(
+            "backend.app.api.routes.connectors._validate_redirect_uri",
         ):
             resp = client.post(
                 "/connectors/gdrive/oauth/callback",
@@ -1670,7 +1878,11 @@ class TestHandleOAuthCallback:
         assert resp.status_code == 200
         data = resp.json()
         assert data["status"] == "ok"
-        assert data["tokens"]["access_token"] == "abc123"
+        # Tokens are redacted in the response for security
+        assert data["tokens"]["access_token"] == "***"
+        assert data["tokens"]["refresh_token"] == "***"
+        assert data["tokens"]["expires_in"] == 3600
+        assert data["tokens"]["_redacted"] is True
 
     def test_callback_passes_code_and_redirect(self, client):
         mock_connector = MagicMock()
@@ -1678,6 +1890,8 @@ class TestHandleOAuthCallback:
         with patch(
             "backend.app.api.routes.connectors.get_connector",
             return_value=mock_connector,
+        ), patch(
+            "backend.app.api.routes.connectors._validate_redirect_uri",
         ):
             client.post(
                 "/connectors/gdrive/oauth/callback",
@@ -1694,6 +1908,8 @@ class TestHandleOAuthCallback:
         with patch(
             "backend.app.api.routes.connectors.get_connector",
             return_value=mock_connector,
+        ), patch(
+            "backend.app.api.routes.connectors._validate_redirect_uri",
         ):
             resp = client.post(
                 "/connectors/gdrive/oauth/callback",
@@ -1703,7 +1919,7 @@ class TestHandleOAuthCallback:
                 },
             )
         assert resp.status_code == 400
-        assert "Invalid code" in resp.json()["detail"]
+        assert "OAuth callback failed" in resp.json()["detail"]
 
     def test_callback_requires_code(self, client):
         resp = client.post(
@@ -1725,6 +1941,8 @@ class TestHandleOAuthCallback:
         with patch(
             "backend.app.api.routes.connectors.get_connector",
             return_value=mock_connector,
+        ), patch(
+            "backend.app.api.routes.connectors._validate_redirect_uri",
         ):
             resp = client.post(
                 "/connectors/gdrive/oauth/callback",
@@ -1829,7 +2047,7 @@ class TestQuerySQLValidationEdgeCases:
             return_value=_make_connection(),
         ):
             return client.post(
-                "/connectors/any-id/query",
+                "/connectors/44444444-aaaa-bbbb-cccc-000000000000/query",
                 json={"query": query, "limit": 10},
             )
 
@@ -1859,7 +2077,7 @@ class TestConnectionResponseModel:
 
     def test_get_connection_returns_all_expected_fields(self, client):
         conn = _make_connection(
-            connection_id="resp-1",
+            connection_id="55555555-aaaa-bbbb-cccc-000000000001",
             name="Test",
             connector_type="mysql",
             status="connected",
@@ -1871,9 +2089,9 @@ class TestConnectionResponseModel:
             "backend.app.api.routes.connectors._store_get",
             return_value=conn,
         ):
-            resp = client.get("/connectors/resp-1")
+            resp = client.get("/connectors/55555555-aaaa-bbbb-cccc-000000000001")
         data = resp.json()
-        assert data["id"] == "resp-1"
+        assert data["id"] == "55555555-aaaa-bbbb-cccc-000000000001"
         assert data["name"] == "Test"
         assert data["connector_type"] == "mysql"
         assert data["status"] == "connected"

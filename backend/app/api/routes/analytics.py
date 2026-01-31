@@ -3,8 +3,8 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Body, Depends, HTTPException, Query
-from pydantic import BaseModel
+from fastapi import APIRouter, Body, Depends, Header, HTTPException, Query
+from pydantic import BaseModel, Field
 
 from backend.app.services.config import get_settings
 from backend.app.services.security import require_api_key
@@ -333,27 +333,28 @@ async def get_activity_log(
 
 
 @router.post("/activity")
-async def log_activity(
-    action: str,
-    entity_type: str,
-    entity_id: Optional[str] = None,
-    entity_name: Optional[str] = None,
-    details: Optional[Dict[str, Any]] = None,
-) -> Dict[str, Any]:
+async def log_activity(payload: LogActivityRequest) -> Dict[str, Any]:
     """Log an activity event."""
     entry = state_access.log_activity(
-        action=action,
-        entity_type=entity_type,
-        entity_id=entity_id,
-        entity_name=entity_name,
-        details=details,
+        action=payload.action,
+        entity_type=payload.entity_type,
+        entity_id=payload.entity_id,
+        entity_name=payload.entity_name,
+        details=payload.details,
     )
     return {"activity": entry}
 
 
 @router.delete("/activity")
-async def clear_activity_log() -> Dict[str, Any]:
-    """Clear all activity log entries."""
+async def clear_activity_log(
+    x_confirm_destructive: str = Header(None, alias="X-Confirm-Destructive"),
+) -> Dict[str, Any]:
+    """Clear all activity log entries. Requires X-Confirm-Destructive: true header."""
+    if x_confirm_destructive != "true":
+        raise HTTPException(
+            status_code=400,
+            detail="Destructive operation requires header X-Confirm-Destructive: true",
+        )
     count = state_access.clear_activity_log()
     return {"cleared": count}
 
@@ -456,6 +457,36 @@ class PreferenceValue(BaseModel):
     value: Any
 
 
+class LogActivityRequest(BaseModel):
+    action: str = Field(..., min_length=1, max_length=100)
+    entity_type: str = Field(..., min_length=1, max_length=50)
+    entity_id: Optional[str] = Field(None, max_length=255)
+    entity_name: Optional[str] = Field(None, max_length=255)
+    details: Optional[Dict[str, Any]] = None
+
+
+class CreateNotificationRequest(BaseModel):
+    title: str = Field(default="Notification", min_length=1, max_length=255)
+    message: str = Field(default="", max_length=2000)
+    type: str = Field(default="info", pattern="^(info|success|warning|error)$")
+    link: Optional[str] = Field(None, max_length=2000)
+    entityType: Optional[str] = Field(None, max_length=50)
+    entityId: Optional[str] = Field(None, max_length=255)
+
+
+class BulkTemplateRequest(BaseModel):
+    templateIds: List[str] = Field(..., min_length=1, max_length=500)
+    status: Optional[str] = Field(None, max_length=50)
+    tags: Optional[List[str]] = Field(None, max_length=100)
+
+
+class BulkJobRequest(BaseModel):
+    jobIds: List[str] = Field(..., min_length=1, max_length=500)
+
+
+MAX_PREFERENCES_SIZE_BYTES = 50_000  # 50KB total
+
+
 @router.get("/preferences")
 async def get_preferences() -> Dict[str, Any]:
     """Get user preferences."""
@@ -466,6 +497,16 @@ async def get_preferences() -> Dict[str, Any]:
 @router.put("/preferences")
 async def update_preferences(updates: Dict[str, Any]) -> Dict[str, Any]:
     """Update user preferences."""
+    import json
+    try:
+        size = len(json.dumps(updates, default=str).encode("utf-8"))
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=400, detail="Invalid preference data")
+    if size > MAX_PREFERENCES_SIZE_BYTES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Preferences payload too large (max {MAX_PREFERENCES_SIZE_BYTES} bytes)",
+        )
     prefs = state_access.update_user_preferences(updates)
     return {"preferences": prefs}
 
@@ -657,33 +698,15 @@ async def get_unread_count() -> Dict[str, int]:
 
 
 @router.post("/notifications")
-async def create_notification(payload: Dict[str, Any]) -> Dict[str, Any]:
+async def create_notification(payload: CreateNotificationRequest) -> Dict[str, Any]:
     """Create a new notification."""
-    # Valid notification types
-    VALID_NOTIFICATION_TYPES = {"info", "success", "warning", "error"}
-
-    title = payload.get("title", "Notification")
-    message = payload.get("message", "")
-    notification_type = payload.get("type", "info")
-    link = payload.get("link")
-    entity_type = payload.get("entityType")
-    entity_id = payload.get("entityId")
-
-    # Validate notification type
-    if notification_type not in VALID_NOTIFICATION_TYPES:
-        from fastapi import HTTPException
-        raise HTTPException(
-            status_code=400,
-            detail=f"Invalid notification type '{notification_type}'. Must be one of: {', '.join(VALID_NOTIFICATION_TYPES)}"
-        )
-
     notification = state_access.add_notification(
-        title=title,
-        message=message,
-        notification_type=notification_type,
-        link=link,
-        entity_type=entity_type,
-        entity_id=entity_id,
+        title=payload.title,
+        message=payload.message,
+        notification_type=payload.type,
+        link=payload.link,
+        entity_type=payload.entityType,
+        entity_id=payload.entityId,
     )
     return {"notification": notification}
 
@@ -716,8 +739,15 @@ async def delete_notification(notification_id: str) -> Dict[str, Any]:
 
 
 @router.delete("/notifications")
-async def clear_all_notifications() -> Dict[str, Any]:
-    """Clear all notifications."""
+async def clear_all_notifications(
+    x_confirm_destructive: str = Header(None, alias="X-Confirm-Destructive"),
+) -> Dict[str, Any]:
+    """Clear all notifications. Requires X-Confirm-Destructive: true header."""
+    if x_confirm_destructive != "true":
+        raise HTTPException(
+            status_code=400,
+            detail="Destructive operation requires header X-Confirm-Destructive: true",
+        )
     count = state_access.clear_notifications()
     return {"clearedCount": count}
 
@@ -727,12 +757,9 @@ async def clear_all_notifications() -> Dict[str, Any]:
 # ------------------------------------------------------------------
 
 @router.post("/bulk/templates/delete")
-async def bulk_delete_templates(payload: Dict[str, Any]) -> Dict[str, Any]:
+async def bulk_delete_templates(payload: BulkTemplateRequest) -> Dict[str, Any]:
     """Delete multiple templates in bulk."""
-    template_ids = payload.get("templateIds", [])
-    if not template_ids:
-        from fastapi import HTTPException
-        raise HTTPException(status_code=400, detail="No template IDs provided")
+    template_ids = payload.templateIds
 
     deleted = []
     failed = []
@@ -747,7 +774,7 @@ async def bulk_delete_templates(payload: Dict[str, Any]) -> Dict[str, Any]:
                 entity_id=tid,
             )
         except Exception as e:
-            failed.append({"id": tid, "error": str(e)})
+            failed.append({"id": tid, "error": f"Delete failed: {type(e).__name__}"})
 
     return {
         "deleted": deleted,
@@ -758,16 +785,12 @@ async def bulk_delete_templates(payload: Dict[str, Any]) -> Dict[str, Any]:
 
 
 @router.post("/bulk/templates/update-status")
-async def bulk_update_template_status(payload: Dict[str, Any]) -> Dict[str, Any]:
+async def bulk_update_template_status(payload: BulkTemplateRequest) -> Dict[str, Any]:
     """Update status for multiple templates."""
-    template_ids = payload.get("templateIds", [])
-    status = payload.get("status")
+    template_ids = payload.templateIds
+    status = payload.status
 
-    if not template_ids:
-        from fastapi import HTTPException
-        raise HTTPException(status_code=400, detail="No template IDs provided")
     if not status:
-        from fastapi import HTTPException
         raise HTTPException(status_code=400, detail="Status is required")
 
     updated = []
@@ -799,7 +822,7 @@ async def bulk_update_template_status(payload: Dict[str, Any]) -> Dict[str, Any]
                 details={"status": status},
             )
         except Exception as e:
-            failed.append({"id": tid, "error": str(e)})
+            failed.append({"id": tid, "error": f"Delete failed: {type(e).__name__}"})
 
     return {
         "updated": updated,
@@ -810,16 +833,12 @@ async def bulk_update_template_status(payload: Dict[str, Any]) -> Dict[str, Any]
 
 
 @router.post("/bulk/templates/add-tags")
-async def bulk_add_tags(payload: Dict[str, Any]) -> Dict[str, Any]:
+async def bulk_add_tags(payload: BulkTemplateRequest) -> Dict[str, Any]:
     """Add tags to multiple templates."""
-    template_ids = payload.get("templateIds", [])
-    tags_to_add = payload.get("tags", [])
+    template_ids = payload.templateIds
+    tags_to_add = payload.tags or []
 
-    if not template_ids:
-        from fastapi import HTTPException
-        raise HTTPException(status_code=400, detail="No template IDs provided")
     if not tags_to_add:
-        from fastapi import HTTPException
         raise HTTPException(status_code=400, detail="No tags provided")
 
     updated = []
@@ -848,7 +867,7 @@ async def bulk_add_tags(payload: Dict[str, Any]) -> Dict[str, Any]:
             )
             updated.append(tid)
         except Exception as e:
-            failed.append({"id": tid, "error": str(e)})
+            failed.append({"id": tid, "error": f"Delete failed: {type(e).__name__}"})
 
     return {
         "updated": updated,
@@ -859,12 +878,9 @@ async def bulk_add_tags(payload: Dict[str, Any]) -> Dict[str, Any]:
 
 
 @router.post("/bulk/jobs/cancel")
-async def bulk_cancel_jobs(payload: Dict[str, Any]) -> Dict[str, Any]:
+async def bulk_cancel_jobs(payload: BulkJobRequest) -> Dict[str, Any]:
     """Cancel multiple jobs."""
-    job_ids = payload.get("jobIds", [])
-    if not job_ids:
-        from fastapi import HTTPException
-        raise HTTPException(status_code=400, detail="No job IDs provided")
+    job_ids = payload.jobIds
 
     cancelled = []
     failed = []
@@ -889,7 +905,7 @@ async def bulk_cancel_jobs(payload: Dict[str, Any]) -> Dict[str, Any]:
                 entity_id=jid,
             )
         except Exception as e:
-            failed.append({"id": jid, "error": str(e)})
+            failed.append({"id": jid, "error": f"Delete failed: {type(e).__name__}"})
 
     return {
         "cancelled": cancelled,
@@ -900,12 +916,9 @@ async def bulk_cancel_jobs(payload: Dict[str, Any]) -> Dict[str, Any]:
 
 
 @router.post("/bulk/jobs/delete")
-async def bulk_delete_jobs(payload: Dict[str, Any]) -> Dict[str, Any]:
+async def bulk_delete_jobs(payload: BulkJobRequest) -> Dict[str, Any]:
     """Delete multiple jobs from history."""
-    job_ids = payload.get("jobIds", [])
-    if not job_ids:
-        from fastapi import HTTPException
-        raise HTTPException(status_code=400, detail="No job IDs provided")
+    job_ids = payload.jobIds
 
     deleted = []
     failed = []
@@ -915,7 +928,7 @@ async def bulk_delete_jobs(payload: Dict[str, Any]) -> Dict[str, Any]:
             state_access.delete_job(jid)
             deleted.append(jid)
         except Exception as e:
-            failed.append({"id": jid, "error": str(e)})
+            failed.append({"id": jid, "error": f"Delete failed: {type(e).__name__}"})
 
     return {
         "deleted": deleted,

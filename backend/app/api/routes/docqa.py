@@ -27,8 +27,15 @@ class AddDocumentRequest(BaseModel):
     page_count: Optional[int] = None
 
 
+_docqa_service: DocumentQAService | None = None
+
+
 def get_service() -> DocumentQAService:
-    return DocumentQAService()
+    """Return a singleton DocumentQAService instance."""
+    global _docqa_service
+    if _docqa_service is None:
+        _docqa_service = DocumentQAService()
+    return _docqa_service
 
 
 @router.post("/sessions")

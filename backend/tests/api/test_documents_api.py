@@ -20,6 +20,7 @@ from backend.app.api.routes.documents import (
     get_collaboration_service,
     get_pdf_service,
 )
+from backend.app.api.middleware import limiter
 from backend.app.services.documents.service import DocumentService
 
 
@@ -54,7 +55,9 @@ def client(doc_service, collab_service, pdf_service):
     app.dependency_overrides[get_document_service] = lambda: doc_service
     app.dependency_overrides[get_collaboration_service] = lambda: collab_service
     app.dependency_overrides[get_pdf_service] = lambda: pdf_service
-    return TestClient(app)
+    limiter.enabled = False
+    yield TestClient(app)
+    limiter.enabled = True
 
 
 @pytest.fixture

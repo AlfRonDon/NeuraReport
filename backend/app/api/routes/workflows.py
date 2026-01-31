@@ -7,7 +7,7 @@ from __future__ import annotations
 import logging
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
 from backend.app.schemas.workflows.workflow import (
     ApprovalRequest,
@@ -15,13 +15,16 @@ from backend.app.schemas.workflows.workflow import (
     CreateWorkflowRequest,
     ExecuteWorkflowRequest,
     ExecutionStatus,
+    TriggerType,
     UpdateWorkflowRequest,
     WorkflowExecutionResponse,
     WorkflowListResponse,
     WorkflowResponse,
+    WorkflowTrigger,
 )
 from backend.app.services.security import require_api_key
 from backend.app.services.workflow.service import workflow_service
+from backend.app.api.middleware import limiter, RATE_LIMIT_STRICT
 
 logger = logging.getLogger("neura.api.workflows")
 
@@ -112,13 +115,18 @@ async def delete_workflow(workflow_id: str):
 
 
 @router.post("/{workflow_id}/execute", response_model=WorkflowExecutionResponse)
-async def execute_workflow(workflow_id: str, request: ExecuteWorkflowRequest):
+@limiter.limit(RATE_LIMIT_STRICT)
+async def execute_workflow(
+    request: Request,
+    workflow_id: str,
+    req: ExecuteWorkflowRequest,
+):
     """Execute a workflow."""
     try:
         return await workflow_service.execute_workflow(
             workflow_id,
-            input_data=request.input_data,
-            async_execution=request.async_execution,
+            input_data=req.input_data,
+            async_execution=req.async_execution,
         )
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
@@ -144,23 +152,50 @@ async def list_executions(
     )
 
 
+# Required config keys per trigger type
+_TRIGGER_REQUIRED_KEYS: dict[TriggerType, set[str]] = {
+    TriggerType.SCHEDULE: {"cron"},
+    TriggerType.WEBHOOK: {"secret"},
+    TriggerType.FILE_UPLOAD: {"path"},
+    TriggerType.EVENT: {"event_name"},
+    TriggerType.MANUAL: set(),
+}
+
+
 @router.post("/{workflow_id}/trigger", response_model=WorkflowResponse)
 async def configure_trigger(workflow_id: str, request: ConfigureTriggerRequest):
     """Configure a workflow trigger."""
-    from backend.app.schemas.workflows.workflow import UpdateWorkflowRequest, WorkflowTrigger
+    # Validate trigger type is recognized
+    try:
+        trigger_type = TriggerType(request.trigger_type)
+    except ValueError:
+        valid = [t.value for t in TriggerType]
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid trigger_type '{request.trigger_type}'. Must be one of: {', '.join(valid)}",
+        )
+
+    # Validate required config keys for the trigger type
+    required = _TRIGGER_REQUIRED_KEYS.get(trigger_type, set())
+    missing = required - set(request.config.keys())
+    if missing:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Trigger type '{trigger_type.value}' requires config keys: {', '.join(sorted(missing))}",
+        )
 
     workflow = await workflow_service.get_workflow(workflow_id)
     if not workflow:
         raise HTTPException(status_code=404, detail="Workflow not found")
 
     # Add or update trigger
-    new_trigger = WorkflowTrigger(type=request.trigger_type, config=request.config)
+    new_trigger = WorkflowTrigger(type=trigger_type, config=request.config)
     triggers = list(workflow.triggers)
 
     # Replace existing trigger of same type or add new
     found = False
     for i, t in enumerate(triggers):
-        if t.type == request.trigger_type:
+        if t.type == trigger_type:
             triggers[i] = new_trigger
             found = True
             break

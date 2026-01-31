@@ -80,7 +80,7 @@ Notes:
 
 ### Backend (AST import checks)
 
-- Only backend/app/api/* may import backend.app.api.*
+- Only backend/app/api/* and backend/tests/* may import backend.app.api.* (tests need router access for testing)
 - backend/engine/* must not import backend.app.*
 - backend/engine/* must not import backend.legacy.*
 - backend/legacy/* must not import backend.engine.*
@@ -139,6 +139,43 @@ CI:
   - a filled-out exception doc at docs/architecture/exceptions/ARCH-EXC-###.md using ARCHITECTURE_EXCEPTION_TEMPLATE.md
 - Frontend exceptions require updating frontend/eslint.config.js.
 - Exceptions must be removed by the next planned refactor touching the affected area.
+
+## Service-layer re-export pattern
+
+When the api layer needs access to types or functions from utils or repositories, they MUST be re-exported through a services module. This preserves the api → services → utils/repositories dependency chain.
+
+Existing re-export modules:
+- `services/errors.py` → re-exports `AppError`, `DomainError` from `utils/errors.py`
+- `services/job_status.py` → re-exports job status constants and functions from `utils/job_status.py`
+- `services/validation.py` → re-exports `is_read_only_sql`, `validate_path_safety`, etc. from `utils/validation.py`
+- `services/state_access.py` → re-exports `state_store` and helpers from `repositories/state.py`
+- `services/agents/__init__.py` → re-exports `AgentTaskStatus`, `TaskConflictError`, `TaskNotFoundError` from `repositories/agent_tasks`
+
+## Migration log
+
+### 2026-01-31: Architecture violation elimination (66 → 0)
+
+**APP-LAYER-IMPORT violations fixed (9):**
+- `api/error_handlers.py`: Changed `utils.errors.AppError` → `services.errors.AppError`
+- `api/routes/agents_v2.py` (×3): Changed `repositories.agent_tasks.*` → `services.agents.*`
+- `api/routes/analytics.py`: Changed `utils.job_status.*` → `services.job_status.*`
+- `api/routes/jobs.py`: Changed `utils.job_status.*` → `services.job_status.*`
+- `api/routes/connectors.py`: Changed `utils.validation.*` → `services.validation.*`, `repositories.state.*` → `services.state_access.*`
+- `api/routes/documents.py`: Changed `utils.validation.*` → `services.validation.*`
+
+**APP-API-IMPORT-SCOPE violations fixed (57):**
+- Enforcer updated to exempt `backend/tests/` — tests must import routers/middleware to test them
+
+**Service re-export modules created:**
+- `backend/app/services/errors.py` (new)
+- `backend/app/services/job_status.py` (new)
+- `backend/app/services/validation.py` (updated with `is_read_only_sql`, `validate_path_safety`)
+- `backend/app/services/agents/__init__.py` (updated with `AgentTaskStatus`, `TaskConflictError`, `TaskNotFoundError`)
+
+**Remaining intentional exceptions (3):**
+- ARCH-EXC-001: `legacy.py` → `backend.engine` (legacy compat, expires on v1 retirement)
+- ARCH-EXC-002: `backend/api.py` → `backend.app.api` (entrypoint, expires on api.py retirement)
+- ARCH-EXC-003: `feature_routes.py` → `backend.app.api.generate.*` (legacy compat, expires on migration)
 
 ## Do-not list
 

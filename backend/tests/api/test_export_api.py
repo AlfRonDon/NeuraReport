@@ -11,6 +11,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from backend.app.api.routes.export import router
+from backend.app.api.middleware import limiter
 from backend.app.services.security import require_api_key
 
 
@@ -156,6 +157,8 @@ def app(mock_export_service, mock_distribution_service):
 
     # Override the API key dependency so tests run without credentials.
     _app.dependency_overrides[require_api_key] = lambda: None
+    # Disable rate limiting in tests
+    limiter.enabled = False
 
     _app.include_router(router, prefix="/export")
 
@@ -182,6 +185,7 @@ def app(mock_export_service, mock_distribution_service):
 
     _route_mod.export_service = _orig_export
     _route_mod.distribution_service = _orig_distrib
+    limiter.enabled = True
 
 
 @pytest.fixture

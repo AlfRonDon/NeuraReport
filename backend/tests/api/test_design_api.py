@@ -8,6 +8,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from backend.app.api.routes.design import router
+from backend.app.api.middleware import limiter
 from backend.app.services.design.service import DesignService
 from backend.app.services.security import require_api_key
 
@@ -18,7 +19,10 @@ def app():
     _app = FastAPI()
     _app.dependency_overrides[require_api_key] = lambda: None
     _app.include_router(router, prefix="/design")
-    return _app
+    # Disable rate limiting in tests to avoid false failures
+    limiter.enabled = False
+    yield _app
+    limiter.enabled = True
 
 
 @pytest.fixture

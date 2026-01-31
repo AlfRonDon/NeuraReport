@@ -55,6 +55,10 @@ class ConnectionService:
     def __init__(self, repo: ConnectionRepository | None = None):
         self.repo = repo or ConnectionRepository()
 
+    def list(self, correlation_id: str | None = None):
+        """List all connections via the repository."""
+        return self.repo.list()
+
     def _resolve_and_verify(
         self,
         *,

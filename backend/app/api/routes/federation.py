@@ -1,9 +1,14 @@
 """API routes for Cross-Database Federation feature."""
 from __future__ import annotations
 
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
 from backend.app.services.security import require_api_key
+from backend.app.services.errors import AppError
+
+logger = logging.getLogger("neura.api.federation")
 from backend.app.schemas.federation import VirtualSchemaCreate, SuggestJoinsRequest, FederatedQueryRequest
 from backend.app.services.federation.service import FederationService
 
@@ -22,7 +27,13 @@ async def create_virtual_schema(
 ):
     """Create a virtual schema spanning multiple databases."""
     correlation_id = getattr(request.state, "correlation_id", None)
-    schema = svc.create_virtual_schema(payload, correlation_id)
+    try:
+        schema = svc.create_virtual_schema(payload, correlation_id)
+    except (HTTPException, AppError):
+        raise
+    except Exception as exc:
+        logger.exception("federation_create_schema_failed", extra={"event": "federation_create_schema_failed"})
+        raise HTTPException(status_code=500, detail="Failed to create virtual schema")
     return {"status": "ok", "schema": schema.dict(), "correlation_id": correlation_id}
 
 
@@ -81,7 +92,13 @@ async def suggest_joins(
 ):
     """Get AI-suggested joins between tables in different connections."""
     correlation_id = getattr(request.state, "correlation_id", None)
-    suggestions = svc.suggest_joins(payload.connection_ids, correlation_id)
+    try:
+        suggestions = svc.suggest_joins(payload.connection_ids, correlation_id)
+    except (HTTPException, AppError):
+        raise
+    except Exception as exc:
+        logger.exception("federation_suggest_joins_failed", extra={"event": "federation_suggest_joins_failed"})
+        raise HTTPException(status_code=500, detail="Join suggestion failed")
     return {"status": "ok", "suggestions": [s.dict() for s in suggestions], "correlation_id": correlation_id}
 
 
@@ -93,5 +110,11 @@ async def execute_federated_query(
 ):
     """Execute a federated query across multiple databases."""
     correlation_id = getattr(request.state, "correlation_id", None)
-    result = svc.execute_query(payload, correlation_id)
+    try:
+        result = svc.execute_query(payload, correlation_id)
+    except (HTTPException, AppError):
+        raise
+    except Exception as exc:
+        logger.exception("federation_query_failed", extra={"event": "federation_query_failed"})
+        raise HTTPException(status_code=500, detail="Federated query execution failed")
     return {"status": "ok", "result": result, "correlation_id": correlation_id}

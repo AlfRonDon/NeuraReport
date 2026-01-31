@@ -23,4 +23,9 @@ def validate_path_safety(path: str) -> tuple[bool, str | None]:
     return _validation.validate_path_safety(path)
 
 
-__all__ = ["is_safe_name", "validate_file_extension", "is_read_only_sql", "validate_path_safety"]
+def is_safe_external_url(url: str) -> tuple[bool, str | None]:
+    """Service-layer validation boundary for SSRF protection on external URLs."""
+    return _validation.is_safe_external_url(url)
+
+
+__all__ = ["is_safe_name", "validate_file_extension", "is_read_only_sql", "validate_path_safety", "is_safe_external_url"]

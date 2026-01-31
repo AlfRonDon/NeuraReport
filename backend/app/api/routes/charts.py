@@ -2,13 +2,19 @@
 from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
-from pydantic import BaseModel, Field
-from fastapi import APIRouter, Depends, Query, Request
+from pydantic import BaseModel, Field, field_validator, model_validator
+import logging
+
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
 from backend.app.services.security import require_api_key
 from backend.app.services.charts.auto_chart_service import AutoChartService
 from backend.app.services.background_tasks import enqueue_background_job
 import backend.app.services.state_access as state_access
+
+logger = logging.getLogger("neura.api.charts")
+
+VALID_CHART_TYPES = {"bar", "line", "scatter", "pie", "area", "heatmap", "histogram", "box", "radar", "treemap"}
 
 router = APIRouter(dependencies=[Depends(require_api_key)])
 
@@ -23,8 +29,27 @@ class ChartGenerateRequest(BaseModel):
     data: List[Dict[str, Any]] = Field(..., min_items=1, max_items=1000)
     chart_type: str
     x_field: str
-    y_fields: List[str]
-    title: Optional[str] = None
+    y_fields: List[str] = Field(..., min_length=1, max_length=20)
+    title: Optional[str] = Field(None, max_length=255)
+
+    @field_validator("chart_type")
+    @classmethod
+    def validate_chart_type(cls, v: str) -> str:
+        if v not in VALID_CHART_TYPES:
+            raise ValueError(f"Invalid chart_type '{v}'. Must be one of: {', '.join(sorted(VALID_CHART_TYPES))}")
+        return v
+
+    @model_validator(mode="after")
+    def validate_fields_exist_in_data(self):
+        if not self.data:
+            return self
+        sample_keys = set(self.data[0].keys())
+        if self.x_field not in sample_keys:
+            raise ValueError(f"x_field '{self.x_field}' not found in data keys: {sorted(sample_keys)}")
+        missing = [f for f in self.y_fields if f not in sample_keys]
+        if missing:
+            raise ValueError(f"y_fields {missing} not found in data keys: {sorted(sample_keys)}")
+        return self
 
 
 def get_service() -> AutoChartService:
@@ -66,8 +91,10 @@ async def analyze_for_charts(
                 result={"suggestions": suggestions},
             )
         except Exception as exc:
-            state_access.record_job_step(job_id, "analyze", status="failed", error=str(exc))
-            state_access.record_job_completion(job_id, status="failed", error=str(exc))
+            logger.exception("chart_analyze_failed", extra={"job_id": job_id})
+            safe_msg = f"Chart analysis failed: {type(exc).__name__}"
+            state_access.record_job_step(job_id, "analyze", status="failed", error=safe_msg)
+            state_access.record_job_completion(job_id, status="failed", error=safe_msg)
 
     job = await enqueue_background_job(
         job_type="chart_analyze",
@@ -115,8 +142,10 @@ async def generate_chart_config(
                 result={"chart": config},
             )
         except Exception as exc:
-            state_access.record_job_step(job_id, "generate", status="failed", error=str(exc))
-            state_access.record_job_completion(job_id, status="failed", error=str(exc))
+            logger.exception("chart_generate_failed", extra={"job_id": job_id})
+            safe_msg = f"Chart generation failed: {type(exc).__name__}"
+            state_access.record_job_step(job_id, "generate", status="failed", error=safe_msg)
+            state_access.record_job_completion(job_id, status="failed", error=safe_msg)
 
     job = await enqueue_background_job(
         job_type="chart_generate",

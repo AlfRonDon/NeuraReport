@@ -24,9 +24,31 @@ from ...services.connectors import (
     ConnectorType,
 )
 from backend.app.services.validation import is_read_only_sql
+from backend.app.utils.validation import is_safe_external_url
 from backend.app.services.state_access import state_store
 
 logger = logging.getLogger("neura.api.connectors")
+
+# Credential keys that must never appear in API responses
+_SENSITIVE_KEYS = frozenset({
+    "password", "secret", "token", "access_token", "refresh_token",
+    "api_key", "private_key", "client_secret", "credentials",
+})
+
+
+def _redact_config(config: dict[str, Any] | None) -> dict[str, Any]:
+    """Return a copy of config with sensitive values replaced by '***'."""
+    if not config:
+        return {}
+    redacted = {}
+    for k, v in config.items():
+        if k.lower() in _SENSITIVE_KEYS:
+            redacted[k] = "***"
+        elif isinstance(v, dict):
+            redacted[k] = _redact_config(v)
+        else:
+            redacted[k] = v
+    return redacted
 
 router = APIRouter(tags=["connectors"], dependencies=[Depends(require_api_key)])
 
@@ -117,12 +139,25 @@ def _store_get(connection_id: str) -> dict | None:
 
 
 def _store_put(connection: dict) -> None:
-    """Persist a connector connection (create or update)."""
+    """Persist a connector connection (create or update).
+
+    Raw config (which may contain credentials) is stored separately in
+    ``connector_credentials`` and stripped from the main record to avoid
+    accidental leakage through list/get endpoints.
+    """
     with state_store.transaction() as state:
-        state.setdefault("connectors", {})[connection["id"]] = connection
-        # Keep config secrets in a separate namespace for future encryption.
+        # Store credentials separately
         if "config" in connection:
             state.setdefault("connector_credentials", {})[connection["id"]] = connection["config"]
+        # Store connection metadata without raw config
+        safe_record = {k: v for k, v in connection.items() if k != "config"}
+        safe_record["has_credentials"] = "config" in connection
+        state.setdefault("connectors", {})[connection["id"]] = safe_record
+
+
+def _store_get_config(connection_id: str) -> dict[str, Any]:
+    """Retrieve raw config (credentials) for a connection."""
+    return state_store.read_state().get("connector_credentials", {}).get(connection_id, {})
 
 
 def _store_delete(connection_id: str) -> bool:
@@ -184,9 +219,12 @@ async def test_connection(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
+        logger.exception("connector_test_failed", extra={"connector_type": connector_type})
         return TestConnectionResponse(
             success=False,
-            error=str(e),
+            latency_ms=None,
+            error=f"Connection test failed: {type(e).__name__}",
+            details=None,
         )
 
 
@@ -268,8 +306,14 @@ async def list_connections(
 
 
 @router.get("/{connection_id}", response_model=ConnectionResponse)
-async def get_connection(connection_id: str):
-    """Get a connection by ID."""
+async def get_connection(
+    connection_id: str = Path(..., min_length=36, max_length=36, pattern="^[0-9a-f-]{36}$"),
+):
+    """Get a connection by ID.
+
+    Note: connection_id is restricted to UUID format to disambiguate from
+    /{connector_type}/... routes which use short alphanumeric names.
+    """
     c = _store_get(connection_id)
     if c is None:
         raise HTTPException(status_code=404, detail="Connection not found")
@@ -285,7 +329,9 @@ async def get_connection(connection_id: str):
 
 
 @router.delete("/{connection_id}")
-async def delete_connection(connection_id: str):
+async def delete_connection(
+    connection_id: str = Path(..., min_length=36, max_length=36, pattern="^[0-9a-f-]{36}$"),
+):
     """Delete a connection."""
     if not _store_delete(connection_id):
         raise HTTPException(status_code=404, detail="Connection not found")
@@ -297,19 +343,23 @@ async def delete_connection(connection_id: str):
 # ============================================
 
 @router.post("/{connection_id}/health", response_model=TestConnectionResponse)
-async def check_connection_health(connection_id: str):
+async def check_connection_health(
+    connection_id: str = Path(..., min_length=36, max_length=36, pattern="^[0-9a-f-]{36}$"),
+):
     """Check if a connection is healthy."""
     conn = _store_get(connection_id)
     if conn is None:
         raise HTTPException(status_code=404, detail="Connection not found")
 
+    config = _store_get_config(connection_id)
     try:
-        connector = get_connector(conn["connector_type"], conn["config"])
+        connector = get_connector(conn["connector_type"], config)
         result = await connector.test_connection()
 
         # Persist updated health status
         conn["status"] = "connected" if result.success else "error"
         conn["latency_ms"] = result.latency_ms
+        conn["config"] = config  # include config so _store_put can re-persist credentials
         _store_put(conn)
 
         return TestConnectionResponse(
@@ -319,33 +369,45 @@ async def check_connection_health(connection_id: str):
             details=result.details,
         )
     except Exception as e:
+        logger.exception("connector_health_failed", extra={"connection_id": connection_id})
         conn["status"] = "error"
         _store_put(conn)
         return TestConnectionResponse(
             success=False,
-            error=str(e),
+            latency_ms=None,
+            error=f"Health check failed: {type(e).__name__}",
+            details=None,
         )
 
 
 @router.get("/{connection_id}/schema")
-async def get_connection_schema(connection_id: str):
+async def get_connection_schema(
+    connection_id: str = Path(..., min_length=36, max_length=36, pattern="^[0-9a-f-]{36}$"),
+):
     """Get schema information for a connection."""
     conn = _store_get(connection_id)
     if conn is None:
         raise HTTPException(status_code=404, detail="Connection not found")
+    config = _store_get_config(connection_id)
+    connector = None
     try:
-        connector = get_connector(conn["connector_type"], conn["config"])
+        connector = get_connector(conn["connector_type"], config)
         await connector.connect()
         schema = await connector.discover_schema()
-        await connector.disconnect()
-
         return {
             "tables": [t.model_dump() for t in schema.tables],
             "views": [v.model_dump() for v in schema.views],
             "schemas": schema.schemas,
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception("connector_schema_failed", extra={"connection_id": connection_id})
+        raise HTTPException(status_code=500, detail="Failed to retrieve schema")
+    finally:
+        if connector is not None:
+            try:
+                await connector.disconnect()
+            except Exception:
+                pass
 
 
 # ============================================
@@ -354,8 +416,8 @@ async def get_connection_schema(connection_id: str):
 
 @router.post("/{connection_id}/query", response_model=QueryResponse)
 async def execute_query(
-    connection_id: str,
     request: QueryRequest,
+    connection_id: str = Path(..., min_length=36, max_length=36, pattern="^[0-9a-f-]{36}$"),
 ):
     """Execute a query on a connection."""
     # Validate query is read-only before execution
@@ -367,18 +429,20 @@ async def execute_query(
     if conn is None:
         raise HTTPException(status_code=404, detail="Connection not found")
 
+    config = _store_get_config(connection_id)
+    connector = None
     try:
-        connector = get_connector(conn["connector_type"], conn["config"])
+        connector = get_connector(conn["connector_type"], config)
         await connector.connect()
         result = await connector.execute_query(
             request.query,
             request.parameters,
             request.limit,
         )
-        await connector.disconnect()
 
         # Persist last-used timestamp
         conn["last_used"] = datetime.utcnow().isoformat()
+        conn["config"] = config  # include config so _store_put can re-persist credentials
         _store_put(conn)
 
         return QueryResponse(
@@ -390,27 +454,60 @@ async def execute_query(
             error=result.error,
         )
     except Exception as e:
+        logger.exception("connector_query_failed", extra={"connection_id": connection_id})
         return QueryResponse(
             columns=[],
             rows=[],
             row_count=0,
             execution_time_ms=0,
             truncated=False,
-            error=str(e),
+            error=f"Query execution failed: {type(e).__name__}",
         )
+    finally:
+        if connector is not None:
+            try:
+                await connector.disconnect()
+            except Exception:
+                pass
 
 
 # ============================================
 # OAuth Endpoints
 # ============================================
 
+def _validate_redirect_uri(redirect_uri: str) -> None:
+    """Validate redirect_uri is a safe external URL (not internal/private)."""
+    is_safe, reason = is_safe_external_url(redirect_uri)
+    if not is_safe:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid redirect_uri: {reason}",
+        )
+
+
+def _redact_tokens(tokens: dict[str, Any] | None) -> dict[str, Any]:
+    """Redact sensitive fields from OAuth tokens, keeping only metadata."""
+    if not tokens:
+        return {}
+    redacted = {}
+    for k, v in tokens.items():
+        if k.lower() in _SENSITIVE_KEYS or "token" in k.lower():
+            redacted[k] = "***"
+        else:
+            redacted[k] = v
+    # Indicate tokens were received but redacted
+    redacted["_redacted"] = True
+    return redacted
+
+
 @router.get("/{connector_type}/oauth/authorize")
 async def get_oauth_url(
     connector_type: str,
-    redirect_uri: str = Query(...),
+    redirect_uri: str = Query(..., max_length=2000),
     state: Optional[str] = None,
 ):
     """Get OAuth authorization URL for a connector."""
+    _validate_redirect_uri(redirect_uri)
     try:
         connector = get_connector(connector_type, {})
         if state is None:
@@ -425,6 +522,8 @@ async def get_oauth_url(
             "authorization_url": auth_url,
             "state": state,
         }
+    except HTTPException:
+        raise
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -432,17 +531,21 @@ async def get_oauth_url(
 @router.post("/{connector_type}/oauth/callback")
 async def handle_oauth_callback(
     connector_type: str,
-    code: str = Query(...),
-    redirect_uri: str = Query(...),
+    code: str = Query(..., max_length=2000),
+    redirect_uri: str = Query(..., max_length=2000),
     state: Optional[str] = None,
 ):
     """Handle OAuth callback and exchange code for tokens."""
+    _validate_redirect_uri(redirect_uri)
     try:
         connector = get_connector(connector_type, {})
         tokens = connector.handle_oauth_callback(code, redirect_uri)
         return {
             "status": "ok",
-            "tokens": tokens,
+            "tokens": _redact_tokens(tokens) if isinstance(tokens, dict) else {"_redacted": True},
         }
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        logger.exception("oauth_callback_failed", extra={"connector_type": connector_type})
+        raise HTTPException(status_code=400, detail="OAuth callback failed")
