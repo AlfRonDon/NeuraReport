@@ -50,6 +50,7 @@ frontend/.vitest-localstorage.*
 .tmp_*.json
 .tmp_*.txt
 AUDIT_FINDINGS.md
+FORENSIC_AUDIT_REPORT.md
 MagicMock/
 features_copy.md
 
