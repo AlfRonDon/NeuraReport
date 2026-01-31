@@ -645,7 +645,9 @@ class SearchService:
             for f in filters:
                 value = doc.get("metadata", {}).get(f.field) or doc.get(f.field)
 
-                if f.operator == "eq":
+                if value is None:
+                    passes_filters = False
+                elif f.operator == "eq":
                     passes_filters = value == f.value
                 elif f.operator == "neq":
                     passes_filters = value != f.value
@@ -802,17 +804,25 @@ class SearchService:
 
         try:
             from backend.app.services.config import get_settings
+            import asyncio
             from openai import OpenAI
 
             settings = get_settings()
             if not settings.openai_api_key:
                 return None
 
-            client = OpenAI(api_key=settings.openai_api_key)
-            response = client.embeddings.create(
-                model="text-embedding-3-small",
-                input=text[:8000],
-            )
+            def _sync_embed():
+                client = OpenAI(api_key=settings.openai_api_key)
+                return client.embeddings.create(
+                    model="text-embedding-3-small",
+                    input=text[:8000],
+                )
+
+            try:
+                loop = asyncio.get_running_loop()
+                response = await loop.run_in_executor(None, _sync_embed)
+            except RuntimeError:
+                response = _sync_embed()
 
             embedding = response.data[0].embedding
             self._embeddings_cache[cache_key] = embedding

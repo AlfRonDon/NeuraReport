@@ -89,9 +89,9 @@ class DocumentService:
         """Normalize incoming content payloads to a plain dict."""
         if content is None:
             return {"type": "doc", "content": []}
-        if hasattr(content, "model_dump"):
-            return content.model_dump()
         if isinstance(content, DocumentContent):
+            return content.model_dump()
+        if hasattr(content, "model_dump"):
             return content.model_dump()
         if isinstance(content, dict):
             return content
@@ -208,7 +208,7 @@ class DocumentService:
         tags: Optional[list[str]] = None,
         limit: int = 100,
         offset: int = 0,
-    ) -> list[Document]:
+    ) -> tuple[list[Document], int]:
         """List documents with optional filters."""
         documents = []
         # Collect file paths first under lock to avoid concurrent modification issues

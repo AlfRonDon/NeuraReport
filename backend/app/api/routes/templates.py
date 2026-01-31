@@ -351,8 +351,8 @@ async def recommend_templates_route(
             response = recommend_templates(payload, _request_with_correlation(correlation_id))
             if hasattr(response, "model_dump"):
                 result_payload = response.model_dump(mode="json")
-            elif hasattr(response, "dict"):
-                result_payload = response.dict()
+            elif hasattr(response, "model_dump"):
+                result_payload = response.model_dump()
             else:
                 result_payload = response
             result_data = (

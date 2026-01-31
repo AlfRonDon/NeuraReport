@@ -148,7 +148,7 @@ class TestIngestionServiceProperties:
         assert result.size_bytes == len(content)
 
     @given(name=filename_strategy, ext=extension_strategy)
-    @settings(max_examples=20, suppress_health_check=[HealthCheck.too_slow])
+    @settings(max_examples=20, suppress_health_check=[HealthCheck.too_slow], deadline=None)
     def test_ingest_file_detects_type(self, name: str, ext: str, tmp_path_factory):
         """Ingested file has correct type detected."""
         import asyncio

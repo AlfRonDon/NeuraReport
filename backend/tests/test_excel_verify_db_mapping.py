@@ -57,7 +57,35 @@ def test_excel_preview_injects_db_placeholders(tmp_path, monkeypatch):
         render_calls.append(html_path)
         out_png_path.write_bytes(b"fake")
 
+    # Mock the LLM call to prevent real API calls
+    def fake_call_chat_completion(*args, **kwargs):
+        # Create a mock response object with the expected structure
+        class MockMessage:
+            content = """<!--BEGIN_HTML-->
+<html><head><meta charset='utf-8'>
+<style>
+  @page { size: A4; margin: 24mm; }
+  body { font-family: Arial; }
+  table { border-collapse: collapse; width: 100%; }
+  th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+</style></head><body>
+<table><thead><tr><th data-label="date">DATE</th><th data-label="di_raw_inlet_fm_3">DI_RAW_INLET_FM_3</th></tr></thead>
+<tbody><tr><td>{row_date}</td><td>{row_di_raw_inlet_fm_3}</td></tr></tbody></table></body></html>
+<!--END_HTML-->
+<!--BEGIN_SCHEMA_JSON-->
+{"columns": [{"column": "DATE", "tag": "date"}, {"column": "DI_RAW_INLET_FM_3", "tag": "di_raw_inlet_fm_3"}]}
+<!--END_SCHEMA_JSON-->"""
+
+        class MockChoice:
+            message = MockMessage()
+
+        class MockResponse:
+            choices = [MockChoice()]
+
+        return MockResponse()
+
     monkeypatch.setattr(excel_verify_module, "render_html_to_png", fake_render_html_to_png)
+    monkeypatch.setattr(excel_verify_module, "call_chat_completion", fake_call_chat_completion)
 
     out_dir = tmp_path / "out"
     result = xlsx_to_html_preview(xlsx_path, out_dir, db_path=db_path)

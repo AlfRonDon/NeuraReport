@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import logging
 import tempfile
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -11,6 +12,8 @@ from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from pydantic import BaseModel
 
 from backend.app.services.security import require_api_key
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/legacy", tags=["legacy"], dependencies=[Depends(require_api_key)])
 
@@ -251,7 +254,7 @@ async def quickchart_url(request: QuickChartRequest):
             request.data,
             title=request.title,
         )
-    except Exception as exc:
+    except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     return {"url": url}
 
@@ -289,7 +292,8 @@ async def get_vision_model_info():
         vlm = VisionLanguageModel()
         return {"model": vlm.model}
     except Exception as exc:
-        raise HTTPException(status_code=503, detail=f"Vision model not available: {exc}")
+        logger.warning("Vision model not available: %s", exc)
+        raise HTTPException(status_code=503, detail="Vision model not available")
 
 
 @router.post("/llm/document-extract")

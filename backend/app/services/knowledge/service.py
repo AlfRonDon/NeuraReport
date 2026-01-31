@@ -4,6 +4,7 @@ Document library and knowledge management service.
 """
 from __future__ import annotations
 
+import copy
 import logging
 import time
 import uuid
@@ -620,8 +621,7 @@ class KnowledgeService:
         """
         try:
             from backend.app.repositories.state.store import state_store
-            with state_store._lock:
-                state = state_store._read_state()
+            with state_store.transaction() as state:
                 library = state.get("library", {})
                 # Clear stale data before loading
                 self._documents.clear()
@@ -644,9 +644,9 @@ class KnowledgeService:
             from backend.app.repositories.state.store import state_store
             with state_store.transaction() as state:
                 state["library"] = {
-                    "documents": self._documents,
-                    "collections": self._collections,
-                    "tags": self._tags,
+                    "documents": copy.deepcopy(self._documents),
+                    "collections": copy.deepcopy(self._collections),
+                    "tags": copy.deepcopy(self._tags),
                 }
         except Exception as e:
             logger.error(f"Failed to persist library to state: {e}")

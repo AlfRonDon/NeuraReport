@@ -35,14 +35,14 @@ def _correlation(request: Request) -> str | None:
 async def _refresh_scheduler() -> None:
     try:
         from backend.api import SCHEDULER
-    except Exception:
+    except (ImportError, AttributeError):
         return
     if SCHEDULER is None:
         return
     try:
         await SCHEDULER.refresh()
     except Exception:
-        pass
+        logger.warning("Scheduler refresh failed", exc_info=True)
 
 
 @router.get("")
@@ -140,7 +140,7 @@ async def trigger_schedule(schedule_id: str, background_tasks: BackgroundTasks, 
     # Create a RunPayload to validate the payload
     try:
         run_payload = RunPayload(**payload)
-    except Exception as exc:
+    except (ValueError, TypeError) as exc:
         raise HTTPException(
             status_code=400,
             detail={
@@ -179,7 +179,6 @@ async def trigger_schedule(schedule_id: str, background_tasks: BackgroundTasks, 
 
     def run_scheduled_report():
         """Background task to run the scheduled report."""
-        import asyncio
         started = datetime.now(timezone.utc)
         try:
             job_tracker.start()

@@ -457,5 +457,7 @@ class SpreadsheetService:
     def _save_spreadsheet(self, spreadsheet: Spreadsheet) -> None:
         """Save spreadsheet to disk."""
         file_path = self._get_spreadsheet_path(spreadsheet.id)
+        if not file_path:
+            raise ValueError(f"Invalid spreadsheet ID: {spreadsheet.id}")
         with open(file_path, "w") as f:
             json.dump(spreadsheet.model_dump(), f, indent=2)

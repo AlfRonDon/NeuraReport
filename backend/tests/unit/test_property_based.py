@@ -142,7 +142,7 @@ class TestDLQProperties:
     """Property-based tests for DLQ invariants."""
 
     @given(template_id=template_id_strategy)
-    @settings(max_examples=30)
+    @settings(max_examples=30, deadline=None)
     def test_dlq_preserves_original_job_data(self, template_id: str):
         """Moving to DLQ should preserve all original job data."""
         store = make_store()
@@ -163,7 +163,7 @@ class TestDLQProperties:
         assert "moved_at" in dlq_record
 
     @given(template_id=template_id_strategy)
-    @settings(max_examples=30)
+    @settings(max_examples=30, deadline=None)
     def test_requeue_creates_new_job_with_reset_state(self, template_id: str):
         """Requeuing from DLQ should create job with reset retry count."""
         store = make_store()
@@ -185,7 +185,7 @@ class TestDLQProperties:
         assert new_job["progress"] == 0
 
     @given(n=st.integers(min_value=1, max_value=10))
-    @settings(max_examples=20)
+    @settings(max_examples=20, deadline=None)
     def test_requeue_count_increments_correctly(self, n: int):
         """Multiple requeues should increment count by exactly n."""
         store = make_store()

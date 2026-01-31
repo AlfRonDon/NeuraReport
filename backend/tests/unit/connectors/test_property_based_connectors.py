@@ -310,7 +310,8 @@ class TestInvariantProperties:
             health.record_success(latency_ms=lat)
 
         avg = health.average_latency_ms
-        assert min(latencies) <= avg <= max(latencies)
+        # Allow for floating point precision errors
+        assert min(latencies) - 1e-10 <= avg <= max(latencies) + 1e-10
 
     def test_empty_health_defaults(self):
         """Empty health should have sensible defaults."""

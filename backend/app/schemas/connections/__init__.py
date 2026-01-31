@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Optional
 
-from pydantic import BaseModel, Field, field_validator, validator
+from pydantic import BaseModel, Field, field_validator
 
 from backend.app.utils.validation import is_safe_id, is_safe_name, sanitize_id, sanitize_filename
 
@@ -13,13 +13,15 @@ class ConnectionTestRequest(BaseModel):
     database: Optional[str] = Field(None, max_length=500)
     db_type: str = Field(default="sqlite", max_length=50)
 
-    @validator("db_type")
+    @field_validator("db_type")
+    @classmethod
     def enforce_sqlite(cls, value: str) -> str:
         if (value or "").lower() != "sqlite":
             raise ValueError("Only sqlite is supported in this build")
         return value
 
-    @validator("database")
+    @field_validator("database")
+    @classmethod
     def validate_database_path(cls, value: Optional[str]) -> Optional[str]:
         if value is None:
             return None
@@ -36,7 +38,8 @@ class ConnectionUpsertRequest(ConnectionTestRequest):
     latency_ms: Optional[float] = Field(None, ge=0, le=1000000)
     tags: Optional[list[str]] = Field(None, max_length=20)
 
-    @validator("id")
+    @field_validator("id")
+    @classmethod
     def validate_id(cls, value: Optional[str]) -> Optional[str]:
         if value is None:
             return None
@@ -44,7 +47,8 @@ class ConnectionUpsertRequest(ConnectionTestRequest):
             raise ValueError("ID must be alphanumeric with dashes/underscores only")
         return value
 
-    @validator("name")
+    @field_validator("name")
+    @classmethod
     def validate_name(cls, value: Optional[str]) -> Optional[str]:
         if value is None:
             return None

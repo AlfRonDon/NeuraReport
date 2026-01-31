@@ -5,7 +5,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 
 from backend.app.utils.validation import is_safe_id, is_safe_name
 
@@ -39,7 +39,8 @@ class EnrichmentSourceCreate(BaseModel):
     config: Dict[str, Any] = Field(default_factory=dict)
     cache_ttl_hours: int = Field(default=24, ge=1, le=720)
 
-    @validator("name")
+    @field_validator("name")
+    @classmethod
     def validate_name(cls, value: str) -> str:
         if not is_safe_name(value):
             raise ValueError("Name contains invalid characters")

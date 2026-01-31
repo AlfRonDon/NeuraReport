@@ -69,7 +69,7 @@ def _sample_data(n=3):
 
 
 def _make_custom_source_obj(**overrides):
-    """Create a mock custom source object with .dict() support."""
+    """Create a mock custom source object with .dict() and .model_dump() support."""
     defaults = {
         "id": "custom-abc",
         "name": "Custom Source",
@@ -84,6 +84,7 @@ def _make_custom_source_obj(**overrides):
     defaults.update(overrides)
     obj = MagicMock()
     obj.dict.return_value = defaults
+    obj.model_dump.return_value = defaults
     for k, v in defaults.items():
         setattr(obj, k, v)
     return obj

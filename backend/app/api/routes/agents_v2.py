@@ -19,8 +19,8 @@ import logging
 from typing import Any, Dict, List, Literal, Optional
 
 from fastapi import APIRouter, HTTPException, Query, Request, Response, status
-from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, Field, field_validator
+from fastapi.responses import JSONResponse, StreamingResponse
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from backend.app.api.middleware import limiter
 from backend.app.services.agents import (
@@ -273,8 +273,7 @@ class LinksResponse(BaseModel):
     events: str
     stream: Optional[str] = None
 
-    class Config:
-        populate_by_name = True
+    model_config = ConfigDict(populate_by_name=True)
 
 
 class TaskResponse(BaseModel):
@@ -290,8 +289,7 @@ class TaskResponse(BaseModel):
     attempts: AttemptsResponse
     links: LinksResponse
 
-    class Config:
-        populate_by_name = True
+    model_config = ConfigDict(populate_by_name=True)
 
 
 class TaskListResponse(BaseModel):
@@ -449,12 +447,12 @@ async def run_research_agent(request: Request, response: Response, body: Researc
         )
 
     except Exception as e:
-        logger.exception(f"Research agent failed: {e}")
+        logger.exception("Agent failed: %s", e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail={
                 "code": "INTERNAL_ERROR",
-                "message": str(e),
+                "message": "An internal error occurred",
             },
         )
 
@@ -476,10 +474,10 @@ def _handle_agent_error(e: Exception) -> None:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail={"code": e.code, "message": e.message, "retryable": e.retryable},
         )
-    logger.exception(f"Agent failed: {e}")
+    logger.exception("Agent failed: %s", e)
     raise HTTPException(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        detail={"code": "INTERNAL_ERROR", "message": str(e)},
+        detail={"code": "INTERNAL_ERROR", "message": "An internal error occurred"},
     )
 
 
@@ -907,7 +905,8 @@ async def health_check():
             "tasks": stats,
         }
     except Exception as e:
-        return {
-            "status": "unhealthy",
-            "error": str(e),
-        }
+        logger.warning("Agents v2 health check failed: %s", e)
+        return JSONResponse(
+            status_code=503,
+            content={"status": "unhealthy", "error": "Service unavailable"},
+        )

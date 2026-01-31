@@ -80,8 +80,8 @@ async def run_research_agent(request: ResearchRequest):
         )
         return task.model_dump()
     except Exception as e:
-        logger.error(f"Research agent failed: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+        logger.exception("Research agent failed: %s", e)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
 
 @router.post("/data-analysis")
@@ -102,8 +102,8 @@ async def run_data_analyst_agent(request: DataAnalysisRequest):
         )
         return task.model_dump()
     except Exception as e:
-        logger.error(f"Data analyst agent failed: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+        logger.exception("Data analyst agent failed: %s", e)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
 
 @router.post("/email-draft")
@@ -125,8 +125,8 @@ async def run_email_draft_agent(request: EmailDraftRequest):
         )
         return task.model_dump()
     except Exception as e:
-        logger.error(f"Email draft agent failed: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+        logger.exception("Email draft agent failed: %s", e)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
 
 @router.post("/content-repurpose")
@@ -148,8 +148,8 @@ async def run_content_repurposing_agent(request: ContentRepurposeRequest):
         )
         return task.model_dump()
     except Exception as e:
-        logger.error(f"Content repurposing agent failed: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+        logger.exception("Content repurposing agent failed: %s", e)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
 
 @router.post("/proofread")
@@ -170,8 +170,8 @@ async def run_proofreading_agent(request: ProofreadingRequest):
         )
         return task.model_dump()
     except Exception as e:
-        logger.error(f"Proofreading agent failed: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+        logger.exception("Proofreading agent failed: %s", e)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
 
 # =============================================================================

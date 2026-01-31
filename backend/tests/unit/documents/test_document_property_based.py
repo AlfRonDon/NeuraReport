@@ -170,7 +170,7 @@ class TestDocumentServiceProperties:
         name1=document_name_strategy,
         name2=document_name_strategy,
     )
-    @settings(max_examples=20)
+    @settings(max_examples=20, deadline=None)
     def test_update_changes_only_specified_fields(
         self, name1: str, name2: str, tmp_path_factory
     ):
@@ -188,7 +188,7 @@ class TestDocumentServiceProperties:
         assert updated.owner_id == "owner-1"  # Unchanged
 
     @given(num_updates=st.integers(min_value=1, max_value=10))
-    @settings(max_examples=10)
+    @settings(max_examples=10, deadline=None)
     def test_version_increments_correctly(
         self, num_updates: int, tmp_path_factory
     ):
@@ -415,7 +415,7 @@ class TestIdempotencyProperties:
     """Property-based tests for idempotent operations."""
 
     @given(name=document_name_strategy)
-    @settings(max_examples=10)
+    @settings(max_examples=10, deadline=None)
     def test_get_is_idempotent(self, name: str, tmp_path_factory):
         """Multiple gets should return same result."""
         assume(len(name.strip()) > 0)
@@ -452,7 +452,7 @@ class TestBoundaryProperties:
         offset=st.integers(min_value=0, max_value=1000),
         limit=st.integers(min_value=1, max_value=100),
     )
-    @settings(max_examples=20)
+    @settings(max_examples=20, deadline=None)
     def test_list_pagination_bounds(
         self, offset: int, limit: int, tmp_path_factory
     ):

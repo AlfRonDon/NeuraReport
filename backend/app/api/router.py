@@ -139,10 +139,11 @@ def register_routes(app: FastAPI) -> None:
     # Visualization and diagrams
     app.include_router(visualization.router, prefix="/visualization", tags=["visualization"])
 
-    # AI Agents
-    app.include_router(agents.router, prefix="/agents", tags=["agents"])
-    # AI Agents v2 - Production-grade with persistent storage
+    # AI Agents v2 - must be mounted BEFORE /agents so /agents/v2/* is not
+    # captured by the {agent_id} path parameter on the /agents router.
     app.include_router(agents_v2.router, prefix="/agents/v2", tags=["agents-v2"])
+    # AI Agents (v1)
+    app.include_router(agents.router, prefix="/agents", tags=["agents"])
 
     # Legacy/compatibility routes
     app.include_router(legacy.router)

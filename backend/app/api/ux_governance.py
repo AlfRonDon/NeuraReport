@@ -14,7 +14,8 @@ from __future__ import annotations
 import hashlib
 import json
 import uuid
-from datetime import datetime, timedelta
+import collections
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 from functools import wraps
 from typing import Any, Callable, Dict, List, Optional, TypeVar
@@ -89,7 +90,7 @@ class IntentContext(BaseModel):
     user_session: Optional[str] = None
     workflow_id: Optional[str] = None
     workflow_step: Optional[str] = None
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 def _get_idempotency_key(request: Request) -> Optional[str]:
@@ -97,6 +98,15 @@ def _get_idempotency_key(request: Request) -> Optional[str]:
         request.headers.get(IntentHeaders.IDEMPOTENCY_KEY)
         or request.headers.get("X-Idempotency-Key")
     )
+
+
+def _parse_reversibility(value: Optional[str]) -> Optional[Reversibility]:
+    if not value:
+        return None
+    try:
+        return Reversibility(value)
+    except ValueError:
+        return None
 
 
 def extract_intent_context(request: Request) -> Optional[IntentContext]:
@@ -117,8 +127,7 @@ def extract_intent_context(request: Request) -> Optional[IntentContext]:
         intent_type=intent_type,
         intent_label=request.headers.get(IntentHeaders.INTENT_LABEL),
         idempotency_key=_get_idempotency_key(request),
-        reversibility=Reversibility(request.headers.get(IntentHeaders.REVERSIBILITY))
-            if request.headers.get(IntentHeaders.REVERSIBILITY) else None,
+        reversibility=_parse_reversibility(request.headers.get(IntentHeaders.REVERSIBILITY)),
         user_session=request.headers.get(IntentHeaders.USER_SESSION),
         workflow_id=request.headers.get(IntentHeaders.WORKFLOW_ID),
         workflow_step=request.headers.get(IntentHeaders.WORKFLOW_STEP),
@@ -251,8 +260,8 @@ def record_reversible_operation(
         intent_id=intent.intent_id,
         operation_type=operation_type,
         reversibility=intent.reversibility or Reversibility.SYSTEM_MANAGED,
-        created_at=datetime.utcnow(),
-        expires_at=datetime.utcnow() + timedelta(hours=ttl_hours),
+        created_at=datetime.now(timezone.utc),
+        expires_at=datetime.now(timezone.utc) + timedelta(hours=ttl_hours),
         reverse_data=reverse_data,
         reverse_endpoint=reverse_endpoint,
     )
@@ -263,7 +272,7 @@ def record_reversible_operation(
 def get_reversibility_record(operation_id: str) -> Optional[ReversibilityRecord]:
     """Get reversibility record for an operation."""
     record = _REVERSIBILITY_STORE.get(operation_id)
-    if record and record.expires_at and record.expires_at < datetime.utcnow():
+    if record and record.expires_at and record.expires_at < datetime.now(timezone.utc):
         del _REVERSIBILITY_STORE[operation_id]
         return None
     return record
@@ -274,7 +283,7 @@ def mark_operation_reversed(operation_id: str) -> bool:
     record = _REVERSIBILITY_STORE.get(operation_id)
     if not record:
         return False
-    record.reversed_at = datetime.utcnow()
+    record.reversed_at = datetime.now(timezone.utc)
     return True
 
 
@@ -291,7 +300,7 @@ def can_reverse_operation(operation_id: str) -> tuple[bool, Optional[str]]:
     if record.reversibility == Reversibility.IRREVERSIBLE:
         return False, "Operation is marked as irreversible"
 
-    if record.expires_at and record.expires_at < datetime.utcnow():
+    if record.expires_at and record.expires_at < datetime.now(timezone.utc):
         return False, "Reversal window has expired"
 
     return True, None
@@ -398,7 +407,7 @@ def reversible(ttl_hours: int = 24, reverse_endpoint: Optional[str] = None):
                     result["_operation_id"] = operation_id
                     result["_can_reverse"] = True
                     result["_reverse_until"] = (
-                        datetime.utcnow() + timedelta(hours=ttl_hours)
+                        datetime.now(timezone.utc) + timedelta(hours=ttl_hours)
                     ).isoformat()
 
             return result
@@ -414,7 +423,7 @@ def reversible(ttl_hours: int = 24, reverse_endpoint: Optional[str] = None):
 class AuditEntry(BaseModel):
     """Audit log entry for UX governance."""
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     intent_id: str
     intent_type: str
     user_session: Optional[str] = None
@@ -428,17 +437,13 @@ class AuditEntry(BaseModel):
 
 
 # Audit log storage (replace with database in production)
-_AUDIT_LOG: List[AuditEntry] = []
 _MAX_AUDIT_ENTRIES = 10000
+_AUDIT_LOG: collections.deque[AuditEntry] = collections.deque(maxlen=_MAX_AUDIT_ENTRIES)
 
 
 def audit_log(entry: AuditEntry):
     """Add an entry to the audit log."""
     _AUDIT_LOG.append(entry)
-
-    # Trim if over limit
-    if len(_AUDIT_LOG) > _MAX_AUDIT_ENTRIES:
-        _AUDIT_LOG.pop(0)
 
 
 def get_audit_log(
@@ -495,7 +500,7 @@ def validate_governance_compliance(request: Request) -> tuple[bool, Optional[str
 def generate_governance_report() -> Dict[str, Any]:
     """Generate a governance compliance report."""
     return {
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
         "total_operations": len(_AUDIT_LOG),
         "reversible_operations": len(_REVERSIBILITY_STORE),
         "operations_by_type": _count_by_field(_AUDIT_LOG, "intent_type"),

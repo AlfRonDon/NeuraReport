@@ -4,7 +4,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, Field, field_validator, validator
+from pydantic import BaseModel, Field, field_validator
 
 from backend.app.utils.validation import is_safe_id, is_safe_name
 
@@ -16,7 +16,8 @@ class NL2SQLGenerateRequest(BaseModel):
     tables: Optional[List[str]] = Field(None, max_length=50)
     context: Optional[str] = Field(None, max_length=1000)
 
-    @validator("connection_id")
+    @field_validator("connection_id")
+    @classmethod
     def validate_connection_id(cls, value: str) -> str:
         if not is_safe_id(value):
             raise ValueError("Connection ID must be alphanumeric with dashes/underscores only")
@@ -42,7 +43,8 @@ class NL2SQLExecuteRequest(BaseModel):
     offset: int = Field(default=0, ge=0)
     include_total: bool = Field(default=False)
 
-    @validator("connection_id")
+    @field_validator("connection_id")
+    @classmethod
     def validate_connection_id(cls, value: str) -> str:
         if not is_safe_id(value):
             raise ValueError("Connection ID must be alphanumeric with dashes/underscores only")
@@ -58,13 +60,15 @@ class NL2SQLSaveRequest(BaseModel):
     original_question: Optional[str] = Field(None, max_length=2000)
     tags: Optional[List[str]] = Field(None, max_length=20)
 
-    @validator("name")
+    @field_validator("name")
+    @classmethod
     def validate_name(cls, value: str) -> str:
         if not is_safe_name(value):
             raise ValueError("Name contains invalid characters")
         return value.strip()
 
-    @validator("connection_id")
+    @field_validator("connection_id")
+    @classmethod
     def validate_connection_id(cls, value: str) -> str:
         if not is_safe_id(value):
             raise ValueError("Connection ID must be alphanumeric with dashes/underscores only")

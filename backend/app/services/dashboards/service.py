@@ -12,6 +12,7 @@ Design Principles:
 """
 from __future__ import annotations
 
+import copy
 import logging
 import uuid
 from datetime import datetime, timezone
@@ -76,7 +77,8 @@ class DashboardService:
     def get_dashboard(self, dashboard_id: str) -> Optional[Dict[str, Any]]:
         """Return a single dashboard by ID, or ``None`` if missing."""
         with state_store.transaction() as state:
-            return state.get("dashboards", {}).get(dashboard_id)
+            dashboard = state.get("dashboards", {}).get(dashboard_id)
+            return copy.deepcopy(dashboard) if dashboard else None
 
     def list_dashboards(
         self,
@@ -86,7 +88,7 @@ class DashboardService:
     ) -> Dict[str, Any]:
         """Return paginated list of dashboards, newest-updated first."""
         with state_store.transaction() as state:
-            dashboards = list(state.get("dashboards", {}).values())
+            dashboards = copy.deepcopy(list(state.get("dashboards", {}).values()))
 
         dashboards.sort(key=lambda d: d.get("updated_at", ""), reverse=True)
         return {

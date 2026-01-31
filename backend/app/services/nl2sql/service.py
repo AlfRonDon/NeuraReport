@@ -47,7 +47,7 @@ def _state_store():
 
 
 def _quote_identifier(name: str) -> str:
-    return name.replace('"', '""')
+    return '"' + name.replace('"', '""') + '"'
 
 
 def _coerce_value(value: Any) -> Any:
@@ -306,7 +306,7 @@ class NL2SQLService:
         # Verify connection exists
         self._resolve_connection(request.connection_id)
 
-        query_id = str(uuid.uuid4())[:8]
+        query_id = str(uuid.uuid4())
         now = _now_iso()
 
         saved_query = SavedQuery(
