@@ -46,20 +46,17 @@ class DocumentQAService:
 
     def _read_sessions(self) -> Dict[str, Any]:
         store = _state_store()
-        with store._lock:
-            state = store._read_state()
+        with store.transaction() as state:
             return dict(state.get("docqa_sessions", {}) or {})
 
     def _update_sessions(self, updater: Callable[[Dict[str, Any]], None]) -> None:
         store = _state_store()
-        with store._lock:
-            state = store._read_state()
+        with store.transaction() as state:
             sessions = state.get("docqa_sessions", {})
             if not isinstance(sessions, dict):
                 sessions = {}
             updater(sessions)
             state["docqa_sessions"] = sessions
-            store._write_state(state)
 
     def create_session(
         self,
@@ -552,22 +549,21 @@ Return ONLY the JSON object."""
         session.updated_at = datetime.now(timezone.utc)
 
         store = _state_store()
-        state = store._read_state()
-        sessions = state.get("docqa_sessions", {})
-        sessions[session_id] = session.model_dump(mode="json")
-        store._write_state({**state, "docqa_sessions": sessions})
+        with store.transaction() as state:
+            sessions = state.get("docqa_sessions", {})
+            sessions[session_id] = session.model_dump(mode="json")
+            state["docqa_sessions"] = sessions
 
         return True
 
     def delete_session(self, session_id: str) -> bool:
         """Delete a Q&A session."""
         store = _state_store()
-        state = store._read_state()
-        sessions = state.get("docqa_sessions", {})
-
-        if session_id in sessions:
-            del sessions[session_id]
-            store._write_state({**state, "docqa_sessions": sessions})
-            return True
+        with store.transaction() as state:
+            sessions = state.get("docqa_sessions", {})
+            if session_id in sessions:
+                del sessions[session_id]
+                state["docqa_sessions"] = sessions
+                return True
 
         return False

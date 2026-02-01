@@ -367,7 +367,11 @@ class StateStore:
         with self._lock:
             try:
                 if backup_name:
-                    backup_path = backup_dir / backup_name
+                    # Prevent path traversal
+                    safe_name = Path(backup_name).name  # strips directory components
+                    if safe_name != backup_name or '..' in backup_name:
+                        raise ValueError("Invalid backup name")
+                    backup_path = backup_dir / safe_name
                 else:
                     backups = sorted(
                         backup_dir.glob("state_*.json"),

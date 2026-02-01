@@ -51,6 +51,20 @@ import { useInteraction, InteractionType, Reversibility } from '@/components/ux/
 import { figmaGrey } from '@/app/theme'
 
 // =============================================================================
+// SANITIZATION HELPERS
+// =============================================================================
+
+const sanitizeSvg = (svg) => {
+  if (!svg) return ''
+  // Remove script tags, event handlers, and foreignObject
+  return svg
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<foreignObject[\s\S]*?<\/foreignObject>/gi, '')
+    .replace(/\bon\w+\s*=\s*["'][^"']*["']/gi, '')
+    .replace(/\bon\w+\s*=\s*[^\s>]*/gi, '')
+}
+
+// =============================================================================
 // STYLED COMPONENTS
 // =============================================================================
 
@@ -479,7 +493,7 @@ export default function VisualizationPageContainer() {
             <PreviewCard elevation={2}>
               {currentDiagram.svg ? (
                 <Box
-                  dangerouslySetInnerHTML={{ __html: currentDiagram.svg }}
+                  dangerouslySetInnerHTML={{ __html: sanitizeSvg(currentDiagram.svg) }}
                   sx={{ '& svg': { maxWidth: '100%', height: 'auto' } }}
                 />
               ) : currentDiagram.content ? (

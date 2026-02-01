@@ -194,9 +194,15 @@ function AppContent() {
   })
 
   useEffect(() => {
-    const handleOpenCommandPaletteEvent = () => handleOpenCommandPalette()
-    const handleOpenJobsPanelEvent = () => handleOpenJobs()
-    const handleOpenActivityPanelEvent = () => handleOpenActivity()
+    const handleOpenCommandPaletteEvent = () => {
+      handleOpenCommandPalette().catch(() => {})
+    }
+    const handleOpenJobsPanelEvent = () => {
+      handleOpenJobs().catch(() => {})
+    }
+    const handleOpenActivityPanelEvent = () => {
+      handleOpenActivity().catch(() => {})
+    }
     window.addEventListener('neura:open-command-palette', handleOpenCommandPaletteEvent)
     window.addEventListener('neura:open-jobs-panel', handleOpenJobsPanelEvent)
     window.addEventListener('neura:open-activity-panel', handleOpenActivityPanelEvent)

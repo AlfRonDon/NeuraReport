@@ -20,9 +20,15 @@ import CompareArrowsIcon from '@mui/icons-material/CompareArrows'
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp'
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown'
 
+// HTML escaping for safe dangerouslySetInnerHTML usage
+const escapeHtml = (str) =>
+  str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+
 // Simple HTML syntax highlighting
 function highlightHtml(text) {
   if (!text) return null
+
+  text = escapeHtml(text)
 
   // Replace HTML tags
   const highlighted = text

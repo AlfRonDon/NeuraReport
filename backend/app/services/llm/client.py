@@ -515,10 +515,18 @@ class LLMClient:
                     default_cache_dir = _raw_dir
                 else:
                     logger.warning("llm_cache_dir_rejected", extra={"reason": "path contains '..'"})
-            _max_items = min(max(1, int(os.getenv("LLM_CACHE_MAX_ITEMS", "100"))), 10000)
+            try:
+                max_items = int(os.getenv("LLM_CACHE_MAX_ITEMS", "100"))
+            except (ValueError, TypeError):
+                max_items = 100
+            try:
+                ttl = float(os.getenv("LLM_CACHE_TTL_SECONDS", "3600"))
+            except (ValueError, TypeError):
+                ttl = 3600.0
+            _max_items = min(max(1, max_items), 10000)
             self._cache = ResponseCache(
                 max_memory_items=_max_items,
-                default_ttl_seconds=float(os.getenv("LLM_CACHE_TTL_SECONDS", "3600")),
+                default_ttl_seconds=ttl,
                 cache_dir=default_cache_dir,
             )
 

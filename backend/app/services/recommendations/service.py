@@ -51,7 +51,8 @@ class RecommendationService:
 
         # Get all approved templates
         store = _state_store()
-        templates = store._read_state().get("templates", {})
+        with store.transaction() as state:
+            templates = state.get("templates", {})
         approved = [t for t in templates.values() if t.get("status") == "approved"]
 
         if not approved:
@@ -61,8 +62,8 @@ class RecommendationService:
         if connection_id and not schema_info:
             try:
                 schema_info = get_connection_schema(connection_id, include_row_counts=False)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("Failed to get schema for connection %s: %s", connection_id, e)
 
         # Build recommendation prompt
         template_catalog = []
@@ -129,7 +130,8 @@ Return ONLY the JSON array."""
     def get_similar_templates(self, template_id: str, limit: int = 3) -> List[Dict[str, Any]]:
         """Get templates similar to a given template."""
         store = _state_store()
-        templates = store._read_state().get("templates", {})
+        with store.transaction() as state:
+            templates = state.get("templates", {})
         target = templates.get(template_id)
 
         if not target:

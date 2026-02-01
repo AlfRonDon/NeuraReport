@@ -51,7 +51,7 @@ def _disable_rate_limiter(request):
     limiter.enabled = True
 
 
-@pytest.fixture(autouse=True, scope="session")
+@pytest.fixture(autouse=True, scope="function")
 def _inject_intent_headers():
     def _patched_request(self, method, url, **kwargs):
         if str(method).upper() in {"POST", "PUT", "PATCH", "DELETE"}:

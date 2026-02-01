@@ -69,8 +69,18 @@ from backend.app.services.templates.TemplateVerify import MODEL, get_openai_clie
 logger = logging.getLogger("neura.analyze.orchestrator")
 
 
-# In-memory cache for analysis results
+# In-memory cache for analysis results (bounded to prevent memory leaks)
 _ANALYSIS_CACHE: Dict[str, EnhancedAnalysisResult] = {}
+_ANALYSIS_CACHE_MAX = 500
+
+
+def _cache_put(analysis_id: str, result: EnhancedAnalysisResult) -> None:
+    """Add to cache with eviction when max size exceeded."""
+    if len(_ANALYSIS_CACHE) >= _ANALYSIS_CACHE_MAX:
+        # Evict oldest entry (first inserted)
+        oldest_key = next(iter(_ANALYSIS_CACHE))
+        del _ANALYSIS_CACHE[oldest_key]
+    _cache_put(analysis_id, result)
 
 
 def _generate_analysis_id() -> str:
@@ -313,7 +323,7 @@ class EnhancedAnalysisOrchestrator:
             )
 
             # Cache the result
-            _ANALYSIS_CACHE[analysis_id] = result
+            _cache_put(analysis_id, result)
             try:
                 self._store.save_result(result)
                 self._store.save_context(analysis_id, content.text_content)
@@ -323,7 +333,7 @@ class EnhancedAnalysisOrchestrator:
             yield self._event("stage", "Complete", 100, analysis_id, correlation_id)
 
             # Final result event
-            result_dict = result.dict()
+            result_dict = result.model_dump()
             result_dict["event"] = "result"
             result_dict["suggested_questions"] = suggested_questions
             result_dict["advanced_analytics"] = advanced_results
@@ -367,7 +377,7 @@ class EnhancedAnalysisOrchestrator:
             return result
         stored = self._store.load_result(analysis_id)
         if stored:
-            _ANALYSIS_CACHE[analysis_id] = stored
+            _cache_put(analysis_id, stored)
             if analysis_id not in self._rag_retrievers:
                 text_content = self._store.load_context(analysis_id)
                 if text_content:
@@ -487,7 +497,7 @@ Return JSON array of questions:
                 for chart in charts
             ]
 
-        return [c.dict() for c in charts]
+        return [c.model_dump() for c in charts]
 
     async def export_analysis(
         self,
@@ -539,7 +549,7 @@ Return JSON array of questions:
             metrics2=result2.metrics,
         )
 
-        return comparison.dict()
+        return comparison.model_dump()
 
     def get_industry_options(self) -> List[Dict[str, Any]]:
         """Get available industry options."""

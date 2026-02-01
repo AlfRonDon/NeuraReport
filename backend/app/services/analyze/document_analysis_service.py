@@ -210,7 +210,7 @@ def _persist_analysis_result(result: AnalysisResult) -> None:
             {
                 "analysis_id": result.analysis_id,
                 "created_at": time.time(),
-                "result": result.dict(),
+                "result": result.model_dump(),
             },
             ensure_ascii=False,
             indent=2,
@@ -608,7 +608,7 @@ async def analyze_document_streaming(
             correlation_id,
         )
 
-        result_payload = {"event": "result", **result.dict()}
+        result_payload = {"event": "result", **result.model_dump()}
         if correlation_id:
             result_payload["correlation_id"] = correlation_id
         yield result_payload

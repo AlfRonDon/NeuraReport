@@ -232,11 +232,17 @@ export function IrreversibleBoundaryProvider({ children }) {
 
     // Start cooldown if required
     if (action.cooldownMs > 0) {
-      setCooldownRemaining(Math.ceil(action.cooldownMs / 1000))
+      // Clear any existing interval before starting a new one
+      if (cooldownInterval.current) {
+        clearInterval(cooldownInterval.current)
+      }
+      const seconds = Math.ceil(action.cooldownMs / 1000)
+      setCooldownRemaining(seconds)
       cooldownInterval.current = setInterval(() => {
         setCooldownRemaining((prev) => {
           if (prev <= 1) {
             clearInterval(cooldownInterval.current)
+            cooldownInterval.current = null
             return 0
           }
           return prev - 1

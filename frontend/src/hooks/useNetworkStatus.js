@@ -43,14 +43,15 @@ export function useNetworkStatus() {
     window.addEventListener('online', handleOnline)
     window.addEventListener('offline', handleOffline)
 
-    // Initial check
-    checkConnectivity()
+    // Initial check (inline to avoid dep on checkConnectivity)
+    setIsOnline(typeof navigator !== 'undefined' ? navigator.onLine : true)
+    setLastChecked(new Date())
 
     return () => {
       window.removeEventListener('online', handleOnline)
       window.removeEventListener('offline', handleOffline)
     }
-  }, [checkConnectivity])
+  }, [])
 
   return {
     isOnline,

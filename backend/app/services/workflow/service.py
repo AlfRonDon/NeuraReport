@@ -171,13 +171,12 @@ class WorkflowService:
             # Try loading from state store
             try:
                 from backend.app.repositories.state.store import state_store
-                with state_store._lock:
-                    state = state_store._read_state()
+                with state_store.transaction() as state:
                     workflow = state.get("workflows", {}).get(workflow_id)
                     if workflow:
                         self._workflows[workflow_id] = workflow
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug("Failed to load workflow from state store: %s", e)
 
         if not workflow:
             return None
@@ -193,11 +192,10 @@ class WorkflowService:
         # Load from state store
         try:
             from backend.app.repositories.state.store import state_store
-            with state_store._lock:
-                state = state_store._read_state()
+            with state_store.transaction() as state:
                 self._workflows.update(state.get("workflows", {}))
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("Failed to load workflows from state store: %s", e)
 
         workflows = list(self._workflows.values())
 
@@ -371,7 +369,8 @@ class WorkflowService:
         except Exception as e:
             logger.error(f"Workflow execution failed: {e}")
             execution["status"] = ExecutionStatus.FAILED.value
-            execution["error"] = str(e)
+            execution["error"] = "Workflow execution failed. Check logs for details."
+            logger.error("Workflow execution %s failed: %s", execution_id, e, exc_info=True)
 
         finally:
             execution["finished_at"] = _now()
@@ -381,8 +380,8 @@ class WorkflowService:
                 from backend.app.repositories.state.store import state_store
                 with state_store.transaction() as state:
                     state["workflow_executions"][execution_id] = execution
-            except Exception:
-                pass
+            except Exception as e:
+                logger.error("Failed to persist execution %s: %s", execution_id, e)
 
     async def _execute_node(
         self,
@@ -483,11 +482,10 @@ class WorkflowService:
             # Try loading from state store
             try:
                 from backend.app.repositories.state.store import state_store
-                with state_store._lock:
-                    state = state_store._read_state()
+                with state_store.transaction() as state:
                     execution = state.get("workflow_executions", {}).get(execution_id)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug("Failed to load execution from state store: %s", e)
 
         if not execution:
             return None
@@ -503,11 +501,10 @@ class WorkflowService:
         # Load from state store
         try:
             from backend.app.repositories.state.store import state_store
-            with state_store._lock:
-                state = state_store._read_state()
+            with state_store.transaction() as state:
                 self._executions.update(state.get("workflow_executions", {}))
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("Failed to load executions from state store: %s", e)
 
         executions = list(self._executions.values())
 

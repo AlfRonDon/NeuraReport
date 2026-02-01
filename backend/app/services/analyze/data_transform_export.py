@@ -379,7 +379,7 @@ def export_to_json(
     include_raw_data: bool = True,
 ) -> str:
     """Export analysis result to JSON."""
-    data = result.dict()
+    data = result.model_dump()
 
     if not include_raw_data:
         # Remove large data arrays

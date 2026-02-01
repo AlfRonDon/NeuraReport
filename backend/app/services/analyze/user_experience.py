@@ -186,8 +186,8 @@ class AnalysisComment:
     content: str
     element_type: Optional[str] = None  # table, chart, insight, metric
     element_id: Optional[str] = None
-    created_at: datetime = field(default_factory=datetime.utcnow)
-    updated_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     replies: List['AnalysisComment'] = field(default_factory=list)
     resolved: bool = False
 
@@ -200,7 +200,7 @@ class AnalysisShare:
     share_type: str  # link, email, embed
     access_level: str  # view, comment, edit
     created_by: str
-    created_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     expires_at: Optional[datetime] = None
     password_protected: bool = False
     access_count: int = 0
@@ -496,7 +496,7 @@ class ProgressUpdate:
     stage: str
     progress: float  # 0-100
     detail: str
-    timestamp: datetime = field(default_factory=datetime.utcnow)
+    timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     data: Optional[Dict[str, Any]] = None
 
 

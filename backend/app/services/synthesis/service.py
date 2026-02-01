@@ -41,20 +41,17 @@ class DocumentSynthesisService:
 
     def _read_sessions(self) -> Dict[str, Any]:
         store = _state_store()
-        with store._lock:
-            state = store._read_state()
+        with store.transaction() as state:
             return dict(state.get("synthesis_sessions", {}) or {})
 
     def _update_sessions(self, updater: Callable[[Dict[str, Any]], None]) -> None:
         store = _state_store()
-        with store._lock:
-            state = store._read_state()
+        with store.transaction() as state:
             sessions = state.get("synthesis_sessions", {})
             if not isinstance(sessions, dict):
                 sessions = {}
             updater(sessions)
             state["synthesis_sessions"] = sessions
-            store._write_state(state)
 
     def create_session(
         self,

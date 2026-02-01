@@ -216,8 +216,7 @@ async def seed_connections():
     """Seed sample database connections."""
     from backend.app.repositories.state.store import state_store
 
-    with state_store._lock:
-        state = state_store._read_state()
+    with state_store.transaction() as state:
         connections = state.get("connections", [])
 
         if len(connections) > 0:
@@ -274,8 +273,7 @@ async def seed_templates():
     """Seed sample report templates."""
     from backend.app.repositories.state.store import state_store
 
-    with state_store._lock:
-        state = state_store._read_state()
+    with state_store.transaction() as state:
         templates = state.get("templates", [])
 
         if len(templates) > 0:

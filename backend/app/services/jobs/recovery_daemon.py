@@ -331,11 +331,12 @@ class JobRecoveryDaemon:
                 job_id = job.get("id")
 
                 # Skip if already in DLQ
-                if job.get("deadLetterAt"):
+                dead_letter_at = job.get("dead_letter_at") or job.get("deadLetterAt")
+                if dead_letter_at:
                     continue
 
-                retry_count = job.get("retryCount") or 0
-                max_retries = job.get("maxRetries") or 3
+                retry_count = job.get("retry_count", job.get("retryCount", 0)) or 0
+                max_retries = job.get("max_retries", job.get("maxRetries", 3)) or 3
 
                 # Only move to DLQ if retries exhausted
                 if retry_count >= max_retries:

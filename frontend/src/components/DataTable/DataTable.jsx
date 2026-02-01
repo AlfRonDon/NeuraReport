@@ -402,14 +402,14 @@ export default function DataTable({
 
   const handleSelectAll = useCallback((event) => {
     if (event.target.checked) {
-      const newSelected = data.map((row) => row.id)
+      const newSelected = paginatedData.map((row) => row.id)
       setSelected(newSelected)
       onSelectionChange?.(newSelected)
       return
     }
     setSelected([])
     onSelectionChange?.([])
-  }, [data, onSelectionChange])
+  }, [paginatedData, onSelectionChange])
 
   const handleSelect = useCallback((id) => {
     const selectedIndex = selected.indexOf(id)

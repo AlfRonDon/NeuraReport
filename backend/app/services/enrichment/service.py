@@ -95,7 +95,7 @@ class EnrichmentService:
         # Persist to state store
         store = _state_store()
         with store.transaction() as state:
-            state.setdefault("enrichment_sources", {})[source_id] = source.dict()
+            state.setdefault("enrichment_sources", {})[source_id] = source.model_dump()
 
         return source
 

@@ -2,7 +2,7 @@
  * TipTap Rich Text Editor Component
  * Full-featured WYSIWYG editor with toolbar, formatting, and collaboration support.
  */
-import { useCallback, useEffect } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Underline from '@tiptap/extension-underline'
@@ -547,6 +547,8 @@ export default function TipTapEditor({
   placeholder = 'Start writing your document...',
   editable = true,
 }) {
+  const isInternalUpdate = useRef(false)
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -589,7 +591,9 @@ export default function TipTapEditor({
     content,
     editable,
     onUpdate: ({ editor }) => {
+      isInternalUpdate.current = true
       onUpdate?.(editor.getJSON())
+      isInternalUpdate.current = false
     },
     onSelectionUpdate: ({ editor }) => {
       const { from, to } = editor.state.selection
@@ -600,6 +604,10 @@ export default function TipTapEditor({
 
   // Update content when it changes externally
   useEffect(() => {
+    if (isInternalUpdate.current) {
+      isInternalUpdate.current = false
+      return
+    }
     if (editor && content && JSON.stringify(editor.getJSON()) !== JSON.stringify(content)) {
       editor.commands.setContent(content)
     }

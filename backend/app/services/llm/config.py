@@ -236,7 +236,7 @@ class LLMConfig:
             except ValueError:
                 pass
 
-        force_gpt5 = os.getenv("NEURA_FORCE_GPT5", "true").lower().strip() in {"1", "true", "yes"}
+        force_gpt5 = os.getenv("NEURA_FORCE_GPT5", "false").lower().strip() in {"1", "true", "yes"}
         if force_gpt5:
             if engine == "litellm":
                 if provider_hint is None:

@@ -58,8 +58,8 @@ const ALL_PAGES = [
   { route: '/summary', name: 'summary' },
 ]
 
-const execPage = process.env.AUDIT_EXEC_PAGE || 'dashboard'
-const targetPages = ALL_PAGES.filter(p => p.name === execPage)
+const execPage = process.env.AUDIT_EXEC_PAGE
+const targetPages = execPage ? ALL_PAGES.filter(p => p.name === execPage) : ALL_PAGES
 
 async function getPageState(page: Page): Promise<string> {
   // Capture a fingerprint of the page state for comparison

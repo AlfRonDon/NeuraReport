@@ -122,8 +122,8 @@ class NL2SQLService:
                             values = [_coerce_value(v) for v in sample_rows[col_name].tolist()]
                             if values:
                                 sample_values[col_name] = values[:3]
-            except Exception:
-                pass  # Sample values are optional
+            except Exception as e:
+                logger.debug("Failed to extract sample values for %s: %s", table_name, e)
 
             schema[table_name] = {
                 "columns": columns,

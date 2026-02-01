@@ -267,6 +267,7 @@ class AgentTaskRepository:
         agent_type: AgentType,
         input_params: Dict[str, Any],
         idempotency_key: str,
+        _depth: int = 0,
         **kwargs,
     ) -> Tuple[AgentTaskModel, bool]:
         """Create a task or return existing one if idempotency key matches.
@@ -275,11 +276,14 @@ class AgentTaskRepository:
             agent_type: Type of agent to run
             input_params: Parameters for the agent
             idempotency_key: Key for deduplication (required)
+            _depth: Internal recursion depth counter (do not set manually)
             **kwargs: Additional arguments for create_task
 
         Returns:
             Tuple of (task, created) where created is True if new task was created
         """
+        if _depth > 3:
+            raise RuntimeError("Failed to create or retrieve task after multiple retries")
         try:
             task = self.create_task(
                 agent_type=agent_type,
@@ -294,7 +298,7 @@ class AgentTaskRepository:
                 # Race condition - task was deleted after we found it
                 # Retry creation
                 return self.create_or_get_by_idempotency_key(
-                    agent_type, input_params, idempotency_key, **kwargs
+                    agent_type, input_params, idempotency_key, _depth=_depth + 1, **kwargs
                 )
             return task, False
 

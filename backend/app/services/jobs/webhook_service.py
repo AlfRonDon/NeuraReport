@@ -154,8 +154,20 @@ class WebhookService:
             pass
 
         # Block well-known cloud metadata endpoints
-        if hostname in ("metadata.google.internal", "metadata.google.com"):
+        if hostname in ("metadata.google.internal", "metadata.google.com", "169.254.169.254"):
             raise ValueError("Webhook URL must not target cloud metadata services")
+
+        # Resolve DNS to prevent DNS rebinding attacks
+        import socket
+        port = parsed.port
+        try:
+            addr_infos = socket.getaddrinfo(hostname, port or 443, proto=socket.IPPROTO_TCP)
+            for family, _, _, _, sockaddr in addr_infos:
+                ip = ipaddress.ip_address(sockaddr[0])
+                if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved:
+                    raise ValueError(f"Webhook URL resolves to blocked IP range")
+        except socket.gaierror as e:
+            raise ValueError(f"Cannot resolve webhook hostname") from e
 
     def compute_signature(self, payload: Dict[str, Any], secret: str) -> str:
         """

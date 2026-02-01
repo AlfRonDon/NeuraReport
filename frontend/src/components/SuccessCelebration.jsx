@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { Box, keyframes } from '@mui/material'
 import { figmaGrey } from '@/app/theme'
 
@@ -24,6 +24,8 @@ const pulse = keyframes`
  */
 export default function SuccessCelebration({ trigger, onComplete }) {
   const [active, setActive] = useState(false)
+  const onCompleteRef = useRef(onComplete)
+  useEffect(() => { onCompleteRef.current = onComplete })
 
   useEffect(() => {
     if (!trigger) {
@@ -36,11 +38,11 @@ export default function SuccessCelebration({ trigger, onComplete }) {
     // Clean up after animation
     const timer = setTimeout(() => {
       setActive(false)
-      onComplete?.()
+      onCompleteRef.current?.()
     }, 1500)
 
     return () => clearTimeout(timer)
-  }, [trigger, onComplete])
+  }, [trigger])
 
   if (!active) return null
 

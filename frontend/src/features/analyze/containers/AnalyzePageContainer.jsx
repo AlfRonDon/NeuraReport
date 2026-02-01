@@ -1,4 +1,4 @@
-import { useCallback, useState, useRef } from 'react'
+import { useCallback, useEffect, useState, useRef } from 'react'
 import {
   Box,
   Typography,
@@ -52,6 +52,17 @@ export default function AnalyzePageContainer() {
   const [runInBackground, setRunInBackground] = useState(false)
   const [queuedJobId, setQueuedJobId] = useState(null)
   const abortControllerRef = useRef(null)
+
+  // Abort in-flight analysis on unmount
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort()
+        abortControllerRef.current = null
+      }
+    }
+  }, [])
+
   const toast = useToast()
   const { execute } = useInteraction()
   const navigate = useNavigateInteraction()

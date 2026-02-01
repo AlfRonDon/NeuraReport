@@ -54,6 +54,16 @@ import { useToast } from '@/components/ToastProvider'
 import { useInteraction, InteractionType, Reversibility } from '@/components/ux/governance'
 
 // =============================================================================
+// SANITIZATION HELPERS
+// =============================================================================
+
+const sanitizeHighlight = (html) => {
+  if (!html) return ''
+  // Strip all tags except <em>, <mark>, <b>, <strong> (common highlight wrappers)
+  return html.replace(/<(?!\/?(?:em|mark|b|strong)\b)[^>]*>/gi, '')
+}
+
+// =============================================================================
 // STYLED COMPONENTS
 // =============================================================================
 
@@ -405,7 +415,7 @@ export default function SearchPageContainer() {
                           variant="body2"
                           color="text.secondary"
                           sx={{ mt: 0.5 }}
-                          dangerouslySetInnerHTML={{ __html: result.highlight }}
+                          dangerouslySetInnerHTML={{ __html: sanitizeHighlight(result.highlight) }}
                         />
                       )}
                       <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>

@@ -279,13 +279,12 @@ class SnapshotService:
                 },
             )
         except Exception as exc:
-            self.mark_failed(snapshot_id, error=str(exc))
-            logger.warning(
+            self.mark_failed(snapshot_id, error="Snapshot rendering failed")
+            logger.exception(
                 "snapshot_render_failed",
                 extra={
                     "event": "snapshot_render_failed",
                     "snapshot_id": snapshot_id,
-                    "error": str(exc),
                 },
             )
         finally:

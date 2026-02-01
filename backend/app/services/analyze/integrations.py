@@ -49,7 +49,7 @@ class DataSourceConnection:
     name: str
     type: DataSourceType
     config: Dict[str, Any]
-    created_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     last_used: Optional[datetime] = None
     is_active: bool = True
 
@@ -116,7 +116,8 @@ class DatabaseConnector(DataSourceConnector):
                 metadata={"query": query, "rows_fetched": 0},
             )
         except Exception as e:
-            return FetchResult(success=False, error=str(e))
+            logger.exception("Database fetch failed")
+            return FetchResult(success=False, error="Database query failed")
 
     async def disconnect(self) -> None:
         """Disconnect from database."""
@@ -161,7 +162,8 @@ class RestAPIConnector(DataSourceConnector):
                             metadata={"url": url},
                         )
         except Exception as e:
-            return FetchResult(success=False, error=str(e))
+            logger.exception("REST API fetch failed for endpoint %s", endpoint)
+            return FetchResult(success=False, error="Failed to fetch data from API")
 
     async def disconnect(self) -> None:
         """No persistent connection to close."""
@@ -202,7 +204,8 @@ class CloudStorageConnector(DataSourceConnector):
                 metadata={"bucket": bucket, "key": key, "provider": self.provider},
             )
         except Exception as e:
-            return FetchResult(success=False, error=str(e))
+            logger.exception("Cloud storage fetch failed for provider %s", self.provider)
+            return FetchResult(success=False, error="Failed to fetch file from cloud storage")
 
     async def disconnect(self) -> None:
         """No persistent connection to close."""
@@ -291,7 +294,7 @@ class AnalysisPipeline:
     id: str
     name: str
     steps: List[Dict[str, Any]]  # [{type, config, depends_on}]
-    created_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     enabled: bool = True
 
 
@@ -402,9 +405,9 @@ class WorkflowAutomationService:
 
         except Exception as e:
             execution.status = "failed"
-            execution.error = str(e)
+            execution.error = "Pipeline execution failed during processing"
             execution.completed_at = datetime.now(timezone.utc)
-            logger.error(f"Pipeline execution failed: {e}")
+            logger.exception("Pipeline execution %s failed", execution.id)
 
         return execution
 

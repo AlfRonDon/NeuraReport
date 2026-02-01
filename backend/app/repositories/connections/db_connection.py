@@ -138,8 +138,10 @@ def execute_query(
     # Apply limit and offset if specified
     final_sql = sql
     if limit is not None:
+        limit = int(limit)
         final_sql = f"{sql} LIMIT {limit}"
-        if offset > 0:
+        if offset:
+            offset = int(offset)
             final_sql += f" OFFSET {offset}"
 
     def coerce_value(val):

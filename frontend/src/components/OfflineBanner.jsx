@@ -191,7 +191,7 @@ export default function OfflineBanner() {
     return () => clearReconnectTimer()
   }, [isOnline, clearReconnectTimer])
 
-  useEffect(() => () => clearReconnectTimer(), [clearReconnectTimer])
+  // Redundant cleanup effect removed - already handled in the effect above
 
   const handleRetry = useCallback(async () => {
     setIsRetrying(true)
