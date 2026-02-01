@@ -1,5 +1,53 @@
 # Release Notes
 
+## 2026-02-01 - Phase 8: Hardening, Documentation & Governance
+
+### Highlights
+- Comprehensive security hardening across middleware, routes, and services.
+- Architecture violation count reduced from 66 to 0 with enforced import boundaries.
+- Expanded test coverage with property-based testing (Hypothesis), chaos simulation, connector security, and 20 Playwright e2e integration specs.
+- Full documentation overhaul: updated README files, created API reference, expanded frontend and backend docs.
+- Cleaned up git tracking: removed large binaries (.fig), generated images, sample data, and analysis artifacts from version control.
+
+### Backend
+- Hardened all 35 route modules with improved input validation, error handling, and consistent error envelopes.
+- Created service re-export modules (`errors.py`, `job_status.py`, `validation.py`) to enforce layered architecture.
+- Updated schemas for connections, enrichment, federation, NL2SQL, and synthesis with tighter validation.
+- Improved webhook service with retry logic and error classification.
+- Strengthened enrichment cache with TTL-based stats.
+- Added soft delete utilities and SQL safety guards.
+- Updated middleware with enhanced rate limiting and idempotency handling.
+- UX governance guards updated for frontend/backend contract alignment.
+
+### Frontend
+- Refactored API client modules (dashboards, documents, export, ingestion, knowledge, search, spreadsheets, visualization, workflows) for consistency.
+- Updated Zustand stores (connectionStore, designStore, spreadsheetStore, useAppStore) with improved state management.
+- Hardened hooks (useFormErrorFocus, useJobs, useUploadProgress) and containers.
+- Added OAuthButton improvements for connectors.
+- Added 20 Playwright e2e integration specs covering all major features (dashboard, connections, connectors, templates, reports, jobs, schedules, query builder, documents, spreadsheets, enrichment, federation, synthesis, docqa, workflows, dashboards, knowledge, design/visualization, agents/ingestion, settings).
+- Added phase verification specs and audit specs.
+
+### Operations
+- Architecture enforcement: `enforce_backend_arch.py` now checks all backend sub-layer import rules.
+- 3 documented architecture exceptions (ARCH-EXC-001 through ARCH-EXC-003) with expiration plans.
+- Git hygiene: added `.fig`, generated images, analysis artifacts, sample data to `.gitignore` and removed from tracking.
+- Updated CI workflow to run architecture checks on every push/PR.
+
+### Documentation
+- Updated root `README.md` with current repository layout, new endpoints, and documentation links.
+- Expanded `frontend/README.md` with all 28 page modules, state management, API clients, folder structure, and testing guide.
+- Expanded `backend/README.md` with all 35 route modules, 40+ services, security middleware, and test commands.
+- Updated `ARCHITECTURE_GOVERNANCE.md` with migration log and service re-export pattern.
+- Created `docs/API_REFERENCE.md` with endpoint reference for all route modules.
+- Added Phase 8 release notes.
+
+### Upgrade Notes
+1. Reinstall backend dependencies: `pip install -r backend/requirements.txt`.
+2. Run `npm install` in `frontend/` for updated dev dependencies.
+3. Architecture enforcement is now stricter — run `python scripts/architecture/enforce_backend_arch.py` to verify compliance before committing.
+
+---
+
 ## 2025-10-23 - Phase 6: End-to-End Integration
 
 ### Highlights
