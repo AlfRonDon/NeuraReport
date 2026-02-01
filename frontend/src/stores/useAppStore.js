@@ -454,25 +454,30 @@ export const useAppStore = create((set, get) => ({
 
 if (typeof window !== 'undefined') {
   window.__NEURA_APP_STORE__ = useAppStore
-  window.addEventListener('storage', (event) => {
-    if (event.key !== DISCOVERY_STORAGE_KEY) return
-    try {
-      const parsed = event.newValue ? JSON.parse(event.newValue) : null
-      useAppStore.setState({
-        discoveryResults:
-          parsed && parsed.results && typeof parsed.results === 'object'
-            ? parsed.results
-            : defaultDiscoveryState.results,
-        discoveryMeta:
-          parsed && parsed.meta && typeof parsed.meta === 'object'
-            ? parsed.meta
-            : defaultDiscoveryState.meta,
-      })
-    } catch {
-      useAppStore.setState({
-        discoveryResults: defaultDiscoveryState.results,
-        discoveryMeta: defaultDiscoveryState.meta,
-      })
+
+  // Guard against duplicate listeners (e.g. HMR re-execution)
+  if (!window.__NEURA_STORAGE_HANDLER__) {
+    window.__NEURA_STORAGE_HANDLER__ = (event) => {
+      if (event.key !== DISCOVERY_STORAGE_KEY) return
+      try {
+        const parsed = event.newValue ? JSON.parse(event.newValue) : null
+        useAppStore.setState({
+          discoveryResults:
+            parsed && parsed.results && typeof parsed.results === 'object'
+              ? parsed.results
+              : defaultDiscoveryState.results,
+          discoveryMeta:
+            parsed && parsed.meta && typeof parsed.meta === 'object'
+              ? parsed.meta
+              : defaultDiscoveryState.meta,
+        })
+      } catch {
+        useAppStore.setState({
+          discoveryResults: defaultDiscoveryState.results,
+          discoveryMeta: defaultDiscoveryState.meta,
+        })
+      }
     }
-  })
+    window.addEventListener('storage', window.__NEURA_STORAGE_HANDLER__)
+  }
 }

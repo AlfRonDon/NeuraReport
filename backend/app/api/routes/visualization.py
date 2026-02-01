@@ -104,7 +104,7 @@ async def generate_flowchart(request: FlowchartRequest):
         return result.model_dump()
     except Exception as e:
         logger.error(f"Flowchart generation failed: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Visualization generation failed")
 
 
 @router.post("/diagrams/mindmap")
@@ -124,7 +124,7 @@ async def generate_mindmap(request: MindmapRequest):
         return result.model_dump()
     except Exception as e:
         logger.error(f"Mindmap generation failed: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Visualization generation failed")
 
 
 @router.post("/diagrams/org-chart")
@@ -143,7 +143,7 @@ async def generate_org_chart(request: OrgChartRequest):
         return result.model_dump()
     except Exception as e:
         logger.error(f"Org chart generation failed: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Visualization generation failed")
 
 
 @router.post("/diagrams/timeline")
@@ -163,7 +163,7 @@ async def generate_timeline(request: TimelineRequest):
         return result.model_dump()
     except Exception as e:
         logger.error(f"Timeline generation failed: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Visualization generation failed")
 
 
 @router.post("/diagrams/gantt")
@@ -183,7 +183,7 @@ async def generate_gantt(request: GanttRequest):
         return result.model_dump()
     except Exception as e:
         logger.error(f"Gantt generation failed: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Visualization generation failed")
 
 
 @router.post("/diagrams/network")
@@ -202,7 +202,7 @@ async def generate_network_graph(request: NetworkGraphRequest):
         return result.model_dump()
     except Exception as e:
         logger.error(f"Network graph generation failed: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Visualization generation failed")
 
 
 @router.post("/diagrams/kanban")
@@ -222,7 +222,7 @@ async def generate_kanban(request: KanbanRequest):
         return result.model_dump()
     except Exception as e:
         logger.error(f"Kanban generation failed: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Visualization generation failed")
 
 
 @router.post("/diagrams/sequence")
@@ -241,7 +241,7 @@ async def generate_sequence_diagram(request: SequenceDiagramRequest):
         return result.model_dump()
     except Exception as e:
         logger.error(f"Sequence diagram generation failed: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Visualization generation failed")
 
 
 @router.post("/diagrams/wordcloud")
@@ -261,7 +261,7 @@ async def generate_wordcloud(request: WordcloudRequest):
         return result.model_dump()
     except Exception as e:
         logger.error(f"Wordcloud generation failed: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Visualization generation failed")
 
 
 # =============================================================================
@@ -289,7 +289,7 @@ async def table_to_chart(request: TableToChartRequest):
         return result.model_dump()
     except Exception as e:
         logger.error(f"Chart generation failed: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Visualization generation failed")
 
 
 @router.post("/charts/sparklines")
@@ -308,7 +308,7 @@ async def generate_sparklines(request: SparklineRequest):
         return [r.model_dump() for r in results]
     except Exception as e:
         logger.error(f"Sparkline generation failed: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Visualization generation failed")
 
 
 # =============================================================================
@@ -327,10 +327,10 @@ async def export_as_mermaid(diagram_id: str):
         code = await visualization_service.export_diagram_as_mermaid(diagram_id)
         return {"mermaid_code": code}
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Visualization not found")
     except Exception as e:
         logger.error(f"Mermaid export failed: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Visualization generation failed")
 
 
 # =============================================================================

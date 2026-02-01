@@ -86,8 +86,8 @@ class DataFrameStore:
             if existing_engine:
                 try:
                     existing_engine.close()
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.debug("Engine close failed: %s", e)
 
             # Store everything
             self._loaders[connection_id] = loader
@@ -182,8 +182,8 @@ class DataFrameStore:
             if engine:
                 try:
                     engine.close()
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.debug("Engine close failed: %s", e)
             self._loaders.pop(connection_id, None)
             self._frames_cache.pop(connection_id, None)
             self._db_paths.pop(connection_id, None)
@@ -217,8 +217,8 @@ class DataFrameStore:
             for engine in self._query_engines.values():
                 try:
                     engine.close()
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.debug("Engine close failed: %s", e)
             self._loaders.clear()
             self._frames_cache.clear()
             self._db_paths.clear()

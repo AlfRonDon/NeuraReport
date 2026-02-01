@@ -168,7 +168,7 @@ class OpenAIClient(BaseLLMClient):
                 },
             )
             raise ExternalServiceError(
-                message=f"OpenAI API call failed: {e}",
+                message="OpenAI API call failed",
                 service="openai",
                 cause=e,
             )
@@ -287,7 +287,7 @@ class OpenAIClient(BaseLLMClient):
                 },
             )
             raise ExternalServiceError(
-                message=f"OpenAI API call failed: {e}",
+                message="OpenAI API call failed",
                 service="openai",
                 cause=e,
             )

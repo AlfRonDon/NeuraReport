@@ -249,7 +249,7 @@ async def create_connection(
         if not test_result.success:
             raise HTTPException(
                 status_code=400,
-                detail=f"Connection failed: {test_result.error}",
+                detail="Connection test failed",
             )
 
         now = datetime.now(timezone.utc).isoformat()
@@ -480,7 +480,7 @@ def _validate_redirect_uri(redirect_uri: str) -> None:
     if not is_safe:
         raise HTTPException(
             status_code=400,
-            detail=f"Invalid redirect_uri: {reason}",
+            detail="Invalid redirect_uri",
         )
 
 
@@ -524,7 +524,8 @@ async def get_oauth_url(
     except HTTPException:
         raise
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        logger.warning("Invalid connector request: %s", e)
+        raise HTTPException(status_code=400, detail="Invalid connector configuration")
 
 
 @router.post("/{connector_type}/oauth/callback")

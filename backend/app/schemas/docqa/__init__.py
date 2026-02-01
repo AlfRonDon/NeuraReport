@@ -1,7 +1,7 @@
 """Schemas for Document Q&A Chat."""
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field
 from enum import Enum
@@ -22,7 +22,7 @@ class MessageFeedback(BaseModel):
     """Feedback on a message."""
 
     feedback_type: FeedbackType
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     comment: Optional[str] = None
 
 
@@ -44,7 +44,7 @@ class ChatMessage(BaseModel):
     role: MessageRole
     content: str
     citations: List[Citation] = Field(default_factory=list)
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     metadata: Dict[str, Any] = Field(default_factory=dict)
     feedback: Optional[MessageFeedback] = None
 
@@ -57,7 +57,7 @@ class DocumentReference(BaseModel):
     content_preview: str
     full_content: str
     page_count: Optional[int] = None
-    added_at: datetime = Field(default_factory=datetime.utcnow)
+    added_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class DocQASession(BaseModel):
@@ -68,8 +68,8 @@ class DocQASession(BaseModel):
     documents: List[DocumentReference] = Field(default_factory=list)
     messages: List[ChatMessage] = Field(default_factory=list)
     context_window: int = Field(default=10)  # Messages to include in context
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class AskRequest(BaseModel):

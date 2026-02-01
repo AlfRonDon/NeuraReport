@@ -382,7 +382,7 @@ async def reorder_pdf_pages(
 
     try:
         output_path = pdf_service.reorder_pages(pdf_path, request.page_order)
-        return {"status": "ok", "output_path": str(output_path)}
+        return {"status": "ok", "message": "PDF operation completed successfully"}
     except Exception as e:
         logger.exception("pdf_reorder_failed", extra={"document_id": document_id})
         raise HTTPException(status_code=500, detail="PDF page reorder failed")
@@ -413,7 +413,7 @@ async def add_watermark(
             color=request.color,
         )
         output_path = pdf_service.add_watermark(pdf_path, config)
-        return {"status": "ok", "output_path": str(output_path)}
+        return {"status": "ok", "message": "PDF operation completed successfully"}
     except Exception as e:
         logger.exception("pdf_watermark_failed", extra={"document_id": document_id})
         raise HTTPException(status_code=500, detail="PDF watermark failed")
@@ -447,7 +447,7 @@ async def redact_pdf(
             for r in request.regions
         ]
         output_path = pdf_service.redact_regions(pdf_path, regions)
-        return {"status": "ok", "output_path": str(output_path)}
+        return {"status": "ok", "message": "PDF operation completed successfully"}
     except Exception as e:
         logger.exception("pdf_redact_failed", extra={"document_id": document_id})
         raise HTTPException(status_code=500, detail="PDF redaction failed")

@@ -825,7 +825,8 @@ export default function DocumentEditorPage() {
                     startIcon={<CopyIcon />}
                     onClick={() => {
                       navigator.clipboard.writeText(aiResult.result_text)
-                      toast.show('Copied to clipboard', 'success')
+                        .then(() => toast.show('Copied to clipboard', 'success'))
+                        .catch(() => toast.show('Failed to copy to clipboard', 'error'))
                     }}
                   >
                     Copy

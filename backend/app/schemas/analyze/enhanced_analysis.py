@@ -12,7 +12,7 @@ Covers:
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Dict, List, Optional, Union
 from pydantic import BaseModel, Field
@@ -300,7 +300,7 @@ class DocumentSummary(BaseModel):
     key_figures: List[Dict[str, Any]] = Field(default_factory=list)
     word_count: int = 0
     reading_time_minutes: float = 0
-    generated_at: datetime = Field(default_factory=datetime.utcnow)
+    generated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class SentimentAnalysis(BaseModel):
@@ -674,7 +674,7 @@ class EnhancedAnalysisResult(BaseModel):
     analysis_id: str
     document_name: str
     document_type: DocumentType
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     processing_time_ms: int = 0
 
     # Extraction results

@@ -2,7 +2,7 @@
  * Premium Notification Center
  * Real-time notifications with theme-based styling
  */
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   IconButton,
@@ -119,6 +119,7 @@ export default function NotificationCenter() {
   const [unreadCount, setUnreadCount] = useState(0)
   const [loading, setLoading] = useState(false)
   const [polling, setPolling] = useState(false)
+  const pollingRef = useRef(false)
   const [notificationsEnabled, setNotificationsEnabled] = useState(
     () => readPreferences().showNotifications ?? true
   )
@@ -204,9 +205,13 @@ export default function NotificationCenter() {
     const startPolling = () => {
       if (interval) return
       interval = setInterval(() => {
-        if (!polling && isVisible) {
+        if (!pollingRef.current && isVisible) {
+          pollingRef.current = true
           setPolling(true)
-          fetchNotifications(false).finally(() => setPolling(false))
+          fetchNotifications(false).finally(() => {
+            pollingRef.current = false
+            setPolling(false)
+          })
         }
       }, 30000)
     }
@@ -235,7 +240,7 @@ export default function NotificationCenter() {
       stopPolling()
       document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
-  }, [fetchNotifications, polling, notificationsEnabled])
+  }, [fetchNotifications, notificationsEnabled])
 
   const handleClick = useCallback((event) => {
     if (!notificationsEnabled) return undefined

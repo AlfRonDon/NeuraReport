@@ -8,10 +8,14 @@ from typing import Any
 
 from fastapi import HTTPException
 
+import logging
+
 from backend.app.repositories.connections.db_connection import resolve_db_path, verify_sqlite
 from backend.app.repositories.dataframes.sqlite_loader import get_loader
 from backend.app.repositories.dataframes import sqlite_shim
 from backend.app.repositories.state import store as state_store_module
+
+logger = logging.getLogger(__name__)
 
 _SCHEMA_CACHE: dict[tuple[str, bool, bool, int], dict] = {}
 _SCHEMA_CACHE_LOCK = threading.Lock()
@@ -75,7 +79,8 @@ def get_connection_schema(
         db_path = resolve_db_path(connection_id=connection_id, db_url=None, db_path=None)
         verify_sqlite(db_path)
     except Exception as exc:
-        raise _http_error(400, "connection_invalid", str(exc))
+        logger.exception("Connection validation failed for %s", connection_id)
+        raise _http_error(400, "connection_invalid", "Connection validation failed")
 
     cache_key = (connection_id, include_row_counts, include_foreign_keys, int(sample_rows or 0))
     cache_enabled = _SCHEMA_CACHE_TTL_SECONDS > 0
@@ -151,7 +156,8 @@ def get_connection_table_preview(
         db_path = resolve_db_path(connection_id=connection_id, db_url=None, db_path=None)
         verify_sqlite(db_path)
     except Exception as exc:
-        raise _http_error(400, "connection_invalid", str(exc))
+        logger.exception("Connection validation failed for %s", connection_id)
+        raise _http_error(400, "connection_invalid", "Connection validation failed")
 
     loader = get_loader(db_path)
     tables = loader.table_names()

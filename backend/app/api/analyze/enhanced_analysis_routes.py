@@ -16,7 +16,7 @@ import contextlib
 import json
 import logging
 import tempfile
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -350,7 +350,7 @@ async def get_analysis(analysis_id: str):
     if not result:
         raise HTTPException(status_code=404, detail="Analysis not found")
 
-    return result.dict()
+    return result.model_dump()
 
 
 @router.get("/{analysis_id}/summary/{mode}")
@@ -369,7 +369,7 @@ async def get_summary(
     if not summary:
         raise HTTPException(status_code=404, detail=f"Summary mode '{mode}' not found")
 
-    return summary.dict()
+    return summary.model_dump()
 
 
 # =============================================================================
@@ -396,7 +396,7 @@ async def ask_question(
         max_context_chunks=request.max_context_chunks,
     )
 
-    return response.dict()
+    return response.model_dump()
 
 
 @router.get("/{analysis_id}/suggested-questions")
@@ -456,8 +456,8 @@ async def get_charts(analysis_id: str):
         raise HTTPException(status_code=404, detail="Analysis not found")
 
     return {
-        "charts": [c.dict() for c in result.chart_suggestions],
-        "suggestions": [s.dict() for s in result.visualization_suggestions],
+        "charts": [c.model_dump() for c in result.chart_suggestions],
+        "suggestions": [s.model_dump() for s in result.visualization_suggestions],
     }
 
 
@@ -478,7 +478,7 @@ async def get_tables(
         raise HTTPException(status_code=404, detail="Analysis not found")
 
     return {
-        "tables": [t.dict() for t in result.tables[:limit]],
+        "tables": [t.model_dump() for t in result.tables[:limit]],
         "total": len(result.tables),
     }
 
@@ -493,7 +493,7 @@ async def get_metrics(analysis_id: str):
         raise HTTPException(status_code=404, detail="Analysis not found")
 
     return {
-        "metrics": [m.dict() for m in result.metrics],
+        "metrics": [m.model_dump() for m in result.metrics],
         "total": len(result.metrics),
     }
 
@@ -508,7 +508,7 @@ async def get_entities(analysis_id: str):
         raise HTTPException(status_code=404, detail="Analysis not found")
 
     return {
-        "entities": [e.dict() for e in result.entities],
+        "entities": [e.model_dump() for e in result.entities],
         "total": len(result.entities),
     }
 
@@ -523,10 +523,10 @@ async def get_insights(analysis_id: str):
         raise HTTPException(status_code=404, detail="Analysis not found")
 
     return {
-        "insights": [i.dict() for i in result.insights],
-        "risks": [r.dict() for r in result.risks],
-        "opportunities": [o.dict() for o in result.opportunities],
-        "action_items": [a.dict() for a in result.action_items],
+        "insights": [i.model_dump() for i in result.insights],
+        "risks": [r.model_dump() for r in result.risks],
+        "opportunities": [o.model_dump() for o in result.opportunities],
+        "action_items": [a.model_dump() for a in result.action_items],
     }
 
 
@@ -542,7 +542,7 @@ async def get_data_quality(analysis_id: str):
     if not result.data_quality:
         raise HTTPException(status_code=404, detail="Data quality assessment not available")
 
-    return result.data_quality.dict()
+    return result.data_quality.model_dump()
 
 
 # =============================================================================
@@ -580,9 +580,11 @@ async def export_analysis(
             include_charts=request.include_charts,
         )
     except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        logger.warning("Export not found: %s", e)
+        raise HTTPException(status_code=404, detail="Analysis not found for export")
     except RuntimeError as e:
-        raise HTTPException(status_code=501, detail=str(e))
+        logger.error("Export not implemented: %s", e)
+        raise HTTPException(status_code=501, detail="Export format not supported")
 
     # Determine content type
     content_types = {
@@ -727,7 +729,7 @@ async def get_shared_analysis(share_id: str):
     if not share:
         raise HTTPException(status_code=404, detail="Share link not found")
 
-    if share.expires_at and share.expires_at < datetime.utcnow():
+    if share.expires_at and share.expires_at < datetime.now(timezone.utc):
         raise HTTPException(status_code=410, detail="Share link expired")
 
     result = orchestrator.get_analysis(share.analysis_id)
@@ -743,7 +745,7 @@ async def get_shared_analysis(share_id: str):
         "share_id": share.id,
         "analysis_id": share.analysis_id,
         "access_level": share.access_level,
-        "analysis": result.dict(),
+        "analysis": result.model_dump(),
     }
 
 
@@ -769,7 +771,8 @@ async def register_integration(request: IntegrationRequest):
             config=request.config,
         )
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
+        logger.warning("Invalid integration config: %s", exc)
+        raise HTTPException(status_code=400, detail="Invalid integration configuration")
 
     return {"id": integration_id, "type": request.integration_type}
 
@@ -905,7 +908,8 @@ async def execute_pipeline(pipeline_id: str, request: PipelineExecuteRequest):
             input_data=request.input_data,
         )
     except ValueError as exc:
-        raise HTTPException(status_code=404, detail=str(exc))
+        logger.warning("Pipeline not found: %s", exc)
+        raise HTTPException(status_code=404, detail="Pipeline not found")
     return {
         "id": execution.id,
         "pipeline_id": execution.pipeline_id,
@@ -928,7 +932,7 @@ async def schedule_analysis(request: ScheduleRequest):
         analysis_config=request.analysis_config,
         notifications=request.notifications,
     )
-    return scheduled.dict()
+    return scheduled.model_dump()
 
 
 @router.post("/webhooks")
@@ -940,7 +944,7 @@ async def register_webhook(request: WebhookRequest):
         events=request.events,
         secret=request.secret,
     )
-    return webhook.dict()
+    return webhook.model_dump()
 
 
 @router.post("/webhooks/{webhook_id}/send")

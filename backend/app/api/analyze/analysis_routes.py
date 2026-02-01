@@ -275,7 +275,7 @@ async def get_analysis_result(analysis_id: str, request: Request):
 
     return {
         "status": "ok",
-        **result.dict(),
+        **result.model_dump(),
         "correlation_id": getattr(request.state, "correlation_id", None),
     }
 
@@ -323,7 +323,7 @@ async def suggest_charts(
     return {
         "status": "ok",
         "analysis_id": analysis_id,
-        "charts": [c.dict() for c in charts],
+        "charts": [c.model_dump() for c in charts],
         "sample_data": sample_data,
         "correlation_id": getattr(request.state, "correlation_id", None),
     }

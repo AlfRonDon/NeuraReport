@@ -535,7 +535,7 @@ def render_html(ctx: ReportPipelineContext) -> Path:
 
     renderer = HTMLRenderer()
     output_dir = ctx.template_path.parent
-    output_path = output_dir / f"filled_{int(datetime.now().timestamp())}.html"
+    output_path = output_dir / f"filled_{int(datetime.now(timezone.utc).timestamp())}.html"
 
     # Combine all data for token substitution
     all_data = {
@@ -588,7 +588,7 @@ def render_pdf(ctx: ReportPipelineContext) -> Optional[Path]:
 
     renderer = PDFRenderer()
     output_dir = ctx.template_path.parent
-    output_path = output_dir / f"filled_{int(datetime.now().timestamp())}.pdf"
+    output_path = output_dir / f"filled_{int(datetime.now(timezone.utc).timestamp())}.pdf"
 
     render_ctx = RenderContext(
         template_html=ctx.filled_html,
@@ -632,7 +632,7 @@ def render_docx(ctx: ReportPipelineContext) -> Optional[Path]:
 
     renderer = DOCXRenderer()
     output_dir = ctx.template_path.parent
-    output_path = output_dir / f"filled_{int(datetime.now().timestamp())}.docx"
+    output_path = output_dir / f"filled_{int(datetime.now(timezone.utc).timestamp())}.docx"
 
     render_ctx = RenderContext(
         template_html=ctx.filled_html,
@@ -667,7 +667,7 @@ def render_xlsx(ctx: ReportPipelineContext) -> Optional[Path]:
 
     renderer = XLSXRenderer()
     output_dir = ctx.template_path.parent
-    output_path = output_dir / f"filled_{int(datetime.now().timestamp())}.xlsx"
+    output_path = output_dir / f"filled_{int(datetime.now(timezone.utc).timestamp())}.xlsx"
 
     render_ctx = RenderContext(
         template_html=ctx.filled_html,

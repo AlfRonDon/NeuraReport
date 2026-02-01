@@ -429,8 +429,8 @@ def _run_report_internal(
     db_path = db_path_from_payload_or_default(p.connection_id)
     if not db_path.exists():
         if job_tracker:
-            job_tracker.step_failed("dataLoad", f"DB not found: {db_path}")
-        raise _http_error(400, "db_not_found", f"DB not found: {db_path}")
+            job_tracker.step_failed("dataLoad", "Database not found")
+        raise _http_error(400, "db_not_found", "Database not found")
     if job_tracker:
         job_tracker.step_succeeded("dataLoad")
 
@@ -449,9 +449,10 @@ def _run_report_internal(
     try:
         contract_data = json.loads(contract_path.read_text(encoding="utf-8"))
     except Exception as exc:
+        logger.exception("Invalid contract.json")
         if job_tracker:
-            job_tracker.step_failed("contractCheck", f"Invalid contract.json: {exc}")
-        raise _http_error(500, "invalid_contract", f"Invalid contract.json: {exc}")
+            job_tracker.step_failed("contractCheck", "Invalid contract.json")
+        raise _http_error(500, "invalid_contract", "Invalid contract.json")
     else:
         try:
             api_mod = importlib.import_module("backend.api")
@@ -461,9 +462,10 @@ def _run_report_internal(
         try:
             validate_fn(contract_data)
         except Exception as exc:
+            logger.exception("Contract schema validation failed")
             if job_tracker:
-                job_tracker.step_failed("contractCheck", str(exc))
-            raise _http_error(500, "invalid_contract", str(exc))
+                job_tracker.step_failed("contractCheck", "Contract schema validation failed")
+            raise _http_error(500, "invalid_contract", "Contract schema validation failed")
     if job_tracker:
         job_tracker.step_succeeded("contractCheck")
 
@@ -657,9 +659,10 @@ def _run_report_internal(
             if tmp_xlsx is not None:
                 with contextlib.suppress(FileNotFoundError):
                     tmp_xlsx.unlink(missing_ok=True)
+            logger.exception("Report generation failed")
             if job_tracker:
-                job_tracker.step_failed("renderPdf", f"Report generation failed: {exc}")
-            raise _http_error(500, "report_generation_failed", f"Report generation failed: {exc}")
+                job_tracker.step_failed("renderPdf", "Report generation failed")
+            raise _http_error(500, "report_generation_failed", "Report generation failed")
     if job_tracker:
         job_tracker.step_succeeded("renderPdf")
 
@@ -935,11 +938,11 @@ def _run_report_job_sync(
     try:
         run_payload = RunPayload(**payload_data)
     except Exception as exc:
-        tracker.fail(f"Invalid payload: {exc}")
-        job_error = f"Invalid payload: {exc}"
+        tracker.fail("Invalid payload")
+        job_error = "Invalid payload"
         logger.exception(
             "report_job_payload_invalid",
-            extra={"event": "report_job_payload_invalid", "job_id": job_id, "error": str(exc)},
+            extra={"event": "report_job_payload_invalid", "job_id": job_id},
         )
         # Mark as non-retriable since payload is invalid
         _state_store().record_job_completion(job_id, status="failed", error=job_error)
@@ -1158,7 +1161,8 @@ def _normalize_run_payloads(raw: RunPayload | Sequence[Any]) -> list[RunPayload]
                     normalized.append(RunPayload(**item))
                     continue
                 except Exception as exc:
-                    raise _http_error(400, "invalid_payload", f"Invalid run payload at index {idx}: {exc}")
+                    logger.exception("Invalid run payload at index %d", idx)
+                    raise _http_error(400, "invalid_payload", f"Invalid run payload at index {idx}")
             raise _http_error(400, "invalid_payload", "Payload entries must be run payload objects or mappings")
         if not normalized:
             raise _http_error(400, "invalid_payload", "At least one run payload is required")
@@ -1180,7 +1184,7 @@ async def queue_report_job(p: RunPayload | Sequence[Any], request: Request, *, k
         correlation_id = correlation_base if len(payloads) == 1 else f"{correlation_base}-{idx + 1}"
         steps = _build_job_steps(payload, kind=kind)
         template_rec = _state_store().get_template_record(payload.template_id) or {}
-        payload_data = payload.dict()
+        payload_data = payload.model_dump()
         job_record = _state_store().create_job(
             job_type="run_report",
             template_id=payload.template_id,
@@ -1264,10 +1268,11 @@ def recover_report_jobs(*, max_jobs: int = 50) -> int:
         try:
             run_payload = RunPayload(**payload)
         except Exception as exc:
+            logger.exception("Server restarted; job payload invalid for job %s", job_id)
             _state_store().record_job_completion(
                 job_id,
                 status="failed",
-                error=f"Server restarted; job payload invalid: {exc}",
+                error="Server restarted; job payload invalid",
             )
             continue
 

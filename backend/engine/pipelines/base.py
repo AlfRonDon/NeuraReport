@@ -209,7 +209,7 @@ class Step:
                     try:
                         self.on_error(e, ctx)
                     except Exception:
-                        pass
+                        logger.debug("callback_failed", exc_info=True)
 
                 if attempt < attempts - 1:
                     logger.warning(
@@ -314,7 +314,7 @@ class Pipeline:
                     try:
                         self._on_step_complete(step.name, result, ctx)
                     except Exception:
-                        pass
+                        logger.debug("callback_failed", exc_info=True)
 
                 logger.info(
                     "step_completed",
@@ -353,7 +353,7 @@ class Pipeline:
                                 ctx,
                             )
                         except Exception:
-                            pass
+                            logger.debug("callback_failed", exc_info=True)
 
                     duration = (time.perf_counter() - start) * 1000
                     ctx.completed_at = datetime.now(timezone.utc)
@@ -386,7 +386,7 @@ class Pipeline:
                 try:
                     self._on_success(ctx)
                 except Exception:
-                    pass
+                    logger.debug("callback_failed", exc_info=True)
 
             publish_sync(
                 Event(
@@ -433,6 +433,14 @@ class Pipeline:
 
     def execute_sync(self, ctx: PipelineContext) -> PipelineResult:
         """Execute pipeline synchronously."""
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = None
+        if loop and loop.is_running():
+            import concurrent.futures
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+                return pool.submit(asyncio.run, self.execute(ctx)).result()
         return asyncio.run(self.execute(ctx))
 
 

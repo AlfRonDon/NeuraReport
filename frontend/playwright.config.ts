@@ -39,7 +39,7 @@ export default defineConfig({
       VITE_API_BASE_URL: 'proxy',
       VITE_USE_MOCK: 'false',
       // Backend runs on 8001 in our manual validation environment.
-      NEURA_BACKEND_URL: process.env.NEURA_BACKEND_URL || 'http://127.0.0.1:8001',
+      NEURA_BACKEND_URL: process.env.NEURA_BACKEND_URL || 'http://127.0.0.1:8002',
     },
   },
 })

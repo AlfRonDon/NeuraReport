@@ -214,4 +214,6 @@ def publish_sync(event: Event) -> None:
         loop = asyncio.get_running_loop()
         asyncio.run_coroutine_threadsafe(bus.publish(event), loop)
     except RuntimeError:
-        asyncio.run(bus.publish(event))
+        import concurrent.futures
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+            pool.submit(asyncio.run, bus.publish(event)).result()

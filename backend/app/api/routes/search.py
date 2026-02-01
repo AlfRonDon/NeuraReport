@@ -151,7 +151,7 @@ async def search(request: SearchRequest):
         return result.model_dump()
     except Exception as e:
         logger.error(f"Search failed: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Search operation failed")
 
 
 @router.post("/search/semantic")
@@ -219,7 +219,7 @@ async def search_and_replace(request: SearchReplaceRequest):
         return result
     except Exception as e:
         logger.error(f"Search and replace failed: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Search operation failed")
 
 
 @router.get("/documents/{document_id}/similar")
@@ -235,7 +235,7 @@ async def find_similar_documents(document_id: str, limit: int = 10):
         return [r.model_dump() for r in results]
     except Exception as e:
         logger.error(f"Find similar failed: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Search operation failed")
 
 
 # =============================================================================
@@ -260,7 +260,7 @@ async def index_document(request: IndexDocumentRequest):
         return {"success": success}
     except Exception as e:
         logger.error(f"Index failed: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Search operation failed")
 
 
 @router.delete("/index/{document_id}")
@@ -298,7 +298,7 @@ async def save_search(request: SaveSearchRequest):
         return result.model_dump()
     except Exception as e:
         logger.error(f"Save search failed: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Search operation failed")
 
 
 @router.get("/saved-searches")
@@ -315,7 +315,7 @@ async def run_saved_search(search_id: str):
         result = await search_service.run_saved_search(search_id)
         return result.model_dump()
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Resource not found")
 
 
 @router.delete("/saved-searches/{search_id}")

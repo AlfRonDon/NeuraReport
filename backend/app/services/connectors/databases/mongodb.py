@@ -141,7 +141,8 @@ class MongoDBConnector(ConnectorBase):
             # Get estimated count
             try:
                 row_count = collection.estimated_document_count()
-            except:
+            except Exception as e:
+                logger.debug("Failed to get collection count: %s", e)
                 row_count = None
 
             tables.append(TableInfo(

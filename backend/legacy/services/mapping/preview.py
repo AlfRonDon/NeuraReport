@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import importlib
 import json
@@ -79,7 +80,7 @@ def _mapping_preview_pipeline(
             "mapping_preview_schema_probe_failed",
             extra={"event": "mapping_preview_schema_probe_failed", "template_id": template_id},
         )
-        raise http_error(500, "db_introspection_failed", f"DB introspection failed: {exc}")
+        raise http_error(500, "db_introspection_failed", "DB introspection failed")
 
     catalog = list(dict.fromkeys(build_catalog_fn(db_path)))
     pdf_sha = sha256_path(find_reference_pdf(template_dir_path)) or ""
@@ -159,13 +160,14 @@ def _mapping_preview_pipeline(
                 cache_key,
             )
         except MappingInlineValidationError as exc:
-            raise http_error(422, "mapping_llm_invalid", str(exc))
+            logger.exception("mapping_llm_validation_error")
+            raise http_error(422, "mapping_llm_invalid", "Mapping LLM validation failed")
         except Exception as exc:
             logger.exception(
                 "mapping_preview_llm_failed",
                 extra={"event": "mapping_preview_llm_failed", "template_id": template_id},
             )
-            raise http_error(500, "mapping_llm_failed", str(exc))
+            raise http_error(500, "mapping_llm_failed", "Mapping LLM call failed")
 
         html_applied = result.html_constants_applied
         write_text_atomic(html_path, html_applied, encoding="utf-8", step="mapping_preview_html")
@@ -306,7 +308,7 @@ async def run_mapping_preview(
             "mapping_preview_failed",
             extra={"event": "mapping_preview_failed", "template_id": template_id, "correlation_id": correlation_id},
         )
-        raise http_error(500, "mapping_preview_failed", str(exc))
+        raise http_error(500, "mapping_preview_failed", "Mapping preview failed")
 
     logger.info(
         "mapping_preview_complete",

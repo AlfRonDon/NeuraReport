@@ -129,7 +129,8 @@ async def execute_workflow(
             async_execution=req.async_execution,
         )
     except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        logger.warning("Workflow not found: %s", e)
+        raise HTTPException(status_code=404, detail="Workflow not found")
     except Exception as e:
         logger.error("Workflow execution failed: %s", e, exc_info=True)
         raise HTTPException(

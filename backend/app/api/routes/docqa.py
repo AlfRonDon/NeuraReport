@@ -225,7 +225,7 @@ async def regenerate_response(
             correlation_id,
         )
     except RuntimeError as exc:
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
+        raise HTTPException(status_code=500, detail="Document Q&A operation failed") from exc
     except Exception as exc:
         logger.error("Response regeneration failed: %s", exc, exc_info=True)
         raise HTTPException(

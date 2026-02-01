@@ -414,7 +414,7 @@ export default function JobsPage() {
     abortControllerRef.current = new AbortController()
 
     try {
-      const data = await api.listJobs({ limit: 50 })
+      const data = await api.listJobs({ limit: 50, signal: abortControllerRef.current.signal })
       if (isMountedRef.current && (force || !isUserActionInProgressRef.current)) {
         const normalized = Array.isArray(data.jobs) ? data.jobs.map((job) => normalizeJob(job)) : []
         setJobs(normalized)

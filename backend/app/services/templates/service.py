@@ -136,7 +136,8 @@ class TemplateService:
             except TemplateImportError as exc:
                 return err(exc)
             except Exception as exc:
-                return err(TemplateImportError(code="upload_failed", message="Upload failed", detail=str(exc)))
+                logger.exception("Template upload failed")
+                return err(TemplateImportError(code="upload_failed", message="Upload failed"))
             tmp_paths.append(tmp_path)
             return ok(replace(ctx, tmp_path=tmp_path))
 
@@ -168,7 +169,8 @@ class TemplateService:
                     root = detect_zip_root(m.filename for m in members)
                     contains_excel = any(Path(m.filename).name.lower() == "source.xlsx" for m in members)
             except Exception as exc:
-                return err(TemplateZipInvalidError(detail=str(exc)))
+                logger.exception("Invalid template ZIP")
+                return err(TemplateZipInvalidError(detail="Invalid ZIP archive"))
             kind = "excel" if contains_excel else "pdf"
             name = self._normalize_display_name(display_name, root, upload.filename)
             return ok(
@@ -211,7 +213,8 @@ class TemplateService:
                         for path in ctx.template_dir.rglob("*"):
                             if path.is_file():
                                 path.unlink()
-                    return err(TemplateExtractionError(detail=str(exc)))
+                    logger.exception("Template extraction failed")
+                    return err(TemplateExtractionError(detail="Extraction failed"))
 
                 manifest = load_manifest(ctx.template_dir) or {}
                 artifacts = manifest.get("artifacts") or {}
@@ -278,7 +281,8 @@ class TemplateService:
             error = result.unwrap_err()
             if isinstance(error, TemplateImportError):
                 raise error
-            raise TemplateImportError(code="import_failed", message="Template import failed", detail=str(error))
+            logger.exception("Template import failed")
+            raise TemplateImportError(code="import_failed", message="Template import failed")
 
         final_ctx = result.unwrap()
         return {

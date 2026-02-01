@@ -498,7 +498,7 @@ async def generate_formula(
         )
     except Exception as e:
         logger.error(f"Formula generation failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Formula generation failed: {str(e)}")
+        raise HTTPException(status_code=500, detail="Formula generation failed")
 
 
 @router.post("/{spreadsheet_id}/ai/explain")
@@ -524,7 +524,7 @@ async def explain_formula_endpoint(
         }
     except Exception as e:
         logger.error(f"Formula explanation failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Formula explanation failed: {str(e)}")
+        raise HTTPException(status_code=500, detail="Formula explanation failed")
 
 
 @router.post("/{spreadsheet_id}/ai/clean")
@@ -571,7 +571,7 @@ async def suggest_data_cleaning(
         }
     except Exception as e:
         logger.error(f"Data cleaning analysis failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Data cleaning analysis failed: {str(e)}")
+        raise HTTPException(status_code=500, detail="Data cleaning analysis failed")
 
 
 @router.post("/{spreadsheet_id}/ai/anomalies")
@@ -625,7 +625,7 @@ async def detect_anomalies_endpoint(
         }
     except Exception as e:
         logger.error(f"Anomaly detection failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Anomaly detection failed: {str(e)}")
+        raise HTTPException(status_code=500, detail="Anomaly detection failed")
 
 
 @router.post("/{spreadsheet_id}/ai/predict")
@@ -684,7 +684,7 @@ async def generate_predictions(
         }
     except Exception as e:
         logger.error(f"Prediction generation failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Prediction generation failed: {str(e)}")
+        raise HTTPException(status_code=500, detail="Prediction generation failed")
 
 
 @router.post("/{spreadsheet_id}/ai/suggest")
@@ -736,7 +736,7 @@ async def suggest_formulas_endpoint(
         }
     except Exception as e:
         logger.error(f"Formula suggestion failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Formula suggestion failed: {str(e)}")
+        raise HTTPException(status_code=500, detail="Formula suggestion failed")
 
 
 # ============================================

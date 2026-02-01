@@ -195,7 +195,7 @@ export default function StepTemplate({ wizardState, updateWizardState, onComplet
     if (files?.length > 0) {
       handleFile(files[0])
     }
-  }, [])
+  }, [handleFile])
 
   const handleDragOver = useCallback((event) => {
     event.preventDefault()
@@ -206,7 +206,7 @@ export default function StepTemplate({ wizardState, updateWizardState, onComplet
     if (files?.length > 0) {
       handleFile(files[0])
     }
-  }, [])
+  }, [handleFile])
 
   const handleFile = useCallback(async (file) => {
     setError(null)

@@ -146,7 +146,7 @@ async def trigger_schedule(schedule_id: str, background_tasks: BackgroundTasks, 
             detail={
                 "status": "error",
                 "code": "invalid_schedule_payload",
-                "message": f"Schedule has invalid configuration: {exc}",
+                "message": "Schedule has invalid configuration",
             }
         )
 

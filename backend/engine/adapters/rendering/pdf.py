@@ -38,9 +38,16 @@ class PDFRenderer(BaseRenderer):
             self._ensure_output_dir(context.output_path)
 
             # Run async rendering
-            asyncio.run(
-                self._render_async(context)
-            )
+            try:
+                loop = asyncio.get_running_loop()
+            except RuntimeError:
+                loop = None
+            if loop and loop.is_running():
+                import concurrent.futures
+                with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+                    pool.submit(asyncio.run, self._render_async(context)).result()
+            else:
+                asyncio.run(self._render_async(context))
 
             if not context.output_path.exists():
                 return RenderResult(

@@ -95,10 +95,12 @@ export default function SetupWizard() {
 
   // Update URL when step changes
   useEffect(() => {
-    const newParams = new URLSearchParams(searchParams)
-    newParams.set('step', STEP_KEYS[currentStep])
-    setSearchParams(newParams, { replace: true })
-  }, [currentStep, searchParams, setSearchParams])
+    setSearchParams((prev) => {
+      const newParams = new URLSearchParams(prev)
+      newParams.set('step', STEP_KEYS[currentStep])
+      return newParams
+    }, { replace: true })
+  }, [currentStep, setSearchParams])
 
   const updateWizardState = useCallback((updates) => {
     setWizardState((prev) => ({ ...prev, ...updates }))
@@ -120,7 +122,7 @@ export default function SetupWizard() {
     clearWizardState()
     toast.show('Report design ready. You can run it from Reports.', 'success')
     handleNavigate('/reports', 'Open reports')
-  }, [navigate, toast])
+  }, [handleNavigate, toast])
 
   const getStepContent = () => {
     switch (currentStep) {

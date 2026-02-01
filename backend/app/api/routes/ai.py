@@ -46,7 +46,7 @@ def _handle_service_error(exc: Exception, operation: str) -> HTTPException:
     if isinstance(exc, InputValidationError):
         return HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(exc),
+            detail="Invalid input for AI operation",
         )
     if isinstance(exc, LLMUnavailableError):
         return HTTPException(

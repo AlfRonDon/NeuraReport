@@ -272,7 +272,6 @@ async def create_snapshot(
         "format": rendered["format"],
         "render_status": rendered.get("status", "pending"),
         "content_hash": rendered["content_hash"],
-        "file_path": rendered.get("file_path"),
         "created_at": rendered["created_at"],
     }
 

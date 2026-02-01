@@ -255,7 +255,7 @@ async def quickchart_url(request: QuickChartRequest):
             title=request.title,
         )
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
+        raise HTTPException(status_code=400, detail="Invalid export request")
     return {"url": url}
 
 

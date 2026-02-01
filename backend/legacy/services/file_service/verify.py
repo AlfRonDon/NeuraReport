@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import contextlib
 import importlib
+import logging
 import os
 import shutil
 import tempfile
@@ -42,6 +43,10 @@ from .helpers import (
     generate_template_id,
     http_error,
 )
+
+MAX_VERIFY_XLSX_BYTES: int = 50 * 1024 * 1024  # 50 MiB
+
+logger = logging.getLogger(__name__)
 
 
 def verify_template(file: UploadFile, connection_id: str | None, request: Request, refine_iters: int = 0):
@@ -147,12 +152,13 @@ def verify_template(file: UploadFile, connection_id: str | None, request: Reques
                     with contextlib.suppress(FileNotFoundError):
                         Path(tmp.name).unlink(missing_ok=True)
             except Exception as exc:
+                logger.exception("verify_upload_pdf_failed")
                 yield finish_stage(
                     stage_key,
                     stage_label,
                     progress=5,
                     status="error",
-                    detail=str(exc),
+                    detail="File upload failed",
                     size_bytes=total_bytes or None,
                 )
                 raise
@@ -171,7 +177,8 @@ def verify_template(file: UploadFile, connection_id: str | None, request: Reques
                 png_path = ref_pngs[0]
                 layout_hints = get_layout_hints_fn(pdf_path, 0)
             except Exception as exc:
-                yield finish_stage(stage_key, stage_label, progress=25, status="error", detail=str(exc))
+                logger.exception("verify_render_reference_preview_failed")
+                yield finish_stage(stage_key, stage_label, progress=25, status="error", detail="Rendering preview failed")
                 raise
             else:
                 yield finish_stage(stage_key, stage_label, progress=60)
@@ -185,7 +192,8 @@ def verify_template(file: UploadFile, connection_id: str | None, request: Reques
                 schema_payload = initial_result.schema or {}
                 save_html_fn(html_path, html_text)
             except Exception as exc:
-                yield finish_stage(stage_key, stage_label, progress=70, status="error", detail=str(exc))
+                logger.exception("verify_generate_html_failed")
+                yield finish_stage(stage_key, stage_label, progress=70, status="error", detail="HTML generation failed")
                 raise
 
             schema_path = tdir / "schema_ext.json"
@@ -218,7 +226,8 @@ def verify_template(file: UploadFile, connection_id: str | None, request: Reques
                 tight_render_png_path = panel_png_path if panel_png_path.exists() else render_png_path
                 yield finish_stage(stage_key, stage_label, progress=88)
             except Exception as exc:
-                yield finish_stage(stage_key, stage_label, progress=80, status="error", detail=str(exc))
+                logger.exception("verify_render_html_preview_failed")
+                yield finish_stage(stage_key, stage_label, progress=80, status="error", detail="HTML preview rendering failed")
                 raise
 
             stage_key = "verify.refine_html_layout"
@@ -307,7 +316,8 @@ def verify_template(file: UploadFile, connection_id: str | None, request: Reques
                     correlation_id=correlation_id,
                 )
             except Exception as exc:
-                yield finish_stage(stage_key, stage_label, progress=97, status="error", detail=str(exc))
+                logger.exception("verify_save_artifacts_failed")
+                yield finish_stage(stage_key, stage_label, progress=97, status="error", detail="Saving artifacts failed")
             else:
                 yield finish_stage(
                     stage_key,
@@ -360,11 +370,12 @@ def verify_template(file: UploadFile, connection_id: str | None, request: Reques
                 artifacts=artifacts_for_state,
             )
         except Exception as e:
-            failed_error = str(e)
+            logger.exception("verify_template_failed")
+            failed_error = "Verification failed"
             yield emit(
                 "error",
                 stage="Verification failed.",
-                detail=failed_error,
+                detail="Verification failed",
                 template_id=tid,
             )
         finally:
@@ -477,6 +488,8 @@ def verify_excel(file: UploadFile, request: Request, connection_id: str | None =
                             if not chunk:
                                 break
                             total_bytes += len(chunk)
+                            if total_bytes > MAX_VERIFY_XLSX_BYTES:
+                                raise RuntimeError(f"Uploaded Excel file exceeds {format_bytes(MAX_VERIFY_XLSX_BYTES)} limit.")
                             tmp.write(chunk)
                         tmp.flush()
                         with contextlib.suppress(OSError):
@@ -486,7 +499,8 @@ def verify_excel(file: UploadFile, request: Request, connection_id: str | None =
                     with contextlib.suppress(FileNotFoundError):
                         Path(tmp.name).unlink(missing_ok=True)
             except Exception as exc:
-                yield finish_stage(stage_key, stage_label, progress=5, status="error", detail=str(exc))
+                logger.exception("excel_upload_file_failed")
+                yield finish_stage(stage_key, stage_label, progress=5, status="error", detail="File upload failed")
                 raise
             else:
                 yield finish_stage(stage_key, stage_label, progress=25, size_bytes=total_bytes)
@@ -499,7 +513,8 @@ def verify_excel(file: UploadFile, request: Request, connection_id: str | None =
                 html_path = preview.html_path
                 png_path = preview.png_path
             except Exception as exc:
-                yield finish_stage(stage_key, stage_label, progress=45, status="error", detail=str(exc))
+                logger.exception("excel_generate_html_failed")
+                yield finish_stage(stage_key, stage_label, progress=45, status="error", detail="HTML generation failed")
                 raise
             else:
                 yield finish_stage(stage_key, stage_label, progress=80)
@@ -532,7 +547,8 @@ def verify_excel(file: UploadFile, request: Request, connection_id: str | None =
                     correlation_id=correlation_id,
                 )
             except Exception as exc:
-                yield finish_stage(stage_key, stage_label, progress=90, status="error", detail=str(exc))
+                logger.exception("excel_save_artifacts_failed")
+                yield finish_stage(stage_key, stage_label, progress=90, status="error", detail="Saving artifacts failed")
                 raise
             else:
                 yield finish_stage(stage_key, stage_label, progress=96, manifest_files=len(manifest_files))
@@ -587,11 +603,12 @@ def verify_excel(file: UploadFile, request: Request, connection_id: str | None =
                 },
             )
         except Exception as exc:
-            failed_error = str(exc)
+            logger.exception("excel_verify_failed")
+            failed_error = "Excel verification failed"
             yield emit(
                 "error",
                 stage="Excel verification failed.",
-                detail=failed_error,
+                detail="Excel verification failed",
                 template_id=tid,
                 kind=template_kind,
             )

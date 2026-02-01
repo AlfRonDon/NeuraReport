@@ -1,7 +1,7 @@
 """Schemas for Multi-Document Synthesis."""
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field
 from enum import Enum
@@ -24,7 +24,7 @@ class SynthesisDocument(BaseModel):
     content_hash: str
     extracted_text: Optional[str] = None
     metadata: Dict[str, Any] = Field(default_factory=dict)
-    added_at: datetime = Field(default_factory=datetime.utcnow)
+    added_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class Inconsistency(BaseModel):
@@ -47,8 +47,8 @@ class SynthesisSession(BaseModel):
     documents: List[SynthesisDocument] = Field(default_factory=list)
     inconsistencies: List[Inconsistency] = Field(default_factory=list)
     synthesis_result: Optional[Dict[str, Any]] = None
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     status: str = Field(default="active", pattern="^(active|processing|completed|error)$")
 
 
@@ -69,4 +69,4 @@ class SynthesisResult(BaseModel):
     inconsistencies: List[Inconsistency]
     source_references: List[Dict[str, Any]]
     confidence: float = Field(ge=0.0, le=1.0)
-    generated_at: datetime = Field(default_factory=datetime.utcnow)
+    generated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

@@ -50,6 +50,8 @@ export default function StepMapping({ wizardState, updateWizardState, onComplete
   const [error, setError] = useState(null)
 
   useEffect(() => {
+    let cancelled = false
+
     const fetchMapping = async () => {
       if (!templateId) return
 
@@ -75,29 +77,37 @@ export default function StepMapping({ wizardState, updateWizardState, onComplete
                 kind: wizardState.templateKind || 'pdf',
               })
 
-              if (result.mapping) {
-                setMapping(result.mapping)
-                updateWizardState({ mapping: result.mapping })
-              }
-              if (result.keys) {
-                setKeys(result.keys)
-                updateWizardState({ keys: result.keys })
+              if (!cancelled) {
+                if (result.mapping) {
+                  setMapping(result.mapping)
+                  updateWizardState({ mapping: result.mapping })
+                }
+                if (result.keys) {
+                  setKeys(result.keys)
+                  updateWizardState({ keys: result.keys })
+                }
               }
               return result
             } catch (err) {
-              setError(err.message || 'Failed to load mapping')
+              if (!cancelled) {
+                setError(err.message || 'Failed to load mapping')
+              }
               throw err
             }
           },
         })
       } finally {
-        setLocalLoading(false)
+        if (!cancelled) {
+          setLocalLoading(false)
+        }
       }
     }
 
     if (!wizardState.mapping) {
       fetchMapping()
     }
+
+    return () => { cancelled = true }
   }, [templateId, wizardState.connectionId, wizardState.templateKind, wizardState.mapping, activeConnection?.id, updateWizardState, execute])
 
   const handleMappingChange = useCallback((token, field, value) => {

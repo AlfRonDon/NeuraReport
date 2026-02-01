@@ -140,7 +140,7 @@ class Scheduler:
 
     async def _dispatch_schedule(self, schedule: Schedule) -> None:
         """Create and submit a job for a schedule."""
-        correlation_id = f"sched-{schedule.schedule_id}-{int(datetime.now().timestamp())}"
+        correlation_id = f"sched-{schedule.schedule_id}-{int(datetime.now(timezone.utc).timestamp())}"
 
         # Create job
         job = Job.create(

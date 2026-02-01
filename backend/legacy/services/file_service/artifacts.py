@@ -34,6 +34,8 @@ def artifact_head_response(
 ) -> dict:
     tdir = template_dir_fn(template_id, kind=kind, must_exist=True, create=False)
     target = tdir / name
+    if not target.resolve().is_relative_to(tdir.resolve()):
+        raise HTTPException(status_code=400, detail="invalid_artifact_name")
     if not target.exists():
         raise HTTPException(status_code=404, detail="artifact_not_found")
     stat = target.stat()

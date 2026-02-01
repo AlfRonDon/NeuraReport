@@ -77,8 +77,8 @@ class DataFrameConnectionPool:
         finally:
             try:
                 conn.close()
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug("Connection close failed: %s", e)
             with self._lock:
                 self._active_count = max(0, self._active_count - 1)
 

@@ -82,10 +82,10 @@ class NL2SQLService:
             verify_sqlite(db_path)
             return db_path
         except Exception as exc:
+            logger.warning("Connection validation failed: %s", exc)
             raise AppError(
                 code="connection_invalid",
                 message="Invalid or unreachable database connection",
-                detail=str(exc),
                 status_code=400,
             )
 
@@ -170,7 +170,6 @@ class NL2SQLService:
             raise AppError(
                 code="generation_failed",
                 message="Failed to generate SQL query",
-                detail=str(exc),
                 status_code=500,
             )
 
@@ -262,7 +261,6 @@ class NL2SQLService:
             raise AppError(
                 code="execution_failed",
                 message="Failed to execute SQL query",
-                detail=str(exc),
                 status_code=400,
             )
 

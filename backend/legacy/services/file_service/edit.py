@@ -3,10 +3,13 @@ from __future__ import annotations
 import contextlib
 import difflib
 import json
+import logging
 from pathlib import Path
 from typing import Any, Mapping, Optional
 
 from fastapi import Request
+
+logger = logging.getLogger(__name__)
 
 from backend.app.services.templates.TemplateVerify import MODEL, get_openai_client
 from backend.app.services.utils import (
@@ -149,19 +152,22 @@ def _run_template_edit_llm(template_html: str, instructions: str) -> tuple[str, 
     try:
         client = get_openai_client()
     except Exception as exc:
-        raise http_error(503, "llm_unavailable", f"LLM client is unavailable: {exc}")
+        logger.exception("LLM client is unavailable")
+        raise http_error(503, "llm_unavailable", "LLM client is unavailable")
 
     try:
         response = call_chat_completion(client, model=MODEL, messages=messages, description=TEMPLATE_EDIT_PROMPT_VERSION)
     except Exception as exc:
-        raise http_error(502, "llm_call_failed", f"Template edit LLM call failed: {exc}")
+        logger.exception("Template edit LLM call failed")
+        raise http_error(502, "llm_call_failed", "Template edit LLM call failed")
 
     raw_text = (response.choices[0].message.content or "").strip()
     parsed_text = strip_code_fences(raw_text)
     try:
         payload = json.loads(parsed_text)
     except Exception as exc:
-        raise http_error(502, "llm_invalid_response", f"LLM did not return valid JSON: {exc}")
+        logger.exception("LLM did not return valid JSON")
+        raise http_error(502, "llm_invalid_response", "LLM did not return valid JSON")
 
     if not isinstance(payload, dict):
         raise http_error(502, "llm_invalid_response", "LLM response was not a JSON object.")
@@ -311,7 +317,8 @@ def undo_last_template_edit(template_id: str, request: Request):
             with contextlib.suppress(Exception):
                 if tmp_path.exists() and not final_path.exists():
                     tmp_path.rename(final_path)
-            raise http_error(500, "undo_failed", f"Failed to restore previous template version: {exc}")
+            logger.exception("Failed to restore previous template version")
+            raise http_error(500, "undo_failed", "Failed to restore previous template version")
 
         restored_html = final_path.read_text(encoding="utf-8", errors="ignore")
         diff_summary = _summarize_html_diff(current_html, restored_html)
@@ -358,14 +365,16 @@ def _run_template_chat_llm(template_html: str, conversation_history: list[dict])
     try:
         client = get_openai_client()
     except Exception as exc:
-        raise http_error(503, "llm_unavailable", f"LLM client is unavailable: {exc}")
+        logger.exception("LLM client is unavailable")
+        raise http_error(503, "llm_unavailable", "LLM client is unavailable")
 
     try:
         response = call_chat_completion(
             client, model=MODEL, messages=messages, description=TEMPLATE_CHAT_PROMPT_VERSION
         )
     except Exception as exc:
-        raise http_error(502, "llm_call_failed", f"Template chat LLM call failed: {exc}")
+        logger.exception("Template chat LLM call failed")
+        raise http_error(502, "llm_call_failed", "Template chat LLM call failed")
 
     raw_text = (response.choices[0].message.content or "").strip()
     parsed_text = strip_code_fences(raw_text)

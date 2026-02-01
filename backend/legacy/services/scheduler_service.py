@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 import importlib
+import logging
 from typing import Any, Optional
 
 from fastapi import HTTPException
 
 from backend.app.services import state_access as state_store_module
+
+logger = logging.getLogger(__name__)
 from backend.legacy.services import report_service as report_service_module
 from backend.legacy.schemas.report_schema import ScheduleCreatePayload, ScheduleUpdatePayload
 from backend.legacy.utils.email_utils import normalize_email_targets
@@ -66,7 +69,7 @@ def cancel_job(job_id: str, *, force: bool = False) -> dict[str, Any]:
         _report_service().force_cancel_job(job_id, force=should_force)
     except Exception:
         # Best-effort force cancel; do not block the API response.
-        pass
+        logger.warning("force_cancel_failed", exc_info=True)
     return job
 
 

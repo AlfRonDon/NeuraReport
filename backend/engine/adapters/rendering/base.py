@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, Optional, Protocol
+
+logger = logging.getLogger("neura.adapters.rendering.base")
 
 from backend.engine.domain.reports import OutputFormat
 
@@ -87,5 +90,6 @@ class BaseRenderer(ABC):
         """Get file size in bytes."""
         try:
             return path.stat().st_size
-        except Exception:
+        except Exception as e:
+            logger.debug("Failed to get file size: %s", e)
             return 0

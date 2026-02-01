@@ -87,7 +87,7 @@ class ConnectionService:
                 raise AppError(
                     code="invalid_database",
                     message="Invalid or unreachable database",
-                    detail=str(exc),
+                    detail=None,
                     status_code=400,
                 )
         else:
@@ -128,7 +128,7 @@ class ConnectionService:
             raise AppError(
                 code="connection_failed",
                 message=f"Network error connecting to {db_type}",
-                detail=str(exc),
+                detail=None,
                 status_code=503,
             )
         finally:
@@ -302,7 +302,7 @@ class ConnectionService:
             raise AppError(
                 code="connection_failed",
                 message="Database connection failed",
-                detail=str(exc),
+                detail=None,
                 status_code=503,
             )
 

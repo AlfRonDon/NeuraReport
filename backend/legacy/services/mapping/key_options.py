@@ -93,7 +93,8 @@ def mapping_key_options(
     try:
         mapping_doc = json.loads(mapping_path.read_text(encoding="utf-8"))
     except Exception as exc:
-        raise http_error(500, "mapping_load_failed", f"Failed to read mapping file: {exc}")
+        logger.exception("Failed to read mapping file")
+        raise http_error(500, "mapping_load_failed", "Failed to read mapping file")
 
     if not isinstance(mapping_doc, list):
         raise http_error(500, "mapping_invalid", "Approved mapping is not in the expected format.")

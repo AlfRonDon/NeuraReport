@@ -92,7 +92,7 @@ def run_corrections_preview(
                 "corrections_preview_failed",
                 extra={"event": "corrections_preview_failed", "template_id": template_id, "correlation_id": correlation_id},
             )
-            yield emit("error", stage="corrections_preview", detail=str(exc), template_id=template_id)
+            yield emit("error", stage="corrections_preview", detail="Corrections preview failed", template_id=template_id)
             return
         except Exception as exc:
             logger.exception(
@@ -103,7 +103,7 @@ def run_corrections_preview(
                     "correlation_id": correlation_id,
                 },
             )
-            yield emit("error", stage="corrections_preview", detail=str(exc), template_id=template_id)
+            yield emit("error", stage="corrections_preview", detail="Corrections preview failed", template_id=template_id)
             return
 
         artifacts_raw = result.get("artifacts") or {}

@@ -538,7 +538,7 @@ class FormulaEngine:
             if "$" in format_str:
                 return f"${float(value):,.2f}"
             return str(value)
-        except:
+        except (ValueError, TypeError):
             return str(value)
 
     def _fn_datedif(self, start_date, end_date, unit):

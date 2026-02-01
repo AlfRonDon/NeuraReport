@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import concurrent.futures
 import importlib
 import json
 import logging
@@ -185,8 +186,8 @@ async def run_mapping_approve(
                     "mapping_save_failed",
                     extra={"event": "mapping_save_failed", "template_id": template_id, "correlation_id": correlation_id},
                 )
-                yield finish_stage(stage_key, stage_label, progress=5, status="error", detail=str(exc))
-                yield emit("error", stage=stage_key, label=stage_label, detail=str(exc), template_id=template_id)
+                yield finish_stage(stage_key, stage_label, progress=5, status="error", detail="Mapping save failed")
+                yield emit("error", stage=stage_key, label=stage_label, detail="Mapping save failed", template_id=template_id)
                 return
 
             stage_key = "mapping.prepare_template"
@@ -213,8 +214,8 @@ async def run_mapping_approve(
                         "correlation_id": correlation_id,
                     },
                 )
-                yield finish_stage(stage_key, stage_label, progress=25, status="error", detail=str(exc))
-                yield emit("error", stage=stage_key, label=stage_label, detail=str(exc), template_id=template_id)
+                yield finish_stage(stage_key, stage_label, progress=25, status="error", detail="Template preparation failed")
+                yield emit("error", stage=stage_key, label=stage_label, detail="Template preparation failed", template_id=template_id)
                 return
 
             final_html_url = artifact_url(final_html_path)
@@ -290,14 +291,14 @@ async def run_mapping_approve(
                     stage_label,
                     progress=55,
                     status="error",
-                    detail=str(exc),
+                    detail="Contract build failed",
                     prompt_version=PROMPT_VERSION_4,
                 )
                 yield emit(
                     "error",
                     stage=stage_key,
                     label=stage_label,
-                    detail=str(exc),
+                    detail="Contract build failed",
                     template_id=template_id,
                     prompt_version=PROMPT_VERSION_4,
                 )
@@ -313,14 +314,14 @@ async def run_mapping_approve(
                     stage_label,
                     progress=55,
                     status="error",
-                    detail=str(exc),
+                    detail="Contract build failed",
                     prompt_version=PROMPT_VERSION_4,
                 )
                 yield emit(
                     "error",
                     stage=stage_key,
                     label=stage_label,
-                    detail=str(exc),
+                    detail="Contract build failed",
                     template_id=template_id,
                     prompt_version=PROMPT_VERSION_4,
                 )
@@ -382,9 +383,9 @@ async def run_mapping_approve(
                         "correlation_id": correlation_id,
                     },
                 )
-                generator_stage_summary = {"stage": stage_key, "status": "error", "detail": str(exc)}
+                generator_stage_summary = {"stage": stage_key, "status": "error", "detail": "Generator assets failed"}
                 generator_artifacts_urls = {}
-                yield finish_stage(stage_key, stage_label, progress=90, status="error", detail=str(exc))
+                yield finish_stage(stage_key, stage_label, progress=90, status="error", detail="Generator assets failed")
             except Exception as exc:
                 log_stage(stage_label, "error", stage_started)
                 logger.exception(
@@ -395,9 +396,9 @@ async def run_mapping_approve(
                         "correlation_id": correlation_id,
                     },
                 )
-                generator_stage_summary = {"stage": stage_key, "status": "error", "detail": str(exc)}
+                generator_stage_summary = {"stage": stage_key, "status": "error", "detail": "Generator assets failed"}
                 generator_artifacts_urls = {}
-                yield finish_stage(stage_key, stage_label, progress=90, status="error", detail=str(exc))
+                yield finish_stage(stage_key, stage_label, progress=90, status="error", detail="Generator assets failed")
 
             stage_key = "mapping.thumbnail"
             stage_label = "Capturing template thumbnail"
@@ -406,7 +407,8 @@ async def run_mapping_approve(
             try:
                 yield start_stage(stage_key, stage_label, progress=95)
                 thumb_path = final_html_path.parent / "report_final.png"
-                asyncio.run(render_html_fn(final_html_path, thumb_path))
+                with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+                    pool.submit(asyncio.run, render_html_fn(final_html_path, thumb_path)).result()
                 thumbnail_url = artifact_url(thumb_path)
                 write_artifact_manifest(
                     template_dir_path,

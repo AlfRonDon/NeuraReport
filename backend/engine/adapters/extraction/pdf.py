@@ -95,10 +95,12 @@ class PDFExtractor(BaseExtractor):
         try:
             import fitz  # PyMuPDF
             doc = fitz.open(str(path))
-            page_count = len(doc)
-            metadata = dict(doc.metadata) if doc.metadata else {}
-            doc.close()
-            return page_count, metadata
+            try:
+                page_count = len(doc)
+                metadata = dict(doc.metadata) if doc.metadata else {}
+                return page_count, metadata
+            finally:
+                doc.close()
         except ImportError:
             pass
 

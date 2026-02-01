@@ -144,14 +144,14 @@ def generator_assets(template_id: str, payload: GeneratorAssetsPayload, request:
                     "generator_assets_v1_failed",
                     extra={"event": "generator_assets_v1_failed", "template_id": template_id, "correlation_id": correlation_id},
                 )
-                yield emit("error", stage="generator_assets_v1", detail=str(exc), template_id=template_id)
+                yield emit("error", stage="generator_assets_v1", detail="Generator assets failed", template_id=template_id)
                 return
             except Exception as exc:
                 logger.exception(
                     "generator_assets_v1_unexpected",
                     extra={"event": "generator_assets_v1_unexpected", "template_id": template_id, "correlation_id": correlation_id},
                 )
-                yield emit("error", stage="generator_assets_v1", detail=str(exc), template_id=template_id)
+                yield emit("error", stage="generator_assets_v1", detail="Generator assets failed", template_id=template_id)
                 return
 
             artifacts_urls = normalize_artifact_map(result.get("artifacts"))
