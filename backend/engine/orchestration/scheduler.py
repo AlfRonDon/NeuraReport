@@ -197,7 +197,8 @@ class Scheduler:
 
         except Exception as e:
             # Record failed trigger
-            schedule.record_run("failed", error=str(e))
+            logger.exception("Schedule trigger failed for %s", schedule.id)
+            schedule.record_run("failed", error="Schedule trigger failed")
             self._repo.save(schedule)
             raise
 

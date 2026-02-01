@@ -126,14 +126,28 @@ export function useEditorDraft(templateId, { autoSaveInterval = 10000, enabled =
     [enabled, autoSaveInterval, saveDraft]
   )
 
-  // Cleanup timer on unmount
+  // Flush pending draft and cleanup timer on unmount
   useEffect(() => {
     return () => {
       if (autoSaveTimerRef.current) {
         clearTimeout(autoSaveTimerRef.current)
       }
+      // Flush any pending content before unmount
+      if (pendingContentRef.current) {
+        try {
+          const draft = {
+            html: pendingContentRef.current.html,
+            instructions: pendingContentRef.current.instructions,
+            savedAt: Date.now(),
+            templateId,
+          }
+          localStorage.setItem(storageKey, JSON.stringify(draft))
+        } catch {
+          // Best-effort flush on unmount
+        }
+      }
     }
-  }, [])
+  }, [templateId, storageKey])
 
   // Clear draft when it's been applied (i.e., saved to server)
   const clearDraftAfterSave = useCallback(() => {

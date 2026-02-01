@@ -7,7 +7,7 @@ from __future__ import annotations
 import base64
 import re
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -562,7 +562,7 @@ class ResumeParser:
     ) -> Optional[float]:
         """Calculate total years of experience."""
         total_months = 0
-        current_year = datetime.now().year
+        current_year = datetime.now(timezone.utc).year
 
         for exp in experience:
             start_year = None

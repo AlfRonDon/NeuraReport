@@ -60,9 +60,9 @@ def validate_regex_pattern(pattern: str) -> tuple[bool, str]:
         # Test with a simple string to catch obvious issues
         compiled.search("test" * 10)
     except re.error as e:
-        return False, f"Invalid regex: {str(e)}"
+        return False, "Invalid regex pattern"
     except Exception as e:
-        return False, f"Regex error: {str(e)}"
+        return False, "Regex validation error"
 
     return True, ""
 

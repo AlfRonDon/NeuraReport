@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import json
 import logging
+import threading
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -116,6 +117,7 @@ class SpreadsheetService:
         base_root = get_settings().uploads_root
         self._storage_path = storage_path or (base_root / "spreadsheets")
         self._storage_path.mkdir(parents=True, exist_ok=True)
+        self._lock = threading.Lock()
 
     def create(
         self,
@@ -163,18 +165,19 @@ class SpreadsheetService:
         metadata: Optional[dict] = None,
     ) -> Optional[Spreadsheet]:
         """Update spreadsheet metadata."""
-        spreadsheet = self.get(spreadsheet_id)
-        if not spreadsheet:
-            return None
+        with self._lock:
+            spreadsheet = self.get(spreadsheet_id)
+            if not spreadsheet:
+                return None
 
-        if name:
-            spreadsheet.name = name
-        if metadata:
-            spreadsheet.metadata.update(metadata)
+            if name:
+                spreadsheet.name = name
+            if metadata:
+                spreadsheet.metadata.update(metadata)
 
-        spreadsheet.updated_at = datetime.now(timezone.utc).isoformat()
-        self._save_spreadsheet(spreadsheet)
-        return spreadsheet
+            spreadsheet.updated_at = datetime.now(timezone.utc).isoformat()
+            self._save_spreadsheet(spreadsheet)
+            return spreadsheet
 
     def delete(self, spreadsheet_id: str) -> bool:
         """Delete a spreadsheet."""
@@ -192,31 +195,32 @@ class SpreadsheetService:
         updates: list[dict[str, Any]],
     ) -> Optional[Spreadsheet]:
         """Update cell values. updates = [{"row": 0, "col": 0, "value": "Hello"}]"""
-        spreadsheet = self.get(spreadsheet_id)
-        if not spreadsheet:
-            return None
+        with self._lock:
+            spreadsheet = self.get(spreadsheet_id)
+            if not spreadsheet:
+                return None
 
-        if sheet_index < 0 or sheet_index >= len(spreadsheet.sheets):
-            return None
+            if sheet_index < 0 or sheet_index >= len(spreadsheet.sheets):
+                return None
 
-        sheet = spreadsheet.sheets[sheet_index]
+            sheet = spreadsheet.sheets[sheet_index]
 
-        for update in updates:
-            row = update.get("row", 0)
-            col = update.get("col", 0)
-            value = update.get("value", "")
+            for update in updates:
+                row = update.get("row", 0)
+                col = update.get("col", 0)
+                value = update.get("value", "")
 
-            # Expand data array if needed
-            while row >= len(sheet.data):
-                sheet.data.append(["" for _ in range(len(sheet.data[0]) if sheet.data else 26)])
-            while col >= len(sheet.data[row]):
-                sheet.data[row].append("")
+                # Expand data array if needed
+                while row >= len(sheet.data):
+                    sheet.data.append(["" for _ in range(len(sheet.data[0]) if sheet.data else 26)])
+                while col >= len(sheet.data[row]):
+                    sheet.data[row].append("")
 
-            sheet.data[row][col] = value
+                sheet.data[row][col] = value
 
-        spreadsheet.updated_at = datetime.now(timezone.utc).isoformat()
-        self._save_spreadsheet(spreadsheet)
-        return spreadsheet
+            spreadsheet.updated_at = datetime.now(timezone.utc).isoformat()
+            self._save_spreadsheet(spreadsheet)
+            return spreadsheet
 
     def add_sheet(
         self,
@@ -224,46 +228,48 @@ class SpreadsheetService:
         name: Optional[str] = None,
     ) -> Optional[Sheet]:
         """Add a new sheet to the spreadsheet."""
-        spreadsheet = self.get(spreadsheet_id)
-        if not spreadsheet:
-            return None
+        with self._lock:
+            spreadsheet = self.get(spreadsheet_id)
+            if not spreadsheet:
+                return None
 
-        new_index = len(spreadsheet.sheets)
-        sheet_name = name or f"Sheet{new_index + 1}"
+            new_index = len(spreadsheet.sheets)
+            sheet_name = name or f"Sheet{new_index + 1}"
 
-        sheet = Sheet(
-            id=str(uuid.uuid4()),
-            name=sheet_name,
-            index=new_index,
-            data=[["" for _ in range(26)] for _ in range(100)],
-        )
+            sheet = Sheet(
+                id=str(uuid.uuid4()),
+                name=sheet_name,
+                index=new_index,
+                data=[["" for _ in range(26)] for _ in range(100)],
+            )
 
-        spreadsheet.sheets.append(sheet)
-        spreadsheet.updated_at = datetime.now(timezone.utc).isoformat()
-        self._save_spreadsheet(spreadsheet)
+            spreadsheet.sheets.append(sheet)
+            spreadsheet.updated_at = datetime.now(timezone.utc).isoformat()
+            self._save_spreadsheet(spreadsheet)
 
-        logger.info(f"Added sheet {sheet_name} to spreadsheet {spreadsheet_id}")
-        return sheet
+            logger.info(f"Added sheet {sheet_name} to spreadsheet {spreadsheet_id}")
+            return sheet
 
     def delete_sheet(self, spreadsheet_id: str, sheet_id: str) -> bool:
         """Delete a sheet from the spreadsheet."""
-        spreadsheet = self.get(spreadsheet_id)
-        if not spreadsheet:
-            return False
+        with self._lock:
+            spreadsheet = self.get(spreadsheet_id)
+            if not spreadsheet:
+                return False
 
-        # Don't delete last sheet
-        if len(spreadsheet.sheets) <= 1:
-            return False
+            # Don't delete last sheet
+            if len(spreadsheet.sheets) <= 1:
+                return False
 
-        spreadsheet.sheets = [s for s in spreadsheet.sheets if s.id != sheet_id]
+            spreadsheet.sheets = [s for s in spreadsheet.sheets if s.id != sheet_id]
 
-        # Reindex sheets
-        for i, sheet in enumerate(spreadsheet.sheets):
-            sheet.index = i
+            # Reindex sheets
+            for i, sheet in enumerate(spreadsheet.sheets):
+                sheet.index = i
 
-        spreadsheet.updated_at = datetime.now(timezone.utc).isoformat()
-        self._save_spreadsheet(spreadsheet)
-        return True
+            spreadsheet.updated_at = datetime.now(timezone.utc).isoformat()
+            self._save_spreadsheet(spreadsheet)
+            return True
 
     def rename_sheet(
         self,
@@ -272,18 +278,19 @@ class SpreadsheetService:
         new_name: str,
     ) -> bool:
         """Rename a sheet."""
-        spreadsheet = self.get(spreadsheet_id)
-        if not spreadsheet:
+        with self._lock:
+            spreadsheet = self.get(spreadsheet_id)
+            if not spreadsheet:
+                return False
+
+            for sheet in spreadsheet.sheets:
+                if sheet.id == sheet_id:
+                    sheet.name = new_name
+                    spreadsheet.updated_at = datetime.now(timezone.utc).isoformat()
+                    self._save_spreadsheet(spreadsheet)
+                    return True
+
             return False
-
-        for sheet in spreadsheet.sheets:
-            if sheet.id == sheet_id:
-                sheet.name = new_name
-                spreadsheet.updated_at = datetime.now(timezone.utc).isoformat()
-                self._save_spreadsheet(spreadsheet)
-                return True
-
-        return False
 
     def set_conditional_format(
         self,
@@ -292,28 +299,29 @@ class SpreadsheetService:
         conditional_format: ConditionalFormat,
     ) -> bool:
         """Add or update a conditional format rule."""
-        spreadsheet = self.get(spreadsheet_id)
-        if not spreadsheet:
+        with self._lock:
+            spreadsheet = self.get(spreadsheet_id)
+            if not spreadsheet:
+                return False
+
+            for sheet in spreadsheet.sheets:
+                if sheet.id == sheet_id:
+                    # Update existing or add new
+                    updated = False
+                    for i, cf in enumerate(sheet.conditional_formats):
+                        if cf.id == conditional_format.id:
+                            sheet.conditional_formats[i] = conditional_format
+                            updated = True
+                            break
+
+                    if not updated:
+                        sheet.conditional_formats.append(conditional_format)
+
+                    spreadsheet.updated_at = datetime.now(timezone.utc).isoformat()
+                    self._save_spreadsheet(spreadsheet)
+                    return True
+
             return False
-
-        for sheet in spreadsheet.sheets:
-            if sheet.id == sheet_id:
-                # Update existing or add new
-                updated = False
-                for i, cf in enumerate(sheet.conditional_formats):
-                    if cf.id == conditional_format.id:
-                        sheet.conditional_formats[i] = conditional_format
-                        updated = True
-                        break
-
-                if not updated:
-                    sheet.conditional_formats.append(conditional_format)
-
-                spreadsheet.updated_at = datetime.now(timezone.utc).isoformat()
-                self._save_spreadsheet(spreadsheet)
-                return True
-
-        return False
 
     def set_data_validation(
         self,
@@ -322,28 +330,29 @@ class SpreadsheetService:
         validation: DataValidation,
     ) -> bool:
         """Add or update a data validation rule."""
-        spreadsheet = self.get(spreadsheet_id)
-        if not spreadsheet:
+        with self._lock:
+            spreadsheet = self.get(spreadsheet_id)
+            if not spreadsheet:
+                return False
+
+            for sheet in spreadsheet.sheets:
+                if sheet.id == sheet_id:
+                    # Update existing or add new
+                    updated = False
+                    for i, dv in enumerate(sheet.data_validations):
+                        if dv.id == validation.id:
+                            sheet.data_validations[i] = validation
+                            updated = True
+                            break
+
+                    if not updated:
+                        sheet.data_validations.append(validation)
+
+                    spreadsheet.updated_at = datetime.now(timezone.utc).isoformat()
+                    self._save_spreadsheet(spreadsheet)
+                    return True
+
             return False
-
-        for sheet in spreadsheet.sheets:
-            if sheet.id == sheet_id:
-                # Update existing or add new
-                updated = False
-                for i, dv in enumerate(sheet.data_validations):
-                    if dv.id == validation.id:
-                        sheet.data_validations[i] = validation
-                        updated = True
-                        break
-
-                if not updated:
-                    sheet.data_validations.append(validation)
-
-                spreadsheet.updated_at = datetime.now(timezone.utc).isoformat()
-                self._save_spreadsheet(spreadsheet)
-                return True
-
-        return False
 
     def freeze_panes(
         self,
@@ -353,19 +362,20 @@ class SpreadsheetService:
         cols: int = 0,
     ) -> bool:
         """Set frozen rows and columns for a sheet."""
-        spreadsheet = self.get(spreadsheet_id)
-        if not spreadsheet:
+        with self._lock:
+            spreadsheet = self.get(spreadsheet_id)
+            if not spreadsheet:
+                return False
+
+            for sheet in spreadsheet.sheets:
+                if sheet.id == sheet_id:
+                    sheet.frozen_rows = rows
+                    sheet.frozen_cols = cols
+                    spreadsheet.updated_at = datetime.now(timezone.utc).isoformat()
+                    self._save_spreadsheet(spreadsheet)
+                    return True
+
             return False
-
-        for sheet in spreadsheet.sheets:
-            if sheet.id == sheet_id:
-                sheet.frozen_rows = rows
-                sheet.frozen_cols = cols
-                spreadsheet.updated_at = datetime.now(timezone.utc).isoformat()
-                self._save_spreadsheet(spreadsheet)
-                return True
-
-        return False
 
     def import_csv(
         self,

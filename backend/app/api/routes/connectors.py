@@ -226,7 +226,7 @@ async def test_connection(
         return TestConnectionResponse(
             success=False,
             latency_ms=None,
-            error=f"Connection test failed: {type(e).__name__}",
+            error="Connection test failed",
             details=None,
         )
 
@@ -378,7 +378,7 @@ async def check_connection_health(
         return TestConnectionResponse(
             success=False,
             latency_ms=None,
-            error=f"Health check failed: {type(e).__name__}",
+            error="Health check failed",
             details=None,
         )
 

@@ -1,7 +1,10 @@
 """API routes for Executive Summary Generation."""
 from __future__ import annotations
 
+import logging
 from typing import List, Optional
+
+logger = logging.getLogger(__name__)
 from pydantic import BaseModel, Field
 from fastapi import APIRouter, Depends, Query, Request
 
@@ -74,8 +77,9 @@ async def generate_summary(
             if _is_cancelled(job_id):
                 state_access.record_job_step(job_id, "generate", status="cancelled", error="Cancelled by user")
                 return
-            state_access.record_job_step(job_id, "generate", status="failed", error=str(exc))
-            state_access.record_job_completion(job_id, status="failed", error=str(exc))
+            logger.exception("summary_job_failed", extra={"job_id": job_id})
+            state_access.record_job_step(job_id, "generate", status="failed", error="Summary generation failed")
+            state_access.record_job_completion(job_id, status="failed", error="Summary generation failed")
 
     job = await enqueue_background_job(
         job_type="summary_generate",
@@ -119,8 +123,9 @@ async def get_report_summary(
             if _is_cancelled(job_id):
                 state_access.record_job_step(job_id, "generate", status="cancelled", error="Cancelled by user")
                 return
-            state_access.record_job_step(job_id, "generate", status="failed", error=str(exc))
-            state_access.record_job_completion(job_id, status="failed", error=str(exc))
+            logger.exception("summary_job_failed", extra={"job_id": job_id})
+            state_access.record_job_step(job_id, "generate", status="failed", error="Summary generation failed")
+            state_access.record_job_completion(job_id, status="failed", error="Summary generation failed")
 
     job = await enqueue_background_job(
         job_type="summary_report",

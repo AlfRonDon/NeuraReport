@@ -4,8 +4,11 @@ Connector for Azure Blob Storage using azure-storage-blob.
 """
 from __future__ import annotations
 
+import logging
 import time
 from typing import Any, Optional
+
+logger = logging.getLogger(__name__)
 
 from backend.app.services.connectors.base import (
     AuthType,
@@ -68,7 +71,7 @@ class AzureBlobConnector(ConnectorBase):
             return True
         except Exception as e:
             self._connected = False
-            raise ConnectionError(f"Failed to connect to Azure Blob Storage: {e}")
+            raise ConnectionError("Failed to connect to Azure Blob Storage") from e
 
     async def disconnect(self) -> None:
         """Close the connection."""
@@ -99,7 +102,8 @@ class AzureBlobConnector(ConnectorBase):
                 details=container_info,
             )
         except Exception as e:
-            return ConnectionTest(success=False, error=str(e))
+            logger.warning("connection_test_failed", exc_info=True)
+            return ConnectionTest(success=False, error="Connection test failed")
 
     async def list_files(
         self,
@@ -206,6 +210,7 @@ class AzureBlobConnector(ConnectorBase):
             blob_client.delete_blob()
             return True
         except Exception:
+            logger.warning("delete_file_failed", exc_info=True)
             return False
 
     async def get_sas_url(

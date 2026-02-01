@@ -89,6 +89,8 @@ export function BackgroundOperationsProvider({ children }) {
 
   // Registered background operations
   const [operations, setOperations] = useState([])
+  const operationsRef = useRef(operations)
+  operationsRef.current = operations
 
   // Notification queue
   const [notification, setNotification] = useState(null)
@@ -208,7 +210,7 @@ export function BackgroundOperationsProvider({ children }) {
    * Cancel an operation
    */
   const cancelOperation = useCallback((operationId) => {
-    const operation = operations.find((op) => op.id === operationId)
+    const operation = operationsRef.current.find((op) => op.id === operationId)
 
     if (!operation) return false
     if (!operation.cancelable) return false
@@ -231,7 +233,7 @@ export function BackgroundOperationsProvider({ children }) {
     })
 
     return true
-  }, [operations, updateOperation])
+  }, [updateOperation])
 
   /**
    * Update progress

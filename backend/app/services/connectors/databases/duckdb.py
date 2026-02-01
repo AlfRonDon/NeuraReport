@@ -216,12 +216,13 @@ class DuckDBConnector(ConnectorBase):
                 truncated=len(rows) >= limit,
             )
         except Exception as e:
+            logger.exception("query_execution_failed")
             return QueryResult(
                 columns=[],
                 rows=[],
                 row_count=0,
                 execution_time_ms=(time.time() - start_time) * 1000,
-                error=str(e),
+                error="Query execution failed",
             )
 
     async def load_parquet(self, file_path: str, table_name: str) -> bool:

@@ -367,8 +367,9 @@ async def recommend_templates_route(
                 result={"recommendations": result_data},
             )
         except Exception as exc:
-            state_access.record_job_step(job_id, "recommend", status="failed", error=str(exc))
-            state_access.record_job_completion(job_id, status="failed", error=str(exc))
+            logger.exception("template_recommend_job_failed", extra={"job_id": job_id})
+            state_access.record_job_step(job_id, "recommend", status="failed", error="Template recommendation failed")
+            state_access.record_job_completion(job_id, status="failed", error="Template recommendation failed")
 
     job = await enqueue_background_job(
         job_type="recommend_templates",

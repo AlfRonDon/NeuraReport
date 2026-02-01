@@ -335,7 +335,8 @@ class TemplateService:
         except Exception as exc:
             with contextlib.suppress(Exception):
                 tmp_zip_path.unlink(missing_ok=True)
-            raise HTTPException(status_code=500, detail=f"Failed to create export zip: {exc}")
+            self.logger.exception("template_export_zip_failed")
+            raise HTTPException(status_code=500, detail="Failed to create export zip")
 
         self.logger.info(
             "template_exported",
@@ -440,7 +441,8 @@ class TemplateService:
             with contextlib.suppress(Exception):
                 if target_dir.exists():
                     shutil.rmtree(target_dir)
-            raise HTTPException(status_code=500, detail=f"Failed to duplicate template: {exc}")
+            self.logger.exception("template_duplicate_failed")
+            raise HTTPException(status_code=500, detail="Failed to duplicate template")
 
     async def update_tags(
         self,

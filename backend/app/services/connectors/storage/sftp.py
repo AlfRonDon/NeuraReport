@@ -4,9 +4,13 @@ Connector for SFTP/FTP servers using paramiko.
 """
 from __future__ import annotations
 
+import logging
+import posixpath
 import stat
 import time
 from typing import Any, Optional
+
+logger = logging.getLogger(__name__)
 
 from backend.app.services.connectors.base import (
     AuthType,
@@ -67,7 +71,7 @@ class SFTPConnector(ConnectorBase):
             return True
         except Exception as e:
             self._connected = False
-            raise ConnectionError(f"Failed to connect to SFTP server: {e}")
+            raise ConnectionError("Failed to connect to SFTP server") from e
 
     async def disconnect(self) -> None:
         """Close the connection."""
@@ -96,7 +100,8 @@ class SFTPConnector(ConnectorBase):
                 details={"cwd": self._sftp.getcwd() or "/"},
             )
         except Exception as e:
-            return ConnectionTest(success=False, error=str(e))
+            logger.warning("connection_test_failed", exc_info=True)
+            return ConnectionTest(success=False, error="Connection test failed")
 
     async def list_files(
         self,
@@ -140,6 +145,10 @@ class SFTPConnector(ConnectorBase):
         destination: Optional[str] = None,
     ) -> bytes:
         """Download a file from SFTP."""
+        normalized = posixpath.normpath(file_id)
+        if '..' in normalized.split('/'):
+            raise ValueError("Path traversal not allowed")
+
         if not self._connected:
             await self.connect()
 
@@ -162,6 +171,10 @@ class SFTPConnector(ConnectorBase):
         mime_type: Optional[str] = None,
     ) -> FileInfo:
         """Upload a file to SFTP."""
+        normalized = posixpath.normpath(f"{path}/{filename}" if path else filename)
+        if '..' in normalized.split('/'):
+            raise ValueError("Path traversal not allowed")
+
         if not self._connected:
             await self.connect()
 
@@ -190,6 +203,10 @@ class SFTPConnector(ConnectorBase):
 
     async def delete_file(self, file_id: str) -> bool:
         """Delete a file from SFTP."""
+        normalized = posixpath.normpath(file_id)
+        if '..' in normalized.split('/'):
+            raise ValueError("Path traversal not allowed")
+
         if not self._connected:
             await self.connect()
 
@@ -197,6 +214,7 @@ class SFTPConnector(ConnectorBase):
             self._sftp.remove(file_id)
             return True
         except Exception:
+            logger.warning("delete_file_failed", exc_info=True)
             return False
 
     async def mkdir(self, path: str) -> bool:

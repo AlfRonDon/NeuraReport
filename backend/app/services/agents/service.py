@@ -4,6 +4,7 @@ Specialized AI agents for research, analysis, email drafting, and more.
 """
 from __future__ import annotations
 
+import asyncio
 import logging
 import hashlib
 from abc import ABC, abstractmethod
@@ -295,10 +296,10 @@ Limit to {max_sections} main sections."""
             )
 
         except Exception as e:
-            logger.error(f"Research agent failed: {e}")
+            logger.exception("agent_task_failed")
             return ResearchReport(
                 topic=topic,
-                summary=f"Research failed: {str(e)}",
+                summary="Research failed due to an internal error",
             )
 
 
@@ -463,10 +464,10 @@ Provide your response as JSON:
             )
 
         except Exception as e:
-            logger.error(f"Data analyst agent failed: {e}")
+            logger.exception("agent_task_failed")
             return DataAnalysisResult(
                 query=question,
-                answer=f"Analysis failed: {str(e)}",
+                answer="Analysis failed due to an internal error",
             )
 
 
@@ -554,10 +555,10 @@ Provide your response as JSON:
             )
 
         except Exception as e:
-            logger.error(f"Email draft agent failed: {e}")
+            logger.exception("agent_task_failed")
             return EmailDraft(
                 subject="",
-                body=f"Draft failed: {str(e)}",
+                body="Draft failed due to an internal error",
                 tone=tone,
             )
 
@@ -639,10 +640,10 @@ Return ONLY the transformed content, no explanations."""
                 adaptations.append(f"Converted to {target_format}")
 
             except Exception as e:
-                logger.error(f"Failed to repurpose to {target_format}: {e}")
+                logger.exception("agent_task_failed")
                 outputs.append({
                     "format": target_format,
-                    "content": f"Conversion failed: {str(e)}",
+                    "content": "Conversion failed due to an internal error",
                     "metadata": {"error": True}
                 })
 
@@ -732,11 +733,11 @@ Provide your response as JSON:
             )
 
         except Exception as e:
-            logger.error(f"Proofreading agent failed: {e}")
+            logger.exception("agent_task_failed")
             return ProofreadingResult(
                 original_text=text,
                 corrected_text=text,
-                issues_found=[{"type": "error", "original": "", "correction": "", "explanation": str(e)}],
+                issues_found=[{"type": "error", "original": "", "correction": "", "explanation": "Review failed due to an internal error"}],
             )
 
 
@@ -759,9 +760,13 @@ class AgentService:
             AgentType.PROOFREADING: ProofreadingAgent(),
         }
         self._tasks: Dict[str, AgentTask] = {}
+        self._tasks_lock = asyncio.Lock()
 
     def _cleanup_old_tasks(self) -> None:
-        """Remove old completed tasks to prevent memory leaks."""
+        """Remove old completed tasks to prevent memory leaks.
+
+        Must be called while holding self._tasks_lock.
+        """
         now = datetime.now(timezone.utc)
         completed_tasks = [
             (task_id, task) for task_id, task in self._tasks.items()
@@ -784,7 +789,7 @@ class AgentService:
             # Sort by completion time, oldest first
             sorted_tasks = sorted(
                 completed_tasks,
-                key=lambda x: x[1].completed_at or datetime.min
+                key=lambda x: x[1].completed_at or datetime.min.replace(tzinfo=timezone.utc)
             )
             # Remove oldest tasks until we're under the limit
             for task_id, _ in sorted_tasks[:len(completed_tasks) - self.MAX_COMPLETED_TASKS]:
@@ -805,18 +810,19 @@ class AgentService:
         Returns:
             AgentTask with results
         """
-        # Clean up old tasks before adding new ones
-        self._cleanup_old_tasks()
+        async with self._tasks_lock:
+            # Clean up old tasks before adding new ones
+            self._cleanup_old_tasks()
 
-        task_id = hashlib.sha256(f"{agent_type}:{datetime.now(timezone.utc).isoformat()}".encode()).hexdigest()[:12]
+            task_id = hashlib.sha256(f"{agent_type}:{datetime.now(timezone.utc).isoformat()}".encode()).hexdigest()[:12]
 
-        task = AgentTask(
-            task_id=task_id,
-            agent_type=agent_type,
-            input=kwargs,
-            status=AgentStatus.RUNNING,
-        )
-        self._tasks[task_id] = task
+            task = AgentTask(
+                task_id=task_id,
+                agent_type=agent_type,
+                input=kwargs,
+                status=AgentStatus.RUNNING,
+            )
+            self._tasks[task_id] = task
 
         try:
             agent = self._agents.get(agent_type)
@@ -824,13 +830,15 @@ class AgentService:
                 raise ValueError(f"Unknown agent type: {agent_type}")
 
             result = await agent.execute(**kwargs)
-            task.result = result.model_dump() if hasattr(result, "model_dump") else result
-            task.status = AgentStatus.COMPLETED
+            async with self._tasks_lock:
+                task.result = result.model_dump() if hasattr(result, "model_dump") else result
+                task.status = AgentStatus.COMPLETED
 
         except Exception as e:
-            task.status = AgentStatus.FAILED
-            task.error = str(e)
-            logger.error(f"Agent {agent_type} failed: {e}")
+            logger.exception("agent_task_failed")
+            async with self._tasks_lock:
+                task.status = AgentStatus.FAILED
+                task.error = "Task failed due to an internal error"
 
         task.completed_at = datetime.now(timezone.utc)
         return task
@@ -839,21 +847,23 @@ class AgentService:
         """Get task by ID."""
         return self._tasks.get(task_id)
 
-    def list_tasks(self, agent_type: Optional[AgentType] = None, limit: int = 50) -> List[AgentTask]:
+    async def list_tasks(self, agent_type: Optional[AgentType] = None, limit: int = 50) -> List[AgentTask]:
         """List recent tasks, optionally filtered by agent type."""
-        tasks = list(self._tasks.values())
+        async with self._tasks_lock:
+            tasks = list(self._tasks.values())
         if agent_type:
             tasks = [t for t in tasks if t.agent_type == agent_type]
         return sorted(tasks, key=lambda t: t.created_at, reverse=True)[:limit]
 
-    def clear_completed_tasks(self) -> int:
+    async def clear_completed_tasks(self) -> int:
         """Clear all completed and failed tasks. Returns count of cleared tasks."""
-        to_remove = [
-            task_id for task_id, task in self._tasks.items()
-            if task.status in (AgentStatus.COMPLETED, AgentStatus.FAILED)
-        ]
-        for task_id in to_remove:
-            del self._tasks[task_id]
+        async with self._tasks_lock:
+            to_remove = [
+                task_id for task_id, task in self._tasks.items()
+                if task.status in (AgentStatus.COMPLETED, AgentStatus.FAILED)
+            ]
+            for task_id in to_remove:
+                del self._tasks[task_id]
         return len(to_remove)
 
 

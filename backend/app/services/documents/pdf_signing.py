@@ -119,10 +119,10 @@ class PDFSigningService:
             }
 
         except Exception as e:
-            logger.error(f"PDF signing failed: {e}")
+            logger.exception("PDF signing failed")
             return {
                 "success": False,
-                "error": str(e),
+                "error": "PDF signing failed",
             }
 
     def _add_basic_signature(
@@ -188,9 +188,10 @@ class PDFSigningService:
             }
 
         except Exception as e:
+            logger.exception("Signature verification failed")
             return {
                 "valid": False,
-                "error": str(e),
+                "error": "Signature verification failed",
             }
 
     def register_certificate(

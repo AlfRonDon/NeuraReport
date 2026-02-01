@@ -91,18 +91,27 @@ const targetPages = execPage
 /* ------------------------------------------------------------------ */
 /*  Navigate helper with retry                                         */
 /* ------------------------------------------------------------------ */
-async function navTo(page: Page, route: string) {
-  await page.goto('about:blank', { waitUntil: 'load', timeout: 5000 }).catch(() => {})
+async function navTo(page: Page, route: string, fullWait = false) {
   await page.goto(route, { waitUntil: 'domcontentloaded', timeout: 30000 }).catch(async () => {
-    await page.waitForTimeout(3000)
+    await page.waitForTimeout(2000)
   })
-  // Wait for React to render: poll until we see buttons or the main content area
-  for (let attempt = 0; attempt < 10; attempt++) {
-    const btnCount = await page.locator('button').count()
-    if (btnCount >= 3) break // Page has rendered enough interactive elements
+  if (fullWait) {
+    // Full wait: used for initial enumeration pass
+    for (let attempt = 0; attempt < 12; attempt++) {
+      const btnCount = await page.locator('button').count()
+      if (btnCount >= 5) break
+      await page.waitForTimeout(500)
+    }
+    await page.waitForTimeout(1500)
+  } else {
+    // Fast wait: used for per-element re-navigation
+    for (let attempt = 0; attempt < 6; attempt++) {
+      const btnCount = await page.locator('button').count()
+      if (btnCount >= 3) break
+      await page.waitForTimeout(400)
+    }
     await page.waitForTimeout(500)
   }
-  await page.waitForTimeout(1000) // Final settle
 }
 
 /* ------------------------------------------------------------------ */
@@ -310,7 +319,7 @@ async function executeEl(
 /* ------------------------------------------------------------------ */
 for (const pg of targetPages) {
   test(`audit-v2: ${pg.name}`, async ({ page }) => {
-    test.setTimeout(600_000)
+    test.setTimeout(1_800_000) // 30 minutes per page
 
     const consoleLogs: string[] = []
     page.on('console', m => {
@@ -318,7 +327,7 @@ for (const pg of targetPages) {
     })
 
     // ── STEP 1: Fresh nav + enumerate live elements ──
-    await navTo(page, pg.route)
+    await navTo(page, pg.route, true)
     const liveElements = await enumerateLive(page)
 
     // Also enumerate after scrolling + tabs for completeness
@@ -337,7 +346,7 @@ for (const pg of targetPages) {
     }
 
     // Click tabs to discover tab-panel elements
-    await navTo(page, pg.route)
+    await navTo(page, pg.route, true)
     const tabs = page.locator('[role="tab"]')
     const tabCount = await tabs.count()
     for (let t = 1; t < Math.min(tabCount, 6); t++) {

@@ -464,8 +464,9 @@ class WorkflowService:
             result["status"] = ExecutionStatus.COMPLETED.value
 
         except Exception as e:
+            logger.error("Workflow node execution failed: %s", e, exc_info=True)
             result["status"] = ExecutionStatus.FAILED.value
-            result["error"] = str(e)
+            result["error"] = "Workflow node execution failed"
 
         finally:
             result["finished_at"] = _now()

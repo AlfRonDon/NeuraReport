@@ -338,8 +338,8 @@ class FolderWatcherService:
                     path.unlink()
 
             except Exception as e:
-                event.error = str(e)
-                self._stats[watcher_id]["errors"].append(f"{path.name}: {e}")
+                event.error = "File import failed"
+                self._stats[watcher_id]["errors"].append(f"{path.name}: import failed")
                 logger.error(f"Failed to import {file_path}: {e}")
 
         self._stats[watcher_id]["last_event"] = datetime.now(timezone.utc)

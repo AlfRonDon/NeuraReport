@@ -4,8 +4,11 @@ Connector for Amazon S3 using boto3.
 """
 from __future__ import annotations
 
+import logging
 import time
 from typing import Any, Optional
+
+logger = logging.getLogger(__name__)
 
 from backend.app.services.connectors.base import (
     AuthType,
@@ -52,7 +55,7 @@ class AWSS3Connector(ConnectorBase):
             return True
         except Exception as e:
             self._connected = False
-            raise ConnectionError(f"Failed to connect to AWS S3: {e}")
+            raise ConnectionError("Failed to connect to AWS S3") from e
 
     async def disconnect(self) -> None:
         """Close the connection."""
@@ -77,7 +80,8 @@ class AWSS3Connector(ConnectorBase):
                 details={"bucket": self._bucket},
             )
         except Exception as e:
-            return ConnectionTest(success=False, error=str(e))
+            logger.warning("connection_test_failed", exc_info=True)
+            return ConnectionTest(success=False, error="Connection test failed")
 
     async def list_files(
         self,
@@ -182,6 +186,7 @@ class AWSS3Connector(ConnectorBase):
             self._client.delete_object(Bucket=self._bucket, Key=file_id)
             return True
         except Exception:
+            logger.warning("delete_file_failed", exc_info=True)
             return False
 
     async def get_presigned_url(

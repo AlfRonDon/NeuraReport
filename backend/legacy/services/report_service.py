@@ -1027,7 +1027,7 @@ def _run_report_job_sync(
         )
     except Exception as exc:
         error_str = str(exc)
-        job_error = error_str
+        job_error = "Report generation failed"
 
         # Check if error is retriable
         retriable = is_retriable_error(error_str)

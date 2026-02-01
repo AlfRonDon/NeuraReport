@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import re
 import time
 from pathlib import Path
@@ -9,6 +10,8 @@ from urllib.parse import urlparse
 from backend.app.repositories.connections.repository import ConnectionRepository
 from backend.app.schemas.connections import ConnectionResponse, ConnectionTestRequest, ConnectionUpsertRequest
 from backend.app.utils.errors import AppError
+
+logger = logging.getLogger(__name__)
 
 
 # Supported database types and their default ports
@@ -260,7 +263,8 @@ class ConnectionService:
                 cursor.fetchone()
                 return True, "Query executed successfully"
             except sqlite3.Error as e:
-                return False, f"SQLite error: {str(e)}"
+                logger.warning("sqlite_connection_test_failed", extra={"error": str(e)})
+                return False, "SQLite connection test failed"
             finally:
                 if conn:
                     conn.close()

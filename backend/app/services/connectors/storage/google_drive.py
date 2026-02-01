@@ -4,8 +4,11 @@ Connector for Google Drive using google-api-python-client.
 """
 from __future__ import annotations
 
+import logging
 import time
 from typing import Any, Optional
+
+logger = logging.getLogger(__name__)
 
 from backend.app.services.connectors.base import (
     AuthType,
@@ -80,7 +83,7 @@ class GoogleDriveConnector(ConnectorBase):
             return True
         except Exception as e:
             self._connected = False
-            raise ConnectionError(f"Failed to connect to Google Drive: {e}")
+            raise ConnectionError("Failed to connect to Google Drive") from e
 
     async def disconnect(self) -> None:
         """Close the connection."""
@@ -105,7 +108,8 @@ class GoogleDriveConnector(ConnectorBase):
                 details={"user": about.get("user", {}).get("emailAddress")},
             )
         except Exception as e:
-            return ConnectionTest(success=False, error=str(e))
+            logger.warning("connection_test_failed", exc_info=True)
+            return ConnectionTest(success=False, error="Connection test failed")
 
     async def list_files(
         self,
@@ -227,6 +231,7 @@ class GoogleDriveConnector(ConnectorBase):
             self._service.files().delete(fileId=file_id).execute()
             return True
         except Exception:
+            logger.warning("delete_file_failed", exc_info=True)
             return False
 
     def get_oauth_url(self, redirect_uri: str, state: str) -> Optional[str]:

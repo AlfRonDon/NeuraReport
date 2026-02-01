@@ -85,7 +85,8 @@ async def run_mapping_approve(
     except HTTPException:
         raise
     except Exception as exc:
-        raise _http_error(400, "db_invalid", f"Invalid database reference: {exc}")
+        logger.exception("approve_db_validation_failed")
+        raise _http_error(400, "db_invalid", "Invalid database reference")
 
     schema_ext = _load_schema_ext(template_dir_path) or {}
     auto_mapping_doc, _ = _load_mapping_step3(template_dir_path)

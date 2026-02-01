@@ -562,7 +562,14 @@ export async function verifyTemplate({
         reject(err)
       })
 
-      xhr.open('POST', url)
+      xhr.open('POST', toApiUrl(url))
+
+      // Apply intent + idempotency headers (XHR bypasses fetchWithIntent)
+      const xhrHeaders = applyIntentAndIdempotency({}, 'post')
+      Object.entries(xhrHeaders).forEach(([key, value]) => {
+        if (value) xhr.setRequestHeader(key, value)
+      })
+
       xhr.send(form)
     })
   }
@@ -1564,6 +1571,7 @@ export async function postGeneratorAssetsV1(templateId, body, { onProgress, sign
 // 5) Convenience for turning verify artifacts into absolute URLs
 
 export function normalizeArtifacts(artifacts) {
+  if (!artifacts) return null
 
   return {
 
@@ -2280,6 +2288,7 @@ export async function runReportAsJob({
 // C) Normalize a run responseG��s artifact URLs to absolute
 
 export function normalizeRunArtifacts(run) {
+  if (!run) return null
   return {
     ...run,
     html_url: withBase(run.html_url),

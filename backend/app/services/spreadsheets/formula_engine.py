@@ -7,7 +7,7 @@ from __future__ import annotations
 import logging
 import math
 import re
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Callable, Optional
 
 from pydantic import BaseModel
@@ -124,8 +124,8 @@ class FormulaEngine:
             "VALUE": lambda s: float(str(s).replace(",", "")),
 
             # Date/Time
-            "TODAY": lambda: datetime.now().strftime("%Y-%m-%d"),
-            "NOW": lambda: datetime.now().isoformat(),
+            "TODAY": lambda: datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+            "NOW": lambda: datetime.now(timezone.utc).isoformat(),
             "DATE": lambda y, m, d: datetime(int(y), int(m), int(d)).strftime("%Y-%m-%d"),
             "YEAR": lambda d: self._parse_date(d).year,
             "MONTH": lambda d: self._parse_date(d).month,
@@ -323,7 +323,7 @@ class FormulaEngine:
         if value is None:
             return ""
         if isinstance(value, float):
-            if value == int(value):
+            if math.isfinite(value) and value == int(value):
                 return str(int(value))
             return f"{value:.2f}"
         return str(value)

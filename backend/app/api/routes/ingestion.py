@@ -22,7 +22,51 @@ from backend.app.services.ingestion import (
 from backend.app.services.ingestion.folder_watcher import WatcherConfig
 from backend.app.services.ingestion.transcription import TranscriptionLanguage
 
+import ipaddress
+from urllib.parse import urlparse
+from pathlib import Path
+
 logger = logging.getLogger(__name__)
+
+
+def _validate_external_url(url: str) -> str:
+    """Validate URL to prevent SSRF. Raises HTTPException if URL is unsafe."""
+    try:
+        parsed = urlparse(url)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid URL")
+
+    if parsed.scheme not in ("http", "https"):
+        raise HTTPException(status_code=400, detail="Only HTTP/HTTPS URLs are allowed")
+
+    if not parsed.hostname:
+        raise HTTPException(status_code=400, detail="Invalid URL: no hostname")
+
+    hostname = parsed.hostname.lower()
+
+    # Block localhost and common internal hostnames
+    blocked_hosts = {"localhost", "127.0.0.1", "0.0.0.0", "::1", "[::1]", "metadata.google.internal"}
+    if hostname in blocked_hosts:
+        raise HTTPException(status_code=400, detail="URL points to a restricted address")
+
+    # Resolve hostname and check for private IPs
+    try:
+        import socket
+        resolved = socket.getaddrinfo(hostname, None)
+        for _, _, _, _, addr in resolved:
+            ip = ipaddress.ip_address(addr[0])
+            if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved:
+                raise HTTPException(status_code=400, detail="URL points to a restricted address")
+    except socket.gaierror:
+        raise HTTPException(status_code=400, detail="Could not resolve URL hostname")
+    except HTTPException:
+        raise
+    except Exception:
+        pass
+
+    return url
+
+
 router = APIRouter()
 
 # Maximum upload sizes
@@ -246,11 +290,14 @@ async def ingest_from_url(request: IngestUrlRequest):
         IngestionResult with document details
     """
     try:
+        _validate_external_url(request.url)
         result = await ingestion_service.ingest_from_url(
             url=request.url,
             filename=request.filename,
         )
         return result.model_dump()
+    except HTTPException:
+        raise
     except Exception as e:
         logger.exception("URL ingestion failed: %s", e)
         raise HTTPException(
@@ -295,6 +342,7 @@ async def clip_web_page(request: ClipUrlRequest):
         ClippedContent with extracted content
     """
     try:
+        _validate_external_url(request.url)
         clipped = await web_clipper_service.clip_url(
             url=request.url,
             include_images=request.include_images,
@@ -327,6 +375,7 @@ async def clip_selection(request: ClipSelectionRequest):
         ClippedContent with selected content
     """
     try:
+        _validate_external_url(request.url)
         clipped = await web_clipper_service.clip_selection(
             url=request.url,
             selected_html=request.selected_html,
@@ -360,6 +409,10 @@ async def create_folder_watcher(request: CreateWatcherRequest):
     """
     import hashlib
     from datetime import datetime, timezone
+
+    watcher_path = Path(request.path).resolve()
+    if not str(watcher_path).startswith(str(Path.cwd())):
+        raise HTTPException(status_code=400, detail="Watcher path must be within the application directory")
 
     watcher_id = hashlib.sha256(f"{request.path}:{datetime.now(timezone.utc).isoformat()}".encode()).hexdigest()[:12]
 

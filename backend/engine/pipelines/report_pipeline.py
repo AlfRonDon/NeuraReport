@@ -519,6 +519,7 @@ def _eval_total_expr(
                 if node.id not in allowed_funcs and node.id not in allowed_names:
                     raise ValueError(f"Unknown name '{node.id}' in totals expression")
         context = {**allowed_funcs, **column_values, **totals}
+        # SECURITY: eval is sandboxed via AST whitelist above (allowed_nodes + allowed_funcs) and __builtins__={}.
         return eval(compile(tree, "<totals_expr>", "eval"), {"__builtins__": {}}, context)
     except (ValueError, TypeError, ZeroDivisionError, SyntaxError) as exc:
         logger.warning(

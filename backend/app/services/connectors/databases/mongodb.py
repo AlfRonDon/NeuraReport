@@ -106,9 +106,10 @@ class MongoDBConnector(ConnectorBase):
                 details={"version": "MongoDB"},
             )
         except Exception as e:
+            logger.exception("MongoDB connection test failed")
             return ConnectionTest(
                 success=False,
-                error=str(e),
+                error="Connection test failed",
             )
 
     async def discover_schema(self) -> SchemaInfo:
@@ -235,12 +236,13 @@ class MongoDBConnector(ConnectorBase):
             )
         except Exception as e:
             execution_time = (time.perf_counter() - start) * 1000
+            logger.exception("MongoDB query execution failed")
             return QueryResult(
                 columns=[],
                 rows=[],
                 row_count=0,
                 execution_time_ms=execution_time,
-                error=str(e),
+                error="Query execution failed",
             )
 
     def _infer_type(self, value: Any) -> str:

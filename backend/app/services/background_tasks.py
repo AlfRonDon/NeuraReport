@@ -231,7 +231,7 @@ async def enqueue_background_job(
                     "background_task_failed",
                     extra={"event": "background_task_failed", "job_id": job.get("id"), "error": str(exc)},
                 )
-                state_store.record_job_completion(job["id"], status="failed", error=str(exc))
+                state_store.record_job_completion(job["id"], status="failed", error="Background task failed")
 
         loop = asyncio.get_running_loop()
         await loop.run_in_executor(_TASK_EXECUTOR, _run)

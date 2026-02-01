@@ -4,8 +4,11 @@ Connector for Elasticsearch using elasticsearch-py.
 """
 from __future__ import annotations
 
+import logging
 import time
 from typing import Any, Optional
+
+logger = logging.getLogger(__name__)
 
 from ..base import (
     AuthType,
@@ -77,7 +80,7 @@ class ElasticsearchConnector(ConnectorBase):
             return True
         except Exception as e:
             self._connected = False
-            raise ConnectionError(f"Failed to connect to Elasticsearch: {e}")
+            raise ConnectionError("Failed to connect to Elasticsearch") from e
 
     async def disconnect(self) -> None:
         """Close the connection."""
@@ -105,7 +108,8 @@ class ElasticsearchConnector(ConnectorBase):
                 },
             )
         except Exception as e:
-            return ConnectionTest(success=False, error=str(e))
+            logger.warning("connection_test_failed", exc_info=True)
+            return ConnectionTest(success=False, error="Connection test failed")
 
     async def discover_schema(self) -> SchemaInfo:
         """Discover indices (tables) and their mappings."""
@@ -162,6 +166,7 @@ class ElasticsearchConnector(ConnectorBase):
             import json
 
             # Parse query - expect JSON or simple index search
+            index = None
             if query.strip().startswith("{"):
                 query_body = json.loads(query)
             else:
@@ -179,7 +184,8 @@ class ElasticsearchConnector(ConnectorBase):
                     index = query.strip()
                     query_body = {"query": {"match_all": {}}}
 
-            index = parameters.get("index", "*") if parameters else "*"
+            if index is None:
+                index = parameters.get("index", "*") if parameters else "*"
 
             response = self._client.search(
                 index=index,
@@ -214,12 +220,13 @@ class ElasticsearchConnector(ConnectorBase):
                 truncated=len(rows) >= limit,
             )
         except Exception as e:
+            logger.exception("query_execution_failed")
             return QueryResult(
                 columns=[],
                 rows=[],
                 row_count=0,
                 execution_time_ms=(time.time() - start_time) * 1000,
-                error=str(e),
+                error="Query execution failed",
             )
 
     @classmethod

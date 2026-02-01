@@ -348,7 +348,7 @@ class EnhancedAnalysisOrchestrator:
             raise
         except Exception as e:
             logger.error(f"Analysis failed: {e}", exc_info=True)
-            yield self._event("error", str(e), 0, analysis_id, correlation_id)
+            yield self._event("error", "Analysis failed due to an internal error", 0, analysis_id, correlation_id)
 
     def _event(
         self,

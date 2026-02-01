@@ -74,7 +74,7 @@ export default function GeneratePage() {
       { reason: 'focus-template' },
       { replace: true, state: Object.keys(nextState).length ? nextState : null }
     )
-  }, [focusTemplateIdFromLocation, location.pathname, location.search, locationState, navigate])
+  }, [focusTemplateIdFromLocation, location.pathname, location.search, locationState, handleNavigate])
 
   useEffect(() => {
     if (!pendingFocusTemplate) return

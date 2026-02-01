@@ -337,8 +337,8 @@ class IngestionService:
                         )
                         results.append(result)
                     except Exception as e:
-                        errors.append({"file": name, "error": str(e)})
-                        logger.error(f"Failed to ingest {name} from archive: {e}")
+                        logger.error("Failed to ingest %s from archive: %s", name, e, exc_info=True)
+                        errors.append({"file": name, "error": "File ingestion failed"})
 
         except zipfile.BadZipFile as e:
             errors.append({"file": filename, "error": f"Invalid ZIP file: {e}"})

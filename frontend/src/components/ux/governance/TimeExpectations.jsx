@@ -149,6 +149,8 @@ export function TimeExpectationProvider({ children }) {
 
   // Active operations being tracked
   const [activeOperations, setActiveOperations] = useState(new Map())
+  const activeOpsRef = useRef(activeOperations)
+  activeOpsRef.current = activeOperations
 
   // Escalation dialog state
   const [escalationDialog, setEscalationDialog] = useState({
@@ -274,7 +276,7 @@ export function TimeExpectationProvider({ children }) {
    * Cancel an operation
    */
   const cancelOperation = useCallback((operationId) => {
-    const operation = activeOperations.get(operationId)
+    const operation = activeOpsRef.current.get(operationId)
     if (operation) {
       // Abort if controller exists
       if (operation.abortController) {
@@ -288,39 +290,39 @@ export function TimeExpectationProvider({ children }) {
 
       completeTracking(operationId, false)
     }
-  }, [activeOperations, completeTracking])
+  }, [completeTracking])
 
   /**
    * Retry an operation
    */
   const retryOperation = useCallback((operationId) => {
-    const operation = activeOperations.get(operationId)
+    const operation = activeOpsRef.current.get(operationId)
     if (operation && operation.onRetry) {
       completeTracking(operationId, false)
       operation.onRetry()
     }
-  }, [activeOperations, completeTracking])
+  }, [completeTracking])
 
   /**
    * Get elapsed time for an operation
    */
   const getElapsedTime = useCallback((operationId) => {
-    const operation = activeOperations.get(operationId)
+    const operation = activeOpsRef.current.get(operationId)
     if (!operation) return 0
     return Date.now() - operation.startTime
-  }, [activeOperations])
+  }, [])
 
   /**
    * Get progress percentage (based on expected time)
    */
   const getProgress = useCallback((operationId) => {
-    const operation = activeOperations.get(operationId)
+    const operation = activeOpsRef.current.get(operationId)
     if (!operation || !operation.timeConfig.expected) return null
 
     const elapsed = Date.now() - operation.startTime
     const expected = operation.timeConfig.expected
     return Math.min(100, (elapsed / expected) * 100)
-  }, [activeOperations])
+  }, [])
 
   // Close escalation dialog
   const closeEscalationDialog = useCallback(() => {

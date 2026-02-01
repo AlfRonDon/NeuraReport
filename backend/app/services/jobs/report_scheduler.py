@@ -310,7 +310,7 @@ class ReportScheduler:
                 finished_at=finished.isoformat(),
                 status="failed",
                 next_run_at=next_run,
-                error=str(exc),
+                error="Scheduled report generation failed",
                 artifacts=None,
             )
             logger.exception(
@@ -318,11 +318,10 @@ class ReportScheduler:
                 extra={
                     "event": "schedule_run_failed",
                     "schedule_id": schedule_id,
-                    "error": str(exc),
                 },
             )
             if job_tracker:
-                job_tracker.fail(str(exc))
+                job_tracker.fail("Scheduled report generation failed")
         else:
             finished = _now_utc()
             next_run = _next_run_datetime(schedule, finished).isoformat()

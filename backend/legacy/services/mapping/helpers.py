@@ -302,7 +302,8 @@ def execute_token_query(
             ]
             return rows, None
         except Exception as exc:
-            return [], str(exc)
+            logger.warning("token_query_execution_failed", extra={"error": str(exc)})
+            return [], "Query execution failed"
 
     where_clause = " AND ".join(conditions) if conditions else "1=1"
     rows, error = run_query(where_clause, params)

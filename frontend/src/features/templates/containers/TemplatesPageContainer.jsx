@@ -473,14 +473,14 @@ export default function TemplatesPage() {
 
   const handleAddTemplate = useCallback(() => {
     handleNavigate('/setup/wizard', 'Open setup wizard')
-  }, [navigate])
+  }, [handleNavigate])
 
   const handleEditTemplate = useCallback(() => {
     if (menuTemplate) {
       handleNavigate(`/templates/${menuTemplate.id}/edit`, 'Edit template', { templateId: menuTemplate.id })
     }
     handleCloseMenu()
-  }, [menuTemplate, navigate, handleCloseMenu])
+  }, [menuTemplate, handleNavigate, handleCloseMenu])
 
   const handleDeleteClick = useCallback(() => {
     setDeletingTemplate(menuTemplate)
@@ -610,7 +610,7 @@ export default function TemplatesPage() {
   const handleSelectSimilarTemplate = useCallback((template) => {
     setSimilarOpen(false)
     handleNavigate(`/reports?template=${template.id}`, 'Open reports', { templateId: template.id })
-  }, [navigate])
+  }, [handleNavigate])
 
   const handleMetadataSave = useCallback(async () => {
     if (!metadataTemplate) return
@@ -892,7 +892,7 @@ export default function TemplatesPage() {
 
   const handleRowClick = useCallback((row) => {
     handleNavigate(`/reports?template=${row.id}`, 'Open reports', { templateId: row.id })
-  }, [navigate])
+  }, [handleNavigate])
 
   const columns = useMemo(() => [
     {

@@ -440,7 +440,7 @@ class AgentService:
             logger.exception(f"Unexpected error executing task {task_id}")
             task = self._repo.fail_task(
                 task_id,
-                error_message=str(e),
+                error_message="Task execution failed due to an unexpected error",
                 error_code="UNEXPECTED_ERROR",
                 is_retryable=True,
             )

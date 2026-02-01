@@ -219,10 +219,10 @@ async def trigger_schedule(schedule_id: str, background_tasks: BackgroundTasks, 
                 finished_at=finished.isoformat(),
                 status="failed",
                 next_run_at=None,
-                error=str(exc),
+                error="Schedule execution failed",
                 artifacts=None,
             )
-            job_tracker.fail(str(exc))
+            job_tracker.fail("Scheduled job failed")
             logger.exception(
                 "manual_trigger_failed",
                 extra={

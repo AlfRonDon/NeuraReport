@@ -94,9 +94,10 @@ class MySQLConnector(ConnectorBase):
                 details={"version": "MySQL/MariaDB"},
             )
         except Exception as e:
+            logger.warning("connection_test_failed", exc_info=True)
             return ConnectionTest(
                 success=False,
-                error=str(e),
+                error="Connection test failed",
             )
 
     async def discover_schema(self) -> SchemaInfo:
@@ -207,13 +208,14 @@ class MySQLConnector(ConnectorBase):
                     truncated=len(data) >= limit,
                 )
         except Exception as e:
+            logger.exception("query_execution_failed")
             execution_time = (time.perf_counter() - start) * 1000
             return QueryResult(
                 columns=[],
                 rows=[],
                 row_count=0,
                 execution_time_ms=execution_time,
-                error=str(e),
+                error="Query execution failed",
             )
 
     @classmethod

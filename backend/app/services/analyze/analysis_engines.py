@@ -207,11 +207,11 @@ def generate_summary(
             reading_time_minutes=reading_time,
         )
     except Exception as e:
-        logger.error(f"Summary generation failed: {e}")
+        logger.error("Summary generation failed: %s", e, exc_info=True)
         return DocumentSummary(
             mode=mode,
             title="Summary Generation Failed",
-            content=f"Could not generate summary: {str(e)}",
+            content="Could not generate summary due to an internal error.",
         )
 
 

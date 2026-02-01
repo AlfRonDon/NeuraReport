@@ -19,7 +19,7 @@ def check_fs_writable(root: Path) -> tuple[bool, str]:
         marker.unlink(missing_ok=True)
         return True, "ok"
     except Exception as exc:
-        return False, str(exc)
+        return False, "filesystem_check_failed"
 
 
 def check_clock() -> tuple[bool, str]:
@@ -29,7 +29,7 @@ def check_clock() -> tuple[bool, str]:
             return False, "invalid_time"
         return True, "ok"
     except Exception as exc:  # pragma: no cover
-        return False, str(exc)
+        return False, "clock_check_failed"
 
 
 def check_external_head(url: str, api_key: str | None) -> tuple[bool, str]:
@@ -47,9 +47,9 @@ def check_external_head(url: str, api_key: str | None) -> tuple[bool, str]:
     except urllib.error.HTTPError as exc:  # pragma: no cover - network path optional
         if exc.code in {401, 403, 405}:
             return True, f"status={exc.code}"
-        return False, str(exc)
+        return False, f"status={exc.code}"
     except Exception as exc:  # pragma: no cover - network path optional
-        return False, str(exc)
+        return False, "external_check_failed"
 
 
 def health_response(request: Request, checks: Dict[str, Tuple[bool, str]]) -> JSONResponse:

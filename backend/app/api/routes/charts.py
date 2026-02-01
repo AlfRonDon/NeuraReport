@@ -92,7 +92,7 @@ async def analyze_for_charts(
             )
         except Exception as exc:
             logger.exception("chart_analyze_failed", extra={"job_id": job_id})
-            safe_msg = f"Chart analysis failed: {type(exc).__name__}"
+            safe_msg = "Chart analysis failed"
             state_access.record_job_step(job_id, "analyze", status="failed", error=safe_msg)
             state_access.record_job_completion(job_id, status="failed", error=safe_msg)
 
@@ -143,7 +143,7 @@ async def generate_chart_config(
             )
         except Exception as exc:
             logger.exception("chart_generate_failed", extra={"job_id": job_id})
-            safe_msg = f"Chart generation failed: {type(exc).__name__}"
+            safe_msg = "Chart generation failed"
             state_access.record_job_step(job_id, "generate", status="failed", error=safe_msg)
             state_access.record_job_completion(job_id, status="failed", error=safe_msg)
 

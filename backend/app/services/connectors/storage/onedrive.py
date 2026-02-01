@@ -4,9 +4,12 @@ Connector for Microsoft OneDrive using MSAL and Graph API.
 """
 from __future__ import annotations
 
+import logging
 import posixpath
 import time
 from typing import Any, Optional
+
+logger = logging.getLogger(__name__)
 
 from backend.app.services.connectors.base import (
     AuthType,
@@ -76,7 +79,7 @@ class OneDriveConnector(ConnectorBase):
             return True
         except Exception as e:
             self._connected = False
-            raise ConnectionError(f"Failed to connect to OneDrive: {e}")
+            raise ConnectionError("Failed to connect to OneDrive") from e
 
     async def _get_token_with_msal(self) -> None:
         """Get access token using MSAL."""
@@ -121,7 +124,8 @@ class OneDriveConnector(ConnectorBase):
                 details={"user": user.get("userPrincipalName")},
             )
         except Exception as e:
-            return ConnectionTest(success=False, error=str(e))
+            logger.warning("connection_test_failed", exc_info=True)
+            return ConnectionTest(success=False, error="Connection test failed")
 
     async def list_files(
         self,
@@ -227,6 +231,7 @@ class OneDriveConnector(ConnectorBase):
             )
             return response.status_code == 204
         except Exception:
+            logger.warning("delete_file_failed", exc_info=True)
             return False
 
     def get_oauth_url(self, redirect_uri: str, state: str) -> Optional[str]:

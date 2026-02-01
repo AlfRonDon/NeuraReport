@@ -184,14 +184,14 @@ class JobExecutor:
 
         except Exception as e:
             elapsed = (time.perf_counter() - start) * 1000
-            job.fail(str(e))
+            job.fail("Job execution failed")
 
             publish_sync(
                 Event(
                     name="job.failed",
                     payload={
                         "job_id": job.job_id,
-                        "error": str(e),
+                        "error": "Job execution failed",
                         "duration_ms": elapsed,
                     },
                     correlation_id=job.correlation_id,

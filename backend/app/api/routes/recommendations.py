@@ -1,7 +1,10 @@
 """API routes for Template Recommendations."""
 from __future__ import annotations
 
+import logging
 from typing import List, Optional
+
+logger = logging.getLogger(__name__)
 from pydantic import BaseModel, Field
 from fastapi import APIRouter, Depends, Query, Request
 
@@ -73,8 +76,9 @@ async def recommend_templates_post(
                 result={"recommendations": recommendations},
             )
         except Exception as exc:
-            state_access.record_job_step(job_id, "recommend", status="failed", error=str(exc))
-            state_access.record_job_completion(job_id, status="failed", error=str(exc))
+            logger.exception("recommend_job_failed", extra={"job_id": job_id})
+            state_access.record_job_step(job_id, "recommend", status="failed", error="Recommendation generation failed")
+            state_access.record_job_completion(job_id, status="failed", error="Recommendation generation failed")
 
     job = await enqueue_background_job(
         job_type="recommend_templates",
@@ -122,8 +126,9 @@ async def recommend_templates_get(
                 result={"recommendations": recommendations},
             )
         except Exception as exc:
-            state_access.record_job_step(job_id, "recommend", status="failed", error=str(exc))
-            state_access.record_job_completion(job_id, status="failed", error=str(exc))
+            logger.exception("recommend_job_failed", extra={"job_id": job_id})
+            state_access.record_job_step(job_id, "recommend", status="failed", error="Recommendation generation failed")
+            state_access.record_job_completion(job_id, status="failed", error="Recommendation generation failed")
 
     job = await enqueue_background_job(
         job_type="recommend_templates",

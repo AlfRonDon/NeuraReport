@@ -1129,7 +1129,8 @@ def health_check() -> Dict[str, Any]:
         if result["healthy"]:
             result["available_models"] = client.list_models()[:5]  # First 5 models
     except Exception as e:
-        result["error"] = str(e)
+        logger.warning("llm_health_check_failed", extra={"error": str(e)})
+        result["error"] = "Health check failed"
 
     return result
 

@@ -159,7 +159,7 @@ def mapping_key_options(
                     )
                     columns = [row[1] for row in pragma_rows if len(row) > 1]
                 except Exception as exc:  # pragma: no cover - defensive
-                    return [], {"error": str(exc), "table": parent_table}
+                    return [], {"error": "Schema query failed", "table": parent_table}
 
                 filtered = [col for col in columns if "hrs" in str(col or "").lower()]
                 filtered.sort()
@@ -207,7 +207,7 @@ def mapping_key_options(
                     )
                     columns = [row[1] for row in pragma_rows if len(row) > 1]
                 except Exception as exc:  # pragma: no cover - defensive
-                    return [], {"fallback_error": str(exc), "fallback_table": fallback_table}
+                    return [], {"fallback_error": "Fallback schema query failed", "fallback_table": fallback_table}
 
                 filtered = [col for col in columns if "hrs" in str(col or "").lower()]
                 filtered.sort()

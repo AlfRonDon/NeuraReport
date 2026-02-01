@@ -218,35 +218,6 @@ def _ensure_invariants(
             raise CorrectionsPreviewError(f"Sample value leaked into final template for token {token!r}.")
 
     return sorted(removed_tokens), missing_expected, unexpected_removed
-    original_tokens = set(extract_tokens(original_html))
-    final_tokens = set(extract_tokens(final_html))
-
-    unexpected_tokens = final_tokens - original_tokens
-    if unexpected_tokens:
-        raise CorrectionsPreviewError("New tokens introduced in final template: " f"{sorted(unexpected_tokens)}")
-
-    removed_tokens = original_tokens - final_tokens
-    expected_inline = {str(tok) for tok in expected_inline_tokens if str(tok)}
-    missing_expected = sorted(expected_inline - removed_tokens)
-    unexpected_removed = sorted(removed_tokens - expected_inline)
-
-    if _count_repeat_markers(original_html) != _count_repeat_markers(final_html):
-        raise CorrectionsPreviewError("Repeat marker count changed between original and final HTML.")
-
-    if _count_tbody(original_html) != _count_tbody(final_html):
-        raise CorrectionsPreviewError("<tbody> element count changed between original and final HTML.")
-
-    if _tbody_row_signature(original_html) != _tbody_row_signature(final_html):
-        raise CorrectionsPreviewError("Row prototype counts differ between original and final HTML.")
-
-    original_regions = _data_regions(original_html)
-    final_regions = _data_regions(final_html)
-    if original_regions != final_regions:
-        raise CorrectionsPreviewError(
-            f"data-region attributes changed. Expected {sorted(original_regions)}, got {sorted(final_regions)}"
-        )
-
-    return sorted(removed_tokens), missing_expected, unexpected_removed
 
 
 def _load_json(path: Path) -> dict[str, Any]:
@@ -606,7 +577,6 @@ def run_corrections_preview(
         if not page_summary.strip():
             last_error = CorrectionsPreviewError("page_summary cannot be blank.")
             validation_feedback = "page_summary must be a non-empty descriptive string."
-            continue
             continue
 
         try:

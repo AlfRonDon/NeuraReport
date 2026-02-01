@@ -2,7 +2,7 @@
  * Premium Data Table Component
  * Sophisticated table with glassmorphism, animations, and advanced interactions
  */
-import { Fragment, useState, useMemo, useCallback, useEffect } from 'react'
+import { Fragment, useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import {
   Box,
   Table,
@@ -400,17 +400,6 @@ export default function DataTable({
     setOrderBy(property)
   }, [order, orderBy])
 
-  const handleSelectAll = useCallback((event) => {
-    if (event.target.checked) {
-      const newSelected = paginatedData.map((row) => row.id)
-      setSelected(newSelected)
-      onSelectionChange?.(newSelected)
-      return
-    }
-    setSelected([])
-    onSelectionChange?.([])
-  }, [paginatedData, onSelectionChange])
-
   const handleSelect = useCallback((id) => {
     const selectedIndex = selected.indexOf(id)
     let newSelected = []
@@ -422,8 +411,8 @@ export default function DataTable({
     }
 
     setSelected(newSelected)
-    onSelectionChange?.(newSelected)
-  }, [selected, onSelectionChange])
+    onSelectionChangeRef.current?.(newSelected)
+  }, [selected])
 
   const handleToggleExpand = useCallback((id) => {
     setExpandedRows((prev) => {
@@ -458,15 +447,18 @@ export default function DataTable({
     setHiddenColumns([])
   }, [])
 
+  const onSelectionChangeRef = useRef(onSelectionChange)
+  onSelectionChangeRef.current = onSelectionChange
+
   useEffect(() => {
     if (!selectable) return
     const idSet = new Set(data.map((row) => row?.id).filter(Boolean))
     const nextSelected = selected.filter((id) => idSet.has(id))
     if (nextSelected.length !== selected.length) {
       setSelected(nextSelected)
-      onSelectionChange?.(nextSelected)
+      onSelectionChangeRef.current?.(nextSelected)
     }
-  }, [data, selectable, selected, onSelectionChange])
+  }, [data, selectable, selected])
 
   const handleChangePage = useCallback((_, newPage) => {
     if (pagination?.onPageChange) {
@@ -551,6 +543,17 @@ export default function DataTable({
     if (pagination) return sortedData
     return sortedData.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
   }, [sortedData, page, rowsPerPage, pagination])
+
+  const handleSelectAll = useCallback((event) => {
+    if (event.target.checked) {
+      const newSelected = paginatedData.map((row) => row.id)
+      setSelected(newSelected)
+      onSelectionChangeRef.current?.(newSelected)
+      return
+    }
+    setSelected([])
+    onSelectionChangeRef.current?.([])
+  }, [paginatedData])
 
   const isSelected = (id) => selected.includes(id)
   const numSelected = selected.length

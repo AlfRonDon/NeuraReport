@@ -254,7 +254,7 @@ class NL2SQLService:
                 sql=request.sql,
                 connection_id=request.connection_id,
                 success=False,
-                error=str(exc),
+                error="Query execution failed",
                 execution_time_ms=execution_time_ms,
             )
 

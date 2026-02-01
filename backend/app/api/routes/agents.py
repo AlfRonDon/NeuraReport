@@ -197,7 +197,7 @@ async def list_tasks(agent_type: Optional[str] = None):
         except ValueError:
             pass
 
-    tasks = agent_service.list_tasks(type_filter)
+    tasks = await agent_service.list_tasks(type_filter)
     return [t.model_dump() for t in tasks]
 
 

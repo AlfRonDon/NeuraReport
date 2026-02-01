@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class TemplateManualEditPayload(BaseModel):
@@ -27,8 +27,7 @@ class MappingPayload(BaseModel):
     force_generator_rebuild: bool = False
     keys: Optional[list[str]] = None
 
-    class Config:
-        extra = "allow"
+    model_config = ConfigDict(extra="allow")
 
 
 class GeneratorAssetsPayload(BaseModel):
@@ -44,8 +43,7 @@ class GeneratorAssetsPayload(BaseModel):
     force_rebuild: bool = False
     key_tokens: Optional[list[str]] = None
 
-    class Config:
-        extra = "allow"
+    model_config = ConfigDict(extra="allow")
 
 
 class CorrectionsPreviewPayload(BaseModel):
@@ -55,8 +53,7 @@ class CorrectionsPreviewPayload(BaseModel):
     sample_tokens: Optional[list[str]] = None
     model_selector: Optional[str] = None
 
-    class Config:
-        extra = "allow"
+    model_config = ConfigDict(extra="allow")
 
 
 class TemplateRecommendPayload(BaseModel):
@@ -68,8 +65,7 @@ class TemplateRecommendPayload(BaseModel):
     schema_snapshot: Optional[dict[str, Any]] = None
     tables: Optional[list[str]] = None
 
-    class Config:
-        extra = "allow"
+    model_config = ConfigDict(extra="allow")
 
 
 class TemplateRecommendation(BaseModel):
@@ -93,8 +89,7 @@ class TemplateUpdatePayload(BaseModel):
     tags: Optional[list[str]] = None
     status: Optional[str] = None
 
-    class Config:
-        extra = "allow"
+    model_config = ConfigDict(extra="allow")
 
 
 class TemplateChatMessage(BaseModel):
@@ -108,8 +103,7 @@ class TemplateChatPayload(BaseModel):
     messages: list[TemplateChatMessage]
     html: Optional[str] = None  # Current HTML state (optional, uses saved if not provided)
 
-    class Config:
-        extra = "allow"
+    model_config = ConfigDict(extra="allow")
 
 
 class TemplateChatResponse(BaseModel):

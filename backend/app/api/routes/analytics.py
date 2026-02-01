@@ -774,7 +774,7 @@ async def bulk_delete_templates(payload: BulkTemplateRequest) -> Dict[str, Any]:
                 entity_id=tid,
             )
         except Exception as e:
-            failed.append({"id": tid, "error": f"Delete failed: {type(e).__name__}"})
+            failed.append({"id": tid, "error": "Delete failed"})
 
     return {
         "deleted": deleted,
@@ -822,7 +822,7 @@ async def bulk_update_template_status(payload: BulkTemplateRequest) -> Dict[str,
                 details={"status": status},
             )
         except Exception as e:
-            failed.append({"id": tid, "error": f"Status update failed: {type(e).__name__}"})
+            failed.append({"id": tid, "error": "Status update failed"})
 
     return {
         "updated": updated,
@@ -867,7 +867,7 @@ async def bulk_add_tags(payload: BulkTemplateRequest) -> Dict[str, Any]:
             )
             updated.append(tid)
         except Exception as e:
-            failed.append({"id": tid, "error": f"Tag update failed: {type(e).__name__}"})
+            failed.append({"id": tid, "error": "Tag update failed"})
 
     return {
         "updated": updated,
@@ -905,7 +905,7 @@ async def bulk_cancel_jobs(payload: BulkJobRequest) -> Dict[str, Any]:
                 entity_id=jid,
             )
         except Exception as e:
-            failed.append({"id": jid, "error": f"Cancel failed: {type(e).__name__}"})
+            failed.append({"id": jid, "error": "Cancel failed"})
 
     return {
         "cancelled": cancelled,
@@ -928,7 +928,7 @@ async def bulk_delete_jobs(payload: BulkJobRequest) -> Dict[str, Any]:
             state_access.delete_job(jid)
             deleted.append(jid)
         except Exception as e:
-            failed.append({"id": jid, "error": f"Delete failed: {type(e).__name__}"})
+            failed.append({"id": jid, "error": "Delete failed"})
 
     return {
         "deleted": deleted,

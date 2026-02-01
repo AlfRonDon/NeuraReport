@@ -195,4 +195,4 @@ class EnrichmentCache:
 
         except Exception as exc:
             logger.warning(f"Cache stats error: {exc}")
-            return {"error": str(exc), "hits": 0, "misses": 0, "hit_rate": 0.0, "size_bytes": 0}
+            return {"error": "Cache stats unavailable", "hits": 0, "misses": 0, "hit_rate": 0.0, "size_bytes": 0}

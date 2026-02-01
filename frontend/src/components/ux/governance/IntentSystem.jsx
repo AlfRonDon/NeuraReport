@@ -111,7 +111,7 @@ export function IntentProvider({ children, onIntentChange, maxHistory = 100, aud
     }
 
     return intent
-  }, [maxHistory, onIntentChange])
+  }, [maxHistory, onIntentChange, auditClient])
 
   /**
    * Update intent status
@@ -147,7 +147,7 @@ export function IntentProvider({ children, onIntentChange, maxHistory = 100, aud
         console.warn('Failed to update intent on backend:', err)
       })
     }
-  }, [onIntentChange])
+  }, [onIntentChange, auditClient])
 
   /**
    * Link child intent to parent

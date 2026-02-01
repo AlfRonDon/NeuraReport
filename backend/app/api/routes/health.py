@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import os
 import time
 from datetime import datetime, timezone
@@ -7,6 +8,8 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Depends, Request
+
+logger = logging.getLogger(__name__)
 
 from backend.app.services.security import require_api_key
 
@@ -37,7 +40,8 @@ def _check_directory_access(path: Path) -> Dict[str, Any]:
         except (OSError, PermissionError):
             return {"status": "warning", "path": str(path), "writable": False, "message": "Read-only access"}
     except Exception as e:
-        return {"status": "error", "message": str(e), "path": str(path)}
+        logger.warning("directory_check_failed", extra={"path": str(path), "error": str(e)})
+        return {"status": "error", "message": "Directory check failed", "path": str(path)}
 
 
 def _check_openai_connection() -> Dict[str, Any]:
@@ -57,7 +61,8 @@ def _check_openai_connection() -> Dict[str, Any]:
             }
         return {"status": "error", "message": "Failed to initialize OpenAI client"}
     except Exception as e:
-        return {"status": "error", "message": str(e)}
+        logger.warning("openai_check_failed", extra={"error": str(e)})
+        return {"status": "error", "message": "OpenAI check failed"}
 
 
 def _get_memory_usage() -> Dict[str, Any]:
@@ -148,9 +153,10 @@ async def token_usage(request: Request) -> Dict[str, Any]:
             "correlation_id": getattr(request.state, "correlation_id", None),
         }
     except Exception as e:
+        logger.warning("token_usage_check_failed", extra={"error": str(e)})
         return {
             "status": "error",
-            "message": str(e),
+            "message": "Token usage retrieval failed",
             "usage": {
                 "total_input_tokens": 0,
                 "total_output_tokens": 0,
@@ -298,11 +304,14 @@ def _test_smtp_connection() -> Dict[str, Any]:
                     client.login(config.username, config.password)
                 return {"status": "connected", "message": "SMTP connection successful"}
     except smtplib.SMTPAuthenticationError as e:
-        return {"status": "auth_failed", "error": str(e), "message": "SMTP authentication failed"}
+        logger.warning("smtp_auth_failed", extra={"error": str(e)})
+        return {"status": "auth_failed", "message": "SMTP authentication failed"}
     except smtplib.SMTPConnectError as e:
-        return {"status": "connection_failed", "error": str(e), "message": "Could not connect to SMTP server"}
+        logger.warning("smtp_connect_failed", extra={"error": str(e)})
+        return {"status": "connection_failed", "message": "Could not connect to SMTP server"}
     except Exception as e:
-        return {"status": "error", "error": str(e), "message": "SMTP connection test failed"}
+        logger.warning("smtp_test_failed", extra={"error": str(e)})
+        return {"status": "error", "message": "SMTP connection test failed"}
 
 
 @limiter.exempt

@@ -1,8 +1,9 @@
+const MAX_INTENT_STACK = 100
 let intentStack = []
 
 export const pushActiveIntent = (intent) => {
   if (!intent) return
-  intentStack = [...intentStack, intent]
+  intentStack = [...intentStack, intent].slice(-MAX_INTENT_STACK)
 }
 
 export const popActiveIntent = (intentId) => {

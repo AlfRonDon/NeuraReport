@@ -271,7 +271,7 @@ export default function GlobalSearch({
         handleNavigate(nextPath, `Open ${result.label}`, { resultType: result.type, resultId: result.id })
       }
     }
-  }, [navigate])
+  }, [handleNavigate])
 
   const handleFocus = useCallback(() => {
     if (hasSearched && query.trim().length >= 2) {

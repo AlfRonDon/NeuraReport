@@ -66,7 +66,8 @@ async def export_to_pdf(request: Request, document_id: str, options: Optional[Ex
 
 
 @router.post("/{document_id}/pdfa")
-async def export_to_pdfa(document_id: str, options: Optional[ExportOptions] = None):
+@limiter.limit(RATE_LIMIT_STANDARD)
+async def export_to_pdfa(request: Request, document_id: str, options: Optional[ExportOptions] = None):
     """Export document to PDF/A archival format."""
     opts = options.model_dump(exclude_none=True) if options else {}
     opts["pdfa_compliant"] = True
@@ -103,7 +104,8 @@ async def export_to_pptx(request: Request, document_id: str, options: Optional[E
 
 
 @router.post("/{document_id}/epub")
-async def export_to_epub(document_id: str, options: Optional[ExportOptions] = None):
+@limiter.limit(RATE_LIMIT_STANDARD)
+async def export_to_epub(request: Request, document_id: str, options: Optional[ExportOptions] = None):
     """Export document to ePub format."""
     job = await export_service.create_export_job(
         document_id=document_id,
@@ -114,7 +116,8 @@ async def export_to_epub(document_id: str, options: Optional[ExportOptions] = No
 
 
 @router.post("/{document_id}/latex")
-async def export_to_latex(document_id: str, options: Optional[ExportOptions] = None):
+@limiter.limit(RATE_LIMIT_STANDARD)
+async def export_to_latex(request: Request, document_id: str, options: Optional[ExportOptions] = None):
     """Export document to LaTeX format."""
     job = await export_service.create_export_job(
         document_id=document_id,
@@ -125,7 +128,8 @@ async def export_to_latex(document_id: str, options: Optional[ExportOptions] = N
 
 
 @router.post("/{document_id}/markdown")
-async def export_to_markdown(document_id: str, options: Optional[ExportOptions] = None):
+@limiter.limit(RATE_LIMIT_STANDARD)
+async def export_to_markdown(request: Request, document_id: str, options: Optional[ExportOptions] = None):
     """Export document to Markdown format."""
     job = await export_service.create_export_job(
         document_id=document_id,
@@ -136,7 +140,8 @@ async def export_to_markdown(document_id: str, options: Optional[ExportOptions] 
 
 
 @router.post("/{document_id}/html")
-async def export_to_html(document_id: str, options: Optional[ExportOptions] = None):
+@limiter.limit(RATE_LIMIT_STANDARD)
+async def export_to_html(request: Request, document_id: str, options: Optional[ExportOptions] = None):
     """Export document to HTML format."""
     job = await export_service.create_export_job(
         document_id=document_id,
@@ -171,39 +176,41 @@ async def get_export_job(job_id: str):
 
 
 @router.post("/distribution/email-campaign")
-async def email_campaign(request: EmailCampaignRequest):
+@limiter.limit(RATE_LIMIT_STRICT)
+async def email_campaign(request: Request, body: EmailCampaignRequest):
     """Send documents via bulk email campaign."""
     results = []
-    for doc_id in request.document_ids:
+    for doc_id in body.document_ids:
         result = await distribution_service.send_email(
             document_id=doc_id,
-            recipients=request.recipients,
-            subject=request.subject,
-            message=request.message,
+            recipients=body.recipients,
+            subject=body.subject,
+            message=body.message,
         )
         results.append(result)
 
     return {
         "campaign_id": results[0]["job_id"] if results else None,
         "documents_sent": len(results),
-        "recipients_count": len(request.recipients),
+        "recipients_count": len(body.recipients),
         "results": results,
     }
 
 
 @router.post("/distribution/portal/{document_id}")
-async def publish_to_portal(document_id: str, request: PortalPublishRequest):
+@limiter.limit(RATE_LIMIT_STANDARD)
+async def publish_to_portal(request: Request, document_id: str, body: PortalPublishRequest):
     """Publish document to portal."""
     result = await distribution_service.publish_to_portal(
         document_id=document_id,
-        portal_path=request.portal_path,
+        portal_path=body.portal_path,
         options={
-            "title": request.title,
-            "description": request.description,
-            "tags": request.tags,
-            "public": request.public,
-            "password": request.password,
-            "expires_at": request.expires_at,
+            "title": body.title,
+            "description": body.description,
+            "tags": body.tags,
+            "public": body.public,
+            "password": body.password,
+            "expires_at": body.expires_at,
         },
     )
     # Never echo the password back in the response
@@ -212,34 +219,36 @@ async def publish_to_portal(document_id: str, request: PortalPublishRequest):
         opts = result.get("options", {})
         if isinstance(opts, dict):
             opts.pop("password", None)
-        result["password_protected"] = request.password is not None
+        result["password_protected"] = body.password is not None
     return result
 
 
 @router.post("/distribution/embed/{document_id}", response_model=EmbedResponse)
-async def generate_embed(document_id: str, request: EmbedGenerateRequest):
+@limiter.limit(RATE_LIMIT_STANDARD)
+async def generate_embed(request: Request, document_id: str, body: EmbedGenerateRequest):
     """Generate embed code for a document."""
     result = await export_service.generate_embed_token(
         document_id=document_id,
         options={
-            "width": request.width,
-            "height": request.height,
-            "allow_download": request.allow_download,
-            "allow_print": request.allow_print,
-            "show_toolbar": request.show_toolbar,
-            "theme": request.theme,
+            "width": body.width,
+            "height": body.height,
+            "allow_download": body.allow_download,
+            "allow_print": body.allow_print,
+            "show_toolbar": body.show_toolbar,
+            "theme": body.theme,
         },
     )
     return EmbedResponse(**result)
 
 
 @router.post("/distribution/slack")
-async def send_to_slack(request: SlackMessageRequest):
+@limiter.limit(RATE_LIMIT_STANDARD)
+async def send_to_slack(request: Request, body: SlackMessageRequest):
     """Send document to Slack channel."""
     result = await distribution_service.send_to_slack(
-        document_id=request.document_id,
-        channel=request.channel,
-        message=request.message,
+        document_id=body.document_id,
+        channel=body.channel,
+        message=body.message,
     )
     return result
 

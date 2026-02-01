@@ -681,9 +681,10 @@ async def cancel_task(task_id: str, request: Optional[CancelRequest] = None):
         )
 
     except TaskConflictError as e:
+        logger.warning("cancel_task_conflict", extra={"task_id": task_id, "error": str(e)})
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail={"code": "CANNOT_CANCEL", "message": str(e)},
+            detail={"code": "CANNOT_CANCEL", "message": "Task cannot be cancelled in its current state"},
         )
 
 
@@ -706,9 +707,10 @@ async def retry_task(task_id: str):
         )
 
     except TaskConflictError as e:
+        logger.warning("retry_task_conflict", extra={"task_id": task_id, "error": str(e)})
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail={"code": "CANNOT_RETRY", "message": str(e)},
+            detail={"code": "CANNOT_RETRY", "message": "Task cannot be retried in its current state"},
         )
 
 

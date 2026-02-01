@@ -4,9 +4,12 @@ Connector for Snowflake using snowflake-connector-python.
 """
 from __future__ import annotations
 
+import logging
 import re
 import time
 from typing import Any, Optional
+
+logger = logging.getLogger(__name__)
 
 # Identifiers must be alphanumeric / underscores
 _SAFE_IDENTIFIER_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
@@ -94,7 +97,8 @@ class SnowflakeConnector(ConnectorBase):
             latency = (time.time() - start_time) * 1000
             return ConnectionTest(success=True, latency_ms=latency)
         except Exception as e:
-            return ConnectionTest(success=False, error=str(e))
+            logger.warning("connection_test_failed", exc_info=True)
+            return ConnectionTest(success=False, error="Connection test failed")
 
     async def discover_schema(self) -> SchemaInfo:
         """Discover database schema."""
@@ -199,12 +203,13 @@ class SnowflakeConnector(ConnectorBase):
             )
         except Exception as e:
             cursor.close()
+            logger.exception("query_execution_failed")
             return QueryResult(
                 columns=[],
                 rows=[],
                 row_count=0,
                 execution_time_ms=(time.time() - start_time) * 1000,
-                error=str(e),
+                error="Query execution failed",
             )
 
     @classmethod

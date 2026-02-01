@@ -89,7 +89,7 @@ Return ONLY the JSON object."""
 
         except Exception as exc:
             logger.error(f"Summary generation failed: {exc}")
-            error_message = str(exc)
+            error_message = "Summary generation failed"
         else:
             error_message = "Unknown error"
 

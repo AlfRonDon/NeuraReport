@@ -7,7 +7,7 @@
  * - Immediate feedback (within 100ms)
  * - Make system state always visible
  */
-import { useState, useCallback, useEffect, useMemo } from 'react'
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import {
   TextField,
   Box,
@@ -105,11 +105,13 @@ export function useFieldValidation(rules = [], options = {}) {
   const [touched, setTouched] = useState(false)
   const [state, setState] = useState(ValidationState.IDLE)
   const [error, setError] = useState(null)
-  const [debounceTimer, setDebounceTimer] = useState(null)
+  const debounceTimerRef = useRef(null)
+  const rulesRef = useRef(rules)
+  rulesRef.current = rules
 
   // Run validation
   const runValidation = useCallback((val) => {
-    for (const rule of rules) {
+    for (const rule of rulesRef.current) {
       const isValid = rule.validate(val)
       if (!isValid) {
         setState(ValidationState.INVALID)
@@ -120,7 +122,7 @@ export function useFieldValidation(rules = [], options = {}) {
     setState(val ? ValidationState.VALID : ValidationState.IDLE)
     setError(null)
     return true
-  }, [rules])
+  }, [])
 
   // Handle change with debounce
   const handleChange = useCallback((newValue) => {
@@ -129,8 +131,8 @@ export function useFieldValidation(rules = [], options = {}) {
     if (!validateOnChange) return
 
     // Clear existing timer
-    if (debounceTimer) {
-      clearTimeout(debounceTimer)
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current)
     }
 
     // Set validating state immediately
@@ -139,14 +141,12 @@ export function useFieldValidation(rules = [], options = {}) {
     }
 
     // Debounce validation
-    const timer = setTimeout(() => {
+    debounceTimerRef.current = setTimeout(() => {
       if (touched || newValue) {
         runValidation(newValue)
       }
     }, debounceMs)
-
-    setDebounceTimer(timer)
-  }, [validateOnChange, debounceTimer, touched, debounceMs, runValidation])
+  }, [validateOnChange, touched, debounceMs, runValidation])
 
   // Handle blur
   const handleBlur = useCallback(() => {
@@ -173,11 +173,11 @@ export function useFieldValidation(rules = [], options = {}) {
   // Cleanup
   useEffect(() => {
     return () => {
-      if (debounceTimer) {
-        clearTimeout(debounceTimer)
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current)
       }
     }
-  }, [debounceTimer])
+  }, [])
 
   return {
     value,
@@ -253,6 +253,16 @@ export function ValidatedTextField({
   }, [allRules])
 
   // Handle change
+  const validateTimerRef = useRef(null)
+
+  useEffect(() => {
+    return () => {
+      if (validateTimerRef.current) {
+        clearTimeout(validateTimerRef.current)
+      }
+    }
+  }, [])
+
   const handleChange = useCallback((e) => {
     const newValue = e.target.value
 
@@ -266,7 +276,10 @@ export function ValidatedTextField({
 
     // Validate with slight delay for perceived performance
     if (touched) {
-      setTimeout(() => validate(newValue), 50)
+      if (validateTimerRef.current) {
+        clearTimeout(validateTimerRef.current)
+      }
+      validateTimerRef.current = setTimeout(() => validate(newValue), 50)
     }
   }, [onChange, touched, validate, maxLength])
 
@@ -316,7 +329,7 @@ export function ValidatedTextField({
         {props.InputProps?.endAdornment}
       </InputAdornment>
     )
-  }, [showValidIcon, touched, validationState, theme, props.InputProps?.endAdornment])
+  }, [showValidIcon, touched, validationState, props.InputProps?.endAdornment])
 
   return (
     <TextField

@@ -549,7 +549,7 @@ class ExcelExtractor:
                 sheets=[],
                 filename=file_path.name,
                 format="ods",
-                errors=[f"Extraction failed: {str(e)}"],
+                errors=["Extraction failed"],
             )
 
     def _extract_xlsx(
@@ -667,7 +667,7 @@ class ExcelExtractor:
                 sheets=[],
                 filename=file_path.name,
                 format="xlsx",
-                errors=[f"Extraction failed: {str(e)}"],
+                errors=["Extraction failed"],
             )
 
     def _extract_xls(
@@ -746,7 +746,7 @@ class ExcelExtractor:
                 sheets=[],
                 filename=file_path.name,
                 format="xls",
-                errors=[f"Extraction failed: {str(e)}"],
+                errors=["Extraction failed"],
             )
 
     def _detect_encoding(self, file_path: Path) -> str:
@@ -871,7 +871,7 @@ class ExcelExtractor:
                 sheets=[],
                 filename=file_path.name,
                 format="csv",
-                errors=[f"Extraction failed: {str(e)}"],
+                errors=["Extraction failed"],
             )
 
 

@@ -285,10 +285,11 @@ class DataFrameDataSource:
             )
         except Exception as e:
             latency = (time.perf_counter() - start) * 1000
+            logger.exception("SQLite connection test failed")
             return ConnectionTest(
                 success=False,
                 latency_ms=latency,
-                error=str(e),
+                error="Connection test failed",
                 tested_at=datetime.now(timezone.utc),
             )
 
