@@ -225,7 +225,8 @@ def suggest_charts(
     template_dir = template_dir_fn(template_id)
     db_path = db_path_fn(payload.connection_id)
     if not db_path.exists():
-        raise HTTPException(status_code=400, detail={"code": "db_not_found", "message": f"DB not found: {db_path}"})
+        logger.error("Database not found at path: %s", db_path)
+        raise HTTPException(status_code=400, detail={"code": "db_not_found", "message": "Database not found for the given connection."})
 
     try:
         load_contract_fn(template_dir)
@@ -239,7 +240,7 @@ def suggest_charts(
                 "correlation_id": correlation_id,
             },
         )
-        raise HTTPException(status_code=500, detail={"code": "contract_load_failed", "message": f"Failed to load contract artifacts: {exc}"})
+        raise HTTPException(status_code=500, detail={"code": "contract_load_failed", "message": "Failed to load contract artifacts."})
 
     contract_path = template_dir / "contract.json"
     if not contract_path.exists():
@@ -250,7 +251,16 @@ def suggest_charts(
     try:
         contract_payload = json.loads(contract_path.read_text(encoding="utf-8"))
     except Exception as exc:
-        raise HTTPException(status_code=500, detail={"code": "contract_invalid", "message": f"Invalid contract.json: {exc}"})
+        logger.exception(
+            "chart_suggest_contract_parse_failed",
+            extra={
+                "event": "chart_suggest_contract_parse_failed",
+                "template_id": template_id,
+                "template_kind": kind,
+                "correlation_id": correlation_id,
+            },
+        )
+        raise HTTPException(status_code=500, detail={"code": "contract_invalid", "message": "Invalid contract configuration."})
 
     key_values_payload = clean_key_values_fn(payload.key_values)
 
@@ -272,7 +282,7 @@ def suggest_charts(
                 "correlation_id": correlation_id,
             },
         )
-        raise HTTPException(status_code=500, detail={"code": "discovery_failed", "message": f"Discovery failed: {exc}"})
+        raise HTTPException(status_code=500, detail={"code": "discovery_failed", "message": "Data discovery failed."})
 
     batches = summary.get("batches") or []
     if not isinstance(batches, list):
@@ -338,7 +348,7 @@ def suggest_charts(
                 "correlation_id": correlation_id,
             },
         )
-        raise HTTPException(status_code=500, detail={"code": "chart_suggest_llm_failed", "message": str(exc)})
+        raise HTTPException(status_code=500, detail={"code": "chart_suggest_llm_failed", "message": "Chart suggestion generation failed."})
 
     raw_text = (response.choices[0].message.content or "").strip()
     parsed_text = strip_code_fences_fn(raw_text)

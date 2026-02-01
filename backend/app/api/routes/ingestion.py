@@ -133,10 +133,10 @@ async def upload_file(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Upload failed: {e}")
+        logger.exception("Upload failed: %s", e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e)
+            detail="Upload failed",
         )
 
 
@@ -156,6 +156,7 @@ async def upload_bulk(
     """
     results = []
     errors = []
+    cumulative_bytes = 0
 
     metadata = {}
     if tags:
@@ -166,14 +167,23 @@ async def upload_bulk(
     for file in files:
         try:
             content = await file.read()
+            cumulative_bytes += len(content)
+            if cumulative_bytes > MAX_BULK_TOTAL_BYTES:
+                raise HTTPException(
+                    status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                    detail=f"Bulk upload exceeds maximum total size of {MAX_BULK_TOTAL_BYTES // (1024*1024)} MB",
+                )
             result = await ingestion_service.ingest_file(
                 filename=file.filename or "upload",
                 content=content,
                 metadata=metadata,
             )
             results.append(result.model_dump())
+        except HTTPException:
+            raise
         except Exception as e:
-            errors.append({"filename": file.filename, "error": str(e)})
+            logger.exception("Bulk upload processing failed for %s: %s", file.filename, e)
+            errors.append({"filename": file.filename, "error": "Processing failed"})
 
     return {
         "total": len(files),
@@ -200,6 +210,16 @@ async def upload_zip(
     """
     try:
         content = await file.read()
+        if len(content) > MAX_SINGLE_FILE_BYTES:
+            raise HTTPException(
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                detail=f"ZIP file exceeds maximum size of {MAX_SINGLE_FILE_BYTES // (1024*1024)} MB",
+            )
+        if len(content) == 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Uploaded ZIP file is empty",
+            )
         result = await ingestion_service.ingest_zip_archive(
             filename=file.filename or "archive.zip",
             content=content,
@@ -207,11 +227,13 @@ async def upload_zip(
             flatten=flatten,
         )
         return result.model_dump()
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"ZIP upload failed: {e}")
+        logger.exception("ZIP upload failed: %s", e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e)
+            detail="ZIP upload failed",
         )
 
 
@@ -230,10 +252,10 @@ async def ingest_from_url(request: IngestUrlRequest):
         )
         return result.model_dump()
     except Exception as e:
-        logger.error(f"URL ingestion failed: {e}")
+        logger.exception("URL ingestion failed: %s", e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e)
+            detail="URL ingestion failed",
         )
 
 
@@ -253,10 +275,10 @@ async def ingest_structured_data(request: IngestStructuredDataRequest):
         )
         return result.model_dump()
     except Exception as e:
-        logger.error(f"Structured data import failed: {e}")
+        logger.exception("Structured data import failed: %s", e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e)
+            detail="Structured data import failed",
         )
 
 
@@ -289,10 +311,10 @@ async def clip_web_page(request: ClipUrlRequest):
         result["document_id"] = doc_id
         return result
     except Exception as e:
-        logger.error(f"Web clip failed: {e}")
+        logger.exception("Web clip failed: %s", e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e)
+            detail="Web clip failed",
         )
 
 
@@ -317,10 +339,10 @@ async def clip_selection(request: ClipSelectionRequest):
         result["document_id"] = doc_id
         return result
     except Exception as e:
-        logger.error(f"Selection clip failed: {e}")
+        logger.exception("Selection clip failed: %s", e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e)
+            detail="Selection clip failed",
         )
 
 
@@ -357,10 +379,10 @@ async def create_folder_watcher(request: CreateWatcherRequest):
         watcher_status = await folder_watcher_service.create_watcher(config)
         return watcher_status.model_dump()
     except Exception as e:
-        logger.error(f"Failed to create watcher: {e}")
+        logger.exception("Failed to create watcher: %s", e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e)
+            detail="Failed to create watcher",
         )
 
 
@@ -387,8 +409,8 @@ async def get_watcher_status(watcher_id: str):
     try:
         watcher_info = folder_watcher_service.get_status(watcher_id)
         return watcher_info.model_dump()
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ValueError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Watcher not found")
 
 
 @router.post("/watchers/{watcher_id}/start")
@@ -397,8 +419,8 @@ async def start_watcher(watcher_id: str):
     try:
         success = await folder_watcher_service.start_watcher(watcher_id)
         return {"success": success}
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ValueError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Watcher not found")
 
 
 @router.post("/watchers/{watcher_id}/stop")
@@ -419,8 +441,8 @@ async def scan_watched_folder(watcher_id: str):
     try:
         events = await folder_watcher_service.scan_folder(watcher_id)
         return [e.model_dump() for e in events]
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ValueError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Watcher not found")
 
 
 @router.delete("/watchers/{watcher_id}")
@@ -474,10 +496,10 @@ async def transcribe_file(
         response["document_id"] = doc_id
         return response
     except Exception as e:
-        logger.error(f"Transcription failed: {e}")
+        logger.exception("Transcription failed: %s", e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e)
+            detail="Transcription failed",
         )
 
 
@@ -504,10 +526,10 @@ async def transcribe_voice_memo(
         )
         return result.model_dump()
     except Exception as e:
-        logger.error(f"Voice memo transcription failed: {e}")
+        logger.exception("Voice memo transcription failed: %s", e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e)
+            detail="Voice memo transcription failed",
         )
 
 
@@ -550,10 +572,10 @@ async def ingest_email(
         )
         return result.model_dump()
     except Exception as e:
-        logger.error(f"Email ingestion failed: {e}")
+        logger.exception("Email ingestion failed: %s", e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e)
+            detail="Email ingestion failed",
         )
 
 
@@ -577,10 +599,10 @@ async def parse_email(
         )
         return result
     except Exception as e:
-        logger.error(f"Email parsing failed: {e}")
+        logger.exception("Email parsing failed: %s", e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e)
+            detail="Email parsing failed",
         )
 
 

@@ -5,7 +5,7 @@
  * which is not natively supported by fetch().
  */
 
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import { fetchWithIntent } from '../api/client'
 
 /**
@@ -51,6 +51,14 @@ export function useUploadProgress({ onProgress, onComplete, onError } = {}) {
 
   const xhrRef = useRef(null)
   const abortControllerRef = useRef(null)
+
+  // Abort any in-flight upload when the component unmounts
+  useEffect(() => {
+    return () => {
+      xhrRef.current?.abort()
+      abortControllerRef.current?.abort()
+    }
+  }, [])
 
   const reset = useCallback(() => {
     setState({

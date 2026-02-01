@@ -13,7 +13,7 @@ This module provides:
 """
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional, TypeVar, Generic, List, Dict, Any
 from dataclasses import dataclass, field
 from enum import Enum
@@ -42,13 +42,13 @@ class SoftDeleteMetadata:
         """Check if the soft-deleted item has expired (should be permanently deleted)."""
         if not self.expires_at:
             return False
-        return datetime.utcnow() > self.expires_at
+        return datetime.now(timezone.utc) > self.expires_at
 
     def days_until_expiry(self) -> Optional[int]:
         """Get days until permanent deletion."""
         if not self.expires_at:
             return None
-        delta = self.expires_at - datetime.utcnow()
+        delta = self.expires_at - datetime.now(timezone.utc)
         return max(0, delta.days)
 
 
@@ -110,7 +110,7 @@ class SoftDeletable:
         if self._deletion_status != DeletionStatus.ACTIVE:
             return False
 
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         self._deletion_status = DeletionStatus.SOFT_DELETED
         self._deletion_metadata = SoftDeleteMetadata(
             deleted_at=now,

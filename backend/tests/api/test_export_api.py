@@ -1084,6 +1084,8 @@ class TestServiceInteraction:
 @pytest.fixture
 def ssrf_client(mock_export_service, mock_distribution_service):
     """TestClient with real SSRF validation (no is_safe_external_url mock)."""
+    from backend.app.api.middleware import limiter
+
     _app = FastAPI()
     _app.dependency_overrides[require_api_key] = lambda: None
     _app.include_router(router, prefix="/export")
@@ -1094,7 +1096,9 @@ def ssrf_client(mock_export_service, mock_distribution_service):
     _route_mod.export_service = mock_export_service
     _route_mod.distribution_service = mock_distribution_service
 
+    limiter.enabled = False
     yield TestClient(_app)
+    limiter.enabled = True
 
     _route_mod.export_service = _orig_export
     _route_mod.distribution_service = _orig_distrib

@@ -48,7 +48,8 @@ export function useFormErrorFocus(formState, setFocus, priority = []) {
     } catch {
       // ignore if field cannot be focused (e.g., unmounted between submit and effect)
     }
-  }, [errorsKey, isSubmitted, submitCount, priorityKey, setFocus, priority])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [errorsKey, isSubmitted, submitCount, priorityKey, setFocus])
 }
 
 export default useFormErrorFocus

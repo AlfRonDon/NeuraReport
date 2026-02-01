@@ -547,7 +547,7 @@ async def set_preference(
                 detail=f"Preference value too large (max {MAX_VALUE_SIZE_BYTES} bytes)"
             )
     except (TypeError, ValueError) as e:
-        raise HTTPException(status_code=400, detail=f"Invalid preference value: {str(e)}")
+        raise HTTPException(status_code=400, detail="Invalid preference value")
 
     prefs = state_access.set_user_preference(key, pref_value)
     return {"preferences": prefs}

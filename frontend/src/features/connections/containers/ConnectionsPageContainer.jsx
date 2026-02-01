@@ -250,7 +250,7 @@ export default function ConnectionsPage() {
         } catch (err) {
           // If delete fails, restore the connection to UI
           if (connectionData) {
-            setSavedConnections((prev) => [...prev, connectionData])
+            addSavedConnection(connectionData)
           }
           throw err
         }
@@ -270,7 +270,7 @@ export default function ConnectionsPage() {
                   status: connectionData.status || 'connected',
                   latencyMs: connectionData.latency_ms,
                 })
-                setSavedConnections((prev) => [...prev, restored])
+                addSavedConnection(restored)
                 toast.show('Data source restored', 'success')
               } catch (restoreErr) {
                 console.error('Failed to restore connection:', restoreErr)

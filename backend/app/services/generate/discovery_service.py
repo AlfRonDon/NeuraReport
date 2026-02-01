@@ -50,7 +50,8 @@ def discover_reports(
     template_dir = template_dir_fn(payload.template_id)
     db_path = db_path_fn(payload.connection_id)
     if not db_path.exists():
-        raise HTTPException(status_code=400, detail={"code": "db_not_found", "message": f"DB not found: {db_path}"})
+        logger.error("Database not found at path %s for connection_id=%s", db_path, payload.connection_id)
+        raise HTTPException(status_code=400, detail={"code": "db_not_found", "message": "Database not found for the specified connection."})
 
     try:
         load_contract_fn(template_dir)
@@ -62,7 +63,7 @@ def discover_reports(
                 "template_id": payload.template_id,
             },
         )
-        raise HTTPException(status_code=500, detail={"code": "contract_load_failed", "message": f"Failed to load contract artifacts: {exc}"})
+        raise HTTPException(status_code=500, detail={"code": "contract_load_failed", "message": "Failed to load contract artifacts."})
 
     contract_path = template_dir / "contract.json"
     if not contract_path.exists():
@@ -73,7 +74,8 @@ def discover_reports(
     try:
         contract_payload = json.loads(contract_path.read_text(encoding="utf-8"))
     except Exception as exc:
-        raise HTTPException(status_code=500, detail={"code": "contract_invalid", "message": f"Invalid contract.json: {exc}"})
+        logger.exception("Invalid contract.json for template_id=%s", payload.template_id)
+        raise HTTPException(status_code=500, detail={"code": "contract_invalid", "message": "Invalid contract configuration."})
 
     key_values_payload = clean_key_values_fn(payload.key_values)
     try:
@@ -85,7 +87,8 @@ def discover_reports(
             key_values=key_values_payload,
         )
     except Exception as exc:
-        raise HTTPException(status_code=500, detail={"code": "discovery_failed", "message": f"Discovery failed: {exc}"})
+        logger.exception("Discovery failed for template_id=%s, connection_id=%s", payload.template_id, payload.connection_id)
+        raise HTTPException(status_code=500, detail={"code": "discovery_failed", "message": "Discovery failed. Please retry or contact support."})
 
     manifest_data = load_manifest_fn(template_dir) or {}
     manifest_url = manifest_endpoint_fn(payload.template_id)

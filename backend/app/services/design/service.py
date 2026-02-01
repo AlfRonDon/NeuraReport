@@ -189,13 +189,12 @@ class DesignService:
             # Try loading from state store
             try:
                 from backend.app.repositories.state.store import state_store
-                with state_store._lock:
-                    state = state_store._read_state()
+                with state_store.transaction() as state:
                     kit = state.get("brand_kits", {}).get(kit_id)
                     if kit:
                         self._brand_kits[kit_id] = kit
             except Exception:
-                pass
+                logger.debug("Failed to load brand kit from state store", exc_info=True)
 
         if not kit:
             return None
@@ -206,11 +205,10 @@ class DesignService:
         # Load from state store
         try:
             from backend.app.repositories.state.store import state_store
-            with state_store._lock:
-                state = state_store._read_state()
+            with state_store.transaction() as state:
                 self._brand_kits.update(state.get("brand_kits", {}))
         except Exception:
-            pass
+            logger.debug("Failed to load brand kits from state store", exc_info=True)
 
         kits = list(self._brand_kits.values())
         kits.sort(key=lambda k: k.get("created_at", ""), reverse=True)
@@ -452,11 +450,10 @@ class DesignService:
         """List all themes."""
         try:
             from backend.app.repositories.state.store import state_store
-            with state_store._lock:
-                state = state_store._read_state()
+            with state_store.transaction() as state:
                 self._themes.update(state.get("themes", {}))
         except Exception:
-            pass
+            logger.debug("Failed to load themes from state store", exc_info=True)
 
         themes = list(self._themes.values())
         themes.sort(key=lambda t: t.get("created_at", ""), reverse=True)
@@ -504,7 +501,7 @@ class DesignService:
             with state_store.transaction() as state:
                 state["themes"].pop(theme_id, None)
         except Exception:
-            pass
+            logger.debug("Failed to delete theme from state store", exc_info=True)
 
         return True
 

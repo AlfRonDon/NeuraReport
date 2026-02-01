@@ -13,14 +13,16 @@ class TestCacheHitMissTracking:
     def mock_state_store(self):
         """Create a mock state store."""
         mock_store = MagicMock()
-        mock_store._lock = MagicMock()
-        mock_store._lock.__enter__ = MagicMock(return_value=None)
-        mock_store._lock.__exit__ = MagicMock(return_value=None)
+        # Set up transaction() as a context manager that returns state
+        mock_transaction = MagicMock()
+        mock_transaction.__enter__ = MagicMock(return_value={})
+        mock_transaction.__exit__ = MagicMock(return_value=None)
+        mock_store.transaction.return_value = mock_transaction
         return mock_store
 
     def test_cache_miss_on_empty_cache(self, mock_state_store):
         """Test that cache miss is recorded when cache is empty."""
-        mock_state_store._read_state.return_value = {"enrichment_cache": {}}
+        mock_state_store.transaction.return_value.__enter__.return_value = {"enrichment_cache": {}}
 
         cache = EnrichmentCache(mock_state_store)
         result = cache.get("source-1", "lookup-value")
@@ -34,7 +36,7 @@ class TestCacheHitMissTracking:
         cache_key = _compute_cache_key("source-1", "lookup-value")
         now = datetime.now(timezone.utc)
 
-        mock_state_store._read_state.return_value = {
+        mock_state_store.transaction.return_value.__enter__.return_value = {
             "enrichment_cache": {
                 cache_key: {
                     "source_id": "source-1",
@@ -58,7 +60,7 @@ class TestCacheHitMissTracking:
         cache_key = _compute_cache_key("source-1", "lookup-value")
         old_time = datetime.now(timezone.utc) - timedelta(hours=48)
 
-        mock_state_store._read_state.return_value = {
+        mock_state_store.transaction.return_value.__enter__.return_value = {
             "enrichment_cache": {
                 cache_key: {
                     "source_id": "source-1",
@@ -82,7 +84,7 @@ class TestCacheHitMissTracking:
         cache_key = _compute_cache_key("source-1", "exists")
         now = datetime.now(timezone.utc)
 
-        mock_state_store._read_state.return_value = {
+        mock_state_store.transaction.return_value.__enter__.return_value = {
             "enrichment_cache": {
                 cache_key: {
                     "source_id": "source-1",
@@ -112,7 +114,7 @@ class TestCacheHitMissTracking:
         cache_key = _compute_cache_key("source-1", "value")
         now = datetime.now(timezone.utc)
 
-        mock_state_store._read_state.return_value = {
+        mock_state_store.transaction.return_value.__enter__.return_value = {
             "enrichment_cache": {
                 cache_key: {
                     "source_id": "source-1",
@@ -142,7 +144,7 @@ class TestCacheHitMissTracking:
         cache_key = _compute_cache_key("source-1", "value")
         now = datetime.now(timezone.utc)
 
-        mock_state_store._read_state.return_value = {
+        mock_state_store.transaction.return_value.__enter__.return_value = {
             "enrichment_cache": {
                 cache_key: {
                     "source_id": "source-1",
@@ -162,7 +164,7 @@ class TestCacheHitMissTracking:
 
     def test_get_stats_with_zero_requests(self, mock_state_store):
         """Test hit_rate with zero requests."""
-        mock_state_store._read_state.return_value = {"enrichment_cache": {}}
+        mock_state_store.transaction.return_value.__enter__.return_value = {"enrichment_cache": {}}
 
         cache = EnrichmentCache(mock_state_store)
         stats = cache.get_stats()
@@ -173,7 +175,7 @@ class TestCacheHitMissTracking:
 
     def test_get_stats_includes_all_expected_fields(self, mock_state_store):
         """Test that get_stats returns all expected fields."""
-        mock_state_store._read_state.return_value = {"enrichment_cache": {}}
+        mock_state_store.transaction.return_value.__enter__.return_value = {"enrichment_cache": {}}
 
         cache = EnrichmentCache(mock_state_store)
         stats = cache.get_stats()

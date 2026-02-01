@@ -68,12 +68,24 @@ def _strip_literals_and_comments(sql: str) -> str:
                 continue
 
         if not in_double and ch == "'":
+            if in_single and nxt == "'":
+                # Escaped single quote ('') inside single-quoted string — skip both
+                out.append(" ")
+                out.append(" ")
+                i += 2
+                continue
             in_single = not in_single
             out.append(" ")
             i += 1
             continue
 
         if not in_single and ch == '"':
+            if in_double and nxt == '"':
+                # Escaped double quote ("") inside double-quoted string — skip both
+                out.append(" ")
+                out.append(" ")
+                i += 2
+                continue
             in_double = not in_double
             out.append(" ")
             i += 1
@@ -100,4 +112,9 @@ def get_write_operation(sql: str | None) -> str | None:
 def is_select_or_with(sql: str | None) -> bool:
     cleaned = _strip_literals_and_comments(sql or "")
     leading = cleaned.lstrip().upper()
-    return leading.startswith("SELECT") or leading.startswith("WITH")
+    if not (leading.startswith("SELECT") or leading.startswith("WITH")):
+        return False
+    # Reject if the query body contains write keywords (e.g. after a semicolon)
+    if get_write_operation(sql) is not None:
+        return False
+    return True

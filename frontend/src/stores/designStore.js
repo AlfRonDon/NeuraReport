@@ -102,14 +102,17 @@ const useDesignStore = create((set, get) => ({
     set({ loading: true, error: null });
     try {
       await designApi.setDefaultBrandKit(brandKitId);
-      set((state) => ({
-        brandKits: state.brandKits.map((k) => ({
+      set((state) => {
+        const updatedBrandKits = state.brandKits.map((k) => ({
           ...k,
           is_default: k.id === brandKitId,
-        })),
-        defaultBrandKit: state.brandKits.find((k) => k.id === brandKitId) || null,
-        loading: false,
-      }));
+        }));
+        return {
+          brandKits: updatedBrandKits,
+          defaultBrandKit: updatedBrandKits.find((k) => k.id === brandKitId) || null,
+          loading: false,
+        };
+      });
       return true;
     } catch (err) {
       set({ error: err.message, loading: false });
@@ -211,14 +214,17 @@ const useDesignStore = create((set, get) => ({
     set({ loading: true, error: null });
     try {
       await designApi.setActiveTheme(themeId);
-      set((state) => ({
-        themes: state.themes.map((t) => ({
+      set((state) => {
+        const updatedThemes = state.themes.map((t) => ({
           ...t,
           is_active: t.id === themeId,
-        })),
-        activeTheme: state.themes.find((t) => t.id === themeId) || null,
-        loading: false,
-      }));
+        }));
+        return {
+          themes: updatedThemes,
+          activeTheme: updatedThemes.find((t) => t.id === themeId) || null,
+          loading: false,
+        };
+      });
       return true;
     } catch (err) {
       set({ error: err.message, loading: false });

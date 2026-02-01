@@ -7,7 +7,7 @@ import os
 import re
 from backend.app.repositories.dataframes import DuckDBDataFrameQuery, SQLiteDataFrameLoader, sqlite_shim as sqlite3
 from collections import defaultdict
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
 from itertools import product
 from pathlib import Path
@@ -44,6 +44,20 @@ try:
     from playwright.async_api import async_playwright
 except ImportError:  # pragma: no cover
     async_playwright = None  # type: ignore
+
+
+def _run_async(coro):
+    """Run an async coroutine safely whether or not an event loop is running."""
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = None
+    if loop and loop.is_running():
+        import concurrent.futures
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+            return pool.submit(asyncio.run, coro).result()
+    return asyncio.run(coro)
+
 
 from .contract_adapter import ContractAdapter, format_decimal_str
 from .date_utils import get_col_type, mk_between_pred_for_date
@@ -640,7 +654,7 @@ def fill_and_print(
 
             combined_html = _combine_html_documents(html_sections)
             OUT_HTML.write_text(combined_html, encoding="utf-8")
-            asyncio.run(html_to_pdf_async(OUT_HTML, OUT_PDF, TEMPLATE_PATH.parent))
+            _run_async(html_to_pdf_async(OUT_HTML, OUT_PDF, TEMPLATE_PATH.parent))
             return {"html_path": str(OUT_HTML), "pdf_path": str(OUT_PDF), "rows_rendered": True}
         finally:
             for tmp_html_path, tmp_pdf_path in tmp_outputs:
@@ -839,7 +853,7 @@ def fill_and_print(
 
     start_dt = _parse_date_like(START_DATE)
     end_dt = _parse_date_like(END_DATE)
-    print_dt = datetime.now()
+    print_dt = datetime.now(timezone.utc)
 
     start_has_time = _has_time_component(START_DATE, start_dt)
     end_has_time = _has_time_component(END_DATE, end_dt)
@@ -2075,7 +2089,7 @@ def fill_and_print(
 
     _log_debug("BATCH_IDS:", len(BATCH_IDS or []), (BATCH_IDS or [])[:20] if BATCH_IDS else [])
 
-    asyncio.run(html_to_pdf_async(OUT_HTML, OUT_PDF, TEMPLATE_PATH.parent))
+    _run_async(html_to_pdf_async(OUT_HTML, OUT_PDF, TEMPLATE_PATH.parent))
     _log_debug("Wrote PDF via Playwright:", OUT_PDF)
 
     if fallback_con is not None:

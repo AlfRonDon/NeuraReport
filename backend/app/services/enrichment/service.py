@@ -94,35 +94,33 @@ class EnrichmentService:
 
         # Persist to state store
         store = _state_store()
-        with store._lock:
-            state = store._read_state()
+        with store.transaction() as state:
             state.setdefault("enrichment_sources", {})[source_id] = source.dict()
-            store._write_state(state)
 
         return source
 
     def list_sources(self) -> List[EnrichmentSource]:
         """List all enrichment sources."""
         store = _state_store()
-        sources = store._read_state().get("enrichment_sources", {})
+        with store.transaction() as state:
+            sources = state.get("enrichment_sources", {})
         return [EnrichmentSource(**s) for s in sources.values()]
 
     def get_source(self, source_id: str) -> Optional[EnrichmentSource]:
         """Get an enrichment source by ID."""
         store = _state_store()
-        source = store._read_state().get("enrichment_sources", {}).get(source_id)
+        with store.transaction() as state:
+            source = state.get("enrichment_sources", {}).get(source_id)
         return EnrichmentSource(**source) if source else None
 
     def delete_source(self, source_id: str) -> bool:
         """Delete an enrichment source."""
         store = _state_store()
-        with store._lock:
-            state = store._read_state()
+        with store.transaction() as state:
             sources = state.get("enrichment_sources", {})
             if source_id not in sources:
                 return False
             del sources[source_id]
-            store._write_state(state)
 
         # Clear cached instances
         self._source_instances.pop(source_id, None)

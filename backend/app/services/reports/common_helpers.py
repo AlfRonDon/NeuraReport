@@ -9,7 +9,7 @@ implementations can import and reuse them without duplicating logic.
 from __future__ import annotations
 
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Callable, Iterable
 
 _TOKEN_REGEX_CACHE: dict[str, re.Pattern[str]] = {}
@@ -165,8 +165,8 @@ def _parse_date_like(value) -> datetime | None:
             seconds = int(val)
             if len(val) > 10:
                 scale = 10 ** (len(val) - 10)
-                return datetime.fromtimestamp(seconds / scale)
-            return datetime.fromtimestamp(seconds)
+                return datetime.fromtimestamp(seconds / scale, tz=timezone.utc)
+            return datetime.fromtimestamp(seconds, tz=timezone.utc)
         except ValueError:
             pass
 

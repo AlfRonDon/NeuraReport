@@ -20,8 +20,9 @@ export default function useConnectionStore() {
   )
 
   const setConnections = useCallback((next) => {
-    setSavedConnections(normalizeConnections(next))
-  }, [setSavedConnections])
+    const resolved = typeof next === 'function' ? next(savedConnections) : next
+    setSavedConnections(normalizeConnections(resolved))
+  }, [savedConnections, setSavedConnections])
 
   const fetchConnections = useCallback(async () => {
     setLoading(true)

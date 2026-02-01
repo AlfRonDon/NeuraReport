@@ -89,6 +89,9 @@ Return ONLY the JSON object."""
 
         except Exception as exc:
             logger.error(f"Summary generation failed: {exc}")
+            error_message = str(exc)
+        else:
+            error_message = "Unknown error"
 
         return {
             "executive_summary": "Summary generation failed",
@@ -96,7 +99,7 @@ Return ONLY the JSON object."""
             "metrics": [],
             "recommendations": [],
             "confidence": 0.0,
-            "error": str(exc) if 'exc' in dir() else "Unknown error",
+            "error": error_message,
         }
 
     def generate_report_summary(
@@ -107,7 +110,8 @@ Return ONLY the JSON object."""
         """Generate summary for a specific report."""
         # Get report data from state store
         store = _state_store()
-        runs = store._read_state().get("runs", {})
+        with store.transaction() as state:
+            runs = state.get("runs", {})
         report = runs.get(report_id)
 
         if not report:

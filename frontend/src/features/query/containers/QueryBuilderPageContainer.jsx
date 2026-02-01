@@ -536,11 +536,12 @@ export default function QueryBuilderPage() {
         errorMessage: 'Failed to delete history entry',
         action: async () => {
           await nl2sqlApi.deleteQueryHistoryEntry(entryId)
-          setQueryHistory(queryHistory.filter((entry) => entry.id !== entryId))
+          const current = useQueryStore.getState().queryHistory
+          setQueryHistory(current.filter((entry) => entry.id !== entryId))
         },
       })
     },
-    [queryHistory, setQueryHistory, execute]
+    [setQueryHistory, execute]
   )
 
   const handleCopySQL = useCallback(async () => {

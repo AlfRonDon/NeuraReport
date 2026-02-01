@@ -50,8 +50,8 @@ class EnrichmentCache:
         cache_key = _compute_cache_key(source_id, lookup_value)
 
         try:
-            with self._store._lock:
-                cache = dict(self._store._read_state().get("enrichment_cache", {}) or {})
+            with self._store.transaction() as state:
+                cache = dict(state.get("enrichment_cache", {}) or {})
             entry = cache.get(cache_key)
 
             if not entry:
@@ -97,8 +97,7 @@ class EnrichmentCache:
         cache_key = _compute_cache_key(source_id, lookup_value)
 
         try:
-            with self._store._lock:
-                state = self._store._read_state()
+            with self._store.transaction() as state:
                 cache = state.setdefault("enrichment_cache", {})
 
                 cache[cache_key] = {
@@ -118,8 +117,6 @@ class EnrichmentCache:
                     )
                     state["enrichment_cache"] = dict(sorted_entries[:1000])
 
-                self._store._write_state(state)
-
         except Exception as exc:
             logger.warning(f"Cache write error: {exc}")
 
@@ -135,8 +132,7 @@ class EnrichmentCache:
             Number of entries invalidated
         """
         try:
-            with self._store._lock:
-                state = self._store._read_state()
+            with self._store.transaction() as state:
                 cache = state.get("enrichment_cache", {})
 
                 if source_id is None:
@@ -148,7 +144,6 @@ class EnrichmentCache:
                     count = original_count - len(cache)
                     state["enrichment_cache"] = cache
 
-                self._store._write_state(state)
                 return count
 
         except Exception as exc:
@@ -158,8 +153,8 @@ class EnrichmentCache:
     def get_stats(self) -> Dict[str, Any]:
         """Get cache statistics."""
         try:
-            with self._store._lock:
-                cache = dict(self._store._read_state().get("enrichment_cache", {}) or {})
+            with self._store.transaction() as state:
+                cache = dict(state.get("enrichment_cache", {}) or {})
 
             now = datetime.now(timezone.utc)
             expired_count = 0

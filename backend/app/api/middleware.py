@@ -28,7 +28,10 @@ def _get_client_key(request: Request) -> str:
         return f"key:{api_key[:16]}"
     forwarded = request.headers.get("x-forwarded-for")
     if forwarded:
-        return forwarded.split(",")[0].strip()
+        # Use last entry (closest to trusted proxy)
+        ip = forwarded.split(",")[-1].strip()
+        if ip:
+            return ip
     real_ip = request.headers.get("x-real-ip")
     if real_ip:
         return real_ip

@@ -194,9 +194,9 @@ const useSpreadsheetStore = create((set, get) => ({
   },
 
   // Formula Engine
-  evaluateFormula: async (spreadsheetId, formula, context = {}) => {
+  evaluateFormula: async (spreadsheetId, formula, sheetIndex = 0) => {
     try {
-      const result = await spreadsheetsApi.evaluateFormula(spreadsheetId, formula, context);
+      const result = await spreadsheetsApi.evaluateFormula(spreadsheetId, formula, sheetIndex);
       return result;
     } catch (err) {
       set({ error: err.message });
@@ -268,9 +268,9 @@ const useSpreadsheetStore = create((set, get) => ({
     }
   },
 
-  detectAnomalies: async (spreadsheetId, sheetIndex, columns) => {
+  detectAnomalies: async (spreadsheetId, column, options = {}) => {
     try {
-      const result = await spreadsheetsApi.detectAnomalies(spreadsheetId, sheetIndex, columns);
+      const result = await spreadsheetsApi.detectAnomalies(spreadsheetId, column, options);
       return result;
     } catch (err) {
       set({ error: err.message });

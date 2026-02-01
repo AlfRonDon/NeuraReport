@@ -20,11 +20,15 @@ from enum import Enum
 from functools import wraps
 from typing import Any, Callable, Dict, List, Optional, TypeVar
 
+import logging
+
 from fastapi import HTTPException, Request, Response
 from fastapi.responses import JSONResponse
 from fastapi.routing import APIRoute
 from pydantic import BaseModel, Field
 from starlette.middleware.base import BaseHTTPMiddleware
+
+logger = logging.getLogger(__name__)
 
 # ============================================================================
 # INTENT HEADERS
@@ -195,7 +199,7 @@ class UXGovernanceMiddleware(BaseHTTPMiddleware):
                 )
             else:
                 # Non-strict mode: log warning but allow
-                print(f"[UX GOVERNANCE WARNING] Request to {request.url.path} missing intent headers")
+                logger.warning("Request to %s missing intent headers", request.url.path)
 
         # Validate idempotency for non-safe operations
         if intent and request.method in {"POST", "DELETE"}:
@@ -266,6 +270,20 @@ def record_reversible_operation(
         reverse_endpoint=reverse_endpoint,
     )
     _REVERSIBILITY_STORE[operation_id] = record
+
+    # Evict entries if store exceeds size limit
+    if len(_REVERSIBILITY_STORE) > 10000:
+        now = datetime.now(timezone.utc)
+        expired = [k for k, v in _REVERSIBILITY_STORE.items() if v.expires_at and v.expires_at <= now]
+        for k in expired:
+            del _REVERSIBILITY_STORE[k]
+        # If still over limit, evict oldest entries
+        if len(_REVERSIBILITY_STORE) > 10000:
+            sorted_keys = sorted(_REVERSIBILITY_STORE.keys(), key=lambda k: _REVERSIBILITY_STORE[k].created_at)
+            excess = len(_REVERSIBILITY_STORE) - 10000
+            for k in sorted_keys[:excess]:
+                del _REVERSIBILITY_STORE[k]
+
     return record
 
 

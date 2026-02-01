@@ -318,7 +318,7 @@ export const useAppStore = create((set, get) => ({
   // Templates in app (only approved listed in Generate by default)
   templates: [],
   setTemplates: (templates) => set({ templates }),
-  addTemplate: (tpl) => set({ templates: [tpl, ...get().templates] }),
+  addTemplate: (tpl) => set((state) => ({ templates: [tpl, ...state.templates] })),
   removeTemplate: (id) =>
     set((state) => {
       const templates = state.templates.filter((tpl) => tpl.id !== id)
@@ -385,7 +385,7 @@ export const useAppStore = create((set, get) => ({
   // Recently downloaded artifacts
   downloads: [],
   addDownload: (item) =>
-    set({ downloads: [item, ...get().downloads].slice(0, 20) }),
+    set((state) => ({ downloads: [item, ...state.downloads].slice(0, 20) })),
 
   hydrated: false,
   setHydrated: (flag = true) => set({ hydrated: !!flag }),

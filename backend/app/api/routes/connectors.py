@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import logging
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
@@ -219,8 +219,8 @@ async def test_connection(
             error=result.error,
             details=result.details,
         )
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid connector configuration")
     except Exception as e:
         logger.exception("connector_test_failed", extra={"connector_type": connector_type})
         return TestConnectionResponse(
@@ -252,7 +252,7 @@ async def create_connection(
                 detail=f"Connection failed: {test_result.error}",
             )
 
-        now = datetime.utcnow().isoformat()
+        now = datetime.now(timezone.utc).isoformat()
         connection = {
             "id": str(uuid.uuid4()),
             "name": request.name,
@@ -274,8 +274,8 @@ async def create_connection(
             last_used=connection["last_used"],
             latency_ms=connection["latency_ms"],
         )
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid connection configuration")
 
 
 @router.get("")
@@ -444,7 +444,7 @@ async def execute_query(
         )
 
         # Persist last-used timestamp
-        conn["last_used"] = datetime.utcnow().isoformat()
+        conn["last_used"] = datetime.now(timezone.utc).isoformat()
         conn["config"] = config  # include config so _store_put can re-persist credentials
         _store_put(conn)
 
@@ -458,13 +458,9 @@ async def execute_query(
         )
     except Exception as e:
         logger.exception("connector_query_failed", extra={"connection_id": connection_id})
-        return QueryResponse(
-            columns=[],
-            rows=[],
-            row_count=0,
-            execution_time_ms=0,
-            truncated=False,
-            error=f"Query execution failed: {type(e).__name__}",
+        raise HTTPException(
+            status_code=500,
+            detail="Query execution failed",
         )
     finally:
         if connector is not None:

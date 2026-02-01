@@ -356,7 +356,8 @@ async def execute_widget_query(
                 "error": str(exc),
             },
         )
-        raise HTTPException(status_code=422, detail=f"Query execution failed: {exc}")
+        logger.exception("Widget query execution failed: %s", exc)
+        raise HTTPException(status_code=422, detail="Query execution failed")
 
 
 @router.post("/analytics/insights")

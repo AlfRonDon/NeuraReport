@@ -331,7 +331,10 @@ async def upload_logo(
 ):
     """Upload a logo asset for a brand kit."""
     try:
+        MAX_LOGO_SIZE = 5 * 1024 * 1024  # 5MB
         content = await file.read()
+        if len(content) > MAX_LOGO_SIZE:
+            raise HTTPException(status_code=413, detail="Logo file too large (max 5MB)")
         return await design_service.upload_logo(
             filename=file.filename or "logo",
             content=content,

@@ -262,21 +262,3 @@ def html_file_to_xlsx(html_path: Path, output_path: Path) -> Optional[Path]:
         },
     )
     return output_path
-def _table_score(table: list[list[str]]) -> int:
-    if not table:
-        return 0
-    row_count = len(table)
-    max_cols = max((len(row) for row in table), default=0)
-    multi_col_rows = sum(1 for row in table if sum(1 for cell in row if cell.strip()) >= 2)
-    return (multi_col_rows or row_count) * max(1, max_cols)
-
-
-def _select_best_table_index(tables: list[list[list[str]]]) -> int:
-    best_idx = 0
-    best_score = -1
-    for idx, table in enumerate(tables):
-        score = _table_score(table)
-        if score > best_score:
-            best_idx = idx
-            best_score = score
-    return best_idx

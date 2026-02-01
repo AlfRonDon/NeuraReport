@@ -24,7 +24,9 @@ export function useJobDetails(jobId, { enabled = true } = {}) {
 const TERMINAL_STATUSES = new Set(['succeeded', 'failed', 'cancelled'])
 
 export function useTrackedJobs(jobIds = [], { refetchInterval = 4000 } = {}) {
-  const ids = Array.isArray(jobIds) ? jobIds.filter(Boolean) : []
+  const idsKey = Array.isArray(jobIds) ? jobIds.filter(Boolean).join(',') : ''
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const ids = useMemo(() => (Array.isArray(jobIds) ? jobIds.filter(Boolean) : []), [idsKey])
   const queries = useQueries({
     queries: ids.map((jobId) => ({
       queryKey: ['jobs', jobId],
@@ -41,6 +43,7 @@ export function useTrackedJobs(jobIds = [], { refetchInterval = 4000 } = {}) {
       },
     })),
   })
+  const queriesKey = queries.map(q => `${q.dataUpdatedAt}-${q.isFetching}`).join(',')
   return useMemo(() => {
     const jobsById = {}
     queries.forEach((result, index) => {
@@ -52,5 +55,6 @@ export function useTrackedJobs(jobIds = [], { refetchInterval = 4000 } = {}) {
     })
     const isFetching = queries.some((query) => query.isFetching)
     return { jobsById, isFetching }
-  }, [ids, queries])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [idsKey, queriesKey])
 }

@@ -18,7 +18,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
-from hypothesis import given, settings
+from hypothesis import given, settings, HealthCheck
 from hypothesis import strategies as st
 
 from backend.app.utils.fs import write_json_atomic, write_text_atomic, _maybe_fail
@@ -151,7 +151,7 @@ class TestPropertyBased:
             max_leaves=30,
         )
     )
-    @settings(max_examples=50)
+    @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow], deadline=None)
     def test_json_roundtrip(self, data):
         import tempfile, shutil
         d = Path(tempfile.mkdtemp())

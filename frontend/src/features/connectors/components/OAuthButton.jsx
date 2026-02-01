@@ -2,7 +2,7 @@
  * OAuth Button Component
  * Handles OAuth authentication flow for cloud connectors.
  */
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import {
   Button,
   CircularProgress,
@@ -107,6 +107,14 @@ export default function OAuthButton({
   const { execute } = useInteraction()
   const [loading, setLoading] = useState(false)
   const [authWindow, setAuthWindow] = useState(null)
+  const checkClosedRef = useRef(null)
+
+  // Cleanup interval on unmount
+  useEffect(() => {
+    return () => {
+      if (checkClosedRef.current) clearInterval(checkClosedRef.current)
+    }
+  }, [])
 
   const config = OAUTH_PROVIDERS[provider] || {
     name: provider,
@@ -181,10 +189,11 @@ export default function OAuthButton({
 
           setAuthWindow(popup)
 
-          const checkClosed = setInterval(() => {
+          checkClosedRef.current = setInterval(() => {
             if (popup?.closed) {
               setLoading(false)
-              clearInterval(checkClosed)
+              clearInterval(checkClosedRef.current)
+              checkClosedRef.current = null
             }
           }, 500)
         } catch (error) {

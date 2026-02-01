@@ -8,12 +8,17 @@ Tests cover:
 4. Client error handling (no retry)
 5. Timeout handling
 """
+import os
 import pytest
 import asyncio
 import hashlib
 import hmac
 import json
 from unittest.mock import AsyncMock, MagicMock, patch
+
+# Ensure debug mode is enabled so WebhookService.__init__ does not raise
+# RuntimeError about missing NEURA_WEBHOOK_SECRET in test environments.
+os.environ.setdefault("NEURA_DEBUG", "true")
 
 from backend.app.services.jobs.webhook_service import (
     WebhookService,
@@ -79,10 +84,11 @@ class TestWebhookSignature:
 
         signature = service.compute_signature(payload, secret)
 
-        # Verify by computing manually
+        # Verify by computing manually (must match service serialization:
+        # sort_keys=True, default=str)
         expected = hmac.new(
             secret.encode("utf-8"),
-            json.dumps(payload, sort_keys=True).encode("utf-8"),
+            json.dumps(payload, sort_keys=True, default=str).encode("utf-8"),
             hashlib.sha256
         ).hexdigest()
 

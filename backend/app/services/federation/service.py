@@ -85,10 +85,8 @@ class FederationService:
 
         # Persist
         store = _state_store()
-        with store._lock:
-            state = store._read_state()
-            state.setdefault("virtual_schemas", {})[schema_id] = virtual_schema.dict()
-            store._write_state(state)
+        with store.transaction() as state:
+            state.setdefault("virtual_schemas", {})[schema_id] = virtual_schema.model_dump()
 
         return virtual_schema
 
@@ -169,25 +167,25 @@ Return ONLY the JSON array."""
     def list_virtual_schemas(self) -> List[VirtualSchema]:
         """List all virtual schemas."""
         store = _state_store()
-        schemas = store._read_state().get("virtual_schemas", {})
-        return [VirtualSchema(**s) for s in schemas.values()]
+        with store.transaction() as state:
+            schemas = state.get("virtual_schemas", {})
+            return [VirtualSchema(**s) for s in schemas.values()]
 
     def get_virtual_schema(self, schema_id: str) -> Optional[VirtualSchema]:
         """Get a virtual schema by ID."""
         store = _state_store()
-        schema = store._read_state().get("virtual_schemas", {}).get(schema_id)
-        return VirtualSchema(**schema) if schema else None
+        with store.transaction() as state:
+            schema = state.get("virtual_schemas", {}).get(schema_id)
+            return VirtualSchema(**schema) if schema else None
 
     def delete_virtual_schema(self, schema_id: str) -> bool:
         """Delete a virtual schema."""
         store = _state_store()
-        with store._lock:
-            state = store._read_state()
+        with store.transaction() as state:
             schemas = state.get("virtual_schemas", {})
             if schema_id not in schemas:
                 return False
             del schemas[schema_id]
-            store._write_state(state)
         return True
 
     def _extract_table_names(self, sql: str) -> List[str]:
@@ -533,7 +531,8 @@ Return ONLY the JSON array."""
                     # Try simpler query for just the tables in this connection
                     for table in tables:
                         try:
-                            simple_sql = f"SELECT * FROM {table}"
+                            quoted = '"' + table.replace('"', '""') + '"'
+                            simple_sql = f"SELECT * FROM {quoted}"
                             if request.limit:
                                 simple_sql += f" LIMIT {request.limit}"
                             result = self._execute_on_connection(
@@ -572,6 +571,6 @@ Return ONLY the JSON array."""
             logger.error(f"Federated query failed: {exc}")
             raise AppError(
                 code="query_failed",
-                message=f"Query execution failed: {str(exc)}",
+                message="Query execution failed",
                 status_code=500,
             )
