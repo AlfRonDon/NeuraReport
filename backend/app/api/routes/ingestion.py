@@ -62,7 +62,8 @@ def _validate_external_url(url: str) -> str:
     except HTTPException:
         raise
     except Exception:
-        pass
+        logger.warning("URL validation failed unexpectedly")
+        raise HTTPException(status_code=400, detail="URL validation failed")
 
     return url
 

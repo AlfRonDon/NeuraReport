@@ -197,7 +197,8 @@ class DocumentQAService:
             total_chars += len(content_chunk)
 
         # Build conversation history (last N messages)
-        history_messages = session.messages[-(session.context_window * 2):-1]  # Exclude current message
+        window = max(1, session.context_window)
+        history_messages = session.messages[-(window * 2):-1]  # Exclude current message
         history_text = ""
         if history_messages:
             history_parts = []

@@ -499,7 +499,7 @@ function MenuBar({ editor }) {
             placeholder="Enter URL"
             value={linkUrl}
             onChange={(e) => setLinkUrl(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && handleLinkSubmit()}
+            onKeyDown={(e) => e.key === 'Enter' && handleLinkSubmit()}
           />
           <Button variant="contained" size="small" onClick={handleLinkSubmit}>
             {linkUrl ? 'Update' : 'Remove'}
@@ -520,7 +520,7 @@ function MenuBar({ editor }) {
             placeholder="Enter image URL"
             value={imageUrl}
             onChange={(e) => setImageUrl(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && handleImageSubmit()}
+            onKeyDown={(e) => e.key === 'Enter' && handleImageSubmit()}
           />
           <Button
             variant="contained"

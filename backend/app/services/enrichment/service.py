@@ -214,7 +214,8 @@ class EnrichmentService:
                                 ttl_hours=source.cache_ttl_hours,
                             )
                     except Exception as exc:
-                        errors.append(f"Lookup failed for {mapping.source_field}: {exc}")
+                        logger.warning("Enrichment lookup failed for %s: %s", mapping.source_field, exc)
+                        errors.append(f"Lookup failed for {mapping.source_field}")
                         enrichment_data = None
                     from_cache = False
 

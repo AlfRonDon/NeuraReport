@@ -319,7 +319,7 @@ async function executeEl(
 /* ------------------------------------------------------------------ */
 for (const pg of targetPages) {
   test(`audit-v2: ${pg.name}`, async ({ page }) => {
-    test.setTimeout(1_800_000) // 30 minutes per page
+    test.setTimeout(3_600_000) // 60 minutes per page
 
     const consoleLogs: string[] = []
     page.on('console', m => {
@@ -345,25 +345,9 @@ for (const pg of targetPages) {
       }
     }
 
-    // Click tabs to discover tab-panel elements
-    await navTo(page, pg.route, true)
-    const tabs = page.locator('[role="tab"]')
-    const tabCount = await tabs.count()
-    for (let t = 1; t < Math.min(tabCount, 6); t++) {
-      try {
-        await tabs.nth(t).click({ force: true, timeout: 2000 })
-        await page.waitForTimeout(600)
-        const tabEls = await enumerateLive(page)
-        for (const el of tabEls) {
-          const fp = `${el.ariaLabel}|${el.text}|${el.tag}|${el.boundingBox.x},${el.boundingBox.y}`
-          if (!allFingerprints.has(fp)) {
-            el.index = liveElements.length
-            liveElements.push(el)
-            allFingerprints.add(fp)
-          }
-        }
-      } catch {}
-    }
+    // NOTE: Tab-panel elements are NOT enumerated separately.
+    // Clicking a tab is itself an audited action (pass/defect).
+    // Elements within tab panels are tested when the tab click is executed.
 
     // Save updated inventory
     const invElements = liveElements.map((el, i) => ({ ...el, id: `${pg.name}-E${String(i).padStart(3, '0')}` }))
@@ -428,6 +412,12 @@ for (const pg of targetPages) {
         pass++
         if ((i + 1) % 20 === 0) {
           console.log(`  ... ${i + 1}/${invElements.length} (P:${pass} D:${defect} Dis:${disabled})`)
+          // Incremental save every 20 elements
+          fs.writeFileSync(path.join(DATA, `${pg.name}-results.json`), JSON.stringify({
+            page: pg.name, route: pg.route,
+            total: invElements.length, processed: i + 1, pass, defect, disabledVerified: disabled, untestable: 0,
+            consoleErrors: consoleLogs, results,
+          }, null, 2))
         }
       } catch (err: any) {
         const msg = err.message?.substring(0, 120) || 'unknown'

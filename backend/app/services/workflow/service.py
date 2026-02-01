@@ -42,6 +42,7 @@ class WorkflowService:
         self._workflows: dict[str, dict] = {}
         self._executions: dict[str, dict] = {}
         self._pending_approvals: dict[str, dict] = {}
+        self._running_tasks: set = set()
 
     def _safe_eval_condition(self, condition: str, context: dict[str, Any]) -> bool:
         """Safely evaluate a condition expression without using eval().
@@ -55,13 +56,16 @@ class WorkflowService:
         import re
         import operator
 
-        condition = condition.strip().lower()
+        condition_raw = condition.strip()
+        condition_lower = condition_raw.lower()
 
         # Handle simple boolean literals
-        if condition in ("true", "1", "yes"):
+        if condition_lower in ("true", "1", "yes"):
             return True
-        if condition in ("false", "0", "no", ""):
+        if condition_lower in ("false", "0", "no", ""):
             return False
+
+        condition = condition_raw
 
         # Safe operators mapping
         ops = {
@@ -294,7 +298,9 @@ class WorkflowService:
 
         if async_execution:
             # Schedule async execution
-            asyncio.create_task(self._run_workflow(execution_id, workflow, input_data))
+            task = asyncio.create_task(self._run_workflow(execution_id, workflow, input_data))
+            self._running_tasks.add(task)
+            task.add_done_callback(self._running_tasks.discard)
         else:
             # Run synchronously
             await self._run_workflow(execution_id, workflow, input_data)
@@ -327,6 +333,7 @@ class WorkflowService:
 
             # Find start nodes (no incoming edges)
             queue = [nid for nid, inc in incoming.items() if not inc]
+            enqueued = set(queue)
             context = {"input": input_data, "outputs": {}}
 
             while queue:
@@ -357,10 +364,13 @@ class WorkflowService:
 
                 # Add downstream nodes to queue
                 for target in outgoing.get(node_id, []):
+                    if target in enqueued:
+                        continue
                     # Check if all dependencies are satisfied
                     deps = incoming.get(target, [])
                     if all(d in context["outputs"] for d in deps):
                         queue.append(target)
+                        enqueued.add(target)
 
             if execution["status"] == ExecutionStatus.RUNNING.value:
                 execution["status"] = ExecutionStatus.COMPLETED.value
@@ -541,9 +551,11 @@ class WorkflowService:
             # Continue execution
             workflow = self._workflows.get(execution["workflow_id"])
             if workflow:
-                asyncio.create_task(
+                task = asyncio.create_task(
                     self._run_workflow(execution_id, workflow, execution["input_data"])
                 )
+                self._running_tasks.add(task)
+                task.add_done_callback(self._running_tasks.discard)
         else:
             execution["status"] = ExecutionStatus.CANCELLED.value
             execution["error"] = f"Rejected: {comment or 'No reason provided'}"

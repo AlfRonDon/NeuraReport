@@ -289,7 +289,7 @@ function ValidationEditorDialog({ open, validation, onClose, onSave }) {
                   placeholder="Add list item..."
                   value={listInput}
                   onChange={(e) => setListInput(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleAddListItem()}
+                  onKeyDown={(e) => e.key === 'Enter' && handleAddListItem()}
                 />
                 <Button variant="outlined" onClick={handleAddListItem}>
                   <AddIcon />

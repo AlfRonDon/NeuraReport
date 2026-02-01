@@ -53,7 +53,8 @@ class KeyValue:
 
     def to_sql_condition(self, table: Optional[str] = None) -> str:
         """Generate SQL WHERE condition for this key-value."""
-        col = f"{table}.{self.key}" if table else self.key
+        safe_key = f"[{self.key}]"
+        col = f"[{table}].{safe_key}" if table else safe_key
         safe_value = self.value.replace("'", "''")
         return f"{col} = '{safe_value}'"
 

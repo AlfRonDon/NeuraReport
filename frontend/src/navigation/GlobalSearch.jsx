@@ -187,6 +187,25 @@ export default function GlobalSearch({
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [enableShortcut, open])
 
+  // Handle result selection
+  const handleSelect = useCallback((result) => {
+    setOpen(false)
+    setQuery('')
+    setResults([])
+    if (result?.url) {
+      handleNavigate(result.url, `Open ${result.label}`, { resultType: result.type, resultId: result.id })
+      return
+    }
+    const typeKey = result?.type ? String(result.type).toLowerCase() : ''
+    const routeBuilder = SEARCH_ROUTE_BY_TYPE[typeKey]
+    if (routeBuilder) {
+      const nextPath = routeBuilder(result)
+      if (nextPath) {
+        handleNavigate(nextPath, `Open ${result.label}`, { resultType: result.type, resultId: result.id })
+      }
+    }
+  }, [handleNavigate])
+
   // Handle arrow key navigation
   const handleKeyDown = useCallback((e) => {
     if (!open || results.length === 0) return
@@ -201,7 +220,7 @@ export default function GlobalSearch({
       e.preventDefault()
       handleSelect(results[selectedIndex])
     }
-  }, [open, results, selectedIndex])
+  }, [open, results, selectedIndex, handleSelect])
 
   const handleSearch = useCallback((searchQuery) => {
     const normalizedQuery = searchQuery?.trim() || ''
@@ -254,24 +273,6 @@ export default function GlobalSearch({
       handleSearch(value)
     }, 300)
   }, [handleSearch])
-
-  const handleSelect = useCallback((result) => {
-    setOpen(false)
-    setQuery('')
-    setResults([])
-    if (result?.url) {
-      handleNavigate(result.url, `Open ${result.label}`, { resultType: result.type, resultId: result.id })
-      return
-    }
-    const typeKey = result?.type ? String(result.type).toLowerCase() : ''
-    const routeBuilder = SEARCH_ROUTE_BY_TYPE[typeKey]
-    if (routeBuilder) {
-      const nextPath = routeBuilder(result)
-      if (nextPath) {
-        handleNavigate(nextPath, `Open ${result.label}`, { resultType: result.type, resultId: result.id })
-      }
-    }
-  }, [handleNavigate])
 
   const handleFocus = useCallback(() => {
     if (hasSearched && query.trim().length >= 2) {

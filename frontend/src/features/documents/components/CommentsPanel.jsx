@@ -512,7 +512,7 @@ export default function CommentsPanel({
           placeholder={selectedText ? 'Add a comment about this selection...' : 'Add a comment...'}
           value={newCommentText}
           onChange={(e) => setNewCommentText(e.target.value)}
-          onKeyPress={(e) => {
+          onKeyDown={(e) => {
             if (e.key === 'Enter' && e.ctrlKey) {
               handleAddComment()
             }

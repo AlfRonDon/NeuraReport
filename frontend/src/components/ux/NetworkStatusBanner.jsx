@@ -58,6 +58,7 @@ export default function NetworkStatusBanner({ onRetry }) {
   const [showBanner, setShowBanner] = useState(false)
   const [wasOffline, setWasOffline] = useState(false)
   const successTimeoutRef = useRef(null)
+  const prevOnlineRef = useRef(isOnline)
   // Server connectivity check is provided by the network hook
 
   // Handle retry
@@ -93,16 +94,17 @@ export default function NetworkStatusBanner({ onRetry }) {
     onRetry?.()
   }, [checkConnectivity, checkServer, onRetry])
 
-  // Monitor network status
+  // Monitor network status - only retry on actual offline-to-online transitions
   useEffect(() => {
     if (!isOnline) {
       setStatus(NetworkStatus.OFFLINE)
       setShowBanner(true)
-    } else if (status === NetworkStatus.OFFLINE) {
-      // Browser says online, verify with server
+    } else if (!prevOnlineRef.current) {
+      // Transitioning from offline to online, verify with server
       handleRetry()
     }
-  }, [isOnline, status, handleRetry])
+    prevOnlineRef.current = isOnline
+  }, [isOnline, handleRetry])
 
   // Periodic check when offline
   useEffect(() => {

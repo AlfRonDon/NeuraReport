@@ -432,7 +432,7 @@ function FieldPropertiesPanel({ field, onChange }) {
               placeholder="Add option..."
               value={optionInput}
               onChange={(e) => setOptionInput(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleAddOption()}
+              onKeyDown={(e) => e.key === 'Enter' && handleAddOption()}
             />
             <Button variant="outlined" onClick={handleAddOption} sx={{ minWidth: 40 }}>
               <AddIcon />

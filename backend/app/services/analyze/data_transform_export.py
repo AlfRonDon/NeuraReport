@@ -10,6 +10,7 @@ Features:
 from __future__ import annotations
 
 import csv
+import html as html_mod
 import io
 import json
 import logging
@@ -96,7 +97,10 @@ def assess_data_quality(tables: List[EnhancedExtractedTable]) -> DataQualityRepo
             # Record missing values
             if missing_count > 0:
                 missing_values[col_key] = missing_count
-                missing_percentage[col_key] = round(missing_count / len(table.rows) * 100, 2)
+                if len(table.rows) > 0:
+                    missing_percentage[col_key] = round(missing_count / len(table.rows) * 100, 2)
+                else:
+                    missing_percentage[col_key] = 0.0
 
             unique_values_per_column[col_key] = len(unique_set)
 
@@ -489,37 +493,37 @@ def export_to_html(result: EnhancedAnalysisResult) -> str:
 """]
 
     # Title
-    html_parts.append(f"<h1>Analysis Report: {result.document_name}</h1>")
-    html_parts.append(f"<p style='color:#6b7280;'>Generated: {result.created_at.strftime('%Y-%m-%d %H:%M')}</p>")
+    html_parts.append(f"<h1>Analysis Report: {html_mod.escape(str(result.document_name))}</h1>")
+    html_parts.append(f"<p style='color:#6b7280;'>Generated: {html_mod.escape(str(result.created_at.strftime('%Y-%m-%d %H:%M')))}</p>")
 
     # Key Metrics
     if result.metrics:
         html_parts.append("<h2>Key Metrics</h2><div>")
         for metric in result.metrics[:8]:
             html_parts.append(f"""<div class="metric">
-                <div class="metric-value">{metric.raw_value}</div>
-                <div class="metric-name">{metric.name}</div>
+                <div class="metric-value">{html_mod.escape(str(metric.raw_value))}</div>
+                <div class="metric-name">{html_mod.escape(str(metric.name))}</div>
             </div>""")
         html_parts.append("</div>")
 
     # Executive Summary
     if "executive" in result.summaries:
         html_parts.append("<h2>Executive Summary</h2>")
-        html_parts.append(f"<p>{result.summaries['executive'].content}</p>")
+        html_parts.append(f"<p>{html_mod.escape(str(result.summaries['executive'].content))}</p>")
 
     # Tables
     if result.tables:
         html_parts.append("<h2>Data Tables</h2>")
         for table in result.tables[:3]:
-            html_parts.append(f"<h3>{table.title or table.id}</h3>")
+            html_parts.append(f"<h3>{html_mod.escape(str(table.title or table.id))}</h3>")
             html_parts.append("<table><thead><tr>")
             for header in table.headers:
-                html_parts.append(f"<th>{header}</th>")
+                html_parts.append(f"<th>{html_mod.escape(str(header))}</th>")
             html_parts.append("</tr></thead><tbody>")
             for row in table.rows[:15]:
                 html_parts.append("<tr>")
                 for val in row:
-                    html_parts.append(f"<td>{val}</td>")
+                    html_parts.append(f"<td>{html_mod.escape(str(val))}</td>")
                 html_parts.append("</tr>")
             html_parts.append("</tbody></table>")
             if len(table.rows) > 15:
@@ -530,9 +534,9 @@ def export_to_html(result: EnhancedAnalysisResult) -> str:
         html_parts.append("<h2>Key Insights</h2>")
         for insight in result.insights:
             html_parts.append(f"""<div class="insight">
-                <strong>{insight.title}</strong>
-                <span class="badge badge-{insight.priority.value}">{insight.priority.value}</span>
-                <p>{insight.description}</p>
+                <strong>{html_mod.escape(str(insight.title))}</strong>
+                <span class="badge badge-{html_mod.escape(str(insight.priority.value))}">{html_mod.escape(str(insight.priority.value))}</span>
+                <p>{html_mod.escape(str(insight.description))}</p>
             </div>""")
 
     # Risks
@@ -540,9 +544,9 @@ def export_to_html(result: EnhancedAnalysisResult) -> str:
         html_parts.append("<h2>Risks Identified</h2>")
         for risk in result.risks:
             html_parts.append(f"""<div class="risk">
-                <strong>{risk.title}</strong>
-                <span class="badge badge-{risk.risk_level.value}">{risk.risk_level.value}</span>
-                <p>{risk.description}</p>
+                <strong>{html_mod.escape(str(risk.title))}</strong>
+                <span class="badge badge-{html_mod.escape(str(risk.risk_level.value))}">{html_mod.escape(str(risk.risk_level.value))}</span>
+                <p>{html_mod.escape(str(risk.description))}</p>
             </div>""")
 
     # Opportunities
@@ -550,8 +554,8 @@ def export_to_html(result: EnhancedAnalysisResult) -> str:
         html_parts.append("<h2>Opportunities</h2>")
         for opp in result.opportunities:
             html_parts.append(f"""<div class="opportunity">
-                <strong>{opp.title}</strong>
-                <p>{opp.description}</p>
+                <strong>{html_mod.escape(str(opp.title))}</strong>
+                <p>{html_mod.escape(str(opp.description))}</p>
             </div>""")
 
     html_parts.append("</div></body></html>")

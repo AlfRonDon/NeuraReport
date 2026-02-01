@@ -5,6 +5,7 @@ Handles document export to various formats and distribution.
 from __future__ import annotations
 
 import base64
+import html as html_mod
 import io
 import logging
 import secrets
@@ -168,7 +169,8 @@ class ExportService:
                 file_name="content.xhtml",
                 lang="en",
             )
-            chapter.content = f"<html><body><h1>{options.get('title', 'Document')}</h1>{content}</body></html>"
+            safe_title = html_mod.escape(options.get('title', 'Document'))
+            chapter.content = f"<html><body><h1>{safe_title}</h1>{content}</body></html>"
             book.add_item(chapter)
 
             # Add navigation
@@ -187,15 +189,29 @@ class ExportService:
             logger.warning("ebooklib not available")
             raise ImportError("ebooklib is required for ePub export")
 
+    @staticmethod
+    def _escape_latex(text: str) -> str:
+        """Escape LaTeX special characters to prevent injection."""
+        replacements = [
+            ('\\', '\\textbackslash{}'),
+            ('{', '\\{'), ('}', '\\}'),
+            ('$', '\\$'), ('#', '\\#'), ('%', '\\%'),
+            ('&', '\\&'), ('^', '\\textasciicircum{}'),
+            ('_', '\\_'), ('~', '\\textasciitilde{}'),
+        ]
+        for old, new in replacements:
+            text = text.replace(old, new)
+        return text
+
     async def export_to_latex(
         self,
         content: str,
         options: dict[str, Any],
     ) -> bytes:
         """Export content to LaTeX format."""
-        doc_class = options.get("document_class", "article")
-        title = options.get("title", "Document")
-        author = options.get("author", "")
+        doc_class = self._escape_latex(options.get("document_class", "article"))
+        title = self._escape_latex(options.get("title", "Document"))
+        author = self._escape_latex(options.get("author", ""))
 
         latex_content = f"""\\documentclass{{{doc_class}}}
 \\usepackage[utf8]{{inputenc}}
@@ -246,7 +262,7 @@ date: {_now().strftime('%Y-%m-%d')}
         options: dict[str, Any],
     ) -> bytes:
         """Export content to HTML format."""
-        title = options.get("title", "Document")
+        title = html_mod.escape(options.get("title", "Document"))
         standalone = options.get("standalone", True)
 
         if standalone:
@@ -302,7 +318,9 @@ date: {_now().strftime('%Y-%m-%d')}
         try:
             from backend.app.repositories.state.store import state_store
             with state_store.transaction() as state:
-                state["export_jobs"][job_id] = job
+                jobs = state.get("export_jobs", {})
+                jobs[job_id] = job
+                state["export_jobs"] = jobs
         except Exception as e:
             logger.warning(f"Failed to persist export job: {e}")
 
@@ -310,7 +328,15 @@ date: {_now().strftime('%Y-%m-%d')}
 
     async def get_export_job(self, job_id: str) -> Optional[dict]:
         """Get export job status."""
-        return self._export_jobs.get(job_id)
+        job = self._export_jobs.get(job_id)
+        if job is not None:
+            return job
+        try:
+            from backend.app.repositories.state.store import state_store
+            with state_store.transaction() as state:
+                return state.get("export_jobs", {}).get(job_id)
+        except Exception:
+            return None
 
     async def bulk_export(
         self,

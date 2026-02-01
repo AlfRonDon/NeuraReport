@@ -184,7 +184,7 @@ def _load_scalars(
         expr = contract.get_mapping(token)
         if not expr:
             continue
-        select_parts.append(f"{expr} AS {token}")
+        select_parts.append(f"{expr} AS [{token}]")
         ordered_tokens.append(token)
 
     if select_parts:
@@ -241,7 +241,7 @@ def _load_rows(
     for token in contract.tokens.row_tokens:
         expr = contract.get_mapping(token)
         if expr:
-            select_parts.append(f"{expr} AS {token}")
+            select_parts.append(f"{expr} AS [{token}]")
 
     if not select_parts:
         return []
@@ -326,14 +326,19 @@ def _load_rows(
             elif child_date:
                 date_column = child_date
                 date_table = child_table
+    _DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
     if request.start_date or request.end_date:
         if date_column:
             date_expr = date_column
             if "." not in date_expr and date_table:
                 date_expr = f"{date_table}.{date_expr}"
             if request.start_date:
+                if not _DATE_RE.match(request.start_date):
+                    raise ValidationError(message="Invalid start_date format: expected YYYY-MM-DD")
                 conditions.append(f"date({date_expr}) >= date('{request.start_date}')")
             if request.end_date:
+                if not _DATE_RE.match(request.end_date):
+                    raise ValidationError(message="Invalid end_date format: expected YYYY-MM-DD")
                 conditions.append(f"date({date_expr}) <= date('{request.end_date}')")
         else:
             logger.warning(
@@ -350,7 +355,15 @@ def _load_rows(
 
     # Add ORDER BY
     if contract.row_order:
-        query += f" ORDER BY {', '.join(contract.row_order)}"
+        safe_order_terms = []
+        for term in contract.row_order:
+            stripped = term.strip()
+            parts = stripped.rsplit(None, 1)
+            if len(parts) == 2 and parts[1].upper() in ("ASC", "DESC"):
+                safe_order_terms.append(f"[{parts[0]}] {parts[1]}")
+            else:
+                safe_order_terms.append(f"[{stripped}]")
+        query += f" ORDER BY {', '.join(safe_order_terms)}"
 
     try:
         result = datasource.execute_query(query)

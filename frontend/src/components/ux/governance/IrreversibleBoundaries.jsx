@@ -252,16 +252,6 @@ export function IrreversibleBoundaryProvider({ children }) {
   }, [])
 
   /**
-   * Execute the confirmed action
-   */
-  const executeAction = useCallback(() => {
-    if (dialogState.onConfirm) {
-      dialogState.onConfirm()
-    }
-    closeDialog()
-  }, [dialogState])
-
-  /**
    * Close dialog and reset state
    */
   const closeDialog = useCallback(() => {
@@ -273,6 +263,16 @@ export function IrreversibleBoundaryProvider({ children }) {
       clearInterval(cooldownInterval.current)
     }
   }, [])
+
+  /**
+   * Execute the confirmed action
+   */
+  const executeAction = useCallback(() => {
+    if (dialogState.onConfirm) {
+      dialogState.onConfirm()
+    }
+    closeDialog()
+  }, [dialogState, closeDialog])
 
   // Clean up cooldown interval on unmount
   useEffect(() => {

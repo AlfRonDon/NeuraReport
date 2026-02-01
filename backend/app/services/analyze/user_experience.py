@@ -593,14 +593,15 @@ async def stream_analysis_progress(
             }
 
         # Check for new incremental results
-        for result in session._incremental_results:
+        pending = list(session._incremental_results)
+        session._incremental_results.clear()
+        for result in pending:
             yield {
                 "event": "result",
                 "type": result.result_type,
                 "data": result.data if isinstance(result.data, dict) else str(result.data),
                 "is_final": result.is_final,
             }
-        session._incremental_results.clear()
 
         await asyncio.sleep(0.1)
 

@@ -590,7 +590,17 @@ export default function CommandPalette({ open, onClose }) {
     }
   }, [selectedIndex])
 
-  let flatIndex = 0
+  // Pre-compute flat index mapping for concurrent-mode safe rendering
+  const flatIndexMap = useMemo(() => {
+    const map = new Map()
+    let idx = 0
+    Object.entries(groupedCommands).forEach(([, commands]) => {
+      commands.forEach((cmd) => {
+        map.set(cmd.id, idx++)
+      })
+    })
+    return map
+  }, [groupedCommands])
 
   return (
     <Dialog
@@ -663,7 +673,7 @@ export default function CommandPalette({ open, onClose }) {
             </Typography>
             <List dense disablePadding sx={{ pb: 1 }}>
               {commands.map((cmd) => {
-                const index = flatIndex++
+                const index = flatIndexMap.get(cmd.id) ?? 0
                 const Icon = cmd.icon || ICON_MAP[cmd.iconKey] || DescriptionOutlinedIcon
                 const isSelected = index === selectedIndex
 

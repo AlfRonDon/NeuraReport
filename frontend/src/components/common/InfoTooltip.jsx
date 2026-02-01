@@ -1,5 +1,4 @@
 import { cloneElement, isValidElement } from 'react'
-import PropTypes from 'prop-types'
 import { IconButton, Tooltip, Typography, Box } from '@mui/material'
 import { alpha } from '@mui/material/styles'
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
@@ -116,34 +115,6 @@ const InfoTooltip = ({
       {baseTrigger}
     </Tooltip>
   )
-}
-
-InfoTooltip.propTypes = {
-  content: PropTypes.oneOfType([PropTypes.node, PropTypes.string]).isRequired,
-  children: PropTypes.node,
-  placement: PropTypes.oneOf([
-    'top',
-    'bottom',
-    'left',
-    'right',
-    'bottom-end',
-    'bottom-start',
-    'left-end',
-    'left-start',
-    'right-end',
-    'right-start',
-    'top-end',
-    'top-start',
-  ]),
-  maxWidth: PropTypes.number,
-  enterDelay: PropTypes.number,
-  enterTouchDelay: PropTypes.number,
-  leaveTouchDelay: PropTypes.number,
-  ariaLabel: PropTypes.string,
-  iconColor: PropTypes.oneOf(['inherit', 'default', 'primary', 'secondary', 'success', 'error', 'info', 'warning']),
-  iconProps: PropTypes.object,
-  tooltipSx: PropTypes.oneOfType([PropTypes.array, PropTypes.object]),
-  disableInteractive: PropTypes.bool,
 }
 
 export default InfoTooltip

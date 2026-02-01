@@ -382,8 +382,13 @@ export async function handleStreamingResponse(res, { onEvent, errorMessage = 'Re
 
   // Handle any remaining data in buffer
   if (buffer.trim()) {
+    let payload
     try {
-      const payload = JSON.parse(buffer.trim())
+      payload = JSON.parse(buffer.trim())
+    } catch {
+      // ignore unparseable trailing data
+    }
+    if (payload) {
       onEvent?.(payload)
       if (payload.event === 'result') {
         finalEvent = payload
@@ -392,8 +397,6 @@ export async function handleStreamingResponse(res, { onEvent, errorMessage = 'Re
         err.detail = payload.detail
         throw err
       }
-    } catch {
-      // ignore trailing junk
     }
   }
 
@@ -683,43 +686,29 @@ export async function verifyTemplate({
 
 
   if (buffer.trim()) {
-
+    let payload
     try {
-
-      const payload = JSON.parse(buffer.trim())
-
+      payload = JSON.parse(buffer.trim())
+    } catch {
+      // ignore unparseable trailing data
+    }
+    if (payload) {
       if (payload.event === 'stage') {
         onProgress?.(payload)
       } else if (payload.event === 'result') {
         finalEvent = payload
         onProgress?.(payload)
-
       } else if (payload.event === 'error') {
-
         try {
-
           await reader.cancel()
-
         } catch {
-
           /* ignore */
-
         }
-
         const err = new Error(payload.detail || 'Verification failed')
-
         err.detail = payload.detail
-
         throw err
-
       }
-
-    } catch {
-
-      // ignore trailing junk
-
     }
-
   }
 
 
@@ -931,33 +920,22 @@ export async function runCorrectionsPreview({
 
 
   if (buffer.trim()) {
-
+    let payload
     try {
-
-      const payload = JSON.parse(buffer.trim())
-
-      onEvent?.(payload)
-
-      if (payload.event === 'result') {
-
-        finalEvent = payload
-
-      } else if (payload.event === 'error') {
-
-        const err = new Error(payload.detail || 'Corrections preview failed')
-
-        err.detail = payload.detail
-
-        throw err
-
-      }
-
+      payload = JSON.parse(buffer.trim())
     } catch {
-
-      // ignore trailing junk
-
+      // ignore unparseable trailing data
     }
-
+    if (payload) {
+      onEvent?.(payload)
+      if (payload.event === 'result') {
+        finalEvent = payload
+      } else if (payload.event === 'error') {
+        const err = new Error(payload.detail || 'Corrections preview failed')
+        err.detail = payload.detail
+        throw err
+      }
+    }
   }
 
 
@@ -1177,8 +1155,13 @@ export async function mappingApprove(
 
 
   if (buffer.trim()) {
+    let payloadEvent
     try {
-      const payloadEvent = JSON.parse(buffer.trim())
+      payloadEvent = JSON.parse(buffer.trim())
+    } catch {
+      // ignore unparseable trailing data
+    }
+    if (payloadEvent) {
       if (payloadEvent.event === 'stage') {
         if (payloadEvent.stage === 'contract_build_v2') {
           contractStage = payloadEvent
@@ -1199,8 +1182,6 @@ export async function mappingApprove(
         err.detail = payloadEvent.detail
         throw err
       }
-    } catch {
-      // ignore trailing junk
     }
   }
 

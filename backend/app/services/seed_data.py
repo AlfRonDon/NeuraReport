@@ -264,7 +264,7 @@ async def seed_connections():
     ]
 
     with state_store.transaction() as state:
-        state["connections"] = sample_connections
+        state["connections"] = {conn["id"]: conn for conn in sample_connections}
 
     logger.info(f"Seeded {len(sample_connections)} connections")
 
@@ -336,7 +336,7 @@ async def seed_templates():
     ]
 
     with state_store.transaction() as state:
-        state["templates"] = sample_templates
+        state["templates"] = {tpl["id"]: tpl for tpl in sample_templates}
 
     logger.info(f"Seeded {len(sample_templates)} templates")
 

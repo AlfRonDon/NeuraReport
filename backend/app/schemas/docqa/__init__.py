@@ -67,7 +67,7 @@ class DocQASession(BaseModel):
     name: str
     documents: List[DocumentReference] = Field(default_factory=list)
     messages: List[ChatMessage] = Field(default_factory=list)
-    context_window: int = Field(default=10)  # Messages to include in context
+    context_window: int = Field(default=10, ge=1, le=50)  # Messages to include in context
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 

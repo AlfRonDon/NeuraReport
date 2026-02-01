@@ -745,7 +745,7 @@ export default function DocumentQAPage() {
     })
   }
 
-  const handleKeyPress = (e) => {
+  const handleKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       handleAskQuestion()
@@ -1320,7 +1320,7 @@ export default function DocumentQAPage() {
                   }
                   value={question}
                   onChange={(e) => setQuestion(e.target.value)}
-                  onKeyPress={handleKeyPress}
+                  onKeyDown={handleKeyDown}
                   disabled={asking || !currentSession.documents?.length}
                   multiline
                   maxRows={4}

@@ -495,7 +495,7 @@ export default function SummaryPage() {
                   placeholder="Add custom focus..."
                   value={customFocus}
                   onChange={(e) => setCustomFocus(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleAddCustomFocus()}
+                  onKeyDown={(e) => e.key === 'Enter' && handleAddCustomFocus()}
                   disabled={focusAreas.length >= 5}
                   sx={{ flex: 1 }}
                 />

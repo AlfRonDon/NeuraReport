@@ -197,23 +197,24 @@ export default function SearchPageContainer() {
     return () => reset()
   }, [fetchSavedSearches, reset])
 
-  const handleSearch = useCallback(async () => {
-    if (!query.trim()) return
+  const handleSearch = useCallback(async (overrideQuery) => {
+    const searchQuery = (overrideQuery ?? query).trim()
+    if (!searchQuery) return
 
     const searchAction = async () => {
       let searchResult = null
       switch (searchType) {
         case 'semantic':
-          searchResult = await semanticSearch(query, { filters })
+          searchResult = await semanticSearch(searchQuery, { filters })
           break
         case 'regex':
-          searchResult = await regexSearch(query, { filters })
+          searchResult = await regexSearch(searchQuery, { filters })
           break
         case 'boolean':
-          searchResult = await booleanSearch(query, { filters })
+          searchResult = await booleanSearch(searchQuery, { filters })
           break
         default:
-          searchResult = await search(query, { searchType: 'fulltext', filters })
+          searchResult = await search(searchQuery, { searchType: 'fulltext', filters })
       }
       return searchResult
     }
@@ -223,12 +224,12 @@ export default function SearchPageContainer() {
       label: 'Search documents',
       reversibility: Reversibility.FULLY_REVERSIBLE,
       suppressSuccessToast: true,
-      intent: { source: 'search', query, searchType },
+      intent: { source: 'search', query: searchQuery, searchType },
       action: searchAction,
     })
   }, [booleanSearch, execute, filters, query, regexSearch, search, searchType, semanticSearch])
 
-  const handleKeyPress = useCallback((e) => {
+  const handleKeyDown = useCallback((e) => {
     if (e.key === 'Enter') {
       handleSearch()
     }
@@ -303,7 +304,7 @@ export default function SearchPageContainer() {
             }
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            onKeyPress={handleKeyPress}
+            onKeyDown={handleKeyDown}
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
@@ -528,7 +529,7 @@ export default function SearchPageContainer() {
                   button
                   onClick={() => {
                     setQuery(item.query)
-                    handleSearch()
+                    handleSearch(item.query)
                   }}
                   sx={{ borderRadius: 1 }}
                 >

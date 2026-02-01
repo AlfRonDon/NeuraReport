@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import html as html_mod
 import logging
 import re
 import time
@@ -50,7 +51,7 @@ class HTMLRenderer(BaseRenderer):
                 success=False,
                 output_path=None,
                 format=OutputFormat.HTML,
-                error=str(e),
+                error="HTML rendering failed",
                 render_time_ms=(time.perf_counter() - start) * 1000,
             )
 
@@ -68,7 +69,7 @@ class HTMLRenderer(BaseRenderer):
                 value = data[token]
                 if value is None:
                     return ""
-                return str(value)
+                return html_mod.escape(str(value))
             else:
                 warnings.append(f"Token '{token}' not found in data")
                 return match.group(0)  # Keep original
@@ -133,7 +134,7 @@ class TokenEngine:
             token = match.group(1)
             if token in data:
                 value = data[token]
-                return "" if value is None else str(value)
+                return "" if value is None else html_mod.escape(str(value))
             self._missing_tokens.append(token)
             return match.group(0)
 

@@ -72,7 +72,7 @@ class PDFRenderer(BaseRenderer):
                 success=False,
                 output_path=None,
                 format=OutputFormat.PDF,
-                error=str(e),
+                error="PDF rendering failed",
                 render_time_ms=(time.perf_counter() - start) * 1000,
             )
 

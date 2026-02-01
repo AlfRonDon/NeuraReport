@@ -936,7 +936,7 @@ export default function DocumentEditorPage() {
             label="Document Name"
             value={newDocName}
             onChange={(e) => setNewDocName(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && handleCreateDocument()}
+            onKeyDown={(e) => e.key === 'Enter' && handleCreateDocument()}
             sx={{ mt: 2 }}
           />
         </DialogContent>

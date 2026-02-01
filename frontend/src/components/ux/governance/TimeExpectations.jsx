@@ -165,6 +165,31 @@ export function TimeExpectationProvider({ children }) {
   const checkIntervals = useRef(new Map())
 
   /**
+   * Escalate an operation to a higher level
+   */
+  const escalateOperation = useCallback((operationId, level) => {
+    setActiveOperations((prev) => {
+      const next = new Map(prev)
+      const operation = next.get(operationId)
+      if (operation && operation.escalationLevel !== EscalationLevel.TIMEOUT) {
+        operation.escalationLevel = level
+        next.set(operationId, { ...operation })
+
+        // Show escalation dialog for warning and above
+        if (level === EscalationLevel.WARNING || level === EscalationLevel.TIMEOUT) {
+          setEscalationDialog({
+            open: true,
+            operationId,
+            level,
+            operation,
+          })
+        }
+      }
+      return next
+    })
+  }, [])
+
+  /**
    * Start tracking an operation with time expectations
    */
   const startTracking = useCallback((operationId, operationType, options = {}) => {
@@ -212,32 +237,7 @@ export function TimeExpectationProvider({ children }) {
     }
 
     return operation
-  }, [])
-
-  /**
-   * Escalate an operation to a higher level
-   */
-  const escalateOperation = useCallback((operationId, level) => {
-    setActiveOperations((prev) => {
-      const next = new Map(prev)
-      const operation = next.get(operationId)
-      if (operation && operation.escalationLevel !== EscalationLevel.TIMEOUT) {
-        operation.escalationLevel = level
-        next.set(operationId, { ...operation })
-
-        // Show escalation dialog for warning and above
-        if (level === EscalationLevel.WARNING || level === EscalationLevel.TIMEOUT) {
-          setEscalationDialog({
-            open: true,
-            operationId,
-            level,
-            operation,
-          })
-        }
-      }
-      return next
-    })
-  }, [])
+  }, [escalateOperation])
 
   /**
    * Complete tracking for an operation
@@ -322,6 +322,15 @@ export function TimeExpectationProvider({ children }) {
     const elapsed = Date.now() - operation.startTime
     const expected = operation.timeConfig.expected
     return Math.min(100, (elapsed / expected) * 100)
+  }, [])
+
+  // Clean up all pending timeouts on unmount
+  useEffect(() => {
+    const intervals = checkIntervals.current
+    return () => {
+      intervals.forEach((timeout) => clearTimeout(timeout))
+      intervals.clear()
+    }
   }, [])
 
   // Close escalation dialog

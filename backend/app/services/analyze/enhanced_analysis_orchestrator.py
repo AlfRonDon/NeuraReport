@@ -80,7 +80,7 @@ def _cache_put(analysis_id: str, result: EnhancedAnalysisResult) -> None:
         # Evict oldest entry (first inserted)
         oldest_key = next(iter(_ANALYSIS_CACHE))
         del _ANALYSIS_CACHE[oldest_key]
-    _cache_put(analysis_id, result)
+    _ANALYSIS_CACHE[analysis_id] = result
 
 
 def _generate_analysis_id() -> str:
