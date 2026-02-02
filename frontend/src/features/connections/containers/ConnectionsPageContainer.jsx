@@ -181,11 +181,13 @@ export default function ConnectionsPage() {
     setMenuConnection(null)
   }, [])
 
+  const drawerOpenRef = useRef(false)
   const handleAddConnection = useCallback(() => {
-    if (drawerOpen) return // Guard against double-click opening duplicate drawers
+    if (drawerOpenRef.current) return // Ref-based guard: prevents double-click opening duplicate drawers
+    drawerOpenRef.current = true
     setEditingConnection(null)
     setDrawerOpen(true)
-  }, [drawerOpen])
+  }, [])
 
   const handleEditConnection = useCallback(() => {
     setEditingConnection(menuConnection)
@@ -314,6 +316,7 @@ export default function ConnectionsPage() {
           })
 
           addSavedConnection(savedConnection)
+          drawerOpenRef.current = false
           setDrawerOpen(false)
         } finally {
           setLoading(false)
@@ -371,7 +374,7 @@ export default function ConnectionsPage() {
           </IconContainer>
           <Box sx={{ minWidth: 0 }}>
             <Stack direction="row" spacing={1} alignItems="center">
-              <Box sx={{ fontWeight: 500, fontSize: '0.8125rem', color: theme.palette.text.primary }}>
+              <Box data-testid="connection-name" sx={{ fontWeight: 500, fontSize: '0.8125rem', color: theme.palette.text.primary }}>
                 {value}
               </Box>
               {activeConnectionId === row.id && (
@@ -431,7 +434,7 @@ export default function ConnectionsPage() {
       headerName: 'Latency',
       width: 100,
       renderCell: (value) => (
-        <Box sx={{ color: theme.palette.text.secondary, fontSize: '0.8125rem' }}>
+        <Box data-testid="connection-latency" sx={{ color: theme.palette.text.secondary, fontSize: '0.8125rem' }}>
           {value ? `${value}ms` : '-'}
         </Box>
       ),
@@ -441,7 +444,7 @@ export default function ConnectionsPage() {
       headerName: 'Last Connected',
       width: 180,
       renderCell: (value) => (
-        <Box sx={{ color: theme.palette.text.secondary, fontSize: '0.8125rem' }}>
+        <Box data-testid="connection-last-connected" sx={{ color: theme.palette.text.secondary, fontSize: '0.8125rem' }}>
           {value ? new Date(value).toLocaleString() : '-'}
         </Box>
       ),
@@ -560,7 +563,7 @@ export default function ConnectionsPage() {
       {/* Connection Form Drawer */}
       <Drawer
         open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
+        onClose={() => { drawerOpenRef.current = false; setDrawerOpen(false) }}
         title={editingConnection ? 'Edit Data Source' : 'Add Data Source'}
         subtitle="Enter your database details to connect"
         width={520}
@@ -568,7 +571,7 @@ export default function ConnectionsPage() {
         <ConnectionForm
           connection={editingConnection}
           onSave={handleSaveConnection}
-          onCancel={() => setDrawerOpen(false)}
+          onCancel={() => { drawerOpenRef.current = false; setDrawerOpen(false) }}
           loading={loading}
         />
       </Drawer>

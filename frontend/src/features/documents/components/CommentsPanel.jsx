@@ -181,6 +181,7 @@ function CommentItem({
       isResolved={comment.resolved}
       isHighlighted={isHighlighted}
       onClick={() => onHighlight?.(comment)}
+      data-testid={`comment-card-${comment.id}`}
     >
       {/* Comment Header */}
       <Stack direction="row" alignItems="center" spacing={1} mb={1}>
@@ -239,6 +240,8 @@ function CommentItem({
                   e.stopPropagation()
                   setReplyOpen(!replyOpen)
                 }}
+                data-testid="comment-reply-button"
+                aria-label="Reply"
               >
                 <ReplyIcon sx={{ fontSize: 16 }} />
               </IconButton>
@@ -250,6 +253,8 @@ function CommentItem({
                   e.stopPropagation()
                   onResolve?.(comment.id)
                 }}
+                data-testid="comment-resolve-button"
+                aria-label="Resolve comment"
               >
                 <ResolveIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
               </IconButton>
@@ -263,6 +268,8 @@ function CommentItem({
               e.stopPropagation()
               onDelete?.(comment.id)
             }}
+            data-testid="comment-delete-button"
+            aria-label="Delete comment"
           >
             <DeleteIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
           </IconButton>
@@ -410,7 +417,7 @@ export default function CommentsPanel({
             sx={{ borderRadius: 1, fontSize: '0.7rem', height: 20 }}
           />
         </Stack>
-        <IconButton size="small" onClick={onClose}>
+        <IconButton size="small" onClick={onClose} data-testid="comments-panel-close" aria-label="Close comments">
           <CloseIcon fontSize="small" />
         </IconButton>
       </PanelHeader>
@@ -423,6 +430,7 @@ export default function CommentsPanel({
             size="small"
             onClick={() => setFilter('all')}
             variant={filter === 'all' ? 'filled' : 'outlined'}
+            data-testid="comments-filter-all"
             sx={{
               borderRadius: 1,
               fontSize: '0.7rem',
@@ -436,6 +444,7 @@ export default function CommentsPanel({
             size="small"
             onClick={() => setFilter('open')}
             variant={filter === 'open' ? 'filled' : 'outlined'}
+            data-testid="comments-filter-open"
             sx={{
               borderRadius: 1,
               fontSize: '0.7rem',
@@ -449,6 +458,7 @@ export default function CommentsPanel({
             size="small"
             onClick={() => setFilter('resolved')}
             variant={filter === 'resolved' ? 'filled' : 'outlined'}
+            data-testid="comments-filter-resolved"
             sx={{
               borderRadius: 1,
               fontSize: '0.7rem',
@@ -528,6 +538,7 @@ export default function CommentsPanel({
             endIcon={<SendIcon sx={{ fontSize: 14 }} />}
             disabled={!newCommentText.trim()}
             onClick={handleAddComment}
+            data-testid="comment-submit-button"
           >
             Comment
           </ActionButton>

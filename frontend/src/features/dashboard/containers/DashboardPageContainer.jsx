@@ -1025,6 +1025,7 @@ export default function DashboardPage() {
                 <Grow key={job.id} in timeout={300 + index * 100}>
                   <JobListItem
                     status={job.status}
+                    data-testid={`dashboard-job-${job.id}`}
                     onClick={() =>
                       handleNavigate('/jobs', 'Open jobs', { jobId: job.id })
                     }
@@ -1041,6 +1042,7 @@ export default function DashboardPage() {
                     <Chip
                       label={job.status}
                       size="small"
+                      data-testid={`job-status-${job.status}`}
                       sx={{
                         height: 24,
                         fontWeight: 600,

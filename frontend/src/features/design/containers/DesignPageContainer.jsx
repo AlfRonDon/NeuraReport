@@ -316,6 +316,7 @@ export default function DesignPageContainer() {
             variant="contained"
             startIcon={<AddIcon />}
             onClick={() => openCreateDialog(activeTab === 0 ? 'brandKit' : 'theme')}
+            data-testid="design-create-button"
           >
             {activeTab === 0 ? 'New Brand Kit' : 'New Theme'}
           </ActionButton>
@@ -323,10 +324,10 @@ export default function DesignPageContainer() {
       </Header>
 
       <ContentArea>
-        <Tabs value={activeTab} onChange={(_, v) => setActiveTab(v)} sx={{ mb: 3 }}>
-          <Tab icon={<BrushIcon />} label="Brand Kits" iconPosition="start" />
-          <Tab icon={<ColorIcon />} label="Themes" iconPosition="start" />
-          <Tab icon={<PaletteIcon />} label="Color Generator" iconPosition="start" />
+        <Tabs value={activeTab} onChange={(_, v) => setActiveTab(v)} sx={{ mb: 3 }} data-testid="design-tabs">
+          <Tab icon={<BrushIcon />} label="Brand Kits" iconPosition="start" data-testid="design-tab-brand-kits" />
+          <Tab icon={<ColorIcon />} label="Themes" iconPosition="start" data-testid="design-tab-themes" />
+          <Tab icon={<PaletteIcon />} label="Color Generator" iconPosition="start" data-testid="design-tab-color-generator" />
         </Tabs>
 
         {/* Brand Kits Tab */}
@@ -334,7 +335,7 @@ export default function DesignPageContainer() {
           <Grid container spacing={3}>
             {brandKits.map((kit) => (
               <Grid item xs={12} sm={6} md={4} key={kit.id}>
-                <BrandKitCard isDefault={kit.is_default}>
+                <BrandKitCard isDefault={kit.is_default} data-testid={`brand-kit-card-${kit.id}`}>
                   <CardContent>
                     <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
                       <Typography variant="h6" sx={{ fontWeight: 600 }}>
@@ -396,7 +397,7 @@ export default function DesignPageContainer() {
           <Grid container spacing={2}>
             {themes.map((t) => (
               <Grid item xs={12} sm={6} md={4} key={t.id}>
-                <ThemeCard isActive={t.is_active}>
+                <ThemeCard isActive={t.is_active} data-testid={`theme-card-${t.id}`}>
                   <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
                     <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
                       {t.name}
@@ -462,6 +463,7 @@ export default function DesignPageContainer() {
                   fullWidth
                   onClick={handleGeneratePalette}
                   disabled={loading}
+                  data-testid="generate-palette-button"
                 >
                   Generate Palette
                 </ActionButton>

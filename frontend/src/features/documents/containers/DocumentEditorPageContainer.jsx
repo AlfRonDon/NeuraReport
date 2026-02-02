@@ -624,6 +624,8 @@ export default function DocumentEditorPage() {
           <IconButton
             size="small"
             onClick={() => setShowDocList(!showDocList)}
+            data-testid="toggle-doc-list"
+            aria-label="Toggle documents list"
             sx={{ color: showDocList ? 'text.primary' : 'text.secondary' }}
           >
             <OpenIcon />
@@ -659,6 +661,7 @@ export default function DocumentEditorPage() {
                 size="small"
                 startIcon={<HistoryIcon />}
                 onClick={handleToggleVersions}
+                data-testid="doc-history-button"
                 sx={{
                   bgcolor: showVersions ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300]) : 'transparent',
                 }}
@@ -670,6 +673,7 @@ export default function DocumentEditorPage() {
                 size="small"
                 startIcon={<CommentIcon />}
                 onClick={handleToggleComments}
+                data-testid="doc-comments-button"
                 sx={{
                   bgcolor: showComments ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300]) : 'transparent',
                 }}
@@ -682,6 +686,7 @@ export default function DocumentEditorPage() {
                 startIcon={aiLoading ? <CircularProgress size={16} /> : <AIIcon />}
                 onClick={handleOpenAiMenu}
                 disabled={aiLoading}
+                data-testid="doc-ai-tools-button"
               >
                 AI Tools
               </ActionButton>
@@ -691,6 +696,7 @@ export default function DocumentEditorPage() {
                 startIcon={<SaveIcon />}
                 onClick={handleSave}
                 disabled={saving}
+                data-testid="doc-save-button"
               >
                 Save
               </ActionButton>
@@ -701,6 +707,7 @@ export default function DocumentEditorPage() {
               size="small"
               startIcon={<AddIcon />}
               onClick={handleOpenCreateDialog}
+              data-testid="doc-new-button"
             >
               New Document
             </ActionButton>
@@ -718,7 +725,7 @@ export default function DocumentEditorPage() {
                 Documents
               </Typography>
               <Tooltip title="New Document">
-                <IconButton size="small" onClick={handleOpenCreateDialog}>
+                <IconButton size="small" onClick={handleOpenCreateDialog} data-testid="doc-sidebar-new-button" aria-label="New Document">
                   <NewIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
@@ -741,6 +748,7 @@ export default function DocumentEditorPage() {
                     elevation={0}
                     isActive={currentDocument?.id === doc.id}
                     onClick={() => handleSelectDocument(doc.id)}
+                    data-testid={`doc-item-${doc.id}`}
                   >
                     <Stack direction="row" alignItems="center" spacing={1}>
                       <DocIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
@@ -767,6 +775,8 @@ export default function DocumentEditorPage() {
                           setDocToDelete(doc)
                           setDeleteConfirmOpen(true)
                         }}
+                        data-testid={`doc-delete-${doc.id}`}
+                        aria-label={`Delete ${doc.name}`}
                         sx={{ opacity: 0.5, '&:hover': { opacity: 1 } }}
                       >
                         <DeleteIcon fontSize="small" />
@@ -894,27 +904,27 @@ export default function DocumentEditorPage() {
           },
         }}
       >
-        <MenuItem onClick={() => handleAIAction('grammar')}>
+        <MenuItem onClick={() => handleAIAction('grammar')} data-testid="ai-grammar">
           <ListItemIcon><GrammarIcon fontSize="small" /></ListItemIcon>
           <ListItemText>Check Grammar</ListItemText>
         </MenuItem>
-        <MenuItem onClick={() => handleAIAction('summarize')}>
+        <MenuItem onClick={() => handleAIAction('summarize')} data-testid="ai-summarize">
           <ListItemIcon><SummarizeIcon fontSize="small" /></ListItemIcon>
           <ListItemText>Summarize</ListItemText>
         </MenuItem>
-        <MenuItem onClick={() => handleAIAction('rewrite')}>
+        <MenuItem onClick={() => handleAIAction('rewrite')} data-testid="ai-rewrite">
           <ListItemIcon><RewriteIcon fontSize="small" /></ListItemIcon>
           <ListItemText>Rewrite</ListItemText>
         </MenuItem>
-        <MenuItem onClick={() => handleAIAction('expand')}>
+        <MenuItem onClick={() => handleAIAction('expand')} data-testid="ai-expand">
           <ListItemIcon><ExpandIcon fontSize="small" /></ListItemIcon>
           <ListItemText>Expand</ListItemText>
         </MenuItem>
-        <MenuItem onClick={() => handleAIAction('translate')}>
+        <MenuItem onClick={() => handleAIAction('translate')} data-testid="ai-translate">
           <ListItemIcon><TranslateIcon fontSize="small" /></ListItemIcon>
           <ListItemText>Translate</ListItemText>
         </MenuItem>
-        <MenuItem onClick={() => handleAIAction('tone')}>
+        <MenuItem onClick={() => handleAIAction('tone')} data-testid="ai-tone">
           <ListItemIcon><ToneIcon fontSize="small" /></ListItemIcon>
           <ListItemText>Adjust Tone</ListItemText>
         </MenuItem>
@@ -941,11 +951,12 @@ export default function DocumentEditorPage() {
           />
         </DialogContent>
         <DialogActions sx={{ p: 2 }}>
-          <Button onClick={handleCloseCreateDialog}>Cancel</Button>
+          <Button onClick={handleCloseCreateDialog} data-testid="doc-create-cancel">Cancel</Button>
           <Button
             variant="contained"
             onClick={handleCreateDocument}
             disabled={!newDocName.trim() || loading}
+            data-testid="doc-create-submit"
           >
             Create
           </Button>
@@ -967,11 +978,12 @@ export default function DocumentEditorPage() {
           </Typography>
         </DialogContent>
         <DialogActions sx={{ p: 2 }}>
-          <Button onClick={() => setDeleteConfirmOpen(false)}>Cancel</Button>
+          <Button onClick={() => setDeleteConfirmOpen(false)} data-testid="doc-delete-cancel">Cancel</Button>
           <Button
             variant="contained"
             sx={{ color: 'text.secondary' }}
             onClick={handleDeleteDocument}
+            data-testid="doc-delete-confirm"
           >
             Delete
           </Button>
@@ -1006,11 +1018,12 @@ export default function DocumentEditorPage() {
           </TextField>
         </DialogContent>
         <DialogActions sx={{ p: 2 }}>
-          <Button onClick={() => setTranslateDialogOpen(false)}>Cancel</Button>
+          <Button onClick={() => setTranslateDialogOpen(false)} data-testid="translate-cancel">Cancel</Button>
           <Button
             variant="contained"
             onClick={handleTranslate}
             startIcon={<TranslateIcon />}
+            data-testid="translate-submit"
           >
             Translate
           </Button>
@@ -1050,11 +1063,12 @@ export default function DocumentEditorPage() {
           </TextField>
         </DialogContent>
         <DialogActions sx={{ p: 2 }}>
-          <Button onClick={() => setToneDialogOpen(false)}>Cancel</Button>
+          <Button onClick={() => setToneDialogOpen(false)} data-testid="tone-cancel">Cancel</Button>
           <Button
             variant="contained"
             onClick={handleAdjustTone}
             startIcon={<ToneIcon />}
+            data-testid="tone-submit"
           >
             Apply Tone
           </Button>

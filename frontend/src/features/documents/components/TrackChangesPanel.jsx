@@ -167,6 +167,8 @@ export default function TrackChangesPanel({
             <IconButton
               size="small"
               onClick={toggleCompareMode}
+              data-testid="version-compare-toggle"
+              aria-label="Compare versions"
               sx={{
                 color: compareMode ? (theme.palette.mode === 'dark' ? figmaGrey[600] : figmaGrey[1200]) : 'text.secondary',
                 bgcolor: compareMode ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300]) : 'transparent',
@@ -175,7 +177,7 @@ export default function TrackChangesPanel({
               <CompareIcon fontSize="small" />
             </IconButton>
           </Tooltip>
-          <IconButton size="small" onClick={onClose}>
+          <IconButton size="small" onClick={onClose} data-testid="version-panel-close" aria-label="Close version history">
             <CloseIcon fontSize="small" />
           </IconButton>
         </Stack>
@@ -192,6 +194,7 @@ export default function TrackChangesPanel({
             disabled={compareVersions.length !== 2}
             onClick={handleCompare}
             fullWidth
+            data-testid="version-compare-button"
           >
             Compare Selected ({compareVersions.length}/2)
           </ActionButton>
@@ -224,6 +227,7 @@ export default function TrackChangesPanel({
                   : selectedVersion?.id === version.id
               }
               onClick={() => handleVersionClick(version)}
+              data-testid={`version-card-${version.id}`}
             >
               <Stack direction="row" alignItems="center" justifyContent="space-between" mb={1}>
                 <Stack direction="row" alignItems="center" spacing={1}>
@@ -252,6 +256,8 @@ export default function TrackChangesPanel({
                     <IconButton
                       size="small"
                       onClick={(e) => handleRestore(version, e)}
+                      data-testid={`version-restore-${version.id}`}
+                      aria-label={`Restore version ${version.version}`}
                       sx={{ color: 'text.secondary' }}
                     >
                       <RestoreIcon fontSize="small" />
