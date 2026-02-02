@@ -434,9 +434,10 @@ export default function TopNav({ onMenuClick, showMenuButton, connection }) {
           >
             <ConnectionChip
               connected={isConnected}
-              icon={<StatusDot connected={isConnected} />}
+              icon={<StatusDot connected={isConnected} data-testid="connection-status-dot" />}
               label={connection.name || (isConnected ? 'Connected' : 'Disconnected')}
               size="small"
+              data-testid="connection-status-chip"
             />
           </Tooltip>
         )}

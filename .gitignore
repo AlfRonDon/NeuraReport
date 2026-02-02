@@ -82,8 +82,9 @@ frontend/tests/e2e/*.ps1
 frontend/tests/e2e/audit-retest.spec.ts
 frontend/tests/e2e/audit-semantic-verification-improved.spec.ts
 frontend/tests/e2e/minimal-test.spec.ts
-frontend/tests/e2e/workflow-01-connection.spec.ts
-frontend/tests/e2e/workflow-01-simple.spec.ts
+frontend/tests/e2e/hsst-*.spec.ts
+frontend/tests/e2e/hsst-results/
+frontend/tests/e2e/workflow-*.spec.ts
 frontend/tests/e2e/playwright.config.ts
 
 # Generated runtime data

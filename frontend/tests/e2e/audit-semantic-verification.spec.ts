@@ -540,44 +540,82 @@ async function executeAction(
       const escapedText = action.text.substring(0, 30).replace(/["\\/]/g, '\\$&')
       locator = page.locator(`${action.tag}:has-text("${escapedText}")`).first()
     } else {
-      // Coordinate fallback
+      // Before coordinate fallback, probe live DOM for stable selectors added after inventory generation
       const cx = action.boundingBox.x + action.boundingBox.width / 2
       const cy = action.boundingBox.y + action.boundingBox.height / 2
-      await page.mouse.click(cx, cy)
-      await page.waitForTimeout(1000)
+      // Scroll to bring element into viewport before probing
+      await page.evaluate(({y}) => window.scrollTo({ top: Math.max(0, y - 300), behavior: 'instant' }), {y: cy}).catch(() => {})
+      await page.waitForTimeout(200)
+      const domProbe = await page.evaluate(({x, y, origY}) => {
+        // Adjust y for scroll offset
+        const scrollY = window.scrollY
+        const viewY = origY - scrollY
+        const el = document.elementFromPoint(x, viewY)
+        if (!el) return null
+        // Check element and its ancestors for stable selectors
+        const dtid = el.getAttribute('data-testid') || el.closest('[data-testid]')?.getAttribute('data-testid')
+        const aria = el.getAttribute('aria-label') || el.closest('[aria-label]')?.getAttribute('aria-label')
+        const elId = el.id || (el.closest('[id]')?.id ?? '')
+        return { dataTestId: dtid || '', ariaLabel: aria || '', id: elId, tag: el.tagName.toLowerCase() }
+      }, {x: cx, y: cy, origY: cy}).catch(() => null)
 
-      const afterShot = path.join(SCREENSHOTS_DIR, `${action.id}-after.png`)
-      await page.screenshot({ path: afterShot, fullPage: false })
+      if (domProbe?.dataTestId) {
+        locator = page.locator(`[data-testid="${domProbe.dataTestId}"]`).first()
+      } else if (domProbe?.ariaLabel) {
+        locator = page.locator(`[aria-label="${domProbe.ariaLabel}"]`).first()
+      } else if (domProbe?.id && domProbe.id.length > 0) {
+        locator = page.locator(`#${domProbe.id}`).first()
+      } else {
+        // True coordinate fallback - no stable selector in inventory or live DOM
+        await page.mouse.click(cx, cy)
+        await page.waitForTimeout(1000)
 
-      const networkCapture = networkMonitor.getCapturedSince(actionTimestamp)
-      const networkFile = path.join(NETWORK_DIR, `${action.id}-network.json`)
-      fs.writeFileSync(networkFile, JSON.stringify(networkCapture, null, 2))
+        const afterShot = path.join(SCREENSHOTS_DIR, `${action.id}-after.png`)
+        await page.screenshot({ path: afterShot, fullPage: false })
 
-      return {
-        actionId: action.id,
-        route: action.route,
-        page: action.page,
-        uiDescription: `${action.tag} at (${cx}, ${cy})`,
-        intendedBackendLogic: 'Unable to determine (no stable selector)',
-        actualBackendBehavior: 'Coordinate click executed',
-        verificationMethod: 'None (unstable selector)',
-        uiResult: 'Clicked via coordinates',
-        verdict: 'FAIL',
-        defectDescription: 'Element lacks stable selector (data-testid, aria-label, id) - cannot reliably verify',
-        evidenceReferences: {
-          networkCapture: networkFile,
-          beforeScreenshot: beforeShot,
-          afterScreenshot: afterShot
-        },
-        executionTimeMs: Date.now() - startTime,
-        timestamp: new Date().toISOString()
+        const networkCapture = networkMonitor.getCapturedSince(actionTimestamp)
+        const networkFile = path.join(NETWORK_DIR, `${action.id}-network.json`)
+        fs.writeFileSync(networkFile, JSON.stringify(networkCapture, null, 2))
+
+        return {
+          actionId: action.id,
+          route: action.route,
+          page: action.page,
+          uiDescription: `${action.tag} at (${cx}, ${cy})`,
+          intendedBackendLogic: 'Unable to determine (no stable selector)',
+          actualBackendBehavior: 'Coordinate click executed',
+          verificationMethod: 'None (unstable selector)',
+          uiResult: 'Clicked via coordinates',
+          verdict: 'FAIL',
+          defectDescription: 'Element lacks stable selector (data-testid, aria-label, id) - cannot reliably verify',
+          evidenceReferences: {
+            networkCapture: networkFile,
+            beforeScreenshot: beforeShot,
+            afterScreenshot: afterShot
+          },
+          executionTimeMs: Date.now() - startTime,
+          timestamp: new Date().toISOString()
+        }
       }
     }
 
-    // Execute click
-    await locator.scrollIntoViewIfNeeded({ timeout: 5000 })
-    await locator.click({ timeout: 10000 })
+    // Execute click (with scroll fallback for fixed/sticky elements)
+    try {
+      await locator.scrollIntoViewIfNeeded({ timeout: 5000 })
+    } catch {
+      // Element may already be visible (fixed/sticky nav) or dynamically positioned - proceed to click
+    }
+    try {
+      await locator.click({ timeout: 10000 })
+    } catch {
+      // If click fails (element may be off-screen like "Skip to content"), try force click
+      await locator.click({ force: true, timeout: 5000 })
+    }
     await page.waitForTimeout(1000) // Allow for backend calls
+
+    // Dismiss any open popovers/modals/menus by pressing Escape
+    await page.keyboard.press('Escape').catch(() => {})
+    await page.waitForTimeout(200)
 
   } catch (error: any) {
     const afterShot = path.join(SCREENSHOTS_DIR, `${action.id}-after.png`)

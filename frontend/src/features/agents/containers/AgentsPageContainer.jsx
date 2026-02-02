@@ -557,7 +557,7 @@ export default function AgentsPageContainer() {
                       Result
                     </Typography>
                     <Box>
-                      <IconButton size="small" onClick={handleCopyResult}>
+                      <IconButton size="small" onClick={handleCopyResult} aria-label="Copy result" data-testid="agent-copy-result-button">
                         <CopyIcon fontSize="small" />
                       </IconButton>
                     </Box>

@@ -59,6 +59,18 @@ export default defineConfig(({ mode }) => {
       '@mui/x-date-pickers/AdapterDayjs',
     ],
   },
+  preview: {
+    proxy: {
+      '/api': {
+        target: backendTarget,
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, ''),
+      },
+      '/uploads': { target: backendTarget, changeOrigin: true },
+      '/excel-uploads': { target: backendTarget, changeOrigin: true },
+      '/ws': { target: backendTarget, changeOrigin: true, ws: true },
+    },
+  },
   build: {
     chunkSizeWarningLimit: 1200,
   },
