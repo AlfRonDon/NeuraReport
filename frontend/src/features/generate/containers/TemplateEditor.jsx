@@ -32,8 +32,8 @@ import FullscreenIcon from '@mui/icons-material/Fullscreen'
 import FullscreenExitIcon from '@mui/icons-material/FullscreenExit'
 import KeyboardIcon from '@mui/icons-material/Keyboard'
 import CloseIcon from '@mui/icons-material/Close'
-import { forwardRef, useCallback, useEffect, useMemo, useState } from 'react'
-import { useParams, useLocation, Link as RouterLink } from 'react-router-dom'
+import { forwardRef, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
+import { useParams, useLocation, Link as RouterLink, UNSAFE_NavigationContext } from 'react-router-dom'
 
 import ScaledIframePreview from '@/components/ScaledIframePreview.jsx'
 import Surface from '@/components/layout/Surface.jsx'
@@ -111,6 +111,34 @@ export default function TemplateEditor() {
   const dirty = html !== initialHtml
   const hasInstructions = (instructions || '').trim().length > 0
 
+  // Block in-app navigation when there are unsaved changes (BrowserRouter-compatible)
+  const { navigator } = useContext(UNSAFE_NavigationContext)
+  const dirtyRef = useRef(dirty)
+  dirtyRef.current = dirty
+
+  useEffect(() => {
+    const originalPush = navigator.push
+    const originalReplace = navigator.replace
+
+    navigator.push = (...args) => {
+      if (dirtyRef.current && !window.confirm('You have unsaved changes in the template editor. Leave without saving?')) {
+        return
+      }
+      originalPush.apply(navigator, args)
+    }
+    navigator.replace = (...args) => {
+      if (dirtyRef.current && !window.confirm('You have unsaved changes in the template editor. Leave without saving?')) {
+        return
+      }
+      originalReplace.apply(navigator, args)
+    }
+
+    return () => {
+      navigator.push = originalPush
+      navigator.replace = originalReplace
+    }
+  }, [navigator])
+
   // Draft auto-save
   const {
     hasDraft,
@@ -168,7 +196,10 @@ export default function TemplateEditor() {
     setError(null)
     try {
       const data = await getTemplateHtml(templateId)
-      const nextHtml = typeof data?.html === 'string' ? data.html : ''
+      if (!data || typeof data !== 'object' || typeof data.html !== 'string') {
+        throw new Error('Template not found or returned invalid data')
+      }
+      const nextHtml = data.html
       setHtml(nextHtml)
       setInitialHtml(nextHtml)
       setServerMeta(data?.metadata || null)
@@ -524,13 +555,34 @@ export default function TemplateEditor() {
           onDiscard={discardDraft}
         />
 
-        {/* Error display */}
+        {/* Error display — show not-found with back link when template fails to load */}
         {error && (
-          <Alert severity="error">{error}</Alert>
+          <Alert
+            severity="error"
+            action={
+              <Button color="inherit" size="small" component={RouterLink} to={referrer}>
+                Back
+              </Button>
+            }
+          >
+            {error}
+          </Alert>
         )}
 
-        {/* Main content */}
-        {loading ? (
+        {/* Main content — or not-found state when template fails to load */}
+        {!loading && error && !html ? (
+          <Box sx={{ textAlign: 'center', py: 8 }}>
+            <Typography variant="h6" color="text.secondary" gutterBottom>
+              Template Not Found
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+              The template &ldquo;{templateId}&rdquo; could not be loaded. It may have been deleted or the ID is invalid.
+            </Typography>
+            <Button variant="contained" component={RouterLink} to="/templates">
+              Go to Templates
+            </Button>
+          </Box>
+        ) : loading ? (
           <>
             <Divider />
             <EditorSkeleton mode={editMode} />

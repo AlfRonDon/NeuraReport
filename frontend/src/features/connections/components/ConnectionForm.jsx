@@ -266,6 +266,15 @@ export default function ConnectionForm({ connection, onSave, onCancel, loading }
 
   const isSqlite = formData.db_type === 'sqlite'
 
+  // Compute whether the form has minimum required data for submission
+  const isFormValid = useMemo(() => {
+    const nameValid = formData.name.trim().length >= 2
+    const dbValid = formData.database.trim().length > 0
+    if (isSqlite) return nameValid && dbValid
+    const hostValid = formData.host.trim().length > 0
+    return nameValid && dbValid && hostValid
+  }, [formData.name, formData.database, formData.host, isSqlite])
+
   return (
     <Box component="form" onSubmit={handleSubmit}>
       <Stack spacing={3}>
@@ -308,6 +317,7 @@ export default function ConnectionForm({ connection, onSave, onCancel, loading }
           placeholder="e.g., Production Database"
           required
           fullWidth
+          inputProps={{ maxLength: 100 }}
           error={touched.name && Boolean(fieldErrors.name)}
           helperText={touched.name && fieldErrors.name}
         />
@@ -507,7 +517,7 @@ export default function ConnectionForm({ connection, onSave, onCancel, loading }
           <Button
             type="submit"
             variant="contained"
-            disabled={loading}
+            disabled={loading || !isFormValid}
           >
             {connection ? 'Update Connection' : 'Add Connection'}
           </Button>

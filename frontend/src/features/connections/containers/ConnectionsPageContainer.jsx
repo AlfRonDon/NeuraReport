@@ -182,9 +182,10 @@ export default function ConnectionsPage() {
   }, [])
 
   const handleAddConnection = useCallback(() => {
+    if (drawerOpen) return // Guard against double-click opening duplicate drawers
     setEditingConnection(null)
     setDrawerOpen(true)
-  }, [])
+  }, [drawerOpen])
 
   const handleEditConnection = useCallback(() => {
     setEditingConnection(menuConnection)
