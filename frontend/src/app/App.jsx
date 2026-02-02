@@ -232,6 +232,7 @@ function AppContent() {
       <Box
         component="a"
         href="#main-content"
+        data-testid="skip-to-content"
         onClick={(e) => {
           e.preventDefault()
           handleSkipToContent()

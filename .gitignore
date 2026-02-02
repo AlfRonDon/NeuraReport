@@ -69,7 +69,22 @@ frontend/playwright-report/
 frontend/playwright-results/
 frontend/test-output.txt
 frontend/tests/e2e/screenshots/
+frontend/tests/e2e/evidence/
+frontend/tests/e2e/workflow-results/
+frontend/workflow-test-result.json
 test-results/
+
+# Throwaway e2e audit/analysis scripts and docs
+frontend/tests/e2e/*.cjs
+frontend/tests/e2e/*.md
+frontend/tests/e2e/*.sh
+frontend/tests/e2e/*.ps1
+frontend/tests/e2e/audit-retest.spec.ts
+frontend/tests/e2e/audit-semantic-verification-improved.spec.ts
+frontend/tests/e2e/minimal-test.spec.ts
+frontend/tests/e2e/workflow-01-connection.spec.ts
+frontend/tests/e2e/workflow-01-simple.spec.ts
+frontend/tests/e2e/playwright.config.ts
 
 # Generated runtime data
 uploads/*

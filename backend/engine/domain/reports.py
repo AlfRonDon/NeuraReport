@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+import re
 import uuid
 
 
@@ -53,6 +54,14 @@ class KeyValue:
 
     def to_sql_condition(self, table: Optional[str] = None) -> str:
         """Generate SQL WHERE condition for this key-value."""
+        # Validate key is a safe SQL identifier (alphanumeric + underscore only)
+        if not re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*$', self.key):
+            raise ValueError(f"Invalid SQL identifier in key: {self.key}")
+
+        # Validate table name if provided
+        if table and not re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*$', table):
+            raise ValueError(f"Invalid SQL identifier in table: {table}")
+
         safe_key = f"[{self.key}]"
         col = f"[{table}].{safe_key}" if table else safe_key
         safe_value = self.value.replace("'", "''")

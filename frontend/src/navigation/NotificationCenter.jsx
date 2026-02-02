@@ -337,6 +337,7 @@ export default function NotificationCenter() {
         <span>
           <IconButton
             disabled
+            data-testid="notifications-disabled-button"
             sx={{
               color: theme.palette.text.disabled,
             }}
@@ -353,6 +354,8 @@ export default function NotificationCenter() {
       <Tooltip title="Notifications">
         <IconButton
           onClick={handleClick}
+          aria-label="Open notifications center"
+          data-testid="notification-center-button"
           sx={{
             color: theme.palette.text.secondary,
             transition: 'all 0.2s ease',
@@ -449,6 +452,8 @@ export default function NotificationCenter() {
                 size="small"
                 onClick={handleMarkAllRead}
                 disabled={unreadCount === 0}
+                aria-label="Mark all notifications as read"
+                data-testid="notifications-mark-all-read-button"
                 sx={{
                   color: theme.palette.text.secondary,
                   '&:hover': { color: theme.palette.text.primary },
@@ -462,6 +467,8 @@ export default function NotificationCenter() {
                 size="small"
                 onClick={handleClearAll}
                 disabled={notifications.length === 0}
+                aria-label="Clear all notifications"
+                data-testid="notifications-clear-all-button"
                 sx={{
                   color: theme.palette.text.secondary,
                   '&:hover': { color: theme.palette.text.primary },
@@ -505,6 +512,8 @@ export default function NotificationCenter() {
                         <IconButton
                           size="small"
                           onClick={(e) => handleDeleteNotification(e, notification.id)}
+                          aria-label="Delete notification"
+                          data-testid={`notification-delete-button-${notification.id}`}
                           sx={{
                             color: theme.palette.text.disabled,
                             opacity: 0,
@@ -523,6 +532,7 @@ export default function NotificationCenter() {
                     >
                       <ListItemButton
                         onClick={() => handleNotificationClick(notification)}
+                        data-testid={`notification-item-${notification.id}`}
                         sx={{
                           py: 1.5,
                           px: 2,
@@ -626,6 +636,7 @@ export default function NotificationCenter() {
             <Button
               size="small"
               onClick={handleViewActivity}
+              data-testid="notifications-view-activity-button"
               sx={{
                 fontSize: '0.75rem',
                 color: theme.palette.text.secondary,

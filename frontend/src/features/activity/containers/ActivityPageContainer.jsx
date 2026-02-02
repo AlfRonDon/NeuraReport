@@ -429,6 +429,8 @@ export default function ActivityPage() {
           <RefreshButton
             onClick={fetchActivities}
             disabled={loading}
+            data-testid="refresh-activity-button"
+            aria-label="Refresh activities"
             sx={{ color: theme.palette.text.secondary }}
           >
             {loading ? <CircularProgress size={20} /> : <RefreshIcon />}
@@ -436,6 +438,8 @@ export default function ActivityPage() {
           <DeleteButton
             onClick={() => setClearConfirmOpen(true)}
             disabled={activities.length === 0}
+            data-testid="clear-activity-button"
+            aria-label="Clear all activities"
             sx={{ color: theme.palette.text.secondary }}
           >
             <DeleteIcon />
@@ -451,6 +455,7 @@ export default function ActivityPage() {
             value={entityTypeFilter}
             onChange={(e) => setEntityTypeFilter(e.target.value)}
             label="Entity Type"
+            data-testid="entity-type-filter"
           >
             <MenuItem value="">All</MenuItem>
             <MenuItem value="template">Template</MenuItem>
@@ -465,6 +470,7 @@ export default function ActivityPage() {
             value={actionFilter}
             onChange={(e) => setActionFilter(e.target.value)}
             label="Action"
+            data-testid="action-filter"
           >
             <MenuItem value="">All</MenuItem>
             <MenuItem value="favorite_added">Favorite added</MenuItem>

@@ -73,6 +73,7 @@ export default function Breadcrumbs() {
         component={RouterLink}
         to="/"
         underline="none"
+        data-testid="breadcrumb-home-link"
         sx={{
           display: 'flex',
           alignItems: 'center',
@@ -101,6 +102,7 @@ export default function Breadcrumbs() {
             component={RouterLink}
             to={crumb.to}
             underline="none"
+            data-testid={`breadcrumb-link-${crumb.label.toLowerCase().replace(/\s+/g, '-')}`}
             sx={{
               fontSize: '0.8125rem',
               fontWeight: 400,

@@ -250,6 +250,7 @@ function JobCard({ job, onNavigate, onSetupNavigate, connectionName, onCancel, o
             label={chip.label}
             color={chip.color === 'default' ? 'default' : chip.color}
             variant={chip.color === 'default' ? 'outlined' : 'filled'}
+            data-testid="job-status"
           />
         </Stack>
         <Typography variant="body2" color="text.secondary">

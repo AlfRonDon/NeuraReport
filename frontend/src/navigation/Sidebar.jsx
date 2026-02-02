@@ -507,7 +507,12 @@ export default function Sidebar({ width, collapsed, mobileOpen, onClose, onToggl
       </LogoContainer>
 
       {/* Collapse Button */}
-      <CollapseButton size="small" onClick={handleToggleSidebar}>
+      <CollapseButton
+        size="small"
+        onClick={handleToggleSidebar}
+        aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        data-testid="sidebar-collapse-button"
+      >
         {collapsed ? <ChevronRightIcon /> : <ChevronLeftIcon />}
       </CollapseButton>
 

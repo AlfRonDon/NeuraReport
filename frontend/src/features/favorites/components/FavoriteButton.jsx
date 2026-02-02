@@ -111,6 +111,7 @@ export default function FavoriteButton({
         size={size}
         onClick={handleToggle}
         disabled={loading}
+        data-testid="favorite-button"
         sx={{
           color: isFavorite ? (theme.palette.mode === 'dark' ? figmaGrey[600] : figmaGrey[1200]) : theme.palette.text.secondary,
           transition: 'all 0.2s ease',

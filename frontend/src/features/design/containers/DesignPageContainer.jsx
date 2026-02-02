@@ -347,10 +347,10 @@ export default function DesignPageContainer() {
 
                     {/* Color Preview */}
                     <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
-                      <ColorSwatch color={kit.primary_color} onClick={() => handleCopyColor(kit.primary_color)} />
-                      <ColorSwatch color={kit.secondary_color} onClick={() => handleCopyColor(kit.secondary_color)} />
+                      <ColorSwatch color={kit.primary_color} onClick={() => handleCopyColor(kit.primary_color)} data-testid="brand-kit-primary-color" />
+                      <ColorSwatch color={kit.secondary_color} onClick={() => handleCopyColor(kit.secondary_color)} data-testid="brand-kit-secondary-color" />
                       {kit.colors?.map((c, i) => (
-                        <ColorSwatch key={i} color={c.value} onClick={() => handleCopyColor(c.value)} />
+                        <ColorSwatch key={i} color={c.value} onClick={() => handleCopyColor(c.value)} data-testid={`brand-kit-color-${i}`} />
                       ))}
                     </Box>
 
@@ -362,12 +362,12 @@ export default function DesignPageContainer() {
                   </CardContent>
                   <CardActions>
                     {!kit.is_default && (
-                      <Button size="small" onClick={() => handleSetDefault(kit.id)}>
+                      <Button size="small" onClick={() => handleSetDefault(kit.id)} data-testid="set-default-brand-kit">
                         Set Default
                       </Button>
                     )}
                     <Box sx={{ flex: 1 }} />
-                    <IconButton size="small" onClick={() => handleDeleteBrandKit(kit.id)}>
+                    <IconButton size="small" onClick={() => handleDeleteBrandKit(kit.id)} data-testid="delete-brand-kit" aria-label="Delete brand kit">
                       <DeleteIcon fontSize="small" />
                     </IconButton>
                   </CardActions>
@@ -404,13 +404,13 @@ export default function DesignPageContainer() {
                     {t.is_active && <CheckIcon sx={{ color: 'text.secondary' }} />}
                   </Box>
                   <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
-                    <ColorSwatch color={t.colors?.primary || '#3b82f6'} />
-                    <ColorSwatch color={t.colors?.secondary || '#6366f1'} />
-                    <ColorSwatch color={t.colors?.background || '#ffffff'} />
+                    <ColorSwatch color={t.colors?.primary || '#3b82f6'} data-testid="theme-primary-color" />
+                    <ColorSwatch color={t.colors?.secondary || '#6366f1'} data-testid="theme-secondary-color" />
+                    <ColorSwatch color={t.colors?.background || '#ffffff'} data-testid="theme-background-color" />
                   </Box>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                     {!t.is_active && (
-                      <Button size="small" onClick={() => handleSetActiveTheme(t.id)}>
+                      <Button size="small" onClick={() => handleSetActiveTheme(t.id)} data-testid="activate-theme">
                         Activate
                       </Button>
                     )}
@@ -480,6 +480,7 @@ export default function DesignPageContainer() {
                           color={color}
                           sx={{ width: 60, height: 60, mb: 1 }}
                           onClick={() => handleCopyColor(color)}
+                          data-testid={`generated-color-${index}`}
                         />
                         <Typography variant="caption" sx={{ fontFamily: 'monospace' }}>
                           {color}

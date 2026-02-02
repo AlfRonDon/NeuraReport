@@ -75,6 +75,7 @@ function SearchResult({ result, onSelect, isSelected, theme }) {
   return (
     <ListItem
       onClick={() => onSelect(result)}
+      data-testid={`search-result-${result.type}-${result.id}`}
       sx={{
         px: 2,
         py: 1.5,
@@ -298,6 +299,7 @@ export default function GlobalSearch({
           placeholder={inputPlaceholder}
           size="small"
           fullWidth
+          data-testid="global-search-input"
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">

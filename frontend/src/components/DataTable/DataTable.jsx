@@ -801,6 +801,7 @@ export default function DataTable({
                       onKeyDown={(event) => handleRowKeyDown(event, row, rowIndex)}
                       selected={isItemSelected}
                       data-row-index={rowIndex}
+                      data-testid={`table-row-${rowIndex}`}
                       rowIndex={rowIndex}
                       isClickable={!!onRowClick}
                       tabIndex={onRowClick || selectable ? 0 : -1}
@@ -841,6 +842,7 @@ export default function DataTable({
                         <TableCell
                           key={column.field}
                           align={column.align || 'left'}
+                          data-testid={`table-cell-${column.field}`}
                           sx={{
                             p: cellPadding,
                             ...(isNarrow ? { whiteSpace: 'normal', overflowWrap: 'anywhere' } : null),

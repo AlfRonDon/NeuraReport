@@ -164,6 +164,9 @@ export function TimeExpectationProvider({ children }) {
   const MAX_TRACKED_OPERATIONS = 200
   const checkIntervals = useRef(new Map())
 
+  // Use ref to avoid TDZ issues with circular dependencies between hooks
+  const escalateOperationRef = useRef()
+
   /**
    * Escalate an operation to a higher level
    */
@@ -188,6 +191,9 @@ export function TimeExpectationProvider({ children }) {
       return next
     })
   }, [])
+
+  // Store in ref for use in other hooks
+  escalateOperationRef.current = escalateOperation
 
   /**
    * Start tracking an operation with time expectations
@@ -222,7 +228,7 @@ export function TimeExpectationProvider({ children }) {
     // Set up escalation checks
     if (timeConfig.warning) {
       const warningTimeout = setTimeout(() => {
-        escalateOperation(operationId, EscalationLevel.WARNING)
+        escalateOperationRef.current?.(operationId, EscalationLevel.WARNING)
       }, timeConfig.warning)
 
       checkIntervals.current.set(`${operationId}-warning`, warningTimeout)
@@ -230,14 +236,14 @@ export function TimeExpectationProvider({ children }) {
 
     if (timeConfig.timeout) {
       const timeoutTimeout = setTimeout(() => {
-        escalateOperation(operationId, EscalationLevel.TIMEOUT)
+        escalateOperationRef.current?.(operationId, EscalationLevel.TIMEOUT)
       }, timeConfig.timeout)
 
       checkIntervals.current.set(`${operationId}-timeout`, timeoutTimeout)
     }
 
     return operation
-  }, [escalateOperation])
+  }, [])
 
   /**
    * Complete tracking for an operation

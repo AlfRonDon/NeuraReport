@@ -511,7 +511,16 @@ async function executeAction(
   networkMonitor.clear()
 
   // Navigate to route (fresh state)
-  await page.goto(action.route, { waitUntil: 'domcontentloaded', timeout: 60000 })
+  const baseUrl = process.env.BASE_URL || 'http://127.0.0.1:4173'
+  let fullUrl = action.route.startsWith('http') ? action.route : `${baseUrl}${action.route}`
+
+  // Safety check: ensure URL is absolute
+  if (!fullUrl.startsWith('http')) {
+    fullUrl = `http://127.0.0.1:4173${fullUrl}`
+  }
+
+  console.log(`Navigating to: ${fullUrl}`)
+  await page.goto(fullUrl, { waitUntil: 'domcontentloaded', timeout: 60000 })
   await page.waitForTimeout(2000) // Allow for hydration
 
   // Capture before screenshot

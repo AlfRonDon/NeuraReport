@@ -410,17 +410,17 @@ export default function TopNav({ onMenuClick, showMenuButton, connection }) {
       <StyledToolbar>
         {/* Menu Button (Mobile) */}
         {showMenuButton && (
-          <NavIconButton edge="start" onClick={handleMenuButtonClick} aria-label="Open menu">
+          <NavIconButton edge="start" onClick={handleMenuButtonClick} aria-label="Open menu" data-testid="mobile-menu-button">
             <MenuIcon sx={{ fontSize: 20 }} />
           </NavIconButton>
         )}
 
         {/* Breadcrumbs + Global Search */}
-        <Box sx={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Box sx={{ flex: 1, minWidth: 0 }}>
+        <Box sx={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 2 }} data-testid="topnav-breadcrumb-search-container">
+          <Box sx={{ flex: 1, minWidth: 0 }} data-testid="topnav-breadcrumb-wrapper">
             <Breadcrumbs />
           </Box>
-          <Box sx={{ display: { xs: 'none', md: 'block' } }}>
+          <Box sx={{ display: { xs: 'none', md: 'block' } }} data-testid="topnav-global-search-wrapper">
             <GlobalSearch variant="compact" enableShortcut={false} showShortcutHint={false} />
           </Box>
         </Box>
@@ -442,19 +442,19 @@ export default function TopNav({ onMenuClick, showMenuButton, connection }) {
         )}
 
         {/* Actions */}
-        <Stack direction="row" spacing={0.5} alignItems="center">
+        <Stack direction="row" spacing={0.5} alignItems="center" data-testid="topnav-actions-container">
           <Tooltip
             title={`Search (${getShortcutDisplay(SHORTCUTS.COMMAND_PALETTE).join(' + ')})`}
             arrow
             TransitionComponent={Zoom}
           >
-            <NavIconButton size="small" onClick={handleOpenCommandPalette} aria-label="Open search">
+            <NavIconButton size="small" onClick={handleOpenCommandPalette} aria-label="Open search" data-testid="search-button">
               <SearchIcon sx={{ fontSize: 18 }} />
             </NavIconButton>
           </Tooltip>
 
           <Tooltip title="Keyboard Shortcuts" arrow TransitionComponent={Zoom}>
-            <NavIconButton size="small" onClick={handleOpenShortcuts} aria-label="View shortcuts">
+            <NavIconButton size="small" onClick={handleOpenShortcuts} aria-label="View shortcuts" data-testid="keyboard-shortcuts-button">
               <KeyboardIcon sx={{ fontSize: 18 }} />
             </NavIconButton>
           </Tooltip>
@@ -462,7 +462,7 @@ export default function TopNav({ onMenuClick, showMenuButton, connection }) {
           <NotificationCenter />
 
           <Tooltip title="Jobs & downloads" arrow TransitionComponent={Zoom}>
-            <NavIconButton size="small" onClick={handleOpenNotifications} aria-label="View notifications">
+            <NavIconButton size="small" onClick={handleOpenNotifications} aria-label="View notifications" data-testid="notifications-button">
               <StyledBadge badgeContent={notificationsCount} invisible={!notificationsCount}>
                 <WorkIcon sx={{ fontSize: 18 }} />
               </StyledBadge>
@@ -470,7 +470,7 @@ export default function TopNav({ onMenuClick, showMenuButton, connection }) {
           </Tooltip>
 
           <Tooltip title="Help" arrow TransitionComponent={Zoom}>
-            <NavIconButton size="small" onClick={handleOpenHelp} aria-label="Open help">
+            <NavIconButton size="small" onClick={handleOpenHelp} aria-label="Open help" data-testid="help-button">
               <HelpOutlineIcon sx={{ fontSize: 18 }} />
             </NavIconButton>
           </Tooltip>
@@ -479,6 +479,7 @@ export default function TopNav({ onMenuClick, showMenuButton, connection }) {
             size="small"
             onClick={handleOpenMenu}
             aria-label="User menu"
+            data-testid="user-menu-button"
             sx={{ ml: 0.5 }}
           >
             <PersonOutlineIcon sx={{ fontSize: 18 }} />

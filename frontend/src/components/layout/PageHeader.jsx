@@ -27,6 +27,7 @@ function renderCrumb(crumb, index) {
         color="text.secondary"
         href={href}
         onClick={onClick}
+        data-testid={label ? `pageheader-breadcrumb-${label.toLowerCase().replace(/\s+/g, '-')}` : `pageheader-breadcrumb-${index}`}
         sx={{
           display: 'inline-flex',
           alignItems: 'center',

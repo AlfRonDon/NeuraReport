@@ -3,6 +3,7 @@ import { bootstrapState } from '../api/client'
 import { useAppStore } from '../stores'
 
 const CACHE_KEY = 'neura:persistent-cache'
+const CACHE_MAX_AGE = 5 * 60 * 1000 // 5 minutes
 
 const safeConnectionCache = (conn) => ({
   id: conn?.id ?? null,
@@ -32,6 +33,7 @@ export const loadPersistedCache = () => {
       connections: Array.isArray(parsed?.connections) ? parsed.connections : [],
       templates: Array.isArray(parsed?.templates) ? parsed.templates : [],
       lastUsed: parsed?.lastUsed || { connectionId: null, templateId: null },
+      timestamp: parsed?.timestamp || 0,
     }
   } catch {
     return null
@@ -44,6 +46,7 @@ export const savePersistedCache = ({ connections, templates, lastUsed }) => {
       connections: Array.isArray(connections) ? connections.map(safeConnectionCache) : [],
       templates: Array.isArray(templates) ? templates.map(safeTemplateCache) : [],
       lastUsed: lastUsed || { connectionId: null, templateId: null },
+      timestamp: Date.now(),
     }
     localStorage.setItem(CACHE_KEY, JSON.stringify(payload))
   } catch {
@@ -110,6 +113,13 @@ export function useBootstrapState() {
 
     const hydrate = async () => {
       try {
+        // Skip API call if cache is fresh (< 5 min old)
+        const cacheAge = cached?.timestamp ? Date.now() - cached.timestamp : Infinity
+        if (cacheAge < CACHE_MAX_AGE && cached?.connections?.length > 0) {
+          setHydrated(true)
+          return
+        }
+
         const data = await bootstrapState()
         if (cancelled || !data) return
         const connections = Array.isArray(data.connections) ? data.connections : []

@@ -28,18 +28,19 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'] },
     },
   ],
-  webServer: {
-    command: 'npm run dev -- --port 4173 --host 127.0.0.1',
-    url: 'http://localhost:4173',
-    reuseExistingServer: !process.env.CI,
-    stdout: 'pipe',
-    stderr: 'pipe',
-    env: {
-      // Ensure e2e runs against the real backend via Vite proxy (no cross-origin/CORS).
-      VITE_API_BASE_URL: 'proxy',
-      VITE_USE_MOCK: 'false',
-      // Backend runs on 8001 in our manual validation environment.
-      NEURA_BACKEND_URL: process.env.NEURA_BACKEND_URL || 'http://127.0.0.1:8002',
-    },
-  },
+  // webServer disabled - services already running manually
+  // webServer: {
+  //   command: 'npm run dev -- --port 4173 --host 127.0.0.1',
+  //   url: 'http://localhost:4173',
+  //   reuseExistingServer: !process.env.CI,
+  //   stdout: 'pipe',
+  //   stderr: 'pipe',
+  //   env: {
+  //     // Ensure e2e runs against the real backend via Vite proxy (no cross-origin/CORS).
+  //     VITE_API_BASE_URL: 'proxy',
+  //     VITE_USE_MOCK: 'false',
+  //     // Backend runs on 8001 in our manual validation environment.
+  //     NEURA_BACKEND_URL: process.env.NEURA_BACKEND_URL || 'http://127.0.0.1:8002',
+  //   },
+  // },
 })

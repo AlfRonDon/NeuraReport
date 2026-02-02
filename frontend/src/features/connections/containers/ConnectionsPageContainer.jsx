@@ -392,6 +392,7 @@ export default function ConnectionsPage() {
         <Chip
           label={value || 'Unknown'}
           size="small"
+          data-testid="connection-db-type"
           sx={{
             bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
             color: theme.palette.text.secondary,
@@ -413,6 +414,7 @@ export default function ConnectionsPage() {
           }
           label={value || 'Unknown'}
           size="small"
+          data-testid="connection-status"
           sx={{
             fontSize: '0.75rem',
             textTransform: 'capitalize',
@@ -493,6 +495,7 @@ export default function ConnectionsPage() {
               size="small"
               onClick={(e) => handleOpenMenu(e, row)}
               aria-label="More actions"
+              data-testid="connection-actions-button"
               sx={{ color: theme.palette.text.secondary }}
             >
               <MoreVertIcon sx={{ fontSize: 18 }} />

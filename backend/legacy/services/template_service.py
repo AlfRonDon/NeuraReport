@@ -201,9 +201,21 @@ def bootstrap_state(request: Request):
     correlation_id = getattr(request.state, "correlation_id", None) or get_correlation_id()
     templates = _state_store().list_templates()
     hydrated_templates = _ensure_template_mapping_keys(templates)
+
+    # Get connections with optional limit for performance
+    all_connections = _state_store().list_connections()
+    # Sort by lastConnected (most recent first), then by createdAt
+    sorted_connections = sorted(
+        all_connections,
+        key=lambda c: (c.get("lastConnected") or c.get("createdAt") or ""),
+        reverse=True
+    )
+    # Limit to 20 most recent to reduce payload size
+    limited_connections = sorted_connections[:20]
+
     return {
         "status": "ok",
-        "connections": _state_store().list_connections(),
+        "connections": limited_connections,
         "templates": hydrated_templates,
         "last_used": _state_store().get_last_used(),
         "correlation_id": correlation_id,

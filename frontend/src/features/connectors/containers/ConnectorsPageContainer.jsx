@@ -411,6 +411,7 @@ export default function ConnectorsPage() {
                               variant="outlined"
                               size="small"
                               onClick={() => handleOpenConnect(connector)}
+                              data-testid="connector-connect-button"
                             >
                               Connect
                             </ActionButton>
@@ -584,6 +585,7 @@ export default function ConnectorsPage() {
             variant="contained"
             onClick={handleCreateConnection}
             disabled={!connectionName || loading}
+            data-testid="connector-create-button"
           >
             Connect
           </Button>
