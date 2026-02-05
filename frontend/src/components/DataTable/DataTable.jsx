@@ -558,7 +558,10 @@ export default function DataTable({
   const isSelected = (id) => selected.includes(id)
   const numSelected = selected.length
   const rowCount = pagination?.total ?? filteredData.length
-  const pageRowCount = pagination ? paginatedData.length : rowCount
+  const pageRowCount = useMemo(() =>
+    pagination ? paginatedData.length : rowCount,
+    [pagination, paginatedData, rowCount]
+  )
   const effectivePage = pagination?.page ?? page
   const effectiveRowsPerPage = pagination?.rowsPerPage ?? rowsPerPage
 

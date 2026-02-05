@@ -513,16 +513,32 @@ async function executeAction(
   networkMonitor.clear()
 
   // Navigate to route (fresh state)
-  const baseUrl = process.env.BASE_URL || 'http://127.0.0.1:4173'
+  const baseUrl = process.env.BASE_URL || 'http://127.0.0.1:5174'
   let fullUrl = action.route.startsWith('http') ? action.route : `${baseUrl}${action.route}`
 
   // Safety check: ensure URL is absolute
   if (!fullUrl.startsWith('http')) {
-    fullUrl = `http://127.0.0.1:4173${fullUrl}`
+    fullUrl = `http://127.0.0.1:5174${fullUrl}`
   }
 
   console.log(`Navigating to: ${fullUrl}`)
-  await page.goto(fullUrl, { waitUntil: 'domcontentloaded', timeout: 60000 })
+  // Retry navigation up to 5 times on timeout or connection refused
+  let navRetries = 5
+  while (navRetries > 0) {
+    try {
+      await page.goto(fullUrl, { waitUntil: 'domcontentloaded', timeout: 60000 })
+      break // Success, exit retry loop
+    } catch (navError: any) {
+      navRetries--
+      const isRetryable = navError.message?.includes('Timeout') || navError.message?.includes('ERR_CONNECTION_REFUSED')
+      if (navRetries === 0 || !isRetryable) {
+        throw navError // Re-throw if out of retries or not retryable
+      }
+      const waitTime = navError.message?.includes('ERR_CONNECTION_REFUSED') ? 15000 : 3000
+      console.log(`Navigation failed (${navError.message?.includes('ERR_CONNECTION_REFUSED') ? 'connection refused' : 'timeout'}), retrying in ${waitTime/1000}s... (${navRetries} attempts left)`)
+      await page.waitForTimeout(waitTime)
+    }
+  }
   await page.waitForTimeout(2000) // Allow for hydration
 
   // Capture before screenshot
@@ -573,9 +589,23 @@ async function executeAction(
       } else if (domProbe?.id && domProbe.id.length > 0 && !domProbe.id.match(/^_r_/)) {
         locator = page.locator(`#${domProbe.id}`).first()
       } else if (!locator) {
-        // Strategy 3: Coordinate click as final fallback
+        // Strategy 3: Coordinate click as final fallback with retry
         usedCoordinateFallback = true
-        await page.mouse.click(cx, cy)
+        let coordClicked = false
+        for (let coordRetry = 0; coordRetry < 3 && !coordClicked; coordRetry++) {
+          try {
+            await Promise.race([
+              page.mouse.click(cx, cy),
+              new Promise((_, reject) => setTimeout(() => reject(new Error('Coordinate click timeout')), 10000))
+            ])
+            coordClicked = true
+          } catch (err: any) {
+            if (coordRetry === 2) {
+              throw new Error(`Coordinate fallback click failed: ${err.message}`)
+            }
+            await page.waitForTimeout(500) // Brief pause before retry
+          }
+        }
         await page.waitForTimeout(1000)
 
         const afterShot = path.join(SCREENSHOTS_DIR, `${action.id}-after.png`)
@@ -609,18 +639,51 @@ async function executeAction(
       }
     }
 
-    // Pre-click element analysis: check disabled state and table header context
-    const elementState = await locator!.evaluate((el: HTMLElement) => {
-      const isDisabled = el.hasAttribute('disabled')
-        || el.getAttribute('aria-disabled') === 'true'
-        || el.classList.contains('Mui-disabled')
-        || (el.closest('button') as HTMLButtonElement)?.disabled === true
-        || el.closest('.Mui-disabled') !== null
-      const isTableHeader = el.tagName.toLowerCase() === 'th'
-        || el.closest('th') !== null
-        || el.closest('thead') !== null
-      return { isDisabled, isTableHeader }
-    }).catch(() => ({ isDisabled: false, isTableHeader: false }))
+    // Verify locator actually matches an element (with timeout) before attempting operations
+    if (locator) {
+      try {
+        const count = await Promise.race([
+          locator.count(),
+          new Promise<number>((_, reject) =>
+            setTimeout(() => reject(new Error('Locator count timeout')), 5000)
+          )
+        ]).catch(() => 0)
+
+        if (count === 0) {
+          // Locator created but no matching elements found - fall back to coordinate click
+          locator = null
+        }
+      } catch (err: any) {
+        // Count check failed or timed out - fall back to coordinate click
+        locator = null
+      }
+    }
+
+    // Pre-click element analysis: check disabled state and table header context with timeout
+    let elementState = { isDisabled: false, isTableHeader: false }
+    if (locator) {
+      try {
+        elementState = await Promise.race([
+          locator.evaluate((el: HTMLElement) => {
+            const isDisabled = el.hasAttribute('disabled')
+              || el.getAttribute('aria-disabled') === 'true'
+              || el.classList.contains('Mui-disabled')
+              || (el.closest('button') as HTMLButtonElement)?.disabled === true
+              || el.closest('.Mui-disabled') !== null
+            const isTableHeader = el.tagName.toLowerCase() === 'th'
+              || el.closest('th') !== null
+              || el.closest('thead') !== null
+            return { isDisabled, isTableHeader }
+          }),
+          new Promise<{isDisabled: boolean, isTableHeader: boolean}>((_, reject) =>
+            setTimeout(() => reject(new Error('Element evaluation timeout')), 5000)
+          )
+        ])
+      } catch (err: any) {
+        // Element evaluation failed or timed out - continue with click attempt
+        elementState = { isDisabled: false, isTableHeader: false }
+      }
+    }
 
     if (elementState.isDisabled) {
       const afterShot = path.join(SCREENSHOTS_DIR, `${action.id}-after.png`)
@@ -680,26 +743,58 @@ async function executeAction(
     const urlBeforeClick = page.url()
 
     // Step 1: Try scrolling into view
-    try {
-      await locator.scrollIntoViewIfNeeded({ timeout: 3000 })
-    } catch {
-      // Fixed/sticky elements or off-screen elements - continue to click
+    if (locator) {
+      try {
+        await locator.scrollIntoViewIfNeeded({ timeout: 3000 })
+      } catch {
+        // Fixed/sticky elements or off-screen elements - continue to click
+      }
     }
 
     // Step 2: Try regular click
     let clicked = false
-    try {
-      await locator.click({ timeout: 5000 })
-      clicked = true
-    } catch {
-      // Step 3: Try force click (bypasses visibility/actionability checks)
+    if (locator) {
       try {
-        await locator.click({ force: true, timeout: 3000 })
+        await locator.click({ timeout: 10000 })
         clicked = true
       } catch {
-        // Step 4: Final fallback - click at original coordinates
-        await page.mouse.click(cx, cy)
-        clicked = true
+        // Step 3: Try force click (bypasses visibility/actionability checks)
+        try {
+          await locator.click({ force: true, timeout: 8000 })
+          clicked = true
+        } catch {
+          // Step 4: Final fallback - click at original coordinates with retry
+          for (let clickRetry = 0; clickRetry < 3 && !clicked; clickRetry++) {
+            try {
+              await Promise.race([
+                page.mouse.click(cx, cy),
+                new Promise((_, reject) => setTimeout(() => reject(new Error('Mouse click timeout')), 10000))
+              ])
+              clicked = true
+            } catch (mouseErr: any) {
+              if (clickRetry === 2) {
+                throw new Error(`All click strategies failed. Last error: ${mouseErr.message}`)
+              }
+              await page.waitForTimeout(500) // Brief pause before retry
+            }
+          }
+        }
+      }
+    } else {
+      // No locator found - use coordinates with retry
+      for (let clickRetry = 0; clickRetry < 3 && !clicked; clickRetry++) {
+        try {
+          await Promise.race([
+            page.mouse.click(cx, cy),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('Mouse click timeout')), 10000))
+          ])
+          clicked = true
+        } catch (mouseErr: any) {
+          if (clickRetry === 2) {
+            throw new Error(`Coordinate click failed: ${mouseErr.message}`)
+          }
+          await page.waitForTimeout(500) // Brief pause before retry
+        }
       }
     }
 

@@ -4,10 +4,13 @@ REST API endpoints for document library and knowledge management.
 """
 from __future__ import annotations
 
+import logging
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Request
 
+from backend.app.services.background_tasks import enqueue_background_job
+import backend.app.services.state_access as state_access
 from backend.app.schemas.knowledge.library import (
     AutoTagRequest,
     CollectionCreate,
@@ -30,6 +33,8 @@ from backend.app.schemas.knowledge.library import (
     TagResponse,
 )
 from backend.app.services.knowledge.service import knowledge_service
+
+logger = logging.getLogger("neura.api.knowledge")
 
 router = APIRouter(tags=["knowledge"])
 

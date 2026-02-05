@@ -67,6 +67,8 @@ frontend/.eslintcache
 frontend/.cache/
 frontend/playwright-report/
 frontend/playwright-results/
+frontend/playwright-report-*/
+frontend/playwright-results-*/
 frontend/test-output.txt
 frontend/tests/e2e/screenshots/
 frontend/tests/e2e/evidence/

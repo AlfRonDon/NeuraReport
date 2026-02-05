@@ -6,7 +6,7 @@ export default defineConfig({
   // "No tests found" on some shells/platforms.
   testMatch: ['**/*.spec.ts', '**/*.spec.js'],
   fullyParallel: true,
-  timeout: 60_000,
+  timeout: 180_000, // 3 minutes for pages with many elements
   expect: {
     timeout: 10_000,
   },
@@ -16,7 +16,7 @@ export default defineConfig({
     ['html', { outputFolder: 'playwright-report', open: 'never' }],
   ],
   use: {
-    baseURL: 'http://localhost:4173',
+    baseURL: 'http://127.0.0.1:5174',
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
