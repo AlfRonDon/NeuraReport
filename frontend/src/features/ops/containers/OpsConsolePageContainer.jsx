@@ -859,7 +859,7 @@ export default function OpsConsolePage() {
                     if (data === null) return
                     runRequest({
                       method: 'post',
-                      url: '/charts/analyze',
+                      url: '/charts/analyze?background=true',
                       data: {
                         data,
                         max_suggestions: chartMaxSuggestions || 3,
@@ -910,7 +910,7 @@ export default function OpsConsolePage() {
                     if (data === null) return
                     runRequest({
                       method: 'post',
-                      url: '/charts/generate',
+                      url: '/charts/generate?background=true',
                       data: {
                         data,
                         chart_type: chartType || 'bar',
