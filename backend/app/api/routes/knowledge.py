@@ -239,10 +239,56 @@ async def build_knowledge_graph(request: KnowledgeGraphRequest):
     )
 
 
-@router.post("/faq", response_model=FAQResponse)
-async def generate_faq(request: FAQGenerateRequest):
-    """Generate FAQ from documents."""
-    return await knowledge_service.generate_faq(
-        document_ids=request.document_ids,
-        max_questions=request.max_questions,
+@router.post("/faq")
+async def generate_faq(
+    payload: FAQGenerateRequest,
+    request: Request,
+    background: bool = Query(True),
+):
+    """Generate FAQ from documents.
+
+    By default runs as a background job so the UI can track progress.
+    Pass ?background=false for synchronous response.
+    """
+    correlation_id = getattr(request.state, "correlation_id", None)
+
+    if not background:
+        result = await knowledge_service.generate_faq(
+            document_ids=payload.document_ids,
+            max_questions=payload.max_questions,
+        )
+        return {"status": "ok", "faq": result, "correlation_id": correlation_id}
+
+    async def runner(job_id: str) -> None:
+        state_access.record_job_start(job_id)
+        state_access.record_job_step(
+            job_id, "generate_faq", status="running", label="Generating FAQ"
+        )
+        try:
+            result = await knowledge_service.generate_faq(
+                document_ids=payload.document_ids,
+                max_questions=payload.max_questions,
+            )
+            state_access.record_job_step(
+                job_id, "generate_faq", status="succeeded", progress=100.0
+            )
+            state_access.record_job_completion(
+                job_id,
+                status="succeeded",
+                result={"faq": result.model_dump() if hasattr(result, "model_dump") else result},
+            )
+        except Exception:
+            logger.exception("faq_generate_failed", extra={"job_id": job_id})
+            safe_msg = "FAQ generation failed"
+            state_access.record_job_step(
+                job_id, "generate_faq", status="failed", error=safe_msg
+            )
+            state_access.record_job_completion(job_id, status="failed", error=safe_msg)
+
+    job = await enqueue_background_job(
+        job_type="faq_generate",
+        steps=[{"name": "generate_faq", "label": "Generating FAQ"}],
+        meta={"document_count": len(payload.document_ids), "max_questions": payload.max_questions},
+        runner=runner,
     )
+    return {"status": "queued", "job_id": job["id"], "correlation_id": correlation_id}
