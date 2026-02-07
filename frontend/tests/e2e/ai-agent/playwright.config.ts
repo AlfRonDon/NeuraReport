@@ -8,14 +8,14 @@ export default defineConfig({
   testDir: '.',
   testMatch: ['**/*.spec.ts'],
   fullyParallel: false,
-  timeout: 300_000, // 5 minutes per test (LLM calls are slow)
+  timeout: 0, // no timeout — let Claude take as long as needed for accurate testing
   expect: {
     timeout: 15_000,
   },
   retries: 0,
   reporter: [['list']],
   use: {
-    baseURL: process.env.BASE_URL || 'http://127.0.0.1:5176',
+    baseURL: process.env.BASE_URL || 'http://localhost:5174',
     trace: 'off',
     screenshot: 'off',
     video: 'off',

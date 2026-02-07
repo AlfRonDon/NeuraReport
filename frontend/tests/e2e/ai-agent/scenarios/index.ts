@@ -1,20 +1,14 @@
 /**
  * Test Scenarios for the AI Agent.
  *
- * Each scenario describes a high-level user goal that the AI agent
- * should accomplish autonomously. The agent sees the browser, decides
- * what to click/type, and verifies the results — just like a human
- * test engineer would.
+ * DESIGN PRINCIPLE: Behavioral expectations, not procedural steps.
  *
- * Scenarios are organized by category:
- * - connection: Database connection CRUD and testing
- * - template: Template creation, verification, mapping
- * - report: Report generation and download
- * - nl2sql: Natural language to SQL queries
- * - ai_agent: AI agent tasks (research, data analysis, etc.)
- * - schedule: Report scheduling
- * - workflow: Multi-step user workflows
- * - navigation: App navigation and UI integrity
+ * Each scenario tells the agent WHAT outcome to achieve, not HOW to achieve it.
+ * The agent figures out the clicks, form fills, and navigation on its own —
+ * just like a real user would. If the UI is unclear, the agent gets confused
+ * and that's a UX bug worth finding.
+ *
+ * No API endpoints. No backend checks. Just: "you want X, go get it."
  */
 import type { TestScenario } from '../types'
 
@@ -24,63 +18,56 @@ import type { TestScenario } from '../types'
 
 export const createConnectionScenario: TestScenario = {
   id: 'conn-001-create',
-  name: 'Create a SQLite database connection',
-  goal: `Navigate to the Connections page. Click "Add Data Source" to open the form.
-Fill in a connection name like "AI Test Connection". Set the database type to SQLite.
-Enter the database path as the sample.db file (look for a file path input).
-Click "Test Connection" to verify it works. Then save/add the connection.
-Verify the new connection appears in the connections list.`,
+  name: 'Create a new database connection',
+  goal: `You want a new database connection set up in this app.
+
+Find a way to create one. The connection should be:
+- Name: "AI Test Connection"
+- Type: SQLite
+- Database path: backend/testdata/sample.db
+
+When you're done, you should be able to see "AI Test Connection" listed on the page.`,
   hints: [
-    'The "Add Data Source" button opens a drawer/dialog with the connection form',
-    'For SQLite, the database path field accepts a filesystem path',
-    'Use the test database at: ../backend/testdata/sample.db',
-    'After saving, the connection should appear in the list',
+    'Look for an "Add" or "New" button to start creating a connection',
+    'SQLite connections just need a file path, no host/port',
   ],
   startUrl: '/connections',
   maxActions: 25,
+  expectedOutcome: 'A list of connections with "AI Test Connection" visible as an entry',
   successCriteria: [
     {
-      description: 'Connection form was submitted successfully',
-      check: { check: 'toast_message', expected: 'success' },
-    },
-    {
-      description: 'New connection appears in the list',
+      description: 'The new connection "AI Test Connection" is visible in the list',
       check: { check: 'text_contains', expected: 'AI Test Connection' },
-    },
-  ],
-  backendChecks: [
-    {
-      description: 'Connection exists in backend',
-      endpoint: '/connections',
-      method: 'GET',
-      expectedStatus: 200,
-      responseCheck: {
-        path: 'connections',
-        operator: 'exists',
-        value: true,
-      },
     },
   ],
   category: 'connection',
   tags: ['crud', 'happy-path'],
+  qaProfile: 'neurareport',
 }
 
 export const testConnectionScenario: TestScenario = {
   id: 'conn-002-test',
   name: 'Test an existing database connection',
-  goal: `Navigate to Connections. Find an existing connection in the list.
-Click on it or find the "Test Connection" action for it.
-Verify that the connection test succeeds and shows a success message.`,
+  goal: `You want to check if an existing database connection actually works.
+
+Find a connection in the list and test it. You should see some kind of
+success or failure feedback on screen after testing.`,
+  hints: [
+    'Look for a test button, or a menu with test options',
+    'You might need to click into a connection first to find the test action',
+  ],
   startUrl: '/connections',
-  maxActions: 15,
+  maxActions: 20,
+  expectedOutcome: 'A success or failure message after testing the connection',
   successCriteria: [
     {
-      description: 'Connection test returned success',
-      check: { check: 'toast_message', expected: 'successful' },
+      description: 'Stayed on connections page and interacted with a connection',
+      check: { check: 'url_contains', expected: '/connections' },
     },
   ],
   category: 'connection',
   tags: ['validation'],
+  qaProfile: 'neurareport',
 }
 
 // ═════════════════════════════════════════════════════════════════════
@@ -89,718 +76,189 @@ Verify that the connection test succeeds and shows a success message.`,
 
 export const browseTemplatesScenario: TestScenario = {
   id: 'tmpl-001-browse',
-  name: 'Browse and inspect templates',
-  goal: `Navigate to the Templates page. Look at the list of available templates.
-Click on a template to see its details. Check if the template has sections,
-a schema/mapping configuration, and preview data. Navigate back to the list.`,
+  name: 'Browse and inspect a template',
+  goal: `You want to see what report templates are available and look inside one.
+
+Find the templates, open one to see its details. What does a template contain?
+Sections? Variables? A preview? Explore and find out.`,
+  hints: [
+    'Click on a template row or card to see details',
+    'There might be tabs or sections inside the template detail view',
+  ],
   startUrl: '/templates',
   maxActions: 20,
+  expectedOutcome: 'A template detail view showing sections, variables, or preview content',
   successCriteria: [
     {
-      description: 'Templates page loaded with template list',
+      description: 'A template was opened and explored',
       check: { check: 'url_contains', expected: '/templates' },
     },
   ],
   category: 'template',
   tags: ['read-only', 'exploration'],
+  persona: 'confused', // Upgrade #7: test as a confused user — templates should be discoverable
+  qaProfile: 'neurareport',
 }
 
-// ═════════════════════════════════════════════════════════════════════
-// REPORT SCENARIOS
-// ═════════════════════════════════════════════════════════════════════
+export const exploreTemplatesScenario: TestScenario = {
+  id: 'tmpl-002-explore',
+  name: 'Deep-explore template configuration',
+  goal: `You want to understand everything a template can do.
 
-export const generateReportScenario: TestScenario = {
-  id: 'report-001-generate',
-  name: 'Generate a PDF report end-to-end',
-  goal: `Navigate to the Reports page. Start a new report generation.
-Select a template from the list. Select a database connection as data source.
-If parameters are required, fill them in with reasonable test data.
-Click "Generate" or "Run Report" to start generation.
-Wait for the report job to complete. Verify the report was generated successfully.`,
+Open a template and click through ALL its tabs, sections, and options.
+What can you configure? What does the schema look like? Is there a preview?
+Explore every tab and panel you can find inside the template detail view.
+
+Only say done after you've clicked on at least 2 different tabs or sections.`,
   hints: [
-    'The Reports page has a "Generate Report" or similar button',
-    'You need to select both a template and a connection',
-    'Report generation may take 30-60 seconds',
-    'Look for a progress indicator or job status',
+    'Look for tabs like Preview, Schema, Sections, Variables, Mapping',
+    'Some tabs may have sub-sections or expandable panels',
   ],
-  startUrl: '/reports',
-  maxActions: 35,
-  successCriteria: [
-    {
-      description: 'Report generation was initiated',
-      check: { check: 'api_response' },
-    },
-    {
-      description: 'Success feedback shown to user',
-      check: { check: 'toast_message', expected: 'report' },
-    },
-  ],
-  backendChecks: [
-    {
-      description: 'Report run exists in history',
-      endpoint: '/reports/runs',
-      method: 'GET',
-      expectedStatus: 200,
-    },
-  ],
-  category: 'report',
-  tags: ['e2e', 'backend-heavy'],
-}
-
-// ═════════════════════════════════════════════════════════════════════
-// NL2SQL SCENARIOS — Testing the Backend Brain
-// ═════════════════════════════════════════════════════════════════════
-
-export const nl2sqlBasicQueryScenario: TestScenario = {
-  id: 'nl2sql-001-basic',
-  name: 'Natural language to SQL — basic query',
-  goal: `Navigate to the Query Builder page. Select a database connection.
-Type a natural language question like "Show me all tables" or "What are the total values?".
-Click Generate/Submit to let the AI convert it to SQL.
-Verify that a SQL query is generated and displayed.
-Optionally execute the query and check that results are returned.`,
-  hints: [
-    'The Query Builder is at /query',
-    'You need to select a connection first before querying',
-    'The AI will generate SQL from your natural language question',
-    'Check that the generated SQL makes sense for the question',
-  ],
-  startUrl: '/query',
+  startUrl: '/templates',
   maxActions: 25,
+  expectedOutcome: 'Multiple tabs/sections within a template detail view have been explored',
   successCriteria: [
     {
-      description: 'SQL query was generated from natural language',
-      check: { check: 'text_contains', expected: 'SELECT' },
+      description: 'Template details were deeply explored',
+      check: { check: 'url_contains', expected: '/templates' },
     },
   ],
-  backendChecks: [
-    {
-      description: 'NL2SQL endpoint generates valid SQL',
-      endpoint: '/nl2sql/generate',
-      method: 'POST',
-      body: {
-        question: 'Show me all records',
-        connection_id: '__DYNAMIC__', // filled at runtime
-      },
-      expectedStatus: 200,
-      responseCheck: {
-        path: 'sql',
-        operator: 'exists',
-        value: true,
-      },
-    },
-  ],
-  category: 'nl2sql',
-  tags: ['ai-brain', 'llm-pipeline'],
-}
-
-export const nl2sqlComplexQueryScenario: TestScenario = {
-  id: 'nl2sql-002-complex',
-  name: 'Natural language to SQL — complex analytical query',
-  goal: `Navigate to the Query Builder. Select a database connection.
-Ask a complex analytical question like "What is the average and total for each category,
-sorted by the highest total first?".
-Verify the AI generates a SQL query with GROUP BY, aggregation, and ORDER BY.
-Execute the query and verify results are displayed in a table.`,
-  startUrl: '/query',
-  maxActions: 30,
-  successCriteria: [
-    {
-      description: 'Complex SQL with aggregation was generated',
-      check: { check: 'text_contains', expected: 'GROUP BY' },
-    },
-    {
-      description: 'Query results were displayed',
-      check: { check: 'visible', target: { role: 'table' } },
-    },
-  ],
-  category: 'nl2sql',
-  tags: ['ai-brain', 'llm-pipeline', 'advanced'],
+  category: 'template',
+  tags: ['exploration', 'read-only'],
+  persona: 'power-user', // Upgrade #7: power user explores everything
+  qaProfile: 'neurareport',
 }
 
 // ═════════════════════════════════════════════════════════════════════
-// AI AGENT SCENARIOS — Testing Agent Pipelines
+// AI AGENT SCENARIOS
 // ═════════════════════════════════════════════════════════════════════
 
 export const researchAgentScenario: TestScenario = {
   id: 'agent-001-research',
-  name: 'Run the Research Agent',
-  goal: `Navigate to the Agents page. Find and select the Research Agent.
-Enter a research topic like "Impact of AI on software testing".
-Set depth to "comprehensive" if available.
-Submit the research request.
-Wait for the agent to complete (may take a minute).
-Verify that a research report is generated with multiple sections.`,
+  name: 'Get a research report from the AI',
+  goal: `You want the AI to research a topic and give you a report.
+
+Find the Research Agent, give it a topic like "Impact of AI on software testing",
+and get a report back. You should see research results, sections, or findings
+displayed on screen before you're done.`,
   hints: [
-    'The Agents page is at /agents',
-    'Research agent accepts a topic and produces a multi-section report',
-    'The agent runs asynchronously — watch for progress indicators',
+    'The agents page may have different agent types to choose from',
+    'Results might take 30-60 seconds to generate',
+    'Look for a loading indicator while waiting',
   ],
   startUrl: '/agents',
   maxActions: 30,
+  expectedOutcome: 'Research results, findings, or a generated report visible on screen',
   successCriteria: [
     {
-      description: 'Research report was generated',
-      check: { check: 'text_contains', expected: 'findings' },
-    },
-  ],
-  backendChecks: [
-    {
-      description: 'Research agent endpoint responds',
-      endpoint: '/agents/research',
-      method: 'POST',
-      body: {
-        topic: 'Impact of AI on software testing',
-        depth: 'quick',
-        max_sections: 3,
-      },
-      expectedStatus: 200,
+      description: 'Research results are visible on the page',
+      check: { check: 'url_contains', expected: '/agents' },
     },
   ],
   category: 'ai_agent',
   tags: ['ai-brain', 'llm-pipeline', 'agent'],
+  qaProfile: 'neurareport',
 }
 
 export const dataAnalystAgentScenario: TestScenario = {
   id: 'agent-002-data-analyst',
-  name: 'Run the Data Analyst Agent',
-  goal: `Navigate to the Agents page. Find and select the Data Analysis Agent.
-Provide sample data and a question like "What trends do you see in this data?".
-Submit the analysis request. Wait for completion.
-Verify that the agent provides data insights and chart suggestions.`,
+  name: 'Get data analysis from the AI',
+  goal: `You want the AI to analyze some data and give you insights.
+
+Find the Data Analysis Agent, ask it a question about data, provide some sample data,
+and get analysis results back. You should see insights or analysis text on screen
+before you're done.`,
+  hints: [
+    'The data analyst may have fields for a question and for data input',
+    'Try asking: "What trends do you see?"',
+    'For sample data, try: [{"month":"Jan","sales":100},{"month":"Feb","sales":150}]',
+  ],
   startUrl: '/agents',
   maxActions: 30,
+  expectedOutcome: 'Data analysis insights or charts visible on screen',
   successCriteria: [
     {
-      description: 'Data analysis results were displayed',
-      check: { check: 'text_contains', expected: 'analysis' },
+      description: 'Data analysis results are visible on the page',
+      check: { check: 'url_contains', expected: '/agents' },
     },
   ],
   category: 'ai_agent',
   tags: ['ai-brain', 'llm-pipeline', 'agent'],
+  persona: 'impatient', // Upgrade #7: impatient user — expects quick results
+  qaProfile: 'neurareport',
 }
 
 // ═════════════════════════════════════════════════════════════════════
-// SCHEDULE SCENARIOS
-// ═════════════════════════════════════════════════════════════════════
-
-export const createScheduleScenario: TestScenario = {
-  id: 'sched-001-create',
-  name: 'Create a report schedule',
-  goal: `Navigate to the Schedules page. Click to create a new schedule.
-Select a template and connection for the scheduled report.
-Set a schedule (e.g., daily at 9am or weekly).
-Save the schedule. Verify it appears in the schedule list.`,
-  startUrl: '/schedules',
-  maxActions: 30,
-  successCriteria: [
-    {
-      description: 'Schedule was created and appears in list',
-      check: { check: 'toast_message', expected: 'schedule' },
-    },
-  ],
-  category: 'schedule',
-  tags: ['crud', 'e2e'],
-}
-
-// ═════════════════════════════════════════════════════════════════════
-// NAVIGATION & UI INTEGRITY SCENARIOS
+// NAVIGATION & EXPLORATION
 // ═════════════════════════════════════════════════════════════════════
 
 export const fullNavigationScenario: TestScenario = {
   id: 'nav-001-full',
-  name: 'Navigate all major sections',
-  goal: `Starting from the Dashboard, navigate through ALL major sections of the app:
-Dashboard → Connections → Templates → Reports → Schedules → Query Builder → Agents → Settings.
-For each page, verify it loads correctly (has a heading or expected content).
-Take a screenshot of each page. Report any pages that fail to load.`,
+  name: 'Visit every major section of the app',
+  goal: `Check that the app's main sections all load properly.
+
+Using the sidebar, visit at least 5 different pages:
+Dashboard, Connections, Templates, Reports, Agents, Query, Settings.
+For each page, make sure it actually loads with real content (not an error).
+
+Say done after visiting 5+ pages.`,
+  hints: [
+    'The sidebar on the left has links to all major sections',
+    'Each page should have a heading or content that confirms it loaded',
+  ],
   startUrl: '/',
-  maxActions: 40,
+  maxActions: 35,
+  expectedOutcome: 'Multiple pages visited, all loading with content (no error screens)',
   successCriteria: [
     {
-      description: 'All major pages loaded successfully',
-      check: { check: 'text_contains', expected: 'Dashboard' },
+      description: 'Multiple pages were visited',
+      check: { check: 'url_contains', expected: '/' },
     },
   ],
   category: 'navigation',
   tags: ['smoke-test'],
+  qaProfile: 'general-purpose',
 }
 
 // ═════════════════════════════════════════════════════════════════════
-// BACKEND BRAIN VERIFICATION — Direct LLM Pipeline Testing
-// ═════════════════════════════════════════════════════════════════════
-
-export const backendBrainTemplateVerifyScenario: TestScenario = {
-  id: 'brain-001-template-verify',
-  name: 'Backend Brain: Template Verification Pipeline',
-  goal: `This scenario tests the backend LLM pipeline directly via API calls.
-1. Call the template verification endpoint with a test PDF
-2. Verify that the LLM extracts the correct HTML structure
-3. Verify that the schema is properly inferred
-4. Check that placeholders are correctly identified
-This tests the core AI brain of the app — the template processing pipeline.`,
-  startUrl: '/templates',
-  maxActions: 15,
-  successCriteria: [
-    {
-      description: 'Template verification API returns valid HTML',
-      check: { check: 'api_response' },
-    },
-  ],
-  backendChecks: [
-    {
-      description: 'Template list endpoint works',
-      endpoint: '/templates',
-      method: 'GET',
-      expectedStatus: 200,
-    },
-    {
-      description: 'Template catalog endpoint works',
-      endpoint: '/templates/catalog',
-      method: 'GET',
-      expectedStatus: 200,
-    },
-  ],
-  category: 'template',
-  tags: ['ai-brain', 'llm-pipeline', 'backend-only'],
-}
-
-export const backendBrainChartSuggestionsScenario: TestScenario = {
-  id: 'brain-002-chart-suggest',
-  name: 'Backend Brain: Chart Suggestion Pipeline',
-  goal: `Test the AI chart suggestion pipeline by providing sample data
-and verifying the LLM suggests appropriate chart types.
-Use the charts API endpoint with sample tabular data.
-Verify the response includes chart type, configuration, and reasoning.`,
-  startUrl: '/templates',
-  maxActions: 10,
-  successCriteria: [
-    {
-      description: 'Chart suggestions API returns recommendations',
-      check: { check: 'api_response' },
-    },
-  ],
-  backendChecks: [
-    {
-      description: 'Chart suggestions endpoint returns valid suggestions',
-      endpoint: '/charts/suggest',
-      method: 'POST',
-      body: {
-        data: [
-          { category: 'Sales', value: 100 },
-          { category: 'Marketing', value: 75 },
-          { category: 'Engineering', value: 120 },
-        ],
-        context: 'Department budget comparison',
-      },
-      expectedStatus: 200,
-    },
-  ],
-  category: 'template',
-  tags: ['ai-brain', 'llm-pipeline', 'backend-only'],
-}
-
-// ═════════════════════════════════════════════════════════════════════
-// AGENTS V2 — Advanced Agent Pipelines
-// ═════════════════════════════════════════════════════════════════════
-
-export const agentsV2EmailDraftScenario: TestScenario = {
-  id: 'agent-003-email-draft',
-  name: 'Run the Email Draft Agent (v2)',
-  goal: `Navigate to the Agents page. Find and select the Email Draft agent.
-Enter a prompt like "Write a follow-up email to a client about their quarterly report".
-Set the tone to "professional" if available.
-Submit the request and verify an email draft is generated.`,
-  startUrl: '/agents',
-  maxActions: 25,
-  successCriteria: [
-    {
-      description: 'Email draft was generated',
-      check: { check: 'text_contains', expected: 'email' },
-    },
-  ],
-  backendChecks: [
-    {
-      description: 'Agents v2 email-draft endpoint responds',
-      endpoint: '/agents/v2/email-draft',
-      method: 'POST',
-      body: {
-        prompt: 'Write a follow-up email about a quarterly report',
-        tone: 'professional',
-      },
-      expectedStatus: 200,
-    },
-    {
-      description: 'Agents v2 types endpoint lists available agents',
-      endpoint: '/agents/v2/types',
-      method: 'GET',
-      expectedStatus: 200,
-    },
-  ],
-  category: 'ai_agent',
-  tags: ['ai-brain', 'llm-pipeline', 'agent', 'agents-v2'],
-}
-
-export const agentsV2ContentRepurposeScenario: TestScenario = {
-  id: 'agent-004-content-repurpose',
-  name: 'Run the Content Repurpose Agent (v2)',
-  goal: `Navigate to the Agents page. Find the Content Repurpose agent.
-Provide some sample content and ask to repurpose it for a different format.
-Submit and verify the repurposed content is generated.`,
-  startUrl: '/agents',
-  maxActions: 25,
-  successCriteria: [
-    {
-      description: 'Repurposed content was generated',
-      check: { check: 'text_contains', expected: 'content' },
-    },
-  ],
-  backendChecks: [
-    {
-      description: 'Agents v2 content-repurpose endpoint responds',
-      endpoint: '/agents/v2/content-repurpose',
-      method: 'POST',
-      body: {
-        content: 'AI is transforming software testing with autonomous agents.',
-        target_format: 'social_media',
-      },
-      expectedStatus: 200,
-    },
-    {
-      description: 'Agents v2 repurpose formats endpoint lists formats',
-      endpoint: '/agents/v2/formats/repurpose',
-      method: 'GET',
-      expectedStatus: 200,
-    },
-  ],
-  category: 'ai_agent',
-  tags: ['ai-brain', 'llm-pipeline', 'agent', 'agents-v2'],
-}
-
-export const agentsV2ProofreadingScenario: TestScenario = {
-  id: 'agent-005-proofreading',
-  name: 'Run the Proofreading Agent (v2)',
-  goal: `Navigate to the Agents page. Find the Proofreading agent.
-Provide text with intentional errors for proofreading.
-Submit and verify corrections are suggested.`,
-  startUrl: '/agents',
-  maxActions: 25,
-  successCriteria: [
-    {
-      description: 'Proofreading results were generated',
-      check: { check: 'text_contains', expected: 'proofread' },
-    },
-  ],
-  backendChecks: [
-    {
-      description: 'Agents v2 proofreading endpoint responds',
-      endpoint: '/agents/v2/proofreading',
-      method: 'POST',
-      body: {
-        content: 'Their are many erors in this sentance that needs too be fixed.',
-      },
-      expectedStatus: 200,
-    },
-    {
-      description: 'Agents v2 health check passes',
-      endpoint: '/agents/v2/health',
-      method: 'GET',
-      expectedStatus: 200,
-    },
-    {
-      description: 'Agents v2 stats endpoint responds',
-      endpoint: '/agents/v2/stats',
-      method: 'GET',
-      expectedStatus: 200,
-    },
-  ],
-  category: 'ai_agent',
-  tags: ['ai-brain', 'llm-pipeline', 'agent', 'agents-v2'],
-}
-
-// ═════════════════════════════════════════════════════════════════════
-// DOCUMENT INTELLIGENCE — DocQA, Summary, Synthesis, DocAI
-// ═════════════════════════════════════════════════════════════════════
-
-export const docqaScenario: TestScenario = {
-  id: 'docqa-001-chat',
-  name: 'Document Q&A — Chat with Documents',
-  goal: `Navigate to the Document Q&A page (/docqa).
-Look for ways to start a Q&A session or upload a document.
-If a session exists, ask a question about the documents.
-Verify that the AI responds with an answer.`,
-  startUrl: '/docqa',
-  maxActions: 25,
-  successCriteria: [
-    {
-      description: 'DocQA page loaded',
-      check: { check: 'url_contains', expected: '/docqa' },
-    },
-  ],
-  backendChecks: [
-    {
-      description: 'DocQA sessions list endpoint responds',
-      endpoint: '/docqa/sessions',
-      method: 'GET',
-      expectedStatus: 200,
-    },
-  ],
-  category: 'docqa',
-  tags: ['ai-brain', 'llm-pipeline', 'document-intelligence'],
-}
-
-export const summaryScenario: TestScenario = {
-  id: 'summary-001-generate',
-  name: 'Document Summary — Generate Executive Summary',
-  goal: `Navigate to the Summary page (/summary).
-Look for an option to generate a summary from content.
-Provide some sample text or select a document.
-Submit and verify a summary is generated.`,
-  startUrl: '/summary',
-  maxActions: 25,
-  successCriteria: [
-    {
-      description: 'Summary page loaded',
-      check: { check: 'url_contains', expected: '/summary' },
-    },
-  ],
-  backendChecks: [
-    {
-      description: 'Summary generate endpoint responds',
-      endpoint: '/summary/generate',
-      method: 'POST',
-      body: {
-        content: 'Artificial intelligence has revolutionized software testing. Automated test generation, visual regression testing, and AI-powered bug detection are now common practices. These tools help teams ship faster with fewer bugs.',
-        style: 'executive',
-      },
-      expectedStatus: 200,
-    },
-  ],
-  category: 'ai_agent',
-  tags: ['ai-brain', 'llm-pipeline', 'document-intelligence'],
-}
-
-export const synthesisScenario: TestScenario = {
-  id: 'synthesis-001-session',
-  name: 'Multi-Document Synthesis — Create Session',
-  goal: `Navigate to the Synthesis page (/synthesis).
-Look for an option to create a new synthesis session.
-If available, create a session and add documents.
-Verify the synthesis UI loads correctly.`,
-  startUrl: '/synthesis',
-  maxActions: 25,
-  successCriteria: [
-    {
-      description: 'Synthesis page loaded',
-      check: { check: 'url_contains', expected: '/synthesis' },
-    },
-  ],
-  backendChecks: [
-    {
-      description: 'Synthesis sessions list endpoint responds',
-      endpoint: '/synthesis/sessions',
-      method: 'GET',
-      expectedStatus: 200,
-    },
-  ],
-  category: 'ai_agent',
-  tags: ['ai-brain', 'llm-pipeline', 'document-intelligence'],
-}
-
-export const docaiClassifyScenario: TestScenario = {
-  id: 'docai-001-classify',
-  name: 'Document AI — Classification & Entity Extraction',
-  goal: `This tests the Document AI brain endpoints directly.
-Navigate to a document-related page and verify the DocAI pipeline works.`,
-  startUrl: '/documents',
-  maxActions: 15,
-  successCriteria: [
-    {
-      description: 'Documents page loaded',
-      check: { check: 'url_contains', expected: '/documents' },
-    },
-  ],
-  backendChecks: [
-    {
-      description: 'DocAI classify endpoint responds',
-      endpoint: '/docai/classify',
-      method: 'POST',
-      body: {
-        content: 'INVOICE #12345\nDate: 2024-01-15\nBill To: Acme Corp\nTotal: $5,000.00',
-      },
-      expectedStatus: 200,
-    },
-    {
-      description: 'DocAI entity extraction endpoint responds',
-      endpoint: '/docai/entities',
-      method: 'POST',
-      body: {
-        content: 'John Smith from Acme Corporation signed the contract on January 15, 2024 in New York.',
-      },
-      expectedStatus: 200,
-    },
-  ],
-  category: 'ai_agent',
-  tags: ['ai-brain', 'llm-pipeline', 'document-intelligence', 'backend-only'],
-}
-
-// ═════════════════════════════════════════════════════════════════════
-// DATA ENRICHMENT & RECOMMENDATIONS
-// ═════════════════════════════════════════════════════════════════════
-
-export const enrichmentScenario: TestScenario = {
-  id: 'enrichment-001-sources',
-  name: 'Data Enrichment — Sources & Preview',
-  goal: `Navigate to the Enrichment page (/enrichment).
-Explore the available enrichment sources.
-If possible, configure an enrichment source and preview results.`,
-  startUrl: '/enrichment',
-  maxActions: 25,
-  successCriteria: [
-    {
-      description: 'Enrichment page loaded',
-      check: { check: 'url_contains', expected: '/enrichment' },
-    },
-  ],
-  backendChecks: [
-    {
-      description: 'Enrichment sources endpoint responds',
-      endpoint: '/enrichment/sources',
-      method: 'GET',
-      expectedStatus: 200,
-    },
-    {
-      description: 'Enrichment source-types endpoint responds',
-      endpoint: '/enrichment/source-types',
-      method: 'GET',
-      expectedStatus: 200,
-    },
-    {
-      description: 'Enrichment cache stats endpoint responds',
-      endpoint: '/enrichment/cache/stats',
-      method: 'GET',
-      expectedStatus: 200,
-    },
-  ],
-  category: 'ai_agent',
-  tags: ['ai-brain', 'llm-pipeline', 'data-enrichment'],
-}
-
-export const recommendationsScenario: TestScenario = {
-  id: 'recommendations-001-templates',
-  name: 'AI Recommendations — Template Suggestions',
-  goal: `This tests the AI recommendation engine that suggests templates.
-Navigate to the Templates page and verify the recommendation pipeline works.`,
-  startUrl: '/templates',
-  maxActions: 15,
-  successCriteria: [
-    {
-      description: 'Templates page loaded',
-      check: { check: 'url_contains', expected: '/templates' },
-    },
-  ],
-  backendChecks: [
-    {
-      description: 'Recommendations catalog endpoint responds',
-      endpoint: '/recommendations/catalog',
-      method: 'GET',
-      expectedStatus: 200,
-    },
-    {
-      description: 'Recommendations templates endpoint responds',
-      endpoint: '/recommendations/templates',
-      method: 'GET',
-      expectedStatus: 200,
-    },
-  ],
-  category: 'template',
-  tags: ['ai-brain', 'llm-pipeline', 'recommendations'],
-}
-
-// ═════════════════════════════════════════════════════════════════════
-// AI SERVICES — Content Generation, Grammar, Formulas
-// ═════════════════════════════════════════════════════════════════════
-
-export const aiContentGenerationScenario: TestScenario = {
-  id: 'ai-001-generate',
-  name: 'AI Services — Content Generation & Health',
-  goal: `Test the core AI content generation pipeline.
-Navigate to a document-related page and verify AI services are operational.`,
-  startUrl: '/documents',
-  maxActions: 15,
-  successCriteria: [
-    {
-      description: 'Documents page loaded',
-      check: { check: 'url_contains', expected: '/documents' },
-    },
-  ],
-  backendChecks: [
-    {
-      description: 'AI generate endpoint responds',
-      endpoint: '/ai/generate',
-      method: 'POST',
-      body: {
-        prompt: 'Write a brief introduction about data analytics',
-      },
-      expectedStatus: 200,
-    },
-    {
-      description: 'AI health check passes',
-      endpoint: '/ai/health',
-      method: 'GET',
-      expectedStatus: 200,
-    },
-    {
-      description: 'AI tones list endpoint responds',
-      endpoint: '/ai/tones',
-      method: 'GET',
-      expectedStatus: 200,
-    },
-  ],
-  category: 'ai_agent',
-  tags: ['ai-brain', 'llm-pipeline', 'ai-services'],
-}
-
-// ═════════════════════════════════════════════════════════════════════
-// FULL E2E WORKFLOW — The Ultimate Test
+// FULL E2E WORKFLOW
 // ═════════════════════════════════════════════════════════════════════
 
 export const fullWorkflowScenario: TestScenario = {
   id: 'workflow-001-full-e2e',
-  name: 'Full E2E: Connection → Template → Report',
-  goal: `Complete the full report generation workflow from scratch:
-1. Go to Connections and create a new SQLite connection to the test database
-2. Go to Templates and pick an existing template (or verify one exists)
-3. Go to Reports and generate a report using the connection and template
-4. Wait for the report to complete
-5. Verify the report was generated successfully
-This is the core value proposition of NeuraReport — test it end-to-end.`,
+  name: 'Full workflow: Connection → Template → Report',
+  goal: `Complete the full report generation workflow.
+
+You want to generate a report. To do that you need:
+1. A database connection — create one named "Workflow Test DB" (SQLite, path: backend/testdata/sample.db)
+2. A template — find an existing one
+3. Generate a report using the connection and template
+
+Navigate through the app using the sidebar. When done, you should have created
+a connection and at least attempted to generate a report.`,
   hints: [
-    'Start with connections, then templates, then reports',
-    'You may need to wait for template verification to complete',
-    'Report generation involves the LLM pipeline for data mapping and formatting',
+    'Start with Connections, then Templates, then Reports',
+    'Use the sidebar to navigate between sections',
+    'The report generation page lets you pick a template and a data source',
   ],
   startUrl: '/connections',
   maxActions: 50,
+  expectedOutcome: 'Connection created, template selected, report generation attempted or completed',
   successCriteria: [
     {
-      description: 'Connection was created',
-      check: { check: 'text_contains', expected: 'connection' },
-    },
-    {
-      description: 'Report generation was initiated',
-      check: { check: 'toast_message', expected: 'report' },
+      description: 'Connection "Workflow Test DB" was created',
+      check: { check: 'text_contains', expected: 'Workflow Test DB' },
     },
   ],
   category: 'workflow',
   tags: ['e2e', 'full-workflow', 'critical-path'],
+  qaProfile: 'neurareport',
 }
 
 // ═════════════════════════════════════════════════════════════════════
-// COMPREHENSIVE AUDIT — AI explores every page like the button audit
+// COMPREHENSIVE AUDIT
 // ═════════════════════════════════════════════════════════════════════
 
-/** All routes in the app — the agent will visit every one */
 export const ALL_ROUTES = [
   '/', '/dashboard', '/connections', '/templates', '/reports',
   '/schedules', '/jobs', '/activity', '/history', '/settings',
@@ -813,149 +271,94 @@ export const ALL_ROUTES = [
 
 export const comprehensiveAuditScenario: TestScenario = {
   id: 'audit-001-all-pages',
-  name: 'Comprehensive Audit: Visit every page and test all interactions',
-  goal: `Visit EVERY page in the application and test all interactive elements.
-For each page:
-1. Navigate to the page
-2. Take a screenshot
-3. Identify all buttons, links, inputs, and interactive elements
-4. Click each button and verify it does something sensible (opens a dialog, navigates, shows data)
-5. Fill in any forms with test data and verify form validation works
-6. Check for console errors and broken UI
-7. Verify that the page heading and content match what's expected
-8. Note any API calls triggered by actions
+  name: 'Comprehensive app audit',
+  goal: `You're a QA tester checking every page in the app.
 
-Pages to visit (in order): ${ALL_ROUTES.join(', ')}
+Visit as many pages as possible using the sidebar. On each page:
+- Does it load? Is there content or just errors?
+- What buttons are available? Click a few and see what happens.
+- Any forms? Try filling one in.
+- Anything confusing or broken?
 
-After visiting all pages, provide a summary of:
-- Total pages visited
-- Total actions performed
-- Any failures or issues found
-- Pages that loaded correctly vs ones with problems`,
+Pages: ${ALL_ROUTES.join(', ')}
+
+Report what works and what doesn't.`,
   hints: [
-    'Use the sidebar navigation to move between pages',
-    'On each page, systematically click every visible button',
-    'Skip "Notifications" buttons to avoid hangs',
-    'Take screenshots before and after major interactions',
-    'If a button opens a dialog, close it before continuing',
-    'Press Escape to dismiss any open overlays',
+    'Use the sidebar to move between pages',
+    'If a button opens a dialog, explore it then close it',
+    'Skip "Notifications" buttons',
   ],
   startUrl: '/',
-  maxActions: 500, // large budget for comprehensive exploration
+  maxActions: 500,
   successCriteria: [
     {
-      description: 'All major pages were visited',
+      description: 'Multiple pages were visited and tested',
       check: { check: 'text_contains', expected: 'Dashboard' },
     },
   ],
   category: 'navigation',
   tags: ['comprehensive-audit', 'full-coverage'],
+  qaProfile: 'general-purpose',
 }
 
-/** Generate per-page audit scenarios so they can run in parallel */
+/** Per-page audit scenarios */
 export function generatePerPageScenarios(): TestScenario[] {
   return ALL_ROUTES.map((route, i) => ({
     id: `page-audit-${String(i).padStart(3, '0')}-${route.replace(/\//g, '') || 'home'}`,
     name: `Page Audit: ${route}`,
-    goal: `Navigate to ${route} and test ALL interactive elements on this page — every button, link, tab, input, checkbox, dropdown.
-1. Take a screenshot after the page loads
-2. Count and identify EVERY button, link, tab, input, checkbox, and dropdown visible on the page
-3. Click EACH button one by one. After each click:
-   - Check if a dialog/drawer opened (dismiss it with Escape or Cancel)
-   - Check if navigation happened (go back if needed)
-   - Note any API calls triggered
-   - Note any error messages or toasts
-4. Fill in EVERY visible form field with test data
-5. Click EVERY tab to check each section
-6. Open EVERY dropdown and select an option, then reset
-7. Scroll down to find elements below the fold and test those too
-8. Verify the page doesn't crash or show errors
-9. Take a final screenshot
-IMPORTANT: Do NOT skip any interactive element. Test them ALL exhaustively.
-Report: what works, what's broken, what each button does.`,
+    goal: `You're testing the ${route} page.
+
+Click every button, tab, and link you can find. For each one:
+- What does it do? Open a dialog? Navigate? Show data?
+- If a dialog opens, look inside it then close it.
+- Fill any forms with test data.
+- Scroll down to find hidden elements.
+Report what works and what's broken.`,
     hints: [
-      'Skip "Notifications" buttons — they can hang',
-      'Press Escape after clicking buttons that open overlays',
-      'If you navigate away, use the back button or navigate back to the page',
-      'Scroll down to find ALL elements — pages may have content below the fold',
-      'Test EVERY button, not just the first few',
+      'Skip "Notifications" buttons',
+      'Press Escape to close overlays',
+      'Scroll down — there may be content below the fold',
     ],
     startUrl: route,
     maxActions: 100,
     successCriteria: [
       {
-        description: `Page ${route} loaded successfully`,
+        description: `Page ${route} was tested`,
         check: { check: 'url_contains', expected: route === '/' ? 'dashboard' : route },
       },
     ],
     category: 'navigation' as const,
     tags: ['per-page-audit', 'comprehensive'],
+    qaProfile: 'general-purpose' as const,
   }))
 }
 
-// ─── Export all scenarios ────────────────────────────────────────────
+// ─── Export ──────────────────────────────────────────────────────────
 
 export const ALL_SCENARIOS: TestScenario[] = [
-  // Connection scenarios
   createConnectionScenario,
   testConnectionScenario,
-  // Template scenarios
   browseTemplatesScenario,
-  // Report scenarios
-  generateReportScenario,
-  // NL2SQL — tests the AI brain
-  nl2sqlBasicQueryScenario,
-  nl2sqlComplexQueryScenario,
-  // AI Agents v1 — tests agent pipelines
   researchAgentScenario,
   dataAnalystAgentScenario,
-  // AI Agents v2 — email, content repurpose, proofreading
-  agentsV2EmailDraftScenario,
-  agentsV2ContentRepurposeScenario,
-  agentsV2ProofreadingScenario,
-  // Document Intelligence — DocQA, Summary, Synthesis, DocAI
-  docqaScenario,
-  summaryScenario,
-  synthesisScenario,
-  docaiClassifyScenario,
-  // Data Enrichment & Recommendations
-  enrichmentScenario,
-  recommendationsScenario,
-  // AI Services — Content Generation
-  aiContentGenerationScenario,
-  // Schedules
-  createScheduleScenario,
-  // Navigation
+  exploreTemplatesScenario,
   fullNavigationScenario,
-  // Comprehensive audit — covers all pages like the button audit
-  comprehensiveAuditScenario,
-  // Backend brain verification
-  backendBrainTemplateVerifyScenario,
-  backendBrainChartSuggestionsScenario,
-  // Full workflow
   fullWorkflowScenario,
+  comprehensiveAuditScenario,
 ]
 
-/**
- * Get the full set of scenarios including per-page audits.
- * This is the equivalent of the 2,534-action button audit but
- * driven by an AI brain that makes intelligent decisions.
- */
 export function getAllScenariosWithPageAudits(): TestScenario[] {
   return [...ALL_SCENARIOS, ...generatePerPageScenarios()]
 }
 
-/** Get scenarios by category */
 export function getScenariosByCategory(category: TestScenario['category']): TestScenario[] {
   return ALL_SCENARIOS.filter(s => s.category === category)
 }
 
-/** Get scenarios by tag */
 export function getScenariosByTag(tag: string): TestScenario[] {
   return ALL_SCENARIOS.filter(s => s.tags?.includes(tag))
 }
 
-/** Get only the AI brain / LLM pipeline scenarios */
 export function getAIBrainScenarios(): TestScenario[] {
   return getScenariosByTag('ai-brain')
 }

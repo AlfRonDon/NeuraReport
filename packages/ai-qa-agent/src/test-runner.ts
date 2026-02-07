@@ -3,13 +3,17 @@
  *
  * This is the main execution loop:
  * 1. Initialize scenario
- * 2. Observe page state (screenshot + DOM)
- * 3. Send observation to LLM brain → get next action
- * 4. Execute action via browser agent
- * 5. Record result, repeat until done or max actions
- * 6. Run backend brain checks
- * 7. Evaluate success criteria
- * 8. Generate evidence report
+ * 2. Run setup actions (if any)
+ * 3. Observe page state (screenshot + DOM)
+ * 4. Send observation to LLM brain → get next action
+ * 5. Execute action via browser agent
+ * 6. Record result, repeat until done or max actions
+ * 7. Run backend brain checks
+ * 8. Evaluate success criteria
+ * 9. Run teardown actions (if any)
+ * 10. Generate evidence report
+ *
+ * Framework-agnostic: Works with any web application.
  */
 import * as fs from 'fs'
 import * as path from 'path'
@@ -22,41 +26,41 @@ import type {
   ActionLogEntry,
   CriterionResult,
   BackendCheckResult,
+  AuditReport,
+  FailureCategory,
 } from './types'
+import type { AgentConfig, RunnerConfig } from './config'
 
-export interface RunnerConfig {
+export interface AITestRunnerConfig {
+  /** Base agent configuration */
+  agent: AgentConfig
   /** Directory for all evidence output */
   evidenceBaseDir: string
-  /** Whether to take screenshots at every step */
+  /** Whether to take screenshots at every step (default: true) */
   screenshotEveryStep?: boolean
-  /** Delay between actions (ms) to avoid overwhelming the app */
+  /** Delay between actions in ms (default: 500) */
   actionDelay?: number
-  /** Model override (default: sonnet) */
-  model?: string
 }
 
 export class AITestRunner {
   private browser: BrowserAgent
   private brain: AgentBrain
-  private config: RunnerConfig
+  private config: AITestRunnerConfig
   private page: Page
 
-  constructor(page: Page, config: RunnerConfig) {
+  constructor(page: Page, config: AITestRunnerConfig) {
     this.page = page
     this.config = {
-      screenshotEveryStep: true,
-      actionDelay: 500,
+      screenshotEveryStep: config.agent.screenshotEveryStep ?? true,
+      actionDelay: config.agent.actionDelay ?? 500,
       ...config,
     }
 
-    // Create evidence directory for this run
+    // Create evidence directory
     fs.mkdirSync(config.evidenceBaseDir, { recursive: true })
 
-    this.browser = new BrowserAgent(page, config.evidenceBaseDir)
-    this.brain = new AgentBrain({
-      model: config.model,
-      screenshotDir: path.join(config.evidenceBaseDir, 'vision-screenshots'),
-    })
+    this.browser = new BrowserAgent(page, config.agent, config.evidenceBaseDir)
+    this.brain = new AgentBrain(config.agent)
   }
 
   /** Run a single scenario and return the result */
@@ -73,14 +77,25 @@ export class AITestRunner {
     // Initialize the brain with this scenario
     this.brain.initScenario(scenario)
 
+    // Run setup actions if any
+    if (scenario.setup?.length) {
+      console.log('  Running setup actions...')
+      for (const setup of scenario.setup) {
+        try {
+          await this.runSetupAction(setup)
+        } catch (err: any) {
+          console.warn(`  Setup failed: ${err.message}`)
+        }
+      }
+    }
+
     // Navigate to start URL
     try {
-      const baseUrl = process.env.BASE_URL || 'http://localhost:5174'
       const fullUrl = scenario.startUrl.startsWith('http')
         ? scenario.startUrl
-        : `${baseUrl}${scenario.startUrl}`
-      await this.page.goto(fullUrl, { waitUntil: 'domcontentloaded', timeout: 30_000 })
-      await this.page.waitForTimeout(2000) // let page render
+        : `${this.config.agent.baseUrl}${scenario.startUrl}`
+      await this.page.goto(fullUrl, { waitUntil: 'domcontentloaded', timeout: this.config.agent.pageLoadTimeout || 30_000 })
+      await this.page.waitForTimeout(2000)
     } catch (err: any) {
       return this.buildResult(scenario, startTime, actionLog, 'error', `Failed to navigate to start URL: ${err.message}`)
     }
@@ -93,12 +108,13 @@ export class AITestRunner {
     let isDone = false
     let consecutiveErrors = 0
     const MAX_CONSECUTIVE_ERRORS = 5
+    const STEP_TIMEOUT = this.config.agent.llm.timeout || 900_000 // 15 min default
 
     while (actionCount < scenario.maxActions && !isDone) {
       actionCount++
       const stepStart = Date.now()
 
-      // Bail if the page/browser was closed (prevents cascade of identical errors)
+      // Bail if page/browser was closed
       if (this.page.isClosed()) {
         console.log(`    ✗ Page closed — stopping agent loop`)
         error = 'Page or browser was closed unexpectedly'
@@ -106,10 +122,6 @@ export class AITestRunner {
       }
 
       try {
-        // Per-step timeout: gives Claude ample time to think.
-        // Claude is the brain — accuracy matters more than speed.
-        // Set to 15 minutes to never rush Claude's decision making.
-        const STEP_TIMEOUT = 900_000
         const stepResult = await Promise.race([
           this.runSingleStep(actionCount, scenario.maxActions),
           new Promise<{ timedOut: true }>((resolve) =>
@@ -142,14 +154,13 @@ export class AITestRunner {
           }
         }
 
-        // Bail after too many consecutive failures
         if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
           console.log(`    ✗ ${MAX_CONSECUTIVE_ERRORS} consecutive failures — stopping`)
           error = `Stopped after ${MAX_CONSECUTIVE_ERRORS} consecutive action failures`
           break
         }
 
-        // Add delay between actions
+        // Delay between actions
         if (this.config.actionDelay && !this.page.isClosed()) {
           await this.page.waitForTimeout(this.config.actionDelay).catch(() => {})
         }
@@ -166,7 +177,7 @@ export class AITestRunner {
           duration: Date.now() - stepStart,
         })
 
-        // Fatal: page/context destroyed — stop immediately
+        // Fatal: page/context destroyed
         if (msg.includes('has been closed') || msg.includes('Target closed') || msg.includes('browser has been closed')) {
           console.log(`    ✗ Browser/page closed — stopping agent loop`)
           error = 'Page or browser was closed unexpectedly'
@@ -187,11 +198,28 @@ export class AITestRunner {
     // Take final screenshot
     await this.browser.takeScreenshot('final')
 
-    // Run backend brain checks
+    // Run backend checks
     const backendResults = await this.runBackendChecks(scenario)
 
     // Evaluate success criteria
     const criteriaResults = await this.evaluateCriteria(scenario)
+
+    // Run teardown actions
+    if (scenario.teardown?.length) {
+      const shouldRun = !error || scenario.teardown.some(t => t.runOnFailure)
+      if (shouldRun) {
+        console.log('  Running teardown actions...')
+        for (const teardown of scenario.teardown) {
+          if (!error || teardown.runOnFailure) {
+            try {
+              await this.runTeardownAction(teardown)
+            } catch (err: any) {
+              console.warn(`  Teardown failed: ${err.message}`)
+            }
+          }
+        }
+      }
+    }
 
     // Determine overall status
     const allCriteriaPassed = criteriaResults.every(r => r.passed)
@@ -200,7 +228,7 @@ export class AITestRunner {
       ? (actionCount >= scenario.maxActions ? 'timeout' : 'error')
       : (allCriteriaPassed && allBackendPassed ? 'pass' : 'fail')
 
-    // Upgrade #6/#8: Finalize scenario — save action cache (on success) / lessons (on failure)
+    // Finalize scenario
     this.brain.finalizeScenario(status === 'pass')
 
     return this.buildResult(scenario, startTime, actionLog, status, error, criteriaResults, backendResults)
@@ -264,6 +292,49 @@ export class AITestRunner {
     }
   }
 
+  /** Run setup action */
+  private async runSetupAction(setup: NonNullable<TestScenario['setup']>[number]) {
+    switch (setup.type) {
+      case 'api_call':
+        if (setup.endpoint) {
+          await this.browser.apiCall(setup.method || 'POST', setup.endpoint, setup.body)
+        }
+        break
+      case 'navigate':
+        if (setup.url) {
+          const fullUrl = setup.url.startsWith('http')
+            ? setup.url
+            : `${this.config.agent.baseUrl}${setup.url}`
+          await this.page.goto(fullUrl)
+        }
+        break
+      case 'wait':
+        await this.page.waitForTimeout(setup.waitMs || 1000)
+        break
+      case 'script':
+        if (setup.script) {
+          await this.page.evaluate(setup.script)
+        }
+        break
+    }
+  }
+
+  /** Run teardown action */
+  private async runTeardownAction(teardown: NonNullable<TestScenario['teardown']>[number]) {
+    switch (teardown.type) {
+      case 'api_call':
+        if (teardown.endpoint) {
+          await this.browser.apiCall(teardown.method || 'DELETE', teardown.endpoint, teardown.body)
+        }
+        break
+      case 'script':
+        if (teardown.script) {
+          await this.page.evaluate(teardown.script)
+        }
+        break
+    }
+  }
+
   /** Run backend API checks defined in the scenario */
   private async runBackendChecks(scenario: TestScenario): Promise<BackendCheckResult[]> {
     if (!scenario.backendChecks?.length) return []
@@ -275,6 +346,7 @@ export class AITestRunner {
           check.method,
           check.endpoint,
           check.body,
+          check.headers,
         )
 
         const passed = check.expectedStatus
@@ -310,6 +382,7 @@ export class AITestRunner {
         passed: result.passed,
         actual: result.actual,
         expected: criterion.check.expected as string,
+        weight: criterion.weight,
       })
     }
     return results
@@ -325,7 +398,7 @@ export class AITestRunner {
     criteriaResults?: CriterionResult[],
     backendResults?: BackendCheckResult[],
   ): ScenarioResult {
-    // Upgrade #5: Failure categorization
+    // Failure categorization
     const failureCategory = status !== 'pass'
       ? this.brain.categorizeFailure(error, actionLog)
       : undefined
@@ -360,11 +433,11 @@ export class AITestRunner {
     fs.writeFileSync(convoPath, JSON.stringify(this.brain.getConversation(), null, 2))
     result.evidence.llmDecisions = convoPath
 
-    // Save perception log (what the user "experienced" each step)
+    // Save perception log
     const perceptionPath = path.join(evidenceDir, `${scenario.id}-perception.json`)
     fs.writeFileSync(perceptionPath, JSON.stringify(this.brain.getPerceptionLog(), null, 2))
 
-    // Save goal ledger (progress tracking)
+    // Save goal ledger
     const ledgerPath = path.join(evidenceDir, `${scenario.id}-goal-ledger.json`)
     fs.writeFileSync(ledgerPath, JSON.stringify(this.brain.getLedger(), null, 2))
 
@@ -385,7 +458,6 @@ export class AITestRunner {
         console.log(`  ${c.passed ? '✓' : '✗'} ${c.description}`)
       })
     }
-    // Print perception confidence trend
     const perceptions = this.brain.getPerceptionLog()
     const avgConfidence = perceptions.length
       ? (perceptions.reduce((sum, p) => sum + p.confidence, 0) / perceptions.length).toFixed(2)
@@ -398,45 +470,75 @@ export class AITestRunner {
 
     return result
   }
+
+  /** Get the browser agent for direct access */
+  getBrowserAgent(): BrowserAgent {
+    return this.browser
+  }
+
+  /** Get the brain for direct access */
+  getBrain(): AgentBrain {
+    return this.brain
+  }
 }
 
 // ─── Aggregate report generation ─────────────────────────────────────
 
-export interface AuditReport {
-  timestamp: string
-  totalScenarios: number
-  passed: number
-  failed: number
-  errors: number
-  timeouts: number
-  totalDuration: number
-  totalActions: number
-  scenarios: ScenarioResult[]
-  summary: string
-}
-
-export function generateAuditReport(results: ScenarioResult[]): AuditReport {
+export function generateAuditReport(
+  results: ScenarioResult[],
+  appName: string,
+  appVersion?: string
+): AuditReport {
   const passed = results.filter(r => r.status === 'pass').length
   const failed = results.filter(r => r.status === 'fail').length
   const errors = results.filter(r => r.status === 'error').length
   const timeouts = results.filter(r => r.status === 'timeout').length
+  const skipped = results.filter(r => r.status === 'skipped').length
+
+  // Failure breakdown
+  const failureBreakdown: Record<FailureCategory, number> = {
+    element_not_found: 0,
+    element_not_interactable: 0,
+    navigation_error: 0,
+    form_error: 0,
+    timeout: 0,
+    stuck_loop: 0,
+    assertion_failed: 0,
+    browser_crash: 0,
+    llm_error: 0,
+    network_error: 0,
+    auth_error: 0,
+    unknown: 0,
+  }
+  results.forEach(r => {
+    if (r.failureCategory) {
+      failureBreakdown[r.failureCategory]++
+    }
+  })
+
+  const passRate = results.length ? Math.round(passed / results.length * 100) : 0
 
   const report: AuditReport = {
     timestamp: new Date().toISOString(),
+    appName,
+    appVersion,
     totalScenarios: results.length,
     passed,
     failed,
     errors,
     timeouts,
+    skipped,
     totalDuration: results.reduce((sum, r) => sum + r.duration, 0),
     totalActions: results.reduce((sum, r) => sum + r.actionCount, 0),
+    passRate,
     scenarios: results,
+    failureBreakdown,
     summary: [
-      `AI Agent Audit Report`,
+      `AI Agent Audit Report: ${appName}`,
       `═════════════════════`,
       `Total Scenarios: ${results.length}`,
-      `Passed: ${passed} | Failed: ${failed} | Errors: ${errors} | Timeouts: ${timeouts}`,
-      `Pass Rate: ${results.length ? Math.round(passed / results.length * 100) : 0}%`,
+      `Passed: ${passed} | Failed: ${failed} | Errors: ${errors} | Timeouts: ${timeouts} | Skipped: ${skipped}`,
+      `Pass Rate: ${passRate}%`,
       `Total Actions: ${results.reduce((sum, r) => sum + r.actionCount, 0)}`,
       `Total Duration: ${Math.round(results.reduce((sum, r) => sum + r.duration, 0) / 1000)}s`,
       '',
@@ -449,4 +551,51 @@ export function generateAuditReport(results: ScenarioResult[]): AuditReport {
   }
 
   return report
+}
+
+/** Run multiple scenarios with retry support */
+export async function runScenarios(
+  page: Page,
+  scenarios: TestScenario[],
+  config: AITestRunnerConfig,
+  options?: {
+    maxRetries?: number
+    onScenarioComplete?: (result: ScenarioResult) => void
+  }
+): Promise<ScenarioResult[]> {
+  const results: ScenarioResult[] = []
+  const maxRetries = options?.maxRetries ?? 0
+
+  for (const scenario of scenarios) {
+    let lastResult: ScenarioResult | null = null
+    let attempt = 0
+
+    while (attempt <= maxRetries) {
+      attempt++
+      const runner = new AITestRunner(page, config)
+      const result = await runner.runScenario(scenario)
+      result.attempt = attempt
+
+      lastResult = result
+
+      if (result.status === 'pass') {
+        break
+      }
+
+      if (attempt <= maxRetries) {
+        console.log(`  Retrying (attempt ${attempt + 1}/${maxRetries + 1})...`)
+        result.wasFlaky = true
+      }
+    }
+
+    if (lastResult) {
+      if (lastResult.attempt && lastResult.attempt > 1 && lastResult.status === 'pass') {
+        lastResult.wasFlaky = true
+      }
+      results.push(lastResult)
+      options?.onScenarioComplete?.(lastResult)
+    }
+  }
+
+  return results
 }

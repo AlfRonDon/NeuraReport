@@ -20,24 +20,65 @@ import type {
   InteractiveElement,
   ApiCallRecord,
   ActionTarget,
+  ActionVerification,
+  PageStability,
+  ActionLogEntry,
 } from './types'
+import type { AgentConfig } from './config'
 
 // Pattern borrowed from semantic audit: comprehensive API route matching
 const API_ROUTE_PATTERN = /\/(api|connections|templates|reports|jobs|schedules|analyze|enrichment|federation|synthesis|docqa|documents|spreadsheets|dashboards|connectors|workflows|export|design|knowledge|ingestion|search|visualization|agents|nl2sql|charts|summary|recommendations|docai|ai)\b/
 
 export class BrowserAgent {
   private page: Page
+  private config: AgentConfig
   private apiCalls: ApiCallRecord[] = []
-  private requestBodies: Map<string, string> = new Map() // track request bodies for semantic verification
+  private requestBodies: Map<string, string> = new Map()
+  private consoleErrors: string[] = []
   private evidenceDir: string
   private screenshotCount = 0
+  private pendingRequests = 0
 
-  constructor(page: Page, evidenceDir: string) {
+  // Failure mode mitigation: action replay detection
+  private actionHistory: Array<{ type: string; targetKey: string; timestamp: number }> = []
+
+  // Failure mode mitigation: track last page state for change detection
+  private lastObservation: { url: string; heading?: string; elementCount: number } | null = null
+
+  constructor(page: Page, evidenceDir: string, config?: AgentConfig) {
     this.page = page
     this.evidenceDir = evidenceDir
+    this.config = config || {
+      appName: 'NeuraReport',
+      baseUrl: process.env.BASE_URL || 'http://localhost:5174',
+      llm: { model: 'sonnet', useVision: true },
+      verifyAfterAction: true,
+      waitForStable: true,
+      stabilityTimeout: 5000,
+      detectActionReplay: true,
+      maxRepeatedActions: 3,
+    }
     fs.mkdirSync(path.join(evidenceDir, 'screenshots'), { recursive: true })
     fs.mkdirSync(path.join(evidenceDir, 'network'), { recursive: true })
     this.setupNetworkCapture()
+    this.setupConsoleCapture()
+    this.setupRequestTracking()
+  }
+
+  /**
+   * FAILURE MODE MITIGATION: Track pending network requests
+   * This helps detect when the page is still loading/fetching data
+   */
+  private setupRequestTracking() {
+    this.page.on('request', () => {
+      this.pendingRequests++
+    })
+    this.page.on('response', () => {
+      this.pendingRequests = Math.max(0, this.pendingRequests - 1)
+    })
+    this.page.on('requestfailed', () => {
+      this.pendingRequests = Math.max(0, this.pendingRequests - 1)
+    })
   }
 
   /**
@@ -84,6 +125,25 @@ export class BrowserAgent {
     })
   }
 
+  /**
+   * Upgrade #2: Console error capturing (from Playwright Healer).
+   * Captures browser console errors so the agent knows about JS crashes,
+   * unhandled rejections, and runtime errors it can't see in the UI.
+   */
+  private setupConsoleCapture() {
+    this.page.on('console', (msg) => {
+      if (msg.type() === 'error') {
+        const text = msg.text().slice(0, 300)
+        // Skip noisy/irrelevant errors
+        if (text.includes('favicon') || text.includes('net::ERR_')) return
+        this.consoleErrors.push(text)
+      }
+    })
+    this.page.on('pageerror', (err) => {
+      this.consoleErrors.push(`Uncaught: ${err.message.slice(0, 300)}`)
+    })
+  }
+
   /** Take a screenshot and save it as evidence */
   async takeScreenshot(label?: string): Promise<string> {
     this.screenshotCount++
@@ -101,10 +161,15 @@ export class BrowserAgent {
   /** Take a screenshot and return as base64 for LLM vision */
   async getScreenshotBase64(): Promise<string> {
     try {
-      const buffer = await this.page.screenshot({ fullPage: false })
+      const buffer = await Promise.race([
+        this.page.screenshot({ fullPage: false }),
+        new Promise<Buffer>((_, reject) =>
+          setTimeout(() => reject(new Error('Screenshot timeout')), 10_000)
+        ),
+      ])
       return buffer.toString('base64')
     } catch {
-      return '' // return empty if screenshot fails
+      return '' // return empty if screenshot fails or times out
     }
   }
 
@@ -128,6 +193,10 @@ export class BrowserAgent {
     // Get recent API calls and reset
     const recentApiCalls = [...this.apiCalls]
     this.apiCalls = []
+
+    // Get recent console errors and reset
+    const consoleErrors = [...this.consoleErrors]
+    this.consoleErrors = []
 
     // Get screenshot as base64 for LLM
     const screenshot = await this.getScreenshotBase64()
@@ -159,6 +228,7 @@ export class BrowserAgent {
       errors,
       heading,
       semanticHints,
+      consoleErrors,
     }
   }
 
@@ -168,7 +238,10 @@ export class BrowserAgent {
    * Cap raised to 80 elements for better coverage.
    */
   private async getInteractiveElements(): Promise<InteractiveElement[]> {
-    return this.page.evaluate(() => {
+    // Wrap page.evaluate with a timeout to prevent hangs when page JS is frozen
+    const EVAL_TIMEOUT = 15_000
+    return Promise.race([
+      this.page.evaluate(() => {
       const elements: Array<{
         role: string
         name: string
@@ -177,6 +250,8 @@ export class BrowserAgent {
         disabled?: boolean
         location?: string
         testId?: string
+        x?: number
+        y?: number
       }> = []
 
       // MUI-aware disabled detection (from semantic audit)
@@ -186,6 +261,12 @@ export class BrowserAgent {
           || el.classList.contains('Mui-disabled')
           || (el.closest('button') as HTMLButtonElement)?.disabled === true
           || el.closest('.Mui-disabled') !== null
+      }
+
+      // Upgrade #9: Get element center coordinates for fallback clicking (from AskUI)
+      function getCenter(el: HTMLElement): { x: number; y: number } {
+        const rect = el.getBoundingClientRect()
+        return { x: Math.round(rect.left + rect.width / 2), y: Math.round(rect.top + rect.height / 2) }
       }
 
       // Buttons (including icon buttons, MUI buttons)
@@ -198,12 +279,14 @@ export class BrowserAgent {
           || ''
         // Skip notification buttons (known to cause hangs)
         if (name.toLowerCase().includes('notification')) return
+        const btnCenter = getCenter(htmlEl)
         elements.push({
           role: 'button',
           name,
           disabled: isDisabled(htmlEl),
           testId: htmlEl.dataset.testid || undefined,
           location: `${Math.round(htmlEl.getBoundingClientRect().top)}px from top`,
+          ...btnCenter,
         })
       })
 
@@ -294,41 +377,53 @@ export class BrowserAgent {
         })
       })
 
-      return elements.slice(0, 80) // cap raised from 50 to 80 for comprehensive coverage
-    })
+      return elements.slice(0, 100) // give Claude full visibility of all interactive elements
+    }),
+      new Promise<InteractiveElement[]>((_, reject) =>
+        setTimeout(() => reject(new Error('getInteractiveElements timed out')), EVAL_TIMEOUT)
+      ),
+    ]).catch(() => []) // Return empty on timeout so the agent can still proceed
   }
 
   /** Get visible toast/snackbar messages */
   private async getToasts(): Promise<string[]> {
-    return this.page.evaluate(() => {
-      const toasts: string[] = []
-      // MUI Snackbar
-      document.querySelectorAll('.MuiSnackbar-root, [role="alert"], .MuiAlert-root').forEach((el) => {
-        const text = (el as HTMLElement).textContent?.trim()
-        if (text) toasts.push(text.slice(0, 200))
-      })
-      return toasts
-    })
+    return Promise.race([
+      this.page.evaluate(() => {
+        const toasts: string[] = []
+        document.querySelectorAll('.MuiSnackbar-root, [role="alert"], .MuiAlert-root').forEach((el) => {
+          const text = (el as HTMLElement).textContent?.trim()
+          if (text) toasts.push(text.slice(0, 200))
+        })
+        return toasts
+      }),
+      new Promise<string[]>((resolve) => setTimeout(() => resolve([]), 5000)),
+    ])
   }
 
   /** Get visible error messages */
   private async getErrors(): Promise<string[]> {
-    return this.page.evaluate(() => {
-      const errors: string[] = []
-      document.querySelectorAll('.MuiFormHelperText-root.Mui-error, .MuiAlert-standardError, [role="alert"]').forEach((el) => {
-        const text = (el as HTMLElement).textContent?.trim()
-        if (text) errors.push(text.slice(0, 200))
-      })
-      return errors
-    })
+    return Promise.race([
+      this.page.evaluate(() => {
+        const errors: string[] = []
+        document.querySelectorAll('.MuiFormHelperText-root.Mui-error, .MuiAlert-standardError, [role="alert"]').forEach((el) => {
+          const text = (el as HTMLElement).textContent?.trim()
+          if (text) errors.push(text.slice(0, 200))
+        })
+        return errors
+      }),
+      new Promise<string[]>((resolve) => setTimeout(() => resolve([]), 5000)),
+    ])
   }
 
   /** Get the main page heading */
   private async getHeading(): Promise<string | undefined> {
-    return this.page.evaluate(() => {
-      const h = document.querySelector('h1, h2, [role="heading"]')
-      return h?.textContent?.trim().slice(0, 100) || undefined
-    })
+    return Promise.race([
+      this.page.evaluate(() => {
+        const h = document.querySelector('h1, h2, [role="heading"]')
+        return h?.textContent?.trim().slice(0, 100) || undefined
+      }),
+      new Promise<string | undefined>((resolve) => setTimeout(() => resolve(undefined), 5000)),
+    ])
   }
 
   // ─── Action execution ──────────────────────────────────────────────
@@ -351,8 +446,25 @@ export class BrowserAgent {
           return await this.executeUpload(action)
         case 'wait':
           return await this.executeWait(action)
+        case 'verify': {
+          const verification = await this.verify(action.assertion)
+          return verification.passed
+            ? { success: true }
+            : { success: false, error: `Verification failed: ${verification.actual}` }
+        }
+        case 'api_call': {
+          if (!action.url) return { success: false, error: 'No URL for api_call action' }
+          const method = action.method || 'GET'
+          const apiResult = await this.apiCall(method, action.url, action.body)
+          return apiResult.status < 400
+            ? { success: true }
+            : { success: false, error: `API ${method} ${action.url} -> ${apiResult.status}` }
+        }
+        case 'key':
+          return await this.executeKey(action)
+        case 'read' as any: // LLM sometimes emits "read" meaning "look at screenshot" — treat as screenshot
         case 'screenshot':
-          await this.takeScreenshot(action.reasoning.replace(/\s+/g, '-').slice(0, 40))
+          await this.takeScreenshot(action.reasoning?.replace(/\s+/g, '-').slice(0, 40) || 'capture')
           return { success: true }
         case 'done':
           return { success: true }
@@ -367,32 +479,49 @@ export class BrowserAgent {
   private resolveLocator(target?: ActionTarget) {
     if (!target) throw new Error('No target specified for action')
 
+    // Support "nth" index for disambiguating multiple matches (e.g. multiple "PDF" buttons)
+    const nthIndex = (target as any).nth
+
     if (target.role && target.name) {
-      return this.page.getByRole(target.role as any, { name: target.name })
+      const loc = this.page.getByRole(target.role as any, { name: target.name })
+      return typeof nthIndex === 'number' ? loc.nth(nthIndex) : loc.first()
     }
     if (target.label) {
-      return this.page.getByLabel(target.label)
+      const loc = this.page.getByLabel(target.label)
+      return typeof nthIndex === 'number' ? loc.nth(nthIndex) : loc.first()
+    }
+    if (target.placeholder) {
+      const loc = this.page.getByPlaceholder(target.placeholder)
+      return typeof nthIndex === 'number' ? loc.nth(nthIndex) : loc.first()
     }
     if (target.testId) {
       return this.page.getByTestId(target.testId)
     }
     if (target.text) {
-      return this.page.getByText(target.text).first()
+      const loc = this.page.getByText(target.text)
+      return typeof nthIndex === 'number' ? loc.nth(nthIndex) : loc.first()
     }
     if (target.css) {
-      return this.page.locator(target.css)
+      return this.page.locator(target.css).first()
     }
     throw new Error('No valid selector in target')
   }
 
   /**
-   * Execute click with multi-strategy fallback (from semantic audit):
+   * Execute click with multi-strategy fallback (from semantic audit + AskUI):
    * 1. Scroll into view
    * 2. Regular click
    * 3. Force click (bypasses actionability checks)
-   * 4. Dismiss any opened popovers/modals after click
+   * 4. Coordinate-based click fallback (Upgrade #9 — from AskUI)
    */
   private async executeClick(action: AgentAction) {
+    // Upgrade #9: Direct coordinate click if coordinates are provided
+    if (action.target?.coordinates) {
+      await this.page.mouse.click(action.target.coordinates.x, action.target.coordinates.y)
+      await this.page.waitForTimeout(500)
+      return { success: true }
+    }
+
     const locator = this.resolveLocator(action.target)
 
     // Step 1: Scroll into view
@@ -403,9 +532,26 @@ export class BrowserAgent {
     // Step 2: Try regular click
     try {
       await locator.click({ timeout: 10_000 })
-    } catch {
+    } catch (clickErr: any) {
       // Step 3: Force click as fallback
-      await locator.click({ force: true, timeout: 8_000 })
+      try {
+        await locator.click({ force: true, timeout: 10_000 })
+      } catch {
+        // Step 4: Coordinate-based click fallback (Upgrade #9)
+        try {
+          const box = await locator.boundingBox()
+          if (box) {
+            await this.page.mouse.click(
+              box.x + box.width / 2,
+              box.y + box.height / 2,
+            )
+          } else {
+            throw clickErr
+          }
+        } catch {
+          throw clickErr
+        }
+      }
     }
 
     await this.page.waitForTimeout(500) // let UI settle
@@ -491,6 +637,16 @@ export class BrowserAgent {
       // Default wait
       await this.page.waitForTimeout(2000)
     }
+    return { success: true }
+  }
+
+  /**
+   * Execute a keyboard key press (Escape, Enter, Tab, etc.)
+   */
+  private async executeKey(action: AgentAction) {
+    const key = action.key || 'Escape'
+    await this.page.keyboard.press(key)
+    await this.page.waitForTimeout(300) // let UI settle
     return { success: true }
   }
 

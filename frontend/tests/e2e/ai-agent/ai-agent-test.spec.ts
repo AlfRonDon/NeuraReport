@@ -1,29 +1,20 @@
 /**
  * AI Agent E2E Tests — LLM-driven browser testing.
  *
- * Instead of scripted test steps, an AI agent (Claude) controls the browser
- * and decides what to click, type, and verify — like ChatGPT agent mode
- * but for QA testing.
- *
- * The agent tests:
- * 1. All pages and interactions (comprehensive audit)
- * 2. Core user workflows (connection → template → report)
- * 3. Backend AI brain (NL2SQL, agents, template verification, chart suggestions)
- * 4. LLM pipeline quality (prompt effectiveness, response accuracy)
+ * An AI agent (Claude) controls the browser like a real human user —
+ * clicking buttons, filling forms, navigating pages, and reading results.
  *
  * Run specific scenarios:
- *   npx playwright test ai-agent-test.spec.ts --grep "connection"
- *   npx playwright test ai-agent-test.spec.ts --grep "ai-brain"
+ *   npx playwright test ai-agent-test.spec.ts --grep "conn-001"
+ *   npx playwright test ai-agent-test.spec.ts --grep "agent"
  *   npx playwright test ai-agent-test.spec.ts --grep "audit"
  *
  * Run all:
  *   npx playwright test ai-agent-test.spec.ts
  *
  * Environment variables:
- *   ANTHROPIC_API_KEY  - Claude API key (required)
- *   AI_TEST_MODEL      - Claude model (default: claude-sonnet-4-5-20250929)
- *   BASE_URL           - Frontend URL (default: http://127.0.0.1:5174)
- *   BACKEND_URL        - Backend URL (default: http://127.0.0.1:8001)
+ *   AI_TEST_MODEL      - Claude model (default: sonnet)
+ *   BASE_URL           - Frontend URL (default: http://127.0.0.1:5176)
  *   AI_TEST_SCENARIOS  - Comma-separated scenario IDs to run (default: all)
  */
 import { test, expect } from '@playwright/test'
@@ -34,9 +25,6 @@ import { AITestRunner, generateAuditReport } from './test-runner'
 import {
   ALL_SCENARIOS,
   generatePerPageScenarios,
-  getAIBrainScenarios,
-  getScenariosByCategory,
-  getScenariosByTag,
   comprehensiveAuditScenario,
   fullWorkflowScenario,
 } from './scenarios'
@@ -62,7 +50,7 @@ function getEvidenceDir(scenarioId: string): string {
 // ─── Preflight check ────────────────────────────────────────────────
 
 test.beforeAll(async () => {
-  // Verify claude CLI is available (uses Claude Code subscription — no API key needed)
+  // Verify claude CLI is available
   try {
     const { spawnSync } = await import('child_process')
     const check = spawnSync('claude', ['--version'], {
@@ -94,50 +82,28 @@ async function runScenario(page: any, scenario: TestScenario): Promise<ScenarioR
 }
 
 // ═════════════════════════════════════════════════════════════════════
-// CORE WORKFLOW TESTS
+// USER TASK TESTS — The agent acts like a real user
 // ═════════════════════════════════════════════════════════════════════
 
-test.describe('AI Agent: Core Workflows', () => {
-  test.setTimeout(300_000) // 5 minutes per test
+test.describe('AI Agent: User Tasks', () => {
+  test.setTimeout(1_800_000) // 30 minutes per test (generous for LLM-driven testing)
 
   for (const scenario of ALL_SCENARIOS.filter(s => !s.tags?.includes('comprehensive-audit'))) {
-    test(`[${scenario.id}] ${scenario.name} @${scenario.category}`, async ({ page }) => {
+    test(`[${scenario.id}] ${scenario.name}`, async ({ page }) => {
       if (!shouldRun(scenario)) test.skip()
 
       const result = await runScenario(page, scenario)
-      // Assert the scenario passed
       expect(result.status, `Scenario "${scenario.name}" should pass`).toBe('pass')
     })
   }
 })
 
 // ═════════════════════════════════════════════════════════════════════
-// AI BRAIN / LLM PIPELINE TESTS
-// ═════════════════════════════════════════════════════════════════════
-
-test.describe('AI Agent: Backend Brain Verification @ai-brain', () => {
-  test.setTimeout(300_000)
-
-  for (const scenario of getAIBrainScenarios()) {
-    test(`[${scenario.id}] ${scenario.name}`, async ({ page }) => {
-      const result = await runScenario(page, scenario)
-
-      // For brain tests, check backend results specifically
-      if (result.backendResults?.length) {
-        for (const br of result.backendResults) {
-          expect(br.passed, `Backend check: ${br.description}`).toBe(true)
-        }
-      }
-    })
-  }
-})
-
-// ═════════════════════════════════════════════════════════════════════
-// COMPREHENSIVE PAGE AUDIT — Covers all pages like the button audit
+// PER-PAGE AUDIT — Test every page individually
 // ═════════════════════════════════════════════════════════════════════
 
 test.describe('AI Agent: Per-Page Audit @audit', () => {
-  test.setTimeout(180_000) // 3 minutes per page
+  test.setTimeout(1_800_000)
 
   const perPageScenarios = generatePerPageScenarios()
 
@@ -146,8 +112,6 @@ test.describe('AI Agent: Per-Page Audit @audit', () => {
       if (!shouldRun(scenario)) test.skip()
 
       const result = await runScenario(page, scenario)
-      // Per-page audits: warn on failure but don't hard-fail
-      // (some pages may not have interactive elements)
       if (result.status !== 'pass') {
         console.warn(`⚠ Page audit ${scenario.startUrl}: ${result.status} — ${result.error || 'check evidence'}`)
       }
@@ -156,42 +120,15 @@ test.describe('AI Agent: Per-Page Audit @audit', () => {
 })
 
 // ═════════════════════════════════════════════════════════════════════
-// COMPREHENSIVE AUDIT — Single test that visits everything
+// FULL SUITE — Run everything and generate a report
 // ═════════════════════════════════════════════════════════════════════
 
-test.describe('AI Agent: Comprehensive Audit @comprehensive', () => {
-  test.setTimeout(600_000) // 10 minutes
-
-  test('[audit-001] Full application audit', async ({ page }) => {
-    const result = await runScenario(page, comprehensiveAuditScenario)
-    console.log(`\nComprehensive audit: ${result.actionCount} actions, ${result.status}`)
-  })
-})
-
-// ═════════════════════════════════════════════════════════════════════
-// FULL E2E WORKFLOW — The ultimate test
-// ═════════════════════════════════════════════════════════════════════
-
-test.describe('AI Agent: Full E2E Workflow @e2e', () => {
-  test.setTimeout(600_000) // 10 minutes
-
-  test('[workflow-001] Connection → Template → Report', async ({ page }) => {
-    const result = await runScenario(page, fullWorkflowScenario)
-    expect(result.status, 'Full E2E workflow should pass').toBe('pass')
-  })
-})
-
-// ═════════════════════════════════════════════════════════════════════
-// AGGREGATE REPORT — Run everything and generate a summary
-// ═════════════════════════════════════════════════════════════════════
-
-test.describe('AI Agent: Full Suite with Report @full-suite', () => {
+test.describe('AI Agent: Full Suite @full-suite', () => {
   test.setTimeout(1_800_000) // 30 minutes
 
   test('Run all scenarios and generate audit report', async ({ page }) => {
     const allResults: ScenarioResult[] = []
 
-    // Run core scenarios
     for (const scenario of ALL_SCENARIOS) {
       if (!shouldRun(scenario)) continue
       try {
@@ -221,7 +158,6 @@ test.describe('AI Agent: Full Suite with Report @full-suite', () => {
     // Generate aggregate report
     const report = generateAuditReport(allResults)
 
-    // Save report
     const reportDir = path.join(EVIDENCE_ROOT, 'reports')
     fs.mkdirSync(reportDir, { recursive: true })
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
@@ -234,7 +170,6 @@ test.describe('AI Agent: Full Suite with Report @full-suite', () => {
     console.log('\n' + report.summary)
     console.log(`\nReport saved to: ${reportPath}`)
 
-    // Assert overall pass rate
     const passRate = report.totalScenarios ? report.passed / report.totalScenarios : 0
     expect(passRate, `Overall pass rate should be > 50%`).toBeGreaterThan(0.5)
   })
