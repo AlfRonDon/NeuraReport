@@ -48,6 +48,9 @@ import { getWriteOperation } from '@/utils/sqlSafety';
 import { useConfirmedAction, useInteraction, InteractionType, Reversibility } from '@/components/ux/governance';
 import AiUsageNotice from '@/components/ai/AiUsageNotice';
 import { figmaGrey } from '@/app/theme';
+import useCrossPageActions from '@/hooks/useCrossPageActions';
+import SendToMenu from '@/components/common/SendToMenu';
+import { OutputType, FeatureKey } from '@/constants/crossPageTypes';
 
 export default function SchemaBuilderPage() {
   const {
@@ -69,6 +72,7 @@ export default function SchemaBuilderPage() {
   const { connections, fetchConnections } = useConnectionStore();
   const confirmWriteQuery = useConfirmedAction('EXECUTE_WRITE_QUERY');
   const { execute } = useInteraction();
+  const { registerOutput } = useCrossPageActions(FeatureKey.FEDERATION);
 
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [newSchemaName, setNewSchemaName] = useState('');
@@ -160,10 +164,20 @@ export default function SchemaBuilderPage() {
         if (!result) {
           throw new Error('Query execution failed');
         }
+        // Register query result for cross-page use
+        const rows = result.rows || [];
+        const columns = rows.length > 0 ? Object.keys(rows[0]).map((k) => ({ name: k })) : [];
+        registerOutput({
+          type: OutputType.TABLE,
+          title: `Federation: ${currentSchema.name || 'Query'} (${rows.length} rows)`,
+          summary: queryInput.slice(0, 100),
+          data: { columns, rows },
+          format: 'table',
+        });
         return result;
       },
     });
-  }, [currentSchema, executeQuery, queryInput, execute, writeOperation]);
+  }, [currentSchema, executeQuery, queryInput, execute, writeOperation, registerOutput]);
 
   const handleExecuteQuery = useCallback(async () => {
     if (!currentSchema || !queryInput.trim()) return;
@@ -289,15 +303,18 @@ export default function SchemaBuilderPage() {
                     selected={currentSchema?.id === schema.id}
                     onClick={() => setCurrentSchema(schema)}
                     secondaryAction={
-                      <IconButton
-                        edge="end"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteRequest(schema);
-                        }}
-                      >
-                        <DeleteIcon />
-                      </IconButton>
+                      <Tooltip title="Delete schema">
+                        <IconButton
+                          edge="end"
+                          aria-label={`Delete ${schema.name}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteRequest(schema);
+                          }}
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      </Tooltip>
                     }
                   >
                     <ListItemIcon>

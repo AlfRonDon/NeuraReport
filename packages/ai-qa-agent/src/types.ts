@@ -30,6 +30,14 @@ export interface AgentAction {
   type: AgentActionType
   /** Human-readable description of why the agent is doing this */
   reasoning: string
+  /** Progress reflection from the last step */
+  progress?: string
+  /** Current blocker (if any) */
+  blocker?: string
+  /** What visible signal should happen if this action works */
+  expectedSignal?: string
+  /** Self-estimated confidence in this action (0.0-1.0) */
+  confidence?: number
   /** Selector or target — role-based preferred: { role: 'button', name: 'Submit' } */
   target?: ActionTarget
   /** Value to type or select */
@@ -196,6 +204,8 @@ export interface TestScenario {
   setup?: SetupAction[]
   /** Teardown actions to run after the test */
   teardown?: TeardownAction[]
+  /** QA profile policy; defaults to general-purpose */
+  qaProfile?: QaAgentProfile
   /** Priority level */
   priority?: 'critical' | 'high' | 'medium' | 'low'
   /** Flaky test tolerance — number of retries before failing */
@@ -211,6 +221,10 @@ export type PersonaModifier =
   | 'accessibility' // relies on screen readers, keyboard navigation
   | 'mobile'        // expects touch-friendly targets, swipe gestures
   | 'slow-network'  // expects loading states, offline handling
+
+export type QaAgentProfile =
+  | 'neurareport'
+  | 'general-purpose'
 
 export interface SuccessCriterion {
   description: string
@@ -407,4 +421,30 @@ export interface AuditReport {
     apiEndpointsCovered: string[]
     featuresCovered: string[]
   }
+}
+
+// ─── Failure Mode Mitigation Types ───────────────────────────────────
+
+/** Post-action verification result */
+export interface ActionVerification {
+  verified: boolean
+  expectedSignal?: string
+  actualSignal?: string
+  uiChanged: boolean
+  networkActivity: boolean
+}
+
+/** Page stability check result */
+export interface PageStability {
+  isStable: boolean
+  pendingRequests: number
+  hasAnimations: boolean
+  loadingIndicators: number
+}
+
+/** Action replay detection */
+export interface ReplayDetection {
+  isReplay: boolean
+  sameActionCount: number
+  lastSameAction?: ActionLogEntry
 }

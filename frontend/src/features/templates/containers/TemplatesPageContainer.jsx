@@ -330,14 +330,19 @@ const getKindConfig = (theme, kind) => {
 }
 
 const getStatusConfig = (theme, status) => {
+  const s = (status || '').toLowerCase()
   const configs = {
     approved: {
-      color: theme.palette.text.secondary,
-      bgColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300],
+      color: theme.palette.mode === 'dark' ? '#66bb6a' : '#2e7d32',
+      bgColor: theme.palette.mode === 'dark' ? alpha('#66bb6a', 0.12) : alpha('#2e7d32', 0.08),
+    },
+    failed: {
+      color: theme.palette.mode === 'dark' ? '#ef5350' : '#c62828',
+      bgColor: theme.palette.mode === 'dark' ? alpha('#ef5350', 0.12) : alpha('#c62828', 0.08),
     },
     pending: {
-      color: theme.palette.text.secondary,
-      bgColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[200],
+      color: theme.palette.mode === 'dark' ? '#ffa726' : '#e65100',
+      bgColor: theme.palette.mode === 'dark' ? alpha('#ffa726', 0.12) : alpha('#e65100', 0.08),
     },
     draft: {
       color: theme.palette.text.secondary,
@@ -348,7 +353,7 @@ const getStatusConfig = (theme, status) => {
       bgColor: alpha(theme.palette.text.secondary, 0.08),
     },
   }
-  return configs[status] || configs.approved
+  return configs[s] || configs.approved
 }
 
 // =============================================================================
@@ -912,11 +917,24 @@ export default function TemplatesPage() {
             <KindIconContainer>
               <Icon sx={{ color: 'text.secondary', fontSize: 18 }} />
             </KindIconContainer>
-            <Box>
-              <Typography sx={{ fontWeight: 500, fontSize: '0.8125rem', color: 'text.primary' }}>
+            <Box sx={{ minWidth: 0, overflow: 'hidden' }}>
+              <Typography sx={{
+                fontWeight: 500,
+                fontSize: '0.8125rem',
+                color: 'text.primary',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}>
                 {value || row.id}
               </Typography>
-              <Typography sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>
+              <Typography sx={{
+                fontSize: '0.75rem',
+                color: 'text.secondary',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}>
                 {row.description || `${row.kind?.toUpperCase() || 'PDF'} Design`}
               </Typography>
             </Box>
@@ -995,26 +1013,42 @@ export default function TemplatesPage() {
     {
       field: 'createdAt',
       headerName: 'Created',
-      width: 140,
+      width: 120,
       renderCell: (value, row) => {
         const raw = value || row.created_at
+        if (!raw) return <Typography sx={{ fontSize: '0.8125rem', color: 'text.disabled' }}>-</Typography>
+        const d = new Date(raw)
+        const now = new Date()
+        const diffDay = Math.floor((now - d) / 86400000)
+        const relative = diffDay < 1 ? 'Today' : diffDay < 2 ? 'Yesterday' : diffDay < 7 ? `${diffDay}d ago` : d.toLocaleDateString()
         return (
-          <Typography sx={{ fontSize: '0.8125rem', color: 'text.secondary' }}>
-            {raw ? new Date(raw).toLocaleDateString() : '-'}
-          </Typography>
+          <Tooltip title={d.toLocaleString()} arrow>
+            <Typography sx={{ fontSize: '0.8125rem', color: 'text.secondary', cursor: 'default' }}>
+              {relative}
+            </Typography>
+          </Tooltip>
         )
       },
     },
     {
       field: 'lastRunAt',
       headerName: 'Last Run',
-      width: 140,
+      width: 120,
       renderCell: (value, row) => {
         const raw = value || row.last_run_at
+        if (!raw) return <Typography sx={{ fontSize: '0.8125rem', color: 'text.disabled' }}>-</Typography>
+        const d = new Date(raw)
+        const now = new Date()
+        const diffMs = now - d
+        const diffHr = Math.floor(diffMs / 3600000)
+        const diffDay = Math.floor(diffMs / 86400000)
+        const relative = diffHr < 1 ? 'Just now' : diffHr < 24 ? `${diffHr}h ago` : diffDay < 7 ? `${diffDay}d ago` : d.toLocaleDateString()
         return (
-          <Typography sx={{ fontSize: '0.8125rem', color: 'text.secondary' }}>
-            {raw ? new Date(raw).toLocaleDateString() : '-'}
-          </Typography>
+          <Tooltip title={d.toLocaleString()} arrow>
+            <Typography sx={{ fontSize: '0.8125rem', color: 'text.secondary', cursor: 'default' }}>
+              {relative}
+            </Typography>
+          </Tooltip>
         )
       },
     },

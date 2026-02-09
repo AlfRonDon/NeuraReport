@@ -45,8 +45,13 @@ import {
 } from '@mui/icons-material'
 import { figmaGrey } from '@/app/theme'
 import useAgentStore from '@/stores/agentStore'
+import useSharedData from '@/hooks/useSharedData'
+import useCrossPageActions from '@/hooks/useCrossPageActions'
+import ConnectionSelector from '@/components/common/ConnectionSelector'
+import SendToMenu from '@/components/common/SendToMenu'
 import { useToast } from '@/components/ToastProvider'
 import { useInteraction, InteractionType, Reversibility } from '@/components/ux/governance'
+import { OutputType, FeatureKey } from '@/constants/crossPageTypes'
 
 // =============================================================================
 // STYLED COMPONENTS
@@ -122,7 +127,7 @@ const AGENTS = [
     fields: [
       { name: 'topic', label: 'Research Topic', type: 'text', required: true, multiline: true },
       { name: 'depth', label: 'Depth', type: 'select', options: ['quick', 'standard', 'comprehensive', 'exhaustive'], default: 'comprehensive' },
-      { name: 'maxSections', label: 'Max Sections', type: 'number', default: 5, min: 1, max: 10 },
+      { name: 'maxSections', label: 'Sections', type: 'number', default: 5, min: 1, max: 10 },
     ],
   },
   {
@@ -133,7 +138,7 @@ const AGENTS = [
     color: 'info',
     fields: [
       { name: 'question', label: 'What do you want to know?', type: 'text', required: true, multiline: true, placeholder: 'e.g., What are the top 5 products by revenue? Which month had the highest sales?' },
-      { name: 'dataSource', label: 'Data Source', type: 'select', options: ['paste_spreadsheet', 'sample_sales', 'sample_inventory', 'custom_json'], default: 'paste_spreadsheet' },
+      { name: 'dataSource', label: 'Data Source', type: 'select', options: ['paste_spreadsheet', 'database_connection', 'sample_sales', 'sample_inventory', 'custom_json'], default: 'paste_spreadsheet' },
       { name: 'data', label: 'Paste your data here (from Excel or Google Sheets)', type: 'spreadsheet', required: true, multiline: true, rows: 8, placeholder: 'Tip: Copy cells from Excel or Google Sheets and paste here. We\'ll convert it automatically!' },
     ],
   },
@@ -202,6 +207,10 @@ export default function AgentsPageContainer() {
     reset,
   } = useAgentStore()
 
+  const { connections, templates, activeConnectionId } = useSharedData()
+  const { registerOutput } = useCrossPageActions(FeatureKey.AGENTS)
+  const [selectedConnectionId, setSelectedConnectionId] = useState(activeConnectionId)
+
   const [selectedAgent, setSelectedAgent] = useState(AGENTS[0])
   const [formData, setFormData] = useState({})
   const [showHistory, setShowHistory] = useState(false)
@@ -258,6 +267,12 @@ export default function AgentsPageContainer() {
                 { item: 'SKU-003', stock: 200, reorder_point: 75, supplier: 'Acme Corp' },
                 { item: 'SKU-004', stock: 10, reorder_point: 20, supplier: 'Gamma Ltd' },
               ]
+            } else if (dataSource === 'database_connection') {
+              if (!selectedConnectionId) {
+                toast.show('Please select a database connection', 'warning')
+                return null
+              }
+              taskResult = await runDataAnalysis(formData.question, [], { connectionId: selectedConnectionId })
             } else if (dataSource === 'custom_json') {
               // User provided raw JSON
               data = JSON.parse(formData.data)
@@ -287,12 +302,14 @@ export default function AgentsPageContainer() {
               }).filter(row => Object.values(row).some(v => v !== ''))
             }
 
-            if (!data || !data.length) {
-              toast.show('No valid data found. Please check your input.', 'warning')
-              return null
-            }
+            if (dataSource !== 'database_connection') {
+              if (!data || !data.length) {
+                toast.show('No valid data found. Please check your input.', 'warning')
+                return null
+              }
 
-            taskResult = await runDataAnalysis(formData.question, data)
+              taskResult = await runDataAnalysis(formData.question, data)
+            }
           } catch (parseError) {
             toast.show('Could not parse data. For custom JSON, ensure it\'s valid JSON format.', 'error')
             return null
@@ -322,6 +339,16 @@ export default function AgentsPageContainer() {
 
       if (taskResult) {
         setResult(taskResult)
+        const outputText = typeof taskResult.output === 'string'
+          ? taskResult.output
+          : JSON.stringify(taskResult.output, null, 2)
+        registerOutput({
+          type: OutputType.TEXT,
+          title: `${selectedAgent.name}: ${formData.topic || formData.question || formData.purpose || 'Result'}`,
+          summary: outputText.substring(0, 200),
+          data: outputText,
+          format: 'text',
+        })
         toast.show('Agent completed successfully', 'success')
       }
       return taskResult
@@ -335,7 +362,7 @@ export default function AgentsPageContainer() {
       intent: { source: 'agents', agentType: selectedAgent.type },
       action: runAction,
     })
-  }, [execute, formData, runContentRepurpose, runDataAnalysis, runEmailDraft, runProofreading, runResearch, selectedAgent, toast])
+  }, [execute, formData, runContentRepurpose, runDataAnalysis, runEmailDraft, runProofreading, runResearch, selectedAgent, selectedConnectionId, toast])
 
   const handleCopyResult = useCallback(() => {
     if (result?.output) {
@@ -431,7 +458,7 @@ export default function AgentsPageContainer() {
               <Paper sx={{ p: 3 }}>
                 <Grid container spacing={2}>
                   {selectedAgent.fields.map((field) => {
-                    // For data_analyst, hide data field if using sample data
+                    // For data_analyst, hide data field if using sample data or database connection
                     if (selectedAgent.type === 'data_analyst' && field.name === 'data') {
                       const dataSource = formData.dataSource || 'paste_spreadsheet'
                       if (dataSource === 'sample_sales' || dataSource === 'sample_inventory') {
@@ -440,6 +467,18 @@ export default function AgentsPageContainer() {
                             <Alert severity="info" sx={{ mt: 1 }}>
                               Using sample {dataSource === 'sample_sales' ? 'sales' : 'inventory'} data. Just enter your question above!
                             </Alert>
+                          </Grid>
+                        )
+                      }
+                      if (dataSource === 'database_connection') {
+                        return (
+                          <Grid item xs={12} key={field.name}>
+                            <ConnectionSelector
+                              value={selectedConnectionId}
+                              onChange={setSelectedConnectionId}
+                              label="Select Database"
+                              showStatus
+                            />
                           </Grid>
                         )
                       }
@@ -459,6 +498,7 @@ export default function AgentsPageContainer() {
                                 // More user-friendly labels for data source options
                                 let label = opt.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())
                                 if (opt === 'paste_spreadsheet') label = 'Paste from Spreadsheet (Recommended)'
+                                if (opt === 'database_connection') label = 'Query Database Connection'
                                 if (opt === 'sample_sales') label = 'Use Sample Sales Data'
                                 if (opt === 'sample_inventory') label = 'Use Sample Inventory Data'
                                 if (opt === 'custom_json') label = 'Enter Raw JSON (Advanced)'
@@ -556,7 +596,15 @@ export default function AgentsPageContainer() {
                     <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
                       Result
                     </Typography>
-                    <Box>
+                    <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                      <SendToMenu
+                        outputType={OutputType.TEXT}
+                        payload={{
+                          title: `${selectedAgent.name} Result`,
+                          content: typeof result.output === 'string' ? result.output : JSON.stringify(result.output, null, 2),
+                        }}
+                        sourceFeature={FeatureKey.AGENTS}
+                      />
                       <IconButton size="small" onClick={handleCopyResult} aria-label="Copy result" data-testid="agent-copy-result-button">
                         <CopyIcon fontSize="small" />
                       </IconButton>

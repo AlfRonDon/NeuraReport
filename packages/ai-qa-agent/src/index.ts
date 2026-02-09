@@ -58,6 +58,7 @@ export type {
 
   // Scenario types
   TestScenario,
+  QaAgentProfile,
   PersonaModifier,
   SuccessCriterion,
   BackendCheck,
@@ -81,6 +82,11 @@ export type {
 
   // Reports
   AuditReport,
+
+  // Failure mode mitigations
+  ActionVerification,
+  PageStability,
+  ReplayDetection,
 } from './types'
 
 // ─── Configuration ───────────────────────────────────────────────────

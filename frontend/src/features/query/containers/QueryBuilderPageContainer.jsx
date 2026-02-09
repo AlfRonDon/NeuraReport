@@ -55,6 +55,9 @@ import ConfirmModal from '@/components/Modal/ConfirmModal'
 import { useToast } from '@/components/ToastProvider'
 import { getWriteOperation } from '@/utils/sqlSafety'
 import AiUsageNotice from '@/components/ai/AiUsageNotice'
+import useCrossPageActions from '@/hooks/useCrossPageActions'
+import SendToMenu from '@/components/common/SendToMenu'
+import { OutputType, FeatureKey } from '@/constants/crossPageTypes'
 // UX Components for premium interactions
 import DisabledTooltip from '@/components/ux/DisabledTooltip'
 // UX Governance - Enforced interaction API
@@ -270,6 +273,7 @@ export default function QueryBuilderPage() {
   // UX Governance: Enforced interaction API - ALL user actions flow through this
   const { execute } = useInteraction()
   const confirmWriteQuery = useConfirmedAction('EXECUTE_WRITE_QUERY')
+  const { registerOutput } = useCrossPageActions(FeatureKey.QUERY)
   const connections = useAppStore((s) => s.savedConnections)
   const {
     currentQuestion,
@@ -453,6 +457,13 @@ export default function QueryBuilderPage() {
             totalCount: result.total_count,
             executionTimeMs: result.execution_time_ms,
             truncated: result.truncated,
+          })
+          registerOutput({
+            type: OutputType.TABLE,
+            title: `Query: ${currentQuestion.substring(0, 60)}`,
+            summary: `${result.row_count} rows, ${result.columns?.length || 0} columns`,
+            data: { columns: result.columns, rows: result.rows },
+            format: 'table',
           })
           toast.show(`Query returned ${result.row_count} rows`, 'success')
         } catch (err) {
@@ -936,9 +947,20 @@ export default function QueryBuilderPage() {
       {results && (
         <GlassCard>
           <Stack direction="row" alignItems="center" justifyContent="space-between" mb={2}>
-            <Typography variant="subtitle2" sx={{ color: theme.palette.text.secondary }}>
-              Results
-            </Typography>
+            <Stack direction="row" alignItems="center" spacing={1}>
+              <Typography variant="subtitle2" sx={{ color: theme.palette.text.secondary }}>
+                Results
+              </Typography>
+              <SendToMenu
+                outputType={OutputType.TABLE}
+                payload={{
+                  title: `Query: ${currentQuestion.substring(0, 60)}`,
+                  content: JSON.stringify({ columns, rows: results }),
+                  data: { columns, rows: results },
+                }}
+                sourceFeature={FeatureKey.QUERY}
+              />
+            </Stack>
             <Stack direction="row" spacing={2}>
               {totalCount !== null && (
                 <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>

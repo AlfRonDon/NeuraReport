@@ -66,8 +66,8 @@ class Settings(BaseSettings):
 
     template_import_max_concurrency: int = Field(default=4, validation_alias="NEURA_TEMPLATE_IMPORT_MAX_CONCURRENCY")
 
-    openai_api_key: Optional[str] = Field(default=None, validation_alias="OPENAI_API_KEY")
-    openai_model: str = Field(default="gpt-4o", validation_alias="OPENAI_MODEL")
+    # Claude Code CLI configuration (no API key needed - uses authenticated CLI)
+    claude_code_model: str = Field(default="sonnet", validation_alias="CLAUDE_CODE_MODEL")
 
     artifact_warn_bytes: int = Field(default=5 * 1024 * 1024, validation_alias="ARTIFACT_WARN_BYTES")
     artifact_warn_render_ms: int = Field(default=2000, validation_alias="ARTIFACT_WARN_RENDER_MS")
@@ -133,29 +133,8 @@ class Settings(BaseSettings):
 
 
 def _apply_runtime_defaults(settings: Settings) -> Settings:
-    if isinstance(settings.openai_api_key, str) and not settings.openai_api_key.strip():
-        settings.openai_api_key = None
-
-    allow_missing = os.getenv("NEURA_ALLOW_MISSING_OPENAI", "false").lower() == "true"
-    provider_env = os.getenv("LLM_PROVIDER", "").lower().strip()
-    engine_env = os.getenv("NEURA_LLM_ENGINE", "litellm").lower().strip()
-    requires_openai = provider_env in {"", "openai"} and engine_env != "litellm"
-    if not settings.openai_api_key and not allow_missing and requires_openai:
-        raise RuntimeError(
-            "OPENAI_API_KEY is required. Set NEURA_ALLOW_MISSING_OPENAI=true to bypass for tests (not for production)."
-        )
-
-    force_gpt5 = os.getenv("NEURA_FORCE_GPT5", "false").lower() in {"1", "true", "yes"}
-    if force_gpt5 and not str(settings.openai_model or "").lower().startswith("gpt-5"):
-        logger.warning(
-            "openai_model_overridden",
-            extra={
-                "event": "openai_model_overridden",
-                "requested": settings.openai_model,
-                "forced": "gpt-5",
-            },
-        )
-        settings.openai_model = "gpt-5"
+    # Claude Code CLI is the only LLM provider - no API key validation needed
+    # The CLI handles authentication via its own session
 
     if settings.jwt_secret.strip().lower() in {"", "change-me"}:
         if settings.debug_mode:
@@ -188,15 +167,14 @@ def get_settings() -> Settings:
 
 
 def log_settings(target_logger: logging.Logger, settings: Settings) -> None:
-    key_preview = f"...{settings.openai_api_key[-4:]}" if settings.openai_api_key else "(missing)"
     target_logger.info(
         "app_config",
         extra={
             "event": "app_config",
             "version": settings.version,
             "commit": settings.commit,
-            "openai_model": settings.openai_model,
-            "openai_key": key_preview,
+            "llm_provider": "claude_code",
+            "claude_model": settings.claude_code_model,
             "uploads_root": str(settings.uploads_root),
             "excel_uploads_root": str(settings.excel_uploads_root),
             "artifact_warn_bytes": settings.artifact_warn_bytes,

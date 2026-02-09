@@ -36,7 +36,7 @@ from backend.app.schemas.analyze.enhanced_analysis import (
     SummaryMode,
     TextAnalytics,
 )
-from backend.app.services.utils.llm import call_chat_completion
+from backend.app.services.utils.llm import call_chat_completion, extract_json_from_llm_response
 from backend.app.services.templates.TemplateVerify import MODEL, get_openai_client
 
 logger = logging.getLogger("neura.analyze.engines")
@@ -269,11 +269,9 @@ Be objective and thorough in your analysis."""
         )
 
         raw_text = response.choices[0].message.content or ""
-        json_match = re.search(r'\{[\s\S]*\}', raw_text)
+        data = extract_json_from_llm_response(raw_text, default=None)
 
-        if json_match:
-            data = json.loads(json_match.group())
-
+        if data:
             sentiment_map = {
                 "very_positive": SentimentLevel.VERY_POSITIVE,
                 "positive": SentimentLevel.POSITIVE,
@@ -597,10 +595,9 @@ Only include metrics you can calculate or find. Use null for unavailable data.""
         )
 
         raw_text = response.choices[0].message.content or ""
-        json_match = re.search(r'\{[\s\S]*\}', raw_text)
+        data = extract_json_from_llm_response(raw_text, default=None)
 
-        if json_match:
-            data = json.loads(json_match.group())
+        if data:
             return FinancialAnalysis(
                 metrics_found=len(metrics),
                 currency=data.get("currency", "USD"),
@@ -721,11 +718,9 @@ Be specific and actionable. Base insights on actual data found."""
         )
 
         raw_text = response.choices[0].message.content or ""
-        json_match = re.search(r'\{[\s\S]*\}', raw_text)
+        data = extract_json_from_llm_response(raw_text, default=None)
 
-        if json_match:
-            data = json.loads(json_match.group())
-
+        if data:
             # Parse insights
             for item in data.get("insights", []):
                 priority_map = {"critical": Priority.CRITICAL, "high": Priority.HIGH,
@@ -884,10 +879,9 @@ Return JSON:
         )
 
         raw_text = response.choices[0].message.content or ""
-        json_match = re.search(r'\{[\s\S]*\}', raw_text)
+        data = extract_json_from_llm_response(raw_text, default=None)
 
-        if json_match:
-            data = json.loads(json_match.group())
+        if data:
             return ComparativeAnalysis(
                 comparison_type="version_diff",
                 documents_compared=["document_1", "document_2"],

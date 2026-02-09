@@ -49,8 +49,11 @@ import {
   Error as ErrorIcon,
   Schedule as PendingIcon,
   FolderOpen as WatcherIcon,
+  Storage as DatabaseImportIcon,
 } from '@mui/icons-material'
 import useIngestionStore from '@/stores/ingestionStore'
+import useSharedData from '@/hooks/useSharedData'
+import ConnectionSelector from '@/components/common/ConnectionSelector'
 import { figmaGrey } from '@/app/theme'
 import { useToast } from '@/components/ToastProvider'
 import { useInteraction, InteractionType, Reversibility } from '@/components/ux/governance'
@@ -137,6 +140,7 @@ const INGESTION_METHODS = [
   { id: 'watcher', name: 'Folder Watcher', description: 'Auto-import from folders', icon: WatcherIcon, color: 'warning' },
   { id: 'email', name: 'Email Import', description: 'Import from email accounts', icon: EmailIcon, color: 'error' },
   { id: 'transcribe', name: 'Transcription', description: 'Transcribe audio/video', icon: MicIcon, color: 'success' },
+  { id: 'database', name: 'Database Import', description: 'Import from a database connection', icon: DatabaseImportIcon, color: 'primary' },
 ]
 
 // =============================================================================
@@ -148,6 +152,7 @@ export default function IngestionPageContainer() {
   const toast = useToast()
   const { execute } = useInteraction()
   const fileInputRef = useRef(null)
+  const { connections, activeConnectionId } = useSharedData()
   const {
     uploads,
     watchers,
@@ -179,6 +184,7 @@ export default function IngestionPageContainer() {
   const [urlInput, setUrlInput] = useState('')
   const [watcherPath, setWatcherPath] = useState('')
   const [createWatcherOpen, setCreateWatcherOpen] = useState(false)
+  const [selectedConnectionId, setSelectedConnectionId] = useState(activeConnectionId || '')
 
   useEffect(() => {
     fetchWatchers()
@@ -494,6 +500,32 @@ export default function IngestionPageContainer() {
                 ))}
               </Box>
             )}
+          </Paper>
+        )
+
+      case 'database':
+        return (
+          <Paper sx={{ p: 3 }}>
+            <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2 }}>
+              Import from Database
+            </Typography>
+            <ConnectionSelector
+              value={selectedConnectionId}
+              onChange={setSelectedConnectionId}
+              label="Select Connection"
+              showStatus
+              sx={{ mb: 2 }}
+            />
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Select a database connection to import tables and data.
+            </Typography>
+            <ActionButton
+              variant="contained"
+              disabled={!selectedConnectionId || loading}
+              startIcon={loading ? <CircularProgress size={20} /> : <StartIcon />}
+            >
+              Import Data
+            </ActionButton>
           </Paper>
         )
 

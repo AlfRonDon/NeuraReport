@@ -35,6 +35,7 @@ import type {
   ActionLogEntry,
   FailureCategory,
   PersonaModifier,
+  QaAgentProfile,
   GoalLedger,
   PerceptionEntry,
   CachedActionSequence,
@@ -54,6 +55,31 @@ interface BrainConfig {
   timeout?: number
   debug?: boolean
 }
+
+const VALID_ACTIONS = new Set([
+  'click',
+  'type',
+  'navigate',
+  'scroll',
+  'select',
+  'upload',
+  'wait',
+  'verify',
+  'api_call',
+  'screenshot',
+  'key',
+  'hover',
+  'drag',
+  'done',
+  'read',
+])
+
+const STOPWORDS = new Set([
+  'the', 'and', 'for', 'with', 'from', 'that', 'this', 'into', 'onto', 'your', 'you',
+  'have', 'has', 'had', 'were', 'was', 'will', 'would', 'should', 'could', 'must', 'can',
+  'are', 'not', 'but', 'all', 'any', 'there', 'their', 'then', 'than', 'when', 'what',
+  'where', 'which', 'after', 'before', 'about', 'over', 'under', 'near', 'page', 'screen',
+])
 
 // ─── The Brain ───────────────────────────────────────────────────────
 
@@ -98,6 +124,13 @@ export class AgentBrain {
 
   // Current scenario ID
   private scenarioId = ''
+  private qaProfile: QaAgentProfile = 'general-purpose'
+  private scenarioMaxActions = 30
+
+  // SOTA exploration controls
+  private actionSignatures: string[] = []
+  private targetUseCount: Map<string, number> = new Map()
+  private targetFailureCount: Map<string, number> = new Map()
 
   constructor(agentConfig: AgentConfig) {
     const screenshotDir = agentConfig.llm.useVision
@@ -138,6 +171,11 @@ export class AgentBrain {
     this.sameScreenCount = 0
     this.currentActionSequence = []
     this.scenarioId = scenario.id
+    this.scenarioMaxActions = scenario.maxActions
+    this.actionSignatures = []
+    this.targetUseCount.clear()
+    this.targetFailureCount.clear()
+    this.qaProfile = scenario.qaProfile || this.inferProfileFromConfig()
 
     this.persona = scenario.persona || 'default'
 
@@ -156,9 +194,11 @@ export class AgentBrain {
   async decideAction(observation: PageObservation): Promise<AgentAction> {
     this.stepCount++
     this.stepsSinceCritic++
+    this.markOutcomesFromObservation(observation)
 
     // Failure heuristics: detect stuck/loop states
     const stuckSignals = this.detectStuckState(observation)
+    this.criticInterval = this.ledger.stuckScore >= 4 ? 5 : 10
 
     // Save screenshot for Claude CLI vision
     let screenshotPath: string | undefined
@@ -189,28 +229,11 @@ export class AgentBrain {
 
     const prompt = this.buildPrompt()
 
-    // Call Claude
-    let action: AgentAction | null = null
-    for (let attempt = 0; attempt < this.maxRetries; attempt++) {
-      try {
-        const response = await this.callClaude(prompt)
-        action = this.parseAction(response)
-        break
-      } catch (err: any) {
-        if (this.config.debug) {
-          console.warn(`[AgentBrain] Claude CLI attempt ${attempt + 1} failed: ${err.message?.slice(0, 150)}`)
-        }
-        if (attempt === this.maxRetries - 1) {
-          action = {
-            type: 'done',
-            reasoning: `Claude CLI failed after ${this.maxRetries} attempts: ${err.message?.slice(0, 200)}`,
-          }
-        }
-      }
-    }
+    let action = await this.decideWithRetries(prompt, observation)
+    action = this.normalizeAction(action, observation)
 
-    if (!action) {
-      action = { type: 'done', reasoning: 'Failed to get Claude response' }
+    if (this.shouldDiversify(action)) {
+      action = this.buildDiversifiedAction(observation, action)
     }
 
     // Update goal ledger
@@ -252,8 +275,32 @@ export class AgentBrain {
     }
     this.actionHistory.push(entry)
 
+    const signature = this.buildActionSignature(action)
+    this.actionSignatures.push(signature)
+    if (this.actionSignatures.length > 40) {
+      this.actionSignatures.shift()
+    }
+
+    const targetKey = this.buildTargetKey(action.target)
+    if (targetKey) {
+      this.targetUseCount.set(targetKey, (this.targetUseCount.get(targetKey) || 0) + 1)
+      if (result.success) {
+        if ((this.targetFailureCount.get(targetKey) || 0) > 0) {
+          this.targetFailureCount.set(targetKey, (this.targetFailureCount.get(targetKey) || 1) - 1)
+        }
+      } else {
+        this.targetFailureCount.set(targetKey, (this.targetFailureCount.get(targetKey) || 0) + 1)
+      }
+    }
+
     let resultMsg: string
     if (result.success) {
+      if (action.progress) this.markOutcomesFromText(action.progress)
+      if (action.reasoning) this.markOutcomesFromText(action.reasoning)
+      if (this.isLikelyProgressAction(action)) {
+        this.ledger.stepsSinceProgress = 0
+        this.ledger.stuckScore = Math.max(0, this.ledger.stuckScore - 1)
+      }
       resultMsg = `[Result] Action succeeded (${duration}ms)`
     } else {
       resultMsg = `[Result] Action FAILED: ${result.error}`
@@ -399,6 +446,26 @@ export class AgentBrain {
       this.ledger.stuckScore += 1
     }
 
+    // Repeated action signature patterns
+    const recentSignatures = this.actionSignatures.slice(-6)
+    if (recentSignatures.length >= 4) {
+      const unique = new Set(recentSignatures)
+      if (unique.size <= 2) {
+        signals.push('REPEATED ACTION PATTERN: Same action signatures are recurring.')
+        this.ledger.stuckScore += 1
+      }
+    }
+
+    // Hot failure targets
+    const hotFailureTargets = Array.from(this.targetFailureCount.entries())
+      .filter(([, count]) => count >= 3)
+      .slice(0, 2)
+      .map(([key, count]) => `${key} (${count} failures)`)
+    if (hotFailureTargets.length) {
+      signals.push(`HOT FAILURE TARGETS: ${hotFailureTargets.join(', ')}`)
+      this.ledger.stuckScore += 1
+    }
+
     // Console errors
     if (obs.consoleErrors?.length) {
       signals.push(`BROWSER ERRORS: ${obs.consoleErrors.slice(0, 3).join(' | ')}`)
@@ -519,6 +586,7 @@ Be specific. No fluff. JSON: {"verdict":"progress|stuck|lost","advice":"..."}`
 
   private buildSystemPrompt(scenario: TestScenario): string {
     const personaText = this.getPersonaText()
+    const profileText = this.getProfilePolicy()
     const lessonsText = this.getLessonsForScenario(scenario.id)
     const expectedOutcome = scenario.expectedOutcome
       ? `\nEXPECTED OUTCOME: ${scenario.expectedOutcome}`
@@ -527,6 +595,7 @@ Be specific. No fluff. JSON: {"verdict":"progress|stuck|lost","advice":"..."}`
 
     return `You are a REAL PERSON testing a web app called ${this.config.appName}. You behave exactly like a normal user — clicking things, filling forms, reading what's on screen.
 ${personaText}
+${profileText}
 You do NOT know anything about code, APIs, or the backend. You only know what you can SEE on screen.
 
 YOUR TASK: ${scenario.name}
@@ -540,6 +609,8 @@ RESPOND WITH A JSON OBJECT:
 {
   "progress": "What did my last action achieve? Am I closer to my goal?",
   "blocker": "Is anything confusing or blocking me right now? Or 'none'",
+  "expectedSignal": "What visible signal should happen if this action succeeds",
+  "confidence": 0.0,
   "type": "click|type|navigate|scroll|select|wait|key|hover|screenshot|done",
   "reasoning": "What I'm about to do and why, as a normal user would think",
   "target": { "role": "button", "name": "exact text" },
@@ -572,6 +643,7 @@ TARGET SELECTORS — Copy from Elements list EXACTLY:
 
 CRITICAL RULES:
 - ONE JSON object. Nothing else. No text before or after.
+- confidence must be 0.0 to 1.0 and reflect uncertainty.
 - Copy element names EXACTLY from the Elements list.
 - DO NOT say "done" until you can SEE the result on screen.
 - If you click a button and NOTHING happens — that's a UX problem. Note it and try a different approach.
@@ -581,6 +653,19 @@ CRITICAL RULES:
 - After submitting a form, WAIT and LOOK at what happened before saying done.
 - Budget: ${scenario.maxActions} actions max.
 ${this.config.useVision ? '- Screenshot paths are provided — view them to see the actual screen.' : ''}`
+  }
+
+  private inferProfileFromConfig(): QaAgentProfile {
+    const app = this.config.appName.toLowerCase()
+    if (app.includes('neurareport')) return 'neurareport'
+    return 'general-purpose'
+  }
+
+  private getProfilePolicy(): string {
+    if (this.qaProfile === 'neurareport') {
+      return `\nProfile policy: This is NeuraReport. Prioritize sidebar navigation, MUI patterns, and visible workflow outcomes for Connections, Templates, Reports, and Agents.`
+    }
+    return `\nProfile policy: Stay framework-agnostic, use accessibility-first selectors, and verify outcomes strictly from visible UI evidence.`
   }
 
   /** Persona modifiers */
@@ -607,6 +692,7 @@ ${this.config.useVision ? '- Screenshot paths are provided — view them to see 
     const parts = [
       `[Step ${this.stepCount}] URL: ${obs.url}`,
       obs.heading ? `Page: ${obs.heading}` : '',
+      `Profile: ${this.qaProfile}`,
     ]
 
     // Stuck warnings — prominent
@@ -647,6 +733,32 @@ ${this.config.useVision ? '- Screenshot paths are provided — view them to see 
       parts.push(`  ... and ${obs.interactiveElements.length - maxElements} more elements`)
     }
 
+    const untried = obs.interactiveElements
+      .filter(el => !!el.name && !el.disabled)
+      .filter(el => (this.targetUseCount.get(`${el.role}:${el.name.trim().toLowerCase()}`) || 0) === 0)
+      .slice(0, 6)
+      .map(el => `[${el.role}] ${el.name}`)
+    if (untried.length) {
+      parts.push(`Untried candidates: ${untried.join(' | ')}`)
+    }
+
+    const repeatedTargets = Array.from(this.targetUseCount.entries())
+      .filter(([, count]) => count >= 3)
+      .slice(0, 4)
+      .map(([target, count]) => `${target}(${count}x)`)
+    if (repeatedTargets.length) {
+      parts.push(`Repeated targets: ${repeatedTargets.join(', ')}`)
+    }
+
+    const recentActions = this.actionHistory.slice(-5)
+    if (recentActions.length) {
+      parts.push('Recent actions:')
+      recentActions.forEach(action => {
+        const target = action.action.target?.name || action.action.target?.label || action.action.url || ''
+        parts.push(`  - #${action.step}: ${action.action.type} ${target ? `"${String(target).slice(0, 60)}"` : ''} -> ${action.result}${action.error ? ` (${action.error.slice(0, 90)})` : ''}`)
+      })
+    }
+
     // User-visible feedback
     if (obs.toasts.length) parts.push(`Messages on screen: ${obs.toasts.join(' | ')}`)
     if (obs.errors.length) parts.push(`Error messages: ${obs.errors.join(' | ')}`)
@@ -657,7 +769,7 @@ ${this.config.useVision ? '- Screenshot paths are provided — view them to see 
     // Goal progress
     parts.push('')
     parts.push(`GOAL PROGRESS: ${this.ledger.completedOutcomes.length}/${this.ledger.requiredOutcomes.length} outcomes done`)
-    const remaining = this.ledger.requiredOutcomes.filter(o => !this.ledger.completedOutcomes.includes(o))
+    const remaining = this.getRemainingOutcomes()
     if (remaining.length) parts.push(`  Still need: ${remaining.join(', ')}`)
 
     return parts.filter(Boolean).join('\n')
@@ -784,21 +896,8 @@ ${this.config.useVision ? '- Screenshot paths are provided — view them to see 
       if (!parsed.type) throw new Error('Missing "type" field')
       if (!parsed.reasoning) parsed.reasoning = 'No reasoning provided'
 
-      // Extract progress for goal ledger
-      if (parsed.progress && parsed.progress !== 'none' && parsed.progress.length > 10) {
-        for (const outcome of this.ledger.requiredOutcomes) {
-          if (!this.ledger.completedOutcomes.includes(outcome)) {
-            const progressLower = (parsed.progress || '').toLowerCase()
-            const outcomeLower = outcome.toLowerCase()
-            const keywords = outcomeLower.split(/\s+/).filter(w => w.length > 4)
-            const matches = keywords.filter(kw => progressLower.includes(kw))
-            if (matches.length >= 2) {
-              this.ledger.completedOutcomes.push(outcome)
-              this.ledger.stuckScore = Math.max(0, this.ledger.stuckScore - 2)
-            }
-          }
-        }
-      }
+      if (parsed.progress) this.markOutcomesFromText(String(parsed.progress))
+      if (parsed.reasoning) this.markOutcomesFromText(String(parsed.reasoning))
 
       return parsed as AgentAction
     } catch (err: any) {
@@ -815,6 +914,380 @@ ${this.config.useVision ? '- Screenshot paths are provided — view them to see 
   }
 
   // ─── Element Shuffling ──────────────────────────────────────────────
+
+  private async decideWithRetries(prompt: string, observation: PageObservation): Promise<AgentAction> {
+    if (this.shouldUseConsensus()) {
+      const consensus = await this.tryConsensusSampling(prompt, observation)
+      if (consensus) return consensus
+    }
+
+    let fallbackError = 'Unknown model failure'
+    for (let attempt = 0; attempt < this.maxRetries; attempt++) {
+      try {
+        const response = await this.callClaude(prompt)
+        return this.parseAction(response)
+      } catch (err: any) {
+        fallbackError = err.message || fallbackError
+        if (this.config.debug) {
+          console.warn(`[AgentBrain] Claude attempt ${attempt + 1} failed: ${fallbackError.slice(0, 150)}`)
+        }
+      }
+    }
+
+    return {
+      type: 'done',
+      reasoning: `Claude CLI failed after ${this.maxRetries} attempts: ${fallbackError.slice(0, 200)}`,
+      progress: 'none',
+      blocker: fallbackError.slice(0, 120),
+      confidence: 0.95,
+    }
+  }
+
+  private shouldUseConsensus(): boolean {
+    const failures = this.actionHistory.slice(-4).filter(a => a.result === 'failed').length
+    return this.ledger.stuckScore >= 4 || this.sameScreenCount >= 3 || failures >= 2
+  }
+
+  private async tryConsensusSampling(prompt: string, observation: PageObservation): Promise<AgentAction | null> {
+    const samples = this.ledger.stuckScore >= 6 ? 3 : 2
+    const candidates: AgentAction[] = []
+
+    for (let i = 0; i < samples; i++) {
+      try {
+        const response = await this.callClaude(`${prompt}\n\nIndependent candidate ${i + 1}/${samples}. Re-evaluate from scratch.`)
+        candidates.push(this.parseAction(response))
+      } catch {
+        // Keep sampling candidates.
+      }
+    }
+
+    if (candidates.length === 0) return null
+
+    let best = candidates[0]
+    let bestScore = this.scoreCandidate(best, observation)
+    for (let i = 1; i < candidates.length; i++) {
+      const score = this.scoreCandidate(candidates[i], observation)
+      if (score > bestScore) {
+        best = candidates[i]
+        bestScore = score
+      }
+    }
+    return best
+  }
+
+  private scoreCandidate(action: AgentAction, observation: PageObservation): number {
+    let score = typeof action.confidence === 'number' ? action.confidence * 2 : 1
+
+    if (action.expectedSignal) score += 0.6
+    if (action.type === 'done') {
+      const remaining = this.getRemainingOutcomes()
+      score += remaining.length === 0 ? 2 : -4
+    }
+
+    const signature = this.buildActionSignature(action)
+    const repeats = this.actionSignatures.slice(-6).filter(s => s === signature).length
+    score -= repeats * 1.0
+
+    const key = this.buildTargetKey(action.target)
+    if (key) {
+      score -= (this.targetFailureCount.get(key) || 0) * 0.8
+      if ((this.targetUseCount.get(key) || 0) === 0) score += 0.5
+    }
+
+    if (action.target) {
+      score += this.isTargetPresent(action.target, observation) ? 1.3 : -1.5
+    }
+
+    return score
+  }
+
+  private normalizeAction(action: AgentAction, observation: PageObservation): AgentAction {
+    const normalized: AgentAction = {
+      ...action,
+      type: (action.type || 'wait') as any,
+      reasoning: action.reasoning?.trim() || 'No reasoning provided',
+      progress: action.progress?.trim() || 'none',
+      blocker: action.blocker?.trim() || 'none',
+      confidence: typeof action.confidence === 'number' ? Math.max(0, Math.min(1, action.confidence)) : 0.6,
+    }
+
+    if (normalized.type === ('read' as any)) {
+      normalized.type = 'screenshot'
+    }
+
+    if (!VALID_ACTIONS.has(normalized.type)) {
+      return this.buildWaitFallback(`Invalid action type received: ${normalized.type}`)
+    }
+
+    if (!normalized.expectedSignal) {
+      normalized.expectedSignal = this.inferExpectedSignal(normalized)
+    }
+
+    if (normalized.type === 'done') {
+      return this.enforceDoneGate(normalized, observation)
+    }
+
+    if (['click', 'type', 'select', 'upload', 'hover', 'drag'].includes(normalized.type) && !normalized.target) {
+      return this.buildWaitFallback(`Missing target for ${normalized.type}`)
+    }
+
+    if (['type', 'select', 'upload'].includes(normalized.type) && !normalized.value) {
+      return this.buildWaitFallback(`Missing value for ${normalized.type}`)
+    }
+
+    if (normalized.type === 'verify' && !normalized.assertion) {
+      const keyword = this.guessEvidenceKeyword(this.getRemainingOutcomes(), observation)
+      if (keyword) {
+        normalized.assertion = {
+          check: 'text_contains',
+          expected: keyword,
+        }
+      } else {
+        return this.buildWaitFallback('Missing assertion for verify action')
+      }
+    }
+
+    return normalized
+  }
+
+  private enforceDoneGate(action: AgentAction, observation: PageObservation): AgentAction {
+    this.markOutcomesFromObservation(observation)
+    const remaining = this.getRemainingOutcomes()
+    if (remaining.length === 0) return action
+
+    const nearBudget = this.stepCount >= Math.max(5, Math.floor(this.scenarioMaxActions * 0.85))
+    const isStuckIntent = /stuck|blocked|cannot|can't|give up|no progress/i.test(
+      `${action.reasoning} ${action.blocker || ''}`,
+    )
+
+    if (isStuckIntent && (nearBudget || this.ledger.stuckScore >= 6)) {
+      return {
+        ...action,
+        blocker: action.blocker && action.blocker !== 'none'
+          ? action.blocker
+          : `Missing evidence for: ${remaining.slice(0, 2).join('; ')}`,
+      }
+    }
+
+    const keyword = this.guessEvidenceKeyword(remaining, observation) || remaining[0]
+    return {
+      type: 'verify',
+      reasoning: `Need visible proof before done for: ${remaining[0]}`,
+      progress: action.progress || 'not complete',
+      blocker: `Missing visible evidence for ${remaining[0]}`,
+      expectedSignal: keyword,
+      confidence: 0.55,
+      assertion: {
+        check: 'text_contains',
+        expected: keyword,
+      },
+    }
+  }
+
+  private shouldDiversify(action: AgentAction): boolean {
+    if (action.type === 'done') return false
+    if (this.ledger.stuckScore < 3) return false
+    const signature = this.buildActionSignature(action)
+    return this.actionSignatures.slice(-6).filter(s => s === signature).length >= 2
+  }
+
+  private buildDiversifiedAction(observation: PageObservation, original: AgentAction): AgentAction {
+    const candidate = observation.interactiveElements.find(el => {
+      if (!el.name || el.disabled) return false
+      if (!['button', 'link', 'tab', 'menuitem'].includes(el.role)) return false
+      const key = `${el.role}:${el.name.trim().toLowerCase()}`
+      return (this.targetUseCount.get(key) || 0) === 0
+    })
+
+    if (candidate) {
+      return {
+        type: 'click',
+        reasoning: `Loop prevention: try untried ${candidate.role}`,
+        progress: 'none',
+        blocker: `repeating ${original.type} pattern`,
+        confidence: 0.6,
+        expectedSignal: `UI changes after clicking ${candidate.name}`,
+        target: {
+          role: candidate.role,
+          name: candidate.name,
+        },
+      }
+    }
+
+    return {
+      type: 'scroll',
+      reasoning: 'Loop prevention: discover new below-the-fold elements',
+      progress: 'none',
+      blocker: `repeating ${original.type} pattern`,
+      confidence: 0.5,
+      expectedSignal: 'new interactive elements appear',
+      direction: 'down',
+      amount: 450,
+    }
+  }
+
+  private buildWaitFallback(reason: string): AgentAction {
+    return {
+      type: 'wait',
+      reasoning: reason,
+      progress: 'none',
+      blocker: reason,
+      confidence: 0.3,
+      expectedSignal: 'A clearer state appears',
+    }
+  }
+
+  private inferExpectedSignal(action: AgentAction): string {
+    switch (action.type) {
+      case 'click':
+        return 'dialog opens, page changes, or state updates'
+      case 'type':
+        return 'input value visibly updates'
+      case 'select':
+        return 'selected option appears in control'
+      case 'navigate':
+        return 'URL changes to target page'
+      case 'verify':
+        return 'assertion evaluates true'
+      case 'wait':
+        return 'loading resolves or result appears'
+      case 'api_call':
+        return 'API returns successful status'
+      case 'done':
+        return 'all required outcomes are visible'
+      default:
+        return 'observable UI feedback appears'
+    }
+  }
+
+  private buildActionSignature(action: AgentAction): string {
+    const target = action.target
+      ? [
+          action.target.role || '',
+          action.target.name || '',
+          action.target.label || '',
+          action.target.text || '',
+          action.target.placeholder || '',
+          action.target.testId || '',
+        ].join('|')
+      : ''
+
+    return [
+      action.type,
+      target,
+      action.value || '',
+      action.url || '',
+      action.key || '',
+      action.waitFor || '',
+    ].join('::').toLowerCase().slice(0, 220)
+  }
+
+  private buildTargetKey(target?: AgentAction['target']): string | undefined {
+    if (!target) return undefined
+    const key = [
+      target.role || '',
+      target.name || '',
+      target.label || '',
+      target.text || '',
+      target.placeholder || '',
+      target.testId || '',
+      target.css || '',
+    ].join(':').trim().toLowerCase()
+    return key || undefined
+  }
+
+  private getRemainingOutcomes(): string[] {
+    return this.ledger.requiredOutcomes.filter(outcome => !this.ledger.completedOutcomes.includes(outcome))
+  }
+
+  private markOutcomesFromObservation(observation: PageObservation) {
+    const corpus = [
+      observation.url,
+      observation.title,
+      observation.heading || '',
+      observation.toasts.join(' '),
+      observation.errors.join(' '),
+      (observation.semanticHints || []).join(' '),
+      observation.interactiveElements.map(el => el.name).join(' '),
+    ].join(' ')
+    this.markOutcomesFromText(corpus)
+  }
+
+  private markOutcomesFromText(text: string) {
+    const normalized = this.normalizeText(text)
+    if (!normalized) return
+
+    for (const outcome of this.ledger.requiredOutcomes) {
+      if (this.ledger.completedOutcomes.includes(outcome)) continue
+
+      const keywords = this.extractKeywords(outcome)
+      if (keywords.length === 0) continue
+
+      const matchCount = keywords.filter(word => normalized.includes(word)).length
+      const threshold = Math.max(1, Math.min(3, Math.ceil(keywords.length * 0.45)))
+      if (matchCount >= threshold) {
+        this.ledger.completedOutcomes.push(outcome)
+        this.ledger.stuckScore = Math.max(0, this.ledger.stuckScore - 1)
+      }
+    }
+  }
+
+  private extractKeywords(text: string): string[] {
+    return Array.from(new Set(
+      this.normalizeText(text)
+        .split(' ')
+        .filter(word => word.length >= 4 && !STOPWORDS.has(word)),
+    ))
+  }
+
+  private normalizeText(text: string): string {
+    return String(text || '')
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+  }
+
+  private guessEvidenceKeyword(remainingOutcomes: string[], observation: PageObservation): string | undefined {
+    const source = [
+      ...remainingOutcomes,
+      observation.heading || '',
+      ...observation.toasts,
+      ...observation.errors,
+      ...observation.interactiveElements.map(el => el.name),
+    ].join(' ')
+    const keywords = this.extractKeywords(source)
+    return keywords.find(word => word.length >= 5)
+  }
+
+  private isLikelyProgressAction(action: AgentAction): boolean {
+    if (['navigate', 'type', 'select', 'upload', 'api_call', 'verify'].includes(action.type)) {
+      return true
+    }
+
+    if (action.type === 'click' && action.target?.name) {
+      const name = action.target.name.toLowerCase()
+      return ['save', 'submit', 'create', 'add', 'run', 'generate', 'confirm', 'next', 'continue', 'apply']
+        .some(token => name.includes(token))
+    }
+
+    return false
+  }
+
+  private isTargetPresent(target: NonNullable<AgentAction['target']>, observation: PageObservation): boolean {
+    const normalizedName = (target.name || target.label || target.text || target.placeholder || '').trim().toLowerCase()
+
+    return observation.interactiveElements.some(el => {
+      const roleMatches = !target.role || el.role.toLowerCase() === target.role.toLowerCase()
+      if (!roleMatches) return false
+
+      if (!normalizedName) return true
+      const elementName = el.name.trim().toLowerCase()
+      return elementName === normalizedName
+        || elementName.includes(normalizedName)
+        || normalizedName.includes(elementName)
+    })
+  }
 
   private shuffleArray<T>(array: T[]): T[] {
     for (let i = array.length - 1; i > 0; i--) {

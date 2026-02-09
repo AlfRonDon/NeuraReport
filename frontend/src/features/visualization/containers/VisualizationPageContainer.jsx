@@ -46,6 +46,11 @@ import {
   Visibility as PreviewIcon,
 } from '@mui/icons-material'
 import useVisualizationStore from '@/stores/visualizationStore'
+import useSharedData from '@/hooks/useSharedData'
+import useCrossPageActions from '@/hooks/useCrossPageActions'
+import ConnectionSelector from '@/components/common/ConnectionSelector'
+import SendToMenu from '@/components/common/SendToMenu'
+import { OutputType, FeatureKey } from '@/constants/crossPageTypes'
 import { useToast } from '@/components/ToastProvider'
 import { useInteraction, InteractionType, Reversibility } from '@/components/ux/governance'
 import { figmaGrey } from '@/app/theme'
@@ -235,6 +240,10 @@ export default function VisualizationPageContainer() {
     reset,
   } = useVisualizationStore()
 
+  const { connections, activeConnectionId } = useSharedData()
+  const { registerOutput } = useCrossPageActions(FeatureKey.VISUALIZATION)
+  const [selectedConnectionId, setSelectedConnectionId] = useState(activeConnectionId || '')
+
   const [selectedType, setSelectedType] = useState(DIAGRAM_TYPES[0])
   const [inputData, setInputData] = useState('')
   const [title, setTitle] = useState('')
@@ -318,6 +327,13 @@ export default function VisualizationPageContainer() {
         }
 
         if (result) {
+          registerOutput({
+            type: OutputType.DIAGRAM,
+            title: `${selectedType.name}: ${title || 'Untitled'}`,
+            summary: `${selectedType.name} diagram`,
+            data: { id: result.id, svg: result.svg, mermaid: result.mermaid_code, content: result.content },
+            format: 'diagram',
+          })
           toast.show('Diagram generated', 'success')
         }
         return result
@@ -384,7 +400,15 @@ export default function VisualizationPageContainer() {
             </Box>
           </Box>
           {currentDiagram && (
-            <Box sx={{ display: 'flex', gap: 1 }}>
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+              <SendToMenu
+                outputType={OutputType.DIAGRAM}
+                payload={{
+                  title: `${selectedType.name}: ${title || 'Diagram'}`,
+                  data: { id: currentDiagram.id, svg: currentDiagram.svg, mermaid: currentDiagram.mermaid_code },
+                }}
+                sourceFeature={FeatureKey.VISUALIZATION}
+              />
               <Tooltip title="Copy Mermaid Code">
                 <IconButton onClick={() => handleExport('mermaid')}>
                   <CodeIcon />
@@ -451,6 +475,14 @@ export default function VisualizationPageContainer() {
               label="Title (optional)"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
+              sx={{ mb: 2 }}
+            />
+            <ConnectionSelector
+              value={selectedConnectionId}
+              onChange={setSelectedConnectionId}
+              label="Data Source"
+              size="small"
+              showStatus
               sx={{ mb: 2 }}
             />
             <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>

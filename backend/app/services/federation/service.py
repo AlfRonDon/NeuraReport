@@ -10,6 +10,7 @@ from backend.app.utils.errors import AppError
 from backend.app.utils.sql_safety import get_write_operation, is_select_or_with
 from backend.app.repositories.state import store as state_store_module
 from backend.app.services.llm.client import get_llm_client
+from backend.app.services.utils.llm import extract_json_array_from_llm_response
 from backend.app.repositories.connections.schema import get_connection_schema
 
 from backend.app.schemas.federation import (
@@ -151,12 +152,9 @@ Return ONLY the JSON array."""
                 temperature=0.0,
             )
 
-            import json
-            import re
             content = response["choices"][0]["message"]["content"]
-            json_match = re.search(r"\[[\s\S]*\]", content)
-            if json_match:
-                suggestions_data = json.loads(json_match.group())
+            suggestions_data = extract_json_array_from_llm_response(content, default=[])
+            if suggestions_data:
                 return [JoinSuggestion(**s) for s in suggestions_data]
 
         except Exception as exc:

@@ -378,13 +378,14 @@ class ResponseCache:
 # Token Counter and Cost Estimator
 # =============================================================================
 
-# Approximate token costs per 1K tokens (as of early 2025)
+# Approximate token costs per 1K tokens (Claude models)
 TOKEN_COSTS: Dict[str, Dict[str, float]] = {
-    "gpt-5": {"input": 0.01, "output": 0.03},
-    "claude-3-5-sonnet-20241022": {"input": 0.003, "output": 0.015},
-    "claude-3-opus-20240229": {"input": 0.015, "output": 0.075},
-    "deepseek-chat": {"input": 0.00014, "output": 0.00028},
-    "deepseek-reasoner": {"input": 0.00055, "output": 0.00219},
+    "claude-sonnet": {"input": 0.003, "output": 0.015},
+    "claude-opus": {"input": 0.015, "output": 0.075},
+    "claude-haiku": {"input": 0.00025, "output": 0.00125},
+    "sonnet": {"input": 0.003, "output": 0.015},
+    "opus": {"input": 0.015, "output": 0.075},
+    "haiku": {"input": 0.00025, "output": 0.00125},
 }
 
 
@@ -410,7 +411,7 @@ def estimate_cost(
     output_tokens: int,
 ) -> float:
     """Estimate cost for a completion."""
-    costs = TOKEN_COSTS.get(model, TOKEN_COSTS.get("gpt-5", {"input": 0.01, "output": 0.03}))
+    costs = TOKEN_COSTS.get(model, TOKEN_COSTS.get("sonnet", {"input": 0.003, "output": 0.015}))
     input_cost = (input_tokens / 1000) * costs["input"]
     output_cost = (output_tokens / 1000) * costs["output"]
     return input_cost + output_cost
@@ -533,15 +534,8 @@ class LLMClient:
         # Initialize usage tracker
         self._usage_tracker = UsageTracker()
 
-        if self.config.fallback_provider:
-            fallback_config = LLMConfig(
-                provider=self.config.fallback_provider,
-                model=self.config.fallback_model or self.config.model,
-                api_key=os.getenv(f"{self.config.fallback_provider.value.upper()}_API_KEY"),
-                timeout_seconds=self.config.timeout_seconds,
-                max_retries=self.config.max_retries,
-            )
-            self._fallback_provider = get_provider(fallback_config)
+        # Fallback provider (not used for Claude Code CLI - single provider only)
+        self._fallback_provider = None
 
     @property
     def provider(self) -> BaseProvider:

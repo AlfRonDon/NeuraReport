@@ -300,6 +300,7 @@ export default function GlobalSearch({
           size="small"
           fullWidth
           data-testid="global-search-input"
+          inputProps={{ 'aria-label': 'Search' }}
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">

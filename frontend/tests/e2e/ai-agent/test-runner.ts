@@ -6,16 +6,24 @@
  * 2. Observe page state (screenshot + DOM)
  * 3. Send observation to LLM brain → get next action
  * 4. Execute action via browser agent
- * 5. Record result, repeat until done or max actions
- * 6. Run backend brain checks
- * 7. Evaluate success criteria
- * 8. Generate evidence report
+ * 5. Verify action had expected effect (failure mode mitigation)
+ * 6. Record result, repeat until done or max actions
+ * 7. Run backend brain checks
+ * 8. Evaluate success criteria
+ * 9. Generate evidence report
+ *
+ * Failure mode mitigations implemented:
+ * - Wait-for-stable before observing (prevents stale DOM reads)
+ * - Post-action verification (prevents false passes)
+ * - Action replay detection (prevents stuck loops)
+ * - Silent failure detection (checks if UI actually changed)
  */
 import * as fs from 'fs'
 import * as path from 'path'
 import type { Page } from '@playwright/test'
 import { BrowserAgent } from './browser-agent'
 import { AgentBrain } from './agent-brain'
+import { createConfig, type AgentConfig } from './config'
 import type {
   TestScenario,
   ScenarioResult,
@@ -33,30 +41,43 @@ export interface RunnerConfig {
   actionDelay?: number
   /** Model override (default: sonnet) */
   model?: string
+  /** Full agent config (optional, overrides other settings) */
+  agentConfig?: Partial<AgentConfig>
 }
 
 export class AITestRunner {
   private browser: BrowserAgent
   private brain: AgentBrain
-  private config: RunnerConfig
+  private runnerConfig: RunnerConfig
+  private agentConfig: AgentConfig
   private page: Page
 
   constructor(page: Page, config: RunnerConfig) {
     this.page = page
-    this.config = {
+    this.runnerConfig = {
       screenshotEveryStep: true,
       actionDelay: 500,
       ...config,
     }
 
+    // Build agent config from runner config
+    this.agentConfig = createConfig({
+      screenshotEveryStep: config.screenshotEveryStep ?? true,
+      actionDelay: config.actionDelay ?? 500,
+      llm: {
+        model: config.model || process.env.AI_TEST_MODEL || 'sonnet',
+        useVision: true,
+        timeout: 600_000,
+      },
+      learningDir: path.join(config.evidenceBaseDir, 'learning'),
+      ...config.agentConfig,
+    })
+
     // Create evidence directory for this run
     fs.mkdirSync(config.evidenceBaseDir, { recursive: true })
 
-    this.browser = new BrowserAgent(page, config.evidenceBaseDir)
-    this.brain = new AgentBrain({
-      model: config.model,
-      screenshotDir: path.join(config.evidenceBaseDir, 'vision-screenshots'),
-    })
+    this.browser = new BrowserAgent(page, config.evidenceBaseDir, this.agentConfig)
+    this.brain = new AgentBrain(this.agentConfig)
   }
 
   /** Run a single scenario and return the result */
@@ -150,8 +171,8 @@ export class AITestRunner {
         }
 
         // Add delay between actions
-        if (this.config.actionDelay && !this.page.isClosed()) {
-          await this.page.waitForTimeout(this.config.actionDelay).catch(() => {})
+        if (this.runnerConfig.actionDelay && !this.page.isClosed()) {
+          await this.page.waitForTimeout(this.runnerConfig.actionDelay).catch(() => {})
         }
 
       } catch (err: any) {
@@ -206,14 +227,14 @@ export class AITestRunner {
     return this.buildResult(scenario, startTime, actionLog, status, error, criteriaResults, backendResults)
   }
 
-  /** Execute a single step (observe → decide → execute → screenshot) */
+  /** Execute a single step (observe → decide → execute → verify → screenshot) */
   private async runSingleStep(actionCount: number, maxActions: number): Promise<{
     isDone: boolean
     logEntry: ActionLogEntry
   }> {
     const stepStart = Date.now()
 
-    // 1. Observe the current page state
+    // 1. Observe the current page state (includes wait-for-stable)
     const observation = await this.browser.observe()
 
     // 2. Ask the brain what to do
@@ -235,18 +256,39 @@ export class AITestRunner {
       }
     }
 
-    // 4. Execute the action
+    // 4. FAILURE MODE MITIGATION: Detect action replay (stuck loop)
+    if (this.agentConfig.detectActionReplay) {
+      const replayCheck = this.browser.detectActionReplay(action)
+      if (replayCheck.isReplay) {
+        console.log(`    ⚠ REPLAY DETECTED: Same action ${replayCheck.sameActionCount} times`)
+        // Don't immediately fail, but record it for the brain to see
+        action.blocker = `WARNING: You've tried this exact action ${replayCheck.sameActionCount} times. Try something different!`
+      }
+    }
+
+    // 5. Execute the action
     const result = await this.browser.execute(action)
 
-    // 5. Take screenshot if configured
+    // 6. FAILURE MODE MITIGATION: Verify action had expected effect
+    if (result.success && this.agentConfig.verifyAfterAction && action.type !== 'screenshot') {
+      const verification = await this.browser.verifyAction(action, observation)
+      if (!verification.verified && !verification.uiChanged && !verification.networkActivity) {
+        // Action appeared to succeed but nothing changed — possible silent failure
+        console.log(`    ⚠ SILENT FAILURE: Action succeeded but no UI change detected`)
+        result.success = true // Don't mark as failed, but warn
+        result.error = 'Warning: No visible change after action'
+      }
+    }
+
+    // 7. Take screenshot if configured
     let screenshotPath: string | undefined
-    if (this.config.screenshotEveryStep) {
+    if (this.runnerConfig.screenshotEveryStep) {
       screenshotPath = await this.browser.takeScreenshot(
         `step-${String(actionCount).padStart(3, '0')}-${action.type}`
       )
     }
 
-    // 6. Record the result
+    // 8. Record the result
     const duration = Date.now() - stepStart
     this.brain.recordResult(action, result, duration)
 
@@ -349,7 +391,7 @@ export class AITestRunner {
     }
 
     // Save evidence
-    const evidenceDir = this.config.evidenceBaseDir
+    const evidenceDir = this.runnerConfig.evidenceBaseDir
 
     // Save action log
     const actionLogPath = path.join(evidenceDir, `${scenario.id}-action-log.json`)

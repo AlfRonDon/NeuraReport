@@ -177,19 +177,17 @@ class ResearchAgent:
         self._model = None
 
     def _get_client(self):
-        """Get OpenAI client lazily."""
+        """Get unified LLM client (Claude Code CLI) lazily."""
         if self._client is None:
-            from backend.app.services.config import get_settings
-            from openai import OpenAI
-            settings = get_settings()
-            self._client = OpenAI(api_key=settings.openai_api_key)
+            from backend.app.services.llm.client import get_llm_client
+            self._client = get_llm_client()
         return self._client
 
     def _get_model(self) -> str:
-        """Get model name from settings."""
+        """Get model name from LLM config."""
         if self._model is None:
-            from backend.app.services.config import get_settings
-            self._model = get_settings().openai_model or "gpt-4o"
+            from backend.app.services.llm.config import get_llm_config
+            self._model = get_llm_config().model
         return self._model
 
     async def execute(
@@ -501,40 +499,39 @@ Return JSON only:
         max_tokens: int,
         timeout_seconds: int,
     ) -> Dict[str, Any]:
-        """Make an LLM call with proper error handling and token tracking."""
+        """Make an LLM call using Claude Code CLI with proper error handling."""
         client = self._get_client()
-        model = self._get_model()
 
-        # Newer models use different parameter name
-        uses_new_param = any(m in model.lower() for m in ["gpt-5", "o1", "o3"])
-
-        create_params = {
-            "model": model,
-            "messages": [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt}
-            ],
-        }
-
-        if uses_new_param:
-            create_params["max_completion_tokens"] = max_tokens
-        else:
-            create_params["max_tokens"] = max_tokens
-            create_params["temperature"] = 0.7
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt}
+        ]
 
         # Run in thread pool to avoid blocking event loop
         loop = asyncio.get_running_loop()
         response = await asyncio.wait_for(
             loop.run_in_executor(
                 None,
-                lambda: client.chat.completions.create(**create_params)
+                lambda: client.complete(
+                    messages=messages,
+                    description="research_agent",
+                    max_tokens=max_tokens,
+                    temperature=0.7,
+                )
             ),
             timeout=timeout_seconds,
         )
 
-        content = response.choices[0].message.content or ""
-        input_tokens = response.usage.prompt_tokens if response.usage else 0
-        output_tokens = response.usage.completion_tokens if response.usage else 0
+        # Extract content from OpenAI-compatible response format
+        content = (
+            response.get("choices", [{}])[0]
+            .get("message", {})
+            .get("content", "")
+        ) or ""
+
+        usage = response.get("usage", {})
+        input_tokens = usage.get("prompt_tokens", 0)
+        output_tokens = usage.get("completion_tokens", 0)
 
         # Parse JSON from response
         parsed = self._parse_json_response(content)

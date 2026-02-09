@@ -86,7 +86,7 @@ async function runScenario(page: any, scenario: TestScenario): Promise<ScenarioR
 // ═════════════════════════════════════════════════════════════════════
 
 test.describe('AI Agent: User Tasks', () => {
-  test.setTimeout(1_800_000) // 30 minutes per test (generous for LLM-driven testing)
+  test.setTimeout(3_600_000) // 60 minutes per test (LLM steps can timeout at 15min each)
 
   for (const scenario of ALL_SCENARIOS.filter(s => !s.tags?.includes('comprehensive-audit'))) {
     test(`[${scenario.id}] ${scenario.name}`, async ({ page }) => {
@@ -103,7 +103,7 @@ test.describe('AI Agent: User Tasks', () => {
 // ═════════════════════════════════════════════════════════════════════
 
 test.describe('AI Agent: Per-Page Audit @audit', () => {
-  test.setTimeout(1_800_000)
+  test.setTimeout(3_600_000) // 60 minutes per test
 
   const perPageScenarios = generatePerPageScenarios()
 
@@ -124,7 +124,7 @@ test.describe('AI Agent: Per-Page Audit @audit', () => {
 // ═════════════════════════════════════════════════════════════════════
 
 test.describe('AI Agent: Full Suite @full-suite', () => {
-  test.setTimeout(1_800_000) // 30 minutes
+  test.setTimeout(7_200_000) // 2 hours for full suite
 
   test('Run all scenarios and generate audit report', async ({ page }) => {
     const allResults: ScenarioResult[] = []

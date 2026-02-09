@@ -52,8 +52,13 @@ import {
   Redo as RedoIcon,
 } from '@mui/icons-material'
 import useSpreadsheetStore from '@/stores/spreadsheetStore'
+import useSharedData from '@/hooks/useSharedData'
+import useIncomingTransfer from '@/hooks/useIncomingTransfer'
+import ImportFromMenu from '@/components/common/ImportFromMenu'
+import { TransferAction, FeatureKey } from '@/constants/crossPageTypes'
 import { useToast } from '@/components/ToastProvider'
 import { useInteraction, InteractionType, Reversibility } from '@/components/ux/governance'
+import ConnectionSelector from '@/components/common/ConnectionSelector'
 import { figmaGrey } from '@/app/theme'
 import HandsontableEditor from '../components/HandsontableEditor'
 import FormulaBar from '../components/FormulaBar'
@@ -191,6 +196,37 @@ export default function SpreadsheetEditorPage() {
   const theme = useTheme()
   const toast = useToast()
   const { execute } = useInteraction()
+  const { connections, activeConnectionId } = useSharedData()
+
+  // Cross-page: accept table data from other features (Query, Federation)
+  useIncomingTransfer(FeatureKey.SPREADSHEETS, {
+    [TransferAction.OPEN_IN]: async (payload) => {
+      const tableData = payload.data || {}
+      const columns = tableData.columns || []
+      const rows = tableData.rows || []
+      // Build cell data from columns/rows
+      const cellData = {}
+      columns.forEach((col, colIdx) => {
+        const colLetter = String.fromCharCode(65 + colIdx)
+        cellData[`${colLetter}1`] = { value: typeof col === 'string' ? col : col.name || `Col${colIdx + 1}` }
+      })
+      rows.forEach((row, rowIdx) => {
+        const rowValues = Array.isArray(row) ? row : Object.values(row)
+        rowValues.forEach((val, colIdx) => {
+          if (colIdx < 26) {
+            const colLetter = String.fromCharCode(65 + colIdx)
+            cellData[`${colLetter}${rowIdx + 2}`] = { value: val }
+          }
+        })
+      })
+      const spreadsheet = await createSpreadsheet({
+        name: payload.title || 'Imported Data',
+        sheets: [{ name: 'Sheet 1', data: cellData }],
+      })
+      if (spreadsheet) getSpreadsheet(spreadsheet.id)
+    },
+  })
+
   const {
     spreadsheets,
     currentSpreadsheet,
@@ -220,6 +256,7 @@ export default function SpreadsheetEditorPage() {
 
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [newSpreadsheetName, setNewSpreadsheetName] = useState('')
+  const [selectedConnectionId, setSelectedConnectionId] = useState('')
   const [currentCellRef, setCurrentCellRef] = useState('A1')
   const [currentCellValue, setCurrentCellValue] = useState('')
   const [currentCellFormula, setCurrentCellFormula] = useState(null)
@@ -285,6 +322,7 @@ export default function SpreadsheetEditorPage() {
     return executeUI('Close create spreadsheet', () => {
       setCreateDialogOpen(false)
       setNewSpreadsheetName('')
+      setSelectedConnectionId('')
     })
   }, [executeUI])
 
@@ -324,21 +362,23 @@ export default function SpreadsheetEditorPage() {
       type: InteractionType.CREATE,
       label: 'Create spreadsheet',
       reversibility: Reversibility.SYSTEM_MANAGED,
-      intent: { source: 'spreadsheets', name: newSpreadsheetName },
+      intent: { source: 'spreadsheets', name: newSpreadsheetName, connectionId: selectedConnectionId || undefined },
       action: async () => {
         const spreadsheet = await createSpreadsheet({
           name: newSpreadsheetName,
           sheets: [{ name: 'Sheet 1', data: {} }],
+          connectionId: selectedConnectionId || undefined,
         })
         if (spreadsheet) {
           setCreateDialogOpen(false)
           setNewSpreadsheetName('')
+          setSelectedConnectionId('')
           toast.show('Spreadsheet created', 'success')
         }
         return spreadsheet
       },
     })
-  }, [createSpreadsheet, execute, newSpreadsheetName, toast])
+  }, [createSpreadsheet, execute, newSpreadsheetName, selectedConnectionId, toast])
 
   const handleDeleteSpreadsheet = useCallback((spreadsheetId) => {
     return execute({
@@ -648,6 +688,42 @@ export default function SpreadsheetEditorPage() {
             </List>
           )}
         </Box>
+
+        <Box sx={{ p: 1.5, borderTop: (theme) => `1px solid ${alpha(theme.palette.divider, 0.1)}` }}>
+          <ImportFromMenu
+            currentFeature={FeatureKey.SPREADSHEETS}
+            onImport={async (output) => {
+              const { columns, rows } = output.data || {}
+              const cellData = {}
+              if (columns && rows) {
+                columns.forEach((col, ci) => {
+                  if (ci < 26) {
+                    const letter = String.fromCharCode(65 + ci)
+                    cellData[`${letter}1`] = { value: typeof col === 'string' ? col : col.name || `Col${ci + 1}` }
+                  }
+                })
+                rows.forEach((row, ri) => {
+                  const vals = Array.isArray(row) ? row : Object.values(row)
+                  vals.forEach((v, ci) => {
+                    if (ci < 26) {
+                      const letter = String.fromCharCode(65 + ci)
+                      cellData[`${letter}${ri + 2}`] = { value: v }
+                    }
+                  })
+                })
+              }
+              const spreadsheet = await createSpreadsheet({
+                name: output.title || 'Imported Data',
+                sheets: [{ name: 'Sheet 1', data: cellData }],
+              })
+              if (spreadsheet) {
+                getSpreadsheet(spreadsheet.id)
+                toast.show(`Created spreadsheet from "${output.title}"`, 'success')
+              }
+            }}
+            fullWidth
+          />
+        </Box>
       </Sidebar>
 
       {/* Main Content */}
@@ -821,6 +897,18 @@ export default function SpreadsheetEditorPage() {
               }
             }}
           />
+          <ConnectionSelector
+            value={selectedConnectionId}
+            onChange={setSelectedConnectionId}
+            label="Import from Connection (Optional)"
+            size="small"
+            showStatus
+          />
+          {selectedConnectionId && (
+            <Typography variant="caption" color="text.secondary" sx={{ mt: 1 }}>
+              Data from the selected connection will be imported into the new spreadsheet.
+            </Typography>
+          )}
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseCreateDialog}>Cancel</Button>

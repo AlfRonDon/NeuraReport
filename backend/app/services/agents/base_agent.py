@@ -129,6 +129,8 @@ class BaseAgentV2(ABC):
     Subclasses implement execute() and define their input/output models.
     The base class provides shared LLM calling, JSON parsing, error
     categorization, and cost tracking infrastructure.
+
+    Supports all LLM providers: OpenAI, Claude Code CLI, Anthropic, etc.
     """
 
     # Token cost estimates (per 1K tokens) — overridable per agent
@@ -140,23 +142,21 @@ class BaseAgentV2(ABC):
     MAX_TIMEOUT_SECONDS: int = 300
 
     def __init__(self):
-        self._client = None
+        self._llm_client = None
         self._model: Optional[str] = None
 
-    def _get_client(self):
-        """Get OpenAI client lazily."""
-        if self._client is None:
-            from backend.app.services.config import get_settings
-            from openai import OpenAI
-            settings = get_settings()
-            self._client = OpenAI(api_key=settings.openai_api_key)
-        return self._client
+    def _get_llm_client(self):
+        """Get unified LLM client lazily."""
+        if self._llm_client is None:
+            from backend.app.services.llm.client import get_llm_client
+            self._llm_client = get_llm_client()
+        return self._llm_client
 
     def _get_model(self) -> str:
-        """Get model name from settings."""
+        """Get model name from LLM config."""
         if self._model is None:
-            from backend.app.services.config import get_settings
-            self._model = get_settings().openai_model or "gpt-4o"
+            from backend.app.services.llm.config import get_llm_config
+            self._model = get_llm_config().model
         return self._model
 
     async def _call_llm(
@@ -168,6 +168,9 @@ class BaseAgentV2(ABC):
         temperature: float = 0.7,
     ) -> Dict[str, Any]:
         """Make an LLM call with proper error handling and token tracking.
+
+        Uses the unified LLM client which supports all providers:
+        OpenAI, Claude Code CLI, Anthropic, etc.
 
         Args:
             system_prompt: System prompt for the LLM.
@@ -187,32 +190,24 @@ class BaseAgentV2(ABC):
             AgentError: For other LLM errors.
         """
         timeout = timeout_seconds or self.DEFAULT_TIMEOUT_SECONDS
-        client = self._get_client()
-        model = self._get_model()
+        client = self._get_llm_client()
 
-        # Newer models use different parameter name
-        uses_new_param = any(m in model.lower() for m in ["gpt-5", "o1", "o3"])
-
-        create_params: Dict[str, Any] = {
-            "model": model,
-            "messages": [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt},
-            ],
-        }
-
-        if uses_new_param:
-            create_params["max_completion_tokens"] = max_tokens
-        else:
-            create_params["max_tokens"] = max_tokens
-            create_params["temperature"] = temperature
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ]
 
         try:
             loop = asyncio.get_running_loop()
             response = await asyncio.wait_for(
                 loop.run_in_executor(
                     None,
-                    lambda: client.chat.completions.create(**create_params),
+                    lambda: client.complete(
+                        messages=messages,
+                        description="agent_call_v2",
+                        max_tokens=max_tokens,
+                        temperature=temperature,
+                    ),
                 ),
                 timeout=timeout,
             )
@@ -221,9 +216,16 @@ class BaseAgentV2(ABC):
         except Exception as exc:
             self._categorize_and_raise(exc, timeout)
 
-        content = response.choices[0].message.content or ""
-        input_tokens = response.usage.prompt_tokens if response.usage else 0
-        output_tokens = response.usage.completion_tokens if response.usage else 0
+        # Extract content from OpenAI-compatible response
+        content = (
+            response.get("choices", [{}])[0]
+            .get("message", {})
+            .get("content", "")
+        ) or ""
+
+        usage = response.get("usage", {})
+        input_tokens = usage.get("prompt_tokens", 0)
+        output_tokens = usage.get("completion_tokens", 0)
 
         # Parse JSON from response
         parsed = self._parse_json_response(content)

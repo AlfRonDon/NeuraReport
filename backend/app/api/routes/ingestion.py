@@ -7,7 +7,7 @@ from __future__ import annotations
 import logging
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile, status
+from fastapi import APIRouter, File, Form, HTTPException, Request, Response, UploadFile, status
 from pydantic import BaseModel, Field
 
 from backend.app.api.middleware import limiter, RATE_LIMIT_STRICT
@@ -136,6 +136,7 @@ class GenerateInboxRequest(BaseModel):
 @limiter.limit(RATE_LIMIT_STRICT)
 async def upload_file(
     request: Request,
+    response: Response,
     file: UploadFile = File(...),
     auto_ocr: bool = Form(default=True),
     generate_preview: bool = Form(default=True),
@@ -189,6 +190,7 @@ async def upload_file(
 @limiter.limit(RATE_LIMIT_STRICT)
 async def upload_bulk(
     request: Request,
+    response: Response,
     files: List[UploadFile] = File(...),
     tags: str = Form(default=""),
     collection: str = Form(default=""),
@@ -243,6 +245,7 @@ async def upload_bulk(
 @limiter.limit(RATE_LIMIT_STRICT)
 async def upload_zip(
     request: Request,
+    response: Response,
     file: UploadFile = File(...),
     preserve_structure: bool = Form(default=True),
     flatten: bool = Form(default=False),

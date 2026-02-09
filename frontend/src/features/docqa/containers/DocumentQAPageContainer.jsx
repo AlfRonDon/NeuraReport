@@ -60,6 +60,11 @@ import {
   Close as CloseIcon,
 } from '@mui/icons-material'
 import useDocQAStore from '@/stores/docqaStore'
+import useSharedData from '@/hooks/useSharedData'
+import useIncomingTransfer from '@/hooks/useIncomingTransfer'
+import useCrossPageActions from '@/hooks/useCrossPageActions'
+import ImportFromMenu from '@/components/common/ImportFromMenu'
+import { TransferAction, FeatureKey } from '@/constants/crossPageTypes'
 import { figmaGrey } from '@/app/theme'
 import ConfirmModal from '@/components/Modal/ConfirmModal'
 import { useToast } from '@/components/ToastProvider'
@@ -573,6 +578,29 @@ export default function DocumentQAPage() {
     reset,
   } = useDocQAStore()
 
+  const { connections, templates } = useSharedData()
+
+  // Cross-page: accept incoming documents from other features
+  useIncomingTransfer(FeatureKey.DOCQA, {
+    [TransferAction.CHAT_WITH]: async (payload) => {
+      const session = await createSession(payload.title ? `Q&A: ${payload.title}` : 'Q&A: Imported')
+      if (session) {
+        await addDocument(session.id, {
+          name: payload.title || 'Imported Document',
+          content: typeof payload.content === 'string' ? payload.content : JSON.stringify(payload.content),
+        })
+      }
+    },
+    [TransferAction.ADD_TO]: async (payload) => {
+      if (currentSession) {
+        await addDocument(currentSession.id, {
+          name: payload.title || 'Imported Document',
+          content: typeof payload.content === 'string' ? payload.content : JSON.stringify(payload.content),
+        })
+      }
+    },
+  })
+
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [addDocDialogOpen, setAddDocDialogOpen] = useState(false)
   const [newSessionName, setNewSessionName] = useState('')
@@ -961,19 +989,33 @@ export default function DocumentQAPage() {
               <Typography variant="overline" sx={{ color: 'text.secondary' }}>
                 Documents
               </Typography>
-              <Tooltip title="Add document">
-                <IconButton
-                  size="small"
-                  onClick={() => setAddDocDialogOpen(true)}
-                  aria-label="Add document"
-                  sx={{
-                    bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
-                    '&:hover': { bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.12) : figmaGrey[400] },
+              <Box sx={{ display: 'flex', gap: 0.5 }}>
+                <ImportFromMenu
+                  currentFeature={FeatureKey.DOCQA}
+                  onImport={(output) => {
+                    if (currentSession) {
+                      addDocument(currentSession.id, {
+                        name: output.title || 'Imported',
+                        content: typeof output.data === 'string' ? output.data : JSON.stringify(output.data),
+                      })
+                    }
                   }}
-                >
-                  <AddIcon fontSize="small" />
-                </IconButton>
-              </Tooltip>
+                  size="small"
+                />
+                <Tooltip title="Add document">
+                  <IconButton
+                    size="small"
+                    onClick={() => setAddDocDialogOpen(true)}
+                    aria-label="Add document"
+                    sx={{
+                      bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
+                      '&:hover': { bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.12) : figmaGrey[400] },
+                    }}
+                  >
+                    <AddIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              </Box>
             </Box>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
               {currentSession.documents?.map((doc) => (
@@ -1041,7 +1083,8 @@ export default function DocumentQAPage() {
                   </Typography>
                   <Typography variant="caption" color="text.secondary">
                     {currentSession.documents?.length || 0} documents •{' '}
-                    {messages.length} messages
+                    {messages.length} messages •{' '}
+                    {connections.length} connections available
                   </Typography>
                 </Box>
               </Box>
@@ -1106,6 +1149,14 @@ export default function DocumentQAPage() {
                           </Typography>
                         </SuggestionCard>
                       ))}
+                    </Box>
+                  )}
+
+                  {connections.length > 0 && (
+                    <Box sx={{ mt: 3, textAlign: 'center' }}>
+                      <Typography variant="caption" color="text.secondary">
+                        {connections.length} database connection{connections.length !== 1 ? 's' : ''} and {templates.length} template{templates.length !== 1 ? 's' : ''} available
+                      </Typography>
                     </Box>
                   )}
 

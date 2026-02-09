@@ -91,7 +91,8 @@ Sections? Variables? A preview? Explore and find out.`,
   successCriteria: [
     {
       description: 'A template was opened and explored',
-      check: { check: 'url_contains', expected: '/templates' },
+      // NeuraReport opens templates via /reports?template=... not /templates/{id}
+      check: { check: 'url_contains', expected: '/reports' },
     },
   ],
   category: 'template',
@@ -120,7 +121,8 @@ Only say done after you've clicked on at least 2 different tabs or sections.`,
   successCriteria: [
     {
       description: 'Template details were deeply explored',
-      check: { check: 'url_contains', expected: '/templates' },
+      // NeuraReport opens templates via /reports?template=... not /templates/{id}
+      check: { check: 'url_contains', expected: '/reports' },
     },
   ],
   category: 'template',

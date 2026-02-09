@@ -42,19 +42,14 @@ try:
 except ImportError:  # pragma: no cover
     ssim = None  # type: ignore
 
-try:
-    from openai import OpenAI
-except ImportError:  # pragma: no cover
-    OpenAI = None  # type: ignore
-
 from backend.app.services.config import get_settings
 
 logger = logging.getLogger("neura.template_verify")
 
 
 def _get_model() -> str:
-    """Use centralized config for model selection."""
-    return get_settings().openai_model
+    """Use centralized config for model selection (Claude Code CLI)."""
+    return get_settings().claude_code_model
 
 
 # Lazy evaluation - will be called when needed, not at import time
@@ -68,7 +63,8 @@ def _ensure_model() -> str:
     return MODEL
 
 
-_client: Optional["OpenAI"] = None
+# Unified LLM client (lazily initialized)
+_llm_client = None
 
 
 @dataclass
@@ -214,18 +210,17 @@ def _parse_schema_ext(raw: str) -> Optional[Dict[str, Any]]:
 
 def get_openai_client():
     """
-    Return a cached OpenAI client configured from the OPENAI_API_KEY environment variable.
+    Return a cached LLM client using Claude Code CLI.
+
+    This function is named get_openai_client for backward compatibility,
+    but uses Claude Code CLI as the backend.
     """
-    global _client
-    if _client is not None:
-        return _client
-    if OpenAI is None:  # pragma: no cover
-        raise RuntimeError("openai package is not available. Install openai>=1.0.0.")
-    api_key = os.getenv("OPENAI_API_KEY")
-    if not api_key:
-        raise RuntimeError("OPENAI_API_KEY environment variable is not set.")
-    _client = OpenAI(api_key=api_key)
-    return _client
+    global _llm_client
+    if _llm_client is not None:
+        return _llm_client
+    from backend.app.services.llm.client import get_llm_client
+    _llm_client = get_llm_client()
+    return _llm_client
 
 
 def pdf_to_pngs(pdf_path: Path, out_dir: Path, dpi=400):
@@ -452,7 +447,7 @@ def save_html(path: Path, html: str):
     )
 
 
-# OpenAI client initialised lazily via get_openai_client()
+# LLM client initialised lazily via get_openai_client() (uses Claude Code CLI)
 
 
 def request_initial_html(

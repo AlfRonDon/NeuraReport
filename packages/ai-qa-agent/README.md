@@ -170,6 +170,22 @@ const scenario: TestScenario = {
 }
 ```
 
+### Scenario with QA Profile Policy
+
+```typescript
+const scenario: TestScenario = {
+  id: 'admin-flow-001',
+  name: 'Admin flow sanity',
+  goal: 'Complete the admin flow and verify success signals',
+  startUrl: '/admin',
+  maxActions: 30,
+  qaProfile: 'general-purpose', // or 'neurareport'
+  successCriteria: [
+    { description: 'Success state is visible', check: { check: 'text_contains', expected: 'Success' } },
+  ],
+}
+```
+
 ### Scenario with Setup/Teardown
 
 ```typescript
@@ -277,6 +293,13 @@ Test your UX from different user perspectives:
 | `accessibility` | Keyboard-only navigation, expects ARIA labels |
 | `mobile` | Expects touch-friendly targets, swipe gestures |
 | `slow-network` | Expects loading states, progress indicators |
+
+## QA Profiles
+
+| Profile | Policy |
+|---------|--------|
+| `general-purpose` | Framework-agnostic strategy and accessibility-first selectors |
+| `neurareport` | NeuraReport-specific navigation and MUI workflow heuristics |
 
 ## Evidence & Debugging
 

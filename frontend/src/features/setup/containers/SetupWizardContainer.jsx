@@ -124,6 +124,11 @@ export default function SetupWizard() {
     handleNavigate('/reports', 'Open reports')
   }, [handleNavigate, toast])
 
+  const handleCancel = useCallback(() => {
+    clearWizardState()
+    handleNavigate('/', 'Exit wizard')
+  }, [handleNavigate])
+
   const getStepContent = () => {
     switch (currentStep) {
       case 0:
@@ -180,6 +185,7 @@ export default function SetupWizard() {
       onNext={handleNext}
       onPrev={handlePrev}
       onComplete={handleComplete}
+      onCancel={handleCancel}
       nextDisabled={isNextDisabled()}
       loading={loading}
     >

@@ -51,6 +51,9 @@ import {
   BugReport as DebugIcon,
 } from '@mui/icons-material'
 import useWorkflowStore from '@/stores/workflowStore'
+import useSharedData from '@/hooks/useSharedData'
+import ConnectionSelector from '@/components/common/ConnectionSelector'
+import TemplateSelector from '@/components/common/TemplateSelector'
 import { useToast } from '@/components/ToastProvider'
 import { useInteraction, InteractionType, Reversibility } from '@/components/ux/governance'
 import { figmaGrey } from '@/app/theme'
@@ -209,8 +212,12 @@ export default function WorkflowBuilderPage() {
     reset,
   } = useWorkflowStore()
 
+  const { connections, templates, activeConnectionId } = useSharedData()
+
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [newWorkflowName, setNewWorkflowName] = useState('')
+  const [selectedConnectionId, setSelectedConnectionId] = useState(activeConnectionId || '')
+  const [selectedTemplateId, setSelectedTemplateId] = useState('')
   const [workflowNodes, setWorkflowNodes] = useState([])
   const [selectedNode, setSelectedNode] = useState(null)
   const [showExecutions, setShowExecutions] = useState(false)
@@ -257,6 +264,8 @@ export default function WorkflowBuilderPage() {
       action: async () => {
         const workflow = await createWorkflow({
           name: newWorkflowName,
+          connectionId: selectedConnectionId || undefined,
+          templateId: selectedTemplateId || undefined,
           nodes: [],
           edges: [],
           triggers: [],
@@ -264,12 +273,14 @@ export default function WorkflowBuilderPage() {
         if (workflow) {
           setCreateDialogOpen(false)
           setNewWorkflowName('')
+          setSelectedConnectionId(activeConnectionId || '')
+          setSelectedTemplateId('')
           toast.show('Workflow created', 'success')
         }
         return workflow
       },
     })
-  }, [createWorkflow, execute, newWorkflowName, toast])
+  }, [activeConnectionId, createWorkflow, execute, newWorkflowName, selectedConnectionId, selectedTemplateId, toast])
 
   const handleAddNode = useCallback((nodeType) => {
     if (!currentWorkflow) return undefined
@@ -751,6 +762,20 @@ export default function WorkflowBuilderPage() {
             label="Workflow Name"
             value={newWorkflowName}
             onChange={(e) => setNewWorkflowName(e.target.value)}
+            sx={{ mt: 2 }}
+          />
+          <ConnectionSelector
+            value={selectedConnectionId}
+            onChange={setSelectedConnectionId}
+            label="Database Connection"
+            size="small"
+            sx={{ mt: 2 }}
+          />
+          <TemplateSelector
+            value={selectedTemplateId}
+            onChange={setSelectedTemplateId}
+            label="Report Template"
+            size="small"
             sx={{ mt: 2 }}
           />
         </DialogContent>

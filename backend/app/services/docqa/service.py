@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 from typing import Any, Callable, Dict, List, Optional
 
 from backend.app.services.llm.client import get_llm_client
+from backend.app.services.utils.llm import extract_json_from_llm_response
 from backend.app.repositories.state import store as state_store_module
 
 from backend.app.schemas.docqa import (
@@ -259,10 +260,9 @@ Return ONLY the JSON object."""
             )
 
             content = response["choices"][0]["message"]["content"]
-            json_match = re.search(r"\{[\s\S]*\}", content)
+            response_data = extract_json_from_llm_response(content, default=None)
 
-            if json_match:
-                response_data = json.loads(json_match.group())
+            if response_data is not None:
 
                 # Build citations
                 citations = []
@@ -479,12 +479,10 @@ Return ONLY the JSON object."""
             )
 
             content = response["choices"][0]["message"]["content"]
-            json_match = re.search(r"\{[\s\S]*\}", content)
+            response_data = extract_json_from_llm_response(content, default=None)
 
-            if not json_match:
+            if response_data is None:
                 raise ValueError("No JSON payload returned from LLM")
-
-            response_data = json.loads(json_match.group())
 
             citations = []
             for cit in response_data.get("citations", []):

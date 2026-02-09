@@ -42,6 +42,7 @@ import {
   Code as QueryIcon,
 } from '@mui/icons-material'
 import useConnectorStore from '@/stores/connectorStore'
+import { useAppStore } from '@/stores'
 import { useToast } from '@/components/ToastProvider'
 import { useInteraction, InteractionType, Reversibility } from '@/components/ux/governance'
 import { figmaGrey } from '@/app/theme'
@@ -147,6 +148,9 @@ export default function ConnectorsPage() {
   const theme = useTheme()
   const toast = useToast()
   const { execute } = useInteraction()
+  const addSavedConnection = useAppStore((s) => s.addSavedConnection)
+  const setSavedConnections = useAppStore((s) => s.setSavedConnections)
+  const removeSavedConnection = useAppStore((s) => s.removeSavedConnection)
   const {
     connectorTypes,
     connections,
@@ -179,9 +183,15 @@ export default function ConnectorsPage() {
 
   useEffect(() => {
     fetchConnectorTypes()
-    fetchConnections()
+    fetchConnections().then(() => {
+      // Sync to global app store so other pages see the connections
+      const connectorConnections = useConnectorStore.getState().connections
+      if (connectorConnections?.length > 0 && setSavedConnections) {
+        setSavedConnections(connectorConnections)
+      }
+    })
     return () => reset()
-  }, [fetchConnectorTypes, fetchConnections, reset])
+  }, [fetchConnectorTypes, fetchConnections, reset, setSavedConnections])
 
   const executeUI = useCallback((label, action, intent = {}) => {
     return execute({
@@ -241,6 +251,10 @@ export default function ConnectorsPage() {
           connectionConfig
         )
         if (connection) {
+          // Sync to global app store so other pages see the new connection
+          if (addSavedConnection) {
+            addSavedConnection(connection)
+          }
           setConnectDialogOpen(false)
           setSelectedConnector(null)
           toast.show('Connection created successfully', 'success')
@@ -248,7 +262,7 @@ export default function ConnectorsPage() {
         return connection
       },
     })
-  }, [connectionConfig, connectionName, createConnection, execute, selectedConnector, toast])
+  }, [addSavedConnection, connectionConfig, connectionName, createConnection, execute, selectedConnector, toast])
 
   const handleDeleteConnection = useCallback((connectionId) => {
     return execute({
@@ -259,12 +273,16 @@ export default function ConnectorsPage() {
       action: async () => {
         const success = await deleteConnection(connectionId)
         if (success) {
+          // Sync deletion to global app store so other pages reflect the change
+          if (removeSavedConnection) {
+            removeSavedConnection(connectionId)
+          }
           toast.show('Connection deleted', 'success')
         }
         return success
       },
     })
-  }, [deleteConnection, execute, toast])
+  }, [deleteConnection, execute, removeSavedConnection, toast])
 
   const handleCheckHealth = useCallback((connectionId) => {
     return execute({

@@ -71,8 +71,7 @@ async def run_research_agent(request: ResearchRequest):
         ResearchReport with findings
     """
     try:
-        task = await agent_service.run_agent(
-            agent_type=AgentType.RESEARCH,
+        task = await agent_service.run_research(
             topic=request.topic,
             depth=request.depth,
             focus_areas=request.focus_areas,
@@ -93,8 +92,7 @@ async def run_data_analyst_agent(request: DataAnalysisRequest):
         DataAnalysisResult with insights
     """
     try:
-        task = await agent_service.run_agent(
-            agent_type=AgentType.DATA_ANALYST,
+        task = await agent_service.run_data_analyst(
             question=request.question,
             data=request.data,
             data_description=request.data_description,
@@ -115,8 +113,7 @@ async def run_email_draft_agent(request: EmailDraftRequest):
         EmailDraft with composed email
     """
     try:
-        task = await agent_service.run_agent(
-            agent_type=AgentType.EMAIL_DRAFT,
+        task = await agent_service.run_email_draft(
             context=request.context,
             purpose=request.purpose,
             tone=request.tone,
@@ -138,8 +135,7 @@ async def run_content_repurposing_agent(request: ContentRepurposeRequest):
         RepurposedContent with all versions
     """
     try:
-        task = await agent_service.run_agent(
-            agent_type=AgentType.CONTENT_REPURPOSE,
+        task = await agent_service.run_content_repurpose(
             content=request.content,
             source_format=request.source_format,
             target_formats=request.target_formats,
@@ -161,8 +157,7 @@ async def run_proofreading_agent(request: ProofreadingRequest):
         ProofreadingResult with corrections
     """
     try:
-        task = await agent_service.run_agent(
-            agent_type=AgentType.PROOFREADING,
+        task = await agent_service.run_proofreading(
             text=request.text,
             style_guide=request.style_guide,
             focus_areas=request.focus_areas,
@@ -190,14 +185,7 @@ async def get_task(task_id: str):
 @router.get("/tasks")
 async def list_tasks(agent_type: Optional[str] = None):
     """List all tasks, optionally filtered by agent type."""
-    type_filter = None
-    if agent_type:
-        try:
-            type_filter = AgentType(agent_type)
-        except ValueError:
-            pass
-
-    tasks = await agent_service.list_tasks(type_filter)
+    tasks = agent_service.list_tasks(agent_type=agent_type)
     return [t.model_dump() for t in tasks]
 
 

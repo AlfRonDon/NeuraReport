@@ -51,6 +51,7 @@ import {
   ContentCopy as CopyIcon,
 } from '@mui/icons-material'
 import useDesignStore from '@/stores/designStore'
+import useSharedData from '@/hooks/useSharedData'
 import { useToast } from '@/components/ToastProvider'
 import { useInteraction, InteractionType, Reversibility } from '@/components/ux/governance'
 
@@ -136,6 +137,7 @@ export default function DesignPageContainer() {
   const theme = useTheme()
   const toast = useToast()
   const { execute } = useInteraction()
+  const { templates } = useSharedData()
   const {
     brandKits,
     themes,
@@ -307,9 +309,17 @@ export default function DesignPageContainer() {
               <Typography variant="h6" sx={{ fontWeight: 600 }}>
                 Design System
               </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Manage brand kits, themes, and color palettes
-              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <Typography variant="body2" color="text.secondary">
+                  Manage brand kits, themes, and color palettes
+                </Typography>
+                <Chip
+                  label={`${templates.length} templates`}
+                  size="small"
+                  variant="outlined"
+                  sx={{ ml: 1 }}
+                />
+              </Box>
             </Box>
           </Box>
           <ActionButton

@@ -36,10 +36,15 @@ import {
   Schedule as ScheduleIcon,
 } from '@mui/icons-material';
 import useSummaryStore from '@/stores/summaryStore';
+import useSharedData from '@/hooks/useSharedData';
+import useCrossPageActions from '@/hooks/useCrossPageActions';
+import SendToMenu from '@/components/common/SendToMenu';
+import { OutputType, FeatureKey } from '@/constants/crossPageTypes';
 import { useToast } from '@/components/ToastProvider.jsx';
 import { useInteraction, InteractionType, Reversibility, useNavigateInteraction } from '@/components/ux/governance';
 import ConfirmModal from '@/components/Modal/ConfirmModal';
 import AiUsageNotice from '@/components/ai/AiUsageNotice';
+import ConnectionSelector from '@/components/common/ConnectionSelector';
 import { figmaGrey } from '@/app/theme';
 
 const TONE_OPTIONS = [
@@ -72,7 +77,11 @@ export default function SummaryPage() {
     reset,
   } = useSummaryStore();
 
+  const { connections, activeConnectionId } = useSharedData();
+  const { registerOutput } = useCrossPageActions(FeatureKey.SUMMARY);
+
   const [content, setContent] = useState('');
+  const [selectedConnectionId, setSelectedConnectionId] = useState('');
   const [tone, setTone] = useState('formal');
   const [maxSentences, setMaxSentences] = useState(5);
   const [focusAreas, setFocusAreas] = useState([]);
@@ -140,6 +149,13 @@ export default function SummaryPage() {
         if (!result) {
           throw new Error('Summary generation failed');
         }
+        registerOutput({
+          type: OutputType.TEXT,
+          title: `Executive Summary (${tone})`,
+          summary: (typeof result === 'string' ? result : '').substring(0, 200),
+          data: typeof result === 'string' ? result : JSON.stringify(result),
+          format: 'text',
+        });
         return result;
       },
     });
@@ -407,6 +423,14 @@ export default function SummaryPage() {
             <Typography variant="h6" gutterBottom>
               Content to Summarize
             </Typography>
+            <ConnectionSelector
+              value={selectedConnectionId}
+              onChange={setSelectedConnectionId}
+              label="Pull from Connection (Optional)"
+              size="small"
+              showStatus
+              sx={{ mb: 2 }}
+            />
             <TextField
               fullWidth
               multiline
@@ -541,7 +565,15 @@ export default function SummaryPage() {
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
               <Typography variant="h6">Generated Summary</Typography>
               {summary && (
-                <Box sx={{ display: 'flex', gap: 1 }}>
+                <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                  <SendToMenu
+                    outputType={OutputType.TEXT}
+                    payload={{
+                      title: `Executive Summary (${tone})`,
+                      content: summary,
+                    }}
+                    sourceFeature={FeatureKey.SUMMARY}
+                  />
                   <Tooltip title={copied ? 'Copied!' : 'Copy to clipboard'}>
                     <IconButton size="small" onClick={handleCopy} aria-label="Copy to clipboard">
                       <CopyIcon fontSize="small" />

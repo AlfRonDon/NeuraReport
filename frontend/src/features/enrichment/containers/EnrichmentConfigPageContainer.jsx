@@ -47,9 +47,16 @@ import {
   Refresh as RefreshIcon,
 } from '@mui/icons-material';
 import useEnrichmentStore from '@/stores/enrichmentStore';
+import useSharedData from '@/hooks/useSharedData';
+import ConnectionSelector from '@/components/common/ConnectionSelector';
 import ConfirmModal from '@/components/Modal/ConfirmModal';
 import AiUsageNotice from '@/components/ai/AiUsageNotice';
 import { useInteraction, InteractionType, Reversibility } from '@/components/ux/governance';
+import useCrossPageActions from '@/hooks/useCrossPageActions';
+import useIncomingTransfer from '@/hooks/useIncomingTransfer';
+import SendToMenu from '@/components/common/SendToMenu';
+import ImportFromMenu from '@/components/common/ImportFromMenu';
+import { OutputType, TransferAction, FeatureKey } from '@/constants/crossPageTypes';
 import { figmaGrey } from '@/app/theme';
 
 // Fallback sources in case API is unavailable
@@ -84,6 +91,21 @@ export default function EnrichmentConfigPage() {
     reset,
   } = useEnrichmentStore();
   const { execute } = useInteraction();
+  const { registerOutput } = useCrossPageActions(FeatureKey.ENRICHMENT);
+
+  // Cross-page: accept table/dataset for enrichment from Query, Spreadsheets, etc.
+  useIncomingTransfer(FeatureKey.ENRICHMENT, {
+    [TransferAction.ENRICH]: async (payload) => {
+      const rows = payload.data?.rows || payload.data;
+      if (Array.isArray(rows)) {
+        setParsedData(rows);
+        setInputData(JSON.stringify(rows, null, 2));
+      }
+    },
+  });
+
+  const { connections, activeConnectionId } = useSharedData();
+  const [selectedConnectionId, setSelectedConnectionId] = useState(activeConnectionId || '');
 
   const [searchParams, setSearchParams] = useSearchParams();
   const tabParam = searchParams.get('tab');
@@ -186,6 +208,16 @@ export default function EnrichmentConfigPage() {
         if (!result) {
           throw new Error('Enrichment failed');
         }
+        // Register enriched data for cross-page use
+        const rows = result.enriched_data || [];
+        const columns = rows.length > 0 ? Object.keys(rows[0]).map((k) => ({ name: k })) : [];
+        registerOutput({
+          type: OutputType.TABLE,
+          title: `Enriched Data (${rows.length} rows)`,
+          summary: `Enriched with ${selectedSources.length} source(s)`,
+          data: { columns, rows },
+          format: 'table',
+        });
         return result;
       },
     });
@@ -381,9 +413,35 @@ export default function EnrichmentConfigPage() {
           {/* Input Section */}
           <Grid size={{ xs: 12, md: 6 }}>
             <Paper sx={{ p: 3, height: '100%' }}>
-              <Typography variant="h6" gutterBottom>
-                Input Data
-              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                <Typography variant="h6">
+                  Input Data
+                </Typography>
+                <ImportFromMenu
+                  currentFeature={FeatureKey.ENRICHMENT}
+                  onImport={(output) => {
+                    const rows = output.data?.rows || output.data;
+                    if (Array.isArray(rows)) {
+                      setParsedData(rows);
+                      setInputData(JSON.stringify(rows, null, 2));
+                    }
+                  }}
+                  size="small"
+                />
+              </Box>
+              <ConnectionSelector
+                value={selectedConnectionId}
+                onChange={setSelectedConnectionId}
+                label="Data Source (Optional)"
+                size="small"
+                showStatus
+                sx={{ mb: 2 }}
+              />
+              {selectedConnectionId && (
+                <Alert severity="info" sx={{ mb: 2 }}>
+                  Data will be pulled from the selected database connection
+                </Alert>
+              )}
               <TextField
                 fullWidth
                 multiline
@@ -490,9 +548,25 @@ export default function EnrichmentConfigPage() {
           {(previewResult || enrichmentResult) && (
             <Grid size={12}>
               <Paper sx={{ p: 3 }}>
-                <Typography variant="h6" gutterBottom>
-                  {enrichmentResult ? 'Enrichment Results' : 'Preview Results'}
-                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                  <Typography variant="h6">
+                    {enrichmentResult ? 'Enrichment Results' : 'Preview Results'}
+                  </Typography>
+                  {enrichmentResult && (
+                    <SendToMenu
+                      outputType={OutputType.TABLE}
+                      payload={{
+                        title: `Enriched Data (${enrichmentResult.enriched_data?.length || 0} rows)`,
+                        content: JSON.stringify(enrichmentResult.enriched_data),
+                        data: {
+                          columns: Object.keys(enrichmentResult.enriched_data?.[0] || {}).map((k) => ({ name: k })),
+                          rows: enrichmentResult.enriched_data || [],
+                        },
+                      }}
+                      sourceFeature={FeatureKey.ENRICHMENT}
+                    />
+                  )}
+                </Box>
                 <TableContainer sx={{ maxHeight: 400 }}>
                   <Table stickyHeader size="small">
                     <TableHead>

@@ -838,19 +838,40 @@ export default function JobsPage() {
     {
       field: 'type',
       headerName: 'Type',
-      width: 120,
-      renderCell: (value) => (
-        <TypeChip
-          label={value || 'report'}
-          size="small"
-        />
-      ),
+      width: 140,
+      renderCell: (value) => {
+        const typeLabels = {
+          run_report: 'Report Run',
+          verify_template: 'Verify Design',
+          verify_excel: 'Verify Excel',
+          recommend_templates: 'Recommendations',
+          summary_generate: 'Summary',
+          summary_report: 'Report Summary',
+          chart_analyze: 'Chart Analyze',
+          chart_generate: 'Chart Generate',
+        }
+        const label = typeLabels[value] || (value || 'report').replace(/_/g, ' ')
+        return (
+          <TypeChip
+            label={label}
+            size="small"
+          />
+        )
+      },
     },
     {
       field: 'templateName',
       headerName: 'Design',
+      width: 220,
       renderCell: (value, row) => (
-        <Typography sx={{ fontSize: '0.8125rem', color: 'text.secondary' }}>
+        <Typography sx={{
+          fontSize: '0.8125rem',
+          color: 'text.secondary',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+          maxWidth: 200,
+        }}>
           {value || row.templateId?.slice(0, 12) || '-'}
         </Typography>
       ),
@@ -911,22 +932,56 @@ export default function JobsPage() {
     {
       field: 'createdAt',
       headerName: 'Started',
-      width: 180,
-      renderCell: (value) => (
-        <Typography sx={{ fontSize: '0.8125rem', color: 'text.secondary' }}>
-          {value ? new Date(value).toLocaleString() : '-'}
-        </Typography>
-      ),
+      width: 160,
+      renderCell: (value) => {
+        if (!value) return <Typography sx={{ fontSize: '0.8125rem', color: 'text.disabled' }}>-</Typography>
+        const d = new Date(value)
+        const now = new Date()
+        const diffMs = now - d
+        const diffMin = Math.floor(diffMs / 60000)
+        const diffHr = Math.floor(diffMs / 3600000)
+        const diffDay = Math.floor(diffMs / 86400000)
+        let relative
+        if (diffMin < 1) relative = 'Just now'
+        else if (diffMin < 60) relative = `${diffMin}m ago`
+        else if (diffHr < 24) relative = `${diffHr}h ago`
+        else if (diffDay < 7) relative = `${diffDay}d ago`
+        else relative = d.toLocaleDateString()
+        return (
+          <Tooltip title={d.toLocaleString()} arrow>
+            <Typography sx={{ fontSize: '0.8125rem', color: 'text.secondary', cursor: 'default' }}>
+              {relative}
+            </Typography>
+          </Tooltip>
+        )
+      },
     },
     {
       field: 'finishedAt',
       headerName: 'Completed',
-      width: 180,
-      renderCell: (value) => (
-        <Typography sx={{ fontSize: '0.8125rem', color: 'text.secondary' }}>
-          {value ? new Date(value).toLocaleString() : '-'}
-        </Typography>
-      ),
+      width: 160,
+      renderCell: (value) => {
+        if (!value) return <Typography sx={{ fontSize: '0.8125rem', color: 'text.disabled' }}>-</Typography>
+        const d = new Date(value)
+        const now = new Date()
+        const diffMs = now - d
+        const diffMin = Math.floor(diffMs / 60000)
+        const diffHr = Math.floor(diffMs / 3600000)
+        const diffDay = Math.floor(diffMs / 86400000)
+        let relative
+        if (diffMin < 1) relative = 'Just now'
+        else if (diffMin < 60) relative = `${diffMin}m ago`
+        else if (diffHr < 24) relative = `${diffHr}h ago`
+        else if (diffDay < 7) relative = `${diffDay}d ago`
+        else relative = d.toLocaleDateString()
+        return (
+          <Tooltip title={d.toLocaleString()} arrow>
+            <Typography sx={{ fontSize: '0.8125rem', color: 'text.secondary', cursor: 'default' }}>
+              {relative}
+            </Typography>
+          </Tooltip>
+        )
+      },
     },
   ], [theme])
 

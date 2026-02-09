@@ -96,7 +96,7 @@ class TestAPICallErrors:
             mock_client.chat.completions.create.side_effect = Exception("Rate limit exceeded")
 
             with pytest.raises(Exception, match="Rate limit"):
-                research_agent._call_openai("system", "user")
+                research_agent._call_llm("system", "user")
 
     def test_timeout_error(self, research_agent):
         """Handle timeout error."""
@@ -106,7 +106,7 @@ class TestAPICallErrors:
             mock_client.chat.completions.create.side_effect = TimeoutError("Request timed out")
 
             with pytest.raises(TimeoutError):
-                research_agent._call_openai("system", "user")
+                research_agent._call_llm("system", "user")
 
     def test_server_error(self, research_agent):
         """Handle server error (500)."""
@@ -116,7 +116,7 @@ class TestAPICallErrors:
             mock_client.chat.completions.create.side_effect = Exception("Internal server error")
 
             with pytest.raises(Exception, match="server error"):
-                research_agent._call_openai("system", "user")
+                research_agent._call_llm("system", "user")
 
     def test_connection_reset(self, research_agent):
         """Handle connection reset."""
@@ -126,7 +126,7 @@ class TestAPICallErrors:
             mock_client.chat.completions.create.side_effect = ConnectionResetError()
 
             with pytest.raises(ConnectionResetError):
-                research_agent._call_openai("system", "user")
+                research_agent._call_llm("system", "user")
 
 
 # =============================================================================
@@ -140,7 +140,7 @@ class TestJSONParsingErrors:
     @pytest.mark.asyncio
     async def test_research_invalid_json(self, research_agent):
         """Research handles invalid JSON."""
-        with patch.object(research_agent, '_call_openai') as mock_call:
+        with patch.object(research_agent, '_call_llm') as mock_call:
             mock_call.return_value = "This is not JSON {invalid"
 
             result = await research_agent.execute(topic="Test")
@@ -150,7 +150,7 @@ class TestJSONParsingErrors:
     @pytest.mark.asyncio
     async def test_research_null_json(self, research_agent):
         """Research handles null JSON."""
-        with patch.object(research_agent, '_call_openai') as mock_call:
+        with patch.object(research_agent, '_call_llm') as mock_call:
             mock_call.return_value = "null"
 
             result = await research_agent.execute(topic="Test")
@@ -161,7 +161,7 @@ class TestJSONParsingErrors:
     @pytest.mark.asyncio
     async def test_research_empty_json(self, research_agent):
         """Research handles empty JSON object."""
-        with patch.object(research_agent, '_call_openai') as mock_call:
+        with patch.object(research_agent, '_call_llm') as mock_call:
             mock_call.return_value = "{}"
 
             result = await research_agent.execute(topic="Test")
@@ -172,7 +172,7 @@ class TestJSONParsingErrors:
     @pytest.mark.asyncio
     async def test_data_analyst_malformed_response(self, data_analyst_agent):
         """Data analyst handles malformed response."""
-        with patch.object(data_analyst_agent, '_call_openai') as mock_call:
+        with patch.object(data_analyst_agent, '_call_llm') as mock_call:
             mock_call.return_value = json.dumps({
                 "answer": "The answer",
                 # Missing other expected fields
@@ -199,7 +199,7 @@ class TestInputEdgeCases:
     @pytest.mark.asyncio
     async def test_very_long_topic(self, research_agent):
         """Handle very long topic string."""
-        with patch.object(research_agent, '_call_openai') as mock_call:
+        with patch.object(research_agent, '_call_llm') as mock_call:
             mock_call.return_value = json.dumps({
                 "summary": "Summary",
                 "sections": [],
@@ -217,7 +217,7 @@ class TestInputEdgeCases:
     @pytest.mark.asyncio
     async def test_special_characters_in_input(self, research_agent):
         """Handle special characters in input."""
-        with patch.object(research_agent, '_call_openai') as mock_call:
+        with patch.object(research_agent, '_call_llm') as mock_call:
             mock_call.return_value = json.dumps({
                 "summary": "Summary",
                 "sections": [],
@@ -235,7 +235,7 @@ class TestInputEdgeCases:
     @pytest.mark.asyncio
     async def test_unicode_in_input(self, research_agent):
         """Handle unicode in input."""
-        with patch.object(research_agent, '_call_openai') as mock_call:
+        with patch.object(research_agent, '_call_llm') as mock_call:
             mock_call.return_value = json.dumps({
                 "summary": "研究摘要",
                 "sections": [],
@@ -253,7 +253,7 @@ class TestInputEdgeCases:
     @pytest.mark.asyncio
     async def test_empty_data_list(self, data_analyst_agent):
         """Handle empty data list."""
-        with patch.object(data_analyst_agent, '_call_openai') as mock_call:
+        with patch.object(data_analyst_agent, '_call_llm') as mock_call:
             mock_call.return_value = json.dumps({
                 "answer": "No data",
                 "data_summary": {},
@@ -273,7 +273,7 @@ class TestInputEdgeCases:
     @pytest.mark.asyncio
     async def test_data_with_null_values(self, data_analyst_agent):
         """Handle data with null/None values."""
-        with patch.object(data_analyst_agent, '_call_openai') as mock_call:
+        with patch.object(data_analyst_agent, '_call_llm') as mock_call:
             mock_call.return_value = json.dumps({
                 "answer": "Handled nulls",
                 "data_summary": {},
@@ -310,7 +310,7 @@ class TestConcurrentExecution:
         """Multiple agents can run concurrently."""
         import asyncio
 
-        with patch.object(agent_service._agents[AgentType.RESEARCH], '_call_openai') as mock_research:
+        with patch.object(agent_service._agents[AgentType.RESEARCH], '_call_llm') as mock_research:
             mock_research.return_value = json.dumps({
                 "summary": "Research result",
                 "sections": [],
@@ -319,7 +319,7 @@ class TestConcurrentExecution:
                 "sources": [],
             })
 
-            with patch.object(agent_service._agents[AgentType.PROOFREADING], '_call_openai') as mock_proofread:
+            with patch.object(agent_service._agents[AgentType.PROOFREADING], '_call_llm') as mock_proofread:
                 mock_proofread.return_value = json.dumps({
                     "corrected_text": "Corrected",
                     "issues_found": [],
@@ -342,7 +342,7 @@ class TestConcurrentExecution:
         """Same agent type can handle concurrent requests."""
         import asyncio
 
-        with patch.object(agent_service._agents[AgentType.RESEARCH], '_call_openai') as mock_call:
+        with patch.object(agent_service._agents[AgentType.RESEARCH], '_call_llm') as mock_call:
             call_count = 0
 
             async def delayed_response(*args, **kwargs):
@@ -447,7 +447,7 @@ class TestRepurposingEdgeCases:
         """Handle empty content."""
         agent = ContentRepurposingAgent()
 
-        with patch.object(agent, '_call_openai') as mock_call:
+        with patch.object(agent, '_call_llm') as mock_call:
             mock_call.return_value = "Repurposed empty content"
 
             result = await agent.execute(
@@ -463,7 +463,7 @@ class TestRepurposingEdgeCases:
         """Handle unknown target format."""
         agent = ContentRepurposingAgent()
 
-        with patch.object(agent, '_call_openai') as mock_call:
+        with patch.object(agent, '_call_llm') as mock_call:
             mock_call.return_value = "Repurposed to custom format"
 
             result = await agent.execute(
@@ -481,7 +481,7 @@ class TestRepurposingEdgeCases:
         """Handle all format conversions failing."""
         agent = ContentRepurposingAgent()
 
-        with patch.object(agent, '_call_openai') as mock_call:
+        with patch.object(agent, '_call_llm') as mock_call:
             mock_call.side_effect = Exception("All conversions failed")
 
             result = await agent.execute(
@@ -508,7 +508,7 @@ class TestEmailDraftEdgeCases:
         """Handle many previous emails (should limit)."""
         agent = EmailDraftAgent()
 
-        with patch.object(agent, '_call_openai') as mock_call:
+        with patch.object(agent, '_call_llm') as mock_call:
             mock_call.return_value = json.dumps({
                 "subject": "Re: Thread",
                 "body": "Response",
@@ -548,7 +548,7 @@ class TestProofreadingEdgeCases:
         """Handle very long text."""
         agent = ProofreadingAgent()
 
-        with patch.object(agent, '_call_openai') as mock_call:
+        with patch.object(agent, '_call_llm') as mock_call:
             mock_call.return_value = json.dumps({
                 "corrected_text": "Long corrected text...",
                 "issues_found": [],
@@ -568,7 +568,7 @@ class TestProofreadingEdgeCases:
         """Handle whitespace-only text."""
         agent = ProofreadingAgent()
 
-        with patch.object(agent, '_call_openai') as mock_call:
+        with patch.object(agent, '_call_llm') as mock_call:
             mock_call.return_value = json.dumps({
                 "corrected_text": "",
                 "issues_found": [],
@@ -602,7 +602,7 @@ class TestModelParameters:
 
             with patch.object(research_agent, '_get_model', return_value='gpt-5'):
                 research_agent._client = None
-                research_agent._call_openai("system", "user")
+                research_agent._call_llm("system", "user")
 
             call_kwargs = mock_client.chat.completions.create.call_args[1]
             assert "max_completion_tokens" in call_kwargs
@@ -619,7 +619,7 @@ class TestModelParameters:
 
             with patch.object(research_agent, '_get_model', return_value='gpt-4'):
                 research_agent._client = None
-                research_agent._call_openai("system", "user")
+                research_agent._call_llm("system", "user")
 
             call_kwargs = mock_client.chat.completions.create.call_args[1]
             assert "max_tokens" in call_kwargs
@@ -652,7 +652,7 @@ class TestRecoveryScenarios:
                 "sources": [],
             })
 
-        with patch.object(agent_service._agents[AgentType.RESEARCH], '_call_openai', side_effect=mock_response):
+        with patch.object(agent_service._agents[AgentType.RESEARCH], '_call_llm', side_effect=mock_response):
             # First call fails - but agent catches it gracefully
             task1 = await agent_service.run_agent(AgentType.RESEARCH, topic="Topic 1")
             # Agent catches internal errors and returns COMPLETED with error info
@@ -678,7 +678,7 @@ class TestRecoveryScenarios:
                 raise Exception("This format failed")
             return "Successful conversion"
 
-        with patch.object(agent, '_call_openai', side_effect=mock_response):
+        with patch.object(agent, '_call_llm', side_effect=mock_response):
             result = await agent.execute(
                 content="Test",
                 source_format="article",

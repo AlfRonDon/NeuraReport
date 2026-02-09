@@ -144,6 +144,151 @@ export class BrowserAgent {
     })
   }
 
+  // ─── FAILURE MODE MITIGATIONS ─────────────────────────────────────
+
+  /**
+   * MITIGATION: Wait for page stability before observing
+   * Prevents reading stale DOM when spinners/loaders shift the layout
+   */
+  async waitForStable(timeout?: number): Promise<PageStability> {
+    const maxWait = timeout || this.config.stabilityTimeout || 5000
+    const startTime = Date.now()
+    let lastCheck: PageStability = {
+      isStable: false,
+      pendingRequests: this.pendingRequests,
+      hasAnimations: false,
+      loadingIndicators: 0,
+    }
+
+    while (Date.now() - startTime < maxWait) {
+      // Check for loading indicators (MUI spinners, skeletons, progress bars)
+      const loadingIndicators = await this.page.evaluate(() => {
+        const spinners = document.querySelectorAll('.MuiCircularProgress-root, .MuiLinearProgress-root, .MuiSkeleton-root, [role="progressbar"]')
+        return spinners.length
+      }).catch(() => 0)
+
+      // Check for CSS animations
+      const hasAnimations = await this.page.evaluate(() => {
+        const animated = document.querySelectorAll(':not(:defined), .MuiCollapse-root.MuiCollapse-entered, .MuiFade-root')
+        return animated.length > 0
+      }).catch(() => false)
+
+      lastCheck = {
+        isStable: this.pendingRequests === 0 && loadingIndicators === 0 && !hasAnimations,
+        pendingRequests: this.pendingRequests,
+        hasAnimations,
+        loadingIndicators,
+      }
+
+      if (lastCheck.isStable) {
+        return lastCheck
+      }
+
+      await this.page.waitForTimeout(100)
+    }
+
+    // Timed out waiting for stability — return current state
+    return lastCheck
+  }
+
+  /**
+   * MITIGATION: Verify that an action had its expected effect
+   * Prevents false passes where button clicks silently do nothing
+   */
+  async verifyAction(action: AgentAction, beforeState: PageObservation): Promise<ActionVerification> {
+    // Wait a moment for the action to take effect
+    await this.page.waitForTimeout(300)
+
+    const afterUrl = this.page.url()
+    const afterHeading = await this.getHeading()
+    const afterElements = await this.getInteractiveElements()
+    const recentApiCalls = [...this.apiCalls]
+
+    // Check if URL changed
+    const urlChanged = afterUrl !== beforeState.url
+
+    // Check if heading changed
+    const headingChanged = afterHeading !== beforeState.heading
+
+    // Check if element count changed significantly (± 3)
+    const elementCountChanged = Math.abs(afterElements.length - beforeState.interactiveElements.length) >= 3
+
+    // Check if there was any network activity
+    const networkActivity = recentApiCalls.length > 0
+
+    // Check for expected signal if specified
+    let signalFound = !action.expectedSignal // if no signal expected, consider it found
+    if (action.expectedSignal) {
+      const toasts = await this.getToasts()
+      const pageText = await this.page.textContent('body').catch(() => '') || ''
+      signalFound = toasts.some(t => t.toLowerCase().includes(action.expectedSignal!.toLowerCase()))
+        || pageText.toLowerCase().includes(action.expectedSignal.toLowerCase())
+    }
+
+    const uiChanged = urlChanged || headingChanged || elementCountChanged
+    const verified = uiChanged || networkActivity || signalFound
+
+    return {
+      verified,
+      expectedSignal: action.expectedSignal,
+      actualSignal: signalFound ? action.expectedSignal : undefined,
+      uiChanged,
+      networkActivity,
+    }
+  }
+
+  /**
+   * MITIGATION: Detect repeated identical actions (stuck loop)
+   * Prevents infinite loops where agent clicks same button repeatedly
+   */
+  detectActionReplay(action: AgentAction): { isReplay: boolean; sameActionCount: number } {
+    const targetKey = action.target
+      ? `${action.target.role || ''}:${action.target.name || action.target.label || action.target.text || ''}`
+      : 'no-target'
+    const actionKey = `${action.type}:${targetKey}`
+    const now = Date.now()
+
+    // Add to history
+    this.actionHistory.push({ type: action.type, targetKey: actionKey, timestamp: now })
+
+    // Keep only last 20 actions
+    if (this.actionHistory.length > 20) {
+      this.actionHistory = this.actionHistory.slice(-20)
+    }
+
+    // Count how many times this exact action was taken recently (last 60s)
+    const recentCutoff = now - 60_000
+    const sameActionCount = this.actionHistory.filter(
+      a => a.targetKey === actionKey && a.timestamp > recentCutoff
+    ).length
+
+    const maxRepeated = this.config.maxRepeatedActions || 3
+    return {
+      isReplay: sameActionCount > maxRepeated,
+      sameActionCount,
+    }
+  }
+
+  /**
+   * MITIGATION: Check if the page actually changed after an action
+   * Helps detect silent failures where action appeared to succeed but did nothing
+   */
+  async didPageChange(): Promise<boolean> {
+    if (!this.lastObservation) return true // first observation, assume changed
+
+    const currentUrl = this.page.url()
+    const currentHeading = await this.getHeading()
+    const currentElements = await this.getInteractiveElements()
+
+    const urlChanged = currentUrl !== this.lastObservation.url
+    const headingChanged = currentHeading !== this.lastObservation.heading
+    const elementCountChanged = Math.abs(currentElements.length - this.lastObservation.elementCount) >= 2
+
+    return urlChanged || headingChanged || elementCountChanged
+  }
+
+  // ─── Screenshots ─────────────────────────────────────────────────────
+
   /** Take a screenshot and save it as evidence */
   async takeScreenshot(label?: string): Promise<string> {
     this.screenshotCount++
@@ -175,6 +320,11 @@ export class BrowserAgent {
 
   /** Observe the current page state — this is what the LLM "sees" */
   async observe(): Promise<PageObservation> {
+    // MITIGATION: Wait for page to stabilize before observing
+    if (this.config.waitForStable) {
+      await this.waitForStable()
+    }
+
     const url = this.page.url()
     const title = await this.page.title()
 
@@ -216,6 +366,13 @@ export class BrowserAgent {
           }
         } catch { /* not JSON */ }
       }
+    }
+
+    // Track last observation for change detection
+    this.lastObservation = {
+      url,
+      heading,
+      elementCount: interactiveElements.length,
     }
 
     return {

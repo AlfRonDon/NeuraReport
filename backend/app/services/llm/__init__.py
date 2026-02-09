@@ -1,18 +1,12 @@
 # mypy: ignore-errors
 """
-Multi-provider LLM abstraction layer.
+LLM abstraction layer using Claude Code CLI.
 
-Supports:
-- OpenAI (GPT-5)
-- Ollama (local models: Llama, Mistral, DeepSeek, Qwen, etc.)
-- DeepSeek API
-- Anthropic Claude
-- Azure OpenAI
-- Google Gemini
-- Local/Custom OpenAI-compatible endpoints
+NeuraReport uses Claude Code CLI as the exclusive LLM backend.
+The CLI handles authentication via its own session - no API keys needed.
 
 Features:
-- Multi-provider LLM client with automatic fallback
+- Claude Code CLI integration for all LLM operations
 - Vision-Language Model integration for document understanding
 - CrewAI-style multi-agent orchestration
 - Text-to-SQL generation with SQLCoder patterns
@@ -57,13 +51,8 @@ from .client import (
 from .config import LLMConfig, LLMProvider, get_llm_config
 from .providers import (
     BaseProvider,
-    LiteLLMProvider,
-    OpenAIProvider,
-    OllamaProvider,
-    DeepSeekProvider,
-    AnthropicProvider,
-    AzureOpenAIProvider,
-    GoogleGeminiProvider,
+    ClaudeCodeCLIProvider,
+    LiteLLMProvider,  # Alias for ClaudeCodeCLIProvider for backwards compat
     get_provider,
 )
 from .vision import (
@@ -129,13 +118,8 @@ __all__ = [
     "get_llm_config",
     # Providers
     "BaseProvider",
-    "LiteLLMProvider",
-    "OpenAIProvider",
-    "OllamaProvider",
-    "DeepSeekProvider",
-    "AnthropicProvider",
-    "AzureOpenAIProvider",
-    "GoogleGeminiProvider",
+    "ClaudeCodeCLIProvider",
+    "LiteLLMProvider",  # Alias for backwards compat
     "get_provider",
     # Vision-Language Models
     "VisionLanguageModel",

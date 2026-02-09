@@ -25,8 +25,9 @@ decides what to click/type, and verifies results autonomously.
 ## Quick Start
 
 ```bash
-# Set your Anthropic API key
-export ANTHROPIC_API_KEY=sk-ant-...
+# Ensure Claude Code CLI is installed and authenticated
+# npm install -g @anthropic-ai/claude-code
+# claude auth login
 
 # Ensure frontend + backend are running
 # Frontend: cd frontend && npx vite preview --port 5174
@@ -65,11 +66,16 @@ npx playwright test ai-agent-test.spec.ts --grep "full-suite"
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `ANTHROPIC_API_KEY` | (required) | Claude API key |
-| `AI_TEST_MODEL` | `claude-sonnet-4-5-20250929` | Claude model to use |
+| `AI_TEST_MODEL` | `sonnet` | Claude model alias or full model ID |
 | `BASE_URL` | `http://127.0.0.1:5174` | Frontend URL |
 | `BACKEND_URL` | `http://127.0.0.1:8001` | Backend API URL |
 | `AI_TEST_SCENARIOS` | (all) | Comma-separated scenario IDs |
+
+## Agent Profiles
+
+- `frontend/tests/e2e/ai-agent/` defaults to `qaProfile: "neurareport"` and applies NeuraReport-specific policy hints.
+- `packages/ai-qa-agent/` defaults to `qaProfile: "general-purpose"` and stays framework-agnostic.
+- Any scenario can override profile via `qaProfile: "neurareport" | "general-purpose"`.
 
 ## Evidence Output
 

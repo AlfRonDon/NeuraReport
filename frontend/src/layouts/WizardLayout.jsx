@@ -12,9 +12,11 @@ export default function WizardLayout({
   onNext,
   onPrev,
   onComplete,
+  onCancel,
   nextLabel = 'Next',
   prevLabel = 'Back',
   completeLabel = 'Complete',
+  cancelLabel = 'Exit',
   nextDisabled = false,
   loading = false,
   children,
@@ -158,14 +160,26 @@ export default function WizardLayout({
       >
         <Container maxWidth="md">
           <Stack direction="row" justifyContent="space-between">
-            <Button
-              variant="outlined"
-              startIcon={<ArrowBackIcon />}
-              onClick={onPrev}
-              disabled={isFirstStep || loading}
-            >
-              {prevLabel}
-            </Button>
+            <Stack direction="row" spacing={1}>
+              {onCancel && (
+                <Button
+                  variant="text"
+                  onClick={onCancel}
+                  disabled={loading}
+                  sx={{ color: 'text.secondary' }}
+                >
+                  {cancelLabel}
+                </Button>
+              )}
+              <Button
+                variant="outlined"
+                startIcon={<ArrowBackIcon />}
+                onClick={onPrev}
+                disabled={isFirstStep || loading}
+              >
+                {prevLabel}
+              </Button>
+            </Stack>
             <Button
               variant="contained"
               endIcon={isLastStep ? <CheckIcon /> : <ArrowForwardIcon />}

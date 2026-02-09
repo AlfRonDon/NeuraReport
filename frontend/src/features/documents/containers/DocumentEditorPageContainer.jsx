@@ -52,8 +52,13 @@ import {
 } from '@mui/icons-material'
 import { figmaGrey } from '@/app/theme'
 import useDocumentStore from '@/stores/documentStore'
+import useSharedData from '@/hooks/useSharedData'
+import useIncomingTransfer from '@/hooks/useIncomingTransfer'
+import ImportFromMenu from '@/components/common/ImportFromMenu'
+import { TransferAction, FeatureKey } from '@/constants/crossPageTypes'
 import { useToast } from '@/components/ToastProvider'
 import { useInteraction, InteractionType, Reversibility } from '@/components/ux/governance'
+import TemplateSelector from '@/components/common/TemplateSelector'
 import TipTapEditor from '../components/TipTapEditor'
 import TrackChangesPanel from '../components/TrackChangesPanel'
 import CommentsPanel from '../components/CommentsPanel'
@@ -163,6 +168,19 @@ export default function DocumentEditorPage() {
   const theme = useTheme()
   const toast = useToast()
   const { execute } = useInteraction()
+  const { templates } = useSharedData()
+
+  // Cross-page: accept content from other features (Agents, Synthesis, Summary)
+  useIncomingTransfer(FeatureKey.DOCUMENTS, {
+    [TransferAction.CREATE_FROM]: async (payload) => {
+      const doc = await createDocument({
+        title: payload.title || 'Imported Document',
+        content: typeof payload.content === 'string' ? payload.content : JSON.stringify(payload.content),
+      })
+      if (doc) getDocument(doc.id)
+    },
+  })
+
   const {
     documents,
     currentDocument,
@@ -198,6 +216,7 @@ export default function DocumentEditorPage() {
   const [showDocList, setShowDocList] = useState(true)
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [newDocName, setNewDocName] = useState('')
+  const [selectedTemplateId, setSelectedTemplateId] = useState('')
   const [editorContent, setEditorContent] = useState(null)
   const [aiMenuAnchor, setAiMenuAnchor] = useState(null)
   const [selectedText, setSelectedText] = useState('')
@@ -302,6 +321,7 @@ export default function DocumentEditorPage() {
     return executeUI('Close create document', () => {
       setCreateDialogOpen(false)
       setNewDocName('')
+      setSelectedTemplateId('')
     })
   }, [executeUI])
 
@@ -324,6 +344,7 @@ export default function DocumentEditorPage() {
         if (doc) {
           setCreateDialogOpen(false)
           setNewDocName('')
+          setSelectedTemplateId('')
           await getDocument(doc.id)
         }
         return doc
@@ -702,15 +723,28 @@ export default function DocumentEditorPage() {
               </ActionButton>
             </>
           ) : (
-            <ActionButton
-              variant="contained"
-              size="small"
-              startIcon={<AddIcon />}
-              onClick={handleOpenCreateDialog}
-              data-testid="doc-new-button"
-            >
-              New Document
-            </ActionButton>
+            <>
+              <ImportFromMenu
+                currentFeature={FeatureKey.DOCUMENTS}
+                onImport={async (output) => {
+                  const doc = await createDocument({
+                    title: output.title || 'Imported',
+                    content: typeof output.data === 'string' ? output.data : JSON.stringify(output.data),
+                  })
+                  if (doc) getDocument(doc.id)
+                }}
+                size="small"
+              />
+              <ActionButton
+                variant="contained"
+                size="small"
+                startIcon={<AddIcon />}
+                onClick={handleOpenCreateDialog}
+                data-testid="doc-new-button"
+              >
+                New Document
+              </ActionButton>
+            </>
           )}
         </Stack>
       </Toolbar>
@@ -948,6 +982,13 @@ export default function DocumentEditorPage() {
             onChange={(e) => setNewDocName(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleCreateDocument()}
             sx={{ mt: 2 }}
+          />
+          <TemplateSelector
+            value={selectedTemplateId}
+            onChange={setSelectedTemplateId}
+            label="From Template (Optional)"
+            size="small"
+            showAll
           />
         </DialogContent>
         <DialogActions sx={{ p: 2 }}>

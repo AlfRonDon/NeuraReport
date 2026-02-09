@@ -284,8 +284,8 @@ Return JSON:
 
 
 def _extract_json_payload(raw_content: str, default: Dict[str, Any]) -> Dict[str, Any]:
-    """Extract JSON from an LLM response."""
-    json_match = re.search(r"```(?:json)?\\s*([\\s\\S]*?)```", raw_content)
+    """Extract JSON from an LLM response (handles Claude's markdown code blocks)."""
+    json_match = re.search(r"```(?:json)?\s*([\s\S]*?)```", raw_content)
     if json_match:
         json_str = json_match.group(1).strip()
     else:

@@ -50,6 +50,8 @@ import {
 } from '@mui/icons-material'
 import { figmaGrey } from '@/app/theme'
 import useSearchStore from '@/stores/searchStore'
+import useSharedData from '@/hooks/useSharedData'
+import ConnectionSelector from '@/components/common/ConnectionSelector'
 import { useToast } from '@/components/ToastProvider'
 import { useInteraction, InteractionType, Reversibility } from '@/components/ux/governance'
 
@@ -163,6 +165,7 @@ export default function SearchPageContainer() {
   const theme = useTheme()
   const toast = useToast()
   const { execute } = useInteraction()
+  const { connections, activeConnectionId } = useSharedData()
   const {
     results,
     totalResults,
@@ -188,6 +191,7 @@ export default function SearchPageContainer() {
   const [searchType, setSearchType] = useState('fulltext')
   const [showFilters, setShowFilters] = useState(false)
   const [filters, setFilters] = useState({})
+  const [selectedConnectionId, setSelectedConnectionId] = useState('')
   const [showHistory, setShowHistory] = useState(false)
   const [saveDialogOpen, setSaveDialogOpen] = useState(false)
   const [searchName, setSearchName] = useState('')
@@ -201,20 +205,24 @@ export default function SearchPageContainer() {
     const searchQuery = (overrideQuery ?? query).trim()
     if (!searchQuery) return
 
+    const searchFilters = selectedConnectionId
+      ? { ...filters, connectionId: selectedConnectionId }
+      : filters
+
     const searchAction = async () => {
       let searchResult = null
       switch (searchType) {
         case 'semantic':
-          searchResult = await semanticSearch(searchQuery, { filters })
+          searchResult = await semanticSearch(searchQuery, { filters: searchFilters })
           break
         case 'regex':
-          searchResult = await regexSearch(searchQuery, { filters })
+          searchResult = await regexSearch(searchQuery, { filters: searchFilters })
           break
         case 'boolean':
-          searchResult = await booleanSearch(searchQuery, { filters })
+          searchResult = await booleanSearch(searchQuery, { filters: searchFilters })
           break
         default:
-          searchResult = await search(searchQuery, { searchType: 'fulltext', filters })
+          searchResult = await search(searchQuery, { searchType: 'fulltext', filters: searchFilters })
       }
       return searchResult
     }
@@ -227,7 +235,7 @@ export default function SearchPageContainer() {
       intent: { source: 'search', query: searchQuery, searchType },
       action: searchAction,
     })
-  }, [booleanSearch, execute, filters, query, regexSearch, search, searchType, semanticSearch])
+  }, [booleanSearch, execute, filters, query, regexSearch, search, searchType, selectedConnectionId, semanticSearch])
 
   const handleKeyDown = useCallback((e) => {
     if (e.key === 'Enter') {
@@ -305,6 +313,7 @@ export default function SearchPageContainer() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
+            inputProps={{ 'aria-label': 'Search query' }}
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
@@ -341,6 +350,14 @@ export default function SearchPageContainer() {
           <Collapse in={showFilters}>
             <Paper sx={{ mt: 2, p: 2 }}>
               <Grid container spacing={2}>
+                <Grid item xs={12} sm={4}>
+                  <ConnectionSelector
+                    value={selectedConnectionId}
+                    onChange={setSelectedConnectionId}
+                    label="Data Source"
+                    size="small"
+                  />
+                </Grid>
                 <Grid item xs={12} sm={4}>
                   <FormControl fullWidth size="small">
                     <InputLabel>Document Type</InputLabel>

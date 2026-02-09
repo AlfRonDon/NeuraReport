@@ -57,7 +57,7 @@ class ResearchReport(BaseModel):
     topic: str
     summary: str
     sections: List[Dict[str, str]] = Field(default_factory=list)  # {title, content}
-    sources: List[Dict[str, str]] = Field(default_factory=list)  # {title, url}
+    sources: List[Dict[str, Any]] = Field(default_factory=list)  # {title, url} - url may be None/null
     key_findings: List[str] = Field(default_factory=list)
     recommendations: List[str] = Field(default_factory=list)
     word_count: int = 0
@@ -106,22 +106,69 @@ class BaseAgent(ABC):
     """Base class for AI agents."""
 
     def __init__(self):
-        self._client = None
+        self._llm_client = None
+
+    # Backwards compatibility alias
+    @property
+    def _client(self):
+        """Backwards compatibility alias for _llm_client."""
+        return self._llm_client
+
+    @_client.setter
+    def _client(self, value):
+        """Backwards compatibility setter for _llm_client."""
+        self._llm_client = value
 
     def _get_client(self):
-        """Get OpenAI client."""
-        if self._client is None:
-            from backend.app.services.config import get_settings
-            from openai import OpenAI
-            settings = get_settings()
-            self._client = OpenAI(api_key=settings.openai_api_key)
-        return self._client
+        """Backwards compatibility alias for _get_llm_client."""
+        return self._get_llm_client()
+
+    def _get_llm_client(self):
+        """Get unified LLM client (supports OpenAI, Claude Code CLI, and other providers)."""
+        if self._llm_client is None:
+            from backend.app.services.llm.client import get_llm_client
+            self._llm_client = get_llm_client()
+        return self._llm_client
 
     def _get_model(self) -> str:
-        """Get model name from settings."""
-        from backend.app.services.config import get_settings
-        return get_settings().openai_model or "gpt-5"
+        """Get model name from LLM config."""
+        from backend.app.services.llm.config import get_llm_config
+        return get_llm_config().model
 
+    def _call_llm(
+        self,
+        system_prompt: str,
+        user_prompt: str,
+        max_tokens: int = 2000,
+        temperature: float = 0.7,
+    ) -> str:
+        """Make an LLM API call using the unified client.
+
+        Works with all providers: OpenAI, Claude Code CLI, Anthropic, etc.
+        """
+        client = self._get_llm_client()
+
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt}
+        ]
+
+        response = client.complete(
+            messages=messages,
+            description="agent_call",
+            max_tokens=max_tokens,
+            temperature=temperature,
+        )
+
+        # Extract content from OpenAI-compatible response
+        content = (
+            response.get("choices", [{}])[0]
+            .get("message", {})
+            .get("content", "")
+        )
+        return content or ""
+
+    # Backwards compatibility alias
     def _call_openai(
         self,
         system_prompt: str,
@@ -129,29 +176,8 @@ class BaseAgent(ABC):
         max_tokens: int = 2000,
         temperature: float = 0.7,
     ) -> str:
-        """Make an OpenAI API call with proper parameter handling for different models."""
-        client = self._get_client()
-        model = self._get_model()
-
-        # Newer models (gpt-5, o1, etc.) use max_completion_tokens instead of max_tokens
-        uses_new_param = any(m in model.lower() for m in ["gpt-5", "o1", "o3"])
-
-        create_params = {
-            "model": model,
-            "messages": [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt}
-            ],
-        }
-
-        if uses_new_param:
-            create_params["max_completion_tokens"] = max_tokens
-        else:
-            create_params["max_tokens"] = max_tokens
-            create_params["temperature"] = temperature
-
-        response = client.chat.completions.create(**create_params)
-        return response.choices[0].message.content or ""
+        """Backwards compatible alias for _call_llm."""
+        return self._call_llm(system_prompt, user_prompt, max_tokens, temperature)
 
     def _safe_parse_json(self, content: str, default: dict | None = None) -> dict:
         """Safely parse JSON from LLM output, handling code blocks and malformed JSON.
@@ -236,9 +262,6 @@ class ResearchAgent(BaseAgent):
         Returns:
             ResearchReport with findings
         """
-        client = self._get_client()
-        model = self._get_model()
-
         focus_prompt = ""
         if focus_areas:
             focus_prompt = f"\nFocus on these areas: {', '.join(focus_areas)}"
@@ -269,7 +292,7 @@ Structure your response as JSON:
 Limit to {max_sections} main sections."""
 
         try:
-            content = self._call_openai(
+            content = self._call_llm(
                 system_prompt=system_prompt,
                 user_prompt=f"Research topic: {topic}",
                 max_tokens=4000,
@@ -393,9 +416,6 @@ class DataAnalystAgent(BaseAgent):
         Returns:
             DataAnalysisResult with analysis
         """
-        client = self._get_client()
-        model = self._get_model()
-
         import json
 
         # Get column info and compute full dataset statistics
@@ -436,7 +456,7 @@ Provide your response as JSON:
 }}"""
 
         try:
-            content = self._call_openai(
+            content = self._call_llm(
                 system_prompt=system_prompt,
                 user_prompt=f"Data sample (stratified from full dataset):\n{data_sample}\n\nQuestion: {question}",
                 max_tokens=2000,
@@ -500,9 +520,6 @@ class EmailDraftAgent(BaseAgent):
         Returns:
             EmailDraft with the composed email
         """
-        client = self._get_client()
-        model = self._get_model()
-
         previous_context = ""
         if previous_emails:
             previous_context = "\n\nPrevious emails in thread:\n" + "\n---\n".join(previous_emails[-3:])
@@ -528,7 +545,7 @@ Provide your response as JSON:
 }}"""
 
         try:
-            content = self._call_openai(
+            content = self._call_llm(
                 system_prompt=system_prompt,
                 user_prompt=f"Context: {context}\n\nPurpose: {purpose}",
                 max_tokens=1500,
@@ -590,9 +607,6 @@ class ContentRepurposingAgent(BaseAgent):
         Returns:
             RepurposedContent with all versions
         """
-        client = self._get_client()
-        model = self._get_model()
-
         format_guidelines = {
             "tweet_thread": "Create a Twitter thread (max 280 chars per tweet, 5-10 tweets)",
             "linkedin_post": "Create a LinkedIn post (professional tone, 1300 chars max)",
@@ -621,7 +635,7 @@ Guidelines: {guidelines}
 Return ONLY the transformed content, no explanations."""
 
             try:
-                transformed = self._call_openai(
+                transformed = self._call_llm(
                     system_prompt=system_prompt,
                     user_prompt=content,
                     max_tokens=2000,
@@ -679,9 +693,6 @@ class ProofreadingAgent(BaseAgent):
         Returns:
             ProofreadingResult with corrections
         """
-        client = self._get_client()
-        model = self._get_model()
-
         style_context = f"\nFollow {style_guide} style guide." if style_guide else ""
         focus_context = f"\nFocus especially on: {', '.join(focus_areas)}" if focus_areas else ""
         voice_context = "\nPreserve the author's unique voice while making corrections." if preserve_voice else ""
@@ -706,7 +717,7 @@ Provide your response as JSON:
 }}"""
 
         try:
-            content = self._call_openai(
+            content = self._call_llm(
                 system_prompt=system_prompt,
                 user_prompt=text,
                 max_tokens=4000,

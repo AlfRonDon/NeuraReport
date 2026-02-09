@@ -753,6 +753,12 @@ export default function Sidebar({ width, collapsed, mobileOpen, onClose, onToggl
         variant="permanent"
         sx={{
           display: { xs: 'none', md: 'block' },
+          width,
+          flexShrink: 0,
+          transition: (theme) => theme.transitions.create('width', {
+            easing: theme.transitions.easing.sharp,
+            duration: 200,
+          }),
           '& .MuiDrawer-paper': {
             width,
             boxSizing: 'border-box',

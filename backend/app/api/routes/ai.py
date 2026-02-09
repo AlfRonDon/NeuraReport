@@ -470,14 +470,34 @@ async def get_available_tones():
 @router.get("/health")
 async def check_ai_health():
     """Check if AI services are configured and available."""
-    from backend.app.services.config import get_settings
-    settings = get_settings()
+    import subprocess
+
+    # Check if Claude CLI is available
+    cli_available = False
+    cli_version = None
+    try:
+        result = subprocess.run(
+            ["claude", "--version"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        cli_available = result.returncode == 0
+        if cli_available:
+            cli_version = result.stdout.strip()
+    except Exception:
+        pass
 
     return {
-        "openai_configured": bool(settings.openai_api_key),
-        "model": settings.openai_model,
+        "status": "ok" if cli_available else "degraded",
+        "claude_cli_available": cli_available,
+        "claude_cli_version": cli_version,
+        "provider": "claude_code_cli",
+        "model": "sonnet",
         "services": {
-            "writing": True,
-            "spreadsheet": True,
+            "writing": cli_available,
+            "spreadsheet": cli_available,
+            "docqa": cli_available,
+            "research": cli_available,
         }
     }

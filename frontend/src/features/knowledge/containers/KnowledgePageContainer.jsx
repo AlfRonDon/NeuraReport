@@ -55,6 +55,10 @@ import {
   CloudUpload as UploadIcon,
 } from '@mui/icons-material'
 import useKnowledgeStore from '@/stores/knowledgeStore'
+import useSharedData from '@/hooks/useSharedData'
+import useIncomingTransfer from '@/hooks/useIncomingTransfer'
+import ImportFromMenu from '@/components/common/ImportFromMenu'
+import { TransferAction, FeatureKey } from '@/constants/crossPageTypes'
 import { useToast } from '@/components/ToastProvider'
 import { useInteraction, InteractionType, Reversibility } from '@/components/ux/governance'
 import { uploadDocument } from '@/api/knowledge'
@@ -143,6 +147,20 @@ export default function KnowledgePageContainer() {
   const theme = useTheme()
   const toast = useToast()
   const { execute } = useInteraction()
+  const { connections, templates } = useSharedData()
+
+  // Cross-page: accept documents from other features (Agents, Synthesis, etc.)
+  useIncomingTransfer(FeatureKey.KNOWLEDGE, {
+    [TransferAction.SAVE_TO]: async (payload) => {
+      // Create a Blob from the content and upload it
+      const content = typeof payload.content === 'string' ? payload.content : JSON.stringify(payload.content)
+      const blob = new Blob([content], { type: 'text/plain' })
+      const file = new File([blob], `${payload.title || 'Imported'}.txt`, { type: 'text/plain' })
+      await uploadDocument(file, payload.title || 'Imported Document', selectedCollection?.id)
+      fetchDocuments()
+    },
+  })
+
   const {
     documents,
     collections,
@@ -381,12 +399,31 @@ export default function KnowledgePageContainer() {
               <Typography variant="h6" sx={{ fontWeight: 600 }}>
                 Knowledge Library
               </Typography>
-              <Typography variant="body2" color="text.secondary">
-                {stats?.total_documents || 0} documents in {stats?.total_collections || 0} collections
-              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
+                <Typography variant="body2" color="text.secondary">
+                  {stats?.total_documents || 0} documents in {stats?.total_collections || 0} collections
+                </Typography>
+                {connections.length > 0 && (
+                  <Chip label={`${connections.length} connections`} size="small" variant="outlined" />
+                )}
+                {templates.length > 0 && (
+                  <Chip label={`${templates.length} templates`} size="small" variant="outlined" />
+                )}
+              </Box>
             </Box>
           </Box>
           <Box sx={{ display: 'flex', gap: 1 }}>
+            <ImportFromMenu
+              currentFeature={FeatureKey.KNOWLEDGE}
+              onImport={async (output) => {
+                const content = typeof output.data === 'string' ? output.data : JSON.stringify(output.data)
+                const blob = new Blob([content], { type: 'text/plain' })
+                const file = new File([blob], `${output.title || 'Imported'}.txt`, { type: 'text/plain' })
+                await uploadDocument(file, output.title || 'Imported', selectedCollection?.id)
+                fetchDocuments()
+                toast.show(`"${output.title}" saved to library`, 'success')
+              }}
+            />
             <ActionButton
               variant="contained"
               startIcon={<UploadIcon />}

@@ -5,6 +5,7 @@ import logging
 from typing import Any, Dict, List, Optional
 
 from backend.app.services.llm.client import get_llm_client
+from backend.app.services.utils.llm import extract_json_array_from_llm_response
 
 logger = logging.getLogger("neura.domain.charts")
 
@@ -105,12 +106,10 @@ Return ONLY the JSON array."""
                 temperature=0.5,
             )
 
-            import json
-            import re
             content = response["choices"][0]["message"]["content"]
-            json_match = re.search(r"\[[\s\S]*\]", content)
-            if json_match:
-                return json.loads(json_match.group())[:max_suggestions]
+            suggestions = extract_json_array_from_llm_response(content, default=[])
+            if suggestions:
+                return suggestions[:max_suggestions]
 
         except Exception as exc:
             logger.error(f"Chart suggestion failed: {exc}")

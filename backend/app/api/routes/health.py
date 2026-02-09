@@ -44,25 +44,26 @@ def _check_directory_access(path: Path) -> Dict[str, Any]:
         return {"status": "error", "message": "Directory check failed", "path": str(path)}
 
 
-def _check_openai_connection() -> Dict[str, Any]:
-    """Check if OpenAI API is configured and accessible."""
-    settings = get_settings()
-    if not settings.openai_api_key:
-        return {"status": "not_configured", "message": "OPENAI_API_KEY not set"}
-
+def _check_claude_code_cli() -> Dict[str, Any]:
+    """Check if Claude Code CLI is available."""
+    import subprocess
     try:
-        from backend.app.services.templates.TemplateVerify import get_openai_client
-        client = get_openai_client()
-        # Just check if client was created - don't actually call the API in health check
-        if client is not None:
+        result = subprocess.run(
+            ["claude", "--version"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+            shell=True,
+        )
+        if result.returncode == 0:
             return {
-                "status": "configured",
-                "message": "OpenAI client initialized",
+                "status": "available",
+                "message": "Claude Code CLI is available",
             }
-        return {"status": "error", "message": "Failed to initialize OpenAI client"}
+        return {"status": "error", "message": "Claude Code CLI not responding"}
     except Exception as e:
-        logger.warning("openai_check_failed", extra={"error": str(e)})
-        return {"status": "error", "message": "OpenAI check failed"}
+        logger.warning("claude_cli_check_failed", extra={"error": str(e)})
+        return {"status": "error", "message": "Claude Code CLI check failed"}
 
 
 def _get_memory_usage() -> Dict[str, Any]:
@@ -201,10 +202,10 @@ async def health_detailed(request: Request) -> Dict[str, Any]:
     if state_check["status"] == "error":
         issues.append("State directory not accessible")
 
-    # Check OpenAI connection
-    checks["openai"] = _check_openai_connection()
-    if checks["openai"]["status"] == "error":
-        issues.append("OpenAI API error")
+    # Check Claude Code CLI
+    checks["llm"] = _check_claude_code_cli()
+    if checks["llm"]["status"] == "error":
+        issues.append("Claude Code CLI not available")
 
     # Check cache status
     cache = _analysis_cache()

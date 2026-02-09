@@ -176,6 +176,8 @@ export type PersonaModifier =
   | 'confused'      // misclicks, hesitates, needs clear labels
   | 'power-user'    // uses keyboard shortcuts, expects advanced features
   | 'accessibility' // relies on screen readers, keyboard navigation
+  | 'mobile'        // expects touch-friendly targets and responsive behavior
+  | 'slow-network'  // expects robust loading and retry states
 
 /** QA policy profile used by the agent brain */
 export type QaAgentProfile =
@@ -209,6 +211,7 @@ export interface BackendCheck {
 /** Failure categories for structured analysis (from mabl Auto TFA) */
 export type FailureCategory =
   | 'element_not_found'   // target element doesn't exist or isn't visible
+  | 'element_not_interactable' // target element exists but cannot be interacted with
   | 'navigation_error'    // page failed to load or redirect
   | 'form_error'          // form validation or submission failed
   | 'timeout'             // action or page timed out
@@ -216,6 +219,8 @@ export type FailureCategory =
   | 'assertion_failed'    // success criteria not met
   | 'browser_crash'       // page or browser closed unexpectedly
   | 'llm_error'           // Claude CLI failed to respond
+  | 'network_error'       // network/API layer failed
+  | 'auth_error'          // authentication/authorization failure
   | 'unknown'
 
 export interface ScenarioResult {

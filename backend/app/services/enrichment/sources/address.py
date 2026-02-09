@@ -4,6 +4,7 @@ from __future__ import annotations
 import logging
 from typing import Any, Dict, List, Optional
 
+from backend.app.services.utils.llm import extract_json_from_llm_response
 from .base import EnrichmentSourceBase
 
 logger = logging.getLogger("neura.domain.enrichment.address")
@@ -85,16 +86,9 @@ Return ONLY the JSON object, no other text."""
 
             content = response["choices"][0]["message"]["content"]
 
-            # Parse JSON from response
-            import json
-            import re
-
-            json_match = re.search(r"\{[\s\S]*\}", content)
-            if json_match:
-                result = json.loads(json_match.group())
-                return result
-
-            return None
+            # Parse JSON from response (handles markdown code blocks from Claude)
+            result = extract_json_from_llm_response(content, default=None)
+            return result
 
         except Exception as exc:
             # Check for critical errors that should be re-raised

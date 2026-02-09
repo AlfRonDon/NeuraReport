@@ -50,6 +50,11 @@ import {
   ContentCopy as DuplicateIcon,
 } from '@mui/icons-material'
 import useDashboardStore from '@/stores/dashboardStore'
+import useSharedData from '@/hooks/useSharedData'
+import useIncomingTransfer from '@/hooks/useIncomingTransfer'
+import ImportFromMenu from '@/components/common/ImportFromMenu'
+import { TransferAction, FeatureKey } from '@/constants/crossPageTypes'
+import ConnectionSelector from '@/components/common/ConnectionSelector'
 import { useToast } from '@/components/ToastProvider'
 import { useInteraction, InteractionType, Reversibility } from '@/components/ux/governance'
 import DashboardGridLayout, { generateWidgetId, DEFAULT_WIDGET_SIZES } from '../components/DashboardGridLayout'
@@ -204,6 +209,22 @@ export default function DashboardBuilderPage() {
     reset,
   } = useDashboardStore()
 
+  const { connections, templates, activeConnectionId } = useSharedData()
+  const [selectedConnectionId, setSelectedConnectionId] = useState(activeConnectionId)
+
+  // Cross-page: accept diagrams/data from other features (Visualization, Query)
+  useIncomingTransfer(FeatureKey.DASHBOARDS, {
+    [TransferAction.ADD_TO]: async (payload) => {
+      if (currentDashboard) {
+        await addWidget(currentDashboard.id, {
+          type: payload.data?.svg ? 'html' : 'chart',
+          title: payload.title || 'Imported Widget',
+          config: payload.data || {},
+        })
+      }
+    },
+  })
+
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [newDashboardName, setNewDashboardName] = useState('')
   const [addWidgetDialogOpen, setAddWidgetDialogOpen] = useState(false)
@@ -285,6 +306,7 @@ export default function DashboardBuilderPage() {
       action: async () => {
         const dashboard = await createDashboard({
           name: newDashboardName,
+          connectionId: selectedConnectionId || undefined,
           widgets: [],
           filters: [],
         })
@@ -356,6 +378,7 @@ export default function DashboardBuilderPage() {
             previousValue: category === 'metric' ? 10000 : undefined,
             sparklineData: category === 'metric' ? SAMPLE_SPARKLINE : undefined,
             format: category === 'metric' ? 'currency' : undefined,
+            data_source: selectedConnectionId || currentDashboard?.connectionId || undefined,
           },
           x: 0,
           y: widgets.length * 4,
@@ -638,6 +661,21 @@ export default function DashboardBuilderPage() {
 
         {currentDashboard && (
           <SidebarContent>
+            <ImportFromMenu
+              currentFeature={FeatureKey.DASHBOARDS}
+              onImport={async (output) => {
+                if (currentDashboard) {
+                  await addWidget(currentDashboard.id, {
+                    type: output.data?.svg ? 'html' : 'chart',
+                    title: output.title || 'Imported Widget',
+                    config: output.data || {},
+                  })
+                  toast.show(`Added "${output.title}" as widget`, 'success')
+                }
+              }}
+              label="Import Widget"
+            />
+            <Box sx={{ mt: 1 }} />
             <WidgetPalette onAddWidget={handleAddWidgetFromPalette} />
 
             {insights.length > 0 && (
@@ -813,6 +851,13 @@ export default function DashboardBuilderPage() {
               }
             }}
           />
+          <ConnectionSelector
+            value={selectedConnectionId}
+            onChange={setSelectedConnectionId}
+            label="Data Source (optional)"
+            showStatus
+            sx={{ mt: 2 }}
+          />
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseCreateDialog}>Cancel</Button>
@@ -858,6 +903,15 @@ export default function DashboardBuilderPage() {
                 ))}
               </Select>
             </FormControl>
+          )}
+          {!currentDashboard?.connectionId && (
+            <ConnectionSelector
+              value={selectedConnectionId}
+              onChange={setSelectedConnectionId}
+              label="Widget Data Source"
+              showStatus
+              sx={{ mt: 2 }}
+            />
           )}
         </DialogContent>
         <DialogActions>

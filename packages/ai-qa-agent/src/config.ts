@@ -241,6 +241,23 @@ export interface AgentConfig {
   actionTimeout?: number
   /** Enable debug logging */
   debug?: boolean
+
+  // ─── Failure Mode Mitigation Settings ────────────────────────────────
+
+  /** Enable post-action verification (checks if action had expected effect) */
+  verifyAfterAction?: boolean
+  /** Wait for page stability before observing */
+  waitForStable?: boolean
+  /** Maximum time to wait for page stability in ms */
+  stabilityTimeout?: number
+  /** Detect and warn on repeated identical actions */
+  detectActionReplay?: boolean
+  /** Maximum identical actions before forcing abort */
+  maxRepeatedActions?: number
+  /** Enable deterministic mode for reproducible tests */
+  deterministicMode?: boolean
+  /** Random seed for deterministic mode */
+  randomSeed?: number
 }
 
 // ─── Runner Configuration ────────────────────────────────────────────
@@ -301,6 +318,15 @@ export const DEFAULT_AGENT_CONFIG: Partial<AgentConfig> = {
   pageLoadTimeout: 30_000,
   actionTimeout: 10_000,
   debug: false,
+
+  // Failure mode mitigations (all enabled by default)
+  verifyAfterAction: true,
+  waitForStable: true,
+  stabilityTimeout: 5_000,
+  detectActionReplay: true,
+  maxRepeatedActions: 3,
+  deterministicMode: false,
+  randomSeed: undefined,
 }
 
 export const DEFAULT_RUNNER_CONFIG: Partial<RunnerConfig> = {

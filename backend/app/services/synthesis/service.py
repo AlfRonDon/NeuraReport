@@ -10,6 +10,10 @@ from datetime import datetime, timezone
 from typing import Any, Callable, Dict, List, Optional
 
 from backend.app.services.llm.client import get_llm_client
+from backend.app.services.utils.llm import (
+    extract_json_from_llm_response,
+    extract_json_array_from_llm_response,
+)
 from backend.app.repositories.state import store as state_store_module
 
 from backend.app.schemas.synthesis import (
@@ -196,10 +200,9 @@ Return ONLY the JSON array. Return [] if no inconsistencies found."""
             )
 
             content = response["choices"][0]["message"]["content"]
-            json_match = re.search(r"\[[\s\S]*\]", content)
+            inconsistencies_data = extract_json_array_from_llm_response(content, default=[])
 
-            if json_match:
-                inconsistencies_data = json.loads(json_match.group())
+            if inconsistencies_data:
                 inconsistencies = []
 
                 for i, item in enumerate(inconsistencies_data):
@@ -312,11 +315,9 @@ Return ONLY the JSON object."""
             )
 
             content = response["choices"][0]["message"]["content"]
-            json_match = re.search(r"\{[\s\S]*\}", content)
+            synthesis_data = extract_json_from_llm_response(content, default=None)
 
-            if json_match:
-                synthesis_data = json.loads(json_match.group())
-
+            if synthesis_data:
                 # Build source references
                 source_refs = []
                 for doc in session.documents:

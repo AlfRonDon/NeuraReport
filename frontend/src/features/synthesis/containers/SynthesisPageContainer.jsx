@@ -49,6 +49,11 @@ import {
   Preview as PreviewIcon,
 } from '@mui/icons-material';
 import useSynthesisStore from '@/stores/synthesisStore';
+import useSharedData from '@/hooks/useSharedData';
+import useCrossPageActions from '@/hooks/useCrossPageActions';
+import ConnectionSelector from '@/components/common/ConnectionSelector';
+import SendToMenu from '@/components/common/SendToMenu';
+import { OutputType, FeatureKey } from '@/constants/crossPageTypes';
 import ConfirmModal from '@/components/Modal/ConfirmModal';
 import { useToast } from '@/components/ToastProvider';
 import AiUsageNotice from '@/components/ai/AiUsageNotice';
@@ -84,6 +89,10 @@ export default function SynthesisPage() {
     synthesize,
     reset,
   } = useSynthesisStore();
+
+  const { connections, templates, activeConnectionId } = useSharedData();
+  const { registerOutput } = useCrossPageActions(FeatureKey.SYNTHESIS);
+  const [selectedConnectionId, setSelectedConnectionId] = useState(activeConnectionId);
 
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [addDocDialogOpen, setAddDocDialogOpen] = useState(false);
@@ -238,8 +247,22 @@ export default function SynthesisPage() {
         const result = await synthesize(currentSession.id, {
           focusTopics: topics,
           outputFormat,
+          connectionId: selectedConnectionId || undefined,
         });
         if (!result) throw new Error('Synthesis failed');
+        const synthTitle = result.synthesis?.title || currentSession.name || 'Synthesis';
+        const synthContent = [
+          result.synthesis?.executive_summary || '',
+          ...(result.synthesis?.key_insights || []),
+          ...(result.synthesis?.sections || []).map((s) => `${s.heading}\n${s.content}`),
+        ].join('\n\n');
+        registerOutput({
+          type: OutputType.TEXT,
+          title: synthTitle,
+          summary: (result.synthesis?.executive_summary || '').substring(0, 200),
+          data: synthContent,
+          format: 'text',
+        });
       },
     });
   };
@@ -452,6 +475,14 @@ export default function SynthesisPage() {
                     Analysis
                   </Typography>
                   <Grid container spacing={2} sx={{ mb: 2 }}>
+                    <Grid size={{ xs: 12 }}>
+                      <ConnectionSelector
+                        value={selectedConnectionId}
+                        onChange={setSelectedConnectionId}
+                        label="Enrich with Database (optional)"
+                        showStatus
+                      />
+                    </Grid>
                     <Grid size={{ xs: 12, sm: 6 }}>
                       <FormControl fullWidth size="small">
                         <InputLabel>Output Format</InputLabel>
@@ -557,9 +588,23 @@ export default function SynthesisPage() {
               {/* Synthesis Result */}
               {synthesisResult && (
                 <Paper sx={{ p: 3 }}>
-                  <Typography variant="h6" gutterBottom>
-                    Synthesis Result
-                  </Typography>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                    <Typography variant="h6">
+                      Synthesis Result
+                    </Typography>
+                    <SendToMenu
+                      outputType={OutputType.TEXT}
+                      payload={{
+                        title: synthesisResult.synthesis?.title || currentSession?.name || 'Synthesis',
+                        content: [
+                          synthesisResult.synthesis?.executive_summary || '',
+                          ...(synthesisResult.synthesis?.key_insights || []),
+                          ...(synthesisResult.synthesis?.sections || []).map((s) => `${s.heading}\n${s.content}`),
+                        ].join('\n\n'),
+                      }}
+                      sourceFeature={FeatureKey.SYNTHESIS}
+                    />
+                  </Box>
                   <Box sx={{ bgcolor: 'grey.50', p: 2, borderRadius: 1 }}>
                     <Typography variant="h6" gutterBottom>
                       {synthesisResult.synthesis?.title}

@@ -43,7 +43,7 @@ class TestResearchAgentAPI:
     @pytest.mark.asyncio
     async def test_research_api_full_request(self, service):
         """Full research request with all parameters."""
-        with patch.object(service._agents[AgentType.RESEARCH], '_call_openai') as mock_call:
+        with patch.object(service._agents[AgentType.RESEARCH], '_call_llm') as mock_call:
             mock_call.return_value = json.dumps({
                 "summary": "Comprehensive research on AI",
                 "sections": [
@@ -74,7 +74,7 @@ class TestResearchAgentAPI:
     @pytest.mark.asyncio
     async def test_research_api_minimal_request(self, service):
         """Minimal research request with only topic."""
-        with patch.object(service._agents[AgentType.RESEARCH], '_call_openai') as mock_call:
+        with patch.object(service._agents[AgentType.RESEARCH], '_call_llm') as mock_call:
             mock_call.return_value = json.dumps({
                 "summary": "Brief research",
                 "sections": [],
@@ -96,7 +96,7 @@ class TestResearchAgentAPI:
         depths = ["quick", "moderate", "comprehensive"]
 
         for depth in depths:
-            with patch.object(service._agents[AgentType.RESEARCH], '_call_openai') as mock_call:
+            with patch.object(service._agents[AgentType.RESEARCH], '_call_llm') as mock_call:
                 mock_call.return_value = json.dumps({
                     "summary": f"Research at {depth} depth",
                     "sections": [],
@@ -128,7 +128,7 @@ class TestDataAnalystAgentAPI:
     @pytest.mark.asyncio
     async def test_data_analyst_full_request(self, service):
         """Full data analysis request."""
-        with patch.object(service._agents[AgentType.DATA_ANALYST], '_call_openai') as mock_call:
+        with patch.object(service._agents[AgentType.DATA_ANALYST], '_call_llm') as mock_call:
             mock_call.return_value = json.dumps({
                 "answer": "The total revenue is $1,000,000",
                 "data_summary": {"total_revenue": 1000000, "avg_order": 500},
@@ -162,7 +162,7 @@ class TestDataAnalystAgentAPI:
     @pytest.mark.asyncio
     async def test_data_analyst_large_dataset(self, service):
         """Data analysis with large dataset (tests sampling)."""
-        with patch.object(service._agents[AgentType.DATA_ANALYST], '_call_openai') as mock_call:
+        with patch.object(service._agents[AgentType.DATA_ANALYST], '_call_llm') as mock_call:
             mock_call.return_value = json.dumps({
                 "answer": "Analysis complete",
                 "data_summary": {},
@@ -192,7 +192,7 @@ class TestDataAnalystAgentAPI:
     @pytest.mark.asyncio
     async def test_data_analyst_empty_data(self, service):
         """Data analysis with empty data."""
-        with patch.object(service._agents[AgentType.DATA_ANALYST], '_call_openai') as mock_call:
+        with patch.object(service._agents[AgentType.DATA_ANALYST], '_call_llm') as mock_call:
             mock_call.return_value = json.dumps({
                 "answer": "No data provided for analysis",
                 "data_summary": {},
@@ -222,7 +222,7 @@ class TestEmailDraftAgentAPI:
     @pytest.mark.asyncio
     async def test_email_draft_full_request(self, service):
         """Full email draft request."""
-        with patch.object(service._agents[AgentType.EMAIL_DRAFT], '_call_openai') as mock_call:
+        with patch.object(service._agents[AgentType.EMAIL_DRAFT], '_call_llm') as mock_call:
             mock_call.return_value = json.dumps({
                 "subject": "Follow-up: Quarterly Review Meeting",
                 "body": "Dear Team,\n\nThank you for attending the quarterly review...",
@@ -250,7 +250,7 @@ class TestEmailDraftAgentAPI:
     @pytest.mark.parametrize("tone", ["professional", "friendly", "formal", "casual"])
     async def test_email_draft_tone_variations(self, service, tone):
         """Email draft with different tones."""
-        with patch.object(service._agents[AgentType.EMAIL_DRAFT], '_call_openai') as mock_call:
+        with patch.object(service._agents[AgentType.EMAIL_DRAFT], '_call_llm') as mock_call:
             mock_call.return_value = json.dumps({
                 "subject": "Test",
                 "body": f"Email body with {tone} tone",
@@ -282,7 +282,7 @@ class TestContentRepurposingAgentAPI:
     @pytest.mark.asyncio
     async def test_content_repurpose_single_format(self, service):
         """Repurpose to single format."""
-        with patch.object(service._agents[AgentType.CONTENT_REPURPOSE], '_call_openai') as mock_call:
+        with patch.object(service._agents[AgentType.CONTENT_REPURPOSE], '_call_llm') as mock_call:
             mock_call.return_value = "Tweet 1/5: AI is transforming...\n\nTweet 2/5: Key benefits include..."
 
             task = await service.run_agent(
@@ -300,7 +300,7 @@ class TestContentRepurposingAgentAPI:
     @pytest.mark.asyncio
     async def test_content_repurpose_multiple_formats(self, service):
         """Repurpose to multiple formats."""
-        with patch.object(service._agents[AgentType.CONTENT_REPURPOSE], '_call_openai') as mock_call:
+        with patch.object(service._agents[AgentType.CONTENT_REPURPOSE], '_call_llm') as mock_call:
             mock_call.return_value = "Repurposed content for this format"
 
             task = await service.run_agent(
@@ -323,7 +323,7 @@ class TestContentRepurposingAgentAPI:
             "podcast_notes", "press_release", "executive_summary",
         ]
 
-        with patch.object(service._agents[AgentType.CONTENT_REPURPOSE], '_call_openai') as mock_call:
+        with patch.object(service._agents[AgentType.CONTENT_REPURPOSE], '_call_llm') as mock_call:
             mock_call.return_value = "Repurposed content"
 
             task = await service.run_agent(
@@ -339,7 +339,7 @@ class TestContentRepurposingAgentAPI:
     @pytest.mark.asyncio
     async def test_content_repurpose_with_options(self, service):
         """Repurpose with preserve_key_points and adapt_length options."""
-        with patch.object(service._agents[AgentType.CONTENT_REPURPOSE], '_call_openai') as mock_call:
+        with patch.object(service._agents[AgentType.CONTENT_REPURPOSE], '_call_llm') as mock_call:
             mock_call.return_value = "Repurposed content"
 
             task = await service.run_agent(
@@ -369,7 +369,7 @@ class TestProofreadingAgentAPI:
     @pytest.mark.asyncio
     async def test_proofread_full_request(self, service):
         """Full proofreading request."""
-        with patch.object(service._agents[AgentType.PROOFREADING], '_call_openai') as mock_call:
+        with patch.object(service._agents[AgentType.PROOFREADING], '_call_llm') as mock_call:
             mock_call.return_value = json.dumps({
                 "corrected_text": "This is the corrected and improved text.",
                 "issues_found": [
@@ -400,7 +400,7 @@ class TestProofreadingAgentAPI:
         style_guides = ["AP", "Chicago", "APA", "MLA"]
 
         for guide in style_guides:
-            with patch.object(service._agents[AgentType.PROOFREADING], '_call_openai') as mock_call:
+            with patch.object(service._agents[AgentType.PROOFREADING], '_call_llm') as mock_call:
                 mock_call.return_value = json.dumps({
                     "corrected_text": "Corrected text",
                     "issues_found": [],
@@ -423,7 +423,7 @@ class TestProofreadingAgentAPI:
     @pytest.mark.asyncio
     async def test_proofread_long_text(self, service):
         """Proofreading long text."""
-        with patch.object(service._agents[AgentType.PROOFREADING], '_call_openai') as mock_call:
+        with patch.object(service._agents[AgentType.PROOFREADING], '_call_llm') as mock_call:
             mock_call.return_value = json.dumps({
                 "corrected_text": "Long corrected text...",
                 "issues_found": [{"type": "style", "original": "", "correction": "", "explanation": ""}],
@@ -454,7 +454,7 @@ class TestTaskManagementAPI:
     @pytest.mark.asyncio
     async def test_get_task_by_id(self, service):
         """Get task by ID."""
-        with patch.object(service._agents[AgentType.RESEARCH], '_call_openai') as mock_call:
+        with patch.object(service._agents[AgentType.RESEARCH], '_call_llm') as mock_call:
             mock_call.return_value = json.dumps({
                 "summary": "Test",
                 "sections": [],
@@ -480,7 +480,7 @@ class TestTaskManagementAPI:
     @pytest.mark.asyncio
     async def test_list_tasks_ordering(self, service):
         """Tasks are listed in reverse chronological order."""
-        with patch.object(service._agents[AgentType.RESEARCH], '_call_openai') as mock_call:
+        with patch.object(service._agents[AgentType.RESEARCH], '_call_llm') as mock_call:
             mock_call.return_value = json.dumps({
                 "summary": "Test",
                 "sections": [],
@@ -504,7 +504,7 @@ class TestTaskManagementAPI:
     @pytest.mark.asyncio
     async def test_list_tasks_limit(self, service):
         """Tasks list respects limit."""
-        with patch.object(service._agents[AgentType.RESEARCH], '_call_openai') as mock_call:
+        with patch.object(service._agents[AgentType.RESEARCH], '_call_llm') as mock_call:
             mock_call.return_value = json.dumps({
                 "summary": "Test",
                 "sections": [],
@@ -532,7 +532,7 @@ class TestAgentAPIErrorHandling:
     @pytest.mark.asyncio
     async def test_api_error_handled_gracefully(self, service):
         """API error is handled gracefully - agent returns completed with error info."""
-        with patch.object(service._agents[AgentType.RESEARCH], '_call_openai') as mock_call:
+        with patch.object(service._agents[AgentType.RESEARCH], '_call_llm') as mock_call:
             mock_call.side_effect = Exception("API rate limit exceeded")
 
             task = await service.run_agent(
@@ -548,7 +548,7 @@ class TestAgentAPIErrorHandling:
     @pytest.mark.asyncio
     async def test_json_parse_error_handled(self, service):
         """JSON parse error is handled gracefully."""
-        with patch.object(service._agents[AgentType.RESEARCH], '_call_openai') as mock_call:
+        with patch.object(service._agents[AgentType.RESEARCH], '_call_llm') as mock_call:
             mock_call.return_value = "This is not valid JSON at all"
 
             task = await service.run_agent(
@@ -563,7 +563,7 @@ class TestAgentAPIErrorHandling:
     @pytest.mark.asyncio
     async def test_timeout_error_handled(self, service):
         """Timeout error is handled gracefully."""
-        with patch.object(service._agents[AgentType.RESEARCH], '_call_openai') as mock_call:
+        with patch.object(service._agents[AgentType.RESEARCH], '_call_llm') as mock_call:
             mock_call.side_effect = TimeoutError("Request timed out")
 
             task = await service.run_agent(
