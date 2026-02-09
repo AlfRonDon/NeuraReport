@@ -1,5 +1,54 @@
 # Release Notes
 
+## 2026-02-10 - Phase 9: Cross-Page Data Sharing, LLM Simplification & AI QA Agent
+
+### Highlights
+- New cross-page data sharing system enabling seamless data transfer between all feature pages.
+- Simplified LLM provider configuration — Claude Code CLI is now the sole primary provider; removed legacy OpenAI-first complexity from providers and config.
+- Enhanced AI agent brain with expanded capabilities for the E2E testing harness.
+- Published `@neurareport/ai-qa-agent` as a standalone, framework-agnostic AI testing package.
+- Updated `.gitignore` for connection dumps, nested node_modules, test artifacts, and temp files.
+
+### Backend
+- Simplified `llm/providers.py` and `llm/config.py`, removing ~1,500 lines of multi-provider boilerplate in favour of Claude Code CLI as the default path.
+- Updated `llm/client.py` and `utils/llm.py` to use the streamlined provider configuration.
+- Updated agent services (`base_agent.py`, `research_agent.py`, `service.py`) with improved task handling and error recovery.
+- Updated routes (`agents.py`, `ai.py`, `health.py`, `ingestion.py`) with refined LLM integration.
+- Updated enrichment, federation, synthesis, docqa, and chart services for simplified LLM calls.
+- Updated `.env.example` to document Claude Code CLI as the primary LLM provider.
+
+### Frontend
+- Added reusable cross-page components: `ConnectionSelector`, `ImportFromMenu`, `SendToMenu`, `TemplateSelector`.
+- Added shared hooks: `useCrossPageActions`, `useIncomingTransfer`, `useSharedData`.
+- Added `crossPageStore` (Zustand) with `crossPageTypes.js` constants for type-safe transfers.
+- Updated all 20+ page containers to integrate cross-page actions (SendTo/ImportFrom menus).
+- Updated `Sidebar`, `GlobalSearch`, `WizardLayout`, and `stores/index.js` with cross-page support.
+
+### Packages
+- Upgraded `@neurareport/ai-qa-agent` with expanded agent brain (~550 lines of new reasoning logic).
+- Added UI framework presets, persona modifiers, QA profiles, and structured failure categorization.
+- Published as standalone npm package with CJS/ESM dual exports.
+
+### Testing
+- Updated AI agent E2E test specs and browser agent with expanded scenario support.
+- Added new E2E specs: `e2e-comprehensive.spec.ts`, `verify-upload.spec.ts`, `water-bill-e2e.spec.ts`.
+- Updated agent service tests to match new LLM provider configuration.
+
+### Operations
+- Updated `.gitignore` to exclude `conns.json`, `conns2.json`, `frontend.env`, nested `node_modules/`, `test-screenshots/`, `templates_check.json`, and temp template files.
+
+### Documentation
+- Updated root `README.md`, `backend/README.md`, `frontend/README.md` to reflect Claude Code CLI as primary LLM, React 19, 33 pages, and new cross-page features.
+- Updated `FEATURES.md` with cross-page data sharing (Section 50), AI QA Agent (Section 51), and revised feature counts (210+).
+- Updated `backend/requirements.txt` with Claude Code CLI documentation.
+
+### Upgrade Notes
+1. Claude Code CLI must be installed and authenticated (`claude --version`). No OpenAI API key is required for default operation.
+2. Run `pip install -r backend/requirements.txt` to update backend dependencies.
+3. Run `npm install` in `frontend/` for updated frontend dependencies.
+
+---
+
 ## 2026-02-01 - Phase 8: Hardening, Documentation & Governance
 
 ### Highlights

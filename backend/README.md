@@ -5,8 +5,8 @@ mapping, report generation, AI agents, data enrichment, document intelligence, a
 
 Refer to `docs/operations/CONFIG.md` for the complete list of supported environment variables. The bare minimum for production is:
 
-- `OPENAI_API_KEY`
-- `OPENAI_MODEL` (defaults to `gpt-5`)
+- Claude Code CLI installed and authenticated (`claude --version` to verify)
+- `CLAUDE_CODE_MODEL` (defaults to `sonnet`; options: `sonnet`, `opus`, `haiku`)
 - `UPLOAD_ROOT` (defaults to `backend/uploads`)
 - `NEURA_STATE_SECRET` (optional but recommended so encrypted state survives restarts)
 
@@ -19,14 +19,14 @@ The backend will read a `.env` file if present (highest to lowest priority):
 Set variables in PowerShell with:
 
 ```powershell
-$env:OPENAI_API_KEY = "sk-..."
+$env:CLAUDE_CODE_MODEL = "sonnet"
 $env:UPLOAD_ROOT = "$PWD\backend\uploads"
 ```
 
 macOS/Linux shells:
 
 ```bash
-export OPENAI_API_KEY="sk-..."
+export CLAUDE_CODE_MODEL="sonnet"
 export UPLOAD_ROOT="$PWD/backend/uploads"
 ```
 

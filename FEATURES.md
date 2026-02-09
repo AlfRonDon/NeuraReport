@@ -448,10 +448,11 @@ A comprehensive document outlining all features (major and minor) in the NeuraRe
 ## Integrations
 
 ### 38. LLM Providers
-- OpenAI integration (primary)
-- Anthropic Claude support (optional)
+- Claude Code CLI (primary — no API key needed, uses authenticated CLI session)
+- liteLLM abstraction layer (unified fallback across providers)
+- OpenAI support (optional fallback)
+- Anthropic API support (optional direct access)
 - Google Gemini support (optional)
-- liteLLM abstraction layer
 - DeepSeek provider support
 - Ollama local LLM support
 - Azure OpenAI support
@@ -611,13 +612,16 @@ A comprehensive document outlining all features (major and minor) in the NeuraRe
 ## Technical Libraries & Frameworks
 
 ### 46. Frontend Stack
-- React
-- Vite
+- React 19
+- Vite 7
+- MUI v7 (Material UI)
+- Zustand 5 (state management)
 - TipTap (rich text editing)
 - Handsontable/HyperFormula (spreadsheets)
 - ECharts/Recharts (charts)
 - React Flow (diagrams)
 - Y.js (real-time collaboration)
+- Playwright (E2E testing)
 
 ### 47. Backend Stack
 - FastAPI
@@ -643,6 +647,34 @@ A comprehensive document outlining all features (major and minor) in the NeuraRe
 
 ---
 
+## Cross-Page Data Sharing (Phase 9)
+
+### 50. Cross-Feature Data Flow
+- SendToMenu component for contextual data export to other features
+- ImportFromMenu component for pulling data from other features
+- Declarative input/output contracts per feature (OutputType, TransferAction, FeatureKey)
+- useCrossPageActions hook for seamless inter-page transfers
+- useIncomingTransfer hook for detecting and handling incoming data
+- useSharedData hook for accessing data passed between features
+- crossPageStore (Zustand) for transfer state management
+- ConnectionSelector and TemplateSelector reusable picker components
+- Type-safe data passing supporting: TEXT, RICH_TEXT, TABLE, DOCUMENT, DIAGRAM, DATASET, REPORT, ANALYSIS
+
+### 51. AI QA Agent (`@neurareport/ai-qa-agent`)
+- Standalone npm package for AI-powered E2E testing
+- Framework-agnostic: works with React, Vue, Angular, plain HTML
+- Built-in UI framework presets (MUI, Tailwind, Bootstrap, Ant Design, Chakra, shadcn/ui)
+- Vision support with Claude screenshot analysis
+- Smart stuck detection and re-planning
+- Cross-session learning from previous test runs
+- Action caching for faster replay
+- Persona modifiers (default, impatient, confused, power-user, accessibility, mobile, slow-network)
+- QA profiles (general-purpose, neurareport)
+- Detailed evidence output (screenshots, network logs, LLM conversations, perception logs)
+- Structured failure categorization for debugging
+
+---
+
 ## Feature Summary
 
 | Category | Count |
@@ -657,14 +689,16 @@ A comprehensive document outlining all features (major and minor) in the NeuraRe
 | Export Formats | 8 |
 | Distribution Channels | 6 |
 | Workflow Features | 6 |
-| Frontend Pages | 31 |
+| Frontend Pages | 33 |
 | UI Components | 8 |
+| Cross-Page Data Sharing | 10 |
+| AI QA Agent | 12 |
 | Security Features | 12 |
 | Integrations | 22 |
 | Backend Services | 93+ |
 | Additional Discovered Features | 33 |
 
-**Total Features Identified: 190+**
+**Total Features Identified: 210+**
 
 ---
 
@@ -687,4 +721,4 @@ A comprehensive document outlining all features (major and minor) in the NeuraRe
 
 *This document represents a comprehensive, enterprise-grade document processing and reporting platform with deep AI integration, multi-source connectivity, and extensive automation capabilities.*
 
-*Generated: January 2026*
+*Updated: February 2026*

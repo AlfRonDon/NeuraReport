@@ -1,6 +1,6 @@
 # NeuraReport
 
-NeuraReport is a desktop-first reporting assistant that pairs a FastAPI backend with a React/Tauri front-end. Operators ingest PDF templates, auto-map fields to SQL data, approve the contract, and generate PDF/HTML batches with full artifact traceability. The platform also provides AI agents, document intelligence (DocAI), data enrichment, federated schema queries, knowledge management, NL2SQL, and workflow automation.
+NeuraReport is an AI-powered reporting and document workspace that pairs a FastAPI backend with a React 19 + Vite front-end. Operators ingest PDF templates, auto-map fields to SQL data, approve the contract, and generate PDF/HTML batches with full artifact traceability. The platform also provides AI agents, document intelligence (DocAI), cross-page data sharing, data enrichment, federated schema queries, knowledge management, NL2SQL, workflow automation, and an AI QA testing agent.
 
 ## Repository Layout
 
@@ -9,7 +9,8 @@ NeuraReport is a desktop-first reporting assistant that pairs a FastAPI backend 
 - `backend/app/services/` - 40+ service modules (agents, AI writing, analytics, charts, connections, connectors, dashboards, design, DocAI, DocQA, documents, enrichment, export, federation, ingestion, jobs, knowledge, LLM, NL2SQL, reports, search, spreadsheets, summary, synthesis, templates, visualization, workflows).
 - `backend/engine/` - Legacy pipeline engine (adapters, orchestration, pipelines) kept for compatibility routes/tests.
 - `backend/legacy/` - Legacy service layer still referenced by API compatibility routes.
-- `frontend/` - Vite + React 18 SPA with 28 page modules, Zustand state management, and Playwright e2e tests.
+- `frontend/` - Vite + React 19 SPA with 33 page modules, Zustand state management, cross-page data sharing, and Playwright e2e tests.
+- `packages/` - Standalone packages: `@neurareport/ai-qa-agent` (AI-powered E2E testing agent).
 - `scripts/` - Developer utilities (`verify_pipeline.py`, `artifact_stats.py`, `enforce_backend_arch.py`, etc.).
 - `docs/` - Architecture governance, operations config, pipeline documentation, product requirements, audits, and release notes.
 - `backend/uploads/`, `backend/uploads_excel/` - Runtime artifacts/manifests (created at runtime; served via `/uploads` and `/excel-uploads`).
@@ -22,6 +23,7 @@ See `FEATURES.md` for a complete feature inventory, `docs/product/requirements.m
 - Python 3.11+
 - Node.js 18+ (or 20 LTS)
 - npm 9+ (bundled with Node)
+- Claude Code CLI installed and authenticated (`claude --version` to verify)
 - (Optional) Playwright browsers for end-to-end UI checks (`npx playwright install --with-deps`)
 
 ## Quickstart
@@ -48,7 +50,7 @@ bash scripts/dev.sh
 python -m venv .venv
 .venv\Scripts\Activate.ps1
 pip install -r backend/requirements.txt
-setx OPENAI_API_KEY "sk-..."   # or $env:OPENAI_API_KEY in the current session
+claude --version   # verify Claude Code CLI is installed and authenticated
 uvicorn backend.api:app --reload
 ```
 
@@ -58,7 +60,7 @@ Unix shell equivalent:
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r backend/requirements.txt
-export OPENAI_API_KEY="sk-..."
+claude --version   # verify Claude Code CLI is installed and authenticated
 uvicorn backend.api:app --reload
 ```
 

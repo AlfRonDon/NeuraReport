@@ -27,9 +27,11 @@ jsonschema>=4.18.0
 # State persistence (SQLite JSON store)
 sqlalchemy
 
-# LLM Providers (install based on your needs)
+# LLM Providers
+# NeuraReport uses Claude Code CLI as the primary LLM provider (no API key needed).
+# The packages below are required by litellm for fallback/alternative providers.
 openai>=1.0.0
-# anthropic>=0.18.0  # Optional: For Claude models
+# anthropic>=0.18.0  # Optional: For direct Anthropic API access
 # google-generativeai>=0.4.0  # Optional: For Gemini models
 
 pillow

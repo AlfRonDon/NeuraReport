@@ -1,6 +1,6 @@
 # NeuraReport Frontend
 
-This package contains the NeuraReport web UI built with React 18 + Vite + MUI. The theme enforces flat 12px surfaces with outlined papers, so please avoid reintroducing component-level elevations or oversized rounded corners.
+This package contains the NeuraReport web UI built with React 19 + Vite + MUI v7. The theme enforces flat 12px surfaces with outlined papers, so please avoid reintroducing component-level elevations or oversized rounded corners.
 
 ## Install
 
@@ -26,7 +26,7 @@ Tip: copy `frontend/.env.example` to `frontend/.env.local` to configure the back
 
 ## Architecture
 
-### Pages (28 modules)
+### Pages (33 modules)
 
 Route-level composition lives under `src/pages/`:
 
@@ -59,19 +59,24 @@ Route-level composition lives under `src/pages/`:
 | `IngestionPage` | `/ingestion` | File, URL, and email ingestion |
 | `HistoryPage` | `/history` | Activity history |
 | `UsageStatsPage` | `/stats` | Usage metrics |
+| `OpsConsolePage` | `/ops` | Operations console and diagnostics |
+| `ActivityPage` | `/activity` | User activity logs |
+| `AnalyzePage` | `/analyze` | Data analysis engine |
+| `FavoritesPage` | *(cross-feature)* | Bookmarking system |
+| `ShellPage` | *(global)* | Command palette (Cmd+K) |
 | `SettingsPage` | `/settings` | Application settings |
 
 ### State Management (Zustand)
 
 State stores live under `src/stores/`. Each feature domain has its own store:
 
-`useAppStore`, `connectionStore`, `connectorStore`, `dashboardStore`, `designStore`, `docqaStore`, `documentStore`, `enrichmentStore`, `exportStore`, `federationStore`, `ingestionStore`, `knowledgeStore`, `queryStore`, `searchStore`, `spreadsheetStore`, `summaryStore`, `synthesisStore`, `templateChatStore`, `visualizationStore`, `workflowStore`
+`useAppStore`, `agentStore`, `connectionStore`, `connectorStore`, `crossPageStore`, `dashboardStore`, `designStore`, `docqaStore`, `documentStore`, `enrichmentStore`, `exportStore`, `federationStore`, `ingestionStore`, `knowledgeStore`, `queryStore`, `searchStore`, `spreadsheetStore`, `summaryStore`, `synthesisStore`, `templateChatStore`, `visualizationStore`, `workflowStore`
 
 ### API Clients
 
 API client modules under `src/api/` handle all backend communication:
 
-`dashboards.js`, `documents.js`, `export.js`, `ingestion.js`, `knowledge.js`, `search.js`, `spreadsheets.js`, `visualization.js`, `workflows.js`
+`agents.js`, `agentsV2.js`, `charts.js`, `connectors.js`, `dashboards.js`, `design.js`, `docqa.js`, `documents.js`, `enrichment.js`, `export.js`, `federation.js`, `health.js`, `ingestion.js`, `knowledge.js`, `nl2sql.js`, `recommendations.js`, `search.js`, `spreadsheets.js`, `summary.js`, `synthesis.js`, `visualization.js`, `workflows.js`
 
 ### Folder Structure
 
@@ -81,9 +86,9 @@ See `docs/architecture/ARCHITECTURE_GOVERNANCE.md` for enforced dependency bound
 - `src/features/` → feature modules and domain UI logic
 - `src/layouts/` → structural shells (AppLayout, ProjectLayout, WizardLayout, SettingsLayout)
 - `src/navigation/` → Sidebar, TopNav, Breadcrumbs, GlobalSearch, NotificationCenter
-- `src/components/` → reusable UI building blocks
+- `src/components/` → reusable UI building blocks (ConnectionSelector, ImportFromMenu, SendToMenu, TemplateSelector, DataTable, ErrorBoundary, etc.)
 - `src/ui/` → design primitives (Button, Input, IconButton, Kbd, ScrollArea)
-- `src/hooks/` → reusable logic (useJobs, useUploadProgress, useKeyboardShortcuts, etc.)
+- `src/hooks/` → reusable logic (useJobs, useUploadProgress, useKeyboardShortcuts, useCrossPageActions, useIncomingTransfer, useSharedData, useBootstrapState, useNetworkStatus, useFormErrorFocus, useStepTimingEstimator)
 - `src/stores/` → Zustand state containers
 - `src/api/` → API client boundary
 - `src/utils/` → shared helpers
