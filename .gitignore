@@ -15,6 +15,7 @@ nul
 .env
 .env.*
 !.env.example
+frontend.env
 
 # Python binaries and caches
 .venv/
@@ -39,6 +40,10 @@ coverage/
 coverage.xml
 *.coverage
 
+# Connection / credential dumps
+conns.json
+conns2.json
+
 # Logs and temp
 *.log
 .vitest-localstorage.*
@@ -49,6 +54,8 @@ frontend/.vitest-localstorage.*
 *.local
 .tmp_*.json
 .tmp_*.txt
+templates_check.json
+*temp_templates.json
 AUDIT_FINDINGS.md
 FORENSIC_AUDIT_REPORT.md
 MANUAL_TEST_LOG.md
@@ -59,8 +66,10 @@ MagicMock/
 features_copy.md
 fix_tests.py
 
+# Node modules
+node_modules/
+
 # Frontend generated content
-frontend/node_modules/
 frontend/dist/
 frontend/.vite/
 frontend/.eslintcache
@@ -75,6 +84,7 @@ frontend/tests/e2e/evidence/
 frontend/tests/e2e/workflow-results/
 frontend/workflow-test-result.json
 test-results/
+test-screenshots/
 
 # Throwaway e2e audit/analysis scripts and docs
 frontend/tests/e2e/*.cjs
