@@ -7,7 +7,8 @@ from __future__ import annotations
 import logging
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from pydantic import BaseModel, Field
 
 from backend.app.services.background_tasks import enqueue_background_job
 import backend.app.services.state_access as state_access
@@ -293,3 +294,159 @@ async def generate_faq(
         runner=runner,
     )
     return {"status": "queued", "job_id": job["id"], "correlation_id": correlation_id}
+
+
+# =============================================================================
+# COLLECTION-DOCUMENT ASSOCIATION ENDPOINTS
+# =============================================================================
+
+
+class CollectionAddDocumentRequest(BaseModel):
+    document_id: str = Field(..., description="ID of the document to add")
+
+
+@router.post("/collections/{coll_id}/documents")
+async def add_document_to_collection(coll_id: str, request: CollectionAddDocumentRequest):
+    """Add a document to a collection."""
+    try:
+        result = await knowledge_service.add_document_to_collection(
+            collection_id=coll_id,
+            document_id=request.document_id,
+        )
+        if not result:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Collection or document not found",
+            )
+        return {"status": "added", "collection_id": coll_id, "document_id": request.document_id}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Failed to add document to collection: %s", e)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to add document to collection",
+        )
+
+
+@router.delete("/collections/{coll_id}/documents/{doc_id}")
+async def remove_document_from_collection(coll_id: str, doc_id: str):
+    """Remove a document from a collection."""
+    try:
+        result = await knowledge_service.remove_document_from_collection(
+            collection_id=coll_id,
+            document_id=doc_id,
+        )
+        if not result:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Collection or document not found",
+            )
+        return {"status": "removed", "collection_id": coll_id, "document_id": doc_id}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Failed to remove document from collection: %s", e)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to remove document from collection",
+        )
+
+
+# =============================================================================
+# DOCUMENT-TAG ASSOCIATION ENDPOINTS
+# =============================================================================
+
+
+class DocumentAddTagRequest(BaseModel):
+    tag_id: str = Field(..., description="ID of the tag to add")
+
+
+@router.post("/documents/{doc_id}/tags")
+async def add_tag_to_document(doc_id: str, request: DocumentAddTagRequest):
+    """Add a tag to a document."""
+    try:
+        result = await knowledge_service.add_tag_to_document(
+            document_id=doc_id,
+            tag_id=request.tag_id,
+        )
+        if not result:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Document or tag not found",
+            )
+        return {"status": "added", "document_id": doc_id, "tag_id": request.tag_id}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Failed to add tag to document: %s", e)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to add tag to document",
+        )
+
+
+@router.delete("/documents/{doc_id}/tags/{tag_id}")
+async def remove_tag_from_document(doc_id: str, tag_id: str):
+    """Remove a tag from a document."""
+    try:
+        result = await knowledge_service.remove_tag_from_document(
+            document_id=doc_id,
+            tag_id=tag_id,
+        )
+        if not result:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Document or tag not found",
+            )
+        return {"status": "removed", "document_id": doc_id, "tag_id": tag_id}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Failed to remove tag from document: %s", e)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to remove tag from document",
+        )
+
+
+# =============================================================================
+# LIBRARY STATISTICS & ACTIVITY ENDPOINTS
+# =============================================================================
+
+
+@router.get("/stats")
+async def get_library_stats():
+    """Get library statistics including total documents, collections, tags, and storage usage."""
+    try:
+        stats = await knowledge_service.get_stats()
+        return stats if isinstance(stats, dict) else stats.model_dump()
+    except Exception as e:
+        logger.exception("Failed to get library stats: %s", e)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve library statistics",
+        )
+
+
+@router.get("/documents/{doc_id}/activity")
+async def get_document_activity(doc_id: str):
+    """Get the activity log for a document."""
+    try:
+        activity = await knowledge_service.get_document_activity(doc_id)
+        if activity is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Document not found",
+            )
+        return activity if isinstance(activity, list) else [
+            a if isinstance(a, dict) else a.model_dump() for a in activity
+        ]
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Failed to get document activity: %s", e)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve document activity",
+        )

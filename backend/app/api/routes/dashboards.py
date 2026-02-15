@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import uuid
 from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -119,6 +120,51 @@ class AddWidgetRequest(BaseModel):
     h: int = 3
 
 
+class WidgetLayoutItem(BaseModel):
+    """Single widget layout position update."""
+
+    widget_id: str
+    x: int
+    y: int
+    w: int = Field(..., ge=1)
+    h: int = Field(..., ge=1)
+
+
+class UpdateLayoutRequest(BaseModel):
+    """Update layout positions for all widgets."""
+
+    items: list[WidgetLayoutItem]
+
+
+class DashboardFilterRequest(BaseModel):
+    """Add or update a dashboard filter."""
+
+    field: str = Field(..., min_length=1, max_length=255)
+    operator: str = Field(..., pattern="^(eq|neq|gt|gte|lt|lte|in|not_in|contains|between)$")
+    value: Any
+    label: Optional[str] = None
+
+
+class DashboardVariableRequest(BaseModel):
+    """Set a dashboard variable value."""
+
+    value: Any
+
+
+class WhatIfRequest(BaseModel):
+    """Run a what-if simulation."""
+
+    variable_changes: dict[str, Any]
+    metrics_to_evaluate: list[str] = Field(..., min_length=1)
+
+
+class ShareDashboardRequest(BaseModel):
+    """Share a dashboard with users."""
+
+    users: list[str] = Field(..., min_length=1)
+    permission: str = Field("view", pattern="^(view|edit|admin)$")
+
+
 class DashboardResponse(BaseModel):
     """Dashboard response."""
 
@@ -157,6 +203,62 @@ async def list_dashboards(
 ):
     """List all dashboards."""
     return _dashboard_svc.list_dashboards(limit=limit, offset=offset)
+
+
+# ============================================
+# Static-path routes (must precede /{dashboard_id})
+# ============================================
+
+@router.get("/snapshots/{snapshot_id}")
+async def get_snapshot(snapshot_id: str):
+    """Get a snapshot by ID and return its URL and content hash."""
+    snapshot = _snapshot_svc.get_snapshot(snapshot_id)
+    if snapshot is None:
+        raise HTTPException(status_code=404, detail="Snapshot not found")
+    return {
+        "snapshot_id": snapshot["id"],
+        "url": snapshot.get("url"),
+        "content_hash": snapshot.get("content_hash"),
+        "format": snapshot.get("format"),
+        "status": snapshot.get("status", "completed"),
+        "created_at": snapshot.get("created_at"),
+    }
+
+
+@router.get("/templates")
+async def list_dashboard_templates():
+    """List available dashboard templates."""
+    templates = _dashboard_svc.list_templates()
+    return {"templates": templates}
+
+
+@router.post("/templates/{template_id}/create", response_model=DashboardResponse)
+async def create_dashboard_from_template(
+    template_id: str,
+    name: Optional[str] = Query(None, min_length=1, max_length=255),
+):
+    """Create a new dashboard from an existing template."""
+    template = _dashboard_svc.get_template(template_id)
+    if template is None:
+        raise HTTPException(status_code=404, detail="Template not found")
+
+    dashboard_name = name or f"{template.get('name', 'Dashboard')} (copy)"
+    dashboard = _dashboard_svc.create_dashboard(
+        name=dashboard_name,
+        description=template.get("description"),
+        widgets=template.get("widgets", []),
+        filters=template.get("filters", []),
+        theme=template.get("theme"),
+    )
+    logger.info(
+        "dashboard_created_from_template",
+        extra={
+            "event": "dashboard_created_from_template",
+            "template_id": template_id,
+            "dashboard_id": dashboard["id"],
+        },
+    )
+    return DashboardResponse(**dashboard)
 
 
 @router.get("/{dashboard_id}", response_model=DashboardResponse)
@@ -538,3 +640,488 @@ def _dicts_to_series(data: list[dict[str, Any]]) -> list[DataSeries]:
         ]
         series.append(DataSeries(name=col, values=values))
     return series
+
+
+# ============================================
+# Layout, Refresh, Filters, Variables, What-If,
+# Templates, Sharing, and Export Endpoints
+# ============================================
+
+@router.put("/{dashboard_id}/layout")
+async def update_widget_layout(dashboard_id: str, request: UpdateLayoutRequest):
+    """Update widget layout positions for all widgets in a dashboard."""
+    dashboard = _dashboard_svc.get_dashboard(dashboard_id)
+    if dashboard is None:
+        raise HTTPException(status_code=404, detail="Dashboard not found")
+
+    updated: list[dict[str, Any]] = []
+    for item in request.items:
+        widget = _widget_svc.update_widget(
+            dashboard_id,
+            item.widget_id,
+            x=item.x,
+            y=item.y,
+            w=item.w,
+            h=item.h,
+        )
+        if widget is None:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Widget {item.widget_id} not found",
+            )
+        updated.append(widget)
+
+    logger.info(
+        "layout_updated",
+        extra={
+            "event": "layout_updated",
+            "dashboard_id": dashboard_id,
+            "widget_count": len(updated),
+        },
+    )
+    return {"status": "ok", "updated_widgets": len(updated), "layout": updated}
+
+
+@router.post("/{dashboard_id}/refresh")
+async def refresh_dashboard(dashboard_id: str):
+    """Refresh all widgets in a dashboard.
+
+    Retrieves the dashboard, iterates over its widgets, and returns
+    a per-widget refresh status.
+    """
+    dashboard = _dashboard_svc.get_dashboard(dashboard_id)
+    if dashboard is None:
+        raise HTTPException(status_code=404, detail="Dashboard not found")
+
+    widgets = dashboard.get("widgets", [])
+    results: list[dict[str, Any]] = []
+
+    for widget in widgets:
+        widget_id = widget.get("id", "unknown")
+        try:
+            config = widget.get("config", {})
+            sql_query = config.get("query")
+            connection_id = config.get("data_source")
+
+            if sql_query and connection_id:
+                _nl2sql_svc.execute_query(
+                    NL2SQLExecuteRequest(
+                        sql=sql_query,
+                        connection_id=connection_id,
+                    ),
+                )
+                results.append({"widget_id": widget_id, "status": "refreshed"})
+            else:
+                results.append({"widget_id": widget_id, "status": "skipped", "reason": "no query configured"})
+        except Exception as exc:
+            logger.warning(
+                "widget_refresh_failed",
+                extra={
+                    "event": "widget_refresh_failed",
+                    "dashboard_id": dashboard_id,
+                    "widget_id": widget_id,
+                    "error": str(exc),
+                },
+            )
+            results.append({"widget_id": widget_id, "status": "error", "error": str(exc)})
+
+    logger.info(
+        "dashboard_refreshed",
+        extra={
+            "event": "dashboard_refreshed",
+            "dashboard_id": dashboard_id,
+            "total_widgets": len(widgets),
+        },
+    )
+    return {
+        "status": "ok",
+        "dashboard_id": dashboard_id,
+        "total_widgets": len(widgets),
+        "results": results,
+    }
+
+
+@router.post("/{dashboard_id}/filters")
+async def add_dashboard_filter(dashboard_id: str, request: DashboardFilterRequest):
+    """Add a filter to a dashboard."""
+    dashboard = _dashboard_svc.get_dashboard(dashboard_id)
+    if dashboard is None:
+        raise HTTPException(status_code=404, detail="Dashboard not found")
+
+    new_filter: dict[str, Any] = {
+        "id": str(uuid.uuid4()),
+        "field": request.field,
+        "operator": request.operator,
+        "value": request.value,
+        "label": request.label or request.field,
+    }
+
+    filters = dashboard.get("filters", [])
+    filters.append(new_filter)
+
+    updated = _dashboard_svc.update_dashboard(dashboard_id, filters=filters)
+    if updated is None:
+        raise HTTPException(status_code=500, detail="Failed to update dashboard filters")
+
+    logger.info(
+        "filter_added",
+        extra={
+            "event": "filter_added",
+            "dashboard_id": dashboard_id,
+            "filter_id": new_filter["id"],
+        },
+    )
+    return {"status": "ok", "filter": new_filter}
+
+
+@router.put("/{dashboard_id}/filters/{filter_id}")
+async def update_dashboard_filter(
+    dashboard_id: str,
+    filter_id: str,
+    request: DashboardFilterRequest,
+):
+    """Update an existing filter on a dashboard."""
+    dashboard = _dashboard_svc.get_dashboard(dashboard_id)
+    if dashboard is None:
+        raise HTTPException(status_code=404, detail="Dashboard not found")
+
+    filters = dashboard.get("filters", [])
+    found = False
+    for i, f in enumerate(filters):
+        if f.get("id") == filter_id:
+            filters[i] = {
+                "id": filter_id,
+                "field": request.field,
+                "operator": request.operator,
+                "value": request.value,
+                "label": request.label or request.field,
+            }
+            found = True
+            break
+
+    if not found:
+        raise HTTPException(status_code=404, detail="Filter not found")
+
+    updated = _dashboard_svc.update_dashboard(dashboard_id, filters=filters)
+    if updated is None:
+        raise HTTPException(status_code=500, detail="Failed to update dashboard filters")
+
+    logger.info(
+        "filter_updated",
+        extra={
+            "event": "filter_updated",
+            "dashboard_id": dashboard_id,
+            "filter_id": filter_id,
+        },
+    )
+    return {"status": "ok", "filter": filters[i]}
+
+
+@router.delete("/{dashboard_id}/filters/{filter_id}")
+async def delete_dashboard_filter(dashboard_id: str, filter_id: str):
+    """Delete a filter from a dashboard."""
+    dashboard = _dashboard_svc.get_dashboard(dashboard_id)
+    if dashboard is None:
+        raise HTTPException(status_code=404, detail="Dashboard not found")
+
+    filters = dashboard.get("filters", [])
+    original_len = len(filters)
+    filters = [f for f in filters if f.get("id") != filter_id]
+
+    if len(filters) == original_len:
+        raise HTTPException(status_code=404, detail="Filter not found")
+
+    updated = _dashboard_svc.update_dashboard(dashboard_id, filters=filters)
+    if updated is None:
+        raise HTTPException(status_code=500, detail="Failed to update dashboard filters")
+
+    logger.info(
+        "filter_deleted",
+        extra={
+            "event": "filter_deleted",
+            "dashboard_id": dashboard_id,
+            "filter_id": filter_id,
+        },
+    )
+    return {"status": "ok", "message": "Filter deleted"}
+
+
+@router.put("/{dashboard_id}/variables/{variable_name}")
+async def set_dashboard_variable(
+    dashboard_id: str,
+    variable_name: str,
+    request: DashboardVariableRequest,
+):
+    """Set a dashboard variable value.
+
+    Stores the variable in the dashboard's metadata dict so it can be
+    referenced by widget queries and filters.
+    """
+    dashboard = _dashboard_svc.get_dashboard(dashboard_id)
+    if dashboard is None:
+        raise HTTPException(status_code=404, detail="Dashboard not found")
+
+    metadata = dashboard.get("metadata", {})
+    variables = metadata.get("variables", {})
+    variables[variable_name] = request.value
+    metadata["variables"] = variables
+
+    updated = _dashboard_svc.update_dashboard(dashboard_id, metadata=metadata)
+    if updated is None:
+        raise HTTPException(status_code=500, detail="Failed to update dashboard variable")
+
+    logger.info(
+        "variable_set",
+        extra={
+            "event": "variable_set",
+            "dashboard_id": dashboard_id,
+            "variable_name": variable_name,
+        },
+    )
+    return {
+        "status": "ok",
+        "variable_name": variable_name,
+        "value": request.value,
+    }
+
+
+@router.post("/{dashboard_id}/what-if")
+async def run_what_if_simulation(dashboard_id: str, request: WhatIfRequest):
+    """Run a what-if simulation on dashboard data.
+
+    Applies hypothetical variable changes and evaluates the requested
+    metrics using the analytics services.
+    """
+    dashboard = _dashboard_svc.get_dashboard(dashboard_id)
+    if dashboard is None:
+        raise HTTPException(status_code=404, detail="Dashboard not found")
+
+    simulation_results: dict[str, Any] = {}
+
+    for metric in request.metrics_to_evaluate:
+        try:
+            # Collect baseline data from dashboard widgets for this metric
+            baseline_values: list[float] = []
+            for widget in dashboard.get("widgets", []):
+                config = widget.get("config", {})
+                if config.get("data_source") and config.get("query"):
+                    result = _nl2sql_svc.execute_query(
+                        NL2SQLExecuteRequest(
+                            sql=config["query"],
+                            connection_id=config["data_source"],
+                        ),
+                    )
+                    for row in result.rows:
+                        if metric in row and _is_numeric(row[metric]):
+                            baseline_values.append(float(row[metric]))
+
+            if len(baseline_values) < 2:
+                simulation_results[metric] = {
+                    "status": "insufficient_data",
+                    "message": f"Not enough data points for metric '{metric}'",
+                }
+                continue
+
+            # Apply variable changes as scaling factors
+            adjusted_values = list(baseline_values)
+            for var_name, change in request.variable_changes.items():
+                if _is_numeric(change):
+                    factor = float(change)
+                    adjusted_values = [v * factor for v in adjusted_values]
+
+            baseline_series = DataSeries(name=f"{metric}_baseline", values=baseline_values)
+            adjusted_series = DataSeries(name=f"{metric}_adjusted", values=adjusted_values)
+
+            baseline_request = InsightsRequest(data=[baseline_series], context="what-if baseline")
+            adjusted_request = InsightsRequest(data=[adjusted_series], context="what-if adjusted")
+
+            baseline_insights = await insight_service.generate_insights(baseline_request)
+            adjusted_insights = await insight_service.generate_insights(adjusted_request)
+
+            simulation_results[metric] = {
+                "status": "ok",
+                "baseline": baseline_insights.model_dump(),
+                "adjusted": adjusted_insights.model_dump(),
+                "variable_changes": request.variable_changes,
+            }
+        except Exception as exc:
+            logger.warning(
+                "what_if_metric_failed",
+                extra={
+                    "event": "what_if_metric_failed",
+                    "dashboard_id": dashboard_id,
+                    "metric": metric,
+                    "error": str(exc),
+                },
+            )
+            simulation_results[metric] = {
+                "status": "error",
+                "error": str(exc),
+            }
+
+    logger.info(
+        "what_if_completed",
+        extra={
+            "event": "what_if_completed",
+            "dashboard_id": dashboard_id,
+            "metrics_evaluated": len(request.metrics_to_evaluate),
+        },
+    )
+    return {
+        "status": "ok",
+        "dashboard_id": dashboard_id,
+        "variable_changes": request.variable_changes,
+        "results": simulation_results,
+    }
+
+
+@router.post("/{dashboard_id}/save-as-template")
+async def save_dashboard_as_template(
+    dashboard_id: str,
+    name: Optional[str] = Query(None, min_length=1, max_length=255),
+):
+    """Save an existing dashboard as a reusable template."""
+    dashboard = _dashboard_svc.get_dashboard(dashboard_id)
+    if dashboard is None:
+        raise HTTPException(status_code=404, detail="Dashboard not found")
+
+    template_id = str(uuid.uuid4())
+    template: dict[str, Any] = {
+        "id": template_id,
+        "name": name or f"{dashboard.get('name', 'Dashboard')} Template",
+        "description": dashboard.get("description"),
+        "widgets": dashboard.get("widgets", []),
+        "filters": dashboard.get("filters", []),
+        "theme": dashboard.get("theme"),
+        "source_dashboard_id": dashboard_id,
+    }
+
+    _dashboard_svc.save_template(template)
+
+    logger.info(
+        "template_saved",
+        extra={
+            "event": "template_saved",
+            "dashboard_id": dashboard_id,
+            "template_id": template_id,
+        },
+    )
+    return {"status": "ok", "template_id": template_id, "template": template}
+
+
+@router.post("/{dashboard_id}/share")
+async def share_dashboard(dashboard_id: str, request: ShareDashboardRequest):
+    """Share a dashboard with other users."""
+    dashboard = _dashboard_svc.get_dashboard(dashboard_id)
+    if dashboard is None:
+        raise HTTPException(status_code=404, detail="Dashboard not found")
+
+    metadata = dashboard.get("metadata", {})
+    sharing = metadata.get("sharing", [])
+
+    for user in request.users:
+        # Update existing entry or add new one
+        existing = next((s for s in sharing if s.get("user") == user), None)
+        if existing:
+            existing["permission"] = request.permission
+        else:
+            sharing.append({
+                "id": str(uuid.uuid4()),
+                "user": user,
+                "permission": request.permission,
+            })
+
+    metadata["sharing"] = sharing
+    updated = _dashboard_svc.update_dashboard(dashboard_id, metadata=metadata)
+    if updated is None:
+        raise HTTPException(status_code=500, detail="Failed to share dashboard")
+
+    logger.info(
+        "dashboard_shared",
+        extra={
+            "event": "dashboard_shared",
+            "dashboard_id": dashboard_id,
+            "shared_with": request.users,
+            "permission": request.permission,
+        },
+    )
+    return {
+        "status": "ok",
+        "dashboard_id": dashboard_id,
+        "shared_with": request.users,
+        "permission": request.permission,
+    }
+
+
+@router.get("/{dashboard_id}/export")
+async def export_dashboard(dashboard_id: str):
+    """Export a complete dashboard and all its data as JSON."""
+    dashboard = _dashboard_svc.get_dashboard(dashboard_id)
+    if dashboard is None:
+        raise HTTPException(status_code=404, detail="Dashboard not found")
+
+    widget_data: list[dict[str, Any]] = []
+    for widget in dashboard.get("widgets", []):
+        widget_id = widget.get("id", "unknown")
+        config = widget.get("config", {})
+        sql_query = config.get("query")
+        connection_id = config.get("data_source")
+
+        entry: dict[str, Any] = {
+            "widget_id": widget_id,
+            "config": config,
+            "x": widget.get("x"),
+            "y": widget.get("y"),
+            "w": widget.get("w"),
+            "h": widget.get("h"),
+        }
+
+        if sql_query and connection_id:
+            try:
+                result = _nl2sql_svc.execute_query(
+                    NL2SQLExecuteRequest(
+                        sql=sql_query,
+                        connection_id=connection_id,
+                    ),
+                )
+                entry["data"] = {
+                    "rows": result.rows,
+                    "columns": result.columns,
+                    "row_count": result.row_count,
+                }
+            except Exception as exc:
+                logger.warning(
+                    "export_widget_query_failed",
+                    extra={
+                        "event": "export_widget_query_failed",
+                        "dashboard_id": dashboard_id,
+                        "widget_id": widget_id,
+                        "error": str(exc),
+                    },
+                )
+                entry["data"] = {"error": str(exc)}
+        else:
+            entry["data"] = None
+
+        widget_data.append(entry)
+
+    logger.info(
+        "dashboard_exported",
+        extra={
+            "event": "dashboard_exported",
+            "dashboard_id": dashboard_id,
+            "widget_count": len(widget_data),
+        },
+    )
+    return {
+        "dashboard_id": dashboard_id,
+        "name": dashboard.get("name"),
+        "description": dashboard.get("description"),
+        "theme": dashboard.get("theme"),
+        "filters": dashboard.get("filters", []),
+        "refresh_interval": dashboard.get("refresh_interval"),
+        "metadata": dashboard.get("metadata", {}),
+        "widgets": widget_data,
+        "created_at": dashboard.get("created_at"),
+        "updated_at": dashboard.get("updated_at"),
+    }

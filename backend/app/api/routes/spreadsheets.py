@@ -6,10 +6,12 @@ from __future__ import annotations
 
 import logging
 import threading
+import uuid
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel, Field
 import io
 
 from ...schemas.spreadsheets import (
@@ -190,6 +192,58 @@ async def update_cells(
     return {"status": "ok", "updated_count": len(updates)}
 
 
+@router.get("/{spreadsheet_id}/cells")
+async def get_cell_range(
+    spreadsheet_id: str,
+    sheet_index: int = Query(0, ge=0),
+    start_row: int = Query(0, ge=0),
+    start_col: int = Query(0, ge=0),
+    end_row: int = Query(99, ge=0),
+    end_col: int = Query(25, ge=0),
+    svc: SpreadsheetService = Depends(get_spreadsheet_service),
+):
+    """Get cell range from a spreadsheet sheet."""
+    spreadsheet = svc.get(spreadsheet_id)
+    if not spreadsheet:
+        raise HTTPException(status_code=404, detail="Spreadsheet not found")
+
+    if sheet_index >= len(spreadsheet.sheets):
+        raise HTTPException(status_code=400, detail="Sheet index out of range")
+
+    sheet = spreadsheet.sheets[sheet_index]
+    data = sheet.data
+
+    # Clamp end bounds to actual data dimensions
+    actual_end_row = min(end_row, len(data) - 1)
+    actual_end_col = min(end_col, (len(data[0]) - 1) if data else 0)
+
+    if start_row > actual_end_row or start_col > actual_end_col:
+        return {
+            "spreadsheet_id": spreadsheet_id,
+            "sheet_index": sheet_index,
+            "start_row": start_row,
+            "start_col": start_col,
+            "end_row": end_row,
+            "end_col": end_col,
+            "data": [],
+        }
+
+    sliced = []
+    for r in range(start_row, actual_end_row + 1):
+        row = data[r][start_col:actual_end_col + 1] if r < len(data) else []
+        sliced.append(row)
+
+    return {
+        "spreadsheet_id": spreadsheet_id,
+        "sheet_index": sheet_index,
+        "start_row": start_row,
+        "start_col": start_col,
+        "end_row": actual_end_row,
+        "end_col": actual_end_col,
+        "data": sliced,
+    }
+
+
 # ============================================
 # Sheet Operations
 # ============================================
@@ -287,6 +341,35 @@ async def add_conditional_format(
     return {"status": "ok", "message": "Conditional formatting applied"}
 
 
+@router.delete("/{spreadsheet_id}/sheets/{sheet_id}/conditional-formats/{format_id}")
+async def remove_conditional_format(
+    spreadsheet_id: str,
+    sheet_id: str,
+    format_id: str,
+    svc: SpreadsheetService = Depends(get_spreadsheet_service),
+):
+    """Remove a conditional format by ID from a sheet."""
+    spreadsheet = svc.get(spreadsheet_id)
+    if not spreadsheet:
+        raise HTTPException(status_code=404, detail="Spreadsheet not found")
+
+    for sheet in spreadsheet.sheets:
+        if sheet.id == sheet_id:
+            original_count = len(sheet.conditional_formats)
+            sheet.conditional_formats = [
+                cf for cf in sheet.conditional_formats if cf.id != format_id
+            ]
+            if len(sheet.conditional_formats) == original_count:
+                raise HTTPException(status_code=404, detail="Conditional format not found")
+
+            from datetime import datetime, timezone
+            spreadsheet.updated_at = datetime.now(timezone.utc).isoformat()
+            svc._save_spreadsheet(spreadsheet)
+            return {"status": "ok", "message": "Conditional format removed"}
+
+    raise HTTPException(status_code=404, detail="Sheet not found")
+
+
 # ============================================
 # Data Validation
 # ============================================
@@ -343,6 +426,49 @@ async def import_spreadsheet(
         raise HTTPException(status_code=400, detail="Unsupported file format. Use CSV or XLSX.")
 
     return _to_spreadsheet_response(spreadsheet)
+
+
+# ============================================
+# Formula Utilities (static paths - must be before /{spreadsheet_id})
+# ============================================
+
+class FormulaValidateRequest(BaseModel):
+    formula: str = Field(..., min_length=1)
+
+
+@router.post("/formula/validate")
+async def validate_formula(
+    request: FormulaValidateRequest,
+    engine: FormulaEngine = Depends(get_formula_engine),
+):
+    """Validate a formula syntax."""
+    formula = request.formula
+    if not formula.startswith("="):
+        formula = f"={formula}"
+
+    # Use engine to check syntax by evaluating against empty data
+    result = engine.evaluate(formula, [[]])
+    is_valid = result.error is None
+    return {
+        "formula": request.formula,
+        "valid": is_valid,
+        "error": result.error,
+    }
+
+
+@router.get("/formula/functions")
+async def list_formula_functions(
+    engine: FormulaEngine = Depends(get_formula_engine),
+):
+    """List available formula functions."""
+    functions = []
+    for name, func in engine.FUNCTIONS.items():
+        doc = getattr(func, "__doc__", None) or f"{name} function"
+        functions.append({
+            "name": name,
+            "description": doc.strip(),
+        })
+    return {"functions": functions, "total": len(functions)}
 
 
 @router.get("/{spreadsheet_id}/export")
@@ -423,6 +549,136 @@ async def create_pivot_table(
         show_row_totals=request.show_row_totals,
         show_col_totals=request.show_col_totals,
     )
+
+    result = pivot_svc.compute_pivot(records, config)
+
+    return PivotTableResponse(
+        id=config.id,
+        name=config.name,
+        headers=result.headers,
+        rows=result.rows,
+        column_totals=result.column_totals,
+        grand_total=result.grand_total,
+    )
+
+
+@router.put("/{spreadsheet_id}/pivot/{pivot_id}", response_model=PivotTableResponse)
+async def update_pivot_table(
+    spreadsheet_id: str,
+    pivot_id: str,
+    request: PivotTableRequest,
+    sheet_index: int = Query(0, ge=0),
+    svc: SpreadsheetService = Depends(get_spreadsheet_service),
+    pivot_svc: PivotService = Depends(get_pivot_service),
+):
+    """Update a pivot table and recompute with updated config."""
+    spreadsheet = svc.get(spreadsheet_id)
+    if not spreadsheet:
+        raise HTTPException(status_code=404, detail="Spreadsheet not found")
+
+    if sheet_index >= len(spreadsheet.sheets):
+        raise HTTPException(status_code=400, detail="Sheet index out of range")
+
+    sheet = spreadsheet.sheets[sheet_index]
+
+    # Convert sheet data to records
+    records = pivot_svc.data_to_records(sheet.data)
+
+    # Create updated pivot config with existing ID
+    from ...services.spreadsheets.pivot_service import PivotTableConfig, PivotValue, PivotFilter
+    config = PivotTableConfig(
+        id=pivot_id,
+        name=request.name,
+        source_sheet_id=sheet.id,
+        source_range=request.source_range,
+        row_fields=request.row_fields,
+        column_fields=request.column_fields,
+        value_fields=[
+            PivotValue(
+                field=v.field,
+                aggregation=v.aggregation,
+                alias=v.alias,
+            )
+            for v in request.value_fields
+        ],
+        filters=[
+            PivotFilter(
+                field=f.field,
+                values=f.values,
+                exclude=f.exclude,
+            )
+            for f in request.filters
+        ],
+        show_grand_totals=request.show_grand_totals,
+        show_row_totals=request.show_row_totals,
+        show_col_totals=request.show_col_totals,
+    )
+
+    result = pivot_svc.compute_pivot(records, config)
+
+    return PivotTableResponse(
+        id=config.id,
+        name=config.name,
+        headers=result.headers,
+        rows=result.rows,
+        column_totals=result.column_totals,
+        grand_total=result.grand_total,
+    )
+
+
+@router.delete("/{spreadsheet_id}/pivot/{pivot_id}")
+async def delete_pivot_table(
+    spreadsheet_id: str,
+    pivot_id: str,
+    svc: SpreadsheetService = Depends(get_spreadsheet_service),
+):
+    """Delete a pivot table."""
+    spreadsheet = svc.get(spreadsheet_id)
+    if not spreadsheet:
+        raise HTTPException(status_code=404, detail="Spreadsheet not found")
+
+    # Remove pivot table metadata from spreadsheet
+    pivots = spreadsheet.metadata.get("pivot_tables", {})
+    if pivot_id not in pivots:
+        raise HTTPException(status_code=404, detail="Pivot table not found")
+
+    del pivots[pivot_id]
+    spreadsheet.metadata["pivot_tables"] = pivots
+
+    from datetime import datetime, timezone
+    spreadsheet.updated_at = datetime.now(timezone.utc).isoformat()
+    svc._save_spreadsheet(spreadsheet)
+
+    return {"status": "ok", "message": "Pivot table deleted"}
+
+
+@router.post("/{spreadsheet_id}/pivot/{pivot_id}/refresh", response_model=PivotTableResponse)
+async def refresh_pivot_table(
+    spreadsheet_id: str,
+    pivot_id: str,
+    sheet_index: int = Query(0, ge=0),
+    svc: SpreadsheetService = Depends(get_spreadsheet_service),
+    pivot_svc: PivotService = Depends(get_pivot_service),
+):
+    """Refresh/recompute a pivot table using its existing config."""
+    spreadsheet = svc.get(spreadsheet_id)
+    if not spreadsheet:
+        raise HTTPException(status_code=404, detail="Spreadsheet not found")
+
+    # Retrieve pivot config from metadata
+    pivots = spreadsheet.metadata.get("pivot_tables", {})
+    pivot_config_data = pivots.get(pivot_id)
+    if not pivot_config_data:
+        raise HTTPException(status_code=404, detail="Pivot table not found")
+
+    if sheet_index >= len(spreadsheet.sheets):
+        raise HTTPException(status_code=400, detail="Sheet index out of range")
+
+    sheet = spreadsheet.sheets[sheet_index]
+    records = pivot_svc.data_to_records(sheet.data)
+
+    from ...services.spreadsheets.pivot_service import PivotTableConfig
+    config = PivotTableConfig(**pivot_config_data)
 
     result = pivot_svc.compute_pivot(records, config)
 
@@ -746,6 +1002,52 @@ async def suggest_formulas_endpoint(
     except Exception as e:
         logger.error(f"Formula suggestion failed: {e}")
         raise HTTPException(status_code=500, detail="Formula suggestion failed")
+
+
+# ============================================
+# Collaboration
+# ============================================
+
+@router.post("/{spreadsheet_id}/collaborate")
+async def start_collaboration(
+    spreadsheet_id: str,
+    svc: SpreadsheetService = Depends(get_spreadsheet_service),
+):
+    """Start a spreadsheet collaboration session."""
+    spreadsheet = svc.get(spreadsheet_id)
+    if not spreadsheet:
+        raise HTTPException(status_code=404, detail="Spreadsheet not found")
+
+    session_id = str(uuid.uuid4())
+    session_info = {
+        "session_id": session_id,
+        "spreadsheet_id": spreadsheet_id,
+        "spreadsheet_name": spreadsheet.name,
+        "status": "active",
+        "created_at": __import__("datetime").datetime.now(
+            __import__("datetime").timezone.utc
+        ).isoformat(),
+        "collaborators": [],
+    }
+    return session_info
+
+
+@router.get("/{spreadsheet_id}/collaborators")
+async def get_collaborators(
+    spreadsheet_id: str,
+    svc: SpreadsheetService = Depends(get_spreadsheet_service),
+):
+    """Get current collaborators for a spreadsheet."""
+    spreadsheet = svc.get(spreadsheet_id)
+    if not spreadsheet:
+        raise HTTPException(status_code=404, detail="Spreadsheet not found")
+
+    collaborators = spreadsheet.metadata.get("collaborators", [])
+    return {
+        "spreadsheet_id": spreadsheet_id,
+        "collaborators": collaborators,
+        "total": len(collaborators),
+    }
 
 
 # ============================================

@@ -22,6 +22,7 @@ from backend.app.services.ingestion import (
 from backend.app.services.ingestion.folder_watcher import WatcherConfig
 from backend.app.services.ingestion.transcription import TranscriptionLanguage
 from backend.app.services.security import require_api_key
+import backend.app.services.state_access as state_access
 
 import ipaddress
 from urllib.parse import urlparse
@@ -119,6 +120,15 @@ class TranscribeRequest(BaseModel):
     language: str = Field(default="auto", description="Language code or 'auto'")
     include_timestamps: bool = Field(default=True, description="Include timestamps")
     diarize_speakers: bool = Field(default=False, description="Identify speakers")
+
+
+class ImapConnectRequest(BaseModel):
+    host: str = Field(..., description="IMAP server hostname")
+    port: int = Field(default=993, description="IMAP server port")
+    username: str = Field(..., description="Account username")
+    password: str = Field(..., description="Account password")
+    use_ssl: bool = Field(default=True, description="Use SSL/TLS")
+    folder: str = Field(default="INBOX", description="Mailbox folder to monitor")
 
 
 class EmailIngestRequest(BaseModel):
@@ -588,6 +598,110 @@ async def transcribe_voice_memo(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Voice memo transcription failed",
+        )
+
+
+@router.get("/transcribe/{job_id}")
+async def get_transcription_status(job_id: str):
+    """
+    Get the status of a transcription job.
+
+    Returns:
+        Job status, progress, and result when complete
+    """
+    job = state_access.get_job(job_id)
+    if not job:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Transcription job not found",
+        )
+    return {
+        "job_id": job_id,
+        "status": job.get("status"),
+        "progress": job.get("progress"),
+        "result": job.get("result"),
+    }
+
+
+# =============================================================================
+# EMAIL IMAP ENDPOINTS
+# =============================================================================
+
+@router.post("/email/imap/connect")
+async def connect_imap_account(request: ImapConnectRequest):
+    """
+    Connect an IMAP email account.
+
+    Tests the connection and stores the account configuration.
+
+    Returns:
+        Connection result with account ID
+    """
+    try:
+        result = await email_ingestion_service.connect_imap(
+            host=request.host,
+            port=request.port,
+            username=request.username,
+            password=request.password,
+            use_ssl=request.use_ssl,
+            folder=request.folder,
+        )
+        return result
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
+    except Exception as e:
+        logger.exception("IMAP connection failed: %s", e)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="IMAP connection failed",
+        )
+
+
+@router.get("/email/imap/accounts")
+async def list_imap_accounts():
+    """
+    List connected IMAP email accounts.
+
+    Returns:
+        List of connected IMAP accounts
+    """
+    try:
+        accounts = email_ingestion_service.list_imap_accounts()
+        return [a if isinstance(a, dict) else a.model_dump() for a in accounts]
+    except Exception as e:
+        logger.exception("Failed to list IMAP accounts: %s", e)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to list IMAP accounts",
+        )
+
+
+@router.post("/email/imap/accounts/{account_id}/sync")
+async def sync_imap_account(account_id: str):
+    """
+    Sync emails from an IMAP account.
+
+    Triggers email synchronisation for the specified account.
+
+    Returns:
+        Sync job status
+    """
+    try:
+        result = await email_ingestion_service.sync_imap_account(account_id)
+        return result
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="IMAP account not found",
+        )
+    except Exception as e:
+        logger.exception("IMAP sync failed for account %s: %s", account_id, e)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="IMAP sync failed",
         )
 
 

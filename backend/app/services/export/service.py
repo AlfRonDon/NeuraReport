@@ -416,6 +416,89 @@ date: {_now().strftime('%Y-%m-%d')}
         """Validate an embed token."""
         return self._embed_tokens.get(token)
 
+    async def revoke_embed_token(self, token_id: str) -> bool:
+        """Revoke an embed token. Returns True if the token existed and was revoked."""
+        if token_id in self._embed_tokens:
+            del self._embed_tokens[token_id]
+            return True
+        return False
+
+    async def list_embed_tokens(self, document_id: str) -> list[dict]:
+        """List all embed tokens for a given document."""
+        return [
+            token_data
+            for token_data in self._embed_tokens.values()
+            if token_data.get("document_id") == document_id
+        ]
+
+    async def print_document(
+        self,
+        document_id: str,
+        printer_id: Optional[str] = None,
+        copies: int = 1,
+        options: Optional[dict[str, Any]] = None,
+    ) -> dict:
+        """Send a document to a printer."""
+        job_id = str(uuid.uuid4())
+        now = _now()
+
+        job = {
+            "job_id": job_id,
+            "document_id": document_id,
+            "printer_id": printer_id or "default",
+            "copies": copies,
+            "options": options or {},
+            "status": "queued",
+            "created_at": now,
+        }
+
+        self._export_jobs[job_id] = job
+        logger.info(f"Print job {job_id} queued for document {document_id}")
+        return job
+
+    async def list_printers(self) -> list[dict]:
+        """List available printers."""
+        # In a real implementation this would query network/system printers.
+        return [
+            {
+                "printer_id": "default",
+                "name": "Default Printer",
+                "status": "ready",
+                "location": "Local",
+            },
+        ]
+
+    async def list_export_jobs(
+        self,
+        status: Optional[str] = None,
+        format: Optional[str] = None,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> dict:
+        """List export jobs with optional filtering."""
+        jobs = list(self._export_jobs.values())
+
+        if status:
+            jobs = [j for j in jobs if j.get("status") == status]
+        if format:
+            jobs = [j for j in jobs if j.get("format") == format]
+
+        total = len(jobs)
+        jobs = jobs[offset : offset + limit]
+
+        return {"jobs": jobs, "total": total, "limit": limit, "offset": offset}
+
+    async def cancel_export_job(self, job_id: str) -> Optional[dict]:
+        """Cancel an export job. Returns the updated job or None if not found."""
+        job = self._export_jobs.get(job_id)
+        if job is None:
+            return None
+        if job.get("status") in ("completed", "failed"):
+            return job  # Cannot cancel a finished job; caller should check status.
+        job["status"] = "cancelled"
+        job["completed_at"] = _now()
+        return job
+
 
 class DistributionService:
     """Service for distributing documents to various channels."""

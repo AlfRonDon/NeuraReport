@@ -276,6 +276,25 @@ async def remove_from_index(document_id: str):
     return {"success": success}
 
 
+@router.post("/index/reindex")
+async def reindex_all():
+    """
+    Reindex all documents in the search index.
+
+    Returns:
+        Reindex job status
+    """
+    try:
+        result = await search_service.reindex_all()
+        return result if isinstance(result, dict) else result.model_dump()
+    except Exception as e:
+        logger.error(f"Reindex failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Reindex operation failed",
+        )
+
+
 # =============================================================================
 # SAVED SEARCHES
 # =============================================================================
@@ -307,6 +326,32 @@ async def list_saved_searches():
     """List all saved searches."""
     searches = search_service.list_saved_searches()
     return [s.model_dump() for s in searches]
+
+
+@router.get("/saved-searches/{search_id}")
+async def get_saved_search(search_id: str):
+    """
+    Get a single saved search by ID.
+
+    Returns:
+        SavedSearch configuration
+    """
+    try:
+        saved = await search_service.get_saved_search(search_id)
+        if not saved:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Saved search not found",
+            )
+        return saved.model_dump()
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Get saved search failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Search operation failed",
+        )
 
 
 @router.post("/saved-searches/{search_id}/run")

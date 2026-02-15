@@ -322,6 +322,19 @@ class DocumentService:
                 return True
         return False
 
+    def delete_comment(self, document_id: str, comment_id: str) -> bool:
+        """Delete a comment from a document."""
+        with self._lock:
+            comments_dir = self._uploads_root / document_id / "comments"
+            if not comments_dir.exists():
+                return False
+            comment_path = comments_dir / f"{comment_id}.json"
+            if not comment_path.exists():
+                return False
+            comment_path.unlink()
+            logger.info(f"Deleted comment {comment_id} from document {document_id}")
+            return True
+
     def _get_document_path(self, document_id: str) -> Optional[Path]:
         """Get path to document JSON file."""
         doc_dir = self._get_document_dir(document_id)

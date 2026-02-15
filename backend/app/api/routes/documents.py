@@ -4,6 +4,7 @@ Document API Routes - Document editing and collaboration endpoints.
 
 from __future__ import annotations
 
+import json
 import logging
 import threading
 from pathlib import Path
@@ -23,13 +24,18 @@ from ...schemas.documents import (
     DocumentListResponse,
     CommentRequest,
     CommentResponse,
+    CommentReplyRequest,
     CollaborationSessionResponse,
+    PresenceUpdateBody,
     PDFMergeRequest,
     PDFWatermarkRequest,
     PDFRedactRequest,
     PDFReorderRequest,
+    PDFSplitRequest,
+    PDFRotateRequest,
     AIWritingRequest,
     AIWritingResponse,
+    CreateFromTemplateRequest,
 )
 from ...services.documents import (
     DocumentService,
@@ -37,6 +43,7 @@ from ...services.documents import (
     PDFOperationsService,
 )
 from ...services.documents.collaboration import YjsWebSocketHandler
+from backend.app.services.ai.writing_service import writing_service as _writing_service
 from backend.app.services.security import require_api_key, verify_ws_token
 from backend.app.api.middleware import limiter, RATE_LIMIT_STANDARD
 
@@ -266,6 +273,44 @@ async def get_document_version(
     raise HTTPException(status_code=404, detail="Version not found")
 
 
+@router.post("/{document_id}/versions/{version}/restore", response_model=DocumentResponse)
+@limiter.limit(RATE_LIMIT_STANDARD)
+async def restore_document_version(
+    request: Request,
+    response: Response,
+    document_id: str,
+    version: int,
+    doc_service: DocumentService = Depends(get_document_service),
+):
+    """Restore a document to a specific version."""
+    doc = doc_service.get(document_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    versions = doc_service.get_versions(document_id)
+    target_version = None
+    for v in versions:
+        if v.version == version:
+            target_version = v
+            break
+    if not target_version:
+        raise HTTPException(status_code=404, detail="Version not found")
+
+    # Update the document content to the version's content
+    content_data = target_version.content
+    if hasattr(content_data, "model_dump"):
+        content_data = content_data.model_dump()
+
+    updated = doc_service.update(
+        document_id=document_id,
+        content=content_data,
+        metadata={"restored_from_version": version},
+    )
+    if not updated:
+        raise HTTPException(status_code=500, detail="Failed to restore version")
+    return DocumentResponse(**updated.model_dump())
+
+
 # ============================================
 # Comment Endpoints
 # ============================================
@@ -311,6 +356,61 @@ async def resolve_comment(
     return {"status": "ok", "message": "Comment resolved"}
 
 
+@router.post("/{document_id}/comments/{comment_id}/reply", response_model=CommentResponse)
+async def reply_to_comment(
+    document_id: str,
+    comment_id: str,
+    request: CommentReplyRequest,
+    doc_service: DocumentService = Depends(get_document_service),
+):
+    """Reply to an existing comment."""
+    # Verify the parent comment exists
+    comments = doc_service.get_comments(document_id)
+    parent = None
+    for c in comments:
+        if c.id == comment_id:
+            parent = c
+            break
+    if not parent:
+        raise HTTPException(status_code=404, detail="Comment not found")
+
+    # Create the reply using the parent comment's selection range
+    reply = doc_service.add_comment(
+        document_id=document_id,
+        selection_start=parent.selection_start,
+        selection_end=parent.selection_end,
+        text=request.text,
+    )
+    if not reply:
+        raise HTTPException(status_code=500, detail="Failed to create reply")
+
+    # Add the reply to the parent comment's replies list and persist
+    parent.replies.append(reply)
+    doc_service._save_comment(parent)
+
+    return CommentResponse(**reply.model_dump())
+
+
+@router.delete("/{document_id}/comments/{comment_id}")
+@limiter.limit(RATE_LIMIT_STANDARD)
+async def delete_comment(
+    request: Request,
+    response: Response,
+    document_id: str,
+    comment_id: str,
+    doc_service: DocumentService = Depends(get_document_service),
+):
+    """Delete a comment from a document."""
+    doc = doc_service.get(document_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    success = doc_service.delete_comment(document_id, comment_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Comment not found")
+    return {"status": "ok", "message": "Comment deleted"}
+
+
 # ============================================
 # Collaboration Endpoints
 # ============================================
@@ -344,6 +444,35 @@ async def get_collaboration_presence(
 
     presence = collab_service.get_presence(session.id)
     return {"collaborators": [p.model_dump() for p in presence]}
+
+
+@router.put("/{document_id}/presence")
+async def update_user_presence(
+    document_id: str,
+    body: PresenceUpdateBody,
+    collab_service: CollaborationService = Depends(get_collaboration_service),
+):
+    """Update user presence (cursor position and selection) for a document."""
+    session = collab_service.get_session_by_document(document_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="No active collaboration session for this document")
+
+    selection_start = None
+    selection_end = None
+    if body.selection:
+        selection_start = body.selection.get("start")
+        selection_end = body.selection.get("end")
+
+    updated = collab_service.update_presence(
+        session_id=session.id,
+        user_id=body.user_id,
+        cursor_position=body.cursor_position,
+        selection_start=selection_start,
+        selection_end=selection_end,
+    )
+    if not updated:
+        raise HTTPException(status_code=404, detail="User not found in session")
+    return {"status": "ok", "presence": updated.model_dump()}
 
 
 # ============================================
@@ -498,6 +627,293 @@ async def merge_pdfs(
     except Exception as e:
         logger.exception("pdf_merge_failed")
         raise HTTPException(status_code=500, detail="PDF merge failed")
+
+
+# ============================================
+# Template Endpoints (static routes - must be before /{document_id})
+# ============================================
+
+@router.get("/templates", response_model=DocumentListResponse)
+async def list_templates(
+    tags: Optional[str] = Query(None, description="Comma-separated tags"),
+    limit: int = Query(100, ge=1, le=500),
+    offset: int = Query(0, ge=0),
+    doc_service: DocumentService = Depends(get_document_service),
+):
+    """List document templates."""
+    tag_list = tags.split(",") if tags else None
+    documents, total = doc_service.list_documents(
+        is_template=True,
+        tags=tag_list,
+        limit=limit,
+        offset=offset,
+    )
+    return DocumentListResponse(
+        documents=[DocumentResponse(**d.model_dump()) for d in documents],
+        total=total,
+        offset=offset,
+        limit=limit,
+    )
+
+
+@router.post("/templates/{template_id}/create", response_model=DocumentResponse)
+@limiter.limit(RATE_LIMIT_STANDARD)
+async def create_from_template(
+    request: Request,
+    response: Response,
+    template_id: str,
+    req: CreateFromTemplateRequest,
+    doc_service: DocumentService = Depends(get_document_service),
+):
+    """Create a new document from a template."""
+    template = doc_service.get(template_id)
+    if not template:
+        raise HTTPException(status_code=404, detail="Template not found")
+    if not template.is_template:
+        raise HTTPException(status_code=400, detail="Document is not a template")
+
+    # Clone the template content into a new document
+    content_data = template.content
+    if hasattr(content_data, "model_dump"):
+        content_data = content_data.model_dump()
+
+    new_name = req.name if req and req.name else f"{template.name} (copy)"
+    doc = doc_service.create(
+        name=new_name,
+        content=content_data,
+        is_template=False,
+        metadata={"created_from_template": template_id},
+    )
+    return DocumentResponse(**doc.model_dump())
+
+
+# ============================================
+# PDF Split and Rotate Endpoints
+# ============================================
+
+@router.post("/{document_id}/pdf/split")
+async def split_pdf(
+    document_id: str,
+    request: PDFSplitRequest,
+    pdf_service: PDFOperationsService = Depends(get_pdf_service),
+    doc_service: DocumentService = Depends(get_document_service),
+):
+    """Split a PDF document into multiple documents at specified pages."""
+    doc = doc_service.get(document_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    # Validate and resolve PDF path safely
+    pdf_path = validate_pdf_path(doc.metadata.get("pdf_path"))
+
+    # Convert split_at_pages to page ranges
+    # e.g. split_at_pages=[3, 7] on a 10-page doc -> [(0,2), (3,6), (7,9)]
+    split_points = sorted(set(request.split_at_pages))
+    try:
+        import fitz
+        temp_doc = fitz.open(str(pdf_path))
+        total_pages = temp_doc.page_count
+        temp_doc.close()
+    except Exception:
+        raise HTTPException(status_code=500, detail="Failed to read PDF")
+
+    page_ranges: list[tuple[int, int]] = []
+    prev = 0
+    for sp in split_points:
+        if sp <= 0 or sp >= total_pages:
+            continue
+        page_ranges.append((prev, sp - 1))
+        prev = sp
+    page_ranges.append((prev, total_pages - 1))
+
+    if len(page_ranges) < 2:
+        raise HTTPException(status_code=400, detail="Split points must divide the PDF into at least 2 parts")
+
+    try:
+        output_paths = pdf_service.split_pdf(pdf_path, page_ranges)
+        return {
+            "status": "ok",
+            "message": f"PDF split into {len(output_paths)} parts",
+            "output_paths": [str(p) for p in output_paths],
+        }
+    except Exception as e:
+        logger.exception("pdf_split_failed", extra={"document_id": document_id})
+        raise HTTPException(status_code=500, detail="PDF split failed")
+
+
+@router.post("/{document_id}/pdf/rotate")
+async def rotate_pdf_pages(
+    document_id: str,
+    request: PDFRotateRequest,
+    pdf_service: PDFOperationsService = Depends(get_pdf_service),
+    doc_service: DocumentService = Depends(get_document_service),
+):
+    """Rotate pages in a PDF document."""
+    doc = doc_service.get(document_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    # Validate and resolve PDF path safely
+    pdf_path = validate_pdf_path(doc.metadata.get("pdf_path"))
+
+    # Validate rotation angle
+    if request.angle not in (0, 90, 180, 270):
+        raise HTTPException(status_code=400, detail="Angle must be 0, 90, 180, or 270")
+
+    try:
+        output_path = pdf_service.rotate_pages(
+            pdf_path,
+            rotation=request.angle,
+            pages=request.pages,
+        )
+        return {
+            "status": "ok",
+            "message": "PDF pages rotated successfully",
+            "output_path": str(output_path),
+        }
+    except Exception as e:
+        logger.exception("pdf_rotate_failed", extra={"document_id": document_id})
+        raise HTTPException(status_code=500, detail="PDF rotation failed")
+
+
+# ============================================
+# Save as Template & Export Endpoints
+# ============================================
+
+@router.post("/{document_id}/save-as-template", response_model=DocumentResponse)
+@limiter.limit(RATE_LIMIT_STANDARD)
+async def save_as_template(
+    request: Request,
+    response: Response,
+    document_id: str,
+    doc_service: DocumentService = Depends(get_document_service),
+):
+    """Save a document as a template by duplicating it with is_template=True."""
+    doc = doc_service.get(document_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    content_data = doc.content
+    if hasattr(content_data, "model_dump"):
+        content_data = content_data.model_dump()
+
+    template = doc_service.create(
+        name=f"{doc.name} (template)",
+        content=content_data,
+        is_template=True,
+        metadata={"created_from_document": document_id},
+    )
+    return DocumentResponse(**template.model_dump())
+
+
+@router.get("/{document_id}/export")
+async def export_document(
+    document_id: str,
+    format: str = Query("html", description="Export format: pdf, docx, html, md"),
+    doc_service: DocumentService = Depends(get_document_service),
+):
+    """Export a document in the specified format."""
+    doc = doc_service.get(document_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    allowed_formats = ("pdf", "docx", "html", "md")
+    if format not in allowed_formats:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported format '{format}'. Must be one of: {', '.join(allowed_formats)}",
+        )
+
+    # Extract text content from the document for export
+    content_data = doc.content
+    if hasattr(content_data, "model_dump"):
+        content_data = content_data.model_dump()
+
+    # Build plain text from tiptap content nodes
+    text_parts: list[str] = []
+    for node in content_data.get("content", []):
+        if "content" in node:
+            for inline in node["content"]:
+                if "text" in inline:
+                    text_parts.append(inline["text"])
+            text_parts.append("\n")
+    plain_text = "\n".join(text_parts).strip() if text_parts else json.dumps(content_data, indent=2)
+
+    if format == "html":
+        html_content = f"<html><head><title>{doc.name}</title></head><body>"
+        for node in content_data.get("content", []):
+            node_type = node.get("type", "paragraph")
+            inner = ""
+            for inline in node.get("content", []):
+                inner += inline.get("text", "")
+            if node_type == "heading":
+                level = node.get("attrs", {}).get("level", 1)
+                html_content += f"<h{level}>{inner}</h{level}>"
+            else:
+                html_content += f"<p>{inner}</p>"
+        html_content += "</body></html>"
+        return {
+            "status": "ok",
+            "format": "html",
+            "filename": f"{doc.name}.html",
+            "content": html_content,
+        }
+
+    if format == "md":
+        md_lines: list[str] = []
+        for node in content_data.get("content", []):
+            node_type = node.get("type", "paragraph")
+            inner = ""
+            for inline in node.get("content", []):
+                inner += inline.get("text", "")
+            if node_type == "heading":
+                level = node.get("attrs", {}).get("level", 1)
+                md_lines.append(f"{'#' * level} {inner}")
+            else:
+                md_lines.append(inner)
+            md_lines.append("")
+        return {
+            "status": "ok",
+            "format": "md",
+            "filename": f"{doc.name}.md",
+            "content": "\n".join(md_lines),
+        }
+
+    # For pdf and docx, use the export service
+    try:
+        from backend.app.services.export.service import ExportService
+        export_service = ExportService()
+
+        if format == "pdf":
+            pdf_bytes = await export_service.export_to_pdf(
+                content=plain_text.encode("utf-8"),
+                options={"title": doc.name},
+            )
+            return {
+                "status": "ok",
+                "format": "pdf",
+                "filename": f"{doc.name}.pdf",
+                "size_bytes": len(pdf_bytes),
+                "message": "PDF export completed",
+            }
+
+        if format == "docx":
+            docx_bytes = await export_service.export_to_docx(
+                content=plain_text,
+                options={"title": doc.name},
+            )
+            return {
+                "status": "ok",
+                "format": "docx",
+                "filename": f"{doc.name}.docx",
+                "size_bytes": len(docx_bytes),
+                "message": "DOCX export completed",
+            }
+    except ImportError as e:
+        raise HTTPException(status_code=501, detail=f"Export dependency not available: {e}")
+    except Exception as e:
+        logger.exception("export_failed", extra={"document_id": document_id, "format": format})
+        raise HTTPException(status_code=500, detail=f"Export to {format} failed")
 
 
 # ============================================

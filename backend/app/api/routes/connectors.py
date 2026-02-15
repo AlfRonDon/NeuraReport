@@ -8,12 +8,14 @@ No in-memory dicts — connections survive server restarts.
 
 from __future__ import annotations
 
+import io
 import logging
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Query
+from fastapi import APIRouter, Depends, File, HTTPException, Path, Query, UploadFile
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from backend.app.services.security import require_api_key
@@ -555,3 +557,431 @@ async def handle_oauth_callback(
     except Exception as e:
         logger.exception("oauth_callback_failed", extra={"connector_type": connector_type})
         raise HTTPException(status_code=400, detail="OAuth callback failed")
+
+
+# ============================================
+# File Operations Endpoints
+# ============================================
+
+
+class FileInfoResponse(BaseModel):
+    """File information response."""
+
+    id: str
+    name: str
+    path: str
+    size_bytes: int
+    mime_type: Optional[str]
+    created_at: Optional[str]
+    modified_at: Optional[str]
+    is_folder: bool
+    download_url: Optional[str]
+
+
+class FileUploadResponse(BaseModel):
+    """File upload response."""
+
+    status: str
+    file: FileInfoResponse
+
+
+class SyncStatusResponse(BaseModel):
+    """Sync status response."""
+
+    connection_id: str
+    status: str
+    started_at: Optional[str]
+    completed_at: Optional[str]
+    files_synced: int
+    errors: list[str]
+
+
+class SyncScheduleRequest(BaseModel):
+    """Sync schedule request."""
+
+    interval_minutes: int = Field(..., ge=5, le=1440)
+    enabled: bool = True
+
+
+class SyncScheduleResponse(BaseModel):
+    """Sync schedule response."""
+
+    connection_id: str
+    interval_minutes: int
+    enabled: bool
+    next_run: Optional[str]
+
+
+@router.get("/{connection_id}/files")
+async def list_connection_files(
+    connection_id: str = Path(..., min_length=36, max_length=36, pattern="^[0-9a-f-]{36}$"),
+    path: str = Query("/", max_length=2000),
+    recursive: bool = Query(False),
+) -> dict[str, Any]:
+    """List files for a cloud storage connection.
+
+    Returns files and folders at the given *path* within the connected
+    cloud storage provider.
+    """
+    conn = _store_get(connection_id)
+    if conn is None:
+        raise HTTPException(status_code=404, detail="Connection not found")
+
+    config = _store_get_config(connection_id)
+    connector = None
+    try:
+        connector = get_connector(conn["connector_type"], config)
+        await connector.connect()
+        files = await connector.list_files(path=path, recursive=recursive)
+
+        # Update last-used timestamp
+        conn["last_used"] = datetime.now(timezone.utc).isoformat()
+        conn["config"] = config
+        _store_put(conn)
+
+        return {
+            "connection_id": connection_id,
+            "path": path,
+            "files": [
+                FileInfoResponse(
+                    id=f.id,
+                    name=f.name,
+                    path=f.path,
+                    size_bytes=f.size_bytes,
+                    mime_type=f.mime_type,
+                    created_at=f.created_at,
+                    modified_at=f.modified_at,
+                    is_folder=f.is_folder,
+                    download_url=f.download_url,
+                ).model_dump()
+                for f in files
+            ],
+            "total": len(files),
+        }
+    except NotImplementedError:
+        raise HTTPException(
+            status_code=400,
+            detail="This connector does not support file listing",
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("connector_list_files_failed", extra={"connection_id": connection_id})
+        raise HTTPException(
+            status_code=500,
+            detail=f"{type(e).__name__}: Failed to list files",
+        )
+    finally:
+        if connector is not None:
+            try:
+                await connector.disconnect()
+            except Exception:
+                pass
+
+
+@router.get("/{connection_id}/files/download")
+async def download_connection_file(
+    connection_id: str = Path(..., min_length=36, max_length=36, pattern="^[0-9a-f-]{36}$"),
+    path: str = Query(..., min_length=1, max_length=2000),
+):
+    """Download a file from a cloud storage connection.
+
+    The *path* query parameter identifies the file to download.  The
+    response streams the raw file bytes with an appropriate content type.
+    """
+    conn = _store_get(connection_id)
+    if conn is None:
+        raise HTTPException(status_code=404, detail="Connection not found")
+
+    config = _store_get_config(connection_id)
+    connector = None
+    try:
+        connector = get_connector(conn["connector_type"], config)
+        await connector.connect()
+        content = await connector.download_file(file_id=path)
+
+        # Update last-used timestamp
+        conn["last_used"] = datetime.now(timezone.utc).isoformat()
+        conn["config"] = config
+        _store_put(conn)
+
+        # Derive a filename from the path for the Content-Disposition header
+        filename = path.rsplit("/", 1)[-1] or "download"
+
+        return StreamingResponse(
+            io.BytesIO(content),
+            media_type="application/octet-stream",
+            headers={
+                "Content-Disposition": f'attachment; filename="{filename}"',
+                "Content-Length": str(len(content)),
+            },
+        )
+    except NotImplementedError:
+        raise HTTPException(
+            status_code=400,
+            detail="This connector does not support file download",
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("connector_download_file_failed", extra={"connection_id": connection_id, "path": path})
+        raise HTTPException(
+            status_code=500,
+            detail=f"{type(e).__name__}: Failed to download file",
+        )
+    finally:
+        if connector is not None:
+            try:
+                await connector.disconnect()
+            except Exception:
+                pass
+
+
+@router.post("/{connection_id}/files/upload", response_model=FileUploadResponse)
+async def upload_connection_file(
+    connection_id: str = Path(..., min_length=36, max_length=36, pattern="^[0-9a-f-]{36}$"),
+    path: str = Query("/", max_length=2000),
+    file: UploadFile = File(...),
+):
+    """Upload a file to a cloud storage connection.
+
+    Accepts a multipart file upload and stores it at the given *path*
+    within the connected cloud storage provider.
+    """
+    conn = _store_get(connection_id)
+    if conn is None:
+        raise HTTPException(status_code=404, detail="Connection not found")
+
+    config = _store_get_config(connection_id)
+    connector = None
+    try:
+        connector = get_connector(conn["connector_type"], config)
+        await connector.connect()
+
+        content = await file.read()
+        file_info = await connector.upload_file(
+            content=content,
+            path=path,
+            filename=file.filename or "upload",
+            mime_type=file.content_type,
+        )
+
+        # Update last-used timestamp
+        conn["last_used"] = datetime.now(timezone.utc).isoformat()
+        conn["config"] = config
+        _store_put(conn)
+
+        return FileUploadResponse(
+            status="ok",
+            file=FileInfoResponse(
+                id=file_info.id,
+                name=file_info.name,
+                path=file_info.path,
+                size_bytes=file_info.size_bytes,
+                mime_type=file_info.mime_type,
+                created_at=file_info.created_at,
+                modified_at=file_info.modified_at,
+                is_folder=file_info.is_folder,
+                download_url=file_info.download_url,
+            ),
+        )
+    except NotImplementedError:
+        raise HTTPException(
+            status_code=400,
+            detail="This connector does not support file upload",
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("connector_upload_file_failed", extra={"connection_id": connection_id})
+        raise HTTPException(
+            status_code=500,
+            detail=f"{type(e).__name__}: Failed to upload file",
+        )
+    finally:
+        if connector is not None:
+            try:
+                await connector.disconnect()
+            except Exception:
+                pass
+
+
+# ============================================
+# Sync Endpoints
+# ============================================
+
+@router.post("/{connection_id}/sync")
+async def start_connection_sync(
+    connection_id: str = Path(..., min_length=36, max_length=36, pattern="^[0-9a-f-]{36}$"),
+) -> dict[str, Any]:
+    """Start syncing a connection.
+
+    Initiates a sync operation for the connection and records the sync
+    status in the persistent state store under ``connector_sync_status``.
+    """
+    conn = _store_get(connection_id)
+    if conn is None:
+        raise HTTPException(status_code=404, detail="Connection not found")
+
+    config = _store_get_config(connection_id)
+    connector = None
+    try:
+        connector = get_connector(conn["connector_type"], config)
+        await connector.connect()
+
+        now = datetime.now(timezone.utc).isoformat()
+        sync_status = {
+            "connection_id": connection_id,
+            "status": "in_progress",
+            "started_at": now,
+            "completed_at": None,
+            "files_synced": 0,
+            "errors": [],
+        }
+
+        # Persist initial sync status
+        with state_store.transaction() as state:
+            state.setdefault("connector_sync_status", {})[connection_id] = sync_status
+
+        # Attempt sync by listing all files (implementation-dependent)
+        files_synced = 0
+        errors: list[str] = []
+        try:
+            files = await connector.list_files(path="/", recursive=True)
+            files_synced = len(files)
+        except NotImplementedError:
+            errors.append("Connector does not support file listing for sync")
+        except Exception as e:
+            errors.append(f"{type(e).__name__}: {e}")
+
+        # Update sync status with results
+        completed_at = datetime.now(timezone.utc).isoformat()
+        final_status = "completed" if not errors else "completed_with_errors"
+        sync_status.update({
+            "status": final_status,
+            "completed_at": completed_at,
+            "files_synced": files_synced,
+            "errors": errors,
+        })
+
+        with state_store.transaction() as state:
+            state.setdefault("connector_sync_status", {})[connection_id] = sync_status
+
+        # Update last-used timestamp on the connection
+        conn["last_used"] = completed_at
+        conn["config"] = config
+        _store_put(conn)
+
+        return sync_status
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("connector_sync_failed", extra={"connection_id": connection_id})
+        # Record failure in sync status
+        error_status = {
+            "connection_id": connection_id,
+            "status": "failed",
+            "started_at": datetime.now(timezone.utc).isoformat(),
+            "completed_at": datetime.now(timezone.utc).isoformat(),
+            "files_synced": 0,
+            "errors": [f"{type(e).__name__}: {e}"],
+        }
+        with state_store.transaction() as state:
+            state.setdefault("connector_sync_status", {})[connection_id] = error_status
+        raise HTTPException(
+            status_code=500,
+            detail=f"{type(e).__name__}: Sync failed",
+        )
+    finally:
+        if connector is not None:
+            try:
+                await connector.disconnect()
+            except Exception:
+                pass
+
+
+@router.get("/{connection_id}/sync/status", response_model=SyncStatusResponse)
+async def get_sync_status(
+    connection_id: str = Path(..., min_length=36, max_length=36, pattern="^[0-9a-f-]{36}$"),
+):
+    """Get the sync status for a connection.
+
+    Returns the most recent sync status from the state store.  If no
+    sync has been run yet, a ``never_synced`` status is returned.
+    """
+    conn = _store_get(connection_id)
+    if conn is None:
+        raise HTTPException(status_code=404, detail="Connection not found")
+
+    with state_store.transaction() as state:
+        sync_statuses = state.get("connector_sync_status", {})
+        sync_status = sync_statuses.get(connection_id)
+
+    if sync_status is None:
+        return SyncStatusResponse(
+            connection_id=connection_id,
+            status="never_synced",
+            started_at=None,
+            completed_at=None,
+            files_synced=0,
+            errors=[],
+        )
+
+    return SyncStatusResponse(
+        connection_id=sync_status["connection_id"],
+        status=sync_status["status"],
+        started_at=sync_status.get("started_at"),
+        completed_at=sync_status.get("completed_at"),
+        files_synced=sync_status.get("files_synced", 0),
+        errors=sync_status.get("errors", []),
+    )
+
+
+@router.post("/{connection_id}/sync/schedule", response_model=SyncScheduleResponse)
+async def schedule_connection_sync(
+    request: SyncScheduleRequest,
+    connection_id: str = Path(..., min_length=36, max_length=36, pattern="^[0-9a-f-]{36}$"),
+):
+    """Schedule periodic sync for a connection.
+
+    Stores the schedule configuration in the state store under
+    ``connector_sync_status`` so that a background worker can pick it
+    up.  The *interval_minutes* field must be between 5 and 1440 (24h).
+    """
+    conn = _store_get(connection_id)
+    if conn is None:
+        raise HTTPException(status_code=404, detail="Connection not found")
+
+    now = datetime.now(timezone.utc)
+
+    # Calculate next run time based on interval
+    next_run = (now + timedelta(minutes=request.interval_minutes)).isoformat()
+
+    schedule = {
+        "connection_id": connection_id,
+        "interval_minutes": request.interval_minutes,
+        "enabled": request.enabled,
+        "next_run": next_run if request.enabled else None,
+        "created_at": now.isoformat(),
+    }
+
+    with state_store.transaction() as state:
+        sync_status = state.setdefault("connector_sync_status", {}).get(connection_id, {})
+        sync_status["schedule"] = schedule
+        state.setdefault("connector_sync_status", {})[connection_id] = sync_status
+
+    logger.info(
+        "connector_sync_scheduled",
+        extra={
+            "connection_id": connection_id,
+            "interval_minutes": request.interval_minutes,
+            "enabled": request.enabled,
+        },
+    )
+
+    return SyncScheduleResponse(
+        connection_id=connection_id,
+        interval_minutes=request.interval_minutes,
+        enabled=request.enabled,
+        next_run=next_run if request.enabled else None,
+    )

@@ -8,6 +8,7 @@ import logging
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from backend.app.services.security import require_api_key
@@ -332,6 +333,46 @@ async def export_as_mermaid(diagram_id: str):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Visualization not found")
     except Exception as e:
         logger.error(f"Mermaid export failed: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Visualization generation failed")
+
+
+@router.get("/diagrams/{diagram_id}/svg")
+async def export_as_svg(diagram_id: str):
+    """
+    Export diagram as SVG.
+
+    Returns:
+        SVG content
+    """
+    try:
+        svg_content = await visualization_service.export_diagram_as_svg(diagram_id)
+        return {"svg": svg_content, "diagram_id": diagram_id}
+    except ValueError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Visualization not found")
+    except Exception as e:
+        logger.error(f"SVG export failed: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Visualization generation failed")
+
+
+@router.get("/diagrams/{diagram_id}/png")
+async def export_as_png(diagram_id: str):
+    """
+    Export diagram as PNG.
+
+    Returns:
+        PNG image as streaming response
+    """
+    try:
+        png_bytes = await visualization_service.export_diagram_as_png(diagram_id)
+        return StreamingResponse(
+            png_bytes,
+            media_type="image/png",
+            headers={"Content-Disposition": f'attachment; filename="{diagram_id}.png"'},
+        )
+    except ValueError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Visualization not found")
+    except Exception as e:
+        logger.error(f"PNG export failed: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Visualization generation failed")
 
 

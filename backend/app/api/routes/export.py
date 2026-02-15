@@ -26,9 +26,10 @@ from backend.app.schemas.export.export import (
 from backend.app.services.export.service import distribution_service, export_service
 
 from backend.app.services.security import require_api_key
-from fastapi import Depends
+from fastapi import Depends, Query
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
-from typing import Any, Optional
+from typing import Any, List, Optional
 
 
 class ExportOptions(BaseModel):
@@ -50,7 +51,44 @@ class ExportOptions(BaseModel):
     quality: Optional[str] = Field(None, pattern="^(draft|standard|high)$")
 
 
+class PrintRequest(BaseModel):
+    """Request body for printing a document."""
+    printer_id: Optional[str] = None
+    copies: int = Field(1, ge=1, le=100)
+    options: dict[str, Any] = Field(default_factory=dict)
+
+
 router = APIRouter(tags=["export"], dependencies=[Depends(require_api_key)])
+
+
+# ── Static-path routes (must be registered before /{document_id} routes) ──
+
+
+@router.get("/printers")
+async def list_printers():
+    """List available printers."""
+    printers = await export_service.list_printers()
+    return {"printers": printers}
+
+
+@router.get("/jobs")
+async def list_export_jobs(
+    status: Optional[str] = Query(None, description="Filter by job status"),
+    format: Optional[str] = Query(None, description="Filter by export format"),
+    limit: int = Query(50, ge=1, le=200, description="Maximum number of jobs to return"),
+    offset: int = Query(0, ge=0, description="Number of jobs to skip"),
+):
+    """List all export jobs with optional filtering."""
+    result = await export_service.list_export_jobs(
+        status=status,
+        format=format,
+        limit=limit,
+        offset=offset,
+    )
+    return result
+
+
+# ── Dynamic-path routes ──
 
 
 @router.post("/{document_id}/pdf")
@@ -276,3 +314,97 @@ async def send_webhook(request: WebhookDeliveryRequest):
         headers=request.headers,
     )
     return result
+
+
+# ── Bulk export download ──
+
+
+@router.get("/bulk/{job_id}/download")
+async def download_bulk_export(job_id: str):
+    """Download the result of a bulk export job."""
+    job = await export_service.get_export_job(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Bulk export job not found")
+
+    if job.get("status") != "completed":
+        raise HTTPException(
+            status_code=400,
+            detail=f"Export job is not completed (current status: {job.get('status')})",
+        )
+
+    download_url = job.get("download_url")
+    if not download_url:
+        raise HTTPException(status_code=404, detail="Export file not available")
+
+    # Resolve the file path from the uploads directory
+    from backend.app.services.config import get_settings
+
+    file_path = get_settings().uploads_root / download_url.lstrip("/uploads/")
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="Export file not found on disk")
+
+    def _iter_file():
+        with open(file_path, "rb") as f:
+            while chunk := f.read(64 * 1024):
+                yield chunk
+
+    filename = file_path.name
+    return StreamingResponse(
+        _iter_file(),
+        media_type="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+# ── Embed token management ──
+
+
+@router.delete("/embed/{token_id}")
+async def revoke_embed_token(token_id: str):
+    """Revoke an embed token."""
+    revoked = await export_service.revoke_embed_token(token_id)
+    if not revoked:
+        raise HTTPException(status_code=404, detail="Embed token not found")
+    return {"detail": "Embed token revoked", "token_id": token_id}
+
+
+@router.get("/{document_id}/embed/tokens")
+async def list_embed_tokens(document_id: str):
+    """List embed tokens for a document."""
+    tokens = await export_service.list_embed_tokens(document_id)
+    return {"document_id": document_id, "tokens": tokens}
+
+
+# ── Print endpoints ──
+
+
+@router.post("/{document_id}/print")
+@limiter.limit(RATE_LIMIT_STANDARD)
+async def print_document(request: Request, document_id: str, body: PrintRequest):
+    """Print a document."""
+    job = await export_service.print_document(
+        document_id=document_id,
+        printer_id=body.printer_id,
+        copies=body.copies,
+        options=body.options,
+    )
+    return job
+
+
+# ── Job management ──
+
+
+@router.post("/jobs/{job_id}/cancel")
+async def cancel_export_job(job_id: str):
+    """Cancel an export job."""
+    job = await export_service.cancel_export_job(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Export job not found")
+
+    if job.get("status") in ("completed", "failed"):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot cancel job with status '{job.get('status')}'",
+        )
+
+    return job

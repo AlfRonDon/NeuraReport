@@ -17,6 +17,7 @@ from .routes import (
     agents_v2,
     ai,
     analytics,
+    audit,
     charts,
     connections,
     connectors,
@@ -125,6 +126,9 @@ def _build_v1_router() -> APIRouter:
     # AI Agents
     v1.include_router(agents.router, prefix="/agents", tags=["agents"])
     v1.include_router(agents_v2.router, prefix="/agents/v2", tags=["agents-v2"])
+
+    # Audit trail
+    v1.include_router(audit.router, prefix="/audit", tags=["audit"])
 
     return v1
 

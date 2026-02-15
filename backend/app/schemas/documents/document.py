@@ -263,3 +263,40 @@ class AIWritingResponse(BaseModel):
     suggestions: list[dict[str, Any]] = []
     confidence: float = 1.0
     metadata: dict[str, Any] = {}
+
+
+# ============================================
+# Additional Request Schemas
+# ============================================
+
+class CommentReplyRequest(BaseModel):
+    """Request to reply to a comment."""
+
+    text: str = Field(..., min_length=1, max_length=5000)
+
+
+class PresenceUpdateBody(BaseModel):
+    """Request body for updating user presence."""
+
+    user_id: str = Field(..., min_length=1)
+    cursor_position: Optional[int] = None
+    selection: Optional[dict[str, int]] = None
+
+
+class PDFSplitRequest(BaseModel):
+    """Request to split a PDF at specific pages."""
+
+    split_at_pages: list[int] = Field(..., min_length=1)
+
+
+class PDFRotateRequest(BaseModel):
+    """Request to rotate pages in a PDF."""
+
+    pages: list[int] = Field(..., min_length=1)
+    angle: int = Field(..., description="Rotation angle: 0, 90, 180, or 270")
+
+
+class CreateFromTemplateRequest(BaseModel):
+    """Request to create a document from a template."""
+
+    name: Optional[str] = Field(None, min_length=1, max_length=255)
