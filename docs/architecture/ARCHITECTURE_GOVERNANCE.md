@@ -36,7 +36,9 @@ Only the folders below are allowed to contain Python code.
 Required sub-layers:
 
 - api/: HTTP routing only.
+- application/: use-cases (commands/queries) orchestrating domain + ports.
 - domain/: core business logic (pure rules).
+- infrastructure/: adapters for DB/files/external services (no HTTP).
 - services/: orchestration, workflows, integrations.
 - repositories/: persistence & data access (if present).
 - schemas/: DTOs, validation, contracts.
@@ -46,9 +48,11 @@ Placement rule:
 - Any Python file under backend/app must live in one of the sub-layer folders above (except backend/app/__init__.py).
 
 Import rules:
-- api/ MAY import: services, schemas. MUST NOT import: domain, repositories, utils.
+- api/ MAY import: application, services, schemas. MUST NOT import: domain, repositories, utils, infrastructure.
+- application/ MAY import: domain, repositories, infrastructure, utils, schemas. MUST NOT import: api.
 - services/ MAY import: domain, repositories, utils, schemas. MUST NOT import: api.
 - domain/ MAY import: utils only. MUST NOT import: api, services, repositories, schemas.
+- infrastructure/ MAY import: domain, repositories, utils, schemas, application (ports). MUST NOT import: api.
 - repositories/ MAY import: domain, utils. MUST NOT import: api, services.
 - schemas/ MAY import: utils only. MUST NOT import: api, services, domain, repositories.
 - utils/ MUST NOT import: api, services, domain, repositories, schemas.
@@ -84,7 +88,8 @@ Notes:
 - backend/engine/* must not import backend.app.*
 - backend/engine/* must not import backend.legacy.*
 - backend/legacy/* must not import backend.engine.*
-- backend/app/* must not import backend.engine.* except backend/app/api/routes/legacy.py
+- backend/app/api/* must not import backend.engine.* (engine is domain logic, accessed via application/services)
+  - Exception: `backend/app/api/routes/legacy.py` (ARCH-EXC-001 legacy compat)
 - backend/app/* may only import backend.legacy.* from backend/app/api/routes/* or backend/api.py
 - Python files under backend/ must live in app/, engine/, legacy/, tests/, scripts/ or backend/api.py
 - backend/app sub-layer placement and import rules (see Backend app sub-layers section)

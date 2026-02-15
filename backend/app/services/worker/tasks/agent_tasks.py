@@ -3,6 +3,8 @@ import os
 import dramatiq
 import logging
 
+from backend.app.repositories.agent_tasks import agent_task_repository
+
 logger = logging.getLogger("neura.worker.agents")
 
 try:
@@ -26,7 +28,6 @@ except (ImportError, ConnectionError, OSError):
 def run_agent(task_id: str, agent_type: str, params: dict):
     """Execute an agent task. Survives worker crashes via Redis persistence."""
     from backend.app.services.agents import agent_service_v2
-    from backend.app.repositories.agent_tasks import agent_task_repository
 
     # Idempotency: skip if already completed
     existing = agent_task_repository.get_task(task_id)

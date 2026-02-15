@@ -45,7 +45,13 @@ def _run_report(job_id: str, template_id: str, connection_id: str, output_format
     """Core report generation logic, extracted for rate-limiter wrapping."""
     try:
         state_store.record_job_start(job_id)
-        state_store.record_job_step(job_id, "generate", "Starting report generation", status="running")
+        # record_job_step enforces keyword-only args after `name`
+        state_store.record_job_step(
+            job_id,
+            "generate",
+            status="running",
+            label="Starting report generation",
+        )
 
         from backend.engine.pipelines.report_pipeline import ReportPipeline
         pipeline = ReportPipeline()

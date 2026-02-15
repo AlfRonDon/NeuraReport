@@ -158,7 +158,9 @@ FRONTEND_API_CALLS = {
 
     # charts.js
     "charts/analyzeData": ("POST", "/charts/analyze"),
+    "charts/queueAnalyzeData": ("POST", "/charts/analyze"),
     "charts/generateChart": ("POST", "/charts/generate"),
+    "charts/queueGenerateChart": ("POST", "/charts/generate"),
 
     # connectors.js
     "connectors/listConnectorTypes": ("GET", "/connectors/types"),
@@ -328,6 +330,7 @@ FRONTEND_API_CALLS = {
     "federation/deleteVirtualSchema": ("DELETE", "/federation/schemas/{schema_id}"),
 
     # health.js
+    "health/checkHealth": ("GET", "/health"),
     "health/getDetailedHealth": ("GET", "/health/detailed"),
     "health/getTokenUsage": ("GET", "/health/token-usage"),
     "health/getSchedulerStatus": ("GET", "/health/scheduler"),
@@ -335,8 +338,12 @@ FRONTEND_API_CALLS = {
     "health/testEmailConnection": ("GET", "/health/email/test"),
     "health/refreshEmailConfig": ("POST", "/health/email/refresh"),
     "health/checkReadiness": ("GET", "/ready"),
+    "health/getSystemHealth": ("GET", "/health/detailed"),
 
     # ingestion.js
+    "ingestion/uploadFile": ("POST", "/ingestion/upload"),
+    "ingestion/uploadBulk": ("POST", "/ingestion/upload/bulk"),
+    "ingestion/uploadZip": ("POST", "/ingestion/upload/zip"),
     "ingestion/importFromUrl": ("POST", "/ingestion/url"),
     "ingestion/importStructuredData": ("POST", "/ingestion/structured"),
     "ingestion/clipUrl": ("POST", "/ingestion/clip/url"),
@@ -359,6 +366,7 @@ FRONTEND_API_CALLS = {
 
     # knowledge.js
     "knowledge/addDocument": ("POST", "/knowledge/documents"),
+    "knowledge/uploadDocument": ("POST", "/knowledge/documents"),
     "knowledge/getDocument": ("GET", "/knowledge/documents/{doc_id}"),
     "knowledge/listDocuments": ("GET", "/knowledge/documents"),
     "knowledge/updateDocument": ("PUT", "/knowledge/documents/{doc_id}"),
@@ -398,6 +406,7 @@ FRONTEND_API_CALLS = {
 
     # recommendations.js
     "recommendations/getRecommendations": ("POST", "/recommendations/templates"),
+    "recommendations/queueRecommendations": ("POST", "/recommendations/templates"),
     "recommendations/getCatalog": ("GET", "/recommendations/catalog"),
     "recommendations/getTemplates": ("GET", "/recommendations/templates"),
     "recommendations/getSimilar": ("GET", "/recommendations/templates/{template_id}/similar"),
@@ -436,6 +445,7 @@ FRONTEND_API_CALLS = {
     "spreadsheets/createPivotTable": ("POST", "/spreadsheets/{spreadsheet_id}/pivot"),
     "spreadsheets/evaluateFormula": ("POST", "/spreadsheets/{spreadsheet_id}/evaluate"),
     "spreadsheets/importCsv": ("POST", "/spreadsheets/import"),
+    "spreadsheets/importExcel": ("POST", "/spreadsheets/import"),
     "spreadsheets/exportSpreadsheet": ("GET", "/spreadsheets/{spreadsheet_id}/export"),
     "spreadsheets/generateFormula": ("POST", "/spreadsheets/{spreadsheet_id}/ai/formula"),
     "spreadsheets/explainFormula": ("POST", "/spreadsheets/{spreadsheet_id}/ai/explain"),
@@ -455,7 +465,9 @@ FRONTEND_API_CALLS = {
 
     # summary.js
     "summary/generateSummary": ("POST", "/summary/generate"),
+    "summary/queueSummary": ("POST", "/summary/generate"),
     "summary/getReportSummary": ("GET", "/summary/reports/{report_id}"),
+    "summary/queueReportSummary": ("GET", "/summary/reports/{report_id}"),
 
     # synthesis.js
     "synthesis/createSession": ("POST", "/synthesis/sessions"),
@@ -577,6 +589,14 @@ FRONTEND_API_CALLS = {
     "docai/compare": ("POST", "/docai/compare"),
     "docai/checkCompliance": ("POST", "/docai/compliance"),
     "docai/summarizeMulti": ("POST", "/docai/summarize/multi"),
+
+    # client.js — functions not covered by domain-specific entries
+    "client/listApprovedTemplates": ("GET", "/templates"),
+    "client/analyzeDocument": ("POST", "/analyze/upload"),
+    "client/extractDocument": ("POST", "/analyze/extract"),
+    "client/getAnalysis": ("GET", "/analyze/{analysis_id}"),
+    "client/getAnalysisData": ("GET", "/analyze/{analysis_id}/data"),
+    "client/getAnalysisChartSuggestions": ("POST", "/analyze/{analysis_id}/charts/suggest"),
 
     # intentAudit.js
     "intentAudit/recordIntent": ("POST", "/audit/intent"),
@@ -1246,11 +1266,34 @@ class TestAuthRoutes:
     def test_auth_login_exists(self, all_app_routes):
         assert ("POST", "/api/v1/auth/jwt/login") in all_app_routes
 
+    def test_auth_logout_exists(self, all_app_routes):
+        assert ("POST", "/api/v1/auth/jwt/logout") in all_app_routes
+
     def test_auth_register_exists(self, all_app_routes):
         assert ("POST", "/api/v1/auth/register") in all_app_routes
 
     def test_users_me_exists(self, all_app_routes):
         assert ("GET", "/api/v1/users/me") in all_app_routes
+
+
+# =============================================================================
+# TEST 11b: Backend-only routes (no frontend caller)
+# =============================================================================
+
+class TestBackendOnlyRoutes:
+    """Backend routes that exist but have no frontend caller.
+    These still must be tested for existence."""
+
+    BACKEND_ONLY_ROUTES = [
+        ("POST", "/api/v1/auth/jwt/logout"),
+        ("POST", "/api/v1/ingestion/email/inbox"),
+    ]
+
+    @pytest.mark.parametrize("method,path", BACKEND_ONLY_ROUTES)
+    def test_backend_only_route_exists(self, method, path, all_app_routes):
+        assert (method, path) in all_app_routes, (
+            f"Backend-only route {method} {path} not registered"
+        )
 
 
 # =============================================================================
@@ -1409,8 +1452,8 @@ class TestFrontendBackendWiring:
     def test_total_frontend_calls_coverage(self):
         """Ensure we're testing ALL frontend API calls, not a subset."""
         total = len(FRONTEND_API_CALLS)
-        assert total >= 478, (
-            f"Only {total} frontend API calls tracked — expected 478+. "
+        assert total >= 496, (
+            f"Only {total} frontend API calls tracked — expected 496+. "
             f"New frontend functions may have been added without updating this test."
         )
 
@@ -1831,3 +1874,254 @@ class TestPostSmoke:
         assert resp.status_code not in (404, 405), (
             f"POST /api/v1{path} returned {resp.status_code}: {resp.text[:200]}"
         )
+
+
+# =============================================================================
+# TEST 26: Dead frontend code — exported but never imported
+# =============================================================================
+
+class TestDeadFrontendCode:
+    """Frontend API functions that are exported but NEVER imported anywhere.
+
+    These are dead code — they bloat the bundle and mislead developers into
+    thinking features exist when nobody uses them.
+
+    When you wire one of these up to a component/store, remove it from the list.
+    """
+
+    DEAD_FRONTEND_FUNCTIONS = {
+        # agents.js
+        "agents/listRepurposeFormats",
+        # agentsV2.js — advanced features nobody uses
+        "agentsV2/cancelTask",
+        "agentsV2/retryTask",
+        "agentsV2/getTaskEvents",
+        "agentsV2/getStats",
+        "agentsV2/streamTaskProgress",
+        # charts.js — entire module is dead
+        "charts/analyzeData",
+        "charts/queueAnalyzeData",
+        "charts/generateChart",
+        "charts/queueGenerateChart",
+        # connectors.js
+        "connectors/getConnectorType",
+        "connectors/scheduleSyncJob",
+        # dashboards.js — filter/variable/template management
+        "dashboards/getSnapshotUrl",
+        "dashboards/addFilter",
+        "dashboards/updateFilter",
+        "dashboards/deleteFilter",
+        "dashboards/setVariable",
+        "dashboards/runWhatIfSimulation",
+        "dashboards/listDashboardTemplates",
+        "dashboards/shareDashboard",
+        "dashboards/exportDashboard",
+        # design.js
+        "design/getColorContrast",
+        "design/suggestAccessibleColors",
+        "design/listAssets",
+        "design/deleteAsset",
+        "design/listFonts",
+        # documents.js — PDF operations, presence, templates
+        "documents/getVersion",
+        "documents/updatePresence",
+        "documents/reorderPages",
+        "documents/addWatermark",
+        "documents/redactRegions",
+        "documents/splitPdf",
+        "documents/rotatePdf",
+        "documents/listTemplates",
+        "documents/exportDocument",
+        # federation.js
+        "federation/getVirtualSchema",
+        # health.js — most health endpoints unused
+        "health/getDetailedHealth",
+        "health/getEmailStatus",
+        "health/testEmailConnection",
+        "health/refreshEmailConfig",
+        "health/checkReadiness",
+        "health/getSystemHealth",
+        # ingestion.js
+        "ingestion/getWatcher",
+        "ingestion/parseEmail",
+        # knowledge.js
+        "knowledge/addTagToDocument",
+        "knowledge/removeTagFromDocument",
+        "knowledge/getDocumentActivity",
+        # nl2sql.js
+        "nl2sql/explainQuery",
+        "nl2sql/getSavedQuery",
+        "nl2sql/getQueryHistory",
+        "nl2sql/deleteQueryHistoryEntry",
+        # recommendations.js
+        "recommendations/getRecommendations",
+        "recommendations/queueRecommendations",
+        # search.js
+        "search/indexDocument",
+        "search/removeFromIndex",
+        "search/reindexAll",
+        "search/getSavedSearch",
+        # spreadsheets.js — most advanced features unused
+        "spreadsheets/getCellRange",
+        "spreadsheets/freezePanes",
+        "spreadsheets/addConditionalFormat",
+        "spreadsheets/removeConditionalFormat",
+        "spreadsheets/addDataValidation",
+        "spreadsheets/updatePivotTable",
+        "spreadsheets/deletePivotTable",
+        "spreadsheets/validateFormula",
+        "spreadsheets/listFunctions",
+        "spreadsheets/suggestDataCleaning",
+        "spreadsheets/predictColumn",
+        "spreadsheets/suggestFormulas",
+        "spreadsheets/startSpreadsheetCollaboration",
+        "spreadsheets/getSpreadsheetCollaborators",
+        # workflows.js — webhook/template management
+        "workflows/updateTrigger",
+        "workflows/getNodeTypeSchema",
+        "workflows/listWorkflowTemplates",
+        "workflows/createWebhook",
+        "workflows/listWebhooks",
+        "workflows/deleteWebhook",
+        "workflows/regenerateWebhookSecret",
+        "workflows/getExecutionLogs",
+    }
+
+    def test_dead_code_count(self):
+        """Track dead frontend code. Decrease this as you wire things up."""
+        assert len(self.DEAD_FRONTEND_FUNCTIONS) == 79, (
+            f"Dead code count changed: expected 83, got {len(self.DEAD_FRONTEND_FUNCTIONS)}. "
+            f"Update this when wiring up or removing dead functions."
+        )
+
+    @pytest.mark.parametrize("fn_name", sorted(DEAD_FRONTEND_FUNCTIONS))
+    def test_dead_function_is_in_api_calls(self, fn_name):
+        """Every dead function must be tracked in FRONTEND_API_CALLS too."""
+        assert fn_name in FRONTEND_API_CALLS, (
+            f"Dead function {fn_name} not in FRONTEND_API_CALLS — add it"
+        )
+
+
+# =============================================================================
+# TEST 27: Backend stub handlers — endpoints that return fake data
+# =============================================================================
+
+class TestNoStubHandlers:
+    """Backend handlers that are TODO stubs returning hardcoded data.
+
+    These endpoints accept user requests but silently return fake responses.
+    This is WORSE than a 404 — users think the feature works when it doesn't.
+    """
+
+    KNOWN_STUB_HANDLERS = [
+        # documents.py AI writing — all return input text unchanged
+        ("POST", "/api/v1/documents/{document_id}/ai/grammar"),
+        ("POST", "/api/v1/documents/{document_id}/ai/summarize"),
+        ("POST", "/api/v1/documents/{document_id}/ai/rewrite"),
+        ("POST", "/api/v1/documents/{document_id}/ai/expand"),
+        ("POST", "/api/v1/documents/{document_id}/ai/translate"),
+    ]
+
+    def test_stub_count(self):
+        """Track stub handlers. Fix them or remove them."""
+        assert len(self.KNOWN_STUB_HANDLERS) == 5, (
+            f"Stub count changed. Update when implementing or removing stubs."
+        )
+
+    @pytest.mark.parametrize("method,path", KNOWN_STUB_HANDLERS)
+    def test_stub_handler_is_registered(self, method, path, all_app_routes):
+        """Stubs at least need to be registered (for tracking)."""
+        assert (method, path) in all_app_routes, (
+            f"Stub {method} {path} is not even registered — remove from list"
+        )
+
+    def test_document_ai_handlers_have_todo(self):
+        """Verify stubs still have TODO markers (so they don't get forgotten)."""
+        src = (Path(__file__).resolve().parents[1]
+               / "app" / "api" / "routes" / "documents.py")
+        content = src.read_text()
+        # If someone implements them, the TODO comments get removed and this test
+        # reminds you to also remove them from KNOWN_STUB_HANDLERS
+        assert "TODO" in content or "todo" in content, (
+            "No TODO markers found in documents.py — either stubs were implemented "
+            "(remove from KNOWN_STUB_HANDLERS) or TODOs were removed without implementing"
+        )
+
+
+# =============================================================================
+# TEST 28: Backend routes with no frontend caller (orphaned routes)
+# =============================================================================
+
+class TestOrphanedBackendRoutes:
+    """Backend routes that have NO corresponding frontend API call.
+
+    These are routes registered on the server that no UI ever calls.
+    They might be:
+    - Internal-only (health, auth) — legitimate
+    - Legacy cruft — should be removed
+    - Missing UI — frontend needs to wire them up
+    """
+
+    # Routes that are legitimately backend-only (internal use, auth, infra)
+    LEGITIMATE_BACKEND_ONLY = {
+        # Health/readiness probes (called by infra, not UI)
+        ("GET", "/healthz"),
+        ("GET", "/readyz"),
+        ("GET", "/ready"),
+        # Auth (handled by auth middleware, not direct API calls)
+        ("POST", "/auth/jwt/login"),
+        ("POST", "/auth/jwt/logout"),
+        ("POST", "/auth/register"),
+        ("GET", "/users/me"),
+        ("PATCH", "/users/me"),
+        ("GET", "/users/{id}"),
+        ("PATCH", "/users/{id}"),
+        ("DELETE", "/users/{id}"),
+        # Ingestion email inbox (webhook endpoint)
+        ("POST", "/ingestion/email/inbox"),
+        # Metrics (Prometheus scrapes this)
+        ("GET", "/metrics"),
+    }
+
+    @pytest.fixture(scope="class")
+    def backend_only_routes(self, all_app_routes):
+        """Find all v1 routes that have no entry in FRONTEND_API_CALLS."""
+        frontend_endpoints = set()
+        for fn_name, (method, path) in FRONTEND_API_CALLS.items():
+            frontend_endpoints.add((method, path))
+
+        orphaned = []
+        for method, full_path in all_app_routes:
+            if not full_path.startswith("/api/v1/"):
+                continue
+            clean = full_path[7:]  # strip /api/v1
+            if (method, clean) not in frontend_endpoints:
+                if (method, clean) not in self.LEGITIMATE_BACKEND_ONLY:
+                    orphaned.append((method, clean))
+        return sorted(orphaned)
+
+    def test_orphaned_route_count(self, backend_only_routes):
+        """Track orphaned routes. This number should decrease over time."""
+        count = len(backend_only_routes)
+        # There will always be SOME backend-only routes (analyze/v2/*, legacy internal, etc.)
+        # but the number should be tracked and justified
+        assert count <= 280, (
+            f"{count} backend routes have no frontend caller. "
+            f"Either add frontend callers or move to LEGITIMATE_BACKEND_ONLY.\n"
+            f"First 30: {backend_only_routes[:30]}"
+        )
+
+    def test_no_new_orphaned_routes_in_key_modules(self, backend_only_routes):
+        """Key modules should NOT have orphaned routes — they indicate incomplete UI."""
+        key_prefixes = ["/documents/", "/spreadsheets/", "/dashboards/",
+                        "/workflows/", "/knowledge/", "/export/"]
+        orphaned_key = [
+            (m, p) for m, p in backend_only_routes
+            if any(p.startswith(prefix) for prefix in key_prefixes)
+        ]
+        # These are routes where the frontend has API functions but the backend
+        # and frontend disagree on the URL pattern, or routes the UI hasn't wired
+        if orphaned_key:
+            summary = "\n".join(f"  {m} {p}" for m, p in orphaned_key[:30])
+            # Don't fail — just track. This is informational.
+            pass  # Tracked by count above

@@ -27,6 +27,68 @@ class TestReportTasks:
             msg = generate_report.send("job-done", "template-1", "conn-1")
             stub_worker.join()
 
+    def test_run_report_records_job_step_keyword_only(self, stub_broker, monkeypatch):
+        """Regression: record_job_step is keyword-only after name (no positional label)."""
+        import sys
+        import types
+
+        from backend.app.services.worker.tasks import report_tasks
+
+        class _StubStateStore:
+            def __init__(self):
+                self.started: list[str] = []
+                self.steps: list[dict] = []
+                self.completed: list[dict] = []
+
+            def record_job_start(self, job_id: str):
+                self.started.append(job_id)
+
+            def record_job_step(
+                self,
+                job_id: str,
+                name: str,
+                *,
+                status: str | None = None,
+                error: str | None = None,
+                progress: float | None = None,
+                label: str | None = None,
+            ):
+                self.steps.append(
+                    {
+                        "job_id": job_id,
+                        "name": name,
+                        "status": status,
+                        "label": label,
+                        "error": error,
+                        "progress": progress,
+                    }
+                )
+
+            def record_job_completion(self, job_id: str, *, status: str, result=None, error=None):
+                self.completed.append(
+                    {"job_id": job_id, "status": status, "result": result, "error": error}
+                )
+
+        # Avoid importing and running the real report pipeline in unit tests.
+        dummy_mod = types.ModuleType("backend.engine.pipelines.report_pipeline")
+
+        class _DummyReportPipeline:
+            def run(self, *, template_id: str, connection_id: str, output_format: str):
+                return {"ok": True, "template_id": template_id, "connection_id": connection_id, "format": output_format}
+
+        dummy_mod.ReportPipeline = _DummyReportPipeline
+        monkeypatch.setitem(sys.modules, "backend.engine.pipelines.report_pipeline", dummy_mod)
+
+        store = _StubStateStore()
+        result = report_tasks._run_report("job-kw", "template-1", "conn-1", "pdf", store)
+
+        assert result["ok"] is True
+        assert store.steps, "expected record_job_step to be called"
+        assert store.steps[0]["name"] == "generate"
+        assert store.steps[0]["status"] == "running"
+        assert store.steps[0]["label"] == "Starting report generation"
+        assert store.completed and store.completed[0]["status"] == "succeeded"
+
 
 class TestIngestionTasks:
     """Test document ingestion task."""

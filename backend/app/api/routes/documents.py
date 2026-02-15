@@ -11,7 +11,7 @@ from typing import Optional
 
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, UploadFile, File, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, UploadFile, File, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel
 
 from backend.app.services.config import get_settings
@@ -46,7 +46,9 @@ router = APIRouter(tags=["documents"], dependencies=[Depends(require_api_key)])
 ws_router = APIRouter()
 
 # Service instances (would use dependency injection in production)
-_lock = threading.Lock()
+# Re-entrant because some getters call other getters while holding the lock.
+# (e.g. get_ws_handler() -> get_collaboration_service()).
+_lock = threading.RLock()
 _doc_service: Optional[DocumentService] = None
 _collab_service: Optional[CollaborationService] = None
 _pdf_service: Optional[PDFOperationsService] = None
@@ -144,6 +146,7 @@ def validate_pdf_path(pdf_path: str | None) -> Path:
 @limiter.limit(RATE_LIMIT_STANDARD)
 async def create_document(
     request: Request,
+    response: Response,
     req: CreateDocumentRequest,
     doc_service: DocumentService = Depends(get_document_service),
 ):
@@ -198,6 +201,7 @@ async def get_document(
 @limiter.limit(RATE_LIMIT_STANDARD)
 async def update_document(
     request: Request,
+    response: Response,
     document_id: str,
     req: UpdateDocumentRequest,
     doc_service: DocumentService = Depends(get_document_service),
@@ -219,6 +223,7 @@ async def update_document(
 @limiter.limit(RATE_LIMIT_STANDARD)
 async def delete_document(
     request: Request,
+    response: Response,
     document_id: str,
     doc_service: DocumentService = Depends(get_document_service),
 ):
@@ -392,7 +397,11 @@ async def reorder_pdf_pages(
 
     try:
         output_path = pdf_service.reorder_pages(pdf_path, request.page_order)
-        return {"status": "ok", "message": "PDF operation completed successfully"}
+        return {
+            "status": "ok",
+            "message": "PDF operation completed successfully",
+            "output_path": str(output_path),
+        }
     except Exception as e:
         logger.exception("pdf_reorder_failed", extra={"document_id": document_id})
         raise HTTPException(status_code=500, detail="PDF page reorder failed")

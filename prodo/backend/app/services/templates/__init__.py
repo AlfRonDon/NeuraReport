@@ -1,1 +1,0 @@
-"""Templates service placeholder."""

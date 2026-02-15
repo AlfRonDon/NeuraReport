@@ -47,17 +47,24 @@ class DocumentQAService:
 
     def _read_sessions(self) -> Dict[str, Any]:
         store = _state_store()
-        with store.transaction() as state:
-            return dict(state.get("docqa_sessions", {}) or {})
+        # Use the StateStore's low-level primitives so tests can patch _read_state/_write_state.
+        with store._lock:
+            state = store._read_state() or {}
+            sessions = state.get("docqa_sessions", {}) if isinstance(state, dict) else {}
+            return dict(sessions or {})
 
     def _update_sessions(self, updater: Callable[[Dict[str, Any]], None]) -> None:
         store = _state_store()
-        with store.transaction() as state:
+        with store._lock:
+            state = store._read_state() or {}
+            if not isinstance(state, dict):
+                state = {}
             sessions = state.get("docqa_sessions", {})
             if not isinstance(sessions, dict):
                 sessions = {}
             updater(sessions)
             state["docqa_sessions"] = sessions
+            store._write_state(state)
 
     def create_session(
         self,
@@ -547,22 +554,19 @@ Return ONLY the JSON object."""
         session.messages = []
         session.updated_at = datetime.now(timezone.utc)
 
-        store = _state_store()
-        with store.transaction() as state:
-            sessions = state.get("docqa_sessions", {})
-            sessions[session_id] = session.model_dump(mode="json")
-            state["docqa_sessions"] = sessions
+        self._update_sessions(lambda sessions: sessions.__setitem__(session_id, session.model_dump(mode="json")))
 
         return True
 
     def delete_session(self, session_id: str) -> bool:
         """Delete a Q&A session."""
-        store = _state_store()
-        with store.transaction() as state:
-            sessions = state.get("docqa_sessions", {})
+        deleted = False
+
+        def _updater(sessions: Dict[str, Any]) -> None:
+            nonlocal deleted
             if session_id in sessions:
                 del sessions[session_id]
-                state["docqa_sessions"] = sessions
-                return True
+                deleted = True
 
-        return False
+        self._update_sessions(_updater)
+        return deleted

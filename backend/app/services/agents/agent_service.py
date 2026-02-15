@@ -104,6 +104,16 @@ class AgentService:
         self._registry = get_agent_registry()
         # Trigger auto-discovery so @register_agent decorators are loaded
         self._registry.auto_discover()
+        # Backwards-compat: some tests and legacy code expect a mapping of
+        # AgentType -> agent instance.
+        self._agents: Dict[AgentType, Any] = {}
+        for atype in AgentType:
+            registry_name = self._AGENT_TYPE_TO_REGISTRY.get(atype.value)
+            if not registry_name:
+                continue
+            agent = self._registry.get(registry_name)
+            if agent is not None:
+                self._agents[atype] = agent
         # Track running task locks to prevent duplicate execution
         self._running_tasks: set[str] = set()
         self._running_tasks_lock = threading.Lock()
@@ -379,16 +389,28 @@ class AgentService:
                 logger.error(f"Failed to claim task {task_id}: {e}")
                 raise
 
-            # Get the agent from registry
-            agent_type_str = task.agent_type.value if hasattr(task.agent_type, "value") else str(task.agent_type)
-            registry_name = self._AGENT_TYPE_TO_REGISTRY.get(agent_type_str, agent_type_str)
-            agent = self._registry.get(registry_name)
-            if not agent:
-                raise AgentError(
-                    f"Unknown agent type: {task.agent_type} (registry key: {registry_name})",
-                    code="UNKNOWN_AGENT_TYPE",
-                    retryable=False,
-                )
+            # Get the agent implementation.
+            # Prefer the explicit AgentType -> agent mapping so tests/legacy code
+            # can override implementations without touching the registry.
+            agent = None
+            try:
+                atype = task.agent_type
+                if isinstance(atype, str):
+                    atype = AgentType(atype)
+                agent = self._agents.get(atype)
+            except Exception:
+                agent = None
+
+            if agent is None:
+                agent_type_str = task.agent_type.value if hasattr(task.agent_type, "value") else str(task.agent_type)
+                registry_name = self._AGENT_TYPE_TO_REGISTRY.get(agent_type_str, agent_type_str)
+                agent = self._registry.get(registry_name)
+                if not agent:
+                    raise AgentError(
+                        f"Unknown agent type: {task.agent_type} (registry key: {registry_name})",
+                        code="UNKNOWN_AGENT_TYPE",
+                        retryable=False,
+                    )
 
             # Create progress callback
             def on_progress(update: ProgressUpdate):
@@ -442,9 +464,10 @@ class AgentService:
         except Exception as e:
             # Unexpected error - mark as retryable
             logger.exception(f"Unexpected error executing task {task_id}")
+            error_message = str(e) or "Task execution failed due to an unexpected error"
             task = self._repo.fail_task(
                 task_id,
-                error_message="Task execution failed due to an unexpected error",
+                error_message=error_message,
                 error_code="UNEXPECTED_ERROR",
                 is_retryable=True,
             )

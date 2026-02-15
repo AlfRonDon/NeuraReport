@@ -218,14 +218,14 @@ async def test_connection(
             error=result.error,
             details=result.details,
         )
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid connector configuration")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e) or "Invalid connector configuration")
     except Exception as e:
         logger.exception("connector_test_failed", extra={"connector_type": connector_type})
         return TestConnectionResponse(
             success=False,
             latency_ms=None,
-            error="Connection test failed",
+            error=f"{type(e).__name__}: Connection test failed",
             details=None,
         )
 
@@ -246,9 +246,12 @@ async def create_connection(
         test_result = await connector.test_connection()
 
         if not test_result.success:
+            detail = "Connection failed"
+            if getattr(test_result, "error", None):
+                detail = f"{detail}: {test_result.error}"
             raise HTTPException(
                 status_code=400,
-                detail="Connection test failed",
+                detail=detail,
             )
 
         now = datetime.now(timezone.utc).isoformat()
@@ -273,8 +276,8 @@ async def create_connection(
             last_used=connection["last_used"],
             latency_ms=connection["latency_ms"],
         )
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid connection configuration")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e) or "Invalid connection configuration")
 
 
 @router.get("")
@@ -377,7 +380,7 @@ async def check_connection_health(
         return TestConnectionResponse(
             success=False,
             latency_ms=None,
-            error="Health check failed",
+            error=f"{type(e).__name__}: Health check failed",
             details=None,
         )
 
@@ -457,9 +460,13 @@ async def execute_query(
         )
     except Exception as e:
         logger.exception("connector_query_failed", extra={"connection_id": connection_id})
-        raise HTTPException(
-            status_code=500,
-            detail="Query execution failed",
+        return QueryResponse(
+            columns=[],
+            rows=[],
+            row_count=0,
+            execution_time_ms=0.0,
+            truncated=False,
+            error=f"{type(e).__name__}: Query execution failed",
         )
     finally:
         if connector is not None:

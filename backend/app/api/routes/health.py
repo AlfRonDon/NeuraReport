@@ -17,6 +17,7 @@ from backend.app.services.config import Settings, get_settings
 from backend.app.api.middleware import limiter
 from backend.app.services.analyze.document_analysis_service import _analysis_cache
 from backend.app.services.utils.mailer import MAILER_CONFIG, refresh_mailer_config
+from backend.app.services import state_access
 
 router = APIRouter()
 
@@ -65,6 +66,31 @@ def _check_claude_code_cli() -> Dict[str, Any]:
         return {"status": "error", "message": "Claude Code CLI check failed"}
 
 
+def _check_openai_connection(settings: Settings | None = None) -> Dict[str, Any]:
+    """Best-effort check that OpenAI is configured (and optionally reachable).
+
+    This is intentionally lightweight: in many environments OpenAI is a fallback
+    provider, and we don't want health checks to block on external calls.
+    """
+    if settings is None:
+        settings = get_settings()
+    if not getattr(settings, "openai_api_key", None):
+        return {"status": "not_configured", "message": "OpenAI API key not configured"}
+    try:
+        # Backwards-compatible: core "verification" code still exposes
+        # TemplateVerify.get_openai_client(), even though the backend may be a
+        # different provider (Claude Code CLI via unified client).
+        from backend.app.services.templates import TemplateVerify
+
+        client = TemplateVerify.get_openai_client()
+        if client is None:
+            return {"status": "error", "message": "OpenAI client initialization failed"}
+        return {"status": "configured", "message": "OpenAI client initialized"}
+    except Exception:
+        logger.exception("openai_health_check_failed")
+        return {"status": "error", "message": "OpenAI health check failed"}
+
+
 def _get_memory_usage() -> Dict[str, Any]:
     """Get current process memory usage."""
     try:
@@ -90,12 +116,18 @@ def _get_memory_usage() -> Dict[str, Any]:
 
 
 def _check_database() -> Dict[str, Any]:
-    """Check state store database is readable."""
+    """Check state store is reachable."""
     try:
-        from backend.app.services.state_access import state_store
-        with state_store.transaction() as s:
-            keys = len(s)
-        return {"status": "healthy", "state_keys": keys}
+        store = state_access.get_state_store()
+        backend_name = getattr(store, "backend_name", store.__class__.__name__)
+        backend_fallback = bool(getattr(store, "backend_fallback", False))
+        stats = store.get_stats() if hasattr(store, "get_stats") else None
+        return {
+            "status": "healthy",
+            "backend_name": backend_name,
+            "backend_fallback": backend_fallback,
+            "stats": stats,
+        }
     except Exception:
         logger.exception("database_health_check_failed")
         return {"status": "error", "message": "Database health check failed"}
@@ -192,10 +224,10 @@ def _redact_directory_check(check: Dict[str, Any]) -> Dict[str, Any]:
 @router.get("/health/detailed", dependencies=[Depends(require_api_key)])
 async def health_detailed(
     request: Request,
-    settings: Settings = Depends(get_settings),
 ) -> Dict[str, Any]:
     """Comprehensive health check with all dependencies."""
     started = time.time()
+    settings = get_settings()
 
     checks: Dict[str, Any] = {}
     issues: list[str] = []
@@ -217,8 +249,11 @@ async def health_detailed(
 
     # Check Claude Code CLI
     checks["llm"] = _check_claude_code_cli()
-    if checks["llm"]["status"] == "error":
-        issues.append("Claude Code CLI not available")
+
+    # Check OpenAI (optional/fallback provider)
+    checks["openai"] = _check_openai_connection(settings)
+    if checks["openai"]["status"] == "error":
+        issues.append("OpenAI connectivity failed")
 
     # Check cache status
     cache = _analysis_cache()

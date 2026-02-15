@@ -20,6 +20,11 @@ LEGACY_ALLOWED_IN_APP_PREFIXES = (
     "backend/api.py",
 )
 
+# Deployment snapshot; do not treat as source code for architecture enforcement.
+EXCLUDED_GIT_PY_PREFIXES = (
+    "prodo/",
+)
+
 BACKEND_ALLOWED_PATHS = (
     "backend/api.py",
     "backend/__init__.py",
@@ -32,7 +37,9 @@ BACKEND_ALLOWED_PATHS = (
 
 APP_LAYERS = {
     "api",
+    "application",
     "domain",
+    "infrastructure",
     "services",
     "repositories",
     "schemas",
@@ -40,9 +47,14 @@ APP_LAYERS = {
 }
 
 APP_LAYER_RULES = {
-    "api": {"allow": {"api", "services", "schemas"}},
+    # Presentation layer: routes + request/response wiring.
+    "api": {"allow": {"api", "application", "services", "schemas"}},
+    # Application layer: use-cases (commands/queries) orchestrating domain + ports.
+    "application": {"allow": {"application", "domain", "repositories", "infrastructure", "services", "utils", "schemas"}},
     "services": {"allow": {"services", "domain", "repositories", "utils", "schemas"}},
     "domain": {"allow": {"domain", "utils"}},
+    # Infrastructure layer: adapters for DB/files/external services. Must not import api.
+    "infrastructure": {"allow": {"infrastructure", "domain", "repositories", "utils", "schemas", "application"}},
     "repositories": {"allow": {"repositories", "domain", "utils"}},
     "schemas": {"allow": {"schemas", "utils"}},
     "utils": {"allow": {"utils"}},
@@ -87,7 +99,15 @@ def _git_tracked_py_files() -> list[Path]:
         cwd=REPO_ROOT,
         text=True,
     )
-    return [REPO_ROOT / line.strip() for line in output.splitlines() if line.strip()]
+    paths: list[Path] = []
+    for line in output.splitlines():
+        rel = line.strip()
+        if not rel:
+            continue
+        if any(rel.startswith(prefix) for prefix in EXCLUDED_GIT_PY_PREFIXES):
+            continue
+        paths.append(REPO_ROOT / rel)
+    return paths
 
 
 def _module_parts_for_path(path: Path) -> list[str]:
@@ -300,13 +320,17 @@ def _violations_for_file(
 
     # App isolation (legacy only in compatibility entrypoints).
     if rel.startswith("backend/app/"):
-        for imp in _imports_with_prefix(imports, "backend.engine"):
-            add_violation(
-                RULE_APP_IMPORT_ENGINE,
-                "backend/app/* must not import backend.engine.*",
-                forbidden_import=imp,
-                allowed_layers=("backend/app/* (no backend.engine imports)",),
-            )
+        # Allow backend.engine usage from application/services only (domain logic).
+        # Presentation/repositories/schemas/utils must not reach into engine directly.
+        allow_engine = rel.startswith(("backend/app/application/", "backend/app/services/"))
+        if not allow_engine:
+            for imp in _imports_with_prefix(imports, "backend.engine"):
+                add_violation(
+                    RULE_APP_IMPORT_ENGINE,
+                    "backend/app/* may only import backend.engine.* from application/ or services/",
+                    forbidden_import=imp,
+                    allowed_layers=("backend/app/application/*", "backend/app/services/*"),
+                )
         for imp in _imports_with_prefix(imports, "backend.legacy"):
             if not rel.startswith(LEGACY_ALLOWED_IN_APP_PREFIXES):
                 add_violation(

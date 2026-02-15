@@ -143,7 +143,9 @@ def register_routes(app: FastAPI) -> None:
 
     # Backward-compatible: mount the same v1 router at root so existing
     # clients continue to work without the /api/v1 prefix.
-    app.include_router(v1_router)
+    # Exclude legacy root routes from the OpenAPI schema so `/api/v1` is the
+    # single source of truth for client code generation.
+    app.include_router(v1_router, include_in_schema=False)
 
     # Legacy/compatibility routes (always at root only)
-    app.include_router(legacy.router)
+    app.include_router(legacy.router, include_in_schema=False)

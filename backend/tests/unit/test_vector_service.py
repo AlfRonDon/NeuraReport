@@ -104,7 +104,7 @@ class TestDramatiqTasks:
         # Just verify the task module imports without error
         # Actual task execution requires Redis
         try:
-            from backend.app.tasks.worker import (
+            from backend.app.services.worker.tasks import (
                 generate_report_task,
                 run_agent_task,
                 export_document_task,

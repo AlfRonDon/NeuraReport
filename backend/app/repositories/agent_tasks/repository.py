@@ -20,6 +20,7 @@ from pathlib import Path
 from typing import Any, Dict, Generator, List, Optional, Tuple
 
 from sqlalchemy import event, text
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, SQLModel, create_engine, select
 
 from backend.app.repositories.agent_tasks.models import (
@@ -248,7 +249,19 @@ class AgentTaskRepository:
             )
 
             session.add(task)
-            session.flush()  # Get the task_id
+            try:
+                session.flush()  # Get the task_id
+            except IntegrityError:
+                # Idempotency is enforced at the DB level; concurrent writers can
+                # race between the existence check and INSERT. Convert the
+                # resulting unique constraint violation into a domain error.
+                if not idempotency_key:
+                    raise
+                session.rollback()
+                existing = self._find_by_idempotency_key(session, idempotency_key)
+                if existing:
+                    raise IdempotencyConflictError(existing.task_id)
+                raise
 
             # Log creation event
             self._log_event(
@@ -537,31 +550,42 @@ class AgentTaskRepository:
             TaskConflictError: If task is not in PENDING state
         """
         with self._session() as session:
-            task = session.get(AgentTaskModel, task_id)
-            if task is None:
-                raise TaskNotFoundError(f"Task {task_id} not found")
+            started_at = _utc_now()
+            result = session.execute(
+                text(
+                    "UPDATE agent_tasks "
+                    "SET status = :running, started_at = :started_at, "
+                    "attempt_count = attempt_count + 1, version = version + 1 "
+                    "WHERE task_id = :task_id AND status = :pending"
+                ),
+                {
+                    "running": AgentTaskStatus.RUNNING.name,
+                    "started_at": started_at,
+                    "task_id": task_id,
+                    "pending": AgentTaskStatus.PENDING.name,
+                },
+            )
 
-            if task.status != AgentTaskStatus.PENDING:
+            if result.rowcount != 1:
+                task = session.get(AgentTaskModel, task_id)
+                if task is None:
+                    raise TaskNotFoundError(f"Task {task_id} not found")
                 raise TaskConflictError(
                     f"Cannot claim task {task_id}: status is {task.status}, expected PENDING"
                 )
 
-            old_status = task.status
-            task.status = AgentTaskStatus.RUNNING
-            task.started_at = _utc_now()
-            task.attempt_count += 1
-            task.version += 1
+            task = session.get(AgentTaskModel, task_id)
+            assert task is not None  # row exists if UPDATE succeeded
 
             self._log_event(
                 session,
                 task_id,
                 "started",
-                previous_status=old_status.value,
+                previous_status=AgentTaskStatus.PENDING.value,
                 new_status=AgentTaskStatus.RUNNING.value,
-                data={"attempt": task.attempt_count}
+                data={"attempt": task.attempt_count},
             )
 
-            session.add(task)
             logger.info(f"Claimed task {task_id} (attempt {task.attempt_count})")
             return task
 
@@ -581,32 +605,43 @@ class AgentTaskRepository:
             TaskConflictError: If task is not in RETRYING state
         """
         with self._session() as session:
-            task = session.get(AgentTaskModel, task_id)
-            if task is None:
-                raise TaskNotFoundError(f"Task {task_id} not found")
+            started_at = _utc_now()
+            result = session.execute(
+                text(
+                    "UPDATE agent_tasks "
+                    "SET status = :running, started_at = :started_at, "
+                    "attempt_count = attempt_count + 1, next_retry_at = NULL, "
+                    "version = version + 1 "
+                    "WHERE task_id = :task_id AND status = :retrying"
+                ),
+                {
+                    "running": AgentTaskStatus.RUNNING.name,
+                    "started_at": started_at,
+                    "task_id": task_id,
+                    "retrying": AgentTaskStatus.RETRYING.name,
+                },
+            )
 
-            if task.status != AgentTaskStatus.RETRYING:
+            if result.rowcount != 1:
+                task = session.get(AgentTaskModel, task_id)
+                if task is None:
+                    raise TaskNotFoundError(f"Task {task_id} not found")
                 raise TaskConflictError(
                     f"Cannot claim retry for task {task_id}: status is {task.status}, expected RETRYING"
                 )
 
-            old_status = task.status
-            task.status = AgentTaskStatus.RUNNING
-            task.started_at = _utc_now()
-            task.attempt_count += 1
-            task.next_retry_at = None
-            task.version += 1
+            task = session.get(AgentTaskModel, task_id)
+            assert task is not None
 
             self._log_event(
                 session,
                 task_id,
                 "retry_started",
-                previous_status=old_status.value,
+                previous_status=AgentTaskStatus.RETRYING.value,
                 new_status=AgentTaskStatus.RUNNING.value,
-                data={"attempt": task.attempt_count}
+                data={"attempt": task.attempt_count},
             )
 
-            session.add(task)
             logger.info(f"Claimed retry for task {task_id} (attempt {task.attempt_count})")
             return task
 
