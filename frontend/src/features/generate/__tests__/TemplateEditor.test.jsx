@@ -5,6 +5,8 @@ import { ThemeProvider } from '@mui/material/styles'
 
 import TemplateEditor from '@/features/generate/containers/TemplateEditor'
 import { ToastProvider } from '@/components/ToastProvider.jsx'
+import { OperationHistoryProvider } from '@/components/ux/OperationHistoryProvider'
+import { InteractionProvider } from '@/components/ux/governance'
 import theme from '@/app/theme.js'
 import { useAppStore } from '@/stores'
 import {
@@ -32,13 +34,17 @@ const baseTemplate = {
 const renderEditor = () =>
   render(
     <ThemeProvider theme={theme}>
-      <ToastProvider>
-        <MemoryRouter initialEntries={['/templates/tpl-1/edit']}>
-          <Routes>
-            <Route path="/templates/:templateId/edit" element={<TemplateEditor />} />
-          </Routes>
-        </MemoryRouter>
-      </ToastProvider>
+      <OperationHistoryProvider>
+        <InteractionProvider>
+          <ToastProvider>
+            <MemoryRouter initialEntries={['/templates/tpl-1/edit']}>
+              <Routes>
+                <Route path="/templates/:templateId/edit" element={<TemplateEditor />} />
+              </Routes>
+            </MemoryRouter>
+          </ToastProvider>
+        </InteractionProvider>
+      </OperationHistoryProvider>
     </ThemeProvider>,
   )
 

@@ -35,12 +35,14 @@ describe('jobs API client', () => {
     const result = await client.runReportAsJob(payload)
 
     expect(postSpy).toHaveBeenCalledWith(
-      `${client.API_BASE}/excel/jobs/run-report`,
+      '/excel/jobs/run-report',
       expect.objectContaining({
         template_id: 'tpl-123',
         template_name: 'Quarterly Revenue',
         start_date: '2024-01-01 00:00:00',
+        end_date: '2024-01-31 23:59:59',
         batch_ids: ['a'],
+        key_values: { foo: 'bar' },
         docx: true,
       }),
     )

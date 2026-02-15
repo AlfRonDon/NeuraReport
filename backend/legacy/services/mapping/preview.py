@@ -73,16 +73,45 @@ def _mapping_preview_pipeline(
     db_path = db_path_from_payload_or_default(connection_id)
     verify_sqlite_fn(db_path)
 
+    catalog = list(dict.fromkeys(build_catalog_fn(db_path)))
+
     try:
         schema_info = get_parent_child_info_fn(db_path)
     except Exception as exc:
-        logger.exception(
-            "mapping_preview_schema_probe_failed",
-            extra={"event": "mapping_preview_schema_probe_failed", "template_id": template_id},
+        logger.warning(
+            "mapping_preview_schema_probe_degraded",
+            extra={
+                "event": "mapping_preview_schema_probe_degraded",
+                "template_id": template_id,
+                "error": str(exc),
+            },
         )
-        raise http_error(500, "db_introspection_failed", "DB introspection failed")
-
-    catalog = list(dict.fromkeys(build_catalog_fn(db_path)))
+        # Additive fallback: build minimal schema_info from catalog so the
+        # LLM mapping call can still proceed with available table/column info.
+        tables_from_catalog: dict[str, list[str]] = {}
+        for entry in catalog:
+            if "." in entry:
+                tbl, col = entry.split(".", 1)
+                tables_from_catalog.setdefault(tbl, []).append(col)
+        if tables_from_catalog:
+            all_tables = sorted(tables_from_catalog.keys())
+            first_table = all_tables[0]
+            first_cols = tables_from_catalog[first_table]
+            schema_info = {
+                "child table": first_table,
+                "parent table": first_table,
+                "child_columns": first_cols,
+                "parent_columns": first_cols,
+                "common_names": first_cols,
+            }
+        else:
+            schema_info = {
+                "child table": "",
+                "parent table": "",
+                "child_columns": [],
+                "parent_columns": [],
+                "common_names": [],
+            }
     pdf_sha = sha256_path(find_reference_pdf(template_dir_path)) or ""
     png_path = find_reference_png(template_dir_path)
     db_sig = compute_db_signature(db_path) or ""

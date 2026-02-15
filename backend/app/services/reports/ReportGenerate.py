@@ -74,6 +74,7 @@ from .common_helpers import (
     _find_or_infer_batch_block,
     _find_rowish_block,
     _extract_page_metrics,
+    detect_date_column,
     sub_token,
     blank_known_tokens,
     html_without_batch_blocks,
@@ -703,6 +704,15 @@ def fill_and_print(
     parent_key = JOIN.get("parent_key", "")
     child_table = JOIN.get("child_table", "")
     child_key = JOIN.get("child_key", "")
+
+    # --- Additive: auto-detect date columns if missing from contract ---
+    for _tbl in (parent_table, child_table):
+        if _tbl and _tbl not in DATE_COLUMNS:
+            _auto = detect_date_column(DB_PATH, _tbl)
+            if _auto:
+                DATE_COLUMNS[_tbl] = _auto
+                logger.info("date_column_auto_detected table=%s col=%s", _tbl, _auto)
+
     parent_date = DATE_COLUMNS.get(parent_table, "")
     child_date = DATE_COLUMNS.get(child_table, "")
     order_col = ROW_ORDER[0] if ROW_ORDER else "ROWID"
@@ -1927,7 +1937,12 @@ def fill_and_print(
 
             rendered_blocks.append(block_html)
         else:
-            logger.debug("Generator SQL produced no usable row data after filtering; skipping block.")
+            # --- Additive: header-only in generator path ---
+            if header_rows and HEADER_TOKENS:
+                logger.debug("Generator: header-only block; appending without row data.")
+                rendered_blocks.append(block_html)
+            else:
+                logger.debug("Generator SQL produced no usable row data after filtering; skipping block.")
 
     else:
         for batch_id in BATCH_IDS or []:
@@ -1947,7 +1962,12 @@ def fill_and_print(
 
             # (b) Row repeater (child rows)
             if not row_tokens_in_template:
-                logger.debug("No row tokens found for batch %s; skipping block.", batch_id)
+                # --- Additive: header-only block support (receipts, summaries) ---
+                if header_cols and HEADER_TOKENS:
+                    logger.debug("Header-only block for batch %s; appending without row expansion.", batch_id)
+                    rendered_blocks.append(block_html)
+                else:
+                    logger.debug("No row tokens and no header tokens for batch %s; skipping.", batch_id)
                 continue
 
             rows = [dict(r) for r in prefetched_rows.get(batch_id, [])]

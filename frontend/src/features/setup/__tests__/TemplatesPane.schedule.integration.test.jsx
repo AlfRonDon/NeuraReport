@@ -7,6 +7,8 @@ import dayjs from 'dayjs'
 
 import TemplatesPane from '@/features/setup/containers/TemplatesPaneContainer'
 import { ToastProvider } from '@/components/ToastProvider.jsx'
+import { OperationHistoryProvider } from '@/components/ux/OperationHistoryProvider'
+import { InteractionProvider } from '@/components/ux/governance'
 import theme from '@/app/theme.js'
 import { useAppStore } from '@/stores'
 
@@ -47,9 +49,13 @@ const renderPane = () =>
   render(
     <MemoryRouter>
       <ThemeProvider theme={theme}>
-        <ToastProvider>
-          <TemplatesPane />
-        </ToastProvider>
+        <OperationHistoryProvider>
+          <InteractionProvider>
+            <ToastProvider>
+              <TemplatesPane />
+            </ToastProvider>
+          </InteractionProvider>
+        </OperationHistoryProvider>
       </ThemeProvider>
     </MemoryRouter>,
   )

@@ -36,7 +36,7 @@ describe('API Client Configuration', () => {
   })
 
   afterEach(() => {
-    vi.clearAllMocks()
+    vi.resetAllMocks()
   })
 
   it('should use default API_BASE when env not set', async () => {
@@ -67,11 +67,14 @@ describe('API Client Configuration', () => {
 
 describe('API Client Functions', () => {
   beforeEach(() => {
+    vi.resetAllMocks()
     vi.resetModules()
+    globalThis.__NEURA_TEST_ENVIRONMENT__ = { VITE_USE_MOCK: 'true' }
   })
 
   afterEach(() => {
-    vi.clearAllMocks()
+    delete globalThis.__NEURA_TEST_ENVIRONMENT__
+    vi.resetAllMocks()
   })
 
   describe('testConnection', () => {
@@ -252,7 +255,7 @@ describe('Error Handling', () => {
   })
 
   afterEach(() => {
-    vi.clearAllMocks()
+    vi.resetAllMocks()
   })
 
   it('should throw meaningful errors on API failures', async () => {
@@ -434,6 +437,17 @@ describe('Chart Functions', () => {
 })
 
 describe('Schedule Functions', () => {
+  beforeEach(() => {
+    vi.resetAllMocks()
+    vi.resetModules()
+    globalThis.__NEURA_TEST_ENVIRONMENT__ = { VITE_USE_MOCK: 'true' }
+  })
+
+  afterEach(() => {
+    delete globalThis.__NEURA_TEST_ENVIRONMENT__
+    vi.resetAllMocks()
+  })
+
   describe('createSchedule', () => {
     it('should create a schedule', async () => {
       const { createSchedule } = await import('../client.js')

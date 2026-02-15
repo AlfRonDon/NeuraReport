@@ -513,3 +513,87 @@ def _extract_page_metrics(html_in: str) -> dict[str, float]:
         "margin_top_mm": max(margin_top_mm, 0.0),
         "margin_bottom_mm": max(margin_bottom_mm, 0.0),
     }
+
+
+# ---------------------------------------------------------------------------
+# Additive: date column auto-detection for contracts missing date_columns
+# ---------------------------------------------------------------------------
+
+def detect_date_column(db_path, table_name: str) -> str | None:
+    """Auto-detect a likely date/timestamp column in *table_name*.
+
+    Strategy:
+      1. Name-based: columns containing 'date', 'timestamp', '_dt', '_ts'.
+         Prefer 'date' over 'time' when multiple match.
+      2. Value-based: sample up to 5 non-null TEXT values and check if they
+         parse as dates via ``_parse_date_like``.
+      3. Return the column name, or ``None`` if nothing matches.
+
+    This is a safety-net fallback — contracts should specify date_columns
+    explicitly whenever possible.
+    """
+    import sqlite3 as _sqlite3
+    from pathlib import Path as _Path
+
+    if not table_name:
+        return None
+
+    db_str = str(db_path) if not isinstance(db_path, str) else db_path
+
+    try:
+        with _sqlite3.connect(db_str) as con:
+            safe_table = table_name.replace("'", "''")
+            cur = con.execute(f"PRAGMA table_info('{safe_table}')")
+            columns = [
+                {"name": str(row[1]), "type": str(row[2] or "").upper()}
+                for row in cur.fetchall()
+            ]
+    except Exception:
+        return None
+
+    if not columns:
+        return None
+
+    # Strategy 1: name-based detection
+    _DATE_PATTERNS = ("date", "timestamp", "_dt", "_ts", "time")
+    _PREFER_PATTERNS = ("date",)
+
+    candidates: list[tuple[int, str]] = []
+    for col_info in columns:
+        col_name = col_info["name"]
+        col_lower = col_name.lower()
+        if any(pat in col_lower for pat in _DATE_PATTERNS):
+            priority = 0 if any(p in col_lower for p in _PREFER_PATTERNS) else 1
+            candidates.append((priority, col_name))
+
+    if candidates:
+        candidates.sort(key=lambda x: x[0])
+        return candidates[0][1]
+
+    # Strategy 2: value-based detection (sample TEXT columns)
+    for col_info in columns:
+        col_name = col_info["name"]
+        col_type = col_info["type"]
+        if col_type not in ("TEXT", "VARCHAR", ""):
+            continue
+        try:
+            with _sqlite3.connect(db_str) as con:
+                safe_col = col_name.replace('"', '""')
+                safe_tbl = table_name.replace('"', '""')
+                cur = con.execute(
+                    f'SELECT "{safe_col}" FROM "{safe_tbl}" '
+                    f'WHERE "{safe_col}" IS NOT NULL AND TRIM("{safe_col}") != \'\' '
+                    f"LIMIT 5"
+                )
+                values = [str(row[0]) for row in cur.fetchall()]
+        except Exception:
+            continue
+
+        if not values:
+            continue
+
+        date_hits = sum(1 for v in values if _parse_date_like(v) is not None)
+        if date_hits >= 3 or (date_hits == len(values) and len(values) >= 1):
+            return col_name
+
+    return None

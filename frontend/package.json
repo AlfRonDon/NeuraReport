@@ -83,6 +83,7 @@
   "devDependencies": {
     "@axe-core/playwright": "^4.10.2",
     "@eslint/js": "^9.34.0",
+    "@openapitools/openapi-generator-cli": "^2.23.0",
     "@playwright/test": "^1.56.0",
     "@sentry/vite-plugin": "^4.9.1",
     "@size-limit/file": "^12.0.0",
@@ -96,7 +97,6 @@
     "@types/react-resizable": "^3.0.8",
     "@types/react-signature-canvas": "^1.0.7",
     "@vitejs/plugin-react": "^5.1.2",
-    "@openapitools/openapi-generator-cli": "^2.23.0",
     "eslint": "^9.34.0",
     "eslint-plugin-boundaries": "^4.1.0",
     "eslint-plugin-react-hooks": "^5.2.0",
@@ -108,6 +108,6 @@
     "size-limit": "^12.0.0",
     "typescript": "^5.7.3",
     "vite": "^7.3.1",
-    "vitest": "^2.1.4"
+    "vitest": "^4.0.18"
   }
 }

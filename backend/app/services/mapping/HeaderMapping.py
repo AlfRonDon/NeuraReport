@@ -113,8 +113,38 @@ def get_parent_child_info(db_path: Path) -> Dict[str, object]:
                 if parent:
                     break
 
+    # --- Additive fallback A: column-overlap heuristic (no FK, multi-table) ---
     if not child or not parent:
-        raise RuntimeError("Could not determine parent/child tables from schema.")
+        best_overlap: list[str] = []
+        best_parent_candidate = None
+        best_child_candidate = None
+        table_pairs = [(t1, t2) for i, t1 in enumerate(tables) for t2 in tables[i + 1:]]
+        for t1, t2 in table_pairs:
+            cols_t1 = set(cols.get(t1, []))
+            cols_t2 = set(cols.get(t2, []))
+            overlap = sorted(cols_t1 & cols_t2)
+            if len(overlap) > len(best_overlap):
+                best_overlap = overlap
+                # More columns → master/parent; fewer → detail/child
+                if len(cols.get(t1, [])) >= len(cols.get(t2, [])):
+                    best_parent_candidate, best_child_candidate = t1, t2
+                else:
+                    best_parent_candidate, best_child_candidate = t2, t1
+        if best_overlap and best_parent_candidate and best_child_candidate:
+            parent = best_parent_candidate
+            child = best_child_candidate
+
+    # --- Additive fallback B: largest table as single-table report ---
+    if not child or not parent:
+        largest = max(tables, key=lambda t: len(cols.get(t, [])))
+        largest_cols = cols.get(largest, [])
+        return {
+            "child table": largest,
+            "parent table": largest,
+            "child_columns": largest_cols,
+            "parent_columns": largest_cols,
+            "common_names": sorted(set(largest_cols)),
+        }
 
     child_cols = cols.get(child, [])
     parent_cols = cols.get(parent, [])

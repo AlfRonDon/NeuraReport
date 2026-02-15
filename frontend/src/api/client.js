@@ -16,7 +16,7 @@ export const API_BASE = envBaseUrl === 'proxy' ? '/api' : (envBaseUrl || 'http:/
 
 // Canonical API version base (plan.md): clients target `/api/v1` only.
 export const API_V1_BASE =
-  API_BASE.endsWith('/api/v1') ? API_BASE : `${API_BASE.replace(/\\/$/, '')}/api/v1`
+  API_BASE.endsWith('/api/v1') ? API_BASE : `${API_BASE.replace(/\/$/, '')}/api/v1`
 
 // Normalize relative API paths to an absolute URL (when API_BASE is a full origin)
 // or a dev-proxy-prefixed path (when API_BASE is '/api').

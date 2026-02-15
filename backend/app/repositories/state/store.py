@@ -218,44 +218,36 @@ class StateStore:
             "dead_letter_jobs": {},  # {job_id: {original_job, failure_history, moved_at}}
         }
 
+    # All collections that MUST be dicts keyed by "id".
+    # If any is stored as a list (legacy migration / corruption), it's auto-normalized.
+    _DICT_KEYED_COLLECTIONS = (
+        "connections", "templates", "schedules", "jobs", "saved_charts", "runs",
+        "saved_queries", "enrichment_sources", "enrichment_cache",
+        "virtual_schemas", "docqa_sessions", "synthesis_sessions", "summaries",
+        "documents", "spreadsheets", "dashboards", "dashboard_widgets",
+        "connectors", "connector_credentials", "workflows", "workflow_executions",
+        "brand_kits", "themes", "export_jobs", "docai_results",
+        "idempotency_keys", "dead_letter_jobs",
+    )
+
     def _apply_defaults(self, state: dict) -> dict:
-        state.setdefault("connections", {})
-        state.setdefault("templates", {})
+        # Dict-keyed collections: setdefault + normalize list→dict
+        for key in self._DICT_KEYED_COLLECTIONS:
+            state.setdefault(key, {})
+            if isinstance(state.get(key), list):
+                state[key] = {
+                    item["id"]: item for item in state[key]
+                    if isinstance(item, dict) and "id" in item
+                }
         state.setdefault("last_used", {})
-        state.setdefault("schedules", {})
-        state.setdefault("jobs", {})
-        state.setdefault("saved_charts", {})
-        state.setdefault("runs", {})
+        # List-typed collections (order matters, not keyed by id)
         state.setdefault("activity_log", [])
+        state.setdefault("notifications", [])
+        state.setdefault("query_history", [])
+        # Nested dict structures (not id-keyed)
         state.setdefault("favorites", {"templates": [], "connections": [], "documents": [], "spreadsheets": [], "dashboards": []})
         state.setdefault("user_preferences", {})
-        state.setdefault("notifications", [])
-        # AI Features
-        state.setdefault("saved_queries", {})
-        state.setdefault("query_history", [])
-        state.setdefault("enrichment_sources", {})
-        state.setdefault("enrichment_cache", {})
-        state.setdefault("virtual_schemas", {})
-        state.setdefault("docqa_sessions", {})
-        state.setdefault("synthesis_sessions", {})
-        state.setdefault("summaries", {})
-        # Phase 1-10 Features
-        state.setdefault("documents", {})
-        state.setdefault("spreadsheets", {})
-        state.setdefault("dashboards", {})
-        state.setdefault("dashboard_widgets", {})
-        state.setdefault("connectors", {})
-        state.setdefault("connector_credentials", {})
-        state.setdefault("workflows", {})
-        state.setdefault("workflow_executions", {})
-        state.setdefault("brand_kits", {})
-        state.setdefault("themes", {})
         state.setdefault("library", {"documents": {}, "collections": {}, "tags": {}})
-        state.setdefault("export_jobs", {})
-        state.setdefault("docai_results", {})
-        # Job system enhancements (state-of-the-art patterns)
-        state.setdefault("idempotency_keys", {})
-        state.setdefault("dead_letter_jobs", {})
         return state
 
     def _read_state(self) -> dict:
