@@ -3,6 +3,7 @@
  * Graceful error handling with theme-aware styling
  */
 import { Component } from 'react'
+import * as Sentry from '@sentry/react'
 import { Box, Typography, Button, Stack, alpha } from '@mui/material'
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline'
 import RefreshIcon from '@mui/icons-material/Refresh'
@@ -23,8 +24,10 @@ class ErrorBoundary extends Component {
 
   componentDidCatch(error, errorInfo) {
     this.setState({ errorInfo })
-    // Log error to console in development
-    console.error('ErrorBoundary caught an error:', error, errorInfo)
+    Sentry.captureException(error, { extra: { componentStack: errorInfo?.componentStack } })
+    if (import.meta.env?.DEV) {
+      console.error('ErrorBoundary caught an error:', error, errorInfo)
+    }
   }
 
   handleReload = () => {

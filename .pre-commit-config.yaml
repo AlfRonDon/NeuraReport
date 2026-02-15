@@ -24,3 +24,12 @@ repos:
     hooks:
       - id: isort
         args: ["--profile", "black"]
+  # Frontend hooks
+  - repo: local
+    hooks:
+      - id: frontend-lint
+        name: ESLint (frontend)
+        entry: bash -c 'cd frontend && npx eslint --max-warnings=0'
+        language: system
+        files: '^frontend/src/.*\.(js|jsx|ts|tsx)$'
+        pass_filenames: false

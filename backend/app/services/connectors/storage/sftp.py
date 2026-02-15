@@ -20,6 +20,7 @@ from backend.app.services.connectors.base import (
     ConnectorType,
     FileInfo,
 )
+from backend.app.utils.ssrf_guard import validate_hostname, SSRFError
 
 
 class SFTPConnector(ConnectorBase):
@@ -48,6 +49,7 @@ class SFTPConnector(ConnectorBase):
 
             host = self.config.get("host")
             port = self.config.get("port", 22)
+            validate_hostname(host, port)
             username = self.config.get("username")
             password = self.config.get("password")
             private_key_path = self.config.get("private_key_path")

@@ -3,6 +3,7 @@
  * Advanced search and discovery interface.
  */
 import React, { useState, useEffect, useCallback } from 'react'
+import { sanitizeHighlight } from '@/shared/utils/sanitize'
 import {
   Box,
   Typography,

@@ -19,6 +19,11 @@ warnings.filterwarnings("ignore", category=DeprecationWarning, module=r"pkg_reso
 os.environ["ALLOWED_HOSTS_ALL"] = "true"
 os.environ["NEURA_ALLOWED_HOSTS_ALL"] = "true"
 
+# JWT secret is required in production; provide a test-only value.
+# Also enable debug mode so the runtime validator doesn't reject the default.
+os.environ.setdefault("NEURA_JWT_SECRET", "test-secret-do-not-use-in-production")
+os.environ.setdefault("NEURA_DEBUG", "true")
+
 # Clear cached settings so the env override takes effect
 try:
     from backend.app.services.config import get_settings

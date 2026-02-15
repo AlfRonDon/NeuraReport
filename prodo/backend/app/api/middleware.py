@@ -1,0 +1,355 @@
+from __future__ import annotations
+
+import asyncio
+import logging
+import time
+import uuid
+
+from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.middleware.trustedhost import TrustedHostMiddleware
+
+from backend.app.api.idempotency import IdempotencyMiddleware, IdempotencyStore
+from backend.app.services.utils.context import set_correlation_id
+from backend.app.services.config import Settings
+from .ux_governance import UXGovernanceMiddleware, IntentHeaders
+
+logger = logging.getLogger("neura.api")
+
+def _get_client_key(request: Request) -> str:
+    """Get unique client identifier for rate limiting."""
+    api_key = request.headers.get("x-api-key")
+    if api_key:
+        return f"key:{api_key[:16]}"
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    real_ip = request.headers.get("x-real-ip")
+    if real_ip:
+        return real_ip
+    return request.client.host if request.client else "unknown"
+
+
+def _format_rate_limit(requests: int, window_seconds: int) -> str:
+    if window_seconds <= 1:
+        return f"{requests}/second"
+    if window_seconds == 60:
+        return f"{requests}/minute"
+    if window_seconds == 3600:
+        return f"{requests}/hour"
+    if window_seconds == 86400:
+        return f"{requests}/day"
+    return f"{requests}/{window_seconds} second"
+
+
+def _build_default_limits(settings: Settings) -> list[str]:
+    limits: list[str] = []
+    if settings.rate_limit_requests > 0 and settings.rate_limit_window_seconds > 0:
+        limits.append(_format_rate_limit(settings.rate_limit_requests, settings.rate_limit_window_seconds))
+    if settings.rate_limit_burst > 0:
+        limits.append(f"{settings.rate_limit_burst}/second")
+    return limits
+
+
+limiter = Limiter(key_func=_get_client_key, default_limits=[], headers_enabled=True)
+
+# Rate limit tier constants for per-endpoint rate limiting
+RATE_LIMIT_STRICT = "10/minute"    # AI endpoints, color generation, ingestion
+RATE_LIMIT_STANDARD = "60/minute"  # Mutations, exports
+
+
+def _configure_limiter(settings: Settings) -> None:
+    limiter.default_limits = _build_default_limits(settings)
+
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    """Middleware to add security headers to all responses."""
+
+    def __init__(self, app, debug_mode: bool = False, csp_connect_origins: list[str] | None = None):
+        super().__init__(app)
+        self.debug_mode = debug_mode
+        self.csp_connect_origins = csp_connect_origins or []
+
+    @staticmethod
+    def _build_csp(debug_mode: bool, connect_origins: list[str]) -> str:
+        """
+        Build Content Security Policy string with configurable connect-src.
+
+        Security improvements from default:
+        - Removed 'unsafe-eval' from script-src
+        - Restricted img-src to 'self' data: blob: (no wildcard http:/https:)
+        - Added frame-ancestors 'none' to prevent embedding
+        - Added base-uri 'self' to prevent base tag injection
+        - Added form-action 'self' to restrict form submissions
+        - Added object-src 'none' to block plugins
+        """
+        # Base CSP directives
+        csp_parts = [
+            "default-src 'self'",
+            "script-src 'self' 'unsafe-inline'",  # Keep unsafe-inline for inline event handlers
+            "style-src 'self' 'unsafe-inline'",
+            "img-src 'self' data: blob:",  # Removed wildcard http:/https:
+            "font-src 'self' data:",
+            "frame-ancestors 'none'",  # Prevent embedding in iframes
+            "base-uri 'self'",         # Prevent base tag injection
+            "form-action 'self'",      # Restrict form submissions
+            "object-src 'none'",       # Block plugins (Flash, etc)
+        ]
+
+        # Build connect-src with configurable origins
+        connect_src_origins = ["'self'"]
+        if debug_mode:
+            # In debug mode, add localhost/127.0.0.1 for all ports
+            connect_src_origins.extend([
+                "http://localhost:*",
+                "http://127.0.0.1:*",
+                "ws://localhost:*",
+                "ws://127.0.0.1:*"
+            ])
+        # Add custom origins from config
+        connect_src_origins.extend(connect_origins)
+        csp_parts.append(f"connect-src {' '.join(connect_src_origins)}")
+
+        return "; ".join(csp_parts)
+
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+
+        # Prevent clickjacking
+        response.headers["X-Frame-Options"] = "DENY"
+
+        # Prevent MIME type sniffing
+        response.headers["X-Content-Type-Options"] = "nosniff"
+
+        # XSS protection (for older browsers)
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+
+        # Referrer policy
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+
+        # Content Security Policy - configurable and tightened
+        response.headers["Content-Security-Policy"] = self._build_csp(
+            self.debug_mode,
+            self.csp_connect_origins
+        )
+
+        # Permissions Policy
+        response.headers["Permissions-Policy"] = (
+            "geolocation=(), microphone=(), camera=()"
+        )
+
+        return response
+
+
+class RequestTimeoutMiddleware(BaseHTTPMiddleware):
+    """Middleware to enforce request timeout."""
+
+    def __init__(self, app, timeout_seconds: int = 300):
+        super().__init__(app)
+        self.timeout_seconds = timeout_seconds
+
+    async def dispatch(self, request: Request, call_next):
+        # Allow longer timeout for streaming endpoints
+        timeout = self.timeout_seconds
+        if "/stream" in request.url.path or "/upload" in request.url.path:
+            timeout = timeout * 2  # Double timeout for streaming/upload
+
+        try:
+            response = await asyncio.wait_for(
+                call_next(request),
+                timeout=timeout,
+            )
+            return response
+        except asyncio.TimeoutError:
+            correlation_id = getattr(getattr(request, "state", None), "correlation_id", None)
+            logger.error(
+                "request_timeout",
+                extra={
+                    "event": "request_timeout",
+                    "path": request.url.path,
+                    "method": request.method,
+                    "timeout": timeout,
+                },
+            )
+            return JSONResponse(
+                status_code=504,
+                content={
+                    "status": "error",
+                    "code": "request_timeout",
+                    "message": "Request timed out. Please try again with a smaller payload or simpler request.",
+                    "timeout_seconds": timeout,
+                    "correlation_id": correlation_id,
+                },
+            )
+
+
+class CorrelationIdMiddleware(BaseHTTPMiddleware):
+    """Middleware to handle correlation IDs and request logging."""
+
+    async def dispatch(self, request: Request, call_next):
+        correlation_id = request.headers.get("x-correlation-id") or uuid.uuid4().hex
+        set_correlation_id(correlation_id)
+        request.state.correlation_id = correlation_id
+        started = time.time()
+
+        logger.info(
+            "request_start",
+            extra={
+                "event": "request_start",
+                "path": request.url.path,
+                "method": request.method,
+                "correlation_id": correlation_id,
+            },
+        )
+
+        try:
+            response = await call_next(request)
+        except Exception:
+            elapsed = int((time.time() - started) * 1000)
+            logger.exception(
+                "request_error",
+                extra={
+                    "event": "request_error",
+                    "path": request.url.path,
+                    "method": request.method,
+                    "elapsed_ms": elapsed,
+                    "correlation_id": correlation_id,
+                },
+            )
+            set_correlation_id(None)
+            raise
+
+        elapsed = int((time.time() - started) * 1000)
+        logger.info(
+            "request_complete",
+            extra={
+                "event": "request_complete",
+                "path": request.url.path,
+                "method": request.method,
+                "status": response.status_code,
+                "elapsed_ms": elapsed,
+                "correlation_id": correlation_id,
+            },
+        )
+        response.headers["X-Correlation-ID"] = correlation_id
+        response.headers.setdefault("X-Content-Type-Options", "nosniff")
+        content_type = response.headers.get("Content-Type", "")
+        if content_type.startswith(("application/json", "text/html", "application/x-ndjson")):
+            response.headers.setdefault("Cache-Control", "no-store")
+        set_correlation_id(None)
+        return response
+
+
+def add_middlewares(app: FastAPI, settings: Settings) -> None:
+    """Configure all application middlewares.
+
+    NOTE: Middleware is executed in REVERSE order of addition.
+    The LAST middleware added is the FIRST to process requests.
+    CORS must be added LAST so it handles OPTIONS preflight requests FIRST.
+    """
+
+    # Correlation ID and logging middleware (added first, executes last)
+    app.add_middleware(CorrelationIdMiddleware)
+
+    # UX Governance middleware - enforces intent headers on mutating requests
+    # Set strict_mode=False initially to log warnings without rejecting requests
+    # Change to strict_mode=True when frontend is fully compliant
+    app.add_middleware(
+        UXGovernanceMiddleware,
+        strict_mode=settings.ux_governance_strict if hasattr(settings, 'ux_governance_strict') else False,
+    )
+
+    # Rate limiting middleware
+    if settings.rate_limit_enabled:
+        _configure_limiter(settings)
+        app.state.limiter = limiter
+        app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+        app.add_middleware(SlowAPIMiddleware)
+
+    # Request timeout middleware
+    app.add_middleware(
+        RequestTimeoutMiddleware,
+        timeout_seconds=settings.request_timeout_seconds,
+    )
+
+    # Security headers middleware - pass debug mode and CSP origins
+    app.add_middleware(
+        SecurityHeadersMiddleware,
+        debug_mode=settings.debug_mode,
+        csp_connect_origins=settings.csp_connect_origins
+    )
+
+    # Trusted host middleware - configure properly in production
+    if settings.allowed_hosts_all:
+        allowed_hosts = ["*"]
+    else:
+        allowed_hosts = settings.trusted_hosts
+    app.add_middleware(TrustedHostMiddleware, allowed_hosts=allowed_hosts)
+
+    if settings.idempotency_enabled:
+        app.add_middleware(
+            IdempotencyMiddleware,
+            store=IdempotencyStore(),
+            ttl_seconds=settings.idempotency_ttl_seconds,
+        )
+
+    # CORS middleware - MUST be added LAST so it executes FIRST
+    # This ensures OPTIONS preflight requests are handled before any other middleware
+    cors_headers = [
+        "Content-Type",
+        "Authorization",
+        "X-API-Key",
+        "X-Correlation-ID",
+        "Idempotency-Key",
+        "X-Idempotency-Key",  # Legacy header name
+        "Accept",
+        "Accept-Language",
+        "Content-Language",
+        "Cache-Control",
+        "Pragma",
+        # UX Governance headers
+        IntentHeaders.INTENT_ID,
+        IntentHeaders.INTENT_TYPE,
+        IntentHeaders.INTENT_LABEL,
+        IntentHeaders.IDEMPOTENCY_KEY,
+        IntentHeaders.REVERSIBILITY,
+        IntentHeaders.USER_SESSION,
+        IntentHeaders.USER_ACTION,
+        IntentHeaders.WORKFLOW_ID,
+        IntentHeaders.WORKFLOW_STEP,
+    ]
+    cors_expose = [
+        "X-Correlation-ID",
+        "X-RateLimit-Remaining",
+        "X-RateLimit-Limit",
+        "Idempotency-Replay",
+        "X-Intent-Processed",
+    ]
+    cors_methods = ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"]
+
+    if settings.debug_mode:
+        # In debug mode, use regex to allow any localhost/127.0.0.1 origin
+        # Note: allow_credentials=True is incompatible with allow_origins=["*"]
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origin_regex=r"https?://(localhost|127\.0\.0\.1)(:\d+)?",
+            allow_methods=cors_methods,
+            allow_headers=cors_headers,
+            allow_credentials=True,
+            expose_headers=cors_expose,
+        )
+    else:
+        # In production, use explicit origin list
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=settings.cors_origins,
+            allow_methods=cors_methods,
+            allow_headers=cors_headers,
+            allow_credentials=True,
+            expose_headers=cors_expose,
+        )

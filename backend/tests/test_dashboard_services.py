@@ -114,7 +114,7 @@ def mock_state_store(monkeypatch):
 def mock_settings(monkeypatch):
     """Provide mock settings for services that need config."""
     settings = MagicMock()
-    settings.jwt_secret = "test-secret-for-hmac-signing-key-1234"
+    settings.jwt_secret = MagicMock(get_secret_value=lambda: "test-secret-for-hmac-signing-key-1234")
     settings.uploads_dir = Path("/tmp/test_uploads")
     settings.debug_mode = True
 
@@ -868,7 +868,7 @@ class TestSecurityConfig:
 
         # Should NOT raise — just log warning
         result = _apply_runtime_defaults(settings)
-        assert result.jwt_secret == "change-me"
+        assert result.jwt_secret.get_secret_value() == "change-me"
 
     def test_jwt_secret_passes_with_real_secret(self, monkeypatch):
         """A real JWT secret should pass in production mode."""
@@ -885,7 +885,7 @@ class TestSecurityConfig:
         assert settings.debug_mode is False
 
         result = _apply_runtime_defaults(settings)
-        assert result.jwt_secret == "a-strong-production-secret-value"
+        assert result.jwt_secret.get_secret_value() == "a-strong-production-secret-value"
 
 
 # =============================================================================

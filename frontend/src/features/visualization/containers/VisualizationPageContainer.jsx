@@ -2,7 +2,8 @@
  * Visualization Page Container
  * Diagram and chart generation interface.
  */
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useMemo } from 'react'
+import { sanitizeSVG } from '@/shared/utils/sanitize'
 import {
   Box,
   Typography,
@@ -525,7 +526,7 @@ export default function VisualizationPageContainer() {
             <PreviewCard elevation={2}>
               {currentDiagram.svg ? (
                 <Box
-                  dangerouslySetInnerHTML={{ __html: sanitizeSvg(currentDiagram.svg) }}
+                  dangerouslySetInnerHTML={{ __html: sanitizeSVG(currentDiagram.svg) }}
                   sx={{ '& svg': { maxWidth: '100%', height: 'auto' } }}
                 />
               ) : currentDiagram.content ? (

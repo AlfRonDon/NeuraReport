@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+import logging
 import os
-import threading
 import uuid
 from typing import AsyncGenerator, Optional
 
@@ -13,41 +13,49 @@ from sqlalchemy import Column, String
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import declarative_base
 
+from backend.app.db.engine import get_engine, get_session_factory
 from .config import get_settings
 
+logger = logging.getLogger("neura.auth")
 
-_ENGINE_LOCK = threading.Lock()
-_ENGINE = None
-_SESSION_MAKER = None
-
-
-def _auth_db_url(settings=None) -> str:
-    settings = settings or get_settings()
-    override = os.getenv("NEURA_AUTH_DB_URL")
-    if override:
-        return override
-    state_dir = settings.state_dir
-    return f"sqlite+aiosqlite:///{state_dir / 'auth.sqlite3'}"
+# Auth-specific engine/session (only used when NEURA_AUTH_DB_URL override is set)
+_auth_engine = None
+_auth_session_factory = None
 
 
 Base = declarative_base()
 
 
-def _get_engine():
-    global _ENGINE, _SESSION_MAKER
-    if _ENGINE is None:
-        with _ENGINE_LOCK:
-            if _ENGINE is None:
-                settings = get_settings()
-                _ENGINE = create_async_engine(_auth_db_url(settings), connect_args={"check_same_thread": False})
-                _SESSION_MAKER = async_sessionmaker(_ENGINE, expire_on_commit=False)
-    return _ENGINE
+def _has_auth_db_override() -> bool:
+    """Check if a separate auth database URL is configured."""
+    return bool(os.getenv("NEURA_AUTH_DB_URL"))
 
 
-def _get_session_maker():
-    if _SESSION_MAKER is None:
-        _get_engine()
-    return _SESSION_MAKER
+def _get_auth_engine():
+    """Get the auth-specific engine when NEURA_AUTH_DB_URL is set."""
+    global _auth_engine, _auth_session_factory
+    if _auth_engine is None:
+        url = os.getenv("NEURA_AUTH_DB_URL")
+        connect_args = {}
+        if url and "sqlite" in url:
+            connect_args = {"check_same_thread": False}
+        _auth_engine = create_async_engine(url, connect_args=connect_args)
+        _auth_session_factory = async_sessionmaker(_auth_engine, expire_on_commit=False)
+        logger.info(
+            "auth_db_override_active",
+            extra={"event": "auth_db_override_active", "dialect": url.split(":")[0] if ":" in url else "unknown"},
+        )
+    return _auth_engine
+
+
+def _get_auth_session_factory():
+    """Get the session factory for auth -- uses override or centralized engine."""
+    if _has_auth_db_override():
+        if _auth_session_factory is None:
+            _get_auth_engine()
+        return _auth_session_factory
+    # Default: use the centralized engine from backend.app.db.engine
+    return get_session_factory()
 
 
 class User(SQLAlchemyBaseUserTableUUID, Base):
@@ -68,8 +76,8 @@ class UserUpdate(schemas.BaseUserUpdate):
 
 
 async def get_user_db() -> AsyncGenerator[SQLAlchemyUserDatabase, None]:
-    session_maker = _get_session_maker()
-    async with session_maker() as session:
+    session_factory = _get_auth_session_factory()
+    async with session_factory() as session:
         yield SQLAlchemyUserDatabase(session, User)
 
 
@@ -80,8 +88,8 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
     def __init__(self, user_db: SQLAlchemyUserDatabase):
         super().__init__(user_db)
         settings = get_settings()
-        self.reset_password_token_secret = settings.jwt_secret
-        self.verification_token_secret = settings.jwt_secret
+        self.reset_password_token_secret = settings.jwt_secret.get_secret_value()
+        self.verification_token_secret = settings.jwt_secret.get_secret_value()
 
     async def on_after_register(self, user: User, request: Optional[Request] = None) -> None:
         return None
@@ -99,7 +107,7 @@ bearer_transport = BearerTransport(tokenUrl="auth/jwt/login")
 def get_jwt_strategy() -> JWTStrategy:
     settings = get_settings()
     return JWTStrategy(
-        secret=settings.jwt_secret,
+        secret=settings.jwt_secret.get_secret_value(),
         lifetime_seconds=settings.jwt_lifetime_seconds,
     )
 
@@ -116,6 +124,11 @@ current_optional_user = fastapi_users.current_user(optional=True)
 
 
 async def init_auth_db() -> None:
-    engine = _get_engine()
+    """Create auth tables. Uses override engine if NEURA_AUTH_DB_URL is set."""
+    if _has_auth_db_override():
+        engine = _get_auth_engine()
+    else:
+        engine = get_engine()
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+    logger.info("auth_db_initialized", extra={"event": "auth_db_initialized"})

@@ -1,0 +1,22 @@
+{
+  "$schema": "node_modules/@openapitools/openapi-generator-cli/config.schema.json",
+  "spaces": 2,
+  "generator-cli": {
+    "version": "7.12.0",
+    "generators": {
+      "neurareport-api": {
+        "generatorName": "typescript-axios",
+        "output": "#{cwd}/src/api/generated",
+        "inputSpec": "http://localhost:8000/openapi.json",
+        "additionalProperties": {
+          "supportsES6": true,
+          "withInterfaces": true,
+          "useSingleRequestParameter": true,
+          "withSeparateModelsAndApi": true,
+          "apiPackage": "endpoints",
+          "modelPackage": "models"
+        }
+      }
+    }
+  }
+}

@@ -1,112 +1,151 @@
-fastapi
-slowapi
-uvicorn
-pydantic-settings
-sqlmodel
-apscheduler
-prefect
-litellm
-instructor
-fastapi-users
-fastapi-users-db-sqlalchemy
-python-jose[cryptography]
-passlib[bcrypt]
-aiosqlite
-email-validator
-pymupdf
-pdfplumber
-reportlab
-pikepdf
-python-multipart
-cryptography
-bleach
-filelock
+#
+# Pinned dependencies — generated from requirements.in
+# To update: edit requirements.in, then run:
+#   pip-compile requirements.in --output-file=requirements.txt
+# Or manually: pip install <pkg> && pip freeze | grep <pkg>
+#
 
-jsonschema>=4.18.0
+# Core framework
+fastapi==0.127.0
+slowapi==0.1.9
+uvicorn==0.40.0
+pydantic-settings==2.12.0
+sqlmodel==0.0.29
+apscheduler==3.11.2
+prefect==3.6.15
+litellm==1.81.5
+instructor==1.14.5
 
-# State persistence (SQLite JSON store)
-sqlalchemy
+# Authentication
+fastapi-users==15.0.3
+fastapi-users-db-sqlalchemy==7.0.0
+python-jose[cryptography]==3.5.0
+passlib[bcrypt]==1.7.4
+
+# Database
+aiosqlite==0.22.1
+sqlalchemy==2.0.45
+alembic==1.14.1
+
+# Validation & security
+email-validator==2.3.0
+cryptography==46.0.3
+bleach==6.3.0
+filelock==3.20.3
+jsonschema==4.26.0
+
+# PDF & Document processing
+pymupdf==1.26.7
+pdfplumber==0.11.9
+reportlab==4.4.9
+pikepdf==10.3.0
+python-multipart==0.0.21
 
 # LLM Providers
 # NeuraReport uses Claude Code CLI as the primary LLM provider (no API key needed).
 # The packages below are required by litellm for fallback/alternative providers.
-openai>=1.0.0
+openai==2.16.0
 # anthropic>=0.18.0  # Optional: For direct Anthropic API access
 # google-generativeai>=0.4.0  # Optional: For Gemini models
 
-pillow
-numpy
-pandas
-duckdb
-opencv-python
-scikit-image
-playwright
-openpyxl
-html2docx
-python-docx
-pdf2docx
+# Data & image processing
+pillow==11.3.0
+numpy==2.1.3
+pandas==2.3.3
+duckdb==1.4.4
+opencv-python==4.12.0.88
+scikit-image==0.26.0
 
-# Enhanced LLM features (all optional)
-# httpx>=0.24.0  # For async HTTP requests
-# tiktoken>=0.5.0  # For token counting
-# sentence-transformers>=2.2.0  # For local embeddings
+# Browser automation
+playwright==1.57.0
 
-# ============================================
-# NEW FEATURES - Phase 1 Dependencies
-# ============================================
+# Spreadsheet & document exports
+openpyxl==3.1.5
+html2docx==1.6.0
+python-docx==1.2.0
+pdf2docx==0.5.8
 
 # Document Editing - Real-time Collaboration
-y-py>=0.6.0
-websockets>=12.0
+y-py==0.6.2
+websockets==16.0
 
 # Spreadsheet Features
-xlrd>=2.0.1
-xlsxwriter>=3.1.0
+xlrd==2.0.2
+xlsxwriter==3.2.9
 
 # Database Connectors
-asyncpg>=0.29.0
-pymysql>=1.1.0
-pymongo>=4.6.0
-elasticsearch>=8.12.0
+asyncpg==0.31.0
+pymysql==1.1.2
+pymongo==4.16.0
+elasticsearch==9.2.1
 
 # Cloud Storage Connectors
-google-api-python-client>=2.118.0
-google-auth-oauthlib>=1.2.0
-msal>=1.26.0
-dropbox>=11.36.0
-boto3>=1.34.0
-azure-storage-blob>=12.19.0
-paramiko>=3.4.0
+google-api-python-client==2.188.0
+google-auth-oauthlib==1.2.4
+msal==1.34.0
+dropbox==12.0.2
+boto3==1.42.38
+azure-storage-blob==12.28.0
+paramiko==4.0.0
 
 # Productivity Integrations
-notion-client>=2.2.0
-slack-sdk>=3.27.0
-pymsteams>=0.2.2
+notion-client==2.7.0
+slack-sdk==3.39.0
+pymsteams==0.2.5
 
 # Analytics & ML
-statsmodels>=0.14.0
-scikit-learn>=1.4.0
+statsmodels==0.14.6
+scikit-learn==1.8.0
 
 # NLP & Document Intelligence
-spacy>=3.7.0
+spacy==3.8.11
 
 # Export Formats
-python-pptx>=0.6.23
-ebooklib>=0.18
-pylatex>=1.4.2
-html2text>=2024.2.26
+python-pptx==1.0.2
+ebooklib==0.20
+pylatex==1.4.2
+html2text==2025.4.15
 
 # Workflow Automation
-watchdog>=4.0.0
+watchdog==6.0.0
 
 # GraphQL
-strawberry-graphql>=0.219.0
+strawberry-graphql==0.289.8
 
 # Full-text Search
-whoosh>=2.7.4
+whoosh==2.7.4
 
 # OAuth
-authlib>=1.3.0
+authlib==1.6.6
 
 # Formula Parsing
-lark>=1.1.0
+lark==1.2.2
+
+# RBAC Authorization
+casbin==1.36.3
+
+# Task Queue (Dramatiq + Redis)
+dramatiq[redis]==1.17.1
+redis==5.2.1
+
+# Vector Search
+pgvector==0.3.6
+sentence-transformers==4.1.0
+
+# Observability
+opentelemetry-api==1.27.0
+opentelemetry-sdk==1.27.0
+opentelemetry-exporter-otlp-proto-grpc==1.27.0
+opentelemetry-instrumentation-fastapi==0.48b0
+opentelemetry-instrumentation-logging==0.48b0
+prometheus-client==0.21.0
+
+# Secrets Management
+hvac==2.3.0
+
+# Dependency Injection
+dependency-injector==4.46.0
+
+# Prompt Management
+pyyaml==6.0.2
+jinja2==3.1.6

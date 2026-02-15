@@ -1,0 +1,69 @@
+[importlinter]
+root_packages =
+    app
+include_external_packages = True
+
+# ============================================================
+# Contract 1: Core Layer Architecture
+# Higher layers can import from lower layers, but NOT vice versa.
+# Order: routes (top) -> services -> repositories (bottom)
+# ============================================================
+[importlinter:contract:layer-architecture]
+name = Core layer architecture (routes -> services -> repositories)
+type = layers
+layers =
+    app.api.routes
+    app.services
+    app.repositories
+
+# ============================================================
+# Contract 2: Models Independence
+# Repository models should not depend on service logic.
+# ============================================================
+[importlinter:contract:models-independence]
+name = Repository models must not import services or routes
+type = forbidden
+source_modules =
+    app.repositories
+forbidden_modules =
+    app.services
+    app.api
+
+# ============================================================
+# Contract 3: Schemas are Pure
+# Pydantic schemas should only depend on stdlib and pydantic.
+# ============================================================
+[importlinter:contract:schemas-purity]
+name = Schemas must not import from services or repositories
+type = forbidden
+source_modules =
+    app.schemas
+forbidden_modules =
+    app.services
+    app.repositories
+    app.api
+
+# ============================================================
+# Contract 4: Domain Layer Purity
+# Domain logic should not depend on infrastructure concerns.
+# ============================================================
+[importlinter:contract:domain-purity]
+name = Domain must not import from API or infrastructure
+type = forbidden
+source_modules =
+    app.domain
+forbidden_modules =
+    app.api
+    app.repositories
+
+# ============================================================
+# Contract 5: No Circular Imports Among Top-Level Packages
+# ============================================================
+[importlinter:contract:no-cycles]
+name = No circular dependencies between top-level packages
+type = independence
+modules =
+    app.api
+    app.domain
+    app.schemas
+    app.utils

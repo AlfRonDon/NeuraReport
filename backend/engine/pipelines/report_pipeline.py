@@ -533,7 +533,7 @@ def _eval_total_expr(
                     raise ValueError(f"Unknown name '{node.id}' in totals expression")
         context = {**allowed_funcs, **column_values, **totals}
         # SECURITY: eval is sandboxed via AST whitelist above (allowed_nodes + allowed_funcs) and __builtins__={}.
-        return eval(compile(tree, "<totals_expr>", "eval"), {"__builtins__": {}}, context)
+        return eval(compile(tree, "<totals_expr>", "eval"), {"__builtins__": {}}, context)  # noqa: S307
     except (ValueError, TypeError, ZeroDivisionError, SyntaxError) as exc:
         logger.warning(
             "totals_expr_eval_failed",

@@ -274,8 +274,9 @@ class TestWebClipperErrors:
             mock_session_instance.__aexit__ = AsyncMock(return_value=None)
             mock_session.return_value = mock_session_instance
 
-            with pytest.raises(aiohttp.ClientError):
-                await service.clip_url("https://nonexistent.invalid/page")
+            with patch("backend.app.services.ingestion.web_clipper.validate_url"):
+                with pytest.raises(aiohttp.ClientError):
+                    await service.clip_url("https://nonexistent.invalid/page")
 
     def test_clean_content_malformed_html(self):
         """Handle malformed HTML in content cleaning."""

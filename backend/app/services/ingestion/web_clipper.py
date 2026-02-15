@@ -13,6 +13,8 @@ from urllib.parse import urljoin, urlparse
 
 from pydantic import BaseModel, Field
 
+from backend.app.utils.ssrf_guard import validate_url, SSRFError
+
 logger = logging.getLogger(__name__)
 
 
@@ -82,6 +84,8 @@ class WebClipperService:
         """
         import aiohttp
         from bs4 import BeautifulSoup
+
+        validate_url(url)
 
         async with aiohttp.ClientSession() as session:
             async with session.get(url, headers={"User-Agent": "Mozilla/5.0 (compatible; NeuraReport/1.0)"}) as response:

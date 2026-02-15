@@ -44,7 +44,7 @@ class EmbedService:
     def _signing_key(self) -> str:
         """Return the HMAC signing key (derived from JWT secret)."""
         settings = get_settings()
-        return settings.jwt_secret
+        return settings.jwt_secret.get_secret_value()
 
     def _sign_token(self, payload: str) -> str:
         """Create HMAC-SHA256 signature for a payload string."""

@@ -90,6 +90,17 @@ def _get_memory_usage() -> Dict[str, Any]:
             return {"status": "unknown", "message": "Memory stats not available"}
 
 
+def _check_database() -> Dict[str, Any]:
+    """Check state store database is readable."""
+    try:
+        from backend.app.repositories.state import state_store
+        with state_store.transaction() as s:
+            keys = len(s)
+        return {"status": "healthy", "state_keys": keys}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+
 @limiter.exempt
 @router.get("/health")
 async def health(request: Request) -> Dict[str, Any]:
@@ -215,6 +226,9 @@ async def health_detailed(request: Request) -> Dict[str, Any]:
         "max_size": cache.max_items,
         "ttl_seconds": cache.ttl_seconds,
     }
+
+    # Database connectivity (state store + auth SQLite)
+    checks["database"] = _check_database()
 
     # Memory usage
     checks["memory"] = _get_memory_usage()

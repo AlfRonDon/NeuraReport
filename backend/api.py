@@ -42,6 +42,7 @@ from backend.legacy.services import report_service as report_service
 
 from backend.app.services.config import get_settings, log_settings
 from backend.app.services.auth import init_auth_db
+from backend.app.db.engine import dispose_engine
 
 from backend.app.services.jobs.report_scheduler import ReportScheduler
 from backend.app.services.background_tasks import mark_incomplete_jobs_failed
@@ -166,18 +167,59 @@ async def lifespan(app: FastAPI):
 
     yield
 
-    # Shutdown: stop agent task worker, then drain the executor
+    # Shutdown: stop each component with individual error handling so that
+    # a failure in one does not prevent cleanup of the others.
     if agent_task_worker.is_running:
-        agent_task_worker.stop()
+        try:
+            agent_task_worker.stop()
+        except Exception as exc:
+            logger.warning("agent_worker_stop_failed", extra={"error": str(exc)})
 
-    from backend.app.services.agents.agent_service import _AGENT_EXECUTOR
-    _AGENT_EXECUTOR.shutdown(wait=True, cancel_futures=False)
+    try:
+        from backend.app.services.agents.agent_service import _AGENT_EXECUTOR
+        _AGENT_EXECUTOR.shutdown(wait=False, cancel_futures=True)
+    except Exception as exc:
+        logger.warning("agent_executor_shutdown_failed", extra={"error": str(exc)})
 
     if SCHEDULER and not SCHEDULER_DISABLED:
-        await SCHEDULER.stop()
+        try:
+            await SCHEDULER.stop()
+        except Exception as exc:
+            logger.warning("scheduler_stop_failed", extra={"error": str(exc)})
+
+    try:
+        await dispose_engine()
+    except Exception as exc:
+        logger.warning("db_engine_dispose_failed", extra={"error": str(exc)})
 
 
-app = FastAPI(title=SETTINGS.api_title, version=SETTINGS.api_version, lifespan=lifespan)
+_OPENAPI_TAGS = [
+    {"name": "health", "description": "Liveness, readiness, and detailed health probes"},
+    {"name": "auth", "description": "JWT authentication (login, register)"},
+    {"name": "users", "description": "User management"},
+    {"name": "connections", "description": "Database connection management"},
+    {"name": "templates", "description": "Report template CRUD and verification"},
+    {"name": "reports", "description": "Report generation and history"},
+    {"name": "jobs", "description": "Background job tracking"},
+    {"name": "schedules", "description": "Report scheduling (cron)"},
+    {"name": "agents", "description": "AI research and analysis agents"},
+    {"name": "agents-v2", "description": "Production-grade persistent agents"},
+    {"name": "dashboards", "description": "Dashboard builder and embed tokens"},
+    {"name": "documents", "description": "Collaborative document editing"},
+    {"name": "spreadsheets", "description": "Spreadsheet editor with formulas"},
+    {"name": "search", "description": "Full-text search and discovery"},
+    {"name": "visualization", "description": "Diagram and chart generation"},
+    {"name": "workflows", "description": "Workflow automation"},
+]
+
+app = FastAPI(
+    title=SETTINGS.api_title,
+    version=SETTINGS.api_version,
+    lifespan=lifespan,
+    openapi_tags=_OPENAPI_TAGS,
+    docs_url="/docs",
+    redoc_url="/redoc",
+)
 add_middlewares(app, SETTINGS)
 add_exception_handlers(app)
 

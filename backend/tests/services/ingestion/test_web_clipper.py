@@ -168,7 +168,7 @@ class TestContentFinding:
     def test_find_main_element(self, service: WebClipperService):
         """Find main element as content."""
         from bs4 import BeautifulSoup
-        html = "<html><body><main><p>Content here with lots of text</p></main></body></html>"
+        html = "<html><body><main><p>Content here with lots of text that needs to exceed one hundred characters in total length so the content selector will actually pick it up properly and not fall back to body</p></main></body></html>"
         soup = BeautifulSoup(html, "html.parser")
         content = service._find_content_element(soup)
 
@@ -189,7 +189,7 @@ class TestContentFinding:
         html = """
         <html><body>
             <article>Short</article>
-            <main>This is the main content with enough text to be detected as the primary content area.</main>
+            <main>This is the main content with enough text to be detected as the primary content area. It has sufficient characters to exceed the one hundred character minimum threshold for detection.</main>
         </body></html>
         """
         soup = BeautifulSoup(html, "html.parser")
@@ -249,7 +249,7 @@ class TestContentCleaning:
     def test_fix_relative_images(self, service: WebClipperService):
         """Make relative image URLs absolute."""
         from bs4 import BeautifulSoup
-        html = '<div><img src="/images/photo.jpg"></div>'
+        html = '<div><p>Some article text here</p><img src="/images/photo.jpg"></div>'
         soup = BeautifulSoup(html, "html.parser")
         clean = service._clean_content(soup, "https://example.com/article")
 

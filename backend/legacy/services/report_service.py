@@ -61,39 +61,32 @@ _JOB_FUTURES: dict[str, concurrent.futures.Future] = {}
 _JOB_THREADS: dict[str, int] = {}
 _JOB_PROCESSES: dict[str, set[int]] = {}
 _JOB_PROCESS_LOCK = threading.RLock()
-_SUBPROCESS_POPEN = subprocess.Popen
-_SUBPROCESS_PATCH_LOCK = threading.RLock()
-_SUBPROCESS_PATCH_COUNT = 0
-_SUBPROCESS_PATCH_ORIGINAL: type[subprocess.Popen] | None = None
 _SUBPROCESS_JOB_CONTEXT = threading.local()
+_ORIGINAL_POPEN = subprocess.Popen
 
 
-def _job_popen_wrapper(*args, **kwargs):
-    proc = _SUBPROCESS_POPEN(*args, **kwargs)
-    job_id = getattr(_SUBPROCESS_JOB_CONTEXT, "job_id", None)
-    if job_id and proc and getattr(proc, "pid", None):
-        _register_job_process(job_id, proc.pid)
-    return proc
+class _TrackingPopen(_ORIGINAL_POPEN):
+    """Popen subclass that registers child PIDs with the active job context."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        job_id = getattr(_SUBPROCESS_JOB_CONTEXT, "job_id", None)
+        if job_id and self.pid:
+            _register_job_process(job_id, self.pid)
 
 
-def _install_subprocess_patch() -> None:
-    global _SUBPROCESS_PATCH_COUNT, _SUBPROCESS_PATCH_ORIGINAL
-    with _SUBPROCESS_PATCH_LOCK:
-        if _SUBPROCESS_PATCH_COUNT == 0:
-            _SUBPROCESS_PATCH_ORIGINAL = subprocess.Popen
-            subprocess.Popen = _job_popen_wrapper  # type: ignore[assignment]
-        _SUBPROCESS_PATCH_COUNT += 1
+# Install once at import time — no reference counting needed.
+subprocess.Popen = _TrackingPopen  # type: ignore[misc]
 
 
-def _remove_subprocess_patch() -> None:
-    global _SUBPROCESS_PATCH_COUNT, _SUBPROCESS_PATCH_ORIGINAL
-    with _SUBPROCESS_PATCH_LOCK:
-        if _SUBPROCESS_PATCH_COUNT <= 0:
-            return
-        _SUBPROCESS_PATCH_COUNT -= 1
-        if _SUBPROCESS_PATCH_COUNT == 0 and _SUBPROCESS_PATCH_ORIGINAL is not None:
-            subprocess.Popen = _SUBPROCESS_PATCH_ORIGINAL  # type: ignore[assignment]
-            _SUBPROCESS_PATCH_ORIGINAL = None
+@contextlib.contextmanager
+def _track_subprocess(job_id: str):
+    """Set thread-local job context so _TrackingPopen records child PIDs."""
+    _SUBPROCESS_JOB_CONTEXT.job_id = job_id
+    try:
+        yield
+    finally:
+        _SUBPROCESS_JOB_CONTEXT.job_id = None
 
 
 def _state_store():
@@ -915,17 +908,8 @@ def _run_report_job_sync(
         if not job_id:
             yield
             return
-        _SUBPROCESS_JOB_CONTEXT.job_id = job_id
-        _install_subprocess_patch()
-        try:
+        with _track_subprocess(job_id):
             yield
-        finally:
-            if getattr(_SUBPROCESS_JOB_CONTEXT, "job_id", None) == job_id:
-                try:
-                    delattr(_SUBPROCESS_JOB_CONTEXT, "job_id")
-                except Exception:
-                    _SUBPROCESS_JOB_CONTEXT.job_id = None
-            _remove_subprocess_patch()
 
     job_succeeded = False
     job_error: str | None = None

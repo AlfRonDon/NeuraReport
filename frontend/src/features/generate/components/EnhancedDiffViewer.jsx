@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import { sanitizeCodeHighlight } from '@/shared/utils/sanitize'
 import {
   Box,
   Stack,
@@ -42,7 +43,7 @@ function highlightHtml(text) {
     .replace(/(>)/g, '<span class="html-bracket">$1</span>')
     .replace(/(\{[^}]+\})/g, '<span class="html-token">$1</span>')
 
-  return <span dangerouslySetInnerHTML={{ __html: highlighted }} />
+  return <span dangerouslySetInnerHTML={{ __html: sanitizeCodeHighlight(highlighted) }} />
 }
 
 // Compute diff using LCS algorithm for better accuracy

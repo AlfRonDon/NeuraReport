@@ -2,10 +2,15 @@
 
 This module registers all API routes in a single location, providing
 a unified entry point for the FastAPI application.
+
+API Versioning:
+    All API routes are mounted under /api/v1/ for forward-compatible versioning.
+    Health-check and auth routes are additionally mounted at the root for
+    backward compatibility and infrastructure probes.
 """
 from __future__ import annotations
 
-from fastapi import FastAPI
+from fastapi import APIRouter, FastAPI
 
 from .routes import (
     agents,
@@ -46,40 +51,98 @@ from backend.app.api.analyze import router as analyze_router
 from backend.app.api.analyze import enhanced_analysis_routes
 from backend.app.services.auth import auth_backend, fastapi_users, UserCreate, UserRead, UserUpdate
 
+API_V1_PREFIX = "/api/v1"
+
+
+def _build_v1_router() -> APIRouter:
+    """Build the versioned v1 API router with all feature routes."""
+    v1 = APIRouter()
+
+    # Auth
+    v1.include_router(fastapi_users.get_auth_router(auth_backend), prefix="/auth/jwt", tags=["auth"])
+    v1.include_router(fastapi_users.get_register_router(UserRead, UserCreate), prefix="/auth", tags=["auth"])
+    v1.include_router(fastapi_users.get_users_router(UserRead, UserUpdate), prefix="/users", tags=["users"])
+
+    # Health
+    v1.include_router(health.router, tags=["health"])
+
+    # Core
+    v1.include_router(connections.router, prefix="/connections", tags=["connections"])
+    v1.include_router(templates.router, prefix="/templates", tags=["templates"])
+    v1.include_router(excel.router, prefix="/excel", tags=["excel"])
+    v1.include_router(reports.router, prefix="/reports", tags=["reports"])
+    v1.include_router(jobs.router, prefix="/jobs", tags=["jobs"])
+    v1.include_router(schedules.router, prefix="/reports/schedules", tags=["schedules"])
+    v1.include_router(state.router, prefix="/state", tags=["state"])
+
+    # Document analysis
+    v1.include_router(analyze_router, prefix="/analyze", tags=["analyze"])
+    v1.include_router(enhanced_analysis_routes.router)
+
+    # Analytics
+    v1.include_router(analytics.router, prefix="/analytics", tags=["analytics"])
+
+    # AI Features
+    v1.include_router(ai.router, prefix="/ai", tags=["ai"])
+    v1.include_router(nl2sql.router, prefix="/nl2sql", tags=["nl2sql"])
+    v1.include_router(enrichment.router, prefix="/enrichment", tags=["enrichment"])
+    v1.include_router(federation.router, prefix="/federation", tags=["federation"])
+    v1.include_router(recommendations.router, prefix="/recommendations", tags=["recommendations"])
+    v1.include_router(charts.router, prefix="/charts", tags=["charts"])
+    v1.include_router(summary.router, prefix="/summary", tags=["summary"])
+    v1.include_router(synthesis.router, prefix="/synthesis", tags=["synthesis"])
+    v1.include_router(docqa.router, prefix="/docqa", tags=["docqa"])
+    v1.include_router(docai.router, prefix="/docai", tags=["docai"])
+
+    # Document editing and collaboration
+    v1.include_router(documents.router, prefix="/documents", tags=["documents"])
+    v1.include_router(documents.ws_router)
+    v1.include_router(spreadsheets.router, prefix="/spreadsheets", tags=["spreadsheets"])
+    v1.include_router(dashboards.router, prefix="/dashboards", tags=["dashboards"])
+    v1.include_router(connectors.router, prefix="/connectors", tags=["connectors"])
+
+    # Workflow automation
+    v1.include_router(workflows.router, prefix="/workflows", tags=["workflows"])
+
+    # Export and distribution
+    v1.include_router(export.router, prefix="/export", tags=["export"])
+
+    # Design and branding
+    v1.include_router(design.router, prefix="/design", tags=["design"])
+
+    # Knowledge management
+    v1.include_router(knowledge.router, prefix="/knowledge", tags=["knowledge"])
+
+    # Document ingestion
+    v1.include_router(ingestion.router, prefix="/ingestion", tags=["ingestion"])
+
+    # Search and discovery
+    v1.include_router(search.router, prefix="/search", tags=["search"])
+
+    # Visualization and diagrams
+    v1.include_router(visualization.router, prefix="/visualization", tags=["visualization"])
+
+    # AI Agents
+    v1.include_router(agents.router, prefix="/agents", tags=["agents"])
+    v1.include_router(agents_v2.router, prefix="/agents/v2", tags=["agents-v2"])
+
+    return v1
+
 
 def register_routes(app: FastAPI) -> None:
     """Register all API routes with the FastAPI application.
 
-    Route prefixes:
-    - /health, /healthz, /ready, /readyz - Health checks
-    - /connections - Database connection management
-    - /templates - Template CRUD, verification, editing
-    - /excel - Excel-specific template operations
-    - /reports - Report generation and history
-    - /jobs - Background job management
-    - /schedules - Report scheduling
-    - /state - Application state management
-    - /analyze - Document analysis
-    - /analytics - Dashboard analytics and bulk operations
-    - /nl2sql - Natural language to SQL
-    - /enrichment - Data enrichment
-    - /federation - Cross-database queries
-    - /recommendations - AI recommendations
-    - /charts - Chart generation
-    - /summary - Document summarization
-    - /synthesis - Multi-document synthesis
-    - /docqa - Document Q&A chat
-    - /docai - Document intelligence (parsing, classification, analysis)
-    - /workflows - Workflow automation
-    - /export - Document export and distribution
-    - /design - Brand kits and themes
-    - /knowledge - Knowledge management and document library
-    - /ingestion - Document ingestion and import
-    - /search - Search and discovery
-    - /visualization - Visualization and diagram generation
-    - /agents - AI agents (research, data analysis, email, content)
+    Routes are served under both ``/api/v1/`` (versioned) and ``/`` (legacy
+    backward-compatible) so existing clients continue to work while new
+    clients can adopt the versioned prefix.
     """
-    # Core routes
+    v1_router = _build_v1_router()
+
+    # Mount versioned routes under /api/v1
+    app.include_router(v1_router, prefix=API_V1_PREFIX)
+
+    # Backward-compatible: mount the same routes at root for existing clients.
+    # Health and auth need root access for infra probes and existing frontends.
     app.include_router(fastapi_users.get_auth_router(auth_backend), prefix="/auth/jwt", tags=["auth"])
     app.include_router(fastapi_users.get_register_router(UserRead, UserCreate), prefix="/auth", tags=["auth"])
     app.include_router(fastapi_users.get_users_router(UserRead, UserUpdate), prefix="/users", tags=["users"])
@@ -91,15 +154,9 @@ def register_routes(app: FastAPI) -> None:
     app.include_router(jobs.router, prefix="/jobs", tags=["jobs"])
     app.include_router(schedules.router, prefix="/reports/schedules", tags=["schedules"])
     app.include_router(state.router, prefix="/state", tags=["state"])
-
-    # Document analysis
     app.include_router(analyze_router, prefix="/analyze", tags=["analyze"])
     app.include_router(enhanced_analysis_routes.router)
-
-    # Analytics and bulk operations
     app.include_router(analytics.router, prefix="/analytics", tags=["analytics"])
-
-    # AI Features
     app.include_router(ai.router, prefix="/ai", tags=["ai"])
     app.include_router(nl2sql.router, prefix="/nl2sql", tags=["nl2sql"])
     app.include_router(enrichment.router, prefix="/enrichment", tags=["enrichment"])
@@ -110,40 +167,23 @@ def register_routes(app: FastAPI) -> None:
     app.include_router(synthesis.router, prefix="/synthesis", tags=["synthesis"])
     app.include_router(docqa.router, prefix="/docqa", tags=["docqa"])
     app.include_router(docai.router, prefix="/docai", tags=["docai"])
-
-    # Document editing and collaboration
     app.include_router(documents.router, prefix="/documents", tags=["documents"])
     app.include_router(documents.ws_router)
     app.include_router(spreadsheets.router, prefix="/spreadsheets", tags=["spreadsheets"])
     app.include_router(dashboards.router, prefix="/dashboards", tags=["dashboards"])
     app.include_router(connectors.router, prefix="/connectors", tags=["connectors"])
-
-    # Workflow automation
     app.include_router(workflows.router, prefix="/workflows", tags=["workflows"])
-
-    # Export and distribution
     app.include_router(export.router, prefix="/export", tags=["export"])
-
-    # Design and branding
     app.include_router(design.router, prefix="/design", tags=["design"])
-
-    # Knowledge management
     app.include_router(knowledge.router, prefix="/knowledge", tags=["knowledge"])
-
-    # Document ingestion
     app.include_router(ingestion.router, prefix="/ingestion", tags=["ingestion"])
-
-    # Search and discovery
     app.include_router(search.router, prefix="/search", tags=["search"])
-
-    # Visualization and diagrams
     app.include_router(visualization.router, prefix="/visualization", tags=["visualization"])
 
     # AI Agents v2 - must be mounted BEFORE /agents so /agents/v2/* is not
     # captured by the {agent_id} path parameter on the /agents router.
     app.include_router(agents_v2.router, prefix="/agents/v2", tags=["agents-v2"])
-    # AI Agents (v1)
     app.include_router(agents.router, prefix="/agents", tags=["agents"])
 
-    # Legacy/compatibility routes
+    # Legacy/compatibility routes (always at root)
     app.include_router(legacy.router)

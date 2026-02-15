@@ -1,5 +1,6 @@
 import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
+import { sentryVitePlugin } from '@sentry/vite-plugin'
 import { fileURLToPath } from 'url'
 import { dirname, resolve } from 'path'
 
@@ -17,7 +18,18 @@ export default defineConfig(({ mode }) => {
     'http://127.0.0.1:8000'
 
   return {
-  plugins: [react()],
+  plugins: [
+    react(),
+    // Sentry source map upload (only when auth token is configured)
+    env.SENTRY_AUTH_TOKEN && sentryVitePlugin({
+      org: env.SENTRY_ORG,
+      project: env.SENTRY_PROJECT,
+      authToken: env.SENTRY_AUTH_TOKEN,
+      sourcemaps: {
+        filesToDeleteAfterUpload: ['./dist/**/*.map'],
+      },
+    }),
+  ].filter(Boolean),
   resolve: {
     alias: {
       '@': resolve(__dirname, 'src'),
@@ -73,6 +85,7 @@ export default defineConfig(({ mode }) => {
   },
   build: {
     chunkSizeWarningLimit: 1200,
+    sourcemap: 'hidden',
   },
   test: {
     environment: 'jsdom',

@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import logging
 import math
+import random
 import re
 from datetime import datetime, timedelta, timezone
 from typing import Any, Callable, Optional
@@ -81,8 +82,8 @@ class FormulaEngine:
             "CEILING": lambda x: math.ceil(float(x)),
             "MOD": lambda x, y: float(x) % float(y),
             "PI": lambda: math.pi,
-            "RAND": lambda: __import__("random").random(),
-            "RANDBETWEEN": lambda a, b: __import__("random").randint(int(a), int(b)),
+            "RAND": lambda: random.random(),
+            "RANDBETWEEN": lambda a, b: random.randint(int(a), int(b)),
 
             # Statistical
             "MEDIAN": self._fn_median,

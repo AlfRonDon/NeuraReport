@@ -17,7 +17,7 @@ except ImportError:  # pragma: no cover - fallback for Pydantic v1
 
     SettingsConfigDict = None
     _V2_SETTINGS = False
-from pydantic import Field
+from pydantic import Field, SecretStr, field_validator
 
 
 logger = logging.getLogger("neura.config")
@@ -52,7 +52,7 @@ class Settings(BaseSettings):
     cors_origins: List[str] = Field(default_factory=lambda: ["http://localhost:3000", "http://localhost:5173", "http://127.0.0.1:3000", "http://127.0.0.1:5173"], validation_alias="NEURA_CORS_ORIGINS")
     api_key: Optional[str] = Field(default=None, validation_alias="NEURA_API_KEY")
     allow_anonymous_api: bool = Field(default=False, validation_alias="NEURA_ALLOW_ANON_API")
-    jwt_secret: str = Field(default="change-me", validation_alias="NEURA_JWT_SECRET")
+    jwt_secret: SecretStr = Field(default="change-me", validation_alias="NEURA_JWT_SECRET")
     jwt_lifetime_seconds: int = Field(default=3600, validation_alias="NEURA_JWT_LIFETIME_SECONDS")
 
     uploads_dir: Path = Field(default_factory=_default_uploads_root, validation_alias="UPLOAD_ROOT")
@@ -91,6 +91,22 @@ class Settings(BaseSettings):
     idempotency_enabled: bool = Field(default=True, validation_alias="NEURA_IDEMPOTENCY_ENABLED")
     idempotency_ttl_seconds: int = Field(default=86400, validation_alias="NEURA_IDEMPOTENCY_TTL_SECONDS")
 
+    # Task queue (Dramatiq + Redis)
+    redis_url: str = Field(default="redis://localhost:6379/0", env="NEURA_REDIS_URL")
+    worker_processes: int = Field(default=4, env="NEURA_WORKER_PROCESSES")
+    worker_threads: int = Field(default=8, env="NEURA_WORKER_THREADS")
+    task_result_ttl_ms: int = Field(default=1_800_000, env="NEURA_TASK_RESULT_TTL_MS")
+
+    # Database configuration (PostgreSQL)
+    database_url: str = Field(
+        default="sqlite+aiosqlite:///backend/state/neurareport.db",
+        env="NEURA_DATABASE_URL"
+    )
+    database_pool_size: int = Field(default=10, env="NEURA_DB_POOL_SIZE")
+    database_pool_max_overflow: int = Field(default=20, env="NEURA_DB_POOL_MAX_OVERFLOW")
+    database_pool_timeout: int = Field(default=30, env="NEURA_DB_POOL_TIMEOUT")
+    database_echo: bool = Field(default=False, env="NEURA_DB_ECHO")
+
     # Content Security Policy configuration
     csp_connect_origins: List[str] = Field(
         default_factory=lambda: ["http://localhost:*", "ws://localhost:*"],
@@ -101,6 +117,11 @@ class Settings(BaseSettings):
     analysis_cache_max_items: int = Field(default=100, validation_alias="NEURA_ANALYSIS_CACHE_MAX_ITEMS")
     analysis_cache_ttl_seconds: int = Field(default=3600, validation_alias="NEURA_ANALYSIS_CACHE_TTL_SECONDS")  # 1 hour
     analysis_max_concurrency: int = Field(default=4, validation_alias="NEURA_ANALYSIS_MAX_CONCURRENCY")
+
+    # Observability
+    otlp_endpoint: Optional[str] = Field(default=None, env="NEURA_OTLP_ENDPOINT")
+    metrics_enabled: bool = Field(default=True, env="NEURA_METRICS_ENABLED")
+    app_name: str = Field(default="neurareport-backend", env="NEURA_APP_NAME")
 
     # Debug/development mode - defaults to False for safety.
     # Set NEURA_DEBUG=true explicitly for local development.
@@ -136,7 +157,8 @@ def _apply_runtime_defaults(settings: Settings) -> Settings:
     # Claude Code CLI is the only LLM provider - no API key validation needed
     # The CLI handles authentication via its own session
 
-    if settings.jwt_secret.strip().lower() in {"", "change-me"}:
+    jwt_val = settings.jwt_secret.get_secret_value()
+    if jwt_val.strip().lower() in {"", "change-me"}:
         if settings.debug_mode:
             logger.warning(
                 "jwt_secret_default",

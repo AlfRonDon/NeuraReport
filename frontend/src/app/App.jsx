@@ -69,6 +69,7 @@ const VisualizationPage = lazy(() => import('@/pages/visualization/Visualization
 const KnowledgePage = lazy(() => import('@/pages/knowledge/KnowledgePage.jsx'))
 const DesignPage = lazy(() => import('@/pages/design/DesignPage.jsx'))
 const IngestionPage = lazy(() => import('@/pages/ingestion/IngestionPage.jsx'))
+const NotFoundPage = lazy(() => import('@/pages/NotFoundPage.jsx'))
 
 // Lazy-loaded pages - Setup and editing
 const SetupWizard = lazy(() => import('@/pages/Setup/SetupWizard.jsx'))
@@ -322,7 +323,7 @@ function AppContent() {
               <Route path="/ingestion" element={<IngestionPage />} />
             </Route>
 
-            <Route path="*" element={<Navigate to="/" replace />} />
+            <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </Suspense>
       </Box>

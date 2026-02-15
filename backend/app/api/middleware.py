@@ -11,10 +11,12 @@ from fastapi.responses import JSONResponse
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
-from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.datastructures import MutableHeaders
 from starlette.middleware.trustedhost import TrustedHostMiddleware
+from starlette.types import ASGIApp, Receive, Scope, Send
 
 from backend.app.api.idempotency import IdempotencyMiddleware, IdempotencyStore
+from backend.app.observability.metrics import PrometheusMiddleware, metrics_endpoint
 from backend.app.services.utils.context import set_correlation_id
 from backend.app.services.config import Settings
 from .ux_governance import UXGovernanceMiddleware, IntentHeaders
@@ -62,164 +64,201 @@ def _build_default_limits(settings: Settings) -> list[str]:
 limiter = Limiter(key_func=_get_client_key, default_limits=[], headers_enabled=True)
 
 # Rate limit tier constants for per-endpoint rate limiting
-RATE_LIMIT_STRICT = "10/minute"    # AI endpoints, color generation, ingestion
-RATE_LIMIT_STANDARD = "60/minute"  # Mutations, exports
+RATE_LIMIT_AI = "5/minute"           # AI generation, LLM calls (most expensive)
+RATE_LIMIT_STRICT = "10/minute"      # Ingestion, color generation
+RATE_LIMIT_STANDARD = "60/minute"    # Standard mutations, exports
+RATE_LIMIT_READ = "120/minute"       # Read-heavy endpoints, search, list
+RATE_LIMIT_HEALTH = "300/minute"     # Health checks
 
 
 def _configure_limiter(settings: Settings) -> None:
     limiter.default_limits = _build_default_limits(settings)
 
 
-class SecurityHeadersMiddleware(BaseHTTPMiddleware):
-    """Middleware to add security headers to all responses."""
+class SecurityHeadersMiddleware:
+    """Pure ASGI middleware to add security headers to all responses.
 
-    def __init__(self, app, debug_mode: bool = False, csp_connect_origins: list[str] | None = None):
-        super().__init__(app)
+    Migrated from BaseHTTPMiddleware for better performance:
+    - No per-request task overhead
+    - No memory spooling of response body
+    - Preserves contextvars propagation
+    """
+
+    def __init__(self, app: ASGIApp, debug_mode: bool = False, csp_connect_origins: list[str] | None = None):
+        self.app = app
         self.debug_mode = debug_mode
         self.csp_connect_origins = csp_connect_origins or []
+        # Pre-compute CSP since it doesn't change per-request
+        self._csp = self._build_csp(debug_mode, self.csp_connect_origins)
 
     @staticmethod
     def _build_csp(debug_mode: bool, connect_origins: list[str]) -> str:
-        """
-        Build Content Security Policy string with configurable connect-src.
-
-        Security improvements from default:
-        - Removed 'unsafe-eval' from script-src
-        - Restricted img-src to 'self' data: blob: (no wildcard http:/https:)
-        - Added frame-ancestors 'none' to prevent embedding
-        - Added base-uri 'self' to prevent base tag injection
-        - Added form-action 'self' to restrict form submissions
-        - Added object-src 'none' to block plugins
-        """
-        # Base CSP directives
+        """Build Content Security Policy string with configurable connect-src."""
         csp_parts = [
             "default-src 'self'",
-            "script-src 'self' 'unsafe-inline'",  # Keep unsafe-inline for inline event handlers
+            "script-src 'self' 'unsafe-inline'" if debug_mode else "script-src 'self'",
             "style-src 'self' 'unsafe-inline'",
-            "img-src 'self' data: blob:",  # Removed wildcard http:/https:
+            "img-src 'self' data: blob:",
             "font-src 'self' data:",
-            "frame-ancestors 'none'",  # Prevent embedding in iframes
-            "base-uri 'self'",         # Prevent base tag injection
-            "form-action 'self'",      # Restrict form submissions
-            "object-src 'none'",       # Block plugins (Flash, etc)
+            "frame-ancestors 'none'",
+            "base-uri 'self'",
+            "form-action 'self'",
+            "object-src 'none'",
         ]
 
-        # Build connect-src with configurable origins
         connect_src_origins = ["'self'"]
         if debug_mode:
-            # In debug mode, add localhost/127.0.0.1 for all ports
             connect_src_origins.extend([
                 "http://localhost:*",
                 "http://127.0.0.1:*",
                 "ws://localhost:*",
                 "ws://127.0.0.1:*"
             ])
-        # Add custom origins from config
         connect_src_origins.extend(connect_origins)
         csp_parts.append(f"connect-src {' '.join(connect_src_origins)}")
 
         return "; ".join(csp_parts)
 
-    async def dispatch(self, request: Request, call_next):
-        response = await call_next(request)
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
 
-        # Prevent clickjacking
-        response.headers["X-Frame-Options"] = "DENY"
+        async def send_with_security_headers(message: dict) -> None:
+            if message["type"] == "http.response.start":
+                headers = MutableHeaders(scope=message)
+                headers["X-Frame-Options"] = "DENY"
+                headers["X-Content-Type-Options"] = "nosniff"
+                headers["X-XSS-Protection"] = "1; mode=block"
+                headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+                headers["Content-Security-Policy"] = self._csp
+                headers["Permissions-Policy"] = (
+                    "geolocation=(), microphone=(), camera=()"
+                )
+            await send(message)
 
-        # Prevent MIME type sniffing
-        response.headers["X-Content-Type-Options"] = "nosniff"
-
-        # XSS protection (for older browsers)
-        response.headers["X-XSS-Protection"] = "1; mode=block"
-
-        # Referrer policy
-        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-
-        # Content Security Policy - configurable and tightened
-        response.headers["Content-Security-Policy"] = self._build_csp(
-            self.debug_mode,
-            self.csp_connect_origins
-        )
-
-        # Permissions Policy
-        response.headers["Permissions-Policy"] = (
-            "geolocation=(), microphone=(), camera=()"
-        )
-
-        return response
+        await self.app(scope, receive, send_with_security_headers)
 
 
-class RequestTimeoutMiddleware(BaseHTTPMiddleware):
-    """Middleware to enforce request timeout."""
+class RequestTimeoutMiddleware:
+    """Pure ASGI middleware to enforce request timeout."""
 
-    def __init__(self, app, timeout_seconds: int = 300):
-        super().__init__(app)
+    def __init__(self, app: ASGIApp, timeout_seconds: int = 300):
+        self.app = app
         self.timeout_seconds = timeout_seconds
 
-    async def dispatch(self, request: Request, call_next):
-        # Allow longer timeout for streaming endpoints
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        path = scope.get("path", "")
         timeout = self.timeout_seconds
-        if "/stream" in request.url.path or "/upload" in request.url.path:
-            timeout = timeout * 2  # Double timeout for streaming/upload
+        if "/stream" in path or "/upload" in path:
+            timeout = timeout * 2
 
         try:
-            response = await asyncio.wait_for(
-                call_next(request),
+            await asyncio.wait_for(
+                self.app(scope, receive, send),
                 timeout=timeout,
             )
-            return response
         except asyncio.TimeoutError:
-            correlation_id = getattr(getattr(request, "state", None), "correlation_id", None)
             logger.error(
                 "request_timeout",
                 extra={
                     "event": "request_timeout",
-                    "path": request.url.path,
-                    "method": request.method,
+                    "path": path,
+                    "method": scope.get("method", ""),
                     "timeout": timeout,
                 },
             )
-            return JSONResponse(
-                status_code=504,
-                content={
-                    "status": "error",
-                    "code": "request_timeout",
-                    "message": "Request timed out. Please try again with a smaller payload or simpler request.",
-                    "timeout_seconds": timeout,
-                    "correlation_id": correlation_id,
-                },
+            body = (
+                b'{"status":"error","code":"request_timeout",'
+                b'"message":"Request timed out. Please try again.",'
+                b'"timeout_seconds":' + str(timeout).encode() + b'}'
             )
+            await send({
+                "type": "http.response.start",
+                "status": 504,
+                "headers": [
+                    [b"content-type", b"application/json"],
+                    [b"content-length", str(len(body)).encode()],
+                ],
+            })
+            await send({
+                "type": "http.response.body",
+                "body": body,
+            })
 
 
-class CorrelationIdMiddleware(BaseHTTPMiddleware):
-    """Middleware to handle correlation IDs and request logging."""
+class CorrelationIdMiddleware:
+    """Pure ASGI middleware for correlation ID and request logging.
 
-    async def dispatch(self, request: Request, call_next):
-        correlation_id = request.headers.get("x-correlation-id") or uuid.uuid4().hex
+    Migrated from BaseHTTPMiddleware to:
+    - Preserve contextvars propagation
+    - Avoid memory spooling of response body
+    - Eliminate per-request task overhead
+    - Use time.monotonic() for accurate elapsed measurements
+    """
+
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        # Extract or generate correlation ID from raw ASGI headers
+        headers_raw = dict(scope.get("headers", []))
+        correlation_id = (
+            headers_raw.get(b"x-correlation-id", b"").decode()
+            or uuid.uuid4().hex
+        )
+
+        scope["correlation_id"] = correlation_id
         set_correlation_id(correlation_id)
-        request.state.correlation_id = correlation_id
-        started = time.time()
+
+        path = scope.get("path", "")
+        method = scope.get("method", "")
+        started = time.monotonic()
 
         logger.info(
             "request_start",
             extra={
                 "event": "request_start",
-                "path": request.url.path,
-                "method": request.method,
+                "path": path,
+                "method": method,
                 "correlation_id": correlation_id,
             },
         )
 
+        status_code = 0
+
+        async def send_wrapper(message: dict) -> None:
+            nonlocal status_code
+            if message["type"] == "http.response.start":
+                status_code = message.get("status", 0)
+                headers = MutableHeaders(scope=message)
+                headers["X-Correlation-ID"] = correlation_id
+                headers.setdefault("X-Content-Type-Options", "nosniff")
+                content_type = headers.get("content-type", "")
+                if content_type.startswith(
+                    ("application/json", "text/html", "application/x-ndjson")
+                ):
+                    headers.setdefault("Cache-Control", "no-store")
+            await send(message)
+
         try:
-            response = await call_next(request)
+            await self.app(scope, receive, send_wrapper)
         except Exception:
-            elapsed = int((time.time() - started) * 1000)
+            elapsed = int((time.monotonic() - started) * 1000)
             logger.exception(
                 "request_error",
                 extra={
                     "event": "request_error",
-                    "path": request.url.path,
-                    "method": request.method,
+                    "path": path,
+                    "method": method,
                     "elapsed_ms": elapsed,
                     "correlation_id": correlation_id,
                 },
@@ -227,25 +266,19 @@ class CorrelationIdMiddleware(BaseHTTPMiddleware):
             set_correlation_id(None)
             raise
 
-        elapsed = int((time.time() - started) * 1000)
+        elapsed = int((time.monotonic() - started) * 1000)
         logger.info(
             "request_complete",
             extra={
                 "event": "request_complete",
-                "path": request.url.path,
-                "method": request.method,
-                "status": response.status_code,
+                "path": path,
+                "method": method,
+                "status": status_code,
                 "elapsed_ms": elapsed,
                 "correlation_id": correlation_id,
             },
         )
-        response.headers["X-Correlation-ID"] = correlation_id
-        response.headers.setdefault("X-Content-Type-Options", "nosniff")
-        content_type = response.headers.get("Content-Type", "")
-        if content_type.startswith(("application/json", "text/html", "application/x-ndjson")):
-            response.headers.setdefault("Cache-Control", "no-store")
         set_correlation_id(None)
-        return response
 
 
 def add_middlewares(app: FastAPI, settings: Settings) -> None:
@@ -258,6 +291,24 @@ def add_middlewares(app: FastAPI, settings: Settings) -> None:
 
     # Correlation ID and logging middleware (added first, executes last)
     app.add_middleware(CorrelationIdMiddleware)
+
+    # Prometheus metrics middleware (after correlation ID, before other middleware)
+    if settings.metrics_enabled:
+        app.add_middleware(PrometheusMiddleware, app_name=settings.app_name)
+        app.add_route("/metrics", metrics_endpoint, methods=["GET"])
+        logger.info("metrics_enabled", extra={"event": "metrics_enabled", "app_name": settings.app_name})
+
+    # OpenTelemetry tracing (conditional on OTLP endpoint being configured)
+    if settings.otlp_endpoint:
+        from backend.app.observability.tracing import setup_tracing
+        deployment_env = "development" if settings.debug_mode else "production"
+        setup_tracing(
+            app=app,
+            service_name=settings.app_name,
+            otlp_endpoint=settings.otlp_endpoint,
+            service_version=settings.version,
+            deployment_environment=deployment_env,
+        )
 
     # UX Governance middleware - enforces intent headers on mutating requests
     # Set strict_mode=False initially to log warnings without rejecting requests
