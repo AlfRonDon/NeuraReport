@@ -110,6 +110,16 @@ const useDocumentStore = create((set, get) => ({
     }
   },
 
+  getVersion: async (documentId, versionId) => {
+    try {
+      const version = await documentsApi.getVersion(documentId, versionId);
+      return version;
+    } catch (err) {
+      set({ error: err.message });
+      return null;
+    }
+  },
+
   restoreVersion: async (documentId, versionId) => {
     set({ loading: true, error: null });
     try {
@@ -225,6 +235,16 @@ const useDocumentStore = create((set, get) => ({
     }
   },
 
+  updatePresence: async (documentId, data) => {
+    try {
+      await documentsApi.updatePresence(documentId, data);
+      return true;
+    } catch (err) {
+      set({ error: err.message });
+      return false;
+    }
+  },
+
   // PDF Operations
   mergePdfs: async (documentIds) => {
     set({ loading: true, error: null });
@@ -246,6 +266,78 @@ const useDocumentStore = create((set, get) => ({
       return result;
     } catch (err) {
       set({ error: err.message, loading: false });
+      return null;
+    }
+  },
+
+  reorderPages: async (documentId, pageOrder) => {
+    set({ loading: true, error: null });
+    try {
+      const result = await documentsApi.reorderPages(documentId, pageOrder);
+      set({ loading: false });
+      return result;
+    } catch (err) {
+      set({ error: err.message, loading: false });
+      return null;
+    }
+  },
+
+  redactRegions: async (documentId, regions) => {
+    set({ loading: true, error: null });
+    try {
+      const result = await documentsApi.redactRegions(documentId, regions);
+      set({ loading: false });
+      return result;
+    } catch (err) {
+      set({ error: err.message, loading: false });
+      return null;
+    }
+  },
+
+  splitPdf: async (documentId, splitConfig) => {
+    set({ loading: true, error: null });
+    try {
+      const result = await documentsApi.splitPdf(documentId, splitConfig);
+      set({ loading: false });
+      return result;
+    } catch (err) {
+      set({ error: err.message, loading: false });
+      return null;
+    }
+  },
+
+  rotatePdf: async (documentId, rotations) => {
+    set({ loading: true, error: null });
+    try {
+      const result = await documentsApi.rotatePdf(documentId, rotations);
+      set({ loading: false });
+      return result;
+    } catch (err) {
+      set({ error: err.message, loading: false });
+      return null;
+    }
+  },
+
+  // Templates
+  listTemplates: async (params = {}) => {
+    set({ loading: true, error: null });
+    try {
+      const response = await documentsApi.listTemplates(params);
+      set({ loading: false });
+      return response;
+    } catch (err) {
+      set({ error: err.message, loading: false });
+      return null;
+    }
+  },
+
+  // Export
+  exportDocument: async (documentId, format, options = {}) => {
+    try {
+      const result = await documentsApi.exportDocument(documentId, format, options);
+      return result;
+    } catch (err) {
+      set({ error: err.message });
       return null;
     }
   },

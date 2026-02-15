@@ -13,6 +13,7 @@ import argparse
 import json
 import os
 from pathlib import Path
+import sys
 
 
 def main() -> int:
@@ -28,6 +29,9 @@ def main() -> int:
     os.environ.setdefault("NEURA_DEBUG", "true")
     os.environ.setdefault("NEURA_JWT_SECRET", "openapi-export-dev-secret")
 
+    repo_root = Path(__file__).resolve().parents[1]
+    sys.path.insert(0, str(repo_root))
+
     from backend.api import app
 
     spec = app.openapi()
@@ -40,4 +44,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

@@ -287,6 +287,122 @@ const useDashboardStore = create((set, get) => ({
     }
   },
 
+  // Snapshot URL
+  getSnapshotUrl: async (dashboardId) => {
+    try {
+      const result = await dashboardsApi.getSnapshotUrl(dashboardId);
+      return result;
+    } catch (err) {
+      set({ error: err.message });
+      return null;
+    }
+  },
+
+  // Filters
+  addFilter: async (dashboardId, filter) => {
+    set({ saving: true, error: null });
+    try {
+      const result = await dashboardsApi.addFilter(dashboardId, filter);
+      set((state) => ({
+        filters: [...state.filters, result],
+        saving: false,
+      }));
+      return result;
+    } catch (err) {
+      set({ error: err.message, saving: false });
+      return null;
+    }
+  },
+
+  updateFilter: async (dashboardId, filterId, data) => {
+    set({ saving: true, error: null });
+    try {
+      const result = await dashboardsApi.updateFilter(dashboardId, filterId, data);
+      set((state) => ({
+        filters: state.filters.map((f) => (f.id === filterId ? result : f)),
+        saving: false,
+      }));
+      return result;
+    } catch (err) {
+      set({ error: err.message, saving: false });
+      return null;
+    }
+  },
+
+  deleteFilter: async (dashboardId, filterId) => {
+    set({ saving: true, error: null });
+    try {
+      await dashboardsApi.deleteFilter(dashboardId, filterId);
+      set((state) => ({
+        filters: state.filters.filter((f) => f.id !== filterId),
+        saving: false,
+      }));
+      return true;
+    } catch (err) {
+      set({ error: err.message, saving: false });
+      return false;
+    }
+  },
+
+  // Variables & What-If
+  setVariable: async (dashboardId, variable) => {
+    try {
+      const result = await dashboardsApi.setVariable(dashboardId, variable);
+      return result;
+    } catch (err) {
+      set({ error: err.message });
+      return null;
+    }
+  },
+
+  runWhatIfSimulation: async (dashboardId, scenario) => {
+    set({ loading: true, error: null });
+    try {
+      const result = await dashboardsApi.runWhatIfSimulation(dashboardId, scenario);
+      set({ loading: false });
+      return result;
+    } catch (err) {
+      set({ error: err.message, loading: false });
+      return null;
+    }
+  },
+
+  // Dashboard Templates
+  listDashboardTemplates: async () => {
+    set({ loading: true, error: null });
+    try {
+      const templates = await dashboardsApi.listDashboardTemplates();
+      set({ loading: false });
+      return templates;
+    } catch (err) {
+      set({ error: err.message, loading: false });
+      return [];
+    }
+  },
+
+  // Sharing & Export
+  shareDashboard: async (dashboardId, data) => {
+    try {
+      const result = await dashboardsApi.shareDashboard(dashboardId, data);
+      return result;
+    } catch (err) {
+      set({ error: err.message });
+      return null;
+    }
+  },
+
+  exportDashboard: async (dashboardId, format = 'pdf') => {
+    set({ loading: true, error: null });
+    try {
+      const result = await dashboardsApi.exportDashboard(dashboardId, format);
+      set({ loading: false });
+      return result;
+    } catch (err) {
+      set({ error: err.message, loading: false });
+      return null;
+    }
+  },
+
   // Reset
   reset: () => set({
     currentDashboard: null,

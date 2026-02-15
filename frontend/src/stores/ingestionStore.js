@@ -158,6 +158,18 @@ const useIngestionStore = create((set, get) => ({
     }
   },
 
+  getWatcher: async (watcherId) => {
+    set({ loading: true, error: null });
+    try {
+      const watcher = await ingestionApi.getWatcher(watcherId);
+      set({ loading: false });
+      return watcher;
+    } catch (err) {
+      set({ error: err.message, loading: false });
+      return null;
+    }
+  },
+
   startWatcher: async (watcherId) => {
     try {
       await ingestionApi.startWatcher(watcherId);
@@ -278,6 +290,18 @@ const useIngestionStore = create((set, get) => ({
     set({ loading: true, error: null });
     try {
       const result = await ingestionApi.syncImapAccount(accountId, options);
+      set({ loading: false });
+      return result;
+    } catch (err) {
+      set({ error: err.message, loading: false });
+      return null;
+    }
+  },
+
+  parseEmail: async (emailData, options = {}) => {
+    set({ loading: true, error: null });
+    try {
+      const result = await ingestionApi.parseEmail(emailData, options);
       set({ loading: false });
       return result;
     } catch (err) {

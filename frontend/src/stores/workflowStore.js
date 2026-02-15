@@ -217,6 +217,19 @@ const useWorkflowStore = create((set, get) => ({
     }
   },
 
+  updateTrigger: async (workflowId, triggerId, data) => {
+    set({ loading: true, error: null });
+    try {
+      const result = await workflowsApi.updateTrigger(workflowId, triggerId, data);
+      await get().getWorkflow(workflowId);
+      set({ loading: false });
+      return result;
+    } catch (err) {
+      set({ error: err.message, loading: false });
+      return null;
+    }
+  },
+
   // Node Types
   fetchNodeTypes: async () => {
     try {
@@ -226,6 +239,16 @@ const useWorkflowStore = create((set, get) => ({
     } catch (err) {
       set({ error: err.message });
       return [];
+    }
+  },
+
+  getNodeTypeSchema: async (nodeType) => {
+    try {
+      const schema = await workflowsApi.getNodeTypeSchema(nodeType);
+      return schema;
+    } catch (err) {
+      set({ error: err.message });
+      return null;
     }
   },
 
@@ -300,6 +323,74 @@ const useWorkflowStore = create((set, get) => ({
     } catch (err) {
       set({ error: err.message });
       return null;
+    }
+  },
+
+  listWorkflowTemplates: async () => {
+    set({ loading: true, error: null });
+    try {
+      const templates = await workflowsApi.listWorkflowTemplates();
+      set({ loading: false });
+      return templates;
+    } catch (err) {
+      set({ error: err.message, loading: false });
+      return [];
+    }
+  },
+
+  // Webhooks
+  createWebhook: async (workflowId, data) => {
+    set({ loading: true, error: null });
+    try {
+      const webhook = await workflowsApi.createWebhook(workflowId, data);
+      set({ loading: false });
+      return webhook;
+    } catch (err) {
+      set({ error: err.message, loading: false });
+      return null;
+    }
+  },
+
+  listWebhooks: async (workflowId) => {
+    try {
+      const webhooks = await workflowsApi.listWebhooks(workflowId);
+      return webhooks;
+    } catch (err) {
+      set({ error: err.message });
+      return [];
+    }
+  },
+
+  deleteWebhook: async (workflowId, webhookId) => {
+    set({ loading: true, error: null });
+    try {
+      await workflowsApi.deleteWebhook(workflowId, webhookId);
+      set({ loading: false });
+      return true;
+    } catch (err) {
+      set({ error: err.message, loading: false });
+      return false;
+    }
+  },
+
+  regenerateWebhookSecret: async (workflowId, webhookId) => {
+    try {
+      const result = await workflowsApi.regenerateWebhookSecret(workflowId, webhookId);
+      return result;
+    } catch (err) {
+      set({ error: err.message });
+      return null;
+    }
+  },
+
+  // Execution Logs
+  getExecutionLogs: async (workflowId, executionId) => {
+    try {
+      const logs = await workflowsApi.getExecutionLogs(workflowId, executionId);
+      return logs;
+    } catch (err) {
+      set({ error: err.message });
+      return [];
     }
   },
 

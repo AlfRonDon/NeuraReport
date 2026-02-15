@@ -94,6 +94,19 @@ const useFederationStore = create((set, get) => ({
     }
   },
 
+  // Get schema details
+  getSchema: async (schemaId) => {
+    set({ loading: true, error: null });
+    try {
+      const response = await federationApi.getVirtualSchema(schemaId);
+      set({ currentSchema: response.schema || response, loading: false });
+      return response;
+    } catch (err) {
+      set({ error: err.message, loading: false });
+      return null;
+    }
+  },
+
   // Set current schema
   setCurrentSchema: (schema) => set({ currentSchema: schema, joinSuggestions: [], queryResult: null }),
 

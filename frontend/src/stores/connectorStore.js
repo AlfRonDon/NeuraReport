@@ -242,6 +242,30 @@ const useConnectorStore = create((set, get) => ({
     }
   },
 
+  // Connector Type Details
+  getConnectorType: async (connectorType) => {
+    try {
+      const type = await connectorsApi.getConnectorType(connectorType);
+      return type;
+    } catch (err) {
+      set({ error: err.message });
+      return null;
+    }
+  },
+
+  // Scheduled Sync
+  scheduleSyncJob: async (connectionId, schedule) => {
+    set({ loading: true, error: null });
+    try {
+      const result = await connectorsApi.scheduleSyncJob(connectionId, schedule);
+      set({ loading: false });
+      return result;
+    } catch (err) {
+      set({ error: err.message, loading: false });
+      return null;
+    }
+  },
+
   // Reset
   reset: () => set({
     currentConnection: null,

@@ -189,6 +189,55 @@ const useSearchStore = create((set, get) => ({
     }
   },
 
+  // Indexing
+  indexDocument: async (documentId) => {
+    set({ loading: true, error: null });
+    try {
+      const result = await searchApi.indexDocument(documentId);
+      set({ loading: false });
+      return result;
+    } catch (err) {
+      set({ error: err.message, loading: false });
+      return null;
+    }
+  },
+
+  removeFromIndex: async (documentId) => {
+    set({ loading: true, error: null });
+    try {
+      await searchApi.removeFromIndex(documentId);
+      set({ loading: false });
+      return true;
+    } catch (err) {
+      set({ error: err.message, loading: false });
+      return false;
+    }
+  },
+
+  reindexAll: async () => {
+    set({ loading: true, error: null });
+    try {
+      const result = await searchApi.reindexAll();
+      set({ loading: false });
+      return result;
+    } catch (err) {
+      set({ error: err.message, loading: false });
+      return null;
+    }
+  },
+
+  getSavedSearch: async (searchId) => {
+    set({ loading: true, error: null });
+    try {
+      const search = await searchApi.getSavedSearch(searchId);
+      set({ currentSearch: search, loading: false });
+      return search;
+    } catch (err) {
+      set({ error: err.message, loading: false });
+      return null;
+    }
+  },
+
   // Reset
   clearResults: () => set({
     results: [],

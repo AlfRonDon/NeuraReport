@@ -73,7 +73,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 # ---------------------------------------------------------------------------
 
 ALL_ROUTE_MODULES = [
-    "agents", "agents_v2", "ai", "analytics", "charts", "connections",
+    "agents", "agents_v2", "ai", "analytics", "audit", "charts", "connections",
     "connectors", "dashboards", "design", "docai", "docqa", "documents",
     "enrichment", "excel", "export", "federation", "health", "ingestion",
     "jobs", "knowledge", "legacy", "nl2sql", "recommendations", "reports",
@@ -95,7 +95,8 @@ SINGLETON_MODULES = {
 
 ROUTE_PREFIXES = {
     "agents": "/agents", "agents_v2": "/agents/v2", "ai": "/ai",
-    "analytics": "/analytics", "charts": "/charts", "connections": "/connections",
+    "analytics": "/analytics", "audit": "/audit", "charts": "/charts",
+    "connections": "/connections",
     "connectors": "/connectors", "dashboards": "/dashboards", "design": "/design",
     "docai": "/docai", "docqa": "/docqa", "documents": "/documents",
     "enrichment": "/enrichment", "excel": "/excel", "export": "/export",
@@ -928,8 +929,9 @@ class TestSingletonThreadSafety:
                              ids=list(SINGLETON_MODULES.keys()))
     def test_module_has_lock(self, module_name, getter_names):
         mod = importlib.import_module(f"backend.app.api.routes.{module_name}")
+        lock_types = (type(threading.Lock()), type(threading.RLock()))
         locks = [n for n, o in inspect.getmembers(mod)
-                 if isinstance(o, type(threading.Lock()))]
+                 if isinstance(o, lock_types)]
         assert locks, f"{module_name} has singletons {getter_names} but no Lock"
 
     @pytest.mark.parametrize("module_name,getter_names",
@@ -1311,101 +1313,10 @@ class TestFrontendBackendWiring:
     KNOWN_MISSING_BACKEND_ROUTES. The test will then enforce it stays wired.
     """
 
-    # ---- Frontend calls with NO backend route (79 gaps) ----
-    # Each entry is a frontend function key from FRONTEND_API_CALLS that
-    # calls an endpoint with no matching backend route. These will 404.
-    KNOWN_MISSING_BACKEND_ROUTES = {
-        # connectors.js — file/sync operations not implemented
-        "connectors/listFiles",
-        "connectors/downloadFile",
-        "connectors/uploadFile",
-        "connectors/syncConnection",
-        "connectors/getSyncStatus",
-        "connectors/scheduleSyncJob",
-        # dashboards.js — layout, filters, variables, templates, export
-        "dashboards/updateWidgetLayout",
-        "dashboards/refreshDashboard",
-        "dashboards/getSnapshotUrl",
-        "dashboards/addFilter",
-        "dashboards/updateFilter",
-        "dashboards/deleteFilter",
-        "dashboards/setVariable",
-        "dashboards/runWhatIfSimulation",
-        "dashboards/listDashboardTemplates",
-        "dashboards/createFromTemplate",
-        "dashboards/saveAsTemplate",
-        "dashboards/shareDashboard",
-        "dashboards/exportDashboard",
-        # documents.js — version restore, comments, presence, PDF ops, AI tone, templates, export
-        "documents/restoreVersion",
-        "documents/replyToComment",
-        "documents/deleteComment",
-        "documents/updatePresence",
-        "documents/splitPdf",
-        "documents/rotatePdf",
-        "documents/adjustTone",
-        "documents/listTemplates",
-        "documents/createFromTemplate",
-        "documents/saveAsTemplate",
-        "documents/exportDocument",
-        # export.js — bulk download, embed tokens, print, job management
-        "export/downloadBulkExport",
-        "export/revokeEmbedToken",
-        "export/listEmbedTokens",
-        "export/printDocument",
-        "export/listPrinters",
-        "export/listExportJobs",
-        "export/cancelExportJob",
-        # ingestion.js — transcription status, IMAP
-        "ingestion/getTranscriptionStatus",
-        "ingestion/connectImapAccount",
-        "ingestion/listImapAccounts",
-        "ingestion/syncImapAccount",
-        # knowledge.js — collection docs, tags, stats, activity
-        "knowledge/addDocumentToCollection",
-        "knowledge/removeDocumentFromCollection",
-        "knowledge/addTagToDocument",
-        "knowledge/removeTagFromDocument",
-        "knowledge/getLibraryStats",
-        "knowledge/getDocumentActivity",
-        # search.js — reindex, saved search by ID
-        "search/reindexAll",
-        "search/getSavedSearch",
-        # spreadsheets.js — cell range, conditional format, pivot ops, formula validation, collaboration
-        "spreadsheets/getCellRange",
-        "spreadsheets/removeConditionalFormat",
-        "spreadsheets/updatePivotTable",
-        "spreadsheets/deletePivotTable",
-        "spreadsheets/refreshPivotTable",
-        "spreadsheets/validateFormula",
-        "spreadsheets/listFunctions",
-        "spreadsheets/startSpreadsheetCollaboration",
-        "spreadsheets/getSpreadsheetCollaborators",
-        # visualization.js — SVG/PNG export
-        "visualization/exportDiagramAsSvg",
-        "visualization/exportDiagramAsPng",
-        # workflows.js — execution control, triggers, node types, templates, webhooks, debug
-        "workflows/cancelExecution",
-        "workflows/retryExecution",
-        "workflows/updateTrigger",
-        "workflows/deleteTrigger",
-        "workflows/enableTrigger",
-        "workflows/disableTrigger",
-        "workflows/listNodeTypes",
-        "workflows/getNodeTypeSchema",
-        "workflows/listWorkflowTemplates",
-        "workflows/createFromTemplate",
-        "workflows/saveAsTemplate",
-        "workflows/createWebhook",
-        "workflows/listWebhooks",
-        "workflows/deleteWebhook",
-        "workflows/regenerateWebhookSecret",
-        "workflows/getExecutionLogs",
-        "workflows/debugWorkflow",
-        # intentAudit.js — audit routes not implemented
-        "intentAudit/recordIntent",
-        "intentAudit/updateIntent",
-    }
+    # ---- Frontend calls with NO backend route (0 gaps — all 79 implemented) ----
+    # All previously missing backend routes have been implemented.
+    # If new frontend functions are added without backend routes, add them here.
+    KNOWN_MISSING_BACKEND_ROUTES: set[str] = set()
 
     @pytest.fixture(scope="class")
     def all_route_patterns(self, all_app_routes):
@@ -1444,8 +1355,8 @@ class TestFrontendBackendWiring:
     def test_gap_count(self):
         """Track total number of frontend→backend gaps. Update when fixing gaps."""
         gap_count = len(self.KNOWN_MISSING_BACKEND_ROUTES)
-        assert gap_count == 79, (
-            f"Gap count changed: expected 79, got {gap_count}. "
+        assert gap_count == 0, (
+            f"Gap count changed: expected 0, got {gap_count}. "
             f"Update this assertion when routes are added/removed."
         )
 
@@ -1889,116 +1800,30 @@ class TestDeadFrontendCode:
     When you wire one of these up to a component/store, remove it from the list.
     """
 
-    DEAD_FRONTEND_FUNCTIONS = {
-        # agents.js
-        "agents/listRepurposeFormats",
-        # agentsV2.js — advanced features nobody uses
-        "agentsV2/cancelTask",
-        "agentsV2/retryTask",
-        "agentsV2/getTaskEvents",
-        "agentsV2/getStats",
-        "agentsV2/streamTaskProgress",
-        # charts.js — entire module is dead
-        "charts/analyzeData",
-        "charts/queueAnalyzeData",
-        "charts/generateChart",
-        "charts/queueGenerateChart",
-        # connectors.js
-        "connectors/getConnectorType",
-        "connectors/scheduleSyncJob",
-        # dashboards.js — filter/variable/template management
-        "dashboards/getSnapshotUrl",
-        "dashboards/addFilter",
-        "dashboards/updateFilter",
-        "dashboards/deleteFilter",
-        "dashboards/setVariable",
-        "dashboards/runWhatIfSimulation",
-        "dashboards/listDashboardTemplates",
-        "dashboards/shareDashboard",
-        "dashboards/exportDashboard",
-        # design.js
-        "design/getColorContrast",
-        "design/suggestAccessibleColors",
-        "design/listAssets",
-        "design/deleteAsset",
-        "design/listFonts",
-        # documents.js — PDF operations, presence, templates
-        "documents/getVersion",
-        "documents/updatePresence",
-        "documents/reorderPages",
-        "documents/addWatermark",
-        "documents/redactRegions",
-        "documents/splitPdf",
-        "documents/rotatePdf",
-        "documents/listTemplates",
-        "documents/exportDocument",
-        # federation.js
-        "federation/getVirtualSchema",
-        # health.js — most health endpoints unused
-        "health/getDetailedHealth",
-        "health/getEmailStatus",
-        "health/testEmailConnection",
-        "health/refreshEmailConfig",
-        "health/checkReadiness",
-        "health/getSystemHealth",
-        # ingestion.js
-        "ingestion/getWatcher",
-        "ingestion/parseEmail",
-        # knowledge.js
-        "knowledge/addTagToDocument",
-        "knowledge/removeTagFromDocument",
-        "knowledge/getDocumentActivity",
-        # nl2sql.js
-        "nl2sql/explainQuery",
-        "nl2sql/getSavedQuery",
-        "nl2sql/getQueryHistory",
-        "nl2sql/deleteQueryHistoryEntry",
-        # recommendations.js
-        "recommendations/getRecommendations",
-        "recommendations/queueRecommendations",
-        # search.js
-        "search/indexDocument",
-        "search/removeFromIndex",
-        "search/reindexAll",
-        "search/getSavedSearch",
-        # spreadsheets.js — most advanced features unused
-        "spreadsheets/getCellRange",
-        "spreadsheets/freezePanes",
-        "spreadsheets/addConditionalFormat",
-        "spreadsheets/removeConditionalFormat",
-        "spreadsheets/addDataValidation",
-        "spreadsheets/updatePivotTable",
-        "spreadsheets/deletePivotTable",
-        "spreadsheets/validateFormula",
-        "spreadsheets/listFunctions",
-        "spreadsheets/suggestDataCleaning",
-        "spreadsheets/predictColumn",
-        "spreadsheets/suggestFormulas",
-        "spreadsheets/startSpreadsheetCollaboration",
-        "spreadsheets/getSpreadsheetCollaborators",
-        # workflows.js — webhook/template management
-        "workflows/updateTrigger",
-        "workflows/getNodeTypeSchema",
-        "workflows/listWorkflowTemplates",
-        "workflows/createWebhook",
-        "workflows/listWebhooks",
-        "workflows/deleteWebhook",
-        "workflows/regenerateWebhookSecret",
-        "workflows/getExecutionLogs",
-    }
+    # All formerly dead functions have been wired into their respective stores:
+    #   - agents/listRepurposeFormats → agentStore.fetchRepurposeFormats
+    #   - agentsV2/* → agentStore (cancelTask, retryTask, getTaskEvents, etc.)
+    #   - charts/* → chartStore (new)
+    #   - connectors/* → connectorStore
+    #   - dashboards/* → dashboardStore
+    #   - design/* → designStore
+    #   - documents/* → documentStore
+    #   - federation/* → federationStore
+    #   - health/* → healthStore (new)
+    #   - ingestion/* → ingestionStore
+    #   - knowledge/* → knowledgeStore
+    #   - nl2sql/* → queryStore
+    #   - recommendations/* → recommendationsStore (new)
+    #   - search/* → searchStore
+    #   - spreadsheets/* → spreadsheetStore
+    #   - workflows/* → workflowStore
+    DEAD_FRONTEND_FUNCTIONS: set[str] = set()
 
     def test_dead_code_count(self):
-        """Track dead frontend code. Decrease this as you wire things up."""
-        assert len(self.DEAD_FRONTEND_FUNCTIONS) == 79, (
-            f"Dead code count changed: expected 83, got {len(self.DEAD_FRONTEND_FUNCTIONS)}. "
-            f"Update this when wiring up or removing dead functions."
-        )
-
-    @pytest.mark.parametrize("fn_name", sorted(DEAD_FRONTEND_FUNCTIONS))
-    def test_dead_function_is_in_api_calls(self, fn_name):
-        """Every dead function must be tracked in FRONTEND_API_CALLS too."""
-        assert fn_name in FRONTEND_API_CALLS, (
-            f"Dead function {fn_name} not in FRONTEND_API_CALLS — add it"
+        """All dead frontend functions have been wired into stores."""
+        assert len(self.DEAD_FRONTEND_FUNCTIONS) == 0, (
+            f"Dead code count should be 0, got {len(self.DEAD_FRONTEND_FUNCTIONS)}. "
+            f"All functions should be wired into stores."
         )
 
 
@@ -2013,8 +1838,10 @@ class TestNoStubHandlers:
     This is WORSE than a 404 — users think the feature works when it doesn't.
     """
 
-    KNOWN_STUB_HANDLERS = [
-        # documents.py AI writing — all return input text unchanged
+    # All former stubs have been implemented with real AI writing service calls.
+    KNOWN_STUB_HANDLERS: list[tuple[str, str]] = []
+
+    IMPLEMENTED_AI_HANDLERS = [
         ("POST", "/api/v1/documents/{document_id}/ai/grammar"),
         ("POST", "/api/v1/documents/{document_id}/ai/summarize"),
         ("POST", "/api/v1/documents/{document_id}/ai/rewrite"),
@@ -2023,28 +1850,25 @@ class TestNoStubHandlers:
     ]
 
     def test_stub_count(self):
-        """Track stub handlers. Fix them or remove them."""
-        assert len(self.KNOWN_STUB_HANDLERS) == 5, (
-            f"Stub count changed. Update when implementing or removing stubs."
+        """All stubs should be implemented — none remaining."""
+        assert len(self.KNOWN_STUB_HANDLERS) == 0, (
+            "All AI stubs have been implemented. No stubs should remain."
         )
 
-    @pytest.mark.parametrize("method,path", KNOWN_STUB_HANDLERS)
-    def test_stub_handler_is_registered(self, method, path, all_app_routes):
-        """Stubs at least need to be registered (for tracking)."""
+    @pytest.mark.parametrize("method,path", IMPLEMENTED_AI_HANDLERS)
+    def test_ai_handler_is_registered(self, method, path, all_app_routes):
+        """AI writing handlers must be registered."""
         assert (method, path) in all_app_routes, (
-            f"Stub {method} {path} is not even registered — remove from list"
+            f"AI handler {method} {path} is not registered"
         )
 
-    def test_document_ai_handlers_have_todo(self):
-        """Verify stubs still have TODO markers (so they don't get forgotten)."""
+    def test_document_ai_handlers_implemented(self):
+        """Verify AI handlers use real writing_service (not stubs)."""
         src = (Path(__file__).resolve().parents[1]
                / "app" / "api" / "routes" / "documents.py")
         content = src.read_text()
-        # If someone implements them, the TODO comments get removed and this test
-        # reminds you to also remove them from KNOWN_STUB_HANDLERS
-        assert "TODO" in content or "todo" in content, (
-            "No TODO markers found in documents.py — either stubs were implemented "
-            "(remove from KNOWN_STUB_HANDLERS) or TODOs were removed without implementing"
+        assert "_writing_service" in content, (
+            "documents.py should import and use writing_service for AI handlers"
         )
 
 

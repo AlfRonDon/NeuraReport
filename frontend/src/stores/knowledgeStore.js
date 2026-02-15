@@ -257,6 +257,38 @@ const useKnowledgeStore = create((set, get) => ({
     }
   },
 
+  addTagToDocument: async (documentId, tagId) => {
+    try {
+      await knowledgeApi.addTagToDocument(documentId, tagId);
+      await get().getDocument(documentId);
+      return true;
+    } catch (err) {
+      set({ error: err.message });
+      return false;
+    }
+  },
+
+  removeTagFromDocument: async (documentId, tagId) => {
+    try {
+      await knowledgeApi.removeTagFromDocument(documentId, tagId);
+      await get().getDocument(documentId);
+      return true;
+    } catch (err) {
+      set({ error: err.message });
+      return false;
+    }
+  },
+
+  getDocumentActivity: async (documentId) => {
+    try {
+      const activity = await knowledgeApi.getDocumentActivity(documentId);
+      return activity;
+    } catch (err) {
+      set({ error: err.message });
+      return null;
+    }
+  },
+
   // Search
   searchDocuments: async (query, options = {}) => {
     set({ searching: true, error: null });

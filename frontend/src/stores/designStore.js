@@ -282,6 +282,52 @@ const useDesignStore = create((set, get) => ({
     }
   },
 
+  // Accessibility
+  getColorContrast: async (foreground, background) => {
+    try {
+      const result = await designApi.getColorContrast(foreground, background);
+      return result;
+    } catch (err) {
+      set({ error: err.message });
+      return null;
+    }
+  },
+
+  suggestAccessibleColors: async (baseColor, options = {}) => {
+    try {
+      const result = await designApi.suggestAccessibleColors(baseColor, options);
+      return result;
+    } catch (err) {
+      set({ error: err.message });
+      return null;
+    }
+  },
+
+  // Assets
+  fetchAssets: async (brandKitId = null) => {
+    set({ loading: true, error: null });
+    try {
+      const assets = await designApi.listAssets(brandKitId);
+      set({ loading: false });
+      return assets;
+    } catch (err) {
+      set({ error: err.message, loading: false });
+      return [];
+    }
+  },
+
+  deleteAsset: async (assetId) => {
+    set({ loading: true, error: null });
+    try {
+      await designApi.deleteAsset(assetId);
+      set({ loading: false });
+      return true;
+    } catch (err) {
+      set({ error: err.message, loading: false });
+      return false;
+    }
+  },
+
   // Export/Import
   exportBrandKit: async (brandKitId, format = 'json') => {
     try {

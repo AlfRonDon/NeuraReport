@@ -120,6 +120,16 @@ const useSpreadsheetStore = create((set, get) => ({
     }
   },
 
+  getCellRange: async (spreadsheetId, sheetIndex, range) => {
+    try {
+      const result = await spreadsheetsApi.getCellRange(spreadsheetId, sheetIndex, range);
+      return result;
+    } catch (err) {
+      set({ error: err.message });
+      return null;
+    }
+  },
+
   // Sheet Operations
   addSheet: async (spreadsheetId, name) => {
     set({ loading: true, error: null });
@@ -164,6 +174,57 @@ const useSpreadsheetStore = create((set, get) => ({
     }
   },
 
+  freezePanes: async (spreadsheetId, sheetIndex, row, col) => {
+    set({ saving: true, error: null });
+    try {
+      await spreadsheetsApi.freezePanes(spreadsheetId, sheetIndex, row, col);
+      await get().getSpreadsheet(spreadsheetId);
+      set({ saving: false });
+      return true;
+    } catch (err) {
+      set({ error: err.message, saving: false });
+      return false;
+    }
+  },
+
+  // Conditional Formatting
+  addConditionalFormat: async (spreadsheetId, sheetIndex, rule) => {
+    set({ saving: true, error: null });
+    try {
+      const result = await spreadsheetsApi.addConditionalFormat(spreadsheetId, sheetIndex, rule);
+      set({ saving: false });
+      return result;
+    } catch (err) {
+      set({ error: err.message, saving: false });
+      return null;
+    }
+  },
+
+  removeConditionalFormat: async (spreadsheetId, sheetIndex, ruleId) => {
+    set({ saving: true, error: null });
+    try {
+      await spreadsheetsApi.removeConditionalFormat(spreadsheetId, sheetIndex, ruleId);
+      set({ saving: false });
+      return true;
+    } catch (err) {
+      set({ error: err.message, saving: false });
+      return false;
+    }
+  },
+
+  // Data Validation
+  addDataValidation: async (spreadsheetId, sheetIndex, validation) => {
+    set({ saving: true, error: null });
+    try {
+      const result = await spreadsheetsApi.addDataValidation(spreadsheetId, sheetIndex, validation);
+      set({ saving: false });
+      return result;
+    } catch (err) {
+      set({ error: err.message, saving: false });
+      return null;
+    }
+  },
+
   // Pivot Tables
   createPivotTable: async (spreadsheetId, config) => {
     set({ loading: true, error: null });
@@ -193,6 +254,36 @@ const useSpreadsheetStore = create((set, get) => ({
     }
   },
 
+  updatePivotTable: async (spreadsheetId, pivotId, config) => {
+    set({ loading: true, error: null });
+    try {
+      const pivot = await spreadsheetsApi.updatePivotTable(spreadsheetId, pivotId, config);
+      set((state) => ({
+        pivotTables: state.pivotTables.map((p) => (p.id === pivotId ? pivot : p)),
+        loading: false,
+      }));
+      return pivot;
+    } catch (err) {
+      set({ error: err.message, loading: false });
+      return null;
+    }
+  },
+
+  deletePivotTable: async (spreadsheetId, pivotId) => {
+    set({ loading: true, error: null });
+    try {
+      await spreadsheetsApi.deletePivotTable(spreadsheetId, pivotId);
+      set((state) => ({
+        pivotTables: state.pivotTables.filter((p) => p.id !== pivotId),
+        loading: false,
+      }));
+      return true;
+    } catch (err) {
+      set({ error: err.message, loading: false });
+      return false;
+    }
+  },
+
   // Formula Engine
   evaluateFormula: async (spreadsheetId, formula, sheetIndex = 0) => {
     try {
@@ -201,6 +292,26 @@ const useSpreadsheetStore = create((set, get) => ({
     } catch (err) {
       set({ error: err.message });
       return null;
+    }
+  },
+
+  validateFormula: async (spreadsheetId, formula) => {
+    try {
+      const result = await spreadsheetsApi.validateFormula(spreadsheetId, formula);
+      return result;
+    } catch (err) {
+      set({ error: err.message });
+      return null;
+    }
+  },
+
+  listFunctions: async () => {
+    try {
+      const result = await spreadsheetsApi.listFunctions();
+      return result;
+    } catch (err) {
+      set({ error: err.message });
+      return [];
     }
   },
 
@@ -275,6 +386,57 @@ const useSpreadsheetStore = create((set, get) => ({
     } catch (err) {
       set({ error: err.message });
       return null;
+    }
+  },
+
+  suggestDataCleaning: async (spreadsheetId, options = {}) => {
+    try {
+      const result = await spreadsheetsApi.suggestDataCleaning(spreadsheetId, options);
+      return result;
+    } catch (err) {
+      set({ error: err.message });
+      return null;
+    }
+  },
+
+  predictColumn: async (spreadsheetId, column, options = {}) => {
+    try {
+      const result = await spreadsheetsApi.predictColumn(spreadsheetId, column, options);
+      return result;
+    } catch (err) {
+      set({ error: err.message });
+      return null;
+    }
+  },
+
+  suggestFormulas: async (spreadsheetId, context = {}) => {
+    try {
+      const result = await spreadsheetsApi.suggestFormulas(spreadsheetId, context);
+      return result;
+    } catch (err) {
+      set({ error: err.message });
+      return [];
+    }
+  },
+
+  // Collaboration
+  startCollaboration: async (spreadsheetId, data = {}) => {
+    try {
+      const session = await spreadsheetsApi.startSpreadsheetCollaboration(spreadsheetId, data);
+      return session;
+    } catch (err) {
+      set({ error: err.message });
+      return null;
+    }
+  },
+
+  fetchCollaborators: async (spreadsheetId) => {
+    try {
+      const response = await spreadsheetsApi.getSpreadsheetCollaborators(spreadsheetId);
+      return response;
+    } catch (err) {
+      set({ error: err.message });
+      return [];
     }
   },
 

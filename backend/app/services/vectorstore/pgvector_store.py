@@ -48,9 +48,11 @@ class PgVectorStore:
     - Full-text search via tsvector for hybrid retrieval
     """
 
-    def __init__(self, connection_string: str, embedding_dim: int = 1536):
+    def __init__(self, connection_string: str, embedding_dim: int | None = None):
+        from backend.app.services.config import get_settings
+
         self.connection_string = connection_string
-        self.embedding_dim = embedding_dim
+        self.embedding_dim = int(embedding_dim or get_settings().embedding_dim)
 
     async def ensure_schema(self, session) -> None:
         """Create pgvector extension and document_chunks table if not exists."""

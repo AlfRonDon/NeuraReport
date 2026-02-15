@@ -97,6 +97,10 @@ class Settings(BaseSettings):
     worker_threads: int = Field(default=8, env="NEURA_WORKER_THREADS")
     task_result_ttl_ms: int = Field(default=1_800_000, env="NEURA_TASK_RESULT_TTL_MS")
 
+    # Embeddings / vector search (pgvector is the system-of-record in Postgres)
+    embedding_model: str = Field(default="all-MiniLM-L6-v2", env="NEURA_EMBEDDING_MODEL")
+    embedding_dim: int = Field(default=384, env="NEURA_EMBEDDING_DIM")
+
     # Database configuration (PostgreSQL)
     database_url: str = Field(
         default="sqlite+aiosqlite:///backend/state/neurareport.db",
@@ -134,6 +138,13 @@ class Settings(BaseSettings):
     # Set to True when frontend is fully compliant with governance headers
     # Default is False to allow development without strict UX headers
     ux_governance_strict: bool = Field(default=False, validation_alias="NEURA_UX_GOVERNANCE_STRICT")
+
+    @field_validator("embedding_dim")
+    @classmethod
+    def _validate_embedding_dim(cls, v: int) -> int:
+        if v <= 0 or v > 8192:
+            raise ValueError("embedding_dim must be between 1 and 8192")
+        return v
 
     @property
     def uploads_root(self) -> Path:

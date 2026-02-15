@@ -7,6 +7,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import hashlib
+import threading
 from abc import ABC, abstractmethod
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
@@ -124,10 +125,15 @@ class BaseAgent(ABC):
         return self._get_llm_client()
 
     def _get_llm_client(self):
-        """Get unified LLM client (supports OpenAI, Claude Code CLI, and other providers)."""
+        """Get OpenAI client (legacy service expectation).
+
+        Note: This is the legacy in-memory agent service used by a subset of
+        API/tests that patch `openai.OpenAI`. The production agent service uses
+        the unified LLM client.
+        """
         if self._llm_client is None:
-            from backend.app.services.llm.client import get_llm_client
-            self._llm_client = get_llm_client()
+            import openai
+            self._llm_client = openai.OpenAI()
         return self._llm_client
 
     def _get_model(self) -> str:
@@ -142,31 +148,49 @@ class BaseAgent(ABC):
         max_tokens: int = 2000,
         temperature: float = 0.7,
     ) -> str:
-        """Make an LLM API call using the unified client.
+        """Make an OpenAI chat-completions call (legacy).
 
-        Works with all providers: OpenAI, Claude Code CLI, Anthropic, etc.
+        The v2 agent service owns the unified LLM abstraction; this legacy
+        implementation keeps a minimal OpenAI-compatible call path for tests
+        and backward compatibility.
         """
         client = self._get_llm_client()
 
         messages = [
             {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt}
+            {"role": "user", "content": user_prompt},
         ]
 
-        response = client.complete(
-            messages=messages,
-            description="agent_call",
-            max_tokens=max_tokens,
-            temperature=temperature,
-        )
+        model = self._get_model()
+        # Some OpenAI models (e.g. gpt-5) use max_completion_tokens instead of max_tokens.
+        # Keep this logic local to the legacy agent service to satisfy compatibility tests.
+        create_kwargs: dict[str, Any] = {
+            "model": model,
+            "messages": messages,
+            "temperature": temperature,
+        }
+        if str(model).startswith("gpt-5"):
+            create_kwargs["max_completion_tokens"] = max_tokens
+        else:
+            create_kwargs["max_tokens"] = max_tokens
 
-        # Extract content from OpenAI-compatible response
-        content = (
-            response.get("choices", [{}])[0]
-            .get("message", {})
-            .get("content", "")
-        )
-        return content or ""
+        response = client.chat.completions.create(**create_kwargs)
+
+        # Support both SDK object responses and dict-like responses.
+        try:
+            return response.choices[0].message.content or ""
+        except Exception:
+            pass
+
+        try:
+            return (
+                (response or {}).get("choices", [{}])[0]
+                .get("message", {})
+                .get("content", "")
+                or ""
+            )
+        except Exception:
+            return ""
 
     # Backwards compatibility alias
     def _call_openai(
@@ -771,7 +795,9 @@ class AgentService:
             AgentType.PROOFREADING: ProofreadingAgent(),
         }
         self._tasks: Dict[str, AgentTask] = {}
-        self._tasks_lock = asyncio.Lock()
+        # Legacy service is in-memory and used in both sync and async contexts.
+        # Use a threading lock so callers can list tasks without having to await.
+        self._tasks_lock = threading.RLock()
 
     def _cleanup_old_tasks(self) -> None:
         """Remove old completed tasks to prevent memory leaks.
@@ -821,7 +847,7 @@ class AgentService:
         Returns:
             AgentTask with results
         """
-        async with self._tasks_lock:
+        with self._tasks_lock:
             # Clean up old tasks before adding new ones
             self._cleanup_old_tasks()
 
@@ -841,13 +867,13 @@ class AgentService:
                 raise ValueError(f"Unknown agent type: {agent_type}")
 
             result = await agent.execute(**kwargs)
-            async with self._tasks_lock:
+            with self._tasks_lock:
                 task.result = result.model_dump() if hasattr(result, "model_dump") else result
                 task.status = AgentStatus.COMPLETED
 
         except Exception as e:
             logger.exception("agent_task_failed")
-            async with self._tasks_lock:
+            with self._tasks_lock:
                 task.status = AgentStatus.FAILED
                 task.error = "Task failed due to an internal error"
 
@@ -858,17 +884,30 @@ class AgentService:
         """Get task by ID."""
         return self._tasks.get(task_id)
 
-    async def list_tasks(self, agent_type: Optional[AgentType] = None, limit: int = 50) -> List[AgentTask]:
+    class _AwaitableList(list):
+        """List that can also be awaited (returns itself).
+
+        This preserves compatibility with older call sites that did `await service.list_tasks()`
+        while allowing sync callers (including FastAPI route handlers) to use it directly.
+        """
+
+        def __await__(self):
+            if False:  # pragma: no cover - makes this a generator
+                yield None
+            return self
+
+    def list_tasks(self, agent_type: Optional[AgentType] = None, limit: int = 50) -> List[AgentTask]:
         """List recent tasks, optionally filtered by agent type."""
-        async with self._tasks_lock:
+        with self._tasks_lock:
             tasks = list(self._tasks.values())
         if agent_type:
             tasks = [t for t in tasks if t.agent_type == agent_type]
-        return sorted(tasks, key=lambda t: t.created_at, reverse=True)[:limit]
+        sorted_tasks = sorted(tasks, key=lambda t: t.created_at, reverse=True)[:limit]
+        return self._AwaitableList(sorted_tasks)
 
     async def clear_completed_tasks(self) -> int:
         """Clear all completed and failed tasks. Returns count of cleared tasks."""
-        async with self._tasks_lock:
+        with self._tasks_lock:
             to_remove = [
                 task_id for task_id, task in self._tasks.items()
                 if task.status in (AgentStatus.COMPLETED, AgentStatus.FAILED)

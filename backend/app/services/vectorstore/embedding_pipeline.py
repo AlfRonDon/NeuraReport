@@ -51,9 +51,12 @@ def _tfidf_hash_embedding(text: str, dim: int = 384) -> list[float]:
 class EmbeddingPipeline:
     """Generate embeddings using sentence-transformers (local, no API key)."""
 
-    def __init__(self, model: str = "all-MiniLM-L6-v2", embedding_dim: int = 384):
-        self.model = model
-        self.embedding_dim = embedding_dim
+    def __init__(self, model: str | None = None, embedding_dim: int | None = None):
+        from backend.app.services.config import get_settings
+
+        settings = get_settings()
+        self.model = model or settings.embedding_model
+        self.embedding_dim = int(embedding_dim or settings.embedding_dim)
 
     def chunk_text(self, text: str, chunk_size: int = 512, chunk_overlap: int = 50) -> list[str]:
         """Split text into overlapping chunks."""

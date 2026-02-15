@@ -3,6 +3,7 @@
  */
 import { create } from 'zustand';
 import * as agentsApi from '../api/agents';
+import * as agentsV2Api from '../api/agentsV2';
 
 const useAgentStore = create((set, get) => ({
   // State
@@ -148,6 +149,70 @@ const useAgentStore = create((set, get) => ({
     } catch (err) {
       set({ error: err.message });
       return [];
+    }
+  },
+
+  // V2 Task Management
+  cancelTask: async (taskId) => {
+    try {
+      await agentsV2Api.cancelTask(taskId);
+      set((state) => ({
+        tasks: state.tasks.map((t) =>
+          t.id === taskId ? { ...t, status: 'cancelled' } : t
+        ),
+        currentTask: state.currentTask?.id === taskId
+          ? { ...state.currentTask, status: 'cancelled' }
+          : state.currentTask,
+      }));
+      return true;
+    } catch (err) {
+      set({ error: err.message });
+      return false;
+    }
+  },
+
+  retryTask: async (taskId) => {
+    set({ executing: true, error: null });
+    try {
+      const task = await agentsV2Api.retryTask(taskId);
+      set((state) => ({
+        tasks: state.tasks.map((t) => (t.id === taskId ? task : t)),
+        currentTask: state.currentTask?.id === taskId ? task : state.currentTask,
+        executing: false,
+      }));
+      return task;
+    } catch (err) {
+      set({ error: err.message, executing: false });
+      return null;
+    }
+  },
+
+  getTaskEvents: async (taskId) => {
+    try {
+      const events = await agentsV2Api.getTaskEvents(taskId);
+      return events;
+    } catch (err) {
+      set({ error: err.message });
+      return [];
+    }
+  },
+
+  getAgentStats: async () => {
+    try {
+      const stats = await agentsV2Api.getStats();
+      return stats;
+    } catch (err) {
+      set({ error: err.message });
+      return null;
+    }
+  },
+
+  streamTaskProgress: async (taskId, onEvent) => {
+    try {
+      return await agentsV2Api.streamTaskProgress(taskId, onEvent);
+    } catch (err) {
+      set({ error: err.message });
+      return null;
     }
   },
 

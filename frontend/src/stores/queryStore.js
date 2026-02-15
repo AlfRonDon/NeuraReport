@@ -3,6 +3,7 @@
  */
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import * as nl2sqlApi from '../api/nl2sql'
 
 const useQueryStore = create(
   persist(
@@ -114,6 +115,53 @@ const useQueryStore = create(
         set((state) => ({
           queryHistory: [entry, ...state.queryHistory].slice(0, 100),
         })),
+
+      // NL2SQL API Actions
+      explainQuery: async (connectionId, sql) => {
+        set({ isGenerating: true, error: null });
+        try {
+          const result = await nl2sqlApi.explainQuery(connectionId, sql);
+          set({ explanation: result.explanation || '', isGenerating: false });
+          return result;
+        } catch (err) {
+          set({ error: err.message, isGenerating: false });
+          return null;
+        }
+      },
+
+      fetchSavedQuery: async (queryId) => {
+        try {
+          const query = await nl2sqlApi.getSavedQuery(queryId);
+          return query;
+        } catch (err) {
+          set({ error: err.message });
+          return null;
+        }
+      },
+
+      fetchQueryHistory: async (connectionId = null) => {
+        try {
+          const history = await nl2sqlApi.getQueryHistory(connectionId);
+          set({ queryHistory: history || [] });
+          return history;
+        } catch (err) {
+          set({ error: err.message });
+          return [];
+        }
+      },
+
+      deleteQueryHistoryEntry: async (entryId) => {
+        try {
+          await nl2sqlApi.deleteQueryHistoryEntry(entryId);
+          set((state) => ({
+            queryHistory: state.queryHistory.filter((e) => e.id !== entryId),
+          }));
+          return true;
+        } catch (err) {
+          set({ error: err.message });
+          return false;
+        }
+      },
 
       // Load saved query into editor
       loadSavedQuery: (query) =>

@@ -3,6 +3,9 @@ from __future__ import annotations
 import base64
 import hashlib
 import os
+import sys
+import tempfile
+import uuid
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional
@@ -39,7 +42,14 @@ def _idempotency_db_url() -> str:
         if state_db:
             path = Path(state_db).expanduser()
         else:
-            path = settings.state_dir / "idempotency.sqlite3"
+            # Under pytest we want a per-run idempotency DB to avoid stale keys
+            # from previous runs causing nondeterministic replays.
+            # PYTEST_CURRENT_TEST is only set while a test is executing, but
+            # IdempotencyStore can be constructed during collection time.
+            if os.getenv("PYTEST_CURRENT_TEST") or "pytest" in sys.modules:
+                path = Path(tempfile.gettempdir()) / f"neurareport-idempotency-{os.getpid()}-{uuid.uuid4().hex}.sqlite3"
+            else:
+                path = settings.state_dir / "idempotency.sqlite3"
     path.parent.mkdir(parents=True, exist_ok=True)
     return f"sqlite:///{path}"
 

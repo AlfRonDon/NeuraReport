@@ -14,6 +14,10 @@ const envBaseUrl = runtimeEnv.VITE_API_BASE_URL
 // do not collide with backend endpoints during full-page navigations/deep links.
 export const API_BASE = envBaseUrl === 'proxy' ? '/api' : (envBaseUrl || 'http://127.0.0.1:8000')
 
+// Canonical API version base (plan.md): clients target `/api/v1` only.
+export const API_V1_BASE =
+  API_BASE.endsWith('/api/v1') ? API_BASE : `${API_BASE.replace(/\\/$/, '')}/api/v1`
+
 // Normalize relative API paths to an absolute URL (when API_BASE is a full origin)
 // or a dev-proxy-prefixed path (when API_BASE is '/api').
 const isAbsoluteUrl = (url) => /^([a-z][a-z\d+\-.]*:)?\/\//i.test(url)
@@ -25,15 +29,27 @@ const joinUrl = (base, path) => {
 export const toApiUrl = (url) => {
   if (!url) return url
   if (isAbsoluteUrl(url)) return url
-  // Avoid double-prefixing if callers already included API_BASE (legacy behavior).
+  // Avoid double-prefixing if callers already included a base (legacy behavior).
   if (url === API_BASE || url.startsWith(`${API_BASE}/`)) return url
-  return joinUrl(API_BASE, url)
+  if (url === API_V1_BASE || url.startsWith(`${API_V1_BASE}/`)) return url
+
+  // Static roots stay at the app root, not under `/api/v1`.
+  if (url.startsWith('/uploads') || url.startsWith('/excel-uploads') || url.startsWith('/ws')) {
+    return joinUrl(API_BASE, url)
+  }
+
+  // If caller already versioned the path, keep it.
+  if (url.startsWith('/api/v1')) {
+    return joinUrl(API_BASE, url)
+  }
+
+  return joinUrl(API_V1_BASE, url)
 }
 
 
 // preconfigured axios instance
 
-export const api = axios.create({ baseURL: API_BASE })
+export const api = axios.create({ baseURL: API_V1_BASE })
 
 const IDEMPOTENCY_HEADER = 'Idempotency-Key'
 const IDEMPOTENCY_LEGACY_HEADER = 'X-Idempotency-Key'

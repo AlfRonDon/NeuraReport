@@ -48,8 +48,6 @@ from backend.app.services.jobs.report_scheduler import ReportScheduler
 from backend.app.services.background_tasks import mark_incomplete_jobs_failed
 from backend.app.services.agents import agent_service_v2
 from backend.app.services.agents.agent_service import agent_task_worker
-from backend.app.services.observability import init_observability
-
 
 def _configure_error_log_handler(target_logger: logging.Logger | None = None) -> Path | None:
     """
@@ -96,14 +94,6 @@ SCHEDULER_DISABLED = os.getenv("NEURA_SCHEDULER_DISABLED", "false").lower() == "
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global ERROR_LOG_PATH, SCHEDULER
-
-    # Initialize observability (OpenTelemetry + Prometheus)
-    init_observability(
-        app,
-        otlp_endpoint=SETTINGS.otlp_endpoint,
-        metrics_enabled=SETTINGS.metrics_enabled,
-        service_name=SETTINGS.app_name,
-    )
 
     if not ERROR_LOG_PATH:
         ERROR_LOG_PATH = _configure_error_log_handler(logging.getLogger())

@@ -142,7 +142,6 @@ def _check_claude_code_available() -> bool:
             capture_output=True,
             text=True,
             timeout=5,
-            shell=True,
         )
         return result.returncode == 0
     except Exception:

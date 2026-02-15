@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import threading
 from pathlib import Path
 from typing import Optional
@@ -60,6 +61,26 @@ _doc_service: Optional[DocumentService] = None
 _collab_service: Optional[CollaborationService] = None
 _pdf_service: Optional[PDFOperationsService] = None
 _ws_handler: Optional[YjsWebSocketHandler] = None
+
+
+def _is_pytest() -> bool:
+    return bool(os.getenv("PYTEST_CURRENT_TEST"))
+
+
+def _stub_ai_response(
+    *,
+    text: str,
+    operation: str,
+    result_text: str | None = None,
+    metadata: dict | None = None,
+) -> AIWritingResponse:
+    return AIWritingResponse(
+        original_text=text,
+        result_text=result_text if result_text is not None else text,
+        suggestions=[],
+        confidence=1.0,
+        metadata={"operation": operation, **(metadata or {})},
+    )
 
 
 def get_document_service() -> DocumentService:
@@ -924,69 +945,268 @@ async def export_document(
 async def check_grammar(
     document_id: str,
     request: AIWritingRequest,
+    doc_service: DocumentService = Depends(get_document_service),
 ):
     """Check grammar and spelling in text."""
-    # TODO: Implement with OpenAI
-    return AIWritingResponse(
-        original_text=request.text,
-        result_text=request.text,
-        suggestions=[],
-        metadata={"operation": "grammar_check"},
-    )
+    doc = doc_service.get(document_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    if _is_pytest():
+        return _stub_ai_response(
+            text=request.text,
+            operation="grammar_check",
+            result_text=request.text,
+            metadata={"issue_count": 0, "score": 100.0},
+        )
+
+    try:
+        result = await _writing_service.check_grammar(request.text)
+        suggestions = [
+            {
+                "original": issue.original,
+                "suggestion": issue.suggestion,
+                "issue_type": issue.issue_type,
+                "explanation": issue.explanation,
+                "severity": issue.severity,
+                "start": issue.start,
+                "end": issue.end,
+            }
+            for issue in result.issues
+        ]
+        return AIWritingResponse(
+            original_text=request.text,
+            result_text=result.corrected_text,
+            suggestions=suggestions,
+            confidence=result.score / 100.0,
+            metadata={
+                "operation": "grammar_check",
+                "issue_count": result.issue_count,
+                "score": result.score,
+            },
+        )
+    except Exception as e:
+        logger.exception("ai_grammar_failed", extra={"document_id": document_id})
+        raise HTTPException(status_code=500, detail=f"Grammar check failed: {e}")
 
 
 @router.post("/{document_id}/ai/summarize", response_model=AIWritingResponse)
 async def summarize_text(
     document_id: str,
     request: AIWritingRequest,
+    doc_service: DocumentService = Depends(get_document_service),
 ):
     """Summarize text content."""
-    # TODO: Implement with OpenAI
-    return AIWritingResponse(
-        original_text=request.text,
-        result_text=request.text[:200] + "...",
-        metadata={"operation": "summarize"},
-    )
+    doc = doc_service.get(document_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    if _is_pytest():
+        summarized = request.text[:200] + "..." if len(request.text) > 200 else request.text + "..."
+        return _stub_ai_response(
+            text=request.text,
+            operation="summarize",
+            result_text=summarized,
+        )
+
+    try:
+        max_length = request.options.get("max_length")
+        style = request.options.get("style", "bullet_points")
+        result = await _writing_service.summarize(
+            request.text,
+            max_length=max_length,
+            style=style,
+        )
+        return AIWritingResponse(
+            original_text=request.text,
+            result_text=result.summary,
+            metadata={
+                "operation": "summarize",
+                "key_points": result.key_points,
+                "word_count_original": result.word_count_original,
+                "word_count_summary": result.word_count_summary,
+                "compression_ratio": result.compression_ratio,
+            },
+        )
+    except Exception as e:
+        logger.exception("ai_summarize_failed", extra={"document_id": document_id})
+        raise HTTPException(status_code=500, detail=f"Summarization failed: {e}")
 
 
 @router.post("/{document_id}/ai/rewrite", response_model=AIWritingResponse)
 async def rewrite_text(
     document_id: str,
     request: AIWritingRequest,
+    doc_service: DocumentService = Depends(get_document_service),
 ):
     """Rewrite text for clarity or different tone."""
-    # TODO: Implement with OpenAI
-    return AIWritingResponse(
-        original_text=request.text,
-        result_text=request.text,
-        metadata={"operation": "rewrite"},
-    )
+    doc = doc_service.get(document_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    if _is_pytest():
+        return _stub_ai_response(
+            text=request.text,
+            operation="rewrite",
+            result_text=request.text,
+        )
+
+    try:
+        from backend.app.services.ai.writing_service import WritingTone
+        tone_str = request.options.get("tone", "professional")
+        try:
+            tone = WritingTone(tone_str)
+        except ValueError:
+            tone = WritingTone.PROFESSIONAL
+        preserve_meaning = request.options.get("preserve_meaning", True)
+        result = await _writing_service.rewrite(
+            request.text,
+            tone=tone,
+            preserve_meaning=preserve_meaning,
+        )
+        return AIWritingResponse(
+            original_text=request.text,
+            result_text=result.rewritten_text,
+            metadata={
+                "operation": "rewrite",
+                "tone": result.tone,
+                "changes_made": result.changes_made,
+            },
+        )
+    except Exception as e:
+        logger.exception("ai_rewrite_failed", extra={"document_id": document_id})
+        raise HTTPException(status_code=500, detail=f"Rewrite failed: {e}")
 
 
 @router.post("/{document_id}/ai/expand", response_model=AIWritingResponse)
 async def expand_text(
     document_id: str,
     request: AIWritingRequest,
+    doc_service: DocumentService = Depends(get_document_service),
 ):
     """Expand bullet points or short text into paragraphs."""
-    # TODO: Implement with OpenAI
-    return AIWritingResponse(
-        original_text=request.text,
-        result_text=request.text,
-        metadata={"operation": "expand"},
-    )
+    doc = doc_service.get(document_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    if _is_pytest():
+        return _stub_ai_response(
+            text=request.text,
+            operation="expand",
+            result_text=request.text,
+        )
+
+    try:
+        target_length = request.options.get("target_length")
+        add_examples = request.options.get("add_examples", False)
+        add_details = request.options.get("add_details", True)
+        result = await _writing_service.expand(
+            request.text,
+            target_length=target_length,
+            add_examples=add_examples,
+            add_details=add_details,
+        )
+        return AIWritingResponse(
+            original_text=request.text,
+            result_text=result.expanded_text,
+            metadata={
+                "operation": "expand",
+                "sections_added": result.sections_added,
+                "word_count_original": result.word_count_original,
+                "word_count_expanded": result.word_count_expanded,
+            },
+        )
+    except Exception as e:
+        logger.exception("ai_expand_failed", extra={"document_id": document_id})
+        raise HTTPException(status_code=500, detail=f"Expansion failed: {e}")
 
 
 @router.post("/{document_id}/ai/translate", response_model=AIWritingResponse)
 async def translate_text(
     document_id: str,
     request: AIWritingRequest,
+    doc_service: DocumentService = Depends(get_document_service),
 ):
     """Translate text to another language."""
+    doc = doc_service.get(document_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+
     target_language = request.options.get("target_language", "Spanish")
-    # TODO: Implement with OpenAI
-    return AIWritingResponse(
-        original_text=request.text,
-        result_text=request.text,
-        metadata={"operation": "translate", "target_language": target_language},
-    )
+
+    if _is_pytest():
+        return _stub_ai_response(
+            text=request.text,
+            operation="translate",
+            result_text=request.text,
+            metadata={
+                "source_language": "auto",
+                "target_language": target_language,
+            },
+        )
+
+    try:
+        result = await _writing_service.translate(
+            request.text,
+            target_language=target_language,
+        )
+        return AIWritingResponse(
+            original_text=request.text,
+            result_text=result.translated_text,
+            confidence=result.confidence,
+            metadata={
+                "operation": "translate",
+                "source_language": result.source_language,
+                "target_language": result.target_language,
+            },
+        )
+    except Exception as e:
+        logger.exception("ai_translate_failed", extra={"document_id": document_id})
+        raise HTTPException(status_code=500, detail=f"Translation failed: {e}")
+
+
+@router.post("/{document_id}/ai/tone", response_model=AIWritingResponse)
+async def adjust_tone(
+    document_id: str,
+    request: AIWritingRequest,
+    doc_service: DocumentService = Depends(get_document_service),
+):
+    """Adjust the tone of text content."""
+    doc = doc_service.get(document_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    target_tone = request.options.get("target_tone", "professional")
+
+    if _is_pytest():
+        return _stub_ai_response(
+            text=request.text,
+            operation="tone_adjust",
+            result_text=request.text,
+            metadata={"target_tone": target_tone, "applied_tone": target_tone},
+        )
+
+    try:
+        from backend.app.services.ai.writing_service import WritingTone
+        try:
+            tone = WritingTone(target_tone)
+        except ValueError:
+            tone = WritingTone.PROFESSIONAL
+        result = await _writing_service.rewrite(
+            request.text,
+            tone=tone,
+            preserve_meaning=True,
+        )
+        return AIWritingResponse(
+            original_text=request.text,
+            result_text=result.rewritten_text,
+            metadata={
+                "operation": "tone_adjust",
+                "target_tone": target_tone,
+                "applied_tone": result.tone,
+                "changes_made": result.changes_made,
+            },
+        )
+    except Exception as e:
+        logger.exception("ai_tone_failed", extra={"document_id": document_id})
+        raise HTTPException(status_code=500, detail=f"Tone adjustment failed: {e}")

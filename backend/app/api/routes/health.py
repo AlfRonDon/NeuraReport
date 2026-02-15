@@ -53,7 +53,6 @@ def _check_claude_code_cli() -> Dict[str, Any]:
             capture_output=True,
             text=True,
             timeout=10,
-            shell=True,
         )
         if result.returncode == 0:
             return {

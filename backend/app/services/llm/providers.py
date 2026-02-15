@@ -144,7 +144,6 @@ class ClaudeCodeCLIProvider(BaseProvider):
                 capture_output=True,
                 text=True,
                 timeout=10,
-                shell=True,
             )
             return result.returncode == 0
         except Exception:
@@ -289,7 +288,6 @@ class ClaudeCodeCLIProvider(BaseProvider):
                     capture_output=True,
                     text=True,
                     timeout=self.config.timeout_seconds,
-                    shell=True,
                 )
 
             # Clean up temp files

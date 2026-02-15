@@ -16,7 +16,9 @@
     "shots:update": "playwright test --grep @visual --update-snapshots",
     "lint:theme": "node ./scripts/lint-theme.mjs",
     "size": "npm run build && size-limit",
-    "size:why": "npm run build && size-limit --why"
+    "size:why": "npm run build && size-limit --why",
+    "openapi:export": "python ../scripts/export_openapi.py --output ../docs/openapi.json",
+    "openapi:generate": "npm run openapi:export && openapi-generator-cli generate -i ../docs/openapi.json -g typescript-axios -o src/api/generated --skip-validate-spec --additional-properties=supportsES6=true,withSeparateModelsAndApi=true,apiPackage=api,modelPackage=models,useSingleRequestParameter=true,enumPropertyNaming=original"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
@@ -94,6 +96,7 @@
     "@types/react-resizable": "^3.0.8",
     "@types/react-signature-canvas": "^1.0.7",
     "@vitejs/plugin-react": "^5.1.2",
+    "@openapitools/openapi-generator-cli": "^2.23.0",
     "eslint": "^9.34.0",
     "eslint-plugin-boundaries": "^4.1.0",
     "eslint-plugin-react-hooks": "^5.2.0",
