@@ -9,7 +9,6 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-os.environ.setdefault("NEURA_ALLOW_MISSING_OPENAI", "true")
 
 api = importlib.import_module("backend.api")
 utils_module = importlib.import_module("backend.app.services.utils")

@@ -84,7 +84,6 @@ def api_key_2():
 # Strict Rate Limit Tests (10/minute)
 # =============================================================================
 
-@pytest.mark.xfail(reason="slowapi rate limiting not triggered in TestClient — see #rate-limit-test-infra")
 def test_strict_rate_limit_enforced(client, api_key_1):
     """Test that strict rate limit (10/min) is enforced on AI endpoints."""
     # The RATE_LIMIT_STRICT is set to "10/minute"
@@ -109,7 +108,6 @@ def test_strict_rate_limit_enforced(client, api_key_1):
     assert response.status_code == 429, f"Expected 429 Too Many Requests on 11th request, got {response.status_code}"
 
 
-@pytest.mark.xfail(reason="slowapi rate limiting not triggered in TestClient — see #rate-limit-test-infra")
 def test_rate_limit_response_headers(client, api_key_1):
     """Test that rate limit headers are included in responses."""
     endpoint = "/ai/generate"
@@ -128,7 +126,6 @@ def test_rate_limit_response_headers(client, api_key_1):
         "Rate limit remaining header missing"
 
 
-@pytest.mark.xfail(reason="slowapi rate limiting not triggered in TestClient — see #rate-limit-test-infra")
 def test_rate_limit_independent_keys(client, api_key_1, api_key_2):
     """Test that rate limits are independent per API key."""
     endpoint = "/ai/generate"
@@ -171,7 +168,6 @@ def test_standard_rate_limit_allows_more_requests(client, api_key_1):
             f"Request {i+1} failed with {response.status_code}"
 
 
-@pytest.mark.xfail(reason="slowapi rate limiting not triggered in TestClient — see #rate-limit-test-infra")
 def test_rate_limit_reset_after_window(client, api_key_1):
     """Test that rate limit resets after time window."""
     import time
@@ -193,7 +189,6 @@ def test_rate_limit_reset_after_window(client, api_key_1):
     assert response.status_code == 429
 
 
-@pytest.mark.xfail(reason="slowapi rate limiting not triggered in TestClient — see #rate-limit-test-infra")
 def test_rate_limit_per_endpoint_isolation(client, api_key_1):
     """Test that rate limits are isolated per endpoint."""
     ai_endpoint = "/ai/generate"

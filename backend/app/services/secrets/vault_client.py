@@ -92,6 +92,26 @@ class VaultSecretClient:
 
         return default
 
+    def write_secret(self, path: str, data: dict[str, Any]) -> bool:
+        """Write a secret to Vault KV v2. Returns True on success."""
+        if not self.is_configured:
+            logger.warning("vault_write_skipped", extra={"event": "vault_write_skipped", "reason": "not configured"})
+            return False
+        client = self._get_client()
+        if not client:
+            return False
+        try:
+            client.secrets.kv.v2.create_or_update_secret(
+                path=path, secret=data, mount_point=self.mount_point,
+            )
+            # Invalidate cache for this path
+            self._cache.pop(path, None)
+            logger.info("vault_secret_written", extra={"event": "vault_secret_written", "path": path})
+            return True
+        except Exception as exc:
+            logger.warning("vault_write_failed", extra={"event": "vault_write_failed", "path": path, "error": str(exc)})
+            return False
+
     def clear_cache(self) -> None:
         self._cache.clear()
 

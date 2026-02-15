@@ -277,7 +277,7 @@ def suggest_charts_excel_route(template_id: str, payload: ChartSuggestPayload, r
         call_chat_completion_fn=lambda **kwargs: call_chat_completion(
             get_openai_client(), **kwargs, description=CHART_SUGGEST_PROMPT_VERSION
         ),
-        model=os.getenv("OPENAI_MODEL", "gpt-5"),
+        model=os.getenv("CLAUDE_CODE_MODEL", "sonnet"),
         strip_code_fences_fn=strip_code_fences,
         logger=logger,
     )

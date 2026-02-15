@@ -18,7 +18,6 @@ def _write_png(path: Path) -> None:
     path.write_bytes(PNG_BYTES)
 
 
-os.environ.setdefault("NEURA_ALLOW_MISSING_OPENAI", "true")
 
 from backend import api  # noqa: E402
 from backend.app.repositories.state import StateStore  # noqa: E402

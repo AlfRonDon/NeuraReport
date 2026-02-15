@@ -7,7 +7,6 @@ import pytest
 from unittest.mock import Mock, patch
 
 import os
-os.environ.setdefault("OPENAI_API_KEY", "test-key")
 
 from backend.app.services.agents.service import (
     AgentService,

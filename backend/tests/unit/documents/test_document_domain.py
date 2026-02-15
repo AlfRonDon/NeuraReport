@@ -9,7 +9,6 @@ from datetime import datetime, timezone
 import pytest
 from pydantic import ValidationError
 
-os.environ.setdefault("OPENAI_API_KEY", "test-key")
 
 from backend.app.services.documents.service import (
     Document,

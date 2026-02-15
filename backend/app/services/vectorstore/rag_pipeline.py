@@ -44,7 +44,7 @@ class RAGResponse:
 class RAGPipeline:
     """End-to-end RAG: embed query -> retrieve -> generate with citations."""
 
-    def __init__(self, vector_store, embedding_pipeline, llm_model: str = "gpt-4o"):
+    def __init__(self, vector_store, embedding_pipeline, llm_model: str = "sonnet"):
         self.vector_store = vector_store
         self.embedding_pipeline = embedding_pipeline
         self.llm_model = llm_model
@@ -76,19 +76,22 @@ class RAGPipeline:
         context = "\n".join(context_parts)
         prompt = RAG_PROMPT_TEMPLATE.format(context=context, query=question)
 
-        # 4. Generate answer
-        import openai
-        from backend.app.services.config import get_settings
-        settings = get_settings()
-        client = openai.AsyncOpenAI(api_key=settings.openai_api_key)
+        # 4. Generate answer using centralized LLM client
+        from backend.app.services.llm.client import get_llm_client
+        client = get_llm_client()
 
-        response = await client.chat.completions.create(
-            model=self.llm_model,
+        response = client.complete(
             messages=[{"role": "user", "content": prompt}],
+            model=self.llm_model,
+            description="rag_generate_answer",
             temperature=0.1,
             max_tokens=1024,
         )
-        answer = response.choices[0].message.content or ""
+        answer = (
+            response.get("choices", [{}])[0]
+            .get("message", {})
+            .get("content", "")
+        )
 
         # 5. Extract referenced sources from [N] patterns
         referenced_indices = set(int(m) for m in re.findall(r"\[(\d+)\]", answer))

@@ -20,8 +20,6 @@ services:
       NEURA_DEBUG: "${NEURA_DEBUG:-false}"
       NEURA_OTLP_ENDPOINT: "tempo:4317"
       NEURA_METRICS_ENABLED: "true"
-      OPENAI_API_KEY: "${OPENAI_API_KEY:-}"
-      NEURA_ALLOW_MISSING_OPENAI: "${NEURA_ALLOW_MISSING_OPENAI:-true}"
     env_file:
       - .env
     volumes:

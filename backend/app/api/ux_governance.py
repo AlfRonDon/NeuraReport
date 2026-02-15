@@ -150,7 +150,6 @@ EXEMPT_PATHS = {
     "/health",
     "/api/health",
     "/docs",
-    "/openapi.json",
     "/redoc",
     "/api/v1/auth/login",
     "/api/v1/auth/refresh",

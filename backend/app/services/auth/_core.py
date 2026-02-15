@@ -13,7 +13,7 @@ from sqlalchemy import Column, String
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import declarative_base
 
-from backend.app.db.engine import get_engine, get_session_factory
+from backend.app.services.db.engine import get_engine, get_session_factory
 from backend.app.services.config import get_settings
 
 logger = logging.getLogger("neura.auth")

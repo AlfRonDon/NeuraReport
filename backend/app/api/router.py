@@ -141,49 +141,9 @@ def register_routes(app: FastAPI) -> None:
     # Mount versioned routes under /api/v1
     app.include_router(v1_router, prefix=API_V1_PREFIX)
 
-    # Backward-compatible: mount the same routes at root for existing clients.
-    # Health and auth need root access for infra probes and existing frontends.
-    app.include_router(fastapi_users.get_auth_router(auth_backend), prefix="/auth/jwt", tags=["auth"])
-    app.include_router(fastapi_users.get_register_router(UserRead, UserCreate), prefix="/auth", tags=["auth"])
-    app.include_router(fastapi_users.get_users_router(UserRead, UserUpdate), prefix="/users", tags=["users"])
-    app.include_router(health.router, tags=["health"])
-    app.include_router(connections.router, prefix="/connections", tags=["connections"])
-    app.include_router(templates.router, prefix="/templates", tags=["templates"])
-    app.include_router(excel.router, prefix="/excel", tags=["excel"])
-    app.include_router(reports.router, prefix="/reports", tags=["reports"])
-    app.include_router(jobs.router, prefix="/jobs", tags=["jobs"])
-    app.include_router(schedules.router, prefix="/reports/schedules", tags=["schedules"])
-    app.include_router(state.router, prefix="/state", tags=["state"])
-    app.include_router(analyze_router, prefix="/analyze", tags=["analyze"])
-    app.include_router(enhanced_analysis_routes.router)
-    app.include_router(analytics.router, prefix="/analytics", tags=["analytics"])
-    app.include_router(ai.router, prefix="/ai", tags=["ai"])
-    app.include_router(nl2sql.router, prefix="/nl2sql", tags=["nl2sql"])
-    app.include_router(enrichment.router, prefix="/enrichment", tags=["enrichment"])
-    app.include_router(federation.router, prefix="/federation", tags=["federation"])
-    app.include_router(recommendations.router, prefix="/recommendations", tags=["recommendations"])
-    app.include_router(charts.router, prefix="/charts", tags=["charts"])
-    app.include_router(summary.router, prefix="/summary", tags=["summary"])
-    app.include_router(synthesis.router, prefix="/synthesis", tags=["synthesis"])
-    app.include_router(docqa.router, prefix="/docqa", tags=["docqa"])
-    app.include_router(docai.router, prefix="/docai", tags=["docai"])
-    app.include_router(documents.router, prefix="/documents", tags=["documents"])
-    app.include_router(documents.ws_router)
-    app.include_router(spreadsheets.router, prefix="/spreadsheets", tags=["spreadsheets"])
-    app.include_router(dashboards.router, prefix="/dashboards", tags=["dashboards"])
-    app.include_router(connectors.router, prefix="/connectors", tags=["connectors"])
-    app.include_router(workflows.router, prefix="/workflows", tags=["workflows"])
-    app.include_router(export.router, prefix="/export", tags=["export"])
-    app.include_router(design.router, prefix="/design", tags=["design"])
-    app.include_router(knowledge.router, prefix="/knowledge", tags=["knowledge"])
-    app.include_router(ingestion.router, prefix="/ingestion", tags=["ingestion"])
-    app.include_router(search.router, prefix="/search", tags=["search"])
-    app.include_router(visualization.router, prefix="/visualization", tags=["visualization"])
+    # Backward-compatible: mount the same v1 router at root so existing
+    # clients continue to work without the /api/v1 prefix.
+    app.include_router(v1_router)
 
-    # AI Agents v2 - must be mounted BEFORE /agents so /agents/v2/* is not
-    # captured by the {agent_id} path parameter on the /agents router.
-    app.include_router(agents_v2.router, prefix="/agents/v2", tags=["agents-v2"])
-    app.include_router(agents.router, prefix="/agents", tags=["agents"])
-
-    # Legacy/compatibility routes (always at root)
+    # Legacy/compatibility routes (always at root only)
     app.include_router(legacy.router)

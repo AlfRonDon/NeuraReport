@@ -143,9 +143,6 @@ prometheus-client==0.21.0
 # Secrets Management
 hvac==2.3.0
 
-# Dependency Injection
-dependency-injector==4.46.0
-
 # Prompt Management
 pyyaml==6.0.2
 jinja2==3.1.6

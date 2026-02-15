@@ -11,7 +11,6 @@ import threading
 
 import pytest
 
-os.environ.setdefault("OPENAI_API_KEY", "test-key")
 
 from backend.app.services.documents.service import (
     Document,

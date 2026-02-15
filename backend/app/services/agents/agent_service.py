@@ -41,11 +41,7 @@ from backend.app.services.agents.base_agent import (
     ProgressUpdate,
     ValidationError,
 )
-from backend.app.services.agents.research_agent import ResearchAgent
-from backend.app.services.agents.data_analyst_agent import DataAnalystAgent
-from backend.app.services.agents.email_draft_agent import EmailDraftAgentV2
-from backend.app.services.agents.content_repurpose_agent import ContentRepurposeAgentV2
-from backend.app.services.agents.proofreading_agent import ProofreadingAgentV2
+from backend.app.services.agents.agent_registry import get_agent_registry
 
 
 logger = logging.getLogger("neura.agents.service")
@@ -88,6 +84,15 @@ class AgentService:
         service.cancel_task(task.task_id)
     """
 
+    # Map AgentType enum values to registry names
+    _AGENT_TYPE_TO_REGISTRY: Dict[str, str] = {
+        "research": "research",
+        "data_analyst": "data_analyst",
+        "email_draft": "email_draft",
+        "content_repurpose": "content_repurpose",
+        "proofreading": "proofreading",
+    }
+
     def __init__(self, repository: Optional[AgentTaskRepository] = None):
         """Initialize the agent service.
 
@@ -95,13 +100,10 @@ class AgentService:
             repository: Optional repository instance. Uses singleton if not provided.
         """
         self._repo = repository or agent_task_repository
-        self._agents = {
-            AgentType.RESEARCH: ResearchAgent(),
-            AgentType.DATA_ANALYST: DataAnalystAgent(),
-            AgentType.EMAIL_DRAFT: EmailDraftAgentV2(),
-            AgentType.CONTENT_REPURPOSE: ContentRepurposeAgentV2(),
-            AgentType.PROOFREADING: ProofreadingAgentV2(),
-        }
+        # Use the agent registry for dynamic agent discovery
+        self._registry = get_agent_registry()
+        # Trigger auto-discovery so @register_agent decorators are loaded
+        self._registry.auto_discover()
         # Track running task locks to prevent duplicate execution
         self._running_tasks: set[str] = set()
         self._running_tasks_lock = threading.Lock()
@@ -377,11 +379,13 @@ class AgentService:
                 logger.error(f"Failed to claim task {task_id}: {e}")
                 raise
 
-            # Get the agent
-            agent = self._agents.get(task.agent_type)
+            # Get the agent from registry
+            agent_type_str = task.agent_type.value if hasattr(task.agent_type, "value") else str(task.agent_type)
+            registry_name = self._AGENT_TYPE_TO_REGISTRY.get(agent_type_str, agent_type_str)
+            agent = self._registry.get(registry_name)
             if not agent:
                 raise AgentError(
-                    f"Unknown agent type: {task.agent_type}",
+                    f"Unknown agent type: {task.agent_type} (registry key: {registry_name})",
                     code="UNKNOWN_AGENT_TYPE",
                     retryable=False,
                 )
@@ -773,6 +777,23 @@ class AgentService:
                 logger.error(f"Failed to enqueue retry task {task.task_id}: {e}")
 
         return enqueued
+
+    # =========================================================================
+    # BACKGROUND EXECUTION (Trade-off 1)
+    # =========================================================================
+
+    def execute_task_sync(self, task_id: str, agent_type: str, params: dict) -> None:
+        """Synchronous entry point for Dramatiq worker execution.
+
+        Creates an event loop and runs ``_execute_task`` to completion.
+        Called from ``backend.app.services.worker.tasks.agent_tasks``.
+        """
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            loop.run_until_complete(self._execute_task(task_id))
+        finally:
+            loop.close()
 
     # =========================================================================
     # BACKGROUND EXECUTION (Trade-off 1)

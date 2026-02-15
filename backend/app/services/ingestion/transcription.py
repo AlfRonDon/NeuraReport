@@ -74,7 +74,7 @@ class VoiceMemoResult(BaseModel):
 class TranscriptionService:
     """
     Service for transcribing audio and video files.
-    Uses OpenAI Whisper for transcription.
+    Uses Whisper for transcription.
     """
 
     # Supported audio formats
@@ -376,14 +376,9 @@ class TranscriptionService:
     ) -> Dict[str, List[str]]:
         """Extract insights from transcript using AI."""
         try:
-            from backend.app.services.config import get_settings
-            from openai import OpenAI
+            from backend.app.services.llm.client import get_llm_client
 
-            settings = get_settings()
-            if not settings.openai_api_key:
-                return {"action_items": [], "key_points": []}
-
-            client = OpenAI(api_key=settings.openai_api_key)
+            client = get_llm_client()
 
             prompt_parts = []
             if extract_action_items:
@@ -400,14 +395,19 @@ Transcript:
 Respond in JSON format:
 {{"action_items": ["item1", "item2"], "key_points": ["point1", "point2"]}}"""
 
-            response = client.chat.completions.create(
-                model=settings.openai_model or "gpt-5",
+            response = client.complete(
                 messages=[{"role": "user", "content": prompt}],
+                description="transcription_extract_insights",
                 max_tokens=500,
             )
 
             import json
-            return json.loads(response.choices[0].message.content or "{}")
+            content = (
+                response.get("choices", [{}])[0]
+                .get("message", {})
+                .get("content", "{}")
+            )
+            return json.loads(content)
 
         except Exception as e:
             logger.warning(f"Failed to extract insights: {e}")

@@ -5,6 +5,7 @@ Spreadsheet API Routes - Spreadsheet editing and analysis endpoints.
 from __future__ import annotations
 
 import logging
+import threading
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
@@ -37,12 +38,14 @@ from ...services.ai.spreadsheet_ai_service import (
     spreadsheet_ai_service,
     SpreadsheetAIService,
 )
+from backend.app.services.security import require_api_key
 
 logger = logging.getLogger("neura.api.spreadsheets")
 
-router = APIRouter(tags=["spreadsheets"])
+router = APIRouter(tags=["spreadsheets"], dependencies=[Depends(require_api_key)])
 
 # Service instances
+_lock = threading.Lock()
 _spreadsheet_service: Optional[SpreadsheetService] = None
 _formula_engine: Optional[FormulaEngine] = None
 _pivot_service: Optional[PivotService] = None
@@ -51,21 +54,27 @@ _pivot_service: Optional[PivotService] = None
 def get_spreadsheet_service() -> SpreadsheetService:
     global _spreadsheet_service
     if _spreadsheet_service is None:
-        _spreadsheet_service = SpreadsheetService()
+        with _lock:
+            if _spreadsheet_service is None:
+                _spreadsheet_service = SpreadsheetService()
     return _spreadsheet_service
 
 
 def get_formula_engine() -> FormulaEngine:
     global _formula_engine
     if _formula_engine is None:
-        _formula_engine = FormulaEngine()
+        with _lock:
+            if _formula_engine is None:
+                _formula_engine = FormulaEngine()
     return _formula_engine
 
 
 def get_pivot_service() -> PivotService:
     global _pivot_service
     if _pivot_service is None:
-        _pivot_service = PivotService()
+        with _lock:
+            if _pivot_service is None:
+                _pivot_service = PivotService()
     return _pivot_service
 
 

@@ -39,7 +39,7 @@ import useSummaryStore from '@/stores/summaryStore';
 import useSharedData from '@/hooks/useSharedData';
 import useCrossPageActions from '@/hooks/useCrossPageActions';
 import SendToMenu from '@/components/common/SendToMenu';
-import { OutputType, FeatureKey } from '@/constants/crossPageTypes';
+import { OutputType, FeatureKey } from '@/utils/crossPageTypes';
 import { useToast } from '@/components/ToastProvider.jsx';
 import { useInteraction, InteractionType, Reversibility, useNavigateInteraction } from '@/components/ux/governance';
 import ConfirmModal from '@/components/Modal/ConfirmModal';

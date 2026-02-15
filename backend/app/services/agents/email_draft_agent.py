@@ -119,7 +119,15 @@ class EmailDraftResult(BaseModel):
 # =============================================================================
 # EMAIL DRAFT AGENT
 # =============================================================================
+from backend.app.services.agents.agent_registry import register_agent
 
+
+@register_agent(
+    "email_draft",
+    version="2.0",
+    capabilities=["email_composition", "tone_control", "thread_context"],
+    timeout_seconds=120,
+)
 class EmailDraftAgentV2(BaseAgentV2):
     """
     Production-grade email draft agent.

@@ -57,7 +57,7 @@ import { getWriteOperation } from '@/utils/sqlSafety'
 import AiUsageNotice from '@/components/ai/AiUsageNotice'
 import useCrossPageActions from '@/hooks/useCrossPageActions'
 import SendToMenu from '@/components/common/SendToMenu'
-import { OutputType, FeatureKey } from '@/constants/crossPageTypes'
+import { OutputType, FeatureKey } from '@/utils/crossPageTypes'
 // UX Components for premium interactions
 import DisabledTooltip from '@/components/ux/DisabledTooltip'
 // UX Governance - Enforced interaction API

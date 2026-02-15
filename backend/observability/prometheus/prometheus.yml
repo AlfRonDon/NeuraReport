@@ -15,6 +15,18 @@ scrape_configs:
           service: neurareport-backend
           environment: development
 
+  - job_name: "neurareport-worker"
+    # Scrape Dramatiq worker Prometheus metrics
+    static_configs:
+      - targets: ["worker:9191"]
+        labels:
+          service: neurareport-worker
+          environment: development
+      - targets: ["worker-agents:9192"]
+        labels:
+          service: neurareport-worker-agents
+          environment: development
+
   - job_name: "prometheus"
     static_configs:
       - targets: ["localhost:9090"]

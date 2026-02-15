@@ -9,9 +9,11 @@ Hallucination detection and fact-checking pipeline.
 Based on: OpenFactCheck + Exa hallucination detector patterns.
 """
 from __future__ import annotations
+import asyncio
 import re
 import logging
 from dataclasses import dataclass, field
+from functools import partial
 from typing import Any, Optional
 
 logger = logging.getLogger("neura.validation.factcheck")
@@ -74,40 +76,48 @@ class FactChecker:
 
     async def decompose_claims(self, text: str) -> list[Claim]:
         """Extract individual factual claims from text using LLM."""
-        import openai
-        from backend.app.services.config import get_settings
-        settings = get_settings()
+        try:
+            from backend.app.services.llm.client import get_llm_client
+            client = get_llm_client()
 
-        if not settings.openai_api_key:
-            # Fallback: split by sentences
-            sentences = [s.strip() for s in re.split(r'[.!?]+', text) if s.strip() and len(s.strip()) > 15]
-            return [Claim(text=s, source_sentence=s) for s in sentences[:20]]
-
-        client = openai.AsyncOpenAI(api_key=settings.openai_api_key)
-        response = await client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{
-                "role": "user",
-                "content": f"""Extract all factual claims from this text. Return each claim on a new line, prefixed with "- ".
+            loop = asyncio.get_event_loop()
+            response = await loop.run_in_executor(
+                None,
+                partial(
+                    client.complete,
+                    messages=[{
+                        "role": "user",
+                        "content": f"""Extract all factual claims from this text. Return each claim on a new line, prefixed with "- ".
 Only include verifiable factual statements, not opinions or qualifiers.
 
 Text:
 {text[:3000]}
 
 Claims:"""
-            }],
-            temperature=0.0,
-            max_tokens=1024,
-        )
+                    }],
+                    description="fact_check_decompose_claims",
+                    temperature=0.0,
+                    max_tokens=1024,
+                ),
+            )
 
-        raw = response.choices[0].message.content or ""
-        claims = []
-        for line in raw.strip().split("\n"):
-            line = line.strip().lstrip("- ").strip()
-            if line and len(line) > 10:
-                claims.append(Claim(text=line, source_sentence=line))
+            raw = (
+                response.get("choices", [{}])[0]
+                .get("message", {})
+                .get("content", "")
+            )
+            claims = []
+            for line in raw.strip().split("\n"):
+                line = line.strip().lstrip("- ").strip()
+                if line and len(line) > 10:
+                    claims.append(Claim(text=line, source_sentence=line))
 
-        return claims[:20]  # Cap at 20 claims
+            return claims[:20]  # Cap at 20 claims
+
+        except Exception:
+            # Fallback: split by sentences
+            sentences = [s.strip() for s in re.split(r'[.!?]+', text) if s.strip() and len(s.strip()) > 15]
+            return [Claim(text=s, source_sentence=s) for s in sentences[:20]]
 
     async def retrieve_evidence(self, claim: Claim, context_docs: list[str]) -> list[dict[str, Any]]:
         """Search context documents for evidence. Uses vector search when available, falls back to keyword overlap."""
@@ -117,12 +127,12 @@ Claims:"""
             from backend.app.services.vectorstore.pgvector_store import PgVectorStore
             from backend.app.services.config import get_settings
             settings = get_settings()
-            if settings.openai_api_key and "postgresql" in settings.database_url:
+            if "postgresql" in settings.database_url:
                 pipeline = EmbeddingPipeline()
                 query_embedding = await pipeline.embed_query(claim.text)
                 # Use pgvector similarity search
                 store = PgVectorStore(settings.database_url)
-                from backend.app.db.engine import get_session_factory
+                from backend.app.services.db.engine import get_session_factory
                 async with get_session_factory()() as session:
                     results = await store.search_similar(session, query_embedding, top_k=3)
                     if results:

@@ -13,11 +13,10 @@ logger = logging.getLogger(__name__)
 
 from backend.app.services.security import require_api_key
 
-from backend.app.services.config import get_settings
+from backend.app.services.config import Settings, get_settings
 from backend.app.api.middleware import limiter
 from backend.app.services.analyze.document_analysis_service import _analysis_cache
 from backend.app.services.utils.mailer import MAILER_CONFIG, refresh_mailer_config
-import backend.app.services.state_access as state_access
 
 router = APIRouter()
 
@@ -93,12 +92,13 @@ def _get_memory_usage() -> Dict[str, Any]:
 def _check_database() -> Dict[str, Any]:
     """Check state store database is readable."""
     try:
-        from backend.app.repositories.state import state_store
+        from backend.app.services.state_access import state_store
         with state_store.transaction() as s:
             keys = len(s)
         return {"status": "healthy", "state_keys": keys}
-    except Exception as e:
-        return {"status": "error", "message": str(e)}
+    except Exception:
+        logger.exception("database_health_check_failed")
+        return {"status": "error", "message": "Database health check failed"}
 
 
 @limiter.exempt
@@ -190,9 +190,11 @@ def _redact_directory_check(check: Dict[str, Any]) -> Dict[str, Any]:
 
 @limiter.exempt
 @router.get("/health/detailed", dependencies=[Depends(require_api_key)])
-async def health_detailed(request: Request) -> Dict[str, Any]:
+async def health_detailed(
+    request: Request,
+    settings: Settings = Depends(get_settings),
+) -> Dict[str, Any]:
     """Comprehensive health check with all dependencies."""
-    settings = get_settings()
     started = time.time()
 
     checks: Dict[str, Any] = {}

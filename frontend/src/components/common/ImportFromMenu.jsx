@@ -29,7 +29,7 @@ import SummarizeRoundedIcon from '@mui/icons-material/SummarizeRounded'
 import BarChartRoundedIcon from '@mui/icons-material/BarChartRounded'
 import DescriptionRoundedIcon from '@mui/icons-material/DescriptionRounded'
 import useCrossPageActions from '@/hooks/useCrossPageActions'
-import { FEATURE_LABELS } from '@/constants/crossPageTypes'
+import { FEATURE_LABELS } from '@/utils/crossPageTypes'
 
 const FEATURE_ICONS = {
   agents: SmartToyRoundedIcon,

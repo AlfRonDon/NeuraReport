@@ -18,7 +18,7 @@ import {
   FEATURE_ROUTES,
   FEATURE_LABELS,
   FEATURE_ACTIONS,
-} from '@/constants/crossPageTypes'
+} from '@/utils/crossPageTypes'
 
 export default function useCrossPageActions(currentFeatureKey) {
   const navigate = useNavigate()

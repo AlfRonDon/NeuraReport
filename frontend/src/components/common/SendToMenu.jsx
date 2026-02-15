@@ -26,7 +26,7 @@ import AutoFixHighRoundedIcon from '@mui/icons-material/AutoFixHighRounded'
 import BarChartRoundedIcon from '@mui/icons-material/BarChartRounded'
 import SummarizeRoundedIcon from '@mui/icons-material/SummarizeRounded'
 import useCrossPageActions from '@/hooks/useCrossPageActions'
-import { FEATURE_ACTIONS, TransferAction } from '@/constants/crossPageTypes'
+import { FEATURE_ACTIONS, TransferAction } from '@/utils/crossPageTypes'
 
 const ACTION_ICONS = {
   [TransferAction.CHAT_WITH]: ChatRoundedIcon,

@@ -8,7 +8,6 @@ import pytest
 from unittest.mock import Mock, patch, AsyncMock, MagicMock
 
 import os
-os.environ.setdefault("OPENAI_API_KEY", "test-key")
 
 from backend.app.services.ai.writing_service import (
     WritingService,

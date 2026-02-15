@@ -28,7 +28,7 @@ class PromptVersion:
     version: str
     template: str
     description: str = ""
-    model: str = "gpt-4o"
+    model: str = "sonnet"
     temperature: float = 0.7
     max_tokens: int = 1024
     metadata: dict[str, Any] = field(default_factory=dict)
@@ -110,7 +110,7 @@ class PromptRegistry:
                         version=ver_key,
                         template=ver_data.get("template", ""),
                         description=ver_data.get("description", ""),
-                        model=ver_data.get("model", "gpt-4o"),
+                        model=ver_data.get("model", "sonnet"),
                         temperature=ver_data.get("temperature", 0.7),
                         max_tokens=ver_data.get("max_tokens", 1024),
                         metadata=ver_data.get("metadata", {}),

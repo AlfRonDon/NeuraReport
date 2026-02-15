@@ -3,7 +3,7 @@
  * Diagram and chart generation interface.
  */
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
-import { sanitizeSVG } from '@/shared/utils/sanitize'
+import { sanitizeSVG } from '@/utils/sanitize'
 import {
   Box,
   Typography,
@@ -51,7 +51,7 @@ import useSharedData from '@/hooks/useSharedData'
 import useCrossPageActions from '@/hooks/useCrossPageActions'
 import ConnectionSelector from '@/components/common/ConnectionSelector'
 import SendToMenu from '@/components/common/SendToMenu'
-import { OutputType, FeatureKey } from '@/constants/crossPageTypes'
+import { OutputType, FeatureKey } from '@/utils/crossPageTypes'
 import { useToast } from '@/components/ToastProvider'
 import { useInteraction, InteractionType, Reversibility } from '@/components/ux/governance'
 import { figmaGrey } from '@/app/theme'

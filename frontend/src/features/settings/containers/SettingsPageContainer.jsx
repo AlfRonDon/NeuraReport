@@ -498,7 +498,7 @@ export default function SettingsPage() {
   }, [preferences, setDemoMode, toast, execute])
 
   const config = health?.checks?.configuration || {}
-  const openai = health?.checks?.openai || {}
+  const llm = health?.checks?.llm || health?.checks?.openai || {}
   const memory = health?.checks?.memory || {}
   const uploadsDir = health?.checks?.uploads_dir || {}
   const stateDir = health?.checks?.state_dir || {}
@@ -749,20 +749,20 @@ export default function SettingsPage() {
           </Stack>
         </SettingCard>
 
-        {/* OpenAI Integration */}
-        <SettingCard icon={CloudIcon} title="OpenAI Integration">
+        {/* LLM Provider */}
+        <SettingCard icon={CloudIcon} title="LLM Provider (Claude Code CLI)">
           <Stack spacing={1}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: 0.75 }}>
               <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
                 Connection Status
               </Typography>
-              <StatusChip status={openai.status} />
+              <StatusChip status={llm.status} />
             </Box>
-            {openai.message && (
-              <ConfigRow label="Details" value={openai.message} />
+            {llm.message && (
+              <ConfigRow label="Details" value={llm.message} />
             )}
-            {openai.key_prefix && (
-              <ConfigRow label="API Key" value={openai.key_prefix} mono />
+            {llm.model && (
+              <ConfigRow label="Model" value={llm.model} />
             )}
           </Stack>
         </SettingCard>

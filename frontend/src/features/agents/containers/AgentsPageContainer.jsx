@@ -51,7 +51,7 @@ import ConnectionSelector from '@/components/common/ConnectionSelector'
 import SendToMenu from '@/components/common/SendToMenu'
 import { useToast } from '@/components/ToastProvider'
 import { useInteraction, InteractionType, Reversibility } from '@/components/ux/governance'
-import { OutputType, FeatureKey } from '@/constants/crossPageTypes'
+import { OutputType, FeatureKey } from '@/utils/crossPageTypes'
 
 // =============================================================================
 // STYLED COMPONENTS

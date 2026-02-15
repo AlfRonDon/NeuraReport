@@ -8,14 +8,15 @@ import logging
 import re
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 
 from backend.app.services.search import search_service
 from backend.app.services.search.service import SearchType, SearchFilter
+from backend.app.services.security import require_api_key
 
 logger = logging.getLogger(__name__)
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_api_key)])
 
 
 # Regex validation to prevent ReDoS attacks

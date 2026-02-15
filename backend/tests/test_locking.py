@@ -3,7 +3,6 @@ import threading
 import time
 from pathlib import Path
 
-os.environ.setdefault("OPENAI_API_KEY", "test-key")
 
 from backend.app.services.utils.lock import acquire_template_lock  # noqa: E402
 

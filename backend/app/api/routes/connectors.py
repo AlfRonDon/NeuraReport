@@ -23,8 +23,7 @@ from ...services.connectors import (
     ConnectorBase,
     ConnectorType,
 )
-from backend.app.services.validation import is_read_only_sql
-from backend.app.utils.validation import is_safe_external_url
+from backend.app.services.validation import is_read_only_sql, is_safe_external_url
 from backend.app.services.state_access import state_store
 
 logger = logging.getLogger("neura.api.connectors")

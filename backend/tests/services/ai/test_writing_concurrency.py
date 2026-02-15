@@ -10,7 +10,6 @@ from unittest.mock import Mock, patch, AsyncMock
 from concurrent.futures import ThreadPoolExecutor
 
 import os
-os.environ.setdefault("OPENAI_API_KEY", "test-key")
 
 from backend.app.services.ai.writing_service import (
     WritingService,

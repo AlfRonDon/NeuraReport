@@ -7,7 +7,7 @@ from __future__ import annotations
 import logging
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, File, Form, HTTPException, Request, Response, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, Response, UploadFile, status
 from pydantic import BaseModel, Field
 
 from backend.app.api.middleware import limiter, RATE_LIMIT_STRICT
@@ -21,6 +21,7 @@ from backend.app.services.ingestion import (
 )
 from backend.app.services.ingestion.folder_watcher import WatcherConfig
 from backend.app.services.ingestion.transcription import TranscriptionLanguage
+from backend.app.services.security import require_api_key
 
 import ipaddress
 from urllib.parse import urlparse
@@ -68,7 +69,7 @@ def _validate_external_url(url: str) -> str:
     return url
 
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_api_key)])
 
 # Maximum upload sizes
 MAX_SINGLE_FILE_BYTES = 200 * 1024 * 1024  # 200 MB

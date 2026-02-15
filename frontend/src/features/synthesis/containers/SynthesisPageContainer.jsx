@@ -53,7 +53,7 @@ import useSharedData from '@/hooks/useSharedData';
 import useCrossPageActions from '@/hooks/useCrossPageActions';
 import ConnectionSelector from '@/components/common/ConnectionSelector';
 import SendToMenu from '@/components/common/SendToMenu';
-import { OutputType, FeatureKey } from '@/constants/crossPageTypes';
+import { OutputType, FeatureKey } from '@/utils/crossPageTypes';
 import ConfirmModal from '@/components/Modal/ConfirmModal';
 import { useToast } from '@/components/ToastProvider';
 import AiUsageNotice from '@/components/ai/AiUsageNotice';

@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { sanitizeCodeHighlight } from '@/shared/utils/sanitize'
+import { sanitizeCodeHighlight } from '@/utils/sanitize'
 import {
   Box,
   Stack,

@@ -13,7 +13,7 @@
 import { useEffect, useRef } from 'react'
 import useCrossPageStore from '@/stores/crossPageStore'
 import { useToast } from '@/components/ToastProvider'
-import { FEATURE_LABELS } from '@/constants/crossPageTypes'
+import { FEATURE_LABELS } from '@/utils/crossPageTypes'
 
 export default function useIncomingTransfer(featureKey, handlers) {
   const consumeTransfer = useCrossPageStore((s) => s.consumeTransfer)

@@ -138,7 +138,15 @@ class ContentRepurposeReport(BaseModel):
 # =============================================================================
 # CONTENT REPURPOSE AGENT
 # =============================================================================
+from backend.app.services.agents.agent_registry import register_agent
 
+
+@register_agent(
+    "content_repurpose",
+    version="2.0",
+    capabilities=["content_adaptation", "multi_format", "summarization"],
+    timeout_seconds=180,
+)
 class ContentRepurposeAgentV2(BaseAgentV2):
     """
     Production-grade content repurposing agent.

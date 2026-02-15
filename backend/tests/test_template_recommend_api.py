@@ -5,7 +5,6 @@ import os
 import pytest
 from fastapi.testclient import TestClient
 
-os.environ.setdefault("NEURA_ALLOW_MISSING_OPENAI", "true")
 
 from backend import api  # noqa: E402
 from backend.app.repositories.state import StateStore  # noqa: E402

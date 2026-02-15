@@ -50,7 +50,7 @@ import AiUsageNotice from '@/components/ai/AiUsageNotice';
 import { figmaGrey } from '@/app/theme';
 import useCrossPageActions from '@/hooks/useCrossPageActions';
 import SendToMenu from '@/components/common/SendToMenu';
-import { OutputType, FeatureKey } from '@/constants/crossPageTypes';
+import { OutputType, FeatureKey } from '@/utils/crossPageTypes';
 
 export default function SchemaBuilderPage() {
   const {

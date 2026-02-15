@@ -16,7 +16,7 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 from starlette.types import ASGIApp, Receive, Scope, Send
 
 from backend.app.api.idempotency import IdempotencyMiddleware, IdempotencyStore
-from backend.app.observability.metrics import PrometheusMiddleware, metrics_endpoint
+from backend.app.services.observability.metrics import PrometheusMiddleware, metrics_endpoint
 from backend.app.services.utils.context import set_correlation_id
 from backend.app.services.config import Settings
 from .ux_governance import UXGovernanceMiddleware, IntentHeaders
@@ -300,7 +300,7 @@ def add_middlewares(app: FastAPI, settings: Settings) -> None:
 
     # OpenTelemetry tracing (conditional on OTLP endpoint being configured)
     if settings.otlp_endpoint:
-        from backend.app.observability.tracing import setup_tracing
+        from backend.app.services.observability.tracing import setup_tracing
         deployment_env = "development" if settings.debug_mode else "production"
         setup_tracing(
             app=app,

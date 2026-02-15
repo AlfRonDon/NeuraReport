@@ -42,12 +42,13 @@ from backend.legacy.services import report_service as report_service
 
 from backend.app.services.config import get_settings, log_settings
 from backend.app.services.auth import init_auth_db
-from backend.app.db.engine import dispose_engine
+from backend.app.services.db.engine import dispose_engine
 
 from backend.app.services.jobs.report_scheduler import ReportScheduler
 from backend.app.services.background_tasks import mark_incomplete_jobs_failed
 from backend.app.services.agents import agent_service_v2
 from backend.app.services.agents.agent_service import agent_task_worker
+from backend.app.services.observability import init_observability
 
 
 def _configure_error_log_handler(target_logger: logging.Logger | None = None) -> Path | None:
@@ -95,6 +96,15 @@ SCHEDULER_DISABLED = os.getenv("NEURA_SCHEDULER_DISABLED", "false").lower() == "
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global ERROR_LOG_PATH, SCHEDULER
+
+    # Initialize observability (OpenTelemetry + Prometheus)
+    init_observability(
+        app,
+        otlp_endpoint=SETTINGS.otlp_endpoint,
+        metrics_enabled=SETTINGS.metrics_enabled,
+        service_name=SETTINGS.app_name,
+    )
+
     if not ERROR_LOG_PATH:
         ERROR_LOG_PATH = _configure_error_log_handler(logging.getLogger())
         if ERROR_LOG_PATH:
@@ -193,30 +203,10 @@ async def lifespan(app: FastAPI):
         logger.warning("db_engine_dispose_failed", extra={"error": str(exc)})
 
 
-_OPENAPI_TAGS = [
-    {"name": "health", "description": "Liveness, readiness, and detailed health probes"},
-    {"name": "auth", "description": "JWT authentication (login, register)"},
-    {"name": "users", "description": "User management"},
-    {"name": "connections", "description": "Database connection management"},
-    {"name": "templates", "description": "Report template CRUD and verification"},
-    {"name": "reports", "description": "Report generation and history"},
-    {"name": "jobs", "description": "Background job tracking"},
-    {"name": "schedules", "description": "Report scheduling (cron)"},
-    {"name": "agents", "description": "AI research and analysis agents"},
-    {"name": "agents-v2", "description": "Production-grade persistent agents"},
-    {"name": "dashboards", "description": "Dashboard builder and embed tokens"},
-    {"name": "documents", "description": "Collaborative document editing"},
-    {"name": "spreadsheets", "description": "Spreadsheet editor with formulas"},
-    {"name": "search", "description": "Full-text search and discovery"},
-    {"name": "visualization", "description": "Diagram and chart generation"},
-    {"name": "workflows", "description": "Workflow automation"},
-]
-
 app = FastAPI(
     title=SETTINGS.api_title,
     version=SETTINGS.api_version,
     lifespan=lifespan,
-    openapi_tags=_OPENAPI_TAGS,
     docs_url="/docs",
     redoc_url="/redoc",
 )

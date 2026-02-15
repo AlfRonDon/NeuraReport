@@ -97,7 +97,7 @@ async def seed_knowledge_library():
             document_type=DocumentType.OTHER,
             tags=["Technical"],
             collections=[created_collections[1].id],
-            metadata={"version": "3.0", "format": "OpenAPI"},
+            metadata={"version": "3.0", "format": "API Reference"},
         ),
         LibraryDocumentCreate(
             title="Employee Handbook 2024",

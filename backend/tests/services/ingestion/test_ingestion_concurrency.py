@@ -13,7 +13,6 @@ from queue import Queue
 
 import pytest
 
-os.environ.setdefault("OPENAI_API_KEY", "test-key")
 
 # Check if BeautifulSoup is available
 try:

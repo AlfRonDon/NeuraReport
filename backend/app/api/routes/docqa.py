@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+import threading
 from typing import Optional
 from pydantic import BaseModel, Field
 from fastapi import APIRouter, Depends, Query, Request, HTTPException
@@ -27,6 +28,7 @@ class AddDocumentRequest(BaseModel):
     page_count: Optional[int] = None
 
 
+_lock = threading.Lock()
 _docqa_service: DocumentQAService | None = None
 
 
@@ -34,7 +36,9 @@ def get_service() -> DocumentQAService:
     """Return a singleton DocumentQAService instance."""
     global _docqa_service
     if _docqa_service is None:
-        _docqa_service = DocumentQAService()
+        with _lock:
+            if _docqa_service is None:
+                _docqa_service = DocumentQAService()
     return _docqa_service
 
 

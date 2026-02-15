@@ -10,7 +10,6 @@ from unittest.mock import patch, MagicMock
 
 import pytest
 
-os.environ.setdefault("OPENAI_API_KEY", "test-key")
 
 # Check if fitz (PyMuPDF) is available
 try:

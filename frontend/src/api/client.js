@@ -2538,7 +2538,7 @@ export async function getSystemHealth() {
       checks: {
         uploads_dir: { status: 'healthy', writable: true },
         state_dir: { status: 'healthy', writable: true },
-        openai: { status: 'configured', message: 'OpenAI client initialized' },
+        llm: { status: 'configured', message: 'Claude Code CLI available', model: 'sonnet' },
         configuration: {
           api_key_configured: true,
           rate_limiting_enabled: true,

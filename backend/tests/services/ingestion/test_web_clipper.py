@@ -8,7 +8,6 @@ from unittest.mock import patch, MagicMock, AsyncMock
 
 import pytest
 
-os.environ.setdefault("OPENAI_API_KEY", "test-key")
 
 # Check if BeautifulSoup is available
 try:

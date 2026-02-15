@@ -10,7 +10,6 @@ import zipfile
 import pytest
 from hypothesis import given, strategies as st, assume, settings, HealthCheck
 
-os.environ.setdefault("OPENAI_API_KEY", "test-key")
 
 from backend.app.services.ingestion.service import (
     IngestionService,

@@ -3,7 +3,7 @@
  * Advanced search and discovery interface.
  */
 import React, { useState, useEffect, useCallback } from 'react'
-import { sanitizeHighlight } from '@/shared/utils/sanitize'
+import { sanitizeHighlight } from '@/utils/sanitize'
 import {
   Box,
   Typography,
@@ -55,16 +55,6 @@ import useSharedData from '@/hooks/useSharedData'
 import ConnectionSelector from '@/components/common/ConnectionSelector'
 import { useToast } from '@/components/ToastProvider'
 import { useInteraction, InteractionType, Reversibility } from '@/components/ux/governance'
-
-// =============================================================================
-// SANITIZATION HELPERS
-// =============================================================================
-
-const sanitizeHighlight = (html) => {
-  if (!html) return ''
-  // Strip all tags except <em>, <mark>, <b>, <strong> (common highlight wrappers)
-  return html.replace(/<(?!\/?(?:em|mark|b|strong)\b)[^>]*>/gi, '')
-}
 
 // =============================================================================
 // STYLED COMPONENTS

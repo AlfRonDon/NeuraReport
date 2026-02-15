@@ -18,7 +18,6 @@ import pytest
 import threading
 from unittest.mock import Mock, patch, AsyncMock, MagicMock
 
-os.environ.setdefault("OPENAI_API_KEY", "test-key")
 
 from backend.app.services.ai.writing_service import (
     WritingService,

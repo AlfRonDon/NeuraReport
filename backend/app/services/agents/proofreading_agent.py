@@ -138,7 +138,15 @@ class ProofreadingReport(BaseModel):
 # =============================================================================
 # PROOFREADING AGENT
 # =============================================================================
+from backend.app.services.agents.agent_registry import register_agent
 
+
+@register_agent(
+    "proofreading",
+    version="2.0",
+    capabilities=["grammar_check", "style_enforcement", "readability_scoring"],
+    timeout_seconds=120,
+)
 class ProofreadingAgentV2(BaseAgentV2):
     """
     Production-grade proofreading agent.

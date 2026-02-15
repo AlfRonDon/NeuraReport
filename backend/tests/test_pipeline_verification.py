@@ -10,8 +10,6 @@ from typing import Any
 
 import pytest
 
-os.environ.setdefault("OPENAI_API_KEY", "test-key")
-os.environ.setdefault("NEURA_ALLOW_MISSING_OPENAI", "true")
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:

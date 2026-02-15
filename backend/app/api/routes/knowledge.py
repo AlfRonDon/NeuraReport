@@ -7,7 +7,7 @@ from __future__ import annotations
 import logging
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
 from backend.app.services.background_tasks import enqueue_background_job
 import backend.app.services.state_access as state_access
@@ -33,10 +33,11 @@ from backend.app.schemas.knowledge.library import (
     TagResponse,
 )
 from backend.app.services.knowledge.service import knowledge_service
+from backend.app.services.security import require_api_key
 
 logger = logging.getLogger("neura.api.knowledge")
 
-router = APIRouter(tags=["knowledge"])
+router = APIRouter(tags=["knowledge"], dependencies=[Depends(require_api_key)])
 
 
 # Document endpoints

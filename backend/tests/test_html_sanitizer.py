@@ -1,6 +1,5 @@
 import os
 
-os.environ.setdefault("OPENAI_API_KEY", "test-key")
 
 from backend.app.services.utils.html import sanitize_html  # noqa: E402
 

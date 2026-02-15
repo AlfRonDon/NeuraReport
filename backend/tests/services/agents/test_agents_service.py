@@ -8,7 +8,6 @@ from unittest.mock import Mock, patch
 from datetime import datetime, timezone
 
 import os
-os.environ.setdefault("OPENAI_API_KEY", "test-key")
 
 from backend.app.services.agents.service import (
     AgentService,

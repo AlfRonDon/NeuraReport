@@ -202,6 +202,11 @@ class DataFrameConnection:
         self.close()
 
 
+# Type aliases for sqlite3 compatibility (used as type annotations in ReportGenerate)
+Connection = DataFrameConnection
+Cursor = DataFrameCursor
+
+
 def connect(db_path: str | Path, **_kwargs) -> DataFrameConnection:
     """sqlite3.connect-compatible entrypoint backed by pandas DataFrames."""
     return DataFrameConnection(Path(db_path))

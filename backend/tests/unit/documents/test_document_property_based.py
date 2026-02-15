@@ -10,7 +10,6 @@ from pathlib import Path
 import pytest
 from hypothesis import given, strategies as st, assume, settings
 
-os.environ.setdefault("OPENAI_API_KEY", "test-key")
 
 from backend.app.services.documents.service import (
     Document,

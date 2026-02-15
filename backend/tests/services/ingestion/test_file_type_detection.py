@@ -8,7 +8,6 @@ import zipfile
 
 import pytest
 
-os.environ.setdefault("OPENAI_API_KEY", "test-key")
 
 from backend.app.services.ingestion.service import (
     IngestionService,

@@ -15,7 +15,6 @@ import json
 import logging
 import re
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any, Callable, Dict, List, Literal, Optional
 
@@ -84,17 +83,7 @@ class ResearchReport(BaseModel):
 # PROGRESS CALLBACK
 # =============================================================================
 
-@dataclass
-class ProgressUpdate:
-    """Progress update for long-running operations."""
-    percent: int
-    message: str
-    current_step: str
-    total_steps: int
-    current_step_num: int
-
-
-ProgressCallback = Callable[[ProgressUpdate], None]
+from backend.app.services.agents.base_agent import ProgressUpdate, ProgressCallback
 
 
 # =============================================================================
@@ -142,7 +131,15 @@ class ResearchInput(BaseModel):
 # =============================================================================
 # RESEARCH AGENT
 # =============================================================================
+from backend.app.services.agents.agent_registry import register_agent
 
+
+@register_agent(
+    "research",
+    version="2.0",
+    capabilities=["research", "report_generation", "topic_analysis"],
+    timeout_seconds=300,
+)
 class ResearchAgent:
     """
     Production-grade research agent.

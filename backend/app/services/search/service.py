@@ -797,34 +797,16 @@ class SearchService:
         return corrected if corrected != query.lower() else None
 
     async def _get_embedding(self, text: str) -> Optional[List[float]]:
-        """Get embedding for text using OpenAI."""
+        """Get embedding for text using the embedding pipeline."""
         cache_key = hashlib.md5(text[:1000].encode()).hexdigest()
         if cache_key in self._embeddings_cache:
             return self._embeddings_cache[cache_key]
 
         try:
-            from backend.app.services.config import get_settings
-            import asyncio
-            from openai import OpenAI
+            from backend.app.services.vectorstore.embedding_pipeline import EmbeddingPipeline
 
-            settings = get_settings()
-            if not settings.openai_api_key:
-                return None
-
-            def _sync_embed():
-                client = OpenAI(api_key=settings.openai_api_key)
-                return client.embeddings.create(
-                    model="text-embedding-3-small",
-                    input=text[:8000],
-                )
-
-            try:
-                loop = asyncio.get_running_loop()
-                response = await loop.run_in_executor(None, _sync_embed)
-            except RuntimeError:
-                response = _sync_embed()
-
-            embedding = response.data[0].embedding
+            pipeline = EmbeddingPipeline()
+            embedding = await pipeline.embed_query(text[:8000])
             self._embeddings_cache[cache_key] = embedding
             return embedding
 

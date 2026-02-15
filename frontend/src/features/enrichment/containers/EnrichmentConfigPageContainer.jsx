@@ -56,7 +56,7 @@ import useCrossPageActions from '@/hooks/useCrossPageActions';
 import useIncomingTransfer from '@/hooks/useIncomingTransfer';
 import SendToMenu from '@/components/common/SendToMenu';
 import ImportFromMenu from '@/components/common/ImportFromMenu';
-import { OutputType, TransferAction, FeatureKey } from '@/constants/crossPageTypes';
+import { OutputType, TransferAction, FeatureKey } from '@/utils/crossPageTypes';
 import { figmaGrey } from '@/app/theme';
 
 // Fallback sources in case API is unavailable

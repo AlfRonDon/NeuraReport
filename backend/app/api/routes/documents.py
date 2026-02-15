@@ -5,6 +5,7 @@ Document API Routes - Document editing and collaboration endpoints.
 from __future__ import annotations
 
 import logging
+import threading
 from pathlib import Path
 from typing import Optional
 
@@ -45,6 +46,7 @@ router = APIRouter(tags=["documents"], dependencies=[Depends(require_api_key)])
 ws_router = APIRouter()
 
 # Service instances (would use dependency injection in production)
+_lock = threading.Lock()
 _doc_service: Optional[DocumentService] = None
 _collab_service: Optional[CollaborationService] = None
 _pdf_service: Optional[PDFOperationsService] = None
@@ -54,21 +56,27 @@ _ws_handler: Optional[YjsWebSocketHandler] = None
 def get_document_service() -> DocumentService:
     global _doc_service
     if _doc_service is None:
-        _doc_service = DocumentService()
+        with _lock:
+            if _doc_service is None:
+                _doc_service = DocumentService()
     return _doc_service
 
 
 def get_collaboration_service() -> CollaborationService:
     global _collab_service
     if _collab_service is None:
-        _collab_service = CollaborationService()
+        with _lock:
+            if _collab_service is None:
+                _collab_service = CollaborationService()
     return _collab_service
 
 
 def get_ws_handler() -> YjsWebSocketHandler:
     global _ws_handler
     if _ws_handler is None:
-        _ws_handler = YjsWebSocketHandler(get_collaboration_service())
+        with _lock:
+            if _ws_handler is None:
+                _ws_handler = YjsWebSocketHandler(get_collaboration_service())
     return _ws_handler
 
 
@@ -81,7 +89,9 @@ def _resolve_ws_base_url(request: Request) -> str:
 def get_pdf_service() -> PDFOperationsService:
     global _pdf_service
     if _pdf_service is None:
-        _pdf_service = PDFOperationsService()
+        with _lock:
+            if _pdf_service is None:
+                _pdf_service = PDFOperationsService()
     return _pdf_service
 
 

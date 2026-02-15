@@ -145,4 +145,17 @@ export default defineConfig([
       },
     },
   },
+  {
+    files: [
+      'vite.config.js',
+      'run-audit.cjs',
+      'scripts/**/*.{js,cjs,mjs}',
+      'tests/**/*.{js,cjs,mjs}',
+    ],
+    languageOptions: {
+      globals: {
+        ...globals.node,
+      },
+    },
+  },
 ])

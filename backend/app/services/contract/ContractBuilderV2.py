@@ -711,7 +711,7 @@ def build_or_load_contract_v2(
     messages = _prepare_messages(system_text, base_messages)
     client = get_openai_client()
 
-    model_name = os.getenv("OPENAI_MODEL", "gpt-5")
+    model_name = os.getenv("CLAUDE_CODE_MODEL", "sonnet")
 
     try:
         raw_response = call_chat_completion(

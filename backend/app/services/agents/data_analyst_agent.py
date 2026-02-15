@@ -110,7 +110,15 @@ class DataAnalysisReport(BaseModel):
 # =============================================================================
 # DATA ANALYST AGENT
 # =============================================================================
+from backend.app.services.agents.agent_registry import register_agent
 
+
+@register_agent(
+    "data_analyst",
+    version="2.0",
+    capabilities=["data_analysis", "chart_suggestion", "sql_generation", "statistics"],
+    timeout_seconds=180,
+)
 class DataAnalystAgent(BaseAgentV2):
     """
     Production-grade data analyst agent.

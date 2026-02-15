@@ -7,8 +7,10 @@ from __future__ import annotations
 import logging
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
+
+from backend.app.services.security import require_api_key
 
 from backend.app.services.visualization import visualization_service
 from backend.app.services.visualization.service import (
@@ -16,7 +18,7 @@ from backend.app.services.visualization.service import (
 )
 
 logger = logging.getLogger(__name__)
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_api_key)])
 
 
 # =============================================================================

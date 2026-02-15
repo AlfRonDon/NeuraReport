@@ -235,12 +235,6 @@ def _request_excel_llm_template(snapshot: dict[str, Any], sheet_html: str, schem
     schema_json = json.dumps(schema_payload or {}, ensure_ascii=False, separators=(",", ":"))
     prompt = build_excel_llm_call_1_prompt(snapshot_json, sheet_html_payload, schema_json)
     content = [{"type": "text", "text": prompt}]
-    if not os.getenv("OPENAI_API_KEY"):
-        logger.warning(
-            "excel_llm_skipped_no_api_key",
-            extra={"event": "excel_llm_skipped_no_api_key"},
-        )
-        return sheet_html, schema_payload
     client = get_openai_client()
     response = call_chat_completion(
         client,
@@ -364,49 +358,42 @@ def xlsx_to_html_preview(
         placeholder_first_row,
     )
 
-    if not os.getenv("OPENAI_API_KEY"):
+    html_text, schema_payload = _request_excel_llm_template(snapshot, sheet_prototype_html)
+    tokens_expected = set(placeholder_tokens)
+    tokens_present = set(extract_tokens(normalize_token_braces(html_text)))
+    missing_tokens = sorted(tokens_expected - tokens_present)
+    if missing_tokens:
         logger.warning(
-            "excel_llm_skipped_no_api_key",
-            extra={"event": "excel_llm_skipped_no_api_key"},
+            "excel_llm_missing_tokens",
+            extra={"event": "excel_llm_missing_tokens", "missing": missing_tokens},
         )
         html_text, schema_payload = sheet_prototype_html, None
     else:
-        html_text, schema_payload = _request_excel_llm_template(snapshot, sheet_prototype_html)
-        tokens_expected = set(placeholder_tokens)
-        tokens_present = set(extract_tokens(normalize_token_braces(html_text)))
-        missing_tokens = sorted(tokens_expected - tokens_present)
-        if missing_tokens:
+        html_lower = html_text.lower()
+        expected_labels = [
+            token.replace("row_", "", 1)
+            for token in placeholder_tokens
+            if token.startswith("row_")
+        ]
+        missing_labels = [
+            label for label in expected_labels if f'data-label="{label}"' not in html_lower
+        ]
+        if missing_labels:
             logger.warning(
-                "excel_llm_missing_tokens",
-                extra={"event": "excel_llm_missing_tokens", "missing": missing_tokens},
+                "excel_llm_missing_data_labels",
+                extra={"event": "excel_llm_missing_data_labels", "missing": missing_labels},
             )
             html_text, schema_payload = sheet_prototype_html, None
         else:
-            html_lower = html_text.lower()
-            expected_labels = [
-                token.replace("row_", "", 1)
-                for token in placeholder_tokens
-                if token.startswith("row_")
+            missing_exact = [
+                label for label in expected_labels if f'<th data-label="{label}">' not in html_text
             ]
-            missing_labels = [
-                label for label in expected_labels if f'data-label="{label}"' not in html_lower
-            ]
-            if missing_labels:
+            if missing_exact:
                 logger.warning(
-                    "excel_llm_missing_data_labels",
-                    extra={"event": "excel_llm_missing_data_labels", "missing": missing_labels},
+                    "excel_llm_data_label_order",
+                    extra={"event": "excel_llm_data_label_order", "missing": missing_exact},
                 )
                 html_text, schema_payload = sheet_prototype_html, None
-            else:
-                missing_exact = [
-                    label for label in expected_labels if f'<th data-label="{label}">' not in html_text
-                ]
-                if missing_exact:
-                    logger.warning(
-                        "excel_llm_data_label_order",
-                        extra={"event": "excel_llm_data_label_order", "missing": missing_exact},
-                    )
-                    html_text, schema_payload = sheet_prototype_html, None
     html_path = out_dir / "template_p1.html"
     html_path.write_text(html_text, encoding="utf-8")
 
