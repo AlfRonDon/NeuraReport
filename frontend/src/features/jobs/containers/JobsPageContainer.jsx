@@ -27,7 +27,7 @@ import {
   styled,
   keyframes,
 } from '@mui/material'
-import { figmaGrey } from '@/app/theme'
+import { neutral, palette } from '@/app/theme'
 import CloseIcon from '@mui/icons-material/Close'
 import RefreshIcon from '@mui/icons-material/Refresh'
 import MoreVertIcon from '@mui/icons-material/MoreVert'
@@ -113,10 +113,10 @@ const StyledMenuItem = styled(MenuItem)(({ theme }) => ({
   borderRadius: 8,
   margin: theme.spacing(0.5, 1),
   padding: theme.spacing(1, 1.5),
-  fontSize: '0.8125rem',
+  fontSize: '14px',
   transition: 'all 0.15s ease',
   '&:hover': {
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
   },
   '& .MuiListItemIcon-root': {
     minWidth: 32,
@@ -154,7 +154,7 @@ const CloseButton = styled(IconButton)(({ theme }) => ({
   color: theme.palette.text.secondary,
   transition: 'all 0.2s ease',
   '&:hover': {
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
     color: theme.palette.text.primary,
     transform: 'rotate(90deg)',
   },
@@ -172,7 +172,7 @@ const StyledDialogActions = styled(DialogActions)(({ theme }) => ({
 }))
 
 const DetailLabel = styled(Typography)(({ theme }) => ({
-  fontSize: '0.6875rem',
+  fontSize: '12px',
   fontWeight: 600,
   textTransform: 'uppercase',
   letterSpacing: '0.05em',
@@ -181,7 +181,7 @@ const DetailLabel = styled(Typography)(({ theme }) => ({
 }))
 
 const DetailValue = styled(Typography)(({ theme }) => ({
-  fontSize: '0.8125rem',
+  fontSize: '14px',
   color: theme.palette.text.primary,
 }))
 
@@ -196,7 +196,7 @@ const StatusChip = styled(Chip, {
 })(({ theme, statusColor, statusBg }) => ({
   borderRadius: 8,
   fontWeight: 600,
-  fontSize: '0.6875rem',
+  fontSize: '12px',
   backgroundColor: statusBg,
   color: statusColor,
   '& .MuiChip-icon': {
@@ -208,7 +208,7 @@ const StatusChip = styled(Chip, {
 const TypeChip = styled(Chip)(({ theme }) => ({
   borderRadius: 8,
   fontWeight: 500,
-  fontSize: '0.6875rem',
+  fontSize: '12px',
   textTransform: 'capitalize',
   backgroundColor: alpha(theme.palette.text.primary, 0.08),
   color: theme.palette.text.secondary,
@@ -217,10 +217,10 @@ const TypeChip = styled(Chip)(({ theme }) => ({
 const StyledLinearProgress = styled(LinearProgress)(({ theme }) => ({
   borderRadius: 4,
   height: 6,
-  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300],
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[100],
   '& .MuiLinearProgress-bar': {
     borderRadius: 4,
-    background: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
+    background: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
   },
 }))
 
@@ -228,17 +228,17 @@ const ActionButton = styled(Button)(({ theme }) => ({
   borderRadius: 8,  // Figma spec: 8px
   textTransform: 'none',
   fontWeight: 500,
-  fontSize: '0.8125rem',
+  fontSize: '14px',
   padding: theme.spacing(0.75, 2),
   transition: 'all 0.2s ease',
 }))
 
 const PrimaryButton = styled(ActionButton)(({ theme }) => ({
-  background: theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200],
-  color: '#fff',
+  background: theme.palette.mode === 'dark' ? neutral[700] : neutral[900],
+  color: theme.palette.common.white,
   boxShadow: `0 4px 14px ${alpha(theme.palette.common.black, 0.15)}`,
   '&:hover': {
-    background: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
+    background: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
     boxShadow: `0 6px 20px ${alpha(theme.palette.common.black, 0.2)}`,
     transform: 'translateY(-1px)',
   },
@@ -275,7 +275,7 @@ const StyledDivider = styled(Divider)(({ theme }) => ({
 
 const ErrorAlert = styled(Alert)(({ theme }) => ({
   borderRadius: 8,  // Figma spec: 8px
-  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
   border: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
   '& .MuiAlert-icon': {
     color: theme.palette.text.secondary,
@@ -287,7 +287,7 @@ const MoreActionsButton = styled(IconButton)(({ theme }) => ({
   transition: 'all 0.2s ease',
   '&:hover': {
     color: theme.palette.text.primary,
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
   },
 }))
 
@@ -300,37 +300,37 @@ const getStatusConfig = (theme, status) => {
     pending: {
       icon: HourglassEmptyIcon,
       color: theme.palette.text.secondary,
-      bgColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200],
+      bgColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : neutral[50],
       label: 'Pending',
     },
     running: {
       icon: PlayArrowIcon,
       color: theme.palette.text.secondary,
-      bgColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300],
+      bgColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[100],
       label: 'Running',
     },
     completed: {
       icon: CheckCircleIcon,
       color: theme.palette.text.secondary,
-      bgColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300],
+      bgColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[100],
       label: 'Completed',
     },
     failed: {
       icon: ErrorIcon,
       color: theme.palette.text.secondary,
-      bgColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[300],
+      bgColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : neutral[100],
       label: 'Failed',
     },
     cancelled: {
       icon: CancelIcon,
       color: theme.palette.text.secondary,
-      bgColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200],
+      bgColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : neutral[50],
       label: 'Cancelled',
     },
     cancelling: {
       icon: HourglassEmptyIcon,
       color: theme.palette.text.secondary,
-      bgColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200],
+      bgColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : neutral[50],
       label: 'Cancelling...',
     },
   }
@@ -865,7 +865,7 @@ export default function JobsPage() {
       width: 220,
       renderCell: (value, row) => (
         <Typography sx={{
-          fontSize: '0.8125rem',
+          fontSize: '14px',
           color: 'text.secondary',
           overflow: 'hidden',
           textOverflow: 'ellipsis',
@@ -934,7 +934,7 @@ export default function JobsPage() {
       headerName: 'Started',
       width: 160,
       renderCell: (value) => {
-        if (!value) return <Typography sx={{ fontSize: '0.8125rem', color: 'text.disabled' }}>-</Typography>
+        if (!value) return <Typography sx={{ fontSize: '14px', color: 'text.disabled' }}>-</Typography>
         const d = new Date(value)
         const now = new Date()
         const diffMs = now - d
@@ -949,7 +949,7 @@ export default function JobsPage() {
         else relative = d.toLocaleDateString()
         return (
           <Tooltip title={d.toLocaleString()} arrow>
-            <Typography sx={{ fontSize: '0.8125rem', color: 'text.secondary', cursor: 'default' }}>
+            <Typography sx={{ fontSize: '14px', color: 'text.secondary', cursor: 'default' }}>
               {relative}
             </Typography>
           </Tooltip>
@@ -961,7 +961,7 @@ export default function JobsPage() {
       headerName: 'Completed',
       width: 160,
       renderCell: (value) => {
-        if (!value) return <Typography sx={{ fontSize: '0.8125rem', color: 'text.disabled' }}>-</Typography>
+        if (!value) return <Typography sx={{ fontSize: '14px', color: 'text.disabled' }}>-</Typography>
         const d = new Date(value)
         const now = new Date()
         const diffMs = now - d
@@ -976,7 +976,7 @@ export default function JobsPage() {
         else relative = d.toLocaleDateString()
         return (
           <Tooltip title={d.toLocaleString()} arrow>
-            <Typography sx={{ fontSize: '0.8125rem', color: 'text.secondary', cursor: 'default' }}>
+            <Typography sx={{ fontSize: '14px', color: 'text.secondary', cursor: 'default' }}>
               {relative}
             </Typography>
           </Tooltip>
@@ -1088,18 +1088,18 @@ export default function JobsPage() {
       >
         <StyledMenuItem onClick={handleViewDetails}>
           <ListItemIcon><VisibilityIcon sx={{ fontSize: 16 }} /></ListItemIcon>
-          <ListItemText primaryTypographyProps={{ fontSize: '0.8125rem' }}>View Details</ListItemText>
+          <ListItemText primaryTypographyProps={{ fontSize: '14px' }}>View Details</ListItemText>
         </StyledMenuItem>
         {menuJob?.status === JobStatus.COMPLETED && menuJob?.artifacts?.html_url && (
           <StyledMenuItem onClick={handleDownload}>
             <ListItemIcon><DownloadIcon sx={{ fontSize: 16 }} /></ListItemIcon>
-            <ListItemText primaryTypographyProps={{ fontSize: '0.8125rem' }}>Download</ListItemText>
+            <ListItemText primaryTypographyProps={{ fontSize: '14px' }}>Download</ListItemText>
           </StyledMenuItem>
         )}
         {canRetryJob(menuJob?.status) && (
           <StyledMenuItem onClick={handleRetry} disabled={retrying}>
             <ListItemIcon><ReplayIcon sx={{ fontSize: 16 }} /></ListItemIcon>
-            <ListItemText primaryTypographyProps={{ fontSize: '0.8125rem' }}>
+            <ListItemText primaryTypographyProps={{ fontSize: '14px' }}>
               {retrying ? 'Retrying...' : 'Retry'}
             </ListItemText>
           </StyledMenuItem>
@@ -1107,7 +1107,7 @@ export default function JobsPage() {
         {canCancelJob(menuJob?.status) && (
           <StyledMenuItem onClick={handleCancelClick} sx={{ color: 'text.secondary' }}>
             <ListItemIcon><CancelIcon sx={{ fontSize: 16, color: 'text.secondary' }} /></ListItemIcon>
-            <ListItemText primaryTypographyProps={{ fontSize: '0.8125rem' }}>Cancel</ListItemText>
+            <ListItemText primaryTypographyProps={{ fontSize: '14px' }}>Cancel</ListItemText>
           </StyledMenuItem>
         )}
       </StyledMenu>
@@ -1172,7 +1172,7 @@ export default function JobsPage() {
             <Stack spacing={2} sx={{ pt: 2 }}>
               <Box>
                 <DetailLabel>Job ID</DetailLabel>
-                <MonoText sx={{ fontSize: '0.8125rem' }}>
+                <MonoText sx={{ fontSize: '14px' }}>
                   {detailsJob.id}
                 </MonoText>
               </Box>

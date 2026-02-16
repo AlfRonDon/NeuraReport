@@ -4,7 +4,7 @@ import {
   Tooltip, Alert, Autocomplete, IconButton,
 } from '@mui/material'
 import { alpha } from '@mui/material/styles'
-import { figmaGrey } from '@/app/theme'
+import { neutral, palette } from '@/app/theme'
 import ListAltIcon from '@mui/icons-material/ListAlt'
 import OpenInNewIcon from '@mui/icons-material/OpenInNew'
 import RocketLaunchIcon from '@mui/icons-material/RocketLaunch'
@@ -252,7 +252,7 @@ function GenerateAndDownload({
                   onClick={onGenerate}
                   disabled={!canGenerate}
                   aria-label={generateTooltip || generateLabel}
-                  sx={{ width: { xs: '100%', sm: 'auto' }, bgcolor: (theme) => theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200], color: '#fff', '&:hover': { bgcolor: (theme) => theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100] } }}
+                  sx={{ width: { xs: '100%', sm: 'auto' }, bgcolor: (theme) => theme.palette.mode === 'dark' ? neutral[700] : neutral[900], color: 'common.white', '&:hover': { bgcolor: (theme) => theme.palette.mode === 'dark' ? neutral[500] : neutral[700] } }}
                 >
                   {generateLabel}
                 </Button>
@@ -547,7 +547,7 @@ function GenerateAndDownload({
                     href={item.pdfUrl ? buildDownloadUrl(item.pdfUrl) : '#'}
                     target="_blank"
                     rel="noopener"
-                    sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200], color: '#fff', '&:hover': { bgcolor: (theme) => theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100] } }}
+                    sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? neutral[700] : neutral[900], color: 'common.white', '&:hover': { bgcolor: (theme) => theme.palette.mode === 'dark' ? neutral[500] : neutral[700] } }}
                   >
                     Download
                   </Button>
@@ -561,7 +561,7 @@ function GenerateAndDownload({
                       href={buildDownloadUrl(item.docxUrl)}
                       target="_blank"
                       rel="noopener"
-                      sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100], color: '#fff', '&:hover': { bgcolor: (theme) => theme.palette.mode === 'dark' ? figmaGrey[900] : figmaGrey[1000] } }}
+                      sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? neutral[500] : neutral[700], color: 'common.white', '&:hover': { bgcolor: (theme) => theme.palette.mode === 'dark' ? neutral[500] : neutral[500] } }}
                     >
                       Download DOCX
                     </Button>
@@ -576,7 +576,7 @@ function GenerateAndDownload({
                       href={buildDownloadUrl(item.xlsxUrl)}
                       target="_blank"
                       rel="noopener"
-                      sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? figmaGrey[900] : figmaGrey[1000], color: '#fff', '&:hover': { bgcolor: (theme) => theme.palette.mode === 'dark' ? figmaGrey[600] : figmaGrey[900] } }}
+                      sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? neutral[500] : neutral[500], color: 'common.white', '&:hover': { bgcolor: (theme) => theme.palette.mode === 'dark' ? neutral[300] : neutral[500] } }}
                     >
                       Download XLSX
                     </Button>
@@ -760,7 +760,7 @@ function GenerateAndDownload({
                         disableElevation
                         startIcon={<ReplayIcon />}
                         onClick={d.onRerun}
-                        sx={{ width: { xs: '100%', lg: 'auto' }, textTransform: 'none', px: 2.5, bgcolor: (theme) => theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200], color: '#fff', '&:hover': { bgcolor: (theme) => theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100] } }}
+                        sx={{ width: { xs: '100%', lg: 'auto' }, textTransform: 'none', px: 2.5, bgcolor: (theme) => theme.palette.mode === 'dark' ? neutral[700] : neutral[900], color: 'common.white', '&:hover': { bgcolor: (theme) => theme.palette.mode === 'dark' ? neutral[500] : neutral[700] } }}
                       >
                         Re-run
                       </Button>

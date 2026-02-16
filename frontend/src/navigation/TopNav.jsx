@@ -46,7 +46,7 @@ import {
   OpenInNew as OpenInNewIcon,
 } from '@mui/icons-material'
 import Breadcrumbs from './Breadcrumbs'
-import { figmaGrey } from '@/app/theme'
+import { neutral, palette } from '@/app/theme'
 import { useAppStore } from '../stores'
 import { useJobsList } from '../hooks/useJobs'
 import { getShortcutDisplay, SHORTCUTS } from '../hooks/useKeyboardShortcuts'
@@ -79,9 +79,9 @@ const shimmer = keyframes`
 
 const StyledAppBar = styled(AppBar)(({ theme }) => ({
   // Solid white header from Figma - no blur
-  backgroundColor: theme.palette.mode === 'dark' ? figmaGrey[1200] : '#FFFFFF',
+  backgroundColor: theme.palette.mode === 'dark' ? neutral[900] : theme.palette.common.white,
   backdropFilter: 'none',
-  borderBottom: `1px solid ${theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[500]}`,
+  borderBottom: `1px solid ${theme.palette.mode === 'dark' ? neutral[700] : neutral[200]}`,
   boxShadow: 'none',
 }))
 
@@ -99,11 +99,11 @@ const NavIconButton = styled(IconButton)(({ theme }) => ({
   height: 36,
   borderRadius: 8,
   // Muted grey icons from Figma
-  color: theme.palette.mode === 'dark' ? figmaGrey[900] : figmaGrey[700],
+  color: theme.palette.mode === 'dark' ? neutral[500] : neutral[300],
   transition: 'all 0.15s ease',
   '&:hover': {
-    backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : figmaGrey[300],
-    color: theme.palette.mode === 'dark' ? figmaGrey[300] : figmaGrey[1200],
+    backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : neutral[100],
+    color: theme.palette.mode === 'dark' ? neutral[100] : neutral[900],
   },
   '&:active': {
     transform: 'none',
@@ -123,10 +123,10 @@ const ConnectionChip = styled(Chip, {
     maxWidth: 140,
   },
   backgroundColor: connected
-    ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300])
-    : (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.06) : figmaGrey[200]),
+    ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[100])
+    : (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.06) : neutral[50]),
   border: `1px solid ${connected
-    ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.15) : figmaGrey[500])
+    ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.15) : neutral[200])
     : alpha(theme.palette.divider, 0.2)}`,
   color: theme.palette.text.secondary,
   fontWeight: 500,
@@ -142,7 +142,7 @@ const ConnectionChip = styled(Chip, {
     maxWidth: '100%',
   },
   '&:hover': {
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.12) : figmaGrey[400],
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.12) : neutral[200],
   },
 }))
 
@@ -153,10 +153,10 @@ const StatusDot = styled(Box, {
   height: 8,
   borderRadius: '50%',
   backgroundColor: connected
-    ? (theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100])
-    : (theme.palette.mode === 'dark' ? figmaGrey[600] : figmaGrey[900]),
+    ? (theme.palette.mode === 'dark' ? neutral[500] : neutral[700])
+    : (theme.palette.mode === 'dark' ? neutral[300] : neutral[500]),
   boxShadow: connected
-    ? `0 0 0 3px ${theme.palette.mode === 'dark' ? alpha(figmaGrey[1000], 0.2) : alpha(figmaGrey[1100], 0.2)}`
+    ? `0 0 0 3px ${theme.palette.mode === 'dark' ? alpha(neutral[500], 0.2) : alpha(neutral[700], 0.2)}`
     : 'none',
   animation: connected ? `${pulse} 2s infinite ease-in-out` : 'none',
 }))
@@ -164,9 +164,9 @@ const StatusDot = styled(Box, {
 const StyledBadge = styled(Badge)(({ theme }) => ({
   '& .MuiBadge-badge': {
     // Neutral badge color - not green
-    backgroundColor: theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[800],
-    color: '#fff',
-    fontSize: '0.65rem',
+    backgroundColor: theme.palette.mode === 'dark' ? neutral[700] : neutral[400],
+    color: 'common.white',
+    fontSize: '10px',
     fontWeight: 600,
     minWidth: 18,
     height: 18,
@@ -194,7 +194,7 @@ const StyledMenuItem = styled(MenuItem)(({ theme }) => ({
   padding: theme.spacing(1, 1.5),
   transition: 'all 0.15s ease',
   '&:hover': {
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
   },
 }))
 
@@ -203,7 +203,7 @@ const MenuHeader = styled(Box)(({ theme }) => ({
 }))
 
 const MenuLabel = styled(Typography)(({ theme }) => ({
-  fontSize: '0.6875rem',
+  fontSize: '12px',
   fontWeight: 600,
   textTransform: 'uppercase',
   letterSpacing: '0.05em',
@@ -212,7 +212,7 @@ const MenuLabel = styled(Typography)(({ theme }) => ({
 
 const ShortcutChip = styled(Chip)(({ theme }) => ({
   height: 24,
-  fontSize: '0.6875rem',
+  fontSize: '12px',
   fontFamily: 'var(--font-mono, monospace)',
   fontWeight: 500,
   backgroundColor: alpha(theme.palette.text.primary, 0.06),
@@ -232,8 +232,8 @@ const HelpCard = styled(Box)(({ theme }) => ({
   border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
   transition: 'all 0.2s ease',
   '&:hover': {
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : figmaGrey[200],
-    borderColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.12) : figmaGrey[500],
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : neutral[50],
+    borderColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.12) : neutral[200],
   },
 }))
 
@@ -544,7 +544,7 @@ export default function TopNav({ onMenuClick, showMenuButton, connection }) {
               <ListItemText
                 primary={job.template_name || job.template_id || job.id}
                 secondary={`Status: ${(job.status || 'unknown').toString()}`}
-                primaryTypographyProps={{ fontSize: '0.8125rem' }}
+                primaryTypographyProps={{ fontSize: '14px' }}
                 secondaryTypographyProps={{ fontSize: '0.75rem' }}
               />
             </StyledMenuItem>
@@ -552,7 +552,7 @@ export default function TopNav({ onMenuClick, showMenuButton, connection }) {
             <MenuItem disabled sx={{ opacity: 0.5, mx: 1 }}>
               <ListItemText
                 primary="No job updates yet"
-                primaryTypographyProps={{ fontSize: '0.8125rem', color: 'text.secondary' }}
+                primaryTypographyProps={{ fontSize: '14px', color: 'text.secondary' }}
               />
             </MenuItem>
           )}
@@ -573,7 +573,7 @@ export default function TopNav({ onMenuClick, showMenuButton, connection }) {
               <ListItemText
                 primary={download.filename || download.template || 'Recent download'}
                 secondary={download.format ? download.format.toUpperCase() : 'Open file'}
-                primaryTypographyProps={{ fontSize: '0.8125rem' }}
+                primaryTypographyProps={{ fontSize: '14px' }}
                 secondaryTypographyProps={{ fontSize: '0.75rem' }}
               />
             </StyledMenuItem>
@@ -581,7 +581,7 @@ export default function TopNav({ onMenuClick, showMenuButton, connection }) {
             <MenuItem disabled sx={{ opacity: 0.5, mx: 1 }}>
               <ListItemText
                 primary="No downloads yet"
-                primaryTypographyProps={{ fontSize: '0.8125rem', color: 'text.secondary' }}
+                primaryTypographyProps={{ fontSize: '14px', color: 'text.secondary' }}
               />
             </MenuItem>
           )}
@@ -594,7 +594,7 @@ export default function TopNav({ onMenuClick, showMenuButton, connection }) {
             </ListItemIcon>
             <ListItemText
               primary="Open Jobs Panel"
-              primaryTypographyProps={{ fontSize: '0.8125rem', fontWeight: 500 }}
+              primaryTypographyProps={{ fontSize: '14px', fontWeight: 500 }}
             />
           </StyledMenuItem>
         </StyledMenu>

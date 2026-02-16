@@ -26,7 +26,7 @@ import { useInteraction, InteractionType, Reversibility } from '@/components/ux/
 import { Drawer } from '@/components/Drawer'
 import ConnectionForm from '@/features/connections/components/ConnectionForm'
 import * as api from '@/api/client'
-import { figmaGrey } from '@/app/theme'
+import { neutral, secondary, palette } from '@/app/theme'
 
 // Demo connection that doesn't require real credentials
 const DEMO_CONNECTION = {
@@ -51,6 +51,9 @@ export default function StepConnection({ wizardState, updateWizardState, onCompl
   const [selectedId, setSelectedId] = useState(wizardState.connectionId || activeConnection?.id || null)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [formLoading, setFormLoading] = useState(false)
+  const normalizedConnections = Array.isArray(savedConnections)
+    ? savedConnections.filter((conn) => conn && typeof conn === 'object' && conn.id)
+    : []
 
   useEffect(() => {
     const fetchConnections = async () => {
@@ -64,10 +67,10 @@ export default function StepConnection({ wizardState, updateWizardState, onCompl
         toast.show('Failed to load saved connections', 'warning')
       }
     }
-    if (savedConnections.length === 0) {
+    if (normalizedConnections.length === 0) {
       fetchConnections()
     }
-  }, [savedConnections.length, setSavedConnections, toast])
+  }, [normalizedConnections.length, setSavedConnections, toast])
 
   const handleSelect = useCallback((connectionId) => {
     setSelectedId(connectionId)
@@ -136,12 +139,12 @@ export default function StepConnection({ wizardState, updateWizardState, onCompl
     setSelectedId(DEMO_CONNECTION.id)
     updateWizardState({ connectionId: DEMO_CONNECTION.id, isDemo: true })
     // Add demo connection to store temporarily
-    if (!savedConnections.find(c => c.id === DEMO_CONNECTION.id)) {
+    if (!normalizedConnections.find(c => c.id === DEMO_CONNECTION.id)) {
       addSavedConnection(DEMO_CONNECTION)
     }
     setActiveConnectionId(DEMO_CONNECTION.id)
     toast.show('Demo mode activated! Using sample data.', 'success')
-  }, [updateWizardState, savedConnections, addSavedConnection, setActiveConnectionId, toast])
+  }, [updateWizardState, normalizedConnections, addSavedConnection, setActiveConnectionId, toast])
 
   const handleSkipConnection = useCallback(() => {
     // Allow users to skip if they just want to explore
@@ -169,12 +172,12 @@ export default function StepConnection({ wizardState, updateWizardState, onCompl
             sx={{
               flex: 1,
               border: 2,
-              borderColor: selectedId === DEMO_CONNECTION.id ? (theme) => theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100] : 'divider',
-              bgcolor: selectedId === DEMO_CONNECTION.id ? (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : figmaGrey[200] : 'transparent',
+              borderColor: selectedId === DEMO_CONNECTION.id ? (theme) => theme.palette.mode === 'dark' ? neutral[500] : neutral[700] : 'divider',
+              bgcolor: selectedId === DEMO_CONNECTION.id ? (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : neutral[50] : 'transparent',
               transition: 'all 0.2s',
               '&:hover': {
-                borderColor: (theme) => theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
-                bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : figmaGrey[200],
+                borderColor: (theme) => theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
+                bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : neutral[50],
               },
             }}
           >
@@ -187,7 +190,7 @@ export default function StepConnection({ wizardState, updateWizardState, onCompl
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                   Explore with sample data — no setup needed
                 </Typography>
-                <Chip label="Recommended for first-time users" size="small" variant="outlined" sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400], color: 'text.secondary' }} />
+                <Chip label="Recommended for first-time users" size="small" variant="outlined" sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[200], color: 'text.secondary' }} />
               </CardContent>
             </CardActionArea>
           </Card>
@@ -223,19 +226,19 @@ export default function StepConnection({ wizardState, updateWizardState, onCompl
         <Chip label="Or connect your own data" size="small" />
       </Divider>
 
-      {savedConnections.length === 0 || savedConnections.every(c => c.isDemo) ? (
+      {normalizedConnections.length === 0 || normalizedConnections.every((c) => c.isDemo) ? (
         <Alert severity="info" sx={{ mb: 3 }}>
           No database connections yet. Add one below or try demo mode above.
         </Alert>
       ) : (
         <Stack spacing={2} sx={{ mb: 3 }}>
-          {savedConnections.map((conn) => (
+          {normalizedConnections.map((conn) => (
             <Card
               key={conn.id}
               variant="outlined"
               sx={{
                 border: 2,
-                borderColor: selectedId === conn.id ? (theme) => theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100] : 'divider',
+                borderColor: selectedId === conn.id ? (theme) => theme.palette.mode === 'dark' ? neutral[500] : neutral[700] : 'divider',
                 transition: 'border-color 0.2s',
               }}
             >
@@ -259,7 +262,7 @@ export default function StepConnection({ wizardState, updateWizardState, onCompl
                       size="small"
                       label={conn.status === 'connected' ? 'Connected' : 'Disconnected'}
                       variant="outlined"
-                      sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400], color: 'text.secondary' }}
+                      sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[200], color: 'text.secondary' }}
                     />
                     {selectedId === conn.id && (
                       <CheckCircleIcon sx={{ color: 'text.secondary' }} />

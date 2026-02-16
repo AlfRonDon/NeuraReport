@@ -39,12 +39,13 @@ async def seed_knowledge_library():
 
     # Create tags
     tags = [
-        TagCreate(name="Important", color="#ef4444", description="High priority items"),
-        TagCreate(name="Finance", color="#3b82f6", description="Financial documents"),
-        TagCreate(name="Marketing", color="#8b5cf6", description="Marketing materials"),
-        TagCreate(name="Technical", color="#10b981", description="Technical documentation"),
-        TagCreate(name="Legal", color="#f59e0b", description="Legal documents"),
-        TagCreate(name="HR", color="#ec4899", description="Human resources"),
+        # Tag colors use secondary palette 500 values per Design System v4/v5
+        TagCreate(name="Important", color="#F43F5E", description="High priority items"),       # Rose 500
+        TagCreate(name="Finance", color="#64748B", description="Financial documents"),         # Slate 500
+        TagCreate(name="Marketing", color="#8B5CF6", description="Marketing materials"),       # Violet 500
+        TagCreate(name="Technical", color="#06B6D4", description="Technical documentation"),   # Cyan 500
+        TagCreate(name="Legal", color="#14B8A6", description="Legal documents"),               # Teal 500
+        TagCreate(name="HR", color="#D946EF", description="Human resources"),                  # Fuchsia 500
     ]
 
     created_tags = []
@@ -288,6 +289,7 @@ async def seed_templates():
             "name": "Monthly Sales Report",
             "description": "Standard monthly sales report with revenue breakdown and trends",
             "category": "Sales",
+            "status": "draft",
             "created_at": _days_ago(90).isoformat(),
             "updated_at": _days_ago(5).isoformat(),
             "is_favorite": True,
@@ -298,6 +300,7 @@ async def seed_templates():
             "name": "Executive Dashboard",
             "description": "High-level KPI dashboard for executive team review",
             "category": "Executive",
+            "status": "draft",
             "created_at": _days_ago(120).isoformat(),
             "updated_at": _days_ago(3).isoformat(),
             "is_favorite": True,
@@ -308,6 +311,7 @@ async def seed_templates():
             "name": "Customer Churn Analysis",
             "description": "Customer retention and churn metrics with cohort analysis",
             "category": "Analytics",
+            "status": "draft",
             "created_at": _days_ago(45).isoformat(),
             "updated_at": _days_ago(10).isoformat(),
             "is_favorite": False,
@@ -318,6 +322,7 @@ async def seed_templates():
             "name": "Marketing Campaign ROI",
             "description": "Campaign performance metrics and ROI calculations",
             "category": "Marketing",
+            "status": "draft",
             "created_at": _days_ago(30).isoformat(),
             "updated_at": _days_ago(7).isoformat(),
             "is_favorite": False,
@@ -328,6 +333,7 @@ async def seed_templates():
             "name": "Inventory Status Report",
             "description": "Current inventory levels, reorder points, and stock alerts",
             "category": "Operations",
+            "status": "draft",
             "created_at": _days_ago(60).isoformat(),
             "updated_at": _days_ago(1).isoformat(),
             "is_favorite": False,

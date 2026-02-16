@@ -44,7 +44,7 @@ import {
   Fullscreen as FullscreenIcon,
   ContentCopy as CopyIcon,
 } from '@mui/icons-material'
-import { figmaGrey } from '@/app/theme'
+import { neutral, palette } from '@/app/theme'
 
 // =============================================================================
 // STYLED COMPONENTS
@@ -79,20 +79,20 @@ const StepCard = styled(Paper, {
   marginBottom: theme.spacing(1),
   border: `1px solid ${
     status === 'success'
-      ? alpha(theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100], 0.3)
+      ? alpha(theme.palette.mode === 'dark' ? neutral[500] : neutral[700], 0.3)
       : status === 'error'
-      ? alpha(theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200], 0.3)
+      ? alpha(theme.palette.mode === 'dark' ? neutral[700] : neutral[900], 0.3)
       : status === 'running'
-      ? alpha(theme.palette.mode === 'dark' ? figmaGrey[900] : figmaGrey[1000], 0.3)
+      ? alpha(theme.palette.mode === 'dark' ? neutral[500] : neutral[500], 0.3)
       : alpha(theme.palette.divider, 0.2)
   }`,
   backgroundColor:
     status === 'success'
-      ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : figmaGrey[200])
+      ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : neutral[50])
       : status === 'error'
-      ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : figmaGrey[200])
+      ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : neutral[50])
       : status === 'running'
-      ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : figmaGrey[200])
+      ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : neutral[50])
       : 'transparent',
   transition: 'all 0.2s ease',
 }))
@@ -114,28 +114,28 @@ const LogLine = styled(Box, {
   padding: theme.spacing(0.25, 0),
   borderLeft: `2px solid ${
     level === 'error'
-      ? figmaGrey[1100]
+      ? neutral[700]
       : level === 'warning'
-      ? figmaGrey[1000]
+      ? neutral[500]
       : level === 'success'
-      ? figmaGrey[900]
+      ? neutral[500]
       : 'transparent'
   }`,
   paddingLeft: level ? theme.spacing(1) : 0,
   color:
     level === 'error'
-      ? figmaGrey[600]
+      ? neutral[300]
       : level === 'warning'
-      ? figmaGrey[700]
+      ? neutral[300]
       : level === 'success'
-      ? figmaGrey[600]
+      ? neutral[300]
       : alpha(theme.palette.common.white, 0.8),
 }))
 
 const StatusChip = styled(Chip)(({ theme }) => ({
   borderRadius: 4,
   fontWeight: 600,
-  fontSize: '0.7rem',
+  fontSize: '12px',
 }))
 
 const TimelineConnector = styled(Box)(({ theme }) => ({
@@ -228,13 +228,13 @@ function ExecutionStep({ step, isLast, onRetry }) {
                     label={formatDuration(step.duration)}
                     size="small"
                     variant="outlined"
-                    sx={{ height: 20, fontSize: '0.65rem' }}
+                    sx={{ height: 20, fontSize: '10px' }}
                   />
                 )}
                 <StatusChip
                   label={statusConfig.label}
                   size="small"
-                  sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400], color: 'text.secondary' }}
+                  sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[200], color: 'text.secondary' }}
                 />
               </Stack>
             </Stack>
@@ -256,7 +256,7 @@ function ExecutionStep({ step, isLast, onRetry }) {
                 size="small"
                 onClick={() => setExpanded(!expanded)}
                 endIcon={expanded ? <CollapseIcon /> : <ExpandIcon />}
-                sx={{ mt: 1, fontSize: '0.7rem', textTransform: 'none' }}
+                sx={{ mt: 1, fontSize: '12px', textTransform: 'none' }}
               >
                 {expanded ? 'Hide Details' : 'Show Details'}
               </Button>
@@ -442,7 +442,7 @@ export default function ExecutionViewer({
             <StatusChip
               label={overallStatus.label}
               size="small"
-              sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400], color: 'text.secondary' }}
+              sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[200], color: 'text.secondary' }}
             />
             <Typography variant="caption" color="text.secondary">
               {formatTimestamp(execution.startedAt)} • Duration: {formatDuration(execution.duration)}

@@ -4,6 +4,15 @@
  */
 import { api } from './client';
 
+function asArray(payload, keys = []) {
+  if (Array.isArray(payload)) return payload;
+  if (!payload || typeof payload !== 'object') return [];
+  for (const key of keys) {
+    if (Array.isArray(payload[key])) return payload[key];
+  }
+  return [];
+}
+
 // ============================================
 // Dashboard CRUD
 // ============================================
@@ -30,7 +39,15 @@ export async function deleteDashboard(dashboardId) {
 
 export async function listDashboards(params = {}) {
   const response = await api.get('/dashboards', { params });
-  return response.data;
+  const payload = response.data;
+  if (Array.isArray(payload)) {
+    return { dashboards: payload, total: payload.length };
+  }
+  if (payload && typeof payload === 'object') {
+    const dashboards = asArray(payload, ['dashboards', 'items', 'results']);
+    return { ...payload, dashboards, total: payload.total ?? dashboards.length };
+  }
+  return { dashboards: [], total: 0 };
 }
 
 // ============================================
@@ -116,6 +133,20 @@ export async function deleteFilter(dashboardId, filterId) {
 }
 
 export async function setVariable(dashboardId, variableName, value) {
+  if (variableName && typeof variableName === 'object') {
+    const variable = variableName;
+    const resolvedName = variable.name || variable.variable_name || variable.key;
+    const resolvedValue = Object.prototype.hasOwnProperty.call(variable, 'value')
+      ? variable.value
+      : variable.current_value;
+    if (!resolvedName) {
+      throw new Error('setVariable requires a variable name');
+    }
+    const response = await api.put(`/dashboards/${dashboardId}/variables/${resolvedName}`, {
+      value: resolvedValue,
+    });
+    return response.data;
+  }
   const response = await api.put(`/dashboards/${dashboardId}/variables/${variableName}`, { value });
   return response.data;
 }
@@ -169,7 +200,15 @@ export async function runWhatIfSimulation(dashboardId, scenarios) {
 
 export async function listDashboardTemplates(params = {}) {
   const response = await api.get('/dashboards/templates', { params });
-  return response.data;
+  const payload = response.data;
+  if (Array.isArray(payload)) {
+    return { templates: payload, total: payload.length };
+  }
+  if (payload && typeof payload === 'object') {
+    const templates = asArray(payload, ['templates', 'dashboards', 'items', 'results']);
+    return { ...payload, templates, total: payload.total ?? templates.length };
+  }
+  return { templates: [], total: 0 };
 }
 
 export async function createFromTemplate(templateId, name) {

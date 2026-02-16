@@ -61,10 +61,10 @@ import CloudUploadIcon from '@mui/icons-material/CloudUpload'
 import { useAppStore } from '../stores'
 import NotificationCenter from './NotificationCenter'
 
-// Import Figma design tokens
+// Import design tokens
 import {
-  figmaGrey,
-  figmaAccent,
+  neutral,
+  primary,
   figmaSpacing,
   fontFamilyHeading,
   fontFamilyUI,
@@ -76,7 +76,7 @@ import {
 // =============================================================================
 const FIGMA_SIDEBAR = {
   width: figmaSpacing.sidebarWidth,  // 250px
-  background: figmaGrey[200],         // #F9F9F8
+  background: neutral[50],         // #F9F9F8
   padding: { horizontal: 16, vertical: 20 },
   borderRadius: 8,
   itemHeight: 40,
@@ -118,8 +118,7 @@ const glow = keyframes`
 // NAVIGATION STRUCTURE
 // =============================================================================
 
-// Simplified, user-friendly navigation structure
-// Reduced from 30+ items to essential items with clear labels
+// Full navigation structure — all pages visible
 const NAV_ITEMS = [
   {
     section: 'Home',
@@ -131,15 +130,23 @@ const NAV_ITEMS = [
     section: 'Reports',
     items: [
       { key: 'reports', label: 'My Reports', icon: AssessmentIcon, path: '/reports', description: 'View and download reports' },
+      { key: 'history', label: 'History', icon: HistoryIcon, path: '/history', description: 'Past report runs' },
       { key: 'templates', label: 'Templates', icon: DescriptionIcon, path: '/templates', description: 'Report designs & layouts' },
+      { key: 'design', label: 'Brand Kit', icon: PaletteIcon, path: '/design', description: 'Colors, fonts & logos' },
       { key: 'jobs', label: 'Running Jobs', icon: WorkIcon, path: '/jobs', badge: true, description: 'Report generation progress' },
       { key: 'schedules', label: 'Schedules', icon: ScheduleIcon, path: '/schedules', description: 'Automated report runs' },
     ],
   },
   {
     section: 'Data',
+    collapsible: true,
     items: [
       { key: 'connections', label: 'Data Sources', icon: StorageIcon, path: '/connections', description: 'Database connections' },
+      { key: 'connectors', label: 'Connectors', icon: CableIcon, path: '/connectors', description: 'Cloud & DB connectors' },
+      { key: 'ingestion', label: 'Ingestion', icon: CloudUploadIcon, path: '/ingestion', description: 'Import documents & data' },
+      { key: 'query', label: 'Query Builder', icon: QuestionAnswerIcon, path: '/query', description: 'Natural language to SQL' },
+      { key: 'enrichment', label: 'Enrichment', icon: AutoFixHighIcon, path: '/enrichment', description: 'AI data enrichment' },
+      { key: 'federation', label: 'Combine Sources', icon: JoinInnerIcon, path: '/federation', description: 'Cross-database federation' },
       { key: 'search', label: 'Search', icon: SearchIcon, path: '/search', description: 'Find anything' },
     ],
   },
@@ -147,9 +154,12 @@ const NAV_ITEMS = [
     section: 'AI Assistant',
     collapsible: true,
     items: [
-      { key: 'docqa', label: 'Chat with Docs', icon: ChatIcon, path: '/docqa', highlight: true, description: 'Ask questions about your documents' },
+      { key: 'analyze', label: 'Analyze', icon: AutoAwesomeIcon, path: '/analyze', highlight: true, description: 'AI document analysis & charts' },
+      { key: 'docqa', label: 'Chat with Docs', icon: ChatIcon, path: '/docqa', description: 'Ask questions about documents' },
       { key: 'agents', label: 'AI Agents', icon: SmartToyIcon, path: '/agents', description: 'Research, analyze, write' },
       { key: 'knowledge', label: 'Knowledge Base', icon: LibraryBooksIcon, path: '/knowledge', description: 'Document library' },
+      { key: 'summary', label: 'Summarize', icon: SummarizeIcon, path: '/summary', description: 'Executive summaries' },
+      { key: 'synthesis', label: 'Synthesis', icon: MergeIcon, path: '/synthesis', description: 'Multi-document synthesis' },
     ],
   },
   {
@@ -159,34 +169,23 @@ const NAV_ITEMS = [
       { key: 'documents', label: 'Documents', icon: EditNoteIcon, path: '/documents', description: 'Write with AI help' },
       { key: 'spreadsheets', label: 'Spreadsheets', icon: TableChartIcon, path: '/spreadsheets', description: 'Data & formulas' },
       { key: 'dashboard-builder', label: 'Dashboards', icon: DashboardCustomizeIcon, path: '/dashboard-builder', description: 'Visual analytics' },
+      { key: 'visualization', label: 'Diagrams', icon: BubbleChartIcon, path: '/visualization', description: 'Flowcharts, mindmaps & more' },
+      { key: 'workflows', label: 'Workflows', icon: AccountTreeIcon, path: '/workflows', description: 'Automation builder' },
     ],
   },
   {
-    section: 'Settings',
+    section: 'Admin',
+    collapsible: true,
     items: [
       { key: 'settings', label: 'Settings', icon: SettingsIcon, path: '/settings', description: 'Preferences & account' },
+      { key: 'activity', label: 'Activity Log', icon: TimelineIcon, path: '/activity', description: 'User & system events' },
+      { key: 'stats', label: 'Usage Stats', icon: BarChartIcon, path: '/stats', description: 'Analytics & metrics' },
+      { key: 'ops', label: 'Ops Console', icon: AdminPanelSettingsIcon, path: '/ops', description: 'System administration' },
     ],
   },
 ]
 
-// Legacy routes map for backward compatibility - these redirect to main sections
-const LEGACY_ROUTES = {
-  '/connectors': '/connections',
-  '/ingestion': '/connections',
-  '/design': '/templates',
-  '/query': '/connections',
-  '/enrichment': '/connections',
-  '/federation': '/connections',
-  '/synthesis': '/knowledge',
-  '/summary': '/docqa',
-  '/analyze': '/reports',
-  '/history': '/reports',
-  '/stats': '/settings',
-  '/ops': '/settings',
-  '/activity': '/settings',
-  '/visualization': '/dashboard-builder',
-  '/workflows': '/dashboard-builder',
-}
+// No legacy routes — all pages are now in the sidebar
 
 // =============================================================================
 // STYLED COMPONENTS
@@ -198,7 +197,7 @@ const SidebarContainer = styled(Box)(({ theme }) => ({
   height: '100%',
   width: FIGMA_SIDEBAR.width,  // 250px from Figma
   // Sidebar background from Figma - Grey/200
-  backgroundColor: theme.palette.mode === 'dark' ? '#1A1A1A' : figmaGrey[200],
+  backgroundColor: theme.palette.mode === 'dark' ? palette.scale[1000] : neutral[50],
   borderRight: 'none',  // No border per Figma design
   borderRadius: FIGMA_SIDEBAR.borderRadius,  // 8px from Figma
   padding: `${FIGMA_SIDEBAR.padding.vertical}px ${FIGMA_SIDEBAR.padding.horizontal}px`,
@@ -241,7 +240,7 @@ const NewReportButton = styled(Box)(({ theme }) => ({
   height: 40,
   // Match nav item style from Figma
   backgroundColor: 'transparent',
-  color: theme.palette.mode === 'dark' ? figmaGrey[900] : figmaGrey[1100],
+  color: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
   cursor: 'pointer',
   transition: 'background-color 0.15s ease',
   width: '100%',
@@ -251,7 +250,7 @@ const NewReportButton = styled(Box)(({ theme }) => ({
   '&:hover': {
     backgroundColor: theme.palette.mode === 'dark'
       ? alpha(theme.palette.common.white, 0.04)
-      : figmaGrey[300],  // Grey/300
+      : neutral[100],  // Grey/300
   },
 
   '&:focus-visible': {
@@ -306,25 +305,25 @@ const NavItemButton = styled(Box, {
   ...(active && {
     backgroundColor: theme.palette.mode === 'dark'
       ? alpha(theme.palette.common.white, 0.08)
-      : figmaGrey[400],  // #E9E8E6 from Figma
+      : neutral[200],  // #E9E8E6 from Figma
     color: theme.palette.mode === 'dark'
-      ? figmaGrey[300]
-      : figmaGrey[1200],  // #21201C from Figma
+      ? neutral[100]
+      : neutral[900],  // #21201C from Figma
   }),
 
   // Inactive state - Grey/1100 text
   ...(!active && {
     color: theme.palette.mode === 'dark'
-      ? figmaGrey[900]  // #8D8D86
-      : figmaGrey[1100],  // #63635E from Figma
+      ? neutral[500]  // #8D8D86
+      : neutral[700],  // #63635E from Figma
 
     '&:hover': {
       backgroundColor: theme.palette.mode === 'dark'
         ? alpha(theme.palette.common.white, 0.04)
-        : figmaGrey[300],  // #F1F0EF on hover
+        : neutral[100],  // #F1F0EF on hover
       color: theme.palette.mode === 'dark'
-        ? figmaGrey[300]
-        : figmaGrey[1200],  // #21201C on hover
+        ? neutral[100]
+        : neutral[900],  // #21201C on hover
     },
   }),
 
@@ -335,7 +334,7 @@ const NavItemButton = styled(Box, {
     '&:hover': {
       backgroundColor: theme.palette.mode === 'dark'
         ? alpha(theme.palette.common.white, 0.04)
-        : figmaGrey[300],
+        : neutral[100],
     },
   }),
 
@@ -361,8 +360,8 @@ const NavIcon = styled(Box, {
     fontSize: FIGMA_SIDEBAR.iconSize,  // 20px from Figma
     // Icon color from Figma - Grey/900 for inactive, Grey/1100 for active
     color: active
-      ? (theme.palette.mode === 'dark' ? figmaGrey[300] : figmaGrey[1100])
-      : (theme.palette.mode === 'dark' ? figmaGrey[900] : figmaGrey[900]),
+      ? (theme.palette.mode === 'dark' ? neutral[100] : neutral[700])
+      : (theme.palette.mode === 'dark' ? neutral[500] : neutral[500]),
   },
 }))
 
@@ -372,16 +371,16 @@ const CollapseButton = styled(IconButton)(({ theme }) => ({
   top: 72,
   width: 24,
   height: 24,
-  backgroundColor: theme.palette.mode === 'dark' ? figmaGrey[1200] : '#fff',
-  border: `1px solid ${theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[500]}`,  // Grey/500
+  backgroundColor: theme.palette.mode === 'dark' ? neutral[900] : theme.palette.common.white,
+  border: `1px solid ${theme.palette.mode === 'dark' ? neutral[700] : neutral[200]}`,  // Grey/500
   boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
   transition: 'all 0.2s ease',
   zIndex: 1,
-  color: theme.palette.mode === 'dark' ? figmaGrey[900] : figmaGrey[1100],
+  color: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
 
   '&:hover': {
-    backgroundColor: theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[400],  // Grey/400
-    color: theme.palette.mode === 'dark' ? figmaGrey[300] : figmaGrey[1200],  // Grey/1200
+    backgroundColor: theme.palette.mode === 'dark' ? neutral[700] : neutral[200],  // Grey/400
+    color: theme.palette.mode === 'dark' ? neutral[100] : neutral[900],  // Grey/1200
   },
 
   '& svg': {
@@ -399,9 +398,10 @@ export default function Sidebar({ width, collapsed, mobileOpen, onClose, onToggl
   const location = useLocation()
   const theme = useTheme()
   const [expandedSections, setExpandedSections] = useState({
+    Data: true,
+    'AI Assistant': true,
     Create: true,
-    Setup: true,
-    'AI Tools': true,
+    Admin: false,
   })
 
   const activeJobs = useAppStore((s) => {
@@ -487,7 +487,7 @@ export default function Sidebar({ width, collapsed, mobileOpen, onClose, onToggl
                 fontWeight: 500,
                 lineHeight: 'normal',
                 letterSpacing: 0,
-                color: theme.palette.mode === 'dark' ? figmaGrey[300] : figmaGrey[1200],
+                color: theme.palette.mode === 'dark' ? neutral[100] : neutral[900],
               }}
             >
               NeuraReport
@@ -565,11 +565,11 @@ export default function Sidebar({ width, collapsed, mobileOpen, onClose, onToggl
                     sx={{
                       // FIGMA: Small Text style - Inter Medium
                       fontFamily: fontFamilyUI,
-                      fontSize: '11px',
+                      fontSize: '10px',
                       fontWeight: 600,
                       letterSpacing: '0.05em',
                       textTransform: 'uppercase',
-                      color: theme.palette.mode === 'dark' ? figmaGrey[900] : figmaGrey[1100],
+                      color: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
                     }}
                   >
                     {section.section}
@@ -621,10 +621,10 @@ export default function Sidebar({ width, collapsed, mobileOpen, onClose, onToggl
                               invisible={!badgeContent}
                               sx={{
                                 '& .MuiBadge-badge': {
-                                  bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400],
+                                  bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[200],
                                   color: 'text.secondary',
-                                  fontSize: '0.6rem',
-                                  fontWeight: 700,
+                                  fontSize: '10px',
+                                  fontWeight: 600,
                                   minWidth: 14,
                                   height: 14,
                                   padding: '0 3px',
@@ -692,14 +692,14 @@ export default function Sidebar({ width, collapsed, mobileOpen, onClose, onToggl
               gap: 1.5,
               p: 1,
               borderRadius: 1,
-              bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : figmaGrey[400],
+              bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : neutral[200],
             }}
           >
             <Avatar
               sx={{
                 width: 32,
                 height: 32,
-                bgcolor: theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[900],
+                bgcolor: theme.palette.mode === 'dark' ? neutral[700] : neutral[500],
                 fontSize: '0.75rem',
                 fontWeight: 600,
               }}
@@ -711,7 +711,7 @@ export default function Sidebar({ width, collapsed, mobileOpen, onClose, onToggl
                 sx={{
                   fontSize: '12px',
                   fontWeight: 500,
-                  color: theme.palette.mode === 'dark' ? figmaGrey[300] : figmaGrey[1200],
+                  color: theme.palette.mode === 'dark' ? neutral[100] : neutral[900],
                 }}
                 noWrap
               >
@@ -720,7 +720,7 @@ export default function Sidebar({ width, collapsed, mobileOpen, onClose, onToggl
               <Typography
                 sx={{
                   fontSize: '10px',
-                  color: theme.palette.mode === 'dark' ? figmaGrey[900] : figmaGrey[1100],
+                  color: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
                   display: 'block'
                 }}
               >
@@ -733,7 +733,7 @@ export default function Sidebar({ width, collapsed, mobileOpen, onClose, onToggl
             sx={{
               width: 32,
               height: 32,
-              bgcolor: theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[900],
+              bgcolor: theme.palette.mode === 'dark' ? neutral[700] : neutral[500],
               fontSize: '0.75rem',
               fontWeight: 600,
               mx: 'auto',

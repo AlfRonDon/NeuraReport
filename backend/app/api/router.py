@@ -46,6 +46,7 @@ from .routes import (
     synthesis,
     templates,
     visualization,
+    widgets,
     workflows,
 )
 from backend.app.api.analyze import router as analyze_router
@@ -122,6 +123,9 @@ def _build_v1_router() -> APIRouter:
 
     # Visualization and diagrams
     v1.include_router(visualization.router, prefix="/visualization", tags=["visualization"])
+
+    # Widget Intelligence
+    v1.include_router(widgets.router, prefix="/widgets", tags=["widgets"])
 
     # AI Agents
     v1.include_router(agents.router, prefix="/agents", tags=["agents"])

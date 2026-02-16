@@ -33,7 +33,7 @@ import {
   alpha,
   styled,
 } from '@mui/material'
-import { figmaGrey } from '@/app/theme'
+import { neutral, palette, primary, secondary, status as statusColors } from '@/app/theme'
 import {
   Close as CloseIcon,
   Add as AddIcon,
@@ -90,7 +90,7 @@ const RuleCard = styled(Paper, {
   opacity: isActive ? 1 : 0.7,
   transition: 'all 0.15s ease',
   '&:hover': {
-    borderColor: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
+    borderColor: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
   },
 }))
 
@@ -179,13 +179,14 @@ const CONDITIONS = {
   ],
 }
 
+// Preset styles use secondary palette per Design System v4/v5
 const PRESET_STYLES = [
-  { label: 'Red Fill', fill: '#FFCDD2', text: '#C62828' },
-  { label: 'Green Fill', fill: '#C8E6C9', text: '#2E7D32' },
-  { label: 'Yellow Fill', fill: '#FFF9C4', text: '#F57F17' },
-  { label: 'Blue Fill', fill: '#BBDEFB', text: '#1565C0' },
-  { label: 'Orange Fill', fill: '#FFE0B2', text: '#E65100' },
-  { label: 'Purple Fill', fill: '#E1BEE7', text: '#6A1B9A' },
+  { label: 'Red Fill', fill: secondary.rose[100], text: secondary.rose[700] },
+  { label: 'Green Fill', fill: secondary.emerald[100], text: secondary.emerald[700] },
+  { label: 'Yellow Fill', fill: secondary.stone[100], text: secondary.stone[700] },
+  { label: 'Blue Fill', fill: secondary.cyan[100], text: secondary.cyan[700] },
+  { label: 'Orange Fill', fill: primary[100], text: secondary.stone[600] },
+  { label: 'Purple Fill', fill: secondary.violet[100], text: secondary.violet[700] },
 ]
 
 // =============================================================================
@@ -200,8 +201,8 @@ function RuleEditorDialog({ open, rule, onClose, onSave }) {
     value1: '',
     value2: '',
     format: {
-      fill: '#FFCDD2',
-      text: '#C62828',
+      fill: secondary.rose[100],
+      text: secondary.rose[700],
       bold: false,
       italic: false,
     },
@@ -399,7 +400,7 @@ function RuleEditorDialog({ open, rule, onClose, onSave }) {
               sx={{
                 width: '100%',
                 height: 40,
-                fontWeight: localRule.format.bold ? 700 : 400,
+                fontWeight: localRule.format.bold ? 600 : 400,
                 fontStyle: localRule.format.italic ? 'italic' : 'normal',
               }}
             >
@@ -562,7 +563,7 @@ export default function ConditionalFormatPanel({
                         sx={{
                           width: 24,
                           height: 24,
-                          fontSize: '0.7rem',
+                          fontSize: '12px',
                           '& .MuiChip-label': { px: 0 },
                         }}
                       />
@@ -594,7 +595,7 @@ export default function ConditionalFormatPanel({
                       bgcolor={rule.format?.fill}
                       textcolor={rule.format?.text}
                       sx={{
-                        fontWeight: rule.format?.bold ? 700 : 400,
+                        fontWeight: rule.format?.bold ? 600 : 400,
                         fontStyle: rule.format?.italic ? 'italic' : 'normal',
                       }}
                     >

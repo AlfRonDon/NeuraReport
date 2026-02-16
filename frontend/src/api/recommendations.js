@@ -13,7 +13,19 @@ export async function getRecommendations({ dataDescription, dataColumns, industr
     industry,
     output_format: outputFormat,
   });
-  return response.data;
+  const payload = response.data;
+  if (Array.isArray(payload)) {
+    return { recommendations: payload };
+  }
+  if (payload && typeof payload === 'object') {
+    return {
+      ...payload,
+      recommendations: Array.isArray(payload.recommendations)
+        ? payload.recommendations
+        : (Array.isArray(payload.templates) ? payload.templates : []),
+    };
+  }
+  return { recommendations: [] };
 }
 
 /**

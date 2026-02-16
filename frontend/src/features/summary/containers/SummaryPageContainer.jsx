@@ -45,7 +45,7 @@ import { useInteraction, InteractionType, Reversibility, useNavigateInteraction 
 import ConfirmModal from '@/components/Modal/ConfirmModal';
 import AiUsageNotice from '@/components/ai/AiUsageNotice';
 import ConnectionSelector from '@/components/common/ConnectionSelector';
-import { figmaGrey } from '@/app/theme';
+import { neutral, palette } from '@/app/theme';
 
 const TONE_OPTIONS = [
   { value: 'formal', label: 'Formal', description: 'Professional, business-appropriate tone' },
@@ -497,7 +497,7 @@ export default function SummaryPage() {
                     label={focus}
                     size="small"
                     onDelete={() => handleRemoveFocus(focus)}
-                    sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400], color: 'text.secondary' }}
+                    sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[200], color: 'text.secondary' }}
                   />
                 ))}
               </Box>

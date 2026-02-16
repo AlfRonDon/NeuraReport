@@ -1,6 +1,7 @@
 /**
- * Button Component - FIGMA Design System
- * Height: 40px, Border-radius: 8px, Font: Lato Medium 14px
+ * Button Component - Design System v4
+ * Height: 40px, Border-radius: 8px, Font: Geist Sans Medium 14px (Label Medium)
+ * Primary: #D97757 bg, #B45309 hover, Disabled: Neutral 200 bg / Neutral 400 text
  */
 import { forwardRef } from 'react'
 import { Button as MuiButton, CircularProgress } from '@mui/material'

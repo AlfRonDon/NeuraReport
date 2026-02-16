@@ -45,7 +45,7 @@ import useConnectorStore from '@/stores/connectorStore'
 import { useAppStore } from '@/stores'
 import { useToast } from '@/components/ToastProvider'
 import { useInteraction, InteractionType, Reversibility } from '@/components/ux/governance'
-import { figmaGrey } from '@/app/theme'
+import { neutral, palette, secondary } from '@/app/theme'
 
 // =============================================================================
 // STYLED COMPONENTS
@@ -95,11 +95,11 @@ const StatusChip = styled(Chip)(({ theme, status }) => ({
   borderRadius: 6,
   fontWeight: 500,
   ...(status === 'connected' && {
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400],
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[200],
     color: theme.palette.text.secondary,
   }),
   ...(status === 'error' && {
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
     color: theme.palette.text.secondary,
   }),
 }))
@@ -119,23 +119,23 @@ const CONNECTOR_CATEGORIES = {
     label: 'Databases',
     icon: DatabaseIcon,
     connectors: [
-      { id: 'postgresql', name: 'PostgreSQL', color: '#336791' },
-      { id: 'mysql', name: 'MySQL', color: '#4479A1' },
-      { id: 'mongodb', name: 'MongoDB', color: '#47A248' },
-      { id: 'sqlserver', name: 'SQL Server', color: '#CC2927' },
-      { id: 'bigquery', name: 'BigQuery', color: '#4285F4' },
-      { id: 'snowflake', name: 'Snowflake', color: '#29B5E8' },
+      { id: 'postgresql', name: 'PostgreSQL', color: secondary.slate[600] },
+      { id: 'mysql', name: 'MySQL', color: secondary.cyan[700] },
+      { id: 'mongodb', name: 'MongoDB', color: secondary.emerald[500] },
+      { id: 'sqlserver', name: 'SQL Server', color: secondary.rose[600] },
+      { id: 'bigquery', name: 'BigQuery', color: secondary.cyan[500] },
+      { id: 'snowflake', name: 'Snowflake', color: secondary.cyan[400] },
     ],
   },
   cloud_storage: {
     label: 'Cloud Storage',
     icon: CloudIcon,
     connectors: [
-      { id: 'google_drive', name: 'Google Drive', color: '#4285F4' },
-      { id: 'dropbox', name: 'Dropbox', color: '#0061FF' },
-      { id: 's3', name: 'Amazon S3', color: '#FF9900' },
-      { id: 'azure_blob', name: 'Azure Blob', color: '#0089D6' },
-      { id: 'onedrive', name: 'OneDrive', color: '#0078D4' },
+      { id: 'google_drive', name: 'Google Drive', color: secondary.cyan[500] },
+      { id: 'dropbox', name: 'Dropbox', color: secondary.violet[500] },
+      { id: 's3', name: 'Amazon S3', color: secondary.fuchsia[500] },
+      { id: 'azure_blob', name: 'Azure Blob', color: secondary.teal[500] },
+      { id: 'onedrive', name: 'OneDrive', color: secondary.slate[500] },
     ],
   },
 }
@@ -363,7 +363,7 @@ export default function ConnectorsPage() {
       <Header>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Box>
-            <Typography variant="h5" sx={{ fontWeight: 700 }}>
+            <Typography variant="h5" sx={{ fontWeight: 600 }}>
               Data Connectors
             </Typography>
             <Typography variant="body2" color="text.secondary">
@@ -373,7 +373,7 @@ export default function ConnectorsPage() {
           <Chip
             label={`${connections.length} connections`}
             variant="outlined"
-            sx={{ borderColor: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100], color: 'text.secondary' }}
+            sx={{ borderColor: theme.palette.mode === 'dark' ? neutral[500] : neutral[700], color: 'text.secondary' }}
           />
         </Box>
 

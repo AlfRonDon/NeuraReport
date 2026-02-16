@@ -23,7 +23,7 @@ import {
   alpha,
   keyframes,
 } from '@mui/material'
-import { figmaGrey } from '@/app/theme'
+import { neutral, palette } from '@/app/theme'
 import NotificationsIcon from '@mui/icons-material/Notifications'
 import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive'
 import NotificationsOffIcon from '@mui/icons-material/NotificationsOff'
@@ -361,7 +361,7 @@ export default function NotificationCenter() {
             transition: 'all 0.2s ease',
             '&:hover': {
               color: theme.palette.text.primary,
-              bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
+              bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
             },
           }}
         >
@@ -370,9 +370,9 @@ export default function NotificationCenter() {
             max={99}
             sx={{
               '& .MuiBadge-badge': {
-                bgcolor: theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200],
-                color: '#fff',
-                fontSize: '0.65rem',
+                bgcolor: theme.palette.mode === 'dark' ? neutral[700] : neutral[900],
+                color: 'common.white',
+                fontSize: '10px',
                 fontWeight: 600,
                 minWidth: 16,
                 height: 16,
@@ -538,9 +538,9 @@ export default function NotificationCenter() {
                           px: 2,
                           bgcolor: notification.read
                             ? 'transparent'
-                            : (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.03) : figmaGrey[200]),
+                            : (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.03) : neutral[50]),
                           '&:hover': {
-                            bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[300],
+                            bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : neutral[100],
                           },
                         }}
                       >
@@ -563,7 +563,7 @@ export default function NotificationCenter() {
                             >
                               <Typography
                                 sx={{
-                                  fontSize: '0.8125rem',
+                                  fontSize: '14px',
                                   fontWeight: notification.read ? 400 : 600,
                                   color: theme.palette.text.primary,
                                   overflow: 'hidden',
@@ -576,7 +576,7 @@ export default function NotificationCenter() {
                               </Typography>
                               <Typography
                                 sx={{
-                                  fontSize: '0.6875rem',
+                                  fontSize: '12px',
                                   color: theme.palette.text.disabled,
                                   ml: 1,
                                   flexShrink: 0,
@@ -608,7 +608,7 @@ export default function NotificationCenter() {
                               width: 8,
                               height: 8,
                               borderRadius: '50%',
-                              bgcolor: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
+                              bgcolor: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
                               ml: 1,
                               flexShrink: 0,
                             }}

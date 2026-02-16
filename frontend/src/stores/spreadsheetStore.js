@@ -147,7 +147,9 @@ const useSpreadsheetStore = create((set, get) => ({
   deleteSheet: async (spreadsheetId, sheetIndex) => {
     set({ loading: true, error: null });
     try {
-      await spreadsheetsApi.deleteSheet(spreadsheetId, sheetIndex);
+      const currentSpreadsheet = get().currentSpreadsheet;
+      const sheetId = currentSpreadsheet?.sheets?.[sheetIndex]?.id ?? sheetIndex;
+      await spreadsheetsApi.deleteSheet(spreadsheetId, sheetId);
       const state = get();
       if (state.activeSheetIndex >= sheetIndex && state.activeSheetIndex > 0) {
         set({ activeSheetIndex: state.activeSheetIndex - 1 });
@@ -164,7 +166,9 @@ const useSpreadsheetStore = create((set, get) => ({
   renameSheet: async (spreadsheetId, sheetIndex, newName) => {
     set({ saving: true, error: null });
     try {
-      await spreadsheetsApi.renameSheet(spreadsheetId, sheetIndex, newName);
+      const currentSpreadsheet = get().currentSpreadsheet;
+      const sheetId = currentSpreadsheet?.sheets?.[sheetIndex]?.id ?? sheetIndex;
+      await spreadsheetsApi.renameSheet(spreadsheetId, sheetId, newName);
       await get().getSpreadsheet(spreadsheetId);
       set({ saving: false });
       return true;
@@ -177,7 +181,9 @@ const useSpreadsheetStore = create((set, get) => ({
   freezePanes: async (spreadsheetId, sheetIndex, row, col) => {
     set({ saving: true, error: null });
     try {
-      await spreadsheetsApi.freezePanes(spreadsheetId, sheetIndex, row, col);
+      const currentSpreadsheet = get().currentSpreadsheet;
+      const sheetId = currentSpreadsheet?.sheets?.[sheetIndex]?.id ?? sheetIndex;
+      await spreadsheetsApi.freezePanes(spreadsheetId, sheetId, row, col);
       await get().getSpreadsheet(spreadsheetId);
       set({ saving: false });
       return true;

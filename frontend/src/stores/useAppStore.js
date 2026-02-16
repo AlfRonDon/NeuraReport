@@ -175,6 +175,11 @@ const normalizeLastUsed = (payload, state) => {
   return { next, hasConn, hasTpl }
 }
 
+const sanitizeConnections = (connections) => {
+  if (!Array.isArray(connections)) return []
+  return connections.filter((conn) => conn && typeof conn === 'object' && conn.id)
+}
+
 export const useAppStore = create((set, get) => ({
   // Demo mode
   demoMode: false,
@@ -233,7 +238,7 @@ export const useAppStore = create((set, get) => ({
   // Saved connections and active selection
   savedConnections: [], // [{ id, name, db_type, status, lastConnected, summary }]
   setSavedConnections: (connections) =>
-    set({ savedConnections: Array.isArray(connections) ? connections : [] }),
+    set({ savedConnections: sanitizeConnections(connections) }),
   addSavedConnection: (conn) =>
     set((state) => {
       const incoming = conn?.id ? conn : { ...conn, id: conn?.id || `conn_${Date.now()}` }

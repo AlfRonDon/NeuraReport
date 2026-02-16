@@ -4,6 +4,35 @@
 import { create } from 'zustand';
 import * as knowledgeApi from '../api/knowledge';
 
+const normalizeSearchResults = (response) => {
+  const rows = Array.isArray(response?.results) ? response.results : [];
+  return rows
+    .map((row) => {
+      const doc = row?.document && typeof row.document === 'object' ? row.document : row;
+      if (!doc || typeof doc !== 'object') return null;
+      return {
+        ...doc,
+        _score: row?.score,
+        _highlights: Array.isArray(row?.highlights) ? row.highlights : [],
+      };
+    })
+    .filter(Boolean);
+};
+
+const normalizeRelatedDocuments = (response) => {
+  const rows = Array.isArray(response?.related) ? response.related : [];
+  return rows
+    .map((row) => row?.document)
+    .filter((doc) => doc && typeof doc === 'object');
+};
+
+const normalizeFaq = (response) => {
+  if (Array.isArray(response?.faq?.items)) return response.faq.items;
+  if (Array.isArray(response?.items)) return response.items;
+  if (Array.isArray(response?.faq)) return response.faq;
+  return [];
+};
+
 const useKnowledgeStore = create((set, get) => ({
   // State
   documents: [],
@@ -294,7 +323,7 @@ const useKnowledgeStore = create((set, get) => ({
     set({ searching: true, error: null });
     try {
       const response = await knowledgeApi.searchDocuments(query, options);
-      set({ searchResults: response.results || [], searching: false });
+      set({ searchResults: normalizeSearchResults(response), searching: false });
       return response;
     } catch (err) {
       set({ error: err.message, searching: false });
@@ -306,7 +335,7 @@ const useKnowledgeStore = create((set, get) => ({
     set({ searching: true, error: null });
     try {
       const response = await knowledgeApi.semanticSearch(query, options);
-      set({ searchResults: response.results || [], searching: false });
+      set({ searchResults: normalizeSearchResults(response), searching: false });
       return response;
     } catch (err) {
       set({ error: err.message, searching: false });
@@ -333,7 +362,7 @@ const useKnowledgeStore = create((set, get) => ({
     set({ loading: true, error: null });
     try {
       const related = await knowledgeApi.findRelated(documentId, options);
-      set({ relatedDocuments: related || [], loading: false });
+      set({ relatedDocuments: normalizeRelatedDocuments(related), loading: false });
       return related;
     } catch (err) {
       set({ error: err.message, loading: false });
@@ -356,9 +385,9 @@ const useKnowledgeStore = create((set, get) => ({
   generateFaq: async (options = {}) => {
     set({ loading: true, error: null });
     try {
-      const faq = await knowledgeApi.generateFaq(options);
-      set({ faq: faq || [], loading: false });
-      return faq;
+      const response = await knowledgeApi.generateFaq(options);
+      set({ faq: normalizeFaq(response), loading: false });
+      return response;
     } catch (err) {
       set({ error: err.message, loading: false });
       return [];

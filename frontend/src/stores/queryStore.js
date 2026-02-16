@@ -141,8 +141,9 @@ const useQueryStore = create(
 
       fetchQueryHistory: async (connectionId = null) => {
         try {
-          const history = await nl2sqlApi.getQueryHistory(connectionId);
-          set({ queryHistory: history || [] });
+          const response = await nl2sqlApi.getQueryHistory({ connectionId });
+          const history = Array.isArray(response) ? response : (response?.history || []);
+          set({ queryHistory: history });
           return history;
         } catch (err) {
           set({ error: err.message });

@@ -24,7 +24,7 @@ import {
   CheckCircle as SuccessIcon,
   Error as ErrorIcon,
 } from '@mui/icons-material'
-import { figmaGrey } from '@/app/theme'
+import { neutral, palette } from '@/app/theme'
 
 // Animations
 const shimmer = keyframes`
@@ -89,7 +89,7 @@ export function FullPageProgress({
                 size={80}
                 thickness={4}
                 sx={{
-                  color: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
+                  color: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
                 }}
               />
               <Box
@@ -129,9 +129,9 @@ export function FullPageProgress({
                 width: '100%',
                 height: 8,
                 borderRadius: 4,
-                bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
+                bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
                 '& .MuiLinearProgress-bar': {
-                  bgcolor: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
+                  bgcolor: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
                 },
               }}
             />
@@ -351,9 +351,9 @@ export function StepProgress({
   const getStepColor = (stepStatus) => {
     switch (stepStatus) {
       case 'completed':
-        return theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100]
+        return theme.palette.mode === 'dark' ? neutral[500] : neutral[700]
       case 'in_progress':
-        return theme.palette.mode === 'dark' ? figmaGrey[600] : figmaGrey[1200]
+        return theme.palette.mode === 'dark' ? neutral[300] : neutral[900]
       case 'error':
         return theme.palette.text.secondary
       default:
@@ -390,7 +390,7 @@ export function StepProgress({
               }}
             >
               {stepStatus === 'completed' ? (
-                <SuccessIcon sx={{ fontSize: 16, color: '#fff' }} />
+                <SuccessIcon sx={{ fontSize: 16, color: 'common.white' }} />
               ) : stepStatus === 'in_progress' ? (
                 <CircularProgress size={12} sx={{ color }} />
               ) : (

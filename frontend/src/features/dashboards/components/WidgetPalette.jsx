@@ -32,6 +32,27 @@ import {
   Numbers as NumberIcon,
   ExpandMore as ExpandIcon,
   ExpandLess as CollapseIcon,
+  // AI Widget icons
+  Speed as KpiIcon,
+  CompareArrows as CompareIcon,
+  Equalizer as DistributionIcon,
+  Layers as CompositionIcon,
+  Warning as AlertsIcon,
+  Timeline as TimelineIcon,
+  ViewList as EventLogIcon,
+  Notes as NarrativeIcon,
+  AccountTree as SankeyIcon,
+  GridView as HeatmapIcon,
+  Build as DiagnosticIcon,
+  HelpOutline as UncertaintyIcon,
+  People as PeopleIcon,
+  Hexagon as HexIcon,
+  Hub as NetworkIcon,
+  Devices as DeviceIcon,
+  Public as GlobeIcon,
+  Chat as ChatIcon,
+  SmartToy as AgentIcon,
+  Lock as VaultIcon,
 } from '@mui/icons-material'
 
 // =============================================================================
@@ -119,6 +140,59 @@ const WIDGET_CATEGORIES = [
       { type: 'image', label: 'Image', icon: ImageIcon, color: 'secondary' },
     ],
   },
+  // ── AI Widget Scenarios ──────────────────────────────────────────────────
+  {
+    id: 'intelligent',
+    label: 'AI Widgets',
+    defaultCollapsed: true,
+    widgets: [
+      { type: 'kpi', label: 'KPI', icon: KpiIcon, color: 'success' },
+      { type: 'trend', label: 'Trend', icon: LineChartIcon, color: 'primary' },
+      { type: 'trend-multi-line', label: 'Multi-Line', icon: LineChartIcon, color: 'primary' },
+      { type: 'trends-cumulative', label: 'Cumulative', icon: AreaIcon, color: 'primary' },
+      { type: 'comparison', label: 'Compare', icon: CompareIcon, color: 'primary' },
+      { type: 'distribution', label: 'Distribution', icon: DistributionIcon, color: 'primary' },
+      { type: 'composition', label: 'Composition', icon: CompositionIcon, color: 'primary' },
+      { type: 'category-bar', label: 'Category Bar', icon: BarChartIcon, color: 'primary' },
+    ],
+  },
+  {
+    id: 'context',
+    label: 'Context & Events',
+    defaultCollapsed: true,
+    widgets: [
+      { type: 'alerts', label: 'Alerts', icon: AlertsIcon, color: 'error' },
+      { type: 'timeline', label: 'Timeline', icon: TimelineIcon, color: 'info' },
+      { type: 'eventlogstream', label: 'Event Log', icon: EventLogIcon, color: 'info' },
+      { type: 'narrative', label: 'Narrative', icon: NarrativeIcon, color: 'secondary' },
+    ],
+  },
+  {
+    id: 'advanced',
+    label: 'Advanced Viz',
+    defaultCollapsed: true,
+    widgets: [
+      { type: 'flow-sankey', label: 'Flow Diagram', icon: SankeyIcon, color: 'warning' },
+      { type: 'matrix-heatmap', label: 'Heatmap', icon: HeatmapIcon, color: 'warning' },
+      { type: 'diagnosticpanel', label: 'Diagnostics', icon: DiagnosticIcon, color: 'warning' },
+      { type: 'uncertaintypanel', label: 'Uncertainty', icon: UncertaintyIcon, color: 'warning' },
+    ],
+  },
+  {
+    id: 'domain',
+    label: 'Domain-Specific',
+    defaultCollapsed: true,
+    widgets: [
+      { type: 'peopleview', label: 'People', icon: PeopleIcon, color: 'secondary' },
+      { type: 'peoplehexgrid', label: 'Hex Grid', icon: HexIcon, color: 'secondary' },
+      { type: 'peoplenetwork', label: 'Network', icon: NetworkIcon, color: 'secondary' },
+      { type: 'edgedevicepanel', label: 'IoT Device', icon: DeviceIcon, color: 'secondary' },
+      { type: 'supplychainglobe', label: 'Globe', icon: GlobeIcon, color: 'secondary' },
+      { type: 'chatstream', label: 'Chat', icon: ChatIcon, color: 'secondary' },
+      { type: 'agentsview', label: 'Agents', icon: AgentIcon, color: 'secondary' },
+      { type: 'vaultview', label: 'Vault', icon: VaultIcon, color: 'secondary' },
+    ],
+  },
 ]
 
 // =============================================================================
@@ -128,7 +202,7 @@ const WIDGET_CATEGORIES = [
 export default function WidgetPalette({ onAddWidget }) {
   const theme = useTheme()
   const [expandedCategories, setExpandedCategories] = useState(
-    WIDGET_CATEGORIES.reduce((acc, cat) => ({ ...acc, [cat.id]: true }), {})
+    WIDGET_CATEGORIES.reduce((acc, cat) => ({ ...acc, [cat.id]: !cat.defaultCollapsed }), {})
   )
 
   const toggleCategory = useCallback((categoryId) => {
@@ -196,7 +270,7 @@ export default function WidgetPalette({ onAddWidget }) {
                       />
                       <Typography
                         variant="caption"
-                        sx={{ fontSize: '0.7rem', textAlign: 'center' }}
+                        sx={{ fontSize: '12px', textAlign: 'center' }}
                       >
                         {widget.label}
                       </Typography>

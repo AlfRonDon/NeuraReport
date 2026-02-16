@@ -49,7 +49,7 @@ const DisabledTooltip = forwardRef(function DisabledTooltip(
       </Box>
       {hint && (
         <Box sx={{
-          fontSize: '0.8125rem',
+          fontSize: '14px',
           opacity: 0.85,
           color: alpha(theme.palette.common.white, 0.85),
         }}>

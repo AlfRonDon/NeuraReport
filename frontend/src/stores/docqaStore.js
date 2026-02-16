@@ -54,7 +54,7 @@ const useDocQAStore = create((set, get) => ({
       const response = await docqaApi.getSession(sessionId);
       let messages = response.session?.messages || [];
       try {
-        const history = await docqaApi.getChatHistory(sessionId, 0);
+        const history = await docqaApi.getChatHistory(sessionId, 50);
         if (Array.isArray(history?.messages)) {
           messages = history.messages;
         }

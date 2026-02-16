@@ -37,7 +37,7 @@ import ChatOutlinedIcon from '@mui/icons-material/ChatOutlined'
 import SummarizeOutlinedIcon from '@mui/icons-material/SummarizeOutlined'
 import BarChartOutlinedIcon from '@mui/icons-material/BarChartOutlined'
 import AdminPanelSettingsOutlinedIcon from '@mui/icons-material/AdminPanelSettingsOutlined'
-import { figmaGrey } from '@/app/theme'
+import { neutral, palette } from '@/app/theme'
 import { useAppStore } from '@/stores'
 import { useInteraction, InteractionType, Reversibility } from '@/components/ux/governance'
 import { Kbd } from '@/ui'
@@ -687,10 +687,10 @@ export default function CommandPalette({ open, onClose }) {
                         mx: 1,
                         borderRadius: 1,  // Figma spec: 8px
                         '&.Mui-selected': {
-                          bgcolor: (theme) => theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200],
+                          bgcolor: (theme) => theme.palette.mode === 'dark' ? neutral[700] : neutral[900],
                           color: 'primary.contrastText',
                           '&:hover': {
-                            bgcolor: (theme) => theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200],
+                            bgcolor: (theme) => theme.palette.mode === 'dark' ? neutral[700] : neutral[900],
                           },
                           '& .MuiListItemIcon-root': {
                             color: 'inherit',
@@ -720,9 +720,9 @@ export default function CommandPalette({ open, onClose }) {
                           sx={{
                             ml: 1,
                             height: 20,
-                            fontSize: '0.65rem',
+                            fontSize: '10px',
                             textTransform: 'capitalize',
-                            bgcolor: isSelected ? alpha('#fff', 0.2) : 'action.selected',
+                            bgcolor: isSelected ? (theme) => alpha(theme.palette.common.white, 0.2) : 'action.selected',
                           }}
                         />
                       )}

@@ -61,9 +61,9 @@ import ReportGlossaryNotice from '@/components/ux/ReportGlossaryNotice'
 import * as api from '@/api/client'
 import * as recommendationsApi from '@/api/recommendations'
 
-// Import Figma design tokens for consistency
+// Import design tokens
 import {
-  figmaGrey,
+  neutral,
   figmaSpacing,
   fontFamilyHeading,
   fontFamilyBody,
@@ -144,12 +144,12 @@ const GlassCard = styled(Box)(({ theme }) => ({
   // Figma: white cards, shadow-only, NO borders
   backgroundColor: theme.palette.mode === 'dark'
     ? alpha(theme.palette.background.paper, 0.6)
-    : '#FFFFFF',
+    : theme.palette.common.white,
   backdropFilter: 'none',
   border: 'none',
   // Shadow from Figma
   boxShadow: theme.palette.mode === 'dark'
-    ? `0 8px 32px ${alpha('#000', 0.2)}`
+    ? `0 8px 32px ${alpha(theme.palette.common.black, 0.2)}`
     : '0 1px 3px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.05)',
   transition: 'all 0.2s ease',
   animation: `${fadeInUp} 0.4s ease-out`,
@@ -157,7 +157,7 @@ const GlassCard = styled(Box)(({ theme }) => ({
   '&:hover': {
     transform: 'none',
     boxShadow: theme.palette.mode === 'dark'
-      ? `0 12px 40px ${alpha('#000', 0.3)}`
+      ? `0 12px 40px ${alpha(theme.palette.common.black, 0.3)}`
       : '0 2px 8px rgba(0,0,0,0.08), 0 8px 24px rgba(0,0,0,0.06)',
   },
 }))
@@ -171,7 +171,7 @@ const StatCardStyled = styled(Box, {
   // Figma: white cards, shadow-only, NO borders
   backgroundColor: theme.palette.mode === 'dark'
     ? alpha(theme.palette.background.paper, 0.6)
-    : '#FFFFFF',
+    : theme.palette.common.white,
   backdropFilter: 'none',
   border: 'none',
   boxShadow: theme.palette.mode === 'dark'
@@ -201,7 +201,7 @@ const QuickActionCard = styled(Box)(({ theme }) => ({
   transition: 'all 0.15s ease',
 
   '&:hover': {
-    backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.04)' : figmaGrey[300],
+    backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.04)' : neutral[100],
 
     '& .action-arrow': {
       transform: 'translateX(4px)',
@@ -209,7 +209,7 @@ const QuickActionCard = styled(Box)(({ theme }) => ({
     },
 
     '& .action-icon': {
-      color: theme.palette.mode === 'dark' ? figmaGrey[300] : figmaGrey[1200],
+      color: theme.palette.mode === 'dark' ? neutral[100] : neutral[900],
     },
   },
 }))
@@ -223,10 +223,10 @@ const OnboardingStep = styled(Box, {
   padding: theme.spacing(2),
   borderRadius: theme.shape.borderRadius * 1.5,
   backgroundColor: completed
-    ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300])
+    ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100])
     : alpha(theme.palette.action.hover, 0.3),
   border: `1px solid ${completed
-    ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.15) : figmaGrey[500])
+    ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.15) : neutral[200])
     : alpha(theme.palette.divider, 0.1)}`,
   cursor: disabled ? 'not-allowed' : 'pointer',
   opacity: disabled ? 0.5 : 1,
@@ -234,8 +234,8 @@ const OnboardingStep = styled(Box, {
 
   ...(!disabled && !completed && {
     '&:hover': {
-      backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200],
-      borderColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.15) : figmaGrey[500],
+      backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : neutral[50],
+      borderColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.15) : neutral[200],
       transform: 'translateX(4px)',
     },
   }),
@@ -245,10 +245,10 @@ const JobListItem = styled(Box, {
   shouldForwardProp: (prop) => prop !== 'status',
 })(({ theme, status }) => {
   const statusColors = {
-    completed: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
-    running: theme.palette.mode === 'dark' ? figmaGrey[900] : figmaGrey[1000],
-    pending: theme.palette.mode === 'dark' ? figmaGrey[600] : figmaGrey[900],
-    failed: theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200],
+    completed: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
+    running: theme.palette.mode === 'dark' ? neutral[500] : neutral[500],
+    pending: theme.palette.mode === 'dark' ? neutral[300] : neutral[500],
+    failed: theme.palette.mode === 'dark' ? neutral[700] : neutral[900],
   }
 
   return {
@@ -265,7 +265,7 @@ const JobListItem = styled(Box, {
     },
 
     '&:hover': {
-      backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.02) : figmaGrey[200],
+      backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.02) : neutral[50],
       paddingLeft: theme.spacing(1),
       paddingRight: theme.spacing(1),
       marginLeft: theme.spacing(-1),
@@ -319,7 +319,7 @@ const RecommendationCard = styled(Box)(({ theme }) => ({
     boxShadow: theme.palette.mode === 'dark'
       ? `0 12px 24px ${alpha(theme.palette.common.black, 0.3)}`
       : '0 12px 24px rgba(0,0,0,0.08)',
-    borderColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.15) : figmaGrey[500],
+    borderColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.15) : neutral[200],
 
     '&::before': {
       opacity: 1,
@@ -341,7 +341,7 @@ const ChartBar = styled(Box, {
   flex: 1,
   height: `${height}%`,
   minHeight: 4,
-  backgroundColor: color || (theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100]),
+  backgroundColor: color || (theme.palette.mode === 'dark' ? neutral[500] : neutral[700]),
   borderRadius: 1,  // Figma spec: 8px
   transition: 'height 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
   transitionDelay: `${delay}ms`,
@@ -360,11 +360,11 @@ function StatCard({ title, value, subtitle, icon: Icon, color = 'inherit', onCli
         <Box sx={{ flex: 1 }}>
           <Typography
             sx={{
-              color: theme.palette.mode === 'dark' ? figmaGrey[900] : figmaGrey[800],  // Grey from Figma
+              color: theme.palette.mode === 'dark' ? neutral[500] : neutral[400],  // Grey from Figma
               fontWeight: 600,
               textTransform: 'uppercase',
               letterSpacing: '0.05em',
-              fontSize: '0.6875rem',
+              fontSize: '12px',
             }}
           >
             {title}
@@ -376,13 +376,13 @@ function StatCard({ title, value, subtitle, icon: Icon, color = 'inherit', onCli
               mt: 0.5,
               mb: 0.5,
               // Solid dark color - NO gradient
-              color: theme.palette.mode === 'dark' ? figmaGrey[300] : figmaGrey[1200],
+              color: theme.palette.mode === 'dark' ? neutral[100] : neutral[900],
             }}
           >
             {value}
           </Typography>
           {subtitle && (
-            <Typography sx={{ fontSize: '0.6875rem', color: theme.palette.mode === 'dark' ? figmaGrey[900] : figmaGrey[700] }}>
+            <Typography sx={{ fontSize: '12px', color: theme.palette.mode === 'dark' ? neutral[500] : neutral[300] }}>
               {subtitle}
             </Typography>
           )}
@@ -415,8 +415,8 @@ function StatCard({ title, value, subtitle, icon: Icon, color = 'inherit', onCli
             alignItems: 'center',
             justifyContent: 'center',
             // Muted grey/neutral background for ALL icons - from Figma
-            bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : figmaGrey[300],
-            color: theme.palette.mode === 'dark' ? figmaGrey[900] : figmaGrey[700],  // Muted grey icon
+            bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : neutral[100],
+            color: theme.palette.mode === 'dark' ? neutral[500] : neutral[300],  // Muted grey icon
           }}
         >
           <Icon sx={{ fontSize: 24 }} />
@@ -526,15 +526,14 @@ export default function DashboardPage() {
     [execute, fetchData]
   )
 
+  const recAttemptedRef = useRef(false)
+
   const fetchRecommendations = useCallback(async () => {
     if (recLoading) return
     setRecLoading(true)
-    try {
-      const catalog = await recommendationsApi.getCatalog()
-      const tpls = catalog?.catalog || catalog?.templates || catalog?.recommendations || []
-      setRecommendations(tpls.slice(0, 4))
-      setRecFromAI(true)
-    } catch {
+    recAttemptedRef.current = true
+
+    const fallbackToLocal = () => {
       const topTpls = templates.slice(0, 4).map((t) => ({
         id: t.id,
         name: t.name,
@@ -544,6 +543,21 @@ export default function DashboardPage() {
       }))
       setRecommendations(topTpls)
       setRecFromAI(false)
+    }
+
+    try {
+      const catalog = await recommendationsApi.getCatalog()
+      const tpls = catalog?.catalog || catalog?.templates || catalog?.recommendations || []
+      if (tpls.length > 0) {
+        setRecommendations(tpls.slice(0, 4))
+        setRecFromAI(true)
+      } else if (templates.length > 0) {
+        fallbackToLocal()
+      }
+    } catch {
+      if (templates.length > 0) {
+        fallbackToLocal()
+      }
     } finally {
       setRecLoading(false)
     }
@@ -557,7 +571,10 @@ export default function DashboardPage() {
         reversibility: Reversibility.FULLY_REVERSIBLE,
         suppressSuccessToast: true,
         intent: { source: 'dashboard', recFromAI },
-        action: fetchRecommendations,
+        action: () => {
+          recAttemptedRef.current = false
+          return fetchRecommendations()
+        },
       }),
     [execute, fetchRecommendations, recFromAI]
   )
@@ -578,7 +595,7 @@ export default function DashboardPage() {
   }, [execute])
 
   useEffect(() => {
-    if (recommendations.length === 0 && templates.length > 0 && !recLoading) {
+    if (recommendations.length === 0 && templates.length > 0 && !recLoading && !recAttemptedRef.current) {
       fetchRecommendations()
     }
   }, [templates.length, recommendations.length, recLoading, fetchRecommendations])
@@ -638,7 +655,7 @@ export default function DashboardPage() {
               lineHeight: 'normal',
               letterSpacing: 0,
               mb: 0.5,
-              color: theme.palette.mode === 'dark' ? figmaGrey[300] : figmaGrey[1200],
+              color: theme.palette.mode === 'dark' ? neutral[100] : neutral[900],
             }}
           >
             Welcome back
@@ -724,7 +741,7 @@ export default function DashboardPage() {
                 width: { xs: '100%', md: 64 },
                 height: 64,
                 borderRadius: 1,  // Figma spec: 8px
-                background: theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200],
+                background: theme.palette.mode === 'dark' ? neutral[700] : neutral[900],
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -735,7 +752,7 @@ export default function DashboardPage() {
             </Box>
 
             <Box sx={{ flex: 1 }}>
-              <Typography variant="h6" fontWeight={700} gutterBottom>
+              <Typography variant="h6" fontWeight={600} gutterBottom>
                 Welcome! Let's create your first report
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
@@ -761,7 +778,7 @@ export default function DashboardPage() {
                     </Typography>
                   </Box>
                   {savedConnections.length > 0 && (
-                    <Chip label="Done" size="small" sx={{ fontWeight: 600, bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300], color: 'text.secondary' }} />
+                    <Chip label="Done" size="small" sx={{ fontWeight: 600, bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[100], color: 'text.secondary' }} />
                   )}
                 </OnboardingStep>
 
@@ -783,7 +800,7 @@ export default function DashboardPage() {
                     </Typography>
                   </Box>
                   {templates.length > 0 && (
-                    <Chip label="Done" size="small" sx={{ fontWeight: 600, bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300], color: 'text.secondary' }} />
+                    <Chip label="Done" size="small" sx={{ fontWeight: 600, bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[100], color: 'text.secondary' }} />
                   )}
                 </OnboardingStep>
 
@@ -810,7 +827,7 @@ export default function DashboardPage() {
                     </Typography>
                   </Box>
                   {(metrics.jobsToday ?? 0) > 0 && (
-                    <Chip label="Done" size="small" sx={{ fontWeight: 600, bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300], color: 'text.secondary' }} />
+                    <Chip label="Done" size="small" sx={{ fontWeight: 600, bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[100], color: 'text.secondary' }} />
                   )}
                 </OnboardingStep>
               </Stack>
@@ -903,7 +920,7 @@ export default function DashboardPage() {
       >
         {/* Quick Actions */}
         <GlassCard sx={{ animationDelay: '200ms' }}>
-          <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 2.5 }}>
+          <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 2.5 }}>
             Quick Actions
           </Typography>
           <Stack spacing={1}>
@@ -945,11 +962,11 @@ export default function DashboardPage() {
                       <ChartBar
                         height={Math.max(10, (item.total / maxTrend) * 100)}
                         color={item.failed > 0
-                          ? (theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200])
-                          : (theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100])}
+                          ? (theme.palette.mode === 'dark' ? neutral[700] : neutral[900])
+                          : (theme.palette.mode === 'dark' ? neutral[500] : neutral[700])}
                         delay={idx * 50}
                       />
-                      <Typography variant="caption" sx={{ fontSize: '0.55rem', color: 'text.tertiary', mt: 0.5 }}>
+                      <Typography variant="caption" sx={{ fontSize: '10px', color: 'text.tertiary', mt: 0.5 }}>
                         {item.label}
                       </Typography>
                     </Box>
@@ -963,7 +980,7 @@ export default function DashboardPage() {
         {/* Recent Jobs */}
         <GlassCard sx={{ animationDelay: '250ms' }}>
           <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
-            <Typography variant="subtitle1" fontWeight={700}>
+            <Typography variant="subtitle1" fontWeight={600}>
               Recent Jobs
             </Typography>
             <Button
@@ -997,7 +1014,7 @@ export default function DashboardPage() {
                   width: 64,
                   height: 64,
                   borderRadius: '50%',
-                  bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
+                  bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -1047,8 +1064,8 @@ export default function DashboardPage() {
                         height: 24,
                         fontWeight: 600,
                         textTransform: 'capitalize',
-                        fontSize: '0.7rem',
-                        bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300],
+                        fontSize: '12px',
+                        bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[100],
                         color: 'text.secondary',
                       }}
                     />
@@ -1075,7 +1092,7 @@ export default function DashboardPage() {
           <GlassCard sx={{ animationDelay: '300ms' }}>
             <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
               <InsightsIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
-              <Typography variant="subtitle2" fontWeight={700}>
+              <Typography variant="subtitle2" fontWeight={600}>
                 Top Designs
               </Typography>
             </Stack>
@@ -1102,7 +1119,7 @@ export default function DashboardPage() {
                       borderRadius: 1.5,
                       transition: 'all 0.15s ease',
                       '&:hover': {
-                        bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[300],
+                        bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : neutral[100],
                       },
                     }}
                   >
@@ -1110,7 +1127,7 @@ export default function DashboardPage() {
                       sx={{
                         width: 32,
                         height: 32,
-                        bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
+                        bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
                         fontSize: '0.75rem',
                       }}
                     >
@@ -1138,7 +1155,7 @@ export default function DashboardPage() {
           <GlassCard sx={{ animationDelay: '350ms' }}>
             <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
               <StarIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
-              <Typography variant="subtitle2" fontWeight={700}>
+              <Typography variant="subtitle2" fontWeight={600}>
                 Favorites
               </Typography>
             </Stack>
@@ -1216,7 +1233,7 @@ export default function DashboardPage() {
                 width: 44,
                 height: 44,
                 borderRadius: 1,  // Figma spec: 8px
-                background: theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200],
+                background: theme.palette.mode === 'dark' ? neutral[700] : neutral[900],
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -1225,7 +1242,7 @@ export default function DashboardPage() {
               <AutoAwesomeIcon sx={{ fontSize: 22, color: 'white' }} />
             </Box>
             <Box>
-              <Typography variant="subtitle1" fontWeight={700}>
+              <Typography variant="subtitle1" fontWeight={600}>
                 {recFromAI ? 'AI Recommendations' : 'Recent Designs'}
               </Typography>
               <Typography variant="caption" color="text.secondary">
@@ -1261,7 +1278,7 @@ export default function DashboardPage() {
                 width: 64,
                 height: 64,
                 borderRadius: '50%',
-                bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
+                bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -1271,17 +1288,36 @@ export default function DashboardPage() {
             >
               <LightbulbIcon sx={{ fontSize: 28, color: 'text.secondary' }} />
             </Box>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              No recommendations yet
-            </Typography>
-            <Button
-              variant="outlined"
-              size="small"
-              onClick={handleRefreshRecommendations}
-              sx={{ borderRadius: 1 }}
-            >
-              Get AI Recommendations
-            </Button>
+            {templates.length === 0 ? (
+              <>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                  Upload a report design to unlock AI recommendations
+                </Typography>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  onClick={() => handleNavigate('/templates', 'Open templates')}
+                  startIcon={<AddIcon />}
+                  sx={{ borderRadius: 1 }}
+                >
+                  Add Report Design
+                </Button>
+              </>
+            ) : (
+              <>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                  No recommendations yet
+                </Typography>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  onClick={handleRefreshRecommendations}
+                  sx={{ borderRadius: 1 }}
+                >
+                  Get AI Recommendations
+                </Button>
+              </>
+            )}
           </Box>
         ) : (
           <Box
@@ -1303,7 +1339,7 @@ export default function DashboardPage() {
                       sx={{
                         width: 28,
                         height: 28,
-                        bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
+                        bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
                       }}
                     >
                       {rec.kind === 'excel' ? (
@@ -1318,9 +1354,9 @@ export default function DashboardPage() {
                         size="small"
                         sx={{
                           height: 20,
-                          fontSize: '0.6rem',
+                          fontSize: '10px',
                           fontWeight: 600,
-                          bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300],
+                          bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[100],
                           color: 'text.secondary',
                         }}
                       />
@@ -1358,13 +1394,13 @@ export default function DashboardPage() {
                 sx={{
                   width: 48,
                   height: 48,
-                  bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
+                  bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
                 }}
               >
                 <StorageIcon sx={{ color: 'text.secondary' }} />
               </Avatar>
               <Box sx={{ flex: 1 }}>
-                <Typography variant="subtitle2" fontWeight={700}>
+                <Typography variant="subtitle2" fontWeight={600}>
                   Connected to {activeConnection.name}
                 </Typography>
                 <Typography variant="caption" color="text.secondary">
@@ -1378,7 +1414,7 @@ export default function DashboardPage() {
                 sx={{
                   fontWeight: 600,
                   animation: `${pulse} 2s ease-in-out infinite`,
-                  bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300],
+                  bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[100],
                   color: 'text.secondary',
                 }}
               />

@@ -22,7 +22,7 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material'
-import { figmaGrey } from '@/app/theme'
+import { neutral, palette } from '@/app/theme'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import DownloadOutlinedIcon from '@mui/icons-material/DownloadOutlined'
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined'
@@ -463,12 +463,12 @@ export function TemplatePicker({ selected, onToggle, outputFormats, setOutputFor
                           <Typography variant="caption" color="text.secondary">
                             SQL & schema assets - {generatorMeta.dialect || 'unknown'}
                           </Typography>
-                          <Chip size="small" sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400], color: 'text.secondary' }} label={generatorStatusLabel} />
+                          <Chip size="small" sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[200], color: 'text.secondary' }} label={generatorStatusLabel} />
                           {!!needsUserFix.length && (
                             <Tooltip title={needsUserFix.join('\\n')}>
                               <Chip
                                 size="small"
-                                sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400], color: 'text.secondary' }}
+                                sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[200], color: 'text.secondary' }}
                                 variant="outlined"
                                 label={`${needsUserFix.length} fix${needsUserFix.length === 1 ? '' : 'es'}`}
                               />
@@ -526,7 +526,7 @@ export function TemplatePicker({ selected, onToggle, outputFormats, setOutputFor
                   </Stack>
                   <Divider sx={{ mt: 'auto', my: 1 }} />
                   <Stack spacing={1} alignItems="flex-start">
-                    <Typography variant="subtitle1" sx={{ fontWeight: 700, lineHeight: 1.2 }} noWrap>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 600, lineHeight: 1.2 }} noWrap>
                       {t.name}
                     </Typography>
                     <Stack
@@ -690,7 +690,7 @@ export function TemplatePicker({ selected, onToggle, outputFormats, setOutputFor
                       <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
                         {template.name || template.id || 'Template'}
                       </Typography>
-                      <Chip size="small" label={meta.label} sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400], color: 'text.secondary' }} variant={meta.variant} />
+                      <Chip size="small" label={meta.label} sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[200], color: 'text.secondary' }} variant={meta.variant} />
                     </Stack>
                     {template.description && (
                       <Typography variant="body2" color="text.secondary">
@@ -925,7 +925,7 @@ export function TemplatePicker({ selected, onToggle, outputFormats, setOutputFor
         </Stack>
       </Stack>
       <Collapse in={showRefreshing} unmountOnExit>
-        <LinearProgress sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300], '& .MuiLinearProgress-bar': { bgcolor: (theme) => theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100] }, borderRadius: 1 }} aria-label="Refreshing templates" />
+        <LinearProgress sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[100], '& .MuiLinearProgress-bar': { bgcolor: (theme) => theme.palette.mode === 'dark' ? neutral[500] : neutral[700] }, borderRadius: 1 }} aria-label="Refreshing templates" />
       </Collapse>
       {isLoading ? (
         <LoadingState

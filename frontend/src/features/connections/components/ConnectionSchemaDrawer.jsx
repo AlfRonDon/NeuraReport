@@ -28,7 +28,7 @@ import RefreshIcon from '@mui/icons-material/Refresh'
 import VisibilityIcon from '@mui/icons-material/Visibility'
 import { Drawer } from '@/components/Drawer'
 import * as api from '@/api/client'
-import { figmaGrey } from '@/app/theme'
+import { neutral, palette } from '@/app/theme'
 import { useInteraction, InteractionType, Reversibility } from '@/components/ux/governance'
 
 const formatRowCount = (value) => {
@@ -142,8 +142,8 @@ export default function ConnectionSchemaDrawer({ open, onClose, connection }) {
               borderColor: alpha(theme.palette.divider, 0.2),
               color: theme.palette.text.secondary,
               '&:hover': {
-                borderColor: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
-                bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
+                borderColor: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
+                bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
               },
             }}
           >
@@ -170,12 +170,12 @@ export default function ConnectionSchemaDrawer({ open, onClose, connection }) {
                 borderColor: alpha(theme.palette.divider, 0.3),
               },
               '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                borderColor: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
+                borderColor: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
               },
             },
           }}
         />
-        {loading && <LinearProgress sx={{ borderRadius: 1, bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300], '& .MuiLinearProgress-bar': { bgcolor: (theme) => theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100] } }} />}
+        {loading && <LinearProgress sx={{ borderRadius: 1, bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[100], '& .MuiLinearProgress-bar': { bgcolor: (theme) => theme.palette.mode === 'dark' ? neutral[500] : neutral[700] } }} />}
         {error && (
           <Alert
             severity="error"
@@ -217,7 +217,7 @@ export default function ConnectionSchemaDrawer({ open, onClose, connection }) {
                 sx={{
                   borderRadius: 1,  // Figma spec: 8px
                   '&:hover': {
-                    bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200],
+                    bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : neutral[50],
                   },
                 }}
               >
@@ -229,9 +229,9 @@ export default function ConnectionSchemaDrawer({ open, onClose, connection }) {
                     size="small"
                     label={`${formatRowCount(table.row_count)} rows`}
                     sx={{
-                      bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
+                      bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
                       color: theme.palette.text.secondary,
-                      fontSize: '0.7rem',
+                      fontSize: '12px',
                       height: 22,
                       borderRadius: 1,  // Figma spec: 8px
                     }}
@@ -251,13 +251,13 @@ export default function ConnectionSchemaDrawer({ open, onClose, connection }) {
                       size="small"
                       sx={{
                         '& .MuiTableCell-head': {
-                          bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200],
+                          bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : neutral[50],
                           fontWeight: 600,
                           fontSize: '0.75rem',
                           color: theme.palette.text.secondary,
                         },
                         '& .MuiTableCell-body': {
-                          fontSize: '0.8125rem',
+                          fontSize: '14px',
                           color: theme.palette.text.primary,
                         },
                       }}
@@ -302,15 +302,15 @@ export default function ConnectionSchemaDrawer({ open, onClose, connection }) {
                           fontSize: '0.75rem',
                           borderColor: alpha(theme.palette.divider, 0.2),
                           '&:hover': {
-                            borderColor: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
-                            bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
+                            borderColor: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
+                            bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
                           },
                         }}
                       >
                         Load preview
                       </Button>
                     </Stack>
-                    {preview.loading && <LinearProgress sx={{ mt: 1, borderRadius: 1, bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300], '& .MuiLinearProgress-bar': { bgcolor: (theme) => theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100] } }} />}
+                    {preview.loading && <LinearProgress sx={{ mt: 1, borderRadius: 1, bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[100], '& .MuiLinearProgress-bar': { bgcolor: (theme) => theme.palette.mode === 'dark' ? neutral[500] : neutral[700] } }} />}
                     {preview.error && (
                       <Alert severity="error" sx={{ mt: 1, borderRadius: 1 }}>  {/* Figma spec: 8px */}
                         {preview.error}
@@ -322,7 +322,7 @@ export default function ConnectionSchemaDrawer({ open, onClose, connection }) {
                         sx={{
                           mt: 1,
                           '& .MuiTableCell-head': {
-                            bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200],
+                            bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : neutral[50],
                             fontWeight: 600,
                             fontSize: '0.75rem',
                             color: theme.palette.text.secondary,

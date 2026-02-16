@@ -22,6 +22,15 @@ import { api } from './client';
 
 const BASE_PATH = '/agents/v2';
 
+const asArray = (payload, keys = []) => {
+  if (Array.isArray(payload)) return payload;
+  if (!payload || typeof payload !== 'object') return [];
+  for (const key of keys) {
+    if (Array.isArray(payload[key])) return payload[key];
+  }
+  return [];
+};
+
 // ============================================
 // Error Types
 // ============================================
@@ -281,6 +290,75 @@ export async function runProofreadingAgent(text, options = {}) {
 }
 
 // ============================================
+// Report Analyst Agent
+// ============================================
+
+/**
+ * Run the report analyst agent to analyze, summarize, compare, or ask questions about reports.
+ *
+ * @param {string} runId - Report run ID to analyze
+ * @param {Object} options - Configuration options
+ * @param {string} options.analysisType - Analysis type: 'summarize', 'insights', 'compare', 'qa'
+ * @param {string} options.question - Question text (required for 'qa' type)
+ * @param {string} options.compareRunId - Second run ID (required for 'compare' type)
+ * @param {string[]} options.focusAreas - Optional areas to focus on
+ * @param {string} options.idempotencyKey - Unique key for deduplication
+ * @param {number} options.priority - Task priority (0-10)
+ * @param {string} options.webhookUrl - Webhook URL for completion
+ * @param {boolean} options.sync - Wait for completion (default true)
+ * @returns {Promise<Object>} Task response
+ */
+export async function runReportAnalystAgent(runId, options = {}) {
+  try {
+    const response = await api.post(`${BASE_PATH}/report-analyst`, {
+      run_id: runId,
+      analysis_type: options.analysisType || 'summarize',
+      question: options.question || null,
+      compare_run_id: options.compareRunId || null,
+      focus_areas: options.focusAreas || null,
+      idempotency_key: options.idempotencyKey || null,
+      priority: options.priority || 0,
+      webhook_url: options.webhookUrl || null,
+      sync: options.sync !== false,
+    });
+    return response.data;
+  } catch (error) {
+    handleApiError(error);
+  }
+}
+
+/**
+ * Generate a report from an agent task result.
+ *
+ * @param {string} taskId - Agent task ID whose result provides context
+ * @param {Object} config - Report generation config
+ * @param {string} config.templateId - Template to use
+ * @param {string} config.connectionId - Database connection to use
+ * @param {string} config.startDate - Report start date (YYYY-MM-DD)
+ * @param {string} config.endDate - Report end date (YYYY-MM-DD)
+ * @param {Object} config.keyValues - Additional key-value parameters
+ * @param {boolean} config.docx - Generate DOCX
+ * @param {boolean} config.xlsx - Generate XLSX
+ * @returns {Promise<Object>} Job info with job_id
+ */
+export async function generateReportFromTask(taskId, config = {}) {
+  try {
+    const response = await api.post(`${BASE_PATH}/tasks/${taskId}/generate-report`, {
+      template_id: config.templateId,
+      connection_id: config.connectionId,
+      start_date: config.startDate,
+      end_date: config.endDate,
+      key_values: config.keyValues || null,
+      docx: config.docx || false,
+      xlsx: config.xlsx || false,
+    });
+    return response.data;
+  } catch (error) {
+    handleApiError(error);
+  }
+}
+
+// ============================================
 // Task Management
 // ============================================
 
@@ -293,7 +371,11 @@ export async function runProofreadingAgent(text, options = {}) {
 export async function getTask(taskId) {
   try {
     const response = await api.get(`${BASE_PATH}/tasks/${taskId}`);
-    return response.data;
+    const payload = response.data;
+    if (payload && typeof payload === 'object' && payload.task) {
+      return payload.task;
+    }
+    return payload;
   } catch (error) {
     handleApiError(error);
   }
@@ -320,7 +402,15 @@ export async function listTasks(options = {}) {
     if (options.offset) params.offset = options.offset;
 
     const response = await api.get(`${BASE_PATH}/tasks`, { params });
-    return response.data;
+    const payload = response.data;
+    if (Array.isArray(payload)) {
+      return { tasks: payload, total: payload.length };
+    }
+    if (payload && typeof payload === 'object') {
+      const tasks = asArray(payload, ['tasks', 'items', 'results']);
+      return { ...payload, tasks, total: payload.total ?? payload.count ?? tasks.length };
+    }
+    return { tasks: [], total: 0 };
   } catch (error) {
     handleApiError(error);
   }
@@ -338,7 +428,11 @@ export async function cancelTask(taskId, reason = null) {
     const response = await api.post(`${BASE_PATH}/tasks/${taskId}/cancel`, {
       reason,
     });
-    return response.data;
+    const payload = response.data;
+    if (payload && typeof payload === 'object' && payload.task) {
+      return payload.task;
+    }
+    return payload;
   } catch (error) {
     handleApiError(error);
   }
@@ -353,7 +447,11 @@ export async function cancelTask(taskId, reason = null) {
 export async function retryTask(taskId) {
   try {
     const response = await api.post(`${BASE_PATH}/tasks/${taskId}/retry`);
-    return response.data;
+    const payload = response.data;
+    if (payload && typeof payload === 'object' && payload.task) {
+      return payload.task;
+    }
+    return payload;
   } catch (error) {
     handleApiError(error);
   }
@@ -371,7 +469,7 @@ export async function getTaskEvents(taskId, limit = 100) {
     const response = await api.get(`${BASE_PATH}/tasks/${taskId}/events`, {
       params: { limit },
     });
-    return response.data;
+    return asArray(response.data, ['events', 'items', 'results']);
   } catch (error) {
     handleApiError(error);
   }
@@ -467,7 +565,14 @@ export async function runResearchAndWait(topic, options = {}) {
 export async function listAgentTypes() {
   try {
     const response = await api.get(`${BASE_PATH}/types`);
-    return response.data;
+    const payload = response.data;
+    if (Array.isArray(payload)) {
+      return { types: payload };
+    }
+    if (payload && typeof payload === 'object') {
+      return { ...payload, types: asArray(payload, ['types', 'items', 'results']) };
+    }
+    return { types: [] };
   } catch (error) {
     handleApiError(error);
   }
@@ -663,6 +768,10 @@ export default {
 
   // Proofreading
   runProofreadingAgent,
+
+  // Report Analyst
+  runReportAnalystAgent,
+  generateReportFromTask,
 
   // Task Management
   getTask,

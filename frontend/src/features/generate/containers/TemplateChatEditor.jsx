@@ -28,14 +28,14 @@ import { chatTemplateEdit, applyChatTemplateEdit } from '@/api/client'
 import { useInteraction, InteractionType, Reversibility } from '@/components/ux/governance'
 import { useToast } from '@/components/ToastProvider'
 import ScaledIframePreview from '@/components/ScaledIframePreview'
-import { figmaGrey } from '@/app/theme'
+import { neutral, palette } from '@/app/theme'
 
 const ROLE_CONFIG = {
   user: {
     icon: PersonOutlineIcon,
     label: 'You',
-    bgcolor: figmaGrey[1200],
-    textColor: '#fff',
+    bgcolor: neutral[900],
+    textColor: 'common.white',
   },
   assistant: {
     icon: SmartToyOutlinedIcon,
@@ -66,7 +66,7 @@ function ChatMessage({ message }) {
           width: 32,
           height: 32,
           borderRadius: '50%',
-          bgcolor: isUser ? figmaGrey[1200] : figmaGrey[900],
+          bgcolor: isUser ? neutral[900] : neutral[500],
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -110,9 +110,9 @@ function ChatMessage({ message }) {
             p: 2,
             borderRadius: 1,  // Figma spec: 8px
             bgcolor: isUser
-              ? figmaGrey[1200]
+              ? neutral[900]
               : 'background.paper',
-            color: isUser ? '#fff' : 'text.primary',
+            color: isUser ? 'common.white' : 'text.primary',
             boxShadow: isUser
               ? '0 2px 8px rgba(33, 32, 28, 0.2)'
               : '0 1px 3px rgba(0,0,0,0.08)',
@@ -179,7 +179,7 @@ function ProposedChangesPanel({ changes, proposedHtml, onApply, onReject, applyi
         borderRadius: 1,  // Figma spec: 8px
         border: '1px solid',
         borderColor: (theme) => alpha(theme.palette.divider, 0.3),
-        bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : figmaGrey[200],
+        bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : neutral[50],
       }}
     >
       <Stack spacing={2}>
@@ -597,7 +597,7 @@ export default function TemplateChatEditor({
             borderColor: 'divider',
             transition: 'all 150ms ease',
             '&:focus-within': {
-              borderColor: (theme) => theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
+              borderColor: (theme) => theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
               boxShadow: (theme) =>
                 `0 0 0 2px ${alpha(theme.palette.text.primary, 0.08)}`,
             },
@@ -623,7 +623,7 @@ export default function TemplateChatEditor({
             InputProps={{
               disableUnderline: true,
               sx: {
-                fontSize: '0.9375rem',
+                fontSize: '1rem',
                 lineHeight: 1.5,
               },
             }}
@@ -639,14 +639,14 @@ export default function TemplateChatEditor({
             disabled={!inputValue.trim() || isProcessing}
             sx={{
               bgcolor: (theme) => inputValue.trim() && !isProcessing
-                ? (theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200])
+                ? (theme.palette.mode === 'dark' ? neutral[700] : neutral[900])
                 : 'action.disabledBackground',
               color: inputValue.trim() && !isProcessing
-                ? '#fff'
+                ? 'common.white'
                 : 'text.disabled',
               '&:hover': {
                 bgcolor: (theme) => inputValue.trim() && !isProcessing
-                  ? (theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100])
+                  ? (theme.palette.mode === 'dark' ? neutral[500] : neutral[700])
                   : 'action.disabledBackground',
               },
             }}

@@ -57,15 +57,40 @@ _nl2sql_svc = NL2SQLService()
 # Schemas
 # ============================================
 
-class WidgetConfig(BaseModel):
-    """Widget configuration."""
+# All valid widget types: legacy types + intelligent widget scenarios
+_LEGACY_WIDGET_TYPES = {"chart", "metric", "table", "text", "filter", "map"}
+_SCENARIO_WIDGET_TYPES = {
+    "kpi", "alerts", "trend", "trend-multi-line", "trends-cumulative",
+    "comparison", "distribution", "composition", "category-bar",
+    "flow-sankey", "matrix-heatmap", "timeline", "eventlogstream",
+    "narrative", "peopleview", "peoplehexgrid", "peoplenetwork",
+    "supplychainglobe", "edgedevicepanel", "chatstream",
+    "diagnosticpanel", "uncertaintypanel", "agentsview", "vaultview",
+}
 
-    type: str = Field(..., pattern="^(chart|metric|table|text|filter|map)$")
+
+class WidgetConfig(BaseModel):
+    """Widget configuration — supports both legacy types and intelligent widget scenarios."""
+
+    type: str = Field(..., min_length=1, max_length=50)
     title: str = Field(..., min_length=1, max_length=255)
     data_source: Optional[str] = None
     query: Optional[str] = Field(None, max_length=10_000)
     chart_type: Optional[str] = None
+    variant: Optional[str] = None
+    scenario: Optional[str] = None
     options: dict[str, Any] = {}
+
+    @field_validator("type")
+    @classmethod
+    def validate_widget_type(cls, v: str) -> str:
+        base_type = v.split(":")[0]
+        if base_type not in _LEGACY_WIDGET_TYPES and v not in _SCENARIO_WIDGET_TYPES:
+            raise ValueError(
+                f"Invalid widget type: {v}. Must be a legacy type "
+                f"(chart, metric, table, text, filter, map) or a scenario type."
+            )
+        return v
 
     @field_validator("query")
     @classmethod
@@ -1125,3 +1150,58 @@ async def export_dashboard(dashboard_id: str):
         "created_at": dashboard.get("created_at"),
         "updated_at": dashboard.get("updated_at"),
     }
+
+
+# ============================================
+# Auto-Compose (Widget Intelligence)
+# ============================================
+
+class AutoComposeRequest(BaseModel):
+    """Auto-compose widgets for a dashboard using AI selection."""
+
+    query: str = Field(..., min_length=1, max_length=2000)
+    query_type: str = Field(default="overview")
+    max_widgets: int = Field(default=8, ge=1, le=20)
+
+
+@router.post("/{dashboard_id}/auto-compose")
+async def auto_compose_dashboard(dashboard_id: str, req: AutoComposeRequest):
+    """Use AI to auto-compose widgets for an existing dashboard."""
+    dashboard = _dashboard_svc.get_dashboard(dashboard_id)
+    if not dashboard:
+        raise HTTPException(status_code=404, detail="Dashboard not found")
+
+    from backend.app.services.widget_intelligence.service import WidgetIntelligenceService
+    intelligence_svc = WidgetIntelligenceService()
+
+    widgets = intelligence_svc.select_widgets(
+        query=req.query,
+        query_type=req.query_type,
+        max_widgets=req.max_widgets,
+    )
+    layout = intelligence_svc.pack_grid(widgets)
+
+    new_widgets = []
+    for w, cell in zip(widgets, layout.get("cells", [])):
+        demo_data = intelligence_svc.get_demo_data(w["scenario"])
+        new_widgets.append({
+            "id": w["id"],
+            "config": {
+                "type": w["scenario"],
+                "title": w.get("question", w["scenario"]),
+                "variant": w["variant"],
+                "scenario": w["scenario"],
+            },
+            "x": cell["col_start"] - 1,
+            "y": cell["row_start"] - 1,
+            "w": cell["col_end"] - cell["col_start"],
+            "h": cell["row_end"] - cell["row_start"],
+            "data": demo_data,
+        })
+
+    existing_widgets = dashboard.get("widgets", [])
+    updated = _dashboard_svc.update_dashboard(
+        dashboard_id,
+        widgets=existing_widgets + new_widgets,
+    )
+    return {"dashboard": updated, "added_widgets": len(new_widgets)}

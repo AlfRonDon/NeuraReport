@@ -57,7 +57,7 @@ import useIncomingTransfer from '@/hooks/useIncomingTransfer';
 import SendToMenu from '@/components/common/SendToMenu';
 import ImportFromMenu from '@/components/common/ImportFromMenu';
 import { OutputType, TransferAction, FeatureKey } from '@/utils/crossPageTypes';
-import { figmaGrey } from '@/app/theme';
+import { neutral, palette } from '@/app/theme';
 
 // Fallback sources in case API is unavailable
 const FALLBACK_SOURCES = [
@@ -497,12 +497,12 @@ export default function EnrichmentConfigPage() {
                           </Box>
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                             {isCustom ? (
-                              <Chip label="Custom" size="small" sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400], color: 'text.secondary' }} />
+                              <Chip label="Custom" size="small" sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[200], color: 'text.secondary' }} />
                             ) : (
                               <Chip label="Built-in" size="small" variant="outlined" />
                             )}
                             {selectedSources.includes(source.id) && (
-                              <Chip label="Selected" size="small" sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400], color: 'text.secondary' }} />
+                              <Chip label="Selected" size="small" sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[200], color: 'text.secondary' }} />
                             )}
                             {isCustom && (
                               <IconButton

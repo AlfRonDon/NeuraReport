@@ -49,7 +49,7 @@ import {
   Psychology as SemanticIcon,
   DataObject as BooleanIcon,
 } from '@mui/icons-material'
-import { figmaGrey } from '@/app/theme'
+import { neutral, palette } from '@/app/theme'
 import useSearchStore from '@/stores/searchStore'
 import useSharedData from '@/hooks/useSharedData'
 import ConnectionSelector from '@/components/common/ConnectionSelector'
@@ -69,7 +69,7 @@ const PageContainer = styled(Box)(({ theme }) => ({
 
 const SearchHeader = styled(Box)(({ theme }) => ({
   padding: theme.spacing(3),
-  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200],
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : neutral[50],
   borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
 }))
 
@@ -96,19 +96,19 @@ const Sidebar = styled(Box)(({ theme }) => ({
 const SearchInput = styled(TextField)(({ theme }) => ({
   '& .MuiOutlinedInput-root': {
     // Figma spec: Background #F1F0EF, Border 1px solid #E2E1DE, Border-radius 8px
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.background.paper, 0.6) : figmaGrey[300],
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.background.paper, 0.6) : neutral[100],
     borderRadius: 8,  // Figma spec: 8px
     '& fieldset': {
-      borderColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.12) : figmaGrey[500],
+      borderColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.12) : neutral[200],
     },
     '&:hover': {
       '& fieldset': {
-        borderColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.2) : figmaGrey[600],
+        borderColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.2) : neutral[300],
       },
     },
     '&.Mui-focused': {
       '& fieldset': {
-        borderColor: theme.palette.mode === 'dark' ? theme.palette.text.secondary : figmaGrey[900],
+        borderColor: theme.palette.mode === 'dark' ? theme.palette.text.secondary : neutral[500],
         borderWidth: 1,
       },
     },
@@ -121,8 +121,8 @@ const ResultCard = styled(Paper)(({ theme }) => ({
   cursor: 'pointer',
   transition: 'all 0.2s ease',
   '&:hover': {
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200],
-    borderColor: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : neutral[50],
+    borderColor: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
   },
 }))
 

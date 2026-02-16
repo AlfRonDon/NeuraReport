@@ -4,6 +4,15 @@
  */
 import { api } from './client';
 
+function asArray(payload, keys = []) {
+  if (Array.isArray(payload)) return payload;
+  if (!payload || typeof payload !== 'object') return [];
+  for (const key of keys) {
+    if (Array.isArray(payload[key])) return payload[key];
+  }
+  return [];
+}
+
 // ============================================
 // Export Formats
 // ============================================
@@ -173,7 +182,7 @@ export async function revokeEmbedToken(tokenId) {
 
 export async function listEmbedTokens(documentId) {
   const response = await api.get(`/export/${documentId}/embed/tokens`);
-  return response.data;
+  return asArray(response.data, ['tokens', 'embed_tokens', 'items', 'results']);
 }
 
 // ============================================
@@ -192,7 +201,7 @@ export async function printDocument(documentId, options = {}) {
 
 export async function listPrinters() {
   const response = await api.get('/export/printers');
-  return response.data;
+  return asArray(response.data, ['printers', 'items', 'results']);
 }
 
 // ============================================
@@ -211,7 +220,7 @@ export async function listExportJobs(options = {}) {
       limit: options.limit || 20,
     },
   });
-  return response.data;
+  return asArray(response.data, ['jobs', 'exports', 'items', 'results']);
 }
 
 export async function cancelExportJob(jobId) {

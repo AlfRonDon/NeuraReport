@@ -78,8 +78,16 @@ def create_schedule(payload: ScheduleCreatePayload) -> dict[str, Any]:
     template = store.get_template_record(payload.template_id) or {}
     if not template:
         raise _http_error(404, "template_not_found", "Template not found.")
-    if str(template.get("status")).lower() != "approved":
-        raise _http_error(400, "template_not_ready", "Template must be approved before scheduling runs.")
+    template_status = str(template.get("status") or "").strip().lower()
+    # Backward compatibility: older template workflows used "active" for
+    # templates that are effectively approved/schedulable.
+    if template_status not in {"approved", "active"}:
+        raise _http_error(
+            400,
+            "template_not_ready",
+            f"Template must be approved before scheduling runs (current status: {template_status or 'none'}). "
+            "Complete the template mapping and approval workflow first.",
+        )
     connection = store.get_connection_record(payload.connection_id)
     if not connection:
         raise _http_error(404, "connection_not_found", "Connection not found.")

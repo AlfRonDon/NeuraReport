@@ -4,6 +4,15 @@
  */
 import { api } from './client';
 
+function asArray(payload, keys = []) {
+  if (Array.isArray(payload)) return payload;
+  if (!payload || typeof payload !== 'object') return [];
+  for (const key of keys) {
+    if (Array.isArray(payload[key])) return payload[key];
+  }
+  return [];
+}
+
 // ============================================
 // Workflow CRUD
 // ============================================
@@ -30,7 +39,15 @@ export async function deleteWorkflow(workflowId) {
 
 export async function listWorkflows(params = {}) {
   const response = await api.get('/workflows', { params });
-  return response.data;
+  const payload = response.data;
+  if (Array.isArray(payload)) {
+    return { workflows: payload, total: payload.length };
+  }
+  if (payload && typeof payload === 'object') {
+    const workflows = asArray(payload, ['workflows', 'items', 'results']);
+    return { ...payload, workflows, total: payload.total ?? workflows.length };
+  }
+  return { workflows: [], total: 0 };
 }
 
 // ============================================
@@ -49,7 +66,15 @@ export async function getExecution(workflowId, executionId) {
 
 export async function listExecutions(workflowId, params = {}) {
   const response = await api.get(`/workflows/${workflowId}/executions`, { params });
-  return response.data;
+  const payload = response.data;
+  if (Array.isArray(payload)) {
+    return { executions: payload, total: payload.length };
+  }
+  if (payload && typeof payload === 'object') {
+    const executions = asArray(payload, ['executions', 'items', 'results']);
+    return { ...payload, executions, total: payload.total ?? executions.length };
+  }
+  return { executions: [], total: 0 };
 }
 
 export async function cancelExecution(workflowId, executionId) {
@@ -100,7 +125,8 @@ export async function disableTrigger(workflowId, triggerId) {
 
 export async function listNodeTypes() {
   const response = await api.get('/workflows/node-types');
-  return response.data;
+  const payload = response.data;
+  return asArray(payload, ['node_types', 'types', 'items', 'results']);
 }
 
 export async function getNodeTypeSchema(nodeType) {
@@ -114,7 +140,15 @@ export async function getNodeTypeSchema(nodeType) {
 
 export async function listWorkflowTemplates(params = {}) {
   const response = await api.get('/workflows/templates', { params });
-  return response.data;
+  const payload = response.data;
+  if (Array.isArray(payload)) {
+    return { templates: payload, total: payload.length };
+  }
+  if (payload && typeof payload === 'object') {
+    const templates = asArray(payload, ['templates', 'workflows', 'items', 'results']);
+    return { ...payload, templates, total: payload.total ?? templates.length };
+  }
+  return { templates: [], total: 0 };
 }
 
 export async function createFromTemplate(templateId, name) {
@@ -167,7 +201,7 @@ export async function createWebhook(workflowId, config) {
 
 export async function listWebhooks(workflowId) {
   const response = await api.get(`/workflows/${workflowId}/webhooks`);
-  return response.data;
+  return asArray(response.data, ['webhooks', 'items', 'results']);
 }
 
 export async function deleteWebhook(workflowId, webhookId) {

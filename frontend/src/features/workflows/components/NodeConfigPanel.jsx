@@ -53,7 +53,7 @@ import {
   HelpOutline as HelpIcon,
   ContentCopy as CopyIcon,
 } from '@mui/icons-material'
-import { figmaGrey } from '@/app/theme'
+import { neutral, palette } from '@/app/theme'
 
 // =============================================================================
 // STYLED COMPONENTS
@@ -92,25 +92,25 @@ const PanelFooter = styled(Box)(({ theme }) => ({
 const NodeTypeChip = styled(Chip)(({ theme }) => ({
   borderRadius: 4,
   fontWeight: 600,
-  fontSize: '0.7rem',
+  fontSize: '12px',
 }))
 
 const CodeEditor = styled(TextField)(({ theme }) => ({
   '& .MuiOutlinedInput-root': {
     fontFamily: 'monospace',
-    fontSize: '0.8125rem',
+    fontSize: '14px',
     backgroundColor: alpha(theme.palette.common.black, 0.02),
   },
 }))
 
 const VariableChip = styled(Chip)(({ theme }) => ({
   height: 24,
-  fontSize: '0.7rem',
+  fontSize: '12px',
   fontFamily: 'monospace',
-  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300],
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[100],
   cursor: 'pointer',
   '&:hover': {
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.15) : figmaGrey[400],
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.15) : neutral[200],
   },
 }))
 
@@ -543,7 +543,7 @@ export default function NodeConfigPanel({
           <NodeTypeChip
             label={nodeTypeInfo?.label || node.type}
             size="small"
-            sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400], color: 'text.secondary' }}
+            sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[200], color: 'text.secondary' }}
           />
           <Chip label={`ID: ${node.id}`} size="small" variant="outlined" />
         </Stack>

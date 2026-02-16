@@ -232,7 +232,12 @@ def list_templates(status: Optional[str], request: Request):
     templates = _state_store().list_templates()
     if status:
         status_lower = status.lower()
-        templates = [t for t in templates if (t.get("status") or "").lower() == status_lower]
+        # Compatibility: legacy records may store schedulable templates as
+        # "active" instead of "approved".
+        if status_lower == "approved":
+            templates = [t for t in templates if (t.get("status") or "").lower() in {"approved", "active"}]
+        else:
+            templates = [t for t in templates if (t.get("status") or "").lower() == status_lower]
     correlation_id = getattr(request.state, "correlation_id", None) or get_correlation_id()
     hydrated = _ensure_template_mapping_keys(templates)
     return {"status": "ok", "templates": hydrated, "correlation_id": correlation_id}

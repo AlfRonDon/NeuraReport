@@ -47,7 +47,7 @@ import ConfirmModal from '@/components/Modal/ConfirmModal';
 import { getWriteOperation } from '@/utils/sqlSafety';
 import { useConfirmedAction, useInteraction, InteractionType, Reversibility } from '@/components/ux/governance';
 import AiUsageNotice from '@/components/ai/AiUsageNotice';
-import { figmaGrey } from '@/app/theme';
+import { neutral, palette } from '@/app/theme';
 import useCrossPageActions from '@/hooks/useCrossPageActions';
 import SendToMenu from '@/components/common/SendToMenu';
 import { OutputType, FeatureKey } from '@/utils/crossPageTypes';
@@ -392,7 +392,7 @@ export default function SchemaBuilderPage() {
                             <Chip
                               size="small"
                               label={`${Math.round((suggestion.confidence || 0) * 100)}% confidence`}
-                              sx={{ mt: 1, bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400], color: 'text.secondary' }}
+                              sx={{ mt: 1, bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[200], color: 'text.secondary' }}
                             />
                           </CardContent>
                         </Card>
@@ -422,13 +422,13 @@ export default function SchemaBuilderPage() {
                   size="small"
                   label="Read-only recommended"
                   variant="outlined"
-                  sx={{ fontSize: '0.7rem' }}
+                  sx={{ fontSize: '12px' }}
                 />
                 {writeOperation && (
                   <Chip
                     size="small"
                     label={`${writeOperation.toUpperCase()} detected`}
-                    sx={{ fontSize: '0.7rem', bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400], color: 'text.secondary' }}
+                    sx={{ fontSize: '12px', bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[200], color: 'text.secondary' }}
                   />
                 )}
               </Box>
@@ -513,7 +513,7 @@ export default function SchemaBuilderPage() {
                       <Typography>{conn.name}</Typography>
                     </Box>
                     {selectedConnections.includes(conn.id) && (
-                      <Chip label="Selected" size="small" sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400], color: 'text.secondary' }} />
+                      <Chip label="Selected" size="small" sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[200], color: 'text.secondary' }} />
                     )}
                   </Box>
                 </CardContent>

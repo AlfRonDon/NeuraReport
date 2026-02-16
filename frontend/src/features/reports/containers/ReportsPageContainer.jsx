@@ -34,6 +34,7 @@ import PlayArrowIcon from '@mui/icons-material/PlayArrow'
 import DownloadIcon from '@mui/icons-material/Download'
 import ScheduleIcon from '@mui/icons-material/Schedule'
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
+import SmartToyIcon from '@mui/icons-material/SmartToy'
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward'
 import TodayIcon from '@mui/icons-material/Today'
 import DateRangeIcon from '@mui/icons-material/DateRange'
@@ -49,7 +50,7 @@ import ReportGlossaryNotice from '@/components/ux/ReportGlossaryNotice.jsx'
 import { useInteraction, InteractionType, Reversibility, useNavigateInteraction } from '@/components/ux/governance'
 import * as api from '@/api/client'
 import * as summaryApi from '@/api/summary'
-import { figmaGrey } from '@/app/theme'
+import { neutral, palette } from '@/app/theme'
 
 // =============================================================================
 // ANIMATIONS
@@ -98,9 +99,9 @@ const PageHeader = styled(Box)(({ theme }) => ({
 
 const PageTitle = styled(Typography)(({ theme }) => ({
   fontSize: '1.75rem',
-  fontWeight: 700,
+  fontWeight: 600,
   letterSpacing: '-0.02em',
-  color: theme.palette.mode === 'dark' ? figmaGrey[300] : figmaGrey[1200],
+  color: theme.palette.mode === 'dark' ? neutral[100] : neutral[900],
 }))
 
 const GlassCard = styled(Paper)(({ theme }) => ({
@@ -116,8 +117,8 @@ const GlassCard = styled(Paper)(({ theme }) => ({
 }))
 
 const SectionLabel = styled(Typography)(({ theme }) => ({
-  fontSize: '0.6875rem',
-  fontWeight: 700,
+  fontSize: '12px',
+  fontWeight: 600,
   textTransform: 'uppercase',
   letterSpacing: '0.1em',
   color: theme.palette.text.secondary,
@@ -182,17 +183,17 @@ const PresetChip = styled(Chip, {
   transition: 'all 0.2s ease',
   cursor: 'pointer',
   ...(selected && {
-    background: theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200],
-    color: '#fff',
+    background: theme.palette.mode === 'dark' ? neutral[700] : neutral[900],
+    color: theme.palette.common.white,
     boxShadow: `0 4px 12px ${alpha(theme.palette.common.black, 0.15)}`,
     '& .MuiChip-icon': {
-      color: '#fff',
+      color: theme.palette.common.white,
     },
   }),
   ...(!selected && {
     backgroundColor: alpha(theme.palette.action.hover, 0.5),
     '&:hover': {
-      backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300],
+      backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[100],
       transform: 'translateY(-1px)',
     },
   }),
@@ -202,7 +203,7 @@ const DiscoveryChip = styled(Chip)(({ theme }) => ({
   borderRadius: 8,
   fontWeight: 600,
   fontSize: '0.75rem',
-  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
   color: theme.palette.text.secondary,
   border: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
 }))
@@ -233,10 +234,10 @@ const BatchListItem = styled(ListItem, {
   transition: 'all 0.15s ease',
   borderBottom: `1px solid ${alpha(theme.palette.divider, 0.05)}`,
   ...(selected && {
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
   }),
   '&:hover': {
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200],
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : neutral[50],
   },
   '&:last-child': {
     borderBottom: 'none',
@@ -249,12 +250,12 @@ const PrimaryButton = styled(Button)(({ theme }) => ({
   fontWeight: 600,
   fontSize: '0.875rem',
   padding: theme.spacing(1.25, 3),
-  background: theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200],
-  color: '#fff',
+  background: theme.palette.mode === 'dark' ? neutral[700] : neutral[900],
+  color: theme.palette.common.white,
   boxShadow: `0 4px 14px ${alpha(theme.palette.common.black, 0.15)}`,
   transition: 'all 0.2s ease',
   '&:hover': {
-    background: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
+    background: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
     boxShadow: `0 6px 20px ${alpha(theme.palette.common.black, 0.2)}`,
     transform: 'translateY(-2px)',
   },
@@ -278,8 +279,8 @@ const SecondaryButton = styled(Button)(({ theme }) => ({
   color: theme.palette.text.primary,
   transition: 'all 0.2s ease',
   '&:hover': {
-    borderColor: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : figmaGrey[200],
+    borderColor: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : neutral[50],
     transform: 'translateY(-1px)',
   },
 }))
@@ -293,7 +294,7 @@ const TextButton = styled(Button)(({ theme }) => ({
   color: theme.palette.text.secondary,
   transition: 'all 0.2s ease',
   '&:hover': {
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
     color: theme.palette.text.primary,
   },
 }))
@@ -310,11 +311,11 @@ const RunHistoryCard = styled(Paper, {
   borderRadius: 12,
   cursor: 'pointer',
   transition: 'all 0.2s ease',
-  border: `1px solid ${selected ? (theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100]) : alpha(theme.palette.divider, 0.1)}`,
-  backgroundColor: selected ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200]) : 'transparent',
+  border: `1px solid ${selected ? (theme.palette.mode === 'dark' ? neutral[500] : neutral[700]) : alpha(theme.palette.divider, 0.1)}`,
+  backgroundColor: selected ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : neutral[50]) : 'transparent',
   '&:hover': {
     borderColor: alpha(theme.palette.divider, 0.3),
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.03) : figmaGrey[200],
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.03) : neutral[50],
     transform: 'translateX(4px)',
     '& .view-summary-hint': {
       opacity: 1,
@@ -326,7 +327,7 @@ const RunHistoryCard = styled(Paper, {
 const SummaryCard = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(2),
   borderRadius: 12,
-  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : figmaGrey[200],
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : neutral[50],
   border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
 }))
 
@@ -336,13 +337,13 @@ const StyledLinearProgress = styled(LinearProgress)(({ theme }) => ({
   backgroundColor: alpha(theme.palette.text.primary, 0.1),
   '& .MuiLinearProgress-bar': {
     borderRadius: 4,
-    background: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1200],
+    background: theme.palette.mode === 'dark' ? neutral[500] : neutral[900],
   },
 }))
 
 const WarningAlert = styled(Alert)(({ theme }) => ({
   borderRadius: 12,
-  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200],
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : neutral[50],
   border: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
   '& .MuiAlert-icon': {
     color: theme.palette.text.secondary,
@@ -354,7 +355,7 @@ const WarningAlert = styled(Alert)(({ theme }) => ({
 
 const SuccessAlert = styled(Alert)(({ theme }) => ({
   borderRadius: 12,
-  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200],
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : neutral[50],
   border: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
   '& .MuiAlert-icon': {
     color: theme.palette.text.secondary,
@@ -366,7 +367,7 @@ const SuccessAlert = styled(Alert)(({ theme }) => ({
 
 const ErrorAlert = styled(Alert)(({ theme }) => ({
   borderRadius: 12,
-  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200],
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : neutral[50],
   border: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
   '& .MuiAlert-icon': {
     color: theme.palette.text.secondary,
@@ -389,8 +390,8 @@ const DownloadButton = styled(Button)(({ theme }) => ({
   borderColor: alpha(theme.palette.divider, 0.3),
   transition: 'all 0.2s ease',
   '&:hover': {
-    borderColor: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : figmaGrey[200],
+    borderColor: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : neutral[50],
   },
 }))
 
@@ -700,13 +701,11 @@ export default function ReportsPage() {
   }, [selectedTemplate, activeConnection?.id, startDate, endDate, keyValues, templates, toast, execute])
 
   const fetchRunHistory = useCallback(async () => {
-    if (!selectedTemplate) {
-      setRunHistory([])
-      return
-    }
     setHistoryLoading(true)
     try {
-      const runs = await api.listReportRuns({ templateId: selectedTemplate, limit: 6 })
+      const opts = { limit: 10 }
+      if (selectedTemplate) opts.templateId = selectedTemplate
+      const runs = await api.listReportRuns(opts)
       setRunHistory(runs)
     } catch (err) {
       console.error('Failed to load run history:', err)
@@ -881,7 +880,7 @@ export default function ReportsPage() {
                             label={template.kind?.toUpperCase() || 'PDF'}
                             size="small"
                             variant="outlined"
-                            sx={{ borderRadius: 6, fontSize: '0.65rem', height: 20 }}
+                            sx={{ borderRadius: 6, fontSize: '10px', height: 20 }}
                           />
                         </Stack>
                       </MenuItem>
@@ -1192,7 +1191,7 @@ export default function ReportsPage() {
                 {historyLoading && <StyledLinearProgress />}
                 {!historyLoading && runHistory.length === 0 && (
                   <Typography variant="body2" color="text.secondary">
-                    No recent runs for this design yet.
+                    {selectedTemplate ? 'No recent runs for this design yet.' : 'No report runs yet. Generate a report to get started.'}
                   </Typography>
                 )}
                 <Stack spacing={1}>
@@ -1206,7 +1205,7 @@ export default function ReportsPage() {
                       <Stack spacing={0.5}>
                         <Stack direction="row" alignItems="center" justifyContent="space-between">
                           <Typography variant="body2" fontWeight={600}>
-                            {new Date(run.createdAt).toLocaleString()}
+                            {run.templateName || run.templateId}
                           </Typography>
                           <Stack
                             direction="row"
@@ -1222,9 +1221,9 @@ export default function ReportsPage() {
                           </Stack>
                         </Stack>
                         <Typography variant="caption" color="text.secondary">
-                          {run.startDate} to {run.endDate}
+                          {new Date(run.createdAt).toLocaleString()} &middot; {run.startDate} to {run.endDate}
                         </Typography>
-                        <Stack direction="row" spacing={1} sx={{ mt: 0.5 }}>
+                        <Stack direction="row" spacing={1} sx={{ mt: 0.5 }} flexWrap="wrap" useFlexGap>
                           {run.artifacts?.pdf_url && (
                             <DownloadButton
                               size="small"
@@ -1249,6 +1248,18 @@ export default function ReportsPage() {
                               HTML
                             </DownloadButton>
                           )}
+                          <DownloadButton
+                            size="small"
+                            variant="outlined"
+                            startIcon={<SmartToyIcon sx={{ fontSize: 14 }} />}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleNavigate(`/agents?analyzeRunId=${run.id}`, 'Analyze with AI', { runId: run.id })
+                            }}
+                            data-testid={`analyze-ai-${run.id}`}
+                          >
+                            Analyze
+                          </DownloadButton>
                         </Stack>
                       </Stack>
                     </RunHistoryCard>

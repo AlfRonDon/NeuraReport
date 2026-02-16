@@ -21,7 +21,7 @@ import {
 } from '@mui/icons-material'
 import { useInteraction, InteractionType, Reversibility } from '@/components/ux/governance'
 import { getOAuthPopupUrl } from '@/api/connectors'
-import { figmaGrey } from '@/app/theme'
+import { neutral, palette, secondary } from '@/app/theme'
 
 // =============================================================================
 // STYLED COMPONENTS
@@ -36,13 +36,13 @@ const OAuthButtonStyled = styled(Button, {
   padding: theme.spacing(1.5, 3),
   backgroundColor: connected
     ? alpha(theme.palette.text.secondary, 0.05)
-    : alpha(providerColor || (theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100]), 0.1),
+    : alpha(providerColor || (theme.palette.mode === 'dark' ? neutral[500] : neutral[700]), 0.1),
   color: connected
     ? theme.palette.text.secondary
-    : providerColor || (theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100]),
-  border: `1px solid ${alpha(connected ? theme.palette.text.secondary : providerColor || (theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100]), 0.3)}`,
+    : providerColor || (theme.palette.mode === 'dark' ? neutral[500] : neutral[700]),
+  border: `1px solid ${alpha(connected ? theme.palette.text.secondary : providerColor || (theme.palette.mode === 'dark' ? neutral[500] : neutral[700]), 0.3)}`,
   '&:hover': {
-    backgroundColor: alpha(connected ? theme.palette.text.secondary : providerColor || (theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100]), 0.15),
+    backgroundColor: alpha(connected ? theme.palette.text.secondary : providerColor || (theme.palette.mode === 'dark' ? neutral[500] : neutral[700]), 0.15),
   },
   '&:disabled': {
     opacity: 0.6,
@@ -57,25 +57,25 @@ const OAUTH_PROVIDERS = {
   google_drive: {
     name: 'Google Drive',
     icon: GoogleIcon,
-    color: '#4285F4',
+    color: secondary.cyan[500],
     scopes: ['drive.readonly', 'drive.file'],
   },
   dropbox: {
     name: 'Dropbox',
     icon: CloudIcon,
-    color: '#0061FF',
+    color: secondary.violet[500],
     scopes: ['files.content.read', 'files.content.write'],
   },
   onedrive: {
     name: 'OneDrive',
     icon: CloudIcon,
-    color: '#0078D4',
+    color: secondary.slate[500],
     scopes: ['Files.Read', 'Files.ReadWrite'],
   },
   s3: {
     name: 'Amazon S3',
     icon: CloudIcon,
-    color: '#FF9900',
+    color: secondary.fuchsia[500],
     scopes: [],
     // S3 uses access keys, not OAuth
     authType: 'credentials',
@@ -83,7 +83,7 @@ const OAUTH_PROVIDERS = {
   azure_blob: {
     name: 'Azure Blob',
     icon: CloudIcon,
-    color: '#0089D6',
+    color: secondary.teal[500],
     scopes: [],
     // Azure can use connection strings or OAuth
     authType: 'mixed',
@@ -119,7 +119,7 @@ export default function OAuthButton({
   const config = OAUTH_PROVIDERS[provider] || {
     name: provider,
     icon: CloudIcon,
-    color: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
+    color: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
     scopes: [],
   }
 

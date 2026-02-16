@@ -1,4 +1,5 @@
 import { alpha } from '@mui/material/styles'
+import { secondary } from '@/app/theme'
 import {
   Alert,
   Button,
@@ -65,7 +66,7 @@ export default function SavedChartsPanel({
                 variant={isSelected ? 'outlined' : 'elevation'}
                 sx={{
                   borderColor: isSelected ? 'text.secondary' : 'divider',
-                  bgcolor: isSelected ? alpha('#4f46e5', 0.04) : 'background.paper',
+                  bgcolor: isSelected ? alpha(secondary.violet[500], 0.04) : 'background.paper',
                 }}
               >
                 <CardActionArea component="div" onClick={() => onSelectSavedChart(chart.id)}>

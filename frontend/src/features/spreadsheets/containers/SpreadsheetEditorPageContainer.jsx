@@ -59,7 +59,7 @@ import { TransferAction, FeatureKey } from '@/utils/crossPageTypes'
 import { useToast } from '@/components/ToastProvider'
 import { useInteraction, InteractionType, Reversibility } from '@/components/ux/governance'
 import ConnectionSelector from '@/components/common/ConnectionSelector'
-import { figmaGrey } from '@/app/theme'
+import { neutral, palette } from '@/app/theme'
 import HandsontableEditor from '../components/HandsontableEditor'
 import FormulaBar from '../components/FormulaBar'
 
@@ -127,7 +127,7 @@ const SheetTab = styled(Chip, {
 })(({ theme, active }) => ({
   borderRadius: '4px 4px 0 0',
   height: 28,
-  fontSize: '0.8125rem',
+  fontSize: '14px',
   backgroundColor: active
     ? theme.palette.background.paper
     : alpha(theme.palette.background.default, 0.5),
@@ -136,7 +136,7 @@ const SheetTab = styled(Chip, {
   '&:hover': {
     backgroundColor: active
       ? theme.palette.background.paper
-      : theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200],
+      : theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : neutral[50],
   },
 }))
 
@@ -145,7 +145,7 @@ const ActionButton = styled(Button)(({ theme }) => ({
   textTransform: 'none',
   fontWeight: 500,
   minWidth: 'auto',
-  fontSize: '0.8125rem',
+  fontSize: '14px',
 }))
 
 const SpreadsheetListItem = styled(ListItemButton, {
@@ -153,10 +153,10 @@ const SpreadsheetListItem = styled(ListItemButton, {
 })(({ theme, active }) => ({
   borderRadius: 8,
   marginBottom: theme.spacing(0.5),
-  backgroundColor: active ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300]) : 'transparent',
+  backgroundColor: active ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[100]) : 'transparent',
   '&:hover': {
     backgroundColor: active
-      ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.15) : figmaGrey[300])
+      ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.15) : neutral[100])
       : alpha(theme.palette.action.hover, 0.05),
   },
 }))
@@ -740,7 +740,7 @@ export default function SpreadsheetEditorPage() {
                   <Chip
                     label="Unsaved"
                     size="small"
-                    sx={{ height: 20, fontSize: '0.7rem', bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400], color: 'text.secondary' }}
+                    sx={{ height: 20, fontSize: '12px', bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[200], color: 'text.secondary' }}
                   />
                 )}
               </Box>

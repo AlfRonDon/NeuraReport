@@ -82,6 +82,7 @@ class AgentType(str, Enum):
     EMAIL_DRAFT = "email_draft"
     CONTENT_REPURPOSE = "content_repurpose"
     PROOFREADING = "proofreading"
+    REPORT_ANALYST = "report_analyst"
 
 
 class AgentTaskModel(SQLModel, table=True):

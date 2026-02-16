@@ -44,7 +44,7 @@ import {
   List as ListIcon,
   Functions as FormulaIcon,
 } from '@mui/icons-material'
-import { figmaGrey } from '@/app/theme'
+import { neutral, palette } from '@/app/theme'
 
 // =============================================================================
 // STYLED COMPONENTS
@@ -80,14 +80,14 @@ const RuleCard = styled(Paper)(({ theme }) => ({
   border: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
   transition: 'all 0.15s ease',
   '&:hover': {
-    borderColor: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
+    borderColor: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
   },
 }))
 
 const TypeChip = styled(Chip)(({ theme }) => ({
   borderRadius: 4,
   height: 24,
-  fontSize: '0.7rem',
+  fontSize: '12px',
   fontWeight: 600,
 }))
 
@@ -565,12 +565,12 @@ export default function DataValidationPanel({
                         label={VALIDATION_TYPES.find((t) => t.value === validation.type)?.label}
                         size="small"
                         variant="outlined"
-                        sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400], color: 'text.secondary' }}
+                        sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[200], color: 'text.secondary' }}
                       />
                       <Chip
                         label={validation.range}
                         size="small"
-                        sx={{ fontFamily: 'monospace', fontSize: '0.65rem' }}
+                        sx={{ fontFamily: 'monospace', fontSize: '10px' }}
                       />
                     </Stack>
 
@@ -597,7 +597,7 @@ export default function DataValidationPanel({
                           size="small"
                           color={errorStyle.color}
                           variant="outlined"
-                          sx={{ fontSize: '0.65rem' }}
+                          sx={{ fontSize: '10px' }}
                         />
                       )}
                       {validation.ignoreBlank && (
@@ -605,7 +605,7 @@ export default function DataValidationPanel({
                           label="Ignore blank"
                           size="small"
                           variant="outlined"
-                          sx={{ fontSize: '0.65rem' }}
+                          sx={{ fontSize: '10px' }}
                         />
                       )}
                     </Stack>

@@ -33,7 +33,7 @@ import { useToast } from '@/components/ToastProvider'
 import { useInteraction, InteractionType, Reversibility, useNavigateInteraction } from '@/components/ux/governance'
 import { ConfirmModal } from '@/components/Modal'
 import * as api from '@/api/client'
-import { figmaGrey } from '@/app/theme'
+import { neutral, palette } from '@/app/theme'
 
 // =============================================================================
 // ANIMATIONS
@@ -115,7 +115,7 @@ const RefreshButton = styled(IconButton)(({ theme }) => ({
   borderRadius: 8,  // Figma spec: 8px
   transition: 'all 0.2s ease',
   '&:hover': {
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
     transform: 'rotate(180deg)',
   },
 }))
@@ -124,7 +124,7 @@ const DeleteButton = styled(IconButton)(({ theme }) => ({
   borderRadius: 8,  // Figma spec: 8px
   transition: 'all 0.2s ease',
   '&:hover': {
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
     color: theme.palette.text.primary,
   },
 }))
@@ -238,7 +238,7 @@ function ActivityItem({ activity, onNavigate }) {
         px: 1,
         transition: 'all 0.2s ease',
         '&:hover': isNavigable ? {
-          bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : figmaGrey[200],
+          bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : neutral[50],
           transform: 'translateX(4px)',
         } : {},
       }}
@@ -265,7 +265,7 @@ function ActivityItem({ activity, onNavigate }) {
         <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 0.5 }}>
           <Typography
             sx={{
-              fontSize: '0.8125rem',
+              fontSize: '14px',
               fontWeight: 500,
               color: theme.palette.text.primary,
             }}
@@ -278,7 +278,7 @@ function ActivityItem({ activity, onNavigate }) {
             sx={{
               height: 18,
               fontSize: '0.625rem',
-              bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
+              bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
               color: theme.palette.text.secondary,
               borderRadius: 1,
             }}
@@ -287,7 +287,7 @@ function ActivityItem({ activity, onNavigate }) {
         {activity.entity_name && (
           <Typography
             sx={{
-              fontSize: '0.8125rem',
+              fontSize: '14px',
               color: theme.palette.text.secondary,
               mb: 0.5,
             }}
@@ -309,7 +309,7 @@ function ActivityItem({ activity, onNavigate }) {
         )}
         <Typography
           sx={{
-            fontSize: '0.6875rem',
+            fontSize: '12px',
             color: theme.palette.text.disabled,
           }}
         >

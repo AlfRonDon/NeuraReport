@@ -5,6 +5,8 @@ import { create } from 'zustand';
 import * as agentsApi from '../api/agents';
 import * as agentsV2Api from '../api/agentsV2';
 
+const taskIdentifier = (task) => task?.id || task?.task_id || null;
+
 const useAgentStore = create((set, get) => ({
   // State
   tasks: [],
@@ -104,6 +106,36 @@ const useAgentStore = create((set, get) => ({
     }
   },
 
+  // Report Analyst Agent
+  runReportAnalyst: async (runId, options = {}) => {
+    set({ executing: true, error: null });
+    try {
+      const task = await agentsV2Api.runReportAnalystAgent(runId, options);
+      set((state) => ({
+        tasks: [task, ...state.tasks].slice(0, 200),
+        currentTask: task,
+        executing: false,
+      }));
+      return task;
+    } catch (err) {
+      set({ error: err.message, executing: false });
+      return null;
+    }
+  },
+
+  // Generate Report from Agent Task
+  generateReportFromTask: async (taskId, config = {}) => {
+    set({ executing: true, error: null });
+    try {
+      const result = await agentsV2Api.generateReportFromTask(taskId, config);
+      set({ executing: false });
+      return result;
+    } catch (err) {
+      set({ error: err.message, executing: false });
+      return null;
+    }
+  },
+
   // Task Management
   fetchTasks: async (agentType = null) => {
     set({ loading: true, error: null });
@@ -158,9 +190,9 @@ const useAgentStore = create((set, get) => ({
       await agentsV2Api.cancelTask(taskId);
       set((state) => ({
         tasks: state.tasks.map((t) =>
-          t.id === taskId ? { ...t, status: 'cancelled' } : t
+          taskIdentifier(t) === taskId ? { ...t, status: 'cancelled' } : t
         ),
-        currentTask: state.currentTask?.id === taskId
+        currentTask: taskIdentifier(state.currentTask) === taskId
           ? { ...state.currentTask, status: 'cancelled' }
           : state.currentTask,
       }));
@@ -176,8 +208,8 @@ const useAgentStore = create((set, get) => ({
     try {
       const task = await agentsV2Api.retryTask(taskId);
       set((state) => ({
-        tasks: state.tasks.map((t) => (t.id === taskId ? task : t)),
-        currentTask: state.currentTask?.id === taskId ? task : state.currentTask,
+        tasks: state.tasks.map((t) => (taskIdentifier(t) === taskId ? task : t)),
+        currentTask: taskIdentifier(state.currentTask) === taskId ? task : state.currentTask,
         executing: false,
       }));
       return task;

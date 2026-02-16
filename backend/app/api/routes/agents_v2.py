@@ -217,6 +217,49 @@ class ProofreadingRequest(BaseModel):
     sync: bool = Field(default=True)
 
 
+class ReportAnalystRequest(BaseModel):
+    """Request to run the Report Analyst agent."""
+    run_id: str = Field(
+        ...,
+        min_length=1,
+        max_length=100,
+        description="Report run ID to analyze",
+    )
+    analysis_type: str = Field(
+        default="summarize",
+        description="Analysis type: summarize, insights, compare, qa",
+    )
+    question: Optional[str] = Field(
+        default=None,
+        max_length=2000,
+        description="Question text (required for 'qa' analysis type)",
+    )
+    compare_run_id: Optional[str] = Field(
+        default=None,
+        max_length=100,
+        description="Second run ID for comparison (required for 'compare' analysis type)",
+    )
+    focus_areas: Optional[List[str]] = Field(
+        default=None,
+        description="Optional areas to focus analysis on",
+    )
+    idempotency_key: Optional[str] = Field(default=None, max_length=64)
+    priority: int = Field(default=0, ge=0, le=10)
+    webhook_url: Optional[str] = Field(default=None, max_length=2000)
+    sync: bool = Field(default=True)
+
+
+class GenerateReportFromAgentRequest(BaseModel):
+    """Request to trigger report generation from an agent task result."""
+    template_id: str = Field(..., min_length=1, description="Template to use for report generation")
+    connection_id: str = Field(..., min_length=1, description="Database connection to use")
+    start_date: str = Field(..., description="Report start date (YYYY-MM-DD)")
+    end_date: str = Field(..., description="Report end date (YYYY-MM-DD)")
+    key_values: Optional[Dict[str, Any]] = Field(default=None, description="Additional key-value parameters")
+    docx: bool = Field(default=False, description="Generate DOCX artifact")
+    xlsx: bool = Field(default=False, description="Generate XLSX artifact")
+
+
 class CancelRequest(BaseModel):
     """Request to cancel a task."""
     reason: Optional[str] = Field(
@@ -606,6 +649,106 @@ async def run_proofreading_agent(request: Request, response: Response, body: Pro
 
 
 # =============================================================================
+# REPORT ANALYST ENDPOINT
+# =============================================================================
+
+@router.post(
+    "/report-analyst",
+    response_model=TaskResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+    summary="Run Report Analyst Agent",
+    description="Analyze, summarize, compare, or ask questions about generated reports.",
+)
+@limiter.limit("10/minute")
+async def run_report_analyst_agent(request: Request, response: Response, body: ReportAnalystRequest):
+    """Run the report analyst agent."""
+    try:
+        task = await agent_service_v2.run_report_analyst(
+            run_id=body.run_id,
+            analysis_type=body.analysis_type,
+            question=body.question,
+            compare_run_id=body.compare_run_id,
+            focus_areas=body.focus_areas,
+            idempotency_key=body.idempotency_key,
+            priority=body.priority,
+            webhook_url=body.webhook_url,
+            sync=body.sync,
+        )
+        return task_to_response(task)
+    except Exception as e:
+        _handle_agent_error(e)
+
+
+# =============================================================================
+# AGENT-TRIGGERED REPORT GENERATION ENDPOINT
+# =============================================================================
+
+@router.post(
+    "/tasks/{task_id}/generate-report",
+    status_code=status.HTTP_202_ACCEPTED,
+    summary="Generate Report from Agent Task",
+    description="Trigger report generation using an agent task's result as additional context.",
+)
+@limiter.limit("5/minute")
+async def generate_report_from_agent(request: Request, response: Response, task_id: str, body: GenerateReportFromAgentRequest):
+    """Generate a report using agent task results as context."""
+    task = agent_service_v2.get_task(task_id)
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "TASK_NOT_FOUND", "message": f"Task {task_id} not found"},
+        )
+    if task.status != "completed":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"code": "TASK_NOT_COMPLETED", "message": f"Task must be completed (current: {task.status})"},
+        )
+
+    # Merge agent result into key_values so the report template can reference it
+    key_values = dict(body.key_values or {})
+    if task.result:
+        key_values["_agent_context"] = {
+            "task_id": task_id,
+            "agent_type": task.agent_type if isinstance(task.agent_type, str) else task.agent_type.value,
+            "result": task.result,
+        }
+
+    try:
+        from backend.app.schemas.generate.reports import RunPayload
+        from backend.legacy.services.report_service import queue_report_job
+
+        payload = RunPayload(
+            template_id=body.template_id,
+            connection_id=body.connection_id,
+            start_date=body.start_date,
+            end_date=body.end_date,
+            key_values=key_values,
+            docx=body.docx,
+            xlsx=body.xlsx,
+        )
+        # Set correlation_id on request state for tracing
+        if not hasattr(request.state, "correlation_id"):
+            request.state.correlation_id = f"agent-{task_id}"
+
+        job = await queue_report_job(payload, request, kind="pdf")
+        job_id = (job.get("job_id") or job.get("id")) if isinstance(job, dict) else getattr(job, "job_id", getattr(job, "id", str(job)))
+        return {
+            "job_id": job_id,
+            "task_id": task_id,
+            "status": "queued",
+            "message": "Report generation triggered from agent task result",
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Failed to trigger report from agent: %s", e)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={"code": "REPORT_TRIGGER_FAILED", "message": str(e)},
+        )
+
+
+# =============================================================================
 # TASK MANAGEMENT ENDPOINTS
 # =============================================================================
 
@@ -866,6 +1009,12 @@ async def list_agent_types():
                 "name": "Proofreading Agent",
                 "description": "Grammar, style, and clarity checking with style guide support",
                 "endpoint": "/agents/v2/proofreading",
+            },
+            {
+                "id": "report_analyst",
+                "name": "Report Analyst",
+                "description": "Analyze, summarize, compare, or ask questions about generated reports",
+                "endpoint": "/agents/v2/report-analyst",
             },
         ]
     }

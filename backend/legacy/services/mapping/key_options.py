@@ -16,6 +16,7 @@ from backend.legacy.utils.template_utils import template_dir
 from backend.legacy.services.mapping.helpers import (
     build_mapping_lookup,
     execute_token_query,
+    execute_token_query_df,
     extract_contract_metadata,
     http_error,
     normalize_tokens_request,
@@ -72,7 +73,14 @@ def mapping_key_options(
 
     effective_connection_id = _resolve_connection_id(connection_id)
 
-    template_dir_path = template_dir(template_id, kind=kind)
+    try:
+        template_dir_path = template_dir(template_id, kind=kind)
+    except Exception:
+        # Template directory doesn't exist on disk — return empty keys
+        # rather than a hard 404, since key options are optional.
+        logger.info("mapping_key_options_no_dir", extra={"template_id": template_id, "kind": kind})
+        return {"keys": {}}
+
     keys_available = load_mapping_keys(template_dir_path)
     if not keys_available:
         return {"keys": {}}
@@ -89,7 +97,7 @@ def mapping_key_options(
 
     mapping_path = template_dir_path / "mapping_pdf_labels.json"
     if not mapping_path.exists():
-        raise http_error(404, "mapping_not_found", "Approved mapping not found for template.")
+        return {"keys": {}}
     try:
         mapping_doc = json.loads(mapping_path.read_text(encoding="utf-8"))
     except Exception as exc:
@@ -136,6 +144,9 @@ def mapping_key_options(
     # (e.g., runtime_machine_keys.db) alongside their artifacts.
     fallback_db_path = template_dir_path / "runtime_machine_keys.db"
 
+    import os as _os
+    _use_df = _os.getenv("NEURA_USE_DATAFRAME_PIPELINE", "false").lower() in ("1", "true", "yes")
+
     with sqlite3.connect(str(db_path)) as con:
         con.row_factory = sqlite3.Row
         for token in token_list:
@@ -152,14 +163,23 @@ def mapping_key_options(
 
             def _schema_machine_columns(connection):
                 parent_table = str(contract_join.get("parent_table") or "").strip() or "neuract__RUNHOURS"
-                try:
-                    safe_table = parent_table.replace("'", "''")
-                    pragma_rows = list(
-                        connection.execute(f"PRAGMA table_info('{safe_table}')")
-                    )
-                    columns = [row[1] for row in pragma_rows if len(row) > 1]
-                except Exception as exc:  # pragma: no cover - defensive
-                    return [], {"error": "Schema query failed", "table": parent_table}
+                if _use_df:
+                    try:
+                        from backend.app.repositories.dataframes.sqlite_loader import get_loader
+                        loader = get_loader(db_path)
+                        df = loader.frame(parent_table)
+                        columns = [str(c) for c in df.columns]
+                    except Exception:
+                        return [], {"error": "DataFrame schema query failed", "table": parent_table}
+                else:
+                    try:
+                        safe_table = parent_table.replace("'", "''")
+                        pragma_rows = list(
+                            connection.execute(f"PRAGMA table_info('{safe_table}')")
+                        )
+                        columns = [row[1] for row in pragma_rows if len(row) > 1]
+                    except Exception as exc:  # pragma: no cover - defensive
+                        return [], {"error": "Schema query failed", "table": parent_table}
 
                 filtered = [col for col in columns if "hrs" in str(col or "").lower()]
                 filtered.sort()
@@ -179,17 +199,29 @@ def mapping_key_options(
                 debug_payload["token_details"][token] = token_debug
                 continue
 
-            def _run_query(connection, *, mark_fallback: bool = False):
-                rows_inner, debug_inner = execute_token_query(
-                    connection,
-                    token=token,
-                    table_clean=table_clean,
-                    column_clean=column_clean,
-                    date_column_name=date_column_name,
-                    start_date=start_date,
-                    end_date=end_date,
-                    limit_value=limit_value,
-                )
+            def _run_query(connection, *, mark_fallback: bool = False, query_db_path=db_path):
+                if _use_df:
+                    rows_inner, debug_inner = execute_token_query_df(
+                        query_db_path,
+                        token=token,
+                        table_clean=table_clean,
+                        column_clean=column_clean,
+                        date_column_name=date_column_name,
+                        start_date=start_date,
+                        end_date=end_date,
+                        limit_value=limit_value,
+                    )
+                else:
+                    rows_inner, debug_inner = execute_token_query(
+                        connection,
+                        token=token,
+                        table_clean=table_clean,
+                        column_clean=column_clean,
+                        date_column_name=date_column_name,
+                        start_date=start_date,
+                        end_date=end_date,
+                        limit_value=limit_value,
+                    )
                 if mark_fallback:
                     debug_inner["fallback_db"] = str(fallback_db_path)
                 return rows_inner, debug_inner
@@ -222,7 +254,7 @@ def mapping_key_options(
             if needs_fallback:
                 with sqlite3.connect(str(fallback_db_path)) as fallback_con:
                     fallback_con.row_factory = sqlite3.Row
-                    rows, token_debug = _run_query(fallback_con, mark_fallback=True)
+                    rows, token_debug = _run_query(fallback_con, mark_fallback=True, query_db_path=fallback_db_path)
             elif not rows and isinstance(token_debug.get("error"), str):
                 err_text = token_debug.get("error", "").lower()
                 if "no such table" in err_text or "no such column" in err_text:

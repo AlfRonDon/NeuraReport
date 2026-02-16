@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any, Iterable, Mapping, Sequence
 
 from ..prompts import llm_prompts
+from ..prompts.llm_prompts import _is_df_mode
 from ..templates.TemplateVerify import MODEL, get_openai_client
 from ..utils import (
     call_chat_completion,
@@ -174,7 +175,7 @@ def _read_png_as_data_uri(png_path: Path) -> str | None:
     return f"data:image/png;base64,{data}"
 
 
-def _mapping_allowlist_errors(mapping: dict[str, str], catalog: Iterable[str]) -> list[str]:
+def _mapping_allowlist_errors(mapping: dict[str, str], catalog: Iterable[str], *, df_mode: bool = False) -> list[str]:
     allowed_catalog = {val.strip() for val in catalog if val}
     allowed = set(allowed_catalog)
     allowed.update(ALLOWED_SPECIAL_VALUES)
@@ -191,6 +192,23 @@ def _mapping_allowlist_errors(mapping: dict[str, str], catalog: Iterable[str]) -
             continue
         if PARAM_REF_RE.match(normalized):
             continue
+
+        if df_mode:
+            # DataFrame mode: only allow direct table.column references (no SQL)
+            if _SQL_EXPR_HINT_RE.search(normalized):
+                errors.append(
+                    f"{key!r} -> contains SQL expression (not allowed in DataFrame mode); "
+                    "use simple table.column or mark as UNRESOLVED"
+                )
+                continue
+            # Must be a direct table.column reference
+            if normalized not in allowed_catalog:
+                errors.append(
+                    f"{key!r} -> value {normalized!r} is not a catalog column or params reference"
+                )
+            continue
+
+        # SQL mode: allow SQL expressions with catalog column references
         referenced: list[str] = [
             f"{match.group('table')}.{match.group('column')}" for match in _COLUMN_REF_RE.finditer(normalized)
         ]
@@ -452,9 +470,10 @@ def run_llm_call_3(
     prompt_builder=None,
     *,
     allow_missing_tokens: bool = False,
+    rich_catalog_text: str | None = None,
 ) -> MappingInlineResult:
     builder = prompt_builder or llm_prompts.build_llm_call_3_prompt
-    prompt_payload = builder(template_html, catalog, schema)
+    prompt_payload = builder(template_html, catalog, schema, rich_catalog_text=rich_catalog_text)
     system_text = prompt_payload.get("system", "")
     user_text = prompt_payload.get("user", "")
     attachments = prompt_payload.get("attachments", [])
@@ -505,12 +524,22 @@ def run_llm_call_3(
 
         raw_text = (response.choices[0].message.content or "").strip()
         parsed_text = strip_code_fences(raw_text)
+
+        # Additive: try to extract JSON object even if surrounded by prose
+        if parsed_text and not parsed_text.startswith(("{", "[")):
+            _json_start = parsed_text.find("{")
+            if _json_start >= 0:
+                _json_end = parsed_text.rfind("}")
+                if _json_end > _json_start:
+                    parsed_text = parsed_text[_json_start : _json_end + 1]
+
         try:
             payload = json.loads(parsed_text)
         except Exception as exc:
             last_error = MappingInlineValidationError(f"Invalid JSON response: {exc}")
             logger.warning(
-                "mapping_inline_json_parse_failed",
+                "mapping_inline_json_parse_failed raw_preview=%s",
+                raw_text[:300] if raw_text else "(empty)",
                 extra={
                     "event": "mapping_inline_json_parse_failed",
                     "attempt": attempt,
@@ -547,7 +576,7 @@ def run_llm_call_3(
                     },
                 )
 
-            allowlist_errors = _mapping_allowlist_errors(mapping, catalog)
+            allowlist_errors = _mapping_allowlist_errors(mapping, catalog, df_mode=_is_df_mode())
             if allowlist_errors:
                 raise MappingInlineValidationError("Mapping values outside allow-list: " + ", ".join(allowlist_errors))
 
@@ -668,7 +697,8 @@ def run_llm_call_3(
         except MappingInlineValidationError as exc:
             last_error = exc
             logger.warning(
-                "mapping_inline_validation_failed",
+                "mapping_inline_validation_failed raw_llm_output=%s",
+                raw_text[:2000] if raw_text else "(empty)",
                 extra={
                     "event": "mapping_inline_validation_failed",
                     "attempt": attempt,
@@ -682,9 +712,11 @@ def run_llm_call_3(
 
     assert last_error is not None
     logger.error(
-        "mapping_inline_failed",
+        "mapping_inline_failed last_raw_llm_output=%s",
+        raw_text[:4000] if raw_text else "(empty)",
         extra={
             "event": "mapping_inline_failed",
+            "error": str(last_error),
             "prompt_version": prompt_version,
             "cache_key": cache_key,
         },

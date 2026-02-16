@@ -15,7 +15,7 @@ import {
   keyframes,
 } from '@mui/material'
 import CloseIcon from '@mui/icons-material/Close'
-import { figmaGrey } from '@/app/theme'
+import { neutral, palette } from '@/app/theme'
 
 // =============================================================================
 // ANIMATIONS
@@ -112,7 +112,7 @@ export default function Drawer({
             {subtitle && (
               <Typography
                 sx={{
-                  fontSize: '0.8125rem',
+                  fontSize: '14px',
                   color: theme.palette.text.secondary,
                   mt: 0.5,
                 }}
@@ -129,7 +129,7 @@ export default function Drawer({
               borderRadius: 1,  // 8px via theme spacing
               transition: 'all 0.2s ease',
               '&:hover': {
-                bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
+                bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
                 color: theme.palette.text.primary,
                 transform: 'rotate(90deg)',
               },
@@ -191,11 +191,11 @@ export default function Drawer({
                     borderRadius: 1,  // 8px via theme spacing
                     textTransform: 'none',
                     fontWeight: 600,
-                    bgcolor: theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200],
+                    bgcolor: theme.palette.mode === 'dark' ? neutral[700] : neutral[900],
                     boxShadow: `0 4px 14px ${alpha(theme.palette.common.black, 0.15)}`,
                     transition: 'all 0.2s ease',
                     '&:hover': {
-                      bgcolor: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
+                      bgcolor: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
                       boxShadow: `0 6px 20px ${alpha(theme.palette.common.black, 0.2)}`,
                       transform: 'translateY(-1px)',
                     },

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import base64
 import json
+import os
 import re
 from functools import lru_cache
 from pathlib import Path
@@ -12,6 +13,13 @@ from typing import Any, Dict, Iterable, Mapping
 PROMPT_VERSION = "llm_call_3_v7"
 PROMPT_VERSION_3_5 = "v4"
 PROMPT_VERSION_4 = "v2"
+
+PROMPT_VERSION_DF = "llm_call_3_df_v1"
+PROMPT_VERSION_4_DF = "v2_df"
+
+
+def _is_df_mode() -> bool:
+    return os.getenv("NEURA_USE_DATAFRAME_PIPELINE", "false").lower() in ("1", "true", "yes")
 LLM_CALL_PROMPTS: Dict[str, str] = {
     "llm_call_1": dedent(
         """\
@@ -36,7 +44,7 @@ LLM_CALL_PROMPTS: Dict[str, str] = {
 
         STRUCTURE & CSS
         - The result must be printable: use @page size A4 with sensible margins.
-        - Prefer flowing layout (avoid fixed heights). Avoid absolute positioning except for persistent header/footer if clearly present.
+        - Prefer flowing layout (avoid fixed heights). Do NOT use position:fixed or position:absolute on headers or footers — these overlap table content on long reports. Keep footers in normal document flow so they render after the content.
         - Reproduce what is visible - draw ONLY the rules/lines that exist in the image. Default to no borders and transparent backgrounds; add borders per edge only where a line is visible.
         - Use table markup ONLY for true grids and structured data (never div-based). Use borderless tables or simple divs for key/value areas. Avoid unnecessary nested tables or enclosing frames.
         - Right-align numeric columns where appropriate; keep typographic rhythm tight enough to match the PDF.
@@ -95,6 +103,7 @@ LLM_CALL_PROMPTS: Dict[str, str] = {
         - For numeric columns, ensure right alignment and enable tabular figures (font-variant-numeric: tabular-nums) so digits align vertically.
         - Borders/lines: match only what is visible in the reference; prefer per-edge borders to mimic single ruled lines. Avoid box-shadows, rounded corners, blurs, gradients, or tints unless clearly present in the reference.
         - Pagination stability: keep .batch-block printable (break-inside: avoid; page-break-inside: avoid); do not fix heights unless the reference shows fixed frames.
+        - Do NOT use position:fixed or position:absolute on headers or footers — these overlap table content on long reports. Keep footers in normal document flow.
         - Do NOT scale the entire page via CSS transforms to "cheat" alignment. Correct geometry via widths, margins, paddings, line-height, letter-spacing, and colgroup widths.
 
         VISUAL MATCHING (unchanged intent)
@@ -203,6 +212,94 @@ VALIDATION & FORMATTING
 - "token_samples" must include every placeholder exactly once and each value must be a non-empty string (use "NOT_VISIBLE"/"UNREADABLE" instead of leaving blanks).
 """.strip()
 
+_CALL3_PROMPT_SECTION_DF = """
+You are given the FULL HTML of a report template and a RICH DB CATALOG that includes column types and sample values.
+Your job has TWO parts:
+A) AUTO-MAPPING:
+Identify all visible header/label texts that correspond to data fields and map each token to exactly one database column.
+B) CONSTANT VALUE DISCOVERY:
+Detect placeholders that are visually constant on the reference PDF and record their literal values.
+--------------------------------------------------------------------------------
+GOALS
+- Produce a JSON object that (1) proposes a strict mapping, and (2) lists constant placeholders.
+- Treat the provided HTML as read-only context; do not attempt to rewrite or return it.
+- Ignore join/date speculation entirely.
+CORE RULES
+- IMPORTANT: Output ONLY simple table.column references from the CATALOG. Do NOT output SQL expressions, functions (STRFTIME, SUM, CONCAT, CASE, etc.), or aggregations.
+- Choose strictly from CATALOG columns in fully-qualified "table.column" format.
+- If the value should be passed through from request parameters, return params.param_name (lower snake_case).
+- For report filter or paging tokens (e.g., from_date, to_date, start_date, end_date, page_info), return the literal string "To Be Selected..." in the mapping.
+- If no clear single-column source exists, set the mapping value to UNRESOLVED and describe the needed operation in meta.hints.
+- If a header requires combining multiple columns, formatting, or computation, set mapping to UNRESOLVED and describe it in meta.hints (e.g., {"op": "concat", "columns": ["table.col_a", "table.col_b"]} or {"op": "sum", "columns": ["table.col1", "table.col2"]}).
+- Never emit SQL expressions, DuckDB functions, DERIVED: prefixes, TABLE_COLUMNS[...], or COLUMN_EXP[...] wrappers.
+- Do not invent headers, tokens, tables, columns, or duplicate mappings.
+- The CATALOG includes data types and sample values — use these to make better mapping decisions.
+HEADER KEYING
+- If a <th> has data-label, only use that value (converted to lowercase snake_case) when the same token name also appears as a {placeholder} in the HTML or is listed in SCHEMA. Otherwise treat the data-label as decorative.
+SYNONYMS/SHORTHANDS TO NORMALIZE
+- set/set_wt -> set_weight
+- ach/achieved -> achieved_weight
+- err -> error_kg
+- err%/error% -> error_percent
+- sl/serial -> sl_no
+- name/material -> material_name
+ENUMERATED/AGGREGATE HEADERS
+- If a header represents an aggregate across enumerated columns, do NOT output a SQL expression. Instead set it to UNRESOLVED and record the contributing columns under meta.hints[header]:
+  { "op": "SUM", "over": ["table.col1", "table.col2", "..."] }
+CONSTANT PLACEHOLDERS
+- Report ONLY tokens that are truly constant across runs (e.g., page titles, company name, static captions).
+- NEVER mark tokens that are per-run or DB-driven.
+- Remove constant tokens from the "mapping" object.
+TOKEN SNAPSHOT
+- Emit a "token_samples" object that enumerates EVERY placeholder token from the HTML.
+- For each token output the literal string you see on the PDF (best effort). Never leave it blank.
+INPUTS
+[FULL_HTML]
+{html_for_llm}
+[CATALOG]
+{catalog_json}
+Optional:
+[SCHEMA_JSON]
+{schema_json_if_any}
+[REFERENCE_PNG_HINT]
+"A screenshot of the reference PDF was used to create this template; treat visible page titles/branding as likely constants."
+OUTPUT -- STRICT JSON ONLY
+{
+  "mapping": {
+    "<header_or_token>": "<table.column | params.param_name | UNRESOLVED>"
+  },
+  "token_samples": {
+    "<token>": "<literal string>"
+  },
+  "meta": {
+    "unresolved": ["<token>", "..."],
+    "hints": {
+      "<token>": { "op": "SUM|CONCAT|FORMAT", "columns": ["table.col1", "table.col2"] }
+    }
+  }
+}
+VALIDATION & FORMATTING
+- Output ONE JSON object only. No markdown, no commentary.
+- Every mapping value must either (a) match a catalog entry exactly in table.column format, (b) use the params.param_name form, or (c) be the literal UNRESOLVED.
+- Do NOT output any SQL functions or expressions as mapping values.
+- Any token you remove from "mapping" (because it is constant) must still appear in "token_samples".
+- Do not add or rename remaining tokens.
+- "token_samples" must include every placeholder exactly once with a non-empty string value.
+""".strip()
+
+
+@lru_cache(maxsize=1)
+def _load_llm_call_3_section_df() -> tuple[str, str]:
+    section = _CALL3_PROMPT_SECTION_DF
+    if _INPUT_MARKER in section:
+        system, remainder = section.split(_INPUT_MARKER, 1)
+        system_text = system.strip()
+        user_template = f"{_INPUT_MARKER}{remainder}".strip()
+    else:
+        system_text = section.strip()
+        user_template = ""
+    return system_text, user_template
+
 
 @lru_cache(maxsize=1)
 def _load_llm_call_3_section() -> tuple[str, str]:
@@ -291,11 +388,21 @@ def build_llm_call_3_prompt(
     html: str,
     catalog: Iterable[str],
     schema_json: Dict[str, Any] | None = None,
+    *,
+    rich_catalog_text: str | None = None,
 ) -> Dict[str, Any]:
     """
     Build the system/user payload for LLM Call 3 (auto-map + constant discovery).
+
+    When ``NEURA_USE_DATAFRAME_PIPELINE`` is enabled and *rich_catalog_text* is
+    provided, the DataFrame-mode prompt is used which forbids SQL expressions.
     """
-    system_template, user_template = _load_llm_call_3_section()
+    df_mode = _is_df_mode()
+    if df_mode:
+        system_template, user_template = _load_llm_call_3_section_df()
+    else:
+        system_template, user_template = _load_llm_call_3_section()
+
     if not user_template:
         user_template = system_template
         system_template = (
@@ -304,7 +411,7 @@ def build_llm_call_3_prompt(
         )
 
     html_block = _sanitize_html(html)
-    catalog_block = _format_catalog(catalog)
+    catalog_block = rich_catalog_text if (df_mode and rich_catalog_text) else _format_catalog(catalog)
     schema_block = _format_schema(schema_json)
     row_hint = _row_token_hint(schema_json)
 
@@ -336,7 +443,7 @@ def build_llm_call_3_prompt(
         "system": system_template.strip(),
         "user": user_payload.strip(),
         "attachments": attachments,
-        "version": PROMPT_VERSION,
+        "version": PROMPT_VERSION_DF if df_mode else PROMPT_VERSION,
     }
 
 
@@ -629,6 +736,122 @@ LLM_CALL_4_SYSTEM_PROMPT = dedent(
     """
 ).strip()
 
+LLM_CALL_4_SYSTEM_PROMPT_DF = dedent(
+    """\
+    LLM CALL 4 - Step-5 Hand-off Builder (DataFrame Mode)
+    You generate the structured payload for the report generation pipeline. Your job is to:
+    1. Interpret the user's instructions, template structure, and catalog context to finalize report logic.
+    2. Emit a fully mapped contract object with declarative operations (NO SQL).
+
+    CRITICAL: This pipeline uses pandas DataFrames directly. Do NOT emit any SQL expressions, DuckDB functions, or SQL fragments anywhere in your output.
+
+    You must:
+    * Use only columns from the provided CATALOG allow-list in simple TABLE.COLUMN format.
+    * Preserve every dynamic token from the schema. Do not add, remove, or rename tokens.
+    * Map every token with exactly one of:
+        - `TABLE.COLUMN` (direct source from catalog),
+        - `PARAM:name` (header/parameter passthrough),
+        - `UNRESOLVED` (if no source found).
+    * Do NOT emit SQL expressions, DuckDB functions, DERIVED: prefixes, or any code in mapping values.
+    * `row_computed` values must be declarative operation objects:
+        {"op": "subtract", "left": "column_a", "right": "column_b"}
+        {"op": "add", "left": "column_a", "right": "column_b"}
+        {"op": "multiply", "left": "column_a", "right": "column_b"}
+        {"op": "divide", "numerator": "column_a", "denominator": "column_b"}
+        {"op": "concat", "columns": ["col_a", "col_b"], "separator": " "}
+        {"op": "format_date", "column": "date_col", "format": "%d-%m-%Y %H:%M:%S"}
+        {"op": "format_number", "column": "num_col", "decimals": 2}
+    * `totals_math` values must be declarative operation objects:
+        {"op": "sum", "column": "row_amount"}
+        {"op": "mean", "column": "row_amount"}
+        {"op": "count", "column": "row_id"}
+        {"op": "divide", "numerator": {"op": "sum", "column": "col_a"}, "denominator": {"op": "sum", "column": "col_b"}}
+    * Describe reshape rules with column ordering and filters. Every reshape rule must include a non-empty "purpose" sentence.
+    * Guarantee `order_by.rows` and `row_order` are non-empty arrays. Use column names only (e.g., ["material_name", "ASC"]). Default to ["ROWID"] when no explicit ordering exists.
+    * Leave `validation.unknown_tokens` and `validation.unknown_columns` empty.
+    * Return exactly one JSON object. No extra text outside JSON.
+
+    User message (JSON payload):
+    {
+      "final_template_html": "<HTML from Step 3.5>",
+      "page_summary": "Detailed narrative of the PDF page",
+      "schema": { "scalars": [...], "row_tokens": [...], "totals": [...] },
+      "auto_mapping_proposal": { "mapping": {...}, "join": {...}, "date_columns": {...}, "unresolved": [...] },
+      "mapping_override": {...},
+      "user_instructions": "...",
+      "key_tokens": ["..."],
+      "catalog": ["table.column", "..."]
+    }
+
+    Expected output (single JSON object):
+    {
+      "overview_md": "STRING (Markdown). Overview for downstream pipeline.",
+      "step5_requirements": {
+        "datasets": {
+          "header": {"description": "One-row header dataset", "columns": ["<scalar tokens>"]},
+          "rows": {"description": "Detail rows", "columns": ["<row tokens>"], "grouping": [...], "ordering": [...]},
+          "totals": {"description": "Aggregate totals", "columns": ["<totals tokens>"]}
+        },
+        "semantics": "Filter and parameter semantics.",
+        "parameters": {
+          "required": [{"name": "from_date", "type": "date"}],
+          "optional": [{"name": "filter_col", "type": "string"}]
+        },
+        "transformations": ["Reshaping rules in plain English"]
+      },
+      "contract": {
+        "tokens": { "scalars": [...], "row_tokens": [...], "totals": [...] },
+        "mapping": {
+          "<token>": "<TABLE.COLUMN | PARAM:name | UNRESOLVED>"
+        },
+        "unresolved": [],
+        "join": { "parent_table": "...", "parent_key": "...", "child_table": "...", "child_key": "..." },
+        "date_columns": { "<table>": "<date column>" },
+        "filters": { "optional": { "<filter_name>": "table.column" } },
+        "reshape_rules": [
+          {
+            "purpose": "Short description",
+            "strategy": "UNION_ALL|MELT|NONE",
+            "columns": [{"as": "alias", "from": ["table.col1", "table.col2"]}]
+          }
+        ],
+        "row_computed": {
+          "<token>": {"op": "subtract", "left": "col_a", "right": "col_b"}
+        },
+        "totals_math": {
+          "<token>": {"op": "sum", "column": "row_amount"}
+        },
+        "formatters": { "<token>": "<formatter spec>" },
+        "order_by": {"rows": ["column_name ASC"]},
+        "header_tokens": ["<scalar token>", ...],
+        "row_tokens": ["<row token>", ...],
+        "totals": {},
+        "row_order": ["column_name ASC"],
+        "notes": "Domain notes"
+      },
+      "validation": {
+        "unknown_tokens": [],
+        "unknown_columns": [],
+        "token_coverage": { "scalars_mapped_pct": 100, "row_tokens_mapped_pct": 100, "totals_mapped_pct": 100 }
+      }
+    }
+
+    Guidance for overview_md:
+    * Executive Summary: what the user wants; reshaping, grouping, totals.
+    * Token Inventory: list dynamic tokens.
+    * Mapping Table: Markdown table Token -> source (TABLE.COLUMN / PARAM).
+    * Join & Date Rules: tables, joins, filter semantics.
+    * Transformations: reshaping descriptions, computed fields (declarative ops), totals rationale.
+    * Parameters: required/optional, semantics.
+
+    Model self-check:
+    * `unknown_tokens` must be [].
+    * `unknown_columns` must be [].
+    * `token_coverage` should report 100%.
+    * NO SQL expressions anywhere in the output.
+    """
+).strip()
+
 LLM_CALL_5_PROMPT: Dict[str, str] = {
     "system": dedent(
         """\
@@ -735,6 +958,89 @@ LLM_CALL_5_PROMPT: Dict[str, str] = {
     ).strip(),
 }
 
+LLM_CALL_5_PROMPT_DF: Dict[str, str] = {
+    "system": dedent(
+        """\
+        LLM CALL 5 - Generator Assets Emitter (DataFrame Mode)
+        You are the Step-5 generator bundle author. Given the final template HTML and the Step-4 payload, you must emit runtime artifacts for a pandas DataFrame pipeline. NO SQL.
+
+        CRITICAL: This pipeline uses pandas DataFrames directly. Do NOT emit SQL, DuckDB expressions, or any code.
+
+        Canonical sources:
+        * Treat `step4_output.contract` as authoritative. Do not add/drop/rename tokens.
+        * Mirror the contract exactly in your output (same ordering, same declarative ops).
+
+        Required output structure:
+        {
+          "contract": {
+            "tokens": { "scalars": [...], "row_tokens": [...], "totals": [...] },
+            "mapping": { "<token>": "TABLE.COLUMN|PARAM:name|UNRESOLVED" },
+            "join": { "parent_table": "...", "parent_key": "...", "child_table": "...", "child_key": "..." },
+            "date_columns": { "<table>": "<date column>" },
+            "filters": { "optional": { "<name>": "table.column" } },
+            "reshape_rules": [...],
+            "row_computed": { "<token>": {"op": "...", ...} },
+            "totals_math": { "<token>": {"op": "...", ...} },
+            "formatters": { "<token>": "<formatter spec>" },
+            "order_by": { "rows": ["column_name ASC"] },
+            "header_tokens": [...],
+            "row_tokens": [...],
+            "totals": {},
+            "row_order": ["column_name ASC"],
+            "literals": {},
+            "notes": "..."
+          },
+          "dataframe_ops": {
+            "header": {
+              "source_table": "<table name>",
+              "columns": ["<column mapped to each scalar token>"],
+              "limit": 1
+            },
+            "rows": {
+              "source_table": "<table name>",
+              "columns": ["<column mapped to each row token>"],
+              "operations": [
+                {"type": "filter", "column": "col", "op": "between", "values": [":start_date", ":end_date"]},
+                {"type": "sort", "by": ["col ASC"]},
+                {"type": "computed", "name": "new_col", "op": "subtract", "left": "col_a", "right": "col_b"}
+              ]
+            },
+            "totals": {
+              "source": "rows_result",
+              "operations": [
+                {"type": "aggregate", "name": "total_amount", "op": "sum", "column": "row_amount"}
+              ]
+            }
+          },
+          "invalid": false
+        }
+
+        Rules:
+        * Copy contract from Step-4 exactly. No SQL expressions anywhere.
+        * `mapping` values: only TABLE.COLUMN, PARAM:name, or UNRESOLVED.
+        * `row_computed`/`totals_math`: declarative ops only ({"op": "sum/subtract/add/multiply/divide/concat/format_date/format_number", ...}).
+        * `dataframe_ops`: describes how to fetch data from DataFrames declaratively.
+        * Join block must have non-empty parent_table/parent_key. If no child, reuse parent.
+        * `order_by.rows` and `row_order` must be non-empty arrays.
+        * Return ONE JSON object. No markdown, no commentary.
+        """
+    ).strip(),
+    "user": dedent(
+        """\
+        {
+          "final_template_html": "<HTML from Step 3.5>",
+          "step4_output": {
+            "contract": { /* Step-4 contract object */ },
+            "overview_md": "Step-4 overview",
+            "step5_requirements": { /* Step-4 requirements */ }
+          },
+          "key_tokens": ["..."],
+          "catalog": ["table.column", "..."]
+        }
+        """
+    ).strip(),
+}
+
 PROMPT_LIBRARY: Dict[str, str] = {
     **LLM_CALL_PROMPTS,
     "llm_call_3_5_system": LLM_CALL_3_5_PROMPT["system"],
@@ -760,7 +1066,7 @@ def build_llm_call_4_prompt(
     """
     Build the payload for LLM Call 4 (contract builder + overview).
     """
-    system_text = LLM_CALL_4_SYSTEM_PROMPT
+    system_text = LLM_CALL_4_SYSTEM_PROMPT_DF if _is_df_mode() else LLM_CALL_4_SYSTEM_PROMPT
     key_tokens_list: list[str] = []
     if key_tokens:
         seen: set[str] = set()
@@ -800,7 +1106,7 @@ def build_llm_call_4_prompt(
     return {
         "system": system_text,
         "messages": messages,
-        "version": PROMPT_VERSION_4,
+        "version": PROMPT_VERSION_4_DF if _is_df_mode() else PROMPT_VERSION_4,
     }
 
 
@@ -810,14 +1116,22 @@ def get_prompt_generator_assets() -> Dict[str, str]:
     return dict(LLM_CALL_5_PROMPT)
 
 
+def get_prompt_generator_assets_df() -> Dict[str, str]:
+    """Return the system and user template strings for LLM CALL 5 (DataFrame mode)."""
+    return dict(LLM_CALL_5_PROMPT_DF)
+
+
 __all__ = [
     "build_llm_call_3_prompt",
     "build_llm_call_3_5_prompt",
     "PROMPT_VERSION",
     "PROMPT_VERSION_3_5",
     "PROMPT_VERSION_4",
+    "PROMPT_VERSION_DF",
+    "PROMPT_VERSION_4_DF",
     "build_llm_call_4_prompt",
     "LLM_CALL_PROMPTS",
     "PROMPT_LIBRARY",
     "get_prompt_generator_assets",
+    "get_prompt_generator_assets_df",
 ]

@@ -16,7 +16,7 @@ import {
   alpha,
 } from '@mui/material'
 import StorageIcon from '@mui/icons-material/Storage'
-import { figmaGrey } from '@/app/theme'
+import { neutral, palette } from '@/app/theme'
 import { useAppStore } from '@/stores'
 
 export default function ConnectionSelector({
@@ -61,11 +61,11 @@ export default function ConnectionSelector({
                   label={conn.status}
                   sx={{
                     height: 18,
-                    fontSize: '0.65rem',
+                    fontSize: '10px',
                     bgcolor: (theme) =>
                       theme.palette.mode === 'dark'
                         ? alpha(theme.palette.text.primary, 0.1)
-                        : figmaGrey[300],
+                        : neutral[100],
                     color: 'text.secondary',
                   }}
                 />
@@ -76,11 +76,11 @@ export default function ConnectionSelector({
                   label={conn.db_type}
                   sx={{
                     height: 18,
-                    fontSize: '0.65rem',
+                    fontSize: '10px',
                     bgcolor: (theme) =>
                       theme.palette.mode === 'dark'
                         ? alpha(theme.palette.text.primary, 0.08)
-                        : figmaGrey[200],
+                        : neutral[50],
                     color: 'text.secondary',
                   }}
                 />

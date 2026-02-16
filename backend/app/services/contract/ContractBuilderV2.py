@@ -18,6 +18,7 @@ from ..utils import (
     write_json_atomic,
     write_text_atomic,
 )
+from ..utils.text import strip_code_fences
 
 logger = logging.getLogger("neura.contract.builder_v2")
 
@@ -616,6 +617,48 @@ def _normalize_sql_mapping_sections(
             contract[section] = {str(token): _validate_expr(str(token), expr) for token, expr in block.items()}
 
 
+def _normalize_df_mapping_sections(
+    contract: dict[str, Any],
+    *,
+    allow_list: Iterable[str],
+    fallback_mapping: Mapping[str, str] | None = None,
+) -> None:
+    """DataFrame mode: reject SQL expressions, only allow TABLE.COLUMN or PARAM:name."""
+    allow_catalog = {str(item).strip() for item in allow_list if str(item).strip()}
+    _direct_col_re = re.compile(r"^\s*(?P<table>[A-Za-z_][\w]*)\s*\.\s*(?P<column>[A-Za-z_][\w]*)\s*$")
+    _param_re = re.compile(r"^PARAM:[A-Za-z0-9_]+$")
+    _unresolved_vals = {"UNRESOLVED", ""}
+
+    def _validate_df_expr(token: str, expr: Any) -> Any:
+        # Allow dict values in row_computed/totals_math (declarative ops)
+        if isinstance(expr, dict):
+            return expr
+        text = str(expr or "").strip()
+        if not text or text in _unresolved_vals:
+            return text
+        if _param_re.match(text):
+            return text
+        m = _direct_col_re.match(text)
+        if m:
+            ref = f"{m.group('table')}.{m.group('column')}"
+            if ref in allow_catalog:
+                return text
+            # Allow if table matches but column may be from reshape
+            return text
+        # Fallback: try to use it as-is (may be a legacy SQL expression)
+        logger.warning("df_mode_non_column_mapping", extra={"token": token, "expr": text})
+        return text
+
+    mapping_section = contract.get("mapping")
+    if isinstance(mapping_section, dict):
+        contract["mapping"] = {str(t): _validate_df_expr(str(t), v) for t, v in mapping_section.items()}
+
+    for section in ("totals", "row_computed", "totals_math"):
+        block = contract.get(section)
+        if isinstance(block, dict):
+            contract[section] = {str(t): _validate_df_expr(str(t), v) for t, v in block.items()}
+
+
 def _serialize_contract(contract: dict[str, Any]) -> dict[str, Any]:
     """
     Return a deep-ish copy safe for persistence (ensures JSON serialisable values).
@@ -724,6 +767,14 @@ def build_or_load_contract_v2(
         raise ContractBuilderError(f"LLM Call 4 request failed: {exc}") from exc
 
     content = (raw_response.choices[0].message.content or "").strip()
+    content = strip_code_fences(content)
+    # Additive: extract JSON object if surrounded by prose
+    if content and not content.startswith(("{", "[")):
+        _json_start = content.find("{")
+        if _json_start >= 0:
+            _json_end = content.rfind("}")
+            if _json_end > _json_start:
+                content = content[_json_start : _json_end + 1]
     try:
         llm_payload = json.loads(content)
     except json.JSONDecodeError as exc:
@@ -768,11 +819,19 @@ def build_or_load_contract_v2(
     _normalize_reshape_rules(contract)
     _normalize_ordering(contract)
     contract = _augment_contract_for_compat(_serialize_contract(contract))
-    _normalize_sql_mapping_sections(
-        contract,
-        allow_list=allow_list,
-        fallback_mapping=fallback_mapping_sources,
-    )
+    _use_df = os.getenv("NEURA_USE_DATAFRAME_PIPELINE", "false").lower() in ("1", "true", "yes")
+    if _use_df:
+        _normalize_df_mapping_sections(
+            contract,
+            allow_list=allow_list,
+            fallback_mapping=fallback_mapping_sources,
+        )
+    else:
+        _normalize_sql_mapping_sections(
+            contract,
+            allow_list=allow_list,
+            fallback_mapping=fallback_mapping_sources,
+        )
 
     now = int(time.time())
     overview_path = template_dir / _OVERVIEW_FILENAME

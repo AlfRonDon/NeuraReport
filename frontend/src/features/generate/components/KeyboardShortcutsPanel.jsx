@@ -1,7 +1,7 @@
 import { Box, Stack, Typography, Chip, alpha } from '@mui/material'
 import KeyboardIcon from '@mui/icons-material/Keyboard'
 import { getShortcutDisplay, EDITOR_SHORTCUTS } from '../hooks/useEditorKeyboardShortcuts'
-import { figmaGrey } from '@/app/theme'
+import { neutral, palette } from '@/app/theme'
 
 function ShortcutKey({ children }) {
   return (
@@ -21,7 +21,7 @@ function ShortcutKey({ children }) {
         borderColor: 'divider',
         boxShadow: (theme) => `0 1px 0 ${alpha(theme.palette.common.black, 0.1)}`,
         fontFamily: 'monospace',
-        fontSize: '0.7rem',
+        fontSize: '12px',
         fontWeight: 600,
         color: 'text.secondary',
       }}
@@ -54,7 +54,7 @@ export default function KeyboardShortcutsPanel({ compact = false }) {
           py: 1,
           px: 1.5,
           borderRadius: 1,
-          bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : figmaGrey[200],
+          bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : neutral[50],
           border: '1px solid',
           borderColor: (theme) => alpha(theme.palette.divider, 0.1),
         }}

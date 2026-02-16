@@ -255,6 +255,16 @@ def normalize_mapping_inline_payload(payload: Any) -> Any:
     if not isinstance(payload, dict):
         return payload
 
+    # LLMs sometimes return a top-level "constants" key for tokens they
+    # consider static.  Merge those entries into "mapping" so the pipeline
+    # handles them correctly, then drop the key before schema validation.
+    constants = payload.pop("constants", None)
+    if isinstance(constants, dict):
+        mapping = payload.setdefault("mapping", {})
+        for key, value in constants.items():
+            if key not in mapping:
+                mapping[str(key)] = str(value)
+
     meta = payload.get("meta")
     if not isinstance(meta, dict):
         return payload

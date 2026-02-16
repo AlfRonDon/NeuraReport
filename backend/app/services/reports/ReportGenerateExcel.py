@@ -9,6 +9,7 @@ rules, workbook-aware helpers) without perturbing the PDF path.
 import asyncio
 import contextlib
 import json
+import os
 import re
 from backend.app.repositories.dataframes import sqlite_shim as sqlite3
 from collections import defaultdict
@@ -1321,45 +1322,75 @@ def fill_and_print(
                         pass
                 GENERATOR_BUNDLE = bundle
 
+    _USE_DF_PIPELINE = os.getenv("NEURA_USE_DATAFRAME_PIPELINE", "false").lower() in ("1", "true", "yes")
+
     generator_results: dict[str, list[dict[str, object]]] | None = None
-    if GENERATOR_BUNDLE and not multi_key_selected:
-        meta_payload = GENERATOR_BUNDLE.get("meta") or {}
-        entrypoints = meta_payload.get("entrypoints")
-        if not isinstance(entrypoints, dict):
-            entrypoints = {}
 
-        if any(entrypoints.values()):
-            params_spec = meta_payload.get("params") or {}
-            required_params = list(params_spec.get("required") or [])
-            optional_params = list(params_spec.get("optional") or [])
-            for name in required_params + optional_params:
-                sql_params.setdefault(name, None)
+    # --- DataFrame pipeline branch (no SQL) ---
+    if _USE_DF_PIPELINE and not multi_key_selected:
+        try:
+            from .dataframe_pipeline import DataFramePipeline
 
-            if "plant_name" in sql_params:
-                sql_params["plant_name"] = LITERALS.get("plant_name") or special_values.get("plant_name", "")
-            if "location" in sql_params:
-                sql_params["location"] = LITERALS.get("location") or special_values.get("location", "")
-            if "recipe_code" in sql_params:
-                if "recipe_code" in key_values_map:
-                    sql_params["recipe_code"] = _first_key_value(key_values_map["recipe_code"])
-                else:
-                    fallback_val = LITERALS.get("recipe_code")
-                    sql_params["recipe_code"] = fallback_val if fallback_val not in (None, "", []) else None
-            if "page_info" in sql_params:
-                sql_params["page_info"] = LITERALS.get("page_info") or ""
+            df_value_filters: dict[str, list] = {}
             if key_values_map:
                 for name, values in key_values_map.items():
-                    sql_params[name] = _first_key_value(values)
+                    df_value_filters[name] = values
 
-            _apply_alias_params(sql_params)
-
-            try:
-                generator_results = _run_generator_entrypoints(entrypoints, sql_params, dataframe_loader)
-            except Exception as exc:  # pragma: no cover - defensive logging
-                print(f"Generator SQL execution failed; falling back to contract mapping: {exc}")
+            pipeline = DataFramePipeline(
+                contract_adapter=contract_adapter,
+                loader=dataframe_loader,
+                params=sql_params,
+                start_date=sql_params.get("start_date") or sql_params.get("from_date"),
+                end_date=sql_params.get("end_date") or sql_params.get("to_date"),
+                value_filters=df_value_filters,
+            )
+            generator_results = pipeline.execute()
+            if not any(generator_results.get(s) for s in ("header", "rows", "totals")):
                 generator_results = None
+        except Exception as exc:
+            print(f"DataFrame pipeline failed; falling back to SQL path: {exc}")
+            generator_results = None
 
-    if generator_results is None and not multi_key_selected:
+    # --- SQL pipeline branch (original) ---
+    if generator_results is None and not _USE_DF_PIPELINE:
+        if GENERATOR_BUNDLE and not multi_key_selected:
+            meta_payload = GENERATOR_BUNDLE.get("meta") or {}
+            entrypoints = meta_payload.get("entrypoints")
+            if not isinstance(entrypoints, dict):
+                entrypoints = {}
+
+            if any(entrypoints.values()):
+                params_spec = meta_payload.get("params") or {}
+                required_params = list(params_spec.get("required") or [])
+                optional_params = list(params_spec.get("optional") or [])
+                for name in required_params + optional_params:
+                    sql_params.setdefault(name, None)
+
+                if "plant_name" in sql_params:
+                    sql_params["plant_name"] = LITERALS.get("plant_name") or special_values.get("plant_name", "")
+                if "location" in sql_params:
+                    sql_params["location"] = LITERALS.get("location") or special_values.get("location", "")
+                if "recipe_code" in sql_params:
+                    if "recipe_code" in key_values_map:
+                        sql_params["recipe_code"] = _first_key_value(key_values_map["recipe_code"])
+                    else:
+                        fallback_val = LITERALS.get("recipe_code")
+                        sql_params["recipe_code"] = fallback_val if fallback_val not in (None, "", []) else None
+                if "page_info" in sql_params:
+                    sql_params["page_info"] = LITERALS.get("page_info") or ""
+                if key_values_map:
+                    for name, values in key_values_map.items():
+                        sql_params[name] = _first_key_value(values)
+
+                _apply_alias_params(sql_params)
+
+                try:
+                    generator_results = _run_generator_entrypoints(entrypoints, sql_params, dataframe_loader)
+                except Exception as exc:  # pragma: no cover - defensive logging
+                    print(f"Generator SQL execution failed; falling back to contract mapping: {exc}")
+                    generator_results = None
+
+    if generator_results is None and not multi_key_selected and not _USE_DF_PIPELINE:
         try:
             default_sql_pack = contract_adapter.build_default_sql_pack()
         except Exception as exc:  # pragma: no cover - defensive logging
@@ -1515,6 +1546,8 @@ def fill_and_print(
     total_token_to_target = {}
 
     for token, raw_target in TOTALS.items():
+        if isinstance(raw_target, dict):
+            continue  # Declarative op spec — handled by DF pipeline, not SQL prefetch
         target = (raw_target or PLACEHOLDER_TO_COL.get(token, "")).strip()
         if not target or "." not in target:
             continue
@@ -1641,7 +1674,7 @@ def fill_and_print(
             rendered_blocks.append(block_html)
         else:
             print("Generator SQL produced no usable row data after filtering; skipping block.")
-    else:
+    elif not _USE_DF_PIPELINE:
         for batch_id in BATCH_IDS or []:
             block_html = prototype_block
 

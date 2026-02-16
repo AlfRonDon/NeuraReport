@@ -4,6 +4,51 @@
  */
 import { api } from './client';
 
+function normalizeDocument(doc) {
+  if (!doc || typeof doc !== 'object') return doc;
+  const normalized = { ...doc };
+  if (normalized.file_type == null && normalized.document_type) {
+    normalized.file_type = normalized.document_type;
+  }
+  if (normalized.collection_ids == null && Array.isArray(normalized.collections)) {
+    normalized.collection_ids = normalized.collections;
+  }
+  return normalized;
+}
+
+function inferDocumentType(fileName) {
+  const ext = String(fileName || '').toLowerCase().split('.').pop();
+  switch (ext) {
+    case 'pdf':
+      return 'pdf';
+    case 'doc':
+    case 'docx':
+      return 'docx';
+    case 'xls':
+    case 'xlsx':
+      return 'xlsx';
+    case 'ppt':
+    case 'pptx':
+      return 'pptx';
+    case 'txt':
+      return 'txt';
+    case 'md':
+    case 'markdown':
+      return 'md';
+    case 'htm':
+    case 'html':
+      return 'html';
+    case 'png':
+    case 'jpg':
+    case 'jpeg':
+    case 'gif':
+    case 'webp':
+      return 'image';
+    default:
+      return 'other';
+  }
+}
+
 // ============================================
 // Documents
 // ============================================
@@ -17,6 +62,7 @@ export async function uploadDocument(file, title, collectionId = null) {
   const formData = new FormData();
   formData.append('file', file);
   formData.append('title', title || file.name);
+  formData.append('document_type', inferDocumentType(file?.name));
   if (collectionId) {
     formData.append('collection_id', collectionId);
   }
@@ -35,13 +81,22 @@ export async function listDocuments(options = {}) {
   const response = await api.get('/knowledge/documents', {
     params: {
       collection_id: options.collectionId,
-      tags: options.tags,
+      tags: Array.isArray(options.tags) ? options.tags.join(',') : options.tags,
       document_type: options.documentType,
       limit: options.pageSize || 50,
       offset: options.offset || 0,
     },
   });
-  return response.data;
+  const payload = response.data;
+  if (Array.isArray(payload)) {
+    const documents = payload.map(normalizeDocument);
+    return { documents, total: documents.length };
+  }
+  if (payload && Array.isArray(payload.documents)) {
+    const documents = payload.documents.map(normalizeDocument);
+    return { ...payload, documents, total: payload.total ?? documents.length };
+  }
+  return { documents: [], total: 0 };
 }
 
 export async function updateDocument(documentId, data) {
@@ -75,7 +130,12 @@ export async function getCollection(collectionId) {
 
 export async function listCollections() {
   const response = await api.get('/knowledge/collections');
-  return response.data;
+  const payload = response.data;
+  if (Array.isArray(payload)) return payload;
+  if (payload && typeof payload === 'object') {
+    return Array.isArray(payload.collections) ? payload.collections : [];
+  }
+  return [];
 }
 
 export async function updateCollection(collectionId, data) {
@@ -111,7 +171,12 @@ export async function createTag(name, color = null) {
 
 export async function listTags() {
   const response = await api.get('/knowledge/tags');
-  return response.data;
+  const payload = response.data;
+  if (Array.isArray(payload)) return payload;
+  if (payload && typeof payload === 'object') {
+    return Array.isArray(payload.tags) ? payload.tags : [];
+  }
+  return [];
 }
 
 export async function deleteTag(tagId) {
@@ -187,10 +252,16 @@ export async function buildKnowledgeGraph(options = {}) {
 }
 
 export async function generateFaq(options = {}) {
+  const documentIds = Array.isArray(options.documentIds)
+    ? options.documentIds.filter(Boolean)
+    : [];
   const response = await api.post('/knowledge/faq', {
-    collection_id: options.collectionId,
-    document_ids: options.documentIds,
+    document_ids: documentIds,
     max_questions: options.maxQuestions || 10,
+  }, {
+    params: {
+      background: options.background ?? false,
+    },
   });
   return response.data;
 }

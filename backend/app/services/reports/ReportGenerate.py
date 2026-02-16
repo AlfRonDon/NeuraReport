@@ -170,7 +170,8 @@ def fill_and_print(
     )
 
     # ---- Load the final shell HTML (created during Approve) ----
-    html = TEMPLATE_PATH.read_text(encoding="utf-8")
+    from ..utils.html import _fix_fixed_footers
+    html = _fix_fixed_footers(TEMPLATE_PATH.read_text(encoding="utf-8"))
 
     dataframe_loader = SQLiteDataFrameLoader(DB_PATH)
 
@@ -562,6 +563,74 @@ def fill_and_print(
                 row[tok] = idx
             for col in serial_columns:
                 row[col] = idx
+
+    def _fill_batch_level_tokens(
+        block_html: str,
+        batch_header: dict[str, Any],
+        known_tokens: set[str],
+    ) -> str:
+        """Fill batch-level tokens from carry-forward data (BLOCK_REPEAT)."""
+        batch_num = batch_header.get("__batch_number__", "")
+
+        for m in re.finditer(r"\{(\w+)\}", block_html):
+            token = m.group(1)
+            if token in known_tokens:
+                continue
+            value = _match_batch_cf(token, batch_header, batch_num)
+            if value is not None:
+                block_html = sub_token(block_html, token, format_token_value(token, value))
+        return block_html
+
+    def _match_batch_cf(
+        token: str,
+        cf: dict[str, Any],
+        batch_num: Any,
+    ) -> Any:
+        """Match a batch-level token to carry-forward column data."""
+        # 1. Direct match
+        if token in cf:
+            return cf[token]
+
+        # 2. Sequential numbering tokens
+        tok_low = token.lower()
+        if tok_low in ("batch_no", "batch_number", "bth_no"):
+            return batch_num
+
+        # 3. Numbered suffix: start_time_1 → start_time, start_time_2 → end_time
+        if tok_low.endswith("_1"):
+            base = token[:-2]
+            if base in cf:
+                return cf[base]
+        if tok_low.endswith("_2"):
+            base = token[:-2]
+            # Common pair: start_time_2 → end_time
+            end_key = base.replace("start", "end")
+            if end_key in cf:
+                return cf[end_key]
+            if base in cf:
+                return cf[base]
+
+        # 4. Date derivation: batch_date → date portion of start_time/end_time
+        if "date" in tok_low:
+            for dt_col in ("start_time", "end_time"):
+                if dt_col in cf:
+                    dt_str = str(cf[dt_col])
+                    if " " in dt_str:
+                        return dt_str.split(" ")[0]
+                    return dt_str
+
+        # 5. Recipe aliases
+        if tok_low in ("recipe_code", "recipe_no"):
+            return cf.get("recipe_name", cf.get("id", ""))
+
+        # 6. Fuzzy: token is a suffix of a cf column or vice-versa
+        for key, val in cf.items():
+            if key.startswith("__"):
+                continue
+            if tok_low.endswith(key.lower()) or key.lower().endswith(tok_low):
+                return val
+
+        return None
 
     def _value_for_token(row: Mapping[str, Any], token: str) -> Any:
         if not token:
@@ -1179,44 +1248,75 @@ def fill_and_print(
                         pass
                 GENERATOR_BUNDLE = bundle
 
+    _USE_DF_PIPELINE = os.getenv("NEURA_USE_DATAFRAME_PIPELINE", "false").lower() in ("1", "true", "yes")
+
     generator_results: dict[str, list[dict[str, object]]] | None = None
-    if GENERATOR_BUNDLE and not multi_key_selected:
-        meta_payload = GENERATOR_BUNDLE.get("meta") or {}
-        entrypoints = meta_payload.get("entrypoints")
-        if not isinstance(entrypoints, dict):
-            entrypoints = {}
 
-        if any(entrypoints.values()):
-            params_spec = meta_payload.get("params") or {}
-            required_params = list(params_spec.get("required") or [])
-            optional_params = list(params_spec.get("optional") or [])
-            for name in required_params + optional_params:
-                sql_params.setdefault(name, None)
+    # --- DataFrame pipeline branch (no SQL) ---
+    if _USE_DF_PIPELINE and not multi_key_selected:
+        try:
+            from .dataframe_pipeline import DataFramePipeline
 
-            if "plant_name" in sql_params:
-                sql_params["plant_name"] = LITERALS.get("plant_name") or special_values.get("plant_name", "")
-            if "location" in sql_params:
-                sql_params["location"] = LITERALS.get("location") or special_values.get("location", "")
-            if "recipe_code" in sql_params:
-                if "recipe_code" in key_values_map:
-                    sql_params["recipe_code"] = _first_key_value(key_values_map["recipe_code"])
-                else:
-                    fallback_val = LITERALS.get("recipe_code")
-                    sql_params["recipe_code"] = fallback_val if fallback_val not in (None, "", []) else None
-            if "page_info" in sql_params:
-                sql_params["page_info"] = LITERALS.get("page_info") or ""
+            df_value_filters: dict[str, list] = {}
             if key_values_map:
                 for name, values in key_values_map.items():
-                    sql_params[name] = _first_key_value(values)
-            _apply_alias_params(sql_params)
+                    df_value_filters[name] = values
 
-            try:
-                generator_results = _run_generator_entrypoints(entrypoints, sql_params, dataframe_loader)
-            except Exception as exc:  # pragma: no cover - defensive logging
-                logger.warning("Generator SQL execution failed; falling back to contract mapping: %s", exc)
+            pipeline = DataFramePipeline(
+                contract_adapter=contract_adapter,
+                loader=dataframe_loader,
+                params=sql_params,
+                start_date=sql_params.get("start_date") or sql_params.get("from_date"),
+                end_date=sql_params.get("end_date") or sql_params.get("to_date"),
+                value_filters=df_value_filters,
+            )
+            generator_results = pipeline.execute()
+            if not any(generator_results.get(s) for s in ("header", "rows", "totals")):
+                logger.warning("DataFrame pipeline returned empty results; falling back to SQL path")
                 generator_results = None
+        except Exception as exc:
+            logger.warning("DataFrame pipeline failed; falling back to SQL path: %s", exc)
+            generator_results = None
 
-    if generator_results is None and not multi_key_selected:
+    # --- SQL pipeline branch (original) ---
+    if generator_results is None and not _USE_DF_PIPELINE:
+        if GENERATOR_BUNDLE and not multi_key_selected:
+            meta_payload = GENERATOR_BUNDLE.get("meta") or {}
+            entrypoints = meta_payload.get("entrypoints")
+            if not isinstance(entrypoints, dict):
+                entrypoints = {}
+
+            if any(entrypoints.values()):
+                params_spec = meta_payload.get("params") or {}
+                required_params = list(params_spec.get("required") or [])
+                optional_params = list(params_spec.get("optional") or [])
+                for name in required_params + optional_params:
+                    sql_params.setdefault(name, None)
+
+                if "plant_name" in sql_params:
+                    sql_params["plant_name"] = LITERALS.get("plant_name") or special_values.get("plant_name", "")
+                if "location" in sql_params:
+                    sql_params["location"] = LITERALS.get("location") or special_values.get("location", "")
+                if "recipe_code" in sql_params:
+                    if "recipe_code" in key_values_map:
+                        sql_params["recipe_code"] = _first_key_value(key_values_map["recipe_code"])
+                    else:
+                        fallback_val = LITERALS.get("recipe_code")
+                        sql_params["recipe_code"] = fallback_val if fallback_val not in (None, "", []) else None
+                if "page_info" in sql_params:
+                    sql_params["page_info"] = LITERALS.get("page_info") or ""
+                if key_values_map:
+                    for name, values in key_values_map.items():
+                        sql_params[name] = _first_key_value(values)
+                _apply_alias_params(sql_params)
+
+                try:
+                    generator_results = _run_generator_entrypoints(entrypoints, sql_params, dataframe_loader)
+                except Exception as exc:  # pragma: no cover - defensive logging
+                    logger.warning("Generator SQL execution failed; falling back to contract mapping: %s", exc)
+                    generator_results = None
+
+    if generator_results is None and not multi_key_selected and not _USE_DF_PIPELINE:
         try:
             default_sql_pack = contract_adapter.build_default_sql_pack()
         except Exception as exc:  # pragma: no cover - defensive logging
@@ -1655,7 +1755,14 @@ def fill_and_print(
         target = mapping_value.strip()
         if "." not in target:
             return None
-        return target.split(".", 1)[1].strip() or None
+        after_dot = target.split(".", 1)[1].strip()
+        if not after_dot:
+            return None
+        # --- Additive: handle SQL expressions like STRFTIME(table.col, 'fmt')
+        #     Extract just the column name, not trailing args/parens ---
+        # Strip trailing parenthesized arguments (e.g. "col, '%d/%m')" → "col")
+        col = re.split(r"[,)\s]", after_dot, 1)[0].strip()
+        return col or None
 
     header_cols = sorted({col for t in HEADER_TOKENS for col in [_extract_col_name(PLACEHOLDER_TO_COL.get(t))] if col})
     row_cols = sorted({col for t in ROW_TOKENS for col in [_extract_col_name(PLACEHOLDER_TO_COL.get(t))] if col})
@@ -1664,6 +1771,8 @@ def fill_and_print(
     total_token_to_target = {}
 
     for token, raw_target in TOTALS.items():
+        if isinstance(raw_target, dict):
+            continue  # Declarative op spec — handled by DF pipeline, not SQL prefetch
         target = (raw_target or PLACEHOLDER_TO_COL.get(token, "")).strip()
         if not target or "." not in target:
             continue
@@ -1765,7 +1874,28 @@ def fill_and_print(
             for idx in range(0, len(batch_ids_chunk), chunk_size):
                 yield batch_ids_chunk[idx : idx + chunk_size]
 
-        if BATCH_IDS:
+        if BATCH_IDS and _USE_DF_PIPELINE:
+            # --- DataFrame prefetch (no SQL) ---
+            try:
+                if header_cols and parent_table:
+                    df_parent = dataframe_loader.frame(parent_table)
+                    select_cols = list(dict.fromkeys((pcols or []) + header_cols))
+                    existing_cols = [c for c in select_cols if c in df_parent.columns]
+                    if existing_cols:
+                        df_filtered = contract_adapter._apply_date_filter_df(
+                            df_parent, parent_table,
+                            sql_params.get("start_date") or sql_params.get("from_date"),
+                            sql_params.get("end_date") or sql_params.get("to_date"),
+                        )
+                        for _, row in df_filtered.iterrows():
+                            row_dict = {c: row.get(c) for c in existing_cols if c in row.index}
+                            key = _compose_key(row_dict, pcols) if pcols else "default"
+                            if key and key not in prefetched_headers:
+                                prefetched_headers[key] = row_dict
+            except Exception as exc:
+                logger.warning("DataFrame prefetch failed, falling back to SQL: %s", exc)
+
+        elif BATCH_IDS and not _USE_DF_PIPELINE:
             con = sqlite3.connect(str(DB_PATH))
             con.row_factory = sqlite3.Row
             cur = con.cursor()
@@ -1848,101 +1978,125 @@ def fill_and_print(
 
     rendered_blocks = []
     if generator_results is not None:
-        block_html = prototype_block
+        # ── Detect batch-level tokens (present in block but unknown to contract) ──
+        _all_block_tokens = set(re.findall(r"\{(\w+)\}", prototype_block))
+        _known_tokens = set(ROW_TOKENS) | set(TOTALS.keys()) | set(HEADER_TOKENS)
+        _batch_level_tokens = _all_block_tokens - _known_tokens
 
+        _df_batches = generator_results.get("batches") or []
+        _use_per_batch = bool(_df_batches) and bool(_batch_level_tokens)
+
+        if _use_per_batch:
+            logger.info(
+                "df_pipeline_per_batch rendering batches=%d batch_tokens=%s",
+                len(_df_batches), _batch_level_tokens,
+            )
+
+        # ── Shared: pre-analyse the row template from the prototype once ──
+        allowed_row_tokens = {t for t in PLACEHOLDER_TO_COL.keys() if t not in TOTALS} - set(HEADER_TOKENS)
         header_rows = generator_results.get("header") or []
         header_row = header_rows[0] if header_rows else {}
-        for t in HEADER_TOKENS:
-            if t in header_row:
-                value = header_row[t]
-                block_html = sub_token(block_html, t, format_token_value(t, value))
 
-        allowed_row_tokens = {t for t in PLACEHOLDER_TO_COL.keys() if t not in TOTALS} - set(HEADER_TOKENS)
-        rows_data = generator_results.get("rows") or []
-        filtered_rows: list[dict[str, Any]] = []
-        row_tokens_in_template: list[str] = []
+        def _render_df_block(rows_data, totals_data, batch_header=None):
+            """Render one block from DF pipeline data. Returns (html, had_rows)."""
+            blk = prototype_block
 
-        if rows_data:
-            tbody_m, tbody_inner = best_rows_tbody(block_html, allowed_row_tokens)
-            if tbody_m and tbody_inner:
-                row_template, row_span, row_tokens_in_template = find_row_template(tbody_inner, allowed_row_tokens)
-                if row_template and row_tokens_in_template:
-                    row_columns_template = [
-                        _extract_col_name(PLACEHOLDER_TO_COL.get(tok)) or "" for tok in row_tokens_in_template
+            # (a) Fill global header tokens
+            for t in HEADER_TOKENS:
+                if t in header_row:
+                    blk = sub_token(blk, t, format_token_value(t, header_row[t]))
+
+            # (b) Fill batch-level tokens from carry-forward data
+            if batch_header and _batch_level_tokens:
+                blk = _fill_batch_level_tokens(blk, batch_header, _known_tokens)
+
+            # (c) Render rows
+            filtered = []
+            if rows_data:
+                tbody_m, tbody_inner = best_rows_tbody(blk, allowed_row_tokens)
+                if tbody_m and tbody_inner:
+                    # --- "tbody" mode: row template inside <tbody> ---
+                    row_template, row_span, rtt = find_row_template(tbody_inner, allowed_row_tokens)
+                    if row_template and rtt:
+                        rcols = [_extract_col_name(PLACEHOLDER_TO_COL.get(tok)) or "" for tok in rtt]
+                        filtered = _filter_rows_for_render(rows_data, rtt, rcols, treat_all_as_data=bool(__force_single))
+                        filtered = _prune_placeholder_rows(filtered, rtt)
+                        if filtered:
+                            parts = []
+                            for row in filtered:
+                                tr = row_template
+                                for tok in rtt:
+                                    tr = sub_token(tr, tok, format_token_value(tok, _value_for_token(row, tok)))
+                                parts.append(tr)
+                            new_inner = tbody_inner[:row_span[0]] + "\n".join(parts) + tbody_inner[row_span[1]:]
+                            blk = blk[:tbody_m.start(1)] + new_inner + blk[tbody_m.end(1):]
+                else:
+                    # --- "tr" mode: prototype_block IS the row template ---
+                    tr_toks = [
+                        (m.group(1) or m.group(2)).strip()
+                        for m in re.finditer(r"\{\{\s*([^}\n]+?)\s*\}\}|\{\s*([^}\n]+?)\s*\}", blk)
                     ]
-                    filtered_rows = _filter_rows_for_render(
-                        rows_data,
-                        row_tokens_in_template,
-                        row_columns_template,
-                        treat_all_as_data=bool(__force_single),
-                    )
-                    filtered_rows = _prune_placeholder_rows(filtered_rows, row_tokens_in_template)
-                    if __force_single:
-                        _log_debug(
-                            f"[multi-debug] generator rows: total={len(rows_data)}, filtered={len(filtered_rows)}, key_values={KEY_VALUES}"
-                        )
-                    if filtered_rows:
-                        parts: list[str] = []
-                        for row in filtered_rows:
-                            tr = row_template
-                            for tok in row_tokens_in_template:
-                                val = _value_for_token(row, tok)
-                                tr = sub_token(tr, tok, format_token_value(tok, val))
-                            parts.append(tr)
-                        new_tbody_inner = tbody_inner[: row_span[0]] + "\n".join(parts) + tbody_inner[row_span[1] :]
-                        block_html = block_html[: tbody_m.start(1)] + new_tbody_inner + block_html[tbody_m.end(1) :]
-            else:
-                tr_tokens = [
-                    m.group(1) or m.group(2)
-                    for m in re.finditer(r"\{\{\s*([^}\n]+?)\s*\}\}|\{\s*([^}\n]+?)\s*\}", block_html)
-                ]
-                row_tokens_in_template = [t.strip() for t in tr_tokens if t and t.strip() in allowed_row_tokens]
-                if row_tokens_in_template:
-                    row_columns_template = [
-                        _extract_col_name(PLACEHOLDER_TO_COL.get(tok)) or "" for tok in row_tokens_in_template
-                    ]
-                    filtered_rows = _filter_rows_for_render(
-                        rows_data,
-                        row_tokens_in_template,
-                        row_columns_template,
-                        treat_all_as_data=bool(__force_single),
-                    )
-                    filtered_rows = _prune_placeholder_rows(filtered_rows, row_tokens_in_template)
-                    if __force_single:
-                        _log_debug(
-                            f"[multi-debug] generator rows (no tbody): total={len(rows_data)}, filtered={len(filtered_rows)}, key_values={KEY_VALUES}"
-                        )
-                    if filtered_rows:
-                        parts = []
-                        for row in filtered_rows:
-                            tr = prototype_block
-                            for tok in row_tokens_in_template:
-                                val = _value_for_token(row, tok)
-                                tr = sub_token(tr, tok, format_token_value(tok, val))
-                            parts.append(tr)
-                        block_html = "\n".join(parts)
+                    rtt = [t for t in tr_toks if t in allowed_row_tokens]
+                    if rtt:
+                        rcols = [_extract_col_name(PLACEHOLDER_TO_COL.get(tok)) or "" for tok in rtt]
+                        filtered = _filter_rows_for_render(rows_data, rtt, rcols, treat_all_as_data=bool(__force_single))
+                        filtered = _prune_placeholder_rows(filtered, rtt)
+                        if filtered:
+                            parts = []
+                            for row in filtered:
+                                tr = blk
+                                for tok in rtt:
+                                    tr = sub_token(tr, tok, format_token_value(tok, _value_for_token(row, tok)))
+                                parts.append(tr)
+                            blk = "\n".join(parts)
 
-        if filtered_rows:
-            totals_row = (generator_results.get("totals") or [{}])[0]
-            for token in TOTALS:
-                value = totals_row.get(token)
-                formatted = format_token_value(token, value)
-                block_html = sub_token(block_html, token, formatted)
-                last_totals_per_token[token] = formatted
-                target = total_token_to_target.get(token)
-                if target:
-                    fv, _formatted = _coerce_total_value(value)
-                    if fv is not None:
-                        totals_accum[target] = totals_accum.get(target, 0.0) + fv
+            # (d) Fill totals
+            if filtered and totals_data:
+                for token in TOTALS:
+                    value = totals_data.get(token)
+                    formatted = format_token_value(token, value)
+                    blk = sub_token(blk, token, formatted)
+                    last_totals_per_token[token] = formatted
+                    target = total_token_to_target.get(token)
+                    if target:
+                        fv, _ = _coerce_total_value(value)
+                        if fv is not None:
+                            totals_accum[target] = totals_accum.get(target, 0.0) + fv
 
-            rendered_blocks.append(block_html)
+            # (e) Blank out any remaining unfilled tokens (no DB data)
+            for m in list(re.finditer(r"\{(\w+)\}", blk)):
+                tok = m.group(1)
+                if tok not in _known_tokens:
+                    blk = sub_token(blk, tok, "")
+            # Also blank UNRESOLVED totals that weren't filled
+            for tok in TOTALS:
+                if f"{{{tok}}}" in blk:
+                    blk = sub_token(blk, tok, "")
+
+            return blk, bool(filtered)
+
+        # ── Render per-batch blocks ──
+        if _use_per_batch:
+            for batch_data in _df_batches:
+                blk_html, had_rows = _render_df_block(
+                    batch_data.get("rows", []),
+                    batch_data.get("totals", {}),
+                    batch_header=batch_data.get("header"),
+                )
+                if had_rows:
+                    rendered_blocks.append(blk_html)
         else:
-            # --- Additive: header-only in generator path ---
-            if header_rows and HEADER_TOKENS:
+            # ── Single-block rendering (original path) ──
+            rows_data = generator_results.get("rows") or []
+            totals_data = (generator_results.get("totals") or [{}])[0]
+            blk_html, had_rows = _render_df_block(rows_data, totals_data)
+            if had_rows:
+                rendered_blocks.append(blk_html)
+            elif header_rows and HEADER_TOKENS:
                 logger.debug("Generator: header-only block; appending without row data.")
-                rendered_blocks.append(block_html)
+                rendered_blocks.append(blk_html)
             else:
-                logger.debug("Generator SQL produced no usable row data after filtering; skipping block.")
+                logger.debug("Generator produced no usable row data after filtering; skipping block.")
 
     else:
         for batch_id in BATCH_IDS or []:
@@ -1986,15 +2140,30 @@ def fill_and_print(
                         )
                         if date_col not in cols_needed:
                             cols_needed.append(date_col)
-                        sql_fb = (
-                            f"SELECT {', '.join(qident(c) for c in cols_needed)} "
-                            f"FROM {qident(maj_table)} "
-                            f"WHERE datetime({qident(date_col)}) BETWEEN datetime(?) AND datetime(?) "
-                            f"ORDER BY {qident(date_col)} ASC, ROWID ASC"
-                        )
-                        cur = _get_fallback_cursor()
-                        cur.execute(sql_fb, (START_DATE, END_DATE))
-                        rows = [dict(r) for r in cur.fetchall()]
+                        if _USE_DF_PIPELINE:
+                            try:
+                                df = dataframe_loader.frame(maj_table)
+                                df_filtered = contract_adapter._apply_date_filter_df(
+                                    df, maj_table, START_DATE, END_DATE,
+                                )
+                                available = [c for c in cols_needed if c in df_filtered.columns]
+                                if available:
+                                    df_selected = df_filtered[available].copy()
+                                    if date_col in df_selected.columns:
+                                        df_selected = df_selected.sort_values(date_col, na_position="last")
+                                    rows = df_selected.to_dict("records")
+                            except Exception as exc:
+                                logger.warning("DF row fallback failed: %s", exc)
+                        else:
+                            sql_fb = (
+                                f"SELECT {', '.join(qident(c) for c in cols_needed)} "
+                                f"FROM {qident(maj_table)} "
+                                f"WHERE datetime({qident(date_col)}) BETWEEN datetime(?) AND datetime(?) "
+                                f"ORDER BY {qident(date_col)} ASC, ROWID ASC"
+                            )
+                            cur = _get_fallback_cursor()
+                            cur.execute(sql_fb, (START_DATE, END_DATE))
+                            rows = [dict(r) for r in cur.fetchall()]
                         logger.debug("Row fallback used: table=%s, rows=%d", maj_table, len(rows))
 
             if not rows:
@@ -2094,6 +2263,35 @@ def fill_and_print(
             table_name, col_name = target
             value = overall_formatted.get((table_name, col_name), last_totals_per_token.get(token, "0"))
             html_multi = sub_token(html_multi, token, value)
+
+    # --- Fill remaining totals tokens from DF pipeline (outside batch blocks). ---
+    if _USE_DF_PIPELINE and generator_results:
+        totals_row = (generator_results.get("totals") or [{}])[0]
+        if totals_row:
+            for token in TOTALS:
+                value = totals_row.get(token)
+                if value is not None:
+                    html_multi = sub_token(html_multi, token, format_token_value(token, value))
+
+    # --- Fill remaining header tokens in the shell (outside batch blocks). ---
+    # In DataFrame mode, generator_results["header"] already has token→value;
+    # in SQL mode, use prefetched_headers with column extraction.
+    if HEADER_TOKENS and _USE_DF_PIPELINE and generator_results:
+        gen_header = (generator_results.get("header") or [{}])[0] if generator_results.get("header") else {}
+        for t in HEADER_TOKENS:
+            val = gen_header.get(t)
+            if val is not None and str(val).strip():
+                html_multi = sub_token(html_multi, t, format_token_value(t, val))
+
+    if HEADER_TOKENS and prefetched_headers:
+        first_header = next(iter(prefetched_headers.values()), {})
+        if first_header:
+            for t in HEADER_TOKENS:
+                if t in PLACEHOLDER_TO_COL:
+                    col = _extract_col_name(PLACEHOLDER_TO_COL.get(t))
+                    if col and col in first_header:
+                        val = first_header[col]
+                        html_multi = sub_token(html_multi, t, format_token_value(t, val))
 
     # Apply literals globally
     for t, s in LITERALS.items():

@@ -124,6 +124,7 @@ class ClaudeCodeCLIProvider(BaseProvider):
     def __init__(self, config: "LLMConfig"):
         super().__init__(config)
         self._available: Optional[bool] = None
+        self._claude_bin: str = "claude"
 
     def get_client(self) -> Any:
         """Check CLI availability on first use."""
@@ -136,11 +137,30 @@ class ClaudeCodeCLIProvider(BaseProvider):
         return True
 
     def _check_cli_available(self) -> bool:
-        """Check if claude CLI is available."""
+        """Check if claude CLI is available, searching common locations."""
+        import shutil
         import subprocess
+
+        # Check PATH first, then common install locations
+        claude_bin = shutil.which("claude")
+        if not claude_bin:
+            from pathlib import Path
+            common_paths = [
+                Path.home() / ".local" / "bin" / "claude",
+                Path("/usr/local/bin/claude"),
+                Path.home() / ".npm-global" / "bin" / "claude",
+                Path.home() / ".nvm" / "current" / "bin" / "claude",
+            ]
+            for p in common_paths:
+                if p.is_file():
+                    claude_bin = str(p)
+                    break
+        if not claude_bin:
+            return False
+        self._claude_bin = claude_bin
         try:
             result = subprocess.run(
-                ["claude", "--version"],
+                [claude_bin, "--version"],
                 capture_output=True,
                 text=True,
                 timeout=10,
@@ -243,7 +263,7 @@ class ClaudeCodeCLIProvider(BaseProvider):
         prompt = self._build_prompt(messages)
 
         # Build CLI command
-        cmd = ["claude", "-p"]  # -p = print mode (no interactive UI)
+        cmd = [self._claude_bin, "-p"]  # -p = print mode (no interactive UI)
 
         # Add model flag
         if model in ("opus", "sonnet", "haiku"):

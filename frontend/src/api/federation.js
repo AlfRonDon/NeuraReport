@@ -3,6 +3,15 @@
  */
 import apiClient from './client';
 
+function asArray(payload, keys = []) {
+  if (Array.isArray(payload)) return payload;
+  if (!payload || typeof payload !== 'object') return [];
+  for (const key of keys) {
+    if (Array.isArray(payload[key])) return payload[key];
+  }
+  return [];
+}
+
 /**
  * Create a virtual schema
  */
@@ -23,7 +32,15 @@ export async function listVirtualSchemas({ limit, offset } = {}) {
   if (limit != null) params.limit = limit;
   if (offset != null) params.offset = offset;
   const response = await apiClient.get('/federation/schemas', { params });
-  return response.data;
+  const payload = response.data;
+  if (Array.isArray(payload)) {
+    return { schemas: payload, total: payload.length };
+  }
+  if (payload && typeof payload === 'object') {
+    const schemas = asArray(payload, ['schemas', 'items', 'results']);
+    return { ...payload, schemas, total: payload.total ?? schemas.length };
+  }
+  return { schemas: [], total: 0 };
 }
 
 /**
@@ -31,7 +48,14 @@ export async function listVirtualSchemas({ limit, offset } = {}) {
  */
 export async function getVirtualSchema(schemaId) {
   const response = await apiClient.get(`/federation/schemas/${schemaId}`);
-  return response.data;
+  const payload = response.data;
+  if (payload && typeof payload === 'object' && payload.schema) {
+    return payload;
+  }
+  if (payload && typeof payload === 'object') {
+    return { status: 'ok', schema: payload };
+  }
+  return { status: 'ok', schema: null };
 }
 
 /**
@@ -41,7 +65,14 @@ export async function suggestJoins(connectionIds) {
   const response = await apiClient.post('/federation/suggest-joins', {
     connection_ids: connectionIds,
   });
-  return response.data;
+  const payload = response.data;
+  if (Array.isArray(payload)) {
+    return { suggestions: payload };
+  }
+  if (payload && typeof payload === 'object') {
+    return { ...payload, suggestions: asArray(payload, ['suggestions', 'joins']) };
+  }
+  return { suggestions: [] };
 }
 
 /**
@@ -53,7 +84,11 @@ export async function executeFederatedQuery({ schemaId, query, limit = 100 }) {
     sql: query,
     limit,
   });
-  return response.data;
+  const payload = response.data;
+  if (payload && typeof payload === 'object' && Object.prototype.hasOwnProperty.call(payload, 'result')) {
+    return payload;
+  }
+  return { status: 'ok', result: payload };
 }
 
 /**

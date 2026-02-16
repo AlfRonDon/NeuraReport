@@ -29,7 +29,7 @@ import DocumentUpload from '../components/DocumentUpload'
 import AnalysisResults from '../components/AnalysisResults'
 import { uploadAndAnalyze, suggestAnalysisCharts, normalizeChartSpec } from '../services/analyzeApi'
 import Surface from '@/components/layout/Surface'
-import { figmaGrey } from '@/app/theme'
+import { neutral, palette } from '@/app/theme'
 import { useToast } from '@/components/ToastProvider'
 import { useInteraction, InteractionType, Reversibility, useNavigateInteraction } from '@/components/ux/governance'
 
@@ -267,7 +267,7 @@ export default function AnalyzePageContainer() {
       {/* Page Header */}
       <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 3 }}>
         <Box>
-          <Typography variant="h5" fontWeight={700}>
+          <Typography variant="h5" fontWeight={600}>
             Analyze Document
           </Typography>
           <Typography variant="body2" color="text.secondary">
@@ -298,7 +298,7 @@ export default function AnalyzePageContainer() {
                 size="small"
                 variant={chip.variant || 'filled'}
                 icon={chip.color === 'success' ? <CheckCircleOutlineIcon /> : undefined}
-                sx={{ fontWeight: 500, bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400], color: 'text.secondary' }}
+                sx={{ fontWeight: 500, bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[200], color: 'text.secondary' }}
               />
             ))}
           </Stack>
@@ -328,7 +328,7 @@ export default function AnalyzePageContainer() {
               fontWeight: 500,
             },
             '& .MuiStepLabel-label.Mui-active': {
-              fontWeight: 700,
+              fontWeight: 600,
               color: 'text.secondary',
             },
             '& .MuiStepLabel-label.Mui-completed': {
@@ -389,7 +389,7 @@ export default function AnalyzePageContainer() {
                     sx={{
                       px: 4,
                       py: 1.5,
-                      fontWeight: 700,
+                      fontWeight: 600,
                       fontSize: '1rem',
                       textTransform: 'none',
                       borderRadius: 1,  // Figma spec: 8px
@@ -430,7 +430,7 @@ export default function AnalyzePageContainer() {
                   justifyContent: 'center',
                 }}
               >
-                <Typography variant="caption" fontWeight={700} color="text.secondary">
+                <Typography variant="caption" fontWeight={600} color="text.secondary">
                   {analysisProgress}%
                 </Typography>
               </Box>

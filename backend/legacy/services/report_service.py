@@ -296,6 +296,7 @@ def _template_dir(
         base_dir = UPLOAD_ROOT_BASE if normalized_kind == "pdf" else EXCEL_UPLOAD_ROOT_BASE
 
     tid = _normalize_template_id(template_id)
+    base_dir = base_dir.resolve()
     tdir = (base_dir / tid).resolve()
     if base_dir not in tdir.parents:
         raise _http_error(400, "invalid_template_path", "Invalid template_id path")
@@ -749,7 +750,104 @@ def _run_report_internal(
         "docx": docx_path if docx_path and docx_path.exists() else None,
         "xlsx": xlsx_path if xlsx_path and xlsx_path.exists() else None,
     }
+
+    # Post-generation agent hooks (fire-and-forget, non-blocking)
+    try:
+        _run_post_generation_hooks(run_id, p.template_id, kind, correlation_id)
+    except Exception:
+        logger.debug("post_generation_hooks_skipped")
+
     return result, artifact_paths
+
+
+def _run_post_generation_hooks(
+    run_id: str,
+    template_id: str,
+    kind: str,
+    correlation_id: str | None,
+) -> None:
+    """
+    Fire-and-forget post-generation agent hooks.
+
+    Controlled by NEURA_REPORT_AGENT_HOOKS env var (comma-separated list).
+    Supported hooks: summarize, insights
+    Failures are logged but never block report delivery.
+    """
+    hooks_raw = os.getenv("NEURA_REPORT_AGENT_HOOKS", "").strip()
+    if not hooks_raw:
+        return
+
+    hooks = [h.strip().lower() for h in hooks_raw.split(",") if h.strip()]
+    if not hooks:
+        return
+
+    HOOK_TO_ANALYSIS_TYPE = {
+        "summarize": "summarize",
+        "insights": "insights",
+    }
+
+    for hook in hooks:
+        analysis_type = HOOK_TO_ANALYSIS_TYPE.get(hook)
+        if not analysis_type:
+            logger.warning("Unknown report agent hook: %s (supported: %s)", hook, ", ".join(HOOK_TO_ANALYSIS_TYPE))
+            continue
+
+        try:
+            import asyncio
+            from backend.app.services.agents.agent_service import AgentService
+
+            service = AgentService()
+
+            async def _run_hook(at=analysis_type, rid=run_id):
+                try:
+                    await service.run_report_analyst(
+                        run_id=rid,
+                        analysis_type=at,
+                        sync=False,  # async — don't block report delivery
+                    )
+                    logger.info(
+                        "report_agent_hook_queued",
+                        extra={
+                            "event": "report_agent_hook_queued",
+                            "hook": at,
+                            "run_id": rid,
+                        },
+                    )
+                except Exception as exc:
+                    logger.warning(
+                        "report_agent_hook_failed",
+                        extra={
+                            "event": "report_agent_hook_failed",
+                            "hook": at,
+                            "run_id": rid,
+                            "error": str(exc),
+                        },
+                    )
+
+            # Schedule on the running event loop if available, else ignore
+            try:
+                loop = asyncio.get_running_loop()
+                loop.create_task(_run_hook())
+            except RuntimeError:
+                # No running event loop (synchronous context) — run in thread
+                import threading
+
+                def _thread_runner():
+                    asyncio.run(_run_hook())
+
+                t = threading.Thread(target=_thread_runner, daemon=True, name=f"agent-hook-{hook}-{run_id[:8]}")
+                t.start()
+
+        except Exception as exc:
+            logger.warning(
+                "report_agent_hook_setup_failed",
+                extra={
+                    "event": "report_agent_hook_setup_failed",
+                    "hook": hook,
+                    "run_id": run_id,
+                    "error": str(exc),
+                },
+            )
 
 
 def _maybe_send_email(

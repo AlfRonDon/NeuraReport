@@ -54,7 +54,7 @@ import {
 import useIngestionStore from '@/stores/ingestionStore'
 import useSharedData from '@/hooks/useSharedData'
 import ConnectionSelector from '@/components/common/ConnectionSelector'
-import { figmaGrey } from '@/app/theme'
+import { neutral, palette } from '@/app/theme'
 import { useToast } from '@/components/ToastProvider'
 import { useInteraction, InteractionType, Reversibility } from '@/components/ux/governance'
 
@@ -83,22 +83,22 @@ const ContentArea = styled(Box)(({ theme }) => ({
 
 const DropZone = styled(Paper)(({ theme, isDragging }) => ({
   padding: theme.spacing(6),
-  border: `2px dashed ${isDragging ? (theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100]) : alpha(theme.palette.divider, 0.3)}`,
-  backgroundColor: isDragging ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200]) : 'transparent',
+  border: `2px dashed ${isDragging ? (theme.palette.mode === 'dark' ? neutral[500] : neutral[700]) : alpha(theme.palette.divider, 0.3)}`,
+  backgroundColor: isDragging ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : neutral[50]) : 'transparent',
   borderRadius: 8,  // Figma spec: 8px
   textAlign: 'center',
   cursor: 'pointer',
   transition: 'all 0.2s ease',
   '&:hover': {
-    borderColor: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.02) : figmaGrey[200],
+    borderColor: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.02) : neutral[50],
   },
 }))
 
 const MethodCard = styled(Card)(({ theme, selected }) => ({
   cursor: 'pointer',
   transition: 'all 0.2s ease',
-  border: selected ? `2px solid ${theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1200]}` : `1px solid ${alpha(theme.palette.divider, 0.2)}`,
+  border: selected ? `2px solid ${theme.palette.mode === 'dark' ? neutral[500] : neutral[900]}` : `1px solid ${alpha(theme.palette.divider, 0.2)}`,
   '&:hover': {
     transform: 'translateY(-2px)',
     boxShadow: `0 4px 12px ${alpha(theme.palette.common.black, 0.1)}`,
@@ -110,17 +110,17 @@ const UploadItem = styled(Paper)(({ theme, status }) => ({
   marginBottom: theme.spacing(1),
   borderLeft: `4px solid ${
     status === 'completed'
-      ? (theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100])
+      ? (theme.palette.mode === 'dark' ? neutral[500] : neutral[700])
       : status === 'error'
-      ? (theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200])
-      : (theme.palette.mode === 'dark' ? figmaGrey[900] : figmaGrey[1000])
+      ? (theme.palette.mode === 'dark' ? neutral[700] : neutral[900])
+      : (theme.palette.mode === 'dark' ? neutral[500] : neutral[500])
   }`,
 }))
 
 const WatcherCard = styled(Paper)(({ theme, isRunning }) => ({
   padding: theme.spacing(2),
   marginBottom: theme.spacing(1),
-  border: `1px solid ${isRunning ? (theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100]) : alpha(theme.palette.divider, 0.2)}`,
+  border: `1px solid ${isRunning ? (theme.palette.mode === 'dark' ? neutral[500] : neutral[700]) : alpha(theme.palette.divider, 0.2)}`,
 }))
 
 const ActionButton = styled(Button)(({ theme }) => ({
@@ -568,7 +568,7 @@ export default function IngestionPageContainer() {
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300],
+                      bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[100],
                       mx: 'auto',
                       mb: 1,
                     }}

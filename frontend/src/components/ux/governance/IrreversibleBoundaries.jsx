@@ -372,7 +372,7 @@ export function IrreversibleBoundaryProvider({ children }) {
             >
               <SeverityIcon sx={{ color: severityConfig.color, fontSize: 28 }} />
               <Box>
-                <Typography variant="h6" fontWeight={700}>
+                <Typography variant="h6" fontWeight={600}>
                   {dialogState.action.label}
                 </Typography>
                 <Typography variant="caption" sx={{ color: severityConfig.color, fontWeight: 600 }}>

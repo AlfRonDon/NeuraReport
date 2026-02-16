@@ -56,7 +56,7 @@ import ConnectionSelector from '@/components/common/ConnectionSelector'
 import TemplateSelector from '@/components/common/TemplateSelector'
 import { useToast } from '@/components/ToastProvider'
 import { useInteraction, InteractionType, Reversibility } from '@/components/ux/governance'
-import { figmaGrey } from '@/app/theme'
+import { neutral, palette } from '@/app/theme'
 
 // =============================================================================
 // STYLED COMPONENTS
@@ -129,7 +129,7 @@ const WorkflowNode = styled(Paper)(({ theme }) => ({
   cursor: 'pointer',
   transition: 'all 0.2s ease',
   '&:hover': {
-    borderColor: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
+    borderColor: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
     boxShadow: `0 4px 20px ${alpha(theme.palette.common.black, 0.1)}`,
   },
 }))
@@ -139,9 +139,9 @@ const ExecutionCard = styled(Paper)(({ theme, status }) => ({
   marginBottom: theme.spacing(1),
   borderLeft: `4px solid ${
     status === 'completed'
-      ? (theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100])
+      ? (theme.palette.mode === 'dark' ? neutral[500] : neutral[700])
       : status === 'running'
-      ? (theme.palette.mode === 'dark' ? figmaGrey[600] : figmaGrey[900])
+      ? (theme.palette.mode === 'dark' ? neutral[300] : neutral[500])
       : status === 'failed'
       ? theme.palette.text.secondary
       : theme.palette.grey[400]
@@ -575,7 +575,7 @@ export default function WorkflowBuilderPage() {
                           onClick={() => handleSelectNode(node)}
                           sx={{
                             borderColor: selectedNode?.id === node.id
-                              ? (theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100])
+                              ? (theme.palette.mode === 'dark' ? neutral[500] : neutral[700])
                               : undefined,
                           }}
                         >
@@ -725,7 +725,7 @@ export default function WorkflowBuilderPage() {
                       display: 'flex',
                       alignItems: 'center',
                       gap: 2,
-                      '&:hover': { bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200] },
+                      '&:hover': { bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : neutral[50] },
                     }}
                     variant="outlined"
                     onClick={() => handleSelectWorkflow(wf.id)}

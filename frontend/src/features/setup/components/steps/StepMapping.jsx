@@ -31,7 +31,7 @@ import { useAppStore } from '@/stores'
 import { useToast } from '@/components/ToastProvider'
 import { useInteraction, InteractionType, Reversibility } from '@/components/ux/governance'
 import * as api from '@/api/client'
-import { figmaGrey } from '@/app/theme'
+import { neutral, palette } from '@/app/theme'
 
 export default function StepMapping({ wizardState, updateWizardState, onComplete, setLoading }) {
   const toast = useToast()
@@ -245,9 +245,9 @@ export default function StepMapping({ wizardState, updateWizardState, onComplete
                     </TableCell>
                     <TableCell>
                       {config?.column || config?.expression ? (
-                        <Chip label="Mapped" size="small" variant="outlined" sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400], color: 'text.secondary' }} />
+                        <Chip label="Mapped" size="small" variant="outlined" sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[200], color: 'text.secondary' }} />
                       ) : (
-                        <Chip label="Unmapped" size="small" variant="outlined" sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400], color: 'text.secondary' }} />
+                        <Chip label="Unmapped" size="small" variant="outlined" sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[200], color: 'text.secondary' }} />
                       )}
                     </TableCell>
                   </TableRow>
@@ -283,7 +283,7 @@ export default function StepMapping({ wizardState, updateWizardState, onComplete
                       label={token}
                       size="small"
                       variant={keys.includes(token) ? 'filled' : 'outlined'}
-                      sx={keys.includes(token) ? { bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400], color: 'text.secondary' } : {}}
+                      sx={keys.includes(token) ? { bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[200], color: 'text.secondary' } : {}}
                       onClick={() => {
                         if (keys.includes(token)) {
                           setKeys((prev) => prev.filter((k) => k !== token))

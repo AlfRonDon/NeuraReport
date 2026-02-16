@@ -16,7 +16,7 @@ import {
   Tooltip,
   alpha,
 } from '@mui/material'
-import { figmaGrey } from '@/app/theme'
+import { neutral, palette } from '@/app/theme'
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import ExpandLessIcon from '@mui/icons-material/ExpandLess'
@@ -188,7 +188,7 @@ export default function TemplateRecommender({ onSelectTemplate }) {
             sx={{
               width: 32,
               height: 32,
-              bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : figmaGrey[300],
+              bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : neutral[100],
             }}
           >
             <AutoAwesomeIcon sx={{ color: 'text.secondary', fontSize: 18 }} />
@@ -292,7 +292,7 @@ export default function TemplateRecommender({ onSelectTemplate }) {
                         cursor: 'pointer',
                         transition: 'all 0.15s ease',
                         '&:hover': {
-                          borderColor: (theme) => theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
+                          borderColor: (theme) => theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
                           bgcolor: 'action.hover',
                         },
                       }}
@@ -308,7 +308,7 @@ export default function TemplateRecommender({ onSelectTemplate }) {
                           sx={{
                             width: 40,
                             height: 40,
-                            bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
+                            bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
                           }}
                         >
                           <Icon
@@ -331,13 +331,13 @@ export default function TemplateRecommender({ onSelectTemplate }) {
                               label={kind.toUpperCase()}
                               size="small"
                               variant="outlined"
-                              sx={{ height: 20, fontSize: '0.65rem', bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400], color: 'text.secondary' }}
+                              sx={{ height: 20, fontSize: '10px', bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[200], color: 'text.secondary' }}
                             />
                             {score !== null && (
                               <Chip
                                 label={`${Math.round(score * 100)}% match`}
                                 size="small"
-                                sx={{ height: 20, fontSize: '0.65rem', bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400], color: 'text.secondary' }}
+                                sx={{ height: 20, fontSize: '10px', bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[200], color: 'text.secondary' }}
                               />
                             )}
                           </Stack>

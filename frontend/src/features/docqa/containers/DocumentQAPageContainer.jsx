@@ -58,14 +58,16 @@ import {
   Mic as MicIcon,
   Stop as StopIcon,
   Close as CloseIcon,
+  Article as ArticleIcon,
 } from '@mui/icons-material'
+import { listReportRuns } from '@/api/client'
 import useDocQAStore from '@/stores/docqaStore'
 import useSharedData from '@/hooks/useSharedData'
 import useIncomingTransfer from '@/hooks/useIncomingTransfer'
 import useCrossPageActions from '@/hooks/useCrossPageActions'
 import ImportFromMenu from '@/components/common/ImportFromMenu'
 import { TransferAction, FeatureKey } from '@/utils/crossPageTypes'
-import { figmaGrey } from '@/app/theme'
+import { neutral, palette } from '@/app/theme'
 import ConfirmModal from '@/components/Modal/ConfirmModal'
 import { useToast } from '@/components/ToastProvider'
 // UX Components for premium interactions
@@ -193,7 +195,7 @@ const SessionCard = styled(Box, {
   cursor: 'pointer',
   marginBottom: theme.spacing(1),
   backgroundColor: selected
-    ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300])
+    ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[100])
     : alpha(theme.palette.background.paper, 0.4),
   border: `1px solid ${selected ? alpha(theme.palette.divider, 0.3) : 'transparent'}`,
   transition: 'all 0.2s ease',
@@ -201,8 +203,8 @@ const SessionCard = styled(Box, {
   overflow: 'hidden',
   '&:hover': {
     backgroundColor: selected
-      ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.12) : figmaGrey[400])
-      : (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200]),
+      ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.12) : neutral[200])
+      : (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : neutral[50]),
     transform: 'translateX(4px)',
   },
   '&::before': selected
@@ -214,7 +216,7 @@ const SessionCard = styled(Box, {
         transform: 'translateY(-50%)',
         width: 3,
         height: '60%',
-        background: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1200],
+        background: theme.palette.mode === 'dark' ? neutral[500] : neutral[900],
         borderRadius: '0 4px 4px 0',
       }
     : {},
@@ -223,7 +225,7 @@ const SessionCard = styled(Box, {
 const DocumentChip = styled(Chip)(({ theme }) => ({
   height: 24,
   fontSize: 11,
-  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
   color: theme.palette.text.secondary,
   border: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
   '& .MuiChip-icon': {
@@ -287,9 +289,9 @@ const BubbleContent = styled(Box, {
   padding: theme.spacing(2, 2.5),
   borderRadius: isUser ? '20px 20px 4px 20px' : '20px 20px 20px 4px',
   backgroundColor: isUser
-    ? (theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200])
+    ? (theme.palette.mode === 'dark' ? neutral[700] : neutral[900])
     : alpha(theme.palette.background.paper, 0.8),
-  color: isUser ? '#fff' : theme.palette.text.primary,
+  color: isUser ? theme.palette.common.white : theme.palette.text.primary,
   backdropFilter: isUser ? 'none' : 'blur(10px)',
   border: isUser ? 'none' : `1px solid ${alpha(theme.palette.divider, 0.1)}`,
   position: 'relative',
@@ -304,20 +306,20 @@ const AvatarStyled = styled(Avatar, {
   width: 36,
   height: 36,
   background: isUser
-    ? (theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200])
-    : (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300]),
+    ? (theme.palette.mode === 'dark' ? neutral[700] : neutral[900])
+    : (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[100]),
   border: `2px solid ${alpha(theme.palette.background.paper, 0.8)}`,
   boxShadow: `0 2px 10px ${alpha(theme.palette.common.black, 0.1)}`,
   '& svg': {
     fontSize: 18,
-    color: isUser ? '#fff' : theme.palette.text.secondary,
+    color: isUser ? theme.palette.common.white : theme.palette.text.secondary,
   },
 }))
 
 const CitationBox = styled(Box)(({ theme }) => ({
   marginTop: theme.spacing(2),
   padding: theme.spacing(1.5),
-  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : figmaGrey[200],
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : neutral[50],
   borderRadius: 8,  // Figma spec: 8px
   border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
 }))
@@ -333,18 +335,18 @@ const CitationItem = styled(Box)(({ theme }) => ({
   cursor: 'pointer',
   transition: 'all 0.2s ease',
   '&:hover': {
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200],
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : neutral[50],
   },
 }))
 
 const FollowUpChip = styled(Chip)(({ theme }) => ({
   borderRadius: 20,
-  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
   border: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
   color: theme.palette.text.primary,
   transition: 'all 0.2s ease',
   '&:hover': {
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.12) : figmaGrey[400],
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.12) : neutral[200],
     transform: 'translateY(-2px)',
     boxShadow: `0 4px 12px ${alpha(theme.palette.common.black, 0.1)}`,
   },
@@ -391,12 +393,12 @@ const StyledTextField = styled(TextField)(({ theme }) => ({
 const SendButton = styled(IconButton)(({ theme }) => ({
   width: 44,
   height: 44,
-  background: theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200],
-  color: '#fff',
+  background: theme.palette.mode === 'dark' ? neutral[700] : neutral[900],
+  color: theme.palette.common.white,
   transition: 'all 0.2s ease',
   '&:hover': {
     transform: 'scale(1.05)',
-    background: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
+    background: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
     boxShadow: `0 4px 20px ${alpha(theme.palette.common.black, 0.2)}`,
   },
   '&:disabled': {
@@ -427,7 +429,7 @@ const ThinkingBox = styled(Box)(({ theme }) => ({
   alignItems: 'center',
   gap: theme.spacing(1.5),
   padding: theme.spacing(1.5, 2),
-  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
   borderRadius: 8,  // Figma spec: 8px
   marginBottom: theme.spacing(1),
   animation: `${pulse} 2s infinite ease-in-out`,
@@ -447,7 +449,7 @@ const EmptyIcon = styled(Box)(({ theme }) => ({
   width: 120,
   height: 120,
   borderRadius: '50%',
-  background: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
+  background: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
@@ -467,7 +469,7 @@ const SuggestionCard = styled(Box)(({ theme }) => ({
   cursor: 'pointer',
   transition: 'all 0.2s ease',
   '&:hover': {
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200],
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : neutral[50],
     borderColor: alpha(theme.palette.divider, 0.2),
     transform: 'translateY(-2px)',
   },
@@ -479,22 +481,22 @@ const ActionButton = styled(IconButton)(({ theme }) => ({
   color: alpha(theme.palette.text.secondary, 0.6),
   '&:hover': {
     color: theme.palette.text.primary,
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
   },
 }))
 
 const NewSessionButton = styled(Button)(({ theme }) => ({
   borderRadius: 8,  // Figma spec: 8px
   padding: theme.spacing(1.5, 2),
-  background: theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200],
-  color: '#fff',
+  background: theme.palette.mode === 'dark' ? neutral[700] : neutral[900],
+  color: theme.palette.common.white,
   fontWeight: 600,
   textTransform: 'none',
   boxShadow: `0 4px 20px ${alpha(theme.palette.common.black, 0.15)}`,
   transition: 'all 0.2s ease',
   '&:hover': {
     transform: 'translateY(-2px)',
-    background: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
+    background: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
     boxShadow: `0 6px 28px ${alpha(theme.palette.common.black, 0.2)}`,
   },
 }))
@@ -603,6 +605,9 @@ export default function DocumentQAPage() {
 
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [addDocDialogOpen, setAddDocDialogOpen] = useState(false)
+  const [reportPickerOpen, setReportPickerOpen] = useState(false)
+  const [availableRuns, setAvailableRuns] = useState([])
+  const [runsLoading, setRunsLoading] = useState(false)
   const [newSessionName, setNewSessionName] = useState('')
   const [docName, setDocName] = useState('')
   const [docContent, setDocContent] = useState('')
@@ -748,6 +753,44 @@ export default function DocumentQAPage() {
     reader.readAsText(file)
   }
 
+  const handleOpenReportPicker = async () => {
+    setReportPickerOpen(true)
+    setRunsLoading(true)
+    try {
+      const runs = await listReportRuns({ limit: 50 })
+      setAvailableRuns(runs.filter((r) => r.status === 'succeeded'))
+    } catch {
+      toast.show('Failed to load reports', 'error')
+    } finally {
+      setRunsLoading(false)
+    }
+  }
+
+  const handleSelectReport = (run) => {
+    if (!currentSession) return
+    execute({
+      type: InteractionType.UPLOAD,
+      label: `Add report "${run.templateName}"`,
+      reversibility: Reversibility.FULLY_REVERSIBLE,
+      successMessage: `Report "${run.templateName}" added`,
+      action: async () => {
+        await addDocument(currentSession.id, {
+          name: `${run.templateName} (${run.startDate} – ${run.endDate})`,
+          content: [
+            `Report: ${run.templateName}`,
+            `Period: ${run.startDate} to ${run.endDate}`,
+            `Connection: ${run.connectionName}`,
+            `Generated: ${new Date(run.createdAt).toLocaleString()}`,
+            `Status: ${run.status}`,
+            run.artifacts?.html_url ? `HTML: ${run.artifacts.html_url}` : '',
+            run.artifacts?.pdf_url ? `PDF: ${run.artifacts.pdf_url}` : '',
+          ].filter(Boolean).join('\n'),
+        })
+        setReportPickerOpen(false)
+      },
+    })
+  }
+
   const handleAskQuestion = () => {
     if (!currentSession || !question.trim()) return
     const trimmedQuestion = question.trim()
@@ -865,16 +908,16 @@ export default function DocumentQAPage() {
                 width: 40,
                 height: 40,
                 borderRadius: 1,  // Figma spec: 8px
-                background: theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200],
+                background: theme.palette.mode === 'dark' ? neutral[700] : neutral[900],
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
               }}
             >
-              <QAIcon sx={{ color: '#fff', fontSize: 22 }} />
+              <QAIcon sx={{ color: 'common.white', fontSize: 22 }} />
             </Box>
             <Box>
-              <Typography variant="h6" sx={{ fontWeight: 700, lineHeight: 1.2 }}>
+              <Typography variant="h6" sx={{ fontWeight: 600, lineHeight: 1.2 }}>
                 Document Q&A
               </Typography>
               <Typography variant="caption" color="text.secondary">
@@ -1008,8 +1051,8 @@ export default function DocumentQAPage() {
                     onClick={() => setAddDocDialogOpen(true)}
                     aria-label="Add document"
                     sx={{
-                      bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
-                      '&:hover': { bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.12) : figmaGrey[400] },
+                      bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
+                      '&:hover': { bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.12) : neutral[200] },
                     }}
                   >
                     <AddIcon fontSize="small" />
@@ -1028,7 +1071,7 @@ export default function DocumentQAPage() {
                     p: 1,
                     borderRadius: 1.5,
                     bgcolor: alpha(theme.palette.background.paper, 0.5),
-                    '&:hover': { bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200] },
+                    '&:hover': { bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : neutral[50] },
                   }}
                 >
                   <DocIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
@@ -1069,7 +1112,7 @@ export default function DocumentQAPage() {
                     width: 36,
                     height: 36,
                     borderRadius: 1,  // Figma spec: 8px
-                    bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
+                    bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -1152,28 +1195,44 @@ export default function DocumentQAPage() {
                     </Box>
                   )}
 
+                  {!currentSession.documents?.length && (
+                    <Box sx={{ display: 'flex', gap: 2 }}>
+                      <Button
+                        variant="outlined"
+                        startIcon={<UploadIcon />}
+                        onClick={() => setAddDocDialogOpen(true)}
+                        sx={{
+                          borderRadius: 1,
+                          textTransform: 'none',
+                          px: 4,
+                          py: 1.5,
+                        }}
+                      >
+                        Upload Document
+                      </Button>
+                      <Button
+                        variant="contained"
+                        startIcon={<ArticleIcon />}
+                        onClick={handleOpenReportPicker}
+                        sx={{
+                          borderRadius: 1,
+                          textTransform: 'none',
+                          px: 4,
+                          py: 1.5,
+                          background: theme.palette.mode === 'dark' ? neutral[700] : neutral[900],
+                        }}
+                      >
+                        Select Existing Report
+                      </Button>
+                    </Box>
+                  )}
+
                   {connections.length > 0 && (
                     <Box sx={{ mt: 3, textAlign: 'center' }}>
                       <Typography variant="caption" color="text.secondary">
                         {connections.length} database connection{connections.length !== 1 ? 's' : ''} and {templates.length} template{templates.length !== 1 ? 's' : ''} available
                       </Typography>
                     </Box>
-                  )}
-
-                  {!currentSession.documents?.length && (
-                    <Button
-                      variant="outlined"
-                      startIcon={<UploadIcon />}
-                      onClick={() => setAddDocDialogOpen(true)}
-                      sx={{
-                        borderRadius: 1,  // Figma spec: 8px
-                        textTransform: 'none',
-                        px: 4,
-                        py: 1.5,
-                      }}
-                    >
-                      Add Your First Document
-                    </Button>
                   )}
                 </EmptyState>
               ) : (
@@ -1271,7 +1330,7 @@ export default function DocumentQAPage() {
                                       ? 'text.primary'
                                       : undefined,
                                     bgcolor: msg.feedback?.feedback_type === 'helpful'
-                                      ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300])
+                                      ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[100])
                                       : undefined,
                                   }}
                                 >
@@ -1287,7 +1346,7 @@ export default function DocumentQAPage() {
                                       ? 'text.primary'
                                       : undefined,
                                     bgcolor: msg.feedback?.feedback_type === 'not_helpful'
-                                      ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300])
+                                      ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[100])
                                       : undefined,
                                   }}
                                 >
@@ -1424,7 +1483,7 @@ export default function DocumentQAPage() {
                           height: 20,
                           border: '2px solid',
                           borderColor: 'rgba(255,255,255,0.3)',
-                          borderTopColor: '#fff',
+                          borderTopColor: 'common.white',
                           borderRadius: '50%',
                           animation: 'spin 0.8s linear infinite',
                         }}
@@ -1442,7 +1501,7 @@ export default function DocumentQAPage() {
             <EmptyIcon>
               <QAIcon />
             </EmptyIcon>
-            <Typography variant="h4" sx={{ fontWeight: 700, mb: 1 }}>
+            <Typography variant="h4" sx={{ fontWeight: 600, mb: 1 }}>
               Document Intelligence
             </Typography>
             <Typography color="text.secondary" sx={{ mb: 4, maxWidth: 450 }}>
@@ -1504,7 +1563,7 @@ export default function DocumentQAPage() {
               borderRadius: 1,  // Figma spec: 8px
               textTransform: 'none',
               px: 3,
-              background: theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200],
+              background: theme.palette.mode === 'dark' ? neutral[700] : neutral[900],
             }}
           >
             Create Session
@@ -1537,10 +1596,10 @@ export default function DocumentQAPage() {
               textAlign: 'center',
               cursor: 'pointer',
               transition: 'all 0.2s ease',
-              bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.02) : figmaGrey[200],
+              bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.02) : neutral[50],
               '&:hover': {
-                borderColor: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
-                bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[300],
+                borderColor: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
+                bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : neutral[100],
               },
             }}
             component="label"
@@ -1602,10 +1661,85 @@ export default function DocumentQAPage() {
               borderRadius: 1,  // Figma spec: 8px
               textTransform: 'none',
               px: 3,
-              background: theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200],
+              background: theme.palette.mode === 'dark' ? neutral[700] : neutral[900],
             }}
           >
             Add Document
+          </Button>
+        </DialogActions>
+      </GlassDialog>
+
+      {/* Select Existing Report Dialog */}
+      <GlassDialog
+        open={reportPickerOpen}
+        onClose={() => setReportPickerOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ pb: 1 }}>
+          <Typography variant="h6" sx={{ fontWeight: 600 }}>
+            Select Existing Report
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Choose a generated report to add to this session
+          </Typography>
+        </DialogTitle>
+        <DialogContent>
+          {runsLoading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+              <ContentSkeleton rows={3} />
+            </Box>
+          ) : availableRuns.length === 0 ? (
+            <Box sx={{ textAlign: 'center', py: 4 }}>
+              <ArticleIcon sx={{ fontSize: 48, color: 'text.disabled', mb: 1 }} />
+              <Typography color="text.secondary">
+                No generated reports found
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Generate a report first, then come back to analyze it here.
+              </Typography>
+            </Box>
+          ) : (
+            <List sx={{ pt: 1 }}>
+              {availableRuns.map((run) => (
+                <ListItem
+                  key={run.id}
+                  button
+                  onClick={() => handleSelectReport(run)}
+                  sx={{
+                    borderRadius: 1,
+                    mb: 0.5,
+                    border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+                    '&:hover': {
+                      bgcolor: theme.palette.mode === 'dark'
+                        ? alpha(theme.palette.text.primary, 0.06)
+                        : neutral[50],
+                    },
+                  }}
+                >
+                  <ListItemIcon sx={{ minWidth: 40 }}>
+                    <ArticleIcon sx={{ color: 'text.secondary' }} />
+                  </ListItemIcon>
+                  <ListItemText
+                    primary={run.templateName || run.id}
+                    secondary={`${run.startDate} – ${run.endDate} · ${run.connectionName || 'Unknown source'}`}
+                    primaryTypographyProps={{ variant: 'body2', fontWeight: 600 }}
+                    secondaryTypographyProps={{ variant: 'caption' }}
+                  />
+                  <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap', ml: 1 }}>
+                    {new Date(run.createdAt).toLocaleDateString()}
+                  </Typography>
+                </ListItem>
+              ))}
+            </List>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3 }}>
+          <Button
+            onClick={() => setReportPickerOpen(false)}
+            sx={{ borderRadius: 1, textTransform: 'none' }}
+          >
+            Cancel
           </Button>
         </DialogActions>
       </GlassDialog>

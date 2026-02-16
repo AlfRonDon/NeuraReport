@@ -61,7 +61,9 @@ import DashboardGridLayout, { generateWidgetId, DEFAULT_WIDGET_SIZES } from '../
 import ChartWidget, { CHART_TYPES } from '../components/ChartWidget'
 import MetricWidget, { METRIC_FORMATS } from '../components/MetricWidget'
 import WidgetPalette, { parseWidgetType } from '../components/WidgetPalette'
-import { figmaGrey } from '@/app/theme'
+import WidgetRenderer, { isScenarioWidget } from '../components/WidgetRenderer'
+import AIWidgetSuggestion from '../components/AIWidgetSuggestion'
+import { neutral, palette } from '@/app/theme'
 
 // =============================================================================
 // STYLED COMPONENTS
@@ -119,7 +121,7 @@ const ActionButton = styled(Button)(({ theme }) => ({
   borderRadius: 8,
   textTransform: 'none',
   fontWeight: 500,
-  fontSize: '0.8125rem',
+  fontSize: '14px',
 }))
 
 const DashboardListItem = styled(ListItemButton, {
@@ -127,10 +129,10 @@ const DashboardListItem = styled(ListItemButton, {
 })(({ theme, active }) => ({
   borderRadius: 8,
   marginBottom: theme.spacing(0.5),
-  backgroundColor: active ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300]) : 'transparent',
+  backgroundColor: active ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[100]) : 'transparent',
   '&:hover': {
     backgroundColor: active
-      ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.15) : figmaGrey[300])
+      ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.15) : neutral[100])
       : alpha(theme.palette.action.hover, 0.05),
   },
 }))
@@ -157,8 +159,8 @@ const EmptyState = styled(Box)(({ theme }) => ({
 const InsightCard = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(1.5),
   marginBottom: theme.spacing(1),
-  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200],
-  border: `1px solid ${theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300]}`,
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : neutral[50],
+  border: `1px solid ${theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[100]}`,
 }))
 
 // =============================================================================
@@ -545,7 +547,25 @@ export default function DashboardBuilderPage() {
 
   // Render widget by type
   const renderWidget = useCallback((widget) => {
-    const { category } = parseWidgetType(widget.config?.type || 'chart')
+    const widgetType = widget.config?.type || 'chart'
+
+    // Scenario-based intelligent widgets
+    if (isScenarioWidget(widgetType)) {
+      return (
+        <WidgetRenderer
+          key={widget.id}
+          scenario={widgetType}
+          variant={widget.config?.variant}
+          data={widget.config?.data || widget.data}
+          config={widget.config}
+          id={widget.id}
+          editable
+          onDelete={handleDeleteWidget}
+        />
+      )
+    }
+
+    const { category } = parseWidgetType(widgetType)
 
     if (category === 'chart' || widget.config?.type === 'chart') {
       return (
@@ -678,6 +698,32 @@ export default function DashboardBuilderPage() {
             <Box sx={{ mt: 1 }} />
             <WidgetPalette onAddWidget={handleAddWidgetFromPalette} />
 
+            <AIWidgetSuggestion
+              onAddSingleWidget={(scenario, variant) => {
+                handleAddWidgetFromPalette(scenario, scenario)
+              }}
+              onAddWidgets={(widgets, layout) => {
+                if (!currentDashboard) return
+                const cells = layout?.cells || []
+                widgets.forEach((w, i) => {
+                  const cell = cells[i]
+                  addWidget(currentDashboard.id, {
+                    config: {
+                      type: w.scenario,
+                      title: w.question || w.scenario,
+                      variant: w.variant,
+                      scenario: w.scenario,
+                    },
+                    x: cell ? cell.col_start - 1 : 0,
+                    y: cell ? cell.row_start - 1 : i * 3,
+                    w: cell ? cell.col_end - cell.col_start : 4,
+                    h: cell ? cell.row_end - cell.row_start : 3,
+                  })
+                })
+                toast.show(`Added ${widgets.length} AI-suggested widgets`, 'success')
+              }}
+            />
+
             {insights.length > 0 && (
               <Box sx={{ mt: 3 }}>
                 <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary' }}>
@@ -712,13 +758,13 @@ export default function DashboardBuilderPage() {
                 <Chip
                   size="small"
                   label={`${widgets.length} widgets`}
-                  sx={{ borderRadius: 1, height: 20, fontSize: '0.7rem' }}
+                  sx={{ borderRadius: 1, height: 20, fontSize: '12px' }}
                 />
                 {hasUnsavedChanges && (
                   <Chip
                     size="small"
                     label="Unsaved"
-                    sx={{ borderRadius: 1, height: 20, fontSize: '0.7rem', bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400], color: 'text.secondary' }}
+                    sx={{ borderRadius: 1, height: 20, fontSize: '12px', bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[200], color: 'text.secondary' }}
                   />
                 )}
               </Box>

@@ -1,6 +1,7 @@
 import axios from 'axios'
 import * as mock from './mock.js'
 import { getActiveIntent } from '@/utils/intentBridge'
+import { reportFrontendError } from './frontendErrorLogger'
 
 const runtimeEnv = {
   ...(typeof import.meta !== 'undefined' && import.meta?.env ? import.meta.env : {}),
@@ -12,7 +13,28 @@ const runtimeEnv = {
 const envBaseUrl = runtimeEnv.VITE_API_BASE_URL
 // IMPORTANT: use an `/api` prefix when proxying so SPA routes like `/connections`
 // do not collide with backend endpoints during full-page navigations/deep links.
-export const API_BASE = envBaseUrl === 'proxy' ? '/api' : (envBaseUrl || 'http://127.0.0.1:8000')
+// In production builds, 0.0.0.0 is not reachable from browsers — resolve to the
+// actual hostname the user is accessing the frontend from.
+function resolveBaseUrl(url) {
+  if (!url || url === 'proxy') return url
+  if (typeof window === 'undefined') return url
+  try {
+    const localHosts = new Set(['0.0.0.0', '127.0.0.1', 'localhost', '::1'])
+    const hasScheme = /^([a-z][a-z\d+\-.]*:)?\/\//i.test(url)
+    const candidate = hasScheme ? url : `${window.location.protocol}//${url}`
+
+    const parsed = new URL(candidate)
+    if (localHosts.has(parsed.hostname)) {
+      parsed.hostname = window.location.hostname
+    }
+    if (!parsed.port && runtimeEnv.VITE_API_PORT) {
+      parsed.port = String(runtimeEnv.VITE_API_PORT)
+    }
+    return parsed.origin
+  } catch (_) { /* not a full URL, keep as-is */ }
+  return url
+}
+export const API_BASE = envBaseUrl === 'proxy' ? '/api' : (resolveBaseUrl(envBaseUrl) || 'http://127.0.0.1:8000')
 
 // Canonical API version base (plan.md): clients target `/api/v1` only.
 export const API_V1_BASE =
@@ -139,6 +161,17 @@ export const fetchWithIntent = async (url, options = {}) => {
   } catch (error) {
     const err = error instanceof Error ? error : new Error('Network error')
     err.userMessage = getUserFriendlyError(err)
+    reportFrontendError({
+      source: 'fetchWithIntent',
+      message: err.message || 'Network error',
+      stack: err.stack,
+      route: typeof window !== 'undefined' ? window.location.pathname : undefined,
+      requestUrl: toApiUrl(url),
+      method,
+      context: {
+        userMessage: err.userMessage,
+      },
+    })
     throw err
   }
 }
@@ -181,10 +214,35 @@ function getUserFriendlyError(error) {
   if (error.response) {
     const status = error.response.status
     const detail = error.response.data?.detail
+    const responseMessage = error.response.data?.message
 
     // Check for status code messages
     if (USER_FRIENDLY_ERRORS[status]) {
       return USER_FRIENDLY_ERRORS[status]
+    }
+
+    if (typeof responseMessage === 'string' && responseMessage.trim()) {
+      return responseMessage
+    }
+
+    if (Array.isArray(detail) && detail.length) {
+      const firstMessage = detail.find((entry) => typeof entry?.msg === 'string')?.msg
+      if (firstMessage) {
+        return firstMessage
+      }
+    }
+
+    if (detail && typeof detail === 'object') {
+      const structuredMessage = [
+        detail.message,
+        detail.detail,
+        detail.error,
+        detail.reason,
+      ].find((value) => typeof value === 'string' && value.trim())
+
+      if (structuredMessage) {
+        return structuredMessage
+      }
     }
 
     // Check detail message patterns
@@ -223,6 +281,22 @@ api.interceptors.response.use(
   (error) => {
     // Preserve original error but add user-friendly message
     error.userMessage = getUserFriendlyError(error)
+    const requestUrl = error?.config?.url
+    if (!String(requestUrl || '').includes('/audit/frontend-error')) {
+      reportFrontendError({
+        source: 'axios.response',
+        message: error?.message || 'API request failed',
+        stack: error?.stack,
+        route: typeof window !== 'undefined' ? window.location.pathname : undefined,
+        requestUrl,
+        method: error?.config?.method,
+        statusCode: error?.response?.status,
+        context: {
+          userMessage: error.userMessage,
+          responseData: error?.response?.data,
+        },
+      })
+    }
     return Promise.reject(error)
   }
 )
@@ -1986,6 +2060,31 @@ export async function importTemplateZip({ file, name, onUploadProgress } = {}) {
           onUploadProgress(percentCompleted)
         }
       : undefined,
+  })
+  return data
+}
+
+export async function createTemplateFromGallery({ galleryId, kind = 'pdf', connectionId } = {}) {
+  if (!galleryId) throw new Error('galleryId is required')
+  const normalizedKind = normalizeKind(kind)
+
+  if (isMock) {
+    if (typeof mock.createTemplateFromGalleryMock === 'function') {
+      return mock.createTemplateFromGalleryMock({ galleryId, kind: normalizedKind, connectionId })
+    }
+    await sleep(200)
+    return {
+      template_id: `mock-gallery-${galleryId}-${Date.now()}`,
+      kind: normalizedKind,
+      status: 'approved',
+    }
+  }
+
+  // Optional backend feature. If the server doesn't implement it (404), callers can fall back.
+  const { data } = await api.post('/templates/create-from-gallery', {
+    gallery_id: galleryId,
+    kind: normalizedKind,
+    connection_id: connectionId,
   })
   return data
 }

@@ -77,7 +77,7 @@ export default function FormErrorSummary({
           ...sxArray,
         ]}
       >
-        <AlertTitle sx={{ fontWeight: 700 }}>{title}</AlertTitle>
+        <AlertTitle sx={{ fontWeight: 600 }}>{title}</AlertTitle>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
           {description}
         </Typography>

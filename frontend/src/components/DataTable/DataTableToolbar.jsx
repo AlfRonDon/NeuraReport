@@ -31,7 +31,7 @@ import {
   styled,
   keyframes,
 } from '@mui/material'
-import { figmaGrey } from '@/app/theme'
+import { neutral, palette } from '@/app/theme'
 import {
   Search as SearchIcon,
   FilterList as FilterListIcon,
@@ -96,7 +96,7 @@ const Title = styled(Typography)(({ theme }) => ({
 }))
 
 const Subtitle = styled(Typography)(({ theme }) => ({
-  fontSize: '0.8125rem',
+  fontSize: '14px',
   color: theme.palette.text.secondary,
 }))
 
@@ -104,21 +104,21 @@ const ActionButton = styled(Button)(({ theme }) => ({
   borderRadius: 8,  // Figma spec: 8px
   textTransform: 'none',
   fontWeight: 500,
-  fontSize: '0.8125rem',
+  fontSize: '14px',
   padding: theme.spacing(0.75, 2),
   transition: 'all 0.2s ease',
   '&.MuiButton-outlined': {
     borderColor: alpha(theme.palette.divider, 0.2),
     '&:hover': {
-      borderColor: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
-      backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : figmaGrey[200],
+      borderColor: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
+      backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : neutral[50],
     },
   },
   '&.MuiButton-contained': {
-    backgroundColor: theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200],
+    backgroundColor: theme.palette.mode === 'dark' ? neutral[700] : neutral[900],
     boxShadow: `0 4px 14px ${alpha(theme.palette.common.black, 0.15)}`,
     '&:hover': {
-      backgroundColor: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
+      backgroundColor: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
       boxShadow: `0 6px 20px ${alpha(theme.palette.common.black, 0.2)}`,
       transform: 'translateY(-1px)',
     },
@@ -128,7 +128,7 @@ const ActionButton = styled(Button)(({ theme }) => ({
 const SelectionBar = styled(Box)(({ theme }) => ({
   marginBottom: theme.spacing(2),
   padding: theme.spacing(1.5, 2),
-  background: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200],
+  background: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : neutral[50],
   border: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
   borderRadius: 8,  // Figma spec: 8px
   display: 'flex',
@@ -138,7 +138,7 @@ const SelectionBar = styled(Box)(({ theme }) => ({
 }))
 
 const SelectionText = styled(Typography)(({ theme }) => ({
-  fontSize: '0.8125rem',
+  fontSize: '14px',
   fontWeight: 500,
   color: theme.palette.text.primary,
   display: 'flex',
@@ -150,8 +150,8 @@ const SelectionBadge = styled(Box)(({ theme }) => ({
   width: 24,
   height: 24,
   borderRadius: 8,
-  backgroundColor: theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200],
-  color: '#fff',
+  backgroundColor: theme.palette.mode === 'dark' ? neutral[700] : neutral[900],
+  color: theme.palette.common.white,
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
@@ -178,8 +178,8 @@ const DeleteAction = styled(SelectionAction)(({ theme }) => ({
   color: theme.palette.text.secondary,
   borderColor: alpha(theme.palette.divider, 0.3),
   '&:hover': {
-    borderColor: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
+    borderColor: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
   },
 }))
 
@@ -199,7 +199,7 @@ const SearchField = styled(TextField)(({ theme }) => ({
       backgroundColor: theme.palette.background.paper,
       boxShadow: `0 0 0 3px ${alpha(theme.palette.divider, 0.1)}`,
       '& fieldset': {
-        borderColor: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
+        borderColor: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
       },
     },
   },
@@ -217,25 +217,25 @@ const FilterButton = styled(Button)(({ theme }) => ({
   borderRadius: 8,  // Figma spec: 8px
   textTransform: 'none',
   fontWeight: 500,
-  fontSize: '0.8125rem',
+  fontSize: '14px',
   padding: theme.spacing(0.75, 1.5),
   color: theme.palette.text.secondary,
   borderColor: alpha(theme.palette.divider, 0.2),
   '&:hover': {
     borderColor: alpha(theme.palette.divider, 0.3),
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : figmaGrey[200],
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : neutral[50],
   },
   '&.active': {
     color: theme.palette.text.primary,
     borderColor: alpha(theme.palette.divider, 0.5),
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
   },
 }))
 
 const FilterChip = styled(Chip)(({ theme }) => ({
   borderRadius: 8,
   height: 28,
-  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
   border: `1px solid ${alpha(theme.palette.divider, 0.15)}`,
   color: theme.palette.text.secondary,
   fontWeight: 500,
@@ -256,7 +256,7 @@ const IconButtonStyled = styled(IconButton)(({ theme }) => ({
   transition: 'all 0.2s ease',
   '&:hover': {
     color: theme.palette.text.primary,
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
   },
 }))
 
@@ -278,7 +278,7 @@ const MenuSection = styled(Box)(({ theme }) => ({
 
 const MenuLabel = styled(Typography)(({ theme }) => ({
   padding: theme.spacing(1, 2),
-  fontSize: '0.6875rem',
+  fontSize: '12px',
   fontWeight: 600,
   textTransform: 'uppercase',
   letterSpacing: '0.05em',
@@ -286,28 +286,28 @@ const MenuLabel = styled(Typography)(({ theme }) => ({
 }))
 
 const StyledMenuItem = styled(MenuItem)(({ theme }) => ({
-  fontSize: '0.8125rem',
+  fontSize: '14px',
   padding: theme.spacing(1, 2),
   borderRadius: 6,
   margin: theme.spacing(0, 1),
   transition: 'all 0.15s ease',
   '&:hover': {
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
   },
   '&.Mui-selected': {
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.12) : figmaGrey[400],
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.12) : neutral[200],
     color: theme.palette.text.primary,
     '&:hover': {
-      backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.16) : figmaGrey[500],
+      backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.16) : neutral[200],
     },
   },
 }))
 
 const FilterBadge = styled(Badge)(({ theme }) => ({
   '& .MuiBadge-badge': {
-    backgroundColor: theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200],
-    color: '#fff',
-    fontSize: '0.65rem',
+    backgroundColor: theme.palette.mode === 'dark' ? neutral[700] : neutral[900],
+    color: theme.palette.common.white,
+    fontSize: '10px',
     fontWeight: 600,
     minWidth: 16,
     height: 16,

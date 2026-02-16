@@ -8,7 +8,7 @@ import { Box, Typography, Button, Stack, alpha } from '@mui/material'
 import SearchOffIcon from '@mui/icons-material/SearchOff'
 import HomeIcon from '@mui/icons-material/Home'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
-import { figmaGrey } from '@/app/theme'
+import { neutral, palette } from '@/app/theme'
 
 export default function NotFoundPage() {
   const navigate = useNavigate()
@@ -47,7 +47,7 @@ export default function NotFoundPage() {
             bgcolor: (theme) =>
               theme.palette.mode === 'dark'
                 ? alpha(theme.palette.text.primary, 0.08)
-                : figmaGrey[300],
+                : neutral[100],
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -60,7 +60,7 @@ export default function NotFoundPage() {
 
         <Typography
           variant="h4"
-          sx={{ fontWeight: 700, color: 'text.primary', mb: 0.5 }}
+          sx={{ fontWeight: 600, color: 'text.primary', mb: 0.5 }}
         >
           404
         </Typography>
@@ -106,12 +106,12 @@ export default function NotFoundPage() {
               textTransform: 'none',
               fontWeight: 600,
               bgcolor: (theme) =>
-                theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200],
+                theme.palette.mode === 'dark' ? neutral[700] : neutral[900],
               boxShadow: (theme) =>
                 `0 4px 14px ${alpha(theme.palette.common.black, 0.15)}`,
               '&:hover': {
                 bgcolor: (theme) =>
-                  theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
+                  theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
                 boxShadow: (theme) =>
                   `0 6px 20px ${alpha(theme.palette.common.black, 0.2)}`,
               },

@@ -31,7 +31,7 @@ import LoadingState from '@/components/feedback/LoadingState.jsx'
 import InfoTooltip from '@/components/common/InfoTooltip.jsx'
 import TOOLTIP_COPY from '@/content/tooltipCopy.jsx'
 import { getTemplateKind, previewFrameSx, surfaceStackSx } from '../utils/templatesPaneUtils'
-import { figmaGrey } from '@/app/theme'
+import { neutral, palette } from '@/app/theme'
 
 function TemplatePicker({ selected, onToggle, tagFilter, setTagFilter }) {
 
@@ -503,7 +503,7 @@ function TemplatePicker({ selected, onToggle, tagFilter, setTagFilter }) {
 
                     <Stack spacing={1} alignItems="flex-start">
 
-                      <Typography variant="subtitle1" sx={{ fontWeight: 700, lineHeight: 1.2 }} noWrap>
+                      <Typography variant="subtitle1" sx={{ fontWeight: 600, lineHeight: 1.2 }} noWrap>
 
                         {t.name}
 
@@ -519,7 +519,7 @@ function TemplatePicker({ selected, onToggle, tagFilter, setTagFilter }) {
 
                             size="small"
 
-                            sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400], color: 'text.secondary' }}
+                            sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[200], color: 'text.secondary' }}
 
                             variant="outlined"
 
@@ -746,7 +746,7 @@ function TemplatePicker({ selected, onToggle, tagFilter, setTagFilter }) {
       </Grid>
       <Collapse in={isFetching && !isLoading} unmountOnExit>
 
-        <LinearProgress sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300], '& .MuiLinearProgress-bar': { bgcolor: (theme) => theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100] }, borderRadius: 1 }} aria-label="Refreshing templates" />
+        <LinearProgress sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[100], '& .MuiLinearProgress-bar': { bgcolor: (theme) => theme.palette.mode === 'dark' ? neutral[500] : neutral[700] }, borderRadius: 1 }} aria-label="Refreshing templates" />
 
       </Collapse>
 

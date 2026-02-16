@@ -4,23 +4,38 @@
  */
 import { api } from './client';
 
+function asArray(payload, keys = []) {
+  if (Array.isArray(payload)) return payload;
+  if (!payload || typeof payload !== 'object') return [];
+  for (const key of keys) {
+    if (Array.isArray(payload[key])) return payload[key];
+  }
+  return [];
+}
+
 // ============================================
 // Connector Discovery
 // ============================================
 
 export async function listConnectorTypes() {
   const response = await api.get('/connectors/types');
-  return response.data;
+  const payload = response.data;
+  return asArray(payload, ['types', 'connectors']);
 }
 
 export async function getConnectorType(connectorType) {
   const response = await api.get(`/connectors/types/${connectorType}`);
-  return response.data;
+  const payload = response.data;
+  if (payload && typeof payload === 'object' && payload.type) {
+    return payload.type;
+  }
+  return payload;
 }
 
 export async function listConnectorsByCategory(category) {
   const response = await api.get(`/connectors/types/by-category/${category}`);
-  return response.data;
+  const payload = response.data;
+  return asArray(payload, ['types', 'connectors']);
 }
 
 // ============================================
@@ -55,7 +70,15 @@ export async function getConnection(connectionId) {
 
 export async function listConnections(params = {}) {
   const response = await api.get('/connectors', { params });
-  return response.data;
+  const payload = response.data;
+  if (Array.isArray(payload)) {
+    return { connections: payload, total: payload.length };
+  }
+  if (payload && typeof payload === 'object') {
+    const connections = asArray(payload, ['connections', 'items', 'results']);
+    return { ...payload, connections, total: payload.total ?? connections.length };
+  }
+  return { connections: [], total: 0 };
 }
 
 export async function deleteConnection(connectionId) {
@@ -125,7 +148,15 @@ export async function listFiles(connectionId, path = '/') {
   const response = await api.get(`/connectors/${connectionId}/files`, {
     params: { path },
   });
-  return response.data;
+  const payload = response.data;
+  if (Array.isArray(payload)) {
+    return { files: payload };
+  }
+  if (payload && typeof payload === 'object') {
+    const files = asArray(payload, ['files', 'items', 'entries']);
+    return { ...payload, files };
+  }
+  return { files: [] };
 }
 
 export async function downloadFile(connectionId, filePath) {

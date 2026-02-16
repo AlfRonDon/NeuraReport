@@ -4,7 +4,7 @@
  */
 import { createContext, useCallback, useContext, useMemo, useState } from 'react'
 import { Snackbar, Alert, Button, useTheme, alpha } from '@mui/material'
-import { figmaGrey } from '@/app/theme'
+import { neutral, palette } from '@/app/theme'
 
 const ToastCtx = createContext({ show: () => {}, showWithUndo: () => {} })
 
@@ -14,7 +14,7 @@ function ToastContent({ state, onClose, onUndo }) {
 
   const getSeverityStyles = () => {
     const neutralColor = theme.palette.text.secondary
-    const neutralBg = theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.12) : figmaGrey[300]
+    const neutralBg = theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.12) : neutral[100]
 
     return {
       bgcolor: neutralBg,
@@ -51,7 +51,7 @@ function ToastContent({ state, onClose, onUndo }) {
       sx={{
         ...styles,
         borderRadius: '8px',  // Figma spec: 8px
-        fontSize: '0.8125rem',
+        fontSize: '14px',
         fontWeight: 500,
         boxShadow: `0 8px 32px ${alpha(theme.palette.common.black, 0.3)}`,
         backdropFilter: 'blur(8px)',

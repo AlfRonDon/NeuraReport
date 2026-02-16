@@ -26,7 +26,7 @@ import {
   Close as CancelIcon,
   KeyboardArrowDown as DropdownIcon,
 } from '@mui/icons-material'
-import { figmaGrey } from '@/app/theme'
+import { neutral, palette } from '@/app/theme'
 
 // =============================================================================
 // STYLED COMPONENTS
@@ -46,12 +46,12 @@ const CellReferenceBox = styled(Box)(({ theme }) => ({
   alignItems: 'center',
   minWidth: 80,
   padding: theme.spacing(0.5, 1),
-  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200],
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : neutral[50],
   borderRadius: 8,  // Figma spec: 8px
   border: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
   cursor: 'pointer',
   '&:hover': {
-    borderColor: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
+    borderColor: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
   },
 }))
 
@@ -59,16 +59,16 @@ const FormulaInput = styled(TextField)(({ theme }) => ({
   flex: 1,
   '& .MuiOutlinedInput-root': {
     borderRadius: 8,  // Figma spec: 8px
-    fontSize: '13px',
+    fontSize: '14px',
     fontFamily: 'monospace',
     '& fieldset': {
       borderColor: alpha(theme.palette.divider, 0.2),
     },
     '&:hover fieldset': {
-      borderColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.3) : figmaGrey[600],
+      borderColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.3) : neutral[300],
     },
     '&.Mui-focused fieldset': {
-      borderColor: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
+      borderColor: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
     },
   },
 }))
@@ -78,10 +78,10 @@ const FunctionChip = styled(Chip)(({ theme }) => ({
   height: 24,
   fontSize: '0.75rem',
   fontFamily: 'monospace',
-  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300],
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[100],
   color: 'text.secondary',
   '&:hover': {
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.15) : figmaGrey[400],
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.15) : neutral[200],
   },
 }))
 

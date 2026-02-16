@@ -14,7 +14,7 @@ import {
   styled,
   keyframes,
 } from '@mui/material'
-import { figmaGrey } from '@/app/theme'
+import { neutral, palette } from '@/app/theme'
 import {
   SignalWifiOff as OfflineIcon,
   Refresh as RefreshIcon,
@@ -70,9 +70,9 @@ const BannerBase = styled(Box)(({ theme }) => ({
 
 const OfflineBannerContainer = styled(BannerBase)(({ theme }) => ({
   background: theme.palette.mode === 'dark'
-    ? `linear-gradient(135deg, ${figmaGrey[1100]}, ${figmaGrey[1200]})`
-    : `linear-gradient(135deg, ${figmaGrey[1000]}, ${figmaGrey[1100]})`,
-  color: '#fff',
+    ? `linear-gradient(135deg, ${neutral[700]}, ${neutral[900]})`
+    : `linear-gradient(135deg, ${neutral[500]}, ${neutral[700]})`,
+  color: theme.palette.common.white,
   '&::before': {
     content: '""',
     position: 'absolute',
@@ -83,7 +83,7 @@ const OfflineBannerContainer = styled(BannerBase)(({ theme }) => ({
     background: `linear-gradient(
       90deg,
       transparent 0%,
-      ${alpha('#fff', 0.1)} 50%,
+      ${alpha(theme.palette.common.white, 0.1)} 50%,
       transparent 100%
     )`,
     backgroundSize: '200% 100%',
@@ -94,9 +94,9 @@ const OfflineBannerContainer = styled(BannerBase)(({ theme }) => ({
 
 const ReconnectedBannerContainer = styled(BannerBase)(({ theme }) => ({
   background: theme.palette.mode === 'dark'
-    ? `linear-gradient(135deg, ${figmaGrey[1000]}, ${figmaGrey[1100]})`
-    : `linear-gradient(135deg, ${figmaGrey[1100]}, ${figmaGrey[1200]})`,
-  color: '#fff',
+    ? `linear-gradient(135deg, ${neutral[500]}, ${neutral[700]})`
+    : `linear-gradient(135deg, ${neutral[700]}, ${neutral[900]})`,
+  color: theme.palette.common.white,
   justifyContent: 'center',
 }))
 
@@ -107,7 +107,7 @@ const IconContainer = styled(Box)(({ theme }) => ({
   width: 28,
   height: 28,
   borderRadius: 8,
-  backgroundColor: alpha('#fff', 0.2),
+  backgroundColor: alpha(theme.palette.common.white, 0.2),
   flexShrink: 0,
 }))
 
@@ -119,7 +119,7 @@ const PulsingIcon = styled(Box)(() => ({
 }))
 
 const StatusText = styled(Typography)(() => ({
-  fontSize: '0.8125rem',
+  fontSize: '14px',
   fontWeight: 600,
   letterSpacing: '-0.01em',
 }))
@@ -136,22 +136,22 @@ const RetryButton = styled(Button)(({ theme }) => ({
   fontSize: '0.75rem',
   padding: theme.spacing(0.5, 2),
   minWidth: 90,
-  borderColor: alpha('#fff', 0.4),
-  color: '#fff',
+  borderColor: alpha(theme.palette.common.white, 0.4),
+  color: theme.palette.common.white,
   backdropFilter: 'blur(4px)',
-  backgroundColor: alpha('#fff', 0.1),
+  backgroundColor: alpha(theme.palette.common.white, 0.1),
   transition: 'all 0.2s ease',
   '&:hover': {
-    borderColor: '#fff',
-    backgroundColor: alpha('#fff', 0.2),
+    borderColor: theme.palette.common.white,
+    backgroundColor: alpha(theme.palette.common.white, 0.2),
     transform: 'translateY(-1px)',
   },
   '&:active': {
     transform: 'translateY(0)',
   },
   '&:disabled': {
-    borderColor: alpha('#fff', 0.2),
-    color: alpha('#fff', 0.7),
+    borderColor: alpha(theme.palette.common.white, 0.2),
+    color: alpha(theme.palette.common.white, 0.7),
   },
 }))
 

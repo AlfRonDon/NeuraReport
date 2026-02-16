@@ -8,7 +8,7 @@ import StarIcon from '@mui/icons-material/Star'
 import StarBorderIcon from '@mui/icons-material/StarBorder'
 import * as api from '@/api/client'
 import { useInteraction, InteractionType, Reversibility } from '@/components/ux/governance'
-import { figmaGrey } from '@/app/theme'
+import { neutral, palette } from '@/app/theme'
 
 /**
  * A reusable favorite toggle button.
@@ -113,11 +113,11 @@ export default function FavoriteButton({
         disabled={loading}
         data-testid="favorite-button"
         sx={{
-          color: isFavorite ? (theme.palette.mode === 'dark' ? figmaGrey[600] : figmaGrey[1200]) : theme.palette.text.secondary,
+          color: isFavorite ? (theme.palette.mode === 'dark' ? neutral[300] : neutral[900]) : theme.palette.text.secondary,
           transition: 'all 0.2s ease',
           '&:hover': {
-            color: theme.palette.mode === 'dark' ? figmaGrey[600] : figmaGrey[1200],
-            bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
+            color: theme.palette.mode === 'dark' ? neutral[300] : neutral[900],
+            bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
             transform: 'scale(1.1)',
           },
         }}

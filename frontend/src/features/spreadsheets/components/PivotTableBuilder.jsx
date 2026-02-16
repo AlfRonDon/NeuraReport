@@ -32,7 +32,7 @@ import {
   alpha,
   styled,
 } from '@mui/material'
-import { figmaGrey } from '@/app/theme'
+import { neutral, palette } from '@/app/theme'
 import {
   Close as CloseIcon,
   DragIndicator as DragIcon,
@@ -88,9 +88,9 @@ const DropZone = styled(Paper, {
   padding: theme.spacing(1.5),
   marginBottom: theme.spacing(2),
   minHeight: 80,
-  border: `2px dashed ${isDragOver ? (theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100]) : alpha(theme.palette.divider, 0.3)}`,
+  border: `2px dashed ${isDragOver ? (theme.palette.mode === 'dark' ? neutral[500] : neutral[700]) : alpha(theme.palette.divider, 0.3)}`,
   borderRadius: 8,
-  backgroundColor: isDragOver ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200]) : 'transparent',
+  backgroundColor: isDragOver ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : neutral[50]) : 'transparent',
   transition: 'all 0.15s ease',
 }))
 
@@ -109,8 +109,8 @@ const DraggableField = styled(ListItemButton)(({ theme }) => ({
   padding: theme.spacing(0.75, 1.5),
   cursor: 'grab',
   '&:hover': {
-    borderColor: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200],
+    borderColor: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : neutral[50],
   },
   '&:active': {
     cursor: 'grabbing',
@@ -120,14 +120,14 @@ const DraggableField = styled(ListItemButton)(({ theme }) => ({
 const PreviewTable = styled('table')(({ theme }) => ({
   width: '100%',
   borderCollapse: 'collapse',
-  fontSize: '0.8125rem',
+  fontSize: '14px',
   '& th, & td': {
     padding: theme.spacing(0.75, 1),
     border: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
     textAlign: 'left',
   },
   '& th': {
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200],
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : neutral[50],
     fontWeight: 600,
   },
   '& tbody tr:hover': {
@@ -405,7 +405,7 @@ export default function PivotTableBuilder({
               {label}
             </Typography>
             {fields.length > 0 && (
-              <Chip label={fields.length} size="small" sx={{ height: 18, fontSize: '0.65rem' }} />
+              <Chip label={fields.length} size="small" sx={{ height: 18, fontSize: '10px' }} />
             )}
           </Stack>
           {isExpanded ? <CollapseIcon fontSize="small" /> : <ExpandIcon fontSize="small" />}

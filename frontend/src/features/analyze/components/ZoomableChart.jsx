@@ -19,20 +19,21 @@ import {
   ReferenceArea,
 } from 'recharts'
 import { Box, IconButton, Stack, Typography, Chip, CircularProgress, Tooltip as MuiTooltip, alpha } from '@mui/material'
-import { figmaGrey } from '@/app/theme'
+import { neutral, palette, secondary } from '@/app/theme'
 import ZoomOutMapIcon from '@mui/icons-material/ZoomOutMap'
 import ZoomInIcon from '@mui/icons-material/ZoomIn'
 import DownloadIcon from '@mui/icons-material/Download'
 
+// Chart colors use secondary palette 500 values per Design System v4/v5
 const CHART_COLORS = [
-  '#4f46e5',
-  '#22c55e',
-  '#0ea5e9',
-  '#f97316',
-  '#ec4899',
-  '#a855f7',
-  '#06b6d4',
-  '#eab308',
+  secondary.violet[500],   // #8B5CF6
+  secondary.emerald[500],  // #10B981
+  secondary.cyan[500],     // #06B6D4
+  secondary.rose[500],     // #F43F5E
+  secondary.teal[500],     // #14B8A6
+  secondary.fuchsia[500],  // #D946EF
+  secondary.slate[500],    // #64748B
+  secondary.zinc[500],     // #71717A
 ]
 
 const CHART_MARGINS = { top: 8, right: 16, bottom: 24, left: 8 }
@@ -251,7 +252,7 @@ export default function ZoomableChart({
           x1={zoomState.refAreaLeft}
           x2={zoomState.refAreaRight}
           strokeOpacity={0.3}
-          fill="#4f46e5"
+          fill={secondary.violet[500]}
           fillOpacity={0.3}
         />
       ) : null
@@ -260,7 +261,7 @@ export default function ZoomableChart({
       <Brush
         dataKey={xField}
         height={24}
-        stroke="#4f46e5"
+        stroke={secondary.violet[500]}
         travellerWidth={8}
         onChange={handleBrushChange}
         startIndex={zoomState.startIndex}
@@ -305,7 +306,7 @@ export default function ZoomableChart({
               innerRadius="40%"
               outerRadius="75%"
               label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-              labelLine={{ stroke: '#666', strokeWidth: 1 }}
+              labelLine={{ stroke: neutral[500], strokeWidth: 1 }}
             >
               {displayData.map((entry, idx) => (
                 <Cell key={`cell-${idx}`} fill={CHART_COLORS[idx % CHART_COLORS.length]} />
@@ -369,7 +370,7 @@ export default function ZoomableChart({
           )}
           <Chip label={type.toUpperCase()} size="small" variant="outlined" />
           {zoomState.isZoomed && (
-            <Chip label="Zoomed" size="small" sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400], color: 'text.secondary' }} />
+            <Chip label="Zoomed" size="small" sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[200], color: 'text.secondary' }} />
           )}
         </Stack>
 

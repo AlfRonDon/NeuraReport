@@ -61,7 +61,7 @@ import {
   Reversibility,
   useNavigateInteraction,
 } from '@/components/ux/governance'
-import { figmaGrey } from '@/app/theme'
+import { neutral, palette, status as statusColors } from '@/app/theme'
 
 // =============================================================================
 // ANIMATIONS
@@ -125,10 +125,10 @@ const StyledMenuItem = styled(MenuItem)(({ theme }) => ({
   borderRadius: 8,
   margin: theme.spacing(0.5, 1),
   padding: theme.spacing(1, 1.5),
-  fontSize: '0.8125rem',
+  fontSize: '14px',
   transition: 'all 0.15s ease',
   '&:hover': {
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
   },
   '& .MuiListItemIcon-root': {
     minWidth: 32,
@@ -208,11 +208,11 @@ const ActionButton = styled(Button)(({ theme }) => ({
 }))
 
 const PrimaryButton = styled(ActionButton)(({ theme }) => ({
-  background: theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200],
-  color: '#fff',
+  background: theme.palette.mode === 'dark' ? neutral[700] : neutral[900],
+  color: theme.palette.common.white,
   boxShadow: `0 4px 14px ${alpha(theme.palette.common.black, 0.15)}`,
   '&:hover': {
-    background: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
+    background: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
     boxShadow: `0 6px 20px ${alpha(theme.palette.common.black, 0.2)}`,
     transform: 'translateY(-1px)',
   },
@@ -226,8 +226,8 @@ const PrimaryButton = styled(ActionButton)(({ theme }) => ({
 const SecondaryButton = styled(ActionButton)(({ theme }) => ({
   borderColor: alpha(theme.palette.divider, 0.3),
   '&:hover': {
-    borderColor: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : figmaGrey[200],
+    borderColor: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : neutral[50],
   },
 }))
 
@@ -237,7 +237,7 @@ const KindIconContainer = styled(Box, {
   width: 36,
   height: 36,
   borderRadius: 10,
-  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
@@ -249,7 +249,7 @@ const KindChip = styled(Chip, {
 })(({ theme, kindColor, kindBg }) => ({
   borderRadius: 8,
   fontWeight: 600,
-  fontSize: '0.6875rem',
+  fontSize: '12px',
   backgroundColor: kindBg,
   color: kindColor,
 }))
@@ -259,7 +259,7 @@ const StatusChip = styled(Chip, {
 })(({ theme, statusColor, statusBg }) => ({
   borderRadius: 8,
   fontWeight: 600,
-  fontSize: '0.6875rem',
+  fontSize: '12px',
   textTransform: 'capitalize',
   backgroundColor: statusBg,
   color: statusColor,
@@ -267,7 +267,7 @@ const StatusChip = styled(Chip, {
 
 const TagChip = styled(Chip)(({ theme }) => ({
   borderRadius: 6,
-  fontSize: '0.6875rem',
+  fontSize: '12px',
   backgroundColor: alpha(theme.palette.text.primary, 0.08),
   color: theme.palette.text.secondary,
 }))
@@ -277,7 +277,7 @@ const MoreActionsButton = styled(IconButton)(({ theme }) => ({
   transition: 'all 0.2s ease',
   '&:hover': {
     color: theme.palette.text.primary,
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
   },
 }))
 
@@ -287,7 +287,7 @@ const StyledLinearProgress = styled(LinearProgress)(({ theme }) => ({
   backgroundColor: alpha(theme.palette.text.primary, 0.1),
   '& .MuiLinearProgress-bar': {
     borderRadius: 4,
-    background: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1200],
+    background: theme.palette.mode === 'dark' ? neutral[500] : neutral[900],
   },
 }))
 
@@ -298,8 +298,8 @@ const SimilarTemplateCard = styled(Box)(({ theme }) => ({
   cursor: 'pointer',
   transition: 'all 0.2s ease',
   '&:hover': {
-    borderColor: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : figmaGrey[200],
+    borderColor: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : neutral[50],
     transform: 'translateX(4px)',
   },
 }))
@@ -318,12 +318,12 @@ const getKindConfig = (theme, kind) => {
     pdf: {
       icon: PictureAsPdfIcon,
       color: theme.palette.text.secondary,
-      bgColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300],
+      bgColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[100],
     },
     excel: {
       icon: TableChartIcon,
       color: theme.palette.text.secondary,
-      bgColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300],
+      bgColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[100],
     },
   }
   return configs[kind] || configs.pdf
@@ -333,20 +333,20 @@ const getStatusConfig = (theme, status) => {
   const s = (status || '').toLowerCase()
   const configs = {
     approved: {
-      color: theme.palette.mode === 'dark' ? '#66bb6a' : '#2e7d32',
-      bgColor: theme.palette.mode === 'dark' ? alpha('#66bb6a', 0.12) : alpha('#2e7d32', 0.08),
+      color: statusColors.success,
+      bgColor: alpha(statusColors.success, 0.1),
     },
     failed: {
-      color: theme.palette.mode === 'dark' ? '#ef5350' : '#c62828',
-      bgColor: theme.palette.mode === 'dark' ? alpha('#ef5350', 0.12) : alpha('#c62828', 0.08),
+      color: statusColors.destructive,
+      bgColor: alpha(statusColors.destructive, 0.1),
     },
     pending: {
-      color: theme.palette.mode === 'dark' ? '#ffa726' : '#e65100',
-      bgColor: theme.palette.mode === 'dark' ? alpha('#ffa726', 0.12) : alpha('#e65100', 0.08),
+      color: statusColors.warning,
+      bgColor: alpha(statusColors.warning, 0.1),
     },
     draft: {
       color: theme.palette.text.secondary,
-      bgColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[200],
+      bgColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[50],
     },
     archived: {
       color: theme.palette.text.secondary,
@@ -920,7 +920,7 @@ export default function TemplatesPage() {
             <Box sx={{ minWidth: 0, overflow: 'hidden' }}>
               <Typography sx={{
                 fontWeight: 500,
-                fontSize: '0.8125rem',
+                fontSize: '14px',
                 color: 'text.primary',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
@@ -981,7 +981,7 @@ export default function TemplatesPage() {
       renderCell: (value, row) => {
         const count = Array.isArray(value) ? value.length : Array.isArray(row.mappingKeys) ? row.mappingKeys.length : row.tokens_count
         return (
-          <Typography sx={{ fontSize: '0.8125rem', color: 'text.secondary' }}>
+          <Typography sx={{ fontSize: '14px', color: 'text.secondary' }}>
             {count || '-'}
           </Typography>
         )
@@ -1016,14 +1016,14 @@ export default function TemplatesPage() {
       width: 120,
       renderCell: (value, row) => {
         const raw = value || row.created_at
-        if (!raw) return <Typography sx={{ fontSize: '0.8125rem', color: 'text.disabled' }}>-</Typography>
+        if (!raw) return <Typography sx={{ fontSize: '14px', color: 'text.disabled' }}>-</Typography>
         const d = new Date(raw)
         const now = new Date()
         const diffDay = Math.floor((now - d) / 86400000)
         const relative = diffDay < 1 ? 'Today' : diffDay < 2 ? 'Yesterday' : diffDay < 7 ? `${diffDay}d ago` : d.toLocaleDateString()
         return (
           <Tooltip title={d.toLocaleString()} arrow>
-            <Typography sx={{ fontSize: '0.8125rem', color: 'text.secondary', cursor: 'default' }}>
+            <Typography sx={{ fontSize: '14px', color: 'text.secondary', cursor: 'default' }}>
               {relative}
             </Typography>
           </Tooltip>
@@ -1036,7 +1036,7 @@ export default function TemplatesPage() {
       width: 120,
       renderCell: (value, row) => {
         const raw = value || row.last_run_at
-        if (!raw) return <Typography sx={{ fontSize: '0.8125rem', color: 'text.disabled' }}>-</Typography>
+        if (!raw) return <Typography sx={{ fontSize: '14px', color: 'text.disabled' }}>-</Typography>
         const d = new Date(raw)
         const now = new Date()
         const diffMs = now - d
@@ -1045,7 +1045,7 @@ export default function TemplatesPage() {
         const relative = diffHr < 1 ? 'Just now' : diffHr < 24 ? `${diffHr}h ago` : diffDay < 7 ? `${diffDay}d ago` : d.toLocaleDateString()
         return (
           <Tooltip title={d.toLocaleString()} arrow>
-            <Typography sx={{ fontSize: '0.8125rem', color: 'text.secondary', cursor: 'default' }}>
+            <Typography sx={{ fontSize: '14px', color: 'text.secondary', cursor: 'default' }}>
               {relative}
             </Typography>
           </Tooltip>
@@ -1059,7 +1059,7 @@ export default function TemplatesPage() {
       renderCell: (value, row) => {
         const raw = value || row.updated_at
         return (
-          <Typography sx={{ fontSize: '0.8125rem', color: 'text.secondary' }}>
+          <Typography sx={{ fontSize: '14px', color: 'text.secondary' }}>
             {raw ? new Date(raw).toLocaleDateString() : '-'}
           </Typography>
         )
@@ -1197,27 +1197,27 @@ export default function TemplatesPage() {
       >
         <StyledMenuItem onClick={handleEditTemplate}>
           <ListItemIcon><EditIcon sx={{ fontSize: 16 }} /></ListItemIcon>
-          <ListItemText primaryTypographyProps={{ fontSize: '0.8125rem' }}>Edit</ListItemText>
+          <ListItemText primaryTypographyProps={{ fontSize: '14px' }}>Edit</ListItemText>
         </StyledMenuItem>
         <StyledMenuItem onClick={handleEditMetadata}>
           <ListItemIcon><SettingsIcon sx={{ fontSize: 16 }} /></ListItemIcon>
-          <ListItemText primaryTypographyProps={{ fontSize: '0.8125rem' }}>Edit Details</ListItemText>
+          <ListItemText primaryTypographyProps={{ fontSize: '14px' }}>Edit Details</ListItemText>
         </StyledMenuItem>
         <StyledMenuItem onClick={handleExport}>
           <ListItemIcon><DownloadIcon sx={{ fontSize: 16 }} /></ListItemIcon>
-          <ListItemText primaryTypographyProps={{ fontSize: '0.8125rem' }}>Export</ListItemText>
+          <ListItemText primaryTypographyProps={{ fontSize: '14px' }}>Export</ListItemText>
         </StyledMenuItem>
         <StyledMenuItem onClick={handleDuplicate} disabled={duplicating}>
           <ListItemIcon><ContentCopyIcon sx={{ fontSize: 16 }} /></ListItemIcon>
-          <ListItemText primaryTypographyProps={{ fontSize: '0.8125rem' }}>{duplicating ? 'Duplicating...' : 'Duplicate'}</ListItemText>
+          <ListItemText primaryTypographyProps={{ fontSize: '14px' }}>{duplicating ? 'Duplicating...' : 'Duplicate'}</ListItemText>
         </StyledMenuItem>
         <StyledMenuItem onClick={handleViewSimilar}>
           <ListItemIcon><AutoAwesomeIcon sx={{ fontSize: 16 }} /></ListItemIcon>
-          <ListItemText primaryTypographyProps={{ fontSize: '0.8125rem' }}>View Similar</ListItemText>
+          <ListItemText primaryTypographyProps={{ fontSize: '14px' }}>View Similar</ListItemText>
         </StyledMenuItem>
         <StyledMenuItem onClick={handleDeleteClick} sx={{ color: 'text.primary' }}>
           <ListItemIcon><DeleteIcon sx={{ fontSize: 16, color: 'text.secondary' }} /></ListItemIcon>
-          <ListItemText primaryTypographyProps={{ fontSize: '0.8125rem' }}>Delete</ListItemText>
+          <ListItemText primaryTypographyProps={{ fontSize: '14px' }}>Delete</ListItemText>
         </StyledMenuItem>
       </StyledMenu>
 
@@ -1301,7 +1301,7 @@ export default function TemplatesPage() {
         <DialogHeader>Update Status</DialogHeader>
         <StyledDialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
-            <Typography sx={{ fontSize: '0.8125rem', color: 'text.secondary' }}>
+            <Typography sx={{ fontSize: '14px', color: 'text.secondary' }}>
               Update {selectedIds.length} design{selectedIds.length !== 1 ? 's' : ''} to:
             </Typography>
             <StyledFormControl fullWidth>
@@ -1335,7 +1335,7 @@ export default function TemplatesPage() {
         <DialogHeader>Add Tags</DialogHeader>
         <StyledDialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
-            <Typography sx={{ fontSize: '0.8125rem', color: 'text.secondary' }}>
+            <Typography sx={{ fontSize: '14px', color: 'text.secondary' }}>
               Add tags to {selectedIds.length} design{selectedIds.length !== 1 ? 's' : ''}.
             </Typography>
             <StyledTextField
@@ -1442,7 +1442,7 @@ export default function TemplatesPage() {
                           label={`${Math.round(template.similarity_score * 100)}% match`}
                           size="small"
                           variant="outlined"
-                          sx={{ borderRadius: 8, bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400], color: 'text.secondary' }}
+                          sx={{ borderRadius: 8, bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[200], color: 'text.secondary' }}
                         />
                       )}
                     </Stack>

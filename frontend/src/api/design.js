@@ -4,6 +4,15 @@
  */
 import { api } from './client';
 
+function asArray(payload, keys = []) {
+  if (Array.isArray(payload)) return payload;
+  if (!payload || typeof payload !== 'object') return [];
+  for (const key of keys) {
+    if (Array.isArray(payload[key])) return payload[key];
+  }
+  return [];
+}
+
 // ============================================
 // Brand Kits
 // ============================================
@@ -23,7 +32,7 @@ export async function listBrandKits({ limit, offset } = {}) {
   if (limit != null) params.limit = limit;
   if (offset != null) params.offset = offset;
   const response = await api.get('/design/brand-kits', { params });
-  return response.data;
+  return asArray(response.data, ['brand_kits', 'kits', 'items', 'results']);
 }
 
 export async function updateBrandKit(brandKitId, data) {
@@ -67,7 +76,7 @@ export async function listThemes({ limit, offset } = {}) {
   if (limit != null) params.limit = limit;
   if (offset != null) params.offset = offset;
   const response = await api.get('/design/themes', { params });
-  return response.data;
+  return asArray(response.data, ['themes', 'items', 'results']);
 }
 
 export async function updateTheme(themeId, data) {
@@ -119,7 +128,7 @@ export async function suggestAccessibleColors(backgroundColor) {
 
 export async function listFonts() {
   const response = await api.get('/design/fonts');
-  return response.data;
+  return asArray(response.data, ['fonts', 'items', 'results']);
 }
 
 export async function getFontPairings(primaryFont) {
@@ -146,7 +155,7 @@ export async function uploadLogo(file, brandKitId) {
 
 export async function listAssets(brandKitId) {
   const response = await api.get(`/design/brand-kits/${brandKitId}/assets`);
-  return response.data;
+  return asArray(response.data, ['assets', 'items', 'results']);
 }
 
 export async function deleteAsset(assetId) {

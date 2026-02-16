@@ -4,6 +4,15 @@
  */
 import { api } from './client';
 
+function asArray(payload, keys = []) {
+  if (Array.isArray(payload)) return payload;
+  if (!payload || typeof payload !== 'object') return [];
+  for (const key of keys) {
+    if (Array.isArray(payload[key])) return payload[key];
+  }
+  return [];
+}
+
 // ============================================
 // Research Agent
 // ============================================
@@ -82,13 +91,17 @@ export async function runProofreadingAgent(text, options = {}) {
 
 export async function getTask(taskId) {
   const response = await api.get(`/agents/tasks/${taskId}`);
-  return response.data;
+  const payload = response.data;
+  if (payload && typeof payload === 'object' && payload.task) {
+    return payload.task;
+  }
+  return payload;
 }
 
 export async function listTasks(agentType = null) {
   const params = agentType ? { agent_type: agentType } : {};
   const response = await api.get('/agents/tasks', { params });
-  return response.data;
+  return asArray(response.data, ['tasks', 'items', 'results']);
 }
 
 // ============================================
@@ -97,10 +110,24 @@ export async function listTasks(agentType = null) {
 
 export async function listAgentTypes() {
   const response = await api.get('/agents/types');
-  return response.data;
+  const payload = response.data;
+  if (Array.isArray(payload)) {
+    return { types: payload };
+  }
+  if (payload && typeof payload === 'object') {
+    return { ...payload, types: asArray(payload, ['types', 'items', 'results']) };
+  }
+  return { types: [] };
 }
 
 export async function listRepurposeFormats() {
   const response = await api.get('/agents/formats/repurpose');
-  return response.data;
+  const payload = response.data;
+  if (Array.isArray(payload)) {
+    return { formats: payload };
+  }
+  if (payload && typeof payload === 'object') {
+    return { ...payload, formats: asArray(payload, ['formats', 'items', 'results']) };
+  }
+  return { formats: [] };
 }

@@ -36,9 +36,9 @@ import {
 import DataTableToolbar from './DataTableToolbar'
 import DataTableEmptyState from './DataTableEmptyState'
 
-// Import Figma design tokens
+// Import design tokens
 import {
-  figmaGrey,
+  neutral,
   figmaComponents,
   fontFamilyBody,
 } from '@/app/theme'
@@ -131,19 +131,19 @@ const StyledTableHead = styled(TableHead)(({ theme }) => ({
   '& .MuiTableCell-head': {
     backgroundColor: theme.palette.mode === 'dark'
       ? alpha(theme.palette.background.paper, 0.5)
-      : figmaGrey[200],  // #F9F9F8 from Figma
+      : neutral[50],  // #F9F9F8 from Figma
     fontFamily: fontFamilyBody,  // Lato from Figma
     fontWeight: 500,
     fontSize: '14px',
     textTransform: 'none',  // No uppercase per Figma
     letterSpacing: 'normal',
-    color: theme.palette.mode === 'dark' ? theme.palette.text.secondary : figmaGrey[1100],  // #63635E
-    borderBottom: `1px solid ${theme.palette.mode === 'dark' ? alpha(theme.palette.divider, 0.08) : figmaGrey[500]}`,
+    color: theme.palette.mode === 'dark' ? theme.palette.text.secondary : neutral[700],  // #63635E
+    borderBottom: `1px solid ${theme.palette.mode === 'dark' ? alpha(theme.palette.divider, 0.08) : neutral[200]}`,
     height: FIGMA_TABLE.headerHeight,  // 60px from Figma
     padding: `0 ${FIGMA_TABLE.cellPadding}px`,  // 16px from Figma
     transition: 'background-color 0.2s ease',
     '&:hover': {
-      backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : figmaGrey[300],
+      backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : neutral[100],
     },
   },
 }))
@@ -160,17 +160,17 @@ const StyledTableRow = styled(TableRow, {
   cursor: isClickable ? 'pointer' : 'default',
   '& .MuiTableCell-body': {
     fontFamily: fontFamilyBody,  // Lato from Figma
-    borderBottom: `1px solid ${theme.palette.mode === 'dark' ? alpha(theme.palette.divider, 0.05) : figmaGrey[400]}`,
+    borderBottom: `1px solid ${theme.palette.mode === 'dark' ? alpha(theme.palette.divider, 0.05) : neutral[200]}`,
     padding: `0 ${FIGMA_TABLE.cellPadding}px`,  // 16px from Figma
     height: FIGMA_TABLE.rowHeight,  // 60px from Figma
     fontSize: '14px',
-    color: theme.palette.mode === 'dark' ? theme.palette.text.primary : figmaGrey[1200],  // #21201C
+    color: theme.palette.mode === 'dark' ? theme.palette.text.primary : neutral[900],  // #21201C
     transition: 'all 0.2s ease',
   },
   '&:hover': {
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : alpha(figmaGrey[300], 0.5),
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : alpha(neutral[100], 0.5),
     '& .MuiTableCell-body': {
-      color: theme.palette.mode === 'dark' ? theme.palette.text.primary : figmaGrey[1200],
+      color: theme.palette.mode === 'dark' ? theme.palette.text.primary : neutral[900],
     },
     '& .row-actions': {
       opacity: 1,
@@ -178,9 +178,9 @@ const StyledTableRow = styled(TableRow, {
     },
   },
   '&.Mui-selected': {
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
     '&:hover': {
-      backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.12) : figmaGrey[400],
+      backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.12) : neutral[200],
     },
   },
   '&:last-child .MuiTableCell-body': {
@@ -203,7 +203,7 @@ const StyledCheckbox = styled(Checkbox)(({ theme }) => ({
   padding: theme.spacing(0.5),
   transition: 'all 0.2s ease',
   '&:hover': {
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300],
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[100],
   },
   '&.Mui-checked': {
     color: theme.palette.text.primary,
@@ -266,7 +266,7 @@ const StyledPagination = styled(TablePagination)(({ theme }) => ({
     '& .MuiIconButton-root': {
       color: theme.palette.text.secondary,
       '&:hover': {
-        backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
+        backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
         color: theme.palette.text.primary,
       },
       '&.Mui-disabled': {

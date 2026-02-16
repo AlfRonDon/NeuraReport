@@ -62,7 +62,7 @@ import { TransferAction, FeatureKey } from '@/utils/crossPageTypes'
 import { useToast } from '@/components/ToastProvider'
 import { useInteraction, InteractionType, Reversibility } from '@/components/ux/governance'
 import { uploadDocument } from '@/api/knowledge'
-import { figmaGrey } from '@/app/theme'
+import { neutral, palette } from '@/app/theme'
 
 // =============================================================================
 // STYLED COMPONENTS
@@ -113,9 +113,9 @@ const DocumentCard = styled(Card)(({ theme }) => ({
 const CollectionItem = styled(ListItem)(({ theme, selected }) => ({
   borderRadius: 8,
   marginBottom: 4,
-  backgroundColor: selected ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300]) : 'transparent',
+  backgroundColor: selected ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[100]) : 'transparent',
   '&:hover': {
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200],
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : neutral[50],
   },
 }))
 
@@ -126,16 +126,16 @@ const ActionButton = styled(Button)(({ theme }) => ({
 }))
 
 const UploadDropzone = styled(Box)(({ theme, isDragActive }) => ({
-  border: `2px dashed ${isDragActive ? (theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100]) : alpha(theme.palette.divider, 0.3)}`,
+  border: `2px dashed ${isDragActive ? (theme.palette.mode === 'dark' ? neutral[500] : neutral[700]) : alpha(theme.palette.divider, 0.3)}`,
   borderRadius: 8,  // Figma spec: 8px
   padding: theme.spacing(6),
   textAlign: 'center',
-  backgroundColor: isDragActive ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200]) : alpha(theme.palette.background.paper, 0.5),
+  backgroundColor: isDragActive ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : neutral[50]) : alpha(theme.palette.background.paper, 0.5),
   cursor: 'pointer',
   transition: 'all 0.2s ease',
   '&:hover': {
-    borderColor: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.02) : figmaGrey[200],
+    borderColor: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.02) : neutral[50],
   },
 }))
 
@@ -193,7 +193,7 @@ export default function KnowledgePageContainer() {
 
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCollection, setSelectedCollection] = useState(null)
-  const [view, setView] = useState('all') // 'all', 'favorites', 'recent'
+  const [view, setView] = useState('all') // 'all', 'favorites', 'recent', 'graph', 'faq'
   const [createCollectionOpen, setCreateCollectionOpen] = useState(false)
   const [newCollectionName, setNewCollectionName] = useState('')
   const [menuAnchor, setMenuAnchor] = useState(null)
@@ -284,6 +284,10 @@ export default function KnowledgePageContainer() {
   }, [execute, findRelated])
 
   const handleBuildGraph = useCallback(async () => {
+    const documentIds = documents
+      .map((doc) => doc?.id)
+      .filter(Boolean)
+
     return execute({
       type: InteractionType.EXECUTE,
       label: 'Build knowledge graph',
@@ -291,13 +295,23 @@ export default function KnowledgePageContainer() {
       blocksNavigation: true,
       intent: { source: 'knowledge' },
       action: async () => {
-        await buildKnowledgeGraph({ collectionId: selectedCollection?.id })
+        await buildKnowledgeGraph({ collectionId: selectedCollection?.id, documentIds })
+        setView('graph')
         toast.show('Knowledge graph built', 'success')
       },
     })
-  }, [buildKnowledgeGraph, execute, selectedCollection?.id, toast])
+  }, [buildKnowledgeGraph, documents, execute, selectedCollection?.id, toast])
 
   const handleGenerateFaq = useCallback(async () => {
+    const documentIds = documents
+      .map((doc) => doc?.id)
+      .filter(Boolean)
+
+    if (!documentIds.length) {
+      toast.show('Upload at least one document before generating FAQ', 'warning')
+      return null
+    }
+
     return execute({
       type: InteractionType.EXECUTE,
       label: 'Generate FAQ',
@@ -305,11 +319,20 @@ export default function KnowledgePageContainer() {
       blocksNavigation: true,
       intent: { source: 'knowledge' },
       action: async () => {
-        await generateFaq({ collectionId: selectedCollection?.id })
-        toast.show('FAQ generated', 'success')
+        const response = await generateFaq({
+          collectionId: selectedCollection?.id,
+          documentIds,
+          background: false,
+        })
+        if (response?.status === 'queued') {
+          toast.show('FAQ generation queued', 'info')
+        } else {
+          setView('faq')
+          toast.show('FAQ generated', 'success')
+        }
       },
     })
-  }, [execute, generateFaq, selectedCollection?.id, toast])
+  }, [documents, execute, generateFaq, selectedCollection?.id, toast])
 
   const handleCreateCollection = useCallback(async () => {
     if (!newCollectionName.trim()) return
@@ -500,6 +523,32 @@ export default function KnowledgePageContainer() {
               </ListItemIcon>
               <ListItemText primary="Favorites" />
             </CollectionItem>
+            <CollectionItem
+              button
+              selected={view === 'graph'}
+              onClick={() => setView('graph')}
+            >
+              <ListItemIcon sx={{ minWidth: 36 }}>
+                <GraphIcon fontSize="small" sx={{ color: 'text.secondary' }} />
+              </ListItemIcon>
+              <ListItemText
+                primary="Knowledge Graph"
+                secondary={knowledgeGraph ? `${knowledgeGraph.nodes?.length || 0} nodes` : null}
+              />
+            </CollectionItem>
+            <CollectionItem
+              button
+              selected={view === 'faq'}
+              onClick={() => setView('faq')}
+            >
+              <ListItemIcon sx={{ minWidth: 36 }}>
+                <FaqIcon fontSize="small" sx={{ color: 'text.secondary' }} />
+              </ListItemIcon>
+              <ListItemText
+                primary="FAQ"
+                secondary={faq.length ? `${faq.length} items` : null}
+              />
+            </CollectionItem>
           </List>
 
           <Divider sx={{ my: 1 }} />
@@ -543,7 +592,7 @@ export default function KnowledgePageContainer() {
                   key={tag.id}
                   size="small"
                   label={tag.name}
-                  sx={{ bgcolor: tag.color || undefined }}
+                  variant="filled"
                   onClick={() => fetchDocuments({ tags: [tag.name] })}
                 />
               ))}
@@ -553,72 +602,283 @@ export default function KnowledgePageContainer() {
 
         {/* Main Panel */}
         <MainPanel>
-          <Grid container spacing={2}>
-            {displayedDocs.map((doc) => (
-              <Grid item xs={12} sm={6} md={4} key={doc.id}>
-                <DocumentCard>
-                  <CardContent>
-                    <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-                      <Box sx={{ flex: 1 }}>
-                        <Typography variant="subtitle1" sx={{ fontWeight: 600 }} noWrap>
-                          {doc.title}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                          {doc.file_type?.toUpperCase()} - {new Date(doc.updated_at).toLocaleDateString()}
-                        </Typography>
-                      </Box>
-                      <IconButton
-                        size="small"
-                        onClick={() => handleToggleFavorite(doc.id)}
-                      >
-                        {doc.is_favorite ? <StarIcon sx={{ color: 'text.secondary' }} /> : <StarBorderIcon />}
-                      </IconButton>
-                    </Box>
-                    {doc.tags?.length > 0 && (
-                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 1 }}>
-                        {doc.tags.slice(0, 3).map((tag) => (
-                          <Chip key={tag} size="small" label={tag} variant="outlined" />
-                        ))}
-                      </Box>
-                    )}
-                  </CardContent>
-                  <CardActions sx={{ justifyContent: 'flex-end', pt: 0 }}>
-                    <IconButton size="small" onClick={(e) => handleMenuOpen(e, doc)}>
-                      <MoreIcon fontSize="small" />
-                    </IconButton>
-                  </CardActions>
-                </DocumentCard>
-              </Grid>
-            ))}
-          </Grid>
+          {view === 'graph' ? (
+            /* Knowledge Graph View */
+            knowledgeGraph ? (
+              <Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
+                  <Box>
+                    <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                      Knowledge Graph
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {knowledgeGraph.nodes?.length || 0} nodes, {knowledgeGraph.edges?.length || 0} relationships
+                    </Typography>
+                  </Box>
+                  <ActionButton
+                    startIcon={<GraphIcon />}
+                    onClick={handleBuildGraph}
+                    disabled={loading}
+                  >
+                    Rebuild
+                  </ActionButton>
+                </Box>
 
-          {displayedDocs.length === 0 && !loading && (
-            <Box
-              sx={{
-                height: '50vh',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <FolderOpenIcon sx={{ fontSize: 80, color: 'text.disabled', mb: 2 }} />
-              <Typography variant="h6" color="text.secondary" gutterBottom>
-                No documents found
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 3, textAlign: 'center', maxWidth: 400 }}>
-                Upload your first document to start building your knowledge base.
-                We support PDF, Word, Text, and Markdown files.
-              </Typography>
-              <ActionButton
-                variant="contained"
-                size="large"
-                startIcon={<UploadIcon />}
-                onClick={() => setUploadDialogOpen(true)}
+                {/* Nodes */}
+                <Typography variant="overline" sx={{ fontWeight: 600, display: 'block', mb: 1 }}>
+                  Entities
+                </Typography>
+                <Grid container spacing={1.5} sx={{ mb: 3 }}>
+                  {knowledgeGraph.nodes?.map((node) => (
+                    <Grid item xs={12} sm={6} md={4} key={node.id}>
+                      <Paper
+                        variant="outlined"
+                        sx={{
+                          p: 2,
+                          borderRadius: 1,
+                          transition: 'all 0.15s ease',
+                          '&:hover': { borderColor: 'text.secondary', transform: 'translateY(-1px)' },
+                        }}
+                      >
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                          <Chip
+                            size="small"
+                            label={node.type}
+                            color={node.type === 'document' ? 'primary' : node.type === 'entity' ? 'secondary' : 'default'}
+                            variant="outlined"
+                          />
+                        </Box>
+                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                          {node.label}
+                        </Typography>
+                        {node.properties?.description && (
+                          <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+                            {node.properties.description}
+                          </Typography>
+                        )}
+                      </Paper>
+                    </Grid>
+                  ))}
+                </Grid>
+
+                {/* Edges */}
+                {knowledgeGraph.edges?.length > 0 && (
+                  <>
+                    <Typography variant="overline" sx={{ fontWeight: 600, display: 'block', mb: 1 }}>
+                      Relationships
+                    </Typography>
+                    <Paper variant="outlined" sx={{ borderRadius: 1 }}>
+                      <List dense>
+                        {knowledgeGraph.edges.map((edge, idx) => {
+                          const sourceNode = knowledgeGraph.nodes?.find((n) => n.id === edge.source)
+                          const targetNode = knowledgeGraph.nodes?.find((n) => n.id === edge.target)
+                          return (
+                            <ListItem key={idx} divider={idx < knowledgeGraph.edges.length - 1}>
+                              <ListItemText
+                                primary={
+                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                      {sourceNode?.label || edge.source}
+                                    </Typography>
+                                    <Chip size="small" label={edge.type} variant="outlined" />
+                                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                      {targetNode?.label || edge.target}
+                                    </Typography>
+                                  </Box>
+                                }
+                              />
+                            </ListItem>
+                          )
+                        })}
+                      </List>
+                    </Paper>
+                  </>
+                )}
+              </Box>
+            ) : (
+              <Box
+                sx={{
+                  height: '50vh',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
               >
-                Upload Your First Document
-              </ActionButton>
-            </Box>
+                <GraphIcon sx={{ fontSize: 80, color: 'text.disabled', mb: 2 }} />
+                <Typography variant="h6" color="text.secondary" gutterBottom>
+                  No knowledge graph yet
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 3, textAlign: 'center', maxWidth: 400 }}>
+                  Build a knowledge graph to visualize relationships between your documents, entities, and concepts.
+                </Typography>
+                <ActionButton
+                  variant="contained"
+                  size="large"
+                  startIcon={<GraphIcon />}
+                  onClick={handleBuildGraph}
+                  disabled={loading || !documents.length}
+                >
+                  Build Knowledge Graph
+                </ActionButton>
+              </Box>
+            )
+          ) : view === 'faq' ? (
+            /* FAQ View */
+            faq.length > 0 ? (
+              <Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
+                  <Box>
+                    <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                      Frequently Asked Questions
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {faq.length} question{faq.length !== 1 ? 's' : ''} generated from your documents
+                    </Typography>
+                  </Box>
+                  <ActionButton
+                    startIcon={<FaqIcon />}
+                    onClick={handleGenerateFaq}
+                    disabled={loading}
+                  >
+                    Regenerate
+                  </ActionButton>
+                </Box>
+
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  {faq.map((item, idx) => (
+                    <Paper
+                      key={idx}
+                      variant="outlined"
+                      sx={{ p: 2.5, borderRadius: 1 }}
+                    >
+                      <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
+                        <FaqIcon sx={{ color: 'text.secondary', fontSize: 20, mt: 0.25, flexShrink: 0 }} />
+                        <Box sx={{ flex: 1 }}>
+                          <Typography variant="body1" sx={{ fontWeight: 600, mb: 1 }}>
+                            {item.question}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.7 }}>
+                            {item.answer}
+                          </Typography>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1.5 }}>
+                            {item.category && (
+                              <Chip size="small" label={item.category} variant="outlined" />
+                            )}
+                            {item.confidence != null && (
+                              <Chip
+                                size="small"
+                                label={`${Math.round(item.confidence * 100)}% confidence`}
+                                variant="outlined"
+                                color={item.confidence >= 0.8 ? 'success' : item.confidence >= 0.5 ? 'warning' : 'default'}
+                              />
+                            )}
+                          </Box>
+                        </Box>
+                      </Box>
+                    </Paper>
+                  ))}
+                </Box>
+              </Box>
+            ) : (
+              <Box
+                sx={{
+                  height: '50vh',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <FaqIcon sx={{ fontSize: 80, color: 'text.disabled', mb: 2 }} />
+                <Typography variant="h6" color="text.secondary" gutterBottom>
+                  No FAQ generated yet
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 3, textAlign: 'center', maxWidth: 400 }}>
+                  Generate FAQ from your documents to surface the most important questions and answers.
+                </Typography>
+                <ActionButton
+                  variant="contained"
+                  size="large"
+                  startIcon={<FaqIcon />}
+                  onClick={handleGenerateFaq}
+                  disabled={loading || !documents.length}
+                >
+                  Generate FAQ
+                </ActionButton>
+              </Box>
+            )
+          ) : (
+            /* Documents View (default) */
+            <>
+              <Grid container spacing={2}>
+                {displayedDocs.map((doc) => (
+                  <Grid item xs={12} sm={6} md={4} key={doc.id}>
+                    <DocumentCard>
+                      <CardContent>
+                        <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+                          <Box sx={{ flex: 1 }}>
+                            <Typography variant="subtitle1" sx={{ fontWeight: 600 }} noWrap>
+                              {doc.title}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                              {doc.file_type?.toUpperCase()} - {new Date(doc.updated_at).toLocaleDateString()}
+                            </Typography>
+                          </Box>
+                          <IconButton
+                            size="small"
+                            onClick={() => handleToggleFavorite(doc.id)}
+                          >
+                            {doc.is_favorite ? <StarIcon sx={{ color: 'text.secondary' }} /> : <StarBorderIcon />}
+                          </IconButton>
+                        </Box>
+                        {doc.tags?.length > 0 && (
+                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 1 }}>
+                            {doc.tags.slice(0, 3).map((tag) => (
+                              <Chip key={tag} size="small" label={tag} variant="outlined" />
+                            ))}
+                          </Box>
+                        )}
+                      </CardContent>
+                      <CardActions sx={{ justifyContent: 'flex-end', pt: 0 }}>
+                        <IconButton size="small" onClick={(e) => handleMenuOpen(e, doc)}>
+                          <MoreIcon fontSize="small" />
+                        </IconButton>
+                      </CardActions>
+                    </DocumentCard>
+                  </Grid>
+                ))}
+              </Grid>
+
+              {displayedDocs.length === 0 && !loading && (
+                <Box
+                  sx={{
+                    height: '50vh',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <FolderOpenIcon sx={{ fontSize: 80, color: 'text.disabled', mb: 2 }} />
+                  <Typography variant="h6" color="text.secondary" gutterBottom>
+                    No documents found
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 3, textAlign: 'center', maxWidth: 400 }}>
+                    Upload your first document to start building your knowledge base.
+                    We support PDF, Word, Text, and Markdown files.
+                  </Typography>
+                  <ActionButton
+                    variant="contained"
+                    size="large"
+                    startIcon={<UploadIcon />}
+                    onClick={() => setUploadDialogOpen(true)}
+                  >
+                    Upload Your First Document
+                  </ActionButton>
+                </Box>
+              )}
+            </>
           )}
         </MainPanel>
       </ContentArea>

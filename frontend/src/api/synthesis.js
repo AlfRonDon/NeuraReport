@@ -3,6 +3,15 @@
  */
 import apiClient from './client';
 
+function asArray(payload, keys = []) {
+  if (Array.isArray(payload)) return payload;
+  if (!payload || typeof payload !== 'object') return [];
+  for (const key of keys) {
+    if (Array.isArray(payload[key])) return payload[key];
+  }
+  return [];
+}
+
 /**
  * Create a synthesis session
  */
@@ -16,7 +25,15 @@ export async function createSession(name) {
  */
 export async function listSessions() {
   const response = await apiClient.get('/synthesis/sessions');
-  return response.data;
+  const payload = response.data;
+  if (Array.isArray(payload)) {
+    return { sessions: payload, total: payload.length };
+  }
+  if (payload && typeof payload === 'object') {
+    const sessions = asArray(payload, ['sessions', 'items', 'results']);
+    return { ...payload, sessions, total: payload.total ?? sessions.length };
+  }
+  return { sessions: [], total: 0 };
 }
 
 /**

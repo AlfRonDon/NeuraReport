@@ -34,7 +34,7 @@ import {
   alpha,
   styled,
 } from '@mui/material'
-import { figmaGrey } from '@/app/theme'
+import { neutral, palette, primary } from '@/app/theme'
 import {
   Palette as PaletteIcon,
   Brush as BrushIcon,
@@ -81,7 +81,7 @@ const ContentArea = styled(Box)(({ theme }) => ({
 const BrandKitCard = styled(Card)(({ theme, isDefault }) => ({
   cursor: 'pointer',
   transition: 'all 0.2s ease',
-  border: isDefault ? `2px solid ${theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100]}` : `1px solid ${alpha(theme.palette.divider, 0.2)}`,
+  border: isDefault ? `2px solid ${theme.palette.mode === 'dark' ? neutral[500] : neutral[700]}` : `1px solid ${alpha(theme.palette.divider, 0.2)}`,
   '&:hover': {
     transform: 'translateY(-2px)',
     boxShadow: `0 8px 24px ${alpha(theme.palette.text.primary, 0.15)}`,
@@ -105,9 +105,9 @@ const ThemeCard = styled(Paper)(({ theme, isActive }) => ({
   padding: theme.spacing(2),
   cursor: 'pointer',
   transition: 'all 0.2s ease',
-  border: isActive ? `2px solid ${theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100]}` : `1px solid ${alpha(theme.palette.divider, 0.2)}`,
+  border: isActive ? `2px solid ${theme.palette.mode === 'dark' ? neutral[500] : neutral[700]}` : `1px solid ${alpha(theme.palette.divider, 0.2)}`,
   '&:hover': {
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200],
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : neutral[50],
   },
 }))
 
@@ -169,11 +169,11 @@ export default function DesignPageContainer() {
   const [dialogMode, setDialogMode] = useState('brandKit') // 'brandKit' or 'theme'
   const [formData, setFormData] = useState({
     name: '',
-    primaryColor: '#3b82f6',
-    secondaryColor: '#6366f1',
-    fontFamily: 'Inter',
+    primaryColor: primary[500],
+    secondaryColor: neutral[700],
+    fontFamily: 'Geist Sans',
   })
-  const [baseColor, setBaseColor] = useState('#3b82f6')
+  const [baseColor, setBaseColor] = useState(primary[500])
   const [colorScheme, setColorScheme] = useState('complementary')
   const [generatedPalette, setGeneratedPalette] = useState(null)
 
@@ -201,7 +201,7 @@ export default function DesignPageContainer() {
         })
         toast.show('Brand kit created', 'success')
         setCreateDialogOpen(false)
-        setFormData({ name: '', primaryColor: '#3b82f6', secondaryColor: '#6366f1', fontFamily: 'Inter' })
+        setFormData({ name: '', primaryColor: primary[500], secondaryColor: neutral[700], fontFamily: 'Geist Sans' })
       },
     })
   }, [createBrandKit, execute, formData, toast])
@@ -227,7 +227,7 @@ export default function DesignPageContainer() {
         })
         toast.show('Theme created', 'success')
         setCreateDialogOpen(false)
-        setFormData({ name: '', primaryColor: '#3b82f6', secondaryColor: '#6366f1', fontFamily: 'Inter' })
+        setFormData({ name: '', primaryColor: primary[500], secondaryColor: neutral[700], fontFamily: 'Geist Sans' })
       },
     })
   }, [createTheme, execute, formData, toast])
@@ -352,7 +352,7 @@ export default function DesignPageContainer() {
                         {kit.name}
                       </Typography>
                       {kit.is_default && (
-                        <Chip size="small" label="Default" icon={<DefaultIcon />} sx={{ bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400], color: 'text.secondary' }} />
+                        <Chip size="small" label="Default" icon={<DefaultIcon />} sx={{ bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[200], color: 'text.secondary' }} />
                       )}
                     </Box>
 
@@ -415,8 +415,8 @@ export default function DesignPageContainer() {
                     {t.is_active && <CheckIcon sx={{ color: 'text.secondary' }} />}
                   </Box>
                   <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
-                    <ColorSwatch color={t.colors?.primary || '#3b82f6'} data-testid="theme-primary-color" />
-                    <ColorSwatch color={t.colors?.secondary || '#6366f1'} data-testid="theme-secondary-color" />
+                    <ColorSwatch color={t.colors?.primary || primary[500]} data-testid="theme-primary-color" />
+                    <ColorSwatch color={t.colors?.secondary || neutral[700]} data-testid="theme-secondary-color" />
                     <ColorSwatch color={t.colors?.background || '#ffffff'} data-testid="theme-background-color" />
                   </Box>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>

@@ -24,7 +24,7 @@ export default function Kbd({ children, size = 'medium', sx, ...props }) {
   const display = KEY_MAP[text] || children
 
   const sizes = {
-    small: { px: 0.5, py: 0.25, fontSize: '0.65rem', minWidth: 16 },
+    small: { px: 0.5, py: 0.25, fontSize: '10px', minWidth: 16 },
     medium: { px: 0.75, py: 0.25, fontSize: '0.75rem', minWidth: 20 },
     large: { px: 1, py: 0.5, fontSize: '0.875rem', minWidth: 24 },
   }

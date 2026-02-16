@@ -45,7 +45,7 @@ import LightbulbIcon from '@mui/icons-material/Lightbulb'
 import BookmarkIcon from '@mui/icons-material/Bookmark'
 import BookmarkBorderIcon from '@mui/icons-material/BookmarkBorder'
 
-import { figmaGrey } from '@/app/theme'
+import { neutral, palette } from '@/app/theme'
 import { useAppStore } from '@/stores'
 import useQueryStore from '@/stores/queryStore'
 import * as nl2sqlApi from '@/api/nl2sql'
@@ -129,8 +129,8 @@ const HeaderButton = styled(Button)(({ theme }) => ({
   borderColor: alpha(theme.palette.divider, 0.2),
   transition: 'all 0.2s ease',
   '&:hover': {
-    borderColor: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
+    borderColor: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
   },
 }))
 
@@ -138,12 +138,12 @@ const PrimaryButton = styled(Button)(({ theme }) => ({
   borderRadius: 12,
   textTransform: 'none',
   fontWeight: 600,
-  background: theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200],
-  color: '#fff',
+  background: theme.palette.mode === 'dark' ? neutral[700] : neutral[900],
+  color: theme.palette.common.white,
   boxShadow: `0 4px 14px ${alpha(theme.palette.common.black, 0.15)}`,
   transition: 'all 0.2s ease',
   '&:hover': {
-    background: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
+    background: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
     boxShadow: `0 6px 20px ${alpha(theme.palette.common.black, 0.2)}`,
     transform: 'translateY(-1px)',
   },
@@ -161,12 +161,12 @@ const ExecuteButton = styled(Button)(({ theme }) => ({
   borderRadius: 12,
   textTransform: 'none',
   fontWeight: 600,
-  background: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
-  color: '#fff',
+  background: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
+  color: theme.palette.common.white,
   boxShadow: `0 4px 14px ${alpha(theme.palette.common.black, 0.15)}`,
   transition: 'all 0.2s ease',
   '&:hover': {
-    background: theme.palette.mode === 'dark' ? figmaGrey[900] : figmaGrey[1000],
+    background: theme.palette.mode === 'dark' ? neutral[500] : neutral[500],
     boxShadow: `0 6px 20px ${alpha(theme.palette.common.black, 0.2)}`,
     transform: 'translateY(-1px)',
   },
@@ -211,11 +211,11 @@ const StyledTextField = styled(TextField)(({ theme }) => ({
 const SavedQueryItem = styled(Stack)(({ theme }) => ({
   padding: theme.spacing(1),
   borderRadius: 10,
-  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : figmaGrey[200],
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : neutral[50],
   cursor: 'pointer',
   transition: 'all 0.2s ease',
   '&:hover': {
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
     transform: 'translateX(4px)',
   },
 }))
@@ -223,11 +223,11 @@ const SavedQueryItem = styled(Stack)(({ theme }) => ({
 const HistoryItem = styled(Stack)(({ theme }) => ({
   padding: theme.spacing(1),
   borderRadius: 10,
-  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : figmaGrey[200],
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : neutral[50],
   cursor: 'pointer',
   transition: 'all 0.2s ease',
   '&:hover': {
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
     transform: 'translateX(4px)',
   },
 }))
@@ -235,16 +235,16 @@ const HistoryItem = styled(Stack)(({ theme }) => ({
 const ExplanationBox = styled(Box)(({ theme }) => ({
   marginTop: theme.spacing(2),
   padding: theme.spacing(1.5),
-  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200],
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : neutral[50],
   borderRadius: 12,
   border: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
 }))
 
 const ConfidenceChip = styled(Chip)(({ theme, confidence }) => ({
   height: 20,
-  fontSize: '0.7rem',
+  fontSize: '12px',
   fontWeight: 600,
-  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300],
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[100],
   color: theme.palette.text.secondary,
   borderRadius: 6,
 }))
@@ -704,8 +704,8 @@ export default function QueryBuilderPage() {
                           label="Success"
                           sx={{
                             height: 20,
-                            fontSize: '0.7rem',
-                            bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300],
+                            fontSize: '12px',
+                            bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[100],
                             color: theme.palette.text.secondary,
                             borderRadius: 1.5,
                           }}
@@ -716,8 +716,8 @@ export default function QueryBuilderPage() {
                           label="Failed"
                           sx={{
                             height: 20,
-                            fontSize: '0.7rem',
-                            bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300],
+                            fontSize: '12px',
+                            bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[100],
                             color: theme.palette.text.secondary,
                             borderRadius: 1.5,
                           }}
@@ -900,13 +900,13 @@ export default function QueryBuilderPage() {
                 size="small"
                 label="Read-only recommended"
                 variant="outlined"
-                sx={{ fontSize: '0.7rem' }}
+                sx={{ fontSize: '12px' }}
               />
               {writeOperation && (
                 <Chip
                   size="small"
                   label={`${writeOperation.toUpperCase()} detected`}
-                  sx={{ fontSize: '0.7rem', bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400], color: 'text.secondary' }}
+                  sx={{ fontSize: '12px', bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[200], color: 'text.secondary' }}
                 />
               )}
             </Stack>

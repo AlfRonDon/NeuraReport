@@ -11,7 +11,7 @@ import {
   ToggleButton,
   alpha,
 } from '@mui/material'
-import { figmaGrey } from '@/app/theme'
+import { neutral, palette } from '@/app/theme'
 import HistoryIcon from '@mui/icons-material/History'
 import EditIcon from '@mui/icons-material/Edit'
 import SmartToyIcon from '@mui/icons-material/SmartToy'
@@ -86,7 +86,7 @@ function HistoryEntry({ entry, isLatest }) {
         py: 1,
         px: 1.5,
         borderRadius: 1,
-        bgcolor: isLatest ? (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : figmaGrey[200] : 'transparent',
+        bgcolor: isLatest ? (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : neutral[50] : 'transparent',
         '&:hover': {
           bgcolor: 'action.hover',
         },
@@ -106,7 +106,7 @@ function HistoryEntry({ entry, isLatest }) {
             width: 28,
             height: 28,
             borderRadius: '50%',
-            bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
+            bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -139,7 +139,7 @@ function HistoryEntry({ entry, isLatest }) {
             variant="outlined"
             sx={{
               height: 20,
-              fontSize: '0.7rem',
+              fontSize: '12px',
               borderColor: (theme) => alpha(theme.palette.divider, 0.3),
               color: 'text.secondary',
             }}
@@ -150,9 +150,9 @@ function HistoryEntry({ entry, isLatest }) {
               size="small"
               sx={{
                 height: 20,
-                fontSize: '0.7rem',
-                bgcolor: (theme) => theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200],
-                color: '#fff',
+                fontSize: '12px',
+                bgcolor: (theme) => theme.palette.mode === 'dark' ? neutral[700] : neutral[900],
+                color: 'common.white',
               }}
             />
           )}
@@ -248,7 +248,7 @@ export default function EditHistoryTimeline({ history = [], maxVisible = 5 }) {
           <Chip
             label={filteredHistory.length}
             size="small"
-            sx={{ height: 18, fontSize: '0.7rem' }}
+            sx={{ height: 18, fontSize: '12px' }}
           />
         </Stack>
 
@@ -262,7 +262,7 @@ export default function EditHistoryTimeline({ history = [], maxVisible = 5 }) {
               '& .MuiToggleButton-root': {
                 py: 0.25,
                 px: 0.75,
-                fontSize: '0.7rem',
+                fontSize: '12px',
               },
             }}
           >
@@ -317,7 +317,7 @@ export default function EditHistoryTimeline({ history = [], maxVisible = 5 }) {
             <IconButton
               size="small"
               onClick={() => setExpanded(!expanded)}
-              sx={{ fontSize: '0.8rem' }}
+              sx={{ fontSize: '12px' }}
             >
               {expanded ? (
                 <>

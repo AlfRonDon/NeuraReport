@@ -17,6 +17,7 @@ import { useNavigate } from 'react-router-dom'
 import { useOperationHistory, OperationType, OperationStatus } from '../OperationHistoryProvider'
 import { useToast } from '@/components/ToastProvider'
 import { pushActiveIntent, popActiveIntent } from '@/utils/intentBridge'
+import { reportFrontendError } from '@/api/frontendErrorLogger'
 
 // ============================================================================
 // INTERACTION TYPES - Every action must have a defined type
@@ -245,6 +246,18 @@ export function InteractionProvider({ children }) {
 
       // STEP 11: Show error with recovery path
       const userMessage = error.userMessage || error.message || 'An error occurred'
+      reportFrontendError({
+        source: 'interaction.execute',
+        message: userMessage,
+        stack: error?.stack,
+        route: typeof window !== 'undefined' ? window.location.pathname : undefined,
+        action: contract.label,
+        context: {
+          interactionType: contract.type,
+          reversibility: contract.reversibility,
+          interactionId,
+        },
+      })
       if (!contract.suppressErrorToast) {
         showToast(userMessage, 'error')
       }

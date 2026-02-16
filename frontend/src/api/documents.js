@@ -4,6 +4,15 @@
  */
 import { api } from './client';
 
+function asArray(payload, keys = []) {
+  if (Array.isArray(payload)) return payload;
+  if (!payload || typeof payload !== 'object') return [];
+  for (const key of keys) {
+    if (Array.isArray(payload[key])) return payload[key];
+  }
+  return [];
+}
+
 // ============================================
 // Document CRUD
 // ============================================
@@ -30,7 +39,15 @@ export async function deleteDocument(documentId) {
 
 export async function listDocuments(params = {}) {
   const response = await api.get('/documents', { params });
-  return response.data;
+  const payload = response.data;
+  if (Array.isArray(payload)) {
+    return { documents: payload, total: payload.length };
+  }
+  if (payload && typeof payload === 'object') {
+    const documents = asArray(payload, ['documents', 'items', 'results']);
+    return { ...payload, documents, total: payload.total ?? documents.length };
+  }
+  return { documents: [], total: 0 };
 }
 
 // ============================================
@@ -190,7 +207,15 @@ export async function adjustTone(documentId, text, targetTone) {
 
 export async function listTemplates(params = {}) {
   const response = await api.get('/documents/templates', { params });
-  return response.data;
+  const payload = response.data;
+  if (Array.isArray(payload)) {
+    return { templates: payload, total: payload.length };
+  }
+  if (payload && typeof payload === 'object') {
+    const templates = asArray(payload, ['templates', 'items', 'results']);
+    return { ...payload, templates, total: payload.total ?? templates.length };
+  }
+  return { templates: [], total: 0 };
 }
 
 export async function createFromTemplate(templateId, name) {

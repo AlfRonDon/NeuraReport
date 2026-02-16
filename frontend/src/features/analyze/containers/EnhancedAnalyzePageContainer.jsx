@@ -73,7 +73,7 @@ import {
   generateCharts,
   exportAnalysis,
 } from '../services/enhancedAnalyzeApi'
-import { figmaGrey } from '@/app/theme'
+import { neutral, palette } from '@/app/theme'
 
 // Animations
 const float = keyframes`
@@ -121,7 +121,7 @@ function GlassCard({ children, sx = {}, gradient = false, hover = true, ...props
           '&:hover': {
             transform: 'translateY(-4px)',
             boxShadow: theme.palette.mode === 'dark' ? `0 20px 40px ${alpha(theme.palette.common.black, 0.3)}` : '0 20px 40px rgba(0,0,0,0.08)',
-            borderColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.15) : figmaGrey[500],
+            borderColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.15) : neutral[200],
           },
         }),
         ...sx,
@@ -143,7 +143,7 @@ function StatCard({ icon, label, value, delay = 0 }) {
           minWidth: 140,
           background: theme.palette.mode === 'dark'
             ? `linear-gradient(135deg, ${alpha(theme.palette.text.primary, 0.08)} 0%, ${alpha(theme.palette.text.primary, 0.03)} 100%)`
-            : `linear-gradient(135deg, ${figmaGrey[300]} 0%, ${figmaGrey[200]} 100%)`,
+            : `linear-gradient(135deg, ${neutral[100]} 0%, ${neutral[50]} 100%)`,
           border: `1px solid ${alpha(theme.palette.divider, 0.15)}`,
           borderRadius: 1,  // Figma spec: 8px
           transition: 'all 0.3s ease',
@@ -157,7 +157,7 @@ function StatCard({ icon, label, value, delay = 0 }) {
           <Stack direction="row" alignItems="center" spacing={1.5}>
             <Avatar
               sx={{
-                bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400],
+                bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[200],
                 color: 'text.secondary',
                 width: 40,
                 height: 40,
@@ -166,7 +166,7 @@ function StatCard({ icon, label, value, delay = 0 }) {
               {icon}
             </Avatar>
             <Box>
-              <Typography variant="h5" fontWeight={800} color="text.primary">
+              <Typography variant="h5" fontWeight={600} color="text.primary">
                 {value}
               </Typography>
               <Typography variant="caption" color="text.secondary" fontWeight={500}>
@@ -211,7 +211,7 @@ function MetricCard({ metric, index }) {
             left: 0,
             right: 0,
             height: 4,
-            background: theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200],
+            background: theme.palette.mode === 'dark' ? neutral[700] : neutral[900],
           },
         }}
       >
@@ -228,7 +228,7 @@ function MetricCard({ metric, index }) {
               </Typography>
               <Typography
                 variant="h4"
-                fontWeight={800}
+                fontWeight={600}
                 sx={{
                   mt: 0.5,
                   color: theme.palette.text.primary,
@@ -244,8 +244,8 @@ function MetricCard({ metric, index }) {
                   sx={{
                     mt: 1,
                     height: 24,
-                    fontWeight: 700,
-                    bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300],
+                    fontWeight: 600,
+                    bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[100],
                     color: 'text.secondary',
                     '& .MuiChip-icon': {
                       color: 'inherit',
@@ -278,44 +278,44 @@ function InsightCard({ insight, type = 'insight', index = 0 }) {
     insight: {
       gradient: theme.palette.mode === 'dark'
         ? `linear-gradient(135deg, ${alpha(theme.palette.text.primary, 0.08)} 0%, ${alpha(theme.palette.text.primary, 0.04)} 100%)`
-        : `linear-gradient(135deg, ${figmaGrey[300]} 0%, ${figmaGrey[200]} 100%)`,
-      borderColor: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
+        : `linear-gradient(135deg, ${neutral[100]} 0%, ${neutral[50]} 100%)`,
+      borderColor: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
       icon: <LightbulbIcon />,
-      iconBg: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400],
+      iconBg: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[200],
     },
     risk: {
       gradient: theme.palette.mode === 'dark'
         ? `linear-gradient(135deg, ${alpha(theme.palette.text.primary, 0.08)} 0%, ${alpha(theme.palette.text.primary, 0.04)} 100%)`
-        : `linear-gradient(135deg, ${figmaGrey[300]} 0%, ${figmaGrey[200]} 100%)`,
-      borderColor: theme.palette.mode === 'dark' ? figmaGrey[900] : figmaGrey[1100],
+        : `linear-gradient(135deg, ${neutral[100]} 0%, ${neutral[50]} 100%)`,
+      borderColor: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
       icon: <SecurityIcon />,
-      iconBg: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400],
+      iconBg: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[200],
     },
     opportunity: {
       gradient: theme.palette.mode === 'dark'
         ? `linear-gradient(135deg, ${alpha(theme.palette.text.primary, 0.08)} 0%, ${alpha(theme.palette.text.primary, 0.04)} 100%)`
-        : `linear-gradient(135deg, ${figmaGrey[300]} 0%, ${figmaGrey[200]} 100%)`,
-      borderColor: theme.palette.mode === 'dark' ? figmaGrey[600] : figmaGrey[1000],
+        : `linear-gradient(135deg, ${neutral[100]} 0%, ${neutral[50]} 100%)`,
+      borderColor: theme.palette.mode === 'dark' ? neutral[300] : neutral[500],
       icon: <RocketLaunchIcon />,
-      iconBg: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400],
+      iconBg: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[200],
     },
     action: {
       gradient: theme.palette.mode === 'dark'
         ? `linear-gradient(135deg, ${alpha(theme.palette.text.primary, 0.08)} 0%, ${alpha(theme.palette.text.primary, 0.04)} 100%)`
-        : `linear-gradient(135deg, ${figmaGrey[300]} 0%, ${figmaGrey[200]} 100%)`,
-      borderColor: theme.palette.mode === 'dark' ? figmaGrey[600] : figmaGrey[900],
+        : `linear-gradient(135deg, ${neutral[100]} 0%, ${neutral[50]} 100%)`,
+      borderColor: theme.palette.mode === 'dark' ? neutral[300] : neutral[500],
       icon: <PlaylistAddCheckIcon />,
-      iconBg: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400],
+      iconBg: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[200],
     },
   }
 
   const { gradient, borderColor, icon, iconBg } = config[type] || config.insight
 
   const priorityColors = {
-    critical: { bg: theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200], text: '#fff' },
-    high: { bg: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100], text: '#fff' },
-    medium: { bg: theme.palette.mode === 'dark' ? figmaGrey[900] : figmaGrey[1000], text: '#fff' },
-    low: { bg: theme.palette.mode === 'dark' ? figmaGrey[600] : figmaGrey[900], text: theme.palette.mode === 'dark' ? figmaGrey[1200] : '#fff' },
+    critical: { bg: theme.palette.mode === 'dark' ? neutral[700] : neutral[900], text: 'common.white' },
+    high: { bg: theme.palette.mode === 'dark' ? neutral[500] : neutral[700], text: 'common.white' },
+    medium: { bg: theme.palette.mode === 'dark' ? neutral[500] : neutral[500], text: 'common.white' },
+    low: { bg: theme.palette.mode === 'dark' ? neutral[300] : neutral[500], text: theme.palette.mode === 'dark' ? neutral[900] : 'common.white' },
   }
 
   const priorityConfig = priorityColors[insight.priority?.toLowerCase()] || priorityColors.medium
@@ -350,7 +350,7 @@ function InsightCard({ insight, type = 'insight', index = 0 }) {
             </Avatar>
             <Box sx={{ flex: 1 }}>
               <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 1 }}>
-                <Typography variant="subtitle1" fontWeight={700}>
+                <Typography variant="subtitle1" fontWeight={600}>
                   {insight.title}
                 </Typography>
                 {insight.priority && (
@@ -360,7 +360,7 @@ function InsightCard({ insight, type = 'insight', index = 0 }) {
                     sx={{
                       height: 22,
                       fontSize: 10,
-                      fontWeight: 700,
+                      fontWeight: 600,
                       textTransform: 'uppercase',
                       bgcolor: priorityConfig.bg,
                       color: priorityConfig.text,
@@ -381,7 +381,7 @@ function InsightCard({ insight, type = 'insight', index = 0 }) {
               </Typography>
               {insight.suggested_actions?.length > 0 && (
                 <Box sx={{ mt: 2, p: 2, bgcolor: alpha(borderColor, 0.08), borderRadius: 1 }}>
-                  <Typography variant="caption" fontWeight={700} color={borderColor}>
+                  <Typography variant="caption" fontWeight={600} color={borderColor}>
                     SUGGESTED ACTIONS
                   </Typography>
                   <Stack spacing={0.5} sx={{ mt: 1 }}>
@@ -408,10 +408,10 @@ function SentimentDisplay({ sentiment }) {
   if (!sentiment) return null
 
   const getSentimentConfig = (level) => {
-    const neutralColor = theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100]
+    const neutralColor = theme.palette.mode === 'dark' ? neutral[500] : neutral[700]
     const neutralGradient = theme.palette.mode === 'dark'
       ? `linear-gradient(135deg, ${alpha(theme.palette.text.primary, 0.12)} 0%, ${alpha(theme.palette.text.primary, 0.06)} 100%)`
-      : `linear-gradient(135deg, ${figmaGrey[400]} 0%, ${figmaGrey[300]} 100%)`
+      : `linear-gradient(135deg, ${neutral[200]} 0%, ${neutral[100]} 100%)`
     if (level?.includes('positive')) {
       return {
         icon: <SentimentSatisfiedAltIcon sx={{ fontSize: 32 }} />,
@@ -457,7 +457,7 @@ function SentimentDisplay({ sentiment }) {
             <Typography variant="overline" color="text.secondary" fontWeight={600}>
               Document Sentiment
             </Typography>
-            <Typography variant="h5" fontWeight={800} color={config.color}>
+            <Typography variant="h5" fontWeight={600} color={config.color}>
               {config.label}
             </Typography>
           </Box>
@@ -479,7 +479,7 @@ function SentimentDisplay({ sentiment }) {
                   justifyContent: 'center',
                 }}
               >
-                <Typography variant="body2" fontWeight={800} color={config.color}>
+                <Typography variant="body2" fontWeight={600} color={config.color}>
                   {score}%
                 </Typography>
               </Box>
@@ -490,12 +490,12 @@ function SentimentDisplay({ sentiment }) {
           <Chip
             size="small"
             label={`Tone: ${sentiment.emotional_tone || 'Neutral'}`}
-            sx={{ bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300] }}
+            sx={{ bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100] }}
           />
           <Chip
             size="small"
             label={`Urgency: ${sentiment.urgency_level || 'Normal'}`}
-            sx={{ bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300] }}
+            sx={{ bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100] }}
           />
         </Stack>
       </Stack>
@@ -510,9 +510,9 @@ function DataQualityGauge({ quality }) {
 
   const score = Math.round((quality.quality_score || 0) * 100)
   const getColor = (s) => {
-    if (s >= 80) return theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100]
-    if (s >= 60) return theme.palette.mode === 'dark' ? figmaGrey[900] : figmaGrey[1000]
-    return theme.palette.mode === 'dark' ? figmaGrey[600] : figmaGrey[900]
+    if (s >= 80) return theme.palette.mode === 'dark' ? neutral[500] : neutral[700]
+    if (s >= 60) return theme.palette.mode === 'dark' ? neutral[500] : neutral[500]
+    return theme.palette.mode === 'dark' ? neutral[300] : neutral[500]
   }
   const color = getColor(score)
 
@@ -552,7 +552,7 @@ function DataQualityGauge({ quality }) {
                 justifyContent: 'center',
               }}
             >
-              <Typography variant="h5" fontWeight={800} color={color}>
+              <Typography variant="h5" fontWeight={600} color={color}>
                 {score}
               </Typography>
               <Typography variant="caption" color="text.secondary">
@@ -564,7 +564,7 @@ function DataQualityGauge({ quality }) {
             <Typography variant="overline" color="text.secondary" fontWeight={600}>
               Data Quality
             </Typography>
-            <Typography variant="h6" fontWeight={700}>
+            <Typography variant="h6" fontWeight={600}>
               {score >= 80 ? 'Excellent' : score >= 60 ? 'Good' : 'Needs Attention'}
             </Typography>
             <Typography variant="caption" color="text.secondary">
@@ -607,8 +607,8 @@ function QABubble({ qa, index }) {
               p: 2,
               px: 3,
               borderRadius: '20px 20px 4px 20px',
-              background: theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200],
-              color: '#fff',
+              background: theme.palette.mode === 'dark' ? neutral[700] : neutral[900],
+              color: 'common.white',
               boxShadow: `0 4px 12px ${alpha(theme.palette.common.black, 0.2)}`,
             }}
           >
@@ -625,7 +625,7 @@ function QABubble({ qa, index }) {
               width: 36,
               height: 36,
               mr: 1.5,
-              bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300],
+              bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[100],
               color: 'text.secondary',
             }}
           >
@@ -647,7 +647,7 @@ function QABubble({ qa, index }) {
             </Typography>
             {qa.sources?.length > 0 && (
               <Box sx={{ mt: 2, pt: 2, borderTop: `1px solid ${alpha(theme.palette.divider, 0.1)}` }}>
-                <Typography variant="caption" fontWeight={700} color="text.secondary">
+                <Typography variant="caption" fontWeight={600} color="text.secondary">
                   Sources:
                 </Typography>
                 {qa.sources.slice(0, 2).map((source, i) => (
@@ -954,7 +954,7 @@ export default function EnhancedAnalyzePageContainer() {
         minHeight: '100vh',
         background: theme.palette.mode === 'dark'
           ? `linear-gradient(180deg, ${alpha(theme.palette.text.primary, 0.02)} 0%, ${theme.palette.background.default} 50%)`
-          : `linear-gradient(180deg, ${figmaGrey[200]} 0%, ${theme.palette.background.default} 50%)`,
+          : `linear-gradient(180deg, ${neutral[50]} 0%, ${theme.palette.background.default} 50%)`,
       }}
     >
       {/* Hero Header */}
@@ -965,7 +965,7 @@ export default function EnhancedAnalyzePageContainer() {
           px: 4,
           background: theme.palette.mode === 'dark'
             ? `linear-gradient(135deg, ${alpha(theme.palette.text.primary, 0.06)} 0%, ${alpha(theme.palette.text.primary, 0.03)} 50%, transparent 100%)`
-            : `linear-gradient(135deg, ${figmaGrey[300]} 0%, ${figmaGrey[200]} 50%, transparent 100%)`,
+            : `linear-gradient(135deg, ${neutral[100]} 0%, ${neutral[50]} 50%, transparent 100%)`,
           borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
         }}
       >
@@ -975,7 +975,7 @@ export default function EnhancedAnalyzePageContainer() {
               sx={{
                 width: 56,
                 height: 56,
-                background: theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200],
+                background: theme.palette.mode === 'dark' ? neutral[700] : neutral[900],
                 boxShadow: `0 8px 24px ${alpha(theme.palette.common.black, 0.2)}`,
               }}
             >
@@ -984,7 +984,7 @@ export default function EnhancedAnalyzePageContainer() {
             <Box>
               <Typography
                 variant="h4"
-                fontWeight={800}
+                fontWeight={600}
                 color="text.primary"
               >
                 AI Document Analysis
@@ -1034,10 +1034,10 @@ export default function EnhancedAnalyzePageContainer() {
                     borderRadius: 1,
                     textTransform: 'none',
                     fontWeight: 600,
-                    background: theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200],
+                    background: theme.palette.mode === 'dark' ? neutral[700] : neutral[900],
                     boxShadow: `0 4px 14px ${alpha(theme.palette.common.black, 0.2)}`,
                     '&:hover': {
-                      background: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
+                      background: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
                     },
                   }}
                 >
@@ -1089,8 +1089,8 @@ export default function EnhancedAnalyzePageContainer() {
                   p: 6,
                   textAlign: 'center',
                   cursor: 'pointer',
-                  border: `2px dashed ${isDragOver ? (theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100]) : alpha(theme.palette.divider, 0.3)}`,
-                  bgcolor: isDragOver ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200]) : undefined,
+                  border: `2px dashed ${isDragOver ? (theme.palette.mode === 'dark' ? neutral[500] : neutral[700]) : alpha(theme.palette.divider, 0.3)}`,
+                  bgcolor: isDragOver ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : neutral[50]) : undefined,
                   transition: 'all 0.3s ease',
                 }}
                 onDragOver={handleDragOver}
@@ -1114,13 +1114,13 @@ export default function EnhancedAnalyzePageContainer() {
                         height: 100,
                         mx: 'auto',
                         mb: 3,
-                        background: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400],
+                        background: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[200],
                         animation: `${float} 3s ease-in-out infinite`,
                       }}
                     >
                       <CloudUploadIcon sx={{ fontSize: 48, color: 'text.secondary' }} />
                     </Avatar>
-                    <Typography variant="h5" fontWeight={700} gutterBottom>
+                    <Typography variant="h5" fontWeight={600} gutterBottom>
                       Drop your document here
                     </Typography>
                     <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
@@ -1132,7 +1132,7 @@ export default function EnhancedAnalyzePageContainer() {
                           key={type}
                           label={type}
                           size="small"
-                          sx={{ bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300] }}
+                          sx={{ bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[100] }}
                         />
                       ))}
                     </Stack>
@@ -1147,12 +1147,12 @@ export default function EnhancedAnalyzePageContainer() {
                         height: 80,
                         mx: 'auto',
                         mb: 3,
-                        bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300],
+                        bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[100],
                       }}
                     >
                       <CheckCircleIcon sx={{ fontSize: 40, color: 'text.secondary' }} />
                     </Avatar>
-                    <Typography variant="h6" fontWeight={700} gutterBottom>
+                    <Typography variant="h6" fontWeight={600} gutterBottom>
                       {selectedFile.name}
                     </Typography>
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
@@ -1170,15 +1170,15 @@ export default function EnhancedAnalyzePageContainer() {
                         px: 6,
                         py: 2,
                         borderRadius: 1,  // Figma spec: 8px
-                        fontWeight: 700,
+                        fontWeight: 600,
                         fontSize: '1.1rem',
                         textTransform: 'none',
-                        bgcolor: theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200],
+                        bgcolor: theme.palette.mode === 'dark' ? neutral[700] : neutral[900],
                         boxShadow: `0 8px 32px ${alpha(theme.palette.common.black, 0.2)}`,
                         transition: 'all 0.3s ease',
                         '&:hover': {
                           transform: 'scale(1.05)',
-                          bgcolor: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
+                          bgcolor: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
                           boxShadow: `0 12px 40px ${alpha(theme.palette.common.black, 0.25)}`,
                         },
                       }}
@@ -1204,7 +1204,7 @@ export default function EnhancedAnalyzePageContainer() {
                         value={100}
                         size={120}
                         thickness={4}
-                        sx={{ color: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400] }}
+                        sx={{ color: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[200] }}
                       />
                       <CircularProgress
                         variant="determinate"
@@ -1214,7 +1214,7 @@ export default function EnhancedAnalyzePageContainer() {
                         sx={{
                           position: 'absolute',
                           left: 0,
-                          color: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
+                          color: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
                           '& .MuiCircularProgress-circle': { strokeLinecap: 'round' },
                         }}
                       />
@@ -1227,7 +1227,7 @@ export default function EnhancedAnalyzePageContainer() {
                           justifyContent: 'center',
                         }}
                       >
-                        <Typography variant="h4" fontWeight={800} color="text.primary">
+                        <Typography variant="h4" fontWeight={600} color="text.primary">
                           {analysisProgress}%
                         </Typography>
                       </Box>
@@ -1244,10 +1244,10 @@ export default function EnhancedAnalyzePageContainer() {
                         mt: 2,
                         height: 8,
                         borderRadius: 4,
-                        bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400],
+                        bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[200],
                         '& .MuiLinearProgress-bar': {
                           borderRadius: 4,
-                          background: theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200],
+                          background: theme.palette.mode === 'dark' ? neutral[700] : neutral[900],
                         },
                       }}
                     />
@@ -1271,7 +1271,7 @@ export default function EnhancedAnalyzePageContainer() {
                   sx={{
                     mt: 2,
                     p: 2,
-                    bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
+                    bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
                     border: `1px solid ${alpha(theme.palette.divider, 0.3)}`,
                     borderRadius: 1,
                   }}
@@ -1298,11 +1298,11 @@ export default function EnhancedAnalyzePageContainer() {
                     '& .MuiTab-root': {
                       textTransform: 'none',
                       fontWeight: 600,
-                      fontSize: '0.95rem',
+                      fontSize: '16px',
                       minHeight: 64,
                       transition: 'all 0.2s ease',
                       '&:hover': {
-                        bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200],
+                        bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : neutral[50],
                       },
                       '&.Mui-selected': {
                         color: 'text.primary',
@@ -1311,7 +1311,7 @@ export default function EnhancedAnalyzePageContainer() {
                     '& .MuiTabs-indicator': {
                       height: 3,
                       borderRadius: '3px 3px 0 0',
-                      background: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1200],
+                      background: theme.palette.mode === 'dark' ? neutral[500] : neutral[900],
                     },
                   }}
                 >
@@ -1330,10 +1330,10 @@ export default function EnhancedAnalyzePageContainer() {
                   <Grid size={{ xs: 12, lg: 8 }}>
                     <GlassCard sx={{ height: '100%' }}>
                       <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 2 }}>
-                        <Avatar sx={{ bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300], color: 'text.secondary' }}>
+                        <Avatar sx={{ bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[100], color: 'text.secondary' }}>
                           <ArticleIcon />
                         </Avatar>
-                        <Typography variant="h6" fontWeight={700}>
+                        <Typography variant="h6" fontWeight={600}>
                           Executive Summary
                         </Typography>
                       </Stack>
@@ -1351,12 +1351,12 @@ export default function EnhancedAnalyzePageContainer() {
                           sx={{
                             mt: 3,
                             p: 2.5,
-                            bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200],
+                            bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : neutral[50],
                             borderRadius: 1,  // Figma spec: 8px
                             border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
                           }}
                         >
-                          <Typography variant="subtitle2" fontWeight={700} gutterBottom>
+                          <Typography variant="subtitle2" fontWeight={600} gutterBottom>
                             Key Points
                           </Typography>
                           <Stack spacing={1}>
@@ -1367,13 +1367,13 @@ export default function EnhancedAnalyzePageContainer() {
                                     width: 24,
                                     height: 24,
                                     borderRadius: '50%',
-                                    bgcolor: theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200],
-                                    color: '#fff',
+                                    bgcolor: theme.palette.mode === 'dark' ? neutral[700] : neutral[900],
+                                    color: 'common.white',
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
                                     fontSize: 12,
-                                    fontWeight: 700,
+                                    fontWeight: 600,
                                     flexShrink: 0,
                                     mt: 0.25,
                                   }}
@@ -1401,10 +1401,10 @@ export default function EnhancedAnalyzePageContainer() {
                   <Grid size={12}>
                     <GlassCard>
                       <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 3 }}>
-                        <Avatar sx={{ bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300], color: 'text.secondary' }}>
+                        <Avatar sx={{ bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[100], color: 'text.secondary' }}>
                           <SpeedIcon />
                         </Avatar>
-                        <Typography variant="h6" fontWeight={700}>
+                        <Typography variant="h6" fontWeight={600}>
                           Key Metrics
                         </Typography>
                       </Stack>
@@ -1420,10 +1420,10 @@ export default function EnhancedAnalyzePageContainer() {
                   <Grid size={{ xs: 12, md: 6 }}>
                     <GlassCard>
                       <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 3 }}>
-                        <Avatar sx={{ bgcolor: (t) => t.palette.mode === 'dark' ? alpha(t.palette.text.primary, 0.1) : figmaGrey[300], color: 'text.secondary' }}>
+                        <Avatar sx={{ bgcolor: (t) => t.palette.mode === 'dark' ? alpha(t.palette.text.primary, 0.1) : neutral[100], color: 'text.secondary' }}>
                           <LightbulbIcon />
                         </Avatar>
-                        <Typography variant="h6" fontWeight={700}>
+                        <Typography variant="h6" fontWeight={600}>
                           Top Insights
                         </Typography>
                       </Stack>
@@ -1437,10 +1437,10 @@ export default function EnhancedAnalyzePageContainer() {
                   <Grid size={{ xs: 12, md: 6 }}>
                     <GlassCard>
                       <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 3 }}>
-                        <Avatar sx={{ bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300], color: 'text.secondary' }}>
+                        <Avatar sx={{ bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[100], color: 'text.secondary' }}>
                           <SecurityIcon />
                         </Avatar>
-                        <Typography variant="h6" fontWeight={700}>
+                        <Typography variant="h6" fontWeight={600}>
                           Risks & Opportunities
                         </Typography>
                       </Stack>
@@ -1461,11 +1461,11 @@ export default function EnhancedAnalyzePageContainer() {
                   <Grid size={{ xs: 12, lg: 8 }}>
                     <GlassCard sx={{ minHeight: 500 }}>
                       <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 3 }}>
-                        <Avatar sx={{ bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300], color: 'text.secondary' }}>
+                        <Avatar sx={{ bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[100], color: 'text.secondary' }}>
                           <SmartToyIcon />
                         </Avatar>
                         <Box>
-                          <Typography variant="h6" fontWeight={700}>
+                          <Typography variant="h6" fontWeight={600}>
                             Ask AI About Your Document
                           </Typography>
                           <Typography variant="caption" color="text.secondary">
@@ -1494,7 +1494,7 @@ export default function EnhancedAnalyzePageContainer() {
                                 height: 80,
                                 mx: 'auto',
                                 mb: 2,
-                                bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
+                                bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
                               }}
                             >
                               <QuestionAnswerIcon sx={{ fontSize: 40, color: 'text.secondary' }} />
@@ -1534,9 +1534,9 @@ export default function EnhancedAnalyzePageContainer() {
                           sx={{
                             minWidth: 56,
                             borderRadius: 1,  // Figma spec: 8px
-                            background: theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200],
+                            background: theme.palette.mode === 'dark' ? neutral[700] : neutral[900],
                             '&:hover': {
-                              background: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
+                              background: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
                             },
                           }}
                         >
@@ -1549,7 +1549,7 @@ export default function EnhancedAnalyzePageContainer() {
                   {/* Suggested Questions */}
                   <Grid size={{ xs: 12, lg: 4 }}>
                     <GlassCard>
-                      <Typography variant="subtitle1" fontWeight={700} gutterBottom>
+                      <Typography variant="subtitle1" fontWeight={600} gutterBottom>
                         Suggested Questions
                       </Typography>
                       <Stack spacing={1.5}>
@@ -1568,8 +1568,8 @@ export default function EnhancedAnalyzePageContainer() {
                               fontWeight: 500,
                               borderColor: alpha(theme.palette.divider, 0.2),
                               '&:hover': {
-                                bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200],
-                                borderColor: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
+                                bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : neutral[50],
+                                borderColor: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
                               },
                             }}
                           >
@@ -1586,11 +1586,11 @@ export default function EnhancedAnalyzePageContainer() {
               <TabPanel value={activeTab} index={2}>
                 <GlassCard sx={{ mb: 3 }}>
                   <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 3 }}>
-                    <Avatar sx={{ bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300], color: 'text.secondary' }}>
+                    <Avatar sx={{ bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[100], color: 'text.secondary' }}>
                       <AutoAwesomeIcon />
                     </Avatar>
                     <Box>
-                      <Typography variant="h6" fontWeight={700}>
+                      <Typography variant="h6" fontWeight={600}>
                         Generate Charts with Natural Language
                       </Typography>
                       <Typography variant="caption" color="text.secondary">
@@ -1622,9 +1622,9 @@ export default function EnhancedAnalyzePageContainer() {
                         borderRadius: 1,  // Figma spec: 8px
                         textTransform: 'none',
                         fontWeight: 600,
-                        background: theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200],
+                        background: theme.palette.mode === 'dark' ? neutral[700] : neutral[900],
                         '&:hover': {
-                          background: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
+                          background: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
                         },
                       }}
                     >
@@ -1639,7 +1639,7 @@ export default function EnhancedAnalyzePageContainer() {
                       <Zoom in timeout={300 + idx * 100}>
                         <Box>
                           <GlassCard>
-                            <Typography variant="h6" fontWeight={700} gutterBottom>
+                            <Typography variant="h6" fontWeight={600} gutterBottom>
                               {chart.title}
                             </Typography>
                             {chart.description && (
@@ -1655,12 +1655,12 @@ export default function EnhancedAnalyzePageContainer() {
                                 sx={{
                                   mt: 2,
                                   p: 2,
-                                  bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
+                                  bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
                                   borderRadius: 1,
                                   border: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
                                 }}
                               >
-                                <Typography variant="caption" fontWeight={700} color="text.secondary">
+                                <Typography variant="caption" fontWeight={600} color="text.secondary">
                                   AI INSIGHTS
                                 </Typography>
                                 {chart.ai_insights.map((insight, i) => (
@@ -1685,10 +1685,10 @@ export default function EnhancedAnalyzePageContainer() {
                   <Grid size={12}>
                     <GlassCard>
                       <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 3 }}>
-                        <Avatar sx={{ bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300], color: 'text.secondary' }}>
+                        <Avatar sx={{ bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[100], color: 'text.secondary' }}>
                           <TableChartIcon />
                         </Avatar>
-                        <Typography variant="h6" fontWeight={700}>
+                        <Typography variant="h6" fontWeight={600}>
                           Extracted Tables ({analysisResult.tables?.length || 0})
                         </Typography>
                       </Stack>
@@ -1707,14 +1707,14 @@ export default function EnhancedAnalyzePageContainer() {
                           <AccordionSummary
                             expandIcon={<ExpandMoreIcon />}
                             sx={{
-                              bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.03) : figmaGrey[200],
-                              '&:hover': { bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.06) : figmaGrey[300] },
+                              bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.03) : neutral[50],
+                              '&:hover': { bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.06) : neutral[100] },
                             }}
                           >
                             <Stack direction="row" alignItems="center" spacing={2}>
                               <TableChartIcon sx={{ color: 'text.secondary' }} />
                               <Typography fontWeight={600}>{table.title || table.id}</Typography>
-                              <Chip label={`${table.row_count} rows`} size="small" variant="outlined" sx={{ borderColor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.3) : figmaGrey[500], color: 'text.secondary' }} />
+                              <Chip label={`${table.row_count} rows`} size="small" variant="outlined" sx={{ borderColor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.3) : neutral[200], color: 'text.secondary' }} />
                               <Chip label={`${table.column_count} cols`} size="small" variant="outlined" />
                             </Stack>
                           </AccordionSummary>
@@ -1728,11 +1728,11 @@ export default function EnhancedAnalyzePageContainer() {
                                   '& th': {
                                     p: 1.5,
                                     textAlign: 'left',
-                                    fontWeight: 700,
-                                    fontSize: '0.8rem',
+                                    fontWeight: 600,
+                                    fontSize: '12px',
                                     textTransform: 'uppercase',
-                                    bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
-                                    borderBottom: `2px solid ${theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200]}`,
+                                    bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
+                                    borderBottom: `2px solid ${theme.palette.mode === 'dark' ? neutral[700] : neutral[900]}`,
                                   },
                                   '& td': {
                                     p: 1.5,
@@ -1740,7 +1740,7 @@ export default function EnhancedAnalyzePageContainer() {
                                     borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
                                   },
                                   '& tr:hover td': {
-                                    bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.02) : figmaGrey[200],
+                                    bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.02) : neutral[50],
                                   },
                                 }}
                               >
@@ -1779,10 +1779,10 @@ export default function EnhancedAnalyzePageContainer() {
                   <Grid size={{ xs: 12, md: 6 }}>
                     <GlassCard>
                       <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 3 }}>
-                        <Avatar sx={{ bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300], color: 'text.secondary' }}>
+                        <Avatar sx={{ bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[100], color: 'text.secondary' }}>
                           <DataObjectIcon />
                         </Avatar>
-                        <Typography variant="h6" fontWeight={700}>
+                        <Typography variant="h6" fontWeight={600}>
                           Entities ({analysisResult.entities?.length || 0})
                         </Typography>
                       </Stack>
@@ -1799,7 +1799,7 @@ export default function EnhancedAnalyzePageContainer() {
                               bgcolor: alpha(theme.palette.background.default, 0.5),
                               transition: 'all 0.2s ease',
                               '&:hover': {
-                                bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200],
+                                bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : neutral[50],
                               },
                             }}
                           >
@@ -1809,7 +1809,7 @@ export default function EnhancedAnalyzePageContainer() {
                               sx={{
                                 minWidth: 80,
                                 fontWeight: 600,
-                                bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300],
+                                bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[100],
                                 color: 'text.secondary',
                               }}
                             />
@@ -1833,10 +1833,10 @@ export default function EnhancedAnalyzePageContainer() {
                       {analysisResult.invoices?.length > 0 && (
                         <GlassCard>
                           <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 3 }}>
-                            <Avatar sx={{ bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300], color: 'text.secondary' }}>
+                            <Avatar sx={{ bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[100], color: 'text.secondary' }}>
                               <ReceiptLongIcon />
                             </Avatar>
-                            <Typography variant="h6" fontWeight={700}>
+                            <Typography variant="h6" fontWeight={600}>
                               Invoices Detected
                             </Typography>
                           </Stack>
@@ -1847,17 +1847,17 @@ export default function EnhancedAnalyzePageContainer() {
                                 p: 2,
                                 mb: 2,
                                 borderRadius: 1,
-                                bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200],
+                                bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : neutral[50],
                                 border: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
                               }}
                             >
-                              <Typography variant="subtitle2" fontWeight={700}>
+                              <Typography variant="subtitle2" fontWeight={600}>
                                 {invoice.vendor_name}
                               </Typography>
                               <Typography variant="body2" color="text.secondary">
                                 Invoice #{invoice.invoice_number} • {invoice.invoice_date}
                               </Typography>
-                              <Typography variant="h5" fontWeight={800} color="text.primary" sx={{ mt: 1 }}>
+                              <Typography variant="h5" fontWeight={600} color="text.primary" sx={{ mt: 1 }}>
                                 {invoice.currency} {invoice.grand_total}
                               </Typography>
                             </Box>
@@ -1868,10 +1868,10 @@ export default function EnhancedAnalyzePageContainer() {
                       {analysisResult.contracts?.length > 0 && (
                         <GlassCard>
                           <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 3 }}>
-                            <Avatar sx={{ bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300], color: 'text.secondary' }}>
+                            <Avatar sx={{ bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[100], color: 'text.secondary' }}>
                               <GavelIcon />
                             </Avatar>
-                            <Typography variant="h6" fontWeight={700}>
+                            <Typography variant="h6" fontWeight={600}>
                               Contracts Detected
                             </Typography>
                           </Stack>
@@ -1881,11 +1881,11 @@ export default function EnhancedAnalyzePageContainer() {
                               sx={{
                                 p: 2,
                                 borderRadius: 1,
-                                bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200],
+                                bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : neutral[50],
                                 border: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
                               }}
                             >
-                              <Typography variant="subtitle2" fontWeight={700}>
+                              <Typography variant="subtitle2" fontWeight={600}>
                                 {contract.contract_type}
                               </Typography>
                               <Typography variant="body2" color="text.secondary">
@@ -1909,10 +1909,10 @@ export default function EnhancedAnalyzePageContainer() {
                   <Grid size={{ xs: 12, md: 6 }}>
                     <GlassCard>
                       <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 3 }}>
-                        <Avatar sx={{ bgcolor: (t) => t.palette.mode === 'dark' ? alpha(t.palette.text.primary, 0.1) : figmaGrey[300], color: 'text.secondary' }}>
+                        <Avatar sx={{ bgcolor: (t) => t.palette.mode === 'dark' ? alpha(t.palette.text.primary, 0.1) : neutral[100], color: 'text.secondary' }}>
                           <LightbulbIcon />
                         </Avatar>
-                        <Typography variant="h6" fontWeight={700}>
+                        <Typography variant="h6" fontWeight={600}>
                           Key Insights ({analysisResult.insights?.length || 0})
                         </Typography>
                       </Stack>
@@ -1925,10 +1925,10 @@ export default function EnhancedAnalyzePageContainer() {
                   <Grid size={{ xs: 12, md: 6 }}>
                     <GlassCard>
                       <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 3 }}>
-                        <Avatar sx={{ bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300], color: 'text.secondary' }}>
+                        <Avatar sx={{ bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[100], color: 'text.secondary' }}>
                           <SecurityIcon />
                         </Avatar>
-                        <Typography variant="h6" fontWeight={700}>
+                        <Typography variant="h6" fontWeight={600}>
                           Risks ({analysisResult.risks?.length || 0})
                         </Typography>
                       </Stack>
@@ -1941,10 +1941,10 @@ export default function EnhancedAnalyzePageContainer() {
                   <Grid size={{ xs: 12, md: 6 }}>
                     <GlassCard>
                       <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 3 }}>
-                        <Avatar sx={{ bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300], color: 'text.secondary' }}>
+                        <Avatar sx={{ bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[100], color: 'text.secondary' }}>
                           <RocketLaunchIcon />
                         </Avatar>
-                        <Typography variant="h6" fontWeight={700}>
+                        <Typography variant="h6" fontWeight={600}>
                           Opportunities ({analysisResult.opportunities?.length || 0})
                         </Typography>
                       </Stack>
@@ -1957,10 +1957,10 @@ export default function EnhancedAnalyzePageContainer() {
                   <Grid size={{ xs: 12, md: 6 }}>
                     <GlassCard>
                       <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 3 }}>
-                        <Avatar sx={{ bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300], color: 'text.secondary' }}>
+                        <Avatar sx={{ bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[100], color: 'text.secondary' }}>
                           <PlaylistAddCheckIcon />
                         </Avatar>
-                        <Typography variant="h6" fontWeight={700}>
+                        <Typography variant="h6" fontWeight={600}>
                           Action Items ({analysisResult.action_items?.length || 0})
                         </Typography>
                       </Stack>

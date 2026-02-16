@@ -466,7 +466,7 @@ export default function TemplateEditor() {
         <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={1.5} flexWrap="wrap">
           <Box sx={{ minWidth: 0, flex: 1 }}>
             <Stack direction="row" spacing={1.5} alignItems="center" flexWrap="wrap">
-              <Typography variant="h5" fontWeight={700}>
+              <Typography variant="h5" fontWeight={600}>
                 {template?.name || 'Design Editor'}
               </Typography>
               <AutoSaveIndicator lastSaved={lastSaved} dirty={dirty} />
@@ -748,7 +748,7 @@ export default function TemplateEditor() {
                       sx={{
                         '& .MuiInputBase-input': {
                           fontFamily: 'monospace',
-                          fontSize: '0.85rem',
+                          fontSize: '14px',
                         },
                       }}
                     />

@@ -47,7 +47,7 @@ import {
   Refresh as RefreshIcon,
   ZoomIn as ZoomInIcon,
 } from '@mui/icons-material'
-import { figmaGrey } from '@/app/theme'
+import { neutral, palette } from '@/app/theme'
 
 // =============================================================================
 // STYLED COMPONENTS
@@ -79,7 +79,7 @@ const PanelContent = styled(Box)(({ theme }) => ({
 
 const BreadcrumbContainer = styled(Box)(({ theme }) => ({
   padding: theme.spacing(1, 2),
-  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : figmaGrey[200],
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : neutral[50],
   borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
 }))
 
@@ -89,7 +89,7 @@ const DataCard = styled(Paper)(({ theme }) => ({
   border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
   transition: 'all 0.15s ease',
   '&:hover': {
-    borderColor: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
+    borderColor: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
     boxShadow: `0 2px 8px ${alpha(theme.palette.common.black, 0.1)}`,
   },
 }))
@@ -99,14 +99,14 @@ const DrillableRow = styled(ListItemButton)(({ theme }) => ({
   marginBottom: theme.spacing(0.5),
   border: `1px solid transparent`,
   '&:hover': {
-    borderColor: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200],
+    borderColor: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : neutral[50],
   },
 }))
 
 const MetricValue = styled(Typography)(({ theme }) => ({
   fontSize: '1.5rem',
-  fontWeight: 700,
+  fontWeight: 600,
   lineHeight: 1.2,
 }))
 
@@ -119,14 +119,14 @@ const ChangeIndicator = styled(Box, {
   borderRadius: 4,
   fontSize: '0.75rem',
   fontWeight: 600,
-  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300],
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[100],
   color: theme.palette.text.secondary,
 }))
 
 const ProgressBar = styled(Box)(({ theme }) => ({
   height: 6,
   borderRadius: 1,  // Figma spec: 8px
-  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400],
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[200],
   overflow: 'hidden',
 }))
 
@@ -135,7 +135,7 @@ const ProgressFill = styled(Box, {
 })(({ theme, width }) => ({
   height: '100%',
   borderRadius: 1,  // Figma spec: 8px
-  backgroundColor: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
+  backgroundColor: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
   width: `${width}%`,
   transition: 'width 0.3s ease',
 }))
@@ -268,7 +268,7 @@ export default function DrillDownPanel({
           )}
           <Breadcrumbs
             separator={<ChevronIcon sx={{ fontSize: 16 }} />}
-            sx={{ fontSize: '0.8125rem' }}
+            sx={{ fontSize: '14px' }}
           >
             <Link
               component="button"
@@ -351,7 +351,7 @@ export default function DrillDownPanel({
                   size="small"
                   color={index === currentPath.length ? 'primary' : 'default'}
                   variant={index === currentPath.length ? 'filled' : 'outlined'}
-                  sx={{ fontSize: '0.7rem' }}
+                  sx={{ fontSize: '12px' }}
                 />
               ))}
             </Stack>

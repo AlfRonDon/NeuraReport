@@ -16,7 +16,7 @@ import {
   alpha,
 } from '@mui/material'
 import DescriptionIcon from '@mui/icons-material/Description'
-import { figmaGrey } from '@/app/theme'
+import { neutral, palette } from '@/app/theme'
 import { useAppStore } from '@/stores'
 
 export default function TemplateSelector({
@@ -69,11 +69,11 @@ export default function TemplateSelector({
                   label={tpl.kind.toUpperCase()}
                   sx={{
                     height: 18,
-                    fontSize: '0.65rem',
+                    fontSize: '10px',
                     bgcolor: (theme) =>
                       theme.palette.mode === 'dark'
                         ? alpha(theme.palette.text.primary, 0.08)
-                        : figmaGrey[200],
+                        : neutral[50],
                     color: 'text.secondary',
                   }}
                 />

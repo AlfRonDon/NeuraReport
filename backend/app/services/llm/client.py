@@ -35,6 +35,36 @@ from backend.app.services.utils.llm import append_raw_llm_output as _append_raw_
 
 logger = logging.getLogger("neura.llm.client")
 
+_MAX_LOG_PREVIEW = 2000  # max chars per message in log
+
+
+def _summarize_messages(messages: List[Dict[str, Any]]) -> str:
+    """Build a concise summary of messages for the LLM log."""
+    parts: list[str] = []
+    for msg in messages:
+        role = msg.get("role", "?")
+        content = msg.get("content", "")
+        if isinstance(content, list):
+            # Multimodal: extract text parts
+            text_parts = [p.get("text", "") for p in content if isinstance(p, dict) and p.get("type") == "text"]
+            content = " ".join(text_parts) or f"[{len(content)} content blocks]"
+        text = str(content)
+        if len(text) > _MAX_LOG_PREVIEW:
+            text = text[:_MAX_LOG_PREVIEW] + f"... ({len(text)} chars total)"
+        parts.append(f"  [{role}] {text}")
+    return "\n".join(parts)
+
+
+def _extract_response_text(response: Dict[str, Any]) -> str:
+    """Extract the assistant text from an OpenAI-compatible response dict."""
+    try:
+        choices = response.get("choices") or []
+        if choices:
+            return choices[0].get("message", {}).get("content", "") or ""
+    except (IndexError, KeyError, TypeError, AttributeError):
+        pass
+    return ""
+
 
 # =============================================================================
 # Circuit Breaker Pattern Implementation
@@ -606,6 +636,8 @@ class LLMClient:
                 "Please try again in a few minutes. If the problem persists, check your API configuration."
             )
 
+        _llm_logger = logging.getLogger("neura.llm")
+
         for attempt in range(1, self.config.max_retries + 1):
             try:
                 logger.info(
@@ -617,6 +649,15 @@ class LLMClient:
                         "model": model,
                         "provider": self.config.provider.value,
                     }
+                )
+
+                # Log the input prompt/messages
+                _llm_logger.info(
+                    "LLM_INPUT [%s] model=%s messages=%d\n%s",
+                    description,
+                    model,
+                    len(messages),
+                    _summarize_messages(messages),
                 )
 
                 start_time = time.time()
@@ -640,6 +681,18 @@ class LLMClient:
                 self._usage_tracker.record(model, input_tokens, output_tokens)
                 _usage_tracker.record(model, input_tokens, output_tokens)
 
+                # Log the output response content
+                output_text = _extract_response_text(response)
+                _llm_logger.info(
+                    "LLM_OUTPUT [%s] model=%s latency=%.0fms tokens=%d/%d\n%s",
+                    description,
+                    model,
+                    latency_ms,
+                    input_tokens,
+                    output_tokens,
+                    output_text[:4000] if output_text else "(empty)",
+                )
+
                 logger.info(
                     "llm_call_success",
                     extra={
@@ -662,6 +715,14 @@ class LLMClient:
 
             except Exception as exc:
                 last_exc = exc
+
+                _llm_logger.error(
+                    "LLM_ERROR [%s] model=%s attempt=%d error=%s",
+                    description,
+                    model,
+                    attempt,
+                    _sanitize_error(exc),
+                )
 
                 # Record failure with circuit breaker
                 if self._circuit_breaker:

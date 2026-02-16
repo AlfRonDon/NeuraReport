@@ -105,6 +105,66 @@ def build_catalog_from_db(db_path: Path) -> list[str]:
     return catalog
 
 
+_SKIP_COLS = {"__rowid__", "rowid"}
+
+
+def build_rich_catalog_from_db(db_path: Path) -> dict[str, list[dict[str, Any]]]:
+    """Return ``{table: [{column, type, sample}, ...]}`` for LLM consumption.
+
+    Unlike :func:`build_catalog_from_db` which returns a flat list of
+    ``table.column`` strings, this function provides column data-types and a
+    representative sample value so the LLM can make better mapping decisions
+    without needing to execute SQL.
+    """
+    result: dict[str, list[dict[str, Any]]] = {}
+    try:
+        loader = get_loader(db_path)
+        for table in loader.table_names():
+            frame = loader.frame(table)
+            cols: list[dict[str, Any]] = []
+            for col in frame.columns:
+                col_name = str(col or "").strip()
+                if not col_name or col_name.lower() in _SKIP_COLS:
+                    continue
+                col_type = loader.column_type(table, col_name)
+                sample = ""
+                non_null = frame[col_name].dropna()
+                if not non_null.empty:
+                    sample = str(non_null.iloc[0])[:80]
+                cols.append({"column": col_name, "type": col_type or "TEXT", "sample": sample})
+            result[table] = cols
+    except Exception as exc:
+        logger.exception(
+            "rich_catalog_build_failed",
+            extra={"event": "rich_catalog_build_failed", "db_path": str(db_path)},
+            exc_info=exc,
+        )
+        return {}
+    return result
+
+
+def format_catalog_rich(rich_catalog: dict[str, list[dict[str, Any]]]) -> str:
+    """Format the rich catalog as human-readable text for LLM prompts.
+
+    Example output::
+
+        TABLE: transactions (11 columns)
+          - transactions.id (INTEGER) sample: '1'
+          - transactions.transaction_date (TEXT) sample: '2026-02-01'
+    """
+    lines: list[str] = []
+    for table, columns in rich_catalog.items():
+        lines.append(f"TABLE: {table} ({len(columns)} columns)")
+        for col_info in columns:
+            col = col_info["column"]
+            ctype = col_info.get("type", "TEXT")
+            sample = col_info.get("sample", "")
+            sample_part = f" sample: '{sample}'" if sample else ""
+            lines.append(f"  - {table}.{col} ({ctype}){sample_part}")
+        lines.append("")
+    return "\n".join(lines)
+
+
 def compute_db_signature(db_path: Path) -> Optional[str]:
     try:
         return _compute_db_signature_impl(db_path)
@@ -249,6 +309,69 @@ def resolve_token_binding(
     return None, None, None
 
 
+def execute_token_query_df(
+    db_path: Path,
+    *,
+    token: str,
+    table_clean: str,
+    column_clean: str,
+    date_column_name: Optional[str],
+    start_date: Optional[str],
+    end_date: Optional[str],
+    limit_value: int,
+) -> tuple[list[str], dict[str, Any]]:
+    """DataFrame-based replacement for execute_token_query — no SQL."""
+    debug_info: dict[str, Any] = {
+        "table": table_clean,
+        "column": column_clean,
+        "date_column": date_column_name,
+        "applied_date_filters": False,
+        "fallback_used": False,
+        "error": None,
+        "row_count": 0,
+        "mode": "dataframe",
+    }
+
+    try:
+        loader = get_loader(db_path)
+        df = loader.frame(table_clean)
+    except Exception as exc:
+        debug_info["error"] = f"Failed to load table: {exc}"
+        return [], debug_info
+
+    if df is None or df.empty or column_clean not in df.columns:
+        debug_info["error"] = f"Column '{column_clean}' not found in table '{table_clean}'"
+        return [], debug_info
+
+    # Filter non-null, non-empty values
+    filtered = df[df[column_clean].notna()]
+    filtered = filtered[filtered[column_clean].astype(str).str.strip() != ""]
+
+    # Apply date filter if available
+    if date_column_name and start_date and end_date and date_column_name in df.columns:
+        try:
+            from backend.app.services.reports.discovery_excel import _coerce_datetime_series, _parse_date_like
+            start_dt = _parse_date_like(start_date)
+            end_dt = _parse_date_like(end_date)
+            if start_dt and end_dt:
+                dt_series = _coerce_datetime_series(filtered[date_column_name])
+                mask = (dt_series >= start_dt) & (dt_series <= end_dt)
+                date_filtered = filtered.loc[mask.fillna(False)]
+                debug_info["applied_date_filters"] = True
+                if not date_filtered.empty:
+                    filtered = date_filtered
+                else:
+                    debug_info["fallback_used"] = True
+        except Exception:
+            pass
+
+    # Get distinct values
+    unique_vals = filtered[column_clean].drop_duplicates().sort_values()
+    rows = [str(v) for v in unique_vals.head(limit_value)]
+    debug_info["row_count"] = len(rows)
+    return rows, debug_info
+
+
 def execute_token_query(
     con,
     *,
@@ -358,6 +481,8 @@ __all__ = [
     "sha256_text",
     "load_schema_ext",
     "build_catalog_from_db",
+    "build_rich_catalog_from_db",
+    "format_catalog_rich",
     "compute_db_signature",
     "normalize_artifact_map",
     "normalize_mapping_for_autofill",
@@ -366,6 +491,7 @@ __all__ = [
     "extract_contract_metadata",
     "resolve_token_binding",
     "execute_token_query",
+    "execute_token_query_df",
     "write_debug_log",
     "load_mapping_keys",
     "mapping_keys_path",

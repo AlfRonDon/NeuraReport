@@ -4,11 +4,14 @@ REST API endpoints for document library and knowledge management.
 """
 from __future__ import annotations
 
+import json
 import logging
+from pathlib import Path
 from typing import Optional
+import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
-from pydantic import BaseModel, Field
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, UploadFile, status
+from pydantic import BaseModel, Field, ValidationError
 
 from backend.app.services.background_tasks import enqueue_background_job
 import backend.app.services.state_access as state_access
@@ -33,21 +36,169 @@ from backend.app.schemas.knowledge.library import (
     TagCreate,
     TagResponse,
 )
+from backend.app.services.config import get_settings
 from backend.app.services.knowledge.service import knowledge_service
 from backend.app.services.security import require_api_key
+from backend.app.utils.validation import sanitize_filename
 
 logger = logging.getLogger("neura.api.knowledge")
 
 router = APIRouter(tags=["knowledge"], dependencies=[Depends(require_api_key)])
+
+_DOCUMENT_TYPE_BY_EXTENSION: dict[str, DocumentType] = {
+    ".pdf": DocumentType.PDF,
+    ".docx": DocumentType.DOCX,
+    ".doc": DocumentType.DOCX,
+    ".xlsx": DocumentType.XLSX,
+    ".xls": DocumentType.XLSX,
+    ".pptx": DocumentType.PPTX,
+    ".txt": DocumentType.TXT,
+    ".md": DocumentType.MD,
+    ".markdown": DocumentType.MD,
+    ".html": DocumentType.HTML,
+    ".htm": DocumentType.HTML,
+    ".png": DocumentType.IMAGE,
+    ".jpg": DocumentType.IMAGE,
+    ".jpeg": DocumentType.IMAGE,
+    ".gif": DocumentType.IMAGE,
+    ".webp": DocumentType.IMAGE,
+}
+
+
+def _split_csv(value: Optional[str]) -> list[str]:
+    if not value:
+        return []
+    parts = [item.strip() for item in str(value).split(",")]
+    return [item for item in parts if item]
+
+
+def _infer_document_type(filename: Optional[str], explicit: Optional[DocumentType]) -> DocumentType:
+    if explicit is not None:
+        return explicit
+    suffix = Path(filename or "").suffix.lower()
+    return _DOCUMENT_TYPE_BY_EXTENSION.get(suffix, DocumentType.OTHER)
+
+
+def _parse_metadata_json(metadata: Optional[str]) -> dict:
+    if not metadata:
+        return {}
+    try:
+        parsed = json.loads(metadata)
+    except json.JSONDecodeError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="metadata must be valid JSON",
+        ) from exc
+    if not isinstance(parsed, dict):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="metadata must be a JSON object",
+        )
+    return parsed
+
+
+async def _persist_upload(file: UploadFile) -> tuple[str, str, int]:
+    settings = get_settings()
+    uploads_root = settings.uploads_root / "knowledge"
+    uploads_root.mkdir(parents=True, exist_ok=True)
+
+    safe_original = sanitize_filename(Path(file.filename or "document").name) or "document"
+    suffix = Path(safe_original).suffix.lower()
+    stored_name = f"{uuid.uuid4().hex}{suffix}" if suffix else uuid.uuid4().hex
+    target_path = uploads_root / stored_name
+
+    size = 0
+    with target_path.open("wb") as fh:
+        while True:
+            chunk = await file.read(1024 * 1024)
+            if not chunk:
+                break
+            size += len(chunk)
+            fh.write(chunk)
+
+    return str(target_path), f"/uploads/knowledge/{stored_name}", size
 
 
 # Document endpoints
 
 
 @router.post("/documents", response_model=LibraryDocumentResponse)
-async def add_document(request: LibraryDocumentCreate):
-    """Add a document to the library."""
-    return await knowledge_service.add_document(request)
+async def add_document(
+    request: Request,
+):
+    """Add a document to the library.
+
+    Supports either:
+    - JSON body (`LibraryDocumentCreate`)
+    - Multipart upload (`file` + optional metadata fields)
+    """
+    content_type = (request.headers.get("content-type") or "").lower()
+    if "multipart/form-data" not in content_type:
+        try:
+            payload = await request.json()
+        except Exception as exc:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Invalid JSON body for knowledge document",
+            ) from exc
+        try:
+            create_payload = LibraryDocumentCreate.model_validate(payload)
+        except ValidationError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=exc.errors(),
+            ) from exc
+        return await knowledge_service.add_document(create_payload)
+
+    form = await request.form()
+    uploaded = form.get("file")
+    if uploaded is None or not hasattr(uploaded, "read"):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="multipart upload requires a file field named 'file'",
+        )
+    file = uploaded
+
+    title = form.get("title")
+    description = form.get("description")
+    tags = form.get("tags")
+    collection_id = form.get("collection_id")
+    collections = form.get("collections")
+    metadata = form.get("metadata")
+    document_type_raw = form.get("document_type")
+    explicit_document_type = None
+    if document_type_raw:
+        try:
+            explicit_document_type = DocumentType(str(document_type_raw))
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Unsupported document_type: {document_type_raw}",
+            ) from exc
+
+    file_path, file_url, file_size = await _persist_upload(file)
+    parsed_collections = _split_csv(collections)
+    if collection_id:
+        parsed_collections.append(collection_id)
+    parsed_collections = list(dict.fromkeys(parsed_collections))
+
+    metadata_payload = _parse_metadata_json(metadata)
+    metadata_payload.setdefault("original_filename", Path(file.filename or "document").name)
+    metadata_payload.setdefault("uploaded_size_bytes", file_size)
+    metadata_payload.setdefault("upload_source", "knowledge_multipart")
+
+    derived_title = title or Path(file.filename or "document").stem or "Untitled document"
+    create_payload = LibraryDocumentCreate(
+        title=derived_title,
+        description=description,
+        file_path=file_path,
+        file_url=file_url,
+        document_type=_infer_document_type(file.filename, explicit_document_type),
+        tags=_split_csv(tags),
+        collections=parsed_collections,
+        metadata=metadata_payload,
+    )
+    return await knowledge_service.add_document(create_payload)
 
 
 @router.get("/documents", response_model=list[LibraryDocumentResponse])
@@ -419,7 +570,36 @@ async def remove_tag_from_document(doc_id: str, tag_id: str):
 async def get_library_stats():
     """Get library statistics including total documents, collections, tags, and storage usage."""
     try:
-        stats = await knowledge_service.get_stats()
+        get_stats = getattr(knowledge_service, "get_stats", None)
+        if callable(get_stats):
+            stats = await get_stats()
+            return stats if isinstance(stats, dict) else stats.model_dump()
+
+        logger.error("knowledge_service_missing_get_stats; using compatibility fallback")
+        docs, _ = await knowledge_service.list_documents(limit=10000, offset=0)
+        collections = await knowledge_service.list_collections()
+        tags = await knowledge_service.list_tags()
+
+        document_types: dict[str, int] = {}
+        storage_used_bytes = 0
+        total_favorites = 0
+        for doc in docs:
+            kind = doc.document_type.value if hasattr(doc.document_type, "value") else str(doc.document_type)
+            document_types[kind] = document_types.get(kind, 0) + 1
+            size = doc.file_size or 0
+            if isinstance(size, int) and size > 0:
+                storage_used_bytes += size
+            if bool(getattr(doc, "is_favorite", False)):
+                total_favorites += 1
+
+        stats = {
+            "total_documents": len(docs),
+            "total_collections": len(collections),
+            "total_tags": len(tags),
+            "total_favorites": total_favorites,
+            "storage_used_bytes": storage_used_bytes,
+            "document_types": document_types,
+        }
         return stats if isinstance(stats, dict) else stats.model_dump()
     except Exception as e:
         logger.exception("Failed to get library stats: %s", e)

@@ -60,7 +60,7 @@ import {
   HorizontalRule,
 } from '@mui/icons-material'
 import { useState } from 'react'
-import { figmaGrey } from '@/app/theme'
+import { neutral, palette } from '@/app/theme'
 
 // =============================================================================
 // STYLED COMPONENTS
@@ -95,11 +95,11 @@ const ToolbarButton = styled(IconButton)(({ theme }) => ({
   borderRadius: 8,  // Figma spec: 8px
   padding: 6,
   '&.active': {
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300],
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[100],
     color: theme.palette.text.secondary,
   },
   '&:hover': {
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200],
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : neutral[50],
   },
 }))
 
@@ -129,14 +129,14 @@ const EditorWrapper = styled(Box)(({ theme }) => ({
       paddingLeft: '1.5em',
     },
     '& blockquote': {
-      borderLeft: `4px solid ${theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100]}`,
+      borderLeft: `4px solid ${theme.palette.mode === 'dark' ? neutral[500] : neutral[700]}`,
       paddingLeft: '1em',
       marginLeft: 0,
       color: theme.palette.text.secondary,
       fontStyle: 'italic',
     },
     '& code': {
-      backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300],
+      backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[100],
       borderRadius: 4,
       padding: '0.2em 0.4em',
       fontFamily: 'monospace',
@@ -166,7 +166,7 @@ const EditorWrapper = styled(Box)(({ theme }) => ({
       borderRadius: 8,
     },
     '& mark': {
-      backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300],
+      backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[100],
       borderRadius: 2,
       padding: '0.1em 0.2em',
     },
@@ -192,7 +192,7 @@ const EditorWrapper = styled(Box)(({ theme }) => ({
         minWidth: 80,
       },
       '& th': {
-        backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200],
+        backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : neutral[50],
         fontWeight: 600,
       },
     },

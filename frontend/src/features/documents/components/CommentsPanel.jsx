@@ -30,7 +30,7 @@ import {
   ExpandMore as ExpandIcon,
   ExpandLess as CollapseIcon,
 } from '@mui/icons-material'
-import { figmaGrey } from '@/app/theme'
+import { neutral, palette } from '@/app/theme'
 
 // =============================================================================
 // STYLED COMPONENTS
@@ -73,15 +73,15 @@ const CommentCard = styled(Paper, {
   marginBottom: theme.spacing(1.5),
   border: `1px solid ${
     isHighlighted
-      ? (theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100])
+      ? (theme.palette.mode === 'dark' ? neutral[500] : neutral[700])
       : isResolved
       ? alpha(theme.palette.divider, 0.3)
       : alpha(theme.palette.divider, 0.1)
   }`,
   backgroundColor: isResolved
-    ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.02) : '#FAFAF9')
+    ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.02) : neutral[50])
     : isHighlighted
-    ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : figmaGrey[200])
+    ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : neutral[50])
     : 'transparent',
   opacity: isResolved ? 0.7 : 1,
   transition: 'all 0.15s ease',
@@ -97,8 +97,8 @@ const ReplyCard = styled(Box)(({ theme }) => ({
 const QuotedText = styled(Box)(({ theme }) => ({
   padding: theme.spacing(1),
   marginBottom: theme.spacing(1),
-  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200],
-  borderLeft: `3px solid ${theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[600]}`,
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : neutral[50],
+  borderLeft: `3px solid ${theme.palette.mode === 'dark' ? neutral[500] : neutral[300]}`,
   borderRadius: '0 4px 4px 0',
   fontSize: '0.75rem',
   fontStyle: 'italic',
@@ -190,14 +190,14 @@ function CommentItem({
             width: 28,
             height: 28,
             fontSize: '0.75rem',
-            bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300],
+            bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[100],
             color: theme.palette.text.secondary,
           }}
         >
           {getInitials(comment.author_name)}
         </Avatar>
         <Box sx={{ flex: 1 }}>
-          <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.8125rem' }}>
+          <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '14px' }}>
             {comment.author_name || 'Anonymous'}
           </Typography>
           <Typography variant="caption" color="text.secondary">
@@ -210,9 +210,9 @@ function CommentItem({
             size="small"
             sx={{
               borderRadius: 1,
-              fontSize: '0.65rem',
+              fontSize: '10px',
               height: 20,
-              bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
+              bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
               color: 'text.secondary',
             }}
           />
@@ -225,7 +225,7 @@ function CommentItem({
       )}
 
       {/* Comment Text */}
-      <Typography variant="body2" sx={{ mb: 1.5, fontSize: '0.8125rem' }}>
+      <Typography variant="body2" sx={{ mb: 1.5, fontSize: '14px' }}>
         {comment.text}
       </Typography>
 
@@ -284,7 +284,7 @@ function CommentItem({
                 e.stopPropagation()
                 setExpanded(!expanded)
               }}
-              sx={{ fontSize: '0.7rem', textTransform: 'none' }}
+              sx={{ fontSize: '12px', textTransform: 'none' }}
             >
               {replies.length} {replies.length === 1 ? 'reply' : 'replies'}
             </Button>
@@ -340,8 +340,8 @@ function CommentItem({
                 sx={{
                   width: 22,
                   height: 22,
-                  fontSize: '0.65rem',
-                  bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[400],
+                  fontSize: '10px',
+                  bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[200],
                   color: theme.palette.text.secondary,
                 }}
               >
@@ -354,7 +354,7 @@ function CommentItem({
                 {formatDate(reply.created_at)}
               </Typography>
             </Stack>
-            <Typography variant="body2" sx={{ fontSize: '0.8125rem', pl: 3.75 }}>
+            <Typography variant="body2" sx={{ fontSize: '14px', pl: 3.75 }}>
               {reply.text}
             </Typography>
           </ReplyCard>
@@ -414,7 +414,7 @@ export default function CommentsPanel({
           <Chip
             label={comments.length}
             size="small"
-            sx={{ borderRadius: 1, fontSize: '0.7rem', height: 20 }}
+            sx={{ borderRadius: 1, fontSize: '12px', height: 20 }}
           />
         </Stack>
         <IconButton size="small" onClick={onClose} data-testid="comments-panel-close" aria-label="Close comments">
@@ -433,9 +433,9 @@ export default function CommentsPanel({
             data-testid="comments-filter-all"
             sx={{
               borderRadius: 1,
-              fontSize: '0.7rem',
-              bgcolor: filter === 'all' ? (theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200]) : 'transparent',
-              color: filter === 'all' ? '#fff' : 'text.secondary',
+              fontSize: '12px',
+              bgcolor: filter === 'all' ? (theme.palette.mode === 'dark' ? neutral[700] : neutral[900]) : 'transparent',
+              color: filter === 'all' ? 'common.white' : 'text.secondary',
               borderColor: filter === 'all' ? 'transparent' : alpha(theme.palette.divider, 0.3),
             }}
           />
@@ -447,9 +447,9 @@ export default function CommentsPanel({
             data-testid="comments-filter-open"
             sx={{
               borderRadius: 1,
-              fontSize: '0.7rem',
-              bgcolor: filter === 'open' ? (theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200]) : 'transparent',
-              color: filter === 'open' ? '#fff' : 'text.secondary',
+              fontSize: '12px',
+              bgcolor: filter === 'open' ? (theme.palette.mode === 'dark' ? neutral[700] : neutral[900]) : 'transparent',
+              color: filter === 'open' ? 'common.white' : 'text.secondary',
               borderColor: filter === 'open' ? 'transparent' : alpha(theme.palette.divider, 0.3),
             }}
           />
@@ -461,9 +461,9 @@ export default function CommentsPanel({
             data-testid="comments-filter-resolved"
             sx={{
               borderRadius: 1,
-              fontSize: '0.7rem',
-              bgcolor: filter === 'resolved' ? (theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200]) : 'transparent',
-              color: filter === 'resolved' ? '#fff' : 'text.secondary',
+              fontSize: '12px',
+              bgcolor: filter === 'resolved' ? (theme.palette.mode === 'dark' ? neutral[700] : neutral[900]) : 'transparent',
+              color: filter === 'resolved' ? 'common.white' : 'text.secondary',
               borderColor: filter === 'resolved' ? 'transparent' : alpha(theme.palette.divider, 0.3),
             }}
           />

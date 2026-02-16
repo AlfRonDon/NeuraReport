@@ -25,7 +25,7 @@ import {
   History as HistoryIcon,
   Person as PersonIcon,
 } from '@mui/icons-material'
-import { figmaGrey } from '@/app/theme'
+import { neutral, palette } from '@/app/theme'
 
 // =============================================================================
 // STYLED COMPONENTS
@@ -62,23 +62,23 @@ const VersionCard = styled(Paper, {
   marginBottom: theme.spacing(1.5),
   cursor: 'pointer',
   transition: 'all 0.15s ease',
-  border: `1px solid ${isSelected ? (theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100]) : alpha(theme.palette.divider, 0.1)}`,
-  backgroundColor: isSelected ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : figmaGrey[200]) : 'transparent',
+  border: `1px solid ${isSelected ? (theme.palette.mode === 'dark' ? neutral[500] : neutral[700]) : alpha(theme.palette.divider, 0.1)}`,
+  backgroundColor: isSelected ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : neutral[50]) : 'transparent',
   '&:hover': {
-    borderColor: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : figmaGrey[200],
+    borderColor: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : neutral[50],
   },
 }))
 
 const DiffAddition = styled('span')(({ theme }) => ({
-  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400],
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[200],
   color: theme.palette.text.primary,
   padding: '0 2px',
   borderRadius: 1,  // Figma spec: 8px
 }))
 
 const DiffDeletion = styled('span')(({ theme }) => ({
-  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[300],
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : neutral[100],
   color: theme.palette.text.secondary,
   textDecoration: 'line-through',
   padding: '0 2px',
@@ -170,8 +170,8 @@ export default function TrackChangesPanel({
               data-testid="version-compare-toggle"
               aria-label="Compare versions"
               sx={{
-                color: compareMode ? (theme.palette.mode === 'dark' ? figmaGrey[600] : figmaGrey[1200]) : 'text.secondary',
-                bgcolor: compareMode ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300]) : 'transparent',
+                color: compareMode ? (theme.palette.mode === 'dark' ? neutral[300] : neutral[900]) : 'text.secondary',
+                bgcolor: compareMode ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[100]) : 'transparent',
               }}
             >
               <CompareIcon fontSize="small" />
@@ -237,9 +237,9 @@ export default function TrackChangesPanel({
                     sx={{
                       borderRadius: 1,
                       fontWeight: 600,
-                      fontSize: '0.7rem',
-                      bgcolor: index === 0 ? (theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200]) : (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300]),
-                      color: index === 0 ? '#fff' : 'text.secondary',
+                      fontSize: '12px',
+                      bgcolor: index === 0 ? (theme.palette.mode === 'dark' ? neutral[700] : neutral[900]) : (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100]),
+                      color: index === 0 ? 'common.white' : 'text.secondary',
                     }}
                   />
                   {index === 0 && (
@@ -247,7 +247,7 @@ export default function TrackChangesPanel({
                       label="Current"
                       size="small"
                       variant="outlined"
-                      sx={{ borderRadius: 1, fontSize: '0.65rem' }}
+                      sx={{ borderRadius: 1, fontSize: '10px' }}
                     />
                   )}
                 </Stack>

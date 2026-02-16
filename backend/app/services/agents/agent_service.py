@@ -91,6 +91,7 @@ class AgentService:
         "email_draft": "email_draft",
         "content_repurpose": "content_repurpose",
         "proofreading": "proofreading",
+        "report_analyst": "report_analyst",
     }
 
     def __init__(self, repository: Optional[AgentTaskRepository] = None):
@@ -321,6 +322,38 @@ class AgentService:
             sync=sync,
         )
 
+    async def run_report_analyst(
+        self,
+        run_id: str,
+        analysis_type: str = "summarize",
+        question: Optional[str] = None,
+        compare_run_id: Optional[str] = None,
+        focus_areas: Optional[List[str]] = None,
+        *,
+        idempotency_key: Optional[str] = None,
+        user_id: Optional[str] = None,
+        priority: int = 0,
+        webhook_url: Optional[str] = None,
+        sync: bool = True,
+    ) -> AgentTaskModel:
+        """Run the report analyst agent."""
+        input_params = {
+            "run_id": run_id,
+            "analysis_type": analysis_type,
+            "question": question,
+            "compare_run_id": compare_run_id,
+            "focus_areas": focus_areas,
+        }
+        return await self._create_and_run(
+            agent_type=AgentType.REPORT_ANALYST,
+            input_params=input_params,
+            idempotency_key=idempotency_key,
+            user_id=user_id,
+            priority=priority,
+            webhook_url=webhook_url,
+            sync=sync,
+        )
+
     # =========================================================================
     # SHARED CREATE-AND-RUN LOGIC
     # =========================================================================
@@ -373,18 +406,23 @@ class AgentService:
         Returns:
             Updated AgentTaskModel
         """
-        # Prevent duplicate execution (thread-safe check-and-add)
+        from backend.app.repositories.agent_tasks.repository import TaskConflictError
+
+        # For the sync path (run_task with sync=True), track the task here.
+        # The background path (_enqueue_background) already adds it.
         with self._running_tasks_lock:
-            if task_id in self._running_tasks:
-                logger.warning(f"Task {task_id} is already running")
-                return self._repo.get_task_or_raise(task_id)
             self._running_tasks.add(task_id)
 
         try:
 
-            # Claim the task
+            # Claim the task — transition PENDING → RUNNING atomically.
+            # A TaskConflictError means another worker legitimately claimed
+            # the task first; this is an expected race, not a real error.
             try:
                 task = self._repo.claim_task(task_id)
+            except TaskConflictError:
+                logger.debug(f"Task {task_id} already claimed by another worker, skipping")
+                return self._repo.get_task_or_raise(task_id)
             except Exception as e:
                 logger.error(f"Failed to claim task {task_id}: {e}")
                 raise
@@ -530,6 +568,14 @@ class AgentService:
                 "style_guide": p.get("style_guide"),
                 "focus_areas": p.get("focus_areas"),
                 "preserve_voice": p.get("preserve_voice", True),
+            }
+        elif atype == AgentType.REPORT_ANALYST:
+            return {
+                "run_id": p.get("run_id", ""),
+                "analysis_type": p.get("analysis_type", "summarize"),
+                "question": p.get("question"),
+                "compare_run_id": p.get("compare_run_id"),
+                "focus_areas": p.get("focus_areas"),
             }
         else:
             raise AgentError(
@@ -836,6 +882,14 @@ class AgentService:
         Args:
             task_id: Task to execute
         """
+        # Mark the task as tracked BEFORE submitting to the executor so that
+        # concurrent poll cycles do not enqueue the same task twice.
+        with self._running_tasks_lock:
+            if task_id in self._running_tasks:
+                logger.debug(f"Task {task_id} already enqueued, skipping duplicate")
+                return
+            self._running_tasks.add(task_id)
+
         def _worker() -> None:
             try:
                 loop = asyncio.new_event_loop()
@@ -852,6 +906,8 @@ class AgentService:
             logger.info(f"Task {task_id} enqueued for background execution")
         except RuntimeError:
             # Executor shut down — task stays PENDING in DB for recovery
+            with self._running_tasks_lock:
+                self._running_tasks.discard(task_id)
             logger.warning(
                 f"Executor shut down, task {task_id} remains PENDING for recovery"
             )

@@ -43,7 +43,7 @@ import {
   InteractionType,
   Reversibility,
 } from '@/components/ux/governance'
-import { figmaGrey } from '@/app/theme'
+import { neutral, palette, status as statusColors } from '@/app/theme'
 
 // =============================================================================
 // ANIMATIONS
@@ -90,10 +90,10 @@ const StyledMenuItem = styled(MenuItem)(({ theme }) => ({
   borderRadius: 8,
   margin: theme.spacing(0.5, 1),
   padding: theme.spacing(1, 1.5),
-  fontSize: '0.8125rem',
+  fontSize: '14px',
   transition: 'all 0.2s ease',
   '&:hover': {
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
   },
 }))
 
@@ -111,7 +111,7 @@ const ActionButton = styled(IconButton)(({ theme }) => ({
   borderRadius: 8,  // Figma spec: 8px
   transition: 'all 0.2s ease',
   '&:hover': {
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
     transform: 'scale(1.05)',
   },
 }))
@@ -369,18 +369,18 @@ export default function ConnectionsPage() {
           />
           <IconContainer
             sx={{
-              bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
+              bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
             }}
           >
             <StorageIcon sx={{ color: theme.palette.text.secondary, fontSize: 16 }} />
           </IconContainer>
           <Box sx={{ minWidth: 0 }}>
             <Stack direction="row" spacing={1} alignItems="center">
-              <Box data-testid="connection-name" sx={{ fontWeight: 500, fontSize: '0.8125rem', color: theme.palette.text.primary }}>
+              <Box data-testid="connection-name" sx={{ fontWeight: 500, fontSize: '14px', color: theme.palette.text.primary }}>
                 {value}
               </Box>
               {activeConnectionId === row.id && (
-                <Chip size="small" label="Active" sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400], color: 'text.secondary' }} />
+                <Chip size="small" label="Active" sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[200], color: 'text.secondary' }} />
               )}
             </Stack>
             <Box sx={{ fontSize: '0.75rem', color: theme.palette.text.secondary }}>
@@ -402,7 +402,7 @@ export default function ConnectionsPage() {
             size="small"
             data-testid="connection-db-type"
             sx={{
-              bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
+              bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
               color: theme.palette.text.secondary,
               fontSize: '0.75rem',
               borderRadius: 1,  // Figma spec: 8px
@@ -430,12 +430,12 @@ export default function ConnectionsPage() {
               fontSize: '0.75rem',
               textTransform: 'capitalize',
               borderRadius: 1,  // Figma spec: 8px
-              bgcolor: (theme) => isConnected
-                ? (theme.palette.mode === 'dark' ? alpha('#66bb6a', 0.12) : alpha('#2e7d32', 0.08))
-                : (theme.palette.mode === 'dark' ? alpha('#ef5350', 0.12) : alpha('#c62828', 0.08)),
+              bgcolor: isConnected
+                ? alpha(statusColors.success, 0.1)
+                : alpha(statusColors.destructive, 0.1),
               color: isConnected
-                ? (theme.palette.mode === 'dark' ? '#66bb6a' : '#2e7d32')
-                : (theme.palette.mode === 'dark' ? '#ef5350' : '#c62828'),
+                ? statusColors.success
+                : statusColors.destructive,
               '& .MuiChip-icon': {
                 color: 'inherit',
               },
@@ -449,7 +449,7 @@ export default function ConnectionsPage() {
       headerName: 'Latency',
       width: 100,
       renderCell: (value) => (
-        <Box data-testid="connection-latency" sx={{ color: theme.palette.text.secondary, fontSize: '0.8125rem' }}>
+        <Box data-testid="connection-latency" sx={{ color: theme.palette.text.secondary, fontSize: '14px' }}>
           {value ? `${value}ms` : '-'}
         </Box>
       ),
@@ -459,7 +459,7 @@ export default function ConnectionsPage() {
       headerName: 'Last Connected',
       width: 160,
       renderCell: (value) => {
-        if (!value) return <Box sx={{ color: theme.palette.text.disabled, fontSize: '0.8125rem' }}>-</Box>
+        if (!value) return <Box sx={{ color: theme.palette.text.disabled, fontSize: '14px' }}>-</Box>
         const d = new Date(value)
         const now = new Date()
         const diffMs = now - d
@@ -474,7 +474,7 @@ export default function ConnectionsPage() {
         else relative = d.toLocaleDateString()
         return (
           <Tooltip title={d.toLocaleString()} arrow>
-            <Box data-testid="connection-last-connected" sx={{ color: theme.palette.text.secondary, fontSize: '0.8125rem', cursor: 'default' }}>
+            <Box data-testid="connection-last-connected" sx={{ color: theme.palette.text.secondary, fontSize: '14px', cursor: 'default' }}>
               {relative}
             </Box>
           </Tooltip>
@@ -559,7 +559,7 @@ export default function ConnectionsPage() {
           <ListItemIcon>
             <RefreshIcon sx={{ fontSize: 16, color: theme.palette.text.secondary }} />
           </ListItemIcon>
-          <ListItemText primaryTypographyProps={{ fontSize: '0.8125rem' }}>
+          <ListItemText primaryTypographyProps={{ fontSize: '14px' }}>
             Test Connection
           </ListItemText>
         </StyledMenuItem>
@@ -567,7 +567,7 @@ export default function ConnectionsPage() {
           <ListItemIcon>
             <TableViewIcon sx={{ fontSize: 16, color: theme.palette.text.secondary }} />
           </ListItemIcon>
-          <ListItemText primaryTypographyProps={{ fontSize: '0.8125rem' }}>
+          <ListItemText primaryTypographyProps={{ fontSize: '14px' }}>
             Inspect Schema
           </ListItemText>
         </StyledMenuItem>
@@ -575,7 +575,7 @@ export default function ConnectionsPage() {
           <ListItemIcon>
             <EditIcon sx={{ fontSize: 16, color: theme.palette.text.secondary }} />
           </ListItemIcon>
-          <ListItemText primaryTypographyProps={{ fontSize: '0.8125rem' }}>
+          <ListItemText primaryTypographyProps={{ fontSize: '14px' }}>
             Edit
           </ListItemText>
         </StyledMenuItem>
@@ -586,7 +586,7 @@ export default function ConnectionsPage() {
           <ListItemIcon>
             <DeleteIcon sx={{ fontSize: 16, color: theme.palette.text.secondary }} />
           </ListItemIcon>
-          <ListItemText primaryTypographyProps={{ fontSize: '0.8125rem' }}>
+          <ListItemText primaryTypographyProps={{ fontSize: '14px' }}>
             Delete
           </ListItemText>
         </StyledMenuItem>

@@ -42,7 +42,7 @@ import { useToast } from '@/components/ToastProvider'
 import { useInteraction, InteractionType, Reversibility, useNavigateInteraction } from '@/components/ux/governance'
 import { useAppStore } from '@/stores'
 import * as api from '@/api/client'
-import { figmaGrey } from '@/app/theme'
+import { neutral, palette } from '@/app/theme'
 
 // =============================================================================
 // ANIMATIONS
@@ -89,9 +89,9 @@ const PageHeader = styled(Box)(({ theme }) => ({
 
 const PageTitle = styled(Typography)(({ theme }) => ({
   fontSize: '1.75rem',
-  fontWeight: 700,
+  fontWeight: 600,
   letterSpacing: '-0.02em',
-  color: theme.palette.mode === 'dark' ? figmaGrey[300] : figmaGrey[1200],
+  color: theme.palette.mode === 'dark' ? neutral[100] : neutral[900],
 }))
 
 const FilterContainer = styled(Stack)(({ theme }) => ({
@@ -148,7 +148,7 @@ const RefreshButton = styled(IconButton)(({ theme }) => ({
   transition: 'all 0.2s ease',
   '&:hover': {
     color: theme.palette.text.primary,
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
   },
 }))
 
@@ -158,12 +158,12 @@ const PrimaryButton = styled(Button)(({ theme }) => ({
   fontWeight: 600,
   fontSize: '0.875rem',
   padding: theme.spacing(1, 2.5),
-  background: theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200],
-  color: '#fff',
+  background: theme.palette.mode === 'dark' ? neutral[700] : neutral[900],
+  color: theme.palette.common.white,
   boxShadow: `0 4px 14px ${alpha(theme.palette.common.black, 0.15)}`,
   transition: 'all 0.2s ease',
   '&:hover': {
-    background: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
+    background: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
     boxShadow: `0 6px 20px ${alpha(theme.palette.common.black, 0.2)}`,
     transform: 'translateY(-2px)',
   },
@@ -177,8 +177,8 @@ const SecondaryButton = styled(Button)(({ theme }) => ({
   borderColor: alpha(theme.palette.divider, 0.3),
   transition: 'all 0.2s ease',
   '&:hover': {
-    borderColor: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : figmaGrey[200],
+    borderColor: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : neutral[50],
   },
 }))
 
@@ -188,7 +188,7 @@ const KindIconContainer = styled(Box, {
   width: 36,
   height: 36,
   borderRadius: 8,  // Figma spec: 8px
-  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
@@ -200,7 +200,7 @@ const StatusChip = styled(Chip, {
 })(({ theme, statusColor, statusBg }) => ({
   borderRadius: 8,
   fontWeight: 600,
-  fontSize: '0.6875rem',
+  fontSize: '12px',
   backgroundColor: statusBg,
   color: statusColor,
   '& .MuiChip-icon': {
@@ -225,25 +225,25 @@ const getStatusConfig = (theme, status) => {
     completed: {
       icon: CheckCircleIcon,
       color: theme.palette.text.secondary,
-      bgColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300],
+      bgColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[100],
       label: 'Completed',
     },
     failed: {
       icon: ErrorIcon,
       color: theme.palette.text.secondary,
-      bgColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300],
+      bgColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[100],
       label: 'Failed',
     },
     running: {
       icon: HourglassEmptyIcon,
       color: theme.palette.text.secondary,
-      bgColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300],
+      bgColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[100],
       label: 'Running',
     },
     pending: {
       icon: HourglassEmptyIcon,
       color: theme.palette.text.secondary,
-      bgColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[200],
+      bgColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[50],
       label: 'Pending',
     },
     cancelled: {
@@ -556,10 +556,10 @@ export default function HistoryPage() {
               <Icon sx={{ fontSize: 18, color: 'text.secondary' }} />
             </KindIconContainer>
             <Box>
-              <Typography sx={{ fontSize: '0.8125rem', fontWeight: 500, color: 'text.primary' }}>
+              <Typography sx={{ fontSize: '14px', fontWeight: 500, color: 'text.primary' }}>
                 {value || 'Unknown'}
               </Typography>
-              <Typography sx={{ fontSize: '0.6875rem', color: 'text.secondary' }}>
+              <Typography sx={{ fontSize: '12px', color: 'text.secondary' }}>
                 {kind.toUpperCase()}
               </Typography>
             </Box>
@@ -590,7 +590,7 @@ export default function HistoryPage() {
       headerName: 'Started',
       width: 160,
       renderCell: (value) => (
-        <Typography sx={{ fontSize: '0.8125rem', color: 'text.secondary' }}>
+        <Typography sx={{ fontSize: '14px', color: 'text.secondary' }}>
           {value ? new Date(value).toLocaleString() : '-'}
         </Typography>
       ),
@@ -600,7 +600,7 @@ export default function HistoryPage() {
       headerName: 'Completed',
       width: 160,
       renderCell: (value) => (
-        <Typography sx={{ fontSize: '0.8125rem', color: 'text.secondary' }}>
+        <Typography sx={{ fontSize: '14px', color: 'text.secondary' }}>
           {value ? new Date(value).toLocaleString() : '-'}
         </Typography>
       ),

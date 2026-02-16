@@ -30,7 +30,7 @@ import {
   Refresh as RetryIcon,
   Cancel as CancelIcon,
 } from '@mui/icons-material'
-import { figmaGrey } from '@/app/theme'
+import { neutral, palette } from '@/app/theme'
 
 // ============================================================================
 // TIME EXPECTATION DEFINITIONS
@@ -349,13 +349,13 @@ export function TimeExpectationProvider({ children }) {
     const configs = {
       [EscalationLevel.WARNING]: {
         icon: WarningIcon,
-        color: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
+        color: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
         title: 'Operation Taking Longer Than Expected',
         message: 'This operation is taking longer than usual. You can wait, retry, or cancel.',
       },
       [EscalationLevel.TIMEOUT]: {
         icon: ErrorIcon,
-        color: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
+        color: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
         title: 'Operation Timed Out',
         message: 'This operation has exceeded its time limit. Please retry or cancel.',
       },
@@ -404,7 +404,7 @@ export function TimeExpectationProvider({ children }) {
                 display: 'flex',
                 alignItems: 'center',
                 gap: 1.5,
-                bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300],
+                bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[100],
               }}
             >
               <EscalationIcon sx={{ color: escalationConfig.color }} />

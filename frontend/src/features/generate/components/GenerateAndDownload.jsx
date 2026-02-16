@@ -74,6 +74,7 @@ import {
   withBase,
 } from '../services/generateApi'
 import { useSavedCharts } from '../hooks/useSavedCharts'
+import { secondary } from '@/app/theme'
 
 const buildFallbackChartsFromSample = (sampleData) => {
   if (!Array.isArray(sampleData) || !sampleData.length) return []
@@ -666,7 +667,7 @@ function GenerateAndDownload({
         </Alert>
       )
     }
-    const palette = ['#4f46e5', '#22c55e', '#0ea5e9', '#f97316', '#ec4899', '#a855f7', '#06b6d4']
+    const palette = [secondary.violet[500], secondary.emerald[500], secondary.cyan[500], secondary.rose[500], secondary.teal[500], secondary.fuchsia[500], secondary.slate[500]]
     const type = (spec.type || '').toLowerCase()
     const xField = spec.xField
     const yKeys = yFieldsArray.length ? yFieldsArray : ['rows']
@@ -704,7 +705,7 @@ function GenerateAndDownload({
             <YAxis type="number" dataKey={yKey} name={yKey} tick={{ fontSize: 11 }} />
             <RechartsTooltip />
             <RechartsLegend />
-            <Scatter data={data} fill="#22c55e" />
+            <Scatter data={data} fill={secondary.emerald[500]} />
           </ScatterChart>
         </ResponsiveContainer>
       )
@@ -1086,11 +1087,11 @@ function GenerateAndDownload({
                         <XAxis dataKey="label" tick={{ fontSize: 11 }} />
                         <YAxis tick={{ fontSize: 11 }} />
                         <RechartsTooltip />
-                        <Bar dataKey="value" fill="#4f46e5" name={selectedMetricLabel} />
+                        <Bar dataKey="value" fill={secondary.violet[500]} name={selectedMetricLabel} />
                         <Brush
                           dataKey="label"
                           height={24}
-                          stroke="#4f46e5"
+                          stroke={secondary.violet[500]}
                           startIndex={
                             resampleState.displayRange ? resampleState.displayRange[0] : 0
                           }
@@ -1286,7 +1287,7 @@ function GenerateAndDownload({
                                 : 'divider',
                             bgcolor:
                               selectedChartSource === 'suggestion' && chart.id === selectedChartId
-                                ? alpha('#4f46e5', 0.04)
+                                ? alpha(secondary.violet[500], 0.04)
                                 : 'background.paper',
                           }}
                         >

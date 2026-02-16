@@ -48,7 +48,7 @@ import {
   readPreferences,
   emitPreferencesChanged,
 } from '@/utils/preferences'
-import { figmaGrey } from '@/app/theme'
+import { neutral, palette } from '@/app/theme'
 
 // =============================================================================
 // ANIMATIONS
@@ -109,7 +109,7 @@ const RefreshButton = styled(IconButton)(({ theme }) => ({
   borderRadius: 12,
   transition: 'all 0.2s ease',
   '&:hover': {
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300],
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[100],
     transform: 'rotate(180deg)',
   },
 }))
@@ -121,8 +121,8 @@ const ExportButton = styled(Button)(({ theme }) => ({
   borderColor: alpha(theme.palette.divider, 0.2),
   transition: 'all 0.2s ease',
   '&:hover': {
-    borderColor: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
+    borderColor: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
   },
 }))
 
@@ -169,7 +169,7 @@ function StatusChip({ status }) {
       size="small"
       icon={<Icon sx={{ fontSize: 14 }} />}
       label={status?.replace(/_/g, ' ') || 'unknown'}
-      sx={{ textTransform: 'capitalize', fontSize: '0.75rem', borderRadius: 1, bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400], color: 'text.secondary' }}
+      sx={{ textTransform: 'capitalize', fontSize: '0.75rem', borderRadius: 1, bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[200], color: 'text.secondary' }}
     />
   )
 }
@@ -183,7 +183,7 @@ function SettingCard({ icon: Icon, title, children }) {
         <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 2 }}>
           <IconContainer
             sx={{
-              bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
+              bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
             }}
           >
             <Icon sx={{ color: 'text.secondary', fontSize: 16 }} />
@@ -210,7 +210,7 @@ function ConfigRow({ label, value, mono = false }) {
         variant="body2"
         sx={{
           color: theme.palette.text.primary,
-          ...(mono && { fontFamily: 'monospace', fontSize: '0.8125rem' }),
+          ...(mono && { fontFamily: 'monospace', fontSize: '14px' }),
         }}
       >
         {value}

@@ -3,6 +3,15 @@
  */
 import { api, API_BASE } from './client'
 
+const asArray = (payload, keys = []) => {
+  if (Array.isArray(payload)) return payload
+  if (!payload || typeof payload !== 'object') return []
+  for (const key of keys) {
+    if (Array.isArray(payload[key])) return payload[key]
+  }
+  return []
+}
+
 /**
  * Generate SQL from a natural language question
  * @param {Object} params
@@ -47,7 +56,8 @@ export async function executeQuery({ sql, connectionId, limit = 100, offset = 0,
  * @param {string} sql - SQL query to explain
  * @returns {Promise<Object>} Explanation
  */
-export async function explainQuery(sql) {
+export async function explainQuery(sqlOrConnectionId, maybeSql) {
+  const sql = maybeSql ?? sqlOrConnectionId
   const { data } = await api.post('/nl2sql/explain', null, {
     params: { sql },
   })
@@ -91,7 +101,14 @@ export async function listSavedQueries({ connectionId, tags } = {}) {
       tags: tags?.length ? tags : undefined,
     },
   })
-  return data
+  if (Array.isArray(data)) {
+    return { queries: data, total: data.length }
+  }
+  if (data && typeof data === 'object') {
+    const queries = asArray(data, ['queries', 'saved_queries', 'items', 'results'])
+    return { ...data, queries, total: data.total ?? data.count ?? queries.length }
+  }
+  return { queries: [], total: 0 }
 }
 
 /**
@@ -101,6 +118,9 @@ export async function listSavedQueries({ connectionId, tags } = {}) {
  */
 export async function getSavedQuery(queryId) {
   const { data } = await api.get(`/nl2sql/saved/${encodeURIComponent(queryId)}`)
+  if (data && typeof data === 'object' && data.query) {
+    return data.query
+  }
   return data
 }
 
@@ -121,14 +141,25 @@ export async function deleteSavedQuery(queryId) {
  * @param {number} [params.limit=50] - Max entries to return
  * @returns {Promise<Object>} Query history
  */
-export async function getQueryHistory({ connectionId, limit = 50 } = {}) {
+export async function getQueryHistory(params = {}) {
+  const options = typeof params === 'string'
+    ? { connectionId: params, limit: 50 }
+    : (params || {})
+  const { connectionId, limit = 50 } = options
   const { data } = await api.get('/nl2sql/history', {
     params: {
       connection_id: connectionId || undefined,
       limit,
     },
   })
-  return data
+  if (Array.isArray(data)) {
+    return { history: data, total: data.length }
+  }
+  if (data && typeof data === 'object') {
+    const history = asArray(data, ['history', 'queries', 'items', 'results'])
+    return { ...data, history, total: data.total ?? data.count ?? history.length }
+  }
+  return { history: [], total: 0 }
 }
 
 /**

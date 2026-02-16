@@ -962,7 +962,7 @@ export default function OpsConsolePage() {
                 backgroundColor: 'background.default',
                 border: '1px solid',
                 borderColor: 'divider',
-                fontSize: '0.8rem',
+                fontSize: '12px',
                 overflow: 'auto',
                 maxHeight: 320,
               }}

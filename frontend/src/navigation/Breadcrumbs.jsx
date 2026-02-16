@@ -46,7 +46,7 @@ export default function Breadcrumbs() {
     return (
       <Typography
         sx={{
-          fontSize: '0.8125rem',
+          fontSize: '14px',
           fontWeight: 500,
           color: theme.palette.text.primary,
         }}
@@ -89,7 +89,7 @@ export default function Breadcrumbs() {
           <Typography
             key={crumb.to}
             sx={{
-              fontSize: '0.8125rem',
+              fontSize: '14px',
               fontWeight: 500,
               color: theme.palette.text.primary,
             }}
@@ -104,7 +104,7 @@ export default function Breadcrumbs() {
             underline="none"
             data-testid={`breadcrumb-link-${crumb.label.toLowerCase().replace(/\s+/g, '-')}`}
             sx={{
-              fontSize: '0.8125rem',
+              fontSize: '14px',
               fontWeight: 400,
               color: theme.palette.text.secondary,
               transition: 'color 150ms ease',

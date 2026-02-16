@@ -8,7 +8,7 @@ import { Box, Typography, Button, Stack, alpha } from '@mui/material'
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline'
 import RefreshIcon from '@mui/icons-material/Refresh'
 import HomeIcon from '@mui/icons-material/Home'
-import { figmaGrey } from '@/app/theme'
+import { neutral, palette } from '@/app/theme'
 
 // Note: Class components cannot use hooks, so we use inline styles
 // that work well with both light and dark themes
@@ -81,7 +81,7 @@ class ErrorBoundary extends Component {
                 width: 72,
                 height: 72,
                 borderRadius: '50%',
-                bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
+                bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -108,7 +108,7 @@ class ErrorBoundary extends Component {
             {import.meta.env?.DEV && this.state.error && (
               <Box
                 sx={{
-                  bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200],
+                  bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : neutral[50],
                   border: 1,
                   borderColor: (theme) => alpha(theme.palette.divider, 0.2),
                   borderRadius: 1,  // Figma spec: 8px
@@ -166,10 +166,10 @@ class ErrorBoundary extends Component {
                   borderRadius: 1,  // Figma spec: 8px
                   textTransform: 'none',
                   fontWeight: 600,
-                  bgcolor: (theme) => theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200],
+                  bgcolor: (theme) => theme.palette.mode === 'dark' ? neutral[700] : neutral[900],
                   boxShadow: (theme) => `0 4px 14px ${alpha(theme.palette.common.black, 0.15)}`,
                   '&:hover': {
-                    bgcolor: (theme) => theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
+                    bgcolor: (theme) => theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
                     boxShadow: (theme) => `0 6px 20px ${alpha(theme.palette.common.black, 0.2)}`,
                   },
                 }}

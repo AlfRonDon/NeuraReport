@@ -47,7 +47,7 @@ import TOOLTIP_COPY from '@/content/tooltipCopy.jsx'
 import { savePersistedCache } from '@/hooks/useBootstrapState.js'
 import useFormErrorFocus from '@/hooks/useFormErrorFocus.js'
 import { useInteraction, InteractionType, Reversibility } from '@/components/ux/governance'
-import { figmaGrey } from '@/app/theme'
+import { neutral, palette } from '@/app/theme'
 const sanitizeDbType = (value) => (typeof value === 'string' ? value.trim().toLowerCase() : '')
 const trimString = (value) => (typeof value === 'string' ? value.trim() : '')
 const formatHostPort = (host, port) => {
@@ -124,22 +124,22 @@ const DB_TYPE_META = {
   sqlite: {
     label: DB_CONFIG.sqlite.label,
     icon: StorageIcon,
-    accent: figmaGrey[1100],  // Grey/1100
+    accent: neutral[700],  // Grey/1100
   },
   postgres: {
     label: DB_CONFIG.postgres.label,
     icon: DnsIcon,
-    accent: figmaGrey[1000],  // Grey/1000
+    accent: neutral[500],  // Grey/1000
   },
   mysql: {
     label: DB_CONFIG.mysql.label,
     icon: LanIcon,
-    accent: figmaGrey[900],  // Grey/900
+    accent: neutral[500],  // Grey/900
   },
   mssql: {
     label: DB_CONFIG.mssql.label,
     icon: HubIcon,
-    accent: figmaGrey[600],  // Grey/800
+    accent: neutral[300],  // Grey/800
   },
 }
 
@@ -215,7 +215,7 @@ const dbTypeToggleGroupSx = (theme) => ({
 })
 
 const buildDbTypeButtonSx = (accent) => (theme) => {
-  const accentColor = accent || (theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100])
+  const accentColor = accent || (theme.palette.mode === 'dark' ? neutral[500] : neutral[700])
   return {
     justifyContent: 'center',
     alignItems: 'center',
@@ -470,9 +470,9 @@ const SelectField = ({
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        color: accentColor || (theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100]),
-                        backgroundColor: alpha(accentColor || (theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100]), 0.12),
-                        boxShadow: `0 4px 12px ${alpha(accentColor || (theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100]), 0.18)}`,
+                        color: accentColor || (theme.palette.mode === 'dark' ? neutral[500] : neutral[700]),
+                        backgroundColor: alpha(accentColor || (theme.palette.mode === 'dark' ? neutral[500] : neutral[700]), 0.12),
+                        boxShadow: `0 4px 12px ${alpha(accentColor || (theme.palette.mode === 'dark' ? neutral[500] : neutral[700]), 0.18)}`,
                         flexShrink: 0,
                         ml: 0.1,
                       })}
@@ -537,14 +537,14 @@ const SelectField = ({
                   borderRadius: 1,  // Figma spec: 8px
                   transition: 'background-color 140ms ease, transform 140ms ease',
                   '&:hover': {
-                    backgroundColor: alpha(accentColor || (theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100]), 0.08),
+                    backgroundColor: alpha(accentColor || (theme.palette.mode === 'dark' ? neutral[500] : neutral[700]), 0.08),
                     transform: 'translateX(4px)',
                   },
                   '&.Mui-selected': {
-                    backgroundColor: alpha(accentColor || (theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100]), 0.12),
-                    color: accentColor || (theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100]),
+                    backgroundColor: alpha(accentColor || (theme.palette.mode === 'dark' ? neutral[500] : neutral[700]), 0.12),
+                    color: accentColor || (theme.palette.mode === 'dark' ? neutral[500] : neutral[700]),
                     '&:hover': {
-                      backgroundColor: alpha(accentColor || (theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100]), 0.16),
+                      backgroundColor: alpha(accentColor || (theme.palette.mode === 'dark' ? neutral[500] : neutral[700]), 0.16),
                     },
                   },
                 })}
@@ -558,8 +558,8 @@ const SelectField = ({
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      color: accentColor || (theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100]),
-                      backgroundColor: alpha(accentColor || (theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100]), 0.1),
+                      color: accentColor || (theme.palette.mode === 'dark' ? neutral[500] : neutral[700]),
+                      backgroundColor: alpha(accentColor || (theme.palette.mode === 'dark' ? neutral[500] : neutral[700]), 0.1),
                       flexShrink: 0,
                       ml: 0.15,
                     })}
@@ -2068,7 +2068,7 @@ const lastHeartbeatLabel = useMemo(() => {
               variant="contained"
               disableElevation
               startIcon={<PlayArrowIcon />}
-              sx={{ borderRadius: 1, px: 2.5, textTransform: 'none', bgcolor: (theme) => theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200], color: '#fff', '&:hover': { bgcolor: (theme) => theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100] } }}
+              sx={{ borderRadius: 1, px: 2.5, textTransform: 'none', bgcolor: (theme) => theme.palette.mode === 'dark' ? neutral[700] : neutral[900], color: 'common.white', '&:hover': { bgcolor: (theme) => theme.palette.mode === 'dark' ? neutral[500] : neutral[700] } }}
               type="submit"
               disabled={mutation.isPending}
             >
@@ -2096,7 +2096,7 @@ const lastHeartbeatLabel = useMemo(() => {
                 label="Connected"
                 size="small"
                 onClick={() => setShowDetails((v) => !v)}
-                sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400], color: 'text.secondary' }}
+                sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[200], color: 'text.secondary' }}
               />
             )}
             {connection.status === 'failed' && (
@@ -2104,7 +2104,7 @@ const lastHeartbeatLabel = useMemo(() => {
                 label="Failed"
                 size="small"
                 onClick={() => setShowDetails((v) => !v)}
-                sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400], color: 'text.secondary' }}
+                sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[200], color: 'text.secondary' }}
               />
             )}
           </Stack>
@@ -2235,7 +2235,7 @@ const lastHeartbeatLabel = useMemo(() => {
                           primary={
                             <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0 }}>
                               <Typography variant="subtitle2" noWrap title={c.name}>{c.name}</Typography>
-                              {isActive && <Chip size="small" label="Active" sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400], color: 'text.secondary' }} />}
+                              {isActive && <Chip size="small" label="Active" sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[200], color: 'text.secondary' }} />}
                             </Stack>
                           }
                           secondary={
@@ -2383,7 +2383,7 @@ const lastHeartbeatLabel = useMemo(() => {
                   <Stack direction="row" spacing={1} alignItems="center" sx={{ flexShrink: 0 }}>
                     {activeConnectionId === detailConnection.backend_connection_id ||
                     activeConnectionId === detailConnection.id ? (
-                      <Chip size="small" label="Active" sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400], color: 'text.secondary' }} />
+                      <Chip size="small" label="Active" sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[200], color: 'text.secondary' }} />
                     ) : null}
                     <HeartbeatBadge
                       withText

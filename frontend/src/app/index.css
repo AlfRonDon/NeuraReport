@@ -1,116 +1,110 @@
 /* ============================================================================
-   NEURACT DEMO - Global Styles
-   EXACT match to Figma design (File: 1Hp9IvJjDcsI4MXJdbOqyo)
+   NEURAREPORT - Design System v4 Global Styles
+   Typography: Geist Sans, Geist Mono, Source Serif 4
+   Color: Neutral + Primary (amber) + Status + Secondary accent palettes
    ============================================================================ */
 
 /* ============================================================================
-   FIGMA FONT IMPORTS
-   Tomorrow - Headings, Inter - UI elements, Lato - Body text
+   FONT IMPORTS
+   Geist Sans & Geist Mono (variable fonts, self-hosted)
+   Source Serif 4 (Google Fonts, display typography only)
    ============================================================================ */
-@import url('https://fonts.googleapis.com/css2?family=Tomorrow:wght@400;500;600;700&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Lato:wght@300;400;500;600;700&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap');
+@font-face {
+  font-family: 'Geist Sans';
+  src: url('/fonts/Geist-Variable.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Geist Mono';
+  src: url('/fonts/GeistMono-Variable.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
 
 :root {
   /* ============================================================================
-     FIGMA FONT FAMILIES
+     FONT FAMILIES
      ============================================================================ */
-  --font-heading: 'Tomorrow', system-ui, -apple-system, sans-serif;
-  --font-ui: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  --font-body: 'Lato', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  --font-mono: 'JetBrains Mono', 'SF Mono', Monaco, 'Cascadia Code', Consolas, monospace;
+  --font-display: 'Source Serif 4', Georgia, 'Times New Roman', serif;
+  --font-heading: 'Geist Sans', system-ui, -apple-system, sans-serif;
+  --font-body: 'Geist Sans', system-ui, -apple-system, sans-serif;
+  --font-mono: 'Geist Mono', 'SF Mono', Monaco, Consolas, monospace;
 
   /* ============================================================================
-     FIGMA GREY SCALE (EXACT from design variables)
+     NEUTRAL PALETTE (intent-driven, 50-900 scale)
+     50-100: never for text. 900: never as background.
      ============================================================================ */
-  --grey-white: #FFFFFF;
-  --grey-200: #F9F9F8;
-  --grey-300: #F1F0EF;
-  --grey-400: #E9E8E6;
-  --grey-500: #E2E1DE;
-  --grey-600: #DAD9D6;
-  --grey-700: #CFCECA;
-  --grey-800: #BCBBB5;
-  --grey-900: #8D8D86;
-  --grey-1000: #82827C;
-  --grey-1100: #63635E;
-  --grey-1200: #21201C;
+  --neutral-50: #FAFAF9;   /* Page backgrounds, subtle sections */
+  --neutral-100: #F3F4F3;  /* Subtle cards, background fills */
+  --neutral-200: #E5E7E6;  /* Borders, dividers */
+  --neutral-300: #D1D5DB;  /* Input outlines, separators */
+  --neutral-400: #9CA3AF;  /* Disabled icons */
+  --neutral-500: #6B7280;  /* Muted / helper text */
+  --neutral-700: #374151;  /* Default body text */
+  --neutral-900: #111827;  /* Headings, high-emphasis text */
 
   /* ============================================================================
-     FIGMA NEUTRAL SCALE
+     PRIMARY PALETTE (Brand / Action - warm amber)
+     Only 500-600 for CTAs. Never replace status colors.
      ============================================================================ */
-  --neutral-50: #F9FAFB;
-  --neutral-100: #F3F4F6;
-  --neutral-200: #E5E7EB;
-  --neutral-300: #D1D5DB;
-  --neutral-400: #9CA3AF;
-  --neutral-500: #6B7280;
-  --neutral-600: #4B5563;
-  --neutral-700: #374151;
-  --neutral-800: #1F2937;
+  --primary-50: #FEF2EF;   /* Subtle backgrounds, hover fills */
+  --primary-100: #FEE2D5;  /* Light accents */
+  --primary-300: #F4A580;  /* Secondary emphasis */
+  --primary-500: #D97757;  /* Primary CTAs, links */
+  --primary-600: #B45309;  /* Hover / active states */
+  --primary-900: #7C2D12;  /* Strong emphasis (never large surfaces) */
 
   /* ============================================================================
-     FIGMA ACCENT COLORS (Tabs, Active states)
+     STATUS COLORS (semantic only, never decorative)
      ============================================================================ */
-  --accent-primary-green: #007E60;
-  --accent-green-bg: #EBFEF6;
-  --accent-green-text: #02634E;
-  --accent-dark-text: #374151;
+  --status-success: #22C55E;
+  --status-warning: #F59E0B;
+  --status-destructive: #EF4444;
 
   /* ============================================================================
-     FIGMA STATUS COLORS
+     SEMANTIC BACKGROUND COLORS
      ============================================================================ */
-  --status-reachable: #22C55E;
-  --status-unreachable: #EF4444;
-  --status-running: #8D8D86;
+  --color-bg-primary: var(--neutral-50);
+  --color-bg-surface: #FFFFFF;
+  --color-bg-sidebar: #FFFFFF;
+  --color-bg-input: var(--neutral-100);
+  --color-bg-hover: var(--neutral-200);
+  --color-bg-active: var(--neutral-200);
 
   /* ============================================================================
-     FIGMA GRADIENTS
+     SEMANTIC BORDER COLORS
      ============================================================================ */
-  --gradient-ai-assistant: linear-gradient(180deg, #F9F9F8 0%, #88A6FF 258.88%);
-  --gradient-notification: linear-gradient(180deg, #F1F0EF 0%, #A1D3FF 258.88%);
+  --color-border: var(--neutral-200);
+  --color-border-subtle: var(--neutral-300);
+  --color-border-muted: var(--neutral-300);
 
   /* ============================================================================
-     FIGMA BACKGROUND COLORS
+     SEMANTIC TEXT COLORS
      ============================================================================ */
-  --color-bg-primary: #F9F9F8;    /* Grey/200 - Main content background */
-  --color-bg-surface: #FFFFFF;    /* White - Cards, panels */
-  --color-bg-sidebar: #F9F9F8;    /* Grey/200 - Sidebar background */
-  --color-bg-input: #F1F0EF;      /* Grey/300 - Input backgrounds */
-  --color-bg-hover: #E9E8E6;      /* Grey/400 - Hover states */
-  --color-bg-active: #E9E8E6;     /* Grey/400 - Active states */
+  --color-text-primary: var(--neutral-900);
+  --color-text-secondary: var(--neutral-700);
+  --color-text-muted: var(--neutral-500);
+  --color-text-disabled: var(--neutral-400);
+  --color-text-placeholder: var(--neutral-500);
 
   /* ============================================================================
-     FIGMA BORDER COLORS
+     STATUS SEMANTIC COLORS
      ============================================================================ */
-  --color-border: #E2E1DE;        /* Grey/500 - Standard borders */
-  --color-border-subtle: #DAD9D6; /* Grey/600 - Subtle borders */
-  --color-border-muted: #CFCECA;  /* Grey/700 - Muted borders */
-
-  /* ============================================================================
-     FIGMA TEXT COLORS
-     ============================================================================ */
-  --color-text-primary: #21201C;   /* Grey/1200 - Headings, titles */
-  --color-text-secondary: #63635E; /* Grey/1100 - Labels, primary text */
-  --color-text-muted: #8D8D86;     /* Grey/900 - Muted, icons */
-  --color-text-disabled: #BCBBB5;  /* Grey/800 - Disabled */
-  --color-text-placeholder: #9CA3AF; /* Neutral/400 - Placeholder */
-
-  /* ============================================================================
-     FIGMA STATUS/SEMANTIC COLORS
-     ============================================================================ */
-  --color-success: #22C55E;
-  --color-success-bg: #DCFCE7;
-  --color-warning: #F59E0B;
+  --color-success: var(--status-success);
+  --color-success-bg: #D1F4E0;
+  --color-warning: var(--status-warning);
   --color-warning-bg: #FEF3C7;
-  --color-error: #EF4444;
+  --color-error: var(--status-destructive);
   --color-error-bg: #FEE2E2;
-  --color-info: #8D8D86;
-  --color-info-bg: #F1F0EF;
+  --color-info: var(--neutral-500);
+  --color-info-bg: var(--neutral-100);
 
   /* ============================================================================
-     FIGMA SPACING & DIMENSIONS
+     SPACING & DIMENSIONS
      ============================================================================ */
   --sidebar-width: 250px;
   --details-panel-width: 400px;
@@ -118,7 +112,7 @@
   --content-padding: 20px;
 
   /* ============================================================================
-     FIGMA BORDER RADIUS
+     BORDER RADIUS
      ============================================================================ */
   --radius-card: 8px;
   --radius-button: 8px;
@@ -127,7 +121,7 @@
   --radius-zoom: 35px;
 
   /* ============================================================================
-     FIGMA COMPONENT DIMENSIONS
+     COMPONENT DIMENSIONS
      ============================================================================ */
   --tab-height: 40px;
   --button-height: 40px;
@@ -140,7 +134,7 @@
   --status-dot-size: 8px;
 
   /* ============================================================================
-     FIGMA SHADOWS
+     SHADOWS
      ============================================================================ */
   --shadow-xsmall: 0 1px 2px rgba(16, 24, 40, 0.04);
   --shadow-card: 0 1px 2px rgba(16, 24, 40, 0.04);
@@ -156,7 +150,7 @@
   --transition-slow: 300ms ease;
 
   /* ============================================================================
-     BASE TYPOGRAPHY (Lato body default)
+     BASE TYPOGRAPHY (Geist Sans default)
      ============================================================================ */
   font-family: var(--font-body);
   line-height: 1.5;
@@ -186,8 +180,8 @@ body {
   min-width: 320px;
   min-height: 100vh;
   font-family: var(--font-body);
-  background-color: var(--grey-200);
-  color: var(--grey-1200);
+  background-color: var(--neutral-50);
+  color: var(--neutral-900);
 }
 
 #root {
@@ -197,27 +191,63 @@ body {
 }
 
 /* ============================================================================
-   FIGMA TYPOGRAPHY CLASSES
+   TYPOGRAPHY UTILITY CLASSES (Design System v4)
    ============================================================================ */
+
+/* Display styles - Source Serif 4 */
+.text-display-large {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 52px;
+  line-height: 56px;
+  letter-spacing: -0.02em;
+}
+
+.text-display-small {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 44px;
+  line-height: 48px;
+  letter-spacing: -0.02em;
+}
+
+/* Heading styles - Geist Sans */
 .text-page-title {
   font-family: var(--font-heading);
-  font-weight: 500;
-  font-size: 24px;
-  line-height: normal;
+  font-weight: 600;
+  font-size: 40px;
+  line-height: 48px;
+  letter-spacing: -0.02em;
 }
 
 .text-section-title {
   font-family: var(--font-heading);
-  font-weight: 500;
-  font-size: 20px;
-  line-height: normal;
+  font-weight: 600;
+  font-size: 36px;
+  line-height: 44px;
+  letter-spacing: -0.02em;
 }
 
-.text-nav-item {
-  font-family: var(--font-ui);
+.text-subsection-title {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 32px;
+  line-height: 40px;
+}
+
+.text-card-title {
+  font-family: var(--font-heading);
+  font-weight: 500;
+  font-size: 24px;
+  line-height: 32px;
+}
+
+/* Label styles - Geist Sans */
+.text-label-large {
+  font-family: var(--font-body);
   font-weight: 500;
   font-size: 16px;
-  line-height: normal;
+  line-height: 18px;
 }
 
 .text-label-medium {
@@ -227,6 +257,37 @@ body {
   line-height: 16px;
 }
 
+.text-label-small {
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: 12px;
+  line-height: 16px;
+  letter-spacing: 0.02em;
+}
+
+.text-label-xsmall {
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: 10px;
+  line-height: 14px;
+  letter-spacing: 0.04em;
+}
+
+/* Paragraph styles - Geist Sans */
+.text-paragraph-large {
+  font-family: var(--font-body);
+  font-weight: 400;
+  font-size: 18px;
+  line-height: 28px;
+}
+
+.text-paragraph-medium {
+  font-family: var(--font-body);
+  font-weight: 400;
+  font-size: 16px;
+  line-height: 24px;
+}
+
 .text-paragraph-small {
   font-family: var(--font-body);
   font-weight: 400;
@@ -234,26 +295,45 @@ body {
   line-height: 20px;
 }
 
-.text-paragraph-16 {
+.text-paragraph-xsmall {
   font-family: var(--font-body);
   font-weight: 400;
+  font-size: 12px;
+  line-height: 20px;
+}
+
+/* Responsive typography — mobile breakpoints (per PDF spec) */
+@media (max-width: 768px) {
+  .text-display-large { font-size: 44px; line-height: 48px; }
+  .text-display-small { font-size: 36px; line-height: 44px; }
+  .text-page-title { font-size: 36px; line-height: 44px; }
+  .text-section-title { font-size: 32px; line-height: 40px; }
+  .text-subsection-title { font-size: 28px; line-height: 36px; }
+  .text-card-title { font-size: 20px; line-height: 28px; }
+}
+
+/* Legacy aliases */
+.text-nav-item {
+  font-family: var(--font-body);
+  font-weight: 500;
   font-size: 16px;
-  line-height: 1.4;
-  letter-spacing: 0.64px;
+  line-height: 18px;
 }
 
 .text-small {
-  font-family: var(--font-ui);
+  font-family: var(--font-body);
   font-weight: 500;
   font-size: 12px;
-  line-height: normal;
+  line-height: 16px;
+  letter-spacing: 0.02em;
 }
 
 .text-tiny {
-  font-family: var(--font-ui);
+  font-family: var(--font-body);
   font-weight: 500;
   font-size: 10px;
-  line-height: normal;
+  line-height: 14px;
+  letter-spacing: 0.04em;
 }
 
 .text-mono {
@@ -261,22 +341,22 @@ body {
 }
 
 /* ============================================================================
-   FIGMA TAB STYLES
+   TAB STYLES (Primary amber instead of green)
    ============================================================================ */
 .tab-active {
-  background-color: var(--accent-green-bg);
-  border-bottom: 2px solid var(--accent-primary-green);
-  color: var(--accent-green-text);
+  background-color: var(--primary-50);
+  border-bottom: 2px solid var(--primary-500);
+  color: var(--primary-600);
 }
 
 .tab-inactive {
   background-color: transparent;
   border-bottom: 1px solid var(--neutral-200);
-  color: var(--accent-dark-text);
+  color: var(--neutral-700);
 }
 
 /* ============================================================================
-   FIGMA STATUS INDICATORS
+   STATUS INDICATORS
    ============================================================================ */
 .status-indicator {
   display: inline-flex;
@@ -291,24 +371,24 @@ body {
 }
 
 .status-dot-reachable {
-  background-color: var(--status-reachable);
+  background-color: var(--status-success);
 }
 
 .status-dot-unreachable {
-  background-color: var(--status-unreachable);
+  background-color: var(--status-destructive);
 }
 
 .status-dot-running {
-  background-color: var(--status-running);
+  background-color: var(--neutral-500);
 }
 
 /* ============================================================================
-   FIGMA AI ASSISTANT PANEL
+   AI ASSISTANT PANEL
    ============================================================================ */
 .ai-assistant-panel {
   width: 394px;
   min-height: 114px;
-  background: var(--gradient-ai-assistant);
+  background: linear-gradient(180deg, var(--neutral-50) 0%, #88A6FF 258.88%);
   border-radius: 4px 4px 0 0;
   box-shadow: var(--shadow-ai-panel);
   padding: 16px;
@@ -316,24 +396,24 @@ body {
 
 .ai-assistant-input {
   height: 48px;
-  background: var(--grey-300);
-  border: 1px solid var(--grey-900);
+  background: var(--neutral-100);
+  border: 1px solid var(--neutral-500);
   border-radius: 8px;
   padding: 16px;
 }
 
 /* ============================================================================
-   FIGMA NOTIFICATION CARD
+   NOTIFICATION CARD
    ============================================================================ */
 .notification-card {
   width: 394px;
-  background: var(--gradient-notification);
+  background: linear-gradient(180deg, var(--neutral-100) 0%, #A1D3FF 258.88%);
   border-radius: 4px 4px 0 0;
   padding: 16px;
 }
 
 /* ============================================================================
-   FIGMA ZOOM CONTROLS
+   ZOOM CONTROLS
    ============================================================================ */
 .zoom-controls {
   display: flex;
@@ -352,12 +432,12 @@ body {
 }
 
 /* ============================================================================
-   FIGMA VIEW TOGGLE (Map/Table)
+   VIEW TOGGLE
    ============================================================================ */
 .view-toggle {
   display: flex;
-  background: var(--grey-white);
-  border: 1px solid var(--grey-700);
+  background: #FFFFFF;
+  border: 1px solid var(--neutral-300);
   border-radius: 8px;
   overflow: hidden;
 }
@@ -369,15 +449,15 @@ body {
 }
 
 .view-toggle-item:hover {
-  background-color: var(--grey-300);
+  background-color: var(--neutral-100);
 }
 
 .view-toggle-item.active {
-  background-color: var(--grey-500);
+  background-color: var(--neutral-200);
 }
 
 /* ============================================================================
-   FIGMA FILTER BUTTON
+   FILTER BUTTON
    ============================================================================ */
 .filter-button {
   display: flex;
@@ -385,15 +465,15 @@ body {
   gap: 8px;
   height: 40px;
   padding: 4px 12px;
-  background: var(--grey-300);
-  border: 1px solid var(--grey-500);
+  background: var(--neutral-100);
+  border: 1px solid var(--neutral-200);
   border-radius: 8px;
   cursor: pointer;
   transition: background-color var(--transition-fast);
 }
 
 .filter-button:hover {
-  background-color: var(--grey-400);
+  background-color: var(--neutral-200);
 }
 
 /* ============================================================================
@@ -421,25 +501,25 @@ pre {
   overflow-x: auto;
   padding: 1rem;
   border-radius: var(--radius-card);
-  background-color: var(--grey-300);
+  background-color: var(--neutral-100);
 }
 
 code {
   padding: 0.125em 0.375em;
   border-radius: 4px;
-  background-color: var(--grey-300);
+  background-color: var(--neutral-100);
 }
 
 /* ============================================================================
    SELECTION
    ============================================================================ */
 ::selection {
-  background-color: rgba(0, 126, 96, 0.15);
+  background-color: rgba(217, 119, 87, 0.15);
   color: inherit;
 }
 
 /* ============================================================================
-   SCROLLBAR (Figma specs: 20.156px width, #D9D9D9, 4px radius)
+   SCROLLBAR
    ============================================================================ */
 ::-webkit-scrollbar {
   width: 8px;
@@ -456,14 +536,14 @@ code {
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background-color: var(--grey-800);
+  background-color: var(--neutral-400);
 }
 
 /* ============================================================================
-   FOCUS STATES
+   FOCUS STATES (Primary amber)
    ============================================================================ */
 :focus-visible {
-  outline: 2px solid var(--grey-1200);
+  outline: 2px solid var(--primary-500);
   outline-offset: 2px;
 }
 

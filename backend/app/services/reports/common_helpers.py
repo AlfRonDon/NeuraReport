@@ -111,7 +111,18 @@ def _select_prototype_block(html_text: str, row_tokens: Iterable[str]) -> tuple[
     if rowish:
         return rowish
 
-    block_full, _, _ = _find_or_infer_batch_block(html_text)
+    block_full, tag_name, _ = _find_or_infer_batch_block(html_text)
+
+    # --- Additive: for header-only templates (no row_tokens), use the full
+    #     containing element (e.g. entire <tbody>) instead of just one <tr>.
+    #     This keeps all header-token <tr> rows inside the prototype block
+    #     so they get filled together rather than being left in the shell. ---
+    row_token_list = list(row_tokens) if row_tokens else []
+    if not row_token_list and tag_name == "tr":
+        m_tbody = re.search(r"(?is)<tbody\b[^>]*>.*?</tbody>", html_text)
+        if m_tbody:
+            block_full = m_tbody.group(0)
+
     start0 = html_text.find(block_full)
     if start0 < 0:
         raise RuntimeError("Inferred batch block could not be located in HTML via .find()")
@@ -532,11 +543,67 @@ def detect_date_column(db_path, table_name: str) -> str | None:
     This is a safety-net fallback — contracts should specify date_columns
     explicitly whenever possible.
     """
-    import sqlite3 as _sqlite3
-    from pathlib import Path as _Path
+    import os as _os
 
     if not table_name:
         return None
+
+    _use_df = _os.getenv("NEURA_USE_DATAFRAME_PIPELINE", "false").lower() in ("1", "true", "yes")
+
+    if _use_df:
+        return _detect_date_column_df(db_path, table_name)
+    return _detect_date_column_sql(db_path, table_name)
+
+
+def _detect_date_column_df(db_path, table_name: str) -> str | None:
+    """DataFrame-based date column detection — no SQL."""
+    from pathlib import Path as _Path
+
+    try:
+        from backend.app.repositories.dataframes.sqlite_loader import get_loader
+        loader = get_loader(_Path(str(db_path)))
+        df = loader.frame(table_name)
+    except Exception:
+        return None
+
+    if df is None or df.empty:
+        return None
+
+    _DATE_PATTERNS = ("date", "timestamp", "_dt", "_ts", "time")
+    _PREFER_PATTERNS = ("date",)
+
+    candidates: list[tuple[int, str]] = []
+    for col in df.columns:
+        col_lower = str(col).lower()
+        if any(pat in col_lower for pat in _DATE_PATTERNS):
+            priority = 0 if any(p in col_lower for p in _PREFER_PATTERNS) else 1
+            candidates.append((priority, str(col)))
+
+    if candidates:
+        candidates.sort(key=lambda x: x[0])
+        return candidates[0][1]
+
+    # Strategy 2: value-based detection
+    for col in df.columns:
+        col_type = loader.column_type(table_name, str(col))
+        if col_type in ("INTEGER", "REAL"):
+            continue
+        non_null = df[col].dropna()
+        if non_null.empty:
+            continue
+        values = [str(v).strip() for v in non_null.head(5) if str(v).strip()]
+        if not values:
+            continue
+        date_hits = sum(1 for v in values if _parse_date_like(v) is not None)
+        if date_hits >= 3 or (date_hits == len(values) and len(values) >= 1):
+            return str(col)
+
+    return None
+
+
+def _detect_date_column_sql(db_path, table_name: str) -> str | None:
+    """SQL-based date column detection — original implementation."""
+    import sqlite3 as _sqlite3
 
     db_str = str(db_path) if not isinstance(db_path, str) else db_path
 
@@ -554,7 +621,6 @@ def detect_date_column(db_path, table_name: str) -> str | None:
     if not columns:
         return None
 
-    # Strategy 1: name-based detection
     _DATE_PATTERNS = ("date", "timestamp", "_dt", "_ts", "time")
     _PREFER_PATTERNS = ("date",)
 
@@ -570,7 +636,6 @@ def detect_date_column(db_path, table_name: str) -> str | None:
         candidates.sort(key=lambda x: x[0])
         return candidates[0][1]
 
-    # Strategy 2: value-based detection (sample TEXT columns)
     for col_info in columns:
         col_name = col_info["name"]
         col_type = col_info["type"]

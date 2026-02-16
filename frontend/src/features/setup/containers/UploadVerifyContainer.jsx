@@ -11,7 +11,7 @@ import CheckRoundedIcon from '@mui/icons-material/CheckRounded'
 import CloudUploadOutlinedIcon from '@mui/icons-material/CloudUploadOutlined'
 import ScheduleIcon from '@mui/icons-material/Schedule'
 import { alpha } from '@mui/material/styles'
-import { figmaGrey } from '@/app/theme'
+import { neutral, status, palette } from '@/app/theme'
 import { useAppStore } from '@/stores'
 import { useToast } from '@/components/ToastProvider.jsx'
 import { useInteraction, InteractionType, Reversibility, useNavigateInteraction } from '@/components/ux/governance'
@@ -97,8 +97,8 @@ function StepIndicator(props) {
         fontWeight: 600,
         fontSize: 14,
         border: '2px solid',
-        borderColor: (theme) => completed ? (theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200]) : active ? (theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100]) : 'divider',
-        bgcolor: (theme) => completed ? (theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200]) : active ? (theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100]) : 'background.paper',
+        borderColor: (theme) => completed ? (theme.palette.mode === 'dark' ? neutral[700] : neutral[900]) : active ? (theme.palette.mode === 'dark' ? neutral[500] : neutral[700]) : 'divider',
+        bgcolor: (theme) => completed ? (theme.palette.mode === 'dark' ? neutral[700] : neutral[900]) : active ? (theme.palette.mode === 'dark' ? neutral[500] : neutral[700]) : 'background.paper',
         color: completed || active ? 'common.white' : 'text.secondary',
         boxShadow: (theme) => active ? `0 6px 16px ${alpha(theme.palette.common.black, 0.15)}` : 'none',
         transition: 'all 160ms ease',
@@ -882,7 +882,7 @@ export default function UploadVerify() {
             label={connection?.status === 'connected' ? 'Connected' : 'Unknown'}
             size="small"
             variant={connection?.status === 'connected' ? 'filled' : 'outlined'}
-            sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400], color: 'text.secondary' }}
+            sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[200], color: 'text.secondary' }}
           />
         </Stack>
       </Stack>
@@ -906,7 +906,7 @@ export default function UploadVerify() {
             border: '1px dashed',
             borderColor: (theme) => {
               if (dropDisabled) return alpha(theme.palette.action.disabled, 0.4)
-              if (file) return theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100]
+              if (file) return theme.palette.mode === 'dark' ? neutral[500] : neutral[700]
               return alpha(theme.palette.divider, 0.5)
             },
             px: { xs: 2.5, sm: 3.5 },
@@ -916,21 +916,21 @@ export default function UploadVerify() {
             cursor: dropDisabled ? 'not-allowed' : 'pointer',
             bgcolor: (theme) => {
               if (dropDisabled) return alpha(theme.palette.action.disabledBackground, 0.4)
-              if (file) return theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200]
-              return theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : figmaGrey[200]
+              if (file) return theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : neutral[50]
+              return theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : neutral[50]
             },
             color: 'text.secondary',
             transition: 'border-color 160ms ease, background-color 160ms ease, box-shadow 160ms ease',
             '&:hover': dropDisabled
               ? {}
               : {
-                  borderColor: (theme) => theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
-                  bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
+                  borderColor: (theme) => theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
+                  bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
                 },
             '&:focus-visible': dropDisabled
               ? {}
               : {
-                  borderColor: (theme) => theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
+                  borderColor: (theme) => theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
                   boxShadow: (theme) => `0 0 0 3px ${alpha(theme.palette.text.primary, 0.1)}`,
                 },
           }}
@@ -1010,7 +1010,7 @@ export default function UploadVerify() {
               label={format || 'Unknown'}
               size="small"
               variant={format === 'PDF' || format === 'Excel' ? 'filled' : 'outlined'}
-              sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[400], color: 'text.secondary' }}
+              sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[200], color: 'text.secondary' }}
             />
             <Button variant="text" size="small" onClick={clearFile} sx={{ color: 'text.secondary' }}>
               Remove

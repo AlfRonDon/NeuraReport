@@ -53,6 +53,7 @@ class KnowledgeService:
         request: LibraryDocumentCreate,
     ) -> LibraryDocumentResponse:
         """Add a document to the library."""
+        self._load_library()
         doc_id = str(uuid.uuid4())
         now = _now()
 
@@ -102,6 +103,7 @@ class KnowledgeService:
 
         # Update last accessed
         doc["last_accessed_at"] = _now()
+        self._persist_library()
         return self._to_document_response(doc)
 
     async def list_documents(
@@ -147,6 +149,7 @@ class KnowledgeService:
         request: LibraryDocumentUpdate,
     ) -> Optional[LibraryDocumentResponse]:
         """Update a document."""
+        self._load_library()
         doc = self._documents.get(doc_id)
         if not doc:
             return None
@@ -186,6 +189,7 @@ class KnowledgeService:
 
     async def delete_document(self, doc_id: str) -> bool:
         """Delete a document."""
+        self._load_library()
         if doc_id not in self._documents:
             return False
 
@@ -208,6 +212,7 @@ class KnowledgeService:
 
     async def toggle_favorite(self, doc_id: str) -> bool:
         """Toggle favorite status for a document."""
+        self._load_library()
         if doc_id not in self._documents:
             return False
 
@@ -230,6 +235,7 @@ class KnowledgeService:
         request: CollectionCreate,
     ) -> CollectionResponse:
         """Create a new collection."""
+        self._load_library()
         coll_id = str(uuid.uuid4())
         now = _now()
 
@@ -272,6 +278,7 @@ class KnowledgeService:
         request: CollectionUpdate,
     ) -> Optional[CollectionResponse]:
         """Update a collection."""
+        self._load_library()
         coll = self._collections.get(coll_id)
         if not coll:
             return None
@@ -289,6 +296,7 @@ class KnowledgeService:
 
     async def delete_collection(self, coll_id: str) -> bool:
         """Delete a collection."""
+        self._load_library()
         if coll_id not in self._collections:
             return False
 
@@ -306,6 +314,7 @@ class KnowledgeService:
 
     async def create_tag(self, request: TagCreate) -> TagResponse:
         """Create a new tag."""
+        self._load_library()
         tag_id = str(uuid.uuid4())
         now = _now()
 
@@ -331,6 +340,7 @@ class KnowledgeService:
 
     async def delete_tag(self, tag_id: str) -> bool:
         """Delete a tag."""
+        self._load_library()
         tag = self._tags.get(tag_id)
         if not tag:
             return False
@@ -346,6 +356,141 @@ class KnowledgeService:
         self._persist_library()
 
         return True
+
+    # Collection-document association methods
+
+    async def add_document_to_collection(self, collection_id: str, document_id: str) -> bool:
+        """Add a document to a collection."""
+        self._load_library()
+        coll = self._collections.get(collection_id)
+        doc = self._documents.get(document_id)
+        if not coll or not doc:
+            return False
+
+        doc_ids = coll.setdefault("document_ids", [])
+        if document_id not in doc_ids:
+            doc_ids.append(document_id)
+
+        colls = doc.setdefault("collections", [])
+        if collection_id not in colls:
+            colls.append(collection_id)
+
+        now = _now()
+        coll["updated_at"] = now
+        doc["updated_at"] = now
+        self._persist_library()
+        return True
+
+    async def remove_document_from_collection(self, collection_id: str, document_id: str) -> bool:
+        """Remove a document from a collection."""
+        self._load_library()
+        coll = self._collections.get(collection_id)
+        doc = self._documents.get(document_id)
+        if not coll or not doc:
+            return False
+
+        coll["document_ids"] = [d for d in coll.get("document_ids", []) if d != document_id]
+        doc["collections"] = [c for c in doc.get("collections", []) if c != collection_id]
+
+        now = _now()
+        coll["updated_at"] = now
+        doc["updated_at"] = now
+        self._persist_library()
+        return True
+
+    # Document-tag association methods
+
+    async def add_tag_to_document(self, document_id: str, tag_id: str) -> bool:
+        """Add a tag to a document by tag ID."""
+        self._load_library()
+        doc = self._documents.get(document_id)
+        tag = self._tags.get(tag_id)
+        if not doc or not tag:
+            return False
+
+        tag_name = str(tag.get("name") or "").strip()
+        if not tag_name:
+            return False
+
+        doc_tags = doc.setdefault("tags", [])
+        if tag_name not in doc_tags:
+            doc_tags.append(tag_name)
+            doc["updated_at"] = _now()
+            self._persist_library()
+        return True
+
+    async def remove_tag_from_document(self, document_id: str, tag_id: str) -> bool:
+        """Remove a tag from a document by tag ID."""
+        self._load_library()
+        doc = self._documents.get(document_id)
+        tag = self._tags.get(tag_id)
+        if not doc or not tag:
+            return False
+
+        tag_name = str(tag.get("name") or "").strip()
+        if not tag_name:
+            return False
+
+        doc["tags"] = [t for t in doc.get("tags", []) if t != tag_name]
+        doc["updated_at"] = _now()
+        self._persist_library()
+        return True
+
+    async def get_document_activity(self, doc_id: str) -> Optional[list[dict[str, Any]]]:
+        """Return a lightweight activity stream for a document."""
+        self._load_library()
+        doc = self._documents.get(doc_id)
+        if not doc:
+            return None
+
+        activity: list[dict[str, Any]] = []
+        metadata_activity = doc.get("activity")
+        if isinstance(metadata_activity, list):
+            for entry in metadata_activity:
+                if isinstance(entry, dict):
+                    activity.append(copy.deepcopy(entry))
+
+        if not activity:
+            created_at = doc.get("created_at")
+            updated_at = doc.get("updated_at")
+            last_accessed_at = doc.get("last_accessed_at")
+            if created_at:
+                activity.append({"event": "created", "timestamp": created_at, "document_id": doc_id})
+            if updated_at and updated_at != created_at:
+                activity.append({"event": "updated", "timestamp": updated_at, "document_id": doc_id})
+            if last_accessed_at:
+                activity.append({"event": "accessed", "timestamp": last_accessed_at, "document_id": doc_id})
+
+        return activity
+
+    async def get_stats(self) -> dict[str, Any]:
+        """Return aggregate library metrics."""
+        self._load_library()
+        docs = list(self._documents.values())
+        colls = list(self._collections.values())
+        tags = list(self._tags.values())
+
+        document_types: dict[str, int] = {}
+        storage_used_bytes = 0
+        favorites = 0
+
+        for doc in docs:
+            kind = str(doc.get("document_type") or "other")
+            document_types[kind] = document_types.get(kind, 0) + 1
+            file_size = doc.get("file_size")
+            if isinstance(file_size, int) and file_size > 0:
+                storage_used_bytes += file_size
+            if bool(doc.get("is_favorite")):
+                favorites += 1
+
+        return {
+            "total_documents": len(docs),
+            "total_collections": len(colls),
+            "total_tags": len(tags),
+            "total_favorites": favorites,
+            "storage_used_bytes": storage_used_bytes,
+            "document_types": document_types,
+        }
 
     # Search methods
 
@@ -444,6 +589,7 @@ class KnowledgeService:
         max_tags: int = 5,
     ) -> dict:
         """Auto-suggest tags for a document."""
+        self._load_library()
         doc = self._documents.get(doc_id)
         if not doc:
             return {"document_id": doc_id, "suggested_tags": [], "confidence_scores": {}}
@@ -479,6 +625,7 @@ class KnowledgeService:
         limit: int = 10,
     ) -> RelatedDocumentsResponse:
         """Find documents related to a given document."""
+        self._load_library()
         doc = self._documents.get(doc_id)
         if not doc:
             return RelatedDocumentsResponse(document_id=doc_id, related=[])
@@ -627,10 +774,16 @@ class KnowledgeService:
                 self._documents.clear()
                 self._collections.clear()
                 self._tags.clear()
+                self._favorites.clear()
                 # Load fresh data from store
                 self._documents.update(library.get("documents", {}))
                 self._collections.update(library.get("collections", {}))
                 self._tags.update(library.get("tags", {}))
+                self._favorites.update(
+                    doc_id
+                    for doc_id, doc in self._documents.items()
+                    if bool(doc.get("is_favorite"))
+                )
         except Exception as e:
             logger.warning(f"Failed to load library from state: {e}")
 

@@ -68,7 +68,7 @@ class DashboardService:
 
         logger.info(
             "dashboard_created",
-            extra={"event": "dashboard_created", "dashboard_id": dashboard_id, "name": name},
+            extra={"event": "dashboard_created", "dashboard_id": dashboard_id, "dashboard_name": name},
         )
         return dashboard
 

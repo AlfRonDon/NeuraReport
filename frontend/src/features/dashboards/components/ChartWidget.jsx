@@ -18,7 +18,7 @@ import {
   alpha,
   styled,
 } from '@mui/material'
-import { figmaGrey } from '@/app/theme'
+import { neutral, palette } from '@/app/theme'
 import {
   MoreVert as MoreIcon,
   Delete as DeleteIcon,
@@ -122,18 +122,18 @@ const generateChartOptions = (chartType, data, config, theme) => {
         fontSize: 12,
       },
     },
-    // Chart colors - all neutral greys per Figma design (no colored accents)
+    // Chart colors — secondary palette values per Design System v4/v5
     color: [
-      theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],  // Grey/1000 : Grey/1100
-      theme.palette.mode === 'dark' ? '#A1A19A' : figmaGrey[900],  // Lighter grey
-      theme.palette.mode === 'dark' ? '#6B6B66' : '#4A4A46',  // Darker grey
-      theme.palette.mode === 'dark' ? figmaGrey[600] : figmaGrey[700],  // Grey/600 : Grey/700
-      theme.palette.mode === 'dark' ? figmaGrey[600] : figmaGrey[500],  // Grey/600 : Grey/500
-      theme.palette.mode === 'dark' ? '#52524E' : '#3A3A36',  // Very dark grey
-      theme.palette.mode === 'dark' ? '#C8C8C2' : '#B5B5AF',  // Mid grey
-      theme.palette.mode === 'dark' ? '#9A9A94' : '#7A7A74',  // Medium grey
-      theme.palette.mode === 'dark' ? '#E5E5DF' : '#D5D5CF',  // Light grey
-      theme.palette.mode === 'dark' ? '#707068' : '#555550',  // Dark grey
+      neutral[700],
+      neutral[500],
+      neutral[900],
+      neutral[400],
+      neutral[300],
+      neutral[200],
+      neutral[100],
+      neutral[500],
+      neutral[300],
+      neutral[400],
     ],
   }
 

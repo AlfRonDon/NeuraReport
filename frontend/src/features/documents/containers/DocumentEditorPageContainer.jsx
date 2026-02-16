@@ -50,7 +50,7 @@ import {
   NoteAdd as NewIcon,
   ContentCopy as CopyIcon,
 } from '@mui/icons-material'
-import { figmaGrey } from '@/app/theme'
+import { neutral, palette } from '@/app/theme'
 import useDocumentStore from '@/stores/documentStore'
 import useSharedData from '@/hooks/useSharedData'
 import useIncomingTransfer from '@/hooks/useIncomingTransfer'
@@ -126,11 +126,11 @@ const DocumentItem = styled(Paper, {
   padding: theme.spacing(1.5),
   marginBottom: theme.spacing(1),
   cursor: 'pointer',
-  border: `1px solid ${isActive ? (theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100]) : 'transparent'}`,
-  backgroundColor: isActive ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : figmaGrey[200]) : 'transparent',
+  border: `1px solid ${isActive ? (theme.palette.mode === 'dark' ? neutral[500] : neutral[700]) : 'transparent'}`,
+  backgroundColor: isActive ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : neutral[50]) : 'transparent',
   transition: 'all 0.15s ease',
   '&:hover': {
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
     borderColor: alpha(theme.palette.divider, 0.3),
   },
 }))
@@ -139,7 +139,7 @@ const ActionButton = styled(Button)(({ theme }) => ({
   borderRadius: 8,
   textTransform: 'none',
   fontWeight: 500,
-  fontSize: '0.8125rem',
+  fontSize: '14px',
 }))
 
 const EmptyState = styled(Box)(({ theme }) => ({
@@ -155,7 +155,7 @@ const EmptyState = styled(Box)(({ theme }) => ({
 const AIResultCard = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(2),
   marginTop: theme.spacing(2),
-  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : figmaGrey[200],
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : neutral[50],
   border: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
   borderRadius: 8,  // Figma spec: 8px
 }))
@@ -684,7 +684,7 @@ export default function DocumentEditorPage() {
                 onClick={handleToggleVersions}
                 data-testid="doc-history-button"
                 sx={{
-                  bgcolor: showVersions ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300]) : 'transparent',
+                  bgcolor: showVersions ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100]) : 'transparent',
                 }}
               >
                 History
@@ -696,7 +696,7 @@ export default function DocumentEditorPage() {
                 onClick={handleToggleComments}
                 data-testid="doc-comments-button"
                 sx={{
-                  bgcolor: showComments ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300]) : 'transparent',
+                  bgcolor: showComments ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100]) : 'transparent',
                 }}
               >
                 Comments {comments.length > 0 && `(${comments.length})`}

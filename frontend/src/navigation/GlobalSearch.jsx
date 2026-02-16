@@ -21,7 +21,7 @@ import {
   ClickAwayListener,
   keyframes,
 } from '@mui/material'
-import { figmaGrey } from '@/app/theme'
+import { neutral, palette } from '@/app/theme'
 import SearchIcon from '@mui/icons-material/Search'
 import DescriptionIcon from '@mui/icons-material/Description'
 import StorageIcon from '@mui/icons-material/Storage'
@@ -80,10 +80,10 @@ function SearchResult({ result, onSelect, isSelected, theme }) {
         px: 2,
         py: 1.5,
         cursor: 'pointer',
-        bgcolor: isSelected ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300]) : 'transparent',
+        bgcolor: isSelected ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100]) : 'transparent',
         transition: 'all 0.15s ease',
         '&:hover': {
-          bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
+          bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
         },
       }}
     >
@@ -93,7 +93,7 @@ function SearchResult({ result, onSelect, isSelected, theme }) {
             width: 28,
             height: 28,
             borderRadius: '8px',
-            bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
+            bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -106,7 +106,7 @@ function SearchResult({ result, onSelect, isSelected, theme }) {
         primary={result.name}
         secondary={result.description}
         primaryTypographyProps={{
-          fontSize: '0.8125rem',
+          fontSize: '14px',
           fontWeight: 500,
           color: theme.palette.text.primary,
         }}
@@ -119,7 +119,7 @@ function SearchResult({ result, onSelect, isSelected, theme }) {
         label={config.label}
         size="small"
         sx={{
-          bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
+          bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
           color: 'text.secondary',
           fontSize: '0.625rem',
           height: 20,
@@ -340,10 +340,10 @@ export default function GlobalSearch({
                 borderColor: alpha(theme.palette.divider, 0.3),
               },
               '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                borderColor: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
+                borderColor: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
               },
               '& input': {
-                fontSize: '0.8125rem',
+                fontSize: '14px',
                 color: theme.palette.text.primary,
                 '&::placeholder': {
                   color: theme.palette.text.secondary,
@@ -375,7 +375,7 @@ export default function GlobalSearch({
           >
             {results.length === 0 ? (
               <Box sx={{ p: 2, textAlign: 'center' }}>
-                <Typography sx={{ color: theme.palette.text.secondary, fontSize: '0.8125rem' }}>
+                <Typography sx={{ color: theme.palette.text.secondary, fontSize: '14px' }}>
                   No results found
                 </Typography>
               </Box>

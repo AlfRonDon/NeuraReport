@@ -42,7 +42,7 @@ import {
   CloudSync as SyncIcon,
   Settings as SystemIcon,
 } from '@mui/icons-material'
-import { figmaGrey } from '@/app/theme'
+import { neutral, status, palette } from '@/app/theme'
 
 // ============================================================================
 // BACKGROUND OPERATION TYPES
@@ -280,7 +280,7 @@ export function BackgroundOperationsProvider({ children }) {
       case BackgroundOperationStatus.FAILED:
         return <ErrorIcon sx={{ color: theme.palette.text.secondary }} />
       case BackgroundOperationStatus.RUNNING:
-        return <RunningIcon sx={{ color: theme.palette.mode === 'dark' ? figmaGrey[600] : figmaGrey[1200] }} />
+        return <RunningIcon sx={{ color: theme.palette.mode === 'dark' ? neutral[300] : neutral[900] }} />
       case BackgroundOperationStatus.CANCELLED:
         return <CancelIcon sx={{ color: theme.palette.text.secondary }} />
       default:
@@ -379,8 +379,8 @@ export function BackgroundOperationsProvider({ children }) {
                 label={`${activeCount} active`}
                 sx={{
                   height: 22,
-                  fontSize: '0.6875rem',
-                  bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
+                  fontSize: '12px',
+                  bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
                   color: 'text.primary',
                 }}
               />
@@ -437,7 +437,7 @@ export function BackgroundOperationsProvider({ children }) {
                         width: 36,
                         height: 36,
                         borderRadius: 1,  // Figma spec: 8px
-                        bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
+                        bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -470,7 +470,7 @@ export function BackgroundOperationsProvider({ children }) {
                           sx={{
                             color: theme.palette.text.secondary,
                             '&:hover': {
-                              bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
+                              bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
                             },
                           }}
                         >
@@ -487,9 +487,9 @@ export function BackgroundOperationsProvider({ children }) {
                       sx={{
                         height: 4,
                         borderRadius: 1,  // Figma spec: 8px
-                        bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
+                        bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
                         '& .MuiLinearProgress-bar': {
-                          bgcolor: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
+                          bgcolor: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
                         },
                       }}
                     />
@@ -609,7 +609,7 @@ export function BackgroundTasksButton() {
     <IconButton
       onClick={openDrawer}
       sx={{
-        color: activeCount > 0 ? (theme.palette.mode === 'dark' ? figmaGrey[600] : figmaGrey[1200]) : theme.palette.text.secondary,
+        color: activeCount > 0 ? (theme.palette.mode === 'dark' ? neutral[300] : neutral[900]) : theme.palette.text.secondary,
       }}
     >
       <Badge
@@ -617,11 +617,11 @@ export function BackgroundTasksButton() {
         max={99}
         sx={{
           '& .MuiBadge-badge': {
-            fontSize: '0.6rem',
+            fontSize: '10px',
             height: 16,
             minWidth: 16,
-            bgcolor: theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200],
-            color: '#fff',
+            bgcolor: theme.palette.mode === 'dark' ? neutral[700] : neutral[900],
+            color: 'common.white',
           },
         }}
       >

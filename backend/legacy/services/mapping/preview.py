@@ -13,7 +13,7 @@ from backend.app.repositories.connections.db_connection import verify_sqlite
 from backend.app.services.mapping.AutoMapInline import MappingInlineValidationError, run_llm_call_3
 from backend.app.services.mapping.CorrectionsPreview import run_corrections_preview as corrections_preview_fn
 from backend.app.services.mapping.HeaderMapping import approval_errors, get_parent_child_info
-from backend.app.services.prompts.llm_prompts import PROMPT_VERSION
+from backend.app.services.prompts.llm_prompts import PROMPT_VERSION, _is_df_mode
 from backend.app.repositories.state import store as state_store_module
 from backend.app.services.utils import TemplateLockError, acquire_template_lock, write_artifact_manifest, write_json_atomic, write_text_atomic
 from backend.legacy.utils.connection_utils import db_path_from_payload_or_default
@@ -22,7 +22,9 @@ from backend.legacy.utils.template_utils import artifact_url, find_reference_pdf
 
 from .helpers import (
     build_catalog_from_db,
+    build_rich_catalog_from_db,
     compute_db_signature,
+    format_catalog_rich,
     http_error,
     load_mapping_step3,
     load_schema_ext,
@@ -74,6 +76,14 @@ def _mapping_preview_pipeline(
     verify_sqlite_fn(db_path)
 
     catalog = list(dict.fromkeys(build_catalog_fn(db_path)))
+
+    # Build rich catalog for DataFrame mode (includes types + sample values)
+    _rich_catalog_text: str | None = None
+    if _is_df_mode():
+        try:
+            _rich_catalog_text = format_catalog_rich(build_rich_catalog_from_db(db_path))
+        except Exception:
+            logger.warning("rich_catalog_build_degraded", extra={"template_id": template_id})
 
     try:
         schema_info = get_parent_child_info_fn(db_path)
@@ -187,6 +197,7 @@ def _mapping_preview_pipeline(
                 PROMPT_VERSION,
                 str(png_path) if png_path else "",
                 cache_key,
+                rich_catalog_text=_rich_catalog_text,
             )
         except MappingInlineValidationError as exc:
             logger.exception("mapping_llm_validation_error")

@@ -166,6 +166,15 @@ export async function getTemplateCatalog() {
   return MOCK_TEMPLATE_CATALOG.map((tpl) => ({ ...tpl }))
 }
 
+export async function createTemplateFromGalleryMock({ galleryId, kind = 'pdf' } = {}) {
+  await sleep(200)
+  return {
+    status: 'ok',
+    template_id: `mock-gallery-${galleryId || 'template'}-${Date.now()}`,
+    kind,
+  }
+}
+
 export async function recommendTemplates({ requirement, limit = 5 } = {}) {
   await sleep(200)
   const term = typeof requirement === 'string' ? requirement.toLowerCase() : ''

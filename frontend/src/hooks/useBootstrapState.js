@@ -24,13 +24,18 @@ const safeTemplateCache = (tpl) => ({
   kind: tpl?.kind || 'pdf',
 })
 
+const sanitizeConnections = (connections) => {
+  if (!Array.isArray(connections)) return []
+  return connections.filter((conn) => conn && typeof conn === 'object' && conn.id)
+}
+
 export const loadPersistedCache = () => {
   try {
     const raw = localStorage.getItem(CACHE_KEY)
     if (!raw) return null
     const parsed = JSON.parse(raw)
     return {
-      connections: Array.isArray(parsed?.connections) ? parsed.connections : [],
+      connections: sanitizeConnections(parsed?.connections),
       templates: Array.isArray(parsed?.templates) ? parsed.templates : [],
       lastUsed: parsed?.lastUsed || { connectionId: null, templateId: null },
       timestamp: parsed?.timestamp || 0,

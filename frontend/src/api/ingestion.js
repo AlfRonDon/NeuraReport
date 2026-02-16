@@ -4,6 +4,15 @@
  */
 import { api } from './client';
 
+function asArray(payload, keys = []) {
+  if (Array.isArray(payload)) return payload;
+  if (!payload || typeof payload !== 'object') return [];
+  for (const key of keys) {
+    if (Array.isArray(payload[key])) return payload[key];
+  }
+  return [];
+}
+
 // ============================================
 // File Upload
 // ============================================
@@ -44,7 +53,12 @@ export async function uploadBulk(files, options = {}) {
     headers: { 'Content-Type': 'multipart/form-data' },
     onUploadProgress: options.onProgress,
   });
-  return response.data;
+  const payload = response.data;
+  if (Array.isArray(payload)) return payload;
+  if (payload && typeof payload === 'object') {
+    return asArray(payload, ['results', 'uploads', 'files', 'items']);
+  }
+  return [];
 }
 
 export async function uploadZip(file, options = {}) {
@@ -131,7 +145,7 @@ export async function createWatcher(folderPath, options = {}) {
 
 export async function listWatchers() {
   const response = await api.get('/ingestion/watchers');
-  return response.data;
+  return asArray(response.data, ['watchers', 'items', 'results']);
 }
 
 export async function getWatcher(watcherId) {
@@ -210,7 +224,7 @@ export async function connectImapAccount(config) {
 
 export async function listImapAccounts() {
   const response = await api.get('/ingestion/email/imap/accounts');
-  return response.data;
+  return asArray(response.data, ['accounts', 'items', 'results']);
 }
 
 export async function syncImapAccount(accountId, options = {}) {

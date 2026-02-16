@@ -20,7 +20,7 @@ import {
   HelpOutline as QuestionIcon,
 } from '@mui/icons-material'
 import Modal from './Modal'
-import { figmaGrey } from '@/app/theme'
+import { neutral, palette } from '@/app/theme'
 
 // =============================================================================
 // ANIMATIONS
@@ -85,7 +85,7 @@ const IconContainer = styled(Box, {
     borderRadius: 21,
     padding: 1,
     background: `linear-gradient(135deg, ${alpha(theme.palette.common.white, 0.2)}, transparent)`,
-    WebkitMask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
+    WebkitMask: `linear-gradient(${theme.palette.common.white} 0 0) content-box, linear-gradient(${theme.palette.common.white} 0 0)`,
     WebkitMaskComposite: 'xor',
     maskComposite: 'exclude',
     pointerEvents: 'none',
@@ -93,7 +93,7 @@ const IconContainer = styled(Box, {
 }))
 
 const MessageText = styled(Typography)(({ theme }) => ({
-  fontSize: '0.9375rem',
+  fontSize: '0.875rem',
   color: theme.palette.text.secondary,
   lineHeight: 1.6,
   maxWidth: 320,
@@ -106,7 +106,7 @@ const MessageText = styled(Typography)(({ theme }) => ({
 
 const getSeverityConfig = (theme, severity) => {
   const neutralColor = theme.palette.text.secondary
-  const neutralBg = theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300]
+  const neutralBg = theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100]
   const configs = {
     warning: {
       icon: WarningIcon,

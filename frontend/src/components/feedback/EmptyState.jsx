@@ -4,7 +4,7 @@
  */
 import { Stack, Typography, Box, useTheme, alpha } from '@mui/material'
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
-import { figmaGrey } from '@/app/theme'
+import { neutral, palette } from '@/app/theme'
 
 export default function EmptyState({
   icon: Icon = InfoOutlinedIcon,
@@ -52,7 +52,7 @@ export default function EmptyState({
           width: iconSize,
           height: iconSize,
           borderRadius: '8px',  // Figma spec: 8px
-          bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
+          bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
           border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
           color: resolvedIconColor,
         }}

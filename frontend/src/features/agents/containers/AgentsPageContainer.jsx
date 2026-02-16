@@ -1,8 +1,8 @@
 /**
  * AI Agents Page Container
- * Interface for running AI agents (research, data analysis, email, content, proofreading).
+ * Interface for running AI agents (research, data analysis, email, content, proofreading, report analyst).
  */
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import {
   Box,
   Typography,
@@ -30,6 +30,14 @@ import {
   useTheme,
   alpha,
   styled,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Stack,
+  LinearProgress,
+  Autocomplete,
+  Tooltip,
 } from '@mui/material'
 import {
   Science as ResearchIcon,
@@ -42,8 +50,19 @@ import {
   ContentCopy as CopyIcon,
   Download as DownloadIcon,
   SmartToy as AgentIcon,
+  Assessment as ReportAnalystIcon,
+  Description as ReportIcon,
+  TrendingUp as TrendUpIcon,
+  TrendingDown as TrendDownIcon,
+  TrendingFlat as TrendFlatIcon,
+  Lightbulb as InsightIcon,
+  CheckCircle as CheckIcon,
+  QuestionAnswer as QAIcon,
+  CompareArrows as CompareIcon,
 } from '@mui/icons-material'
-import { figmaGrey } from '@/app/theme'
+import * as clientApi from '@/api/client'
+import { useSearchParams } from 'react-router-dom'
+import { neutral, palette } from '@/app/theme'
 import useAgentStore from '@/stores/agentStore'
 import useSharedData from '@/hooks/useSharedData'
 import useCrossPageActions from '@/hooks/useCrossPageActions'
@@ -93,7 +112,7 @@ const Sidebar = styled(Box)(({ theme }) => ({
 const AgentCard = styled(Card)(({ theme, selected }) => ({
   cursor: 'pointer',
   transition: 'all 0.2s ease',
-  border: selected ? `2px solid ${theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100]}` : `1px solid ${alpha(theme.palette.divider, 0.2)}`,
+  border: selected ? `2px solid ${theme.palette.mode === 'dark' ? neutral[500] : neutral[700]}` : `1px solid ${alpha(theme.palette.divider, 0.2)}`,
   '&:hover': {
     transform: 'translateY(-2px)',
     boxShadow: `0 8px 24px ${alpha(theme.palette.text.primary, 0.15)}`,
@@ -103,7 +122,7 @@ const AgentCard = styled(Card)(({ theme, selected }) => ({
 const ResultCard = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(2),
   marginTop: theme.spacing(2),
-  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200],
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : neutral[50],
   border: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
 }))
 
@@ -112,6 +131,289 @@ const ActionButton = styled(Button)(({ theme }) => ({
   textTransform: 'none',
   fontWeight: 500,
 }))
+
+// =============================================================================
+// TREND ICON HELPER
+// =============================================================================
+
+const TrendIcon = ({ trend }) => {
+  if (trend === 'up') return <TrendUpIcon fontSize="small" color="success" />
+  if (trend === 'down') return <TrendDownIcon fontSize="small" color="error" />
+  if (trend === 'stable') return <TrendFlatIcon fontSize="small" color="action" />
+  return null
+}
+
+// =============================================================================
+// REPORT ANALYST STRUCTURED RESULT
+// =============================================================================
+
+const AnalysisSectionTitle = styled(Typography)(({ theme }) => ({
+  fontWeight: 600,
+  fontSize: '0.875rem',
+  display: 'flex',
+  alignItems: 'center',
+  gap: theme.spacing(1),
+  marginBottom: theme.spacing(1),
+}))
+
+const FindingCard = styled(Paper)(({ theme }) => ({
+  padding: theme.spacing(1.5),
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : neutral[50],
+  border: `1px solid ${alpha(theme.palette.divider, 0.15)}`,
+  borderRadius: 8,
+}))
+
+const HighlightRow = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  padding: theme.spacing(1, 1.5),
+  borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+  '&:last-child': { borderBottom: 'none' },
+}))
+
+function ReportAnalystResult({ output }) {
+  if (!output || typeof output !== 'object') return null
+
+  const { summary, answer, key_findings, data_highlights, recommendations, comparison, analysis_type } = output
+
+  return (
+    <Stack spacing={2.5}>
+      {/* Answer (QA mode) */}
+      {answer && (
+        <Box>
+          <AnalysisSectionTitle>
+            <QAIcon fontSize="small" color="primary" />
+            Answer
+          </AnalysisSectionTitle>
+          <Paper sx={{ p: 2, bgcolor: (t) => alpha(t.palette.primary.main, 0.06), borderRadius: 2, border: '1px solid', borderColor: (t) => alpha(t.palette.primary.main, 0.15) }}>
+            <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>{answer}</Typography>
+          </Paper>
+        </Box>
+      )}
+
+      {/* Summary */}
+      {summary && (
+        <Box>
+          <AnalysisSectionTitle>
+            <ReportIcon fontSize="small" color="action" />
+            Summary
+          </AnalysisSectionTitle>
+          <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', lineHeight: 1.7 }}>{summary}</Typography>
+        </Box>
+      )}
+
+      {/* Key Findings */}
+      {key_findings?.length > 0 && (
+        <Box>
+          <AnalysisSectionTitle>
+            <InsightIcon fontSize="small" sx={{ color: 'warning.main' }} />
+            Key Findings ({key_findings.length})
+          </AnalysisSectionTitle>
+          <Stack spacing={1}>
+            {key_findings.map((f, i) => (
+              <FindingCard key={i} elevation={0}>
+                <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 1 }}>
+                  <Typography variant="body2">{f.finding || f}</Typography>
+                  {f.confidence != null && (
+                    <Chip
+                      label={`${Math.round(f.confidence * 100)}%`}
+                      size="small"
+                      color={f.confidence >= 0.8 ? 'success' : f.confidence >= 0.6 ? 'warning' : 'default'}
+                      variant="outlined"
+                      sx={{ flexShrink: 0, fontSize: '12px', height: 22 }}
+                    />
+                  )}
+                </Box>
+                {f.source_section && (
+                  <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+                    Source: {f.source_section}
+                  </Typography>
+                )}
+              </FindingCard>
+            ))}
+          </Stack>
+        </Box>
+      )}
+
+      {/* Data Highlights */}
+      {data_highlights?.length > 0 && (
+        <Box>
+          <AnalysisSectionTitle>
+            <DataIcon fontSize="small" color="info" />
+            Data Highlights ({data_highlights.length})
+          </AnalysisSectionTitle>
+          <Paper variant="outlined" sx={{ borderRadius: 2, overflow: 'hidden' }}>
+            {data_highlights.map((d, i) => (
+              <HighlightRow key={i}>
+                <Box sx={{ flex: 1, minWidth: 0 }}>
+                  <Typography variant="body2" fontWeight={600} noWrap>{d.metric}</Typography>
+                  {d.context && <Typography variant="caption" color="text.secondary">{d.context}</Typography>}
+                </Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0 }}>
+                  <Typography variant="body2" fontWeight={500}>{d.value}</Typography>
+                  <TrendIcon trend={d.trend} />
+                </Box>
+              </HighlightRow>
+            ))}
+          </Paper>
+        </Box>
+      )}
+
+      {/* Comparison (Compare mode) */}
+      {comparison && (
+        <Box>
+          <AnalysisSectionTitle>
+            <CompareIcon fontSize="small" color="secondary" />
+            Comparison
+          </AnalysisSectionTitle>
+          <Stack spacing={1}>
+            {comparison.report_a_period && comparison.report_b_period && (
+              <Typography variant="caption" color="text.secondary">
+                Comparing: {comparison.report_a_period} vs {comparison.report_b_period}
+              </Typography>
+            )}
+            {comparison.improvements?.length > 0 && (
+              <Box>
+                <Typography variant="caption" fontWeight={600} color="success.main">Improvements:</Typography>
+                <ul style={{ margin: '4px 0', paddingLeft: 20 }}>
+                  {comparison.improvements.map((item, i) => (
+                    <li key={i}><Typography variant="caption">{item}</Typography></li>
+                  ))}
+                </ul>
+              </Box>
+            )}
+            {comparison.regressions?.length > 0 && (
+              <Box>
+                <Typography variant="caption" fontWeight={600} color="error.main">Regressions:</Typography>
+                <ul style={{ margin: '4px 0', paddingLeft: 20 }}>
+                  {comparison.regressions.map((item, i) => (
+                    <li key={i}><Typography variant="caption">{item}</Typography></li>
+                  ))}
+                </ul>
+              </Box>
+            )}
+          </Stack>
+        </Box>
+      )}
+
+      {/* Recommendations */}
+      {recommendations?.length > 0 && (
+        <Box>
+          <AnalysisSectionTitle>
+            <CheckIcon fontSize="small" color="success" />
+            Recommendations ({recommendations.length})
+          </AnalysisSectionTitle>
+          <Stack spacing={0.5}>
+            {recommendations.map((rec, i) => (
+              <Box key={i} sx={{ display: 'flex', alignItems: 'flex-start', gap: 1, pl: 0.5 }}>
+                <Typography variant="body2" color="text.secondary" sx={{ minWidth: 20, fontWeight: 600 }}>{i + 1}.</Typography>
+                <Typography variant="body2">{rec}</Typography>
+              </Box>
+            ))}
+          </Stack>
+        </Box>
+      )}
+    </Stack>
+  )
+}
+
+// =============================================================================
+// GENERATE REPORT FROM AGENT DIALOG
+// =============================================================================
+
+function GenerateReportDialog({ open, onClose, taskId, templates, connections, onGenerate }) {
+  const [templateId, setTemplateId] = useState('')
+  const [connectionId, setConnectionId] = useState('')
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+
+  useEffect(() => {
+    if (open) {
+      setTemplateId(templates?.[0]?.id || '')
+      setConnectionId(connections?.[0]?.id || '')
+      const today = new Date().toISOString().split('T')[0]
+      const monthAgo = new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0]
+      setStartDate(monthAgo)
+      setEndDate(today)
+    }
+  }, [open, templates, connections])
+
+  const handleSubmit = async () => {
+    setSubmitting(true)
+    try {
+      await onGenerate(taskId, {
+        templateId,
+        connectionId,
+        startDate,
+        endDate,
+      })
+      onClose()
+    } catch (err) {
+      // Error handled in parent
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+      <DialogTitle sx={{ fontWeight: 600 }}>Generate Report from Agent Result</DialogTitle>
+      <DialogContent>
+        <Stack spacing={2.5} sx={{ mt: 1 }}>
+          <FormControl fullWidth size="small">
+            <InputLabel>Template</InputLabel>
+            <Select value={templateId} onChange={(e) => setTemplateId(e.target.value)} label="Template">
+              {(templates || []).map((t) => (
+                <MenuItem key={t.id} value={t.id}>{t.name || t.id}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <FormControl fullWidth size="small">
+            <InputLabel>Connection</InputLabel>
+            <Select value={connectionId} onChange={(e) => setConnectionId(e.target.value)} label="Connection">
+              {(connections || []).map((c) => (
+                <MenuItem key={c.id} value={c.id}>{c.name || c.id}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <Stack direction="row" spacing={2}>
+            <TextField
+              label="Start Date"
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+              fullWidth
+              size="small"
+            />
+            <TextField
+              label="End Date"
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+              fullWidth
+              size="small"
+            />
+          </Stack>
+        </Stack>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>Cancel</Button>
+        <Button
+          variant="contained"
+          onClick={handleSubmit}
+          disabled={!templateId || !connectionId || submitting}
+          startIcon={submitting ? <CircularProgress size={16} /> : <ReportIcon />}
+        >
+          {submitting ? 'Generating...' : 'Generate Report'}
+        </Button>
+      </DialogActions>
+    </Dialog>
+  )
+}
 
 // =============================================================================
 // AGENT CONFIGS
@@ -178,6 +480,19 @@ const AGENTS = [
       { name: 'styleGuide', label: 'Style Guide', type: 'select', options: ['AP', 'Chicago', 'MLA', 'APA', 'None'], default: 'None' },
     ],
   },
+  {
+    type: 'report_analyst',
+    name: 'Report Analyst',
+    description: 'Analyze, summarize, compare, or ask questions about generated reports',
+    icon: ReportAnalystIcon,
+    color: 'error',
+    fields: [
+      { name: 'runId', label: 'Report Run', type: 'reportRunPicker', required: true, placeholder: 'Select or enter a report run ID' },
+      { name: 'analysisType', label: 'Analysis Type', type: 'select', options: ['summarize', 'insights', 'compare', 'qa'], default: 'summarize' },
+      { name: 'question', label: 'Question (for Q&A mode)', type: 'text', multiline: true, placeholder: 'What would you like to know about this report?' },
+      { name: 'compareRunId', label: 'Comparison Run ID (for compare mode)', type: 'reportRunPicker', placeholder: 'Select second report to compare against' },
+    ],
+  },
 ]
 
 // =============================================================================
@@ -187,6 +502,7 @@ const AGENTS = [
 export default function AgentsPageContainer() {
   const theme = useTheme()
   const toast = useToast()
+  const [searchParams, setSearchParams] = useSearchParams()
   const { execute } = useInteraction()
   const {
     tasks,
@@ -201,6 +517,8 @@ export default function AgentsPageContainer() {
     runEmailDraft,
     runContentRepurpose,
     runProofreading,
+    runReportAnalyst,
+    generateReportFromTask,
     fetchTasks,
     fetchAgentTypes,
     fetchRepurposeFormats,
@@ -215,6 +533,10 @@ export default function AgentsPageContainer() {
   const [formData, setFormData] = useState({})
   const [showHistory, setShowHistory] = useState(false)
   const [result, setResult] = useState(null)
+  const [recentRuns, setRecentRuns] = useState([])
+  const [runsLoading, setRunsLoading] = useState(false)
+  const [generateDialogOpen, setGenerateDialogOpen] = useState(false)
+  const resultRef = useRef(null)
 
   useEffect(() => {
     fetchAgentTypes()
@@ -222,6 +544,33 @@ export default function AgentsPageContainer() {
     fetchTasks()
     return () => reset()
   }, [fetchAgentTypes, fetchRepurposeFormats, fetchTasks, reset])
+
+  // Handle deep-link from Reports page: ?analyzeRunId=<run_id>
+  useEffect(() => {
+    const analyzeRunId = searchParams.get('analyzeRunId')
+    if (analyzeRunId) {
+      const reportAnalystAgent = AGENTS.find((a) => a.type === 'report_analyst')
+      if (reportAnalystAgent) {
+        setSelectedAgent(reportAnalystAgent)
+        setFormData({ runId: analyzeRunId, analysisType: 'summarize' })
+        // Clear the query param so it doesn't persist
+        const nextParams = new URLSearchParams(searchParams)
+        nextParams.delete('analyzeRunId')
+        setSearchParams(nextParams, { replace: true })
+      }
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Fetch recent report runs when Report Analyst is selected
+  useEffect(() => {
+    if (selectedAgent?.type === 'report_analyst') {
+      setRunsLoading(true)
+      clientApi.listReportRuns({ limit: 20 })
+        .then((runs) => setRecentRuns(Array.isArray(runs) ? runs : []))
+        .catch(() => setRecentRuns([]))
+        .finally(() => setRunsLoading(false))
+    }
+  }, [selectedAgent?.type])
 
   const handleSelectAgent = useCallback((agent) => {
     setSelectedAgent(agent)
@@ -333,23 +682,36 @@ export default function AgentsPageContainer() {
             styleGuide: formData.styleGuide !== 'None' ? formData.styleGuide : null,
           })
           break
+        case 'report_analyst':
+          taskResult = await runReportAnalyst(formData.runId, {
+            analysisType: formData.analysisType || 'summarize',
+            question: formData.question || null,
+            compareRunId: formData.compareRunId || null,
+          })
+          break
         default:
           break
       }
 
       if (taskResult) {
         setResult(taskResult)
-        const outputText = typeof taskResult.output === 'string'
-          ? taskResult.output
-          : JSON.stringify(taskResult.output, null, 2)
-        registerOutput({
-          type: OutputType.TEXT,
-          title: `${selectedAgent.name}: ${formData.topic || formData.question || formData.purpose || 'Result'}`,
-          summary: outputText.substring(0, 200),
-          data: outputText,
-          format: 'text',
-        })
-        toast.show('Agent completed successfully', 'success')
+        if (taskResult.status === 'failed' || taskResult.status === 'error') {
+          const errMsg = (typeof taskResult.error === 'object' ? taskResult.error?.message : taskResult.error) || taskResult.message || 'Agent task failed'
+          toast.show(errMsg, 'error')
+        } else {
+          const taskOutput = taskResult.result || taskResult.output
+          const outputText = (typeof taskOutput === 'string'
+            ? taskOutput
+            : JSON.stringify(taskOutput, null, 2)) || ''
+          registerOutput({
+            type: OutputType.TEXT,
+            title: `${selectedAgent.name}: ${formData.topic || formData.question || formData.purpose || 'Result'}`,
+            summary: outputText.substring(0, 200),
+            data: outputText,
+            format: 'text',
+          })
+          toast.show('Agent completed successfully', 'success')
+        }
       }
       return taskResult
     }
@@ -362,11 +724,12 @@ export default function AgentsPageContainer() {
       intent: { source: 'agents', agentType: selectedAgent.type },
       action: runAction,
     })
-  }, [execute, formData, runContentRepurpose, runDataAnalysis, runEmailDraft, runProofreading, runResearch, selectedAgent, selectedConnectionId, toast])
+  }, [execute, formData, runContentRepurpose, runDataAnalysis, runEmailDraft, runProofreading, runReportAnalyst, runResearch, selectedAgent, selectedConnectionId, toast])
 
   const handleCopyResult = useCallback(() => {
-    if (result?.output) {
-      navigator.clipboard.writeText(typeof result.output === 'string' ? result.output : JSON.stringify(result.output, null, 2))
+    const outputData = result?.result || result?.output
+    if (outputData) {
+      navigator.clipboard.writeText(typeof outputData === 'string' ? outputData : JSON.stringify(outputData, null, 2))
       toast.show('Copied to clipboard', 'success')
     }
   }, [result, toast])
@@ -430,7 +793,7 @@ export default function AgentsPageContainer() {
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : figmaGrey[200],
+                          bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : neutral[50],
                         }}
                       >
                         <agent.icon color="inherit" sx={{ color: 'text.secondary' }} />
@@ -484,9 +847,71 @@ export default function AgentsPageContainer() {
                       }
                     }
 
+                    // Conditionally hide question/compareRunId fields based on analysisType
+                    if (selectedAgent.type === 'report_analyst') {
+                      const analysisType = formData.analysisType || 'summarize'
+                      if (field.name === 'question' && analysisType !== 'qa') return null
+                      if (field.name === 'compareRunId' && analysisType !== 'compare') return null
+                    }
+
                     return (
                       <Grid item xs={12} md={field.multiline ? 12 : 6} key={field.name}>
-                        {field.type === 'select' ? (
+                        {field.type === 'reportRunPicker' ? (
+                          <Autocomplete
+                            freeSolo
+                            options={recentRuns}
+                            loading={runsLoading}
+                            getOptionLabel={(option) => {
+                              if (typeof option === 'string') return option
+                              const name = option.templateName || option.template_name || option.templateId || option.template_id || ''
+                              const date = option.createdAt || option.created_at || ''
+                              const dateStr = date ? new Date(date).toLocaleDateString() : ''
+                              return `${name} — ${dateStr} (${option.id?.slice(0, 8)}...)`
+                            }}
+                            value={formData[field.name] || null}
+                            onChange={(_, value) => {
+                              const runId = typeof value === 'string' ? value : value?.id || ''
+                              handleFieldChange(field.name, runId)
+                            }}
+                            onInputChange={(_, value, reason) => {
+                              if (reason === 'input') handleFieldChange(field.name, value)
+                            }}
+                            renderOption={(props, option) => {
+                              const { key, ...rest } = props
+                              const name = option.templateName || option.template_name || option.templateId || option.template_id || ''
+                              const date = option.createdAt || option.created_at || ''
+                              const dateStr = date ? new Date(date).toLocaleString() : ''
+                              const period = [option.startDate || option.start_date, option.endDate || option.end_date].filter(Boolean).join(' – ')
+                              return (
+                                <li key={key} {...rest}>
+                                  <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                                    <Typography variant="body2" fontWeight={500}>{name}</Typography>
+                                    <Typography variant="caption" color="text.secondary">
+                                      {dateStr}{period ? ` | ${period}` : ''} | {option.id?.slice(0, 12)}...
+                                    </Typography>
+                                  </Box>
+                                </li>
+                              )
+                            }}
+                            renderInput={(params) => (
+                              <TextField
+                                {...params}
+                                label={field.label}
+                                placeholder={field.placeholder}
+                                required={field.required}
+                                InputProps={{
+                                  ...params.InputProps,
+                                  endAdornment: (
+                                    <>
+                                      {runsLoading ? <CircularProgress size={18} /> : null}
+                                      {params.InputProps.endAdornment}
+                                    </>
+                                  ),
+                                }}
+                              />
+                            )}
+                          />
+                        ) : field.type === 'select' ? (
                           <FormControl fullWidth>
                             <InputLabel>{field.label}</InputLabel>
                             <Select
@@ -591,17 +1016,40 @@ export default function AgentsPageContainer() {
 
               {/* Result */}
               {result && (
-                <ResultCard>
+                <ResultCard ref={resultRef}>
                   <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
                     <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
                       Result
+                      {result.status && (
+                        <Chip
+                          label={result.status}
+                          size="small"
+                          color={result.status === 'completed' ? 'success' : result.status === 'failed' ? 'error' : 'default'}
+                          sx={{ ml: 1, fontSize: '12px', height: 22 }}
+                        />
+                      )}
                     </Typography>
                     <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                      {/* Generate Report button for completed agent tasks */}
+                      {result.status === 'completed' && result.task_id && (
+                        <Tooltip title="Generate a report using this agent's output" arrow>
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            startIcon={<ReportIcon fontSize="small" />}
+                            onClick={() => setGenerateDialogOpen(true)}
+                            sx={{ textTransform: 'none', mr: 0.5 }}
+                            data-testid="agent-generate-report-button"
+                          >
+                            Generate Report
+                          </Button>
+                        </Tooltip>
+                      )}
                       <SendToMenu
                         outputType={OutputType.TEXT}
                         payload={{
                           title: `${selectedAgent.name} Result`,
-                          content: typeof result.output === 'string' ? result.output : JSON.stringify(result.output, null, 2),
+                          content: (() => { const o = result.result || result.output; return typeof o === 'string' ? o : JSON.stringify(o, null, 2) })(),
                         }}
                         sourceFeature={FeatureKey.AGENTS}
                       />
@@ -610,21 +1058,32 @@ export default function AgentsPageContainer() {
                       </IconButton>
                     </Box>
                   </Box>
-                  <Typography
-                    variant="body2"
-                    component="pre"
-                    sx={{
-                      whiteSpace: 'pre-wrap',
-                      fontFamily: 'monospace',
-                      bgcolor: alpha(theme.palette.background.default, 0.5),
-                      p: 2,
-                      borderRadius: 1,
-                      maxHeight: 400,
-                      overflow: 'auto',
-                    }}
-                  >
-                    {typeof result.output === 'string' ? result.output : JSON.stringify(result.output, null, 2)}
-                  </Typography>
+
+                  {/* Structured result for Report Analyst (V2 uses result.result, V1 uses result.output) */}
+                  {(() => {
+                    const agentOutput = result.result || result.output
+                    if (selectedAgent.type === 'report_analyst' && agentOutput && typeof agentOutput === 'object') {
+                      return <ReportAnalystResult output={agentOutput} />
+                    }
+                    const displayContent = typeof agentOutput === 'string' ? agentOutput : JSON.stringify(agentOutput, null, 2)
+                    return (
+                      <Typography
+                        variant="body2"
+                        component="pre"
+                        sx={{
+                          whiteSpace: 'pre-wrap',
+                          fontFamily: 'monospace',
+                          bgcolor: alpha(theme.palette.background.default, 0.5),
+                          p: 2,
+                          borderRadius: 1,
+                          maxHeight: 400,
+                          overflow: 'auto',
+                        }}
+                      >
+                        {displayContent}
+                      </Typography>
+                    )
+                  })()}
                 </ResultCard>
               )}
             </>
@@ -642,24 +1101,46 @@ export default function AgentsPageContainer() {
             <Box sx={{ flex: 1, overflow: 'auto' }}>
               {tasks.length > 0 ? (
                 <List>
-                  {tasks.map((task) => (
-                    <ListItem key={task.id} divider>
-                      <ListItemText
-                        primary={task.agent_type?.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}
-                        secondary={
-                          <>
-                            <Chip
-                              size="small"
-                              label={task.status}
-                              color={task.status === 'completed' ? 'success' : task.status === 'failed' ? 'error' : 'default'}
-                              sx={{ mr: 1 }}
-                            />
-                            {new Date(task.created_at).toLocaleString()}
-                          </>
-                        }
-                      />
-                    </ListItem>
-                  ))}
+                  {tasks.map((task) => {
+                    const taskId = task.id || task.task_id
+                    const isSelected = (result?.id || result?.task_id) === taskId
+                    return (
+                      <ListItem
+                        key={taskId}
+                        divider
+                        onClick={() => {
+                          const agentDef = AGENTS.find((a) => a.type === task.agent_type)
+                          if (agentDef) setSelectedAgent(agentDef)
+                          setResult(task)
+                          setTimeout(() => resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100)
+                        }}
+                        sx={{
+                          cursor: 'pointer',
+                          bgcolor: isSelected ? alpha(theme.palette.primary.main, 0.08) : 'transparent',
+                          borderLeft: isSelected ? `3px solid ${theme.palette.primary.main}` : '3px solid transparent',
+                          '&:hover': {
+                            bgcolor: alpha(theme.palette.primary.main, 0.04),
+                          },
+                          transition: 'all 0.15s ease',
+                        }}
+                      >
+                        <ListItemText
+                          primary={task.agent_type?.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}
+                          secondary={
+                            <>
+                              <Chip
+                                size="small"
+                                label={task.status}
+                                color={task.status === 'completed' ? 'success' : task.status === 'failed' ? 'error' : 'default'}
+                                sx={{ mr: 1 }}
+                              />
+                              {new Date(task.created_at).toLocaleString()}
+                            </>
+                          }
+                        />
+                      </ListItem>
+                    )
+                  })}
                 </List>
               ) : (
                 <Box sx={{ p: 3, textAlign: 'center' }}>
@@ -676,6 +1157,21 @@ export default function AgentsPageContainer() {
           {error}
         </Alert>
       )}
+
+      {/* Generate Report from Agent Dialog */}
+      <GenerateReportDialog
+        open={generateDialogOpen}
+        onClose={() => setGenerateDialogOpen(false)}
+        taskId={result?.task_id}
+        templates={templates}
+        connections={connections}
+        onGenerate={async (taskId, config) => {
+          const res = await generateReportFromTask(taskId, config)
+          if (res) {
+            toast.show(`Report generation started! Job ID: ${res.job_id || 'queued'}`, 'success')
+          }
+        }}
+      />
     </PageContainer>
   )
 }

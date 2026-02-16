@@ -61,7 +61,7 @@ import {
   InteractionType,
   Reversibility,
 } from '@/components/ux/governance'
-import { figmaGrey } from '@/app/theme'
+import { neutral, palette } from '@/app/theme'
 
 // =============================================================================
 // ANIMATIONS
@@ -118,7 +118,7 @@ const DialogIconContainer = styled(Box)(({ theme }) => ({
   width: 48,
   height: 48,
   borderRadius: 14,
-  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
@@ -160,11 +160,11 @@ const StyledTextField = styled(TextField)(({ theme }) => ({
     borderRadius: 12,
     transition: 'all 0.2s ease',
     '&:hover .MuiOutlinedInput-notchedOutline': {
-      borderColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.3) : figmaGrey[600],
+      borderColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.3) : neutral[300],
     },
     '&.Mui-focused': {
       '& .MuiOutlinedInput-notchedOutline': {
-        borderColor: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
+        borderColor: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
         borderWidth: 2,
       },
     },
@@ -184,11 +184,11 @@ const StatusChip = styled(Chip, {
   fontWeight: 500,
   fontSize: '0.75rem',
   backgroundColor: active
-    ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300])
-    : (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.06) : figmaGrey[200]),
+    ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[100])
+    : (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.06) : neutral[50]),
   color: theme.palette.text.secondary,
   border: `1px solid ${active
-    ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.15) : figmaGrey[500])
+    ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.15) : neutral[200])
     : alpha(theme.palette.divider, 0.2)}`,
 }))
 
@@ -196,16 +196,16 @@ const FrequencyChip = styled(Chip)(({ theme }) => ({
   borderRadius: 8,
   fontWeight: 500,
   fontSize: '0.75rem',
-  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
   color: theme.palette.text.secondary,
-  border: `1px solid ${theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.12) : figmaGrey[500]}`,
+  border: `1px solid ${theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.12) : neutral[200]}`,
 }))
 
 const StyledSwitch = styled(Switch)(({ theme }) => ({
   '& .MuiSwitch-switchBase.Mui-checked': {
-    color: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
+    color: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
     '& + .MuiSwitch-track': {
-      backgroundColor: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
+      backgroundColor: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
     },
   },
 }))
@@ -227,19 +227,19 @@ const StyledMenuItem = styled(MenuItem)(({ theme }) => ({
   padding: theme.spacing(1, 1.5),
   transition: 'all 0.15s ease',
   '&:hover': {
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[200],
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[50],
   },
 }))
 
 const SchedulerStatusBanner = styled(Box, {
   shouldForwardProp: (prop) => prop !== 'status',
 })(({ theme, status }) => {
-  const neutralColor = theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100]
-  const neutralBg = theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300]
+  const neutralColor = theme.palette.mode === 'dark' ? neutral[500] : neutral[700]
+  const neutralBg = theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[100]
   const colors = {
     ok: { bg: neutralBg, border: neutralColor, text: neutralColor },
     warning: { bg: neutralBg, border: neutralColor, text: neutralColor },
-    disabled: { bg: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.06) : figmaGrey[200], border: alpha(theme.palette.divider, 0.3), text: theme.palette.text.secondary },
+    disabled: { bg: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.06) : neutral[50], border: alpha(theme.palette.divider, 0.3), text: theme.palette.text.secondary },
     error: { bg: neutralBg, border: neutralColor, text: neutralColor },
   }
   const colorScheme = colors[status] || colors.warning
@@ -265,11 +265,11 @@ const ActionButton = styled(Button)(({ theme }) => ({
 }))
 
 const PrimaryButton = styled(ActionButton)(({ theme }) => ({
-  background: theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200],
-  color: '#fff',
+  background: theme.palette.mode === 'dark' ? neutral[700] : neutral[900],
+  color: theme.palette.common.white,
   boxShadow: `0 4px 14px ${alpha(theme.palette.common.black, 0.15)}`,
   '&:hover': {
-    background: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
+    background: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
     boxShadow: `0 6px 20px ${alpha(theme.palette.common.black, 0.2)}`,
     transform: 'translateY(-1px)',
   },
@@ -328,6 +328,12 @@ const formatEmailList = (list) => {
 const isValidEmail = (email) => {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
   return emailRegex.test(email)
+}
+
+const isSchedulableTemplate = (template) => {
+  if (!template || typeof template !== 'object') return false
+  const status = String(template.status || '').toLowerCase()
+  return status === 'approved' || status === 'active'
 }
 
 // =============================================================================
@@ -403,9 +409,21 @@ function ScheduleDialog({
     const emailRecipients = parseEmailList(form.emailRecipients)
     const startDate = buildDateTime(form.startDate)
     const endDate = buildDateTime(form.endDate, true)
+    const templateAllowed = templates.some((tpl) => tpl.id === form.templateId)
+    const connectionAvailable = connections.some((conn) => conn.id === form.connectionId)
 
     if (form.startDate && form.endDate && form.endDate < form.startDate) {
       onError?.('End date must be on or after start date')
+      return
+    }
+
+    if (!templateAllowed) {
+      onError?.('Selected template is not approved for scheduling. Choose an approved template.')
+      return
+    }
+
+    if (!connectionAvailable) {
+      onError?.('Selected connection is no longer available. Choose another connection.')
       return
     }
 
@@ -433,6 +451,9 @@ function ScheduleDialog({
         active: form.active,
       })
       onClose()
+    } catch {
+      // Keep dialog open on save failure; the interaction layer already
+      // reports the error message to the user.
     } finally {
       setSaving(false)
     }
@@ -605,11 +626,11 @@ export default function SchedulesPage() {
   const { execute } = useInteraction()
   const [searchParams, setSearchParams] = useSearchParams()
   const templates = useAppStore((s) => s.templates)
-  const setTemplates = useAppStore((s) => s.setTemplates)
   const savedConnections = useAppStore((s) => s.savedConnections)
   const activeConnectionId = useAppStore((s) => s.activeConnectionId)
 
   const [schedules, setSchedules] = useState([])
+  const [schedulableTemplates, setSchedulableTemplates] = useState([])
   const [loading, setLoading] = useState(false)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingSchedule, setEditingSchedule] = useState(null)
@@ -622,6 +643,10 @@ export default function SchedulesPage() {
   const scheduleDeleteUndoRef = useRef(null)
   const didLoadSchedulesRef = useRef(false)
   const didLoadTemplatesRef = useRef(false)
+  const templatesFromStore = useMemo(
+    () => (Array.isArray(templates) ? templates.filter(isSchedulableTemplate) : []),
+    [templates]
+  )
 
   const fetchSchedules = useCallback(async () => {
     setLoading(true)
@@ -653,16 +678,18 @@ export default function SchedulesPage() {
   }, [fetchSchedules, fetchSchedulerStatus])
 
   const fetchTemplates = useCallback(async () => {
-    if (templates.length > 0) return
     try {
       const templatesData = await api.listApprovedTemplates()
       if (Array.isArray(templatesData) && templatesData.length > 0) {
-        setTemplates(templatesData)
+        setSchedulableTemplates(templatesData)
+        return
       }
+      setSchedulableTemplates(templatesFromStore)
     } catch (err) {
-      toast.show(err.message || 'Failed to load templates', 'error')
+      setSchedulableTemplates(templatesFromStore)
+      toast.show(err.userMessage || err.message || 'Failed to load templates', 'error')
     }
-  }, [templates.length, setTemplates, toast])
+  }, [templatesFromStore, toast])
 
   useEffect(() => {
     if (didLoadTemplatesRef.current) return
@@ -670,18 +697,35 @@ export default function SchedulesPage() {
     fetchTemplates()
   }, [fetchTemplates])
 
+  useEffect(() => {
+    if (schedulableTemplates.length > 0) return
+    if (templatesFromStore.length > 0) {
+      setSchedulableTemplates(templatesFromStore)
+    }
+  }, [schedulableTemplates.length, templatesFromStore])
+
   const templateParam = searchParams.get('template')
-  const defaultTemplateId = templateParam || templates[0]?.id || ''
+  const schedulableTemplateIds = useMemo(
+    () => new Set(schedulableTemplates.map((template) => template.id)),
+    [schedulableTemplates]
+  )
+  const defaultTemplateId = templateParam && schedulableTemplateIds.has(templateParam)
+    ? templateParam
+    : (schedulableTemplates[0]?.id || '')
   const defaultConnectionId = activeConnectionId || savedConnections[0]?.id || ''
+  const canCreateSchedule = schedulableTemplates.length > 0 && savedConnections.length > 0
 
   useEffect(() => {
     if (!templateParam) return
+    if (schedulableTemplates.length > 0 && !schedulableTemplateIds.has(templateParam)) {
+      toast.show('Selected template is not approved for scheduling. Choose an approved template.', 'warning')
+    }
     setEditingSchedule(null)
     setDialogOpen(true)
     const nextParams = new URLSearchParams(searchParams)
     nextParams.delete('template')
     setSearchParams(nextParams, { replace: true })
-  }, [templateParam, searchParams, setSearchParams])
+  }, [templateParam, searchParams, schedulableTemplates, schedulableTemplateIds, setSearchParams, toast])
 
   const handleOpenMenu = useCallback((event, schedule) => {
     event.stopPropagation()
@@ -695,9 +739,17 @@ export default function SchedulesPage() {
   }, [])
 
   const handleAddSchedule = useCallback(() => {
+    if (schedulableTemplates.length === 0) {
+      toast.show('No approved templates available. Approve a template first.', 'warning')
+      return
+    }
+    if (savedConnections.length === 0) {
+      toast.show('No connections available. Add a connection first.', 'warning')
+      return
+    }
     setEditingSchedule(null)
     setDialogOpen(true)
-  }, [])
+  }, [schedulableTemplates.length, savedConnections.length, toast])
 
   const handleEditSchedule = useCallback(() => {
     setEditingSchedule(menuSchedule)
@@ -749,7 +801,7 @@ export default function SchedulesPage() {
       const isEditing = !!editingSchedule
 
       // UX Governance: Create/Update action with tracking
-      await execute({
+      const result = await execute({
         type: isEditing ? InteractionType.UPDATE : InteractionType.CREATE,
         label: isEditing ? `Update schedule "${data.name}"` : `Create schedule "${data.name}"`,
         reversibility: Reversibility.FULLY_REVERSIBLE,
@@ -761,9 +813,13 @@ export default function SchedulesPage() {
           } else {
             await api.createSchedule(data)
           }
-          fetchSchedules()
+          await fetchSchedules()
         },
       })
+
+      if (!result?.success) {
+        throw result?.error || new Error('Failed to save schedule')
+      }
     },
     [editingSchedule, fetchSchedules, execute]
   )
@@ -1001,6 +1057,7 @@ export default function SchedulesPage() {
               icon: <AddIcon />,
               variant: 'contained',
               onClick: handleAddSchedule,
+              disabled: !canCreateSchedule,
             },
           ]}
           rowActions={(row) => (
@@ -1044,7 +1101,7 @@ export default function SchedulesPage() {
           open={dialogOpen}
           onClose={() => setDialogOpen(false)}
           schedule={editingSchedule}
-          templates={templates}
+          templates={schedulableTemplates}
           connections={savedConnections}
           defaultTemplateId={defaultTemplateId}
           defaultConnectionId={defaultConnectionId}

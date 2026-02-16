@@ -59,7 +59,7 @@ import {
 import { useToast } from '@/components/ToastProvider'
 import { useInteraction, InteractionType, Reversibility, useNavigateInteraction } from '@/components/ux/governance'
 import * as api from '@/api/client'
-import { figmaGrey, figmaAccent } from '@/app/theme'
+import { neutral, primary, palette } from '@/app/theme'
 
 // =============================================================================
 // ANIMATIONS
@@ -129,8 +129,8 @@ const ExportButton = styled(Button)(({ theme }) => ({
   borderColor: alpha(theme.palette.divider, 0.2),
   transition: 'all 0.2s ease',
   '&:hover': {
-    borderColor: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
+    borderColor: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
   },
 }))
 
@@ -138,7 +138,7 @@ const RefreshButton = styled(IconButton)(({ theme }) => ({
   borderRadius: 12,
   transition: 'all 0.2s ease',
   '&:hover': {
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : figmaGrey[300],
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[100],
     transform: 'rotate(180deg)',
   },
 }))
@@ -147,7 +147,7 @@ const StyledTabs = styled(Tabs)(({ theme }) => ({
   marginBottom: theme.spacing(3),
   '& .MuiTab-root': {
     // Figma spec: Inactive tab - #374151 text, transparent bg
-    color: theme.palette.mode === 'dark' ? theme.palette.text.secondary : figmaAccent.darkText,
+    color: theme.palette.mode === 'dark' ? theme.palette.text.secondary : neutral[700],
     textTransform: 'none',
     minWidth: 100,
     fontWeight: 500,
@@ -155,17 +155,17 @@ const StyledTabs = styled(Tabs)(({ theme }) => ({
     padding: '8px 32px',  // Figma spec
     '&.Mui-selected': {
       // Figma spec: Active tab - #02634E text, #EBFEF6 bg
-      color: theme.palette.mode === 'dark' ? theme.palette.text.primary : figmaAccent.greenText,
-      backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaAccent.greenBackground,
+      color: theme.palette.mode === 'dark' ? theme.palette.text.primary : primary[600],
+      backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : primary[50],
     },
     '&:hover': {
-      color: theme.palette.mode === 'dark' ? theme.palette.text.primary : figmaAccent.greenText,
-      backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : alpha(figmaAccent.greenBackground, 0.5),
+      color: theme.palette.mode === 'dark' ? theme.palette.text.primary : primary[600],
+      backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : alpha(primary[50], 0.5),
     },
   },
   '& .MuiTabs-indicator': {
     // Figma spec: Active tab border - #007E60 (2px height)
-    backgroundColor: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaAccent.primaryGreen,
+    backgroundColor: theme.palette.mode === 'dark' ? neutral[500] : primary[500],
     height: 2,
   },
 }))
@@ -201,19 +201,19 @@ const PERIOD_OPTIONS = [
 ]
 
 const getChartColors = (theme) => [
-  theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
-  theme.palette.mode === 'dark' ? figmaGrey[900] : figmaGrey[1000],
-  theme.palette.mode === 'dark' ? figmaGrey[600] : figmaGrey[900],
-  theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200],
-  theme.palette.mode === 'dark' ? figmaGrey[700] : figmaGrey[600],
+  theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
+  theme.palette.mode === 'dark' ? neutral[500] : neutral[500],
+  theme.palette.mode === 'dark' ? neutral[300] : neutral[500],
+  theme.palette.mode === 'dark' ? neutral[700] : neutral[900],
+  theme.palette.mode === 'dark' ? neutral[300] : neutral[300],
   theme.palette.text.secondary,
 ]
 
 const getStatusColors = (theme) => ({
-  completed: theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100],
-  failed: theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200],
-  pending: theme.palette.mode === 'dark' ? figmaGrey[600] : figmaGrey[900],
-  running: theme.palette.mode === 'dark' ? figmaGrey[900] : figmaGrey[1000],
+  completed: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
+  failed: theme.palette.mode === 'dark' ? neutral[700] : neutral[900],
+  pending: theme.palette.mode === 'dark' ? neutral[300] : neutral[500],
+  running: theme.palette.mode === 'dark' ? neutral[500] : neutral[500],
   cancelled: theme.palette.text.secondary,
 })
 
@@ -226,7 +226,7 @@ function StatCard({ title, value, subtitle, icon: Icon, trend, color, onClick })
   const trendPositive = trend > 0
   const TrendIcon = trendPositive ? TrendingUpIcon : TrendingDownIcon
   const trendColor = theme.palette.text.secondary
-  const accentColor = color || (theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100])
+  const accentColor = color || (theme.palette.mode === 'dark' ? neutral[500] : neutral[700])
 
   return (
     <GlassCard
@@ -380,7 +380,7 @@ function CustomTooltip({ active, payload, label }) {
               bgcolor: entry.color,
             }}
           />
-          <Typography sx={{ fontSize: '0.6875rem', color: theme.palette.text.secondary }}>
+          <Typography sx={{ fontSize: '12px', color: theme.palette.text.secondary }}>
             {entry.name}: {entry.value}
           </Typography>
         </Stack>
@@ -486,8 +486,8 @@ export default function UsageStatsPage() {
       name: name.toUpperCase(),
       value,
       color: name === 'pdf'
-        ? (theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200])
-        : (theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100]),
+        ? (theme.palette.mode === 'dark' ? neutral[700] : neutral[900])
+        : (theme.palette.mode === 'dark' ? neutral[500] : neutral[700]),
     }))
   }, [usageData, theme])
 
@@ -620,7 +620,7 @@ export default function UsageStatsPage() {
             value={summary.totalJobs || 0}
             subtitle={`${metrics.jobsThisWeek || 0} this week`}
             icon={WorkIcon}
-            color={theme.palette.mode === 'dark' ? figmaGrey[900] : figmaGrey[1000]}
+            color={theme.palette.mode === 'dark' ? neutral[500] : neutral[500]}
             onClick={() => handleNavigate('/jobs', 'Open jobs')}
           />
         </Grid>
@@ -630,7 +630,7 @@ export default function UsageStatsPage() {
             value={`${(metrics.successRate || 0).toFixed(1)}%`}
             subtitle={`${summary.completedJobs || 0} completed`}
             icon={CheckCircleIcon}
-            color={theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100]}
+            color={theme.palette.mode === 'dark' ? neutral[500] : neutral[700]}
             onClick={() => handleNavigate('/history', 'Open history')}
           />
         </Grid>
@@ -640,7 +640,7 @@ export default function UsageStatsPage() {
             value={summary.totalTemplates || 0}
             subtitle={`${summary.approvedTemplates || 0} approved`}
             icon={DescriptionIcon}
-            color={theme.palette.mode === 'dark' ? figmaGrey[600] : figmaGrey[900]}
+            color={theme.palette.mode === 'dark' ? neutral[300] : neutral[500]}
             onClick={() => handleNavigate('/templates', 'Open templates')}
           />
         </Grid>
@@ -650,7 +650,7 @@ export default function UsageStatsPage() {
             value={summary.totalConnections || 0}
             subtitle={`${summary.activeConnections || 0} active`}
             icon={StorageIcon}
-            color={theme.palette.mode === 'dark' ? figmaGrey[700] : figmaGrey[600]}
+            color={theme.palette.mode === 'dark' ? neutral[300] : neutral[300]}
             onClick={() => handleNavigate('/connections', 'Open connections')}
           />
         </Grid>
@@ -689,8 +689,8 @@ export default function UsageStatsPage() {
                     axisLine={{ stroke: alpha(theme.palette.divider, 0.3) }}
                   />
                   <Tooltip content={<CustomTooltip />} />
-                  <Bar dataKey="completed" name="Completed" fill={theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100]} radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="failed" name="Failed" fill={theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200]} radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="completed" name="Completed" fill={theme.palette.mode === 'dark' ? neutral[500] : neutral[700]} radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="failed" name="Failed" fill={theme.palette.mode === 'dark' ? neutral[700] : neutral[900]} radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </ChartCard>
@@ -766,7 +766,7 @@ export default function UsageStatsPage() {
                     <Box key={index}>
                       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 0.5 }}>
                         <Stack direction="row" alignItems="center" spacing={1}>
-                          <Typography sx={{ fontSize: '0.8125rem', color: theme.palette.text.primary }}>
+                          <Typography sx={{ fontSize: '14px', color: theme.palette.text.primary }}>
                             {template.name}
                           </Typography>
                           <Chip
@@ -774,8 +774,8 @@ export default function UsageStatsPage() {
                             size="small"
                             sx={{
                               height: 18,
-                              fontSize: '0.5625rem',
-                              bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : figmaGrey[300],
+                              fontSize: '10px',
+                              bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
                               color: 'text.secondary',
                               borderRadius: 1,
                             }}
@@ -820,12 +820,12 @@ export default function UsageStatsPage() {
                 <AreaChart data={historyByDay}>
                   <defs>
                     <linearGradient id="colorCompleted" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100]} stopOpacity={0.3} />
-                      <stop offset="95%" stopColor={theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100]} stopOpacity={0} />
+                      <stop offset="5%" stopColor={theme.palette.mode === 'dark' ? neutral[500] : neutral[700]} stopOpacity={0.3} />
+                      <stop offset="95%" stopColor={theme.palette.mode === 'dark' ? neutral[500] : neutral[700]} stopOpacity={0} />
                     </linearGradient>
                     <linearGradient id="colorFailed" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200]} stopOpacity={0.3} />
-                      <stop offset="95%" stopColor={theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200]} stopOpacity={0} />
+                      <stop offset="5%" stopColor={theme.palette.mode === 'dark' ? neutral[700] : neutral[900]} stopOpacity={0.3} />
+                      <stop offset="95%" stopColor={theme.palette.mode === 'dark' ? neutral[700] : neutral[900]} stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke={alpha(theme.palette.divider, 0.3)} />
@@ -844,7 +844,7 @@ export default function UsageStatsPage() {
                     type="monotone"
                     dataKey="completed"
                     name="Completed"
-                    stroke={theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100]}
+                    stroke={theme.palette.mode === 'dark' ? neutral[500] : neutral[700]}
                     fill="url(#colorCompleted)"
                     strokeWidth={2}
                   />
@@ -852,7 +852,7 @@ export default function UsageStatsPage() {
                     type="monotone"
                     dataKey="failed"
                     name="Failed"
-                    stroke={theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200]}
+                    stroke={theme.palette.mode === 'dark' ? neutral[700] : neutral[900]}
                     fill="url(#colorFailed)"
                     strokeWidth={2}
                   />
@@ -874,7 +874,7 @@ export default function UsageStatsPage() {
               title="Jobs Today"
               value={metrics.jobsToday || 0}
               icon={ScheduleIcon}
-              color={theme.palette.mode === 'dark' ? figmaGrey[900] : figmaGrey[1000]}
+              color={theme.palette.mode === 'dark' ? neutral[500] : neutral[500]}
               onClick={() => handleNavigate('/jobs', 'Open jobs')}
             />
           </Grid>
@@ -883,7 +883,7 @@ export default function UsageStatsPage() {
               title="Jobs This Week"
               value={metrics.jobsThisWeek || 0}
               icon={WorkIcon}
-              color={theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100]}
+              color={theme.palette.mode === 'dark' ? neutral[500] : neutral[700]}
               onClick={() => handleNavigate('/jobs', 'Open jobs')}
             />
           </Grid>
@@ -892,7 +892,7 @@ export default function UsageStatsPage() {
               title="Jobs This Month"
               value={metrics.jobsThisMonth || 0}
               icon={BarChartIcon}
-              color={theme.palette.mode === 'dark' ? figmaGrey[600] : figmaGrey[900]}
+              color={theme.palette.mode === 'dark' ? neutral[300] : neutral[500]}
               onClick={() => handleNavigate('/jobs', 'Open jobs')}
             />
           </Grid>
@@ -901,7 +901,7 @@ export default function UsageStatsPage() {
               title="Failed Jobs"
               value={summary.failedJobs || 0}
               icon={ErrorIcon}
-              color={theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200]}
+              color={theme.palette.mode === 'dark' ? neutral[700] : neutral[900]}
               onClick={() =>
                 handleNavigate('/history?status=failed', 'Open failed history', { status: 'failed' })
               }
@@ -918,7 +918,7 @@ export default function UsageStatsPage() {
               title="Total Templates"
               value={summary.totalTemplates || 0}
               icon={DescriptionIcon}
-              color={theme.palette.mode === 'dark' ? figmaGrey[900] : figmaGrey[1000]}
+              color={theme.palette.mode === 'dark' ? neutral[500] : neutral[500]}
               onClick={() => handleNavigate('/templates', 'Open templates')}
             />
           </Grid>
@@ -927,7 +927,7 @@ export default function UsageStatsPage() {
               title="PDF Templates"
               value={summary.pdfTemplates || 0}
               icon={DescriptionIcon}
-              color={theme.palette.mode === 'dark' ? figmaGrey[1100] : figmaGrey[1200]}
+              color={theme.palette.mode === 'dark' ? neutral[700] : neutral[900]}
               onClick={() =>
                 handleNavigate('/templates?kind=pdf', 'Open PDF templates', { kind: 'pdf' })
               }
@@ -938,7 +938,7 @@ export default function UsageStatsPage() {
               title="Excel Templates"
               value={summary.excelTemplates || 0}
               icon={DescriptionIcon}
-              color={theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100]}
+              color={theme.palette.mode === 'dark' ? neutral[500] : neutral[700]}
               onClick={() =>
                 handleNavigate('/templates?kind=excel', 'Open Excel templates', { kind: 'excel' })
               }
@@ -949,7 +949,7 @@ export default function UsageStatsPage() {
               title="Active Schedules"
               value={summary.activeSchedules || 0}
               icon={ScheduleIcon}
-              color={theme.palette.mode === 'dark' ? figmaGrey[600] : figmaGrey[900]}
+              color={theme.palette.mode === 'dark' ? neutral[300] : neutral[500]}
               onClick={() => handleNavigate('/schedules', 'Open schedules')}
             />
           </Grid>
@@ -981,7 +981,7 @@ export default function UsageStatsPage() {
                       width={120}
                     />
                     <Tooltip content={<CustomTooltip />} />
-                    <Bar dataKey="count" name="Jobs" fill={theme.palette.mode === 'dark' ? figmaGrey[1000] : figmaGrey[1100]} radius={[0, 4, 4, 0]} />
+                    <Bar dataKey="count" name="Jobs" fill={theme.palette.mode === 'dark' ? neutral[500] : neutral[700]} radius={[0, 4, 4, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               )}

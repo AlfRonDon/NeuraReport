@@ -62,6 +62,7 @@ class EmailInboxConfig(BaseModel):
     imap_port: int = 993
     username: str
     password: str  # Should be encrypted in practice
+    use_ssl: bool = True
     folder: str = "INBOX"
     auto_process: bool = True
     delete_after_process: bool = False
@@ -75,6 +76,88 @@ class EmailIngestionService:
 
     def __init__(self):
         self._inbox_configs: Dict[str, EmailInboxConfig] = {}
+
+    async def connect_imap(
+        self,
+        host: str,
+        port: int,
+        username: str,
+        password: str,
+        use_ssl: bool = True,
+        folder: str = "INBOX",
+    ) -> Dict[str, Any]:
+        """
+        Validate IMAP credentials and register an account configuration.
+
+        Returns a safe account payload without sensitive fields.
+        """
+        if not host or not username or not password:
+            raise ValueError("host, username, and password are required")
+
+        # Validate credentials before storing.
+        try:
+            client = imaplib.IMAP4_SSL(host, port) if use_ssl else imaplib.IMAP4(host, port)
+            client.login(username, password)
+            client.select(folder)
+            client.logout()
+        except imaplib.IMAP4.error as exc:
+            raise ValueError("IMAP authentication failed") from exc
+        except Exception as exc:
+            raise ValueError("Unable to connect to IMAP server") from exc
+
+        account_id = hashlib.sha256(f"{host}:{port}:{username}:{folder}".encode()).hexdigest()[:16]
+        cfg = EmailInboxConfig(
+            inbox_id=account_id,
+            email_address=username,
+            imap_server=host,
+            imap_port=port,
+            username=username,
+            password=password,
+            use_ssl=use_ssl,
+            folder=folder,
+        )
+        self._inbox_configs[account_id] = cfg
+
+        return {
+            "id": account_id,
+            "account_id": account_id,
+            "email_address": cfg.email_address,
+            "host": cfg.imap_server,
+            "port": cfg.imap_port,
+            "folder": cfg.folder,
+            "use_ssl": cfg.use_ssl,
+            "status": "connected",
+        }
+
+    def list_imap_accounts(self) -> List[Dict[str, Any]]:
+        """List registered IMAP accounts (without credentials)."""
+        accounts: List[Dict[str, Any]] = []
+        for account_id, cfg in self._inbox_configs.items():
+            accounts.append({
+                "id": account_id,
+                "account_id": account_id,
+                "email_address": cfg.email_address,
+                "host": cfg.imap_server,
+                "port": cfg.imap_port,
+                "folder": cfg.folder,
+                "use_ssl": cfg.use_ssl,
+                "status": "connected",
+            })
+        return accounts
+
+    async def sync_imap_account(self, account_id: str, limit: int = 50) -> Dict[str, Any]:
+        """Sync recent messages from a configured IMAP account."""
+        cfg = self._inbox_configs.get(account_id)
+        if not cfg:
+            raise ValueError("IMAP account not found")
+
+        results = await self.fetch_from_imap(cfg, limit=limit, unseen_only=True)
+        return {
+            "account_id": account_id,
+            "status": "completed",
+            "synced": len(results),
+            "documents": [r.document_id for r in results],
+        }
 
     def generate_inbox_address(self, user_id: str, purpose: str = "default") -> str:
         """

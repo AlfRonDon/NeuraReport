@@ -43,6 +43,22 @@ class UpdateIntentRequest(BaseModel):
     result: Optional[Dict[str, Any]] = Field(None, description="Result data")
 
 
+class FrontendErrorReportRequest(BaseModel):
+    """Frontend error event for debugging click/action failures."""
+
+    source: str = Field(default="frontend", max_length=128)
+    message: str = Field(..., min_length=1, max_length=4000)
+    route: Optional[str] = Field(None, max_length=512)
+    action: Optional[str] = Field(None, max_length=256)
+    status_code: Optional[int] = Field(None, ge=100, le=599)
+    method: Optional[str] = Field(None, max_length=16)
+    request_url: Optional[str] = Field(None, max_length=2000)
+    stack: Optional[str] = Field(None, max_length=12000)
+    user_agent: Optional[str] = Field(None, max_length=1024)
+    timestamp: Optional[str] = Field(None, max_length=64)
+    context: Optional[Dict[str, Any]] = Field(None)
+
+
 # ============================================
 # State helpers
 # ============================================
@@ -126,3 +142,38 @@ async def update_intent(
     )
 
     return {"status": "ok", "intent_id": id, "updated_at": now}
+
+
+@router.post("/frontend-error")
+async def record_frontend_error(request: FrontendErrorReportRequest):
+    """Persist/log frontend runtime or action errors for operations debugging."""
+    now = datetime.now(timezone.utc).isoformat()
+    one_line_message = " ".join((request.message or "").split())[:1000]
+    stack_preview = None
+    if request.stack:
+        stack_preview = request.stack.replace("\n", "\\n")[:3000]
+
+    logger.error(
+        "frontend_error source=%s route=%s action=%s method=%s status=%s message=%s stack=%s",
+        request.source,
+        request.route or "-",
+        request.action or "-",
+        request.method or "-",
+        request.status_code if request.status_code is not None else "-",
+        one_line_message,
+        stack_preview or "-",
+        extra={
+            "event": "frontend_error",
+            "source": request.source,
+            "route": request.route,
+            "action": request.action,
+            "method": request.method,
+            "status_code": request.status_code,
+            "request_url": request.request_url,
+            "user_agent": request.user_agent,
+            "context": request.context,
+            "client_timestamp": request.timestamp,
+            "logged_at": now,
+        },
+    )
+    return {"status": "ok", "logged_at": now}

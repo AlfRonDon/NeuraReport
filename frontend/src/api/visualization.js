@@ -4,6 +4,15 @@
  */
 import { api } from './client';
 
+function asArray(payload, keys = []) {
+  if (Array.isArray(payload)) return payload;
+  if (!payload || typeof payload !== 'object') return [];
+  for (const key of keys) {
+    if (Array.isArray(payload[key])) return payload[key];
+  }
+  return [];
+}
+
 // ============================================
 // Diagram Generation
 // ============================================
@@ -133,10 +142,10 @@ export async function exportDiagramAsPng(diagramId) {
 
 export async function listDiagramTypes() {
   const response = await api.get('/visualization/types/diagrams');
-  return response.data;
+  return asArray(response.data, ['types', 'diagram_types', 'items', 'results']);
 }
 
 export async function listChartTypes() {
   const response = await api.get('/visualization/types/charts');
-  return response.data;
+  return asArray(response.data, ['types', 'chart_types', 'items', 'results']);
 }

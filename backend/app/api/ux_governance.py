@@ -153,6 +153,8 @@ EXEMPT_PATHS = {
     "/redoc",
     "/api/v1/auth/login",
     "/api/v1/auth/refresh",
+    "/audit/frontend-error",
+    "/api/v1/audit/frontend-error",
 }
 
 

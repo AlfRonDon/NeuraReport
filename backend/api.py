@@ -53,8 +53,12 @@ def _configure_error_log_handler(target_logger: logging.Logger | None = None) ->
     """
     Attach a file handler that records backend errors for desktop/frontend debugging.
     Path defaults to backend/logs/backend_errors.log but can be overridden via NEURA_ERROR_LOG.
+
+    The handler is attached to the ``neura`` and ``backend`` top-level logger
+    namespaces (which cover all application loggers) as well as the root logger
+    as a fallback.  This avoids relying solely on root-logger propagation, which
+    can be disrupted by uvicorn's logging dictConfig.
     """
-    target_logger = target_logger or logging.getLogger("neura.api")
     log_target = os.getenv("NEURA_ERROR_LOG")
     if log_target:
         log_file = Path(log_target).expanduser()
@@ -67,9 +71,7 @@ def _configure_error_log_handler(target_logger: logging.Logger | None = None) ->
     log_file.parent.mkdir(parents=True, exist_ok=True)
     log_file.touch(exist_ok=True)
 
-    for handler in target_logger.handlers:
-        if isinstance(handler, logging.FileHandler) and getattr(handler, "baseFilename", "") == str(log_file):
-            return log_file
+    abs_log_file = str(log_file.resolve())
 
     try:
         handler = logging.FileHandler(log_file, encoding="utf-8")
@@ -78,8 +80,68 @@ def _configure_error_log_handler(target_logger: logging.Logger | None = None) ->
 
     handler.setLevel(logging.ERROR)
     handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s %(message)s"))
-    target_logger.addHandler(handler)
+
+    # Attach to the app namespaces plus framework/network loggers and the
+    # root logger as a catch-all.  This ensures errors from uvicorn, starlette,
+    # fastapi, httpx, and other libraries are captured alongside app errors.
+    for logger_name in ("neura", "backend", "uvicorn", "uvicorn.error", "fastapi", "starlette", "httpx", "httpcore"):
+        _logger = logging.getLogger(logger_name)
+        already_attached = any(
+            isinstance(h, logging.FileHandler)
+            and os.path.abspath(getattr(h, "baseFilename", "")) == abs_log_file
+            for h in _logger.handlers
+        )
+        if not already_attached:
+            _logger.addHandler(handler)
+
+    # Also attach to root logger as a fallback for any namespace not listed above.
+    root = target_logger or logging.getLogger()
+    root_attached = any(
+        isinstance(h, logging.FileHandler)
+        and os.path.abspath(getattr(h, "baseFilename", "")) == abs_log_file
+        for h in root.handlers
+    )
+    if not root_attached:
+        root.addHandler(handler)
+
     return log_file
+
+
+def _configure_llm_log_handler() -> Path | None:
+    """Configure a dedicated log file for LLM calls and outputs."""
+    log_target = os.getenv("NEURA_LLM_LOG")
+    if log_target:
+        log_file = Path(log_target).expanduser()
+    else:
+        backend_dir = Path(__file__).resolve().parent
+        logs_dir = backend_dir / "logs"
+        logs_dir.mkdir(parents=True, exist_ok=True)
+        log_file = logs_dir / "llm.log"
+
+    log_file.parent.mkdir(parents=True, exist_ok=True)
+    log_file.touch(exist_ok=True)
+    abs_log_file = str(log_file.resolve())
+
+    try:
+        handler = logging.FileHandler(log_file, encoding="utf-8")
+    except OSError:
+        return None
+
+    handler.setLevel(logging.DEBUG)
+    handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s %(message)s"))
+
+    llm_logger = logging.getLogger("neura.llm")
+    llm_logger.setLevel(logging.DEBUG)
+    already_attached = any(
+        isinstance(h, logging.FileHandler)
+        and os.path.abspath(getattr(h, "baseFilename", "")) == abs_log_file
+        for h in llm_logger.handlers
+    )
+    if not already_attached:
+        llm_logger.addHandler(handler)
+
+    return log_file
+
 
 # ---------- App & CORS ----------
 logger = logging.getLogger("neura.api")
@@ -99,6 +161,10 @@ async def lifespan(app: FastAPI):
         ERROR_LOG_PATH = _configure_error_log_handler(logging.getLogger())
         if ERROR_LOG_PATH:
             logger.info("error_log_configured", extra={"event": "error_log_configured", "path": str(ERROR_LOG_PATH)})
+
+    llm_log_path = _configure_llm_log_handler()
+    if llm_log_path:
+        logger.info("llm_log_configured", extra={"event": "llm_log_configured", "path": str(llm_log_path)})
 
     try:
         await init_auth_db()
