@@ -889,6 +889,7 @@ def build_or_load_contract_v2(
             "overview": overview_path,
             "step5_requirements": step5_path,
             "meta": meta_path,
+            "contract": contract_path,
         },
         "meta": meta_payload,
         "cached": False,

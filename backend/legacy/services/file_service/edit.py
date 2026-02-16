@@ -17,9 +17,11 @@ from backend.app.services.utils import (
     acquire_template_lock,
     get_correlation_id,
     write_text_atomic,
+    write_json_atomic,
     call_chat_completion,
     strip_code_fences,
 )
+from backend.app.services.utils.text import extract_json_object
 from backend.legacy.schemas.template_schema import (
     TemplateAiEditPayload,
     TemplateCreateFromChatPayload,
@@ -163,11 +165,9 @@ def _run_template_edit_llm(template_html: str, instructions: str) -> tuple[str, 
         raise http_error(502, "llm_call_failed", "Template edit LLM call failed")
 
     raw_text = (response.choices[0].message.content or "").strip()
-    parsed_text = strip_code_fences(raw_text)
-    try:
-        payload = json.loads(parsed_text)
-    except Exception as exc:
-        logger.exception("LLM did not return valid JSON")
+    payload = extract_json_object(raw_text)
+    if payload is None:
+        logger.error("LLM did not return valid JSON: %s", raw_text[:500])
         raise http_error(502, "llm_invalid_response", "LLM did not return valid JSON")
 
     if not isinstance(payload, dict):
@@ -378,11 +378,8 @@ def _run_template_chat_llm(template_html: str, conversation_history: list[dict])
         raise http_error(502, "llm_call_failed", "Template chat LLM call failed")
 
     raw_text = (response.choices[0].message.content or "").strip()
-    parsed_text = strip_code_fences(raw_text)
-
-    try:
-        payload = json.loads(parsed_text)
-    except Exception as exc:
+    payload = extract_json_object(raw_text)
+    if payload is None:
         # If JSON parsing fails, return a friendly error response
         return {
             "message": "I apologize, but I encountered an issue processing your request. Could you please rephrase or try again?",
@@ -567,25 +564,32 @@ def _run_template_chat_create_llm(
         raise http_error(502, "llm_call_failed", "Template chat create LLM call failed")
 
     raw_text = (response.choices[0].message.content or "").strip()
-    parsed_text = strip_code_fences(raw_text)
-
-    try:
-        payload = json.loads(parsed_text)
-    except Exception:
+    payload = extract_json_object(raw_text)
+    if not isinstance(payload, dict):
+        # Log the raw text so we can debug JSON parse failures
+        logger.warning(
+            "template_chat_create_json_parse_failed",
+            extra={
+                "event": "template_chat_create_json_parse_failed",
+                "raw_text_length": len(raw_text),
+                "raw_text_preview": raw_text[:500],
+            },
+        )
+        # Fallback: if the LLM returned plain text (not JSON), use it as the message
+        # This is better than showing "I apologize" — the LLM's text is still useful
+        if raw_text and len(raw_text) > 20:
+            return {
+                "message": raw_text,
+                "ready_to_apply": False,
+                "proposed_changes": None,
+                "follow_up_questions": None,
+                "updated_html": None,
+            }
         return {
             "message": "I apologize, but I encountered an issue processing your request. Could you please rephrase or try again?",
             "ready_to_apply": False,
             "proposed_changes": None,
             "follow_up_questions": ["Could you describe what kind of report template you need?"],
-            "updated_html": None,
-        }
-
-    if not isinstance(payload, dict):
-        return {
-            "message": "I apologize, but I encountered an issue. Could you please try again?",
-            "ready_to_apply": False,
-            "proposed_changes": None,
-            "follow_up_questions": None,
             "updated_html": None,
         }
 
@@ -686,6 +690,88 @@ def create_template_from_chat(payload: TemplateCreateFromChatPayload, request: R
     _TOKEN_RE = _re.compile(r"\{\{?\s*([A-Za-z0-9_\-\.]+)\s*\}\}?")
     _BLOCK_RE = _re.compile(r"<!--\s*BEGIN:BLOCK_REPEAT\b", _re.IGNORECASE)
     tokens_found = sorted(set(_TOKEN_RE.findall(html)))
+    has_block_repeat = bool(_BLOCK_RE.search(html))
+
+    # --- Build schema_ext.json by classifying tokens from HTML structure ---
+    # Tokens inside <table> rows (between <tr>...</tr>) → row_tokens
+    # Tokens near totals (tfoot, or rows with "total" in nearby text) → totals
+    # Everything else → scalars
+    scalars, row_tokens, totals = [], [], []
+
+    # Identify tokens that appear inside table body rows
+    _TR_RE = _re.compile(r"<tr\b[^>]*>(.*?)</tr>", _re.IGNORECASE | _re.DOTALL)
+    _THEAD_RE = _re.compile(r"<thead\b[^>]*>.*?</thead>", _re.IGNORECASE | _re.DOTALL)
+    _TFOOT_RE = _re.compile(r"<tfoot\b[^>]*>(.*?)</tfoot>", _re.IGNORECASE | _re.DOTALL)
+    _TABLE_RE = _re.compile(r"<table\b[^>]*>(.*?)</table>", _re.IGNORECASE | _re.DOTALL)
+
+    table_row_tokens = set()
+    totals_tokens = set()
+
+    # Check tokens in tfoot first (these are totals)
+    for tfoot_match in _TFOOT_RE.finditer(html):
+        tfoot_text = tfoot_match.group(1)
+        for tok in _TOKEN_RE.findall(tfoot_text):
+            totals_tokens.add(tok)
+
+    # Check tokens in table rows (excluding thead, tfoot)
+    for table_match in _TABLE_RE.finditer(html):
+        table_html = table_match.group(1)
+        # Strip thead and tfoot to get tbody content
+        body_html = _THEAD_RE.sub("", table_html)
+        body_html = _TFOOT_RE.sub("", body_html)
+        for tr_match in _TR_RE.finditer(body_html):
+            row_text = tr_match.group(1)
+            row_lower = row_text.lower()
+            for tok in _TOKEN_RE.findall(row_text):
+                if tok in totals_tokens:
+                    continue
+                # If row contains "total" text, classify as totals
+                if "total" in row_lower or "grand" in row_lower or "sum" in row_lower:
+                    totals_tokens.add(tok)
+                else:
+                    table_row_tokens.add(tok)
+
+    # Also check for BLOCK_REPEAT tokens → row_tokens
+    _BLOCK_SECTION_RE = _re.compile(
+        r"<!--\s*BEGIN:BLOCK_REPEAT\b.*?-->(.+?)<!--\s*END:BLOCK_REPEAT\s*-->",
+        _re.IGNORECASE | _re.DOTALL,
+    )
+    for block_match in _BLOCK_SECTION_RE.finditer(html):
+        block_text = block_match.group(1)
+        for tok in _TOKEN_RE.findall(block_text):
+            if tok not in totals_tokens:
+                table_row_tokens.add(tok)
+
+    for tok in tokens_found:
+        if tok in totals_tokens:
+            totals.append(tok)
+        elif tok in table_row_tokens:
+            row_tokens.append(tok)
+        else:
+            scalars.append(tok)
+
+    schema_ext = {"scalars": scalars, "row_tokens": row_tokens, "totals": totals}
+    schema_path = template_dir_path / "schema_ext.json"
+    write_json_atomic(schema_path, schema_ext, indent=2, ensure_ascii=False, step="create_template_schema_ext")
+
+    # --- Build page_summary.txt for the contract builder ---
+    page_summary_lines = [
+        f"Template: {name}",
+        f"Type: {kind}",
+        f"Created from: AI chat conversation",
+        f"Total tokens: {len(tokens_found)}",
+        f"  Scalars: {', '.join(scalars[:20]) if scalars else '(none)'}",
+        f"  Row tokens: {', '.join(row_tokens[:20]) if row_tokens else '(none)'}",
+        f"  Totals: {', '.join(totals[:10]) if totals else '(none)'}",
+        f"Has block repeat: {has_block_repeat}",
+    ]
+    page_summary_path = template_dir_path / "page_summary.txt"
+    write_text_atomic(
+        page_summary_path,
+        "\n".join(page_summary_lines),
+        encoding="utf-8",
+        step="create_template_page_summary",
+    )
 
     # Register in state
     state_access.upsert_template(
@@ -712,6 +798,7 @@ def create_template_from_chat(payload: TemplateCreateFromChatPayload, request: R
         "name": name,
         "kind": kind,
         "tokens": tokens_found,
-        "has_block_repeat": bool(_BLOCK_RE.search(html)),
+        "has_block_repeat": has_block_repeat,
+        "schema": schema_ext,
         "correlation_id": correlation_id,
     }

@@ -128,7 +128,8 @@ export default function UploadVerify() {
 
   const [file, setFile] = useState(null)
   const [pendingFileAction, setPendingFileAction] = useState(null)
-
+  const [selectedPage, setSelectedPage] = useState(0)
+  const [pageCount, setPageCount] = useState(1)
 
   const [verified, setVerified] = useState(false)
   const [verifying, setVerifying] = useState(false)
@@ -193,6 +194,8 @@ export default function UploadVerify() {
       setQueueingVerify(false)
       if (options.clearFile) {
         setFile(null)
+        setSelectedPage(0)
+        setPageCount(1)
         if (inputRef.current) {
           inputRef.current.value = ''
         }
@@ -377,6 +380,14 @@ export default function UploadVerify() {
             setVerifyProgress(evt.progress);
           }
 
+          // Capture page count from the upload-complete or result events
+          if (typeof evt.page_count === 'number' && evt.page_count > 0) {
+            setPageCount(evt.page_count);
+          }
+          if (typeof evt.selected_page === 'number') {
+            setSelectedPage(evt.selected_page);
+          }
+
           const eventType = evt.event || (evt.stage ? 'stage' : null);
 
           if (eventType === 'stage') {
@@ -501,6 +512,7 @@ export default function UploadVerify() {
           const res = await apiVerifyTemplate({
             file,
             connectionId,
+            page: selectedPage,
             onProgress: handleProgress,
             onUploadProgress: handleUploadProgress,
             kind: templateKind,
@@ -598,6 +610,7 @@ export default function UploadVerify() {
           const res = await apiVerifyTemplate({
             file,
             connectionId,
+            page: selectedPage,
             kind: templateKind,
             background: true,
           })
@@ -1019,6 +1032,56 @@ export default function UploadVerify() {
         </Stack>
       ) : null}
 
+      {/* Page selector for multi-page PDFs */}
+      {file && format === 'PDF' && pageCount > 1 && (
+        <Stack
+          direction="row"
+          spacing={1.5}
+          alignItems="center"
+          sx={{
+            mt: 1.5,
+            px: 2,
+            py: 1,
+            borderRadius: 1,
+            border: '1px solid',
+            borderColor: 'divider',
+            bgcolor: (theme) => theme.palette.mode === 'dark'
+              ? alpha(theme.palette.info.main, 0.08)
+              : alpha(theme.palette.info.main, 0.06),
+          }}
+        >
+          <Typography variant="body2" sx={{ fontWeight: 500 }}>
+            This PDF has {pageCount} pages. Select the page to verify:
+          </Typography>
+          <Stack direction="row" spacing={0.5} alignItems="center">
+            <Button
+              size="small"
+              variant="outlined"
+              disabled={selectedPage <= 0 || verifying}
+              onClick={() => setSelectedPage((p) => Math.max(0, p - 1))}
+              sx={{ minWidth: 32, px: 0.5 }}
+            >
+              &lsaquo;
+            </Button>
+            <Typography
+              variant="body2"
+              sx={{ minWidth: 60, textAlign: 'center', fontWeight: 600 }}
+            >
+              Page {selectedPage + 1} / {pageCount}
+            </Typography>
+            <Button
+              size="small"
+              variant="outlined"
+              disabled={selectedPage >= pageCount - 1 || verifying}
+              onClick={() => setSelectedPage((p) => Math.min(pageCount - 1, p + 1))}
+              sx={{ minWidth: 32, px: 0.5 }}
+            >
+              &rsaquo;
+            </Button>
+          </Stack>
+        </Stack>
+      )}
+
       {/* Verify / Mapping buttons */}
       <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mt: 2 }}>
         <Button
@@ -1128,7 +1191,9 @@ export default function UploadVerify() {
             }}
           >
             <Stack spacing={1.5}>
-              <Typography variant="subtitle2">Reference (PDF page 1)</Typography>
+              <Typography variant="subtitle2">
+                Reference (Page {selectedPage + 1}{pageCount > 1 ? ` of ${pageCount}` : ''})
+              </Typography>
               <Box
                 sx={{
                   border: '1px solid',

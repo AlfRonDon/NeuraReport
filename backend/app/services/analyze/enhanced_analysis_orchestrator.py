@@ -64,7 +64,7 @@ from backend.app.services.analyze.extraction_pipeline import (
 from backend.app.services.analyze.enhanced_analysis_store import get_analysis_store
 from backend.app.services.llm.rag import RAGRetriever
 from backend.app.services.utils.llm import call_chat_completion, call_chat_completion_async
-from backend.app.services.templates.TemplateVerify import MODEL, get_openai_client
+from backend.app.services.llm.client import get_llm_client
 
 logger = logging.getLogger("neura.analyze.orchestrator")
 
@@ -152,6 +152,8 @@ class EnhancedAnalysisOrchestrator:
         # Create streaming session
         session = self.ux_service.create_streaming_session()
 
+        warnings_list: List[str] = []
+
         try:
             # Stage 1: Upload validation
             yield self._event("stage", "Validating document...", 5, analysis_id, correlation_id)
@@ -162,8 +164,8 @@ class EnhancedAnalysisOrchestrator:
 
             document_type = _detect_document_type(file_name)
 
-            # Stage 2: Content extraction
-            yield self._event("stage", "Extracting content...", 15, analysis_id, correlation_id)
+            # Stage 2: Content extraction (PDF/Excel parsing — no LLM)
+            yield self._event("stage", "Extracting content from document...", 15, analysis_id, correlation_id)
 
             content = extract_document_content(
                 file_bytes=file_bytes,
@@ -172,16 +174,44 @@ class EnhancedAnalysisOrchestrator:
             )
 
             if content.errors and not content.tables_raw and not content.text_content:
-                yield self._event("error", f"Extraction failed: {'; '.join(content.errors)}", 0, analysis_id, correlation_id)
+                yield self._event("error", f"Could not extract content: {'; '.join(content.errors)}", 0, analysis_id, correlation_id)
                 return
 
-            # Stage 3: Intelligent extraction
-            yield self._event("stage", "Running intelligent extraction...", 30, analysis_id, correlation_id)
+            if content.errors:
+                warnings_list.extend(content.errors)
 
-            extraction_result = self.extraction_service.extract_all(
-                text=content.text_content,
-                raw_tables=content.tables_raw,
-            )
+            text_len = len(content.text_content or "")
+            yield self._event("stage", f"Extracted {text_len} chars, {len(content.tables_raw)} tables", 20, analysis_id, correlation_id)
+
+            # Stage 3: Intelligent extraction (1 LLM call — runs in thread with progress ticks)
+            yield self._event("stage", "Extracting entities & metrics with AI...", 30, analysis_id, correlation_id)
+
+            try:
+                extraction_task = asyncio.create_task(
+                    asyncio.to_thread(
+                        self.extraction_service.extract_all,
+                        text=content.text_content,
+                        raw_tables=content.tables_raw,
+                    )
+                )
+                _pct = 30
+                while not extraction_task.done():
+                    await asyncio.sleep(2.0)
+                    if extraction_task.done():
+                        break
+                    if _pct < 48:
+                        _pct += 2
+                        yield self._event("stage", "Extracting entities & metrics...", _pct, analysis_id, correlation_id)
+                extraction_result = await extraction_task
+            except Exception as exc:
+                logger.error("Extraction stage failed: %s", exc, exc_info=True)
+                yield self._event("stage", f"Extraction partially failed: {exc}", 35, analysis_id, correlation_id)
+                warnings_list.append(f"AI extraction failed: {exc}")
+                extraction_result = {
+                    "tables": [], "entities": [], "metrics": [],
+                    "forms": [], "invoices": [], "contracts": [],
+                    "table_relationships": [],
+                }
 
             tables = extraction_result["tables"]
             entities = extraction_result["entities"]
@@ -191,16 +221,46 @@ class EnhancedAnalysisOrchestrator:
             contracts = extraction_result["contracts"]
             table_relationships = extraction_result["table_relationships"]
 
-            yield self._event("stage", f"Found {len(tables)} tables, {len(metrics)} metrics", 40, analysis_id, correlation_id)
+            yield self._event("stage", f"Found {len(tables)} tables, {len(metrics)} metrics, {len(entities)} entities", 40, analysis_id, correlation_id)
 
-            # Stage 4: AI Analysis Engines
-            yield self._event("stage", "Running AI analysis...", 50, analysis_id, correlation_id)
+            # Stage 4: AI Analysis — single consolidated LLM call (runs in thread with progress ticks)
+            yield self._event("stage", "Running comprehensive AI analysis...", 50, analysis_id, correlation_id)
 
-            analysis_results = self.analysis_engine.run_all_analyses(
-                text=content.text_content,
-                tables=tables,
-                metrics=metrics,
-            )
+            try:
+                analysis_task = asyncio.create_task(
+                    asyncio.to_thread(
+                        self.analysis_engine.run_all_analyses,
+                        text=content.text_content,
+                        tables=tables,
+                        metrics=metrics,
+                    )
+                )
+                _pct = 50
+                while not analysis_task.done():
+                    await asyncio.sleep(2.0)
+                    if analysis_task.done():
+                        break
+                    if _pct < 63:
+                        _pct += 2
+                        yield self._event("stage", "Analyzing document...", _pct, analysis_id, correlation_id)
+                analysis_results = await analysis_task
+            except Exception as exc:
+                logger.error("Analysis stage failed: %s", exc, exc_info=True)
+                yield self._event("stage", f"AI analysis failed: {exc}", 55, analysis_id, correlation_id)
+                warnings_list.append(f"AI analysis failed: {exc}")
+                # Provide empty defaults so we can still return partial results
+                from backend.app.schemas.analyze.enhanced_analysis import (
+                    SentimentLevel, SentimentAnalysis as SA, TextAnalytics as TA,
+                    StatisticalAnalysis as StA, FinancialAnalysis as FA,
+                )
+                analysis_results = {
+                    "summaries": {},
+                    "sentiment": SA(overall_sentiment=SentimentLevel.NEUTRAL, overall_score=0.0, confidence=0.0),
+                    "text_analytics": TA(),
+                    "statistical_analysis": StA(),
+                    "financial_analysis": FA(metrics_found=len(metrics)),
+                    "insights": [], "risks": [], "opportunities": [], "action_items": [],
+                }
 
             summaries = analysis_results["summaries"]
             sentiment = analysis_results["sentiment"]
@@ -212,44 +272,38 @@ class EnhancedAnalysisOrchestrator:
             opportunities = analysis_results["opportunities"]
             action_items = analysis_results["action_items"]
 
-            yield self._event("stage", f"Generated {len(insights)} insights", 60, analysis_id, correlation_id)
+            yield self._event("stage", f"Generated {len(insights)} insights, {len(risks)} risks", 65, analysis_id, correlation_id)
 
-            # Stage 5: Visualization Generation
+            # Stage 5: Visualization (no LLM — pattern detection + chart specs)
             yield self._event("stage", "Generating visualizations...", 70, analysis_id, correlation_id)
 
-            viz_results = self.visualization_engine.generate_all_visualizations(
-                tables=tables,
-                metrics=metrics,
-                max_charts=preferences.max_charts,
-            )
-
-            charts = viz_results["charts"]
-            viz_suggestions = viz_results["suggestions"]
+            try:
+                viz_results = self.visualization_engine.generate_all_visualizations(
+                    tables=tables,
+                    metrics=metrics,
+                    max_charts=preferences.max_charts,
+                )
+                charts = viz_results["charts"]
+                viz_suggestions = viz_results["suggestions"]
+            except Exception as exc:
+                logger.warning("Visualization failed: %s", exc)
+                warnings_list.append(f"Chart generation failed: {exc}")
+                charts = []
+                viz_suggestions = []
 
             yield self._event("stage", f"Created {len(charts)} charts", 75, analysis_id, correlation_id)
 
-            # Stage 6: Data Quality Assessment
+            # Stage 6: Data Quality (no LLM)
             yield self._event("stage", "Assessing data quality...", 80, analysis_id, correlation_id)
 
-            data_quality = self.export_service.assess_quality(tables)
+            try:
+                data_quality = self.export_service.assess_quality(tables)
+            except Exception as exc:
+                logger.warning("Quality assessment failed: %s", exc)
+                data_quality = {}
 
-            # Stage 7: Advanced AI Features (if enabled)
-            advanced_results = {}
-            if preferences.enable_predictions:
-                yield self._event("stage", "Running predictive analytics...", 85, analysis_id, correlation_id)
-
-                advanced_results = self.advanced_ai.run_all_advanced_features(
-                    text=content.text_content,
-                    entities=entities,
-                    metrics=metrics,
-                    tables=tables,
-                    document_id=analysis_id,
-                    images=content.images,
-                    document_context=content.text_content,
-                )
-
-            # Stage 8: Build RAG index for Q&A
-            yield self._event("stage", "Building knowledge index...", 90, analysis_id, correlation_id)
+            # Stage 7: Build RAG index for Q&A (no LLM)
+            yield self._event("stage", "Building knowledge index for Q&A...", 88, analysis_id, correlation_id)
 
             rag = RAGRetriever(use_embeddings=False)
             rag.add_document(
@@ -259,7 +313,7 @@ class EnhancedAnalysisOrchestrator:
             )
             self._rag_retrievers[analysis_id] = rag
 
-            # Stage 9: Generate suggested questions
+            # Stage 8: Suggested questions (no LLM)
             suggested_questions = self.ux_service.generate_suggested_questions(
                 tables=tables,
                 metrics=metrics,
@@ -269,7 +323,7 @@ class EnhancedAnalysisOrchestrator:
             # Calculate processing time
             processing_time_ms = int((time.time() - started) * 1000)
 
-            yield self._event("stage", "Finalizing...", 95, analysis_id, correlation_id)
+            yield self._event("stage", "Finalizing results...", 95, analysis_id, correlation_id)
 
             # Build final result
             result = EnhancedAnalysisResult(
@@ -313,13 +367,13 @@ class EnhancedAnalysisOrchestrator:
                 total_tables=len(tables),
                 total_entities=len(entities),
                 total_metrics=len(metrics),
-                confidence_score=0.85,
+                confidence_score=0.85 if not warnings_list else 0.6,
 
                 # Settings
                 preferences=preferences,
 
                 # Warnings
-                warnings=content.errors,
+                warnings=warnings_list,
             )
 
             # Cache the result
@@ -332,11 +386,10 @@ class EnhancedAnalysisOrchestrator:
 
             yield self._event("stage", "Complete", 100, analysis_id, correlation_id)
 
-            # Final result event
-            result_dict = result.model_dump()
+            # Final result event (use mode="json" for datetime serialization)
+            result_dict = result.model_dump(mode="json")
             result_dict["event"] = "result"
             result_dict["suggested_questions"] = suggested_questions
-            result_dict["advanced_analytics"] = advanced_results
 
             if correlation_id:
                 result_dict["correlation_id"] = correlation_id
@@ -348,7 +401,10 @@ class EnhancedAnalysisOrchestrator:
             raise
         except Exception as e:
             logger.error(f"Analysis failed: {e}", exc_info=True)
-            yield self._event("error", "Analysis failed due to an internal error", 0, analysis_id, correlation_id)
+            error_detail = str(e)
+            if len(error_detail) > 200:
+                error_detail = error_detail[:200] + "..."
+            yield self._event("error", f"Analysis failed: {error_detail}", 0, analysis_id, correlation_id)
 
     def _event(
         self,
@@ -422,8 +478,9 @@ class EnhancedAnalysisOrchestrator:
                 suggested_followups=[],
             )
 
-        # Query with context
-        rag_result = rag.query_with_context(
+        # Query with context (runs Claude CLI — must not block event loop)
+        rag_result = await asyncio.to_thread(
+            rag.query_with_context,
             question=question,
             top_k=max_context_chunks,
             include_sources=include_sources,
@@ -442,7 +499,7 @@ class EnhancedAnalysisOrchestrator:
     async def _generate_followup_questions(self, question: str, answer: str) -> List[str]:
         """Generate follow-up questions based on Q&A."""
         try:
-            client = get_openai_client()
+            client = get_llm_client()
             prompt = f"""Based on this Q&A, suggest 3 relevant follow-up questions.
 
 Question: {question}
@@ -453,17 +510,17 @@ Return JSON array of questions:
 
             response = await call_chat_completion_async(
                 client,
-                model=MODEL,
+                model=None,
                 messages=[{"role": "user", "content": prompt}],
                 description="followup_questions",
                 temperature=0.5,
             )
 
             raw = response.choices[0].message.content or "[]"
-            import re
-            match = re.search(r'\[[\s\S]*\]', raw)
-            if match:
-                return json.loads(match.group())
+            from backend.app.services.utils.llm import extract_json_array_from_llm_response
+            result = extract_json_array_from_llm_response(raw, default=[])
+            if result:
+                return result
         except Exception as e:
             logger.warning(f"Follow-up generation failed: {e}")
 
@@ -475,29 +532,45 @@ Return JSON array of questions:
         query: str,
         include_trends: bool = True,
         include_forecasts: bool = False,
-    ) -> List[Dict[str, Any]]:
-        """Generate charts from natural language query."""
+    ) -> Dict[str, Any]:
+        """Generate charts from natural language query.
+
+        Returns dict with 'charts' list and optional 'message' string.
+        """
         result = self.get_analysis(analysis_id)
         if not result:
-            return []
+            return {"charts": [], "message": "Analysis not found. Please re-analyze the document."}
 
-        charts = self.visualization_engine.generate_from_query(
-            query=query,
-            tables=result.tables,
-            metrics=result.metrics,
-        )
+        if not result.tables:
+            return {"charts": [], "message": "No tables were extracted from this document. Chart generation requires tabular data."}
 
-        # Add intelligence features
-        if include_trends or include_forecasts:
-            charts = [
-                self.visualization_engine.add_intelligence_to_chart(
-                    chart,
-                    include_forecast=include_forecasts,
-                )
-                for chart in charts
-            ]
+        # Chart generation + intelligence both call Claude CLI — run in thread
+        def _generate_sync():
+            charts = self.visualization_engine.generate_from_query(
+                query=query,
+                tables=result.tables,
+                metrics=result.metrics,
+            )
+            if include_trends or include_forecasts:
+                charts = [
+                    self.visualization_engine.add_intelligence_to_chart(
+                        chart,
+                        include_forecast=include_forecasts,
+                    )
+                    for chart in charts
+                ]
+            return charts
 
-        return [c.model_dump() for c in charts]
+        try:
+            charts = await asyncio.to_thread(_generate_sync)
+        except Exception as exc:
+            logger.error("Chart generation failed: %s", exc, exc_info=True)
+            return {"charts": [], "message": f"Chart generation failed: {exc}"}
+
+        if not charts:
+            return {"charts": [], "message": "AI could not generate charts for this query. Try rephrasing or be more specific about the data you want to visualize."}
+
+        return {"charts": [c.model_dump() for c in charts]}
 
     async def export_analysis(
         self,

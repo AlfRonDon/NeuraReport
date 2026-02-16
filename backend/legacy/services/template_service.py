@@ -195,8 +195,8 @@ def apply_chat_template_edit(template_id: str, html: str, request: Request):
     return apply_chat_template_edit_service(template_id, html, request)
 
 
-def chat_template_create(payload: TemplateChatPayload, request: Request):
-    return chat_template_create_service(payload, request)
+def chat_template_create(payload: TemplateChatPayload, request: Request, sample_pdf_bytes: bytes | None = None):
+    return chat_template_create_service(payload, request, sample_pdf_bytes=sample_pdf_bytes)
 
 
 def create_template_from_chat(payload, request: Request):

@@ -334,7 +334,7 @@ def _validate_constant_replacements(
             )
         if token in schema_tokens:
             raise MappingInlineValidationError(f"Token '{token}' is defined as dynamic in the schema")
-        if _TOKEN_DATE_RE.search(token):
+        if _TOKEN_DATE_RE.search(token) and not token.lower().startswith("label_"):
             raise MappingInlineValidationError(f"Date-like token '{token}' cannot be treated as a constant")
 
         if raw_value is None:

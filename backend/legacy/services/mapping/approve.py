@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import asyncio
-import concurrent.futures
 import importlib
 import json
 import logging
@@ -349,8 +347,7 @@ async def run_mapping_approve(
             try:
                 yield start_stage(stage_key, stage_label, progress=95)
                 thumb_path = final_html_path.parent / "report_final.png"
-                with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-                    pool.submit(asyncio.run, render_html_fn(final_html_path, thumb_path)).result()
+                render_html_fn(final_html_path, thumb_path)
                 thumbnail_url = artifact_url(thumb_path)
                 write_artifact_manifest(
                     template_dir_path,
@@ -386,6 +383,26 @@ async def run_mapping_approve(
             generator_contract_url = generator_artifacts.get("contract") or generator_artifacts.get("contract.json")
             contract_url = generator_contract_url or contract_artifacts.get("contract") or contract_artifacts.get("contract.json")
 
+            # Fallback: if stage artifacts didn't report a contract URL but
+            # contract.json exists on disk (e.g. fresh build path), derive the URL.
+            if not contract_url:
+                disk_contract = template_dir_path / "contract.json"
+                if disk_contract.exists():
+                    contract_url = artifact_url(disk_contract)
+
+            # Also derive overview/step5 URLs from disk when stages didn't report them
+            overview_url = contract_artifacts.get("overview")
+            if not overview_url:
+                disk_overview = template_dir_path / "overview.md"
+                if disk_overview.exists():
+                    overview_url = artifact_url(disk_overview)
+
+            step5_url = contract_artifacts.get("step5_requirements")
+            if not step5_url:
+                disk_step5 = template_dir_path / "step5_requirements.json"
+                if disk_step5.exists():
+                    step5_url = artifact_url(disk_step5)
+
             artifacts_payload = {
                 "template_html_url": template_html_url,
                 "final_html_url": final_html_url,
@@ -393,15 +410,15 @@ async def run_mapping_approve(
                 "manifest_url": manifest_url,
                 "page_summary_url": page_summary_url,
                 "contract_url": contract_url,
-                "overview_url": contract_artifacts.get("overview"),
-                "step5_requirements_url": contract_artifacts.get("step5_requirements"),
+                "overview_url": overview_url,
+                "step5_requirements_url": step5_url,
                 "generator_sql_pack_url": generator_artifacts.get("sql_pack"),
                 "generator_output_schemas_url": generator_artifacts.get("output_schemas"),
                 "generator_assets_url": generator_artifacts.get("generator_assets"),
                 "mapping_keys_url": artifact_url(mapping_keys_file) if mapping_keys_file.exists() else None,
             }
 
-            final_contract_ready = bool(generator_contract_url)
+            final_contract_ready = bool(contract_url)
 
             existing_tpl = state_store.get_template_record(template_id) or {}
             state_store.upsert_template(

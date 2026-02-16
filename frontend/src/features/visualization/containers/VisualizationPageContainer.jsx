@@ -256,17 +256,31 @@ export default function VisualizationPageContainer() {
   const [uploadingFile, setUploadingFile] = useState(false)
   const [uploadedFileName, setUploadedFileName] = useState('')
   const [extractedTable, setExtractedTable] = useState(null) // { headers, rows, filename, sheetCount }
+  const [previewType, setPreviewType] = useState(null)
   const fileInputRef = useRef(null)
+  const activeDiagram = currentDiagram && previewType === selectedType.type ? currentDiagram : null
 
   useEffect(() => {
     return () => reset()
   }, [reset])
+
+  const handleTypeChange = useCallback((type) => {
+    setSelectedType(type)
+    setInputData('')
+    setTitle('')
+    setUploadedFileName('')
+    setExtractedTable(null)
+    setPreviewType(null)
+    setCurrentDiagram(null)
+  }, [setCurrentDiagram])
 
   const handleFileUpload = useCallback(async (e) => {
     const file = e.target.files?.[0]
     if (!file) return
     e.target.value = ''
 
+    setPreviewType(null)
+    setCurrentDiagram(null)
     setUploadingFile(true)
     setUploadedFileName(file.name)
     try {
@@ -299,7 +313,7 @@ export default function VisualizationPageContainer() {
     } finally {
       setUploadingFile(false)
     }
-  }, [toast])
+  }, [setCurrentDiagram, toast])
 
   const handleGenerate = useCallback(async () => {
     if (!inputData.trim()) {
@@ -392,6 +406,7 @@ export default function VisualizationPageContainer() {
         }
 
         if (result) {
+          setPreviewType(selectedType.type)
           registerOutput({
             type: OutputType.DIAGRAM,
             title: `${selectedType.name}: ${title || 'Untitled'}`,
@@ -415,25 +430,25 @@ export default function VisualizationPageContainer() {
       intent: { source: 'visualization', type: selectedType.type },
       action: generateAction,
     })
-  }, [execute, generateFlowchart, generateGantt, generateKanban, generateMindmap, generateNetworkGraph, generateOrgChart, generateSequenceDiagram, generateTimeline, generateWordcloud, inputData, options, selectedType, title, toast])
+  }, [execute, generateFlowchart, generateGantt, generateKanban, generateMindmap, generateNetworkGraph, generateOrgChart, generateSequenceDiagram, generateTimeline, generateWordcloud, inputData, options, registerOutput, selectedType, title, toast])
 
   const handleExport = useCallback(async (format) => {
-    if (!currentDiagram?.id) return
+    if (!activeDiagram?.id) return
 
     let result
     switch (format) {
       case 'mermaid':
-        result = await exportAsMermaid(currentDiagram.id)
+        result = await exportAsMermaid(activeDiagram.id)
         if (result) {
           navigator.clipboard.writeText(result.code)
           toast.show('Mermaid code copied', 'success')
         }
         break
       case 'svg':
-        result = await exportAsSvg(currentDiagram.id)
+        result = await exportAsSvg(activeDiagram.id)
         break
       case 'png':
-        result = await exportAsPng(currentDiagram.id)
+        result = await exportAsPng(activeDiagram.id)
         if (result) {
           const url = URL.createObjectURL(result)
           const a = document.createElement('a')
@@ -447,7 +462,7 @@ export default function VisualizationPageContainer() {
       default:
         break
     }
-  }, [currentDiagram?.id, exportAsMermaid, exportAsPng, exportAsSvg, title, toast])
+  }, [activeDiagram?.id, exportAsMermaid, exportAsPng, exportAsSvg, title, toast])
 
   return (
     <PageContainer>
@@ -464,13 +479,13 @@ export default function VisualizationPageContainer() {
               </Typography>
             </Box>
           </Box>
-          {currentDiagram && (
+          {activeDiagram && (
             <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
               <SendToMenu
                 outputType={OutputType.DIAGRAM}
                 payload={{
                   title: `${selectedType.name}: ${title || 'Diagram'}`,
-                  data: { id: currentDiagram.id, svg: currentDiagram.svg, mermaid: currentDiagram.mermaid_code },
+                  data: { id: activeDiagram.id, svg: activeDiagram.svg, mermaid: activeDiagram.mermaid_code },
                 }}
                 sourceFeature={FeatureKey.VISUALIZATION}
               />
@@ -499,11 +514,7 @@ export default function VisualizationPageContainer() {
             <DiagramTypeCard
               key={type.type}
               selected={selectedType.type === type.type}
-              onClick={() => {
-                setSelectedType(type)
-                setInputData('')
-                setCurrentDiagram(null)
-              }}
+              onClick={() => handleTypeChange(type)}
             >
               <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
@@ -598,24 +609,24 @@ export default function VisualizationPageContainer() {
         </Sidebar>
 
         {/* Preview Area */}
-        <PreviewArea sx={extractedTable || currentDiagram ? { justifyContent: 'flex-start', alignItems: 'stretch' } : {}}>
-          {currentDiagram ? (
+        <PreviewArea sx={extractedTable || activeDiagram ? { justifyContent: 'flex-start', alignItems: 'stretch' } : {}}>
+          {activeDiagram ? (
             <PreviewCard elevation={2}>
-              {currentDiagram.mermaid_code ? (
-                <MermaidDiagram code={currentDiagram.mermaid_code} />
-              ) : currentDiagram.svg ? (
+              {activeDiagram.mermaid_code ? (
+                <MermaidDiagram code={activeDiagram.mermaid_code} />
+              ) : activeDiagram.svg ? (
                 <Box
-                  dangerouslySetInnerHTML={{ __html: sanitizeSVG(currentDiagram.svg) }}
+                  dangerouslySetInnerHTML={{ __html: sanitizeSVG(activeDiagram.svg) }}
                   sx={{ '& svg': { maxWidth: '100%', height: 'auto' } }}
                 />
-              ) : currentDiagram.content ? (
+              ) : activeDiagram.content ? (
                 <Typography
                   component="pre"
                   sx={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}
                 >
-                  {typeof currentDiagram.content === 'string'
-                    ? currentDiagram.content
-                    : JSON.stringify(currentDiagram.content, null, 2)}
+                  {typeof activeDiagram.content === 'string'
+                    ? activeDiagram.content
+                    : JSON.stringify(activeDiagram.content, null, 2)}
                 </Typography>
               ) : (
                 <Typography color="text.secondary">No diagram data returned</Typography>

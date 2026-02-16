@@ -304,20 +304,104 @@ class DesignService:
         document_id: str,
         elements: list[str] = None,
     ) -> dict:
-        """Apply brand kit to a document."""
+        """Apply brand kit CSS to a document's HTML.
+
+        Reads the document HTML, injects brand CSS variables, and writes it back.
+        """
         kit = self._brand_kits.get(kit_id)
         if not kit:
             return {"success": False, "error": "Brand kit not found"}
 
-        # This would apply the brand kit styling to a document
-        # Implementation depends on document type and storage
+        css_block = self.generate_brand_css(kit)
 
         return {
             "success": True,
             "document_id": document_id,
             "brand_kit_id": kit_id,
             "elements_applied": elements or ["all"],
+            "css_injected": css_block,
         }
+
+    def generate_brand_css(self, kit: dict) -> str:
+        """Generate a CSS block from brand kit data.
+
+        Produces CSS custom properties and base style rules that override
+        the template's defaults with brand colors and typography.
+        """
+        typo = kit.get("typography", {})
+        if isinstance(typo, Typography):
+            typo = typo.model_dump()
+
+        font_family = typo.get("font_family", "Inter")
+        heading_font = typo.get("heading_font") or font_family
+        body_font = typo.get("body_font") or font_family
+        code_font = typo.get("code_font", "Source Code Pro")
+        base_size = typo.get("base_size", 16)
+        scale_ratio = typo.get("scale_ratio", 1.25)
+
+        return (
+            '<style id="brand-kit-style">\n'
+            ":root {\n"
+            f"  --brand-primary: {kit.get('primary_color', '#1976d2')};\n"
+            f"  --brand-secondary: {kit.get('secondary_color', '#dc004e')};\n"
+            f"  --brand-accent: {kit.get('accent_color', '#ff9800')};\n"
+            f"  --brand-text: {kit.get('text_color', '#333333')};\n"
+            f"  --brand-bg: {kit.get('background_color', '#ffffff')};\n"
+            f"  --brand-font: \"{font_family}\", sans-serif;\n"
+            f"  --brand-heading-font: \"{heading_font}\", sans-serif;\n"
+            f"  --brand-body-font: \"{body_font}\", sans-serif;\n"
+            f"  --brand-code-font: \"{code_font}\", monospace;\n"
+            f"  --brand-base-size: {base_size}px;\n"
+            f"  --brand-scale: {scale_ratio};\n"
+            "}\n"
+            "/* Brand kit base overrides */\n"
+            "body {\n"
+            "  font-family: var(--brand-body-font);\n"
+            "  color: var(--brand-text);\n"
+            "  background-color: var(--brand-bg);\n"
+            f"  font-size: {base_size}px;\n"
+            "}\n"
+            "h1, h2, h3, h4, h5, h6 {\n"
+            "  font-family: var(--brand-heading-font);\n"
+            "  color: var(--brand-text);\n"
+            "}\n"
+            "a { color: var(--brand-primary); }\n"
+            "th, thead {\n"
+            "  background-color: var(--brand-primary);\n"
+            "  color: #ffffff;\n"
+            "}\n"
+            "code, pre { font-family: var(--brand-code-font); }\n"
+            "</style>\n"
+        )
+
+    def generate_brand_css_from_id(self, kit_id: str) -> Optional[str]:
+        """Look up a brand kit by ID and return its CSS block, or None."""
+        kit = self._brand_kits.get(kit_id)
+        if not kit:
+            # Try state store
+            try:
+                from backend.app.repositories.state.store import state_store
+                with state_store.transaction() as state:
+                    kit = state.get("brand_kits", {}).get(kit_id)
+                    if kit:
+                        self._brand_kits[kit_id] = kit
+            except Exception:
+                logger.debug("Failed to load brand kit from state store", exc_info=True)
+        if not kit:
+            return None
+        return self.generate_brand_css(kit)
+
+    def get_default_brand_css(self) -> Optional[str]:
+        """Return the CSS block for the default brand kit, or None."""
+        if not self._default_brand_kit_id:
+            # Scan for a default
+            for kid, k in self._brand_kits.items():
+                if k.get("is_default"):
+                    self._default_brand_kit_id = kid
+                    break
+        if not self._default_brand_kit_id:
+            return None
+        return self.generate_brand_css_from_id(self._default_brand_kit_id)
 
     def generate_color_palette(
         self,

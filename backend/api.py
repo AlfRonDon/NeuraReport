@@ -330,6 +330,7 @@ from backend.app.services.render.html_raster import save_png as save_png
 from backend.app.services.reports.docx_export import html_file_to_docx as html_file_to_docx
 from backend.app.services.reports.xlsx_export import html_file_to_xlsx as html_file_to_xlsx
 from backend.app.repositories.state import state_store as state_store
+from backend.app.services.templates.TemplateVerify import pdf_page_count as pdf_page_count
 from backend.app.services.templates.TemplateVerify import pdf_to_pngs as pdf_to_pngs
 from backend.app.services.templates.TemplateVerify import render_html_to_png as render_html_to_png
 from backend.app.services.templates.TemplateVerify import render_panel_preview as render_panel_preview

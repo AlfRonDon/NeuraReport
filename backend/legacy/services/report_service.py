@@ -531,6 +531,7 @@ def _run_report_internal(
                 END_DATE=p.end_date,
                 batch_ids=p.batch_ids,
                 KEY_VALUES=key_values_payload,
+                BRAND_KIT_ID=getattr(p, "brand_kit_id", None),
             )
             _ensure_not_cancelled()
             if tmp_html.exists():

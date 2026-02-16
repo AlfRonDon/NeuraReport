@@ -264,11 +264,16 @@ async def verify_template_route(
     file: UploadFile = File(...),
     connection_id: Optional[str] = Form(None),
     refine_iters: int = Form(0),
+    page: int = Form(0),
     background: bool = Query(False),
 ):
-    """Verify and process a PDF template."""
+    """Verify and process a PDF template.
+
+    Args:
+        page: Zero-based page index to render from multi-page PDFs (default 0).
+    """
     if not background:
-        return verify_template(file=file, connection_id=connection_id, refine_iters=refine_iters, request=request)
+        return verify_template(file=file, connection_id=connection_id, refine_iters=refine_iters, page=page, request=request)
 
     upload_path, filename = await _persist_upload(file, suffix=".pdf")
     correlation_id = _correlation(request)
@@ -281,6 +286,7 @@ async def verify_template_route(
                 file=upload,
                 connection_id=connection_id,
                 refine_iters=refine_iters,
+                page=page,
                 request=_request_with_correlation(correlation_id),
             )
             await run_event_stream_async(job_id, iter_ndjson_events_async(response.body_iterator))
@@ -295,7 +301,7 @@ async def verify_template_route(
         connection_id=connection_id,
         template_name=template_name,
         template_kind="pdf",
-        meta={"filename": filename, "background": True, "refine_iters": refine_iters},
+        meta={"filename": filename, "background": True, "refine_iters": refine_iters, "page": page},
         runner=runner,
     )
     return {"status": "queued", "job_id": job["id"], "correlation_id": correlation_id}

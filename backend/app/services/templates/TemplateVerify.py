@@ -223,16 +223,48 @@ def get_openai_client():
     return _llm_client
 
 
-def pdf_to_pngs(pdf_path: Path, out_dir: Path, dpi=400):
-    """Return PNG path of only the first page of the PDF."""
+def pdf_page_count(pdf_path: Path) -> int:
+    """Return the number of pages in a PDF without rendering anything."""
+    if fitz is None:
+        raise RuntimeError("PyMuPDF (install via `pip install pymupdf`) is required for PDF operations.")
+    if not pdf_path.exists():
+        raise FileNotFoundError(f"PDF not found: {pdf_path}")
+    doc = fitz.open(pdf_path)
+    count = len(doc)
+    doc.close()
+    return count
+
+
+def pdf_to_pngs(pdf_path: Path, out_dir: Path, dpi=400, *, page: int = 0):
+    """Render a single page of the PDF to PNG.
+
+    Args:
+        pdf_path: Path to the source PDF.
+        out_dir: Directory for the output PNG.
+        dpi: Resolution for rasterisation.
+        page: Zero-based page index to render (default 0 = first page).
+
+    Returns:
+        List containing a single Path to the rendered PNG.
+
+    Raises:
+        ValueError: If *page* is out of range for the document.
+    """
     if fitz is None:
         raise RuntimeError("PyMuPDF (install via `pip install pymupdf`) is required for PDF rendering.")
     assert pdf_path.exists(), f"PDF not found: {pdf_path}"
     doc = fitz.open(pdf_path)
+    total_pages = len(doc)
+    if page < 0 or page >= total_pages:
+        doc.close()
+        raise ValueError(
+            f"Page index {page} out of range for PDF with {total_pages} page(s). "
+            f"Valid range: 0–{total_pages - 1}."
+        )
     zoom = dpi / 72.0
     mat = fitz.Matrix(zoom, zoom)
-    page = doc[0]  # first page only
-    pix = page.get_pixmap(matrix=mat, alpha=False)
+    pg = doc[page]
+    pix = pg.get_pixmap(matrix=mat, alpha=False)
     out_png = out_dir / "reference_p1.png"
     pix.save(out_png)
     doc.close()
@@ -242,6 +274,8 @@ def pdf_to_pngs(pdf_path: Path, out_dir: Path, dpi=400):
             "event": "pdf_page_rendered",
             "pdf_path": str(pdf_path),
             "png_path": str(out_png),
+            "page": page,
+            "total_pages": total_pages,
             "dpi": dpi,
         },
     )

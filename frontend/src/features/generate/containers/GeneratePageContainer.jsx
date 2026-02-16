@@ -1,13 +1,15 @@
 import Grid from '@mui/material/Grid2'
-import { Box, Typography, Stack, Chip, Alert, Button, alpha } from '@mui/material'
+import { Box, Typography, Stack, Chip, Alert, Button, alpha, Autocomplete, TextField } from '@mui/material'
 import { neutral, palette } from '@/app/theme'
 import PlayArrowIcon from '@mui/icons-material/PlayArrow'
+import PaletteIcon from '@mui/icons-material/Palette'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useNavigateInteraction } from '@/components/ux/governance'
 import { useQueryClient } from '@tanstack/react-query'
 
 import { useAppStore } from '@/stores'
+import useDesignStore from '@/stores/designStore'
 import { useToast } from '@/components/ToastProvider.jsx'
 import TemplatePicker from '../components/TemplatePicker.jsx'
 import GenerateAndDownload from '../components/GenerateAndDownload.jsx'
@@ -46,6 +48,8 @@ export default function GeneratePage() {
   const [keyValues, setKeyValues] = useState({})
   const [keyOptions, setKeyOptions] = useState({})
   const [keyOptionsLoading, setKeyOptionsLoading] = useState({})
+  const [selectedBrandKit, setSelectedBrandKit] = useState(null)
+  const { brandKits, fetchBrandKits } = useDesignStore()
   const isDevEnv = typeof import.meta !== 'undefined' && Boolean(import.meta.env?.DEV)
 
   useEffect(() => {
@@ -53,6 +57,15 @@ export default function GeneratePage() {
     window.__NR_GENERATE_KEY_OPTIONS__ = keyOptions
     window.__NR_GENERATE_KEY_VALUES__ = keyValues
   }, [keyOptions, keyValues, isDevEnv])
+
+  useEffect(() => {
+    fetchBrandKits().then((kits) => {
+      if (!selectedBrandKit && kits?.length) {
+        const defaultKit = kits.find((k) => k.is_default)
+        if (defaultKit) setSelectedBrandKit(defaultKit)
+      }
+    })
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { setResults({}); setFinding(false) }, [selected, start, end, keyValues])
 
@@ -545,6 +558,7 @@ export default function GeneratePage() {
           endDate: endSql,
           batchIds: batchIdsFor(item.tplId),
           keyValues: keyValues[item.tplId],
+          brandKitId: selectedBrandKit?.id || undefined,
           docx: requestDocx,
           xlsx: requestXlsx,
           kind: item.kind,
@@ -656,6 +670,46 @@ export default function GeneratePage() {
               }}
             />
           </Grid>
+          {/* Brand Kit selector */}
+          {brandKits.length > 0 && (
+            <Grid size={12}>
+              <Autocomplete
+                size="small"
+                options={brandKits}
+                value={selectedBrandKit}
+                onChange={(_, kit) => setSelectedBrandKit(kit)}
+                getOptionLabel={(kit) => kit.name || ''}
+                isOptionEqualToValue={(opt, val) => opt?.id === val?.id}
+                renderOption={(props, kit) => (
+                  <li {...props} key={kit.id}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Box sx={{ width: 14, height: 14, borderRadius: '50%', bgcolor: kit.primary_color, border: '1px solid rgba(0,0,0,0.15)', flexShrink: 0 }} />
+                      <Typography variant="body2">{kit.name}</Typography>
+                      {kit.is_default && <Chip label="default" size="small" variant="outlined" sx={{ ml: 'auto', height: 18, fontSize: 11 }} />}
+                    </Box>
+                  </li>
+                )}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Brand Kit"
+                    placeholder="Select brand kit for report styling"
+                    InputProps={{
+                      ...params.InputProps,
+                      startAdornment: (
+                        <>
+                          <PaletteIcon fontSize="small" sx={{ color: 'text.secondary', mr: 0.5 }} />
+                          {params.InputProps.startAdornment}
+                        </>
+                      ),
+                    }}
+                  />
+                )}
+                sx={{ maxWidth: 360 }}
+              />
+            </Grid>
+          )}
+
           <Grid size={12} sx={{ minWidth: 0 }}>
             <GenerateAndDownload
               selected={selectedTemplates.map((t) => t.id)}

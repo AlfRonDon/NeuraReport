@@ -174,6 +174,16 @@ export async function exportBrandKit(brandKitId, format = 'json') {
   return response.data;
 }
 
+export async function getBrandKitCss(brandKitId) {
+  const response = await api.get(`/design/brand-kits/${brandKitId}/css`);
+  return response.data;
+}
+
+export async function getDefaultBrandKitCss() {
+  const response = await api.get('/design/brand-kits/default/css');
+  return response.data;
+}
+
 export async function importBrandKit(data) {
   const response = await api.post('/design/brand-kits/import', data);
   return response.data;

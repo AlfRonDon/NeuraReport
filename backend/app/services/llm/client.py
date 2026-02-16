@@ -131,7 +131,7 @@ class CircuitBreaker:
             "circuit_breaker_state_change",
             extra={
                 "event": "circuit_breaker_state_change",
-                "name": self.name,
+                "breaker_name": self.name,
                 "old_state": old_state.value,
                 "new_state": new_state.value,
             }
@@ -184,7 +184,7 @@ class CircuitBreaker:
         """Get circuit breaker statistics."""
         with self._lock:
             return {
-                "name": self.name,
+                "breaker_name": self.name,
                 "state": self._state.value,
                 "failure_count": len(self._failure_timestamps),
                 "success_count": self._success_count,

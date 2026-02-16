@@ -12,6 +12,7 @@ class RunPayload(BaseModel):
     end_date: str
     batch_ids: Optional[list[str]] = None
     key_values: Optional[dict[str, Any]] = None
+    brand_kit_id: Optional[str] = None
     docx: bool = False
     xlsx: bool = False
     email_recipients: Optional[list[str]] = None

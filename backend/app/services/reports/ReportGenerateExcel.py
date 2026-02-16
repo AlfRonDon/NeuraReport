@@ -307,6 +307,7 @@ def fill_and_print(
     KEY_VALUES: dict | None = None,
     GENERATOR_BUNDLE: dict | None = None,
     __force_single: bool = False,
+    BRAND_KIT_ID: str | None = None,
 ):
     """
     DB-driven renderer:
@@ -347,6 +348,18 @@ def fill_and_print(
 
     # ---- Load the final shell HTML (created during Approve) ----
     html = TEMPLATE_PATH.read_text(encoding="utf-8")
+
+    # ---- Inject brand kit CSS if requested ----
+    if BRAND_KIT_ID:
+        try:
+            from backend.app.services.design.service import design_service
+            brand_css = design_service.generate_brand_css_from_id(BRAND_KIT_ID)
+            if brand_css:
+                from .ReportGenerate import _inject_brand_css
+                html = _inject_brand_css(html, brand_css)
+                logger.debug("Brand kit CSS injected (Excel path): %s", BRAND_KIT_ID)
+        except Exception:
+            logger.warning("Failed to inject brand kit CSS (Excel path)", exc_info=True)
 
     dataframe_loader = SQLiteDataFrameLoader(DB_PATH)
 
@@ -1645,6 +1658,9 @@ def fill_and_print(
     # Blank any remaining known tokens
     ALL_KNOWN_TOKENS = set(HEADER_TOKENS) | set(ROW_TOKENS) | set(TOTALS.keys()) | set(LITERALS.keys())
     html_multi = blank_known_tokens(html_multi, ALL_KNOWN_TOKENS)
+
+    # Strip internal BATCH markers — they are pipeline internals and must not leak into output
+    html_multi = html_multi.replace(BEGIN_TAG, "").replace(END_TAG, "")
 
     column_count = max(row_token_count, _count_table_columns(html_multi))
     excel_print_scale = _estimate_excel_print_scale(column_count)

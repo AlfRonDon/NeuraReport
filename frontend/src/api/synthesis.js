@@ -66,6 +66,18 @@ export async function addDocument(sessionId, { name, content, docType = 'text', 
 }
 
 /**
+ * Extract text from an uploaded file for synthesis
+ */
+export async function extractDocument(file, { docType } = {}) {
+  const formData = new FormData();
+  formData.append('file', file);
+  if (docType) formData.append('doc_type', docType);
+
+  const response = await apiClient.post('/synthesis/documents/extract', formData);
+  return response.data;
+}
+
+/**
  * Remove document from session
  */
 export async function removeDocument(sessionId, documentId) {
@@ -100,6 +112,7 @@ export default {
   getSession,
   deleteSession,
   addDocument,
+  extractDocument,
   removeDocument,
   findInconsistencies,
   synthesize,

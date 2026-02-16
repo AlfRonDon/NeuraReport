@@ -62,7 +62,10 @@ def resolve_db_path(connection_id: str | None, db_url: str | None, db_path: str 
                                 return Path(db)
                     except Exception:
                         continue
-        raise RuntimeError(f"connection_id {connection_id!r} not found in storage")
+        # Fall through to db_url / db_path if the connection_id isn't stored yet
+        # (e.g. creating a new connection where the ID is provided but not yet persisted).
+        if not db_url and not db_path:
+            raise RuntimeError(f"connection_id {connection_id!r} not found in storage")
 
     # b) db_url (preferred)
     db_url = _strip_quotes(db_url)

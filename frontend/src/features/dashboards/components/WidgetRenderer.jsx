@@ -369,13 +369,41 @@ function renderTextVariant(variantKey, vConfig, data, config) {
   )
 }
 
-// ── Domain placeholder sub-renderer ────────────────────────────────────────
+// ── Domain sub-renderer (with ECharts for heatmap/sankey) ─────────────────
 
-function renderDomainVariant(variantKey, vConfig, data, config) {
+function renderDomainVariant(variantKey, vConfig, data, config, props) {
   const domainType = vConfig.domainType || variantKey
-  const IconComponent = DOMAIN_ICONS[domainType] || TrendIcon
   const title = config?.title || vConfig.label
 
+  // Route heatmap and sankey through ChartWidget for actual ECharts rendering
+  if (domainType === 'matrix-heatmap' && data && Object.keys(data).length > 0) {
+    return (
+      <ChartWidget
+        title={title}
+        chartType="heatmap"
+        data={data}
+        config={{ ...config, title }}
+        editable={false}
+        {...props}
+      />
+    )
+  }
+
+  if (domainType === 'flow-sankey' && data && Object.keys(data).length > 0) {
+    return (
+      <ChartWidget
+        title={title}
+        chartType="sankey"
+        data={data}
+        config={{ ...config, title }}
+        editable={false}
+        {...props}
+      />
+    )
+  }
+
+  // Fallback placeholder for other domain types
+  const IconComponent = DOMAIN_ICONS[domainType] || TrendIcon
   return (
     <PlaceholderCard>
       <IconComponent sx={{ fontSize: 40, color: 'primary.main', opacity: 0.6 }} />
@@ -544,7 +572,7 @@ export default function WidgetRenderer({
     return (
       <Box sx={{ position: 'relative', height: '100%' }}>
         {badge}
-        {renderDomainVariant(effectiveVariant, vConfig, data, config)}
+        {renderDomainVariant(effectiveVariant, vConfig, data, config, props)}
       </Box>
     )
   }

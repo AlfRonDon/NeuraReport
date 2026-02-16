@@ -17,6 +17,7 @@ from fastapi.responses import StreamingResponse
 
 from backend.app.services.excel.ExcelVerify import xlsx_to_html_preview
 from backend.app.services.templates.TemplateVerify import (
+    pdf_page_count,
     pdf_to_pngs,
     render_html_to_png,
     render_panel_preview,
@@ -49,7 +50,7 @@ MAX_VERIFY_XLSX_BYTES: int = 50 * 1024 * 1024  # 50 MiB
 logger = logging.getLogger(__name__)
 
 
-def verify_template(file: UploadFile, connection_id: str | None, request: Request, refine_iters: int = 0):
+def verify_template(file: UploadFile, connection_id: str | None, request: Request, refine_iters: int = 0, page: int = 0):
     original_filename = getattr(file, "filename", "") or ""
     template_name_hint = Path(original_filename).stem if original_filename else ""
     tid = generate_template_id(template_name_hint, kind="pdf")
@@ -64,6 +65,7 @@ def verify_template(file: UploadFile, connection_id: str | None, request: Reques
         api_mod = importlib.import_module("backend.api")
     except Exception:
         api_mod = None
+    pdf_page_count_fn = getattr(api_mod, "pdf_page_count", pdf_page_count)
     pdf_to_pngs_fn = getattr(api_mod, "pdf_to_pngs", pdf_to_pngs)
     request_initial_html_fn = getattr(api_mod, "request_initial_html", request_initial_html)
     save_html_fn = getattr(api_mod, "save_html", save_html)
@@ -163,19 +165,30 @@ def verify_template(file: UploadFile, connection_id: str | None, request: Reques
                 )
                 raise
             else:
-                yield finish_stage(stage_key, stage_label, progress=20, size_bytes=total_bytes)
+                # Detect page count and emit with the upload-complete event
+                total_pages = 1
+                try:
+                    total_pages = pdf_page_count_fn(pdf_path)
+                except Exception:
+                    pass
+                yield finish_stage(
+                    stage_key, stage_label, progress=20,
+                    size_bytes=total_bytes,
+                    page_count=total_pages,
+                    selected_page=page,
+                )
 
             stage_key = "verify.render_reference_preview"
             stage_label = "Rendering a preview image"
-            yield start_stage(stage_key, stage_label, progress=25)
+            yield start_stage(stage_key, stage_label, progress=25, page=page, page_count=total_pages)
             png_path: Path | None = None
             layout_hints: dict[str, Any] | None = None
             try:
-                ref_pngs = pdf_to_pngs_fn(pdf_path, tdir, dpi=int(os.getenv("PDF_DPI", "400")))
+                ref_pngs = pdf_to_pngs_fn(pdf_path, tdir, dpi=int(os.getenv("PDF_DPI", "400")), page=page)
                 if not ref_pngs:
                     raise RuntimeError("No pages rendered from PDF")
                 png_path = ref_pngs[0]
-                layout_hints = get_layout_hints_fn(pdf_path, 0)
+                layout_hints = get_layout_hints_fn(pdf_path, page)
             except Exception as exc:
                 logger.exception("verify_render_reference_preview_failed")
                 yield finish_stage(stage_key, stage_label, progress=25, status="error", detail="Rendering preview failed")
@@ -368,6 +381,8 @@ def verify_template(file: UploadFile, connection_id: str | None, request: Reques
                 schema=schema_payload,
                 elapsed_ms=total_elapsed_ms,
                 artifacts=artifacts_for_state,
+                page_count=total_pages,
+                selected_page=page,
             )
         except Exception as e:
             logger.exception("verify_template_failed")

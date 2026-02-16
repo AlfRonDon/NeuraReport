@@ -879,6 +879,8 @@ export default function EnhancedAnalyzePageContainer() {
             setGeneratedCharts((prev) => [...response.charts, ...prev])
             setChartQuery('')
             toast.show(`Generated ${response.charts.length} chart(s)`, 'success')
+          } else {
+            toast.show(response.message || 'No charts could be generated for this query. Try a different request or re-analyze the document.', 'warning')
           }
         } catch (err) {
           toast.show(err.message || 'Failed to generate charts', 'error')
@@ -1296,12 +1298,12 @@ export default function EnhancedAnalyzePageContainer() {
                   sx={{
                     mt: 2,
                     p: 2,
-                    bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
-                    border: `1px solid ${alpha(theme.palette.divider, 0.3)}`,
+                    bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.error.main, 0.1) : alpha(theme.palette.error.main, 0.05),
+                    border: `1px solid ${alpha(theme.palette.error.main, 0.3)}`,
                     borderRadius: 1,
                   }}
                 >
-                  <Typography color="text.primary">{error}</Typography>
+                  <Typography color="error.main" sx={{ fontWeight: 500 }}>{error}</Typography>
                 </Paper>
               )}
             </Box>
@@ -1312,6 +1314,28 @@ export default function EnhancedAnalyzePageContainer() {
         {analysisResult && (
           <Fade in>
             <Box>
+              {/* Warnings from partial failures */}
+              {analysisResult.warnings?.length > 0 && (
+                <Paper
+                  sx={{
+                    mb: 2,
+                    p: 2,
+                    bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.warning.main, 0.1) : alpha(theme.palette.warning.main, 0.05),
+                    border: `1px solid ${alpha(theme.palette.warning.main, 0.3)}`,
+                    borderRadius: 1,
+                  }}
+                >
+                  <Typography variant="body2" color="warning.main" sx={{ fontWeight: 500 }}>
+                    Analysis completed with warnings:
+                  </Typography>
+                  {analysisResult.warnings.map((w, i) => (
+                    <Typography key={i} variant="body2" color="text.secondary" sx={{ ml: 2, mt: 0.5 }}>
+                      {w}
+                    </Typography>
+                  ))}
+                </Paper>
+              )}
+
               {/* Tabs */}
               <GlassCard hover={false} sx={{ p: 0, mb: 3 }}>
                 <Tabs

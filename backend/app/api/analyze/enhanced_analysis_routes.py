@@ -337,7 +337,11 @@ async def analyze_document(
     return StreamingResponse(
         generate_events(),
         media_type="application/x-ndjson",
-        headers={"X-Content-Type-Options": "nosniff"},
+        headers={
+            "X-Content-Type-Options": "nosniff",
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        },
     )
 
 
@@ -436,14 +440,14 @@ async def generate_charts(
     """
     orchestrator = get_orchestrator()
 
-    charts = await orchestrator.generate_charts_from_query(
+    result = await orchestrator.generate_charts_from_query(
         analysis_id=analysis_id,
         query=request.query,
         include_trends=request.include_trends,
         include_forecasts=request.include_forecasts,
     )
 
-    return {"charts": charts}
+    return result
 
 
 @router.get("/{analysis_id}/charts")

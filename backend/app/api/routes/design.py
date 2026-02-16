@@ -397,3 +397,27 @@ async def import_brand_kit(data: dict):
         raise
     except Exception as exc:
         raise _handle_design_error(exc, "Brand kit import") from exc
+
+
+@router.get("/brand-kits/{kit_id}/css")
+async def get_brand_kit_css(kit_id: str):
+    """Return the injectable CSS block for a brand kit.
+
+    Useful for live previews — inject this ``<style>`` into an iframe to
+    see how a template looks with the brand kit applied.
+    """
+    css = design_service.generate_brand_css_from_id(kit_id)
+    if css is None:
+        raise HTTPException(status_code=404, detail="Brand kit not found")
+    return JSONResponse(content={"css": css})
+
+
+@router.get("/brand-kits/default/css")
+async def get_default_brand_kit_css():
+    """Return CSS for the default brand kit (if one is set)."""
+    # Ensure kits are loaded from state
+    await design_service.list_brand_kits()
+    css = design_service.get_default_brand_css()
+    if css is None:
+        return JSONResponse(content={"css": None})
+    return JSONResponse(content={"css": css})

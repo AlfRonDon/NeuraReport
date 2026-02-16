@@ -17,6 +17,12 @@ _DEFAULT_TASK_WORKERS = os.cpu_count() or 4
 _TASK_WORKERS = max(int(os.getenv("NR_TASK_WORKERS", str(_DEFAULT_TASK_WORKERS)) or _DEFAULT_TASK_WORKERS), 1)
 _TASK_EXECUTOR = ThreadPoolExecutor(max_workers=_TASK_WORKERS)
 
+# Limit concurrent LLM-intensive jobs (verify, mapping) to prevent OOM.
+# Each LLM job can consume 500MB+ of memory; running too many in parallel
+# (e.g. 5 template verifications) can exhaust available RAM and crash the server.
+_MAX_LLM_CONCURRENT = max(int(os.getenv("NR_MAX_LLM_CONCURRENT", "2")), 1)
+_LLM_SEMAPHORE = threading.Semaphore(_MAX_LLM_CONCURRENT)
+
 _BACKGROUND_TASKS: set[asyncio.Task] = set()
 _BACKGROUND_LOCK = threading.Lock()
 
@@ -199,6 +205,10 @@ async def run_event_stream_async(
         state_store.record_job_completion(job_id, status="failed", error="Task finished without result")
 
 
+# Job types that involve heavy LLM calls and should be concurrency-limited.
+_LLM_JOB_TYPES = {"verify_template", "verify_excel", "mapping_approve"}
+
+
 async def enqueue_background_job(
     *,
     job_type: str,
@@ -220,9 +230,19 @@ async def enqueue_background_job(
         meta=meta,
     )
 
+    use_llm_semaphore = job_type in _LLM_JOB_TYPES
+
     async def _schedule() -> None:
         def _run() -> None:
+            acquired = False
             try:
+                if use_llm_semaphore:
+                    logger.info(
+                        "llm_semaphore_wait",
+                        extra={"event": "llm_semaphore_wait", "job_id": job["id"], "job_type": job_type},
+                    )
+                    _LLM_SEMAPHORE.acquire()
+                    acquired = True
                 result = runner(job["id"])
                 if asyncio.iscoroutine(result):
                     asyncio.run(result)
@@ -232,6 +252,9 @@ async def enqueue_background_job(
                     extra={"event": "background_task_failed", "job_id": job.get("id"), "error": str(exc)},
                 )
                 state_store.record_job_completion(job["id"], status="failed", error="Background task failed")
+            finally:
+                if acquired:
+                    _LLM_SEMAPHORE.release()
 
         loop = asyncio.get_running_loop()
         await loop.run_in_executor(_TASK_EXECUTOR, _run)

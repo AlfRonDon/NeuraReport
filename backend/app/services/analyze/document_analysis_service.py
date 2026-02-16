@@ -31,7 +31,7 @@ from backend.app.services.prompts.llm_prompts_analysis import (
     parse_analysis_response,
     strip_code_fences,
 )
-from backend.app.services.templates.TemplateVerify import MODEL, get_openai_client
+from backend.app.services.llm.client import get_llm_client
 from backend.app.utils.fs import write_json_atomic
 from backend.app.services.utils.llm import call_chat_completion, call_chat_completion_async
 
@@ -518,7 +518,7 @@ async def analyze_document_streaming(
         llm_result = {"tables": [], "key_metrics": [], "time_series_candidates": [], "chart_recommendations": []}
 
         try:
-            client = get_openai_client()
+            client = get_llm_client()
             formatted_content = format_content_for_llm(content)
 
             prompt = build_analysis_prompt(
@@ -532,7 +532,7 @@ async def analyze_document_streaming(
 
             response = await call_chat_completion_async(
                 client,
-                model=MODEL,
+                model=None,
                 messages=messages,
                 description="document_analysis",
                 temperature=0.2,
@@ -684,7 +684,7 @@ def suggest_charts_for_analysis(
         return []
 
     try:
-        client = get_openai_client()
+        client = get_llm_client()
 
         data_summary = f"Document: {result.document_name}\n"
         data_summary += f"Tables: {len(result.tables)}\n"
@@ -706,7 +706,7 @@ def suggest_charts_for_analysis(
 
         response = call_chat_completion(
             client,
-            model=MODEL,
+            model=None,
             messages=messages,
             description="chart_suggestion_analysis",
             temperature=0.3,

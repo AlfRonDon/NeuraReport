@@ -520,6 +520,7 @@ export async function verifyTemplate({
   file,
   connectionId,
   refineIters = 0,
+  page = 0,
   onProgress,
   onUploadProgress,
   kind = 'pdf',
@@ -530,6 +531,9 @@ export async function verifyTemplate({
   const normalizedConnectionId = connectionId ?? ''
   form.append('connection_id', normalizedConnectionId)
   form.append('refine_iters', String(refineIters ?? 0))
+  if (typeof page === 'number' && page > 0) {
+    form.append('page', String(page))
+  }
 
   const url = background
     ? `${getTemplateRoutes(kind).verify()}?background=true`
@@ -2380,6 +2384,7 @@ export async function runReport({
   endDate,
   batchIds = null,
   keyValues,
+  brandKitId,
   docx = false,
   xlsx = false,
   kind = 'pdf',
@@ -2396,6 +2401,9 @@ export async function runReport({
   const preparedKeyValues = prepareKeyValues(keyValues)
   if (preparedKeyValues) {
     payload.key_values = preparedKeyValues
+  }
+  if (brandKitId) {
+    payload.brand_kit_id = brandKitId
   }
   if (docx) {
     payload.docx = true
@@ -2415,6 +2423,7 @@ export async function runReportAsJob({
   endDate,
   batchIds = null,
   keyValues,
+  brandKitId,
   docx = false,
   xlsx = false,
   kind = 'pdf',
@@ -2437,6 +2446,7 @@ export async function runReportAsJob({
   if (preparedKeyValues) {
     payload.key_values = preparedKeyValues
   }
+  if (brandKitId) payload.brand_kit_id = brandKitId
   if (docx) payload.docx = true
   if (xlsx) payload.xlsx = true
   if (Array.isArray(emailRecipients) && emailRecipients.length) {

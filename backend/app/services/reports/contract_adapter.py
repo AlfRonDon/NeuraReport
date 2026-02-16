@@ -628,14 +628,17 @@ class ContractAdapter:
         if not row_tokens:
             return pd.DataFrame()
 
-        # Determine source table from first row token mapping
-        source_table = self._parent_table
+        # Determine source table from first row token mapping reference,
+        # falling back to parent_table.  Row tokens often live in the child
+        # (detail) table, not the parent (header) table.
+        source_table = None
+        for tok in row_tokens:
+            ref = self._resolve_mapping_column(tok)
+            if ref:
+                source_table = ref[0]
+                break
         if not source_table:
-            for tok in row_tokens:
-                ref = self._resolve_mapping_column(tok)
-                if ref:
-                    source_table = ref[0]
-                    break
+            source_table = self._parent_table
 
         if not source_table:
             return pd.DataFrame()

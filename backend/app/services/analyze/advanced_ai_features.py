@@ -27,8 +27,8 @@ from backend.app.schemas.analyze.enhanced_analysis import (
     Insight,
     Priority,
 )
-from backend.app.services.utils.llm import call_chat_completion
-from backend.app.services.templates.TemplateVerify import MODEL, get_openai_client
+from backend.app.services.utils.llm import call_chat_completion, extract_json_from_llm_response
+from backend.app.services.llm.client import get_llm_client
 
 logger = logging.getLogger("neura.analyze.advanced_ai")
 
@@ -559,10 +559,10 @@ Return JSON:
 Only report genuine contradictions, not differences in scope or perspective."""
 
     try:
-        client = get_openai_client()
+        client = get_llm_client()
         response = call_chat_completion(
             client,
-            model=MODEL,
+            model=None,
             messages=[{"role": "user", "content": prompt}],
             description="contradiction_detection",
             temperature=0.2,
@@ -932,10 +932,10 @@ Return JSON:
 Be specific and data-driven in your predictions."""
 
     try:
-        client = get_openai_client()
+        client = get_llm_client()
         response = call_chat_completion(
             client,
-            model=MODEL,
+            model=None,
             messages=[{"role": "user", "content": prompt}],
             description="ai_predictions",
             temperature=0.4,

@@ -26,8 +26,8 @@ from backend.app.schemas.analyze.enhanced_analysis import (
     ExtractedMetric,
     VisualizationSuggestion,
 )
-from backend.app.services.utils.llm import call_chat_completion
-from backend.app.services.templates.TemplateVerify import MODEL, get_openai_client
+from backend.app.services.utils.llm import call_chat_completion, extract_json_from_llm_response
+from backend.app.services.llm.client import get_llm_client
 
 logger = logging.getLogger("neura.analyze.visualization")
 
@@ -282,10 +282,10 @@ Generate 1-3 appropriate charts. Return JSON array:
 Match column names exactly as provided. Choose the most appropriate chart type for the data and request."""
 
     try:
-        client = get_openai_client()
+        client = get_llm_client()
         response = call_chat_completion(
             client,
-            model=MODEL,
+            model=None,
             messages=[{"role": "user", "content": prompt}],
             description="nl_chart_generation",
             temperature=0.3,
@@ -584,10 +584,10 @@ Return JSON:
 Focus on patterns, trends, outliers, and business implications."""
 
     try:
-        client = get_openai_client()
+        client = get_llm_client()
         response = call_chat_completion(
             client,
-            model=MODEL,
+            model=None,
             messages=[{"role": "user", "content": prompt}],
             description="chart_analysis",
             temperature=0.3,

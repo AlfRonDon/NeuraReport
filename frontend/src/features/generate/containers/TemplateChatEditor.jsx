@@ -13,6 +13,12 @@ import {
   Alert,
   Collapse,
   alpha,
+  Autocomplete,
+  Table,
+  TableBody,
+  TableRow,
+  TableCell,
+  TableHead,
 } from '@mui/material'
 import SendIcon from '@mui/icons-material/Send'
 import RefreshIcon from '@mui/icons-material/Refresh'
@@ -22,6 +28,8 @@ import PersonOutlineIcon from '@mui/icons-material/PersonOutline'
 import SmartToyOutlinedIcon from '@mui/icons-material/SmartToyOutlined'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import ExpandLessIcon from '@mui/icons-material/ExpandLess'
+import QueueIcon from '@mui/icons-material/Queue'
+import LinearProgress from '@mui/material/LinearProgress'
 
 import { useTemplateChatStore, DEFAULT_CREATE_WELCOME } from '@/stores/templateChatStore'
 import { chatTemplateEdit, applyChatTemplateEdit } from '@/api/client'
@@ -313,12 +321,316 @@ function FollowUpQuestions({ questions, onQuestionClick }) {
   )
 }
 
+const SPECIAL_VALUES = new Set(['UNRESOLVED', 'INPUT_SAMPLE', 'LATER_SELECTED'])
+
+function humanizeToken(token) {
+  return token.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+}
+
+function humanizeColumn(col) {
+  if (!col || SPECIAL_VALUES.has(col)) return null
+  // "table.column" → "Column (from Table)"
+  const parts = col.split('.')
+  if (parts.length === 2) {
+    const table = parts[0].replace(/_/g, ' ')
+    const column = parts[1].replace(/_/g, ' ')
+    return `${column} from ${table}`
+  }
+  return col.replace(/_/g, ' ')
+}
+
+const PROGRESS_STEPS = [
+  'Preparing mapping...',
+  'Building contract...',
+  'Generating report assets...',
+  'Finalizing template...',
+]
+
+function MappingReviewPanel({ mappingData, catalog, schemaInfo, onApprove, onSkip, onQueue, approving }) {
+  const [localMapping, setLocalMapping] = useState(() => ({ ...(mappingData || {}) }))
+  const [showDetails, setShowDetails] = useState(false)
+  const [editingToken, setEditingToken] = useState(null)
+  const [progressStep, setProgressStep] = useState(0)
+
+  const catalogOptions = (catalog || []).map((c) => c)
+
+  const handleChange = (token, newValue) => {
+    setLocalMapping((prev) => ({ ...prev, [token]: newValue || '' }))
+  }
+
+  // Cycle through progress steps while approving
+  useEffect(() => {
+    if (!approving) { setProgressStep(0); return }
+    const timer = setInterval(() => {
+      setProgressStep((prev) => (prev + 1) % PROGRESS_STEPS.length)
+    }, 3000)
+    return () => clearInterval(timer)
+  }, [approving])
+
+  const tokens = Object.keys(localMapping)
+  const mapped = tokens.filter((t) => !SPECIAL_VALUES.has(localMapping[t]) && localMapping[t])
+  const unresolved = tokens.filter((t) => SPECIAL_VALUES.has(localMapping[t]) || !localMapping[t])
+
+  const tables = schemaInfo
+    ? [schemaInfo['child table'], schemaInfo['parent table']].filter(Boolean).join(' and ')
+    : null
+
+  // --- Processing state: rolling progress ---
+  if (approving) {
+    return (
+      <Paper
+        elevation={0}
+        sx={{
+          p: 2.5,
+          mx: 2,
+          mb: 2,
+          borderRadius: 1,
+          border: '1px solid',
+          borderColor: (theme) => alpha(theme.palette.primary.main, 0.3),
+          bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.primary.main, 0.08) : alpha(theme.palette.primary.main, 0.04),
+        }}
+      >
+        <Stack spacing={2} alignItems="center">
+          <Stack direction="row" spacing={1.5} alignItems="center">
+            <CircularProgress size={22} thickness={5} />
+            <Typography variant="subtitle2" fontWeight={600}>
+              Setting up your template...
+            </Typography>
+          </Stack>
+
+          <Box sx={{ width: '100%' }}>
+            <LinearProgress
+              variant="indeterminate"
+              sx={{
+                height: 6,
+                borderRadius: 3,
+                bgcolor: (theme) => alpha(theme.palette.primary.main, 0.12),
+                '& .MuiLinearProgress-bar': { borderRadius: 3 },
+              }}
+            />
+          </Box>
+
+          <Typography variant="body2" color="text.secondary" sx={{ minHeight: 20, transition: 'opacity 0.3s' }}>
+            {PROGRESS_STEPS[progressStep]}
+          </Typography>
+
+          {onQueue && (
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={<QueueIcon />}
+              onClick={onQueue}
+              sx={{ textTransform: 'none', mt: 0.5 }}
+            >
+              Queue & Continue — I'll finish this in the background
+            </Button>
+          )}
+        </Stack>
+      </Paper>
+    )
+  }
+
+  return (
+    <Paper
+      elevation={0}
+      sx={{
+        p: 2,
+        mx: 2,
+        mb: 2,
+        borderRadius: 1,
+        border: '1px solid',
+        borderColor: (theme) => alpha(theme.palette.divider, 0.3),
+        bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : neutral[50],
+      }}
+    >
+      <Stack spacing={1.5}>
+        {/* Friendly summary */}
+        <Typography variant="body2" sx={{ lineHeight: 1.7 }}>
+          {tables && <>I found your data in the <strong>{tables}</strong> table{tables.includes(' and ') ? 's' : ''}. </>}
+          {mapped.length > 0 && (
+            <>I was able to connect <strong>{mapped.length} of {tokens.length}</strong> template fields to your database. </>
+          )}
+          {unresolved.length > 0 && (
+            <>{mapped.length > 0 ? 'However, ' : ''}<strong>{unresolved.length} field{unresolved.length > 1 ? 's' : ''}</strong> still need{unresolved.length === 1 ? 's' : ''} to be configured.</>
+          )}
+          {unresolved.length === 0 && mapped.length > 0 && (
+            <>All fields are mapped and ready to go!</>
+          )}
+        </Typography>
+
+        {/* Mapped fields — compact list */}
+        {mapped.length > 0 && (
+          <Box>
+            <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ mb: 0.5, display: 'block' }}>
+              Connected fields:
+            </Typography>
+            <Stack direction="row" flexWrap="wrap" gap={0.5}>
+              {mapped.map((token) => (
+                <Chip
+                  key={token}
+                  label={`${humanizeToken(token)} → ${humanizeColumn(localMapping[token]) || localMapping[token]}`}
+                  size="small"
+                  variant="outlined"
+                  color="success"
+                  sx={{ fontSize: '0.7rem' }}
+                />
+              ))}
+            </Stack>
+          </Box>
+        )}
+
+        {/* Unresolved fields — highlighted */}
+        {unresolved.length > 0 && (
+          <Box>
+            <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ mb: 0.5, display: 'block' }}>
+              Needs your input:
+            </Typography>
+            <Stack spacing={0.5}>
+              {unresolved.map((token) => (
+                <Stack key={token} direction="row" alignItems="center" spacing={1}>
+                  <Typography variant="body2" sx={{ minWidth: 120 }}>
+                    {humanizeToken(token)}
+                  </Typography>
+                  {editingToken === token ? (
+                    <Autocomplete
+                      freeSolo
+                      size="small"
+                      options={catalogOptions}
+                      value={localMapping[token] || ''}
+                      onChange={(_e, newVal) => {
+                        handleChange(token, newVal)
+                        setEditingToken(null)
+                      }}
+                      onBlur={() => setEditingToken(null)}
+                      renderInput={(params) => (
+                        <TextField {...params} variant="outlined" autoFocus size="small" placeholder="Pick a column..."
+                          sx={{ '& .MuiInputBase-root': { fontSize: '0.8rem', py: 0 } }}
+                        />
+                      )}
+                      sx={{ flex: 1, minWidth: 150 }}
+                    />
+                  ) : (
+                    <Chip
+                      label="Select column..."
+                      size="small"
+                      color="warning"
+                      variant="outlined"
+                      onClick={() => setEditingToken(token)}
+                      sx={{ cursor: 'pointer', fontSize: '0.75rem' }}
+                    />
+                  )}
+                </Stack>
+              ))}
+            </Stack>
+          </Box>
+        )}
+
+        {/* Expandable detail view */}
+        {mapped.length > 0 && (
+          <Button
+            size="small"
+            variant="text"
+            onClick={() => setShowDetails(!showDetails)}
+            endIcon={showDetails ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+            sx={{ alignSelf: 'flex-start', textTransform: 'none', fontSize: '0.75rem' }}
+          >
+            {showDetails ? 'Hide all mappings' : 'View all mappings'}
+          </Button>
+        )}
+
+        <Collapse in={showDetails}>
+          <Box sx={{ maxHeight: 250, overflow: 'auto', border: '1px solid', borderColor: 'divider', borderRadius: 0.5 }}>
+            <Table size="small" stickyHeader>
+              <TableHead>
+                <TableRow>
+                  <TableCell sx={{ fontWeight: 600, bgcolor: 'background.paper', width: '40%', py: 0.5 }}>Field</TableCell>
+                  <TableCell sx={{ fontWeight: 600, bgcolor: 'background.paper', py: 0.5 }}>Source</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {tokens.map((token) => {
+                  const value = localMapping[token]
+                  const isSpecial = SPECIAL_VALUES.has(value) || !value
+                  return (
+                    <TableRow key={token} sx={{ '&:hover': { bgcolor: 'action.hover' } }}>
+                      <TableCell sx={{ py: 0.5 }}>
+                        <Typography variant="body2" fontSize="0.8rem">{humanizeToken(token)}</Typography>
+                      </TableCell>
+                      <TableCell sx={{ py: 0.5 }}>
+                        {editingToken === token ? (
+                          <Autocomplete
+                            freeSolo
+                            size="small"
+                            options={catalogOptions}
+                            value={value || ''}
+                            onChange={(_e, newVal) => { handleChange(token, newVal); setEditingToken(null) }}
+                            onBlur={() => setEditingToken(null)}
+                            renderInput={(params) => (
+                              <TextField {...params} variant="outlined" autoFocus size="small"
+                                sx={{ '& .MuiInputBase-root': { fontSize: '0.8rem', py: 0 } }}
+                              />
+                            )}
+                            sx={{ minWidth: 150 }}
+                          />
+                        ) : (
+                          <Chip
+                            label={isSpecial ? 'Not set' : (humanizeColumn(value) || value)}
+                            size="small"
+                            color={isSpecial ? 'warning' : 'default'}
+                            variant="outlined"
+                            onClick={() => setEditingToken(token)}
+                            sx={{ cursor: 'pointer', fontSize: '0.7rem' }}
+                          />
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
+              </TableBody>
+            </Table>
+          </Box>
+        </Collapse>
+
+        <Typography variant="body2" color="text.secondary" fontSize="0.8rem">
+          Looks good? Approve to finalize, or tell me what you'd like to change.
+        </Typography>
+
+        <Stack direction="row" spacing={1.5}>
+          <Button
+            variant="contained"
+            onClick={() => onApprove(localMapping)}
+            disabled={approving}
+            startIcon={<CheckCircleIcon />}
+            sx={{ textTransform: 'none' }}
+          >
+            Looks Good, Approve
+          </Button>
+          <Button
+            variant="outlined"
+            onClick={() => onApprove(mappingData)}
+            disabled={approving}
+            sx={{ textTransform: 'none' }}
+          >
+            You do this
+          </Button>
+        </Stack>
+      </Stack>
+    </Paper>
+  )
+}
+
 export default function TemplateChatEditor({
   templateId,
   templateName,
   currentHtml,
   onHtmlUpdate,
   onApplySuccess,
+  onRequestSave,
+  onMappingApprove,
+  onMappingSkip,
+  onMappingQueue,
+  mappingPreviewData,
+  mappingApproving = false,
   mode = 'edit',
   chatApi = null,
 }) {
@@ -389,11 +701,8 @@ export default function TemplateChatEditor({
       action: async () => {
         setIsProcessing(true)
         try {
-          // Get messages for API (including the new user message)
-          const apiMessages = [
-            ...getMessagesForApi(templateId),
-            { role: 'user', content: text },
-          ]
+          // Get messages for API (already includes the user message added above)
+          const apiMessages = getMessagesForApi(templateId)
 
           const response = await chatApiFunction(apiMessages, currentHtml)
 
@@ -410,6 +719,12 @@ export default function TemplateChatEditor({
             proposedHtml: response.updated_html,
             readyToApply: response.ready_to_apply,
           })
+
+          // In create mode, update the live preview as soon as the AI
+          // produces HTML so the left-hand side stays in sync.
+          if (mode === 'create' && response.updated_html) {
+            onHtmlUpdate?.(response.updated_html)
+          }
 
           // Set follow-up questions if provided
           if (response.follow_up_questions) {
@@ -460,7 +775,14 @@ export default function TemplateChatEditor({
       action: async () => {
         setApplying(true)
         try {
-          const result = await applyChatTemplateEdit(templateId, proposedHtml)
+          let result
+          if (mode === 'create') {
+            // In create mode the template doesn't exist on disk yet —
+            // just update local state without hitting the backend.
+            result = { updated_html: proposedHtml }
+          } else {
+            result = await applyChatTemplateEdit(templateId, proposedHtml)
+          }
 
           // Clear proposed changes
           clearProposedChanges(templateId)
@@ -470,12 +792,25 @@ export default function TemplateChatEditor({
           onApplySuccess?.(result)
 
           // Add confirmation message
-          addAssistantMessage(
-            templateId,
-            "The changes have been applied successfully. Is there anything else you'd like to modify?"
-          )
+          if (mode === 'create') {
+            addAssistantMessage(
+              templateId,
+              "Your template is ready! Opening the save dialog so you can name and save it."
+            )
+          } else {
+            addAssistantMessage(
+              templateId,
+              "The changes have been applied successfully. Is there anything else you'd like to modify?"
+            )
+          }
 
           toast.show('Template changes applied successfully.', 'success')
+
+          // In create mode, auto-open the save dialog
+          if (mode === 'create' && onRequestSave) {
+            onRequestSave()
+          }
+
           return result
         } catch (err) {
           toast.show(String(err.message || err), 'error')
@@ -488,10 +823,12 @@ export default function TemplateChatEditor({
   }, [
     proposedHtml,
     templateId,
+    mode,
     clearProposedChanges,
     addAssistantMessage,
     onHtmlUpdate,
     onApplySuccess,
+    onRequestSave,
     toast,
     execute,
   ])
@@ -523,13 +860,18 @@ export default function TemplateChatEditor({
   const handleClearChat = useCallback(() => {
     clearSession(templateId, templateName, modeConfig.welcomeMessage)
     setFollowUpQuestions(null)
+    // In create mode, also clear the parent's HTML so preview resets
+    if (mode === 'create') {
+      onHtmlUpdate?.('')
+    }
     toast.show('Chat cleared. Starting fresh conversation.', 'info')
-  }, [templateId, templateName, clearSession, toast, modeConfig.welcomeMessage])
+  }, [templateId, templateName, clearSession, toast, modeConfig.welcomeMessage, mode, onHtmlUpdate])
 
   return (
     <Box
       sx={{
         height: '100%',
+        minHeight: 0,         /* respect grid cell constraint */
         display: 'flex',
         flexDirection: 'column',
         bgcolor: 'background.default',
@@ -569,36 +911,51 @@ export default function TemplateChatEditor({
         </Stack>
       </Box>
 
-      {/* Messages */}
+      {/* Messages + Proposed Changes + Follow-ups — all in one scrollable area */}
       <Box
         sx={{
           flex: 1,
           overflow: 'auto',
           py: 1,
+          minHeight: 0,
         }}
       >
         {messages.map((message) => (
           <ChatMessage key={message.id} message={message} />
         ))}
+
+        {/* Proposed Changes Panel */}
+        {readyToApply && proposedChanges && (
+          <ProposedChangesPanel
+            changes={proposedChanges}
+            proposedHtml={proposedHtml}
+            onApply={handleApplyChanges}
+            onReject={handleRejectChanges}
+            applying={applying}
+          />
+        )}
+
+        {/* Mapping Review Panel — shown after template save in create mode */}
+        {mappingPreviewData && onMappingApprove && (
+          <MappingReviewPanel
+            mappingData={mappingPreviewData.mapping}
+            catalog={mappingPreviewData.catalog}
+            schemaInfo={mappingPreviewData.schema_info}
+            onApprove={onMappingApprove}
+            onSkip={onMappingSkip}
+            onQueue={onMappingQueue}
+            approving={mappingApproving}
+          />
+        )}
+
+        {/* Follow-up Questions */}
+        <FollowUpQuestions
+          questions={followUpQuestions}
+          onQuestionClick={handleQuestionClick}
+        />
+
         <div ref={messagesEndRef} />
       </Box>
-
-      {/* Proposed Changes Panel */}
-      {readyToApply && proposedChanges && (
-        <ProposedChangesPanel
-          changes={proposedChanges}
-          proposedHtml={proposedHtml}
-          onApply={handleApplyChanges}
-          onReject={handleRejectChanges}
-          applying={applying}
-        />
-      )}
-
-      {/* Follow-up Questions */}
-      <FollowUpQuestions
-        questions={followUpQuestions}
-        onQuestionClick={handleQuestionClick}
-      />
 
       {/* Input */}
       <Box

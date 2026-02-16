@@ -286,6 +286,78 @@ const generateChartOptions = (chartType, data, config, theme) => {
         })),
       }
 
+    case 'heatmap': {
+      const xLabels = data?.xLabels || data?.labels || []
+      const yLabels = data?.yLabels || []
+      const heatData = data?.heatmapData || data?.data || []
+      // Convert {labels, datasets} → heatmap [[x,y,val], ...] if needed
+      let points = heatData
+      const yLabelsFinal = [...yLabels]
+      if (!Array.isArray(heatData) || (heatData.length > 0 && !Array.isArray(heatData[0]))) {
+        points = []
+        ;(data?.datasets || []).forEach((ds, yi) => {
+          ;(ds.data || []).forEach((val, xi) => {
+            points.push([xi, yi, val ?? 0])
+          })
+        })
+        if (yLabelsFinal.length === 0 && data?.datasets) {
+          data.datasets.forEach((ds) => yLabelsFinal.push(ds.label || ''))
+        }
+      }
+      const allVals = points.map((p) => (Array.isArray(p) ? p[2] : 0)).filter((v) => v != null)
+      const minVal = allVals.length ? Math.min(...allVals) : 0
+      const maxVal = allVals.length ? Math.max(...allVals) : 100
+      return {
+        ...baseOptions,
+        grid: { left: 80, right: 60, top: 20, bottom: 50, containLabel: true },
+        xAxis: {
+          type: 'category',
+          data: xLabels,
+          splitArea: { show: true },
+          axisLabel: { fontSize: 11, color: theme.palette.text.secondary, rotate: xLabels.length > 10 ? 45 : 0 },
+        },
+        yAxis: {
+          type: 'category',
+          data: yLabelsFinal,
+          splitArea: { show: true },
+          axisLabel: { fontSize: 11, color: theme.palette.text.secondary },
+        },
+        visualMap: {
+          min: minVal,
+          max: maxVal,
+          calculable: true,
+          orient: 'horizontal',
+          left: 'center',
+          bottom: 0,
+          inRange: { color: ['#f5f5f5', neutral[300], neutral[500], neutral[700], neutral[900]] },
+          textStyle: { fontSize: 10, color: theme.palette.text.secondary },
+        },
+        series: [{ type: 'heatmap', data: points, label: { show: points.length <= 50, fontSize: 10 } }],
+      }
+    }
+
+    case 'sankey': {
+      const nodes = (data?.nodes || []).map((n) => (typeof n === 'string' ? { name: n } : n))
+      const links = (data?.links || []).map((l) => ({
+        source: typeof l.source === 'number' ? (nodes[l.source]?.name || String(l.source)) : String(l.source || ''),
+        target: typeof l.target === 'number' ? (nodes[l.target]?.name || String(l.target)) : String(l.target || ''),
+        value: l.value ?? 1,
+      }))
+      return {
+        ...baseOptions,
+        grid: undefined,
+        series: [{
+          type: 'sankey',
+          layout: 'none',
+          emphasis: { focus: 'adjacency' },
+          data: nodes,
+          links,
+          lineStyle: { color: 'gradient', curveness: 0.5 },
+          label: { fontSize: 11, color: theme.palette.text.primary },
+        }],
+      }
+    }
+
     default:
       return baseOptions
   }

@@ -65,6 +65,7 @@ import {
   InteractionType,
   Reversibility,
 } from '@/components/ux/governance';
+import { extractDocument as extractSynthesisDocument } from '@/api/synthesis';
 
 const MAX_DOC_SIZE = 5 * 1024 * 1024;
 const MIN_DOC_LENGTH = 10;
@@ -176,53 +177,57 @@ export default function SynthesisPage() {
     });
   };
 
-  const handleFileUpload = (event) => {
-    const file = event.target.files[0];
+  const handleFileUpload = async (event) => {
+    const inputEl = event.target;
+    const file = inputEl.files?.[0];
     if (!file) return;
     if (file.name.length > MAX_NAME_LENGTH) {
       toast.show(`File name must be ${MAX_NAME_LENGTH} characters or less`, 'error');
-      event.target.value = '';
-      return;
-    }
-
-    const ext = file.name.split('.').pop().toLowerCase();
-
-    // Binary file types that can't be read as text
-    const binaryExtensions = ['pdf', 'xlsx', 'xls', 'doc', 'docx'];
-    if (binaryExtensions.includes(ext)) {
-      toast.show(`${ext.toUpperCase()} files must be converted to text format first. Please paste the content directly.`, 'warning');
-      event.target.value = '';
+      inputEl.value = '';
       return;
     }
 
     // Check file size (max 5MB for text files)
     if (file.size > MAX_DOC_SIZE) {
       toast.show('File size exceeds 5MB limit', 'error');
-      event.target.value = '';
+      inputEl.value = '';
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const content = e.target.result;
-      // Check if content appears to be binary
-      if (content.includes('\0')) {
-        toast.show('File appears to be binary. Please upload a text file or paste content directly.', 'error');
-        event.target.value = '';
+    const ext = file.name.split('.').pop().toLowerCase();
+    const inferredType = ext === 'pdf'
+      ? 'pdf'
+      : ['xlsx', 'xls', 'csv'].includes(ext)
+        ? 'excel'
+        : ['doc', 'docx'].includes(ext)
+          ? 'word'
+          : ext === 'json'
+            ? 'json'
+            : 'text';
+
+    try {
+      const response = await extractSynthesisDocument(file, { docType: inferredType });
+      const extracted = response?.document;
+      const content = extracted?.content || '';
+      if (content.trim().length < MIN_DOC_LENGTH) {
+        toast.show(`Extracted content must be at least ${MIN_DOC_LENGTH} characters`, 'error');
+        inputEl.value = '';
         return;
       }
-      setDocName(file.name);
-      setDocContent(content);
 
-      // Set doc type based on file extension
-      if (['json'].includes(ext)) setDocType('json');
-      else setDocType('text');
-    };
-    reader.onerror = () => {
-      toast.show('Failed to read file', 'error');
-      event.target.value = '';
-    };
-    reader.readAsText(file);
+      setDocName(extracted?.name || file.name);
+      setDocContent(content);
+      setDocType(extracted?.doc_type || inferredType);
+      if (extracted?.truncated) {
+        toast.show('File content was truncated to fit 5MB limit', 'warning');
+      } else {
+        toast.show('File processed successfully', 'success');
+      }
+    } catch (err) {
+      toast.show(err.message || 'Failed to process file', 'error');
+    } finally {
+      inputEl.value = '';
+    }
   };
 
   const handleSynthesize = () => {

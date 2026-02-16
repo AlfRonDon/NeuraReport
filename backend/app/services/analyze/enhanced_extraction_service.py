@@ -30,8 +30,12 @@ from backend.app.schemas.analyze.enhanced_analysis import (
     MetricType,
     TableRelationship,
 )
-from backend.app.services.utils.llm import call_chat_completion
-from backend.app.services.templates.TemplateVerify import MODEL, get_openai_client
+from backend.app.services.utils.llm import (
+    call_chat_completion,
+    extract_json_from_llm_response,
+    extract_json_array_from_llm_response,
+)
+from backend.app.services.llm.client import get_llm_client
 
 logger = logging.getLogger("neura.analyze.extraction")
 
@@ -102,16 +106,15 @@ Extract ALL entities found. Be thorough."""
     try:
         response = call_chat_completion(
             client,
-            model=MODEL,
+            model=None,
             messages=[{"role": "user", "content": prompt}],
             description="entity_extraction",
             temperature=0.1,
         )
 
         raw_text = response.choices[0].message.content or ""
-        json_match = re.search(r'\[[\s\S]*\]', raw_text)
-        if json_match:
-            data = json.loads(json_match.group())
+        data = extract_json_array_from_llm_response(raw_text, default=[])
+        if data:
             entities = []
             for item in data:
                 entity_type = item.get("type", "").upper()
@@ -145,7 +148,7 @@ def extract_all_entities(text: str, use_llm: bool = True) -> List[ExtractedEntit
     # Add LLM extraction for semantic entities
     if use_llm:
         try:
-            client = get_openai_client()
+            client = get_llm_client()
             llm_entities = extract_entities_llm(text, client)
 
             # Merge, avoiding duplicates
@@ -213,19 +216,18 @@ Metric types: currency, percentage, count, ratio, duration, quantity, score, rat
 Extract ALL significant numbers with their context. Focus on KPIs."""
 
     try:
-        client = get_openai_client()
+        client = get_llm_client()
         response = call_chat_completion(
             client,
-            model=MODEL,
+            model=None,
             messages=[{"role": "user", "content": prompt}],
             description="metric_extraction",
             temperature=0.1,
         )
 
         raw_text = response.choices[0].message.content or ""
-        json_match = re.search(r'\[[\s\S]*\]', raw_text)
-        if json_match:
-            data = json.loads(json_match.group())
+        data = extract_json_array_from_llm_response(raw_text, default=[])
+        if data:
             metrics = []
             for item in data:
                 try:
@@ -233,10 +235,13 @@ Extract ALL significant numbers with their context. Focus on KPIs."""
                 except KeyError:
                     mtype = MetricType.COUNT
 
+                raw_val = item.get("value")
+                if raw_val is None:
+                    raw_val = item.get("raw_value", "0")
                 metrics.append(ExtractedMetric(
                     id=f"met_{uuid.uuid4().hex[:8]}",
                     name=item.get("name", "Unknown"),
-                    value=item.get("value", 0),
+                    value=raw_val if raw_val is not None else "0",
                     raw_value=str(item.get("raw_value", "")),
                     metric_type=mtype,
                     unit=item.get("unit"),
@@ -247,7 +252,7 @@ Extract ALL significant numbers with their context. Focus on KPIs."""
                     comparison_base=item.get("comparison_base"),
                     confidence=0.85,
                     context=item.get("context"),
-                    importance_score=item.get("importance", 0.5),
+                    importance_score=float(item.get("importance", 0.5)),
                 ))
             return metrics
     except Exception as e:
@@ -300,19 +305,18 @@ Field types: text, checkbox, radio, date, signature, dropdown, number, email, ph
 If not a form, return {{"is_form": false, "fields": []}}"""
 
     try:
-        client = get_openai_client()
+        client = get_llm_client()
         response = call_chat_completion(
             client,
-            model=MODEL,
+            model=None,
             messages=[{"role": "user", "content": prompt}],
             description="form_extraction",
             temperature=0.1,
         )
 
         raw_text = response.choices[0].message.content or ""
-        json_match = re.search(r'\{[\s\S]*\}', raw_text)
-        if json_match:
-            data = json.loads(json_match.group())
+        data = extract_json_from_llm_response(raw_text, default={})
+        if data:
             if data.get("is_form"):
                 fields = []
                 for item in data.get("fields", []):
@@ -389,19 +393,18 @@ If this is an invoice, return JSON:
 If not an invoice, return {{"is_invoice": false}}"""
 
     try:
-        client = get_openai_client()
+        client = get_llm_client()
         response = call_chat_completion(
             client,
-            model=MODEL,
+            model=None,
             messages=[{"role": "user", "content": prompt}],
             description="invoice_extraction",
             temperature=0.1,
         )
 
         raw_text = response.choices[0].message.content or ""
-        json_match = re.search(r'\{[\s\S]*\}', raw_text)
-        if json_match:
-            data = json.loads(json_match.group())
+        data = extract_json_from_llm_response(raw_text, default={})
+        if data:
             if data.get("is_invoice"):
                 line_items = []
                 for item in data.get("line_items", []):
@@ -490,19 +493,18 @@ If this is a contract, return JSON:
 If not a contract, return {{"is_contract": false}}"""
 
     try:
-        client = get_openai_client()
+        client = get_llm_client()
         response = call_chat_completion(
             client,
-            model=MODEL,
+            model=None,
             messages=[{"role": "user", "content": prompt}],
             description="contract_extraction",
             temperature=0.1,
         )
 
         raw_text = response.choices[0].message.content or ""
-        json_match = re.search(r'\{[\s\S]*\}', raw_text)
-        if json_match:
-            data = json.loads(json_match.group())
+        data = extract_json_from_llm_response(raw_text, default={})
+        if data:
             if data.get("is_contract"):
                 return ExtractedContract(
                     id=f"con_{uuid.uuid4().hex[:8]}",
@@ -736,7 +738,7 @@ class EnhancedExtractionService:
     @property
     def client(self):
         if self._client is None:
-            self._client = get_openai_client()
+            self._client = get_llm_client()
         return self._client
 
     def extract_all(
@@ -744,30 +746,46 @@ class EnhancedExtractionService:
         text: str,
         raw_tables: List[Dict[str, Any]],
     ) -> Dict[str, Any]:
-        """Perform all extraction operations."""
-        # Enhance tables
+        """
+        Perform all extraction operations.
+
+        Uses regex for fast entity extraction + ONE consolidated LLM call
+        for semantic extraction (entities, metrics) instead of 5 separate calls.
+        """
+        # Enhance tables (no LLM)
         enhanced_tables = [enhance_table(t, raw_tables) for t in raw_tables]
 
-        # Detect relationships and stitch
+        # Detect relationships and stitch (no LLM)
         relationships = detect_table_relationships(enhanced_tables)
         stitched_tables = stitch_continuation_tables(enhanced_tables, relationships)
 
-        # Extract entities
-        entities = extract_all_entities(text, use_llm=self.use_llm)
+        # Fast regex-based entity extraction (no LLM)
+        entities = extract_entities_regex(text)
 
-        # Extract metrics
-        metrics = extract_metrics_llm(text, stitched_tables) if self.use_llm else []
+        metrics: List[ExtractedMetric] = []
+        forms: List[FormField] = []
+        invoices: List[ExtractedInvoice] = []
+        contracts: List[ExtractedContract] = []
 
-        # Extract forms
-        forms = extract_form_fields(text, stitched_tables) if self.use_llm else []
+        if self.use_llm:
+            try:
+                llm_result = self._extract_with_llm(text, stitched_tables)
 
-        # Extract invoices
-        invoice = extract_invoice(text, stitched_tables) if self.use_llm else None
-        invoices = [invoice] if invoice else []
+                # Merge LLM entities with regex entities (dedup)
+                entity_values = {e.value.lower() for e in entities}
+                for ent in llm_result.get("entities", []):
+                    if ent.value.lower() not in entity_values:
+                        entities.append(ent)
+                        entity_values.add(ent.value.lower())
 
-        # Extract contracts
-        contract = extract_contract(text) if self.use_llm else None
-        contracts = [contract] if contract else []
+                metrics = llm_result.get("metrics", [])
+                forms = llm_result.get("forms", [])
+                invoices = llm_result.get("invoices", [])
+                contracts = llm_result.get("contracts", [])
+
+            except Exception as e:
+                logger.error("LLM extraction failed: %s", e, exc_info=True)
+                raise RuntimeError(f"Intelligent extraction failed: {e}") from e
 
         return {
             "tables": stitched_tables,
@@ -778,3 +796,116 @@ class EnhancedExtractionService:
             "invoices": invoices,
             "contracts": contracts,
         }
+
+    def _extract_with_llm(
+        self,
+        text: str,
+        tables: List[EnhancedExtractedTable],
+    ) -> Dict[str, Any]:
+        """
+        Single consolidated LLM call for semantic extraction.
+
+        Combines entity NER + metric extraction + document type detection.
+        """
+        table_context = ""
+        for table in tables[:5]:
+            table_context += f"- {table.title or table.id}: columns={', '.join(table.headers[:8])}"
+            if table.rows:
+                table_context += f", sample={table.rows[0][:6]}"
+            table_context += "\n"
+        table_context = table_context or "(no tables)"
+
+        prompt = f"""Extract structured data from this document in ONE JSON response.
+
+DOCUMENT TEXT:
+{text[:8000]}
+
+TABLES:
+{table_context}
+
+Return a JSON object:
+{{
+  "entities": [
+    {{"type": "PERSON|ORGANIZATION|LOCATION|PRODUCT|DATE|MONEY|PERCENTAGE", "value": "...", "context": "surrounding text"}}
+  ],
+  "metrics": [
+    {{
+      "name": "Metric name",
+      "value": 1500000,
+      "raw_value": "$1.5M",
+      "metric_type": "currency|percentage|count|ratio|duration|other",
+      "currency": "USD",
+      "period": "Q3 2025",
+      "change": 15.5,
+      "change_direction": "increase|decrease|stable",
+      "context": "Brief context sentence",
+      "importance": 0.9
+    }}
+  ],
+  "document_type": "invoice|contract|form|report|letter|other"
+}}
+
+RULES:
+- Extract ALL named entities (people, companies, locations, products)
+- Extract ALL key metrics, KPIs, and numerical data with context
+- Be thorough - don't miss important data points
+- Return ONLY valid JSON"""
+
+        client = get_llm_client()
+        response = call_chat_completion(
+            client,
+            model=None,
+            messages=[{"role": "user", "content": prompt}],
+            description="consolidated_extraction",
+            temperature=0.1,
+        )
+
+        raw_text = response.choices[0].message.content or ""
+        data = extract_json_from_llm_response(raw_text, default={})
+
+        result: Dict[str, Any] = {"entities": [], "metrics": [], "forms": [],
+                                   "invoices": [], "contracts": []}
+
+        # Parse entities
+        for item in data.get("entities", []):
+            if isinstance(item, dict):
+                entity_type = str(item.get("type", "")).upper()
+                try:
+                    etype = EntityType[entity_type]
+                except KeyError:
+                    etype = EntityType.CUSTOM
+                result["entities"].append(ExtractedEntity(
+                    id=f"ent_{uuid.uuid4().hex[:8]}",
+                    type=etype,
+                    value=item.get("value", ""),
+                    confidence=0.85,
+                    context=item.get("context"),
+                ))
+
+        # Parse metrics
+        for item in data.get("metrics", []):
+            if isinstance(item, dict):
+                mtype_map = {
+                    "currency": MetricType.CURRENCY, "percentage": MetricType.PERCENTAGE,
+                    "count": MetricType.COUNT, "ratio": MetricType.RATIO,
+                    "duration": MetricType.DURATION, "quantity": MetricType.QUANTITY,
+                    "score": MetricType.SCORE, "rate": MetricType.RATE,
+                }
+                raw_val = item.get("value")
+                if raw_val is None:
+                    raw_val = item.get("raw_value", "0")
+                result["metrics"].append(ExtractedMetric(
+                    id=f"met_{uuid.uuid4().hex[:8]}",
+                    name=item.get("name", ""),
+                    value=raw_val if raw_val is not None else "0",
+                    raw_value=str(item.get("raw_value", "")),
+                    metric_type=mtype_map.get(str(item.get("metric_type", "count")).lower(), MetricType.COUNT),
+                    currency=item.get("currency"),
+                    period=item.get("period"),
+                    change=item.get("change"),
+                    change_direction=item.get("change_direction"),
+                    context=item.get("context"),
+                    importance_score=float(item.get("importance", 0.5)),
+                ))
+
+        return result

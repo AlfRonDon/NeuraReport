@@ -301,6 +301,11 @@ class ClaudeCodeCLIProvider(BaseProvider):
                 prompt_file = f.name
 
             # Run claude CLI with prompt from stdin
+            # Explicitly unset CLAUDECODE to avoid conflicts when running nested CLI calls
+            import os as _env_os
+            env = _env_os.environ.copy()
+            env.pop('CLAUDECODE', None)
+
             with open(prompt_file, 'r', encoding='utf-8') as pf:
                 result = subprocess.run(
                     cmd,
@@ -308,6 +313,7 @@ class ClaudeCodeCLIProvider(BaseProvider):
                     capture_output=True,
                     text=True,
                     timeout=self.config.timeout_seconds,
+                    env=env,
                 )
 
             # Clean up temp files
@@ -320,10 +326,16 @@ class ClaudeCodeCLIProvider(BaseProvider):
                     pass
 
             if result.returncode != 0:
-                error_msg = result.stderr or f"Claude CLI exited with code {result.returncode}"
+                stderr_msg = (result.stderr or "").strip()
+                stdout_msg = (result.stdout or "").strip()
+                # Claude CLI often writes errors to stdout, not stderr
+                error_msg = stderr_msg or stdout_msg or f"Claude CLI exited with code {result.returncode}"
+                # Truncate to avoid enormous log entries
+                if len(error_msg) > 500:
+                    error_msg = error_msg[:500] + "..."
                 logger.error(
                     "claude_code_cli_error",
-                    extra={"event": "claude_code_cli_error", "error": error_msg}
+                    extra={"event": "claude_code_cli_error", "error": error_msg, "returncode": result.returncode}
                 )
                 raise RuntimeError(f"Claude Code CLI error: {error_msg}")
 

@@ -149,7 +149,7 @@ class ExtractedMetric(BaseModel):
     """A key metric or KPI extracted from the document."""
     id: str
     name: str
-    value: Union[float, int, str]
+    value: Union[float, int, str, None] = None
     raw_value: str
     metric_type: MetricType
     unit: Optional[str] = None

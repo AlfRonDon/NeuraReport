@@ -3,7 +3,7 @@ Widget Intelligence API Routes — widget catalog, selection, grid packing, data
 
 Endpoints:
     GET  /widgets/catalog              Full widget catalog (24 scenarios)
-    POST /widgets/recommend            Dynamic widget recommendations for a DB connection
+    POST /widgets/recommend            Claude-powered widget recommendations for a DB connection
     POST /widgets/select               AI-powered widget selection
     POST /widgets/pack-grid            Pack widgets into CSS grid layout
     POST /widgets/{scenario}/validate  Validate data shape
@@ -14,7 +14,9 @@ Endpoints:
 """
 from __future__ import annotations
 
+import json
 import logging
+import uuid
 from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -110,15 +112,16 @@ async def get_widget_catalog():
 
 @router.post("/recommend")
 async def recommend_widgets(req: RecommendRequest):
-    """Analyze a connected DB and recommend optimal widgets using data-driven scoring."""
+    """Analyze a connected DB using Claude LLM and recommend optimal widgets."""
     try:
         from backend.app.repositories.connections.db_connection import resolve_db_path
-        from backend.legacy.services.mapping.helpers import build_rich_catalog_from_db
-        from backend.resolvers.widget_selector import WidgetSelector as DynamicSelector
-        from backend.resolvers.data_shape import extract_data_shape
+        from backend.legacy.services.mapping.helpers import build_rich_catalog_from_db, format_catalog_rich
         from backend.resolvers.grid_packer import pack_grid as dynamic_pack
-        from backend.app.services.widget_intelligence.models.intent import ParsedIntent, QueryType
-        from backend.app.services.widget_intelligence.models.data import DataProfile
+        from backend.app.services.widget_intelligence.models.design import (
+            VALID_SCENARIOS, VARIANT_TO_SCENARIO, WidgetSlot,
+        )
+        from backend.app.services.widget_intelligence.models.intent import WidgetSize
+        from backend.app.services.llm.client import get_llm_client
 
         # 1. Resolve DB path from connection_id
         db_path = resolve_db_path(req.connection_id, None, None)
@@ -131,40 +134,118 @@ async def recommend_widgets(req: RecommendRequest):
             1 for cols in rich_catalog.values()
             for c in cols if c.get("type", "").upper() in ("INTEGER", "REAL", "FLOAT", "NUMERIC", "DECIMAL", "DOUBLE")
         )
-
-        # 3. Build data profile from schema
         has_ts = any(
             c.get("type", "").upper() in ("DATE", "DATETIME", "TIMESTAMP")
             or any(kw in c.get("column", "").lower() for kw in ("date", "time", "timestamp"))
             for cols in rich_catalog.values() for c in cols
         )
-        profile = DataProfile(
-            table_count=table_count,
-            entity_count=min(table_count, 5),
-            numeric_column_count=numeric_cols,
-            has_timeseries=has_ts,
+
+        # 3. Format schema as text for Claude
+        schema_text = format_catalog_rich(rich_catalog)
+
+        # 4. Build variant reference for the prompt
+        variant_list = "\n".join(
+            f"  - {variant} (scenario: {scenario})"
+            for variant, scenario in sorted(VARIANT_TO_SCENARIO.items())
         )
 
-        # 4. Build intent from query
-        try:
-            qt = QueryType(req.query) if req.query in QueryType.__members__ else QueryType.overview
-        except ValueError:
-            qt = QueryType.overview
-        intent = ParsedIntent(original_query=req.query, query_type=qt)
+        # 5. Call Claude LLM to recommend widgets
+        system_prompt = f"""You are a data visualization expert. Given a database schema and a user query, recommend the best dashboard widgets.
 
-        # 5. Run dynamic widget selection
-        selector = DynamicSelector()
-        slots = selector.select(
-            intent=intent,
-            data_profile=profile,
-            max_widgets=req.max_widgets,
-            catalog=None,  # data_shape extractor handles None gracefully
+Available scenarios: {', '.join(VALID_SCENARIOS)}
+
+Available variants (variant → scenario):
+{variant_list}
+
+Widget sizes: compact, normal, expanded, hero
+
+Rules:
+- Analyze the database tables and columns to understand what data is available
+- Match the user's intent to the most relevant widget scenarios
+- Pick the best variant for each scenario based on the data shape
+- Assign a relevance score (0.0–1.0) for how well each widget fits
+- Generate a short question each widget answers (e.g. "What is the total billing amount?")
+- Pick appropriate sizes: use "hero" for the most important widget, "expanded" for secondary insights, "normal" for standard widgets, "compact" for supporting metrics
+- Return at most {req.max_widgets} widgets, ordered by relevance (highest first)
+- Only recommend scenarios that make sense for the available data
+- If the DB has numeric columns, include KPI and trend widgets
+- If the DB has date/time columns, include timeline or trend widgets
+- If the DB has categorical columns, include distribution or category-bar widgets
+
+DATABASE SCHEMA:
+{schema_text}
+
+Respond with ONLY a JSON array (no markdown, no explanation):
+[
+  {{"scenario": "kpi", "variant": "kpi-live", "size": "hero", "relevance": 0.95, "question": "What is the current total?"}},
+  ...
+]"""
+
+        user_message = req.query or "overview"
+
+        client = get_llm_client()
+        response = client.complete(
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_message},
+            ],
+            description="widget_recommend",
+            use_cache=True,
+            cache_ttl=300.0,
         )
 
-        # 6. Pack into grid layout
+        # 6. Extract JSON from LLM response
+        raw_text = (
+            response.get("choices", [{}])[0]
+            .get("message", {})
+            .get("content", "")
+        )
+        from backend.app.services.utils.llm import extract_json_array_from_llm_response
+        recommended = extract_json_array_from_llm_response(raw_text, default=[])
+        if not recommended:
+            logger.error("LLM response has no JSON array: %s", raw_text[:500])
+            raise ValueError("Claude did not return a valid JSON array")
+
+        # 7. Validate and build WidgetSlot objects
+        slots: list[WidgetSlot] = []
+        for i, rec in enumerate(recommended[:req.max_widgets]):
+            scenario = rec.get("scenario", "")
+            variant = rec.get("variant", scenario)
+            size_str = rec.get("size", "normal")
+            relevance = float(rec.get("relevance", 0.5))
+            question = rec.get("question", "")
+
+            # Validate scenario
+            if scenario not in VALID_SCENARIOS:
+                logger.warning("LLM recommended invalid scenario %s, skipping", scenario)
+                continue
+
+            # Validate variant belongs to scenario
+            if variant in VARIANT_TO_SCENARIO and VARIANT_TO_SCENARIO[variant] != scenario:
+                variant = scenario  # Fall back to base scenario name
+
+            # Validate size
+            try:
+                size = WidgetSize(size_str)
+            except ValueError:
+                size = WidgetSize.normal
+
+            slots.append(WidgetSlot(
+                id=f"w-{uuid.uuid4().hex[:8]}",
+                scenario=scenario,
+                variant=variant,
+                size=size,
+                relevance=min(max(relevance, 0.0), 1.0),
+                question=question,
+            ))
+
+        if not slots:
+            logger.warning("LLM returned no valid widgets, raw: %s", raw_text[:500])
+
+        # 8. Pack into grid layout
         grid = dynamic_pack(slots)
 
-        # 7. Build response
+        # 9. Build response
         widgets = [
             {
                 "id": s.id,

@@ -382,52 +382,6 @@ export default function StepTemplate({ wizardState, updateWizardState, onComplet
         Create with AI, pick from our gallery, or upload your own design.
       </Typography>
 
-      {/* Create with AI — primary CTA */}
-      {!showUpload && !verifyResult && (
-        <Paper
-          sx={{
-            p: 3,
-            mb: 3,
-            border: 2,
-            borderColor: (theme) => theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
-            bgcolor: (theme) => theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : neutral[50],
-            cursor: 'pointer',
-            transition: 'all 0.2s',
-            '&:hover': {
-              transform: 'translateY(-2px)',
-              boxShadow: 3,
-            },
-          }}
-          onClick={() => handleNavigate(`/templates/new/chat?from=wizard&connectionId=${encodeURIComponent(wizardState.connectionId || '')}`, 'Create template with AI')}
-        >
-          <Stack direction="row" alignItems="center" spacing={2}>
-            <Box
-              sx={{
-                width: 48,
-                height: 48,
-                borderRadius: '50%',
-                bgcolor: neutral[900],
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-              }}
-            >
-              <AutoAwesomeIcon sx={{ color: 'common.white', fontSize: 24 }} />
-            </Box>
-            <Box sx={{ flex: 1 }}>
-              <Typography variant="subtitle1" fontWeight={600}>
-                Create with AI
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Describe the report you need in plain language and AI will build the template for you
-              </Typography>
-            </Box>
-            <Chip label="Recommended" size="small" sx={{ bgcolor: neutral[900], color: 'common.white', fontWeight: 600, fontSize: '11px' }} />
-          </Stack>
-        </Paper>
-      )}
-
       {/* Template Type Filter */}
       <Box sx={{ mb: 3 }}>
         <ToggleButtonGroup

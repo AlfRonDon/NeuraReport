@@ -37,7 +37,7 @@ from backend.app.schemas.analyze.enhanced_analysis import (
     TextAnalytics,
 )
 from backend.app.services.utils.llm import call_chat_completion, extract_json_from_llm_response
-from backend.app.services.templates.TemplateVerify import MODEL, get_openai_client
+from backend.app.services.llm.client import get_llm_client
 
 logger = logging.getLogger("neura.analyze.engines")
 
@@ -164,10 +164,10 @@ def generate_summary(
     prompt = f"{SUMMARY_PROMPTS[mode]}\n\nDocument:\n{context}"
 
     try:
-        client = get_openai_client()
+        client = get_llm_client()
         response = call_chat_completion(
             client,
-            model=MODEL,
+            model=None,
             messages=[{"role": "user", "content": prompt}],
             description=f"summary_{mode.value}",
             temperature=0.3,
@@ -259,10 +259,10 @@ Provide analysis in JSON format:
 Be objective and thorough in your analysis."""
 
     try:
-        client = get_openai_client()
+        client = get_llm_client()
         response = call_chat_completion(
             client,
-            model=MODEL,
+            model=None,
             messages=[{"role": "user", "content": prompt}],
             description="sentiment_analysis",
             temperature=0.2,
@@ -585,10 +585,10 @@ Return JSON:
 Only include metrics you can calculate or find. Use null for unavailable data."""
 
     try:
-        client = get_openai_client()
+        client = get_llm_client()
         response = call_chat_completion(
             client,
-            model=MODEL,
+            model=None,
             messages=[{"role": "user", "content": prompt}],
             description="financial_analysis",
             temperature=0.2,
@@ -708,10 +708,10 @@ Be specific and actionable. Base insights on actual data found."""
     action_items = []
 
     try:
-        client = get_openai_client()
+        client = get_llm_client()
         response = call_chat_completion(
             client,
-            model=MODEL,
+            model=None,
             messages=[{"role": "user", "content": prompt}],
             description="insights_generation",
             temperature=0.3,
@@ -869,10 +869,10 @@ Return JSON:
 ```"""
 
     try:
-        client = get_openai_client()
+        client = get_llm_client()
         response = call_chat_completion(
             client,
-            model=MODEL,
+            model=None,
             messages=[{"role": "user", "content": prompt}],
             description="document_comparison",
             temperature=0.2,
@@ -916,35 +916,296 @@ class AnalysisEngineService:
         tables: List[EnhancedExtractedTable],
         metrics: List[ExtractedMetric],
     ) -> Dict[str, Any]:
-        """Run all analysis engines."""
-        # Generate summaries
-        summaries = generate_all_summaries(text, tables, metrics)
+        """
+        Run all analysis engines.
 
-        # Sentiment analysis
-        sentiment = analyze_sentiment(text)
-
-        # Text analytics
+        Uses a single consolidated LLM call for summary + sentiment +
+        financial + insights instead of 10+ separate calls.
+        """
+        # ---- Pure-Python analyses (no LLM) ----
         text_analytics = analyze_text(text)
-
-        # Statistical analysis
         statistical = analyze_statistics(tables)
 
-        # Financial analysis
-        financial = analyze_financials(text, metrics, tables)
-
-        # Generate insights
-        insights, risks, opportunities, action_items = generate_insights(
-            text, metrics, tables, sentiment, statistical
-        )
+        # ---- Single consolidated LLM call ----
+        llm_results = self._run_consolidated_analysis(text, tables, metrics)
 
         return {
-            "summaries": summaries,
-            "sentiment": sentiment,
+            "summaries": llm_results.get("summaries", {}),
+            "sentiment": llm_results.get("sentiment", SentimentAnalysis(
+                overall_sentiment=SentimentLevel.NEUTRAL,
+                overall_score=0.0, confidence=0.5,
+            )),
             "text_analytics": text_analytics,
             "statistical_analysis": statistical,
-            "financial_analysis": financial,
-            "insights": insights,
-            "risks": risks,
-            "opportunities": opportunities,
-            "action_items": action_items,
+            "financial_analysis": llm_results.get("financial_analysis", FinancialAnalysis(
+                metrics_found=len(metrics),
+            )),
+            "insights": llm_results.get("insights", []),
+            "risks": llm_results.get("risks", []),
+            "opportunities": llm_results.get("opportunities", []),
+            "action_items": llm_results.get("action_items", []),
         }
+
+    def _run_consolidated_analysis(
+        self,
+        text: str,
+        tables: List[EnhancedExtractedTable],
+        metrics: List[ExtractedMetric],
+    ) -> Dict[str, Any]:
+        """
+        Perform comprehensive analysis in ONE LLM call.
+
+        Combines: executive summary, comprehensive summary, sentiment,
+        financial analysis, insights, risks, opportunities, and action items.
+        """
+        # Build context
+        metrics_context = "\n".join([
+            f"- {m.name}: {m.raw_value}" + (f" ({m.change}% {m.change_direction})" if m.change else "")
+            for m in metrics[:20]
+        ]) or "(no metrics extracted)"
+
+        table_info = ""
+        for t in tables[:5]:
+            table_info += f"- {t.title or t.id}: {t.row_count} rows, columns: {', '.join(t.headers[:8])}\n"
+        table_info = table_info or "(no tables found)"
+
+        prompt = f"""Analyze this document comprehensively. Return a SINGLE JSON object with all analyses.
+
+DOCUMENT TEXT:
+{text[:10000]}
+
+TABLES FOUND:
+{table_info}
+
+METRICS EXTRACTED:
+{metrics_context}
+
+Return a JSON object with these keys:
+
+{{
+  "executive_summary": {{
+    "title": "Brief title",
+    "content": "2-3 paragraph executive summary for C-suite",
+    "bullet_points": ["Key point 1", "Key point 2", "Key point 3"]
+  }},
+  "comprehensive_summary": {{
+    "title": "Document title",
+    "content": "Detailed structured summary covering all major sections",
+    "bullet_points": ["Finding 1", "Finding 2", "Finding 3", "Finding 4", "Finding 5"]
+  }},
+  "sentiment": {{
+    "overall_sentiment": "positive|negative|neutral|very_positive|very_negative",
+    "overall_score": 0.5,
+    "confidence": 0.85,
+    "emotional_tone": "formal|casual|urgent|optimistic|pessimistic|neutral|analytical",
+    "urgency_level": "low|normal|high|critical"
+  }},
+  "financial": {{
+    "currency": "USD",
+    "revenue_growth": null,
+    "profit_growth": null,
+    "insights": ["Financial insight 1"],
+    "warnings": ["Financial warning 1"]
+  }},
+  "insights": [
+    {{
+      "type": "finding|trend|anomaly|recommendation|warning",
+      "title": "Short title",
+      "description": "Detailed description",
+      "priority": "critical|high|medium|low",
+      "confidence": 0.85,
+      "actionable": true,
+      "suggested_actions": ["Action 1"]
+    }}
+  ],
+  "risks": [
+    {{
+      "title": "Risk title",
+      "description": "Risk description",
+      "risk_level": "critical|high|medium|low|minimal",
+      "category": "financial|operational|compliance|market",
+      "probability": 0.7,
+      "impact": 0.8,
+      "mitigation_suggestions": ["Suggestion 1"]
+    }}
+  ],
+  "opportunities": [
+    {{
+      "title": "Opportunity title",
+      "description": "Description",
+      "opportunity_type": "growth|efficiency|cost_saving|innovation",
+      "potential_value": "$500K",
+      "confidence": 0.75,
+      "suggested_actions": ["Action 1"]
+    }}
+  ],
+  "action_items": [
+    {{
+      "title": "Action title",
+      "description": "Description",
+      "priority": "critical|high|medium|low",
+      "category": "financial|operational|strategic",
+      "expected_outcome": "Expected result"
+    }}
+  ]
+}}
+
+IMPORTANT:
+- Be specific and actionable, grounded in the actual document content
+- Include at least 3 insights, 2 risks, 2 opportunities, and 2 action items
+- For financial fields, only include data you can calculate from the document (use null otherwise)
+- Return ONLY valid JSON, no extra text"""
+
+        try:
+            client = get_llm_client()
+            response = call_chat_completion(
+                client,
+                model=None,
+                messages=[{"role": "user", "content": prompt}],
+                description="consolidated_analysis",
+                temperature=0.3,
+            )
+
+            raw_text = response.choices[0].message.content or ""
+            data = extract_json_from_llm_response(raw_text, default=None)
+
+            if not data:
+                raise ValueError("LLM returned no parseable JSON for analysis")
+
+            return self._parse_consolidated_result(data, metrics)
+
+        except Exception as e:
+            logger.error("Consolidated analysis failed: %s", e, exc_info=True)
+            raise RuntimeError(f"AI analysis failed: {e}") from e
+
+    def _parse_consolidated_result(
+        self,
+        data: Dict[str, Any],
+        metrics: List[ExtractedMetric],
+    ) -> Dict[str, Any]:
+        """Parse the consolidated LLM response into typed structures."""
+        result: Dict[str, Any] = {}
+
+        # --- Summaries ---
+        summaries: Dict[str, DocumentSummary] = {}
+        for key, mode in [("executive_summary", SummaryMode.EXECUTIVE),
+                          ("comprehensive_summary", SummaryMode.COMPREHENSIVE)]:
+            s = data.get(key, {})
+            if isinstance(s, dict):
+                content = s.get("content", "")
+                words = len(content.split())
+                summaries[mode.value] = DocumentSummary(
+                    mode=mode,
+                    title=s.get("title", f"{mode.value.title()} Summary"),
+                    content=content,
+                    bullet_points=s.get("bullet_points", []),
+                    word_count=words,
+                    reading_time_minutes=max(1, words / 200),
+                )
+        result["summaries"] = summaries
+
+        # --- Sentiment ---
+        sent = data.get("sentiment", {})
+        if isinstance(sent, dict):
+            sentiment_map = {
+                "very_positive": SentimentLevel.VERY_POSITIVE,
+                "positive": SentimentLevel.POSITIVE,
+                "neutral": SentimentLevel.NEUTRAL,
+                "negative": SentimentLevel.NEGATIVE,
+                "very_negative": SentimentLevel.VERY_NEGATIVE,
+            }
+            result["sentiment"] = SentimentAnalysis(
+                overall_sentiment=sentiment_map.get(
+                    str(sent.get("overall_sentiment", "neutral")).lower(),
+                    SentimentLevel.NEUTRAL
+                ),
+                overall_score=float(sent.get("overall_score", 0)),
+                confidence=float(sent.get("confidence", 0.8)),
+                emotional_tone=sent.get("emotional_tone", "neutral"),
+                urgency_level=sent.get("urgency_level", "normal"),
+            )
+
+        # --- Financial ---
+        fin = data.get("financial", {})
+        if isinstance(fin, dict):
+            result["financial_analysis"] = FinancialAnalysis(
+                metrics_found=len(metrics),
+                currency=fin.get("currency", "USD"),
+                gross_margin=fin.get("gross_margin"),
+                operating_margin=fin.get("operating_margin"),
+                net_margin=fin.get("net_margin"),
+                revenue_growth=fin.get("revenue_growth"),
+                profit_growth=fin.get("profit_growth"),
+                yoy_comparison=fin.get("yoy_comparison", {}),
+                variance_analysis=fin.get("variance_analysis", []),
+                insights=fin.get("insights", []),
+                warnings=fin.get("warnings", []),
+            )
+
+        # --- Insights ---
+        priority_map = {"critical": Priority.CRITICAL, "high": Priority.HIGH,
+                        "medium": Priority.MEDIUM, "low": Priority.LOW}
+        result["insights"] = []
+        for item in data.get("insights", []):
+            if isinstance(item, dict):
+                result["insights"].append(Insight(
+                    id=f"ins_{uuid.uuid4().hex[:8]}",
+                    type=item.get("type", "finding"),
+                    title=item.get("title", ""),
+                    description=item.get("description", ""),
+                    priority=priority_map.get(str(item.get("priority", "medium")).lower(), Priority.MEDIUM),
+                    confidence=float(item.get("confidence", 0.8)),
+                    supporting_data=item.get("supporting_data", []),
+                    actionable=bool(item.get("actionable", False)),
+                    suggested_actions=item.get("suggested_actions", []),
+                ))
+
+        # --- Risks ---
+        risk_map = {"critical": RiskLevel.CRITICAL, "high": RiskLevel.HIGH,
+                    "medium": RiskLevel.MEDIUM, "low": RiskLevel.LOW, "minimal": RiskLevel.MINIMAL}
+        result["risks"] = []
+        for item in data.get("risks", []):
+            if isinstance(item, dict):
+                prob = float(item.get("probability", 0.5))
+                impact = float(item.get("impact", 0.5))
+                result["risks"].append(RiskItem(
+                    id=f"risk_{uuid.uuid4().hex[:8]}",
+                    title=item.get("title", ""),
+                    description=item.get("description", ""),
+                    risk_level=risk_map.get(str(item.get("risk_level", "medium")).lower(), RiskLevel.MEDIUM),
+                    category=item.get("category", "general"),
+                    probability=prob,
+                    impact=impact,
+                    risk_score=prob * impact,
+                    mitigation_suggestions=item.get("mitigation_suggestions", []),
+                ))
+
+        # --- Opportunities ---
+        result["opportunities"] = []
+        for item in data.get("opportunities", []):
+            if isinstance(item, dict):
+                result["opportunities"].append(OpportunityItem(
+                    id=f"opp_{uuid.uuid4().hex[:8]}",
+                    title=item.get("title", ""),
+                    description=item.get("description", ""),
+                    opportunity_type=item.get("opportunity_type", "growth"),
+                    potential_value=item.get("potential_value"),
+                    confidence=float(item.get("confidence", 0.7)),
+                    requirements=item.get("requirements", []),
+                    suggested_actions=item.get("suggested_actions", []),
+                ))
+
+        # --- Action Items ---
+        result["action_items"] = []
+        for item in data.get("action_items", []):
+            if isinstance(item, dict):
+                result["action_items"].append(ActionItem(
+                    id=f"act_{uuid.uuid4().hex[:8]}",
+                    title=item.get("title", ""),
+                    description=item.get("description", ""),
+                    priority=priority_map.get(str(item.get("priority", "medium")).lower(), Priority.MEDIUM),
+                    category=item.get("category", "general"),
+                    expected_outcome=item.get("expected_outcome"),
+                ))
+
+        return result
