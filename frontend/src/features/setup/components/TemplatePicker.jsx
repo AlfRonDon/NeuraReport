@@ -31,7 +31,7 @@ import LoadingState from '@/components/feedback/LoadingState.jsx'
 import InfoTooltip from '@/components/common/InfoTooltip.jsx'
 import TOOLTIP_COPY from '@/content/tooltipCopy.jsx'
 import { getTemplateKind, previewFrameSx, surfaceStackSx } from '../utils/templatesPaneUtils'
-import { neutral, palette } from '@/app/theme'
+import { neutral, palette, secondary } from '@/app/theme'
 
 function TemplatePicker({ selected, onToggle, tagFilter, setTagFilter }) {
 
@@ -401,7 +401,7 @@ function TemplatePicker({ selected, onToggle, tagFilter, setTagFilter }) {
 
                     borderColor: 'text.secondary',
 
-                    boxShadow: '0 0 0 1px rgba(79,70,229,0.28)',
+                    boxShadow: `0 0 0 1px ${alpha(secondary.violet[500], 0.28)}`,
 
                   },
 

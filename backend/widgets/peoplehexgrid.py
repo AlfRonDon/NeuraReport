@@ -1,6 +1,6 @@
 """People hex-grid widget plugin — hexagonal personnel map."""
 
-from layer2.pipeline_v7.widgets.base import WidgetPlugin, WidgetMeta
+from backend.app.services.widget_intelligence.widgets.base import WidgetPlugin, WidgetMeta
 
 
 class PeopleHexGridWidget(WidgetPlugin):

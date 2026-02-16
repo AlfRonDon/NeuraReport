@@ -1,6 +1,6 @@
 """Distribution widget plugin — pie/donut/bar breakdown."""
 
-from layer2.pipeline_v7.widgets.base import WidgetPlugin, WidgetMeta
+from backend.app.services.widget_intelligence.widgets.base import WidgetPlugin, WidgetMeta
 
 
 class DistributionWidget(WidgetPlugin):

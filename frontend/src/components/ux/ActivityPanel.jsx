@@ -85,7 +85,7 @@ const getStatusConfig = (status, theme) => {
   const configs = {
     [OperationStatus.PENDING]: {
       icon: PendingIcon,
-      color: theme.palette.grey[500],
+      color: neutral[500],
       label: 'Pending',
     },
     [OperationStatus.IN_PROGRESS]: {

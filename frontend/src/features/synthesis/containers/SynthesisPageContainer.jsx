@@ -605,7 +605,7 @@ export default function SynthesisPage() {
                       sourceFeature={FeatureKey.SYNTHESIS}
                     />
                   </Box>
-                  <Box sx={{ bgcolor: 'grey.50', p: 2, borderRadius: 1 }}>
+                  <Box sx={{ bgcolor: neutral[50], p: 2, borderRadius: 1 }}>
                     <Typography variant="h6" gutterBottom>
                       {synthesisResult.synthesis?.title}
                     </Typography>
@@ -739,7 +739,7 @@ export default function SynthesisPage() {
           <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>
             {previewDoc?.doc_type || previewDoc?.docType || 'text'}
           </Typography>
-          <Paper sx={{ p: 2, bgcolor: 'grey.50', maxHeight: 420, overflow: 'auto' }}>
+          <Paper sx={{ p: 2, bgcolor: neutral[50], maxHeight: 420, overflow: 'auto' }}>
             <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
               {previewDoc?.content || 'No content available.'}
             </Typography>

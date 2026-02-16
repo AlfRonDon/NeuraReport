@@ -22,7 +22,7 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material'
-import { neutral, palette } from '@/app/theme'
+import { neutral, palette, secondary } from '@/app/theme'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import DownloadOutlinedIcon from '@mui/icons-material/DownloadOutlined'
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined'
@@ -396,7 +396,7 @@ export function TemplatePicker({ selected, onToggle, outputFormats, setOutputFor
                 },
                 selectedState && {
                   borderColor: 'text.secondary',
-                  boxShadow: '0 0 0 1px rgba(79,70,229,0.28)',
+                  boxShadow: `0 0 0 1px ${alpha(secondary.violet[500], 0.28)}`,
                 },
               ]}
             >
@@ -432,8 +432,8 @@ export function TemplatePicker({ selected, onToggle, outputFormats, setOutputFor
                         sx={{ width: '100%', height: '100%' }}
                         frameAspectRatio="210 / 297"
                         pageShadow
-                        pageBorderColor="rgba(15,23,42,0.08)"
-                        marginGuides={{ inset: 28, color: 'rgba(79,70,229,0.28)' }}
+                        pageBorderColor={alpha(neutral[900], 0.08)}
+                        marginGuides={{ inset: 28, color: alpha(secondary.violet[500], 0.28) }}
                       />
                     ) : imagePreview ? (
                       <Box component="img" src={imagePreview} alt={`${t.name} preview`} loading="lazy" sx={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', display: 'block' }} />

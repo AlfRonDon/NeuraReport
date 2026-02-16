@@ -13,7 +13,7 @@ from backend.app.repositories.connections.db_connection import verify_sqlite
 from backend.app.services.mapping.AutoMapInline import MappingInlineValidationError, run_llm_call_3
 from backend.app.services.mapping.CorrectionsPreview import run_corrections_preview as corrections_preview_fn
 from backend.app.services.mapping.HeaderMapping import approval_errors, get_parent_child_info
-from backend.app.services.prompts.llm_prompts import PROMPT_VERSION, _is_df_mode
+from backend.app.services.prompts.llm_prompts import PROMPT_VERSION
 from backend.app.repositories.state import store as state_store_module
 from backend.app.services.utils import TemplateLockError, acquire_template_lock, write_artifact_manifest, write_json_atomic, write_text_atomic
 from backend.legacy.utils.connection_utils import db_path_from_payload_or_default
@@ -68,6 +68,8 @@ def _mapping_preview_pipeline(
     mapping_keys_file = mapping_keys_path(template_dir_path)
     html_path = template_dir_path / "template_p1.html"
     if not html_path.exists():
+        html_path = template_dir_path / "report_final.html"
+    if not html_path.exists():
         raise http_error(404, "template_not_ready", "Run /templates/verify first")
     template_html = html_path.read_text(encoding="utf-8", errors="ignore")
 
@@ -77,13 +79,12 @@ def _mapping_preview_pipeline(
 
     catalog = list(dict.fromkeys(build_catalog_fn(db_path)))
 
-    # Build rich catalog for DataFrame mode (includes types + sample values)
+    # Build rich catalog with types + sample values for LLM mapping
     _rich_catalog_text: str | None = None
-    if _is_df_mode():
-        try:
-            _rich_catalog_text = format_catalog_rich(build_rich_catalog_from_db(db_path))
-        except Exception:
-            logger.warning("rich_catalog_build_degraded", extra={"template_id": template_id})
+    try:
+        _rich_catalog_text = format_catalog_rich(build_rich_catalog_from_db(db_path))
+    except Exception:
+        logger.warning("rich_catalog_build_degraded", extra={"template_id": template_id})
 
     try:
         schema_info = get_parent_child_info_fn(db_path)

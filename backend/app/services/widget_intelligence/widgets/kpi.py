@@ -3,6 +3,16 @@
 from backend.app.services.widget_intelligence.widgets.base import WidgetPlugin, WidgetMeta
 
 
+def _to_num(v):
+    """Coerce to float, return None on failure."""
+    if v is None:
+        return None
+    try:
+        return float(v)
+    except (ValueError, TypeError):
+        return 0
+
+
 class KPIWidget(WidgetPlugin):
     meta = WidgetMeta(
         scenario="kpi",
@@ -19,12 +29,24 @@ class KPIWidget(WidgetPlugin):
 
     def validate_data(self, data: dict) -> list[str]:
         errors = []
-        summary = data.get("summary", {}).get("value", {})
-        if not summary and "value" not in data:
+        if "value" not in data and not data.get("summary", {}).get("value"):
             errors.append("Missing value field")
         return errors
 
     def format_data(self, raw: dict) -> dict:
+        # Flat format from data resolver
+        if "value" in raw or "timeSeries" in raw:
+            return {
+                "value": _to_num(raw.get("value", 0)),
+                "label": raw.get("label", "Metric"),
+                "units": raw.get("units", ""),
+                "trend": raw.get("trend", "stable"),
+                "previousValue": _to_num(raw.get("previousValue")),
+                "timeSeries": raw.get("timeSeries", []),
+                "threshold": raw.get("threshold"),
+                "status": raw.get("status", "ok"),
+            }
+        # Legacy nested format
         summary = raw.get("summary", {}).get("value", {})
         return {
             "value": summary.get("latest", 0),

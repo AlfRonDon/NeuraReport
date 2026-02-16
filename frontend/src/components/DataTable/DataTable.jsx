@@ -255,12 +255,12 @@ const StyledPagination = styled(TablePagination)(({ theme }) => ({
   borderTop: `1px solid ${alpha(theme.palette.divider, 0.08)}`,
   backgroundColor: alpha(theme.palette.background.paper, 0.3),
   '& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows': {
-    fontSize: 13,
+    fontSize: 14,
     color: theme.palette.text.secondary,
   },
   '& .MuiTablePagination-select': {
     borderRadius: 8,
-    fontSize: 13,
+    fontSize: 14,
   },
   '& .MuiTablePagination-actions': {
     '& .MuiIconButton-root': {

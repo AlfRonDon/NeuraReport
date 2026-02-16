@@ -6,7 +6,6 @@ Provides a clean API for:
 - AI-powered widget selection for dashboard composition
 - Deterministic CSS grid packing
 - Widget data validation and formatting
-- Demo data retrieval
 - Thompson Sampling feedback
 """
 from __future__ import annotations
@@ -167,15 +166,6 @@ class WidgetIntelligenceService:
             "total_rows": layout.total_rows,
             "utilization_pct": layout.utilization_pct,
         }
-
-    # ── Demo Data ────────────────────────────────────────────────────────
-
-    def get_demo_data(self, scenario: str) -> dict[str, Any]:
-        """Get demo data for a widget scenario."""
-        plugin = self._registry.get(scenario)
-        if not plugin:
-            return {"error": f"Unknown scenario: {scenario}"}
-        return plugin.get_demo_data()
 
     # ── Validation ───────────────────────────────────────────────────────
 

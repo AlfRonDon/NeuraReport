@@ -10,6 +10,7 @@
 import { forwardRef } from 'react'
 import { Tooltip, Box, useTheme, alpha } from '@mui/material'
 import { InfoOutlined as InfoIcon } from '@mui/icons-material'
+import { neutral } from '@/app/theme'
 
 /**
  * DisabledTooltip - Wrapper that explains why an action is unavailable
@@ -70,14 +71,14 @@ const DisabledTooltip = forwardRef(function DisabledTooltip(
       componentsProps={{
         tooltip: {
           sx: {
-            bgcolor: alpha(theme.palette.grey[900], 0.95),
+            bgcolor: alpha(neutral[900], 0.95),
             backdropFilter: 'blur(8px)',
             borderRadius: '8px',
             px: 1.5,
             py: 1,
             boxShadow: `0 4px 20px ${alpha(theme.palette.common.black, 0.3)}`,
             '& .MuiTooltip-arrow': {
-              color: alpha(theme.palette.grey[900], 0.95),
+              color: alpha(neutral[900], 0.95),
             },
           },
         },

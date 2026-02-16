@@ -2299,6 +2299,77 @@ export async function applyChatTemplateEdit(templateId, html) {
 }
 
 
+/**
+ * Send a chat message for conversational template creation (no template_id needed).
+ * The AI will guide the user through creating a template from scratch.
+ *
+ * @param {Array<{role: string, content: string}>} messages - Conversation history
+ * @param {string} [html] - Optional current HTML draft
+ * @param {File} [samplePdf] - Optional sample PDF file for visual reference
+ * @returns {Promise<Object>} Chat response with message, ready_to_apply, proposed_changes, etc.
+ */
+export async function chatTemplateCreate(messages, html = null, samplePdf = null) {
+  if (!Array.isArray(messages) || messages.length === 0) {
+    throw new Error('messages array is required')
+  }
+  if (isMock) {
+    await sleep(800)
+    return {
+      status: 'ok',
+      message: samplePdf
+        ? "I can see your sample PDF. I'll use its layout and styling as a reference. What would you like to keep or change from this design?"
+        : "What kind of report template would you like to create? For example: invoice, sales summary, or inventory report.",
+      ready_to_apply: false,
+      proposed_changes: null,
+      follow_up_questions: [
+        "What type of report is this?",
+        "What sections or columns do you need?",
+      ],
+    }
+  }
+  if (samplePdf) {
+    const fd = new FormData()
+    fd.append('messages_json', JSON.stringify(messages))
+    if (html) fd.append('html', html)
+    fd.append('sample_pdf', samplePdf)
+    const { data } = await api.post('/templates/chat-create', fd, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+    return data
+  }
+  const payload = { messages }
+  if (html) {
+    payload.html = html
+  }
+  const { data } = await api.post('/templates/chat-create', payload)
+  return data
+}
+
+/**
+ * Persist a template that was created via the chat conversation.
+ *
+ * @param {string} name - Template name
+ * @param {string} html - The finalized HTML
+ * @param {string} [kind='pdf'] - Template kind (pdf or excel)
+ * @returns {Promise<Object>} Response with template_id, name, kind
+ */
+export async function createTemplateFromChat(name, html, kind = 'pdf') {
+  if (!name) throw new Error('name is required')
+  if (typeof html !== 'string') throw new Error('html is required')
+  if (isMock) {
+    await sleep(400)
+    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+    return {
+      status: 'ok',
+      template_id: slug || 'chat-template',
+      name,
+      kind,
+    }
+  }
+  const { data } = await api.post('/templates/create-from-chat', { name, html, kind })
+  return data
+}
+
 
 // B) Run a report for a date range (returns artifact URLs)
 

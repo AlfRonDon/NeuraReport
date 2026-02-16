@@ -197,8 +197,8 @@ async def run_mapping_approve(
             stage_started = time.time()
             try:
                 yield start_stage(stage_key, stage_label, progress=25)
-                if not base_template_path.exists():
-                    raise FileNotFoundError("template_p1.html not found. Run /templates/verify first.")
+                if not base_template_path.exists() and not final_html_path.exists():
+                    raise FileNotFoundError("No template HTML found. Run /templates/verify or create via chat first.")
                 if not final_html_path.exists():
                     from backend.app.services.utils.html import _fix_fixed_footers
                     final_html_path.write_text(
@@ -335,83 +335,12 @@ async def run_mapping_approve(
             stage_started = time.time()
             generator_dialect = payload.generator_dialect or payload.dialect_hint or "duckdb"
 
-            # In DataFrame mode, skip SQL-based generator assets entirely —
-            # DataFramePipeline resolves data directly from the contract.
-            _use_df = os.getenv("NEURA_USE_DATAFRAME_PIPELINE", "false").lower() in ("1", "true", "yes")
-            if _use_df:
-                logger.info("df_mode_skip_generator_assets", extra={"event": "df_mode_skip_generator_assets", "template_id": template_id})
-                generator_stage_summary = {"stage": stage_key, "status": "skipped", "detail": "Skipped in DataFrame mode"}
-                generator_artifacts_urls = {}
-                yield finish_stage(stage_key, stage_label, progress=92, status="skipped", detail="Skipped in DataFrame mode")
-            else:
-                yield start_stage(stage_key, stage_label, progress=80, dialect=generator_dialect)
-                try:
-                    generator_result = generator_builder(
-                        template_dir=template_dir_path,
-                        step4_output=contract_result,
-                        final_template_html=final_html_path.read_text(encoding="utf-8", errors="ignore"),
-                        reference_pdf_image=None,
-                        catalog_allowlist=payload.catalog_allowlist or catalog,
-                        dialect=generator_dialect,
-                        params_spec=payload.params_spec,
-                        sample_params=payload.sample_params,
-                        force_rebuild=payload.force_generator_rebuild,
-                        key_tokens=keys_clean,
-                        require_contract_join=require_contract_join,
-                    )
-                    generator_artifacts_urls = _normalize_artifact_map(generator_result.get("artifacts"))
-                    generator_stage_summary = {
-                        "stage": stage_key,
-                        "status": "done",
-                        "invalid": generator_result.get("invalid"),
-                        "needs_user_fix": list(generator_result.get("needs_user_fix") or []),
-                        "dialect": generator_result.get("dialect"),
-                        "params": generator_result.get("params"),
-                        "summary": generator_result.get("summary"),
-                        "dry_run": generator_result.get("dry_run"),
-                        "cached": generator_result.get("cached"),
-                        "artifacts": generator_artifacts_urls,
-                    }
-                    log_stage(stage_label, "ok", stage_started)
-                    yield finish_stage(
-                        stage_key,
-                        stage_label,
-                        progress=92,
-                        invalid=generator_result.get("invalid"),
-                        needs_user_fix=list(generator_result.get("needs_user_fix") or []),
-                        dialect=generator_result.get("dialect"),
-                        params=generator_result.get("params"),
-                        summary=generator_result.get("summary"),
-                        dry_run=generator_result.get("dry_run"),
-                        cached=generator_result.get("cached"),
-                        artifacts=generator_artifacts_urls,
-                    )
-                except GeneratorAssetsError as exc:
-                    log_stage(stage_label, "error", stage_started)
-                    logger.exception(
-                        "generator_assets_failed",
-                        extra={
-                            "event": "generator_assets_failed",
-                            "template_id": template_id,
-                            "correlation_id": correlation_id,
-                        },
-                    )
-                    generator_stage_summary = {"stage": stage_key, "status": "error", "detail": "Generator assets failed"}
-                    generator_artifacts_urls = {}
-                    yield finish_stage(stage_key, stage_label, progress=90, status="error", detail="Generator assets failed")
-                except Exception as exc:
-                    log_stage(stage_label, "error", stage_started)
-                    logger.exception(
-                        "generator_assets_failed",
-                        extra={
-                            "event": "generator_assets_failed",
-                            "template_id": template_id,
-                            "correlation_id": correlation_id,
-                        },
-                    )
-                    generator_stage_summary = {"stage": stage_key, "status": "error", "detail": "Generator assets failed"}
-                    generator_artifacts_urls = {}
-                    yield finish_stage(stage_key, stage_label, progress=90, status="error", detail="Generator assets failed")
+            # DataFrame pipeline resolves data directly from the contract —
+            # skip SQL-based generator assets entirely (Call 5 SQL removed).
+            logger.info("df_mode_skip_generator_assets", extra={"event": "df_mode_skip_generator_assets", "template_id": template_id})
+            generator_stage_summary = {"stage": stage_key, "status": "skipped", "detail": "Skipped — DataFrame pipeline"}
+            generator_artifacts_urls = {}
+            yield finish_stage(stage_key, stage_label, progress=92, status="skipped", detail="Skipped — DataFrame pipeline")
 
             stage_key = "mapping.thumbnail"
             stage_label = "Capturing template thumbnail"

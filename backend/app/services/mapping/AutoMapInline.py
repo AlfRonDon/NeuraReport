@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any, Iterable, Mapping, Sequence
 
 from ..prompts import llm_prompts
-from ..prompts.llm_prompts import _is_df_mode
+# DataFrame mode is now the only mode — always use DF validation
 from ..templates.TemplateVerify import MODEL, get_openai_client
 from ..utils import (
     call_chat_completion,
@@ -576,7 +576,7 @@ def run_llm_call_3(
                     },
                 )
 
-            allowlist_errors = _mapping_allowlist_errors(mapping, catalog, df_mode=_is_df_mode())
+            allowlist_errors = _mapping_allowlist_errors(mapping, catalog, df_mode=True)
             if allowlist_errors:
                 raise MappingInlineValidationError("Mapping values outside allow-list: " + ", ".join(allowlist_errors))
 

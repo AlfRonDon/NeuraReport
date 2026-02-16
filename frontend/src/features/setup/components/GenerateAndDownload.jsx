@@ -663,11 +663,11 @@ function GenerateAndDownload({
                   border: '1px solid',
                   borderColor: 'divider',
                   bgcolor: 'background.paper',
-                  boxShadow: '0 6px 20px rgba(15,23,42,0.06)',
+                  boxShadow: `0 6px 20px ${alpha(neutral[900], 0.06)}`,
                   transition: 'border-color 200ms ease, box-shadow 200ms ease, transform 160ms ease',
                   '&:hover': {
                     borderColor: 'primary.light',
-                    boxShadow: '0 10px 30px rgba(79,70,229,0.14)',
+                    boxShadow: `0 10px 30px ${alpha(secondary.violet[500], 0.14)}`,
                     transform: 'translateY(-2px)',
                   },
                 }}

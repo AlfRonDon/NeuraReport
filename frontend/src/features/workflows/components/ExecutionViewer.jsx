@@ -200,7 +200,7 @@ function ExecutionStep({ step, isLast, onRetry }) {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              backgroundColor: alpha(theme.palette[statusConfig.color]?.main || theme.palette.grey[500], 0.15),
+              backgroundColor: alpha(theme.palette[statusConfig.color]?.main || neutral[500], 0.15),
             }}
           >
             {step.status === 'running' ? (

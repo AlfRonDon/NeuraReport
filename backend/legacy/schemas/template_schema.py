@@ -113,3 +113,10 @@ class TemplateChatResponse(BaseModel):
     proposed_changes: Optional[list[str]] = None  # List of proposed changes when ready
     updated_html: Optional[str] = None  # The updated HTML if ready_to_apply is True
     follow_up_questions: Optional[list[str]] = None  # Questions to ask user if not ready
+
+
+class TemplateCreateFromChatPayload(BaseModel):
+    """Payload for creating a template from a chat conversation."""
+    name: str
+    html: str
+    kind: str = "pdf"

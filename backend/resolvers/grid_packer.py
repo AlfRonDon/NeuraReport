@@ -17,8 +17,8 @@ from __future__ import annotations
 
 import logging
 
-from layer2.pipeline_v7.config import GRID_COLS, GRID_ROWS, SIZE_COLS, SIZE_ROWS
-from layer2.pipeline_v7.models.design import GridCell, GridLayout, WidgetSlot
+from backend.app.services.widget_intelligence.config import GRID_COLS, GRID_ROWS, SIZE_COLS, SIZE_ROWS
+from backend.app.services.widget_intelligence.models.design import GridCell, GridLayout, WidgetSlot
 
 logger = logging.getLogger(__name__)
 

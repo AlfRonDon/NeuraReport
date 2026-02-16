@@ -19,7 +19,7 @@ import logging
 import re
 from dataclasses import dataclass
 
-from layer2.pipeline_v7.models.catalog import ColumnStats
+from backend.app.services.widget_intelligence.models.catalog import ColumnStats
 
 logger = logging.getLogger(__name__)
 

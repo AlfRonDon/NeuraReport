@@ -2,6 +2,7 @@ import { cloneElement, isValidElement } from 'react'
 import { IconButton, Tooltip, Typography, Box } from '@mui/material'
 import { alpha } from '@mui/material/styles'
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
+import { neutral } from '@/app/theme'
 
 const InfoTooltip = ({
   content,
@@ -79,9 +80,9 @@ const InfoTooltip = ({
               lineHeight: 1.6,
               px: 2,
               py: 1.5,
-              color: theme.palette.mode === 'dark' ? theme.palette.grey[50] : theme.palette.grey[900],
+              color: theme.palette.mode === 'dark' ? neutral[50] : neutral[900],
               backgroundColor: theme.palette.mode === 'dark'
-                ? alpha(theme.palette.grey[900], 0.9)
+                ? alpha(neutral[900], 0.9)
                 : alpha(theme.palette.background.paper, 0.98),
               boxShadow: theme.shadows[6],
               borderRadius: 1,  // Figma spec: 8px

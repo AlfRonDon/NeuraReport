@@ -11,7 +11,7 @@ import CheckRoundedIcon from '@mui/icons-material/CheckRounded'
 import CloudUploadOutlinedIcon from '@mui/icons-material/CloudUploadOutlined'
 import ScheduleIcon from '@mui/icons-material/Schedule'
 import { alpha } from '@mui/material/styles'
-import { neutral, status, palette } from '@/app/theme'
+import { neutral, secondary, status, palette } from '@/app/theme'
 import { useAppStore } from '@/stores'
 import { useToast } from '@/components/ToastProvider.jsx'
 import { useInteraction, InteractionType, Reversibility, useNavigateInteraction } from '@/components/ux/governance'
@@ -946,7 +946,7 @@ export default function UploadVerify() {
                 alignItems: 'center',
                 justifyContent: 'center',
                 bgcolor: 'common.white',
-                boxShadow: '0 8px 20px rgba(15, 23, 42, 0.12)',
+                boxShadow: `0 8px 20px ${alpha(neutral[900], 0.12)}`,
                 color: 'text.secondary',
               }}
             >
@@ -994,7 +994,7 @@ export default function UploadVerify() {
             border: '1px solid',
             borderColor: (theme) => alpha(theme.palette.divider, 0.3),
             bgcolor: 'common.white',
-            boxShadow: '0 10px 24px rgba(15, 23, 42, 0.06)',
+            boxShadow: `0 10px 24px ${alpha(neutral[900], 0.06)}`,
           }}
         >
           <Stack spacing={0.5}>
@@ -1140,7 +1140,7 @@ export default function UploadVerify() {
                   alignItems: 'center',
                   justifyContent: 'center',
                   bgcolor: 'background.paper',
-                  boxShadow: '0 16px 38px rgba(15, 23, 42, 0.08)',
+                  boxShadow: `0 16px 38px ${alpha(neutral[900], 0.08)}`,
                 }}
               >
                 <Box
@@ -1172,7 +1172,7 @@ export default function UploadVerify() {
                   borderRadius: 1,  // Figma spec: 8px
                   overflow: 'hidden',
                   bgcolor: 'background.paper',
-                  boxShadow: '0 16px 38px rgba(15, 23, 42, 0.08)',
+                  boxShadow: `0 16px 38px ${alpha(neutral[900], 0.08)}`,
                 }}
               >
                 {templateIframeSrc ? (
@@ -1185,7 +1185,7 @@ export default function UploadVerify() {
                       loading="eager"
                       contentAlign="top"
                       pageChrome={false}
-                      marginGuides={{ inset: 36, color: 'rgba(79,70,229,0.3)' }}
+                      marginGuides={{ inset: 36, color: alpha(secondary.violet[500], 0.3) }}
                       sx={{ width: '100%', height: '100%' }}
                     />
                     {verifying && (
@@ -1194,7 +1194,7 @@ export default function UploadVerify() {
                           position: 'absolute',
                           inset: 0,
                           zIndex: 1,
-                          bgcolor: 'rgba(15,23,42,0.06)',
+                          bgcolor: (theme) => alpha(neutral[900], 0.06),
                           backdropFilter: 'blur(1.5px)',
                           display: 'flex',
                           alignItems: 'center',
@@ -1407,7 +1407,7 @@ export default function UploadVerify() {
                         loading="eager"
                         contentAlign="top"
                         pageShadow
-                        pageBorderColor="rgba(15,23,42,0.08)"
+                        pageBorderColor={alpha(neutral[900], 0.08)}
                         clampToParentHeight
                       />
                     </Box>

@@ -144,7 +144,7 @@ const ExecutionCard = styled(Paper)(({ theme, status }) => ({
       ? (theme.palette.mode === 'dark' ? neutral[300] : neutral[500])
       : status === 'failed'
       ? theme.palette.text.secondary
-      : theme.palette.grey[400]
+      : neutral[400]
   }`,
 }))
 

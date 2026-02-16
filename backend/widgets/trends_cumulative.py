@@ -1,6 +1,6 @@
 """Trends cumulative widget plugin — accumulated value over time."""
 
-from layer2.pipeline_v7.widgets.base import WidgetPlugin, WidgetMeta
+from backend.app.services.widget_intelligence.widgets.base import WidgetPlugin, WidgetMeta
 
 
 class TrendsCumulativeWidget(WidgetPlugin):

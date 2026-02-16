@@ -144,8 +144,8 @@ def mapping_key_options(
     # (e.g., runtime_machine_keys.db) alongside their artifacts.
     fallback_db_path = template_dir_path / "runtime_machine_keys.db"
 
-    import os as _os
-    _use_df = _os.getenv("NEURA_USE_DATAFRAME_PIPELINE", "false").lower() in ("1", "true", "yes")
+    # DataFrame pipeline is the only mode
+    _use_df = True
 
     with sqlite3.connect(str(db_path)) as con:
         con.row_factory = sqlite3.Row

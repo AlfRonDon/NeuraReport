@@ -171,7 +171,7 @@ def _configure_dspy() -> bool:
     if not vllm_url:
         # Fall back to pipeline config default even when env vars aren't exported.
         try:
-            from layer2.pipeline_v7.config import VLLM_BASE_URL as _CFG_VLLM_BASE_URL
+            from backend.app.services.widget_intelligence.config import VLLM_BASE_URL as _CFG_VLLM_BASE_URL
             vllm_url = _CFG_VLLM_BASE_URL
         except Exception:
             vllm_url = None

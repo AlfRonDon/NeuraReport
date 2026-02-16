@@ -65,6 +65,8 @@ from backend.legacy.services.template_service import (
     edit_template_ai,
     edit_template_manual,
     chat_template_edit,
+    chat_template_create,
+    create_template_from_chat,
     apply_chat_template_edit,
     undo_last_template_edit,
     verify_excel,
@@ -87,6 +89,7 @@ from backend.legacy.schemas.template_schema import (
     MappingPayload,
     TemplateAiEditPayload,
     TemplateChatPayload,
+    TemplateCreateFromChatPayload,
     TemplateManualEditPayload,
     TemplateRecommendPayload,
     TemplateRecommendResponse,
@@ -186,6 +189,53 @@ def list_templates_route(request: Request, status: Optional[str] = None):
 def templates_catalog_route(request: Request):
     """Get template catalog for browsing."""
     return templates_catalog(request)
+
+
+# =============================================================================
+# Chat-based Template Creation (from scratch)
+# =============================================================================
+
+@router.post("/chat-create")
+async def chat_template_create_route(request: Request):
+    """Conversational template creation endpoint (no template_id needed).
+
+    Accepts either:
+    - JSON body (TemplateChatPayload) when no file is attached
+    - multipart/form-data with messages_json, optional html, and optional sample_pdf
+    """
+    import json as _json
+    from backend.legacy.schemas.template_schema import TemplateChatMessage
+
+    content_type = request.headers.get("content-type", "")
+    sample_pdf_bytes = None
+
+    if "multipart/form-data" in content_type:
+        form = await request.form()
+        messages_json = form.get("messages_json")
+        if not messages_json:
+            raise HTTPException(status_code=422, detail="messages_json is required in form data")
+        try:
+            msgs_raw = _json.loads(messages_json)
+        except _json.JSONDecodeError:
+            raise HTTPException(status_code=422, detail="Invalid messages_json")
+        payload = TemplateChatPayload(
+            messages=[TemplateChatMessage(role=m["role"], content=m["content"]) for m in msgs_raw],
+            html=form.get("html") or None,
+        )
+        sample_file = form.get("sample_pdf")
+        if sample_file is not None:
+            sample_pdf_bytes = await sample_file.read()
+    else:
+        body = await request.json()
+        payload = TemplateChatPayload(**body)
+
+    return chat_template_create(payload, request, sample_pdf_bytes=sample_pdf_bytes)
+
+
+@router.post("/create-from-chat")
+def create_template_from_chat_route(payload: TemplateCreateFromChatPayload, request: Request):
+    """Persist a template that was created via the chat conversation."""
+    return create_template_from_chat(payload, request)
 
 
 # =============================================================================

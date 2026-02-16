@@ -23,10 +23,10 @@ import re
 from dataclasses import dataclass
 from typing import Any
 
-from layer2.pipeline_v7.models.intent import ParsedIntent, WidgetSize
-from layer2.pipeline_v7.models.data import DataProfile
-from layer2.pipeline_v7.models.design import WidgetSlot, VALID_SCENARIOS, VARIANT_TO_SCENARIO
-from layer2.pipeline_v7.resolvers.variant_scorer import VARIANT_PROFILES
+from backend.app.services.widget_intelligence.models.intent import ParsedIntent, WidgetSize
+from backend.app.services.widget_intelligence.models.data import DataProfile
+from backend.app.services.widget_intelligence.models.design import WidgetSlot, VALID_SCENARIOS, VARIANT_TO_SCENARIO
+from backend.resolvers.variant_scorer import VARIANT_PROFILES
 
 logger = logging.getLogger(__name__)
 
@@ -172,8 +172,8 @@ class WidgetSelector:
         6. Assign questions with entity diversity maximization
         7. Select variant per scenario via LangGraph pipeline
         """
-        from layer2.pipeline_v7.resolvers.data_shape import extract_data_shape
-        from layer2.pipeline_v7.resolvers.scenario_scorer import score_all_scenarios
+        from backend.resolvers.data_shape import extract_data_shape
+        from backend.resolvers.scenario_scorer import score_all_scenarios
 
         # Step 1: Extract data shape profile
         shape = extract_data_shape(catalog, data_profile, intent)
@@ -372,7 +372,7 @@ class WidgetSelector:
         has_timeseries = data_profile.has_timeseries if data_profile else True
 
         try:
-            from layer2.pipeline_v7.resolvers.selection_graph import run_selection_graph
+            from backend.resolvers.selection_graph import run_selection_graph
 
             variant, confidence, method = run_selection_graph(
                 scenario=scenario,

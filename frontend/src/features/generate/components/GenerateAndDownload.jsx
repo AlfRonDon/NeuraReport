@@ -701,8 +701,8 @@ function GenerateAndDownload({
         <ResponsiveContainer width="100%" height="100%">
           <ScatterChart margin={{ top: 8, right: 16, bottom: 24, left: 0 }}>
             <CartesianGrid strokeDasharray="3 3" />
-            <XAxis type="number" dataKey={xField} name={xField} tick={{ fontSize: 11 }} />
-            <YAxis type="number" dataKey={yKey} name={yKey} tick={{ fontSize: 11 }} />
+            <XAxis type="number" dataKey={xField} name={xField} tick={{ fontSize: 12 }} />
+            <YAxis type="number" dataKey={yKey} name={yKey} tick={{ fontSize: 12 }} />
             <RechartsTooltip />
             <RechartsLegend />
             <Scatter data={data} fill={secondary.emerald[500]} />
@@ -715,8 +715,8 @@ function GenerateAndDownload({
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data} margin={{ top: 8, right: 16, bottom: 24, left: 0 }}>
             <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey={xField} tick={{ fontSize: 11 }} />
-            <YAxis tick={{ fontSize: 11 }} />
+            <XAxis dataKey={xField} tick={{ fontSize: 12 }} />
+            <YAxis tick={{ fontSize: 12 }} />
             <RechartsTooltip />
             <RechartsLegend />
             {yKeys.map((key, index) => (
@@ -736,8 +736,8 @@ function GenerateAndDownload({
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data} margin={{ top: 8, right: 16, bottom: 24, left: 0 }}>
           <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey={xField} tick={{ fontSize: 11 }} />
-          <YAxis tick={{ fontSize: 11 }} />
+          <XAxis dataKey={xField} tick={{ fontSize: 12 }} />
+          <YAxis tick={{ fontSize: 12 }} />
           <RechartsTooltip />
           <RechartsLegend />
           {yKeys.map((key, index) => (
@@ -1084,8 +1084,8 @@ function GenerateAndDownload({
                         margin={{ top: 8, right: 16, bottom: 24, left: 0 }}
                       >
                         <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="label" tick={{ fontSize: 11 }} />
-                        <YAxis tick={{ fontSize: 11 }} />
+                        <XAxis dataKey="label" tick={{ fontSize: 12 }} />
+                        <YAxis tick={{ fontSize: 12 }} />
                         <RechartsTooltip />
                         <Bar dataKey="value" fill={secondary.violet[500]} name={selectedMetricLabel} />
                         <Brush
@@ -1533,11 +1533,11 @@ function GenerateAndDownload({
                   border: '1px solid',
                   borderColor: 'divider',
                   bgcolor: 'background.paper',
-                  boxShadow: '0 6px 20px rgba(15,23,42,0.06)',
+                  boxShadow: `0 6px 20px ${alpha(neutral[900], 0.06)}`,
                   transition: 'border-color 200ms ease, box-shadow 200ms ease, transform 160ms ease',
                   '&:hover': {
                     borderColor: 'primary.light',
-                    boxShadow: '0 10px 30px rgba(79,70,229,0.14)',
+                    boxShadow: `0 10px 30px ${alpha(secondary.violet[500], 0.14)}`,
                     transform: 'translateY(-2px)',
                   },
                 }}

@@ -1,6 +1,6 @@
 """Diagnostic panel widget plugin — equipment diagnostics and health checks."""
 
-from layer2.pipeline_v7.widgets.base import WidgetPlugin, WidgetMeta
+from backend.app.services.widget_intelligence.widgets.base import WidgetPlugin, WidgetMeta
 
 
 class DiagnosticPanelWidget(WidgetPlugin):

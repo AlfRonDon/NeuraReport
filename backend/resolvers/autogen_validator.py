@@ -96,7 +96,7 @@ def _validate_candidate(
 
     Returns {valid: bool, violations: [str], adjusted_score: float}.
     """
-    from layer2.pipeline_v7.resolvers.variant_scorer import VARIANT_PROFILES
+    from backend.resolvers.variant_scorer import VARIANT_PROFILES
 
     violations: list[str] = []
 

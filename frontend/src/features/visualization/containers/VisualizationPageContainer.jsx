@@ -2,7 +2,8 @@
  * Visualization Page Container
  * Diagram and chart generation interface.
  */
-import React, { useState, useEffect, useCallback, useMemo } from 'react'
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import mermaid from 'mermaid'
 import { sanitizeSVG } from '@/utils/sanitize'
 import {
   Box,
@@ -25,6 +26,12 @@ import {
   InputLabel,
   IconButton,
   Tooltip,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
   useTheme,
   alpha,
   styled,
@@ -45,6 +52,7 @@ import {
   Code as CodeIcon,
   Image as ImageIcon,
   Visibility as PreviewIcon,
+  UploadFile as UploadFileIcon,
 } from '@mui/icons-material'
 import useVisualizationStore from '@/stores/visualizationStore'
 import useSharedData from '@/hooks/useSharedData'
@@ -55,6 +63,7 @@ import { OutputType, FeatureKey } from '@/utils/crossPageTypes'
 import { useToast } from '@/components/ToastProvider'
 import { useInteraction, InteractionType, Reversibility } from '@/components/ux/governance'
 import { neutral, palette } from '@/app/theme'
+import { extractExcel } from '@/api/visualization'
 
 // =============================================================================
 // SANITIZATION HELPERS
@@ -152,64 +161,58 @@ const DIAGRAM_TYPES = [
   { type: 'wordcloud', name: 'Word Cloud', description: 'Text frequency visualization', icon: WordcloudIcon, color: 'info' },
 ]
 
-// Sample data for each diagram type
-const SAMPLE_DATA = {
-  flowchart: `Start Application
-Validate Input
-Check Database?
-Process Request
-Return Response
-End`,
-  mindmap: `Product Strategy
-  Market Research
-    Competitor Analysis
-    Customer Interviews
-  Product Development
-    Feature Planning
-    Technical Design
-  Go-to-Market
-    Pricing Strategy
-    Launch Campaign`,
-  org_chart: `[
-  {"name": "Sarah Chen", "role": "CEO", "id": "ceo"},
-  {"name": "John Smith", "role": "CTO", "reports_to": "ceo", "id": "cto"},
-  {"name": "Lisa Wong", "role": "CFO", "reports_to": "ceo", "id": "cfo"},
-  {"name": "Mike Johnson", "role": "VP Engineering", "reports_to": "cto", "id": "vp-eng"},
-  {"name": "Amy Liu", "role": "VP Finance", "reports_to": "cfo", "id": "vp-fin"}
-]`,
-  timeline: `2023-01: Project Kickoff
-2023-03: Requirements Complete
-2023-06: Design Phase Complete
-2023-09: Development Complete
-2023-11: Beta Launch
-2024-01: Public Release`,
-  gantt: `[
-  {"id": "design", "name": "Design Phase", "start": "2024-01-01", "end": "2024-01-31", "progress": 100},
-  {"id": "dev", "name": "Development", "start": "2024-02-01", "end": "2024-04-15", "progress": 60, "dependencies": ["design"]},
-  {"id": "test", "name": "Testing", "start": "2024-04-01", "end": "2024-05-01", "progress": 20, "dependencies": ["dev"]},
-  {"id": "launch", "name": "Launch", "start": "2024-05-01", "end": "2024-05-15", "progress": 0, "dependencies": ["test"]}
-]`,
-  kanban: `To Do: Research competitors
-To Do: Define user personas
-In Progress: Design landing page
-In Progress: Set up analytics
-Review: API documentation
-Done: Project kickoff
-Done: Team onboarding`,
-  network: `Marketing -> Sales
-Sales -> Support
-Support -> Product
-Product -> Engineering
-Engineering -> QA
-QA -> Product
-Marketing -> Product`,
-  sequence: `User -> Frontend: Click Login
-Frontend -> Auth Service: POST /login
-Auth Service -> Database: Query User
-Database -> Auth Service: User Data
-Auth Service -> Frontend: JWT Token
-Frontend -> User: Redirect to Dashboard`,
-  wordcloud: `innovation technology growth digital transformation customer experience data analytics cloud computing artificial intelligence machine learning automation efficiency productivity collaboration strategy innovation digital growth`,
+
+// =============================================================================
+// MERMAID RENDERER
+// =============================================================================
+
+mermaid.initialize({ startOnLoad: false, theme: 'default', securityLevel: 'strict' })
+
+function MermaidDiagram({ code }) {
+  const containerRef = useRef(null)
+  const [svgContent, setSvgContent] = useState('')
+  const [error, setError] = useState(null)
+
+  useEffect(() => {
+    if (!code) return
+    let cancelled = false
+    const id = `mermaid-${Date.now()}`
+
+    mermaid.render(id, code).then(({ svg }) => {
+      if (!cancelled) {
+        setSvgContent(svg)
+        setError(null)
+      }
+    }).catch((err) => {
+      if (!cancelled) {
+        setError(err?.message || 'Failed to render diagram')
+        setSvgContent('')
+      }
+    })
+
+    return () => { cancelled = true }
+  }, [code])
+
+  if (error) {
+    return (
+      <Box>
+        <Alert severity="warning" sx={{ mb: 2 }}>Diagram render issue — showing code</Alert>
+        <Typography component="pre" sx={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap', fontSize: 13 }}>
+          {code}
+        </Typography>
+      </Box>
+    )
+  }
+
+  if (!svgContent) return <CircularProgress size={24} />
+
+  return (
+    <Box
+      ref={containerRef}
+      dangerouslySetInnerHTML={{ __html: svgContent }}
+      sx={{ '& svg': { maxWidth: '100%', height: 'auto' } }}
+    />
+  )
 }
 
 // =============================================================================
@@ -238,6 +241,7 @@ export default function VisualizationPageContainer() {
     exportAsMermaid,
     exportAsSvg,
     exportAsPng,
+    setCurrentDiagram,
     reset,
   } = useVisualizationStore()
 
@@ -249,35 +253,53 @@ export default function VisualizationPageContainer() {
   const [inputData, setInputData] = useState('')
   const [title, setTitle] = useState('')
   const [options, setOptions] = useState({})
+  const [uploadingFile, setUploadingFile] = useState(false)
+  const [uploadedFileName, setUploadedFileName] = useState('')
+  const [extractedTable, setExtractedTable] = useState(null) // { headers, rows, filename, sheetCount }
+  const fileInputRef = useRef(null)
 
   useEffect(() => {
     return () => reset()
   }, [reset])
 
-  const getPlaceholder = () => {
-    switch (selectedType.type) {
-      case 'flowchart':
-        return 'Enter steps separated by newlines:\nStart\nProcess Data\nDecision Point\nEnd'
-      case 'mindmap':
-        return 'Enter hierarchical data:\nMain Topic\n  Subtopic 1\n    Detail A\n  Subtopic 2'
-      case 'org_chart':
-        return 'Enter org structure (JSON):\n[{"name": "CEO", "children": [{"name": "CTO"}, {"name": "CFO"}]}]'
-      case 'timeline':
-        return 'Enter events (one per line):\n2020-01: Project Started\n2021-06: Phase 1 Complete\n2022-12: Launch'
-      case 'gantt':
-        return 'Enter tasks (JSON):\n[{"task": "Design", "start": "2024-01-01", "end": "2024-01-15"}]'
-      case 'kanban':
-        return 'Enter tasks with status:\nTodo: Task 1\nIn Progress: Task 2\nDone: Task 3'
-      case 'network':
-        return 'Enter connections:\nA -> B\nB -> C\nC -> A'
-      case 'sequence':
-        return 'Enter interactions:\nUser -> Server: Request\nServer -> Database: Query\nDatabase -> Server: Response'
-      case 'wordcloud':
-        return 'Enter text to analyze or word frequencies:\nword1 word2 word3\nor\n{"innovation": 50, "technology": 40, "growth": 30}'
-      default:
-        return 'Enter data...'
+  const handleFileUpload = useCallback(async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    e.target.value = ''
+
+    setUploadingFile(true)
+    setUploadedFileName(file.name)
+    try {
+      const result = await extractExcel(file)
+      let headers = []
+      let rows = []
+
+      if (result?.sheets?.length > 0) {
+        const sheet = result.sheets[0]
+        headers = sheet.headers || []
+        rows = (sheet.rows || []).slice(0, 200)
+      }
+
+      if (headers.length > 0 && rows.length > 0) {
+        // Build JSON array for diagram generation input
+        const jsonRows = rows.map((row) => {
+          const obj = {}
+          headers.forEach((h, i) => { obj[h] = row[i] })
+          return obj
+        })
+        setExtractedTable({ headers, rows, filename: file.name, sheetCount: result.total_sheets || 1 })
+        setInputData(JSON.stringify(jsonRows, null, 2))
+        setTitle(file.name.replace(/\.[^.]+$/, ''))
+        toast.show(`Extracted ${rows.length} rows, ${headers.length} columns from ${file.name}`, 'success')
+      } else {
+        toast.show('No data found in file', 'warning')
+      }
+    } catch (err) {
+      toast.show(err.message || 'Failed to extract data from file', 'error')
+    } finally {
+      setUploadingFile(false)
     }
-  }
+  }, [toast])
 
   const handleGenerate = useCallback(async () => {
     if (!inputData.trim()) {
@@ -289,40 +311,82 @@ export default function VisualizationPageContainer() {
       let result = null
       const opts = { title, ...options }
 
+      // Try parsing inputData as JSON array (from Excel upload)
+      let parsedRows = null
+      try {
+        const parsed = JSON.parse(inputData)
+        if (Array.isArray(parsed)) parsedRows = parsed
+      } catch { /* not JSON, use as plain text */ }
+
+      // Helper: extract single-column values from parsed rows
+      const colValues = (rows) => {
+        const keys = Object.keys(rows[0] || {})
+        return keys.length === 1
+          ? rows.map((r) => Object.values(r)[0]).filter(Boolean)
+          : rows.map((r) => Object.values(r).join(' - ')).filter(Boolean)
+      }
+
       try {
         switch (selectedType.type) {
-          case 'flowchart':
-            result = await generateFlowchart({ steps: inputData.split('\n').filter(Boolean) }, opts)
+          case 'flowchart': {
+            const steps = parsedRows ? colValues(parsedRows) : inputData.split('\n').filter(Boolean)
+            result = await generateFlowchart({ steps }, opts)
             break
-          case 'mindmap':
-            result = await generateMindmap({ text: inputData }, opts)
+          }
+          case 'mindmap': {
+            const text = parsedRows ? colValues(parsedRows).join('\n') : inputData
+            result = await generateMindmap({ text }, opts)
             break
+          }
           case 'org_chart':
-            result = await generateOrgChart(JSON.parse(inputData), opts)
+            result = await generateOrgChart(parsedRows || JSON.parse(inputData), opts)
             break
-          case 'timeline':
-            result = await generateTimeline({ events: inputData.split('\n').filter(Boolean) }, opts)
+          case 'timeline': {
+            const events = parsedRows || inputData.split('\n').filter(Boolean)
+            result = await generateTimeline({ events }, opts)
             break
+          }
           case 'gantt':
-            result = await generateGantt(JSON.parse(inputData), opts)
+            result = await generateGantt(parsedRows || JSON.parse(inputData), opts)
             break
-          case 'kanban':
-            result = await generateKanban({ tasks: inputData }, opts)
-            break
-          case 'network':
-            result = await generateNetworkGraph({ connections: inputData.split('\n').filter(Boolean) }, opts)
-            break
-          case 'sequence':
-            result = await generateSequenceDiagram({ interactions: inputData.split('\n').filter(Boolean) }, opts)
-            break
-          case 'wordcloud':
-            try {
-              const parsed = JSON.parse(inputData)
-              result = await generateWordcloud({ frequencies: parsed }, opts)
-            } catch {
-              result = await generateWordcloud({ text: inputData }, opts)
+          case 'kanban': {
+            if (parsedRows) {
+              result = await generateKanban({ items: parsedRows }, opts)
+            } else {
+              result = await generateKanban({ tasks: inputData }, opts)
             }
             break
+          }
+          case 'network': {
+            if (parsedRows) {
+              result = await generateNetworkGraph({ relationships: parsedRows }, opts)
+            } else {
+              result = await generateNetworkGraph({ connections: inputData.split('\n').filter(Boolean) }, opts)
+            }
+            break
+          }
+          case 'sequence': {
+            if (parsedRows) {
+              result = await generateSequenceDiagram({ interactions: parsedRows }, opts)
+            } else {
+              result = await generateSequenceDiagram({ interactions: inputData.split('\n').filter(Boolean) }, opts)
+            }
+            break
+          }
+          case 'wordcloud': {
+            if (parsedRows) {
+              const text = colValues(parsedRows).join(' ')
+              result = await generateWordcloud({ text }, opts)
+            } else {
+              try {
+                const parsed = JSON.parse(inputData)
+                result = await generateWordcloud({ frequencies: parsed }, opts)
+              } catch {
+                result = await generateWordcloud({ text: inputData }, opts)
+              }
+            }
+            break
+          }
           default:
             break
         }
@@ -438,6 +502,7 @@ export default function VisualizationPageContainer() {
               onClick={() => {
                 setSelectedType(type)
                 setInputData('')
+                setCurrentDiagram(null)
               }}
             >
               <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}>
@@ -486,24 +551,36 @@ export default function VisualizationPageContainer() {
               showStatus
               sx={{ mb: 2 }}
             />
-            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
-              <Button
-                size="small"
-                onClick={() => {
-                  setInputData(SAMPLE_DATA[selectedType.type] || '')
-                  setTitle(`Sample ${selectedType.name}`)
-                }}
-                sx={{ textTransform: 'none' }}
-              >
-                Use Example Data
-              </Button>
-            </Box>
+            {/* File Upload */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              hidden
+              accept=".xlsx,.xls,.csv"
+              onChange={handleFileUpload}
+            />
+            <Button
+              fullWidth
+              variant="outlined"
+              size="small"
+              startIcon={uploadingFile ? <CircularProgress size={16} color="inherit" /> : <UploadFileIcon />}
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploadingFile}
+              sx={{ mb: 1, textTransform: 'none', borderStyle: 'dashed' }}
+            >
+              {uploadingFile ? 'Extracting data...' : 'Upload Excel / CSV'}
+            </Button>
+            {uploadedFileName && (
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1, textAlign: 'center' }}>
+                {uploadedFileName}
+              </Typography>
+            )}
             <TextField
               fullWidth
               multiline
               rows={8}
               label="Data Input"
-              placeholder={getPlaceholder()}
+              placeholder="Upload an Excel/CSV file or paste data here..."
               value={inputData}
               onChange={(e) => setInputData(e.target.value)}
               sx={{ mb: 2 }}
@@ -521,10 +598,12 @@ export default function VisualizationPageContainer() {
         </Sidebar>
 
         {/* Preview Area */}
-        <PreviewArea>
+        <PreviewArea sx={extractedTable || currentDiagram ? { justifyContent: 'flex-start', alignItems: 'stretch' } : {}}>
           {currentDiagram ? (
             <PreviewCard elevation={2}>
-              {currentDiagram.svg ? (
+              {currentDiagram.mermaid_code ? (
+                <MermaidDiagram code={currentDiagram.mermaid_code} />
+              ) : currentDiagram.svg ? (
                 <Box
                   dangerouslySetInnerHTML={{ __html: sanitizeSVG(currentDiagram.svg) }}
                   sx={{ '& svg': { maxWidth: '100%', height: 'auto' } }}
@@ -539,28 +618,83 @@ export default function VisualizationPageContainer() {
                     : JSON.stringify(currentDiagram.content, null, 2)}
                 </Typography>
               ) : (
-                <Typography color="text.secondary">Diagram preview</Typography>
+                <Typography color="text.secondary">No diagram data returned</Typography>
               )}
             </PreviewCard>
+          ) : extractedTable ? (
+            <Box sx={{ width: '100%' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+                <Box>
+                  <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                    {extractedTable.filename}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {extractedTable.rows.length} rows, {extractedTable.headers.length} columns
+                    {extractedTable.sheetCount > 1 ? ` (${extractedTable.sheetCount} sheets — showing first)` : ''}
+                  </Typography>
+                </Box>
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    startIcon={<UploadFileIcon />}
+                    onClick={() => fileInputRef.current?.click()}
+                    sx={{ textTransform: 'none' }}
+                  >
+                    Upload Another
+                  </Button>
+                  <ActionButton
+                    variant="contained"
+                    size="small"
+                    startIcon={generating ? <CircularProgress size={16} color="inherit" /> : <PreviewIcon />}
+                    onClick={handleGenerate}
+                    disabled={!inputData.trim() || generating}
+                  >
+                    {generating ? 'Generating...' : `Generate ${selectedType.name}`}
+                  </ActionButton>
+                </Box>
+              </Box>
+              <TableContainer component={Paper} elevation={1} sx={{ maxHeight: 'calc(100vh - 220px)' }}>
+                <Table stickyHeader size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell sx={{ fontWeight: 700, bgcolor: 'background.paper', color: 'text.secondary', fontSize: 11, py: 0.75 }}>#</TableCell>
+                      {extractedTable.headers.map((h) => (
+                        <TableCell key={h} sx={{ fontWeight: 700, bgcolor: 'background.paper', whiteSpace: 'nowrap', py: 0.75 }}>
+                          {h}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {extractedTable.rows.map((row, ri) => (
+                      <TableRow key={ri} hover>
+                        <TableCell sx={{ color: 'text.secondary', fontSize: 11, py: 0.5 }}>{ri + 1}</TableCell>
+                        {row.map((cell, ci) => (
+                          <TableCell key={ci} sx={{ whiteSpace: 'nowrap', py: 0.5 }}>{cell}</TableCell>
+                        ))}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </Box>
           ) : (
             <Box sx={{ textAlign: 'center', maxWidth: 400 }}>
-              <ChartIcon sx={{ fontSize: 80, color: 'text.secondary', opacity: 0.3, mb: 2 }} />
+              <UploadFileIcon sx={{ fontSize: 80, color: 'text.secondary', opacity: 0.3, mb: 2 }} />
               <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
-                Create Your First Diagram
+                Upload Excel Data
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                Select a diagram type from the sidebar, enter your data, and click Generate.
-                Not sure how to format your data?
+                Upload an Excel or CSV file to extract data, then select a diagram type and generate a visualization.
               </Typography>
               <Button
                 variant="outlined"
-                onClick={() => {
-                  setInputData(SAMPLE_DATA[selectedType.type] || '')
-                  setTitle(`Sample ${selectedType.name}`)
-                }}
+                startIcon={<UploadFileIcon />}
+                onClick={() => fileInputRef.current?.click()}
                 sx={{ textTransform: 'none' }}
               >
-                Try with Example Data
+                Upload Excel / CSV
               </Button>
             </Box>
           )}

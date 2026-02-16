@@ -45,6 +45,7 @@ from backend.app.services.auth import init_auth_db
 from backend.app.services.db.engine import dispose_engine
 
 from backend.app.services.jobs.report_scheduler import ReportScheduler
+from backend.app.services.jobs.recovery_daemon import start_recovery_daemon, stop_recovery_daemon
 from backend.app.services.background_tasks import mark_incomplete_jobs_failed
 from backend.app.services.agents import agent_service_v2
 from backend.app.services.agents.agent_service import agent_task_worker
@@ -231,10 +232,25 @@ async def lifespan(app: FastAPI):
     if not agent_worker_disabled:
         agent_task_worker.start()
 
+    # Start recovery daemon for stale job detection, DLQ migration,
+    # webhook delivery, and idempotency key cleanup.
+    recovery_disabled = os.getenv("NEURA_RECOVERY_DAEMON_DISABLED", "false").lower() == "true"
+    if not recovery_disabled:
+        try:
+            start_recovery_daemon()
+            logger.info("recovery_daemon_started", extra={"event": "recovery_daemon_started"})
+        except Exception as exc:
+            logger.warning("recovery_daemon_start_failed", extra={"event": "recovery_daemon_start_failed", "error": str(exc)})
+
     yield
 
     # Shutdown: stop each component with individual error handling so that
     # a failure in one does not prevent cleanup of the others.
+    try:
+        stop_recovery_daemon(timeout_seconds=5)
+    except Exception as exc:
+        logger.warning("recovery_daemon_stop_failed", extra={"error": str(exc)})
+
     if agent_task_worker.is_running:
         try:
             agent_task_worker.stop()

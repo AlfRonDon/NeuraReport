@@ -28,10 +28,3 @@ class ChatStreamWidget(WidgetPlugin):
         return {
             "messages": raw.get("messages", []),
         }
-
-    def get_demo_data(self) -> dict:
-        return {
-            "messages": [
-                {"message_id": "m1", "role": "system", "content": "System initialized.", "timestamp": "2026-01-31T10:00:00Z"},
-            ],
-        }

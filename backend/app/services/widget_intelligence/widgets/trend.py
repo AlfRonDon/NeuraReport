@@ -20,12 +20,25 @@ class TrendWidget(WidgetPlugin):
 
     def validate_data(self, data: dict) -> list[str]:
         errors = []
-        series = data.get("series", [])
-        if not series:
+        if not data.get("timeSeries") and not data.get("series") and not data.get("datasets"):
             errors.append("Missing timeSeries data")
         return errors
 
     def format_data(self, raw: dict) -> dict:
+        # Flat format from data resolver — single_metric returns timeSeries + value
+        ts = raw.get("timeSeries", [])
+        if ts:
+            return {
+                "labels": [p.get("time", "") for p in ts],
+                "datasets": [{
+                    "label": raw.get("label", "Value"),
+                    "data": [p.get("value", 0) for p in ts],
+                }],
+            }
+        # Already in chart format (labels + datasets)
+        if "labels" in raw and "datasets" in raw:
+            return raw
+        # Legacy nested format
         series = raw.get("series", [])
         return {
             "timeSeries": series[0].get("data", []) if series else [],

@@ -1,6 +1,6 @@
 """Vault view widget plugin — secure data vault and document archive."""
 
-from layer2.pipeline_v7.widgets.base import WidgetPlugin, WidgetMeta
+from backend.app.services.widget_intelligence.widgets.base import WidgetPlugin, WidgetMeta
 
 
 class VaultViewWidget(WidgetPlugin):

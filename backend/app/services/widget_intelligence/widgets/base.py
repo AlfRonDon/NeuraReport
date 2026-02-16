@@ -37,7 +37,7 @@ class WidgetPlugin(ABC):
     Base class for widget plugins.
 
     Each widget type is a single file in pipeline_v7/widgets/.
-    Implements: meta, validate_data, format_data, get_demo_data.
+    Implements: meta, validate_data, format_data.
     """
 
     meta: WidgetMeta
@@ -52,9 +52,6 @@ class WidgetPlugin(ABC):
         """Transform raw query result into frontend-ready data shape."""
         ...
 
-    def get_demo_data(self) -> dict:
-        """Return demo/fallback data. Override for widget-specific demos."""
-        return {}
 
 
 class WidgetRegistry:

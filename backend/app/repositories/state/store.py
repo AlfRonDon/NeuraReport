@@ -1527,6 +1527,32 @@ class StateStore:
     def cancel_job(self, job_id: str) -> Optional[dict]:
         return self.record_job_completion(job_id, status="cancelled", error="Cancelled by user", result=None)
 
+    def update_job(self, job_id: str, **updates: Any) -> Optional[dict]:
+        """Apply arbitrary field updates to a job record."""
+        if not updates:
+            return self.get_job(job_id)
+
+        def mutator(rec: dict) -> bool:
+            now = _now_iso()
+            for key, value in updates.items():
+                rec[key] = value
+            rec["updated_at"] = now
+            return True
+
+        return self._update_job_record(job_id, mutator)
+
+    def delete_job(self, job_id: str) -> bool:
+        """Permanently remove a job record. Returns True if deleted."""
+        with self._lock:
+            state = self._read_state()
+            jobs = state.get("jobs") or {}
+            if job_id not in jobs:
+                return False
+            del jobs[job_id]
+            state["jobs"] = jobs
+            self._write_state(state)
+            return True
+
     # ------------------------------------------------------------------
     # Job retry and recovery helpers
     # ------------------------------------------------------------------

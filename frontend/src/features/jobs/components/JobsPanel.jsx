@@ -225,7 +225,7 @@ function JobCard({ job, onNavigate, onSetupNavigate, connectionName, onCancel, o
         borderColor: 'divider',
         p: 2,
         bgcolor: 'background.paper',
-        boxShadow: '0 6px 18px rgba(15,23,42,0.05)',
+        boxShadow: `0 6px 18px ${alpha(neutral[900], 0.05)}`,
       }}
       data-testid="job-card"
     >

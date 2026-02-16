@@ -66,8 +66,9 @@ import useSharedData from '@/hooks/useSharedData'
 import useIncomingTransfer from '@/hooks/useIncomingTransfer'
 import useCrossPageActions from '@/hooks/useCrossPageActions'
 import ImportFromMenu from '@/components/common/ImportFromMenu'
+import ConnectionSelector from '@/components/common/ConnectionSelector'
 import { TransferAction, FeatureKey } from '@/utils/crossPageTypes'
-import { neutral, palette } from '@/app/theme'
+import { neutral, palette, secondary } from '@/app/theme'
 import ConfirmModal from '@/components/Modal/ConfirmModal'
 import { useToast } from '@/components/ToastProvider'
 // UX Components for premium interactions
@@ -120,8 +121,8 @@ const typing = keyframes`
 `
 
 const glow = keyframes`
-  0%, 100% { box-shadow: 0 0 20px rgba(99, 102, 241, 0.3); }
-  50% { box-shadow: 0 0 40px rgba(99, 102, 241, 0.5); }
+  0%, 100% { box-shadow: 0 0 20px ${alpha(secondary.violet[500], 0.3)}; }
+  50% { box-shadow: 0 0 40px ${alpha(secondary.violet[500], 0.5)}; }
 `
 
 const float = keyframes`
@@ -224,7 +225,7 @@ const SessionCard = styled(Box, {
 
 const DocumentChip = styled(Chip)(({ theme }) => ({
   height: 24,
-  fontSize: 11,
+  fontSize: 12,
   backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
   color: theme.palette.text.secondary,
   border: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
@@ -377,7 +378,7 @@ const InputContainer = styled(Box)(({ theme }) => ({
 const StyledTextField = styled(TextField)(({ theme }) => ({
   '& .MuiOutlinedInput-root': {
     backgroundColor: 'transparent',
-    fontSize: 15,
+    fontSize: 16,
     '& fieldset': {
       border: 'none',
     },
@@ -630,6 +631,7 @@ export default function DocumentQAPage() {
     messageCount: 0,
   })
   const [searchQuery, setSearchQuery] = useState('')
+  const [selectedConnectionId, setSelectedConnectionId] = useState('')
   const toast = useToast()
   const [initialLoading, setInitialLoading] = useState(true)
   const inputRef = useRef(null)
@@ -914,7 +916,7 @@ export default function DocumentQAPage() {
                 justifyContent: 'center',
               }}
             >
-              <QAIcon sx={{ color: 'common.white', fontSize: 22 }} />
+              <QAIcon sx={{ color: 'common.white', fontSize: 24 }} />
             </Box>
             <Box>
               <Typography variant="h6" sx={{ fontWeight: 600, lineHeight: 1.2 }}>
@@ -1098,6 +1100,18 @@ export default function DocumentQAPage() {
             </Box>
           </DocumentsSection>
         )}
+
+        {/* Database connection for enriched Q&A */}
+        <Box sx={{ p: 2, borderTop: `1px solid ${alpha(theme.palette.divider, 0.1)}` }}>
+          <ConnectionSelector
+            value={selectedConnectionId}
+            onChange={setSelectedConnectionId}
+            label="Enrich with Database (Optional)"
+            size="small"
+            showStatus
+            fullWidth
+          />
+        </Box>
       </Sidebar>
 
       {/* Chat Area */}

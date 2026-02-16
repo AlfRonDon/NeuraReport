@@ -2,7 +2,7 @@
  * Widget Intelligence API client.
  *
  * Provides access to the widget catalog, AI-powered widget selection,
- * grid packing, demo data, validation, and formatting.
+ * grid packing, validation, and formatting.
  */
 import { api } from './client'
 
@@ -50,16 +50,6 @@ export async function packGrid(widgets) {
 }
 
 /**
- * Get demo/sample data for a widget scenario.
- * @param {string} scenario - Widget scenario name
- * @returns {Promise<{scenario: string, data: Object}>}
- */
-export async function getWidgetDemo(scenario) {
-  const response = await api.get(`/widgets/${scenario}/demo`)
-  return response.data
-}
-
-/**
  * Validate data shape for a widget scenario.
  * @param {string} scenario - Widget scenario name
  * @param {Object} data - Data to validate
@@ -89,6 +79,62 @@ export async function formatWidgetData(scenario, data) {
  */
 export async function submitWidgetFeedback(scenario, reward) {
   const response = await api.post('/widgets/feedback', { scenario, reward })
+  return response.data
+}
+
+/**
+ * Fetch live data from an active DB connection using a widget's RAG strategy.
+ * @param {Object} params
+ * @param {string} params.connectionId - Active DB connection ID
+ * @param {string} params.scenario - Widget scenario name
+ * @param {string} [params.variant] - Optional variant
+ * @param {Object} [params.filters] - Optional query filters
+ * @param {number} [params.limit=100] - Max rows
+ * @returns {Promise<{data: Object, source: string, strategy: string, table_used: string}>}
+ */
+export async function getWidgetData({ connectionId, scenario, variant, filters, limit = 100 }) {
+  const response = await api.post('/widgets/data', {
+    connection_id: connectionId,
+    scenario,
+    variant,
+    filters,
+    limit,
+  })
+  return response.data
+}
+
+/**
+ * Fetch widget data from a report run's extracted tables and content.
+ * @param {Object} params
+ * @param {string} params.runId - Report run ID
+ * @param {string} params.scenario - Widget scenario name
+ * @param {string} [params.variant] - Optional variant
+ * @returns {Promise<{scenario: string, data: Object, source: string, strategy: string}>}
+ */
+export async function getWidgetReportData({ runId, scenario, variant }) {
+  const response = await api.post('/widgets/data/report', {
+    run_id: runId,
+    scenario,
+    variant,
+  })
+  return response.data
+}
+
+/**
+ * Get dynamic widget recommendations for a connected database.
+ * Analyzes the DB schema and returns optimal widgets using data-driven scoring.
+ * @param {Object} params
+ * @param {string} params.connectionId - Active DB connection ID
+ * @param {string} [params.query='overview'] - Natural language query for intent
+ * @param {number} [params.maxWidgets=8] - Maximum widgets to recommend
+ * @returns {Promise<{widgets: Array, count: number, grid: Object, profile: Object}>}
+ */
+export async function recommendWidgets({ connectionId, query = 'overview', maxWidgets = 8 }) {
+  const response = await api.post('/widgets/recommend', {
+    connection_id: connectionId,
+    query,
+    max_widgets: maxWidgets,
+  })
   return response.data
 }
 

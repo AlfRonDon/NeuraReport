@@ -19,25 +19,33 @@ class DiagnosticPanelWidget(WidgetPlugin):
 
     def validate_data(self, data: dict) -> list[str]:
         errors = []
-        if not data.get("checks") and not data.get("equipment"):
+        if not data.get("checks") and not data.get("equipment") and "value" not in data:
             errors.append("Missing checks or equipment field")
         return errors
 
     def format_data(self, raw: dict) -> dict:
-        return {
-            "checks": raw.get("checks", []),
-            "equipment": raw.get("equipment", ""),
-            "faultCodes": raw.get("faultCodes", []),
-            "recommendations": raw.get("recommendations", []),
-        }
-
-    def get_demo_data(self) -> dict:
-        return {
-            "equipment": "Motor A",
-            "checks": [
-                {"name": "Vibration", "status": "pass", "value": "0.8 mm/s"},
-                {"name": "Temperature", "status": "warning", "value": "78°C"},
-            ],
-            "faultCodes": [],
-            "recommendations": ["Schedule bearing inspection within 30 days"],
-        }
+        # Already in diagnostic format
+        if "checks" in raw:
+            return {
+                "checks": raw["checks"],
+                "equipment": raw.get("equipment", ""),
+                "faultCodes": raw.get("faultCodes", []),
+                "recommendations": raw.get("recommendations", []),
+            }
+        # Flat single_metric from resolver — adapt to diagnostic shape
+        if "value" in raw or "timeSeries" in raw:
+            label = raw.get("label", "Metric")
+            value = raw.get("value", 0)
+            try:
+                value = float(value)
+            except (ValueError, TypeError):
+                value = 0
+            return {
+                "checks": [
+                    {"name": label, "status": "pass" if value > 0 else "warning", "value": str(value)},
+                ],
+                "equipment": raw.get("label", "System"),
+                "faultCodes": [],
+                "recommendations": [],
+            }
+        return raw

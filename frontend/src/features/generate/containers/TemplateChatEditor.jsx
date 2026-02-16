@@ -23,8 +23,21 @@ import SmartToyOutlinedIcon from '@mui/icons-material/SmartToyOutlined'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import ExpandLessIcon from '@mui/icons-material/ExpandLess'
 
-import { useTemplateChatStore } from '@/stores/templateChatStore'
+import { useTemplateChatStore, DEFAULT_CREATE_WELCOME } from '@/stores/templateChatStore'
 import { chatTemplateEdit, applyChatTemplateEdit } from '@/api/client'
+
+const MODE_CONFIG = {
+  edit: {
+    welcomeMessage: null, // uses default edit welcome
+    placeholder: 'Describe the changes you want...',
+    sendLabel: 'Generate edit suggestions',
+  },
+  create: {
+    welcomeMessage: DEFAULT_CREATE_WELCOME,
+    placeholder: 'Describe the report template you need...',
+    sendLabel: 'Generate template',
+  },
+}
 import { useInteraction, InteractionType, Reversibility } from '@/components/ux/governance'
 import { useToast } from '@/components/ToastProvider'
 import ScaledIframePreview from '@/components/ScaledIframePreview'
@@ -114,7 +127,7 @@ function ChatMessage({ message }) {
               : 'background.paper',
             color: isUser ? 'common.white' : 'text.primary',
             boxShadow: isUser
-              ? '0 2px 8px rgba(33, 32, 28, 0.2)'
+              ? `0 2px 8px ${alpha(neutral[900], 0.2)}`
               : '0 1px 3px rgba(0,0,0,0.08)',
           }}
         >
@@ -306,7 +319,12 @@ export default function TemplateChatEditor({
   currentHtml,
   onHtmlUpdate,
   onApplySuccess,
+  mode = 'edit',
+  chatApi = null,
 }) {
+  const modeConfig = MODE_CONFIG[mode] || MODE_CONFIG.edit
+  // In edit mode, bind templateId into the API call; in create mode, use the provided chatApi
+  const chatApiFunction = chatApi || ((messages, html) => chatTemplateEdit(templateId, messages, html))
   const toast = useToast()
   const messagesEndRef = useRef(null)
   const inputRef = useRef(null)
@@ -330,9 +348,9 @@ export default function TemplateChatEditor({
   // Initialize session
   useEffect(() => {
     if (templateId) {
-      getOrCreateSession(templateId, templateName)
+      getOrCreateSession(templateId, templateName, modeConfig.welcomeMessage)
     }
-  }, [templateId, templateName, getOrCreateSession])
+  }, [templateId, templateName, getOrCreateSession, modeConfig.welcomeMessage])
 
   const session = getSession(templateId)
   const messages = session?.messages || []
@@ -360,13 +378,13 @@ export default function TemplateChatEditor({
 
     await execute({
       type: InteractionType.GENERATE,
-      label: 'Generate edit suggestions',
+      label: modeConfig.sendLabel,
       reversibility: Reversibility.FULLY_REVERSIBLE,
       suppressSuccessToast: true,
       suppressErrorToast: true,
       intent: {
         templateId,
-        action: 'template_chat',
+        action: mode === 'create' ? 'template_chat_create' : 'template_chat',
       },
       action: async () => {
         setIsProcessing(true)
@@ -377,7 +395,7 @@ export default function TemplateChatEditor({
             { role: 'user', content: text },
           ]
 
-          const response = await chatTemplateEdit(templateId, apiMessages, currentHtml)
+          const response = await chatApiFunction(apiMessages, currentHtml)
 
           // Add assistant response
           addAssistantMessage(templateId, response.message, {
@@ -421,6 +439,9 @@ export default function TemplateChatEditor({
     setProposedChanges,
     toast,
     execute,
+    chatApiFunction,
+    mode,
+    modeConfig.sendLabel,
   ])
 
   const handleApplyChanges = useCallback(async () => {
@@ -500,10 +521,10 @@ export default function TemplateChatEditor({
   )
 
   const handleClearChat = useCallback(() => {
-    clearSession(templateId, templateName)
+    clearSession(templateId, templateName, modeConfig.welcomeMessage)
     setFollowUpQuestions(null)
     toast.show('Chat cleared. Starting fresh conversation.', 'info')
-  }, [templateId, templateName, clearSession, toast])
+  }, [templateId, templateName, clearSession, toast, modeConfig.welcomeMessage])
 
   return (
     <Box
@@ -530,10 +551,12 @@ export default function TemplateChatEditor({
         <Stack direction="row" justifyContent="space-between" alignItems="center">
           <Box>
             <Typography variant="subtitle1" fontWeight={600}>
-              AI Template Editor
+              {mode === 'create' ? 'AI Template Creator' : 'AI Template Editor'}
             </Typography>
             <Typography variant="caption" color="text.secondary">
-              Describe the changes you want and I'll help you implement them
+              {mode === 'create'
+                ? 'Describe the report you need and I\'ll build it for you'
+                : 'Describe the changes you want and I\'ll help you implement them'}
             </Typography>
           </Box>
           <IconButton
@@ -613,7 +636,7 @@ export default function TemplateChatEditor({
                 ? 'Processing...'
                 : readyToApply
                 ? 'Apply the changes above or describe different modifications...'
-                : 'Describe what changes you want to make to the template...'
+                : modeConfig.placeholder
             }
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}

@@ -69,11 +69,13 @@ const VisualizationPage = lazy(() => import('@/pages/visualization/Visualization
 const KnowledgePage = lazy(() => import('@/pages/knowledge/KnowledgePage.jsx'))
 const DesignPage = lazy(() => import('@/pages/design/DesignPage.jsx'))
 const IngestionPage = lazy(() => import('@/pages/ingestion/IngestionPage.jsx'))
+const WidgetsPage = lazy(() => import('@/pages/widgets/WidgetsPage.jsx'))
 const NotFoundPage = lazy(() => import('@/pages/NotFoundPage.jsx'))
 
 // Lazy-loaded pages - Setup and editing
 const SetupWizard = lazy(() => import('@/pages/Setup/SetupWizard.jsx'))
 const TemplateEditorPage = lazy(() => import('@/pages/Generate/TemplateEditor.jsx'))
+const TemplateChatCreatePage = lazy(() => import('@/pages/templates/TemplateChatCreatePage.jsx'))
 
 const intentAuditClient = { recordIntent, updateIntent }
 
@@ -290,6 +292,7 @@ function AppContent() {
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/connections" element={<ConnectionsPage />} />
               <Route path="/templates" element={<TemplatesPage />} />
+              <Route path="/templates/new/chat" element={<TemplateChatCreatePage />} />
               <Route path="/templates/:templateId/edit" element={<TemplateEditorPage />} />
               <Route path="/jobs" element={<JobsPage />} />
               <Route path="/reports" element={<ReportsPage />} />
@@ -321,6 +324,7 @@ function AppContent() {
               <Route path="/knowledge" element={<KnowledgePage />} />
               <Route path="/design" element={<DesignPage />} />
               <Route path="/ingestion" element={<IngestionPage />} />
+              <Route path="/widgets" element={<WidgetsPage />} />
             </Route>
 
             <Route path="*" element={<NotFoundPage />} />

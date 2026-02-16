@@ -819,19 +819,12 @@ def build_or_load_contract_v2(
     _normalize_reshape_rules(contract)
     _normalize_ordering(contract)
     contract = _augment_contract_for_compat(_serialize_contract(contract))
-    _use_df = os.getenv("NEURA_USE_DATAFRAME_PIPELINE", "false").lower() in ("1", "true", "yes")
-    if _use_df:
-        _normalize_df_mapping_sections(
-            contract,
-            allow_list=allow_list,
-            fallback_mapping=fallback_mapping_sources,
-        )
-    else:
-        _normalize_sql_mapping_sections(
-            contract,
-            allow_list=allow_list,
-            fallback_mapping=fallback_mapping_sources,
-        )
+    # DataFrame pipeline only — validate declarative ops, no SQL
+    _normalize_df_mapping_sections(
+        contract,
+        allow_list=allow_list,
+        fallback_mapping=fallback_mapping_sources,
+    )
 
     now = int(time.time())
     overview_path = template_dir / _OVERVIEW_FILENAME

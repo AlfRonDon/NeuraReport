@@ -1248,12 +1248,10 @@ def fill_and_print(
                         pass
                 GENERATOR_BUNDLE = bundle
 
-    _USE_DF_PIPELINE = os.getenv("NEURA_USE_DATAFRAME_PIPELINE", "false").lower() in ("1", "true", "yes")
-
     generator_results: dict[str, list[dict[str, object]]] | None = None
 
-    # --- DataFrame pipeline branch (no SQL) ---
-    if _USE_DF_PIPELINE and not multi_key_selected:
+    # --- DataFrame pipeline ---
+    if not multi_key_selected:
         try:
             from .dataframe_pipeline import DataFramePipeline
 
@@ -1277,68 +1275,6 @@ def fill_and_print(
         except Exception as exc:
             logger.warning("DataFrame pipeline failed; falling back to SQL path: %s", exc)
             generator_results = None
-
-    # --- SQL pipeline branch (original) ---
-    if generator_results is None and not _USE_DF_PIPELINE:
-        if GENERATOR_BUNDLE and not multi_key_selected:
-            meta_payload = GENERATOR_BUNDLE.get("meta") or {}
-            entrypoints = meta_payload.get("entrypoints")
-            if not isinstance(entrypoints, dict):
-                entrypoints = {}
-
-            if any(entrypoints.values()):
-                params_spec = meta_payload.get("params") or {}
-                required_params = list(params_spec.get("required") or [])
-                optional_params = list(params_spec.get("optional") or [])
-                for name in required_params + optional_params:
-                    sql_params.setdefault(name, None)
-
-                if "plant_name" in sql_params:
-                    sql_params["plant_name"] = LITERALS.get("plant_name") or special_values.get("plant_name", "")
-                if "location" in sql_params:
-                    sql_params["location"] = LITERALS.get("location") or special_values.get("location", "")
-                if "recipe_code" in sql_params:
-                    if "recipe_code" in key_values_map:
-                        sql_params["recipe_code"] = _first_key_value(key_values_map["recipe_code"])
-                    else:
-                        fallback_val = LITERALS.get("recipe_code")
-                        sql_params["recipe_code"] = fallback_val if fallback_val not in (None, "", []) else None
-                if "page_info" in sql_params:
-                    sql_params["page_info"] = LITERALS.get("page_info") or ""
-                if key_values_map:
-                    for name, values in key_values_map.items():
-                        sql_params[name] = _first_key_value(values)
-                _apply_alias_params(sql_params)
-
-                try:
-                    generator_results = _run_generator_entrypoints(entrypoints, sql_params, dataframe_loader)
-                except Exception as exc:  # pragma: no cover - defensive logging
-                    logger.warning("Generator SQL execution failed; falling back to contract mapping: %s", exc)
-                    generator_results = None
-
-    if generator_results is None and not multi_key_selected and not _USE_DF_PIPELINE:
-        try:
-            default_sql_pack = contract_adapter.build_default_sql_pack()
-        except Exception as exc:  # pragma: no cover - defensive logging
-            logger.warning("Contract-derived SQL synthesis failed: %s", exc)
-        else:
-            default_params = default_sql_pack.get("params") or {}
-            required_default = list(default_params.get("required") or [])
-            optional_default = list(default_params.get("optional") or [])
-            for name in required_default + optional_default:
-                sql_params.setdefault(name, None)
-            _apply_alias_params(sql_params)
-            try:
-                fallback_results = _run_generator_entrypoints(
-                    default_sql_pack["entrypoints"],
-                    sql_params,
-                    dataframe_loader,
-                )
-            except Exception as exc:  # pragma: no cover - defensive logging
-                logger.warning("Contract SQL execution failed; continuing with discovery fallback: %s", exc)
-            else:
-                if any(fallback_results.get(section) for section in ("rows", "header", "totals")):
-                    generator_results = fallback_results
 
     # ---- Normalize / auto-discover BATCH_IDS ----
     if generator_results is None:
@@ -1749,18 +1685,21 @@ def fill_and_print(
         return Counter(tbls).most_common(1)[0][0] if tbls else None
 
     # ---- Pre-compute minimal column sets ----
+    _SQL_EXPR_CHARS = re.compile(r"[|+\-*/()']")
+
     def _extract_col_name(mapping_value: str | None) -> str | None:
         if not isinstance(mapping_value, str):
             return None
         target = mapping_value.strip()
         if "." not in target:
             return None
+        # Skip SQL expressions (e.g. "table.col || ' ' || table.col2") — these
+        # are handled by generator SQL, not by column prefetch.
+        if _SQL_EXPR_CHARS.search(target):
+            return None
         after_dot = target.split(".", 1)[1].strip()
         if not after_dot:
             return None
-        # --- Additive: handle SQL expressions like STRFTIME(table.col, 'fmt')
-        #     Extract just the column name, not trailing args/parens ---
-        # Strip trailing parenthesized arguments (e.g. "col, '%d/%m')" → "col")
         col = re.split(r"[,)\s]", after_dot, 1)[0].strip()
         return col or None
 
@@ -1874,7 +1813,7 @@ def fill_and_print(
             for idx in range(0, len(batch_ids_chunk), chunk_size):
                 yield batch_ids_chunk[idx : idx + chunk_size]
 
-        if BATCH_IDS and _USE_DF_PIPELINE:
+        if BATCH_IDS:
             # --- DataFrame prefetch (no SQL) ---
             try:
                 if header_cols and parent_table:
@@ -1895,77 +1834,6 @@ def fill_and_print(
             except Exception as exc:
                 logger.warning("DataFrame prefetch failed, falling back to SQL: %s", exc)
 
-        elif BATCH_IDS and not _USE_DF_PIPELINE:
-            con = sqlite3.connect(str(DB_PATH))
-            con.row_factory = sqlite3.Row
-            cur = con.cursor()
-            try:
-                if header_cols and parent_table and pcols:
-                    extra_params = len(PDATE) + len(parent_filter_values_tuple)
-                    select_cols = list(dict.fromkeys(pcols + header_cols))
-                    for chunk in _iter_batch_chunks(list(BATCH_IDS), pcols, extra_params):
-                        batch_pred, batch_params = _batch_predicate(pcols, chunk)
-                        where_clause = f"{batch_pred} AND {parent_where_clause}"
-                        sql = (
-                            f"SELECT {', '.join(qident(c) for c in select_cols)} "
-                            f"FROM {qident(parent_table)} "
-                            f"WHERE {where_clause} "
-                            f"ORDER BY ROWID"
-                        )
-                        cur.execute(sql, tuple(batch_params) + tuple(PDATE) + parent_filter_values_tuple)
-                        for row in cur.fetchall():
-                            row_dict = dict(row)
-                            key = _compose_key(row_dict, pcols)
-                            if key and key not in prefetched_headers:
-                                prefetched_headers[key] = row_dict
-
-                if has_child and child_table and ccols and row_cols_needed:
-                    extra_params = len(CDATE) + len(child_filter_values_tuple)
-                    select_cols = list(dict.fromkeys(ccols + row_cols_needed))
-                    order_parts = [qident(c) for c in ccols]
-                    if order_col.upper() == "ROWID":
-                        order_parts.append("ROWID")
-                    else:
-                        order_parts.append(qident(order_col))
-                        order_parts.append("ROWID")
-                    order_clause = "ORDER BY " + ", ".join(order_parts)
-                    for chunk in _iter_batch_chunks(list(BATCH_IDS), ccols, extra_params):
-                        batch_pred, batch_params = _batch_predicate(ccols, chunk)
-                        where_clause = f"{batch_pred} AND {child_where_clause}"
-                        sql = (
-                            f"SELECT {', '.join(qident(c) for c in select_cols)} "
-                            f"FROM {qident(child_table)} "
-                            f"WHERE {where_clause} "
-                            f"{order_clause}"
-                        )
-                        cur.execute(sql, tuple(batch_params) + tuple(CDATE) + child_filter_values_tuple)
-                        for row in cur.fetchall():
-                            row_dict = dict(row)
-                            key = _compose_key(row_dict, ccols)
-                            prefetched_rows[key].append(row_dict)
-
-                if has_child and child_table and ccols and child_totals_cols:
-                    extra_params = len(CDATE) + len(child_filter_values_tuple)
-                    sum_exprs = ", ".join([f"COALESCE(SUM({qident(c)}),0) AS {qident(c)}" for c in child_totals_cols])
-                    group_cols = ", ".join(qident(c) for c in ccols)
-                    select_cols = ", ".join(qident(c) for c in ccols)
-                    for chunk in _iter_batch_chunks(list(BATCH_IDS), ccols, extra_params):
-                        batch_pred, batch_params = _batch_predicate(ccols, chunk)
-                        where_clause = f"{batch_pred} AND {child_where_clause}"
-                        sql = (
-                            f"SELECT {select_cols}, {sum_exprs} "
-                            f"FROM {qident(child_table)} "
-                            f"WHERE {where_clause} "
-                            f"GROUP BY {group_cols}"
-                        )
-                        cur.execute(sql, tuple(batch_params) + tuple(CDATE) + child_filter_values_tuple)
-                        for row in cur.fetchall():
-                            row_dict = dict(row)
-                            key = _compose_key(row_dict, ccols)
-                            if key:
-                                prefetched_totals[key] = row_dict
-            finally:
-                con.close()
     # ---- Render all batches ----
     fallback_con: sqlite3.Connection | None = None
 
@@ -2140,30 +2008,19 @@ def fill_and_print(
                         )
                         if date_col not in cols_needed:
                             cols_needed.append(date_col)
-                        if _USE_DF_PIPELINE:
-                            try:
-                                df = dataframe_loader.frame(maj_table)
-                                df_filtered = contract_adapter._apply_date_filter_df(
-                                    df, maj_table, START_DATE, END_DATE,
-                                )
-                                available = [c for c in cols_needed if c in df_filtered.columns]
-                                if available:
-                                    df_selected = df_filtered[available].copy()
-                                    if date_col in df_selected.columns:
-                                        df_selected = df_selected.sort_values(date_col, na_position="last")
-                                    rows = df_selected.to_dict("records")
-                            except Exception as exc:
-                                logger.warning("DF row fallback failed: %s", exc)
-                        else:
-                            sql_fb = (
-                                f"SELECT {', '.join(qident(c) for c in cols_needed)} "
-                                f"FROM {qident(maj_table)} "
-                                f"WHERE datetime({qident(date_col)}) BETWEEN datetime(?) AND datetime(?) "
-                                f"ORDER BY {qident(date_col)} ASC, ROWID ASC"
+                        try:
+                            df = dataframe_loader.frame(maj_table)
+                            df_filtered = contract_adapter._apply_date_filter_df(
+                                df, maj_table, START_DATE, END_DATE,
                             )
-                            cur = _get_fallback_cursor()
-                            cur.execute(sql_fb, (START_DATE, END_DATE))
-                            rows = [dict(r) for r in cur.fetchall()]
+                            available = [c for c in cols_needed if c in df_filtered.columns]
+                            if available:
+                                df_selected = df_filtered[available].copy()
+                                if date_col in df_selected.columns:
+                                    df_selected = df_selected.sort_values(date_col, na_position="last")
+                                rows = df_selected.to_dict("records")
+                        except Exception as exc:
+                            logger.warning("DF row fallback failed: %s", exc)
                         logger.debug("Row fallback used: table=%s, rows=%d", maj_table, len(rows))
 
             if not rows:
@@ -2265,7 +2122,7 @@ def fill_and_print(
             html_multi = sub_token(html_multi, token, value)
 
     # --- Fill remaining totals tokens from DF pipeline (outside batch blocks). ---
-    if _USE_DF_PIPELINE and generator_results:
+    if generator_results:
         totals_row = (generator_results.get("totals") or [{}])[0]
         if totals_row:
             for token in TOTALS:
@@ -2276,7 +2133,7 @@ def fill_and_print(
     # --- Fill remaining header tokens in the shell (outside batch blocks). ---
     # In DataFrame mode, generator_results["header"] already has token→value;
     # in SQL mode, use prefetched_headers with column extraction.
-    if HEADER_TOKENS and _USE_DF_PIPELINE and generator_results:
+    if HEADER_TOKENS and generator_results:
         gen_header = (generator_results.get("header") or [{}])[0] if generator_results.get("header") else {}
         for t in HEADER_TOKENS:
             val = gen_header.get(t)

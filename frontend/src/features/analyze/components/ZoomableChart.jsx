@@ -274,8 +274,8 @@ export default function ZoomableChart({
         return (
           <LineChart {...commonProps}>
             <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey={xField} tick={{ fontSize: 11 }} />
-            <YAxis tick={{ fontSize: 11 }} />
+            <XAxis dataKey={xField} tick={{ fontSize: 12 }} />
+            <YAxis tick={{ fontSize: 12 }} />
             <Tooltip />
             <Legend />
             {yFields.map((field, idx) => (
@@ -321,8 +321,8 @@ export default function ZoomableChart({
         return (
           <ScatterChart {...commonProps}>
             <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey={xField} name={xField} tick={{ fontSize: 11 }} />
-            <YAxis dataKey={yFields[0]} name={yFields[0]} tick={{ fontSize: 11 }} />
+            <XAxis dataKey={xField} name={xField} tick={{ fontSize: 12 }} />
+            <YAxis dataKey={yFields[0]} name={yFields[0]} tick={{ fontSize: 12 }} />
             <Tooltip cursor={{ strokeDasharray: '3 3' }} />
             <Legend />
             <Scatter
@@ -340,8 +340,8 @@ export default function ZoomableChart({
         return (
           <BarChart {...commonProps}>
             <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey={xField} tick={{ fontSize: 11 }} />
-            <YAxis tick={{ fontSize: 11 }} />
+            <XAxis dataKey={xField} tick={{ fontSize: 12 }} />
+            <YAxis tick={{ fontSize: 12 }} />
             <Tooltip />
             <Legend />
             {yFields.map((field, idx) => (

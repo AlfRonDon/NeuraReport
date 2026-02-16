@@ -5,7 +5,7 @@
  * options for each variant. Falls back to scenario-level defaults when
  * no variant is specified.
  */
-import { useEffect, useMemo } from 'react'
+import { useMemo } from 'react'
 import {
   Box,
   Typography,
@@ -14,9 +14,14 @@ import {
   ListItem,
   ListItemText,
   LinearProgress,
+  CircularProgress,
+  Tooltip,
   alpha,
   styled,
 } from '@mui/material'
+import {
+  Storage as DbIcon,
+} from '@mui/icons-material'
 import {
   TrendingUp as TrendIcon,
   Warning as WarningIcon,
@@ -40,6 +45,7 @@ import {
 } from '@mui/icons-material'
 import ChartWidget from './ChartWidget'
 import MetricWidget from './MetricWidget'
+import useWidgetData from '../hooks/useWidgetData'
 import {
   VARIANT_CONFIG,
   DEFAULT_VARIANTS,
@@ -154,7 +160,7 @@ function renderMetricVariant(variantKey, vConfig, data, config, props) {
             {title}
           </Typography>
         </Box>
-        <Typography variant="h4" sx={{ fontWeight: 700 }}>
+        <Typography variant="h4" sx={{ fontWeight: 600 }}>
           {status === 'ok' ? 'Online' : status === 'offline' ? 'Offline' : String(value)}
         </Typography>
         {unit && (
@@ -386,12 +392,69 @@ function renderDomainVariant(variantKey, vConfig, data, config) {
   )
 }
 
+// ── Data source badge ─────────────────────────────────────────────────────
+
+function DataSourceBadge({ source }) {
+  if (!source) return null
+  return (
+    <Tooltip title={`Source: ${source}`}>
+      <Chip
+        icon={<DbIcon sx={{ fontSize: 14 }} />}
+        label="Live"
+        size="small"
+        variant="outlined"
+        color="success"
+        sx={{
+          position: 'absolute',
+          top: 4,
+          right: 4,
+          height: 20,
+          fontSize: '10px',
+          opacity: 0.8,
+          zIndex: 1,
+          '& .MuiChip-icon': { fontSize: 14 },
+        }}
+      />
+    </Tooltip>
+  )
+}
+
 // ── Main Component ─────────────────────────────────────────────────────────
 
-export default function WidgetRenderer({ scenario, variant, data, config, ...props }) {
+export default function WidgetRenderer({
+  scenario,
+  variant,
+  data: externalData,
+  config,
+  connectionId,
+  reportRunId,
+  showSourceBadge = true,
+  ...props
+}) {
   // Resolve effective variant — prefer explicit variant, else default for scenario
-  const effectiveVariant = variant || DEFAULT_VARIANTS[scenario] || scenario
+  const effectiveVariant = variant || config?.variant || DEFAULT_VARIANTS[scenario] || scenario
   const vConfig = getVariantConfig(effectiveVariant, scenario)
+
+  // Resolve connection from config if not passed directly
+  // useWidgetData will auto-resolve from app store if this is still undefined
+  const explicitConnectionId = connectionId || config?.data_source
+
+  // Always fetch — useWidgetData auto-resolves from the active DB in the store
+  const {
+    data: fetchedData,
+    loading,
+    error: fetchError,
+    source: dataSource,
+  } = useWidgetData({
+    scenario,
+    variant: effectiveVariant,
+    connectionId: explicitConnectionId,
+    reportRunId,
+    autoFetch: !externalData,
+  })
+
+  // Use external data if provided, otherwise use fetched data
+  const data = externalData || fetchedData
 
   // If we can't find any config, render a generic fallback
   if (!vConfig) {
@@ -408,26 +471,82 @@ export default function WidgetRenderer({ scenario, variant, data, config, ...pro
     )
   }
 
+  // Show loading state while fetching
+  if (loading && !data) {
+    return (
+      <PlaceholderCard>
+        <CircularProgress size={24} />
+        <Typography variant="caption" color="text.secondary">
+          Loading {vConfig.label}...
+        </Typography>
+      </PlaceholderCard>
+    )
+  }
+
+  // Show error/empty state when no data available
+  if (!data && !loading) {
+    return (
+      <PlaceholderCard>
+        <ErrorIcon sx={{ fontSize: 36, color: 'text.disabled' }} />
+        <Typography variant="body2" color="text.secondary">
+          {config?.title || vConfig?.label || scenario}
+        </Typography>
+        <Typography variant="caption" color="text.disabled">
+          {fetchError || 'No data available. Connect a database to see live data.'}
+        </Typography>
+      </PlaceholderCard>
+    )
+  }
+
+  const badge = showSourceBadge && !externalData ? (
+    <DataSourceBadge source={dataSource} />
+  ) : null
+
   const renderAs = vConfig.renderAs
 
   if (renderAs === 'metric') {
-    return renderMetricVariant(effectiveVariant, vConfig, data, config, props)
+    return (
+      <Box sx={{ position: 'relative', height: '100%' }}>
+        {badge}
+        {renderMetricVariant(effectiveVariant, vConfig, data, config, props)}
+      </Box>
+    )
   }
 
   if (renderAs === 'chart') {
-    return renderChartVariant(effectiveVariant, vConfig, data, config, props)
+    return (
+      <Box sx={{ position: 'relative', height: '100%' }}>
+        {badge}
+        {renderChartVariant(effectiveVariant, vConfig, data, config, props)}
+      </Box>
+    )
   }
 
   if (renderAs === 'list') {
-    return renderListVariant(effectiveVariant, vConfig, data, config, props)
+    return (
+      <Box sx={{ position: 'relative', height: '100%' }}>
+        {badge}
+        {renderListVariant(effectiveVariant, vConfig, data, config, props)}
+      </Box>
+    )
   }
 
   if (renderAs === 'text') {
-    return renderTextVariant(effectiveVariant, vConfig, data, config)
+    return (
+      <Box sx={{ position: 'relative', height: '100%' }}>
+        {badge}
+        {renderTextVariant(effectiveVariant, vConfig, data, config)}
+      </Box>
+    )
   }
 
   if (renderAs === 'domain') {
-    return renderDomainVariant(effectiveVariant, vConfig, data, config)
+    return (
+      <Box sx={{ position: 'relative', height: '100%' }}>
+        {badge}
+        {renderDomainVariant(effectiveVariant, vConfig, data, config)}
+      </Box>
+    )
   }
 
   // Final fallback

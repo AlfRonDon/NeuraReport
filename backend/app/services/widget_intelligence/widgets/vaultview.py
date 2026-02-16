@@ -28,12 +28,3 @@ class VaultViewWidget(WidgetPlugin):
             "items": raw.get("items", []),
             "categories": raw.get("categories", []),
         }
-
-    def get_demo_data(self) -> dict:
-        return {
-            "items": [
-                {"id": "doc-1", "title": "Monthly Report", "type": "report", "date": "2026-01-31", "status": "archived"},
-                {"id": "doc-2", "title": "Compliance Audit", "type": "audit", "date": "2026-01-15", "status": "active"},
-            ],
-            "categories": ["reports", "audits", "compliance"],
-        }

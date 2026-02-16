@@ -95,8 +95,8 @@ const pulse = keyframes`
 `
 
 const glow = keyframes`
-  0%, 100% { box-shadow: 0 0 20px rgba(33, 32, 28, 0.1); }
-  50% { box-shadow: 0 0 40px rgba(33, 32, 28, 0.2); }
+  0%, 100% { box-shadow: 0 0 20px ${alpha(neutral[900], 0.1)}; }
+  50% { box-shadow: 0 0 40px ${alpha(neutral[900], 0.2)}; }
 `
 
 const spin = keyframes`
@@ -282,8 +282,8 @@ const JobListItem = styled(Box, {
       width: 8,
       height: 8,
       borderRadius: '50%',
-      backgroundColor: statusColors[status] || theme.palette.grey[500],
-      boxShadow: `0 0 8px ${alpha(statusColors[status] || theme.palette.grey[500], 0.3)}`,
+      backgroundColor: statusColors[status] || neutral[500],
+      boxShadow: `0 0 8px ${alpha(statusColors[status] || neutral[500], 0.3)}`,
     },
   }
 })
@@ -1239,7 +1239,7 @@ export default function DashboardPage() {
                 justifyContent: 'center',
               }}
             >
-              <AutoAwesomeIcon sx={{ fontSize: 22, color: 'white' }} />
+              <AutoAwesomeIcon sx={{ fontSize: 24, color: 'white' }} />
             </Box>
             <Box>
               <Typography variant="subtitle1" fontWeight={600}>

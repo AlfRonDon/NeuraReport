@@ -1,6 +1,6 @@
 /**
  * Widget Palette Component
- * Draggable widget options for dashboard building.
+ * Draggable widget options with variant sub-menus for AI widgets.
  */
 import { useState, useCallback } from 'react'
 import {
@@ -10,7 +10,11 @@ import {
   CardContent,
   Collapse,
   IconButton,
-  Divider,
+  Tooltip,
+  Popover,
+  List,
+  ListItemButton,
+  ListItemText,
   useTheme,
   alpha,
   styled,
@@ -28,10 +32,10 @@ import {
   TextFields as TextIcon,
   FilterList as FilterIcon,
   Image as ImageIcon,
-  Map as MapIcon,
   Numbers as NumberIcon,
   ExpandMore as ExpandIcon,
   ExpandLess as CollapseIcon,
+  UnfoldMore as VariantIcon,
   // AI Widget icons
   Speed as KpiIcon,
   CompareArrows as CompareIcon,
@@ -54,6 +58,7 @@ import {
   SmartToy as AgentIcon,
   Lock as VaultIcon,
 } from '@mui/icons-material'
+import { SCENARIO_VARIANTS, VARIANT_CONFIG, DEFAULT_VARIANTS } from '../constants/widgetVariants'
 
 // =============================================================================
 // STYLED COMPONENTS
@@ -80,6 +85,7 @@ const CategoryHeader = styled(Box)(({ theme }) => ({
 const WidgetCard = styled(Card)(({ theme }) => ({
   cursor: 'grab',
   transition: 'all 0.2s ease',
+  position: 'relative',
   '&:hover': {
     transform: 'translateY(-2px)',
     boxShadow: `0 4px 12px ${theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.15) : alpha(theme.palette.text.primary, 0.08)}`,
@@ -95,6 +101,22 @@ const WidgetGrid = styled(Box)(({ theme }) => ({
   display: 'grid',
   gridTemplateColumns: 'repeat(2, 1fr)',
   gap: theme.spacing(1),
+}))
+
+const VariantBadge = styled(Box)(({ theme }) => ({
+  position: 'absolute',
+  top: 2,
+  right: 2,
+  width: 14,
+  height: 14,
+  borderRadius: '50%',
+  backgroundColor: alpha(theme.palette.primary.main, 0.15),
+  color: theme.palette.primary.main,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  fontSize: '10px',
+  fontWeight: 600,
 }))
 
 // =============================================================================
@@ -146,14 +168,14 @@ const WIDGET_CATEGORIES = [
     label: 'AI Widgets',
     defaultCollapsed: true,
     widgets: [
-      { type: 'kpi', label: 'KPI', icon: KpiIcon, color: 'success' },
-      { type: 'trend', label: 'Trend', icon: LineChartIcon, color: 'primary' },
+      { type: 'kpi', label: 'KPI', icon: KpiIcon, color: 'success', hasVariants: true },
+      { type: 'trend', label: 'Trend', icon: LineChartIcon, color: 'primary', hasVariants: true },
       { type: 'trend-multi-line', label: 'Multi-Line', icon: LineChartIcon, color: 'primary' },
       { type: 'trends-cumulative', label: 'Cumulative', icon: AreaIcon, color: 'primary' },
-      { type: 'comparison', label: 'Compare', icon: CompareIcon, color: 'primary' },
-      { type: 'distribution', label: 'Distribution', icon: DistributionIcon, color: 'primary' },
-      { type: 'composition', label: 'Composition', icon: CompositionIcon, color: 'primary' },
-      { type: 'category-bar', label: 'Category Bar', icon: BarChartIcon, color: 'primary' },
+      { type: 'comparison', label: 'Compare', icon: CompareIcon, color: 'primary', hasVariants: true },
+      { type: 'distribution', label: 'Distribution', icon: DistributionIcon, color: 'primary', hasVariants: true },
+      { type: 'composition', label: 'Composition', icon: CompositionIcon, color: 'primary', hasVariants: true },
+      { type: 'category-bar', label: 'Category Bar', icon: BarChartIcon, color: 'primary', hasVariants: true },
     ],
   },
   {
@@ -161,9 +183,9 @@ const WIDGET_CATEGORIES = [
     label: 'Context & Events',
     defaultCollapsed: true,
     widgets: [
-      { type: 'alerts', label: 'Alerts', icon: AlertsIcon, color: 'error' },
-      { type: 'timeline', label: 'Timeline', icon: TimelineIcon, color: 'info' },
-      { type: 'eventlogstream', label: 'Event Log', icon: EventLogIcon, color: 'info' },
+      { type: 'alerts', label: 'Alerts', icon: AlertsIcon, color: 'error', hasVariants: true },
+      { type: 'timeline', label: 'Timeline', icon: TimelineIcon, color: 'info', hasVariants: true },
+      { type: 'eventlogstream', label: 'Event Log', icon: EventLogIcon, color: 'info', hasVariants: true },
       { type: 'narrative', label: 'Narrative', icon: NarrativeIcon, color: 'secondary' },
     ],
   },
@@ -172,8 +194,8 @@ const WIDGET_CATEGORIES = [
     label: 'Advanced Viz',
     defaultCollapsed: true,
     widgets: [
-      { type: 'flow-sankey', label: 'Flow Diagram', icon: SankeyIcon, color: 'warning' },
-      { type: 'matrix-heatmap', label: 'Heatmap', icon: HeatmapIcon, color: 'warning' },
+      { type: 'flow-sankey', label: 'Flow Diagram', icon: SankeyIcon, color: 'warning', hasVariants: true },
+      { type: 'matrix-heatmap', label: 'Heatmap', icon: HeatmapIcon, color: 'warning', hasVariants: true },
       { type: 'diagnosticpanel', label: 'Diagnostics', icon: DiagnosticIcon, color: 'warning' },
       { type: 'uncertaintypanel', label: 'Uncertainty', icon: UncertaintyIcon, color: 'warning' },
     ],
@@ -204,6 +226,8 @@ export default function WidgetPalette({ onAddWidget }) {
   const [expandedCategories, setExpandedCategories] = useState(
     WIDGET_CATEGORIES.reduce((acc, cat) => ({ ...acc, [cat.id]: !cat.defaultCollapsed }), {})
   )
+  const [variantAnchor, setVariantAnchor] = useState(null)
+  const [variantWidget, setVariantWidget] = useState(null)
 
   const toggleCategory = useCallback((categoryId) => {
     setExpandedCategories((prev) => ({
@@ -212,15 +236,40 @@ export default function WidgetPalette({ onAddWidget }) {
     }))
   }, [])
 
-  const handleDragStart = useCallback((e, widget) => {
+  const handleDragStart = useCallback((e, widget, variant) => {
     e.dataTransfer.setData('widget-type', widget.type)
     e.dataTransfer.setData('widget-label', widget.label)
+    if (variant) {
+      e.dataTransfer.setData('widget-variant', variant)
+    }
     e.dataTransfer.effectAllowed = 'copy'
   }, [])
 
-  const handleWidgetClick = useCallback((widget) => {
-    onAddWidget?.(widget.type, widget.label)
+  const handleWidgetClick = useCallback((widget, e) => {
+    // If widget has multiple variants, show variant picker
+    const variants = SCENARIO_VARIANTS[widget.type]
+    if (widget.hasVariants && variants && variants.length > 1) {
+      setVariantAnchor(e.currentTarget)
+      setVariantWidget(widget)
+      return
+    }
+    // Single variant or legacy — add directly
+    const defaultVariant = DEFAULT_VARIANTS[widget.type]
+    onAddWidget?.(widget.type, widget.label, defaultVariant)
   }, [onAddWidget])
+
+  const handleVariantSelect = useCallback((scenario, variant) => {
+    const vConfig = VARIANT_CONFIG[variant]
+    const label = vConfig?.label || variant
+    onAddWidget?.(scenario, label, variant)
+    setVariantAnchor(null)
+    setVariantWidget(null)
+  }, [onAddWidget])
+
+  const handleCloseVariantPicker = useCallback(() => {
+    setVariantAnchor(null)
+    setVariantWidget(null)
+  }, [])
 
   return (
     <PaletteContainer>
@@ -245,43 +294,93 @@ export default function WidgetPalette({ onAddWidget }) {
 
           <Collapse in={expandedCategories[category.id]}>
             <WidgetGrid>
-              {category.widgets.map((widget) => (
-                <WidgetCard
-                  key={widget.type}
-                  variant="outlined"
-                  draggable
-                  onDragStart={(e) => handleDragStart(e, widget)}
-                  onClick={() => handleWidgetClick(widget)}
-                >
-                  <CardContent sx={{ p: 1, '&:last-child': { pb: 1 } }}>
-                    <Box
-                      sx={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        gap: 0.5,
-                      }}
-                    >
-                      <widget.icon
+              {category.widgets.map((widget) => {
+                const variantCount = SCENARIO_VARIANTS[widget.type]?.length || 0
+                return (
+                  <WidgetCard
+                    key={widget.type}
+                    variant="outlined"
+                    draggable
+                    onDragStart={(e) => handleDragStart(e, widget)}
+                    onClick={(e) => handleWidgetClick(widget, e)}
+                  >
+                    <CardContent sx={{ p: 1, '&:last-child': { pb: 1 } }}>
+                      <Box
                         sx={{
-                          fontSize: 20,
-                          color: 'text.secondary',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          gap: 0.5,
                         }}
-                      />
-                      <Typography
-                        variant="caption"
-                        sx={{ fontSize: '12px', textAlign: 'center' }}
                       >
-                        {widget.label}
-                      </Typography>
-                    </Box>
-                  </CardContent>
-                </WidgetCard>
-              ))}
+                        <widget.icon
+                          sx={{
+                            fontSize: 20,
+                            color: 'text.secondary',
+                          }}
+                        />
+                        <Typography
+                          variant="caption"
+                          sx={{ fontSize: '12px', textAlign: 'center' }}
+                        >
+                          {widget.label}
+                        </Typography>
+                      </Box>
+                    </CardContent>
+                    {widget.hasVariants && variantCount > 1 && (
+                      <VariantBadge>{variantCount}</VariantBadge>
+                    )}
+                  </WidgetCard>
+                )
+              })}
             </WidgetGrid>
           </Collapse>
         </Box>
       ))}
+
+      {/* Variant Picker Popover */}
+      <Popover
+        open={Boolean(variantAnchor)}
+        anchorEl={variantAnchor}
+        onClose={handleCloseVariantPicker}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+        slotProps={{
+          paper: {
+            sx: { maxHeight: 300, minWidth: 200, maxWidth: 260 },
+          },
+        }}
+      >
+        {variantWidget && (
+          <Box sx={{ py: 0.5 }}>
+            <Typography
+              variant="caption"
+              sx={{ fontWeight: 600, px: 2, py: 0.5, color: 'text.secondary', display: 'block' }}
+            >
+              {variantWidget.label} Variants
+            </Typography>
+            <List dense disablePadding>
+              {(SCENARIO_VARIANTS[variantWidget.type] || []).map((v) => {
+                const vConfig = VARIANT_CONFIG[v]
+                return (
+                  <ListItemButton
+                    key={v}
+                    onClick={() => handleVariantSelect(variantWidget.type, v)}
+                    sx={{ py: 0.5, px: 2 }}
+                  >
+                    <ListItemText
+                      primary={vConfig?.label || v}
+                      secondary={vConfig?.description || ''}
+                      primaryTypographyProps={{ variant: 'body2', fontSize: '14px' }}
+                      secondaryTypographyProps={{ variant: 'caption', fontSize: '12px', noWrap: true }}
+                    />
+                  </ListItemButton>
+                )
+              })}
+            </List>
+          </Box>
+        )}
+      </Popover>
     </PaletteContainer>
   )
 }

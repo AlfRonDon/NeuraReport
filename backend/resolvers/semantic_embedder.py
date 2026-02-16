@@ -40,7 +40,7 @@ def _build_corpus() -> dict[str, str]:
     if _variant_corpus is not None:
         return _variant_corpus
 
-    from layer2.widget_catalog import WIDGET_CATALOG
+    from backend.app.services.widget_intelligence.widget_catalog import WIDGET_CATALOG
 
     corpus: dict[str, str] = {}
     scenario_map: dict[str, str] = {}
@@ -250,7 +250,7 @@ def _score_embedding_client(
         if not q_emb:
             return {}
 
-        from layer2.pipeline_v7.embedding import EmbeddingClient
+        from backend.app.services.widget_intelligence.embedding import EmbeddingClient
 
         scores: dict[str, float] = {}
         for variant in candidates:

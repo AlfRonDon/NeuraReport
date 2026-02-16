@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Box from '@mui/material/Box'
+import { alpha } from '@mui/material/styles'
+import { neutral, secondary } from '@/app/theme'
 
 import { DEFAULT_PAGE_DIMENSIONS } from '../utils/preview'
 
@@ -92,7 +94,7 @@ export default function ScaledIframePreview({
   fit = 'contain', // layout fit strategy for scaling
   contentAlign = 'center',
   pageShadow = false,
-  pageBorderColor = 'rgba(15,23,42,0.12)',
+  pageBorderColor = alpha(neutral[900], 0.12),
   pageRadius = 0,
   marginGuides = false,
   clampToParentHeight = false,
@@ -115,12 +117,12 @@ export default function ScaledIframePreview({
       const inset = Math.max(0, Number(marginGuides.inset ?? marginGuides.offset ?? 36))
       return {
         inset,
-        color: marginGuides.color || 'rgba(79,70,229,0.28)',
+        color: marginGuides.color || alpha(secondary.violet[500], 0.28),
       }
     }
     return {
       inset: 36,
-      color: 'rgba(79,70,229,0.28)',
+      color: alpha(secondary.violet[500], 0.28),
     }
   }, [marginGuides])
 
@@ -315,7 +317,7 @@ export default function ScaledIframePreview({
     ? Math.max(Number(pageRadius), 0)
     : 0
   const resolvedPageShadow = pageChrome && pageShadow
-    ? (typeof pageShadow === 'string' ? pageShadow : '0 32px 48px rgba(15,23,42,0.18)')
+    ? (typeof pageShadow === 'string' ? pageShadow : `0 32px 48px ${alpha(neutral[900], 0.18)}`)
     : 'none'
   const resolvedBorderColor = pageChrome && typeof pageBorderColor === 'string' && pageBorderColor.trim()
     ? pageBorderColor

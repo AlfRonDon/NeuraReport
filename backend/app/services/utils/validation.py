@@ -381,7 +381,7 @@ def validate_contract_v2(data: Any, *, require_join: bool = True) -> None:
         raise SchemaValidationError(f"contract_v2 validation error{location}: {err.message}")
 
     reshape_rules = data.get("reshape_rules")
-    if isinstance(reshape_rules, list):
+    if isinstance(reshape_rules, list) and reshape_rules:
         column_rule_found = False
         for idx, rule in enumerate(reshape_rules):
             if not isinstance(rule, Mapping):

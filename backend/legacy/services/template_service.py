@@ -24,7 +24,9 @@ from backend.app.services.utils.zip_tools import create_zip_from_dir
 from backend.app.utils.validation import is_safe_name
 from backend.legacy.services.file_service import (
     apply_chat_template_edit as apply_chat_template_edit_service,
+    chat_template_create as chat_template_create_service,
     chat_template_edit as chat_template_edit_service,
+    create_template_from_chat as create_template_from_chat_service,
     edit_template_ai as edit_template_ai_service,
     edit_template_manual as edit_template_manual_service,
     generator_assets as generator_assets_service,
@@ -191,6 +193,14 @@ def chat_template_edit(template_id: str, payload: TemplateChatPayload, request: 
 
 def apply_chat_template_edit(template_id: str, html: str, request: Request):
     return apply_chat_template_edit_service(template_id, html, request)
+
+
+def chat_template_create(payload: TemplateChatPayload, request: Request):
+    return chat_template_create_service(payload, request)
+
+
+def create_template_from_chat(payload, request: Request):
+    return create_template_from_chat_service(payload, request)
 
 
 def generator_assets(template_id: str, payload: GeneratorAssetsPayload, request: Request, *, kind: str = "pdf"):

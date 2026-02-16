@@ -480,6 +480,10 @@ export default function TemplatesPage() {
     handleNavigate('/setup/wizard', 'Open setup wizard')
   }, [handleNavigate])
 
+  const handleCreateWithAi = useCallback(() => {
+    handleNavigate('/templates/new/chat', 'Create template with AI')
+  }, [handleNavigate])
+
   const handleEditTemplate = useCallback(() => {
     if (menuTemplate) {
       handleNavigate(`/templates/${menuTemplate.id}/edit`, 'Edit template', { templateId: menuTemplate.id })
@@ -1152,9 +1156,15 @@ export default function TemplatesPage() {
         filters={filters}
         actions={[
           {
+            label: 'Create with AI',
+            icon: <AutoAwesomeIcon sx={{ fontSize: 18 }} />,
+            variant: 'contained',
+            onClick: handleCreateWithAi,
+          },
+          {
             label: 'Upload Design',
             icon: <AddIcon sx={{ fontSize: 18 }} />,
-            variant: 'contained',
+            variant: 'outlined',
             onClick: handleAddTemplate,
           },
           {
@@ -1183,9 +1193,9 @@ export default function TemplatesPage() {
         emptyState={{
           icon: DescriptionIcon,
           title: 'No report designs yet',
-          description: 'Upload a PDF or Excel file as a report design.',
-          actionLabel: 'Upload Design',
-          onAction: handleAddTemplate,
+          description: 'Create a template with AI or upload a PDF/Excel file.',
+          actionLabel: 'Create with AI',
+          onAction: handleCreateWithAi,
         }}
       />
 

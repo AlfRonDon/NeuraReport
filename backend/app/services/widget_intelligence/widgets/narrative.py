@@ -28,9 +28,3 @@ class NarrativeWidget(WidgetPlugin):
             "text": raw.get("text", ""),
             "title": raw.get("title", ""),
         }
-
-    def get_demo_data(self) -> dict:
-        return {
-            "text": "System performance remains within normal parameters.",
-            "title": "Summary",
-        }

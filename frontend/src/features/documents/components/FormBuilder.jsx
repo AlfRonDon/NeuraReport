@@ -57,7 +57,7 @@ import {
   Preview as PreviewIcon,
   Save as SaveIcon,
 } from '@mui/icons-material'
-import { neutral, palette } from '@/app/theme'
+import { neutral, palette, status } from '@/app/theme'
 
 // =============================================================================
 // STYLED COMPONENTS
@@ -699,7 +699,7 @@ export default function FormBuilder({
               <Box key={field.id}>
                 <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>
                   {field.label}
-                  {field.required && <span style={{ color: 'red' }}> *</span>}
+                  {field.required && <span style={{ color: status.destructive }}> *</span>}
                 </Typography>
                 {field.description && (
                   <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>

@@ -1,6 +1,6 @@
 """Edge device panel widget plugin — IoT/edge device status and readings."""
 
-from layer2.pipeline_v7.widgets.base import WidgetPlugin, WidgetMeta
+from backend.app.services.widget_intelligence.widgets.base import WidgetPlugin, WidgetMeta
 
 
 class EdgeDevicePanelWidget(WidgetPlugin):

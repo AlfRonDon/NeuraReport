@@ -226,7 +226,7 @@ export default function AIWidgetSuggestion({ onAddWidgets, onAddSingleWidget }) 
                     size="small"
                     color="primary"
                     variant="outlined"
-                    sx={{ height: 20, fontSize: '11px' }}
+                    sx={{ height: 20, fontSize: '12px' }}
                   />
                 </SuggestionItem>
               )

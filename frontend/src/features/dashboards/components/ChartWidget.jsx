@@ -144,12 +144,12 @@ const generateChartOptions = (chartType, data, config, theme) => {
         xAxis: {
           type: 'category',
           data: data?.labels || [],
-          axisLabel: { fontSize: 11, color: theme.palette.text.secondary },
+          axisLabel: { fontSize: 12, color: theme.palette.text.secondary },
           axisLine: { lineStyle: { color: alpha(theme.palette.divider, 0.3) } },
         },
         yAxis: {
           type: 'value',
-          axisLabel: { fontSize: 11, color: theme.palette.text.secondary },
+          axisLabel: { fontSize: 12, color: theme.palette.text.secondary },
           splitLine: { lineStyle: { color: alpha(theme.palette.divider, 0.1) } },
         },
         series: (data?.datasets || []).map((ds, idx) => ({
@@ -166,12 +166,12 @@ const generateChartOptions = (chartType, data, config, theme) => {
         xAxis: {
           type: 'category',
           data: data?.labels || [],
-          axisLabel: { fontSize: 11, color: theme.palette.text.secondary },
+          axisLabel: { fontSize: 12, color: theme.palette.text.secondary },
           axisLine: { lineStyle: { color: alpha(theme.palette.divider, 0.3) } },
         },
         yAxis: {
           type: 'value',
-          axisLabel: { fontSize: 11, color: theme.palette.text.secondary },
+          axisLabel: { fontSize: 12, color: theme.palette.text.secondary },
           splitLine: { lineStyle: { color: alpha(theme.palette.divider, 0.1) } },
         },
         series: (data?.datasets || []).map((ds, idx) => ({
@@ -189,12 +189,12 @@ const generateChartOptions = (chartType, data, config, theme) => {
         xAxis: {
           type: 'category',
           data: data?.labels || [],
-          axisLabel: { fontSize: 11, color: theme.palette.text.secondary },
+          axisLabel: { fontSize: 12, color: theme.palette.text.secondary },
           boundaryGap: false,
         },
         yAxis: {
           type: 'value',
-          axisLabel: { fontSize: 11, color: theme.palette.text.secondary },
+          axisLabel: { fontSize: 12, color: theme.palette.text.secondary },
           splitLine: { lineStyle: { color: alpha(theme.palette.divider, 0.1) } },
         },
         series: (data?.datasets || []).map((ds, idx) => ({
@@ -216,7 +216,7 @@ const generateChartOptions = (chartType, data, config, theme) => {
           orient: 'vertical',
           right: 10,
           top: 'center',
-          textStyle: { fontSize: 11, color: theme.palette.text.secondary },
+          textStyle: { fontSize: 12, color: theme.palette.text.secondary },
         },
         series: [
           {
@@ -229,7 +229,7 @@ const generateChartOptions = (chartType, data, config, theme) => {
             })),
             label: {
               show: true,
-              fontSize: 11,
+              fontSize: 12,
               color: theme.palette.text.secondary,
             },
             emphasis: {
@@ -248,12 +248,12 @@ const generateChartOptions = (chartType, data, config, theme) => {
         ...baseOptions,
         xAxis: {
           type: 'value',
-          axisLabel: { fontSize: 11, color: theme.palette.text.secondary },
+          axisLabel: { fontSize: 12, color: theme.palette.text.secondary },
           splitLine: { lineStyle: { color: alpha(theme.palette.divider, 0.1) } },
         },
         yAxis: {
           type: 'value',
-          axisLabel: { fontSize: 11, color: theme.palette.text.secondary },
+          axisLabel: { fontSize: 12, color: theme.palette.text.secondary },
           splitLine: { lineStyle: { color: alpha(theme.palette.divider, 0.1) } },
         },
         series: (data?.datasets || []).map((ds, idx) => ({
@@ -270,11 +270,11 @@ const generateChartOptions = (chartType, data, config, theme) => {
         xAxis: {
           type: 'category',
           data: data?.labels || [],
-          axisLabel: { fontSize: 11, color: theme.palette.text.secondary },
+          axisLabel: { fontSize: 12, color: theme.palette.text.secondary },
         },
         yAxis: {
           type: 'value',
-          axisLabel: { fontSize: 11, color: theme.palette.text.secondary },
+          axisLabel: { fontSize: 12, color: theme.palette.text.secondary },
           splitLine: { lineStyle: { color: alpha(theme.palette.divider, 0.1) } },
         },
         series: (data?.datasets || []).map((ds, idx) => ({

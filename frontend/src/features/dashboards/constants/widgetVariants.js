@@ -9,6 +9,8 @@
  * - defaultSize: { w, h } grid dimensions
  */
 
+import { status, secondary } from '@/app/theme'
+
 // ── Variant → Rendering Config ─────────────────────────────────────────────
 
 export const VARIANT_CONFIG = {
@@ -80,7 +82,7 @@ export const VARIANT_CONFIG = {
     label: 'RGB Phase',
     description: 'Three-phase R/Y/B overlay',
     defaultSize: { w: 6, h: 3 },
-    chartOptions: { multiSeries: true, colors: ['#ef4444', '#eab308', '#3b82f6'] },
+    chartOptions: { multiSeries: true, colors: [status.destructive, status.warning, secondary.cyan[500]] },
   },
   'trend-alert-context': {
     renderAs: 'chart',

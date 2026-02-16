@@ -5,9 +5,11 @@ Endpoints for generating charts, diagrams, and visual representations.
 from __future__ import annotations
 
 import logging
+import re
+import uuid
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
@@ -158,9 +160,23 @@ async def generate_timeline(request: TimelineRequest):
         DiagramSpec for the timeline
     """
     try:
-        events = [TimelineEvent(**e) for e in request.events]
+        parsed_events = []
+        _DATE_RE = re.compile(r"\b(\d{4}[-/]\d{2}(?:[-/]\d{2})?)\b")
+        for i, e in enumerate(request.events):
+            if "id" not in e:
+                e["id"] = str(uuid.uuid4())[:8]
+            if "title" not in e or "date" not in e:
+                desc = e.get("description", "")
+                m = _DATE_RE.search(desc)
+                if "date" not in e:
+                    e["date"] = m.group(1) if m else f"event-{i + 1}"
+                if "title" not in e:
+                    # Strip the date prefix (e.g. "2023-01: ") to get the title
+                    title = _DATE_RE.sub("", desc).strip().lstrip(":").strip()
+                    e["title"] = title or desc or f"Event {i + 1}"
+            parsed_events.append(TimelineEvent(**e))
         result = await visualization_service.generate_timeline(
-            events=events,
+            events=parsed_events,
             title=request.title,
         )
         return result.model_dump()
@@ -374,6 +390,71 @@ async def export_as_png(diagram_id: str):
     except Exception as e:
         logger.error(f"PNG export failed: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Visualization generation failed")
+
+
+# =============================================================================
+# EXCEL EXTRACTION ENDPOINT
+# =============================================================================
+
+@router.post("/extract-excel")
+async def extract_excel(file: UploadFile = File(...)):
+    """
+    Extract table data from an Excel (.xlsx/.xls) or CSV file.
+
+    Returns sheets with headers + rows, ready for chart generation.
+    """
+    import io
+    import pandas as pd
+
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="No file provided")
+
+    ext = file.filename.rsplit(".", 1)[-1].lower() if "." in file.filename else ""
+    if ext not in ("xlsx", "xls", "csv"):
+        raise HTTPException(status_code=400, detail=f"Unsupported file type: .{ext}. Use .xlsx, .xls, or .csv")
+
+    try:
+        content = await file.read()
+        buf = io.BytesIO(content)
+
+        if ext == "csv":
+            df = pd.read_csv(buf)
+            sheets = [{"name": file.filename, "headers": list(df.columns), "rows": df.fillna("").values.tolist(), "row_count": len(df), "column_count": len(df.columns)}]
+        else:
+            xls = pd.ExcelFile(buf, engine="openpyxl")
+            sheets = []
+            for sheet_name in xls.sheet_names:
+                df = pd.read_excel(xls, sheet_name=sheet_name)
+                if df.empty:
+                    continue
+                # Convert all values to JSON-safe types
+                rows = []
+                for _, row in df.iterrows():
+                    rows.append([str(v) if pd.notna(v) else "" for v in row])
+                sheets.append({
+                    "name": sheet_name,
+                    "headers": [str(c) for c in df.columns],
+                    "rows": rows,
+                    "row_count": len(df),
+                    "column_count": len(df.columns),
+                })
+
+        # Also provide the first sheet as a flat JSON array (ready for charts)
+        data_preview = []
+        if sheets:
+            s = sheets[0]
+            for row in s["rows"][:200]:  # cap at 200 rows for preview
+                data_preview.append(dict(zip(s["headers"], row)))
+
+        return {
+            "filename": file.filename,
+            "sheets": sheets,
+            "total_sheets": len(sheets),
+            "data": data_preview,
+        }
+    except Exception as e:
+        logger.error(f"Excel extraction failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to extract data: {str(e)}")
 
 
 # =============================================================================

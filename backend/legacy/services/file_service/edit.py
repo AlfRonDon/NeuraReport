@@ -22,6 +22,7 @@ from backend.app.services.utils import (
 )
 from backend.legacy.schemas.template_schema import (
     TemplateAiEditPayload,
+    TemplateCreateFromChatPayload,
     TemplateManualEditPayload,
     TemplateChatPayload,
     TemplateChatResponse,
@@ -496,3 +497,221 @@ def apply_chat_template_edit(template_id: str, html: str, request: Request):
         correlation_id=correlation_id,
         diff_summary=diff_summary,
     )
+
+
+def _convert_sample_pdf_to_b64(pdf_bytes: bytes) -> str | None:
+    """Convert raw PDF bytes to a base64-encoded PNG of the first page."""
+    import tempfile
+    import base64
+
+    try:
+        import fitz  # PyMuPDF
+    except ImportError:
+        logger.warning("PyMuPDF not available — cannot render sample PDF")
+        return None
+
+    try:
+        with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
+            tmp.write(pdf_bytes)
+            tmp_path = Path(tmp.name)
+
+        doc = fitz.open(tmp_path)
+        zoom = 300 / 72.0  # 300 DPI
+        mat = fitz.Matrix(zoom, zoom)
+        page = doc[0]
+        pix = page.get_pixmap(matrix=mat, alpha=False)
+        png_bytes = pix.tobytes("png")
+        doc.close()
+        tmp_path.unlink(missing_ok=True)
+
+        return base64.b64encode(png_bytes).decode("utf-8")
+    except Exception:
+        logger.exception("Failed to convert sample PDF to image")
+        return None
+
+
+def _run_template_chat_create_llm(
+    conversation_history: list[dict],
+    current_html: str | None = None,
+    sample_image_b64: str | None = None,
+) -> dict:
+    """
+    Run the conversational template creation LLM.
+
+    Returns same shape as _run_template_chat_llm.
+    """
+    from backend.app.services.prompts.llm_prompts_template_chat import (
+        TEMPLATE_CHAT_CREATE_PROMPT_VERSION,
+        build_template_chat_create_prompt,
+    )
+
+    prompt_payload = build_template_chat_create_prompt(
+        conversation_history, current_html, sample_image_b64=sample_image_b64,
+    )
+    messages = prompt_payload.get("messages") or []
+    if not messages:
+        raise http_error(500, "prompt_build_failed", "Failed to build template chat create prompt.")
+
+    try:
+        client = get_openai_client()
+    except Exception:
+        logger.exception("LLM client is unavailable")
+        raise http_error(503, "llm_unavailable", "LLM client is unavailable")
+
+    try:
+        response = call_chat_completion(
+            client, model=MODEL, messages=messages, description=TEMPLATE_CHAT_CREATE_PROMPT_VERSION
+        )
+    except Exception:
+        logger.exception("Template chat create LLM call failed")
+        raise http_error(502, "llm_call_failed", "Template chat create LLM call failed")
+
+    raw_text = (response.choices[0].message.content or "").strip()
+    parsed_text = strip_code_fences(raw_text)
+
+    try:
+        payload = json.loads(parsed_text)
+    except Exception:
+        return {
+            "message": "I apologize, but I encountered an issue processing your request. Could you please rephrase or try again?",
+            "ready_to_apply": False,
+            "proposed_changes": None,
+            "follow_up_questions": ["Could you describe what kind of report template you need?"],
+            "updated_html": None,
+        }
+
+    if not isinstance(payload, dict):
+        return {
+            "message": "I apologize, but I encountered an issue. Could you please try again?",
+            "ready_to_apply": False,
+            "proposed_changes": None,
+            "follow_up_questions": None,
+            "updated_html": None,
+        }
+
+    return {
+        "message": payload.get("message", ""),
+        "ready_to_apply": bool(payload.get("ready_to_apply", False)),
+        "proposed_changes": payload.get("proposed_changes"),
+        "follow_up_questions": payload.get("follow_up_questions"),
+        "updated_html": payload.get("updated_html"),
+    }
+
+
+def chat_template_create(
+    payload: TemplateChatPayload,
+    request: Request,
+    sample_pdf_bytes: bytes | None = None,
+):
+    """
+    Handle a conversational template creation request (no template_id needed).
+
+    The LLM will guide the user through creating a template from scratch.
+    Optionally accepts a sample PDF (as raw bytes) for visual reference.
+    """
+    correlation_id = getattr(request.state, "correlation_id", None) or get_correlation_id()
+
+    current_html = (payload.html or "").strip() or None
+
+    conversation_history = [
+        {"role": msg.role, "content": msg.content}
+        for msg in payload.messages
+    ]
+
+    # Convert sample PDF to base64 image if provided
+    sample_image_b64 = None
+    if sample_pdf_bytes:
+        sample_image_b64 = _convert_sample_pdf_to_b64(sample_pdf_bytes)
+
+    llm_response = _run_template_chat_create_llm(
+        conversation_history, current_html, sample_image_b64=sample_image_b64,
+    )
+
+    result = {
+        "status": "ok",
+        "message": llm_response["message"],
+        "ready_to_apply": llm_response["ready_to_apply"],
+        "proposed_changes": llm_response.get("proposed_changes"),
+        "follow_up_questions": llm_response.get("follow_up_questions"),
+        "correlation_id": correlation_id,
+    }
+
+    if llm_response["ready_to_apply"] and llm_response.get("updated_html"):
+        result["updated_html"] = llm_response["updated_html"]
+
+    return result
+
+
+def create_template_from_chat(payload: TemplateCreateFromChatPayload, request: Request):
+    """
+    Persist a template created from the chat conversation.
+
+    Creates the template directory, writes the HTML, and registers it in state.
+    """
+    import re
+    import backend.app.services.state_access as state_access
+    from backend.legacy.utils.template_utils import normalize_template_id
+
+    correlation_id = getattr(request.state, "correlation_id", None) or get_correlation_id()
+
+    name = (payload.name or "").strip()
+    if not name:
+        raise http_error(400, "missing_name", "Template name is required.")
+
+    html = payload.html or ""
+    kind = (payload.kind or "pdf").lower()
+    if kind not in ("pdf", "excel"):
+        raise http_error(400, "invalid_kind", "kind must be 'pdf' or 'excel'.")
+
+    # Slugify name to template_id
+    slug = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
+    if not slug:
+        slug = "chat-template"
+    template_id = normalize_template_id(slug)
+
+    # Create directory
+    template_dir_path = template_dir(template_id, kind=kind, must_exist=False, create=True)
+
+    final_path = template_dir_path / "report_final.html"
+    write_text_atomic(final_path, html, encoding="utf-8", step="create_template_from_chat")
+
+    # Also write template_p1.html so the mapping pipeline can find it
+    # (mapping preview/approve expect template_p1.html from the verify step)
+    p1_path = template_dir_path / "template_p1.html"
+    if not p1_path.exists():
+        write_text_atomic(p1_path, html, encoding="utf-8", step="create_template_from_chat_p1")
+
+    # Extract tokens from the HTML for metadata
+    import re as _re
+    _TOKEN_RE = _re.compile(r"\{\{?\s*([A-Za-z0-9_\-\.]+)\s*\}\}?")
+    _BLOCK_RE = _re.compile(r"<!--\s*BEGIN:BLOCK_REPEAT\b", _re.IGNORECASE)
+    tokens_found = sorted(set(_TOKEN_RE.findall(html)))
+
+    # Register in state
+    state_access.upsert_template(
+        template_id,
+        name=name,
+        status="draft",
+        artifacts={},
+        template_type=kind,
+    )
+
+    # Write initial history
+    notes = "Template created from AI chat conversation"
+    summary = update_template_generator_summary_for_edit(template_id, edit_type="chat", notes=notes)
+    history_entry = {
+        "timestamp": summary.get("lastEditAt"),
+        "type": "chat",
+        "notes": notes,
+    }
+    append_template_history_entry(template_dir_path, history_entry)
+
+    return {
+        "status": "ok",
+        "template_id": template_id,
+        "name": name,
+        "kind": kind,
+        "tokens": tokens_found,
+        "has_block_repeat": bool(_BLOCK_RE.search(html)),
+        "correlation_id": correlation_id,
+    }

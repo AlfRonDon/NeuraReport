@@ -64,6 +64,8 @@ import RocketLaunchIcon from '@mui/icons-material/RocketLaunch'
 import ArticleIcon from '@mui/icons-material/Article'
 
 import ZoomableChart from '../components/ZoomableChart'
+import ConnectionSelector from '@/components/common/ConnectionSelector'
+import TemplateSelector from '@/components/common/TemplateSelector'
 import { useToast } from '@/components/ToastProvider'
 import { useInteraction, InteractionType, Reversibility } from '@/components/ux/governance'
 import AiUsageNotice from '@/components/ai/AiUsageNotice'
@@ -687,6 +689,10 @@ export default function EnhancedAnalyzePageContainer() {
   const [isGeneratingCharts, setIsGeneratingCharts] = useState(false)
   const [generatedCharts, setGeneratedCharts] = useState([])
 
+  // Data source selectors
+  const [selectedConnectionId, setSelectedConnectionId] = useState('')
+  const [selectedTemplateId, setSelectedTemplateId] = useState('')
+
   // Export state
   const [exportMenuAnchor, setExportMenuAnchor] = useState(null)
   const [isExporting, setIsExporting] = useState(false)
@@ -759,6 +765,8 @@ export default function EnhancedAnalyzePageContainer() {
           const result = await uploadAndAnalyzeEnhanced({
             file: selectedFile,
             preferences,
+            connectionId: selectedConnectionId || undefined,
+            templateId: selectedTemplateId || undefined,
             signal: abortControllerRef.current?.signal,
             onProgress: (event) => {
               if (event.event === 'stage') {
@@ -1081,6 +1089,23 @@ export default function EnhancedAnalyzePageContainer() {
         {!analysisResult && (
           <Fade in>
             <Box>
+              {/* Data Source Selectors */}
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mb: 3 }}>
+                <ConnectionSelector
+                  value={selectedConnectionId}
+                  onChange={setSelectedConnectionId}
+                  label="Analyze from Connection (Optional)"
+                  size="small"
+                  showStatus
+                />
+                <TemplateSelector
+                  value={selectedTemplateId}
+                  onChange={setSelectedTemplateId}
+                  label="Report Template (Optional)"
+                  size="small"
+                />
+              </Stack>
+
               {/* Dropzone */}
               <GlassCard
                 gradient
@@ -1762,7 +1787,7 @@ export default function EnhancedAnalyzePageContainer() {
                                 </tbody>
                               </Box>
                               {table.rows.length > 10 && (
-                                <Box sx={{ p: 2, textAlign: 'center', bgcolor: alpha(theme.palette.grey[500], 0.05) }}>
+                                <Box sx={{ p: 2, textAlign: 'center', bgcolor: alpha(neutral[500], 0.05) }}>
                                   <Typography variant="caption" color="text.secondary">
                                     Showing 10 of {table.rows.length} rows
                                   </Typography>

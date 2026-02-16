@@ -63,7 +63,7 @@ export default function SuccessCelebration({ trigger, onComplete }) {
         animation: `${pulse} 1.5s ease-out forwards`,
         zIndex: 9999,
         pointerEvents: 'none',
-        boxShadow: '0 0 40px rgba(33, 32, 28, 0.4)',
+        boxShadow: `0 0 40px ${alpha(neutral[900], 0.4)}`,
       }}
     >
       <Box

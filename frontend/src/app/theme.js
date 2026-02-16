@@ -365,7 +365,7 @@ function createAppTheme(mode = 'dark') {
     // ========================================================================
     typography: {
       fontFamily: fontFamilyBody,
-      fontWeightLight: 300,
+      fontWeightLight: 400,
       fontWeightRegular: 400,
       fontWeightMedium: 500,
       fontWeightBold: 600,
@@ -527,7 +527,7 @@ function createAppTheme(mode = 'dark') {
       // Code — Geist Mono
       code: {
         fontFamily: fontFamilyMono,
-        fontSize: '13px',
+        fontSize: '14px',
       },
       // Paragraph Large — Geist Sans, 18/28, 400, 0% (long-form text)
       paragraphLarge: {
@@ -1045,7 +1045,7 @@ function createAppTheme(mode = 'dark') {
       },
       MuiBadge: {
         styleOverrides: {
-          badge: { fontWeight: 600, fontSize: '0.65rem' },
+          badge: { fontWeight: 600, fontSize: '0.625rem' },
         },
       },
 
@@ -1340,7 +1340,7 @@ function createAppTheme(mode = 'dark') {
         styleOverrides: {
           root: {
             borderRadius: 8,
-            fontSize: '0.8125rem',
+            fontSize: '0.875rem',
             alignItems: 'flex-start',
             padding: '12px 16px',
             backgroundColor: isDark ? alpha(palette.scale[100], 0.05) : neutral[50],
@@ -1398,7 +1398,7 @@ function createAppTheme(mode = 'dark') {
             marginRight: 8,
           },
           li: {
-            '& .MuiTypography-root': { fontSize: '0.8125rem' },
+            '& .MuiTypography-root': { fontSize: '0.875rem' },
           },
         },
       },

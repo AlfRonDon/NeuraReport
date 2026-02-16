@@ -14,8 +14,8 @@ import logging
 import re
 from typing import Any
 
-from layer2.pipeline_v7.config import ENTITY_PREFIX_MAP, NUMBER_WORDS
-from layer2.pipeline_v7.models.intent import ResolvedEntity
+from backend.app.services.widget_intelligence.config import ENTITY_PREFIX_MAP, NUMBER_WORDS
+from backend.app.services.widget_intelligence.models.intent import ResolvedEntity
 
 logger = logging.getLogger(__name__)
 

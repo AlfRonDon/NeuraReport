@@ -63,6 +63,7 @@ import MetricWidget, { METRIC_FORMATS } from '../components/MetricWidget'
 import WidgetPalette, { parseWidgetType } from '../components/WidgetPalette'
 import WidgetRenderer, { isScenarioWidget } from '../components/WidgetRenderer'
 import AIWidgetSuggestion from '../components/AIWidgetSuggestion'
+import { DEFAULT_VARIANTS, SCENARIO_VARIANTS, VARIANT_CONFIG, getVariantDefaultSize } from '../constants/widgetVariants'
 import { neutral, palette } from '@/app/theme'
 
 // =============================================================================
@@ -338,10 +339,13 @@ export default function DashboardBuilderPage() {
     })
   }, [deleteDashboard, execute, toast])
 
+  const [pendingVariant, setPendingVariant] = useState(null)
+
   // Add widget from palette
-  const handleAddWidgetFromPalette = useCallback((widgetType, label) => {
+  const handleAddWidgetFromPalette = useCallback((widgetType, label, variant) => {
     setPendingWidgetType(widgetType)
     setWidgetTitle(label || '')
+    setPendingVariant(variant || DEFAULT_VARIANTS[widgetType] || null)
     const { category, subtype } = parseWidgetType(widgetType)
     if (category === 'chart') {
       setWidgetChartType(subtype)
@@ -353,6 +357,7 @@ export default function DashboardBuilderPage() {
     return executeUI('Close add widget', () => {
       setAddWidgetDialogOpen(false)
       setPendingWidgetType(null)
+      setPendingVariant(null)
       setWidgetTitle('')
     })
   }, [executeUI])
@@ -361,7 +366,16 @@ export default function DashboardBuilderPage() {
     if (!currentDashboard || !pendingWidgetType || !widgetTitle) return undefined
 
     const { category, subtype } = parseWidgetType(pendingWidgetType)
-    const sizes = DEFAULT_WIDGET_SIZES[category] || { w: 4, h: 3, minW: 2, minH: 2 }
+    const isScenario = isScenarioWidget(pendingWidgetType)
+
+    // Use variant-aware sizing for scenario widgets, legacy sizing otherwise
+    let sizes
+    if (isScenario && pendingVariant) {
+      const vs = getVariantDefaultSize(pendingVariant, pendingWidgetType)
+      sizes = { w: vs.w, h: vs.h, minW: 2, minH: 2 }
+    } else {
+      sizes = DEFAULT_WIDGET_SIZES[category] || { w: 4, h: 3, minW: 2, minH: 2 }
+    }
 
     return execute({
       type: InteractionType.UPDATE,
@@ -369,19 +383,31 @@ export default function DashboardBuilderPage() {
       reversibility: Reversibility.SYSTEM_MANAGED,
       intent: { source: 'dashboards', dashboardId: currentDashboard.id, widgetType: pendingWidgetType },
       action: async () => {
+        const connectionId = selectedConnectionId || currentDashboard?.connectionId || undefined
+
+        const widgetConfig = isScenario
+          ? {
+              type: pendingWidgetType,
+              scenario: pendingWidgetType,
+              variant: pendingVariant || DEFAULT_VARIANTS[pendingWidgetType],
+              title: widgetTitle,
+              data_source: connectionId,
+            }
+          : {
+              type: category,
+              subtype: subtype,
+              chartType: category === 'chart' ? widgetChartType : undefined,
+              title: widgetTitle,
+              data: category === 'chart' ? SAMPLE_CHART_DATA : undefined,
+              value: category === 'metric' ? 12500 : undefined,
+              previousValue: category === 'metric' ? 10000 : undefined,
+              sparklineData: category === 'metric' ? SAMPLE_SPARKLINE : undefined,
+              format: category === 'metric' ? 'currency' : undefined,
+              data_source: connectionId,
+            }
+
         const widget = await addWidget(currentDashboard.id, {
-          config: {
-            type: category,
-            subtype: subtype,
-            chartType: category === 'chart' ? widgetChartType : undefined,
-            title: widgetTitle,
-            data: category === 'chart' ? SAMPLE_CHART_DATA : undefined,
-            value: category === 'metric' ? 12500 : undefined,
-            previousValue: category === 'metric' ? 10000 : undefined,
-            sparklineData: category === 'metric' ? SAMPLE_SPARKLINE : undefined,
-            format: category === 'metric' ? 'currency' : undefined,
-            data_source: selectedConnectionId || currentDashboard?.connectionId || undefined,
-          },
+          config: widgetConfig,
           x: 0,
           y: widgets.length * 4,
           ...sizes,
@@ -389,6 +415,7 @@ export default function DashboardBuilderPage() {
         if (widget) {
           setAddWidgetDialogOpen(false)
           setPendingWidgetType(null)
+          setPendingVariant(null)
           setWidgetTitle('')
           setHasUnsavedChanges(true)
           toast.show('Widget added', 'success')
@@ -396,7 +423,7 @@ export default function DashboardBuilderPage() {
         return widget
       },
     })
-  }, [addWidget, currentDashboard, execute, pendingWidgetType, toast, widgetChartType, widgetTitle, widgets.length])
+  }, [addWidget, currentDashboard, execute, pendingWidgetType, pendingVariant, toast, widgetChartType, widgetTitle, widgets.length, selectedConnectionId])
 
   const handleDeleteWidget = useCallback((widgetId) => {
     if (!currentDashboard) return undefined
@@ -554,10 +581,11 @@ export default function DashboardBuilderPage() {
       return (
         <WidgetRenderer
           key={widget.id}
-          scenario={widgetType}
+          scenario={widget.config?.scenario || widgetType}
           variant={widget.config?.variant}
           data={widget.config?.data || widget.data}
           config={widget.config}
+          connectionId={widget.config?.data_source || selectedConnectionId || currentDashboard?.connectionId}
           id={widget.id}
           editable
           onDelete={handleDeleteWidget}
@@ -700,7 +728,7 @@ export default function DashboardBuilderPage() {
 
             <AIWidgetSuggestion
               onAddSingleWidget={(scenario, variant) => {
-                handleAddWidgetFromPalette(scenario, scenario)
+                handleAddWidgetFromPalette(scenario, scenario, variant)
               }}
               onAddWidgets={(widgets, layout) => {
                 if (!currentDashboard) return
@@ -947,6 +975,25 @@ export default function DashboardBuilderPage() {
                     {ct.label}
                   </MenuItem>
                 ))}
+              </Select>
+            </FormControl>
+          )}
+          {isScenarioWidget(pendingWidgetType) && SCENARIO_VARIANTS[pendingWidgetType]?.length > 1 && (
+            <FormControl fullWidth sx={{ mt: 2 }}>
+              <InputLabel>Variant</InputLabel>
+              <Select
+                value={pendingVariant || DEFAULT_VARIANTS[pendingWidgetType] || ''}
+                label="Variant"
+                onChange={(e) => setPendingVariant(e.target.value)}
+              >
+                {(SCENARIO_VARIANTS[pendingWidgetType] || []).map((v) => {
+                  const vc = VARIANT_CONFIG[v]
+                  return (
+                    <MenuItem key={v} value={v}>
+                      {vc?.label || v}
+                    </MenuItem>
+                  )
+                })}
               </Select>
             </FormControl>
           )}

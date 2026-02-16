@@ -15,15 +15,16 @@ const createMessage = (role, content, metadata = {}) => ({
   ...metadata,
 })
 
-const createChatSession = (templateId, templateName) => ({
+const DEFAULT_EDIT_WELCOME = "I've reviewed your template. What changes would you like to make? Feel free to describe what you want - whether it's styling updates, layout changes, adding or removing sections, or any other modifications."
+
+const DEFAULT_CREATE_WELCOME = "I'll help you create a report template from scratch. What kind of report do you need? For example: invoice, sales summary, inventory report, financial statement, or something else?"
+
+const createChatSession = (templateId, templateName, welcomeMessage) => ({
   id: nanoid(),
   templateId,
   templateName,
   messages: [
-    createMessage(
-      'assistant',
-      "I've reviewed your template. What changes would you like to make? Feel free to describe what you want - whether it's styling updates, layout changes, adding or removing sections, or any other modifications."
-    ),
+    createMessage('assistant', welcomeMessage || DEFAULT_EDIT_WELCOME),
   ],
   createdAt: Date.now(),
   updatedAt: Date.now(),
@@ -38,12 +39,12 @@ export const useTemplateChatStore = create((set, get) => ({
   sessions: {},
 
   // Get or create a session for a template
-  getOrCreateSession: (templateId, templateName = 'Template') => {
+  getOrCreateSession: (templateId, templateName = 'Template', welcomeMessage = null) => {
     const { sessions } = get()
     if (sessions[templateId]) {
       return sessions[templateId]
     }
-    const session = createChatSession(templateId, templateName)
+    const session = createChatSession(templateId, templateName, welcomeMessage)
     set((state) => ({
       sessions: {
         ...state.sessions,
@@ -234,8 +235,8 @@ export const useTemplateChatStore = create((set, get) => ({
   },
 
   // Clear a session (start fresh conversation)
-  clearSession: (templateId, templateName) => {
-    const session = createChatSession(templateId, templateName)
+  clearSession: (templateId, templateName, welcomeMessage = null) => {
+    const session = createChatSession(templateId, templateName, welcomeMessage)
     set((state) => ({
       sessions: {
         ...state.sessions,
@@ -267,4 +268,5 @@ export const useTemplateChatStore = create((set, get) => ({
   },
 }))
 
+export { DEFAULT_EDIT_WELCOME, DEFAULT_CREATE_WELCOME }
 export default useTemplateChatStore

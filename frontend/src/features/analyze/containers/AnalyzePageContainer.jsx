@@ -29,7 +29,9 @@ import DocumentUpload from '../components/DocumentUpload'
 import AnalysisResults from '../components/AnalysisResults'
 import { uploadAndAnalyze, suggestAnalysisCharts, normalizeChartSpec } from '../services/analyzeApi'
 import Surface from '@/components/layout/Surface'
-import { neutral, palette } from '@/app/theme'
+import ConnectionSelector from '@/components/common/ConnectionSelector'
+import TemplateSelector from '@/components/common/TemplateSelector'
+import { neutral, palette, secondary } from '@/app/theme'
 import { useToast } from '@/components/ToastProvider'
 import { useInteraction, InteractionType, Reversibility, useNavigateInteraction } from '@/components/ux/governance'
 
@@ -51,6 +53,8 @@ export default function AnalyzePageContainer() {
   const [isLoadingCharts, setIsLoadingCharts] = useState(false)
   const [runInBackground, setRunInBackground] = useState(false)
   const [queuedJobId, setQueuedJobId] = useState(null)
+  const [selectedConnectionId, setSelectedConnectionId] = useState('')
+  const [selectedTemplateId, setSelectedTemplateId] = useState('')
   const abortControllerRef = useRef(null)
 
   // Abort in-flight analysis on unmount
@@ -110,6 +114,8 @@ export default function AnalyzePageContainer() {
             const queued = await uploadAndAnalyze({
               file: selectedFile,
               background: true,
+              connectionId: selectedConnectionId || undefined,
+              templateId: selectedTemplateId || undefined,
             })
             const jobId = queued?.job_id || queued?.jobId || null
             setQueuedJobId(jobId)
@@ -134,6 +140,8 @@ export default function AnalyzePageContainer() {
         try {
           const result = await uploadAndAnalyze({
             file: selectedFile,
+            connectionId: selectedConnectionId || undefined,
+            templateId: selectedTemplateId || undefined,
             signal: abortControllerRef.current?.signal,
             onProgress: (event) => {
               if (event.event === 'stage') {
@@ -359,6 +367,21 @@ export default function AnalyzePageContainer() {
         {/* Step 0: Upload */}
         {activeStep === 0 && (
           <Box>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mb: 2 }}>
+              <ConnectionSelector
+                value={selectedConnectionId}
+                onChange={setSelectedConnectionId}
+                label="Analyze from Connection (Optional)"
+                size="small"
+                showStatus
+              />
+              <TemplateSelector
+                value={selectedTemplateId}
+                onChange={setSelectedTemplateId}
+                label="Report Template (Optional)"
+                size="small"
+              />
+            </Stack>
             <DocumentUpload
               onFileSelect={handleFileSelect}
               isUploading={isAnalyzing}
@@ -393,9 +416,9 @@ export default function AnalyzePageContainer() {
                       fontSize: '1rem',
                       textTransform: 'none',
                       borderRadius: 1,  // Figma spec: 8px
-                      boxShadow: '0 4px 14px rgba(79, 70, 229, 0.25)',
+                      boxShadow: `0 4px 14px ${alpha(secondary.violet[500], 0.25)}`,
                       '&:hover': {
-                        boxShadow: '0 6px 20px rgba(79, 70, 229, 0.35)',
+                        boxShadow: `0 6px 20px ${alpha(secondary.violet[500], 0.35)}`,
                       },
                     }}
                   >

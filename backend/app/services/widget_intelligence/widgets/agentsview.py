@@ -28,12 +28,3 @@ class AgentsViewWidget(WidgetPlugin):
             "agents": raw.get("agents", []),
             "tasks": raw.get("tasks", []),
         }
-
-    def get_demo_data(self) -> dict:
-        return {
-            "agents": [
-                {"id": "agent-1", "name": "Data Collector", "status": "active", "lastAction": "Fetched 120 records"},
-                {"id": "agent-2", "name": "Anomaly Detector", "status": "idle", "lastAction": "No anomalies found"},
-            ],
-            "tasks": [],
-        }

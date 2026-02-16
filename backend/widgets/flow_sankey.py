@@ -1,6 +1,6 @@
 """Flow Sankey widget plugin — energy/material flow diagram."""
 
-from layer2.pipeline_v7.widgets.base import WidgetPlugin, WidgetMeta
+from backend.app.services.widget_intelligence.widgets.base import WidgetPlugin, WidgetMeta
 
 
 class FlowSankeyWidget(WidgetPlugin):

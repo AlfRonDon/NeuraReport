@@ -221,7 +221,7 @@ def _build_variant_nodes() -> dict[str, list]:
     if _variant_nodes_cache:
         return _variant_nodes_cache
 
-    from layer2.pipeline_v7.resolvers.variant_scorer import VARIANT_PROFILES
+    from backend.resolvers.variant_scorer import VARIANT_PROFILES
 
     nodes: dict[str, list] = {}
 
@@ -352,7 +352,7 @@ def filter_variants(scenario: str, shape) -> list[str]:
 
     # Ensure at least one variant survives (scenario default)
     if not result:
-        from layer2.pipeline_v7.resolvers.variant_scorer import VARIANT_PROFILES
+        from backend.resolvers.variant_scorer import VARIANT_PROFILES
         profiles = VARIANT_PROFILES.get(scenario, {})
         for v, p in profiles.items():
             if p.is_default:

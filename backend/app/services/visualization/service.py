@@ -86,6 +86,7 @@ class DiagramSpec(BaseModel):
     layout: str = "auto"  # auto, horizontal, vertical, radial
     theme: str = "default"
     metadata: Dict[str, Any] = Field(default_factory=dict)
+    mermaid_code: Optional[str] = None
 
 
 class ChartSpec(BaseModel):
@@ -159,6 +160,7 @@ class VisualizationService:
             layout="vertical",
         )
 
+        self._attach_mermaid(spec)
         self._diagram_cache[diagram_id] = spec
         return spec
 
@@ -201,6 +203,7 @@ class VisualizationService:
             layout="radial",
         )
 
+        self._attach_mermaid(spec)
         self._diagram_cache[diagram_id] = spec
         return spec
 
@@ -253,6 +256,7 @@ class VisualizationService:
             layout="vertical",
         )
 
+        self._attach_mermaid(spec)
         self._diagram_cache[diagram_id] = spec
         return spec
 
@@ -307,6 +311,7 @@ class VisualizationService:
             layout="horizontal",
         )
 
+        self._attach_mermaid(spec)
         self._diagram_cache[diagram_id] = spec
         return spec
 
@@ -357,6 +362,7 @@ class VisualizationService:
             layout="horizontal",
         )
 
+        self._attach_mermaid(spec)
         self._diagram_cache[diagram_id] = spec
         return spec
 
@@ -402,6 +408,7 @@ class VisualizationService:
             layout="auto",
         )
 
+        self._attach_mermaid(spec)
         self._diagram_cache[diagram_id] = spec
         return spec
 
@@ -461,6 +468,7 @@ class VisualizationService:
             layout="horizontal",
         )
 
+        self._attach_mermaid(spec)
         self._diagram_cache[diagram_id] = spec
         return spec
 
@@ -507,6 +515,7 @@ class VisualizationService:
             layout="vertical",
         )
 
+        self._attach_mermaid(spec)
         self._diagram_cache[diagram_id] = spec
         return spec
 
@@ -551,6 +560,7 @@ class VisualizationService:
             layout="cloud",
         )
 
+        self._attach_mermaid(spec)
         self._diagram_cache[diagram_id] = spec
         return spec
 
@@ -692,16 +702,20 @@ class VisualizationService:
         # Simple parsing - split by numbered steps or bullet points
         import re
 
+        # Try structured formats first (numbered, bullet), fall back to newline split
         steps = re.split(r"(?:\d+\.\s*|\n-\s*|\n\*\s*)", description)
         steps = [s.strip() for s in steps if s.strip()]
+        # If only one step remains but has newlines, split on newlines
+        if len(steps) <= 1 and "\n" in description:
+            steps = [s.strip() for s in description.split("\n") if s.strip()]
 
         nodes = []
         edges = []
 
-        # Add start node
-        nodes.append(DiagramNode(id="start", label="Start", type="terminal"))
+        # Add start node (avoid 'end' — reserved in Mermaid)
+        nodes.append(DiagramNode(id="node_start", label="Start", type="terminal"))
 
-        prev_id = "start"
+        prev_id = "node_start"
         for i, step in enumerate(steps):
             node_id = f"step_{i}"
 
@@ -720,9 +734,9 @@ class VisualizationService:
             edges.append(DiagramEdge(source=prev_id, target=node_id))
             prev_id = node_id
 
-        # Add end node
-        nodes.append(DiagramNode(id="end", label="End", type="terminal"))
-        edges.append(DiagramEdge(source=prev_id, target="end"))
+        # Add end node (avoid 'end' — reserved in Mermaid)
+        nodes.append(DiagramNode(id="node_end", label="End", type="terminal"))
+        edges.append(DiagramEdge(source=prev_id, target="node_end"))
 
         return nodes, edges
 
@@ -797,24 +811,58 @@ class VisualizationService:
                     return False
         return True
 
+    def _attach_mermaid(self, spec: DiagramSpec) -> DiagramSpec:
+        """Generate and attach mermaid_code to a DiagramSpec."""
+        try:
+            spec.mermaid_code = self._to_mermaid(spec)
+        except Exception as e:
+            logger.warning(f"Mermaid generation failed for {spec.type}: {e}")
+        return spec
+
+    def _to_mermaid(self, diagram: DiagramSpec) -> str:
+        """Convert any diagram to Mermaid syntax."""
+        converters = {
+            DiagramType.FLOWCHART: self._to_mermaid_flowchart,
+            DiagramType.SEQUENCE: self._to_mermaid_sequence,
+            DiagramType.GANTT: self._to_mermaid_gantt,
+            DiagramType.MINDMAP: self._to_mermaid_mindmap,
+            DiagramType.ORG_CHART: self._to_mermaid_flowchart,  # org charts render well as flowcharts
+            DiagramType.TIMELINE: self._to_mermaid_timeline,
+            DiagramType.NETWORK: self._to_mermaid_flowchart,  # networks render as flowcharts
+            DiagramType.KANBAN: self._to_mermaid_kanban,
+            DiagramType.WORDCLOUD: self._to_mermaid_wordcloud,
+        }
+        converter = converters.get(diagram.type, self._to_mermaid_flowchart)
+        return converter(diagram)
+
+    @staticmethod
+    def _safe_id(raw_id: str) -> str:
+        """Make an ID safe for Mermaid (alphanumeric + underscores only)."""
+        import re
+        return re.sub(r"[^a-zA-Z0-9_]", "_", raw_id)
+
     def _to_mermaid_flowchart(self, diagram: DiagramSpec) -> str:
         """Convert diagram to Mermaid flowchart syntax."""
         lines = ["flowchart TD"]
 
         for node in diagram.nodes:
-            shape_start, shape_end = "(", ")"
+            nid = self._safe_id(node.id)
+            safe = node.label.replace('"', "'")
             if node.type == "terminal":
-                shape_start, shape_end = "([", "])"
+                lines.append(f'    {nid}(["{safe}"])')
             elif node.type == "decision":
-                shape_start, shape_end = "{", "}"
-
-            lines.append(f"    {node.id}{shape_start}{node.label}{shape_end}")
+                lines.append(f'    {nid}{{"{safe}"}}')
+            else:
+                lines.append(f'    {nid}["{safe}"]')
 
         for edge in diagram.edges:
-            arrow = "-->"
+            src = self._safe_id(edge.source)
+            tgt = self._safe_id(edge.target)
             if edge.label:
-                arrow = f"-->|{edge.label}|"
-            lines.append(f"    {edge.source} {arrow} {edge.target}")
+                safe_label = edge.label.replace('"', "'")
+                lines.append(f'    {src} -->|"{safe_label}"| {tgt}')
+            else:
+                lines.append(f"    {src} --> {tgt}")
 
         return "\n".join(lines)
 
@@ -823,10 +871,13 @@ class VisualizationService:
         lines = ["sequenceDiagram"]
 
         for node in diagram.nodes:
-            lines.append(f"    participant {node.id} as {node.label}")
+            nid = self._safe_id(node.id)
+            lines.append(f"    participant {nid} as {node.label}")
 
         for edge in diagram.edges:
-            lines.append(f"    {edge.source}->>{edge.target}: {edge.label or ''}")
+            src = self._safe_id(edge.source)
+            tgt = self._safe_id(edge.target)
+            lines.append(f"    {src}->>{tgt}: {edge.label or ''}")
 
         return "\n".join(lines)
 
@@ -844,6 +895,77 @@ class VisualizationService:
             end = meta.get("end", "")
             lines.append(f"    {node.label} :{node.id}, {start}, {end}")
 
+        return "\n".join(lines)
+
+    def _to_mermaid_mindmap(self, diagram: DiagramSpec) -> str:
+        """Convert to Mermaid mindmap syntax."""
+        lines = ["mindmap"]
+        if diagram.nodes:
+            central = diagram.nodes[0]
+            lines.append(f"  root(({central.label}))")
+
+        # Build parent-child map from edges
+        children: Dict[str, List[str]] = {}
+        for edge in diagram.edges:
+            children.setdefault(edge.source, []).append(edge.target)
+
+        node_map = {n.id: n for n in diagram.nodes}
+
+        def render(parent_id: str, depth: int):
+            for child_id in children.get(parent_id, []):
+                child = node_map.get(child_id)
+                if child:
+                    indent = "  " * (depth + 1)
+                    lines.append(f"{indent}{child.label}")
+                    render(child_id, depth + 1)
+
+        if diagram.nodes:
+            render(diagram.nodes[0].id, 1)
+
+        return "\n".join(lines)
+
+    def _to_mermaid_timeline(self, diagram: DiagramSpec) -> str:
+        """Convert to Mermaid timeline syntax."""
+        lines = ["timeline", f"    title {diagram.title}"]
+        for node in diagram.nodes:
+            date = node.metadata.get("date", "")
+            lines.append(f"    {date} : {node.label}")
+        return "\n".join(lines)
+
+    def _to_mermaid_kanban(self, diagram: DiagramSpec) -> str:
+        """Convert kanban to Mermaid flowchart with subgraphs."""
+        lines = ["flowchart LR"]
+
+        # Group items by column
+        columns: Dict[str, List[DiagramNode]] = {}
+        col_nodes = []
+        for node in diagram.nodes:
+            if node.type == "column":
+                col_nodes.append(node)
+                columns[node.id] = []
+            elif node.parent:
+                columns.setdefault(node.parent, []).append(node)
+
+        for col in col_nodes:
+            safe_label = col.label.replace('"', "'")
+            lines.append(f'    subgraph {col.id}["{safe_label}"]')
+            for item in columns.get(col.id, []):
+                safe = item.label.replace('"', "'")
+                lines.append(f'        {item.id}["{safe}"]')
+            lines.append("    end")
+
+        # Add arrows between columns
+        for i in range(len(col_nodes) - 1):
+            lines.append(f"    {col_nodes[i].id} ~~~ {col_nodes[i+1].id}")
+
+        return "\n".join(lines)
+
+    def _to_mermaid_wordcloud(self, diagram: DiagramSpec) -> str:
+        """Convert wordcloud to a simple Mermaid mindmap (closest visual)."""
+        lines = ["mindmap", f"  root(({diagram.title}))"]
+        for node in diagram.nodes[:20]:
+            freq = node.metadata.get("frequency", 1)
+            lines.append(f"    {node.label}")
         return "\n".join(lines)
 
 

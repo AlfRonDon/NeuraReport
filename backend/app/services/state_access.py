@@ -88,6 +88,14 @@ def record_schedule_run(*args: Any, **kwargs: Any) -> None:
     _call("record_schedule_run", *args, **kwargs)
 
 
+def list_report_runs(*args: Any, **kwargs: Any) -> list[dict]:
+    return _call("list_report_runs", *args, **kwargs)
+
+
+def get_report_run(run_id: str) -> dict | None:
+    return _call("get_report_run", run_id)
+
+
 def get_activity_log(*args: Any, **kwargs: Any) -> list[dict]:
     return _call("get_activity_log", *args, **kwargs)
 
@@ -238,6 +246,8 @@ __all__ = [
     "record_job_step",
     "record_job_completion",
     "record_schedule_run",
+    "list_report_runs",
+    "get_report_run",
     "get_activity_log",
     "log_activity",
     "clear_activity_log",

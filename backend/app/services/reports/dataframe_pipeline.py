@@ -1,10 +1,9 @@
-"""DataFrame pipeline — replaces SQL-based ``_run_generator_entrypoints()``.
+"""DataFrame pipeline — the primary report data execution engine.
 
-When ``NEURA_USE_DATAFRAME_PIPELINE=true``, this module is used instead of
-the DuckDB-based SQL execution path.  All data fetching, filtering, reshaping,
-computed columns and totals happen via pandas DataFrame operations.
+All data fetching, filtering, reshaping, computed columns and totals
+happen via pandas DataFrame operations (no SQL).
 
-The public interface mirrors the dict returned by the SQL path::
+The public interface returns::
 
     {"header": [dict], "rows": [dict, ...], "totals": [dict]}
 

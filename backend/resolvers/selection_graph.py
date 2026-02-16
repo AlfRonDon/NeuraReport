@@ -95,7 +95,7 @@ class SelectionState(TypedDict, total=False):
 
 def node_profile_data(state: SelectionState) -> dict:
     """Node 1: Extract DataShapeProfile from catalog."""
-    from layer2.pipeline_v7.resolvers.data_shape import extract_data_shape, DataShapeProfile
+    from backend.resolvers.data_shape import extract_data_shape, DataShapeProfile
 
     catalog = state.get("catalog")
     profile = state.get("data_profile")
@@ -108,8 +108,8 @@ def node_profile_data(state: SelectionState) -> dict:
 
 def node_hard_filter(state: SelectionState) -> dict:
     """Node 2: Hard elimination using LlamaIndex MetadataFilters."""
-    from layer2.pipeline_v7.resolvers.variant_metadata import filter_variants
-    from layer2.pipeline_v7.resolvers.variant_scorer import VARIANT_PROFILES
+    from backend.resolvers.variant_metadata import filter_variants
+    from backend.resolvers.variant_scorer import VARIANT_PROFILES
 
     scenario = state["scenario"]
     shape = state.get("_data_shape")
@@ -170,8 +170,8 @@ def node_score_shape(state: SelectionState) -> dict:
     Uses DataShapeProfile properties to compute how well each
     variant matches the actual data characteristics.
     """
-    from layer2.pipeline_v7.resolvers.variant_metadata import score_shape_fitness
-    from layer2.pipeline_v7.resolvers.variant_scorer import (
+    from backend.resolvers.variant_metadata import score_shape_fitness
+    from backend.resolvers.variant_scorer import (
         VARIANT_PROFILES, _score_data_shape,
     )
 
@@ -205,7 +205,7 @@ def node_score_shape(state: SelectionState) -> dict:
 
 def node_score_intent(state: SelectionState) -> dict:
     """Node 4: Score intent affinity + query type affinity."""
-    from layer2.pipeline_v7.resolvers.variant_metadata import (
+    from backend.resolvers.variant_metadata import (
         get_variant_intent_score, get_variant_qtype_score,
     )
 
@@ -497,7 +497,7 @@ def node_apply_penalties(state: SelectionState) -> dict:
 
 def node_rank(state: SelectionState) -> dict:
     """Node 6: Compute composite scores and determine confidence."""
-    from layer2.pipeline_v7.resolvers.variant_metadata import is_variant_default
+    from backend.resolvers.variant_metadata import is_variant_default
 
     survivors = state.get("survivors", [])
     shape_scores = state.get("shape_scores", {})
@@ -557,7 +557,7 @@ def node_semantic_tiebreak(state: SelectionState) -> dict:
     and variant descriptions, then blends that score into the composite ranking.
     This runs only when the rank node marks the result as ambiguous.
     """
-    from layer2.pipeline_v7.resolvers.semantic_embedder import score_variants_semantic
+    from backend.resolvers.semantic_embedder import score_variants_semantic
 
     scenario = state.get("scenario", "")
     survivors = state.get("survivors", [])
@@ -614,11 +614,11 @@ def node_semantic_tiebreak(state: SelectionState) -> dict:
 
 def node_dspy_reason(state: SelectionState) -> dict:
     """Node 7: DSPy ChainOfThought reasoning for ambiguous cases."""
-    from layer2.pipeline_v7.resolvers.dspy_reasoner import (
+    from backend.resolvers.dspy_reasoner import (
         reason_variant_selection, is_dspy_available,
     )
-    from layer2.pipeline_v7.resolvers.data_shape import shape_to_text
-    from layer2.pipeline_v7.resolvers.variant_metadata import VARIANT_DESCRIPTIONS
+    from backend.resolvers.data_shape import shape_to_text
+    from backend.resolvers.variant_metadata import VARIANT_DESCRIPTIONS
 
     survivors = state.get("survivors", [])
     composite = state.get("composite_scores", {})
@@ -659,7 +659,7 @@ def node_autogen_validate(state: SelectionState) -> dict:
     Runs a deterministic multi-agent-style validator over the current composite
     scores. This provides a robust fallback when DSPy is unavailable or fails.
     """
-    from layer2.pipeline_v7.resolvers.autogen_validator import validate_selection
+    from backend.resolvers.autogen_validator import validate_selection
 
     composite = state.get("composite_scores", {})
     survivors = set(state.get("survivors", []) or [])
@@ -877,7 +877,7 @@ def run_selection_graph(
         (variant_name, confidence_score, method) tuple.
         method is one of: "filter_only", "graph", "graph+dspy"
     """
-    from layer2.pipeline_v7.resolvers.variant_scorer import VARIANT_PROFILES
+    from backend.resolvers.variant_scorer import VARIANT_PROFILES
 
     profiles = VARIANT_PROFILES.get(scenario, {})
     if not profiles:

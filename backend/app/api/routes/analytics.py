@@ -256,50 +256,96 @@ async def get_report_history(
     status: Optional[str] = Query(None),
     template_id: Optional[str] = Query(None),
 ) -> Dict[str, Any]:
-    """Get report generation history with filtering."""
+    """Get report generation history with filtering.
 
+    Merges completed report runs (which have artifacts) with in-progress
+    jobs so the timeline shows both finished and pending work.
+    """
+
+    # Report runs have artifacts, templateName, timestamps
+    runs = state_access.list_report_runs(
+        template_id=template_id or None,
+        limit=0,  # fetch all, we paginate below
+    )
+
+    # Also include in-progress / queued jobs that haven't finished yet
     jobs = state_access.list_jobs()
+    completed_job_ids: set[str] = set()
+    for run in runs:
+        # correlation between run id and job id varies; track run ids
+        completed_job_ids.add(run.get("id", ""))
 
-    # Filter
-    filtered = jobs
-    if status:
-        status_norm = _normalize_job_status(status)
-        filtered = [j for j in filtered if _normalize_job_status(j.get("status")) == status_norm]
-    if template_id:
-        filtered = [j for j in filtered if j.get("template_id") == template_id]
-
-    # Sort by created_at descending
-    filtered.sort(key=lambda j: j.get("created_at") or "", reverse=True)
-
-    total = len(filtered)
-
-    # Paginate
-    paginated = filtered[offset:offset + limit]
-
-    # Enhance with template info
     templates = {t.get("id"): t for t in state_access.list_templates()}
 
-    history = []
-    for job in paginated:
+    history: list[dict] = []
+
+    # Add completed report runs
+    for run in runs:
+        entry = {
+            "id": run.get("id"),
+            "templateId": run.get("templateId"),
+            "templateName": run.get("templateName") or "Unknown",
+            "templateKind": run.get("templateKind") or "pdf",
+            "connectionId": run.get("connectionId"),
+            "connectionName": run.get("connectionName"),
+            "status": _normalize_job_status(run.get("status")),
+            "createdAt": run.get("createdAt"),
+            "completedAt": run.get("createdAt"),  # run recorded at completion
+            "artifacts": run.get("artifacts"),
+            "startDate": run.get("startDate"),
+            "endDate": run.get("endDate"),
+            "keyValues": run.get("keyValues"),
+            "scheduleId": run.get("scheduleId"),
+            "scheduleName": run.get("scheduleName"),
+            "error": None,
+            "source": "run",
+        }
+        history.append(entry)
+
+    # Add jobs that don't have a corresponding report run entry
+    for job in jobs:
+        jid = job.get("id", "")
+        if jid in completed_job_ids:
+            continue
+        job_status = _normalize_job_status(job.get("status"))
         tid = job.get("template_id")
         template = templates.get(tid, {})
-
-        history.append({
-            "id": job.get("id"),
+        entry = {
+            "id": jid,
             "templateId": tid,
             "templateName": job.get("template_name") or template.get("name") or (tid[:12] if tid else "Unknown"),
             "templateKind": job.get("template_kind") or template.get("kind") or "pdf",
             "connectionId": job.get("connection_id"),
-            "status": _normalize_job_status(job.get("status")),
+            "connectionName": None,
+            "status": job_status,
             "createdAt": job.get("created_at"),
-            "completedAt": job.get("completed_at"),
-            "artifacts": job.get("artifacts"),
+            "completedAt": job.get("finished_at"),
+            "artifacts": None,
+            "startDate": None,
+            "endDate": None,
+            "keyValues": None,
+            "scheduleId": job.get("schedule_id"),
+            "scheduleName": None,
             "error": job.get("error"),
-            "meta": job.get("meta"),
-        })
+            "source": "job",
+        }
+        history.append(entry)
+
+    # Filter
+    if status:
+        status_norm = _normalize_job_status(status)
+        history = [h for h in history if h.get("status") == status_norm]
+    if template_id:
+        history = [h for h in history if h.get("templateId") == template_id]
+
+    # Sort by createdAt descending
+    history.sort(key=lambda h: h.get("createdAt") or "", reverse=True)
+
+    total = len(history)
+    paginated = history[offset:offset + limit]
 
     return {
-        "history": history,
+        "history": paginated,
         "total": total,
         "limit": limit,
         "offset": offset,

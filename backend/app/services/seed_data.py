@@ -145,7 +145,18 @@ async def seed_brand_kits():
     from backend.app.services.design.service import design_service
     from backend.app.schemas.design.brand_kit import BrandKitCreate, ThemeCreate
 
-    # Check if already seeded
+    # Check state store directly first (more reliable than in-memory service)
+    try:
+        from backend.app.repositories.state.store import state_store
+        with state_store.transaction() as state:
+            existing = state.get("brand_kits", {})
+            if existing and len(existing) > 0:
+                logger.info("Brand kits already exist in state store (%d), skipping seed", len(existing))
+                return
+    except Exception:
+        pass
+
+    # Fallback: also check via service
     existing_kits = await design_service.list_brand_kits()
     if len(existing_kits) > 0:
         logger.info("Brand kits already exist, skipping seed")

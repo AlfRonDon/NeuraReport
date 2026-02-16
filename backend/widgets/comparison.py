@@ -1,6 +1,6 @@
 """Comparison widget plugin — side-by-side value comparison."""
 
-from layer2.pipeline_v7.widgets.base import WidgetPlugin, WidgetMeta
+from backend.app.services.widget_intelligence.widgets.base import WidgetPlugin, WidgetMeta
 
 
 class ComparisonWidget(WidgetPlugin):

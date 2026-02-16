@@ -1,6 +1,6 @@
 """Trend multi-line widget plugin — multiple time series on one chart."""
 
-from layer2.pipeline_v7.widgets.base import WidgetPlugin, WidgetMeta
+from backend.app.services.widget_intelligence.widgets.base import WidgetPlugin, WidgetMeta
 
 
 class TrendMultiLineWidget(WidgetPlugin):

@@ -1,6 +1,6 @@
 """Narrative widget plugin — text-based insight summary."""
 
-from layer2.pipeline_v7.widgets.base import WidgetPlugin, WidgetMeta
+from backend.app.services.widget_intelligence.widgets.base import WidgetPlugin, WidgetMeta
 
 
 class NarrativeWidget(WidgetPlugin):

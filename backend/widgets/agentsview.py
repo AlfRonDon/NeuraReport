@@ -1,6 +1,6 @@
 """Agents view widget plugin — AI agent status and activity monitor."""
 
-from layer2.pipeline_v7.widgets.base import WidgetPlugin, WidgetMeta
+from backend.app.services.widget_intelligence.widgets.base import WidgetPlugin, WidgetMeta
 
 
 class AgentsViewWidget(WidgetPlugin):

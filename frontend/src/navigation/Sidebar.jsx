@@ -49,6 +49,7 @@ import SparklesIcon from '@mui/icons-material/AutoAwesome'
 import EditNoteIcon from '@mui/icons-material/EditNote'
 import TableChartIcon from '@mui/icons-material/TableChart'
 import DashboardCustomizeIcon from '@mui/icons-material/DashboardCustomize'
+import WidgetsIcon from '@mui/icons-material/Widgets'
 import CableIcon from '@mui/icons-material/Cable'
 import AccountTreeIcon from '@mui/icons-material/AccountTree'
 import SmartToyIcon from '@mui/icons-material/SmartToy'
@@ -65,6 +66,7 @@ import NotificationCenter from './NotificationCenter'
 import {
   neutral,
   primary,
+  secondary,
   figmaSpacing,
   fontFamilyHeading,
   fontFamilyUI,
@@ -110,8 +112,8 @@ const pulse = keyframes`
 `
 
 const glow = keyframes`
-  0%, 100% { box-shadow: 0 0 10px rgba(99, 102, 241, 0.3); }
-  50% { box-shadow: 0 0 20px rgba(99, 102, 241, 0.5); }
+  0%, 100% { box-shadow: 0 0 10px ${alpha(secondary.violet[500], 0.3)}; }
+  50% { box-shadow: 0 0 20px ${alpha(secondary.violet[500], 0.5)}; }
 `
 
 // =============================================================================
@@ -169,6 +171,7 @@ const NAV_ITEMS = [
       { key: 'documents', label: 'Documents', icon: EditNoteIcon, path: '/documents', description: 'Write with AI help' },
       { key: 'spreadsheets', label: 'Spreadsheets', icon: TableChartIcon, path: '/spreadsheets', description: 'Data & formulas' },
       { key: 'dashboard-builder', label: 'Dashboards', icon: DashboardCustomizeIcon, path: '/dashboard-builder', description: 'Visual analytics' },
+      { key: 'widgets', label: 'Widgets', icon: WidgetsIcon, path: '/widgets', description: 'AI-powered widget catalog' },
       { key: 'visualization', label: 'Diagrams', icon: BubbleChartIcon, path: '/visualization', description: 'Flowcharts, mindmaps & more' },
       { key: 'workflows', label: 'Workflows', icon: AccountTreeIcon, path: '/workflows', description: 'Automation builder' },
     ],

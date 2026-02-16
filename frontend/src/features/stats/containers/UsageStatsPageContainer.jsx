@@ -681,11 +681,11 @@ export default function UsageStatsPage() {
                   <CartesianGrid strokeDasharray="3 3" stroke={alpha(theme.palette.divider, 0.3)} />
                   <XAxis
                     dataKey="label"
-                    tick={{ fill: theme.palette.text.secondary, fontSize: 11 }}
+                    tick={{ fill: theme.palette.text.secondary, fontSize: 12 }}
                     axisLine={{ stroke: alpha(theme.palette.divider, 0.3) }}
                   />
                   <YAxis
-                    tick={{ fill: theme.palette.text.secondary, fontSize: 11 }}
+                    tick={{ fill: theme.palette.text.secondary, fontSize: 12 }}
                     axisLine={{ stroke: alpha(theme.palette.divider, 0.3) }}
                   />
                   <Tooltip content={<CustomTooltip />} />
@@ -836,7 +836,7 @@ export default function UsageStatsPage() {
                     tickFormatter={(v) => v.slice(5)}
                   />
                   <YAxis
-                    tick={{ fill: theme.palette.text.secondary, fontSize: 11 }}
+                    tick={{ fill: theme.palette.text.secondary, fontSize: 12 }}
                     axisLine={{ stroke: alpha(theme.palette.divider, 0.3) }}
                   />
                   <Tooltip content={<CustomTooltip />} />
@@ -970,13 +970,13 @@ export default function UsageStatsPage() {
                     <CartesianGrid strokeDasharray="3 3" stroke={alpha(theme.palette.divider, 0.3)} />
                     <XAxis
                       type="number"
-                      tick={{ fill: theme.palette.text.secondary, fontSize: 11 }}
+                      tick={{ fill: theme.palette.text.secondary, fontSize: 12 }}
                       axisLine={{ stroke: alpha(theme.palette.divider, 0.3) }}
                     />
                     <YAxis
                       type="category"
                       dataKey="name"
-                      tick={{ fill: theme.palette.text.secondary, fontSize: 11 }}
+                      tick={{ fill: theme.palette.text.secondary, fontSize: 12 }}
                       axisLine={{ stroke: alpha(theme.palette.divider, 0.3) }}
                       width={120}
                     />

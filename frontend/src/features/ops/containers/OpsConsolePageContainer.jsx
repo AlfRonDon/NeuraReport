@@ -17,6 +17,8 @@ import Surface from '@/components/layout/Surface.jsx'
 import SectionHeader from '@/components/layout/SectionHeader.jsx'
 import { useToast } from '@/components/ToastProvider.jsx'
 import { useInteraction, InteractionType, Reversibility } from '@/components/ux/governance'
+import ConnectionSelector from '@/components/common/ConnectionSelector'
+import TemplateSelector from '@/components/common/TemplateSelector'
 import api, { API_BASE } from '@/api/client.js'
 
 const parseJsonInput = (value, toast, label) => {
@@ -406,19 +408,21 @@ export default function OpsConsolePage() {
             <Grid item xs={12} md={6}>
               <Stack spacing={1.5}>
                 <Typography variant="subtitle2">Run Report Job</Typography>
-                <TextField
-                  fullWidth
-                  label="Template ID"
+                <TemplateSelector
                   value={jobTemplateId}
-                  onChange={(event) => setJobTemplateId(event.target.value)}
+                  onChange={setJobTemplateId}
+                  label="Template"
                   size="small"
-                />
-                <TextField
                   fullWidth
-                  label="Connection ID (optional)"
+                  showAll
+                />
+                <ConnectionSelector
                   value={jobConnectionId}
-                  onChange={(event) => setJobConnectionId(event.target.value)}
+                  onChange={setJobConnectionId}
+                  label="Connection (optional)"
                   size="small"
+                  fullWidth
+                  showStatus
                 />
                 <Grid container spacing={1}>
                   <Grid item xs={12} sm={6}>

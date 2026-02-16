@@ -46,6 +46,7 @@ import ConfirmModal from '@/components/Modal/ConfirmModal';
 import AiUsageNotice from '@/components/ai/AiUsageNotice';
 import ConnectionSelector from '@/components/common/ConnectionSelector';
 import { neutral, palette } from '@/app/theme';
+import { getReportHistory } from '@/api/client';
 
 const TONE_OPTIONS = [
   { value: 'formal', label: 'Formal', description: 'Professional, business-appropriate tone' },
@@ -91,6 +92,8 @@ export default function SummaryPage() {
   const [queueing, setQueueing] = useState(false);
   const [queuedJobId, setQueuedJobId] = useState(null);
   const [clearHistoryConfirmOpen, setClearHistoryConfirmOpen] = useState(false);
+  const [reportRuns, setReportRuns] = useState([]);
+  const [loadingReports, setLoadingReports] = useState(false);
   const toast = useToast();
   const navigate = useNavigateInteraction();
   const { execute } = useInteraction();
@@ -116,6 +119,26 @@ export default function SummaryPage() {
   useEffect(() => {
     return () => reset();
   }, [reset]);
+
+  // Fetch recent report runs for "Load from Report" feature
+  useEffect(() => {
+    let cancelled = false;
+    const fetchRuns = async () => {
+      setLoadingReports(true);
+      try {
+        const result = await getReportHistory({ limit: 20, status: 'succeeded' });
+        if (!cancelled) {
+          setReportRuns(result?.history || []);
+        }
+      } catch (err) {
+        console.error('Failed to fetch report runs:', err);
+      } finally {
+        if (!cancelled) setLoadingReports(false);
+      }
+    };
+    fetchRuns();
+    return () => { cancelled = true; };
+  }, []);
 
   const handleGenerate = async () => {
     if (!content.trim()) return;
@@ -423,6 +446,54 @@ export default function SummaryPage() {
             <Typography variant="h6" gutterBottom>
               Content to Summarize
             </Typography>
+
+            {/* Load from existing report runs */}
+            {reportRuns.length > 0 && (
+              <Box sx={{ mb: 2 }}>
+                <FormControl fullWidth size="small">
+                  <InputLabel>Load from Report Run</InputLabel>
+                  <Select
+                    value=""
+                    label="Load from Report Run"
+                    onChange={(e) => {
+                      const run = reportRuns.find((r) => r.id === e.target.value);
+                      if (run) {
+                        const parts = [
+                          `Report: ${run.templateName || 'Unknown'}`,
+                          run.startDate && run.endDate ? `Period: ${run.startDate} to ${run.endDate}` : null,
+                          run.connectionName ? `Connection: ${run.connectionName}` : null,
+                          run.keyValues && Object.keys(run.keyValues).length > 0
+                            ? `Parameters: ${Object.entries(run.keyValues).map(([k, v]) => `${k}=${v}`).join(', ')}`
+                            : null,
+                          run.artifacts?.html_url ? `\nReport content available at: ${run.artifacts.html_url}` : null,
+                        ].filter(Boolean);
+                        setContent(parts.join('\n'));
+                        toast.show(`Loaded report "${run.templateName}" context`, 'success');
+                      }
+                    }}
+                    displayEmpty
+                  >
+                    <MenuItem value="" disabled>
+                      <Typography variant="body2" color="text.secondary">
+                        Select a completed report to summarize...
+                      </Typography>
+                    </MenuItem>
+                    {reportRuns.map((run) => (
+                      <MenuItem key={run.id} value={run.id}>
+                        <Box>
+                          <Typography variant="body2">{run.templateName || 'Unknown Report'}</Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {run.createdAt ? new Date(run.createdAt).toLocaleDateString() : ''}
+                            {run.connectionName ? ` \u2022 ${run.connectionName}` : ''}
+                          </Typography>
+                        </Box>
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Box>
+            )}
+
             <ConnectionSelector
               value={selectedConnectionId}
               onChange={setSelectedConnectionId}
@@ -594,7 +665,7 @@ export default function SummaryPage() {
                   variant="outlined"
                   sx={{
                     p: 2,
-                    bgcolor: 'grey.50',
+                    bgcolor: neutral[50],
                     minHeight: 200,
                     whiteSpace: 'pre-wrap',
                   }}

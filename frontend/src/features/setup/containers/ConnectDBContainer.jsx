@@ -47,7 +47,7 @@ import TOOLTIP_COPY from '@/content/tooltipCopy.jsx'
 import { savePersistedCache } from '@/hooks/useBootstrapState.js'
 import useFormErrorFocus from '@/hooks/useFormErrorFocus.js'
 import { useInteraction, InteractionType, Reversibility } from '@/components/ux/governance'
-import { neutral, palette } from '@/app/theme'
+import { neutral, palette, fontFamilyMono } from '@/app/theme'
 const sanitizeDbType = (value) => (typeof value === 'string' ? value.trim().toLowerCase() : '')
 const trimString = (value) => (typeof value === 'string' ? value.trim() : '')
 const formatHostPort = (host, port) => {
@@ -341,10 +341,10 @@ const SelectField = ({
         borderTopRightRadius: '12px !important',
         borderBottomRightRadius: '12px !important',
         borderBottomLeftRadius: '12px !important',
-        border: '1px solid rgba(148,163,184,0.28)',
+        border: `1px solid ${alpha(neutral[400], 0.28)}`,
         backgroundColor: 'rgba(255,255,255,0.98)',
         backdropFilter: 'blur(10px)',
-        boxShadow: '0 22px 52px rgba(15,23,42,0.22)',
+        boxShadow: `0 22px 52px ${alpha(neutral[900], 0.22)}`,
         overflow: 'hidden',
         '&.MuiPaper-rounded': {
           borderRadius: '8px !important',
@@ -489,7 +489,7 @@ const SelectField = ({
                       variant="subtitle2"
                       component="span"
                       sx={(theme) => ({
-                        fontWeight: theme.typography.fontWeightSemibold,
+                        fontWeight: theme.typography.fontWeightBold,
                         color: theme.palette.text.primary,
                         lineHeight: 1.2,
                         overflow: 'hidden',
@@ -571,7 +571,7 @@ const SelectField = ({
                   variant="subtitle2"
                   component="span"
                   sx={(theme) => ({
-                    fontWeight: theme.typography.fontWeightSemibold,
+                    fontWeight: theme.typography.fontWeightBold,
                     lineHeight: 1.2,
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
@@ -1972,7 +1972,7 @@ const lastHeartbeatLabel = useMemo(() => {
             <Typography
               variant="caption"
               sx={{
-                fontFamily: 'var(--font-code, "Menlo", monospace)',
+                fontFamily: 'var(--font-mono, monospace)',
                 color: 'text.primary',
                 wordBreak: 'break-all',
               }}
@@ -2119,7 +2119,7 @@ const lastHeartbeatLabel = useMemo(() => {
                     typography: {
                       sx: (theme) => ({
                         whiteSpace: 'nowrap',
-                        fontWeight: theme.typography.fontWeightSemibold,
+                        fontWeight: theme.typography.fontWeightBold,
                       }),
                     },
                   }}
@@ -2221,12 +2221,12 @@ const lastHeartbeatLabel = useMemo(() => {
                         borderRadius: 1,  // Figma spec: 8px
                         border: '1px solid',
                         borderColor: isSelected ? 'text.secondary' : 'divider',
-                        boxShadow: isSelected ? '0 12px 24px rgba(15,23,42,0.12)' : 'none',
+                        boxShadow: isSelected ? `0 12px 24px ${alpha(neutral[900], 0.12)}` : 'none',
                         backgroundColor: 'background.paper',
                         transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
                         '&:hover': {
                           borderColor: 'text.secondary',
-                          boxShadow: '0 10px 20px rgba(15,23,42,0.18)',
+                          boxShadow: `0 10px 20px ${alpha(neutral[900], 0.18)}`,
                         },
                       }}
                     >
@@ -2289,7 +2289,7 @@ const lastHeartbeatLabel = useMemo(() => {
                 sx={{
                   position: 'absolute',
                   inset: 0,
-                  bgcolor: 'rgba(15,23,42,0.32)',
+                  bgcolor: alpha(neutral[900], 0.32),
                   pointerEvents: 'auto',
                   zIndex: 0,
                 }}
@@ -2337,7 +2337,7 @@ const lastHeartbeatLabel = useMemo(() => {
                     borderTopRightRadius: '18px !important',
                     borderBottomRightRadius: '18px !important',
                     borderBottomLeftRadius: '18px !important',
-                    boxShadow: '0 12px 32px rgba(15,23,42,0.14)',
+                    boxShadow: `0 12px 32px ${alpha(neutral[900], 0.14)}`,
                     maxHeight: {
                       xs: 'calc(100vh - 96px)',
                       sm: 'calc(100vh - 112px)',
@@ -2418,7 +2418,7 @@ const lastHeartbeatLabel = useMemo(() => {
                       <Typography
                         variant="body2"
                         sx={{
-                          fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+                          fontFamily: fontFamilyMono,
                           wordBreak: 'break-all',
                         }}
                       >
