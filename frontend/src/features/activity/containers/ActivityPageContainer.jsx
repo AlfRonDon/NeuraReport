@@ -7,17 +7,16 @@ import {
   Box,
   Typography,
   Stack,
+  Button,
   IconButton,
   Chip,
   Select,
   MenuItem,
-  FormControl,
   InputLabel,
   CircularProgress,
   useTheme,
   alpha,
   styled,
-  keyframes,
 } from '@mui/material'
 import RefreshIcon from '@mui/icons-material/Refresh'
 import DeleteIcon from '@mui/icons-material/Delete'
@@ -29,31 +28,13 @@ import ScheduleIcon from '@mui/icons-material/Schedule'
 import StarIcon from '@mui/icons-material/Star'
 import SettingsIcon from '@mui/icons-material/Settings'
 import OpenInNewIcon from '@mui/icons-material/OpenInNew'
+import DashboardIcon from '@mui/icons-material/Dashboard'
 import { useToast } from '@/components/ToastProvider'
 import { useInteraction, InteractionType, Reversibility, useNavigateInteraction } from '@/components/ux/governance'
 import { ConfirmModal } from '@/components/Modal'
 import * as api from '@/api/client'
 import { neutral, palette } from '@/app/theme'
-
-// =============================================================================
-// ANIMATIONS
-// =============================================================================
-
-const fadeInUp = keyframes`
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-`
-
-const pulse = keyframes`
-  0%, 100% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.05); opacity: 0.8; }
-`
+import { fadeInUp, pulse, StyledFormControl, RefreshButton } from '@/styles'
 
 // =============================================================================
 // STYLED COMPONENTS
@@ -88,41 +69,9 @@ const ActivityListContainer = styled(Box)(({ theme }) => ({
   animation: `${fadeInUp} 0.5s ease-out 0.2s both`,
 }))
 
-const StyledFormControl = styled(FormControl)(({ theme }) => ({
-  minWidth: 150,
-  '& .MuiOutlinedInput-root': {
-    borderRadius: 8,  // Figma spec: 8px
-    backgroundColor: alpha(theme.palette.background.paper, 0.6),
-    backdropFilter: 'blur(8px)',
-    transition: 'all 0.2s ease',
-    '&:hover': {
-      backgroundColor: alpha(theme.palette.background.paper, 0.8),
-    },
-    '&.Mui-focused': {
-      backgroundColor: theme.palette.background.paper,
-      boxShadow: `0 0 0 3px ${alpha(theme.palette.text.primary, 0.08)}`,
-    },
-    '& .MuiOutlinedInput-notchedOutline': {
-      borderColor: alpha(theme.palette.divider, 0.15),
-    },
-  },
-  '& .MuiInputLabel-root': {
-    color: theme.palette.text.secondary,
-  },
-}))
-
-const RefreshButton = styled(IconButton)(({ theme }) => ({
-  borderRadius: 8,  // Figma spec: 8px
-  transition: 'all 0.2s ease',
-  '&:hover': {
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
-    transform: 'rotate(180deg)',
-  },
-}))
-
 const DeleteButton = styled(IconButton)(({ theme }) => ({
   borderRadius: 8,  // Figma spec: 8px
-  transition: 'all 0.2s ease',
+  transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)',
   '&:hover': {
     backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
     color: theme.palette.text.primary,
@@ -236,7 +185,7 @@ function ActivityItem({ activity, onNavigate }) {
         borderRadius: 1,  // Figma spec: 8px
         mx: -1,
         px: 1,
-        transition: 'all 0.2s ease',
+        transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)',
         '&:hover': isNavigable ? {
           bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : neutral[50],
           transform: 'translateX(4px)',
@@ -253,9 +202,9 @@ function ActivityItem({ activity, onNavigate }) {
           alignItems: 'center',
           justifyContent: 'center',
           flexShrink: 0,
-          transition: 'transform 0.2s ease',
+          transition: 'transform 0.2s cubic-bezier(0.22, 1, 0.36, 1)',
           '.MuiBox-root:hover > &': isNavigable ? {
-            animation: `${pulse} 0.5s ease`,
+            animation: `${pulse} 0.5s cubic-bezier(0.22, 1, 0.36, 1)`,
           } : {},
         }}
       >
@@ -322,7 +271,7 @@ function ActivityItem({ activity, onNavigate }) {
             fontSize: 14,
             color: theme.palette.text.disabled,
             opacity: 0,
-            transition: 'opacity 0.2s ease',
+            transition: 'opacity 0.2s cubic-bezier(0.22, 1, 0.36, 1)',
             '.MuiBox-root:hover > &': { opacity: 1 },
           }}
         />
@@ -499,9 +448,17 @@ export default function ActivityPage() {
             <Typography sx={{ fontSize: '0.875rem', color: theme.palette.text.secondary }}>
               No activity recorded yet
             </Typography>
-            <Typography sx={{ fontSize: '0.75rem', color: theme.palette.text.disabled, mt: 0.5 }}>
+            <Typography sx={{ fontSize: '0.75rem', color: theme.palette.text.disabled, mt: 0.5, mb: 2 }}>
               Actions like creating templates, running jobs, and more will appear here
             </Typography>
+            <Button
+              variant="contained"
+              startIcon={<DashboardIcon />}
+              onClick={() => handleNavigate('/', 'Go to Dashboard', { action: 'empty-state-cta' })}
+              sx={{ textTransform: 'none' }}
+            >
+              Go to Dashboard
+            </Button>
           </EmptyStateContainer>
         ) : (
           activities.map((activity) => (

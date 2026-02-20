@@ -393,7 +393,7 @@ function TemplatePicker({ selected, onToggle, tagFilter, setTagFilter }) {
 
                     minHeight: 280,
 
-                    transition: 'border-color 160ms ease, box-shadow 160ms ease',
+                    transition: 'border-color 160ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 160ms cubic-bezier(0.22, 1, 0.36, 1)',
 
                   },
 

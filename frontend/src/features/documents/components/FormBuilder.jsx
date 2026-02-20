@@ -105,7 +105,7 @@ const FieldCard = styled(Paper, {
     ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : neutral[50])
     : theme.palette.background.paper,
   cursor: 'grab',
-  transition: 'all 0.15s ease',
+  transition: 'all 0.15s cubic-bezier(0.22, 1, 0.36, 1)',
   '&:hover': {
     borderColor: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
     boxShadow: `0 2px 8px ${alpha(theme.palette.common.black, 0.1)}`,

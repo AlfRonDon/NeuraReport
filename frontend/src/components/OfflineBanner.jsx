@@ -22,35 +22,15 @@ import {
   WifiTethering as OnlineIcon,
 } from '@mui/icons-material'
 import { useNetworkStatus } from '../hooks/useNetworkStatus'
+import { slideDown, shimmer, spin } from '@/styles'
 
 // =============================================================================
-// ANIMATIONS
+// ANIMATIONS (local — differs from shared version)
 // =============================================================================
-
-const slideDown = keyframes`
-  from {
-    opacity: 0;
-    transform: translateY(-100%);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-`
 
 const pulse = keyframes`
   0%, 100% { transform: scale(1); opacity: 1; }
   50% { transform: scale(1.1); opacity: 0.8; }
-`
-
-const shimmer = keyframes`
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-`
-
-const spin = keyframes`
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
 `
 
 // =============================================================================

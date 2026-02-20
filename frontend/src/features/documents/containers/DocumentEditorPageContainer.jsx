@@ -99,7 +99,7 @@ const EditorPane = styled(Box)(({ theme }) => ({
 }))
 
 const DocumentsList = styled(Box)(({ theme }) => ({
-  width: 280,
+  width: 300,
   borderRight: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
   backgroundColor: alpha(theme.palette.background.paper, 0.5),
   display: 'flex',
@@ -128,7 +128,7 @@ const DocumentItem = styled(Paper, {
   cursor: 'pointer',
   border: `1px solid ${isActive ? (theme.palette.mode === 'dark' ? neutral[500] : neutral[700]) : 'transparent'}`,
   backgroundColor: isActive ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : neutral[50]) : 'transparent',
-  transition: 'all 0.15s ease',
+  transition: 'all 0.15s cubic-bezier(0.22, 1, 0.36, 1)',
   '&:hover': {
     backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
     borderColor: alpha(theme.palette.divider, 0.3),
@@ -811,7 +811,7 @@ export default function DocumentEditorPage() {
                         }}
                         data-testid={`doc-delete-${doc.id}`}
                         aria-label={`Delete ${doc.name}`}
-                        sx={{ opacity: 0.5, '&:hover': { opacity: 1 } }}
+                        sx={{ opacity: 0, transition: 'opacity 0.15s ease', '.MuiPaper-root:hover &': { opacity: 0.5 }, '&:hover': { opacity: '1 !important' } }}
                       >
                         <DeleteIcon fontSize="small" />
                       </IconButton>
@@ -881,7 +881,7 @@ export default function DocumentEditorPage() {
           </EditorPane>
         ) : (
           <EmptyState>
-            <DocIcon sx={{ fontSize: 80, color: 'text.disabled', mb: 2 }} />
+            <DocIcon sx={{ fontSize: 64, color: 'text.disabled', mb: 2 }} />
             <Typography variant="h5" sx={{ fontWeight: 600, mb: 1 }}>
               No Document Selected
             </Typography>

@@ -82,20 +82,9 @@ def _configure_error_log_handler(target_logger: logging.Logger | None = None) ->
     handler.setLevel(logging.ERROR)
     handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s %(message)s"))
 
-    # Attach to the app namespaces plus framework/network loggers and the
-    # root logger as a catch-all.  This ensures errors from uvicorn, starlette,
-    # fastapi, httpx, and other libraries are captured alongside app errors.
-    for logger_name in ("neura", "backend", "uvicorn", "uvicorn.error", "fastapi", "starlette", "httpx", "httpcore"):
-        _logger = logging.getLogger(logger_name)
-        already_attached = any(
-            isinstance(h, logging.FileHandler)
-            and os.path.abspath(getattr(h, "baseFilename", "")) == abs_log_file
-            for h in _logger.handlers
-        )
-        if not already_attached:
-            _logger.addHandler(handler)
-
-    # Also attach to root logger as a fallback for any namespace not listed above.
+    # Attach only to the root logger.  All child loggers (neura.*, backend.*,
+    # uvicorn.*, etc.) propagate to root by default, so a single handler here
+    # captures everything without duplicate entries.
     root = target_logger or logging.getLogger()
     root_attached = any(
         isinstance(h, logging.FileHandler)
@@ -350,34 +339,44 @@ def _http_error(status_code: int, code: str, message: str) -> HTTPException:
     return HTTPException(status_code=status_code, detail={"status": "error", "code": code, "message": message})
 
 
-def _db_path_from_payload_or_default(conn_id: str | None) -> Path:
+def _db_path_from_payload_or_default(conn_id: str | None):
     """
     Legacy override hook used by src/utils/connection_utils.py.
 
-    This implementation mirrors the same precedence rules but lives here so
-    tests can monkeypatch it without causing import recursion.
+    Returns ConnectionRef for both SQLite and PostgreSQL connections.
     """
+    from backend.legacy.utils.connection_utils import ConnectionRef, _resolve_ref_for_conn_id
+
     if conn_id:
+        # Try ConnectionRef first (handles both SQLite and PostgreSQL)
+        ref = _resolve_ref_for_conn_id(conn_id)
+        if ref is not None:
+            return ref
+
         secrets = state_store.get_connection_secrets(conn_id)
         if secrets and secrets.get("database_path"):
-            return Path(secrets["database_path"])
+            return ConnectionRef(db_type="sqlite", db_path=Path(secrets["database_path"]), connection_id=conn_id)
         record = state_store.get_connection_record(conn_id)
         if record and record.get("database_path"):
-            return Path(record["database_path"])
+            return ConnectionRef(db_type="sqlite", db_path=Path(record["database_path"]), connection_id=conn_id)
         try:
-            return resolve_db_path(connection_id=conn_id, db_url=None, db_path=None)
+            path = resolve_db_path(connection_id=conn_id, db_url=None, db_path=None)
+            return ConnectionRef(db_type="sqlite", db_path=path, connection_id=conn_id)
         except Exception:
             pass
 
     last_used = state_store.get_last_used()
     if last_used.get("connection_id"):
         connection_id = str(last_used["connection_id"])
+        ref = _resolve_ref_for_conn_id(connection_id)
+        if ref is not None:
+            return ref
         secrets = state_store.get_connection_secrets(connection_id)
         if secrets and secrets.get("database_path"):
-            return Path(secrets["database_path"])
+            return ConnectionRef(db_type="sqlite", db_path=Path(secrets["database_path"]), connection_id=connection_id)
         record = state_store.get_connection_record(connection_id)
         if record and record.get("database_path"):
-            return Path(record["database_path"])
+            return ConnectionRef(db_type="sqlite", db_path=Path(record["database_path"]), connection_id=connection_id)
 
     env_db = os.getenv("NR_DEFAULT_DB") or os.getenv("DB_PATH")
     if env_db:

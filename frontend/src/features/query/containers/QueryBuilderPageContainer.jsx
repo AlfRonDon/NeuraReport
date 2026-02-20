@@ -11,9 +11,7 @@ import {
   TextField,
   Select,
   MenuItem,
-  FormControl,
   InputLabel,
-  Paper,
   Chip,
   IconButton,
   Tooltip,
@@ -30,7 +28,6 @@ import {
   useTheme,
   alpha,
   styled,
-  keyframes,
 } from '@mui/material'
 import PlayArrowIcon from '@mui/icons-material/PlayArrow'
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh'
@@ -46,6 +43,7 @@ import BookmarkIcon from '@mui/icons-material/Bookmark'
 import BookmarkBorderIcon from '@mui/icons-material/BookmarkBorder'
 
 import { neutral, palette } from '@/app/theme'
+import { fadeInUp, GlassCard, StyledFormControl } from '@/styles'
 import { useAppStore } from '@/stores'
 import useQueryStore from '@/stores/queryStore'
 import * as nl2sqlApi from '@/api/nl2sql'
@@ -69,31 +67,6 @@ import {
 } from '@/components/ux/governance'
 
 // =============================================================================
-// ANIMATIONS
-// =============================================================================
-
-const fadeInUp = keyframes`
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-`
-
-const pulse = keyframes`
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.02); }
-`
-
-const shimmer = keyframes`
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-`
-
-// =============================================================================
 // STYLED COMPONENTS
 // =============================================================================
 
@@ -111,23 +84,12 @@ const HeaderContainer = styled(Stack)(({ theme }) => ({
   animation: `${fadeInUp} 0.5s ease-out`,
 }))
 
-const GlassCard = styled(Paper)(({ theme }) => ({
-  backgroundColor: alpha(theme.palette.background.paper, 0.8),
-  backdropFilter: 'blur(20px)',
-  border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-  borderRadius: 8,  // Figma spec: 8px
-  padding: theme.spacing(2),
-  boxShadow: `0 8px 32px ${alpha(theme.palette.common.black, 0.08)}`,
-  animation: `${fadeInUp} 0.5s ease-out`,
-  marginBottom: theme.spacing(2),
-}))
-
 const HeaderButton = styled(Button)(({ theme }) => ({
   borderRadius: 12,
   textTransform: 'none',
   fontWeight: 500,
   borderColor: alpha(theme.palette.divider, 0.2),
-  transition: 'all 0.2s ease',
+  transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)',
   '&:hover': {
     borderColor: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
     backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
@@ -141,7 +103,7 @@ const PrimaryButton = styled(Button)(({ theme }) => ({
   background: theme.palette.mode === 'dark' ? neutral[700] : neutral[900],
   color: theme.palette.common.white,
   boxShadow: `0 4px 14px ${alpha(theme.palette.common.black, 0.15)}`,
-  transition: 'all 0.2s ease',
+  transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)',
   '&:hover': {
     background: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
     boxShadow: `0 6px 20px ${alpha(theme.palette.common.black, 0.2)}`,
@@ -164,7 +126,7 @@ const ExecuteButton = styled(Button)(({ theme }) => ({
   background: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
   color: theme.palette.common.white,
   boxShadow: `0 4px 14px ${alpha(theme.palette.common.black, 0.15)}`,
-  transition: 'all 0.2s ease',
+  transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)',
   '&:hover': {
     background: theme.palette.mode === 'dark' ? neutral[500] : neutral[500],
     boxShadow: `0 6px 20px ${alpha(theme.palette.common.black, 0.2)}`,
@@ -177,27 +139,11 @@ const ExecuteButton = styled(Button)(({ theme }) => ({
   },
 }))
 
-const StyledFormControl = styled(FormControl)(({ theme }) => ({
-  '& .MuiOutlinedInput-root': {
-    borderRadius: 12,
-    backgroundColor: alpha(theme.palette.background.paper, 0.6),
-    backdropFilter: 'blur(8px)',
-    transition: 'all 0.2s ease',
-    '&:hover': {
-      backgroundColor: alpha(theme.palette.background.paper, 0.8),
-    },
-    '&.Mui-focused': {
-      backgroundColor: theme.palette.background.paper,
-      boxShadow: `0 0 0 3px ${alpha(theme.palette.text.primary, 0.08)}`,
-    },
-  },
-}))
-
 const StyledTextField = styled(TextField)(({ theme }) => ({
   '& .MuiOutlinedInput-root': {
     borderRadius: 12,
     backgroundColor: alpha(theme.palette.background.default, 0.5),
-    transition: 'all 0.2s ease',
+    transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)',
     '&:hover': {
       backgroundColor: alpha(theme.palette.background.default, 0.7),
     },
@@ -213,7 +159,7 @@ const SavedQueryItem = styled(Stack)(({ theme }) => ({
   borderRadius: 10,
   backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : neutral[50],
   cursor: 'pointer',
-  transition: 'all 0.2s ease',
+  transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)',
   '&:hover': {
     backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
     transform: 'translateX(4px)',
@@ -225,7 +171,7 @@ const HistoryItem = styled(Stack)(({ theme }) => ({
   borderRadius: 10,
   backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : neutral[50],
   cursor: 'pointer',
-  transition: 'all 0.2s ease',
+  transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)',
   '&:hover': {
     backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
     transform: 'translateX(4px)',

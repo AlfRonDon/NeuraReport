@@ -75,7 +75,7 @@ const ToolbarContainer = styled(Box)(({ theme }) => ({
   padding: theme.spacing(2.5, 3),
   backgroundColor: alpha(theme.palette.background.paper, 0.4),
   backdropFilter: 'blur(10px)',
-  borderBottom: `1px solid ${alpha(theme.palette.divider, 0.06)}`,
+  borderBottom: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
 }))
 
 const HeaderRow = styled(Stack)(({ theme }) => ({

@@ -664,7 +664,7 @@ function GenerateAndDownload({
                   borderColor: 'divider',
                   bgcolor: 'background.paper',
                   boxShadow: `0 6px 20px ${alpha(neutral[900], 0.06)}`,
-                  transition: 'border-color 200ms ease, box-shadow 200ms ease, transform 160ms ease',
+                  transition: 'border-color 200ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 200ms cubic-bezier(0.22, 1, 0.36, 1), transform 160ms cubic-bezier(0.22, 1, 0.36, 1)',
                   '&:hover': {
                     borderColor: 'primary.light',
                     boxShadow: `0 10px 30px ${alpha(secondary.violet[500], 0.14)}`,

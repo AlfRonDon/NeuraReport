@@ -17,7 +17,6 @@ import {
   useTheme,
   alpha,
   styled,
-  keyframes,
 } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
 import MoreVertIcon from '@mui/icons-material/MoreVert'
@@ -44,21 +43,7 @@ import {
   Reversibility,
 } from '@/components/ux/governance'
 import { neutral, palette, status as statusColors } from '@/app/theme'
-
-// =============================================================================
-// ANIMATIONS
-// =============================================================================
-
-const fadeInUp = keyframes`
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-`
+import { fadeInUp } from '@/styles'
 
 // =============================================================================
 // STYLED COMPONENTS
@@ -91,7 +76,7 @@ const StyledMenuItem = styled(MenuItem)(({ theme }) => ({
   margin: theme.spacing(0.5, 1),
   padding: theme.spacing(1, 1.5),
   fontSize: '14px',
-  transition: 'all 0.2s ease',
+  transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)',
   '&:hover': {
     backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
   },
@@ -104,12 +89,12 @@ const IconContainer = styled(Box)(({ theme }) => ({
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  transition: 'all 0.2s ease',
+  transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)',
 }))
 
 const ActionButton = styled(IconButton)(({ theme }) => ({
   borderRadius: 8,  // Figma spec: 8px
-  transition: 'all 0.2s ease',
+  transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)',
   '&:hover': {
     backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
     transform: 'scale(1.05)',
@@ -498,6 +483,7 @@ export default function ConnectionsPage() {
       label: 'Type',
       options: [
         { value: 'sqlite', label: 'SQLite' },
+        { value: 'postgresql', label: 'PostgreSQL' },
       ],
     },
   ], [])

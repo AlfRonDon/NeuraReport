@@ -18,7 +18,7 @@
  *   // Sync execution (waits for completion)
  *   const result = await runResearchAgent('AI trends', { sync: true });
  */
-import { api } from './client';
+import { api, toApiUrl } from './client';
 
 const BASE_PATH = '/agents/v2';
 
@@ -639,7 +639,7 @@ export function streamTaskProgress(taskId, options = {}) {
     timeout: String(timeout),
   });
 
-  const url = `${BASE_PATH}/tasks/${taskId}/stream?${params}`;
+  const url = toApiUrl(`${BASE_PATH}/tasks/${taskId}/stream?${params}`);
 
   // Use EventSource for native SSE support
   const eventSource = new EventSource(url);

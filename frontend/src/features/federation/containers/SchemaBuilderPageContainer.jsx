@@ -236,7 +236,7 @@ export default function SchemaBuilderPage() {
       <Box sx={{ p: 3, maxWidth: 1400, mx: 'auto' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
           <JoinIcon />
-          <Typography variant="h4">Cross-Database Federation</Typography>
+          <Typography variant="h5">Cross-Database Federation</Typography>
         </Box>
         <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 300 }}>
           <CircularProgress />
@@ -249,7 +249,7 @@ export default function SchemaBuilderPage() {
     <Box sx={{ p: 3, maxWidth: 1400, mx: 'auto' }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Box>
-          <Typography variant="h4" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Typography variant="h5" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <JoinIcon /> Cross-Database Federation
           </Typography>
           <Typography variant="body1" color="text.secondary">

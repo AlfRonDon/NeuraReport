@@ -74,7 +74,7 @@ const PageContainer = styled(Box)(({ theme }) => ({
 }))
 
 const Sidebar = styled(Box)(({ theme }) => ({
-  width: 280,
+  width: 300,
   display: 'flex',
   flexDirection: 'column',
   borderRight: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
@@ -670,7 +670,7 @@ export default function SpreadsheetEditorPage() {
                   </ListItemIcon>
                   <ListItemText
                     primary={ss.name}
-                    secondary={`${ss.sheets?.length || 1} sheets`}
+                    secondary={`${ss.sheets?.length || 1} ${(ss.sheets?.length || 1) === 1 ? 'sheet' : 'sheets'}`}
                     primaryTypographyProps={{ variant: 'body2', fontWeight: 500 }}
                     secondaryTypographyProps={{ variant: 'caption' }}
                   />
@@ -680,6 +680,8 @@ export default function SpreadsheetEditorPage() {
                       e.stopPropagation()
                       handleDeleteSpreadsheet(ss.id)
                     }}
+                    aria-label={`Delete ${ss.name}`}
+                    sx={{ opacity: 0, '.MuiListItemButton-root:hover &': { opacity: 0.5 }, '&:hover': { opacity: 1 } }}
                   >
                     <DeleteIcon fontSize="small" />
                   </IconButton>
@@ -840,7 +842,7 @@ export default function SpreadsheetEditorPage() {
           </>
         ) : (
           <EmptyState>
-            <SpreadsheetIcon sx={{ fontSize: 80, color: 'text.disabled', mb: 2 }} />
+            <SpreadsheetIcon sx={{ fontSize: 64, color: 'text.disabled', mb: 2 }} />
             <Typography variant="h5" sx={{ fontWeight: 600, mb: 1 }}>
               No Spreadsheet Selected
             </Typography>

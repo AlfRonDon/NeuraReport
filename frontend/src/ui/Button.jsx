@@ -1,7 +1,7 @@
 /**
- * Button Component - Design System v4
- * Height: 40px, Border-radius: 8px, Font: Geist Sans Medium 14px (Label Medium)
- * Primary: #D97757 bg, #B45309 hover, Disabled: Neutral 200 bg / Neutral 400 text
+ * Button Component - Desktop UI Overhaul
+ * Height: 40px, Border-radius: 8px, Font: Inter Medium 14px (Label Medium)
+ * Primary: #3B82F6 bg, #2563EB hover, Disabled: Neutral 200 bg / Neutral 400 text
  */
 import { forwardRef } from 'react'
 import { Button as MuiButton, CircularProgress } from '@mui/material'

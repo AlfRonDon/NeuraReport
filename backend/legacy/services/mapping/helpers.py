@@ -12,6 +12,7 @@ from typing import Any, Iterable, Mapping, Optional
 from fastapi import HTTPException
 
 from backend.app.repositories.dataframes.sqlite_loader import get_loader
+from backend.legacy.utils.connection_utils import get_loader_for_ref
 from backend.app.services.mapping.HeaderMapping import REPORT_SELECTED_VALUE
 from backend.app.services.mapping.auto_fill import _compute_db_signature as _compute_db_signature_impl
 from backend.app.services.utils import write_json_atomic
@@ -85,10 +86,10 @@ def load_schema_ext(template_dir_path: Path) -> Optional[dict[str, Any]]:
         return None
 
 
-def build_catalog_from_db(db_path: Path) -> list[str]:
+def build_catalog_from_db(db_path) -> list[str]:
     catalog: list[str] = []
     try:
-        loader = get_loader(db_path)
+        loader = get_loader_for_ref(db_path)
         for table in loader.table_names():
             frame = loader.frame(table)
             for col in frame.columns:
@@ -108,7 +109,7 @@ def build_catalog_from_db(db_path: Path) -> list[str]:
 _SKIP_COLS = {"__rowid__", "rowid"}
 
 
-def build_rich_catalog_from_db(db_path: Path) -> dict[str, list[dict[str, Any]]]:
+def build_rich_catalog_from_db(db_path) -> dict[str, list[dict[str, Any]]]:
     """Return ``{table: [{column, type, sample}, ...]}`` for LLM consumption.
 
     Unlike :func:`build_catalog_from_db` which returns a flat list of
@@ -118,7 +119,7 @@ def build_rich_catalog_from_db(db_path: Path) -> dict[str, list[dict[str, Any]]]
     """
     result: dict[str, list[dict[str, Any]]] = {}
     try:
-        loader = get_loader(db_path)
+        loader = get_loader_for_ref(db_path)
         for table in loader.table_names():
             frame = loader.frame(table)
             cols: list[dict[str, Any]] = []
@@ -165,7 +166,11 @@ def format_catalog_rich(rich_catalog: dict[str, list[dict[str, Any]]]) -> str:
     return "\n".join(lines)
 
 
-def compute_db_signature(db_path: Path) -> Optional[str]:
+def compute_db_signature(db_path) -> Optional[str]:
+    # PostgreSQL connections don't have a file-based signature
+    if hasattr(db_path, 'is_postgresql') and db_path.is_postgresql:
+        import hashlib as _hashlib
+        return _hashlib.md5((db_path.connection_url or "").encode()).hexdigest()[:16]
     try:
         return _compute_db_signature_impl(db_path)
     except Exception:
@@ -310,7 +315,7 @@ def resolve_token_binding(
 
 
 def execute_token_query_df(
-    db_path: Path,
+    db_path,
     *,
     token: str,
     table_clean: str,
@@ -333,7 +338,7 @@ def execute_token_query_df(
     }
 
     try:
-        loader = get_loader(db_path)
+        loader = get_loader_for_ref(db_path)
         df = loader.frame(table_clean)
     except Exception as exc:
         debug_info["error"] = f"Failed to load table: {exc}"

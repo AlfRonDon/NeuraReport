@@ -361,7 +361,7 @@ export default function SummaryPage() {
     <Box sx={{ p: 3, maxWidth: 1400, mx: 'auto' }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Box>
-          <Typography variant="h4" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Typography variant="h5" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <SummaryIcon /> Executive Summary Generator
           </Typography>
           <Typography variant="body1" color="text.secondary">
@@ -471,13 +471,7 @@ export default function SummaryPage() {
                         toast.show(`Loaded report "${run.templateName}" context`, 'success');
                       }
                     }}
-                    displayEmpty
                   >
-                    <MenuItem value="" disabled>
-                      <Typography variant="body2" color="text.secondary">
-                        Select a completed report to summarize...
-                      </Typography>
-                    </MenuItem>
                     {reportRuns.map((run) => (
                       <MenuItem key={run.id} value={run.id}>
                         <Box>

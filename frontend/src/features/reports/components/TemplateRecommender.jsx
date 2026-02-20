@@ -163,7 +163,7 @@ export default function TemplateRecommender({ onSelectTemplate }) {
         border: 1,
         borderColor: 'divider',
         borderStyle: expanded ? 'solid' : 'dashed',
-        transition: 'all 0.2s ease',
+        transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)',
         overflow: 'hidden',
       }}
     >
@@ -290,7 +290,7 @@ export default function TemplateRecommender({ onSelectTemplate }) {
                       sx={{
                         p: 2,
                         cursor: 'pointer',
-                        transition: 'all 0.15s ease',
+                        transition: 'all 0.15s cubic-bezier(0.22, 1, 0.36, 1)',
                         '&:hover': {
                           borderColor: (theme) => theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
                           bgcolor: 'action.hover',

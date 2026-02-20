@@ -230,7 +230,7 @@ const buildDbTypeButtonSx = (accent) => (theme) => {
     minWidth: 0,
     backgroundColor: alpha(theme.palette.background.paper, 0.96),
     color: theme.palette.text.primary,
-    transition: 'border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease, transform 160ms ease',
+    transition: 'border-color 160ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 160ms cubic-bezier(0.22, 1, 0.36, 1), background-color 160ms cubic-bezier(0.22, 1, 0.36, 1), transform 160ms cubic-bezier(0.22, 1, 0.36, 1)',
     '& .db-type-icon': {
       width: 24,
       height: 24,
@@ -535,7 +535,7 @@ const SelectField = ({
                   py: 1.15,
                   px: 1.75,
                   borderRadius: 1,  // Figma spec: 8px
-                  transition: 'background-color 140ms ease, transform 140ms ease',
+                  transition: 'background-color 140ms cubic-bezier(0.22, 1, 0.36, 1), transform 140ms cubic-bezier(0.22, 1, 0.36, 1)',
                   '&:hover': {
                     backgroundColor: alpha(accentColor || (theme.palette.mode === 'dark' ? neutral[500] : neutral[700]), 0.08),
                     transform: 'translateX(4px)',
@@ -2223,7 +2223,7 @@ const lastHeartbeatLabel = useMemo(() => {
                         borderColor: isSelected ? 'text.secondary' : 'divider',
                         boxShadow: isSelected ? `0 12px 24px ${alpha(neutral[900], 0.12)}` : 'none',
                         backgroundColor: 'background.paper',
-                        transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
+                        transition: 'border-color 0.2s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.2s cubic-bezier(0.22, 1, 0.36, 1)',
                         '&:hover': {
                           borderColor: 'text.secondary',
                           boxShadow: `0 10px 20px ${alpha(neutral[900], 0.18)}`,
@@ -2258,7 +2258,7 @@ const lastHeartbeatLabel = useMemo(() => {
                             latencyMs={latency != null ? latency : undefined}
                             tooltip={c.details || c.status || 'unknown'}
                           />
-                          <KeyboardArrowRightIcon color="disabled" sx={{ transform: isSelected ? 'translateX(2px)' : 'none', transition: 'transform 0.2s ease' }} />
+                          <KeyboardArrowRightIcon color="disabled" sx={{ transform: isSelected ? 'translateX(2px)' : 'none', transition: 'transform 0.2s cubic-bezier(0.22, 1, 0.36, 1)' }} />
                         </Stack>
                       </Stack>
                     </ListItemButton>

@@ -611,7 +611,7 @@ export default function TemplateEditor() {
                         bgcolor: 'background.paper',
                         p: 1.5,
                         minHeight: previewFullscreen ? 600 : 400,
-                        transition: 'min-height 0.2s ease',
+                        transition: 'min-height 0.2s cubic-bezier(0.22, 1, 0.36, 1)',
                       }}
                     >
                       <ScaledIframePreview
@@ -686,7 +686,7 @@ export default function TemplateEditor() {
                         p: 1.5,
                         minHeight: previewFullscreen ? 500 : 200,
                         flex: 1,
-                        transition: 'min-height 0.2s ease',
+                        transition: 'min-height 0.2s cubic-bezier(0.22, 1, 0.36, 1)',
                       }}
                     >
                       <ScaledIframePreview

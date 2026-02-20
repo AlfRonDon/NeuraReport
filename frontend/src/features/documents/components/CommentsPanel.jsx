@@ -84,7 +84,7 @@ const CommentCard = styled(Paper, {
     ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : neutral[50])
     : 'transparent',
   opacity: isResolved ? 0.7 : 1,
-  transition: 'all 0.15s ease',
+  transition: 'all 0.15s cubic-bezier(0.22, 1, 0.36, 1)',
 }))
 
 const ReplyCard = styled(Box)(({ theme }) => ({

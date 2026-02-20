@@ -1290,7 +1290,7 @@ export default function HeaderMappingEditor({
           spacing={{ xs: 1, sm: 1.5 }}
           sx={{
             opacity: waiting ? 0.8 : 1,
-            transition: "opacity 120ms ease",
+            transition: "opacity 120ms cubic-bezier(0.22, 1, 0.36, 1)",
           }}
         >
           <Stack spacing={0.5} sx={{ flexGrow: 1, minWidth: 0 }}>

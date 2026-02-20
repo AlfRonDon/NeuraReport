@@ -81,7 +81,7 @@ function SearchResult({ result, onSelect, isSelected, theme }) {
         py: 1.5,
         cursor: 'pointer',
         bgcolor: isSelected ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100]) : 'transparent',
-        transition: 'all 0.15s ease',
+        transition: 'all 0.15s cubic-bezier(0.22, 1, 0.36, 1)',
         '&:hover': {
           bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
         },
@@ -363,8 +363,8 @@ export default function GlobalSearch({
           <Paper
             sx={{
               mt: 0.5,
-              bgcolor: alpha(theme.palette.background.paper, 0.98),
-              backdropFilter: 'blur(20px)',
+              bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.background.paper, 0.92) : 'rgba(255, 255, 255, 0.92)',
+              backdropFilter: 'blur(12px)',
               border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
               borderRadius: 1,  // Figma spec: 8px
               boxShadow: `0 8px 32px ${alpha(theme.palette.common.black, 0.2)}`,

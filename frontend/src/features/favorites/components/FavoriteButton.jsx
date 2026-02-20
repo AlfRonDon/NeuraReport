@@ -114,7 +114,7 @@ export default function FavoriteButton({
         data-testid="favorite-button"
         sx={{
           color: isFavorite ? (theme.palette.mode === 'dark' ? neutral[300] : neutral[900]) : theme.palette.text.secondary,
-          transition: 'all 0.2s ease',
+          transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)',
           '&:hover': {
             color: theme.palette.mode === 'dark' ? neutral[300] : neutral[900],
             bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],

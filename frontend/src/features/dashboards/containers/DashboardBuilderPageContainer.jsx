@@ -77,7 +77,7 @@ const PageContainer = styled(Box)(({ theme }) => ({
 }))
 
 const Sidebar = styled(Box)(({ theme }) => ({
-  width: 280,
+  width: 300,
   display: 'flex',
   flexDirection: 'column',
   borderRight: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
@@ -865,7 +865,7 @@ export default function DashboardBuilderPage() {
           </>
         ) : (
           <EmptyState>
-            <DashboardIcon sx={{ fontSize: 80, color: 'text.secondary', mb: 2 }} />
+            <DashboardIcon sx={{ fontSize: 64, color: 'text.disabled', mb: 2 }} />
             <Typography variant="h5" sx={{ fontWeight: 600, mb: 1 }}>
               No Dashboard Selected
             </Typography>

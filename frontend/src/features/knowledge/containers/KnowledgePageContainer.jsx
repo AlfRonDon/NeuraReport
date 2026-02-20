@@ -103,7 +103,7 @@ const MainPanel = styled(Box)(({ theme }) => ({
 
 const DocumentCard = styled(Card)(({ theme }) => ({
   cursor: 'pointer',
-  transition: 'all 0.2s ease',
+  transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)',
   '&:hover': {
     transform: 'translateY(-2px)',
     boxShadow: `0 8px 24px ${alpha(theme.palette.text.primary, 0.05)}`,
@@ -132,7 +132,7 @@ const UploadDropzone = styled(Box)(({ theme, isDragActive }) => ({
   textAlign: 'center',
   backgroundColor: isDragActive ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : neutral[50]) : alpha(theme.palette.background.paper, 0.5),
   cursor: 'pointer',
-  transition: 'all 0.2s ease',
+  transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)',
   '&:hover': {
     borderColor: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
     backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.02) : neutral[50],
@@ -602,7 +602,25 @@ export default function KnowledgePageContainer() {
 
         {/* Main Panel */}
         <MainPanel>
-          {view === 'graph' ? (
+          {loading && !documents.length && view !== 'graph' && view !== 'faq' ? (
+            <Grid container spacing={2}>
+              {Array.from({ length: 6 }).map((_, i) => (
+                <Grid item xs={12} sm={6} md={4} key={i}>
+                  <Card variant="outlined" sx={{ p: 2 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1.5 }}>
+                      <Box sx={{ width: '70%', height: 20, bgcolor: alpha(theme.palette.text.primary, 0.08), borderRadius: 1 }} />
+                      <Box sx={{ width: 24, height: 24, bgcolor: alpha(theme.palette.text.primary, 0.05), borderRadius: '50%' }} />
+                    </Box>
+                    <Box sx={{ width: '50%', height: 14, bgcolor: alpha(theme.palette.text.primary, 0.05), borderRadius: 1, mb: 1.5 }} />
+                    <Box sx={{ display: 'flex', gap: 0.5 }}>
+                      <Box sx={{ width: 48, height: 20, bgcolor: alpha(theme.palette.text.primary, 0.05), borderRadius: 1 }} />
+                      <Box sx={{ width: 56, height: 20, bgcolor: alpha(theme.palette.text.primary, 0.05), borderRadius: 1 }} />
+                    </Box>
+                  </Card>
+                </Grid>
+              ))}
+            </Grid>
+          ) : view === 'graph' ? (
             /* Knowledge Graph View */
             knowledgeGraph ? (
               <Box>
@@ -636,7 +654,7 @@ export default function KnowledgePageContainer() {
                         sx={{
                           p: 2,
                           borderRadius: 1,
-                          transition: 'all 0.15s ease',
+                          transition: 'all 0.15s cubic-bezier(0.22, 1, 0.36, 1)',
                           '&:hover': { borderColor: 'text.secondary', transform: 'translateY(-1px)' },
                         }}
                       >
@@ -705,7 +723,7 @@ export default function KnowledgePageContainer() {
                   justifyContent: 'center',
                 }}
               >
-                <GraphIcon sx={{ fontSize: 80, color: 'text.disabled', mb: 2 }} />
+                <GraphIcon sx={{ fontSize: 64, color: 'text.disabled', mb: 2 }} />
                 <Typography variant="h6" color="text.secondary" gutterBottom>
                   No knowledge graph yet
                 </Typography>
@@ -790,7 +808,7 @@ export default function KnowledgePageContainer() {
                   justifyContent: 'center',
                 }}
               >
-                <FaqIcon sx={{ fontSize: 80, color: 'text.disabled', mb: 2 }} />
+                <FaqIcon sx={{ fontSize: 64, color: 'text.disabled', mb: 2 }} />
                 <Typography variant="h6" color="text.secondary" gutterBottom>
                   No FAQ generated yet
                 </Typography>
@@ -860,7 +878,7 @@ export default function KnowledgePageContainer() {
                     justifyContent: 'center',
                   }}
                 >
-                  <FolderOpenIcon sx={{ fontSize: 80, color: 'text.disabled', mb: 2 }} />
+                  <FolderOpenIcon sx={{ fontSize: 64, color: 'text.disabled', mb: 2 }} />
                   <Typography variant="h6" color="text.secondary" gutterBottom>
                     No documents found
                   </Typography>

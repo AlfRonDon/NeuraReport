@@ -37,7 +37,7 @@ export default function EmptyState({
           py,
           borderRadius: '8px',  // Figma spec: 8px
           bgcolor: alpha(theme.palette.background.paper, 0.5),
-          border: `1px dashed ${alpha(theme.palette.divider, 0.2)}`,
+          border: `1px dashed ${alpha(theme.palette.divider, 0.4)}`,
         },
         ...sxArray,
       ]}
@@ -53,7 +53,7 @@ export default function EmptyState({
           height: iconSize,
           borderRadius: '8px',  // Figma spec: 8px
           bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
-          border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+          border: `1px solid ${alpha(theme.palette.divider, 0.25)}`,
           color: resolvedIconColor,
         }}
       >

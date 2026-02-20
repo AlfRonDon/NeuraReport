@@ -123,7 +123,7 @@ const PreviewArea = styled(Box)(({ theme }) => ({
 
 const DiagramTypeCard = styled(Card)(({ theme, selected }) => ({
   cursor: 'pointer',
-  transition: 'all 0.2s ease',
+  transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)',
   marginBottom: theme.spacing(1),
   border: selected ? `2px solid ${theme.palette.mode === 'dark' ? neutral[500] : neutral[700]}` : `1px solid ${alpha(theme.palette.divider, 0.2)}`,
   '&:hover': {
@@ -150,15 +150,15 @@ const ActionButton = styled(Button)(({ theme }) => ({
 // =============================================================================
 
 const DIAGRAM_TYPES = [
-  { type: 'flowchart', name: 'Flowchart', description: 'Process and decision flows', icon: FlowchartIcon, color: 'primary' },
-  { type: 'mindmap', name: 'Mind Map', description: 'Hierarchical idea mapping', icon: MindmapIcon, color: 'secondary' },
-  { type: 'org_chart', name: 'Org Chart', description: 'Organizational structure', icon: OrgChartIcon, color: 'info' },
-  { type: 'timeline', name: 'Timeline', description: 'Chronological events', icon: TimelineIcon, color: 'warning' },
-  { type: 'gantt', name: 'Gantt Chart', description: 'Project scheduling', icon: GanttIcon, color: 'success' },
-  { type: 'kanban', name: 'Kanban Board', description: 'Task management', icon: KanbanIcon, color: 'error' },
-  { type: 'network', name: 'Network Graph', description: 'Connections and relationships', icon: NetworkIcon, color: 'primary' },
-  { type: 'sequence', name: 'Sequence Diagram', description: 'Process interactions', icon: SequenceIcon, color: 'secondary' },
-  { type: 'wordcloud', name: 'Word Cloud', description: 'Text frequency visualization', icon: WordcloudIcon, color: 'info' },
+  { type: 'flowchart', name: 'Flowchart', description: 'Process and decision flows', icon: FlowchartIcon },
+  { type: 'mindmap', name: 'Mind Map', description: 'Hierarchical idea mapping', icon: MindmapIcon },
+  { type: 'org_chart', name: 'Org Chart', description: 'Organizational structure', icon: OrgChartIcon },
+  { type: 'timeline', name: 'Timeline', description: 'Chronological events', icon: TimelineIcon },
+  { type: 'gantt', name: 'Gantt Chart', description: 'Project scheduling', icon: GanttIcon },
+  { type: 'kanban', name: 'Kanban Board', description: 'Task management', icon: KanbanIcon },
+  { type: 'network', name: 'Network Graph', description: 'Connections and relationships', icon: NetworkIcon },
+  { type: 'sequence', name: 'Sequence Diagram', description: 'Process interactions', icon: SequenceIcon },
+  { type: 'wordcloud', name: 'Word Cloud', description: 'Text frequency visualization', icon: WordcloudIcon },
 ]
 
 
@@ -526,10 +526,10 @@ export default function VisualizationPageContainer() {
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      bgcolor: alpha(theme.palette[type.color].main, 0.1),
+                      bgcolor: alpha(theme.palette.text.primary, 0.08),
                     }}
                   >
-                    <type.icon color={type.color} fontSize="small" />
+                    <type.icon sx={{ color: 'text.secondary', fontSize: 18 }} />
                   </Box>
                   <Box>
                     <Typography variant="body2" sx={{ fontWeight: 500 }}>
@@ -692,7 +692,7 @@ export default function VisualizationPageContainer() {
             </Box>
           ) : (
             <Box sx={{ textAlign: 'center', maxWidth: 400 }}>
-              <UploadFileIcon sx={{ fontSize: 80, color: 'text.secondary', opacity: 0.3, mb: 2 }} />
+              <UploadFileIcon sx={{ fontSize: 64, color: 'text.disabled', mb: 2 }} />
               <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
                 Upload Excel Data
               </Typography>

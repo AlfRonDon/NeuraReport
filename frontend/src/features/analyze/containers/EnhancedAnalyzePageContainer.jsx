@@ -29,7 +29,7 @@ import {
   alpha,
   useTheme,
 } from '@mui/material'
-import { keyframes } from '@mui/system'
+import { float, GlassCard } from '@/styles'
 import RefreshIcon from '@mui/icons-material/Refresh'
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
 import CloudUploadIcon from '@mui/icons-material/CloudUpload'
@@ -77,64 +77,6 @@ import {
 } from '../services/enhancedAnalyzeApi'
 import { neutral, palette } from '@/app/theme'
 
-// Animations
-const float = keyframes`
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-10px); }
-`
-
-const pulse = keyframes`
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
-`
-
-const shimmer = keyframes`
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-`
-
-const gradientMove = keyframes`
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-`
-
-const scaleIn = keyframes`
-  0% { transform: scale(0.9); opacity: 0; }
-  100% { transform: scale(1); opacity: 1; }
-`
-
-// Glass morphism card component
-function GlassCard({ children, sx = {}, gradient = false, hover = true, ...props }) {
-  const theme = useTheme()
-  return (
-    <Paper
-      elevation={0}
-      sx={{
-        p: 3,
-        borderRadius: 4,
-        background: gradient
-          ? `linear-gradient(135deg, ${alpha(theme.palette.text.primary, 0.04)} 0%, ${alpha(theme.palette.text.primary, 0.02)} 100%)`
-          : alpha(theme.palette.background.paper, 0.8),
-        backdropFilter: 'blur(20px)',
-        border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-        ...(hover && {
-          '&:hover': {
-            transform: 'translateY(-4px)',
-            boxShadow: theme.palette.mode === 'dark' ? `0 20px 40px ${alpha(theme.palette.common.black, 0.3)}` : '0 20px 40px rgba(0,0,0,0.08)',
-            borderColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.15) : neutral[200],
-          },
-        }),
-        ...sx,
-      }}
-      {...props}
-    >
-      {children}
-    </Paper>
-  )
-}
-
 // Animated stat card
 function StatCard({ icon, label, value, delay = 0 }) {
   const theme = useTheme()
@@ -148,7 +90,7 @@ function StatCard({ icon, label, value, delay = 0 }) {
             : `linear-gradient(135deg, ${neutral[100]} 0%, ${neutral[50]} 100%)`,
           border: `1px solid ${alpha(theme.palette.divider, 0.15)}`,
           borderRadius: 1,  // Figma spec: 8px
-          transition: 'all 0.3s ease',
+          transition: 'all 0.3s cubic-bezier(0.22, 1, 0.36, 1)',
           '&:hover': {
             transform: 'scale(1.05)',
             boxShadow: theme.palette.mode === 'dark' ? `0 8px 24px ${alpha(theme.palette.common.black, 0.3)}` : '0 8px 24px rgba(0,0,0,0.08)',
@@ -198,7 +140,7 @@ function MetricCard({ metric, index }) {
           borderRadius: 1,  // Figma spec: 8px
           overflow: 'hidden',
           position: 'relative',
-          transition: 'all 0.3s ease',
+          transition: 'all 0.3s cubic-bezier(0.22, 1, 0.36, 1)',
           '&:hover': {
             transform: 'translateY(-6px)',
             boxShadow: theme.palette.mode === 'dark' ? `0 12px 32px ${alpha(theme.palette.common.black, 0.3)}` : '0 12px 32px rgba(0,0,0,0.08)',
@@ -259,7 +201,7 @@ function MetricCard({ metric, index }) {
             <Box
               className="metric-icon"
               sx={{
-                transition: 'transform 0.3s ease',
+                transition: 'transform 0.3s cubic-bezier(0.22, 1, 0.36, 1)',
                 color: alpha(theme.palette.text.primary, 0.15),
               }}
             >
@@ -331,7 +273,7 @@ function InsightCard({ insight, type = 'insight', index = 0 }) {
           borderLeft: `4px solid ${borderColor}`,
           borderRadius: 1,  // Figma spec: 8px
           overflow: 'hidden',
-          transition: 'all 0.3s ease',
+          transition: 'all 0.3s cubic-bezier(0.22, 1, 0.36, 1)',
           '&:hover': {
             transform: 'translateX(8px)',
             boxShadow: `0 8px 24px ${alpha(borderColor, 0.2)}`,
@@ -993,7 +935,7 @@ export default function EnhancedAnalyzePageContainer() {
             </Avatar>
             <Box>
               <Typography
-                variant="h4"
+                variant="h5"
                 fontWeight={600}
                 color="text.primary"
               >
@@ -1086,7 +1028,7 @@ export default function EnhancedAnalyzePageContainer() {
       </Box>
 
       {/* Main Content */}
-      <Box sx={{ px: 4, py: 3 }}>
+      <Box sx={{ px: 4, py: 3, maxWidth: 1400, mx: 'auto', width: '100%' }}>
         {/* Upload Section */}
         {!analysisResult && (
           <Fade in>
@@ -1118,7 +1060,7 @@ export default function EnhancedAnalyzePageContainer() {
                   cursor: 'pointer',
                   border: `2px dashed ${isDragOver ? (theme.palette.mode === 'dark' ? neutral[500] : neutral[700]) : alpha(theme.palette.divider, 0.3)}`,
                   bgcolor: isDragOver ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : neutral[50]) : undefined,
-                  transition: 'all 0.3s ease',
+                  transition: 'all 0.3s cubic-bezier(0.22, 1, 0.36, 1)',
                 }}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
@@ -1202,7 +1144,7 @@ export default function EnhancedAnalyzePageContainer() {
                         textTransform: 'none',
                         bgcolor: theme.palette.mode === 'dark' ? neutral[700] : neutral[900],
                         boxShadow: `0 8px 32px ${alpha(theme.palette.common.black, 0.2)}`,
-                        transition: 'all 0.3s ease',
+                        transition: 'all 0.3s cubic-bezier(0.22, 1, 0.36, 1)',
                         '&:hover': {
                           transform: 'scale(1.05)',
                           bgcolor: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
@@ -1349,7 +1291,7 @@ export default function EnhancedAnalyzePageContainer() {
                       fontWeight: 600,
                       fontSize: '16px',
                       minHeight: 64,
-                      transition: 'all 0.2s ease',
+                      transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)',
                       '&:hover': {
                         bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : neutral[50],
                       },
@@ -1846,7 +1788,7 @@ export default function EnhancedAnalyzePageContainer() {
                               p: 1.5,
                               borderRadius: 1,
                               bgcolor: alpha(theme.palette.background.default, 0.5),
-                              transition: 'all 0.2s ease',
+                              transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)',
                               '&:hover': {
                                 bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : neutral[50],
                               },

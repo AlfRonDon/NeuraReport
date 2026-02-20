@@ -8,12 +8,9 @@ import {
   Box,
   Typography,
   Stack,
-  IconButton,
-  Card,
   CardContent,
   Select,
   MenuItem,
-  FormControl,
   InputLabel,
   CircularProgress,
   Grid,
@@ -21,11 +18,9 @@ import {
   LinearProgress,
   Tabs,
   Tab,
-  Button,
   useTheme,
   alpha,
   styled,
-  keyframes,
 } from '@mui/material'
 import RefreshIcon from '@mui/icons-material/Refresh'
 import TrendingUpIcon from '@mui/icons-material/TrendingUp'
@@ -60,26 +55,7 @@ import { useToast } from '@/components/ToastProvider'
 import { useInteraction, InteractionType, Reversibility, useNavigateInteraction } from '@/components/ux/governance'
 import * as api from '@/api/client'
 import { neutral, primary, palette } from '@/app/theme'
-
-// =============================================================================
-// ANIMATIONS
-// =============================================================================
-
-const fadeInUp = keyframes`
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-`
-
-const pulse = keyframes`
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.02); }
-`
+import { fadeInUp, pulse, GlassCard, StyledFormControl, RefreshButton, ExportButton } from '@/styles'
 
 // =============================================================================
 // STYLED COMPONENTS
@@ -99,50 +75,6 @@ const HeaderContainer = styled(Stack)(({ theme }) => ({
   animation: `${fadeInUp} 0.5s ease-out`,
 }))
 
-const StyledFormControl = styled(FormControl)(({ theme }) => ({
-  minWidth: 160,
-  '& .MuiOutlinedInput-root': {
-    borderRadius: 12,
-    backgroundColor: alpha(theme.palette.background.paper, 0.6),
-    backdropFilter: 'blur(8px)',
-    transition: 'all 0.2s ease',
-    '&:hover': {
-      backgroundColor: alpha(theme.palette.background.paper, 0.8),
-    },
-    '&.Mui-focused': {
-      backgroundColor: theme.palette.background.paper,
-      boxShadow: `0 0 0 3px ${alpha(theme.palette.text.primary, 0.08)}`,
-    },
-    '& .MuiOutlinedInput-notchedOutline': {
-      borderColor: alpha(theme.palette.divider, 0.15),
-    },
-  },
-  '& .MuiInputLabel-root': {
-    color: theme.palette.text.secondary,
-  },
-}))
-
-const ExportButton = styled(Button)(({ theme }) => ({
-  borderRadius: 12,
-  textTransform: 'none',
-  fontWeight: 500,
-  borderColor: alpha(theme.palette.divider, 0.2),
-  transition: 'all 0.2s ease',
-  '&:hover': {
-    borderColor: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
-  },
-}))
-
-const RefreshButton = styled(IconButton)(({ theme }) => ({
-  borderRadius: 12,
-  transition: 'all 0.2s ease',
-  '&:hover': {
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[100],
-    transform: 'rotate(180deg)',
-  },
-}))
-
 const StyledTabs = styled(Tabs)(({ theme }) => ({
   marginBottom: theme.spacing(3),
   '& .MuiTab-root': {
@@ -151,35 +83,21 @@ const StyledTabs = styled(Tabs)(({ theme }) => ({
     textTransform: 'none',
     minWidth: 100,
     fontWeight: 500,
-    transition: 'all 0.2s ease',
+    transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)',
     padding: '8px 32px',  // Figma spec
     '&.Mui-selected': {
       // Figma spec: Active tab - #02634E text, #EBFEF6 bg
-      color: theme.palette.mode === 'dark' ? theme.palette.text.primary : primary[600],
-      backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : primary[50],
+      color: theme.palette.mode === 'dark' ? theme.palette.text.primary : neutral[900],
+      backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
     },
     '&:hover': {
-      color: theme.palette.mode === 'dark' ? theme.palette.text.primary : primary[600],
-      backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : alpha(primary[50], 0.5),
+      color: theme.palette.mode === 'dark' ? theme.palette.text.primary : neutral[700],
+      backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : neutral[50],
     },
   },
   '& .MuiTabs-indicator': {
-    // Figma spec: Active tab border - #007E60 (2px height)
-    backgroundColor: theme.palette.mode === 'dark' ? neutral[500] : primary[500],
+    backgroundColor: theme.palette.mode === 'dark' ? neutral[500] : neutral[900],
     height: 2,
-  },
-}))
-
-const GlassCard = styled(Card)(({ theme }) => ({
-  backgroundColor: alpha(theme.palette.background.paper, 0.8),
-  backdropFilter: 'blur(20px)',
-  border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-  borderRadius: 8,  // Figma spec: 8px
-  boxShadow: `0 8px 32px ${alpha(theme.palette.common.black, 0.08)}`,
-  transition: 'all 0.3s ease',
-  '&:hover': {
-    boxShadow: `0 12px 48px ${alpha(theme.palette.common.black, 0.12)}`,
-    transform: 'translateY(-2px)',
   },
 }))
 

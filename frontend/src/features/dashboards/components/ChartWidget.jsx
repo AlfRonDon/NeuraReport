@@ -50,7 +50,7 @@ const WidgetContainer = styled(Box)(({ theme }) => ({
   borderRadius: 8,  // Figma spec: 8px
   border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
   overflow: 'hidden',
-  transition: 'box-shadow 0.2s ease',
+  transition: 'box-shadow 0.2s cubic-bezier(0.22, 1, 0.36, 1)',
   '&:hover': {
     boxShadow: `0 4px 20px ${alpha(theme.palette.common.black, 0.08)}`,
   },

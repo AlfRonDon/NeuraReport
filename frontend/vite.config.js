@@ -83,6 +83,7 @@ export default defineConfig(({ mode }) => {
       '/ws': { target: backendTarget, changeOrigin: true, ws: true },
     },
   },
+  base: './',  // relative asset paths — works behind any proxy prefix
   build: {
     chunkSizeWarningLimit: 1200,
     sourcemap: 'hidden',

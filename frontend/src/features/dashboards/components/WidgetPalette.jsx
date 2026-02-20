@@ -84,7 +84,7 @@ const CategoryHeader = styled(Box)(({ theme }) => ({
 
 const WidgetCard = styled(Card)(({ theme }) => ({
   cursor: 'grab',
-  transition: 'all 0.2s ease',
+  transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)',
   position: 'relative',
   '&:hover': {
     transform: 'translateY(-2px)',

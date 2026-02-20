@@ -87,7 +87,7 @@ const ContentArea = styled(Box)(({ theme }) => ({
 
 const BrandKitCard = styled(Card)(({ theme, isDefault }) => ({
   cursor: 'pointer',
-  transition: 'all 0.2s ease',
+  transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)',
   border: isDefault
     ? `2px solid ${theme.palette.mode === 'dark' ? neutral[500] : neutral[700]}`
     : `1px solid ${alpha(theme.palette.divider, 0.2)}`,
@@ -114,7 +114,7 @@ const ColorSwatch = styled(Box)(({ color: bgColor, size = 40 }) => ({
 const ThemeCard = styled(Paper)(({ theme, isActive }) => ({
   padding: theme.spacing(2),
   cursor: 'pointer',
-  transition: 'all 0.2s ease',
+  transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)',
   border: isActive
     ? `2px solid ${theme.palette.mode === 'dark' ? neutral[500] : neutral[700]}`
     : `1px solid ${alpha(theme.palette.divider, 0.2)}`,
@@ -829,7 +829,7 @@ export default function DesignPageContainer() {
             {brandKits.length === 0 && !loading && (
               <Grid item xs={12}>
                 <Box sx={{ textAlign: 'center', py: 8 }}>
-                  <BrushIcon sx={{ fontSize: 80, color: 'text.disabled', mb: 2 }} />
+                  <BrushIcon sx={{ fontSize: 64, color: 'text.disabled', mb: 2 }} />
                   <Typography variant="h6" color="text.secondary">
                     No brand kits yet
                   </Typography>
@@ -933,7 +933,7 @@ export default function DesignPageContainer() {
             {themes.length === 0 && !loading && (
               <Grid item xs={12}>
                 <Box sx={{ textAlign: 'center', py: 8 }}>
-                  <ColorIcon sx={{ fontSize: 80, color: 'text.disabled', mb: 2 }} />
+                  <ColorIcon sx={{ fontSize: 64, color: 'text.disabled', mb: 2 }} />
                   <Typography variant="h6" color="text.secondary">
                     No themes yet
                   </Typography>

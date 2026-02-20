@@ -22,14 +22,12 @@ import {
   Button,
   Stack,
   Typography,
-  FormControl,
   InputLabel,
   Select,
   LinearProgress,
   useTheme,
   alpha,
   styled,
-  keyframes,
 } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
 import MoreVertIcon from '@mui/icons-material/MoreVert'
@@ -62,26 +60,7 @@ import {
   useNavigateInteraction,
 } from '@/components/ux/governance'
 import { neutral, palette, status as statusColors } from '@/app/theme'
-
-// =============================================================================
-// ANIMATIONS
-// =============================================================================
-
-const fadeInUp = keyframes`
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-`
-
-const pulse = keyframes`
-  0%, 100% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.05); opacity: 0.8; }
-`
+import { fadeInUp, pulse, StyledFormControl } from '@/styles'
 
 // =============================================================================
 // STYLED COMPONENTS
@@ -126,7 +105,7 @@ const StyledMenuItem = styled(MenuItem)(({ theme }) => ({
   margin: theme.spacing(0.5, 1),
   padding: theme.spacing(1, 1.5),
   fontSize: '14px',
-  transition: 'all 0.15s ease',
+  transition: 'all 0.15s cubic-bezier(0.22, 1, 0.36, 1)',
   '&:hover': {
     backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
   },
@@ -172,22 +151,7 @@ const StyledTextField = styled(TextField)(({ theme }) => ({
   '& .MuiOutlinedInput-root': {
     borderRadius: 8,  // Figma spec: 8px
     backgroundColor: alpha(theme.palette.background.paper, 0.6),
-    transition: 'all 0.2s ease',
-    '&:hover': {
-      backgroundColor: alpha(theme.palette.background.paper, 0.8),
-    },
-    '&.Mui-focused': {
-      backgroundColor: theme.palette.background.paper,
-      boxShadow: `0 0 0 3px ${alpha(theme.palette.text.primary, 0.08)}`,
-    },
-  },
-}))
-
-const StyledFormControl = styled(FormControl)(({ theme }) => ({
-  '& .MuiOutlinedInput-root': {
-    borderRadius: 8,  // Figma spec: 8px
-    backgroundColor: alpha(theme.palette.background.paper, 0.6),
-    transition: 'all 0.2s ease',
+    transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)',
     '&:hover': {
       backgroundColor: alpha(theme.palette.background.paper, 0.8),
     },
@@ -204,7 +168,7 @@ const ActionButton = styled(Button)(({ theme }) => ({
   fontWeight: 500,
   fontSize: '0.875rem',
   padding: theme.spacing(1, 2.5),
-  transition: 'all 0.2s ease',
+  transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)',
 }))
 
 const PrimaryButton = styled(ActionButton)(({ theme }) => ({
@@ -241,7 +205,7 @@ const KindIconContainer = styled(Box, {
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  transition: 'all 0.2s ease',
+  transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)',
 }))
 
 const KindChip = styled(Chip, {
@@ -274,7 +238,7 @@ const TagChip = styled(Chip)(({ theme }) => ({
 
 const MoreActionsButton = styled(IconButton)(({ theme }) => ({
   color: theme.palette.text.secondary,
-  transition: 'all 0.2s ease',
+  transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)',
   '&:hover': {
     color: theme.palette.text.primary,
     backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
@@ -296,7 +260,7 @@ const SimilarTemplateCard = styled(Box)(({ theme }) => ({
   borderRadius: 8,  // Figma spec: 8px
   border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
   cursor: 'pointer',
-  transition: 'all 0.2s ease',
+  transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)',
   '&:hover': {
     borderColor: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
     backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : neutral[50],
@@ -907,6 +871,8 @@ export default function TemplatesPage() {
     {
       field: 'name',
       headerName: 'Design',
+      minWidth: 200,
+      flex: 1,
       renderCell: (value, row) => {
         const config = getKindConfig(theme, row.kind)
         const Icon = config.icon

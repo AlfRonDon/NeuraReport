@@ -88,7 +88,7 @@ const DropZone = styled(Paper)(({ theme, isDragging }) => ({
   borderRadius: 8,  // Figma spec: 8px
   textAlign: 'center',
   cursor: 'pointer',
-  transition: 'all 0.2s ease',
+  transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)',
   '&:hover': {
     borderColor: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
     backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.02) : neutral[50],
@@ -97,7 +97,7 @@ const DropZone = styled(Paper)(({ theme, isDragging }) => ({
 
 const MethodCard = styled(Card)(({ theme, selected }) => ({
   cursor: 'pointer',
-  transition: 'all 0.2s ease',
+  transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)',
   border: selected ? `2px solid ${theme.palette.mode === 'dark' ? neutral[500] : neutral[900]}` : `1px solid ${alpha(theme.palette.divider, 0.2)}`,
   '&:hover': {
     transform: 'translateY(-2px)',

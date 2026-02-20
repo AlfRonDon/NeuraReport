@@ -1,26 +1,25 @@
 /* ============================================================================
-   NEURAREPORT - Design System v4 Global Styles
-   Typography: Geist Sans, Geist Mono, Source Serif 4
-   Color: Neutral + Primary (amber) + Status + Secondary accent palettes
+   NEURAREPORT - Desktop UI Overhaul Global Styles
+   Typography: Inter (UI/body), Courier New (mono), Space Grotesk (display/brand)
+   Color: Neutral (warm paper) + Primary (blue) + Status + Secondary accent palettes
    ============================================================================ */
 
 /* ============================================================================
    FONT IMPORTS
-   Geist Sans & Geist Mono (variable fonts, self-hosted)
-   Source Serif 4 (Google Fonts, display typography only)
+   Inter & Space Grotesk (variable fonts, self-hosted)
    ============================================================================ */
 @font-face {
-  font-family: 'Geist Sans';
-  src: url('/fonts/Geist-Variable.woff2') format('woff2');
+  font-family: 'Inter';
+  src: url('/fonts/Inter-Variable.woff2') format('woff2');
   font-weight: 100 900;
   font-style: normal;
   font-display: swap;
 }
 
 @font-face {
-  font-family: 'Geist Mono';
-  src: url('/fonts/GeistMono-Variable.woff2') format('woff2');
-  font-weight: 100 900;
+  font-family: 'Space Grotesk';
+  src: url('/fonts/SpaceGrotesk-Variable.woff2') format('woff2');
+  font-weight: 300 700;
   font-style: normal;
   font-display: swap;
 }
@@ -29,34 +28,34 @@
   /* ============================================================================
      FONT FAMILIES
      ============================================================================ */
-  --font-display: 'Source Serif 4', Georgia, 'Times New Roman', serif;
-  --font-heading: 'Geist Sans', system-ui, -apple-system, sans-serif;
-  --font-body: 'Geist Sans', system-ui, -apple-system, sans-serif;
-  --font-mono: 'Geist Mono', 'SF Mono', Monaco, Consolas, monospace;
+  --font-display: 'Space Grotesk', 'Inter', system-ui, sans-serif;
+  --font-heading: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'Courier New', SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 
   /* ============================================================================
      NEUTRAL PALETTE (intent-driven, 50-900 scale)
      50-100: never for text. 900: never as background.
      ============================================================================ */
-  --neutral-50: #FAFAF9;   /* Page backgrounds, subtle sections */
-  --neutral-100: #F3F4F3;  /* Subtle cards, background fills */
-  --neutral-200: #E5E7E6;  /* Borders, dividers */
-  --neutral-300: #D1D5DB;  /* Input outlines, separators */
+  --neutral-50: #fbfaf7;   /* Warm paper page backgrounds */
+  --neutral-100: #f6f5f2;  /* Warm cream cards, background fills */
+  --neutral-200: #d7d6d1;  /* Warm paper borders, dividers */
+  --neutral-300: #d4d2cc;  /* Warm paper input outlines, separators */
   --neutral-400: #9CA3AF;  /* Disabled icons */
   --neutral-500: #6B7280;  /* Muted / helper text */
   --neutral-700: #374151;  /* Default body text */
   --neutral-900: #111827;  /* Headings, high-emphasis text */
 
   /* ============================================================================
-     PRIMARY PALETTE (Brand / Action - warm amber)
+     PRIMARY PALETTE (Brand / Action - blue accent)
      Only 500-600 for CTAs. Never replace status colors.
      ============================================================================ */
-  --primary-50: #FEF2EF;   /* Subtle backgrounds, hover fills */
-  --primary-100: #FEE2D5;  /* Light accents */
-  --primary-300: #F4A580;  /* Secondary emphasis */
-  --primary-500: #D97757;  /* Primary CTAs, links */
-  --primary-600: #B45309;  /* Hover / active states */
-  --primary-900: #7C2D12;  /* Strong emphasis (never large surfaces) */
+  --primary-50: #EFF6FF;   /* Subtle blue backgrounds, hover fills */
+  --primary-100: #DBEAFE;  /* Light blue accents */
+  --primary-300: #6A9EFA;  /* Secondary blue emphasis */
+  --primary-500: #3B82F6;  /* Primary CTAs, links */
+  --primary-600: #2563EB;  /* Hover / active states */
+  --primary-900: #1D4ED8;  /* Strong emphasis (never large surfaces) */
 
   /* ============================================================================
      STATUS COLORS (semantic only, never decorative)
@@ -70,7 +69,7 @@
      ============================================================================ */
   --color-bg-primary: var(--neutral-50);
   --color-bg-surface: #FFFFFF;
-  --color-bg-sidebar: #FFFFFF;
+  --color-bg-sidebar: var(--neutral-50);
   --color-bg-input: var(--neutral-100);
   --color-bg-hover: var(--neutral-200);
   --color-bg-active: var(--neutral-200);
@@ -136,21 +135,21 @@
   /* ============================================================================
      SHADOWS
      ============================================================================ */
-  --shadow-xsmall: 0 1px 2px rgba(16, 24, 40, 0.04);
-  --shadow-card: 0 1px 2px rgba(16, 24, 40, 0.04);
-  --shadow-elevated: 0 1px 2px rgba(16, 24, 40, 0.04), 0 4px 8px rgba(16, 24, 40, 0.04);
-  --shadow-modal: 0 1px 2px rgba(16, 24, 40, 0.04), 0 8px 24px rgba(16, 24, 40, 0.12);
+  --shadow-xsmall: 0 2px 8px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04);
+  --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04);
+  --shadow-elevated: 0 2px 8px rgba(0, 0, 0, 0.06), 0 8px 24px rgba(0, 0, 0, 0.1);
+  --shadow-modal: 0 2px 8px rgba(0, 0, 0, 0.06), 0 16px 48px rgba(0, 0, 0, 0.12);
   --shadow-ai-panel: 0px 4px 8.4px rgba(0, 0, 0, 0.25);
 
   /* ============================================================================
      TRANSITIONS
      ============================================================================ */
-  --transition-fast: 150ms ease;
-  --transition-normal: 200ms ease;
-  --transition-slow: 300ms ease;
+  --transition-fast: 150ms cubic-bezier(0.22, 1, 0.36, 1);
+  --transition-normal: 200ms cubic-bezier(0.22, 1, 0.36, 1);
+  --transition-slow: 300ms cubic-bezier(0.22, 1, 0.36, 1);
 
   /* ============================================================================
-     BASE TYPOGRAPHY (Geist Sans default)
+     BASE TYPOGRAPHY (Inter default)
      ============================================================================ */
   font-family: var(--font-body);
   line-height: 1.5;
@@ -194,13 +193,13 @@ body {
    TYPOGRAPHY UTILITY CLASSES (Design System v4)
    ============================================================================ */
 
-/* Display styles - Source Serif 4 */
+/* Display styles - Space Grotesk */
 .text-display-large {
   font-family: var(--font-display);
   font-weight: 600;
   font-size: 52px;
   line-height: 56px;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.04em;
 }
 
 .text-display-small {
@@ -208,16 +207,16 @@ body {
   font-weight: 600;
   font-size: 44px;
   line-height: 48px;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.04em;
 }
 
-/* Heading styles - Geist Sans */
+/* Heading styles - Inter */
 .text-page-title {
   font-family: var(--font-heading);
   font-weight: 600;
   font-size: 40px;
   line-height: 48px;
-  letter-spacing: -0.02em;
+  letter-spacing: 0.02em;
 }
 
 .text-section-title {
@@ -225,7 +224,7 @@ body {
   font-weight: 600;
   font-size: 36px;
   line-height: 44px;
-  letter-spacing: -0.02em;
+  letter-spacing: 0.02em;
 }
 
 .text-subsection-title {
@@ -242,7 +241,7 @@ body {
   line-height: 32px;
 }
 
-/* Label styles - Geist Sans */
+/* Label styles - Inter */
 .text-label-large {
   font-family: var(--font-body);
   font-weight: 500;
@@ -270,10 +269,10 @@ body {
   font-weight: 500;
   font-size: 10px;
   line-height: 14px;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.1em;
 }
 
-/* Paragraph styles - Geist Sans */
+/* Paragraph styles - Inter */
 .text-paragraph-large {
   font-family: var(--font-body);
   font-weight: 400;
@@ -341,7 +340,7 @@ body {
 }
 
 /* ============================================================================
-   TAB STYLES (Primary amber instead of green)
+   TAB STYLES (Primary blue accent)
    ============================================================================ */
 .tab-active {
   background-color: var(--primary-50);
@@ -514,7 +513,7 @@ code {
    SELECTION
    ============================================================================ */
 ::selection {
-  background-color: rgba(217, 119, 87, 0.15);
+  background-color: rgba(59, 130, 246, 0.15);
   color: inherit;
 }
 
@@ -531,7 +530,7 @@ code {
 }
 
 ::-webkit-scrollbar-thumb {
-  background-color: #D9D9D9;
+  background-color: #d4d2cc;
   border-radius: 4px;
 }
 
@@ -540,7 +539,7 @@ code {
 }
 
 /* ============================================================================
-   FOCUS STATES (Primary amber)
+   FOCUS STATES (Primary blue)
    ============================================================================ */
 :focus-visible {
   outline: 2px solid var(--primary-500);

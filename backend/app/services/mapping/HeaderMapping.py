@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import logging
 from backend.app.repositories.dataframes.sqlite_loader import get_loader
+from backend.legacy.utils.connection_utils import get_loader_for_ref
 from collections import defaultdict
 from pathlib import Path
 from typing import Dict, Iterable
@@ -31,8 +32,8 @@ def _detect_measurement_table(tables: list[str], cols: Dict[str, list[str]]) -> 
     return None
 
 
-def get_parent_child_info(db_path: Path) -> Dict[str, object]:
-    """Inspect the SQLite database and infer suitable parent/child tables.
+def get_parent_child_info(db_path) -> Dict[str, object]:
+    """Inspect the database and infer suitable parent/child tables.
 
     Behavior:
       - If there is exactly ONE user table, treat it as BOTH parent and child (single-table report).
@@ -40,7 +41,7 @@ def get_parent_child_info(db_path: Path) -> Dict[str, object]:
       - Else, pick the first table that declares a foreign key as child and its referenced table as parent.
       - If none of the above applies, raise a clear error.
     """
-    loader = get_loader(db_path)
+    loader = get_loader_for_ref(db_path)
     tables = loader.table_names()
 
     if not tables:

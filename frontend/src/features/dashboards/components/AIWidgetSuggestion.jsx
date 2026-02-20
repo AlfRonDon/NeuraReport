@@ -91,7 +91,7 @@ const SuggestionItem = styled(ListItem)(({ theme }) => ({
   border: `1px solid ${theme.palette.divider}`,
   marginBottom: theme.spacing(0.5),
   cursor: 'pointer',
-  transition: 'all 0.15s ease',
+  transition: 'all 0.15s cubic-bezier(0.22, 1, 0.36, 1)',
   '&:hover': {
     backgroundColor:
       theme.palette.mode === 'dark'

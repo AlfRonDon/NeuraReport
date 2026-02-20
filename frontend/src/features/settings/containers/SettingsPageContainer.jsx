@@ -6,14 +6,11 @@ import { useState, useCallback, useEffect, useRef } from 'react'
 import {
   Box,
   Typography,
-  Card,
-  CardContent,
   Stack,
   Chip,
   Switch,
   FormControlLabel,
   Divider,
-  IconButton,
   CircularProgress,
   Alert,
   Button,
@@ -22,7 +19,6 @@ import {
   useTheme,
   alpha,
   styled,
-  keyframes,
 } from '@mui/material'
 import RefreshIcon from '@mui/icons-material/Refresh'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
@@ -49,21 +45,7 @@ import {
   emitPreferencesChanged,
 } from '@/utils/preferences'
 import { neutral, palette } from '@/app/theme'
-
-// =============================================================================
-// ANIMATIONS
-// =============================================================================
-
-const fadeInUp = keyframes`
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-`
+import { fadeInUp, GlassCard, RefreshButton, ExportButton } from '@/styles'
 
 // =============================================================================
 // STYLED COMPONENTS
@@ -83,19 +65,6 @@ const HeaderContainer = styled(Stack)(({ theme }) => ({
   animation: `${fadeInUp} 0.5s ease-out`,
 }))
 
-const GlassCard = styled(Card)(({ theme }) => ({
-  backgroundColor: alpha(theme.palette.background.paper, 0.8),
-  backdropFilter: 'blur(20px)',
-  border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-  borderRadius: 8,  // Figma spec: 8px
-  boxShadow: `0 8px 32px ${alpha(theme.palette.common.black, 0.08)}`,
-  animation: `${fadeInUp} 0.5s ease-out`,
-  transition: 'all 0.3s ease',
-  '&:hover': {
-    boxShadow: `0 12px 48px ${alpha(theme.palette.common.black, 0.12)}`,
-  },
-}))
-
 const IconContainer = styled(Box)(({ theme }) => ({
   width: 32,
   height: 32,
@@ -103,27 +72,6 @@ const IconContainer = styled(Box)(({ theme }) => ({
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-}))
-
-const RefreshButton = styled(IconButton)(({ theme }) => ({
-  borderRadius: 12,
-  transition: 'all 0.2s ease',
-  '&:hover': {
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[100],
-    transform: 'rotate(180deg)',
-  },
-}))
-
-const ExportButton = styled(Button)(({ theme }) => ({
-  borderRadius: 12,
-  textTransform: 'none',
-  fontWeight: 500,
-  borderColor: alpha(theme.palette.divider, 0.2),
-  transition: 'all 0.2s ease',
-  '&:hover': {
-    borderColor: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
-  },
 }))
 
 // =============================================================================
@@ -179,21 +127,19 @@ function SettingCard({ icon: Icon, title, children }) {
 
   return (
     <GlassCard>
-      <CardContent>
-        <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 2 }}>
-          <IconContainer
-            sx={{
-              bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
-            }}
-          >
-            <Icon sx={{ color: 'text.secondary', fontSize: 16 }} />
-          </IconContainer>
-          <Typography variant="subtitle1" fontWeight={600} sx={{ color: theme.palette.text.primary }}>
-            {title}
-          </Typography>
-        </Stack>
-        {children}
-      </CardContent>
+      <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 2 }}>
+        <IconContainer
+          sx={{
+            bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
+          }}
+        >
+          <Icon sx={{ color: 'text.secondary', fontSize: 16 }} />
+        </IconContainer>
+        <Typography variant="subtitle1" fontWeight={600} sx={{ color: theme.palette.text.primary }}>
+          {title}
+        </Typography>
+      </Stack>
+      {children}
     </GlassCard>
   )
 }

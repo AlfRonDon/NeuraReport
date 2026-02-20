@@ -21,21 +21,11 @@ import {
 } from '@mui/icons-material'
 import Modal from './Modal'
 import { neutral, palette } from '@/app/theme'
+import { bounce, shake } from '@/styles'
 
 // =============================================================================
-// ANIMATIONS
+// ANIMATIONS (local — differ from shared versions)
 // =============================================================================
-
-const bounce = keyframes`
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.1); }
-`
-
-const shake = keyframes`
-  0%, 100% { transform: translateX(0); }
-  10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
-  20%, 40%, 60%, 80% { transform: translateX(4px); }
-`
 
 const pulse = keyframes`
   0%, 100% { transform: scale(1); opacity: 0.5; }

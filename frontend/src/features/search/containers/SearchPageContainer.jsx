@@ -119,7 +119,7 @@ const ResultCard = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(2),
   marginBottom: theme.spacing(2),
   cursor: 'pointer',
-  transition: 'all 0.2s ease',
+  transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)',
   '&:hover': {
     backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : neutral[50],
     borderColor: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
@@ -267,7 +267,7 @@ export default function SearchPageContainer() {
       {/* Search Header */}
       <SearchHeader>
         <Box sx={{ maxWidth: 800, mx: 'auto' }}>
-          <Typography variant="h5" sx={{ fontWeight: 600, mb: 3, textAlign: 'center' }}>
+          <Typography variant="h5" sx={{ fontWeight: 600, mb: 3 }}>
             Search & Discovery
           </Typography>
 
@@ -275,7 +275,6 @@ export default function SearchPageContainer() {
           <Tabs
             value={searchType}
             onChange={(_, v) => setSearchType(v)}
-            centered
             sx={{ mb: 2 }}
           >
             {SEARCH_TYPES.map((st) => (

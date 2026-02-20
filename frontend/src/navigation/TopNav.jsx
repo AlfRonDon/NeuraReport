@@ -52,7 +52,6 @@ import { useJobsList } from '../hooks/useJobs'
 import { getShortcutDisplay, SHORTCUTS } from '../hooks/useKeyboardShortcuts'
 import { withBase } from '../api/client'
 import GlobalSearch from './GlobalSearch'
-import NotificationCenter from './NotificationCenter'
 
 // =============================================================================
 // ANIMATIONS
@@ -78,9 +77,9 @@ const shimmer = keyframes`
 // =============================================================================
 
 const StyledAppBar = styled(AppBar)(({ theme }) => ({
-  // Solid white header from Figma - no blur
-  backgroundColor: theme.palette.mode === 'dark' ? neutral[900] : theme.palette.common.white,
-  backdropFilter: 'none',
+  // Glass effect header with warm paper tones
+  backgroundColor: theme.palette.mode === 'dark' ? neutral[900] : 'rgba(255, 255, 255, 0.85)',
+  backdropFilter: 'blur(12px)',
   borderBottom: `1px solid ${theme.palette.mode === 'dark' ? neutral[700] : neutral[200]}`,
   boxShadow: 'none',
 }))
@@ -100,7 +99,7 @@ const NavIconButton = styled(IconButton)(({ theme }) => ({
   borderRadius: 8,
   // Muted grey icons from Figma
   color: theme.palette.mode === 'dark' ? neutral[500] : neutral[300],
-  transition: 'all 0.15s ease',
+  transition: 'all 0.15s cubic-bezier(0.22, 1, 0.36, 1)',
   '&:hover': {
     backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : neutral[100],
     color: theme.palette.mode === 'dark' ? neutral[100] : neutral[900],
@@ -131,7 +130,7 @@ const ConnectionChip = styled(Chip, {
   color: theme.palette.text.secondary,
   fontWeight: 500,
   fontSize: '0.75rem',
-  transition: 'all 0.2s ease',
+  transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)',
   '& .MuiChip-icon': {
     marginLeft: 6,
   },
@@ -192,7 +191,7 @@ const StyledMenuItem = styled(MenuItem)(({ theme }) => ({
   borderRadius: 8,
   margin: theme.spacing(0.5, 1),
   padding: theme.spacing(1, 1.5),
-  transition: 'all 0.15s ease',
+  transition: 'all 0.15s cubic-bezier(0.22, 1, 0.36, 1)',
   '&:hover': {
     backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
   },
@@ -230,7 +229,7 @@ const HelpCard = styled(Box)(({ theme }) => ({
   borderRadius: 8,  // Figma spec: 8px
   backgroundColor: alpha(theme.palette.background.paper, 0.5),
   border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-  transition: 'all 0.2s ease',
+  transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)',
   '&:hover': {
     backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : neutral[50],
     borderColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.12) : neutral[200],
@@ -459,8 +458,6 @@ export default function TopNav({ onMenuClick, showMenuButton, connection }) {
               <KeyboardIcon sx={{ fontSize: 18 }} />
             </NavIconButton>
           </Tooltip>
-
-          <NotificationCenter />
 
           <Tooltip title="Jobs & downloads" arrow TransitionComponent={Zoom}>
             <NavIconButton size="small" onClick={handleOpenNotifications} aria-label="View notifications" data-testid="notifications-button">

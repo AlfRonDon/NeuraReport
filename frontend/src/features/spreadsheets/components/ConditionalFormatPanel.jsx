@@ -88,7 +88,7 @@ const RuleCard = styled(Paper, {
   border: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
   backgroundColor: isActive ? 'transparent' : alpha(theme.palette.action.disabled, 0.05),
   opacity: isActive ? 1 : 0.7,
-  transition: 'all 0.15s ease',
+  transition: 'all 0.15s cubic-bezier(0.22, 1, 0.36, 1)',
   '&:hover': {
     borderColor: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
   },

@@ -87,7 +87,7 @@ const DataCard = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(2),
   marginBottom: theme.spacing(2),
   border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-  transition: 'all 0.15s ease',
+  transition: 'all 0.15s cubic-bezier(0.22, 1, 0.36, 1)',
   '&:hover': {
     borderColor: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
     boxShadow: `0 2px 8px ${alpha(theme.palette.common.black, 0.1)}`,
@@ -137,7 +137,7 @@ const ProgressFill = styled(Box, {
   borderRadius: 1,  // Figma spec: 8px
   backgroundColor: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
   width: `${width}%`,
-  transition: 'width 0.3s ease',
+  transition: 'width 0.3s cubic-bezier(0.22, 1, 0.36, 1)',
 }))
 
 // =============================================================================

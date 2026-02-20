@@ -18,13 +18,9 @@ import {
   alpha,
   keyframes,
 } from '@mui/material'
+import { shimmer } from '@/styles'
 
-// Shimmer animation for skeleton loaders
-const shimmer = keyframes`
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-`
-
+// Local pulse — differs from shared version (opacity-based, not scale-based)
 const pulse = keyframes`
   0%, 100% { opacity: 1; }
   50% { opacity: 0.5; }

@@ -35,6 +35,7 @@ from .routes import (
     jobs,
     knowledge,
     legacy,
+    logger,
     nl2sql,
     recommendations,
     reports,
@@ -130,6 +131,9 @@ def _build_v1_router() -> APIRouter:
     # AI Agents
     v1.include_router(agents.router, prefix="/agents", tags=["agents"])
     v1.include_router(agents_v2.router, prefix="/agents/v2", tags=["agents-v2"])
+
+    # Logger integration
+    v1.include_router(logger.router, prefix="/logger", tags=["logger"])
 
     # Audit trail
     v1.include_router(audit.router, prefix="/audit", tags=["audit"])

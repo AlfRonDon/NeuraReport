@@ -42,6 +42,7 @@ import {
   figmaComponents,
   fontFamilyBody,
 } from '@/app/theme'
+import { shimmer, slideIn } from '@/styles'
 
 // =============================================================================
 // FIGMA DATA TABLE CONSTANTS (EXACT from Figma specs)
@@ -53,7 +54,7 @@ const FIGMA_TABLE = {
 }
 
 // =============================================================================
-// ANIMATIONS
+// ANIMATIONS (local — differ from shared versions)
 // =============================================================================
 
 const fadeInUp = keyframes`
@@ -67,25 +68,9 @@ const fadeInUp = keyframes`
   }
 `
 
-const shimmer = keyframes`
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-`
-
 const pulse = keyframes`
   0%, 100% { opacity: 1; }
   50% { opacity: 0.5; }
-`
-
-const slideIn = keyframes`
-  from {
-    opacity: 0;
-    transform: translateX(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
 `
 
 // =============================================================================
@@ -96,7 +81,7 @@ const TableWrapper = styled(Box)(({ theme }) => ({
   backgroundColor: alpha(theme.palette.background.paper, 0.7),
   backdropFilter: 'blur(20px)',
   borderRadius: 8,  // Figma spec: 8px
-  border: `1px solid ${alpha(theme.palette.divider, 0.08)}`,
+  border: `1px solid ${alpha(theme.palette.divider, 0.25)}`,
   overflow: 'hidden',
   // In flex layouts, allow the table wrapper to shrink so wide tables don't force horizontal page scroll.
   minWidth: 0,
@@ -235,7 +220,7 @@ const SkeletonRow = styled(Box)(({ theme }) => ({
   alignItems: 'center',
   padding: theme.spacing(1.5, 2),
   gap: theme.spacing(2),
-  borderBottom: `1px solid ${alpha(theme.palette.divider, 0.05)}`,
+  borderBottom: `1px solid ${alpha(theme.palette.divider, 0.15)}`,
   animation: `${pulse} 1.5s infinite ease-in-out`,
 }))
 
@@ -252,7 +237,7 @@ const ShimmerSkeleton = styled(Skeleton)(({ theme }) => ({
 }))
 
 const StyledPagination = styled(TablePagination)(({ theme }) => ({
-  borderTop: `1px solid ${alpha(theme.palette.divider, 0.08)}`,
+  borderTop: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
   backgroundColor: alpha(theme.palette.background.paper, 0.3),
   '& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows': {
     fontSize: 14,
@@ -279,7 +264,7 @@ const StyledPagination = styled(TablePagination)(({ theme }) => ({
 const ExpandableRow = styled(TableRow)(({ theme }) => ({
   backgroundColor: alpha(theme.palette.background.paper, 0.3),
   '& .MuiTableCell-body': {
-    borderBottom: `1px solid ${alpha(theme.palette.divider, 0.05)}`,
+    borderBottom: `1px solid ${alpha(theme.palette.divider, 0.15)}`,
   },
 }))
 
@@ -709,7 +694,7 @@ export default function DataTable({
           size={rowHeight === 'compact' ? 'small' : 'medium'}
           sx={{
             width: '100%',
-            tableLayout: isNarrow ? 'fixed' : 'auto',
+            tableLayout: 'auto',
           }}
         >
           <StyledTableHead>
@@ -730,9 +715,9 @@ export default function DataTable({
                   key={column.field}
                   align={column.align || 'left'}
                   sx={{
-                    ...(isNarrow
-                      ? { width: 'auto', minWidth: 0, whiteSpace: 'normal' }
-                      : { width: column.width, minWidth: column.minWidth }),
+                    width: column.width,
+                    minWidth: isNarrow ? (column.minWidth || column.width || 80) : column.minWidth,
+                    whiteSpace: 'nowrap',
                   }}
                   sortDirection={orderBy === column.field ? order : false}
                 >
@@ -773,7 +758,7 @@ export default function DataTable({
                       key={column.field}
                       sx={{
                         p: cellPadding,
-                        ...(isNarrow ? { whiteSpace: 'normal', overflowWrap: 'anywhere' } : null),
+                        ...(isNarrow ? { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 0 } : null),
                       }}
                     >
                       <ShimmerSkeleton
@@ -848,7 +833,7 @@ export default function DataTable({
                           data-testid={`table-cell-${column.field}`}
                           sx={{
                             p: cellPadding,
-                            ...(isNarrow ? { whiteSpace: 'normal', overflowWrap: 'anywhere' } : null),
+                            ...(isNarrow ? { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 0 } : null),
                           }}
                         >
                           {column.renderCell

@@ -165,8 +165,8 @@ def mapping_key_options(
                 parent_table = str(contract_join.get("parent_table") or "").strip() or "neuract__RUNHOURS"
                 if _use_df:
                     try:
-                        from backend.app.repositories.dataframes.sqlite_loader import get_loader
-                        loader = get_loader(db_path)
+                        from backend.legacy.utils.connection_utils import get_loader_for_ref
+                        loader = get_loader_for_ref(db_path)
                         df = loader.frame(parent_table)
                         columns = [str(c) for c in df.columns]
                     except Exception:

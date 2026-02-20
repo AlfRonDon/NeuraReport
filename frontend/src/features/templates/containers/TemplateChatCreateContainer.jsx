@@ -15,6 +15,8 @@ import {
   Paper,
   Chip,
   IconButton,
+  ToggleButton,
+  ToggleButtonGroup,
 } from '@mui/material'
 import NavigateNextIcon from '@mui/icons-material/NavigateNext'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
@@ -22,10 +24,12 @@ import SaveIcon from '@mui/icons-material/Save'
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
 import UploadFileIcon from '@mui/icons-material/UploadFile'
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf'
+import TableChartIcon from '@mui/icons-material/TableChart'
 import CloseIcon from '@mui/icons-material/Close'
 import { Link as RouterLink, useSearchParams } from 'react-router-dom'
 
 import Surface from '@/components/layout/Surface.jsx'
+import ConnectionSelector from '@/components/common/ConnectionSelector'
 import { useToast } from '@/components/ToastProvider.jsx'
 import {
   useInteraction,
@@ -50,10 +54,15 @@ export default function TemplateChatCreateContainer() {
   const addTemplate = useAppStore((s) => s.addTemplate)
   const setTemplateId = useAppStore((s) => s.setTemplateId)
   const lastUsedConnectionId = useAppStore((s) => s.lastUsed?.connectionId || null)
+  const activeConnection = useAppStore((s) => s.activeConnection)
+  const setActiveConnectionId = useAppStore((s) => s.setActiveConnectionId)
   const deleteSession = useTemplateChatStore((s) => s.deleteSession)
   const [searchParams] = useSearchParams()
   const fromWizard = searchParams.get('from') === 'wizard'
   const wizardConnectionId = searchParams.get('connectionId') || null
+  const [selectedConnectionId, setSelectedConnectionId] = useState(
+    wizardConnectionId || lastUsedConnectionId || activeConnection?.id || ''
+  )
 
   const addAssistantMessage = useTemplateChatStore((s) => s.addAssistantMessage)
 
@@ -63,6 +72,7 @@ export default function TemplateChatCreateContainer() {
   const [templateName, setTemplateName] = useState('')
   const [creating, setCreating] = useState(false)
   const [samplePdf, setSamplePdf] = useState(null) // { file: File, name, size }
+  const [templateKind, setTemplateKind] = useState('pdf')
   const fileInputRef = useRef(null)
 
   // Mapping phase state — shown after template save
@@ -74,8 +84,15 @@ export default function TemplateChatCreateContainer() {
 
   const handleFileSelect = useCallback((file) => {
     if (!file) return
-    if (file.type !== 'application/pdf') {
-      toast.show('Please upload a PDF file.', 'warning')
+    const pdfTypes = ['application/pdf']
+    const excelTypes = [
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/vnd.ms-excel',
+    ]
+    const allowedTypes = templateKind === 'excel' ? [...pdfTypes, ...excelTypes] : pdfTypes
+    const isExcelExt = /\.(xlsx|xls)$/i.test(file.name)
+    if (!allowedTypes.includes(file.type) && !(templateKind === 'excel' && isExcelExt)) {
+      toast.show(templateKind === 'excel' ? 'Please upload a PDF or Excel file.' : 'Please upload a PDF file.', 'warning')
       return
     }
     if (file.size > MAX_PDF_SIZE_MB * 1024 * 1024) {
@@ -83,8 +100,8 @@ export default function TemplateChatCreateContainer() {
       return
     }
     setSamplePdf({ file, name: file.name, size: file.size })
-    toast.show(`Sample PDF "${file.name}" attached. The AI will use this as a visual reference.`, 'info')
-  }, [toast])
+    toast.show(`Sample file "${file.name}" attached. The AI will use this as a visual reference.`, 'info')
+  }, [toast, templateKind])
 
   const handleDrop = useCallback((e) => {
     e.preventDefault()
@@ -174,7 +191,7 @@ export default function TemplateChatCreateContainer() {
       action: async () => {
         setCreating(true)
         try {
-          const result = await createTemplateFromChat(name, currentHtml)
+          const result = await createTemplateFromChat(name, currentHtml, templateKind)
           const templateId = result?.template_id
           const kind = result?.kind || 'pdf'
 
@@ -194,7 +211,7 @@ export default function TemplateChatCreateContainer() {
           setNameDialogOpen(false)
 
           // Run mapping preview and show in chat for user review
-          const connId = wizardConnectionId || lastUsedConnectionId
+          const connId = selectedConnectionId || wizardConnectionId || lastUsedConnectionId
           if (templateId && connId) {
             // Save template details for mapping phase
             setSavedTemplateId(templateId)
@@ -293,7 +310,7 @@ export default function TemplateChatCreateContainer() {
     if (!savedTemplateId) return
     setMappingApproving(true)
     try {
-      const connId = wizardConnectionId || lastUsedConnectionId
+      const connId = selectedConnectionId || wizardConnectionId || lastUsedConnectionId
       addAssistantMessage(SESSION_KEY, 'Building contract and generator assets... This may take a moment.')
       toast.show('Approving mapping and building contract...', 'info')
       await mappingApprove(savedTemplateId, finalMapping, {
@@ -325,7 +342,7 @@ export default function TemplateChatCreateContainer() {
   // Handle "Queue & Continue" — fire-and-forget the approval and navigate away
   const handleMappingQueue = useCallback(() => {
     if (!savedTemplateId) return
-    const connId = wizardConnectionId || lastUsedConnectionId
+    const connId = selectedConnectionId || wizardConnectionId || lastUsedConnectionId
     // Fire the approval in the background — don't await
     mappingApprove(savedTemplateId, mappingPreviewData?.mapping || {}, {
       connectionId: connId,
@@ -339,10 +356,10 @@ export default function TemplateChatCreateContainer() {
     navigateToTemplate(savedTemplateId, savedTemplateName, savedTemplateKind)
   }, [savedTemplateId, savedTemplateName, savedTemplateKind, wizardConnectionId, lastUsedConnectionId, mappingPreviewData, toast, navigateToTemplate])
 
-  // Wrap the chatApi to match (messages, html) signature, passing sample PDF if attached
+  // Wrap the chatApi to match (messages, html) signature, passing sample PDF and kind
   const chatApi = useCallback((messages, html) => {
-    return chatTemplateCreate(messages, html, samplePdf?.file || null)
-  }, [samplePdf])
+    return chatTemplateCreate(messages, html, samplePdf?.file || null, templateKind)
+  }, [samplePdf, templateKind])
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', flex: '1 1 0', minHeight: 0, overflow: 'hidden' }}>
@@ -375,6 +392,17 @@ export default function TemplateChatCreateContainer() {
           </Stack>
 
           <Stack direction="row" spacing={1.5} alignItems="center">
+            <ConnectionSelector
+              value={selectedConnectionId}
+              onChange={(connId) => {
+                setSelectedConnectionId(connId)
+                setActiveConnectionId(connId)
+              }}
+              label="Data Source"
+              size="small"
+              fullWidth={false}
+              sx={{ minWidth: 200 }}
+            />
             <Button
               variant="contained"
               onClick={handleOpenNameDialog}
@@ -446,17 +474,19 @@ export default function TemplateChatCreateContainer() {
             <UploadFileIcon sx={{ color: 'text.secondary' }} />
             <Box sx={{ flex: 1 }}>
               <Typography variant="body2" fontWeight={600}>
-                Have a sample PDF?
+                {templateKind === 'excel' ? 'Have a sample PDF or Excel file?' : 'Have a sample PDF?'}
               </Typography>
               <Typography variant="caption" color="text.secondary">
-                Drop a PDF here or click to upload. The AI will use it as a visual reference for layout and styling.
+                {templateKind === 'excel'
+                  ? 'Drop a PDF or Excel file here or click to upload. The AI will use it as a visual reference.'
+                  : 'Drop a PDF here or click to upload. The AI will use it as a visual reference for layout and styling.'}
               </Typography>
             </Box>
             <Chip label="Optional" size="small" variant="outlined" />
             <input
               ref={fileInputRef}
               type="file"
-              accept="application/pdf"
+              accept={templateKind === 'excel' ? 'application/pdf,.xlsx,.xls' : 'application/pdf'}
               hidden
               onChange={(e) => handleFileSelect(e.target.files?.[0])}
             />
@@ -564,6 +594,20 @@ export default function TemplateChatCreateContainer() {
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
             Give your template a descriptive name. You can change this later.
           </Typography>
+          <ToggleButtonGroup
+            value={templateKind}
+            exclusive
+            onChange={(_, newKind) => newKind && setTemplateKind(newKind)}
+            size="small"
+            sx={{ mb: 2 }}
+          >
+            <ToggleButton value="pdf">
+              <PictureAsPdfIcon sx={{ mr: 1, fontSize: 18 }} /> PDF Report
+            </ToggleButton>
+            <ToggleButton value="excel">
+              <TableChartIcon sx={{ mr: 1, fontSize: 18 }} /> Excel Report
+            </ToggleButton>
+          </ToggleButtonGroup>
           <TextField
             autoFocus
             fullWidth

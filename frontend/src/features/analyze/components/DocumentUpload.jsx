@@ -107,7 +107,7 @@ export default function DocumentUpload({
         p: 4,
         textAlign: 'center',
         cursor: disabled || isUploading ? 'default' : 'pointer',
-        transition: 'all 0.2s ease',
+        transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)',
         borderStyle: 'dashed',
         borderWidth: 2,
         borderColor: dragActive

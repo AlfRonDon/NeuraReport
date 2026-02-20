@@ -94,7 +94,7 @@ const StepCard = styled(Paper, {
       : status === 'running'
       ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : neutral[50])
       : 'transparent',
-  transition: 'all 0.2s ease',
+  transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)',
 }))
 
 const LogContainer = styled(Box)(({ theme }) => ({

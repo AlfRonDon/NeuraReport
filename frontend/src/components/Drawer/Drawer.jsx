@@ -66,7 +66,7 @@ export default function Drawer({
           maxWidth: '100%',
           bgcolor: alpha(theme.palette.background.paper, 0.98),
           backdropFilter: 'blur(20px)',
-          borderLeft: `1px solid ${alpha(theme.palette.divider, 0.08)}`,
+          borderLeft: `1px solid ${alpha(theme.palette.divider, 0.25)}`,
           boxShadow: `0 0 64px ${alpha(theme.palette.common.black, 0.25)}`,
         },
       }}
@@ -95,7 +95,7 @@ export default function Drawer({
             display: 'flex',
             alignItems: 'flex-start',
             justifyContent: 'space-between',
-            borderBottom: `1px solid ${alpha(theme.palette.divider, 0.08)}`,
+            borderBottom: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
           }}
         >
           <Box>
@@ -157,7 +157,7 @@ export default function Drawer({
             sx={{
               px: 3,
               py: 2.5,
-              borderTop: `1px solid ${alpha(theme.palette.divider, 0.08)}`,
+              borderTop: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
               bgcolor: theme.palette.background.paper,
             }}
           >

@@ -74,7 +74,7 @@ const ConnectorCard = styled(Card)(({ theme }) => ({
   height: '100%',
   display: 'flex',
   flexDirection: 'column',
-  transition: 'all 0.2s ease',
+  transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)',
   '&:hover': {
     transform: 'translateY(-4px)',
     boxShadow: `0 8px 30px ${alpha(theme.palette.text.primary, 0.15)}`,
@@ -515,7 +515,7 @@ export default function ConnectorsPage() {
               </Grid>
             ) : (
               <Box sx={{ textAlign: 'center', py: 8 }}>
-                <DatabaseIcon sx={{ fontSize: 80, color: 'text.disabled', mb: 2 }} />
+                <DatabaseIcon sx={{ fontSize: 64, color: 'text.disabled', mb: 2 }} />
                 <Typography variant="h6" sx={{ mb: 1 }}>
                   No connections yet
                 </Typography>

@@ -170,9 +170,15 @@ class DataFrameCursor:
 
 
 class DataFrameConnection:
-    def __init__(self, db_path: Path):
-        self.db_path = Path(db_path)
-        self._loader = get_loader(self.db_path)
+    def __init__(self, db_path):
+        # Support ConnectionRef objects for PostgreSQL connections
+        if hasattr(db_path, 'is_postgresql') and db_path.is_postgresql:
+            from backend.legacy.utils.connection_utils import get_loader_for_ref
+            self.db_path = db_path
+            self._loader = get_loader_for_ref(db_path)
+        else:
+            self.db_path = Path(db_path)
+            self._loader = get_loader(self.db_path)
         if eager_load_enabled():
             frames = self._loader.frames()
         else:
@@ -207,6 +213,12 @@ Connection = DataFrameConnection
 Cursor = DataFrameCursor
 
 
-def connect(db_path: str | Path, **_kwargs) -> DataFrameConnection:
-    """sqlite3.connect-compatible entrypoint backed by pandas DataFrames."""
+def connect(db_path, **_kwargs) -> DataFrameConnection:
+    """sqlite3.connect-compatible entrypoint backed by pandas DataFrames.
+
+    Accepts Path, str, or ConnectionRef objects.
+    """
+    # Pass ConnectionRef objects directly to handle PostgreSQL
+    if hasattr(db_path, 'is_postgresql'):
+        return DataFrameConnection(db_path)
     return DataFrameConnection(Path(db_path))

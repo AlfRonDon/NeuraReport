@@ -61,7 +61,7 @@ const VersionCard = styled(Paper, {
   padding: theme.spacing(2),
   marginBottom: theme.spacing(1.5),
   cursor: 'pointer',
-  transition: 'all 0.15s ease',
+  transition: 'all 0.15s cubic-bezier(0.22, 1, 0.36, 1)',
   border: `1px solid ${isSelected ? (theme.palette.mode === 'dark' ? neutral[500] : neutral[700]) : alpha(theme.palette.divider, 0.1)}`,
   backgroundColor: isSelected ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : neutral[50]) : 'transparent',
   '&:hover': {

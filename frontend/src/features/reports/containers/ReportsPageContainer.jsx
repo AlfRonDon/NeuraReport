@@ -1,6 +1,6 @@
 /**
- * Premium Reports Page
- * Sophisticated report generation with glassmorphism and smooth animations
+ * Reports Page — Clean workflow for report generation
+ * Single-column layout: Design & Source → Time Period → Generate → Recent Runs
  */
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
@@ -11,7 +11,6 @@ import {
   Stack,
   Paper,
   Button,
-  FormControl,
   InputLabel,
   Select,
   MenuItem,
@@ -19,7 +18,7 @@ import {
   Chip,
   Alert,
   LinearProgress,
-  Grid,
+  Collapse,
   Divider,
   Checkbox,
   List,
@@ -28,10 +27,11 @@ import {
   useTheme,
   alpha,
   styled,
-  keyframes,
 } from '@mui/material'
 import PlayArrowIcon from '@mui/icons-material/PlayArrow'
 import DownloadIcon from '@mui/icons-material/Download'
+import TableChartIcon from '@mui/icons-material/TableChart'
+import ArticleIcon from '@mui/icons-material/Article'
 import ScheduleIcon from '@mui/icons-material/Schedule'
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
 import SmartToyIcon from '@mui/icons-material/SmartToy'
@@ -41,87 +41,31 @@ import DateRangeIcon from '@mui/icons-material/DateRange'
 import FilterListIcon from '@mui/icons-material/FilterList'
 import DescriptionIcon from '@mui/icons-material/Description'
 import RefreshIcon from '@mui/icons-material/Refresh'
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
+import ExpandLessIcon from '@mui/icons-material/ExpandLess'
 import { useAppStore } from '@/stores'
 import { useToast } from '@/components/ToastProvider'
+import PageHeader from '@/components/layout/PageHeader'
 import TemplateRecommender from '@/features/reports/components/TemplateRecommender.jsx'
 import SuccessCelebration, { useCelebration } from '@/components/SuccessCelebration'
 import AiUsageNotice from '@/components/ai/AiUsageNotice'
-import ReportGlossaryNotice from '@/components/ux/ReportGlossaryNotice.jsx'
 import { useInteraction, InteractionType, Reversibility, useNavigateInteraction } from '@/components/ux/governance'
+import ConnectionSelector from '@/components/common/ConnectionSelector'
 import * as api from '@/api/client'
 import * as summaryApi from '@/api/summary'
 import { neutral, palette } from '@/app/theme'
-
-// =============================================================================
-// ANIMATIONS
-// =============================================================================
-
-const fadeInUp = keyframes`
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-`
-
-const shimmer = keyframes`
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-`
-
-const pulse = keyframes`
-  0%, 100% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.05); opacity: 0.8; }
-`
-
-const glow = keyframes`
-  0%, 100% { box-shadow: 0 0 5px currentColor; }
-  50% { box-shadow: 0 0 20px currentColor, 0 0 30px currentColor; }
-`
+import { fadeInUp, GlassCard, StyledFormControl } from '@/styles'
 
 // =============================================================================
 // STYLED COMPONENTS
 // =============================================================================
 
-const PageContainer = styled(Box)(({ theme }) => ({
-  minHeight: '100vh',
-  padding: theme.spacing(3),
-  backgroundColor: theme.palette.background.default,
-}))
-
-const PageHeader = styled(Box)(({ theme }) => ({
-  marginBottom: theme.spacing(4),
-  animation: `${fadeInUp} 0.5s ease-out`,
-}))
-
-const PageTitle = styled(Typography)(({ theme }) => ({
-  fontSize: '1.75rem',
-  fontWeight: 600,
-  letterSpacing: '-0.02em',
-  color: theme.palette.mode === 'dark' ? neutral[100] : neutral[900],
-}))
-
-const GlassCard = styled(Paper)(({ theme }) => ({
-  padding: theme.spacing(3),
-  borderRadius: 8,  // Figma spec: 8px
-  backgroundColor: alpha(theme.palette.background.paper, 0.8),
-  backdropFilter: 'blur(20px)',
-  border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-  boxShadow: `0 8px 32px ${alpha(theme.palette.common.black, 0.08)}`,
-  animation: `${fadeInUp} 0.6s ease-out`,
-  position: 'relative',
-  overflow: 'hidden',
-}))
-
 const SectionLabel = styled(Typography)(({ theme }) => ({
-  fontSize: '12px',
-  fontWeight: 600,
+  fontSize: '0.8125rem',
+  fontWeight: 700,
   textTransform: 'uppercase',
-  letterSpacing: '0.1em',
-  color: theme.palette.text.secondary,
+  letterSpacing: '0.08em',
+  color: theme.palette.text.primary,
   marginBottom: theme.spacing(1.5),
   display: 'flex',
   alignItems: 'center',
@@ -134,36 +78,11 @@ const SectionLabel = styled(Typography)(({ theme }) => ({
   },
 }))
 
-const SectionTitle = styled(Typography)(({ theme }) => ({
-  fontSize: '1rem',
-  fontWeight: 600,
-  color: theme.palette.text.primary,
-  marginBottom: theme.spacing(2),
-}))
-
-const StyledFormControl = styled(FormControl)(({ theme }) => ({
-  '& .MuiOutlinedInput-root': {
-    borderRadius: 12,
-    backgroundColor: alpha(theme.palette.background.paper, 0.6),
-    transition: 'all 0.2s ease',
-    '&:hover': {
-      backgroundColor: alpha(theme.palette.background.paper, 0.8),
-    },
-    '&.Mui-focused': {
-      backgroundColor: theme.palette.background.paper,
-      boxShadow: `0 0 0 3px ${alpha(theme.palette.text.primary, 0.08)}`,
-    },
-  },
-  '& .MuiInputLabel-root': {
-    fontWeight: 500,
-  },
-}))
-
 const StyledTextField = styled(TextField)(({ theme }) => ({
   '& .MuiOutlinedInput-root': {
     borderRadius: 12,
     backgroundColor: alpha(theme.palette.background.paper, 0.6),
-    transition: 'all 0.2s ease',
+    transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)',
     '&:hover': {
       backgroundColor: alpha(theme.palette.background.paper, 0.8),
     },
@@ -180,7 +99,7 @@ const PresetChip = styled(Chip, {
   borderRadius: 10,
   fontWeight: 500,
   fontSize: '0.75rem',
-  transition: 'all 0.2s ease',
+  transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)',
   cursor: 'pointer',
   ...(selected && {
     background: theme.palette.mode === 'dark' ? neutral[700] : neutral[900],
@@ -191,9 +110,14 @@ const PresetChip = styled(Chip, {
     },
   }),
   ...(!selected && {
-    backgroundColor: alpha(theme.palette.action.hover, 0.5),
+    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
+    color: theme.palette.text.primary,
+    border: `1px solid ${alpha(theme.palette.divider, 0.3)}`,
+    '& .MuiChip-icon': {
+      color: theme.palette.text.secondary,
+    },
     '&:hover': {
-      backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[100],
+      backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.14) : neutral[200],
       transform: 'translateY(-1px)',
     },
   }),
@@ -212,7 +136,7 @@ const BatchListContainer = styled(Box)(({ theme }) => ({
   maxHeight: 200,
   overflow: 'auto',
   borderRadius: 12,
-  border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+  border: `1px solid ${alpha(theme.palette.divider, 0.15)}`,
   backgroundColor: alpha(theme.palette.background.paper, 0.4),
   '&::-webkit-scrollbar': {
     width: 6,
@@ -222,7 +146,7 @@ const BatchListContainer = styled(Box)(({ theme }) => ({
   },
   '&::-webkit-scrollbar-thumb': {
     background: alpha(theme.palette.text.primary, 0.2),
-    borderRadius: 8,  // Figma spec: 8px (styled component)
+    borderRadius: 8,
   },
 }))
 
@@ -231,8 +155,8 @@ const BatchListItem = styled(ListItem, {
 })(({ theme, selected }) => ({
   padding: theme.spacing(1, 1.5),
   cursor: 'pointer',
-  transition: 'all 0.15s ease',
-  borderBottom: `1px solid ${alpha(theme.palette.divider, 0.05)}`,
+  transition: 'all 0.15s cubic-bezier(0.22, 1, 0.36, 1)',
+  borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
   ...(selected && {
     backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
   }),
@@ -253,7 +177,7 @@ const PrimaryButton = styled(Button)(({ theme }) => ({
   background: theme.palette.mode === 'dark' ? neutral[700] : neutral[900],
   color: theme.palette.common.white,
   boxShadow: `0 4px 14px ${alpha(theme.palette.common.black, 0.15)}`,
-  transition: 'all 0.2s ease',
+  transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)',
   '&:hover': {
     background: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
     boxShadow: `0 6px 20px ${alpha(theme.palette.common.black, 0.2)}`,
@@ -277,7 +201,7 @@ const SecondaryButton = styled(Button)(({ theme }) => ({
   padding: theme.spacing(1.25, 2.5),
   borderColor: alpha(theme.palette.divider, 0.3),
   color: theme.palette.text.primary,
-  transition: 'all 0.2s ease',
+  transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)',
   '&:hover': {
     borderColor: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
     backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : neutral[50],
@@ -292,43 +216,30 @@ const TextButton = styled(Button)(({ theme }) => ({
   fontSize: '0.75rem',
   padding: theme.spacing(0.5, 1.5),
   color: theme.palette.text.secondary,
-  transition: 'all 0.2s ease',
+  transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)',
   '&:hover': {
     backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
     color: theme.palette.text.primary,
   },
 }))
 
-const OutputCard = styled(GlassCard)(({ theme }) => ({
-  height: '100%',
-  animationDelay: '0.1s',
-}))
-
 const RunHistoryCard = styled(Paper, {
   shouldForwardProp: (prop) => prop !== 'selected',
 })(({ theme, selected }) => ({
-  padding: theme.spacing(1.5),
+  padding: theme.spacing(2),
   borderRadius: 12,
   cursor: 'pointer',
-  transition: 'all 0.2s ease',
-  border: `1px solid ${selected ? (theme.palette.mode === 'dark' ? neutral[500] : neutral[700]) : alpha(theme.palette.divider, 0.1)}`,
+  transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)',
+  border: `1px solid ${selected ? (theme.palette.mode === 'dark' ? neutral[500] : neutral[700]) : alpha(theme.palette.divider, 0.2)}`,
   backgroundColor: selected ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : neutral[50]) : 'transparent',
   '&:hover': {
-    borderColor: alpha(theme.palette.divider, 0.3),
+    borderColor: alpha(theme.palette.divider, 0.4),
     backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.03) : neutral[50],
-    transform: 'translateX(4px)',
     '& .view-summary-hint': {
       opacity: 1,
       color: theme.palette.text.primary,
     },
   },
-}))
-
-const SummaryCard = styled(Paper)(({ theme }) => ({
-  padding: theme.spacing(2),
-  borderRadius: 12,
-  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : neutral[50],
-  border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
 }))
 
 const StyledLinearProgress = styled(LinearProgress)(({ theme }) => ({
@@ -341,46 +252,6 @@ const StyledLinearProgress = styled(LinearProgress)(({ theme }) => ({
   },
 }))
 
-const WarningAlert = styled(Alert)(({ theme }) => ({
-  borderRadius: 12,
-  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : neutral[50],
-  border: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
-  '& .MuiAlert-icon': {
-    color: theme.palette.text.secondary,
-  },
-  '& .MuiAlert-message': {
-    color: theme.palette.text.primary,
-  },
-}))
-
-const SuccessAlert = styled(Alert)(({ theme }) => ({
-  borderRadius: 12,
-  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : neutral[50],
-  border: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
-  '& .MuiAlert-icon': {
-    color: theme.palette.text.secondary,
-  },
-  '& .MuiAlert-message': {
-    color: theme.palette.text.primary,
-  },
-}))
-
-const ErrorAlert = styled(Alert)(({ theme }) => ({
-  borderRadius: 12,
-  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : neutral[50],
-  border: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
-  '& .MuiAlert-icon': {
-    color: theme.palette.text.secondary,
-  },
-  '& .MuiAlert-message': {
-    color: theme.palette.text.primary,
-  },
-}))
-
-const AiIcon = styled(AutoAwesomeIcon)(({ theme }) => ({
-  color: theme.palette.text.secondary,
-}))
-
 const DownloadButton = styled(Button)(({ theme }) => ({
   borderRadius: 8,
   textTransform: 'none',
@@ -388,16 +259,24 @@ const DownloadButton = styled(Button)(({ theme }) => ({
   fontSize: '0.75rem',
   padding: theme.spacing(0.5, 1.5),
   borderColor: alpha(theme.palette.divider, 0.3),
-  transition: 'all 0.2s ease',
+  transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)',
   '&:hover': {
     borderColor: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
     backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : neutral[50],
   },
 }))
 
-const StyledDivider = styled(Divider)(({ theme }) => ({
-  borderColor: alpha(theme.palette.divider, 0.08),
-  margin: theme.spacing(2, 0),
+const AdvancedToggle = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  padding: theme.spacing(1.5, 0),
+  cursor: 'pointer',
+  color: theme.palette.text.secondary,
+  transition: 'color 0.2s ease',
+  '&:hover': {
+    color: theme.palette.text.primary,
+  },
 }))
 
 // =============================================================================
@@ -456,6 +335,7 @@ export default function ReportsPage() {
 
   const templates = useAppStore((s) => s.templates)
   const activeConnection = useAppStore((s) => s.activeConnection)
+  const setActiveConnectionId = useAppStore((s) => s.setActiveConnectionId)
   const setTemplates = useAppStore((s) => s.setTemplates)
 
   const [selectedTemplate, setSelectedTemplate] = useState(searchParams.get('template') || '')
@@ -477,11 +357,11 @@ export default function ReportsPage() {
   const [runSummary, setRunSummary] = useState(null)
   const [summaryLoading, setSummaryLoading] = useState(false)
   const [queueingSummary, setQueueingSummary] = useState(false)
+  const [batchDiscoveryOpen, setBatchDiscoveryOpen] = useState(false)
+  const [expandedRunId, setExpandedRunId] = useState(null)
 
   const selectedTemplateInfo = templates.find((t) => t.id === selectedTemplate)
   const outputLabel = selectedTemplateInfo?.kind?.toUpperCase() || 'PDF'
-  const dateRangeLabel = startDate && endDate ? `${startDate} to ${endDate}` : 'Select dates'
-  const connectionLabel = activeConnection?.name || 'No connection'
 
   // Success celebration
   const { celebrating, celebrate, onComplete: onCelebrationComplete } = useCelebration()
@@ -490,15 +370,19 @@ export default function ReportsPage() {
   const keyOptionsRequestIdRef = useRef(0)
   const summaryRequestIdRef = useRef(0)
 
+  // Auto-select first template when templates are loaded but none selected
+  useEffect(() => {
+    if (!selectedTemplate && templates.length > 0) {
+      setSelectedTemplate(templates[0].id)
+    }
+  }, [templates, selectedTemplate])
+
   useEffect(() => {
     const fetchTemplates = async () => {
       setLoading(true)
       try {
         const data = await api.listApprovedTemplates()
         setTemplates(data)
-        if (!selectedTemplate && data.length > 0) {
-          setSelectedTemplate(data[0].id)
-        }
       } catch (err) {
         toast.show(err.message || 'Failed to load designs', 'error')
       } finally {
@@ -508,7 +392,7 @@ export default function ReportsPage() {
     if (templates.length === 0) {
       fetchTemplates()
     }
-  }, [templates.length, setTemplates, selectedTemplate, toast])
+  }, [templates.length, setTemplates, toast])
 
   useEffect(() => {
     const fetchKeyOptions = async () => {
@@ -630,6 +514,7 @@ export default function ReportsPage() {
             keyValues: Object.keys(keyValues).length > 0 ? keyValues : undefined,
             batchIds: useSelectedBatches ? selectedBatches : undefined,
             kind: template?.kind || 'pdf',
+            xlsx: template?.kind === 'excel',
           })
 
           setResult(reportResult)
@@ -729,8 +614,18 @@ export default function ReportsPage() {
   }, [])
 
   const handleSelectRun = useCallback(async (run) => {
+    // Toggle: clicking the same run collapses it
+    if (selectedRun?.id === run.id) {
+      setSelectedRun(null)
+      setExpandedRunId(null)
+      setRunSummary(null)
+      return
+    }
+
     setSelectedRun(run)
+    setExpandedRunId(run.id)
     setRunSummary(null)
+
     if (run?.id) {
       const requestId = ++summaryRequestIdRef.current
 
@@ -752,7 +647,7 @@ export default function ReportsPage() {
         }
       }
     }
-  }, [])
+  }, [selectedRun?.id])
 
   const handleQueueSummary = useCallback(async () => {
     if (!selectedRun?.id) return
@@ -796,75 +691,45 @@ export default function ReportsPage() {
     setSelectedBatches([])
   }, [])
 
+  // =========================================================================
+  // RENDER
+  // =========================================================================
+
   return (
-    <PageContainer>
+    <Box sx={{ minHeight: '100vh', p: 3, bgcolor: 'background.default' }}>
       <SuccessCelebration trigger={celebrating} onComplete={onCelebrationComplete} />
       <Container maxWidth="lg">
-        <PageHeader>
-          <PageTitle>Run a Report</PageTitle>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-            Choose a design, set your date range, and generate a new report run.
-          </Typography>
-        </PageHeader>
+        <PageHeader
+          title="Run a Report"
+          description="Choose a design, set your date range, and generate a report."
+          actions={
+            <SecondaryButton
+              variant="outlined"
+              startIcon={<ScheduleIcon />}
+              disabled={!selectedTemplate || generating}
+              onClick={() =>
+                handleNavigate(`/schedules?template=${selectedTemplate}`, 'Open schedules', {
+                  templateId: selectedTemplate,
+                })
+              }
+            >
+              Schedule
+            </SecondaryButton>
+          }
+        />
 
-        <ReportGlossaryNotice sx={{ mb: 3 }} />
+        <Stack spacing={3}>
 
-        {!activeConnection && (
-          <WarningAlert severity="warning" sx={{ mb: 3 }}>
-            Please add a data source first to create reports.
-          </WarningAlert>
-        )}
+          {/* ── CARD 1: Design & Data Source ── */}
+          <GlassCard>
+            <SectionLabel>
+              <DescriptionIcon sx={{ fontSize: 14 }} />
+              Design & Data Source
+            </SectionLabel>
 
-        {/* AI Template Picker */}
-        <Box sx={{ mb: 3 }}>
-          <TemplateRecommender onSelectTemplate={handleAiSelectTemplate} />
-        </Box>
-
-        <Grid container spacing={3}>
-          {/* Configuration Panel */}
-          <Grid size={{ xs: 12, md: 8 }}>
-            <GlassCard>
-              <SectionLabel>
-                <DescriptionIcon sx={{ fontSize: 14 }} />
-                Report Settings
-              </SectionLabel>
-
-              <Stack spacing={3}>
-                <Alert
-                  severity="info"
-                  sx={{ borderRadius: 1 }}  // Figma spec: 8px
-                  action={(
-                    <Button
-                      size="small"
-                      onClick={() => handleNavigate('/jobs', 'Open jobs')}
-                      sx={{ textTransform: 'none' }}
-                    >
-                      View Progress
-                    </Button>
-                  )}
-                >
-                  Reports run in the background. Track progress in Report Progress and download finished files in History.
-                </Alert>
-
-                <Box
-                  sx={{
-                    p: 1.5,
-                    borderRadius: 1,  // Figma spec: 8px
-                    border: '1px solid',
-                    borderColor: 'divider',
-                    bgcolor: alpha(theme.palette.background.paper, 0.6),
-                  }}
-                >
-                  <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                    Outcome preview
-                  </Typography>
-                  <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                    <Chip size="small" label={`Output: ${outputLabel}`} variant="outlined" />
-                    <Chip size="small" label={`Connection: ${connectionLabel}`} variant="outlined" />
-                    <Chip size="small" label={`Dates: ${dateRangeLabel}`} variant="outlined" />
-                  </Stack>
-                </Box>
-                {/* Design Selection */}
+            <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
+              {/* Report Design */}
+              <Box sx={{ flex: 1 }}>
                 <StyledFormControl fullWidth>
                   <InputLabel>Report Design</InputLabel>
                   <Select
@@ -887,389 +752,481 @@ export default function ReportsPage() {
                     ))}
                   </Select>
                 </StyledFormControl>
+              </Box>
 
-                {/* Date Range */}
-                <Box>
-                  <SectionTitle>Time Period</SectionTitle>
-                  <Stack direction="row" spacing={1} sx={{ mb: 2, flexWrap: 'wrap', gap: 1 }}>
-                    {Object.entries(getDatePresets()).map(([key, preset]) => (
-                      <PresetChip
-                        key={key}
-                        label={preset.label}
-                        icon={<TodayIcon sx={{ fontSize: 14 }} />}
-                        onClick={() => handleDatePreset(key)}
-                        selected={datePreset === key}
-                        variant={datePreset === key ? 'filled' : 'outlined'}
-                      />
-                    ))}
-                    <PresetChip
-                      label="Custom"
-                      icon={<DateRangeIcon sx={{ fontSize: 14 }} />}
-                      onClick={() => handleDatePreset('custom')}
-                      selected={datePreset === 'custom'}
-                      variant={datePreset === 'custom' ? 'filled' : 'outlined'}
-                    />
-                  </Stack>
-                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-                    <StyledTextField
-                      label="Start Date"
-                      type="date"
-                      value={startDate}
-                      onChange={(e) => {
-                        setStartDate(e.target.value)
-                        setDatePreset('custom')
-                      }}
-                      InputLabelProps={{ shrink: true }}
-                      fullWidth
-                      size="small"
-                    />
-                    <StyledTextField
-                      label="End Date"
-                      type="date"
-                      value={endDate}
-                      onChange={(e) => {
-                        setEndDate(e.target.value)
-                        setDatePreset('custom')
-                      }}
-                      InputLabelProps={{ shrink: true }}
-                      fullWidth
-                      size="small"
-                    />
-                  </Stack>
-                </Box>
-
-                {/* Key Fields */}
-                {keyFields.length > 0 && (
-                  <>
-                    <StyledDivider />
-                    <Box>
-                      <SectionLabel>
-                        <FilterListIcon sx={{ fontSize: 14 }} />
-                        Filter Parameters
-                      </SectionLabel>
-                      <Stack spacing={2}>
-                        {keyFields.map((key) => (
-                          <StyledFormControl key={key} fullWidth size="small">
-                            <InputLabel>{key}</InputLabel>
-                            <Select
-                              value={keyValues[key] || ''}
-                              onChange={(e) => handleKeyValueChange(key, e.target.value)}
-                              label={key}
-                            >
-                              <MenuItem value="">
-                                <em>All</em>
-                              </MenuItem>
-                              {(keyOptions[key] || []).map((option) => (
-                                <MenuItem key={option} value={option}>
-                                  {option}
-                                </MenuItem>
-                              ))}
-                            </Select>
-                          </StyledFormControl>
-                        ))}
-                      </Stack>
-                    </Box>
-                  </>
-                )}
-
-                <StyledDivider />
-
-                {/* Batch Discovery */}
-                <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between">
-                  <SectionTitle sx={{ mb: 0 }}>Find Data Batches</SectionTitle>
-                  <SecondaryButton
-                    variant="outlined"
-                    size="small"
-                    onClick={handleDiscover}
-                    disabled={discovering || !selectedTemplate || !activeConnection}
-                  >
-                    {discovering ? 'Searching...' : 'Find Batches'}
-                  </SecondaryButton>
-                </Stack>
-
-                {discovering && <StyledLinearProgress />}
-                {!discovering && discovery && (
-                  <Stack spacing={2}>
-                    <Stack direction="row" spacing={1} alignItems="center">
-                      <DiscoveryChip label={`${discovery.batches_count || discovery.batches?.length || 0} batches`} />
-                      <DiscoveryChip label={`${discovery.rows_total || 0} rows`} />
-                    </Stack>
-                    <Stack direction="row" spacing={1}>
-                      <TextButton size="small" onClick={handleSelectAllBatches}>
-                        Select all
-                      </TextButton>
-                      <TextButton size="small" onClick={handleClearBatches}>
-                        Clear
-                      </TextButton>
-                    </Stack>
-                    <BatchListContainer>
-                      <List dense disablePadding>
-                        {(discovery.batches || []).map((batch) => (
-                          <BatchListItem
-                            key={batch.id}
-                            disableGutters
-                            onClick={() => toggleBatch(batch.id)}
-                            selected={selectedBatches.includes(batch.id)}
-                          >
-                            <Checkbox
-                              checked={selectedBatches.includes(batch.id)}
-                              sx={{ p: 0.5, mr: 1 }}
-                            />
-                            <ListItemText
-                              primary={`${batch.id}`}
-                              secondary={`${batch.rows || 0} rows`}
-                              primaryTypographyProps={{ variant: 'body2', fontWeight: 500 }}
-                              secondaryTypographyProps={{ variant: 'caption' }}
-                            />
-                          </BatchListItem>
-                        ))}
-                      </List>
-                    </BatchListContainer>
-                  </Stack>
-                )}
-
-                {error && (
-                  <ErrorAlert
-                    severity="error"
-                    onClose={() => setError(null)}
-                    action={
-                      <TextButton
-                        color="inherit"
-                        size="small"
-                        onClick={handleGenerate}
-                        disabled={generating}
-                      >
-                        Try Again
-                      </TextButton>
-                    }
-                  >
-                    {error}
-                  </ErrorAlert>
-                )}
-
-                {generating && (
-                  <Box>
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                      Generating report...
+              {/* Data Source */}
+              <Box sx={{ flex: 1 }}>
+                <ConnectionSelector
+                  value={activeConnection?.id || ''}
+                  onChange={(connId) => setActiveConnectionId(connId)}
+                  label="Data Source"
+                  showStatus
+                />
+                {!activeConnection && (
+                  <Typography variant="caption" color="warning.main" sx={{ mt: 0.75, display: 'block' }}>
+                    No data source selected.{' '}
+                    <Typography
+                      component="span"
+                      variant="caption"
+                      sx={{ color: 'primary.main', cursor: 'pointer', textDecoration: 'underline' }}
+                      onClick={() => handleNavigate('/connections', 'Open connections')}
+                    >
+                      Add one
                     </Typography>
-                    <StyledLinearProgress />
-                  </Box>
+                  </Typography>
                 )}
+              </Box>
+            </Stack>
 
-                {/* Actions */}
-                <Stack direction="row" spacing={2} justifyContent="flex-end">
-                  <SecondaryButton
-                    variant="outlined"
-                    startIcon={<ScheduleIcon />}
-                    disabled={!selectedTemplate || generating}
-                    onClick={() =>
-                      handleNavigate(`/schedules?template=${selectedTemplate}`, 'Open schedules', {
-                        templateId: selectedTemplate,
-                      })
-                    }
-                  >
-                    Schedule
-                  </SecondaryButton>
-                  <PrimaryButton
-                    startIcon={<PlayArrowIcon />}
-                    onClick={handleGenerate}
-                    disabled={!selectedTemplate || !activeConnection || generating}
-                  >
-                    Generate Report
-                  </PrimaryButton>
-                </Stack>
-              </Stack>
-            </GlassCard>
-          </Grid>
+            {/* AI Template Picker — tucked inside, not top-level */}
+            <Box sx={{ mt: 2 }}>
+              <TemplateRecommender onSelectTemplate={handleAiSelectTemplate} />
+            </Box>
+          </GlassCard>
 
-          {/* Result Panel */}
-          <Grid size={{ xs: 12, md: 4 }}>
-            <OutputCard>
-              <SectionLabel>Output</SectionLabel>
+          {/* ── CARD 2: Time Period & Filters ── */}
+          <GlassCard>
+            <SectionLabel>
+              <TodayIcon sx={{ fontSize: 14 }} />
+              Time Period
+            </SectionLabel>
 
-              {result ? (
+            {/* Date preset chips */}
+            <Stack direction="row" spacing={1} sx={{ mb: 2, flexWrap: 'wrap', gap: 1 }}>
+              {Object.entries(getDatePresets()).map(([key, preset]) => (
+                <PresetChip
+                  key={key}
+                  label={preset.label}
+                  icon={<TodayIcon sx={{ fontSize: 14 }} />}
+                  onClick={() => handleDatePreset(key)}
+                  selected={datePreset === key}
+                  variant={datePreset === key ? 'filled' : 'outlined'}
+                />
+              ))}
+              <PresetChip
+                label="Custom"
+                icon={<DateRangeIcon sx={{ fontSize: 14 }} />}
+                onClick={() => handleDatePreset('custom')}
+                selected={datePreset === 'custom'}
+                variant={datePreset === 'custom' ? 'filled' : 'outlined'}
+              />
+            </Stack>
+
+            {/* Date inputs */}
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+              <StyledTextField
+                label="Start Date"
+                type="date"
+                value={startDate}
+                onChange={(e) => {
+                  setStartDate(e.target.value)
+                  setDatePreset('custom')
+                }}
+                InputLabelProps={{ shrink: true }}
+                fullWidth
+                size="small"
+              />
+              <StyledTextField
+                label="End Date"
+                type="date"
+                value={endDate}
+                onChange={(e) => {
+                  setEndDate(e.target.value)
+                  setDatePreset('custom')
+                }}
+                InputLabelProps={{ shrink: true }}
+                fullWidth
+                size="small"
+              />
+            </Stack>
+
+            {/* Key field filters (conditional) */}
+            {keyFields.length > 0 && (
+              <Box sx={{ mt: 3 }}>
+                <Divider sx={{ mb: 2, borderColor: alpha(theme.palette.divider, 0.2) }} />
+                <SectionLabel>
+                  <FilterListIcon sx={{ fontSize: 14 }} />
+                  Filter Parameters
+                </SectionLabel>
                 <Stack spacing={2}>
-                  <SuccessAlert severity="success">
+                  {keyFields.map((key) => (
+                    <StyledFormControl key={key} fullWidth size="small">
+                      <InputLabel>{key}</InputLabel>
+                      <Select
+                        value={keyValues[key] || ''}
+                        onChange={(e) => handleKeyValueChange(key, e.target.value)}
+                        label={key}
+                      >
+                        <MenuItem value="">
+                          <em>All</em>
+                        </MenuItem>
+                        {(keyOptions[key] || []).map((option) => (
+                          <MenuItem key={option} value={option}>
+                            {option}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </StyledFormControl>
+                  ))}
+                </Stack>
+              </Box>
+            )}
+          </GlassCard>
+
+          {/* ── ACTION BAR ── */}
+          <Box>
+            {/* Error alert */}
+            {error && (
+              <Alert
+                severity="error"
+                sx={{ mb: 2, borderRadius: 1 }}
+                onClose={() => setError(null)}
+                action={
+                  <TextButton color="inherit" size="small" onClick={handleGenerate} disabled={generating}>
+                    Try Again
+                  </TextButton>
+                }
+              >
+                {error}
+              </Alert>
+            )}
+
+            {/* Generating progress */}
+            {generating && (
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                  Generating report...
+                </Typography>
+                <StyledLinearProgress />
+              </Box>
+            )}
+
+            {/* Success result */}
+            {result && (
+              <Alert severity="success" sx={{ mb: 2, borderRadius: 1 }}>
+                <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap">
+                  <Typography variant="body2">
                     Report started! ID: {result.job_id?.slice(0, 8)}...
-                  </SuccessAlert>
-                  <Typography variant="body2" color="text.secondary">
-                    Your report is being generated. Track it in Report Progress.
                   </Typography>
                   <SecondaryButton
                     size="small"
                     variant="outlined"
                     onClick={() => handleNavigate('/jobs', 'Open jobs')}
-                    sx={{ alignSelf: 'flex-start' }}
                   >
                     View Progress
                   </SecondaryButton>
                 </Stack>
-              ) : (
-                <Typography variant="body2" color="text.secondary">
-                  Configure your report parameters and click "Generate Report" to create a new report.
+              </Alert>
+            )}
+
+            {/* Primary action row */}
+            <Stack direction="row" spacing={2} alignItems="center" justifyContent="flex-end">
+              <Typography variant="caption" color="text.secondary" sx={{ flex: 1 }}>
+                Reports run in the background.{' '}
+                <Typography
+                  component="span"
+                  variant="caption"
+                  sx={{ color: 'primary.main', cursor: 'pointer', textDecoration: 'underline' }}
+                  onClick={() => handleNavigate('/jobs', 'Open jobs')}
+                >
+                  Track progress
                 </Typography>
-              )}
+              </Typography>
+              <PrimaryButton
+                startIcon={<PlayArrowIcon />}
+                onClick={handleGenerate}
+                disabled={!selectedTemplate || !activeConnection || generating}
+                sx={{ px: 4, py: 1.5 }}
+              >
+                Generate Report
+              </PrimaryButton>
+            </Stack>
+          </Box>
 
-              {/* AI Summary Widget */}
-              {selectedRun && (
-                <>
-                  <StyledDivider />
-                  <AiUsageNotice
-                    title="AI summary"
-                    description="Summaries are generated from the selected report run. Review before sharing."
-                    chips={[
-                      { label: 'Source: Selected run', color: 'info', variant: 'outlined' },
-                      { label: 'Confidence: Review required', color: 'warning', variant: 'outlined' },
-                    ]}
-                    dense
-                    sx={{ mb: 2 }}
-                  />
-                  <Stack spacing={1.5}>
-                    <Stack direction="row" spacing={1} alignItems="center">
-                      <AiIcon fontSize="small" />
-                      <Typography variant="subtitle2" fontWeight={600}>
-                        AI Summary
-                      </Typography>
-                    </Stack>
-                    {summaryLoading && <StyledLinearProgress />}
-                    {!summaryLoading && runSummary ? (
-                      <SummaryCard>
-                        <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
-                          {typeof runSummary === 'string' ? runSummary : runSummary.text || runSummary.content || 'No summary available'}
-                        </Typography>
-                        {runSummary.key_points && (
-                          <Box sx={{ mt: 1.5 }}>
-                            <Typography variant="caption" fontWeight={600} color="text.primary">
-                              Key Points:
-                            </Typography>
-                            <ul style={{ margin: '4px 0', paddingLeft: 20 }}>
-                              {runSummary.key_points.map((point, idx) => (
-                                <li key={idx}>
-                                  <Typography variant="caption">{point}</Typography>
-                                </li>
-                              ))}
-                            </ul>
-                          </Box>
-                        )}
-                      </SummaryCard>
-                    ) : !summaryLoading && (
-                      <Stack spacing={1}>
-                        <Typography variant="body2" color="text.secondary">
-                          Click on a run below to view its AI summary.
-                        </Typography>
-                        <SecondaryButton
-                          size="small"
-                          variant="outlined"
-                          startIcon={<ScheduleIcon />}
-                          onClick={handleQueueSummary}
-                          disabled={queueingSummary}
-                          sx={{ alignSelf: 'flex-start' }}
-                        >
-                          {queueingSummary ? 'Queueing...' : 'Queue summary'}
-                        </SecondaryButton>
-                      </Stack>
-                    )}
-                  </Stack>
-                </>
+          {/* ── ADVANCED: Batch Discovery (collapsed by default) ── */}
+          <Box>
+            <AdvancedToggle onClick={() => setBatchDiscoveryOpen((prev) => !prev)}>
+              <Stack direction="row" spacing={1} alignItems="center">
+                <FilterListIcon sx={{ fontSize: 16 }} />
+                <Typography variant="subtitle2" fontWeight={500}>
+                  Advanced: Find Data Batches
+                </Typography>
+              </Stack>
+              {batchDiscoveryOpen ? (
+                <ExpandLessIcon sx={{ fontSize: 20 }} />
+              ) : (
+                <ExpandMoreIcon sx={{ fontSize: 20 }} />
               )}
+            </AdvancedToggle>
 
-              <StyledDivider />
-              <Stack spacing={1.5}>
-                <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between">
-                  <Typography variant="subtitle2" fontWeight={600}>
-                    Recent Runs
-                  </Typography>
-                  <TextButton
-                    size="small"
-                    onClick={fetchRunHistory}
-                    disabled={historyLoading}
-                    startIcon={<RefreshIcon sx={{ fontSize: 14 }} />}
-                  >
-                    Refresh
-                  </TextButton>
-                </Stack>
-                {historyLoading && <StyledLinearProgress />}
-                {!historyLoading && runHistory.length === 0 && (
-                  <Typography variant="body2" color="text.secondary">
-                    {selectedTemplate ? 'No recent runs for this design yet.' : 'No report runs yet. Generate a report to get started.'}
-                  </Typography>
-                )}
-                <Stack spacing={1}>
-                  {runHistory.map((run) => (
-                    <RunHistoryCard
-                      key={run.id}
-                      selected={selectedRun?.id === run.id}
-                      onClick={() => handleSelectRun(run)}
-                      title="Click to view summary"
+            <Collapse in={batchDiscoveryOpen}>
+              <GlassCard sx={{ mt: 1 }}>
+                <Stack spacing={2}>
+                  <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between">
+                    <Typography variant="body2" color="text.secondary">
+                      Discover available data batches for the selected design and date range.
+                    </Typography>
+                    <SecondaryButton
+                      variant="outlined"
+                      size="small"
+                      onClick={handleDiscover}
+                      disabled={discovering || !selectedTemplate || !activeConnection}
                     >
-                      <Stack spacing={0.5}>
-                        <Stack direction="row" alignItems="center" justifyContent="space-between">
-                          <Typography variant="body2" fontWeight={600}>
-                            {run.templateName || run.templateId}
-                          </Typography>
-                          <Stack
-                            direction="row"
-                            alignItems="center"
-                            spacing={0.5}
-                            className="view-summary-hint"
-                            sx={{ opacity: 0.6, transition: 'all 0.2s ease' }}
-                          >
-                            <Typography variant="caption" color="text.secondary">
-                              View
-                            </Typography>
-                            <ArrowForwardIcon sx={{ fontSize: 12 }} />
-                          </Stack>
-                        </Stack>
-                        <Typography variant="caption" color="text.secondary">
-                          {new Date(run.createdAt).toLocaleString()} &middot; {run.startDate} to {run.endDate}
+                      {discovering ? 'Searching...' : 'Find Batches'}
+                    </SecondaryButton>
+                  </Stack>
+
+                  {discovering && <StyledLinearProgress />}
+
+                  {!discovering && discovery && (
+                    <Stack spacing={2}>
+                      <Stack direction="row" spacing={1} alignItems="center">
+                        <DiscoveryChip label={`${discovery.batches_count || discovery.batches?.length || 0} batches`} />
+                        <DiscoveryChip label={`${discovery.rows_total || 0} rows`} />
+                      </Stack>
+                      <Stack direction="row" spacing={1}>
+                        <TextButton size="small" onClick={handleSelectAllBatches}>Select all</TextButton>
+                        <TextButton size="small" onClick={handleClearBatches}>Clear</TextButton>
+                      </Stack>
+                      <BatchListContainer>
+                        <List dense disablePadding>
+                          {(discovery.batches || []).map((batch) => (
+                            <BatchListItem
+                              key={batch.id}
+                              disableGutters
+                              onClick={() => toggleBatch(batch.id)}
+                              selected={selectedBatches.includes(batch.id)}
+                            >
+                              <Checkbox
+                                checked={selectedBatches.includes(batch.id)}
+                                sx={{ p: 0.5, mr: 1 }}
+                              />
+                              <ListItemText
+                                primary={`${batch.id}`}
+                                secondary={`${batch.rows || 0} rows`}
+                                primaryTypographyProps={{ variant: 'body2', fontWeight: 500 }}
+                                secondaryTypographyProps={{ variant: 'caption' }}
+                              />
+                            </BatchListItem>
+                          ))}
+                        </List>
+                      </BatchListContainer>
+                    </Stack>
+                  )}
+                </Stack>
+              </GlassCard>
+            </Collapse>
+          </Box>
+
+          {/* ── RECENT RUNS (full-width) ── */}
+          <Box>
+            <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
+              <SectionLabel sx={{ mb: 0, flex: 1 }}>
+                <RefreshIcon sx={{ fontSize: 14 }} />
+                Recent Runs
+              </SectionLabel>
+              <TextButton
+                size="small"
+                onClick={fetchRunHistory}
+                disabled={historyLoading}
+                startIcon={<RefreshIcon sx={{ fontSize: 14 }} />}
+              >
+                Refresh
+              </TextButton>
+            </Stack>
+
+            {historyLoading && <StyledLinearProgress sx={{ mb: 2 }} />}
+
+            {!historyLoading && runHistory.length === 0 && (
+              <Box sx={{ py: 4, textAlign: 'center' }}>
+                <DescriptionIcon sx={{ fontSize: 48, color: 'text.disabled', mb: 1 }} />
+                <Typography variant="body2" color="text.secondary">
+                  {selectedTemplate
+                    ? 'No recent runs for this design yet.'
+                    : 'No report runs yet. Generate a report to get started.'}
+                </Typography>
+              </Box>
+            )}
+
+            {/* Run history grid: 2 per row on desktop, 1 on mobile */}
+            <Box
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
+                gap: 2,
+              }}
+            >
+              {runHistory.map((run) => (
+                <Box key={run.id}>
+                  <RunHistoryCard
+                    selected={selectedRun?.id === run.id}
+                    onClick={() => handleSelectRun(run)}
+                    title="Click to view summary"
+                  >
+                    <Stack spacing={0.5}>
+                      <Stack direction="row" alignItems="center" justifyContent="space-between">
+                        <Typography variant="body2" fontWeight={600}>
+                          {run.templateName || run.templateId}
                         </Typography>
-                        <Stack direction="row" spacing={1} sx={{ mt: 0.5 }} flexWrap="wrap" useFlexGap>
-                          {run.artifacts?.pdf_url && (
-                            <DownloadButton
-                              size="small"
-                              variant="outlined"
-                              startIcon={<DownloadIcon sx={{ fontSize: 14 }} />}
-                              href={api.withBase(run.artifacts.pdf_url)}
-                              target="_blank"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              PDF
-                            </DownloadButton>
-                          )}
-                          {run.artifacts?.html_url && (
-                            <DownloadButton
-                              size="small"
-                              variant="outlined"
-                              startIcon={<DownloadIcon sx={{ fontSize: 14 }} />}
-                              href={api.withBase(run.artifacts.html_url)}
-                              target="_blank"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              HTML
-                            </DownloadButton>
-                          )}
+                        <Stack
+                          direction="row"
+                          alignItems="center"
+                          spacing={0.5}
+                          className="view-summary-hint"
+                          sx={{ opacity: 0.6, transition: 'all 0.2s' }}
+                        >
+                          <Typography variant="caption" color="text.secondary">
+                            {selectedRun?.id === run.id ? 'Collapse' : 'Summary'}
+                          </Typography>
+                          <ArrowForwardIcon
+                            sx={{
+                              fontSize: 12,
+                              transform: selectedRun?.id === run.id ? 'rotate(90deg)' : 'none',
+                              transition: 'transform 0.2s',
+                            }}
+                          />
+                        </Stack>
+                      </Stack>
+                      <Typography variant="caption" color="text.secondary">
+                        {new Date(run.createdAt).toLocaleString()} &middot; {run.startDate} to {run.endDate}
+                      </Typography>
+                      <Stack direction="row" spacing={1} sx={{ mt: 0.5 }} flexWrap="wrap" useFlexGap>
+                        {run.artifacts?.pdf_url && (
                           <DownloadButton
                             size="small"
                             variant="outlined"
-                            startIcon={<SmartToyIcon sx={{ fontSize: 14 }} />}
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleNavigate(`/agents?analyzeRunId=${run.id}`, 'Analyze with AI', { runId: run.id })
-                            }}
-                            data-testid={`analyze-ai-${run.id}`}
+                            startIcon={<DownloadIcon sx={{ fontSize: 14 }} />}
+                            href={api.withBase(run.artifacts.pdf_url)}
+                            target="_blank"
+                            onClick={(e) => e.stopPropagation()}
                           >
-                            Analyze
+                            PDF
                           </DownloadButton>
-                        </Stack>
+                        )}
+                        {run.artifacts?.html_url && (
+                          <DownloadButton
+                            size="small"
+                            variant="outlined"
+                            startIcon={<DownloadIcon sx={{ fontSize: 14 }} />}
+                            href={api.withBase(run.artifacts.html_url)}
+                            target="_blank"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            HTML
+                          </DownloadButton>
+                        )}
+                        {run.artifacts?.xlsx_url && (
+                          <DownloadButton
+                            size="small"
+                            variant="outlined"
+                            startIcon={<TableChartIcon sx={{ fontSize: 14 }} />}
+                            href={api.withBase(run.artifacts.xlsx_url)}
+                            target="_blank"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            XLSX
+                          </DownloadButton>
+                        )}
+                        {run.artifacts?.docx_url && (
+                          <DownloadButton
+                            size="small"
+                            variant="outlined"
+                            startIcon={<ArticleIcon sx={{ fontSize: 14 }} />}
+                            href={api.withBase(run.artifacts.docx_url)}
+                            target="_blank"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            DOCX
+                          </DownloadButton>
+                        )}
+                        <DownloadButton
+                          size="small"
+                          variant="outlined"
+                          startIcon={<SmartToyIcon sx={{ fontSize: 14 }} />}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleNavigate(`/agents?analyzeRunId=${run.id}`, 'Analyze with AI', { runId: run.id })
+                          }}
+                          data-testid={`analyze-ai-${run.id}`}
+                        >
+                          Analyze
+                        </DownloadButton>
                       </Stack>
-                    </RunHistoryCard>
-                  ))}
-                </Stack>
-              </Stack>
-            </OutputCard>
-          </Grid>
-        </Grid>
+                    </Stack>
+                  </RunHistoryCard>
+
+                  {/* Expanded inline AI summary */}
+                  <Collapse in={expandedRunId === run.id}>
+                    <Box sx={{ mt: 1, ml: 2, pl: 2, borderLeft: 2, borderColor: 'divider' }}>
+                      <AiUsageNotice
+                        title="AI summary"
+                        description="Summaries are generated from the selected report run. Review before sharing."
+                        chips={[
+                          { label: 'Source: Selected run', color: 'info', variant: 'outlined' },
+                          { label: 'Confidence: Review required', color: 'warning', variant: 'outlined' },
+                        ]}
+                        dense
+                        sx={{ mb: 1.5 }}
+                      />
+                      {summaryLoading && <StyledLinearProgress sx={{ mb: 1 }} />}
+                      {!summaryLoading && runSummary ? (
+                        <Paper
+                          sx={{
+                            p: 2,
+                            borderRadius: 1.5,
+                            bgcolor: theme.palette.mode === 'dark'
+                              ? alpha(theme.palette.text.primary, 0.04)
+                              : neutral[50],
+                            border: 1,
+                            borderColor: 'divider',
+                          }}
+                        >
+                          <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+                            {typeof runSummary === 'string'
+                              ? runSummary
+                              : runSummary.text || runSummary.content || 'No summary available'}
+                          </Typography>
+                          {runSummary.key_points && (
+                            <Box sx={{ mt: 1.5 }}>
+                              <Typography variant="caption" fontWeight={600} color="text.primary">
+                                Key Points:
+                              </Typography>
+                              <ul style={{ margin: '4px 0', paddingLeft: 20 }}>
+                                {runSummary.key_points.map((point, idx) => (
+                                  <li key={idx}>
+                                    <Typography variant="caption">{point}</Typography>
+                                  </li>
+                                ))}
+                              </ul>
+                            </Box>
+                          )}
+                        </Paper>
+                      ) : !summaryLoading && (
+                        <Stack spacing={1}>
+                          <Typography variant="body2" color="text.secondary">
+                            No summary available for this run.
+                          </Typography>
+                          <SecondaryButton
+                            size="small"
+                            variant="outlined"
+                            startIcon={<AutoAwesomeIcon sx={{ fontSize: 14 }} />}
+                            onClick={handleQueueSummary}
+                            disabled={queueingSummary}
+                            sx={{ alignSelf: 'flex-start' }}
+                          >
+                            {queueingSummary ? 'Queueing...' : 'Generate summary'}
+                          </SecondaryButton>
+                        </Stack>
+                      )}
+                    </Box>
+                  </Collapse>
+                </Box>
+              ))}
+            </Box>
+          </Box>
+
+        </Stack>
       </Container>
-    </PageContainer>
+    </Box>
   )
 }

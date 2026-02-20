@@ -1,47 +1,47 @@
 import { alpha, createTheme } from '@mui/material/styles'
 
 // ============================================================================
-// DESIGN SYSTEM v4 — Typography, Color & Component Rules
-// Fonts: Geist Sans (UI/body), Geist Mono (code), Source Serif 4 (display)
-// Colors: Neutral + Primary (amber) + Status + Secondary accent palettes
+// DESIGN SYSTEM v5 — Desktop UI Overhaul
+// Fonts: Inter (UI/body), Courier New (code/mono), Space Grotesk (display/brand)
+// Colors: Neutral (warm paper) + Primary (blue) + Status + Secondary accent palettes
 // ============================================================================
 
 // ============================================================================
 // FONT FAMILIES
 // ============================================================================
-const fontFamilyDisplay = '"Source Serif 4", Georgia, "Times New Roman", serif'
-const fontFamilyHeading = '"Geist Sans", system-ui, -apple-system, BlinkMacSystemFont, sans-serif'
-const fontFamilyBody = '"Geist Sans", system-ui, -apple-system, BlinkMacSystemFont, sans-serif'
-const fontFamilyMono = '"Geist Mono", "SF Mono", Monaco, "Cascadia Code", Consolas, monospace'
-// Backward compat alias — Geist Sans serves both heading and UI roles
+const fontFamilyDisplay = '"Space Grotesk", "Inter", system-ui, sans-serif'
+const fontFamilyHeading = '"Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif'
+const fontFamilyBody = '"Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif'
+const fontFamilyMono = '"Courier New", SFMono-Regular, Menlo, Monaco, Consolas, monospace'
+// Backward compat alias — Inter serves both heading and UI roles
 const fontFamilyUI = fontFamilyBody
 
 // ============================================================================
 // CANONICAL COLOR TOKENS — Design System v4
 // ============================================================================
 
-// Neutral palette (50-900) — intent-driven, not importance
+// Neutral palette (50-900) — warm paper tones for light surfaces
 // Rules: 50-100 never for text. 900 never as background.
 const neutral = {
-  50: '#FAFAF9',     // Page backgrounds, subtle sections
-  100: '#F3F4F3',    // Subtle cards, background fills
-  200: '#E5E7E6',    // Borders, dividers
-  300: '#D1D5DB',    // Input outlines, separators
+  50: '#fdfdfc',     // Warm paper page backgrounds — aligned with desktop taskbar bg
+  100: '#f4f2ed',    // Warm cream cards, background fills — aligned with desktop hover
+  200: '#d4d2cc',    // Borders, dividers — aligned with desktop separator color
+  300: '#d4d2cc',    // Input outlines, separators
   400: '#9CA3AF',    // Disabled icons
-  500: '#6B7280',    // Muted / helper text
+  500: '#6f6f69',    // Muted / helper text — aligned with desktop icon color
   700: '#374151',    // Default body text
   900: '#111827',    // Headings, high-emphasis text
 }
 
-// Primary palette (Brand / Action) — warm amber
+// Primary palette (Brand / Action) — blue accent
 // Rules: Only 500-600 for CTAs. Never replace status colors.
 const primary = {
-  50: '#FEF2EF',     // Subtle backgrounds, hover fills
-  100: '#FEE2D5',    // Light accents
-  300: '#F4A580',    // Secondary emphasis
-  500: '#D97757',    // Primary CTAs, links
-  600: '#B45309',    // Hover / active states
-  900: '#7C2D12',    // Strong emphasis (never for large surfaces)
+  50: '#EFF6FF',     // Subtle blue backgrounds, hover fills
+  100: '#DBEAFE',    // Light blue accents
+  300: '#6A9EFA',    // Secondary blue emphasis
+  500: '#3B82F6',    // Primary CTAs, links (blue-500)
+  600: '#2563EB',    // Hover / active states (blue-600)
+  900: '#1D4ED8',    // Strong emphasis (blue-700)
 }
 
 // Status colors — semantic only, never decorative
@@ -162,7 +162,7 @@ const palette = {
 }
 
 const figmaShadow = {
-  xsmall: '0 1px 2px rgba(16, 24, 40, 0.04)',
+  xsmall: '0 2px 8px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04)',
   aiPanel: '0px 4px 8.4px rgba(0,0,0,0.25)',
 }
 
@@ -274,12 +274,12 @@ const darkTheme = {
 const lightTheme = {
   palette: {
     mode: 'light',
-    // Primary — warm amber for CTAs and interactive elements
+    // Primary — blue accent for CTAs and interactive elements
     primary: {
-      main: primary[500],          // #D97757
-      light: primary[300],         // #F4A580
-      dark: primary[600],          // #B45309
-      lighter: primary[50],        // #FEF2EF
+      main: primary[500],          // #3B82F6
+      light: primary[300],         // #6A9EFA
+      dark: primary[600],          // #2563EB
+      lighter: primary[50],        // #EFF6FF
       contrastText: '#FFFFFF',
     },
     // Secondary — neutral for non-primary UI
@@ -318,13 +318,13 @@ const lightTheme = {
       lighter: neutral[100],       // #F3F4F3
       contrastText: neutral[900],
     },
-    // Backgrounds — tiered surface system
+    // Backgrounds — warm paper surface system
     background: {
-      default: neutral[50],        // #FAFAF9 — page background
+      default: neutral[50],        // #fbfaf7 — warm paper page background
       paper: '#FFFFFF',            // Cards, panels
       surface: '#FFFFFF',
-      overlay: neutral[100],       // #F3F4F3
-      sidebar: '#FFFFFF',
+      overlay: neutral[100],       // #f6f5f2 — warm cream
+      sidebar: neutral[50],        // #fbfaf7 — warm paper sidebar
     },
     // Text — 3-tier hierarchy
     text: {
@@ -359,8 +359,8 @@ function createAppTheme(mode = 'dark') {
     spacing: 8,
 
     // ========================================================================
-    // TYPOGRAPHY — Design System v4 (exact from PDF spec)
-    // Display: Source Serif 4 | Headings/Labels/Paragraphs: Geist Sans
+    // TYPOGRAPHY — Desktop UI Overhaul
+    // Display: Space Grotesk | Headings/Labels/Paragraphs: Inter
     // Responsive: Desktop sizes with mobile breakpoints at 768px
     // ========================================================================
     typography: {
@@ -370,55 +370,55 @@ function createAppTheme(mode = 'dark') {
       fontWeightMedium: 500,
       fontWeightBold: 600,
 
-      // Display Large — Source Serif 4, 52/56 desktop, 44/48 mobile, 600, -2%
+      // Display Large — Space Grotesk, 52/56 desktop, 44/48 mobile, 600
       displayLarge: {
         fontFamily: fontFamilyDisplay,
         fontSize: '52px',
         fontWeight: 600,
         lineHeight: '56px',
-        letterSpacing: '-0.02em',
+        letterSpacing: '-0.04em',
         '@media (max-width: 768px)': {
           fontSize: '44px',
           lineHeight: '48px',
         },
       },
-      // Display Small — Source Serif 4, 44/48 desktop, 36/44 mobile, 600, -2%
+      // Display Small — Space Grotesk, 44/48 desktop, 36/44 mobile, 600
       displaySmall: {
         fontFamily: fontFamilyDisplay,
         fontSize: '44px',
         fontWeight: 600,
         lineHeight: '48px',
-        letterSpacing: '-0.02em',
+        letterSpacing: '-0.04em',
         '@media (max-width: 768px)': {
           fontSize: '36px',
           lineHeight: '44px',
         },
       },
-      // H1 — Geist Sans, 40/48 desktop, 36/44 mobile, 600, -2%
+      // H1 — Inter, 40/48 desktop, 36/44 mobile, 600
       h1: {
         fontFamily: fontFamilyHeading,
         fontSize: '40px',
         fontWeight: 600,
         lineHeight: '48px',
-        letterSpacing: '-0.02em',
+        letterSpacing: '0.02em',
         '@media (max-width: 768px)': {
           fontSize: '36px',
           lineHeight: '44px',
         },
       },
-      // H2 — Geist Sans, 36/44 desktop, 32/40 mobile, 600, -2%
+      // H2 — Inter, 36/44 desktop, 32/40 mobile, 600
       h2: {
         fontFamily: fontFamilyHeading,
         fontSize: '36px',
         fontWeight: 600,
         lineHeight: '44px',
-        letterSpacing: '-0.02em',
+        letterSpacing: '0.02em',
         '@media (max-width: 768px)': {
           fontSize: '32px',
           lineHeight: '40px',
         },
       },
-      // H3 — Geist Sans, 32/40 desktop, 28/36 mobile, 600, 0%
+      // H3 — Inter, 32/40 desktop, 28/36 mobile, 600, 0%
       h3: {
         fontFamily: fontFamilyHeading,
         fontSize: '32px',
@@ -430,7 +430,7 @@ function createAppTheme(mode = 'dark') {
           lineHeight: '36px',
         },
       },
-      // H4 — Geist Sans, 28/36 desktop, 24/32 mobile, 500, 0%
+      // H4 — Inter, 28/36 desktop, 24/32 mobile, 500, 0%
       h4: {
         fontFamily: fontFamilyHeading,
         fontSize: '28px',
@@ -442,7 +442,7 @@ function createAppTheme(mode = 'dark') {
           lineHeight: '32px',
         },
       },
-      // H5 — Geist Sans, 24/32 desktop, 20/28 mobile, 500, 0%
+      // H5 — Inter, 24/32 desktop, 20/28 mobile, 500, 0%
       h5: {
         fontFamily: fontFamilyHeading,
         fontSize: '24px',
@@ -454,7 +454,7 @@ function createAppTheme(mode = 'dark') {
           lineHeight: '28px',
         },
       },
-      // H6 — Geist Sans, 20/28 desktop, 18/24 mobile, 500, 0%
+      // H6 — Inter, 20/28 desktop, 18/24 mobile, 500, 0%
       h6: {
         fontFamily: fontFamilyHeading,
         fontSize: '20px',
@@ -466,7 +466,7 @@ function createAppTheme(mode = 'dark') {
           lineHeight: '24px',
         },
       },
-      // Label Large — Geist Sans, 16/18, 500, 0%
+      // Label Large — Inter, 16/18, 500, 0%
       subtitle1: {
         fontFamily: fontFamilyBody,
         fontSize: '16px',
@@ -474,7 +474,7 @@ function createAppTheme(mode = 'dark') {
         lineHeight: '18px',
         letterSpacing: 0,
       },
-      // Label Medium — Geist Sans, 14/16, 500, 0%
+      // Label Medium — Inter, 14/16, 500, 0%
       subtitle2: {
         fontFamily: fontFamilyBody,
         fontSize: '14px',
@@ -482,7 +482,7 @@ function createAppTheme(mode = 'dark') {
         lineHeight: '16px',
         letterSpacing: 0,
       },
-      // Paragraph Medium — Geist Sans, 16/24, 400, 0% (default body text)
+      // Paragraph Medium — Inter, 16/24, 400, 0% (default body text)
       body1: {
         fontFamily: fontFamilyBody,
         fontSize: '16px',
@@ -490,7 +490,7 @@ function createAppTheme(mode = 'dark') {
         lineHeight: '24px',
         letterSpacing: 0,
       },
-      // Paragraph Small — Geist Sans, 14/20, 400, 0% (dense UI text)
+      // Paragraph Small — Inter, 14/20, 400, 0% (dense UI text)
       body2: {
         fontFamily: fontFamilyBody,
         fontSize: '14px',
@@ -498,7 +498,7 @@ function createAppTheme(mode = 'dark') {
         lineHeight: '20px',
         letterSpacing: 0,
       },
-      // Label Small — Geist Sans, 12/16, 500, +2% (badges, chips)
+      // Label Small — Inter, 12/16, 500, +2% (badges, chips)
       caption: {
         fontFamily: fontFamilyBody,
         fontSize: '12px',
@@ -506,13 +506,13 @@ function createAppTheme(mode = 'dark') {
         lineHeight: '16px',
         letterSpacing: '0.02em',
       },
-      // Label XSmall — Geist Sans, 10/14, 500, +4% (helper UI)
+      // Label XSmall — Inter, 10/14, 500, +10% (helper UI, webshell section style)
       overline: {
         fontFamily: fontFamilyBody,
         fontSize: '10px',
         fontWeight: 500,
         lineHeight: '14px',
-        letterSpacing: '0.04em',
+        letterSpacing: '0.1em',
         textTransform: 'uppercase',
       },
       // Button — Label Medium
@@ -524,12 +524,12 @@ function createAppTheme(mode = 'dark') {
         letterSpacing: 0,
         textTransform: 'none',
       },
-      // Code — Geist Mono
+      // Code — Courier New
       code: {
         fontFamily: fontFamilyMono,
         fontSize: '14px',
       },
-      // Paragraph Large — Geist Sans, 18/28, 400, 0% (long-form text)
+      // Paragraph Large — Inter, 18/28, 400, 0% (long-form text)
       paragraphLarge: {
         fontFamily: fontFamilyBody,
         fontSize: '18px',
@@ -537,7 +537,7 @@ function createAppTheme(mode = 'dark') {
         lineHeight: '28px',
         letterSpacing: 0,
       },
-      // Paragraph XSmall — Geist Sans, 12/20, 400, 0% (captions)
+      // Paragraph XSmall — Inter, 12/20, 400, 0% (captions)
       paragraphXSmall: {
         fontFamily: fontFamilyBody,
         fontSize: '12px',
@@ -679,6 +679,14 @@ function createAppTheme(mode = 'dark') {
             backgroundColor: isDark ? palette.scale[1000] : neutral[50],
             border: `1px solid ${isDark ? alpha(palette.scale[100], 0.08) : neutral[200]}`,
             boxShadow: isDark ? 'none' : figmaShadow.xsmall,
+            transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
+            // Add default padding for cards without CardContent
+            '&:not(:has(.MuiCardContent-root))': {
+              padding: 24,
+            },
+            '&:hover': {
+              borderColor: isDark ? alpha(palette.scale[100], 0.15) : neutral[300],
+            },
           },
         },
       },
@@ -693,10 +701,18 @@ function createAppTheme(mode = 'dark') {
 
       // ====================================================================
       // BUTTON — Primary 500 bg, Primary 600 hover
-      // Label: Label Medium (Geist Sans 14px/500)
+      // Label: Label Medium (Inter 14px/500)
       // ====================================================================
       MuiButtonBase: {
         defaultProps: { disableRipple: true },
+        styleOverrides: {
+          root: {
+            transition: 'all 0.15s cubic-bezier(0.22, 1, 0.36, 1)',
+            '&:active': {
+              transform: 'scale(0.97)',
+            },
+          },
+        },
       },
       MuiButton: {
         defaultProps: { disableElevation: true },
@@ -710,23 +726,26 @@ function createAppTheme(mode = 'dark') {
             minHeight: 40,
             transition: 'all 150ms ease',
             '&:focus-visible': {
-              outline: `2px solid ${isDark ? palette.scale[400] : primary[500]}`,
+              outline: `2px solid ${isDark ? palette.scale[400] : neutral[900]}`,
               outlineOffset: 2,
+              boxShadow: `0 0 0 4px ${isDark ? alpha(palette.scale[400], 0.25) : alpha(neutral[900], 0.15)}`,
             },
           },
-          // Contained primary — warm amber
+          // Contained primary — dark neutral (consistent across all pages)
           contained: {
-            backgroundColor: isDark ? palette.scale[300] : primary[500],
+            backgroundColor: isDark ? palette.scale[300] : neutral[900],
             color: isDark ? palette.scale[1100] : '#FFFFFF',
             '&:hover': {
-              backgroundColor: isDark ? palette.scale[200] : primary[600],
+              backgroundColor: isDark ? palette.scale[200] : neutral[700],
             },
             '&:active': {
-              backgroundColor: isDark ? palette.scale[100] : primary[900],
+              backgroundColor: isDark ? palette.scale[100] : neutral[800],
             },
             '&.Mui-disabled': {
               backgroundColor: isDark ? palette.scale[800] : neutral[200],
-              color: isDark ? palette.scale[600] : neutral[400],
+              color: isDark ? palette.scale[600] : neutral[500],
+              cursor: 'not-allowed',
+              pointerEvents: 'auto',
             },
           },
           // Secondary contained — neutral
@@ -748,6 +767,13 @@ function createAppTheme(mode = 'dark') {
             '&:hover': {
               backgroundColor: isDark ? alpha(palette.scale[100], 0.08) : neutral[200],
               borderColor: isDark ? palette.scale[600] : neutral[400],
+            },
+            '&.Mui-disabled': {
+              color: isDark ? palette.scale[600] : neutral[400],
+              borderColor: isDark ? palette.scale[800] : neutral[200],
+              backgroundColor: isDark ? alpha(palette.scale[100], 0.03) : neutral[50],
+              cursor: 'not-allowed',
+              pointerEvents: 'auto',
             },
           },
           // Text button
@@ -774,15 +800,19 @@ function createAppTheme(mode = 'dark') {
         styleOverrides: {
           root: {
             borderRadius: 6,
-            color: isDark ? palette.scale[500] : neutral[400],
-            transition: 'all 150ms ease',
+            color: isDark ? palette.scale[500] : neutral[500],
+            transition: 'all 0.15s cubic-bezier(0.22, 1, 0.36, 1)',
             '&:hover': {
               backgroundColor: isDark ? alpha(palette.scale[100], 0.06) : 'rgba(0,0,0,0.03)',
-              color: isDark ? palette.scale[200] : neutral[500],
+              color: isDark ? palette.scale[200] : neutral[700],
+              '& .MuiSvgIcon-root': {
+                filter: `drop-shadow(0 0 4px ${alpha(primary[500], 0.3)})`,
+              },
             },
             '&:focus-visible': {
-              outline: `2px solid ${isDark ? palette.scale[400] : primary[500]}`,
+              outline: `2px solid ${isDark ? palette.scale[400] : neutral[900]}`,
               outlineOffset: 2,
+              boxShadow: `0 0 0 4px ${isDark ? alpha(palette.scale[400], 0.25) : alpha(neutral[900], 0.15)}`,
             },
           },
           sizeSmall: { padding: 6 },
@@ -861,8 +891,8 @@ function createAppTheme(mode = 'dark') {
               borderColor: isDark ? alpha(palette.scale[100], 0.25) : neutral[400],
             },
             '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-              borderColor: isDark ? palette.scale[300] : primary[500],
-              borderWidth: 1,
+              borderColor: isDark ? palette.scale[300] : neutral[900],
+              borderWidth: 2,
             },
             '&.Mui-error .MuiOutlinedInput-notchedOutline': {
               borderColor: status.destructive,
@@ -892,15 +922,15 @@ function createAppTheme(mode = 'dark') {
       MuiInputLabel: {
         styleOverrides: {
           root: {
-            // Label Small — 12/16, 500, +2% per PDF spec
+            // Label Small — 12/16, 500 per PDF spec (letterSpacing normalized to avoid rendering gaps)
             fontFamily: fontFamilyBody,
             fontSize: '12px',
             fontWeight: 500,
             lineHeight: '16px',
-            letterSpacing: '0.02em',
+            letterSpacing: 'normal',
             color: isDark ? palette.scale[400] : neutral[700],
             '&.Mui-focused': {
-              color: isDark ? palette.scale[200] : primary[500],
+              color: isDark ? palette.scale[200] : neutral[900],
             },
           },
         },
@@ -927,11 +957,12 @@ function createAppTheme(mode = 'dark') {
         styleOverrides: {
           paper: {
             borderRadius: 8,
-            backgroundColor: isDark ? palette.scale[900] : '#FFFFFF',
+            backgroundColor: isDark ? palette.scale[900] : 'rgba(255, 255, 255, 0.92)',
+            backdropFilter: 'blur(12px)',
             border: `1px solid ${isDark ? alpha(palette.scale[100], 0.1) : neutral[200]}`,
             boxShadow: isDark
               ? '0 4px 24px rgba(0,0,0,0.4)'
-              : '0 1px 2px rgba(16, 24, 40, 0.04), 0 4px 12px rgba(16, 24, 40, 0.08)',
+              : '0 2px 8px rgba(0,0,0,0.06), 0 8px 24px rgba(0,0,0,0.1)',
             marginTop: 4,
           },
           list: { padding: 4 },
@@ -945,7 +976,7 @@ function createAppTheme(mode = 'dark') {
             padding: '8px 12px',
             margin: '2px 0',
             minHeight: 36,
-            color: isDark ? palette.scale[300] : neutral[500],
+            color: isDark ? palette.scale[300] : neutral[700],
             '&:hover': {
               backgroundColor: isDark ? alpha(palette.scale[100], 0.05) : 'rgba(0,0,0,0.03)',
               color: isDark ? palette.scale[100] : neutral[900],
@@ -1080,7 +1111,7 @@ function createAppTheme(mode = 'dark') {
             border: `1px solid ${isDark ? alpha(palette.scale[100], 0.1) : neutral[200]}`,
             boxShadow: isDark
               ? '0 16px 48px rgba(0,0,0,0.4)'
-              : '0 1px 2px rgba(16, 24, 40, 0.04), 0 8px 24px rgba(16, 24, 40, 0.12)',
+              : '0 2px 8px rgba(0,0,0,0.06), 0 16px 48px rgba(0,0,0,0.12)',
           },
         },
       },
@@ -1101,7 +1132,7 @@ function createAppTheme(mode = 'dark') {
       },
       MuiDialogActions: {
         styleOverrides: {
-          root: { padding: '12px 24px 20px', gap: 8 },
+          root: { padding: '12px 24px 20px', gap: 8, flexWrap: 'wrap' },
         },
       },
 
@@ -1112,7 +1143,7 @@ function createAppTheme(mode = 'dark') {
         styleOverrides: {
           paper: {
             width: figmaSpacing.sidebarWidth,
-            backgroundColor: isDark ? palette.scale[1000] : '#FFFFFF',
+            backgroundColor: isDark ? palette.scale[1000] : neutral[50],
             borderRight: 'none',
             borderRadius: 0,
             boxShadow: 'none',
@@ -1123,7 +1154,8 @@ function createAppTheme(mode = 'dark') {
       MuiAppBar: {
         styleOverrides: {
           root: {
-            backgroundColor: isDark ? palette.scale[1000] : '#FFFFFF',
+            backgroundColor: isDark ? palette.scale[1000] : 'rgba(255, 255, 255, 0.85)',
+            backdropFilter: 'blur(12px)',
             borderBottom: `1px solid ${isDark ? alpha(palette.scale[100], 0.08) : neutral[200]}`,
             boxShadow: 'none',
           },
@@ -1152,7 +1184,7 @@ function createAppTheme(mode = 'dark') {
           indicator: {
             height: 2,
             borderRadius: 0,
-            backgroundColor: isDark ? palette.scale[100] : primary[500],
+            backgroundColor: isDark ? palette.scale[100] : neutral[900],
           },
           flexContainer: { gap: 0 },
         },
@@ -1172,12 +1204,12 @@ function createAppTheme(mode = 'dark') {
             transition: 'all 150ms ease',
             '&.Mui-selected': {
               fontWeight: 500,
-              color: isDark ? palette.scale[100] : primary[600],
-              backgroundColor: isDark ? alpha(palette.scale[100], 0.08) : primary[50],
+              color: isDark ? palette.scale[100] : neutral[900],
+              backgroundColor: isDark ? alpha(palette.scale[100], 0.08) : neutral[100],
             },
             '&:hover': {
-              color: isDark ? palette.scale[300] : primary[600],
-              backgroundColor: isDark ? alpha(palette.scale[100], 0.04) : alpha(primary[50], 0.5),
+              color: isDark ? palette.scale[300] : neutral[700],
+              backgroundColor: isDark ? alpha(palette.scale[100], 0.04) : neutral[50],
             },
           },
         },
@@ -1269,12 +1301,13 @@ function createAppTheme(mode = 'dark') {
       MuiCheckbox: {
         styleOverrides: {
           root: {
-            color: isDark ? palette.scale[600] : neutral[300],
+            color: isDark ? palette.scale[600] : neutral[400],
+            padding: 8,
             '&.Mui-checked': {
-              color: isDark ? palette.scale[200] : primary[500],
+              color: isDark ? palette.scale[200] : neutral[900],
             },
             '&:hover': {
-              backgroundColor: isDark ? alpha(palette.scale[100], 0.04) : alpha(primary[500], 0.04),
+              backgroundColor: isDark ? alpha(palette.scale[100], 0.04) : alpha(neutral[900], 0.04),
             },
           },
         },
@@ -1288,7 +1321,7 @@ function createAppTheme(mode = 'dark') {
               transform: 'translateX(20px)',
               color: '#FFFFFF',
               '& + .MuiSwitch-track': {
-                backgroundColor: isDark ? palette.scale[200] : primary[500],
+                backgroundColor: isDark ? palette.scale[200] : '#22c55e',
                 opacity: 1,
               },
             },
@@ -1296,7 +1329,7 @@ function createAppTheme(mode = 'dark') {
           thumb: { width: 20, height: 20, boxShadow: '0 2px 4px rgba(0,0,0,0.2)' },
           track: {
             borderRadius: 12,
-            backgroundColor: isDark ? palette.scale[700] : neutral[300],
+            backgroundColor: isDark ? palette.scale[700] : neutral[400],
             opacity: 1,
           },
         },
@@ -1328,7 +1361,7 @@ function createAppTheme(mode = 'dark') {
       MuiSkeleton: {
         styleOverrides: {
           root: {
-            backgroundColor: isDark ? alpha(palette.scale[100], 0.06) : alpha(neutral[900], 0.06),
+            backgroundColor: isDark ? alpha(palette.scale[100], 0.1) : alpha(neutral[900], 0.11),
           },
         },
       },
@@ -1348,30 +1381,33 @@ function createAppTheme(mode = 'dark') {
             border: `1px solid ${isDark ? alpha(palette.scale[100], 0.1) : neutral[200]}`,
           },
           standardSuccess: {
-            backgroundColor: isDark ? alpha(palette.scale[100], 0.05) : neutral[50],
+            backgroundColor: isDark ? alpha(palette.green[400], 0.08) : '#f0fdf4',
             color: isDark ? palette.scale[200] : neutral[900],
-            border: `1px solid ${isDark ? alpha(palette.scale[100], 0.1) : neutral[200]}`,
+            border: `1px solid ${isDark ? alpha(palette.green[400], 0.2) : '#bbf7d0'}`,
+            '& .MuiAlert-icon': { color: isDark ? palette.green[400] : palette.green[600] },
           },
           standardError: {
-            backgroundColor: isDark ? alpha(palette.scale[100], 0.05) : neutral[50],
+            backgroundColor: isDark ? alpha(palette.red[500], 0.08) : '#fef2f2',
             color: isDark ? palette.scale[200] : neutral[900],
-            border: `1px solid ${isDark ? alpha(palette.scale[100], 0.1) : neutral[200]}`,
+            border: `1px solid ${isDark ? alpha(palette.red[500], 0.2) : '#fecaca'}`,
+            '& .MuiAlert-icon': { color: isDark ? palette.red[400] : palette.red[600] },
           },
           standardWarning: {
-            backgroundColor: isDark ? alpha(palette.scale[100], 0.05) : neutral[50],
+            backgroundColor: isDark ? alpha(palette.yellow[400], 0.08) : '#fffbeb',
             color: isDark ? palette.scale[200] : neutral[900],
-            border: `1px solid ${isDark ? alpha(palette.scale[100], 0.1) : neutral[200]}`,
+            border: `1px solid ${isDark ? alpha(palette.yellow[400], 0.2) : '#fde68a'}`,
+            '& .MuiAlert-icon': { color: isDark ? palette.yellow[400] : palette.yellow[600] },
           },
           standardInfo: {
-            backgroundColor: isDark ? alpha(palette.scale[100], 0.05) : neutral[50],
+            backgroundColor: isDark ? alpha(palette.blue[400], 0.08) : '#eff6ff',
             color: isDark ? palette.scale[200] : neutral[900],
-            border: `1px solid ${isDark ? alpha(palette.scale[100], 0.1) : neutral[200]}`,
+            border: `1px solid ${isDark ? alpha(palette.blue[400], 0.2) : '#bfdbfe'}`,
+            '& .MuiAlert-icon': { color: isDark ? palette.blue[400] : palette.blue[500] },
           },
           icon: {
             marginRight: 12,
             padding: 0,
             opacity: 1,
-            color: isDark ? palette.scale[400] : neutral[500],
           },
         },
       },
@@ -1451,7 +1487,7 @@ function createAppTheme(mode = 'dark') {
             '&.Mui-expanded': { margin: '12px 0' },
           },
           expandIconWrapper: {
-            color: isDark ? palette.scale[500] : alpha(neutral[900], 0.2),
+            color: isDark ? palette.scale[500] : neutral[400],
           },
         },
       },

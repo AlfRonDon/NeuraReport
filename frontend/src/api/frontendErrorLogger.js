@@ -34,6 +34,8 @@ const safeContext = (value) => {
 const resolveApiOrigin = () => {
   const envBaseUrl = runtimeEnv.VITE_API_BASE_URL
   if (envBaseUrl && envBaseUrl !== 'proxy') {
+    // Path-based URL (e.g. /neurareport-api) — use as base directly
+    if (envBaseUrl.startsWith('/')) return envBaseUrl
     try {
       const hasScheme = /^([a-z][a-z\d+\-.]*:)?\/\//i.test(envBaseUrl)
       const protocol = typeof window !== 'undefined' ? window.location.protocol : 'http:'

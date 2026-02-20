@@ -22,7 +22,6 @@ import {
   DialogActions,
   Button,
   TextField,
-  FormControl,
   InputLabel,
   Select,
   Switch,
@@ -33,7 +32,6 @@ import {
   useTheme,
   alpha,
   styled,
-  keyframes,
 } from '@mui/material'
 import {
   Add as AddIcon,
@@ -62,26 +60,7 @@ import {
   Reversibility,
 } from '@/components/ux/governance'
 import { neutral, palette } from '@/app/theme'
-
-// =============================================================================
-// ANIMATIONS
-// =============================================================================
-
-const fadeInUp = keyframes`
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-`
-
-const pulse = keyframes`
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.05); }
-`
+import { fadeInUp, StyledFormControl } from '@/styles'
 
 // =============================================================================
 // STYLED COMPONENTS
@@ -158,7 +137,7 @@ const SectionLabel = styled(Typography)(({ theme }) => ({
 const StyledTextField = styled(TextField)(({ theme }) => ({
   '& .MuiOutlinedInput-root': {
     borderRadius: 12,
-    transition: 'all 0.2s ease',
+    transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)',
     '&:hover .MuiOutlinedInput-notchedOutline': {
       borderColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.3) : neutral[300],
     },
@@ -168,12 +147,6 @@ const StyledTextField = styled(TextField)(({ theme }) => ({
         borderWidth: 2,
       },
     },
-  },
-}))
-
-const StyledFormControl = styled(FormControl)(({ theme }) => ({
-  '& .MuiOutlinedInput-root': {
-    borderRadius: 12,
   },
 }))
 
@@ -225,7 +198,7 @@ const StyledMenuItem = styled(MenuItem)(({ theme }) => ({
   borderRadius: 8,
   margin: theme.spacing(0.5, 1),
   padding: theme.spacing(1, 1.5),
-  transition: 'all 0.15s ease',
+  transition: 'all 0.15s cubic-bezier(0.22, 1, 0.36, 1)',
   '&:hover': {
     backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[50],
   },
@@ -249,7 +222,7 @@ const SchedulerStatusBanner = styled(Box, {
     gap: theme.spacing(1.5),
     padding: theme.spacing(1.5, 2),
     marginBottom: theme.spacing(2),
-    borderRadius: 12,
+    borderRadius: 8,
     backgroundColor: colorScheme.bg,
     border: `1px solid ${colorScheme.border}`,
     color: colorScheme.text,
@@ -261,7 +234,7 @@ const ActionButton = styled(Button)(({ theme }) => ({
   textTransform: 'none',
   fontWeight: 500,
   padding: theme.spacing(1, 2.5),
-  transition: 'all 0.2s ease',
+  transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)',
 }))
 
 const PrimaryButton = styled(ActionButton)(({ theme }) => ({

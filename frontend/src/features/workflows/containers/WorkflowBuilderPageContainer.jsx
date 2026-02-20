@@ -113,7 +113,7 @@ const Sidebar = styled(Box)(({ theme }) => ({
 
 const NodeCard = styled(Card)(({ theme }) => ({
   cursor: 'grab',
-  transition: 'all 0.2s ease',
+  transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)',
   marginBottom: theme.spacing(1),
   '&:hover': {
     transform: 'translateX(4px)',
@@ -127,7 +127,7 @@ const WorkflowNode = styled(Paper)(({ theme }) => ({
   borderRadius: 8,  // Figma spec: 8px
   border: `2px solid ${alpha(theme.palette.divider, 0.3)}`,
   cursor: 'pointer',
-  transition: 'all 0.2s ease',
+  transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)',
   '&:hover': {
     borderColor: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
     boxShadow: `0 4px 20px ${alpha(theme.palette.common.black, 0.1)}`,
@@ -695,7 +695,7 @@ export default function WorkflowBuilderPage() {
           </>
         ) : (
           <EmptyState sx={{ width: '100%' }}>
-            <WorkflowIcon sx={{ fontSize: 80, color: 'text.disabled', mb: 2 }} />
+            <WorkflowIcon sx={{ fontSize: 64, color: 'text.disabled', mb: 2 }} />
             <Typography variant="h5" sx={{ fontWeight: 600, mb: 1 }}>
               No Workflow Selected
             </Typography>

@@ -19,6 +19,7 @@ from typing import Any, Dict, Optional
 import pandas as pd
 
 from .sqlite_loader import DuckDBDataFrameQuery, SQLiteDataFrameLoader, get_loader, eager_load_enabled
+from .postgres_loader import PostgresDataFrameLoader, get_postgres_loader
 
 logger = logging.getLogger("neura.dataframes.store")
 
@@ -47,37 +48,56 @@ class DataFrameStore:
     def __init__(self) -> None:
         if self._initialized:
             return
-        self._loaders: Dict[str, SQLiteDataFrameLoader] = {}
+        self._loaders: Dict[str, SQLiteDataFrameLoader | PostgresDataFrameLoader] = {}
         self._frames_cache: Dict[str, Dict[str, pd.DataFrame]] = {}
         self._db_paths: Dict[str, Path] = {}
+        self._connection_urls: Dict[str, str] = {}
+        self._db_types: Dict[str, str] = {}
         self._query_engines: Dict[str, DuckDBDataFrameQuery] = {}
         self._store_lock = threading.Lock()
         self._initialized = True
         logger.info("DataFrameStore initialized")
 
-    def register_connection(self, connection_id: str, db_path: Path) -> None:
+    def register_connection(
+        self,
+        connection_id: str,
+        db_path: Path | None = None,
+        db_type: str = "sqlite",
+        connection_url: str | None = None,
+    ) -> None:
         """
         Register a database connection and load all tables as DataFrames.
 
-        This should be called when a connection is established. All tables
-        will be loaded into memory as DataFrames for subsequent queries.
+        For SQLite: pass db_path.
+        For PostgreSQL: pass connection_url and db_type="postgresql".
         """
-        db_path = Path(db_path).resolve()
+        is_postgres = db_type in ("postgresql", "postgres")
 
         with self._store_lock:
-            # Check if already registered with same path
-            existing_path = self._db_paths.get(connection_id)
-            if existing_path and existing_path == db_path:
-                # Already registered, check if file modified
-                loader = self._loaders.get(connection_id)
-                if loader:
-                    current_mtime = os.path.getmtime(db_path) if db_path.exists() else 0.0
-                    if loader._mtime == current_mtime:
-                        logger.debug(f"Connection {connection_id} already registered and up to date")
-                        return
+            if is_postgres:
+                # Check if already registered with same URL
+                existing_url = self._connection_urls.get(connection_id)
+                if existing_url and existing_url == connection_url:
+                    logger.debug(f"Connection {connection_id} already registered (PostgreSQL)")
+                    return
+            else:
+                db_path = Path(db_path).resolve()
+                existing_path = self._db_paths.get(connection_id)
+                if existing_path and existing_path == db_path:
+                    loader = self._loaders.get(connection_id)
+                    if loader and hasattr(loader, "_mtime"):
+                        current_mtime = os.path.getmtime(db_path) if db_path.exists() else 0.0
+                        if loader._mtime == current_mtime:
+                            logger.debug(f"Connection {connection_id} already registered and up to date")
+                            return
 
-            logger.info(f"Loading DataFrames for connection {connection_id} from {db_path}")
-            loader = get_loader(db_path)
+            if is_postgres:
+                logger.info(f"Loading DataFrames for connection {connection_id} from PostgreSQL")
+                loader = get_postgres_loader(connection_url)
+            else:
+                logger.info(f"Loading DataFrames for connection {connection_id} from {db_path}")
+                loader = get_loader(db_path)
+
             eager = eager_load_enabled()
             frames = loader.frames() if eager else {}
 
@@ -92,7 +112,11 @@ class DataFrameStore:
             # Store everything
             self._loaders[connection_id] = loader
             self._frames_cache[connection_id] = frames if frames else {}
-            self._db_paths[connection_id] = db_path
+            self._db_types[connection_id] = db_type
+            if is_postgres:
+                self._connection_urls[connection_id] = connection_url
+            else:
+                self._db_paths[connection_id] = db_path
             self._query_engines[connection_id] = DuckDBDataFrameQuery(frames, loader=loader)
 
             logger.info(
@@ -187,6 +211,8 @@ class DataFrameStore:
             self._loaders.pop(connection_id, None)
             self._frames_cache.pop(connection_id, None)
             self._db_paths.pop(connection_id, None)
+            self._connection_urls.pop(connection_id, None)
+            self._db_types.pop(connection_id, None)
             logger.info(f"Invalidated DataFrames for connection {connection_id}")
 
     def is_registered(self, connection_id: str) -> bool:
@@ -222,6 +248,8 @@ class DataFrameStore:
             self._loaders.clear()
             self._frames_cache.clear()
             self._db_paths.clear()
+            self._connection_urls.clear()
+            self._db_types.clear()
             self._query_engines.clear()
             logger.info("DataFrameStore cleared")
 
@@ -235,7 +263,12 @@ def get_dataframe_store() -> DataFrameStore:
     return dataframe_store
 
 
-def ensure_connection_loaded(connection_id: str, db_path: Path) -> DataFrameStore:
+def ensure_connection_loaded(
+    connection_id: str,
+    db_path: Path | None = None,
+    db_type: str = "sqlite",
+    connection_url: str | None = None,
+) -> DataFrameStore:
     """
     Ensure a connection's DataFrames are loaded in the store.
 
@@ -243,5 +276,10 @@ def ensure_connection_loaded(connection_id: str, db_path: Path) -> DataFrameStor
     """
     store = get_dataframe_store()
     if not store.is_registered(connection_id):
-        store.register_connection(connection_id, db_path)
+        store.register_connection(
+            connection_id,
+            db_path=db_path,
+            db_type=db_type,
+            connection_url=connection_url,
+        )
     return store

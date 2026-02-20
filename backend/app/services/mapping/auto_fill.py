@@ -10,11 +10,15 @@ from typing import Optional
 logger = logging.getLogger("neura.auto_fill")
 
 
-def _compute_db_signature(db_path: Path) -> Optional[str]:
+def _compute_db_signature(db_path) -> Optional[str]:
     """
-    Build a stable fingerprint of the SQLite schema (user tables only).
+    Build a stable fingerprint of the database schema (user tables only).
     Captures table columns and foreign keys to detect schema drift.
     """
+    # Handle PostgreSQL connections
+    if hasattr(db_path, 'is_postgresql') and db_path.is_postgresql:
+        return hashlib.md5((db_path.connection_url or "").encode()).hexdigest()[:16]
+
     schema: dict[str, dict[str, list[dict[str, object]]]] = {}
     try:
         loader = get_loader(db_path)

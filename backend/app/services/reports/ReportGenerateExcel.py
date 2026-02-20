@@ -9,6 +9,7 @@ rules, workbook-aware helpers) without perturbing the PDF path.
 import asyncio
 import contextlib
 import json
+import logging
 import os
 import re
 from backend.app.repositories.dataframes import sqlite_shim as sqlite3
@@ -18,6 +19,8 @@ from decimal import Decimal, InvalidOperation
 from itertools import product
 from pathlib import Path
 from typing import Any, Iterable, Mapping, Sequence
+
+logger = logging.getLogger(__name__)
 
 try:
     from PIL import Image
@@ -77,20 +80,10 @@ from .common_helpers import (
     _token_regex,
     _find_or_infer_batch_block,
     _find_rowish_block,
+    _extract_page_metrics,
+    detect_date_column,
     sub_token,
     blank_known_tokens,
-)
-from .common_helpers import (
-    _format_for_token,
-    _has_time_component,
-    _parse_date_like,
-    _raise_no_block,
-    _segment_has_any_token,
-    _select_prototype_block,
-    _strip_found_block,
-    _token_regex,
-    _find_or_infer_batch_block,
-    _find_rowish_block,
     html_without_batch_blocks,
 )
 _TABLE_RE = re.compile(r"(?is)<table\b[^>]*>(?P<body>.*?)</table>")
@@ -328,16 +321,9 @@ def fill_and_print(
     OUT_DIR = OUT_HTML.parent
     OUT_DIR.mkdir(parents=True, exist_ok=True)
 
-    log_file_path = Path(__file__).with_name("fill_and_print.log")
-
     def _log_debug(*parts: object) -> None:
         message = " ".join(str(part) for part in parts)
-        print(message)
-        try:
-            with log_file_path.open("a", encoding="utf-8") as fh:
-                fh.write(f"[{datetime.now(timezone.utc).isoformat()}] {message}\n")
-        except Exception:
-            pass
+        logger.debug(message)
 
     _log_debug(
         "=== fill_and_print call ===",
@@ -347,7 +333,8 @@ def fill_and_print(
     )
 
     # ---- Load the final shell HTML (created during Approve) ----
-    html = TEMPLATE_PATH.read_text(encoding="utf-8")
+    from ..utils.html import _fix_fixed_footers
+    html = _fix_fixed_footers(TEMPLATE_PATH.read_text(encoding="utf-8"))
 
     # ---- Inject brand kit CSS if requested ----
     if BRAND_KIT_ID:
@@ -361,7 +348,12 @@ def fill_and_print(
         except Exception:
             logger.warning("Failed to inject brand kit CSS (Excel path)", exc_info=True)
 
-    dataframe_loader = SQLiteDataFrameLoader(DB_PATH)
+    # Support both SQLite and PostgreSQL connections via ConnectionRef
+    if hasattr(DB_PATH, 'is_postgresql') and DB_PATH.is_postgresql:
+        from backend.legacy.utils.connection_utils import get_loader_for_ref
+        dataframe_loader = get_loader_for_ref(DB_PATH)
+    else:
+        dataframe_loader = SQLiteDataFrameLoader(DB_PATH)
 
     TOKEN_RE = re.compile(r"\{\{?\s*([A-Za-z0-9_\-\.]+)\s*\}\}?")
     TEMPLATE_TOKENS = {m.group(1) for m in TOKEN_RE.finditer(html)}
@@ -551,16 +543,36 @@ def fill_and_print(
         if not tokens:
             yield {}
             return
+        max_combos_raw = os.getenv("NEURA_REPORT_MAX_KEY_COMBINATIONS", "50")
+        try:
+            max_combos = int(max_combos_raw)
+        except ValueError:
+            max_combos = 50
+        max_combos = max(1, max_combos)
+        estimated = 1
+        for values in value_lists:
+            estimated *= max(1, len(values))
+            if estimated > max_combos:
+                raise ValueError(
+                    f"Too many key combinations ({estimated} > {max_combos}). "
+                    "Narrow key selections or reduce multi-select values."
+                )
         for combo in product(*value_lists):
             yield {token: value for token, value in zip(tokens, combo)}
 
+    _PLAYWRIGHT_ROW_FRIENDLY_LIMIT = 6000
+
     async def html_to_pdf_async(html_path: Path, pdf_path: Path, base_dir: Path, pdf_scale: float | None = None):
         if async_playwright is None:
-            print("Playwright not available; skipping PDF generation.")
+            logger.warning("Playwright not available; skipping PDF generation.")
             return
 
-        html_source = html_path.read_text(encoding="utf-8", errors="ignore")
-        base_url = (base_dir or html_path.parent).as_uri()
+        html_path_resolved = html_path.resolve()
+        html_source = html_path_resolved.read_text(encoding="utf-8", errors="ignore")
+        approx_row_count = html_source.lower().count("<tr")
+        base_dir_resolved = (base_dir or html_path.parent).resolve()
+        pdf_path_resolved = pdf_path.resolve()
+        base_url = base_dir_resolved.as_uri()
 
         async with async_playwright() as p:
             browser = await p.chromium.launch()
@@ -574,15 +586,26 @@ def fill_and_print(
                 if not isinstance(scale_value, (int, float)):
                     scale_value = 1.0
                 scale_value = max(0.1, min(float(scale_value), 2.0))
-                await page.pdf(
-                    path=str(pdf_path),
-                    format="A4",
-                    landscape=True,
-                    print_background=True,
-                    margin={"top": "10mm", "right": "10mm", "bottom": "10mm", "left": "10mm"},
-                    prefer_css_page_size=True,
-                    scale=scale_value,
-                )
+                try:
+                    await page.pdf(
+                        path=str(pdf_path_resolved),
+                        format="A4",
+                        landscape=True,
+                        print_background=True,
+                        margin={"top": "10mm", "right": "10mm", "bottom": "10mm", "left": "10mm"},
+                        prefer_css_page_size=True,
+                        scale=scale_value,
+                    )
+                except Exception as exc:
+                    if approx_row_count >= _PLAYWRIGHT_ROW_FRIENDLY_LIMIT:
+                        raise RuntimeError(
+                            (
+                                "PDF rendering failed because the report contains "
+                                f"approximately {approx_row_count:,} table rows, which exceeds the printable limit. "
+                                "Please filter the data further or split the report into smaller chunks and try again."
+                            )
+                        ) from exc
+                    raise
             finally:
                 if context is not None:
                     await context.close()
@@ -665,6 +688,13 @@ def fill_and_print(
             if not col:
                 continue
             if _value_has_content(row.get(col)):
+                return True
+        for key, value in row.items():
+            if not isinstance(key, str):
+                continue
+            if _is_counter_field(key):
+                continue
+            if _value_has_content(value):
                 return True
         return False
 
@@ -877,9 +907,26 @@ def fill_and_print(
     parent_key = JOIN.get("parent_key", "")
     child_table = JOIN.get("child_table", "")
     child_key = JOIN.get("child_key", "")
+
+    # --- Additive: auto-detect date columns if missing from contract ---
+    for _tbl in (parent_table, child_table):
+        if _tbl and _tbl not in DATE_COLUMNS:
+            _auto = detect_date_column(DB_PATH, _tbl)
+            if _auto:
+                DATE_COLUMNS[_tbl] = _auto
+                logger.info("date_column_auto_detected table=%s col=%s", _tbl, _auto)
+
     parent_date = DATE_COLUMNS.get(parent_table, "")
     child_date = DATE_COLUMNS.get(child_table, "")
     order_col = ROW_ORDER[0] if ROW_ORDER else "ROWID"
+    if isinstance(order_col, str) and order_col.upper() != "ROWID":
+        mapped_order = PLACEHOLDER_TO_COL.get(order_col, order_col)
+        if isinstance(mapped_order, str):
+            mapped_order = mapped_order.strip()
+            if "." in mapped_order:
+                mapped_order = mapped_order.split(".", 1)[1].strip()
+            if mapped_order:
+                order_col = mapped_order
 
     def _normalize_token_name(name: str) -> str:
         return re.sub(r"[^a-z0-9]", "", name.lower())
@@ -1357,9 +1404,10 @@ def fill_and_print(
             )
             generator_results = pipeline.execute()
             if not any(generator_results.get(s) for s in ("header", "rows", "totals")):
+                logger.warning("DataFrame pipeline returned empty results; falling back to SQL path")
                 generator_results = None
         except Exception as exc:
-            print(f"DataFrame pipeline failed; falling back to SQL path: {exc}")
+            logger.warning("DataFrame pipeline failed; falling back to SQL path: %s", exc)
             generator_results = None
 
     # ---- Normalize / auto-discover BATCH_IDS ----
@@ -1379,7 +1427,7 @@ def fill_and_print(
                 existing = list(existing)
                 if len(pcols) > 1:
                     if any(not _looks_like_composite_id(i, len(pcols)) for i in existing):
-                        print("Provided BATCH_IDS do not match composite key format; falling back to auto-discovery.")
+                        logger.debug("Provided BATCH_IDS do not match composite key format; falling back to auto-discovery.")
                         need_discover = True
 
         if need_discover:
@@ -1396,7 +1444,7 @@ def fill_and_print(
     else:
         BATCH_IDS = ["__GENERATOR_SINGLE__"]
 
-    print("BATCH_IDS:", len(BATCH_IDS or []), (BATCH_IDS or [])[:20] if BATCH_IDS else [])
+    _log_debug("BATCH_IDS:", len(BATCH_IDS or []), (BATCH_IDS or [])[:20] if BATCH_IDS else [])
     # ---- Only touch tokens outside <style>/<script> ----
     def format_token_value(token: str, raw_value: Any) -> str:
         return contract_adapter.format_value(token, raw_value)
@@ -1621,12 +1669,12 @@ def fill_and_print(
 
             rendered_blocks.append(block_html)
         else:
-            print("Generator SQL produced no usable row data after filtering; skipping block.")
+            _log_debug("Generator SQL produced no usable row data after filtering; skipping block.")
 
     # ---- Assemble full document ----
     rows_rendered = bool(rendered_blocks)
     if not rows_rendered:
-        print("No rendered blocks generated for this selection.")
+        _log_debug("No rendered blocks generated for this selection.")
 
     html_multi = shell_prefix + "\n".join(rendered_blocks) + shell_suffix
 
@@ -1676,9 +1724,9 @@ def fill_and_print(
 
     # write to the path requested by the API
     OUT_HTML.write_text(html_multi, encoding="utf-8")
-    print("Wrote HTML:", OUT_HTML)
+    _log_debug("Wrote HTML:", OUT_HTML)
 
-    print("BATCH_IDS:", len(BATCH_IDS or []), (BATCH_IDS or [])[:20] if BATCH_IDS else [])
+    _log_debug("BATCH_IDS:", len(BATCH_IDS or []), (BATCH_IDS or [])[:20] if BATCH_IDS else [])
 
     _run_async(
         html_to_pdf_async(
@@ -1688,7 +1736,7 @@ def fill_and_print(
             pdf_scale=excel_print_scale,
         )
     )
-    print("Wrote PDF via Playwright:", OUT_PDF)
+    _log_debug("Wrote PDF via Playwright:", OUT_PDF)
 
     return {"html_path": str(OUT_HTML), "pdf_path": str(OUT_PDF), "rows_rendered": rows_rendered}
 

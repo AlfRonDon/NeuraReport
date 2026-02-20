@@ -24,6 +24,31 @@ const ROUTE_LABELS = {
   new: 'New',
   edit: 'Edit',
   wizard: 'New Report',
+  history: 'History',
+  design: 'Brand Kit',
+  connectors: 'Connectors',
+  ingestion: 'Ingestion',
+  query: 'Query Builder',
+  enrichment: 'Enrichment',
+  federation: 'Federation',
+  search: 'Search',
+  docqa: 'Chat with Docs',
+  agents: 'AI Agents',
+  knowledge: 'Knowledge Base',
+  summary: 'Summarize',
+  synthesis: 'Synthesis',
+  documents: 'Documents',
+  spreadsheets: 'Spreadsheets',
+  'dashboard-builder': 'Dashboard Builder',
+  widgets: 'Widgets',
+  visualization: 'Visualization',
+  workflows: 'Workflows',
+  activity: 'Activity',
+  stats: 'Usage Stats',
+  ops: 'Ops Console',
+  legacy: 'Legacy',
+  chat: 'Chat Create',
+  dashboard: 'Dashboard',
 }
 
 export default function Breadcrumbs() {
@@ -78,7 +103,7 @@ export default function Breadcrumbs() {
           display: 'flex',
           alignItems: 'center',
           color: theme.palette.text.secondary,
-          transition: 'color 150ms ease',
+          transition: 'color 0.15s cubic-bezier(0.22, 1, 0.36, 1)',
           '&:hover': { color: theme.palette.text.primary },
         }}
       >
@@ -107,7 +132,7 @@ export default function Breadcrumbs() {
               fontSize: '14px',
               fontWeight: 400,
               color: theme.palette.text.secondary,
-              transition: 'color 150ms ease',
+              transition: 'color 0.15s cubic-bezier(0.22, 1, 0.36, 1)',
               '&:hover': { color: theme.palette.text.primary },
             }}
           >

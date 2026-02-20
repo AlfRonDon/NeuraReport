@@ -404,8 +404,8 @@ export default function NotificationCenter() {
           sx: {
             width: 380,
             maxHeight: 480,
-            bgcolor: alpha(theme.palette.background.paper, 0.98),
-            backdropFilter: 'blur(20px)',
+            bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.background.paper, 0.92) : 'rgba(255, 255, 255, 0.92)',
+            backdropFilter: 'blur(12px)',
             border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
             borderRadius: 1,  // Figma spec: 8px
             overflow: 'hidden',

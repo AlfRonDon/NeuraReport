@@ -15,10 +15,12 @@ class ConnectionTestRequest(BaseModel):
 
     @field_validator("db_type")
     @classmethod
-    def enforce_sqlite(cls, value: str) -> str:
-        if (value or "").lower() != "sqlite":
-            raise ValueError("Only sqlite is supported in this build")
-        return value
+    def enforce_supported_type(cls, value: str) -> str:
+        supported = {"sqlite", "postgresql", "postgres"}
+        if (value or "").lower() not in supported:
+            raise ValueError(f"Only {', '.join(sorted(supported))} are supported")
+        v = value.lower()
+        return "postgresql" if v == "postgres" else v
 
     @field_validator("database")
     @classmethod
@@ -72,7 +74,7 @@ class ConnectionResponse(BaseModel):
     id: str
     name: str
     db_type: str
-    database_path: Path
+    database_path: Optional[Path] = None
     status: str
     latency_ms: Optional[float] = None
 

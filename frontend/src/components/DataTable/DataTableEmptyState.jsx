@@ -13,15 +13,11 @@ import {
 } from '@mui/material'
 import { Inbox as InboxIcon, Add as AddIcon } from '@mui/icons-material'
 import { neutral, palette } from '@/app/theme'
+import { float, shimmer } from '@/styles'
 
 // =============================================================================
-// ANIMATIONS
+// ANIMATIONS (local — differ from shared versions)
 // =============================================================================
-
-const float = keyframes`
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-8px); }
-`
 
 const fadeIn = keyframes`
   from {
@@ -37,11 +33,6 @@ const fadeIn = keyframes`
 const pulse = keyframes`
   0%, 100% { opacity: 0.4; }
   50% { opacity: 0.8; }
-`
-
-const shimmer = keyframes`
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
 `
 
 // =============================================================================
@@ -62,8 +53,8 @@ const EmptyContainer = styled(Box)(({ theme }) => ({
 }))
 
 const IconContainer = styled(Box)(({ theme }) => ({
-  width: 80,
-  height: 80,
+  width: 64,
+  height: 64,
   borderRadius: 24,
   backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
   border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
@@ -216,11 +207,6 @@ export default function DataTableEmptyState({
         )}
       </Box>
 
-      <DecorativeDots>
-        <span />
-        <span />
-        <span />
-      </DecorativeDots>
     </EmptyContainer>
   )
 }

@@ -225,11 +225,16 @@ async def chat_template_create_route(request: Request):
         sample_file = form.get("sample_pdf")
         if sample_file is not None:
             sample_pdf_bytes = await sample_file.read()
+        kind = str(form.get("kind") or "pdf").lower()
     else:
         body = await request.json()
         payload = TemplateChatPayload(**body)
+        kind = str(body.get("kind", "pdf")).lower()
 
-    return chat_template_create(payload, request, sample_pdf_bytes=sample_pdf_bytes)
+    if kind not in ("pdf", "excel"):
+        kind = "pdf"
+
+    return chat_template_create(payload, request, sample_pdf_bytes=sample_pdf_bytes, kind=kind)
 
 
 @router.post("/create-from-chat")

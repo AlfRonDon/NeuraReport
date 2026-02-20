@@ -554,8 +554,8 @@ def _detect_date_column_df(db_path, table_name: str) -> str | None:
     from pathlib import Path as _Path
 
     try:
-        from backend.app.repositories.dataframes.sqlite_loader import get_loader
-        loader = get_loader(_Path(str(db_path)))
+        from backend.legacy.utils.connection_utils import get_loader_for_ref
+        loader = get_loader_for_ref(db_path)
         df = loader.frame(table_name)
     except Exception:
         return None

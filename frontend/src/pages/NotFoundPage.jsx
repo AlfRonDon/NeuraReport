@@ -19,7 +19,7 @@ export default function NotFoundPage() {
   return (
     <Box
       sx={{
-        minHeight: '100vh',
+        minHeight: 'calc(100vh - 64px)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -105,16 +105,6 @@ export default function NotFoundPage() {
               borderRadius: 1,
               textTransform: 'none',
               fontWeight: 600,
-              bgcolor: (theme) =>
-                theme.palette.mode === 'dark' ? neutral[700] : neutral[900],
-              boxShadow: (theme) =>
-                `0 4px 14px ${alpha(theme.palette.common.black, 0.15)}`,
-              '&:hover': {
-                bgcolor: (theme) =>
-                  theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
-                boxShadow: (theme) =>
-                  `0 6px 20px ${alpha(theme.palette.common.black, 0.2)}`,
-              },
             }}
           >
             Go to Dashboard

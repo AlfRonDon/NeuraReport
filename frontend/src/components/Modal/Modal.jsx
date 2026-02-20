@@ -18,35 +18,10 @@ import {
   useTheme,
   alpha,
   styled,
-  keyframes,
 } from '@mui/material'
 import { Close as CloseIcon } from '@mui/icons-material'
 import { neutral, palette } from '@/app/theme'
-
-// =============================================================================
-// ANIMATIONS
-// =============================================================================
-
-const slideUp = keyframes`
-  from {
-    opacity: 0;
-    transform: translateY(20px) scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-`
-
-const fadeIn = keyframes`
-  from { opacity: 0; }
-  to { opacity: 1; }
-`
-
-const shimmer = keyframes`
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-`
+import { fadeIn, slideUp, shimmer } from '@/styles'
 
 // =============================================================================
 // STYLED COMPONENTS
@@ -62,7 +37,7 @@ const StyledDialog = styled(Dialog)(({ theme }) => ({
 const DialogPaper = styled(Box)(({ theme }) => ({
   backgroundColor: alpha(theme.palette.background.paper, 0.95),
   backdropFilter: 'blur(20px)',
-  border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+  border: `1px solid ${alpha(theme.palette.divider, 0.25)}`,
   borderRadius: 8,  // Figma spec: 8px
   boxShadow: `
     0 0 0 1px ${alpha(theme.palette.common.white, 0.05)} inset,
@@ -126,7 +101,7 @@ const StyledDialogContent = styled(DialogContent)(({ theme }) => ({
 }))
 
 const StyledDivider = styled(Divider)(({ theme }) => ({
-  borderColor: alpha(theme.palette.divider, 0.08),
+  borderColor: alpha(theme.palette.divider, 0.25),
   margin: theme.spacing(0, 3),
 }))
 
@@ -134,7 +109,7 @@ const StyledDialogActions = styled(DialogActions)(({ theme }) => ({
   padding: theme.spacing(2.5, 3),
   gap: theme.spacing(1.5),
   backgroundColor: alpha(theme.palette.background.paper, 0.3),
-  borderTop: `1px solid ${alpha(theme.palette.divider, 0.06)}`,
+  borderTop: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
 }))
 
 const CancelButton = styled(Button)(({ theme }) => ({

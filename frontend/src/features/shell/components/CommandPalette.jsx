@@ -609,11 +609,17 @@ export default function CommandPalette({ open, onClose }) {
       maxWidth="sm"
       fullWidth
       PaperProps={{
-        sx: {
+        sx: (theme) => ({
           borderRadius: 1,  // Figma spec: 8px
           overflow: 'hidden',
           maxHeight: '70vh',
-        },
+          background: theme.palette.mode === 'dark'
+            ? 'rgba(30, 30, 30, 0.92)'
+            : 'rgba(255, 255, 255, 0.92)',
+          backdropFilter: 'blur(12px)',
+          border: '2px solid',
+          borderColor: theme.palette.common.black,
+        }),
       }}
       slotProps={{
         backdrop: {

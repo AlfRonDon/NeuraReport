@@ -70,6 +70,7 @@ const KnowledgePage = lazy(() => import('@/pages/knowledge/KnowledgePage.jsx'))
 const DesignPage = lazy(() => import('@/pages/design/DesignPage.jsx'))
 const IngestionPage = lazy(() => import('@/pages/ingestion/IngestionPage.jsx'))
 const WidgetsPage = lazy(() => import('@/pages/widgets/WidgetsPage.jsx'))
+const LoggerPage = lazy(() => import('@/pages/logger/LoggerPage.jsx'))
 const NotFoundPage = lazy(() => import('@/pages/NotFoundPage.jsx'))
 
 // Lazy-loaded pages - Setup and editing
@@ -325,9 +326,9 @@ function AppContent() {
               <Route path="/design" element={<DesignPage />} />
               <Route path="/ingestion" element={<IngestionPage />} />
               <Route path="/widgets" element={<WidgetsPage />} />
+              <Route path="/logger" element={<LoggerPage />} />
+              <Route path="*" element={<NotFoundPage />} />
             </Route>
-
-            <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </Suspense>
       </Box>
@@ -401,7 +402,7 @@ function GovernedErrorBoundary({ children }) {
 export default function App() {
   return (
     <ErrorBoundary fallback={StaticErrorFallback}>
-      <BrowserRouter>
+      <BrowserRouter basename={import.meta.env.VITE_ROUTER_BASENAME || import.meta.env.BASE_URL.replace(/\/+$/, '') || ''}>
         <AppProviders>
           <OperationHistoryProvider>
             <UXGovernanceProvider auditClient={intentAuditClient}>

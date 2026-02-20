@@ -319,7 +319,7 @@ export default function SynthesisPage() {
       <Box sx={{ p: 3, maxWidth: 1400, mx: 'auto' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
           <MergeIcon />
-          <Typography variant="h4">Multi-Document Synthesis</Typography>
+          <Typography variant="h5">Multi-Document Synthesis</Typography>
         </Box>
         <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 300 }}>
           <CircularProgress />
@@ -332,7 +332,7 @@ export default function SynthesisPage() {
     <Box sx={{ p: 3, maxWidth: 1400, mx: 'auto' }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Box>
-          <Typography variant="h4" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Typography variant="h5" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <MergeIcon /> Multi-Document Synthesis
           </Typography>
           <Typography variant="body1" color="text.secondary">

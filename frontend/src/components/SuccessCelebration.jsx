@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { Box, keyframes } from '@mui/material'
+import { Box, alpha, keyframes } from '@mui/material'
 import { neutral } from '@/app/theme'
 
 // Subtle pulse animation for success indicator

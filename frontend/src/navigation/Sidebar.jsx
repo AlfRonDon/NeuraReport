@@ -58,9 +58,9 @@ import BubbleChartIcon from '@mui/icons-material/BubbleChart'
 import LibraryBooksIcon from '@mui/icons-material/LibraryBooks'
 import PaletteIcon from '@mui/icons-material/Palette'
 import CloudUploadIcon from '@mui/icons-material/CloudUpload'
+import SensorsIcon from '@mui/icons-material/Sensors'
 
 import { useAppStore } from '../stores'
-import NotificationCenter from './NotificationCenter'
 
 // Import design tokens
 import {
@@ -69,9 +69,11 @@ import {
   secondary,
   figmaSpacing,
   fontFamilyHeading,
+  fontFamilyDisplay,
   fontFamilyUI,
   fontFamilyBody,
 } from '@/app/theme'
+import { fadeIn } from '@/styles'
 
 // =============================================================================
 // FIGMA DESIGN CONSTANTS (EXACT from Figma specs)
@@ -87,13 +89,8 @@ const FIGMA_SIDEBAR = {
 }
 
 // =============================================================================
-// ANIMATIONS
+// ANIMATIONS (local — differ from shared versions)
 // =============================================================================
-
-const fadeIn = keyframes`
-  from { opacity: 0; }
-  to { opacity: 1; }
-`
 
 const slideIn = keyframes`
   from {
@@ -144,6 +141,7 @@ const NAV_ITEMS = [
     collapsible: true,
     items: [
       { key: 'connections', label: 'Data Sources', icon: StorageIcon, path: '/connections', description: 'Database connections' },
+      { key: 'logger', label: 'Logger', icon: SensorsIcon, path: '/logger', description: 'PLC data logger' },
       { key: 'connectors', label: 'Connectors', icon: CableIcon, path: '/connectors', description: 'Cloud & DB connectors' },
       { key: 'ingestion', label: 'Ingestion', icon: CloudUploadIcon, path: '/ingestion', description: 'Import documents & data' },
       { key: 'query', label: 'Query Builder', icon: QuestionAnswerIcon, path: '/query', description: 'Natural language to SQL' },
@@ -245,7 +243,7 @@ const NewReportButton = styled(Box)(({ theme }) => ({
   backgroundColor: 'transparent',
   color: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
   cursor: 'pointer',
-  transition: 'background-color 0.15s ease',
+  transition: 'background-color 0.15s cubic-bezier(0.22, 1, 0.36, 1)',
   width: '100%',
   textAlign: 'left',
   font: 'inherit',
@@ -296,7 +294,7 @@ const NavItemButton = styled(Box, {
   borderRadius: 8,  // 8px from Figma
   cursor: 'pointer',
   position: 'relative',
-  transition: 'all 0.15s ease',
+  transition: 'all 0.15s cubic-bezier(0.22, 1, 0.36, 1)',
   justifyContent: collapsed ? 'center' : 'flex-start',
   height: FIGMA_SIDEBAR.itemHeight,  // 40px from Figma
   fontFamily: fontFamilyUI,  // Inter from Figma
@@ -370,24 +368,26 @@ const NavIcon = styled(Box, {
 
 const CollapseButton = styled(IconButton)(({ theme }) => ({
   position: 'absolute',
-  right: -12,
+  right: -14,
   top: 72,
-  width: 24,
-  height: 24,
+  width: 28,
+  height: 28,
   backgroundColor: theme.palette.mode === 'dark' ? neutral[900] : theme.palette.common.white,
-  border: `1px solid ${theme.palette.mode === 'dark' ? neutral[700] : neutral[200]}`,  // Grey/500
-  boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+  border: `1px solid ${theme.palette.mode === 'dark' ? neutral[700] : neutral[200]}`,
+  boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
   transition: 'all 0.2s ease',
   zIndex: 1,
-  color: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
+  color: theme.palette.mode === 'dark' ? neutral[400] : neutral[600],
+  opacity: 1,
 
   '&:hover': {
-    backgroundColor: theme.palette.mode === 'dark' ? neutral[700] : neutral[200],  // Grey/400
-    color: theme.palette.mode === 'dark' ? neutral[100] : neutral[900],  // Grey/1200
+    backgroundColor: theme.palette.mode === 'dark' ? neutral[700] : neutral[100],
+    color: theme.palette.mode === 'dark' ? neutral[100] : neutral[900],
+    transform: 'scale(1.1)',
   },
 
   '& svg': {
-    fontSize: 14,
+    fontSize: 16,
   },
 }))
 
@@ -480,12 +480,12 @@ export default function Sidebar({ width, collapsed, mobileOpen, onClose, onToggl
             onClick={() => handleNavigate('/')}
           >
             <LogoBox>
-              <img src="/logo.png" alt="NeuraReport" />
+              <img src={`${import.meta.env.BASE_URL}logo.png`} alt="NeuraReport" />
             </LogoBox>
             <Typography
               sx={{
-                // FIGMA: Section Title - Tomorrow Medium 20px
-                fontFamily: fontFamilyHeading,
+                // Display font for logo text (Space Grotesk)
+                fontFamily: fontFamilyDisplay,
                 fontSize: '20px',
                 fontWeight: 500,
                 lineHeight: 'normal',
@@ -500,13 +500,11 @@ export default function Sidebar({ width, collapsed, mobileOpen, onClose, onToggl
 
         {collapsed && (
           <LogoBox onClick={() => handleNavigate('/')} sx={{ cursor: 'pointer' }}>
-            <img src="/logo.png" alt="NeuraReport" />
+            <img src={`${import.meta.env.BASE_URL}logo.png`} alt="NeuraReport" />
           </LogoBox>
         )}
 
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-          {!collapsed && <NotificationCenter />}
-        </Box>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }} />
       </LogoContainer>
 
       {/* Collapse Button */}
@@ -570,7 +568,7 @@ export default function Sidebar({ width, collapsed, mobileOpen, onClose, onToggl
                       fontFamily: fontFamilyUI,
                       fontSize: '10px',
                       fontWeight: 600,
-                      letterSpacing: '0.05em',
+                      letterSpacing: '0.1em',
                       textTransform: 'uppercase',
                       color: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
                     }}
@@ -671,7 +669,7 @@ export default function Sidebar({ width, collapsed, mobileOpen, onClose, onToggl
                     height: 1,
                     mx: 2,
                     my: 1.5,
-                    bgcolor: alpha(theme.palette.divider, 0.08),
+                    bgcolor: alpha(theme.palette.divider, 0.3),
                   }}
                 />
               )}

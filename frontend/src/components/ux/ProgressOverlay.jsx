@@ -25,13 +25,9 @@ import {
   Error as ErrorIcon,
 } from '@mui/icons-material'
 import { neutral, palette } from '@/app/theme'
+import { shimmer } from '@/styles'
 
-// Animations
-const shimmer = keyframes`
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-`
-
+// Local animations — differ from shared versions
 const pulse = keyframes`
   0%, 100% { opacity: 1; }
   50% { opacity: 0.6; }

@@ -418,6 +418,13 @@ class StateStore:
             state = self._read_state()
             try:
                 yield state
+                # Sanitize non-JSON-serializable values (datetime, set, etc.)
+                # before writing.  Uses the existing _json_roundtrip helper
+                # which applies default=str during serialization.
+                sanitized = _json_roundtrip(state)
+                if sanitized:
+                    state.clear()
+                    state.update(sanitized)
                 self._write_state(state)
             except Exception as e:
                 logger.error(f"Transaction failed: {e}")

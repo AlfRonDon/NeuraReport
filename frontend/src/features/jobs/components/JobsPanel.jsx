@@ -514,7 +514,17 @@ export default function JobsPanel({ open, onClose }) {
       : 'No jobs match the selected filter. Try another status or start a new run.'
 
   return (
-    <Drawer anchor="right" open={open} onClose={handleClosePanel}>
+    <Drawer
+      anchor="right"
+      open={open}
+      onClose={handleClosePanel}
+      PaperProps={{
+        sx: {
+          backgroundColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(17, 24, 39, 0.95)' : 'rgba(255, 255, 255, 0.92)',
+          backdropFilter: 'blur(12px)',
+        },
+      }}
+    >
       <Box
         sx={{
           width: { xs: '100vw', sm: 420 },

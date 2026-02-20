@@ -111,7 +111,7 @@ const Sidebar = styled(Box)(({ theme }) => ({
 
 const AgentCard = styled(Card)(({ theme, selected }) => ({
   cursor: 'pointer',
-  transition: 'all 0.2s ease',
+  transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)',
   border: selected ? `2px solid ${theme.palette.mode === 'dark' ? neutral[500] : neutral[700]}` : `1px solid ${alpha(theme.palette.divider, 0.2)}`,
   '&:hover': {
     transform: 'translateY(-2px)',
@@ -1121,7 +1121,7 @@ export default function AgentsPageContainer() {
                           '&:hover': {
                             bgcolor: alpha(theme.palette.primary.main, 0.04),
                           },
-                          transition: 'all 0.15s ease',
+                          transition: 'all 0.15s cubic-bezier(0.22, 1, 0.36, 1)',
                         }}
                       >
                         <ListItemText

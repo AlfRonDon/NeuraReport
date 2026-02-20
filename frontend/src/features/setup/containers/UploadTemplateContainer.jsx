@@ -163,7 +163,7 @@ export default function UploadTemplate() {
             textAlign: 'center',
             bgcolor: isDragging ? 'action.hover' : 'transparent',
             cursor: 'pointer',
-            transition: 'all 160ms ease',
+            transition: 'all 160ms cubic-bezier(0.22, 1, 0.36, 1)',
           }}
         >
           <CloudUploadOutlinedIcon sx={{ mb: 1, color: 'text.secondary' }} />

@@ -26,13 +26,9 @@ import {
 } from '@mui/icons-material'
 import { useNetworkStatus } from '@/hooks/useNetworkStatus'
 import { neutral, palette } from '@/app/theme'
+import { slideDown } from '@/styles'
 
-// Animations
-const slideDown = keyframes`
-  from { transform: translateY(-100%); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
-`
-
+// Local pulse — differs from shared version (opacity-based, not scale-based)
 const pulse = keyframes`
   0%, 100% { opacity: 1; }
   50% { opacity: 0.6; }

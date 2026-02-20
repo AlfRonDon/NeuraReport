@@ -17,6 +17,7 @@ const envBaseUrl = runtimeEnv.VITE_API_BASE_URL
 // actual hostname the user is accessing the frontend from.
 function resolveBaseUrl(url) {
   if (!url || url === 'proxy') return url
+  if (url.startsWith('/')) return url  // Already a relative path, use as-is
   if (typeof window === 'undefined') return url
   try {
     const localHosts = new Set(['0.0.0.0', '127.0.0.1', 'localhost', '::1'])
@@ -2312,7 +2313,7 @@ export async function applyChatTemplateEdit(templateId, html) {
  * @param {File} [samplePdf] - Optional sample PDF file for visual reference
  * @returns {Promise<Object>} Chat response with message, ready_to_apply, proposed_changes, etc.
  */
-export async function chatTemplateCreate(messages, html = null, samplePdf = null) {
+export async function chatTemplateCreate(messages, html = null, samplePdf = null, kind = 'pdf') {
   if (!Array.isArray(messages) || messages.length === 0) {
     throw new Error('messages array is required')
   }
@@ -2336,12 +2337,13 @@ export async function chatTemplateCreate(messages, html = null, samplePdf = null
     fd.append('messages_json', JSON.stringify(messages))
     if (html) fd.append('html', html)
     fd.append('sample_pdf', samplePdf)
+    fd.append('kind', kind)
     const { data } = await api.post('/templates/chat-create', fd, {
       headers: { 'Content-Type': 'multipart/form-data' },
     })
     return data
   }
-  const payload = { messages }
+  const payload = { messages, kind }
   if (html) {
     payload.html = html
   }
@@ -3483,6 +3485,84 @@ export async function bulkDeleteJobs(jobIds) {
     return { deleted: jobIds, deletedCount: jobIds.length, failed: [], failedCount: 0 }
   }
   const { data } = await api.post('/analytics/bulk/jobs/delete', { jobIds })
+  return data
+}
+
+
+// ==================== Logger Integration API ====================
+
+/**
+ * Discover available Logger databases on the network.
+ * @returns {Promise<Object>} Discovery results with databases array
+ */
+export async function discoverLoggerDatabases() {
+  if (isMock) {
+    await sleep(300)
+    return { databases: [] }
+  }
+  const { data } = await api.get('/logger/discover')
+  return data
+}
+
+/**
+ * Get devices from a Logger database.
+ * @param {string} connectionId - Connection ID of the Logger database
+ * @returns {Promise<Object>} Devices list
+ */
+export async function getLoggerDevices(connectionId) {
+  const { data } = await api.get(`/logger/${encodeURIComponent(connectionId)}/devices`)
+  return data
+}
+
+/**
+ * Get device schemas from a Logger database.
+ * @param {string} connectionId - Connection ID
+ * @returns {Promise<Object>} Schemas with fields
+ */
+export async function getLoggerSchemas(connectionId) {
+  const { data } = await api.get(`/logger/${encodeURIComponent(connectionId)}/schemas`)
+  return data
+}
+
+/**
+ * Get logging jobs from a Logger database.
+ * @param {string} connectionId - Connection ID
+ * @returns {Promise<Object>} Jobs list
+ */
+export async function getLoggerJobs(connectionId) {
+  const { data } = await api.get(`/logger/${encodeURIComponent(connectionId)}/jobs`)
+  return data
+}
+
+/**
+ * Get execution history for a Logger job.
+ * @param {string} connectionId - Connection ID
+ * @param {string} jobId - Job ID
+ * @param {number} [limit=50] - Max runs to return
+ * @returns {Promise<Object>} Job runs list
+ */
+export async function getLoggerJobRuns(connectionId, jobId, limit = 50) {
+  const { data } = await api.get(`/logger/${encodeURIComponent(connectionId)}/jobs/${encodeURIComponent(jobId)}/runs?limit=${limit}`)
+  return data
+}
+
+/**
+ * Get storage targets from a Logger database.
+ * @param {string} connectionId - Connection ID
+ * @returns {Promise<Object>} Storage targets list
+ */
+export async function getLoggerStorageTargets(connectionId) {
+  const { data } = await api.get(`/logger/${encodeURIComponent(connectionId)}/storage-targets`)
+  return data
+}
+
+/**
+ * Get device tables from a Logger database.
+ * @param {string} connectionId - Connection ID
+ * @returns {Promise<Object>} Device tables list
+ */
+export async function getLoggerDeviceTables(connectionId) {
+  const { data } = await api.get(`/logger/${encodeURIComponent(connectionId)}/device-tables`)
   return data
 }
 

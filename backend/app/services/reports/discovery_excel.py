@@ -430,7 +430,12 @@ def discover_batches_and_counts(
             if col_text and not col_text.startswith("__") and col_text not in categorical_fields:
                 categorical_fields.append(col_text)
 
-    loader = SQLiteDataFrameLoader(db_path)
+    # Support both SQLite and PostgreSQL connections via ConnectionRef
+    if hasattr(db_path, 'is_postgresql') and db_path.is_postgresql:
+        from backend.legacy.utils.connection_utils import get_loader_for_ref
+        loader = get_loader_for_ref(db_path)
+    else:
+        loader = SQLiteDataFrameLoader(db_path)
 
     if not isinstance(key_values, Mapping):
         key_values = {}

@@ -268,9 +268,21 @@ class ConnectionService:
             finally:
                 if conn:
                     conn.close()
+        elif db_type in ("postgresql", "postgres"):
+            from sqlalchemy import create_engine, text as sa_text
+            engine = None
+            try:
+                engine = create_engine(db_path, connect_args={"connect_timeout": 5})
+                with engine.connect() as conn:
+                    conn.execute(sa_text("SELECT 1"))
+                return True, "Query executed successfully"
+            except Exception as e:
+                logger.warning("postgres_connection_test_failed", extra={"error": str(e)})
+                return False, "PostgreSQL connection test failed"
+            finally:
+                if engine:
+                    engine.dispose()
         else:
-            # For network databases, we already checked port connectivity
-            # A proper implementation would use the appropriate driver
             return True, "Port accessible"
 
     def healthcheck(self, connection_id: str, correlation_id: str | None = None) -> dict:

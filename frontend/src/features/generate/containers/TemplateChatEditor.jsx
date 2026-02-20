@@ -975,7 +975,7 @@ export default function TemplateChatEditor({
             bgcolor: (theme) => alpha(theme.palette.action.hover, 0.5),
             border: 1,
             borderColor: 'divider',
-            transition: 'all 150ms ease',
+            transition: 'all 150ms cubic-bezier(0.22, 1, 0.36, 1)',
             '&:focus-within': {
               borderColor: (theme) => theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
               boxShadow: (theme) =>

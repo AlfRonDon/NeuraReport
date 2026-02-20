@@ -7,6 +7,23 @@ from typing import Any, Dict, List
 
 TEMPLATE_CHAT_PROMPT_VERSION = "template_chat_v1"
 
+_EXCEL_GUIDANCE = dedent(
+    """\
+
+    EXCEL TEMPLATE MODE
+    This template will be converted to an Excel spreadsheet (.xlsx), NOT rendered as a PDF page.
+    Follow these constraints strictly:
+    - Use simple <table>-based layouts — each <table> maps directly to an Excel sheet region.
+    - <tr> = rows, <td>/<th> = cells. Use colspan/rowspan for cell merging.
+    - Avoid: CSS grid, flexbox, floats, absolute positioning, page-size constraints (no A4 dimensions), page breaks.
+    - OK to use: background-color on cells (→ cell fills), bold/italic/font-size, border styles, text-align.
+    - Keep styling inline and simple — complex CSS does not survive XLSX conversion.
+    - Do NOT add page numbering, print-oriented headers/footers, or page-break markers — these are stripped in Excel output.
+    - Prefer landscape-friendly wide table layouts over narrow portrait-style designs.
+    - For repeating data rows, still use <!-- BEGIN:BLOCK_REPEAT ... --> / <!-- END:BLOCK_REPEAT --> inside the <table>.
+    """
+).strip()
+
 
 TEMPLATE_CHAT_SYSTEM_PROMPT = dedent(
     """\
@@ -60,6 +77,7 @@ TEMPLATE_CHAT_SYSTEM_PROMPT = dedent(
 def build_template_chat_prompt(
     template_html: str,
     conversation_history: List[Dict[str, str]],
+    kind: str = "pdf",
 ) -> Dict[str, Any]:
     """
     Build a chat-completions payload for conversational template editing.
@@ -67,6 +85,7 @@ def build_template_chat_prompt(
     Args:
         template_html: The current HTML template content
         conversation_history: List of messages with 'role' and 'content' keys
+        kind: Template kind — 'pdf' or 'excel'
 
     Returns a dict with:
         {
@@ -76,6 +95,7 @@ def build_template_chat_prompt(
         }
     """
     # Build the initial context message that includes the template
+    excel_note = f"\n\n{_EXCEL_GUIDANCE}" if kind == "excel" else ""
     context_message = (
         "Here is the current template HTML that the user wants to edit:\n\n"
         "```html\n"
@@ -83,6 +103,7 @@ def build_template_chat_prompt(
         "```\n\n"
         "The user will now describe what changes they want. "
         "Engage in a conversation to understand their needs fully before making changes."
+        f"{excel_note}"
     )
 
     messages: List[Dict[str, Any]] = [
@@ -230,6 +251,7 @@ def build_template_chat_create_prompt(
     conversation_history: List[Dict[str, str]],
     current_html: str | None = None,
     sample_image_b64: str | None = None,
+    kind: str = "pdf",
 ) -> Dict[str, Any]:
     """
     Build a chat-completions payload for conversational template creation.
@@ -238,6 +260,7 @@ def build_template_chat_create_prompt(
         conversation_history: List of messages with 'role' and 'content' keys
         current_html: Optional current HTML if template is being iterated on
         sample_image_b64: Optional base64-encoded PNG of a sample PDF for visual reference
+        kind: Template kind — 'pdf' or 'excel'
 
     Returns a dict with:
         {
@@ -246,6 +269,7 @@ def build_template_chat_create_prompt(
           "version": TEMPLATE_CHAT_CREATE_PROMPT_VERSION,
         }
     """
+    excel_note = f"\n\n{_EXCEL_GUIDANCE}" if kind == "excel" else ""
     if current_html and current_html.strip():
         context_message = (
             "The user is creating a new report template. Here is the current draft:\n\n"
@@ -254,12 +278,14 @@ def build_template_chat_create_prompt(
             "```\n\n"
             "The user will now describe what they want to change or add. "
             "Help them refine the template."
+            f"{excel_note}"
         )
     else:
         context_message = (
             "The user wants to create a new report template from scratch. "
             "They will describe what kind of report they need. "
             "Help them by asking the right questions and then generate a professional HTML template."
+            f"{excel_note}"
         )
 
     if sample_image_b64:

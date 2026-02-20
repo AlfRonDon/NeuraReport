@@ -25,9 +25,9 @@ import {
   useTheme,
   alpha,
   styled,
-  keyframes,
 } from '@mui/material'
 import { neutral, palette } from '@/app/theme'
+import { fadeInUp } from '@/styles'
 import CloseIcon from '@mui/icons-material/Close'
 import RefreshIcon from '@mui/icons-material/Refresh'
 import MoreVertIcon from '@mui/icons-material/MoreVert'
@@ -53,36 +53,6 @@ import {
   canCancelJob,
   JobStatus,
 } from '@/utils/jobStatus'
-
-// =============================================================================
-// ANIMATIONS
-// =============================================================================
-
-const fadeInUp = keyframes`
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-`
-
-const pulse = keyframes`
-  0%, 100% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.05); opacity: 0.8; }
-`
-
-const spin = keyframes`
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-`
-
-const shimmer = keyframes`
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-`
 
 // =============================================================================
 // STYLED COMPONENTS
@@ -114,7 +84,7 @@ const StyledMenuItem = styled(MenuItem)(({ theme }) => ({
   margin: theme.spacing(0.5, 1),
   padding: theme.spacing(1, 1.5),
   fontSize: '14px',
-  transition: 'all 0.15s ease',
+  transition: 'all 0.15s cubic-bezier(0.22, 1, 0.36, 1)',
   '&:hover': {
     backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
   },
@@ -152,7 +122,7 @@ const CloseButton = styled(IconButton)(({ theme }) => ({
   height: 32,
   borderRadius: 8,  // Figma spec: 8px
   color: theme.palette.text.secondary,
-  transition: 'all 0.2s ease',
+  transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)',
   '&:hover': {
     backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
     color: theme.palette.text.primary,
@@ -189,6 +159,7 @@ const MonoText = styled(Typography)(({ theme }) => ({
   fontFamily: 'var(--font-mono, monospace)',
   fontSize: '0.75rem',
   color: theme.palette.text.secondary,
+  whiteSpace: 'nowrap',
 }))
 
 const StatusChip = styled(Chip, {
@@ -230,7 +201,7 @@ const ActionButton = styled(Button)(({ theme }) => ({
   fontWeight: 500,
   fontSize: '14px',
   padding: theme.spacing(0.75, 2),
-  transition: 'all 0.2s ease',
+  transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)',
 }))
 
 const PrimaryButton = styled(ActionButton)(({ theme }) => ({
@@ -284,7 +255,7 @@ const ErrorAlert = styled(Alert)(({ theme }) => ({
 
 const MoreActionsButton = styled(IconButton)(({ theme }) => ({
   color: theme.palette.text.secondary,
-  transition: 'all 0.2s ease',
+  transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)',
   '&:hover': {
     color: theme.palette.text.primary,
     backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],

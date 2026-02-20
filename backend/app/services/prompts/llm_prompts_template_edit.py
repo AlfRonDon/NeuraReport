@@ -43,9 +43,14 @@ TEMPLATE_EDIT_SYSTEM_PROMPT = dedent(
 ).strip()
 
 
-def build_template_edit_prompt(template_html: str, instructions: str) -> Dict[str, Any]:
+def build_template_edit_prompt(template_html: str, instructions: str, kind: str = "pdf") -> Dict[str, Any]:
     """
     Build a chat-completions payload for editing an existing template HTML using natural-language instructions.
+
+    Args:
+        template_html: The current HTML template content
+        instructions: Natural-language editing instructions
+        kind: Template kind — 'pdf' or 'excel'
 
     Returns a dict with:
         {
@@ -54,6 +59,11 @@ def build_template_edit_prompt(template_html: str, instructions: str) -> Dict[st
           "version": TEMPLATE_EDIT_PROMPT_VERSION,
         }
     """
+    system_prompt = TEMPLATE_EDIT_SYSTEM_PROMPT
+    if kind == "excel":
+        from backend.app.services.prompts.llm_prompts_template_chat import _EXCEL_GUIDANCE
+        system_prompt = system_prompt + "\n\n" + _EXCEL_GUIDANCE
+
     payload: Dict[str, Any] = {
         "template_html": template_html or "",
         "instructions": instructions or "",
@@ -64,7 +74,7 @@ def build_template_edit_prompt(template_html: str, instructions: str) -> Dict[st
     messages: List[Dict[str, Any]] = [
         {
             "role": "system",
-            "content": [{"type": "text", "text": TEMPLATE_EDIT_SYSTEM_PROMPT}],
+            "content": [{"type": "text", "text": system_prompt}],
         },
         {
             "role": "user",
@@ -73,7 +83,7 @@ def build_template_edit_prompt(template_html: str, instructions: str) -> Dict[st
     ]
 
     return {
-        "system": TEMPLATE_EDIT_SYSTEM_PROMPT,
+        "system": system_prompt,
         "messages": messages,
         "version": TEMPLATE_EDIT_PROMPT_VERSION,
     }

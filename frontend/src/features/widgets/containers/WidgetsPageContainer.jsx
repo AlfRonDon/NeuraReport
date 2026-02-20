@@ -22,7 +22,10 @@ import {
   Refresh as RefreshIcon,
   Storage as DbIcon,
   LinkOff as NoConnectionIcon,
+  Cable as ConnectionsIcon,
 } from '@mui/icons-material'
+import { useNavigate } from 'react-router-dom'
+import { Button } from '@mui/material'
 import PageHeader from '@/components/layout/PageHeader'
 import WidgetRenderer from '@/features/dashboards/components/WidgetRenderer'
 import { recommendWidgets } from '@/api/widgets'
@@ -49,7 +52,7 @@ const WidgetCell = styled(Box)(({ theme }) => ({
   border: `1px solid ${alpha(theme.palette.divider, 0.12)}`,
   backgroundColor: theme.palette.background.paper,
   overflow: 'hidden',
-  transition: 'box-shadow 0.2s ease, border-color 0.2s ease',
+  transition: 'box-shadow 0.2s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.2s cubic-bezier(0.22, 1, 0.36, 1)',
   '&:hover': {
     boxShadow: `0 4px 24px ${alpha(theme.palette.common.black, 0.08)}`,
     borderColor: alpha(theme.palette.primary.main, 0.3),
@@ -67,7 +70,7 @@ const WidgetOverlay = styled(Box)(({ theme }) => ({
   alignItems: 'center',
   gap: theme.spacing(0.5),
   opacity: 0,
-  transition: 'opacity 0.2s ease',
+  transition: 'opacity 0.2s cubic-bezier(0.22, 1, 0.36, 1)',
   '.MuiBox-root:hover > &': {
     opacity: 1,
   },
@@ -76,6 +79,7 @@ const WidgetOverlay = styled(Box)(({ theme }) => ({
 // ── Component ────────────────────────────────────────────────────────────
 
 export default function WidgetsPageContainer() {
+  const navigate = useNavigate()
   const [widgets, setWidgets] = useState([])
   const [grid, setGrid] = useState(null)
   const [profile, setProfile] = useState(null)
@@ -152,10 +156,18 @@ export default function WidgetsPageContainer() {
           <Typography variant="h6" color="text.secondary" gutterBottom>
             No database connected
           </Typography>
-          <Typography variant="body2" color="text.disabled">
+          <Typography variant="body2" color="text.disabled" sx={{ mb: 2 }}>
             Connect a database from the Connections page to see intelligent widget
             recommendations tailored to your data.
           </Typography>
+          <Button
+            variant="contained"
+            startIcon={<ConnectionsIcon />}
+            onClick={() => navigate('/connections')}
+            sx={{ textTransform: 'none' }}
+          >
+            Go to Connections
+          </Button>
         </Box>
       </Box>
     )

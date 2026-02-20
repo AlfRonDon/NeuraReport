@@ -12,7 +12,6 @@ import {
   Chip,
   Select,
   MenuItem,
-  FormControl,
   InputLabel,
   CircularProgress,
   Button,
@@ -21,7 +20,6 @@ import {
   useTheme,
   alpha,
   styled,
-  keyframes,
 } from '@mui/material'
 import RefreshIcon from '@mui/icons-material/Refresh'
 import HistoryIcon from '@mui/icons-material/History'
@@ -43,31 +41,7 @@ import { useInteraction, InteractionType, Reversibility, useNavigateInteraction 
 import { useAppStore } from '@/stores'
 import * as api from '@/api/client'
 import { neutral, palette } from '@/app/theme'
-
-// =============================================================================
-// ANIMATIONS
-// =============================================================================
-
-const fadeInUp = keyframes`
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-`
-
-const float = keyframes`
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-8px); }
-`
-
-const pulse = keyframes`
-  0%, 100% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.05); opacity: 0.8; }
-`
+import { fadeInUp, float, StyledFormControl, RefreshButton } from '@/styles'
 
 // =============================================================================
 // STYLED COMPONENTS
@@ -99,25 +73,6 @@ const FilterContainer = styled(Stack)(({ theme }) => ({
   animation: `${fadeInUp} 0.5s ease-out 0.1s both`,
 }))
 
-const StyledFormControl = styled(FormControl)(({ theme }) => ({
-  minWidth: 150,
-  '& .MuiOutlinedInput-root': {
-    borderRadius: 8,  // Figma spec: 8px
-    backgroundColor: alpha(theme.palette.background.paper, 0.6),
-    transition: 'all 0.2s ease',
-    '&:hover': {
-      backgroundColor: alpha(theme.palette.background.paper, 0.8),
-    },
-    '&.Mui-focused': {
-      backgroundColor: theme.palette.background.paper,
-      boxShadow: `0 0 0 3px ${alpha(theme.palette.text.primary, 0.08)}`,
-    },
-  },
-  '& .MuiInputLabel-root': {
-    fontWeight: 500,
-  },
-}))
-
 const TableContainer = styled(Box)(({ theme }) => ({
   backgroundColor: alpha(theme.palette.background.paper, 0.8),
   backdropFilter: 'blur(20px)',
@@ -143,15 +98,6 @@ const EmptyIcon = styled(HistoryIcon)(({ theme }) => ({
   animation: `${float} 3s ease-in-out infinite`,
 }))
 
-const RefreshButton = styled(IconButton)(({ theme }) => ({
-  color: theme.palette.text.secondary,
-  transition: 'all 0.2s ease',
-  '&:hover': {
-    color: theme.palette.text.primary,
-    backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
-  },
-}))
-
 const PrimaryButton = styled(Button)(({ theme }) => ({
   borderRadius: 8,  // Figma spec: 8px
   textTransform: 'none',
@@ -161,7 +107,7 @@ const PrimaryButton = styled(Button)(({ theme }) => ({
   background: theme.palette.mode === 'dark' ? neutral[700] : neutral[900],
   color: theme.palette.common.white,
   boxShadow: `0 4px 14px ${alpha(theme.palette.common.black, 0.15)}`,
-  transition: 'all 0.2s ease',
+  transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)',
   '&:hover': {
     background: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
     boxShadow: `0 6px 20px ${alpha(theme.palette.common.black, 0.2)}`,
@@ -175,7 +121,7 @@ const SecondaryButton = styled(Button)(({ theme }) => ({
   fontWeight: 500,
   fontSize: '0.875rem',
   borderColor: alpha(theme.palette.divider, 0.3),
-  transition: 'all 0.2s ease',
+  transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)',
   '&:hover': {
     borderColor: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
     backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.04) : neutral[50],
@@ -192,7 +138,7 @@ const KindIconContainer = styled(Box, {
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  transition: 'all 0.2s ease',
+  transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)',
 }))
 
 const StatusChip = styled(Chip, {
@@ -210,7 +156,7 @@ const StatusChip = styled(Chip, {
 }))
 
 const ArtifactButton = styled(IconButton)(({ theme }) => ({
-  transition: 'all 0.2s ease',
+  transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)',
   '&:hover': {
     transform: 'translateY(-2px)',
   },

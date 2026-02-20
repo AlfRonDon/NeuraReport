@@ -140,7 +140,7 @@ def _resolve_template_html_paths(template_id: str, *, kind: str) -> tuple[Path, 
     )
 
 
-def _run_template_edit_llm(template_html: str, instructions: str) -> tuple[str, list[str]]:
+def _run_template_edit_llm(template_html: str, instructions: str, kind: str = "pdf") -> tuple[str, list[str]]:
     if not instructions or not str(instructions).strip():
         raise http_error(400, "missing_instructions", "instructions is required for AI template edit.")
     from backend.app.services.prompts.llm_prompts_template_edit import (
@@ -148,7 +148,7 @@ def _run_template_edit_llm(template_html: str, instructions: str) -> tuple[str, 
         build_template_edit_prompt,
     )
 
-    prompt_payload = build_template_edit_prompt(template_html, instructions)
+    prompt_payload = build_template_edit_prompt(template_html, instructions, kind=kind)
     messages = prompt_payload.get("messages") or []
     if not messages:
         raise http_error(500, "prompt_build_failed", "Failed to build template edit prompt.")
@@ -259,7 +259,7 @@ def edit_template_ai(template_id: str, payload: TemplateAiEditPayload, request: 
         current_html = _snapshot_final_html(template_dir_path, final_path, base_path)
 
         llm_input_html = payload.html.strip() if isinstance(payload.html, str) and payload.html.strip() else current_html
-        updated_html, change_summary = _run_template_edit_llm(llm_input_html, payload.instructions or "")
+        updated_html, change_summary = _run_template_edit_llm(llm_input_html, payload.instructions or "", kind=template_kind)
         write_text_atomic(final_path, updated_html, encoding="utf-8", step="template_edit_ai")
         diff_summary = _summarize_html_diff(current_html, updated_html)
 
@@ -342,7 +342,7 @@ def undo_last_template_edit(template_id: str, request: Request):
     )
 
 
-def _run_template_chat_llm(template_html: str, conversation_history: list[dict]) -> dict:
+def _run_template_chat_llm(template_html: str, conversation_history: list[dict], kind: str = "pdf") -> dict:
     """
     Run the conversational template editing LLM.
 
@@ -358,7 +358,7 @@ def _run_template_chat_llm(template_html: str, conversation_history: list[dict])
         build_template_chat_prompt,
     )
 
-    prompt_payload = build_template_chat_prompt(template_html, conversation_history)
+    prompt_payload = build_template_chat_prompt(template_html, conversation_history, kind=kind)
     messages = prompt_payload.get("messages") or []
     if not messages:
         raise http_error(500, "prompt_build_failed", "Failed to build template chat prompt.")
@@ -433,7 +433,7 @@ def chat_template_edit(template_id: str, payload: TemplateChatPayload, request: 
     ]
 
     # Call the LLM
-    llm_response = _run_template_chat_llm(current_html, conversation_history)
+    llm_response = _run_template_chat_llm(current_html, conversation_history, kind=template_kind)
 
     result = {
         "status": "ok",
@@ -531,6 +531,7 @@ def _run_template_chat_create_llm(
     conversation_history: list[dict],
     current_html: str | None = None,
     sample_image_b64: str | None = None,
+    kind: str = "pdf",
 ) -> dict:
     """
     Run the conversational template creation LLM.
@@ -543,7 +544,7 @@ def _run_template_chat_create_llm(
     )
 
     prompt_payload = build_template_chat_create_prompt(
-        conversation_history, current_html, sample_image_b64=sample_image_b64,
+        conversation_history, current_html, sample_image_b64=sample_image_b64, kind=kind,
     )
     messages = prompt_payload.get("messages") or []
     if not messages:
@@ -606,6 +607,7 @@ def chat_template_create(
     payload: TemplateChatPayload,
     request: Request,
     sample_pdf_bytes: bytes | None = None,
+    kind: str = "pdf",
 ):
     """
     Handle a conversational template creation request (no template_id needed).
@@ -628,7 +630,7 @@ def chat_template_create(
         sample_image_b64 = _convert_sample_pdf_to_b64(sample_pdf_bytes)
 
     llm_response = _run_template_chat_create_llm(
-        conversation_history, current_html, sample_image_b64=sample_image_b64,
+        conversation_history, current_html, sample_image_b64=sample_image_b64, kind=kind,
     )
 
     result = {

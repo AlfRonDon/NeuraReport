@@ -76,7 +76,8 @@ def resolve_db_path(connection_id: str | None, db_url: str | None, db_path: str 
                 return Path(_sqlite_path_from_url(db_url))
             if len(parsed.scheme) == 1 and db_url[1:3] in (":\\", ":/"):
                 return Path(db_url)
-            raise RuntimeError("Only sqlite URLs are supported for now")
+            # Non-SQLite URL (PostgreSQL, etc.) — caller should use resolve_connection_ref() instead
+            raise RuntimeError(f"resolve_db_path only handles SQLite. Use resolve_connection_ref() for {parsed.scheme} URLs.")
         return Path(db_url)
 
     # c) db_path (legacy)
@@ -92,8 +93,51 @@ def resolve_db_path(connection_id: str | None, db_url: str | None, db_path: str 
     raise RuntimeError("No DB specified. Provide --connection-id OR --db-url OR --db-path (or DB_PATH env).")
 
 
-def verify_sqlite(path: Path) -> None:
-    """Raise when the backing SQLite file cannot be materialized into DataFrames."""
+def resolve_connection_ref(connection_id: str) -> dict:
+    """Resolve a connection_id to its type and access info.
+
+    Returns dict with:
+        db_type: "sqlite" | "postgresql"
+        db_path: Path (for sqlite) or None
+        connection_url: str (for postgresql) or None
+    """
+    secrets = state_store.get_connection_secrets(connection_id)
+    if not secrets:
+        # Fallback: try resolve_db_path for legacy sqlite connections
+        db_path = resolve_db_path(connection_id=connection_id, db_url=None, db_path=None)
+        return {"db_type": "sqlite", "db_path": db_path, "connection_url": None}
+
+    db_type = secrets.get("db_type") or "sqlite"
+    sp = secrets.get("secret_payload") or {}
+    db_url = sp.get("db_url") or secrets.get("db_url")
+
+    # Detect PostgreSQL from URL
+    if db_url and db_url.startswith("postgresql"):
+        db_type = "postgresql"
+
+    if db_type in ("postgresql", "postgres"):
+        return {"db_type": "postgresql", "db_path": None, "connection_url": db_url}
+    else:
+        database_path = secrets.get("database_path") or sp.get("database")
+        if database_path:
+            return {"db_type": "sqlite", "db_path": Path(database_path), "connection_url": None}
+        # Last resort
+        db_path = resolve_db_path(connection_id=connection_id, db_url=db_url, db_path=None)
+        return {"db_type": "sqlite", "db_path": db_path, "connection_url": None}
+
+
+def verify_sqlite(path) -> None:
+    """Raise when the backing database cannot be materialized into DataFrames.
+
+    Also accepts ConnectionRef objects — dispatches to PostgreSQL verification
+    when the ref is a PostgreSQL connection.
+    """
+    # Support ConnectionRef objects from the updated pipeline
+    if hasattr(path, 'is_postgresql') and path.is_postgresql:
+        from backend.app.repositories.dataframes.postgres_loader import verify_postgres
+        verify_postgres(path.connection_url)
+        return
+
     db_file = Path(path)
     if not db_file.exists():
         raise FileNotFoundError(f"SQLite DB not found: {path}")
@@ -125,10 +169,18 @@ def execute_query(
     Returns:
         Dictionary with 'columns' (list of column names) and 'rows' (list of row data)
     """
-    db_path = resolve_db_path(connection_id=connection_id, db_url=None, db_path=None)
+    conn_ref = resolve_connection_ref(connection_id)
+    db_type = conn_ref["db_type"]
+    db_path = conn_ref["db_path"]
+    connection_url = conn_ref["connection_url"]
 
     # Ensure DataFrames are loaded for this connection
-    ensure_connection_loaded(connection_id, db_path)
+    ensure_connection_loaded(
+        connection_id,
+        db_path=db_path,
+        db_type=db_type,
+        connection_url=connection_url,
+    )
 
     # Basic safety check - only allow SELECT/WITH queries
     if not is_select_or_with(sql):
@@ -157,14 +209,14 @@ def execute_query(
             return val.decode("utf-8", errors="replace")
         return val
 
-    # Execute using DataFrame store
-    with sqlite_shim.connect(str(db_path)) as con:
-        con.row_factory = sqlite_shim.Row
-        cur = con.execute(final_sql)
-        rows_raw = cur.fetchall()
+    # Execute using DataFrame store (works for both SQLite and PostgreSQL)
+    store = dataframe_store
+    result_df = store.execute_query(connection_id, final_sql)
 
-        columns = list(rows_raw[0].keys()) if rows_raw else []
-        rows = [[coerce_value(row[col]) for col in columns] for row in rows_raw]
+    columns = list(result_df.columns) if not result_df.empty else []
+    rows = []
+    for _, row in result_df.iterrows():
+        rows.append([coerce_value(row[col]) for col in columns])
 
     return {
         "columns": columns,

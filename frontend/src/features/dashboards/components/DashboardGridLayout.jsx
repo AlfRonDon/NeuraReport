@@ -18,7 +18,7 @@ const ResponsiveGridLayout = WidthProvider(Responsive)
 const GridContainer = styled(Box)(({ theme }) => ({
   height: '100%',
   '& .react-grid-item': {
-    transition: 'transform 200ms ease, all 200ms ease',
+    transition: 'transform 200ms cubic-bezier(0.22, 1, 0.36, 1), all 200ms cubic-bezier(0.22, 1, 0.36, 1)',
     '&.react-grid-placeholder': {
       backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : neutral[100],
       border: `2px dashed ${theme.palette.mode === 'dark' ? neutral[500] : neutral[700]}`,

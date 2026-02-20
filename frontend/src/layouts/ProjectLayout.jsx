@@ -10,13 +10,13 @@ import {
   useTheme,
   alpha,
   styled,
-  keyframes,
 } from '@mui/material'
 import { Outlet } from 'react-router-dom'
 import Sidebar from '../navigation/Sidebar'
 import TopNav from '../navigation/TopNav'
 import OfflineBanner from '../components/OfflineBanner'
 import { useAppStore } from '../stores'
+import { fadeIn } from '@/styles'
 
 // =============================================================================
 // CONSTANTS
@@ -25,15 +25,6 @@ import { useAppStore } from '../stores'
 // FIGMA SPEC: Sidebar width = 250px
 const SIDEBAR_WIDTH = 250
 const SIDEBAR_COLLAPSED_WIDTH = 64
-
-// =============================================================================
-// ANIMATIONS
-// =============================================================================
-
-const fadeIn = keyframes`
-  from { opacity: 0; }
-  to { opacity: 1; }
-`
 
 // =============================================================================
 // STYLED COMPONENTS
@@ -67,7 +58,11 @@ const PageContent = styled(Box)(({ theme }) => ({
   flexDirection: 'column',
   overflow: 'auto',
   backgroundColor: 'transparent',
-  animation: `${fadeIn} 0.3s ease-out`,
+  // Warm chart-paper grid overlay (webshell desktop UI pattern)
+  backgroundImage: theme.palette.mode === 'dark'
+    ? 'none'
+    : `repeating-linear-gradient(to right, rgba(59, 130, 246, 0.02) 0, rgba(59, 130, 246, 0.02) 1px, transparent 1px, transparent 60px), repeating-linear-gradient(to bottom, rgba(59, 130, 246, 0.02) 0, rgba(59, 130, 246, 0.02) 1px, transparent 1px, transparent 60px)`,
+  animation: `${fadeIn} 0.3s cubic-bezier(0.22, 1, 0.36, 1)`,
 
   // Custom scrollbar styling
   '&::-webkit-scrollbar': {

@@ -30,7 +30,6 @@ import {
   useTheme,
   alpha,
   styled,
-  keyframes,
 } from '@mui/material'
 import {
   Add as AddIcon,
@@ -68,7 +67,8 @@ import useCrossPageActions from '@/hooks/useCrossPageActions'
 import ImportFromMenu from '@/components/common/ImportFromMenu'
 import ConnectionSelector from '@/components/common/ConnectionSelector'
 import { TransferAction, FeatureKey } from '@/utils/crossPageTypes'
-import { neutral, palette, secondary } from '@/app/theme'
+import { neutral, palette } from '@/app/theme'
+import { slideInLeft, slideInRight, typing, pulse, float } from '@/styles'
 import ConfirmModal from '@/components/Modal/ConfirmModal'
 import { useToast } from '@/components/ToastProvider'
 // UX Components for premium interactions
@@ -87,50 +87,6 @@ import {
 } from '@/components/ux/governance'
 
 // =============================================================================
-// ANIMATIONS
-// =============================================================================
-
-const fadeIn = keyframes`
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
-`
-
-const slideInLeft = keyframes`
-  from { opacity: 0; transform: translateX(-20px); }
-  to { opacity: 1; transform: translateX(0); }
-`
-
-const slideInRight = keyframes`
-  from { opacity: 0; transform: translateX(20px); }
-  to { opacity: 1; transform: translateX(0); }
-`
-
-const pulse = keyframes`
-  0%, 100% { transform: scale(1); opacity: 0.8; }
-  50% { transform: scale(1.05); opacity: 1; }
-`
-
-const shimmer = keyframes`
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-`
-
-const typing = keyframes`
-  0%, 60%, 100% { transform: translateY(0); }
-  30% { transform: translateY(-4px); }
-`
-
-const glow = keyframes`
-  0%, 100% { box-shadow: 0 0 20px ${alpha(secondary.violet[500], 0.3)}; }
-  50% { box-shadow: 0 0 40px ${alpha(secondary.violet[500], 0.5)}; }
-`
-
-const float = keyframes`
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-6px); }
-`
-
-// =============================================================================
 // STYLED COMPONENTS
 // =============================================================================
 
@@ -143,7 +99,7 @@ const PageContainer = styled(Box)(({ theme }) => ({
 }))
 
 const Sidebar = styled(Box)(({ theme }) => ({
-  width: 320,
+  width: 300,
   flexShrink: 0,
   display: 'flex',
   flexDirection: 'column',
@@ -199,7 +155,7 @@ const SessionCard = styled(Box, {
     ? (theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.1) : neutral[100])
     : alpha(theme.palette.background.paper, 0.4),
   border: `1px solid ${selected ? alpha(theme.palette.divider, 0.3) : 'transparent'}`,
-  transition: 'all 0.2s ease',
+  transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)',
   position: 'relative',
   overflow: 'hidden',
   '&:hover': {
@@ -334,7 +290,7 @@ const CitationItem = styled(Box)(({ theme }) => ({
   backgroundColor: alpha(theme.palette.background.paper, 0.5),
   marginTop: theme.spacing(1),
   cursor: 'pointer',
-  transition: 'all 0.2s ease',
+  transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)',
   '&:hover': {
     backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : neutral[50],
   },
@@ -345,7 +301,7 @@ const FollowUpChip = styled(Chip)(({ theme }) => ({
   backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.08) : neutral[100],
   border: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
   color: theme.palette.text.primary,
-  transition: 'all 0.2s ease',
+  transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)',
   '&:hover': {
     backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.12) : neutral[200],
     transform: 'translateY(-2px)',
@@ -368,7 +324,7 @@ const InputContainer = styled(Box)(({ theme }) => ({
   borderRadius: 24,
   border: `1px solid ${alpha(theme.palette.divider, 0.15)}`,
   boxShadow: `0 4px 20px ${alpha(theme.palette.common.black, 0.05)}`,
-  transition: 'all 0.2s ease',
+  transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)',
   '&:focus-within': {
     borderColor: alpha(theme.palette.divider, 0.4),
     boxShadow: `0 4px 30px ${alpha(theme.palette.common.black, 0.08)}`,
@@ -396,7 +352,7 @@ const SendButton = styled(IconButton)(({ theme }) => ({
   height: 44,
   background: theme.palette.mode === 'dark' ? neutral[700] : neutral[900],
   color: theme.palette.common.white,
-  transition: 'all 0.2s ease',
+  transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)',
   '&:hover': {
     transform: 'scale(1.05)',
     background: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
@@ -468,7 +424,7 @@ const SuggestionCard = styled(Box)(({ theme }) => ({
   backgroundColor: alpha(theme.palette.background.paper, 0.6),
   border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
   cursor: 'pointer',
-  transition: 'all 0.2s ease',
+  transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)',
   '&:hover': {
     backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : neutral[50],
     borderColor: alpha(theme.palette.divider, 0.2),
@@ -494,7 +450,7 @@ const NewSessionButton = styled(Button)(({ theme }) => ({
   fontWeight: 600,
   textTransform: 'none',
   boxShadow: `0 4px 20px ${alpha(theme.palette.common.black, 0.15)}`,
-  transition: 'all 0.2s ease',
+  transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)',
   '&:hover': {
     transform: 'translateY(-2px)',
     background: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],
@@ -1515,7 +1471,7 @@ export default function DocumentQAPage() {
             <EmptyIcon>
               <QAIcon />
             </EmptyIcon>
-            <Typography variant="h4" sx={{ fontWeight: 600, mb: 1 }}>
+            <Typography variant="h5" sx={{ fontWeight: 600, mb: 1 }}>
               Document Intelligence
             </Typography>
             <Typography color="text.secondary" sx={{ mb: 4, maxWidth: 450 }}>
@@ -1609,7 +1565,7 @@ export default function DocumentQAPage() {
               borderRadius: 1,  // Figma spec: 8px
               textAlign: 'center',
               cursor: 'pointer',
-              transition: 'all 0.2s ease',
+              transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)',
               bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.02) : neutral[50],
               '&:hover': {
                 borderColor: theme.palette.mode === 'dark' ? neutral[500] : neutral[700],

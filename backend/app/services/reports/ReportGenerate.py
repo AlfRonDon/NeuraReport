@@ -204,7 +204,12 @@ def fill_and_print(
         except Exception:
             logger.warning("Failed to inject brand kit CSS", exc_info=True)
 
-    dataframe_loader = SQLiteDataFrameLoader(DB_PATH)
+    # Support both SQLite and PostgreSQL connections via ConnectionRef
+    if hasattr(DB_PATH, 'is_postgresql') and DB_PATH.is_postgresql:
+        from backend.legacy.utils.connection_utils import get_loader_for_ref
+        dataframe_loader = get_loader_for_ref(DB_PATH)
+    else:
+        dataframe_loader = SQLiteDataFrameLoader(DB_PATH)
 
     TOKEN_RE = re.compile(r"\{\{?\s*([A-Za-z0-9_\-\.]+)\s*\}\}?")
     TEMPLATE_TOKENS = {m.group(1) for m in TOKEN_RE.finditer(html)}

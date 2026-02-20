@@ -21,7 +21,6 @@ import {
   alpha,
   useTheme,
   styled,
-  keyframes,
 } from '@mui/material'
 
 // Icons
@@ -68,46 +67,7 @@ import {
   fontFamilyHeading,
   fontFamilyBody,
 } from '@/app/theme'
-
-// =============================================================================
-// ANIMATIONS
-// =============================================================================
-
-const fadeInUp = keyframes`
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-`
-
-const shimmer = keyframes`
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-`
-
-const pulse = keyframes`
-  0%, 100% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.02); opacity: 0.9; }
-`
-
-const glow = keyframes`
-  0%, 100% { box-shadow: 0 0 20px ${alpha(neutral[900], 0.1)}; }
-  50% { box-shadow: 0 0 40px ${alpha(neutral[900], 0.2)}; }
-`
-
-const spin = keyframes`
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-`
-
-const float = keyframes`
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-6px); }
-`
+import { fadeInUp, shimmer, pulse, glow, spin, GlassCard } from '@/styles'
 
 // =============================================================================
 // STYLED COMPONENTS
@@ -138,35 +98,12 @@ const PageContainer = styled(Box)(({ theme }) => ({
   },
 }))
 
-const GlassCard = styled(Box)(({ theme }) => ({
-  padding: theme.spacing(3),
-  borderRadius: 8,
-  // Figma: white cards, shadow-only, NO borders
-  backgroundColor: theme.palette.mode === 'dark'
-    ? alpha(theme.palette.background.paper, 0.6)
-    : theme.palette.common.white,
-  backdropFilter: 'none',
-  border: 'none',
-  // Shadow from Figma
-  boxShadow: theme.palette.mode === 'dark'
-    ? `0 8px 32px ${alpha(theme.palette.common.black, 0.2)}`
-    : '0 1px 3px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.05)',
-  transition: 'all 0.2s ease',
-  animation: `${fadeInUp} 0.4s ease-out`,
-
-  '&:hover': {
-    transform: 'none',
-    boxShadow: theme.palette.mode === 'dark'
-      ? `0 12px 40px ${alpha(theme.palette.common.black, 0.3)}`
-      : '0 2px 8px rgba(0,0,0,0.08), 0 8px 24px rgba(0,0,0,0.06)',
-  },
-}))
-
 const StatCardStyled = styled(Box, {
   shouldForwardProp: (prop) => !['color', 'delay'].includes(prop),
 })(({ theme, color = 'inherit', delay = 0 }) => ({
   position: 'relative',
   padding: theme.spacing(2.5),
+  minHeight: 110,
   borderRadius: 8,
   // Figma: white cards, shadow-only, NO borders
   backgroundColor: theme.palette.mode === 'dark'
@@ -179,7 +116,7 @@ const StatCardStyled = styled(Box, {
     : '0 1px 3px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.05)',
   cursor: 'pointer',
   overflow: 'hidden',
-  transition: 'all 0.2s ease',
+  transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)',
   animation: `${fadeInUp} 0.5s ease-out ${delay}ms both`,
 
   '&:hover': {
@@ -198,7 +135,7 @@ const QuickActionCard = styled(Box)(({ theme }) => ({
   backgroundColor: 'transparent',
   border: 'none',
   cursor: 'pointer',
-  transition: 'all 0.15s ease',
+  transition: 'all 0.15s cubic-bezier(0.22, 1, 0.36, 1)',
 
   '&:hover': {
     backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.04)' : neutral[100],
@@ -230,7 +167,7 @@ const OnboardingStep = styled(Box, {
     : alpha(theme.palette.divider, 0.1)}`,
   cursor: disabled ? 'not-allowed' : 'pointer',
   opacity: disabled ? 0.5 : 1,
-  transition: 'all 0.2s ease',
+  transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)',
 
   ...(!disabled && !completed && {
     '&:hover': {
@@ -257,7 +194,7 @@ const JobListItem = styled(Box, {
     gap: theme.spacing(2),
     padding: theme.spacing(1.5, 0),
     borderBottom: `1px solid ${alpha(theme.palette.divider, 0.08)}`,
-    transition: 'all 0.15s ease',
+    transition: 'all 0.15s cubic-bezier(0.22, 1, 0.36, 1)',
     cursor: 'pointer',
 
     '&:last-child': {
@@ -311,7 +248,7 @@ const RecommendationCard = styled(Box)(({ theme }) => ({
       ? `linear-gradient(135deg, ${alpha(theme.palette.text.primary, 0.03)} 0%, transparent 50%)`
       : `linear-gradient(135deg, rgba(0,0,0,0.02) 0%, transparent 50%)`,
     opacity: 0,
-    transition: 'opacity 0.3s ease',
+    transition: 'opacity 0.3s cubic-bezier(0.22, 1, 0.36, 1)',
   },
 
   '&:hover': {
@@ -861,6 +798,7 @@ export default function DashboardPage() {
           gridTemplateColumns: {
             xs: '1fr',
             sm: 'repeat(2, 1fr)',
+            md: 'repeat(3, 1fr)',
             lg: 'repeat(5, 1fr)',
           },
           gap: 2.5,
@@ -931,7 +869,7 @@ export default function DashboardPage() {
               { label: 'Manage Schedules', icon: ScheduleIcon, path: '/schedules' },
             ].map((action) => (
               <QuickActionCard key={action.path} onClick={() => handleNavigate(action.path, `Open ${action.label}`)}>
-                <action.icon className="action-icon" sx={{ fontSize: 20, color: 'text.secondary', transition: 'color 0.2s ease' }} />
+                <action.icon className="action-icon" sx={{ fontSize: 20, color: 'text.secondary', transition: 'color 0.2s cubic-bezier(0.22, 1, 0.36, 1)' }} />
                 <Typography variant="body2" fontWeight={500} sx={{ flex: 1 }}>
                   {action.label}
                 </Typography>
@@ -942,7 +880,7 @@ export default function DashboardPage() {
                     color: 'text.tertiary',
                     opacity: 0,
                     transform: 'translateX(-4px)',
-                    transition: 'all 0.2s ease',
+                    transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)',
                   }}
                 />
               </QuickActionCard>
@@ -1076,7 +1014,7 @@ export default function DashboardPage() {
                         color: 'text.tertiary',
                         opacity: 0,
                         transform: 'translateX(-4px)',
-                        transition: 'all 0.2s ease',
+                        transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)',
                       }}
                     />
                   </JobListItem>
@@ -1117,7 +1055,7 @@ export default function DashboardPage() {
                       p: 1,
                       mx: -1,
                       borderRadius: 1.5,
-                      transition: 'all 0.15s ease',
+                      transition: 'all 0.15s cubic-bezier(0.22, 1, 0.36, 1)',
                       '&:hover': {
                         bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.05) : neutral[100],
                       },

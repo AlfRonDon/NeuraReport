@@ -74,7 +74,7 @@ function CollapsibleSection({ title, icon, badge, defaultExpanded = false, child
           cursor: 'pointer',
           bgcolor: expanded ? 'action.hover' : 'background.paper',
           '&:hover': { bgcolor: 'action.hover' },
-          transition: 'background-color 150ms ease',
+          transition: 'background-color 150ms cubic-bezier(0.22, 1, 0.36, 1)',
         }}
       >
         <Stack direction="row" alignItems="center" spacing={1}>

@@ -6,7 +6,7 @@ from typing import Callable, Tuple
 from backend.app.repositories.dataframes.sqlite_loader import get_loader
 
 
-def get_col_type(db_path: Path, table: str, col: str) -> str:
+def get_col_type(db_path, table: str, col: str) -> str:
     """
     Return the inferred column type (uppercased) for table.col or '' when unavailable.
     Uses the shared DataFrame loader's dtype map instead of SQLite PRAGMA calls.
@@ -14,7 +14,8 @@ def get_col_type(db_path: Path, table: str, col: str) -> str:
     if not col or not table:
         return ""
     try:
-        loader = get_loader(db_path)
+        from backend.legacy.utils.connection_utils import get_loader_for_ref
+        loader = get_loader_for_ref(db_path)
         return (loader.column_type(table, col) or "").upper()
     except Exception:
         return ""
