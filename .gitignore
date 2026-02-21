@@ -128,8 +128,8 @@ backend/llm_raw_outputs.md
 backend/docs/
 backend/tests/*VALIDATION_REPORT*.md
 
-# Deployment snapshot (must never be tracked)
-prodo/
+# Deployment snapshot
+# prodo/
 
 # Orphaned directories (from path misconfiguration)
 backend/backend/
