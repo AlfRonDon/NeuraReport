@@ -14,7 +14,7 @@ import os
 import re
 from backend.app.repositories.dataframes import sqlite_shim as sqlite3
 from collections import defaultdict
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal, InvalidOperation
 from itertools import product
 from pathlib import Path
@@ -1066,7 +1066,8 @@ def fill_and_print(
 
     start_dt = _parse_date_like(START_DATE)
     end_dt = _parse_date_like(END_DATE)
-    print_dt = datetime.now(timezone.utc)
+    _IST = timezone(timedelta(hours=5, minutes=30))
+    print_dt = datetime.now(_IST)
 
     start_has_time = _has_time_component(START_DATE, start_dt)
     end_has_time = _has_time_component(END_DATE, end_dt)
@@ -1082,6 +1083,12 @@ def fill_and_print(
         "rundate",
         "runon",
         "generatedat",
+    }
+    PRINT_TIME_KEYS = {
+        "printtime",
+        "printedat",
+        "generatedtime",
+        "runtime",
     }
     PAGE_NO_KEYS = {
         "page",
@@ -1142,6 +1149,7 @@ def fill_and_print(
     start_tokens = _tokens_for_keys(START_DATE_KEYS)
     end_tokens = _tokens_for_keys(END_DATE_KEYS)
     print_tokens = _tokens_for_keys(PRINT_DATE_KEYS)
+    print_time_tokens = _tokens_for_keys(PRINT_TIME_KEYS)
     page_number_tokens = _tokens_for_keys(PAGE_NO_KEYS)
     page_count_tokens = _tokens_for_keys(PAGE_COUNT_KEYS)
     page_label_tokens = _tokens_for_keys(PAGE_LABEL_KEYS)
@@ -1170,6 +1178,9 @@ def fill_and_print(
         else:
             value = _format_for_token(tok, print_dt_source, include_time_default=print_has_time)
         _record_special_value(special_values, tok, value)
+
+    for tok in print_time_tokens:
+        _record_special_value(special_values, tok, print_dt.strftime("%I:%M %p") if print_dt else "")
 
     page_number_tokens = _filter_tokens_without_literal(page_number_tokens)
     page_count_tokens = _filter_tokens_without_literal(page_count_tokens)
