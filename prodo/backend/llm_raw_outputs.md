@@ -6190,3 +6190,99 @@
 }
 ```
 
+## 2026-02-21T21:02:46+00:00Z - text_to_sql
+
+```json
+{
+  "id": "claude-cli-1771707766",
+  "model": "claude-sonnet",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "```sql\nSELECT *\nFROM neuract__FM_TABLE\nWHERE DATE(timestamp_utc) = '2026-02-20'\n```"
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 2216,
+    "completion_tokens": 20,
+    "total_tokens": 2236
+  }
+}
+```
+
+## 2026-02-21T22:09:57+00:00Z - text_to_sql
+
+```json
+{
+  "id": "claude-cli-1771711797",
+  "model": "claude-sonnet",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "```sql\nSELECT AVG(FM_101) AS avg_flow_rate_fm101\nFROM neuract__FM_TABLE\nWHERE timestamp_utc >= datetime('now', '-24 hours')\n  AND FM_101 IS NOT NULL;\n```"
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 2219,
+    "completion_tokens": 38,
+    "total_tokens": 2257
+  }
+}
+```
+
+## 2026-02-21T22:10:38+00:00Z - text_to_sql
+
+```json
+{
+  "id": "claude-cli-1771711838",
+  "model": "claude-sonnet",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "```sql\nSELECT 'neuract__ANALYSER_TABLE' AS table_name, COUNT(*) AS record_count FROM neuract__ANALYSER_TABLE\nUNION ALL\nSELECT 'neuract__FM_TABLE', COUNT(*) FROM neuract__FM_TABLE\nUNION ALL\nSELECT 'neuract__LT_TABLE', COUNT(*) FROM neuract__LT_TABLE\nUNION ALL\nSELECT 'neuract__PT_TABLE', COUNT(*) FROM neuract__PT_TABLE\nUNION ALL\nSELECT 'neuract__device_mappings', COUNT(*) FROM neuract__device_mappings\nORDER BY table_name;\n```"
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 2214,
+    "completion_tokens": 106,
+    "total_tokens": 2320
+  }
+}
+```
+
+## 2026-02-21T22:10:49+00:00Z - sql_explanation
+
+```json
+{
+  "id": "claude-cli-1771711849",
+  "model": "claude-sonnet",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "## Query Explanation\n\n**What it does in plain English:**\n> \"Calculate the average value of flow meter FM_101, ignoring any missing readings.\"\n\n---\n\n### 1. What data is being retrieved\n- A **single number**: the average (mean) of all readings from the flow meter named **FM_101**\n- The result column is labeled `avg_flow`\n- Data comes from the **FM_TABLE** table (flow meter readings)\n\n### 2. Filters/conditions applied\n- **Excludes null values** \u2014 any rows where FM_101 has no recorded value are skipped\n- This prevents null entries from skewing or breaking the average calculation\n\n### 3. How results are organized\n- Returns a **single row** with a single column (`avg_flow`)\n- No grouping, sorting, or pagination \u2014 just one aggregate result\n\n### 4. Calculations performed\n- **AVG()** \u2014 sums all non-null FM_101 values and divides by the count of those values\n- Example: if FM_101 recorded `[10, 20, 30]`, the result would be `(10+20+30) / 3 = 20.0`\n\n---\n\n**In one sentence:** *\"Find the average flow rate measured by FM_101, ignoring any time periods where the sensor had no data.\"*"
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 82,
+    "completion_tokens": 271,
+    "total_tokens": 353
+  }
+}
+```
+
