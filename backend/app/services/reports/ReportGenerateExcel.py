@@ -367,6 +367,13 @@ def fill_and_print(
         message = " ".join(str(part) for part in parts)
         logger.debug(message)
 
+    import time as _time
+    _fp_start = _time.time()
+    def _fp_progress(stage: str) -> None:
+        elapsed = _time.time() - _fp_start
+        print(f"[REPORT-EXCEL] {stage} ({elapsed:.1f}s)", flush=True)
+
+    _fp_progress("fill_and_print START")
     _log_debug(
         "=== fill_and_print call ===",
         "force_single" if __force_single else "fanout_root",
@@ -1484,6 +1491,7 @@ def fill_and_print(
                         need_discover = True
 
         if need_discover:
+            _fp_progress("discover_batches START")
             discovery_summary = discover_batches_excel(
                 db_path=DB_PATH,
                 contract=OBJ,
@@ -1776,11 +1784,11 @@ def fill_and_print(
     )
 
     # write to the path requested by the API
+    _fp_progress("writing HTML output")
     OUT_HTML.write_text(html_multi, encoding="utf-8")
     _log_debug("Wrote HTML:", OUT_HTML)
 
-    _log_debug("BATCH_IDS:", len(BATCH_IDS or []), (BATCH_IDS or [])[:20] if BATCH_IDS else [])
-
+    _fp_progress("starting PDF generation via Playwright")
     # Use subprocess isolation for Playwright to avoid SIGCHLD / asyncio
     # event-loop conflicts when running inside uvicorn's thread pool.
     _html_to_pdf_subprocess(

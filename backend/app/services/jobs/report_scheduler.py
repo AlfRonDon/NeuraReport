@@ -18,7 +18,7 @@ from backend.app.services.jobs.job_tracking import JobRunTracker, _build_job_ste
 from backend.app.schemas.generate.reports import RunPayload
 
 logger = logging.getLogger("neura.scheduler")
-_MISFIRE_GRACE_SECONDS_RAW = os.getenv("NEURA_SCHEDULER_MISFIRE_GRACE_SECONDS", "0")
+_MISFIRE_GRACE_SECONDS_RAW = os.getenv("NEURA_SCHEDULER_MISFIRE_GRACE_SECONDS", "3600")
 try:
     _MISFIRE_GRACE_SECONDS = int(_MISFIRE_GRACE_SECONDS_RAW)
 except (TypeError, ValueError):
