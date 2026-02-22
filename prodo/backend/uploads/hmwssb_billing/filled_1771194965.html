@@ -1,0 +1,561 @@
+
+<style id="nr-page-counter-style">
+  .nr-page-number,
+  .nr-page-count { white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .nr-page-label { white-space: nowrap; }
+  @media screen {
+    .nr-page-number::after { content: attr(data-nr-screen); }
+    .nr-page-count::after { content: attr(data-nr-total-pages); }
+  }
+  @media print {
+    body { counter-reset: page; }
+    .nr-page-number::after { content: counter(page); }
+    .nr-page-count::after { content: counter(pages); }
+    .nr-page-count[data-nr-total-pages]::after { content: attr(data-nr-total-pages); }
+  }
+</style>
+
+
+
+<meta charset="UTF-8">
+<meta>
+<title>HMWSSB Payment Receipt</title>
+<style>
+:root {
+  --page-width: 210mm;
+  --page-height: 297mm;
+  --margin-x: 15mm;
+  --margin-y: 8mm;
+  --blue-primary: #1a6ba8;
+  --green-success: #4caf50;
+  --red-alert: #d32f2f;
+  --grey-label: #333;
+  --border-color: #ddd;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+@page {
+  size: A4;
+  margin: 0;
+}
+
+body {
+  font-family: Arial, sans-serif;
+  font-size: 9pt;
+  line-height: 1.35;
+  color: #000;
+  background: #fff;
+}
+
+.page {
+  width: var(--page-width);
+  min-height: var(--page-height);
+  padding: var(--margin-y) var(--margin-x);
+  margin: 0 auto;
+  background: #fff;
+  position: relative;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  gap: 8mm;
+  margin-bottom: 4mm;
+}
+
+.logo {
+  width: 18mm;
+  height: 18mm;
+  flex-shrink: 0;
+}
+
+.logo-placeholder {
+  width: 100%;
+  height: 100%;
+  background: var(--blue-primary);
+  border-radius: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: bold;
+  font-size: 7pt;
+  text-align: center;
+  padding: 1mm;
+}
+
+.header-text {
+  flex: 1;
+}
+
+.org-name {
+  font-size: 13pt;
+  font-weight: bold;
+  color: var(--blue-primary);
+  letter-spacing: 0.2px;
+  margin-bottom: 0.5mm;
+  line-height: 1.1;
+}
+
+.org-subtitle {
+  font-size: 10pt;
+  font-weight: bold;
+  color: var(--blue-primary);
+  letter-spacing: 0.1px;
+  line-height: 1.15;
+}
+
+.page-title {
+  font-size: 8.5pt;
+  color: #666;
+  margin-top: 2mm;
+  line-height: 1.2;
+}
+
+.timestamp {
+  position: absolute;
+  top: var(--margin-y);
+  right: var(--margin-x);
+  font-size: 8pt;
+  color: #000;
+}
+
+.success-message {
+  background: #f5f5f5;
+  border-left: 2.5px solid var(--green-success);
+  padding: 2.5mm 3mm;
+  margin: 4mm 0 5mm 0;
+}
+
+.success-message p:first-child {
+  color: var(--green-success);
+  font-weight: bold;
+  margin-bottom: 1mm;
+  font-size: 9pt;
+}
+
+.success-message p:last-child {
+  font-size: 8.5pt;
+  color: #333;
+  line-height: 1.4;
+}
+
+.details-section {
+  margin: 5mm 0 4mm 0;
+}
+
+.details-grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2mm 8mm;
+  max-width: 140mm;
+}
+
+.detail-label {
+  font-weight: 600;
+  color: #000;
+  white-space: nowrap;
+  font-size: 9pt;
+}
+
+.detail-value {
+  color: #000;
+  font-size: 9pt;
+}
+
+.detail-value.status-success {
+  color: var(--green-success);
+  font-weight: 600;
+}
+
+.note {
+  font-size: 9pt;
+  color: var(--red-alert);
+  font-weight: 600;
+  margin-top: 4mm;
+  line-height: 1.3;
+}
+
+.note-prefix {
+  font-weight: bold;
+}
+
+.button-container {
+  text-align: center;
+  margin: 6mm 0;
+}
+
+.button {
+  display: inline-block;
+  background: transparent;
+  border: none;
+  padding: 0;
+  font-size: 9pt;
+  color: #666;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.security-notice {
+  background: #fffbf5;
+  border: 1.5px solid #ffb74d;
+  border-left: 2.5px solid #ff9800;
+  padding: 2.5mm 3mm;
+  margin: 6mm 0;
+  font-size: 8pt;
+  color: var(--red-alert);
+  line-height: 1.45;
+  position: relative;
+}
+
+.security-notice strong {
+  font-weight: 600;
+}
+
+.powered-by {
+  position: absolute;
+  right: 3mm;
+  bottom: 2.5mm;
+  font-size: 7.5pt;
+  color: #666;
+  display: flex;
+  align-items: center;
+  gap: 1mm;
+}
+
+.billdesk-logo {
+  font-weight: bold;
+  color: #ff6600;
+}
+
+.footer {
+  position: absolute;
+  bottom: var(--margin-y);
+  left: var(--margin-x);
+  right: var(--margin-x);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 7.5pt;
+  color: #666;
+  padding-top: 2mm;
+  border-top: 0.5px solid #e0e0e0;
+}
+
+.page-number {
+  text-align: right;
+}
+
+@media print {
+  body {
+    margin: 0;
+  }
+  .page {
+    margin: 0;
+    width: 100%;
+  }
+}
+</style>
+
+
+
+<div class="page">
+  <div class="timestamp">{{timestamp}}</div>
+
+  <div class="header" id="report-header">
+    <div class="logo">
+      <div class="logo-placeholder">HMWSSB</div>
+    </div>
+    <div class="header-text">
+      <div class="org-name">HMWSSB</div>
+      <div class="org-subtitle">HYDERABAD METROPOLITAN</div>
+      <div class="org-subtitle">WATER SUPPLY &amp; SEWERAGE BOARD</div>
+      <div class="page-title">Transaction Acknowledgement</div>
+    </div>
+  </div>
+
+  <div class="success-message">
+    <p>Thank you !</p>
+    <p>Your payment has been successfully received with the following details.<br>Please quote your Transaction reference number for any queries relating to this request.</p>
+  </div>
+
+  <!-- BEGIN:BATCH (auto) --><!-- END:BATCH (auto) -->
+
+  <div class="footer">
+    <div class="footer-url">{{footer_url}}</div>
+    <div class="page-number"><span class="nr-page-number" data-nr-counter="page" aria-label="Current page number"></span></div>
+  </div>
+</div>
+
+<script id="nr-page-counter-script">
+(function() {
+  const METRICS = {"page_width_mm": 210.0, "page_height_mm": 297.0, "margin_top_mm": 0.0, "margin_bottom_mm": 0.0};
+  const PX_PER_MM = 96 / 25.4;
+  const BREAK_VALUES = ['page', 'always', 'left', 'right'];
+  const TRAILING_BREAK_SENTINEL = '__nr_trailing_break__';
+  let lastPageNodes = [];
+  let lastCountNodes = [];
+
+  function isForcedBreak(value) {
+    if (!value) return false;
+    const normalized = String(value).toLowerCase().trim();
+    if (!normalized) return false;
+    return BREAK_VALUES.indexOf(normalized) !== -1;
+  }
+
+  function readBreakValue(style, which) {
+    if (!style) return '';
+    if (which === 'before') {
+      return (
+        style.getPropertyValue('break-before') ||
+        style.getPropertyValue('page-break-before') ||
+        style.breakBefore ||
+        style.pageBreakBefore ||
+        ''
+      );
+    }
+    return (
+      style.getPropertyValue('break-after') ||
+      style.getPropertyValue('page-break-after') ||
+      style.breakAfter ||
+      style.pageBreakAfter ||
+      ''
+    );
+  }
+
+  function findNextElement(node) {
+    if (!node) return null;
+    let current = node;
+    while (current) {
+      if (current.nextElementSibling) return current.nextElementSibling;
+      current = current.parentElement;
+    }
+    return null;
+  }
+
+  function resolveNodeOffset(node) {
+    if (!node || typeof node.getBoundingClientRect !== 'function') return 0;
+    const rect = node.getBoundingClientRect();
+    const scrollY = typeof window !== 'undefined' ? window.scrollY || window.pageYOffset || 0 : 0;
+    return Math.max(0, rect.top + scrollY);
+  }
+
+  function collectManualBreakAnchors(root) {
+    if (!root || !root.ownerDocument) return [];
+    const anchors = [];
+    const seen = new Set();
+    const showElement = typeof NodeFilter !== 'undefined' && NodeFilter.SHOW_ELEMENT ? NodeFilter.SHOW_ELEMENT : 1;
+    const walker = root.ownerDocument.createTreeWalker(root, showElement);
+
+    function pushAnchor(target) {
+      if (!target) return;
+      if (seen.has(target)) return;
+      seen.add(target);
+      anchors.push(target);
+    }
+
+    while (walker.nextNode()) {
+      const element = walker.currentNode;
+      const style = window.getComputedStyle ? window.getComputedStyle(element) : null;
+      if (!style) continue;
+      if (isForcedBreak(readBreakValue(style, 'before'))) {
+        pushAnchor(element);
+      }
+      if (isForcedBreak(readBreakValue(style, 'after'))) {
+        const next = findNextElement(element);
+        pushAnchor(next || TRAILING_BREAK_SENTINEL);
+      }
+    }
+    return anchors;
+  }
+
+  function buildPageStartOffsets(manualAnchors, usableHeightPx, contentHeight, totalPages) {
+    const offsets = [0];
+    const seenOffsets = new Set([0]);
+    manualAnchors.forEach((anchor) => {
+      let offset = null;
+      if (anchor === TRAILING_BREAK_SENTINEL) {
+        offset = contentHeight + usableHeightPx;
+      } else if (anchor && typeof anchor.getBoundingClientRect === 'function') {
+        offset = resolveNodeOffset(anchor);
+      }
+      if (offset == null || !Number.isFinite(offset)) {
+        return;
+      }
+      const key = Math.round(offset * 1000) / 1000;
+      if (seenOffsets.has(key)) return;
+      seenOffsets.add(key);
+      offsets.push(offset);
+    });
+
+    offsets.sort((a, b) => a - b);
+
+    while (offsets.length < totalPages) {
+      const last = offsets[offsets.length - 1];
+      offsets.push(last + usableHeightPx);
+    }
+
+    return offsets;
+  }
+
+  function resolvePageIndexFromOffsets(offset, startOffsets) {
+    if (!startOffsets || !startOffsets.length) return 0;
+    let index = 0;
+    for (let i = 0; i < startOffsets.length; i += 1) {
+      if (offset >= startOffsets[i] - 0.5) {
+        index = i;
+      } else {
+        break;
+      }
+    }
+    return index;
+  }
+
+  function indexOfSection(node, sections) {
+    if (!node || !sections || !sections.length) return -1;
+    const target = typeof node.closest === 'function' ? node.closest('.nr-key-section') : null;
+    if (!target) return -1;
+    for (let i = 0; i < sections.length; i += 1) {
+      if (sections[i] === target) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
+  function assignScreenText(node, text, key) {
+    if (!node) return;
+    const stringText = text == null ? '' : String(text);
+    if (node.getAttribute('aria-label') === null) {
+      node.setAttribute('aria-label', key === 'count' ? 'Total page count' : 'Current page number');
+    }
+    node.setAttribute('data-nr-screen', stringText);
+    if (key === 'count') {
+      node.setAttribute('data-nr-total-pages', stringText);
+    } else {
+      node.setAttribute('data-nr-page-estimate', stringText);
+    }
+    node.setAttribute('data-nr-' + key + '-text', stringText);
+    node.textContent = stringText;
+  }
+
+  function clearNodesForPrint() {
+    const nodes = lastPageNodes.concat(lastCountNodes);
+    nodes.forEach((node) => {
+      if (!node) return;
+      if (!node.hasAttribute('data-nr-print-cache')) {
+        node.setAttribute('data-nr-print-cache', node.textContent || '');
+      }
+      node.textContent = '';
+    });
+  }
+
+  function restoreNodesAfterPrint() {
+    const nodes = lastPageNodes.concat(lastCountNodes);
+    nodes.forEach((node) => {
+      if (!node) return;
+      const cached = node.getAttribute('data-nr-print-cache');
+      if (cached != null) {
+        const key = node.getAttribute('data-nr-counter') === 'pages' ? 'count' : 'page';
+        const preferred = node.getAttribute('data-nr-' + key + '-text');
+        node.textContent = preferred != null ? preferred : cached;
+        node.removeAttribute('data-nr-print-cache');
+      }
+    });
+  }
+
+  function computeTotals() {
+    try {
+      const doc = document.documentElement;
+      const body = document.body;
+      if (!doc || !body) return;
+      const usableHeightMm = Math.max(METRICS.page_height_mm - (METRICS.margin_top_mm + METRICS.margin_bottom_mm), 0.1);
+      const usableHeightPx = usableHeightMm * PX_PER_MM;
+      const contentHeight = Math.max(
+        body.scrollHeight,
+        body.offsetHeight,
+        doc.scrollHeight,
+        doc.offsetHeight
+      );
+      const contentPages = Math.max(1, Math.ceil(contentHeight / usableHeightPx));
+      const manualAnchors = collectManualBreakAnchors(body);
+      const manualPages = manualAnchors.length > 0 ? manualAnchors.length + 1 : 1;
+      const totalPages = Math.max(contentPages, manualPages);
+      const startOffsets = buildPageStartOffsets(manualAnchors, usableHeightPx, contentHeight, totalPages);
+      const totalAsString = String(totalPages);
+      doc.setAttribute('data-nr-total-pages', totalAsString);
+      const countNodes = Array.from(document.querySelectorAll('[data-nr-counter="pages"]'));
+      countNodes.forEach((node) => assignScreenText(node, totalAsString, 'count'));
+      const pageNodes = Array.from(document.querySelectorAll('[data-nr-counter="page"]'));
+      const sections = Array.from(document.querySelectorAll('.nr-key-section'));
+      pageNodes.forEach((node) => {
+        const sectionIndex = indexOfSection(node, sections);
+        let pageIndex;
+        if (sectionIndex >= 0) {
+          pageIndex = sectionIndex;
+        } else {
+          const offset = resolveNodeOffset(node);
+          pageIndex = resolvePageIndexFromOffsets(offset, startOffsets);
+        }
+        const pageNumber = Math.min(totalPages, Math.max(1, pageIndex + 1));
+        assignScreenText(node, String(pageNumber), 'page');
+      });
+      lastPageNodes = pageNodes;
+      lastCountNodes = countNodes;
+    } catch (err) {
+      if (typeof console !== 'undefined' && console.warn) {
+        console.warn('nr-page-counter: unable to compute preview counters', err);
+      }
+    }
+  }
+
+  function scheduleCompute() {
+    computeTotals();
+    setTimeout(computeTotals, 180);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      scheduleCompute();
+    }, { once: true });
+  } else {
+    scheduleCompute();
+  }
+
+  if (typeof window !== 'undefined') {
+    window.addEventListener('resize', computeTotals, { passive: true });
+    window.addEventListener('beforeprint', clearNodesForPrint);
+    window.addEventListener('afterprint', () => {
+      restoreNodesAfterPrint();
+      scheduleCompute();
+    });
+    if (typeof window.matchMedia === 'function') {
+      const mediaQuery = window.matchMedia('print');
+      if (typeof mediaQuery.addEventListener === 'function') {
+        mediaQuery.addEventListener('change', (event) => {
+          if (event.matches) {
+            clearNodesForPrint();
+          } else {
+            restoreNodesAfterPrint();
+            scheduleCompute();
+          }
+        });
+      } else if (typeof mediaQuery.addListener === 'function') {
+        mediaQuery.addListener((event) => {
+          if (event.matches) {
+            clearNodesForPrint();
+          } else {
+            restoreNodesAfterPrint();
+            scheduleCompute();
+          }
+        });
+      }
+    }
+  }
+})();
+</script>
