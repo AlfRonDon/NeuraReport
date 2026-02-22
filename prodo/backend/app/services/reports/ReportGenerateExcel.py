@@ -1505,7 +1505,6 @@ def fill_and_print(
     else:
         BATCH_IDS = ["__GENERATOR_SINGLE__"]
 
-    _fp_progress(f"BATCH_IDS resolved: {len(BATCH_IDS or [])} batches")
     _log_debug("BATCH_IDS:", len(BATCH_IDS or []), (BATCH_IDS or [])[:20] if BATCH_IDS else [])
     # ---- Only touch tokens outside <style>/<script> ----
     def format_token_value(token: str, raw_value: Any) -> str:
