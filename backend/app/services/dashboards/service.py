@@ -58,6 +58,7 @@ class DashboardService:
             "filters": filters or [],
             "theme": theme,
             "refresh_interval": None,
+            "metadata": {},
             "created_at": now,
             "updated_at": now,
         }
@@ -78,7 +79,11 @@ class DashboardService:
         """Return a single dashboard by ID, or ``None`` if missing."""
         with state_store.transaction() as state:
             dashboard = state.get("dashboards", {}).get(dashboard_id)
-            return copy.deepcopy(dashboard) if dashboard else None
+            if dashboard is None:
+                return None
+            result = copy.deepcopy(dashboard)
+            result.setdefault("metadata", {})
+            return result
 
     def list_dashboards(
         self,
@@ -90,6 +95,9 @@ class DashboardService:
         with state_store.transaction() as state:
             dashboards = copy.deepcopy(list(state.get("dashboards", {}).values()))
 
+        # Ensure every dashboard has a metadata key (backfill for pre-existing)
+        for d in dashboards:
+            d.setdefault("metadata", {})
         dashboards.sort(key=lambda d: d.get("updated_at", ""), reverse=True)
         return {
             "dashboards": dashboards[offset : offset + limit],
@@ -110,6 +118,7 @@ class DashboardService:
         filters: Optional[List[Dict[str, Any]]] = None,
         theme: Optional[str] = None,
         refresh_interval: Optional[int] = None,
+        metadata: Optional[Dict[str, Any]] = None,
     ) -> Optional[Dict[str, Any]]:
         """Update an existing dashboard.  Returns ``None`` if not found."""
         with state_store.transaction() as state:
@@ -130,6 +139,8 @@ class DashboardService:
                 dashboard["theme"] = theme
             if refresh_interval is not None:
                 dashboard["refresh_interval"] = refresh_interval
+            if metadata is not None:
+                dashboard["metadata"] = metadata
 
             dashboard["updated_at"] = _now_iso()
             state["dashboards"][dashboard_id] = dashboard
@@ -197,6 +208,30 @@ class DashboardService:
         with state_store.transaction() as state:
             favs = state.get("favorites", {})
             return dashboard_id in favs.get("dashboards", [])
+
+    # ── Templates ────────────────────────────────────────────────────────
+
+    def list_templates(self) -> List[Dict[str, Any]]:
+        """Return all saved dashboard templates."""
+        with state_store.transaction() as state:
+            templates = state.get("dashboard_templates", {})
+            return copy.deepcopy(list(templates.values()))
+
+    def get_template(self, template_id: str) -> Optional[Dict[str, Any]]:
+        """Return a single dashboard template by ID, or ``None``."""
+        with state_store.transaction() as state:
+            template = state.get("dashboard_templates", {}).get(template_id)
+            return copy.deepcopy(template) if template else None
+
+    def save_template(self, template: Dict[str, Any]) -> None:
+        """Persist a dashboard template."""
+        with state_store.transaction() as state:
+            state.setdefault("dashboard_templates", {})
+            state["dashboard_templates"][template["id"]] = template
+        logger.info(
+            "dashboard_template_saved",
+            extra={"event": "dashboard_template_saved", "template_id": template["id"]},
+        )
 
     # ── Stats ───────────────────────────────────────────────────────────
 

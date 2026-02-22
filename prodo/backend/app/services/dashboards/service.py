@@ -58,6 +58,7 @@ class DashboardService:
             "filters": filters or [],
             "theme": theme,
             "refresh_interval": None,
+            "metadata": {},
             "created_at": now,
             "updated_at": now,
         }
@@ -78,7 +79,11 @@ class DashboardService:
         """Return a single dashboard by ID, or ``None`` if missing."""
         with state_store.transaction() as state:
             dashboard = state.get("dashboards", {}).get(dashboard_id)
-            return copy.deepcopy(dashboard) if dashboard else None
+            if dashboard is None:
+                return None
+            result = copy.deepcopy(dashboard)
+            result.setdefault("metadata", {})
+            return result
 
     def list_dashboards(
         self,
@@ -90,6 +95,9 @@ class DashboardService:
         with state_store.transaction() as state:
             dashboards = copy.deepcopy(list(state.get("dashboards", {}).values()))
 
+        # Ensure every dashboard has a metadata key (backfill for pre-existing)
+        for d in dashboards:
+            d.setdefault("metadata", {})
         dashboards.sort(key=lambda d: d.get("updated_at", ""), reverse=True)
         return {
             "dashboards": dashboards[offset : offset + limit],
