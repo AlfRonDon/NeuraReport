@@ -53,8 +53,41 @@ import { useInteraction, InteractionType, Reversibility, useNavigateInteraction 
 import ConnectionSelector from '@/components/common/ConnectionSelector'
 import * as api from '@/api/client'
 import * as summaryApi from '@/api/summary'
+const isTauri = () => false
 import { neutral, palette } from '@/app/theme'
 import { fadeInUp, GlassCard, StyledFormControl } from '@/styles'
+
+/** Download a file by URL — works in both browser and Tauri webview. */
+function downloadFile(url, filename, toast) {
+  const label = filename || 'file'
+  if (toast) toast.show(`Downloading ${label}…`, 'info')
+  if (isTauri()) {
+    // Tauri: fetch as blob, create object URL, trigger download via hidden <a>
+    fetch(url)
+      .then((res) => {
+        if (!res.ok) throw new Error(`Download failed: ${res.status}`)
+        return res.blob()
+      })
+      .then((blob) => {
+        const blobUrl = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = blobUrl
+        a.download = filename || 'download'
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(blobUrl)
+        if (toast) toast.show(`Downloaded ${label}`, 'success')
+      })
+      .catch((err) => {
+        console.error('[download]', err)
+        if (toast) toast.show(`Download failed: ${err.message}`, 'error')
+      })
+  } else {
+    // Browser: open in new tab (original behavior)
+    window.open(url, '_blank')
+  }
+}
 
 // =============================================================================
 // STYLED COMPONENTS
@@ -315,30 +348,6 @@ const getDatePresets = () => {
       end: formatDateForInput(endOfLastMonth),
     },
   }
-}
-
-// =============================================================================
-// HELPERS
-// =============================================================================
-
-/** Download a file via fetch+blob — works in both browser and Tauri webview. */
-function downloadFile(url, filename) {
-  fetch(url)
-    .then((res) => {
-      if (!res.ok) throw new Error(`Download failed: ${res.status}`)
-      return res.blob()
-    })
-    .then((blob) => {
-      const blobUrl = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = blobUrl
-      a.download = filename || 'download'
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      URL.revokeObjectURL(blobUrl)
-    })
-    .catch((err) => console.error('[download]', err))
 }
 
 // =============================================================================
@@ -613,8 +622,6 @@ export default function ReportsPage() {
   const fetchRunHistory = useCallback(async () => {
     setHistoryLoading(true)
     try {
-      // Fetch all recent runs (not filtered by template) so runs don't
-      // vanish when the auto-selected template changes after page refresh.
       const runs = await api.listReportRuns({ limit: 10 })
       setRunHistory(runs)
     } catch (err) {
@@ -1080,9 +1087,7 @@ export default function ReportsPage() {
               <Box sx={{ py: 4, textAlign: 'center' }}>
                 <DescriptionIcon sx={{ fontSize: 48, color: 'text.disabled', mb: 1 }} />
                 <Typography variant="body2" color="text.secondary">
-                  {selectedTemplate
-                    ? 'No recent runs for this design yet.'
-                    : 'No report runs yet. Generate a report to get started.'}
+                  No report runs yet. Generate a report to get started.
                 </Typography>
               </Box>
             )}
@@ -1135,7 +1140,7 @@ export default function ReportsPage() {
                             size="small"
                             variant="outlined"
                             startIcon={<DownloadIcon sx={{ fontSize: 14 }} />}
-                            onClick={(e) => { e.stopPropagation(); downloadFile(api.withBase(run.artifacts.pdf_url), `${run.templateName || 'report'}.pdf`) }}
+                            onClick={(e) => { e.stopPropagation(); downloadFile(api.withBase(run.artifacts.pdf_url), `${run.templateName || 'report'}.pdf`, toast) }}
                           >
                             PDF
                           </DownloadButton>
@@ -1145,7 +1150,7 @@ export default function ReportsPage() {
                             size="small"
                             variant="outlined"
                             startIcon={<DownloadIcon sx={{ fontSize: 14 }} />}
-                            onClick={(e) => { e.stopPropagation(); downloadFile(api.withBase(run.artifacts.html_url), `${run.templateName || 'report'}.html`) }}
+                            onClick={(e) => { e.stopPropagation(); downloadFile(api.withBase(run.artifacts.html_url), `${run.templateName || 'report'}.html`, toast) }}
                           >
                             HTML
                           </DownloadButton>
@@ -1155,7 +1160,7 @@ export default function ReportsPage() {
                             size="small"
                             variant="outlined"
                             startIcon={<TableChartIcon sx={{ fontSize: 14 }} />}
-                            onClick={(e) => { e.stopPropagation(); downloadFile(api.withBase(run.artifacts.xlsx_url), `${run.templateName || 'report'}.xlsx`) }}
+                            onClick={(e) => { e.stopPropagation(); downloadFile(api.withBase(run.artifacts.xlsx_url), `${run.templateName || 'report'}.xlsx`, toast) }}
                           >
                             XLSX
                           </DownloadButton>
@@ -1165,7 +1170,7 @@ export default function ReportsPage() {
                             size="small"
                             variant="outlined"
                             startIcon={<ArticleIcon sx={{ fontSize: 14 }} />}
-                            onClick={(e) => { e.stopPropagation(); downloadFile(api.withBase(run.artifacts.docx_url), `${run.templateName || 'report'}.docx`) }}
+                            onClick={(e) => { e.stopPropagation(); downloadFile(api.withBase(run.artifacts.docx_url), `${run.templateName || 'report'}.docx`, toast) }}
                           >
                             DOCX
                           </DownloadButton>

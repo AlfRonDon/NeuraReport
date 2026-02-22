@@ -18,6 +18,7 @@ from backend.legacy.services.report_service import (
     run_report as run_report_service,
     list_report_runs as list_report_runs_service,
     get_report_run as get_report_run_service,
+    generate_docx_for_run as generate_docx_for_run_service,
 )
 
 router = APIRouter(dependencies=[Depends(require_api_key)])
@@ -145,6 +146,18 @@ def list_report_runs_route(
         limit=limit,
     )
     return {"runs": runs, "correlation_id": _correlation(request)}
+
+
+@router.post("/runs/{run_id}/generate-docx")
+def generate_docx_route(run_id: str, request: Request):
+    """Generate DOCX from an existing report run's PDF (on-demand, may take minutes)."""
+    try:
+        run = generate_docx_for_run_service(run_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail={"status": "error", "code": "generate_docx_failed", "message": str(exc)})
+    except RuntimeError as exc:
+        raise HTTPException(status_code=500, detail={"status": "error", "code": "generate_docx_failed", "message": str(exc)})
+    return {"run": run, "correlation_id": _correlation(request)}
 
 
 @router.get("/runs/{run_id}")
