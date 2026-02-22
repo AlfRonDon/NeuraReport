@@ -9382,3 +9382,99 @@
 }
 ```
 
+## 2026-02-22T20:05:53+00:00Z - nl_to_formula
+
+```json
+{
+  "id": "claude-cli-1771790753",
+  "model": "claude-sonnet",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "```json\n{\n    \"formula\": \"=B2*C2*(1-D2/100)\",\n    \"explanation\": \"Multiplies Price (B2) by Quantity (C2) by the discount multiplier (1 - Discount%/100). The discount multiplier converts a percentage like 20% into 0.80, representing the fraction of price retained after discount.\",\n    \"examples\": [\n        \"Price=100, Quantity=5, Discount%=20 \u2192 100*5*(1-20/100) = 500*0.80 = 400.00\",\n        \"Price=250, Quantity=3, Discount%=10 \u2192 250*3*(1-10/100) = 750*0.90 = 675.00\",\n        \"Price=50, Quantity=10, Discount%=0 \u2192 50*10*(1-0/100) = 500*1.00 = 500.00\"\n    ],\n    \"alternative_formulas\": [\n        \"=B2*C2*(100-D2)/100\",\n        \"=B2*C2-B2*C2*(D2/100)\",\n        \"=PRODUCT(B2,C2,1-D2/100)\"\n    ]\n}\n```"
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 156,
+    "completion_tokens": 175,
+    "total_tokens": 331
+  }
+}
+```
+
+## 2026-02-22T20:06:09+00:00Z - nl_to_formula
+
+```json
+{
+  "id": "claude-cli-1771790769",
+  "model": "claude-sonnet",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "```json\n{\n    \"formula\": \"=INDEX(A2:A100, MATCH(MAX(B2:B100*C2:C100), B2:B100*C2:C100, 0))\",\n    \"explanation\": \"Calculates revenue (Price \u00d7 Quantity) for every row, finds the MAX of those products, then uses MATCH to locate its position and INDEX to return the corresponding Product name. In Excel 365/2021 this works as a regular formula; in older Excel enter with Ctrl+Shift+Enter to make it an array formula.\",\n    \"examples\": [\n        \"Product=Widget, Price=10, Quantity=500 \u2192 Revenue=5000; Product=Gadget, Price=25, Quantity=300 \u2192 Revenue=7500 \u2192 Formula returns 'Gadget'\",\n        \"Product=Alpha, Price=100, Quantity=50 \u2192 Revenue=5000; Product=Beta, Price=40, Quantity=200 \u2192 Revenue=8000 \u2192 Formula returns 'Beta'\"\n    ],\n    \"alternative_formulas\": [\n        \"=INDEX(A2:A100, MATCH(MAXPRODUCT(B2:B100*C2:C100), B2:B100*C2:C100, 0))  \u2014 same logic, explicit naming\",\n        \"=LET(rev, B2:B100*C2:C100, INDEX(A2:A100, MATCH(MAX(rev), rev, 0)))  \u2014 Excel 365 LET version for readability\",\n        \"=XLOOKUP(MAX(B2:B100*C2:C100), B2:B100*C2:C100, A2:A100)  \u2014 Excel 365 XLOOKUP; cleaner but requires 365\"\n    ]\n}\n```"
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 150,
+    "completion_tokens": 279,
+    "total_tokens": 429
+  }
+}
+```
+
+## 2026-02-22T20:08:30+00:00Z - explain_formula
+
+```json
+{
+  "id": "claude-cli-1771790910",
+  "model": "claude-sonnet",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "```json\n{\n    \"formula\": \"=VLOOKUP(A2, Sheet2!A:B, 2, FALSE)\",\n    \"summary\": \"Looks up the value in cell A2 within the first column of Sheet2's A:B range, and returns the corresponding value from the second column (column B).\",\n    \"step_by_step\": [\n        \"Take the value from cell A2 in the current sheet as the search key.\",\n        \"Search for that value in the first column (column A) of the range A:B on Sheet2.\",\n        \"When a match is found, return the value from the 2nd column of that range (column B on Sheet2).\",\n        \"FALSE ensures an exact match is required \u2014 if no exact match exists, return #N/A.\"\n    ],\n    \"components\": {\n        \"A2\": \"The lookup value \u2014 what you're searching for.\",\n        \"Sheet2!A:B\": \"The table range to search in, located on Sheet2, spanning columns A and B.\",\n        \"2\": \"The column index \u2014 return the value from the 2nd column of the range (column B).\",\n        \"FALSE\": \"Exact match mode \u2014 the lookup value must match precisely; no approximate matching.\"\n    },\n    \"potential_issues\": [\n        \"Returns #N/A if the value in A2 is not found in Sheet2 column A.\",\n        \"Only searches the first column of the range (column A on Sheet2) \u2014 the lookup column must always be leftmost.\",\n        \"Case-insensitive \u2014 'Apple' and 'apple' are treated as the same value.\",\n        \"If duplicate values exist in Sheet2 column A, only the first match is returned.\",\n        \"Using entire columns (A:B) can slow performance on very large sheets compared to a bounded range like A1:B1000.\",\n        \"If A2 is empty, VLOOKUP may return an unexpected result or #N/A depending on Sheet2 data.\"\n    ]\n}\n```"
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 119,
+    "completion_tokens": 411,
+    "total_tokens": 530
+  }
+}
+```
+
+## 2026-02-22T20:11:18+00:00Z - anomaly_detection
+
+```json
+{
+  "id": "claude-cli-1771791078",
+  "model": "claude-sonnet",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "{\"anomalies\":[{\"location\":\"Row 6 (Jun)\",\"value\":\"9999\",\"expected_range\":\"95\u2013110 (based on all other months)\",\"confidence\":0.98,\"explanation\":\"Jun revenue is 9999, approximately 97x the mean of all other months (~102.7). This is nearly 2169 standard deviations above the normal range and is almost certainly a data entry error \u2014 likely a repeated digit (e.g., '99' typed as '9999').\",\"anomaly_type\":\"outlier\"},{\"location\":\"Row 9 (Sep)\",\"value\":\"100000\",\"expected_range\":\"95\u2013110 (based on all other months)\",\"confidence\":0.99,\"explanation\":\"Sep revenue is 100,000 \u2014 roughly 974x the mean of all other months (~102.7). This is an extreme outlier, likely caused by a data entry error such as extra trailing zeros (e.g., '100' entered as '100000').\",\"anomaly_type\":\"outlier\"}],\"total_rows_analyzed\":12,\"summary\":\"2 severe outliers detected in the Revenue column. All other 10 months cluster tightly between 95 and 110 (mean \u2248 102.7, std \u2248 4.6). Jun (9999) and Sep (100000) deviate by thousands of standard deviations and are almost certainly data entry errors rather than genuine revenue spikes. Recommend verifying source records for these two months before any aggregation or forecasting.\"}"
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 354,
+    "completion_tokens": 296,
+    "total_tokens": 650
+  }
+}
+```
+

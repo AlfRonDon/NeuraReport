@@ -239,11 +239,15 @@ class DashboardService:
         """Return dashboard-related statistics."""
         with state_store.transaction() as state:
             dashboards = state.get("dashboards", {})
-            widgets = state.get("dashboard_widgets", {})
-            favs = state.get("favorites", {}).get("dashboards", [])
+            total_widgets = sum(
+                len(d.get("widgets", []))
+                for d in dashboards.values()
+            )
+            favs = state.get("favorites", {})
+            total_favs = sum(len(v) for v in favs.values())
 
         return {
             "total_dashboards": len(dashboards),
-            "total_widgets": len(widgets),
-            "total_favorites": len(favs),
+            "total_widgets": total_widgets,
+            "total_favorites": total_favs,
         }
