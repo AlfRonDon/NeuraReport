@@ -2121,6 +2121,7 @@ export async function createSchedule(payload) {
     email_message: payload.emailMessage,
     frequency: payload.frequency || 'daily',
     interval_minutes: payload.intervalMinutes,
+    run_time: payload.runTime || null,
     name: payload.name,
     active: payload.active,
   }
@@ -2150,6 +2151,7 @@ export async function updateSchedule(scheduleId, payload) {
   if (payload.emailMessage !== undefined) apiPayload.email_message = payload.emailMessage
   if (payload.frequency !== undefined) apiPayload.frequency = payload.frequency
   if (payload.intervalMinutes !== undefined) apiPayload.interval_minutes = payload.intervalMinutes
+  if (payload.runTime !== undefined) apiPayload.run_time = payload.runTime || null
   if (payload.active !== undefined) apiPayload.active = payload.active
 
   if (isMock) {
@@ -2173,6 +2175,16 @@ export async function deleteSchedule(scheduleId) {
     return { status: 'ok', schedule_id: scheduleId }
   }
   const { data } = await api.delete(`/reports/schedules/${encodeURIComponent(scheduleId)}`)
+  return data
+}
+
+export async function triggerSchedule(scheduleId) {
+  if (!scheduleId) throw new Error('Missing schedule id')
+  if (isMock) {
+    await sleep(300)
+    return { status: 'triggered', schedule_id: scheduleId, job_id: `mock-job-${Date.now()}` }
+  }
+  const { data } = await api.post(`/reports/schedules/${encodeURIComponent(scheduleId)}/trigger`)
   return data
 }
 
@@ -2514,6 +2526,16 @@ export async function generateDocx(runId) {
   if (!runId) throw new Error('Missing run id')
   const { data } = await api.post(`/reports/runs/${encodeURIComponent(runId)}/generate-docx`)
   return data?.run || data
+}
+
+/**
+ * Queue DOCX generation as a background job (non-blocking).
+ * Returns { job_id, run_id, status, correlation_id } immediately.
+ */
+export async function generateDocxJob(runId) {
+  if (!runId) throw new Error('Missing run id')
+  const { data } = await api.post(`/reports/jobs/generate-docx/${encodeURIComponent(runId)}`)
+  return data
 }
 
 // D) Discovery helper - delegates to discoverReports with simplified interface
@@ -3214,6 +3236,45 @@ export async function setUserPreference(key, value) {
     return { preferences: { [key]: value } }
   }
   const { data } = await api.put(`/analytics/preferences/${encodeURIComponent(key)}`, { value })
+  return data
+}
+
+
+/* ------------------------ SMTP Settings API ------------------------ */
+
+/**
+ * Get saved SMTP settings (password masked).
+ */
+export async function getSmtpSettings() {
+  if (isMock) {
+    await sleep(100)
+    return { smtp: {} }
+  }
+  const { data } = await api.get('/analytics/settings/smtp')
+  return data
+}
+
+/**
+ * Save SMTP settings.
+ */
+export async function saveSmtpSettings(settings) {
+  if (isMock) {
+    await sleep(200)
+    return { smtp: settings, message: 'SMTP settings saved' }
+  }
+  const { data } = await api.put('/analytics/settings/smtp', settings)
+  return data
+}
+
+/**
+ * Test SMTP connection.
+ */
+export async function testSmtpConnection() {
+  if (isMock) {
+    await sleep(500)
+    return { status: 'connected', message: 'SMTP connection successful' }
+  }
+  const { data } = await api.post('/analytics/settings/smtp/test')
   return data
 }
 
