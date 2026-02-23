@@ -303,6 +303,24 @@ const isValidEmail = (email) => {
   return emailRegex.test(email)
 }
 
+/** Convert a local HH:MM string to UTC HH:MM using the browser's timezone offset. */
+const localTimeToUtc = (timeStr) => {
+  if (!timeStr) return timeStr
+  const [h, m] = timeStr.split(':').map(Number)
+  const d = new Date()
+  d.setHours(h, m, 0, 0)
+  return `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`
+}
+
+/** Convert a UTC HH:MM string to local HH:MM using the browser's timezone offset. */
+const utcTimeToLocal = (timeStr) => {
+  if (!timeStr) return timeStr
+  const [h, m] = timeStr.split(':').map(Number)
+  const d = new Date()
+  d.setUTCHours(h, m, 0, 0)
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+}
+
 const isSchedulableTemplate = (template) => {
   if (!template || typeof template !== 'object') return false
   const status = String(template.status || '').toLowerCase()
@@ -350,7 +368,7 @@ function ScheduleDialog({
         startDate: extractDateOnly(schedule.start_date),
         endDate: extractDateOnly(schedule.end_date),
         frequency: schedule.frequency || 'daily',
-        runTime: schedule.run_time || '',
+        runTime: utcTimeToLocal(schedule.run_time) || '',
         emailRecipients: formatEmailList(schedule.email_recipients),
         emailSubject: schedule.email_subject || '',
         emailMessage: schedule.email_message || '',
@@ -421,7 +439,7 @@ function ScheduleDialog({
         endDate,
         frequency: form.frequency,
         intervalMinutes,
-        runTime: form.runTime || undefined,
+        runTime: localTimeToUtc(form.runTime) || undefined,
         emailRecipients: emailRecipients.length ? emailRecipients : undefined,
         emailSubject: form.emailSubject || undefined,
         emailMessage: form.emailMessage || undefined,
@@ -542,7 +560,7 @@ function ScheduleDialog({
               onChange={handleChange('runTime')}
               InputLabelProps={{ shrink: true }}
               fullWidth
-              helperText="Time of day to run (leave blank for interval-based)"
+              helperText="Time of day in your local time (leave blank for interval-based)"
             />
           </Stack>
         </Stack>
@@ -957,7 +975,7 @@ export default function SchedulesPage() {
           const lastRun = value || row.last_run_at
           return (
             <Typography variant="body2" color={lastRun ? 'text.primary' : 'text.secondary'}>
-              {lastRun ? new Date(lastRun).toLocaleString() : 'Never'}
+              {lastRun ? new Date(lastRun).toLocaleString(undefined, { timeZoneName: 'short' }) : 'Never'}
             </Typography>
           )
         },
@@ -965,13 +983,13 @@ export default function SchedulesPage() {
       {
         field: 'next_run',
         headerName: 'Next Run',
-        width: 180,
+        width: 220,
         renderCell: (value, row) => {
           const active = row.active ?? row.enabled ?? true
           const nextRun = value || row.next_run_at
           return (
             <Typography variant="body2" color={active && nextRun ? 'text.primary' : 'text.secondary'}>
-              {active && nextRun ? new Date(nextRun).toLocaleString() : '-'}
+              {active && nextRun ? new Date(nextRun).toLocaleString(undefined, { timeZoneName: 'short' }) : '-'}
             </Typography>
           )
         },
