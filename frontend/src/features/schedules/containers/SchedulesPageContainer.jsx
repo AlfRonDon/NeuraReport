@@ -303,23 +303,6 @@ const isValidEmail = (email) => {
   return emailRegex.test(email)
 }
 
-/** Convert a local HH:MM string to UTC HH:MM using the browser's timezone offset. */
-const localTimeToUtc = (timeStr) => {
-  if (!timeStr) return timeStr
-  const [h, m] = timeStr.split(':').map(Number)
-  const d = new Date()
-  d.setHours(h, m, 0, 0)
-  return `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`
-}
-
-/** Convert a UTC HH:MM string to local HH:MM using the browser's timezone offset. */
-const utcTimeToLocal = (timeStr) => {
-  if (!timeStr) return timeStr
-  const [h, m] = timeStr.split(':').map(Number)
-  const d = new Date()
-  d.setUTCHours(h, m, 0, 0)
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
-}
 
 const isSchedulableTemplate = (template) => {
   if (!template || typeof template !== 'object') return false
@@ -368,7 +351,7 @@ function ScheduleDialog({
         startDate: extractDateOnly(schedule.start_date),
         endDate: extractDateOnly(schedule.end_date),
         frequency: schedule.frequency || 'daily',
-        runTime: utcTimeToLocal(schedule.run_time) || '',
+        runTime: schedule.run_time || '',
         emailRecipients: formatEmailList(schedule.email_recipients),
         emailSubject: schedule.email_subject || '',
         emailMessage: schedule.email_message || '',
@@ -439,7 +422,7 @@ function ScheduleDialog({
         endDate,
         frequency: form.frequency,
         intervalMinutes,
-        runTime: localTimeToUtc(form.runTime) || undefined,
+        runTime: form.runTime || undefined,
         emailRecipients: emailRecipients.length ? emailRecipients : undefined,
         emailSubject: form.emailSubject || undefined,
         emailMessage: form.emailMessage || undefined,

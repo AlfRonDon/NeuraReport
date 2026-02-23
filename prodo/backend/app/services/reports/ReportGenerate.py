@@ -5,6 +5,8 @@ import json
 import logging
 import os
 import re
+import subprocess
+import sys as _sys
 from backend.app.repositories.dataframes import DuckDBDataFrameQuery, SQLiteDataFrameLoader, sqlite_shim as sqlite3
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
@@ -57,6 +59,44 @@ def _run_async(coro):
         with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
             return pool.submit(asyncio.run, coro).result()
     return asyncio.run(coro)
+
+
+_PDF_WORKER_SCRIPT = str(Path(__file__).with_name("_pdf_worker.py"))
+
+
+def _html_to_pdf_subprocess(
+    html_path: Path, pdf_path: Path, base_dir: Path, pdf_scale: float | None = None
+) -> None:
+    """Convert HTML to PDF by running Playwright in a dedicated subprocess.
+
+    This avoids the SIGCHLD / asyncio event-loop conflict that occurs when
+    ``asyncio.run()`` is called from a non-main thread inside uvicorn.
+    """
+    import json as _json
+
+    args_json = _json.dumps({
+        "html_path": str(html_path.resolve()),
+        "pdf_path": str(pdf_path.resolve()),
+        "base_dir": str((base_dir or html_path.parent).resolve()),
+        "pdf_scale": pdf_scale,
+    })
+
+    env = {**os.environ}
+    if "TMPDIR" not in env:
+        home_tmp = Path.home() / ".tmp"
+        if home_tmp.is_dir():
+            env["TMPDIR"] = str(home_tmp)
+
+    result = subprocess.run(
+        [_sys.executable, _PDF_WORKER_SCRIPT, args_json],
+        capture_output=True,
+        text=True,
+        timeout=180,
+        env=env,
+    )
+    if result.returncode != 0:
+        stderr_tail = (result.stderr or "")[-800:]
+        raise RuntimeError(f"PDF subprocess failed:\n{stderr_tail}")
 
 
 from .contract_adapter import ContractAdapter, format_decimal_str
@@ -773,7 +813,7 @@ def fill_and_print(
 
             combined_html = _combine_html_documents(html_sections)
             OUT_HTML.write_text(combined_html, encoding="utf-8")
-            _run_async(html_to_pdf_async(OUT_HTML, OUT_PDF, TEMPLATE_PATH.parent))
+            _html_to_pdf_subprocess(OUT_HTML, OUT_PDF, TEMPLATE_PATH.parent)
             return {"html_path": str(OUT_HTML), "pdf_path": str(OUT_PDF), "rows_rendered": True}
         finally:
             for tmp_html_path, tmp_pdf_path in tmp_outputs:
@@ -2232,7 +2272,7 @@ def fill_and_print(
     _log_debug("Wrote HTML:", OUT_HTML)
 
     _fp_progress("starting PDF generation via Playwright")
-    _run_async(html_to_pdf_async(OUT_HTML, OUT_PDF, TEMPLATE_PATH.parent))
+    _html_to_pdf_subprocess(OUT_HTML, OUT_PDF, TEMPLATE_PATH.parent)
     _fp_progress("PDF generation complete")
     _log_debug("Wrote PDF via Playwright:", OUT_PDF)
 

@@ -1,6 +1,6 @@
 {
   "tokens": {
-    "scalars": [],
+    "scalars": ["print_date", "print_time"],
     "row_tokens": [
       "row_flow_meter",
       "row_fm_101",
@@ -164,7 +164,7 @@
       "timestamp_utc ASC"
     ]
   },
-  "header_tokens": [],
+  "header_tokens": ["print_date", "print_time"],
   "row_tokens": [
     "row_flow_meter",
     "row_fm_101",
