@@ -6,6 +6,10 @@
     "contract_v2_meta.json": "6b2baca3a2c3bc3139e29cb5f67061ed172fbbc5d405734b419d270ef3e6c9d4",
     "filled_1771227249.html": "a1c12ae34f101510be76a3b8b255a0b55df87084e384845c2157e46d710e5e8a",
     "filled_1771227249.pdf": "1ceea04e76935288d3e6012a182f131bdf657247034bf6bc8f32511734f775ee",
+    "filled_1772493774.html": "2c09a418adf12e9e5ebba3df23336a5802be22092844cb447bc61deaaef03800",
+    "filled_1772493774.pdf": "f4de6f8f825b99bc1a9af92eb252c5ae340089272d75cccd03f2539ebc6aa6cf",
+    "filled_1772494399.html": "0ee2489e1e187746578b5fbf5378a34d2580e6223e5edbb59804c445d4aca974",
+    "filled_1772494399.pdf": "0284134948e6b985f774d6f076a5739db5a71562f7c09220c63e790aa692a852",
     "fix_metrics.json": "64f1ab85c2f00c7c0cc55037b28599dc01500615908a0ee185a0851a3ed9d756",
     "mapping_keys.json": "39e7a5a7be158fe858f4d0ae4edec1510211b93696790165f1a562ee7e794a0b",
     "mapping_pdf_labels.json": "9faf6fb0728aed9362f238a3cd30029c636b231f66f2e5fddc87a1ab01a2939f",
@@ -27,6 +31,10 @@
     "contract_v2_meta.json": "contract_v2_meta.json",
     "filled_1771227249.html": "filled_1771227249.html",
     "filled_1771227249.pdf": "filled_1771227249.pdf",
+    "filled_1772493774.html": "filled_1772493774.html",
+    "filled_1772493774.pdf": "filled_1772493774.pdf",
+    "filled_1772494399.html": "filled_1772494399.html",
+    "filled_1772494399.pdf": "filled_1772494399.pdf",
     "fix_metrics.json": "fix_metrics.json",
     "mapping_keys.json": "mapping_keys.json",
     "mapping_pdf_labels.json": "mapping_pdf_labels.json",
@@ -54,10 +62,11 @@
     "contract_v2_input_signature=74af60927d88c68075a38cda3a45d907633cdb59ccc19d6251d57d0abb753950",
     "dialect_hint=",
     "/home/rohith/desktop/NeuraReport/prodo/backend/uploads/04-invoicesimple-pdf-template-dc6c23/contract.json",
-    "/home/rohith/desktop/NeuraReport/samples/report_generation_testkit/databases/04_invoicesimple_pdf_template.sqlite3"
+    "/home/rohith/desktop/NeuraReport/samples/report_generation_testkit/databases/04_invoicesimple_pdf_template.sqlite3",
+    "postgresql://neuract:neuract123@localhost:5434/neuract_db"
   ],
-  "pid": 417772,
-  "produced_at": "2026-02-16T07:34:10.270124+00:00",
+  "pid": 349366,
+  "produced_at": "2026-03-02T23:33:20.539924+00:00",
   "schema_version": "1.0",
   "step": "reports_run"
 }

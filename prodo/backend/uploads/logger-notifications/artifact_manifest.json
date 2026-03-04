@@ -1,11 +1,13 @@
 {
-  "correlation_id": "job-4010546743",
+  "correlation_id": null,
   "file_checksums": {
     "constant_replacements.json": "bf72c494df7c494c10a173aeff7ef3a7f2a599c3c567b39dd8cfd5712b09daac",
     "contract.json": "348833832986e1942bcbcb7efa1a4c15dc427bac9a414117b773c49856fff94f",
     "contract_v2_meta.json": "4e793e02fbd0c5843c914da11e1d6c0e97965049be4ceef639194833a8e8ad0b",
     "filled_1771434562.html": "2424b74624a6f8e736afd3e4c69ed77fc776b6b545cb03e3b48fb89ecc408715",
     "filled_1771434562.pdf": "e2d76c41644aa4df143f394f04ffe45bcec926cd077f3f5bcc7a7012a4a34b72",
+    "filled_1772494129.html": "5dd50f901e96e35544891565115b38deef18a33ac0fb9262629709208dbe78fc",
+    "filled_1772494129.pdf": "a4de9101bd876c0ea94a835a07b3773630174558862d06971009e6f0e69a8c14",
     "mapping_keys.json": "7a8b7894d86c11ef46d0707ee9dff1d4c997c07380924fe43d8f9172ca8b2713",
     "mapping_pdf_labels.json": "29282af22253aca5637b598f09679d9ece635a68541b4ca4006b14ca65fc5f86",
     "mapping_step3.json": "e21675578dbe5a9742df458cc984a9b030af9833cd5ceba128d7e7f35c8953c3",
@@ -21,6 +23,8 @@
     "contract_v2_meta.json": "contract_v2_meta.json",
     "filled_1771434562.html": "filled_1771434562.html",
     "filled_1771434562.pdf": "filled_1771434562.pdf",
+    "filled_1772494129.html": "filled_1772494129.html",
+    "filled_1772494129.pdf": "filled_1772494129.pdf",
     "mapping_keys.json": "mapping_keys.json",
     "mapping_pdf_labels.json": "mapping_pdf_labels.json",
     "mapping_step3.json": "mapping_step3.json",
@@ -42,10 +46,11 @@
     "dialect_hint=",
     "/home/rohith/desktop/NeuraReport/prodo/backend/uploads/logger-notifications/mapping_pdf_labels.json",
     "/home/rohith/desktop/NeuraReport/prodo/backend/uploads/logger-notifications/contract.json",
-    "postgresql://postgres@localhost:5432/meta_data_fast"
+    "postgresql://postgres@localhost:5432/meta_data_fast",
+    "postgresql://neuract:neuract123@localhost:5434/neuract_db"
   ],
-  "pid": 3342082,
-  "produced_at": "2026-02-18T17:09:23.284888+00:00",
+  "pid": 349366,
+  "produced_at": "2026-03-02T23:28:49.838362+00:00",
   "schema_version": "1.0",
   "step": "reports_run"
 }

@@ -1,5 +1,5 @@
 {
-  "correlation_id": "job-f6bd5290a0",
+  "correlation_id": null,
   "file_checksums": {
     "constant_replacements.json": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
     "contract.json": "fe0803e665f5e325cbbe47e2c67c80f39670dba5708b356b27ff73151cb6ec80",
@@ -29,6 +29,12 @@
     "filled_1771484058.html": "filled_1771484058.html",
     "filled_1771484058.pdf": "filled_1771484058.pdf",
     "filled_1771484058.xlsx": "filled_1771484058.xlsx",
+    "filled_1772494333.html": "filled_1772494333.html",
+    "filled_1772494333.pdf": "filled_1772494333.pdf",
+    "filled_1772494333.xlsx": "filled_1772494333.xlsx",
+    "filled_1772494347.html": "filled_1772494347.html",
+    "filled_1772494347.pdf": "filled_1772494347.pdf",
+    "filled_1772494347.xlsx": "filled_1772494347.xlsx",
     "mapping_keys.json": "mapping_keys.json",
     "mapping_pdf_labels.json": "mapping_pdf_labels.json",
     "mapping_step3.json": "mapping_step3.json",
@@ -55,10 +61,11 @@
     "dialect_hint=",
     "/home/rohith/desktop/NeuraReport/prodo/backend/uploads_excel/app-protocol-types-763a9e/mapping_pdf_labels.json",
     "/home/rohith/desktop/NeuraReport/prodo/backend/uploads_excel/app-protocol-types-763a9e/contract.json",
-    "postgresql://postgres@localhost:5432/meta_data_fast"
+    "postgresql://postgres@localhost:5432/meta_data_fast",
+    "postgresql://neuract:neuract123@localhost:5434/neuract_db"
   ],
-  "pid": 4104959,
-  "produced_at": "2026-02-19T06:54:19.559454+00:00",
+  "pid": 349366,
+  "produced_at": "2026-03-02T23:32:27.032493+00:00",
   "schema_version": "1.0",
-  "step": "reports_run"
+  "step": "reports_run_started"
 }

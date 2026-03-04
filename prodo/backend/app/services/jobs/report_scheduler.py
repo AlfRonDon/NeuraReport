@@ -19,6 +19,12 @@ from backend.app.services.jobs.job_tracking import JobRunTracker, _build_job_ste
 from backend.app.schemas.generate.reports import RunPayload
 
 logger = logging.getLogger("neura.scheduler")
+
+# Compute the system's local timezone explicitly.  In PyInstaller frozen
+# builds, APScheduler's get_localzone() may fail and silently fall back to
+# UTC.  Using a fixed-offset timezone avoids this completely.
+_LOCAL_TZ = datetime.now(timezone.utc).astimezone().tzinfo
+logger.info("scheduler_timezone", extra={"event": "scheduler_timezone", "tz": str(_LOCAL_TZ)})
 _MISFIRE_GRACE_SECONDS_RAW = os.getenv("NEURA_SCHEDULER_MISFIRE_GRACE_SECONDS", "3600")
 try:
     _MISFIRE_GRACE_SECONDS = int(_MISFIRE_GRACE_SECONDS_RAW)
@@ -98,8 +104,13 @@ def _build_cron_trigger(
     frequency: str, hour: int, minute: int,
     start_date: datetime | None, end_date: datetime | None,
 ) -> CronTrigger:
-    """Build a CronTrigger for the given frequency and time-of-day."""
-    kwargs: dict = {"hour": hour, "minute": minute, "timezone": timezone.utc}
+    """Build a CronTrigger for the given frequency and time-of-day.
+
+    run_time is stored in the user's local time, so we use the system's local
+    timezone (no explicit timezone kwarg) so the job fires at the expected
+    wall-clock time on the machine where the scheduler runs.
+    """
+    kwargs: dict = {"hour": hour, "minute": minute, "timezone": _LOCAL_TZ}
     if start_date:
         kwargs["start_date"] = start_date
     if end_date:
@@ -145,7 +156,7 @@ class ReportScheduler:
         self._inflight: set[str] = set()
         self._scheduler = AsyncIOScheduler(
             executors={"default": AsyncIOExecutor()},
-            timezone=timezone.utc,
+            timezone=_LOCAL_TZ,
         )
 
     async def start(self) -> None:
