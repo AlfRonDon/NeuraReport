@@ -16,7 +16,6 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 from starlette.types import ASGIApp, Receive, Scope, Send
 
 from backend.app.api.idempotency import IdempotencyMiddleware, IdempotencyStore
-from backend.app.services.observability.metrics import PrometheusMiddleware, metrics_endpoint
 from backend.app.services.utils.context import set_correlation_id
 from backend.app.services.config import Settings
 from .ux_governance import UXGovernanceMiddleware, IntentHeaders
@@ -162,8 +161,23 @@ class RequestTimeoutMiddleware:
             return
 
         path = scope.get("path", "")
+        method = scope.get("method", "GET")
         timeout = self.timeout_seconds
-        if "/stream" in path or "/upload" in path:
+
+        # Long-running endpoints get doubled timeout (300s → 600s).
+        # Covers: report generation, discovery, AI/LLM, export, ingestion,
+        # agents, synthesis, document AI, workflows, and streaming.
+        _SLOW_FRAGMENTS = (
+            "/stream", "/upload", "/discover",
+            "/reports/run", "/jobs/run-report",
+            "/excel/reports/run", "/generate-docx",
+            "/export/", "/ingestion/",
+            "/ai/", "/docqa/", "/docai/",
+            "/synthesis/", "/nl2sql/",
+            "/agents/", "/workflows/",
+            "/enrichment/enrich", "/summary/generate",
+        )
+        if any(frag in path for frag in _SLOW_FRAGMENTS):
             timeout = timeout * 2
 
         try:
@@ -308,9 +322,13 @@ def add_middlewares(app: FastAPI, settings: Settings) -> None:
 
     # Prometheus metrics middleware (after correlation ID, before other middleware)
     if settings.metrics_enabled:
-        app.add_middleware(PrometheusMiddleware, app_name=settings.app_name)
-        app.add_route("/metrics", metrics_endpoint, methods=["GET"])
-        logger.info("metrics_enabled", extra={"event": "metrics_enabled", "app_name": settings.app_name})
+        try:
+            from backend.app.services.observability.metrics import PrometheusMiddleware, metrics_endpoint
+            app.add_middleware(PrometheusMiddleware, app_name=settings.app_name)
+            app.add_route("/metrics", metrics_endpoint, methods=["GET"])
+            logger.info("metrics_enabled", extra={"event": "metrics_enabled", "app_name": settings.app_name})
+        except ImportError:
+            logger.warning("prometheus_client not installed, metrics disabled")
 
     # OpenTelemetry tracing (conditional on OTLP endpoint being configured)
     if settings.otlp_endpoint:

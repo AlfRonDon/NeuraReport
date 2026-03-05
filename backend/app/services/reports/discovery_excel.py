@@ -112,6 +112,17 @@ def _stringify_value(value: Any) -> str:
     return text.strip()
 
 
+def _vectorized_stringify(series: pd.Series) -> pd.Series:
+    """Vectorized equivalent of series.apply(_stringify_value)."""
+    return series.fillna("").astype(str).str.strip()
+
+
+def _vectorized_bid(df: pd.DataFrame, columns: list[str]) -> pd.Series:
+    """Build batch ID from multiple columns, joined by '|' — vectorized."""
+    parts = [df[col].fillna("").astype(str).str.strip() for col in columns]
+    return parts[0].str.cat(parts[1:], sep="|")
+
+
 def _coerce_datetime_series(series: pd.Series) -> pd.Series:
     if pd.api.types.is_datetime64_any_dtype(series):
         result = series
@@ -197,12 +208,12 @@ def _build_batch_index(df: pd.DataFrame, key_columns: List[str], *, use_rowid: b
         col = columns[0]
         if col not in working.columns:
             working[col] = None
-        working["__bid__"] = working[col].apply(_stringify_value)
+        working["__bid__"] = _vectorized_stringify(working[col])
     else:
         for col in columns:
             if col not in working.columns:
                 working[col] = None
-        working["__bid__"] = working[columns].apply(lambda row: "|".join(_stringify_value(v) for v in row), axis=1)
+        working["__bid__"] = _vectorized_bid(working, columns)
     sort_cols = columns or ["__bid__"]
     working_sorted = working.sort_values(sort_cols, kind="mergesort")
     ordered_ids: list[str] = []
@@ -242,9 +253,9 @@ def _attach_batch_id(df: pd.DataFrame, key_columns: List[str], *, use_rowid: boo
 
     if len(columns) == 1:
         col = columns[0]
-        working["__bid__"] = working[col].apply(_stringify_value)
+        working["__bid__"] = _vectorized_stringify(working[col])
     else:
-        working["__bid__"] = working[columns].apply(lambda row: "|".join(_stringify_value(v) for v in row), axis=1)
+        working["__bid__"] = _vectorized_bid(working, columns)
 
     return working
 
@@ -285,15 +296,12 @@ def _build_batch_metadata(
         col = columns[0]
         if col not in working.columns:
             working[col] = None
-        working["__bid__"] = working[col].apply(_stringify_value)
+        working["__bid__"] = _vectorized_stringify(working[col])
     else:
         for col in columns:
             if col not in working.columns:
                 working[col] = None
-        working["__bid__"] = working[columns].apply(
-            lambda row: "|".join(_stringify_value(v) for v in row),
-            axis=1,
-        )
+        working["__bid__"] = _vectorized_bid(working, columns)
 
     metadata: Dict[str, Dict[str, object]] = {}
 
@@ -326,7 +334,7 @@ def _build_batch_metadata(
         if col not in working.columns:
             continue
         label_field = f"_nr_label_{col}"
-        working[label_field] = working[col].apply(_stringify_value)
+        working[label_field] = _vectorized_stringify(working[col])
         grouped = working.groupby("__bid__")[label_field].first()
         for bid, raw_val in grouped.items():
             text = _stringify_value(raw_val)
@@ -338,7 +346,7 @@ def _build_batch_metadata(
                 meta["category"] = text
 
     if category_source and category_source in working.columns:
-        working["_nr_category"] = working[category_source].apply(_stringify_value)
+        working["_nr_category"] = _vectorized_stringify(working[category_source])
         grouped_cat = working.groupby("__bid__")["_nr_category"].first()
         for bid, cat in grouped_cat.items():
             text = _stringify_value(cat)
@@ -612,17 +620,16 @@ def discover_batches_and_counts(
         numeric_cols = [
             col for col in df.columns if col not in skip_cols and pd.api.types.is_numeric_dtype(df[col])
         ]
-        aggregates: dict[str, dict[str, float]] = {}
         if not numeric_cols:
-            return aggregates
-        grouped = df.groupby("__bid__")
-        for bid, group in grouped:
-            entry: dict[str, float] = {}
-            for col in numeric_cols:
-                try:
-                    entry[f"{prefix}{col}"] = float(pd.to_numeric(group[col], errors="coerce").sum())
-                except Exception:
-                    continue
+            return {}
+        # Vectorized: coerce all numeric columns at once, then groupby.sum()
+        coerced = df[["__bid__"] + numeric_cols].copy()
+        for col in numeric_cols:
+            coerced[col] = pd.to_numeric(coerced[col], errors="coerce")
+        summed = coerced.groupby("__bid__")[numeric_cols].sum()
+        aggregates: dict[str, dict[str, float]] = {}
+        for bid, row in summed.iterrows():
+            entry = {f"{prefix}{col}": float(row[col]) for col in numeric_cols if pd.notna(row[col])}
             if entry:
                 aggregates[str(bid)] = entry
         return aggregates
@@ -635,22 +642,26 @@ def discover_batches_and_counts(
             "margin": "margin_amount",
             "cost": "cost_amount",
         }
+        available = {name: col for name, col in metric_sources.items() if col in df.columns}
+        if not available:
+            return {}
+        # Vectorized: coerce once, then groupby.agg()
+        cols = list(available.values())
+        coerced = df[["__bid__"] + cols].copy()
+        for col in cols:
+            coerced[col] = pd.to_numeric(coerced[col], errors="coerce")
+        grouped = coerced.groupby("__bid__")
+        summed = grouped[cols].sum()
         aggregates: dict[str, dict[str, float]] = {}
-        grouped = df.groupby("__bid__")
-        for bid, group in grouped:
+        revenue_col = metric_sources.get("revenue")
+        has_revenue = revenue_col and revenue_col in cols
+        mean_revenue = grouped[revenue_col].mean() if has_revenue else None
+        for bid, row in summed.iterrows():
             entry: dict[str, float] = {}
-            for metric_name, column in metric_sources.items():
-                if column not in group.columns:
-                    continue
-                numeric_series = pd.to_numeric(group[column], errors="coerce")
-                entry[metric_name] = float(numeric_series.sum(skipna=True))
-            revenue_col = metric_sources["revenue"]
-            if revenue_col in group.columns:
-                revenue_series = pd.to_numeric(group[revenue_col], errors="coerce")
-                if revenue_series.count():
-                    entry["avg_order_value"] = float(revenue_series.mean(skipna=True))
-                else:
-                    entry["avg_order_value"] = 0.0
+            for metric_name, column in available.items():
+                entry[metric_name] = float(row[column])
+            if has_revenue and mean_revenue is not None:
+                entry["avg_order_value"] = float(mean_revenue.loc[bid])
             if entry:
                 aggregates[str(bid)] = entry
         return aggregates

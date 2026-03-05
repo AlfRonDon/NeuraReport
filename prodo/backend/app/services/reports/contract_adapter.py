@@ -509,14 +509,20 @@ class ContractAdapter:
         if op == "subtract":
             left = self._resolve_agg_or_col(df, op_spec.get("left", 0))
             right = self._resolve_agg_or_col(df, op_spec.get("right", 0))
+            if left is None or right is None:
+                return None
             return left - right
         elif op == "add":
             left = self._resolve_agg_or_col(df, op_spec.get("left", 0))
             right = self._resolve_agg_or_col(df, op_spec.get("right", 0))
+            if left is None or right is None:
+                return None
             return left + right
         elif op == "multiply":
             left = self._resolve_agg_or_col(df, op_spec.get("left", 0))
             right = self._resolve_agg_or_col(df, op_spec.get("right", 0))
+            if left is None or right is None:
+                return None
             return left * right
         elif op == "divide":
             num_spec = op_spec.get("numerator", op_spec.get("left", ""))
@@ -922,9 +928,10 @@ class ContractAdapter:
                     existing = [c for c in alias_cols if c in df.columns]
                     if existing:
                         df = df.dropna(subset=existing, how="all")
-                        str_mask = df[existing].astype(str).apply(
-                            lambda row: not all(v.strip() == "" for v in row), axis=1
-                        )
+                        str_df = df[existing].fillna("").astype(str)
+                        for c in str_df.columns:
+                            str_df[c] = str_df[c].str.strip()
+                        str_mask = (str_df != "").any(axis=1)
                         df = df.loc[str_mask].reset_index(drop=True)
 
             elif strategy == "MELT" and columns:

@@ -71,7 +71,21 @@ def _html_to_pdf_subprocess(
 
     This avoids the SIGCHLD / asyncio event-loop conflict that occurs when
     ``asyncio.run()`` is called from a non-main thread inside uvicorn.
+
+    In PyInstaller frozen mode, sys.executable is the bundled exe which
+    cannot run .py scripts, so we call the worker function in-process.
     """
+    # PyInstaller frozen mode: run in-process (no subprocess possible)
+    if getattr(_sys, "frozen", False):
+        from ._pdf_worker import _convert
+        _run_async(_convert(
+            html_path=str(html_path.resolve()),
+            pdf_path=str(pdf_path.resolve()),
+            base_dir=str((base_dir or html_path.parent).resolve()),
+            pdf_scale=pdf_scale,
+        ))
+        return
+
     import json as _json
 
     args_json = _json.dumps({
@@ -2002,8 +2016,8 @@ def fill_and_print(
                             sql_params.get("start_date") or sql_params.get("from_date"),
                             sql_params.get("end_date") or sql_params.get("to_date"),
                         )
-                        for _, row in df_filtered.iterrows():
-                            row_dict = {c: row.get(c) for c in existing_cols if c in row.index}
+                        records = df_filtered[existing_cols].to_dict("records")
+                        for row_dict in records:
                             key = _compose_key(row_dict, pcols) if pcols else "default"
                             if key and key not in prefetched_headers:
                                 prefetched_headers[key] = row_dict

@@ -645,9 +645,54 @@ class StateStore:
         except Exception:
             return path
 
+    def prune_stale_connections(self) -> int:
+        """Remove connection entries whose database files no longer exist."""
+        from pathlib import Path
+        removed = 0
+        with self._lock:
+            state = self._read_state()
+            connections = state.get("connections") or {}
+            stale_ids = []
+            for cid, rec in connections.items():
+                db_path = rec.get("database_path")
+                if not db_path:
+                    stale_ids.append(cid)
+                    continue
+                if not Path(db_path).exists():
+                    stale_ids.append(cid)
+            if stale_ids:
+                for cid in stale_ids:
+                    del connections[cid]
+                state["connections"] = connections
+                self._write_state(state)
+                removed = len(stale_ids)
+        return removed
+
     # ------------------------------------------------------------------
     # template helpers
     # ------------------------------------------------------------------
+    def prune_stale_templates(self, pdf_root: "Path", excel_root: "Path") -> int:
+        """Remove template entries whose directories no longer exist on disk."""
+        from pathlib import Path
+        removed = 0
+        with self._lock:
+            state = self._read_state()
+            templates = state.get("templates") or {}
+            stale_ids = []
+            for tid, rec in templates.items():
+                kind = str(rec.get("kind") or rec.get("template_type") or "pdf").lower()
+                base = excel_root if kind == "excel" else pdf_root
+                tdir = Path(base) / tid
+                if not tdir.exists():
+                    stale_ids.append(tid)
+            if stale_ids:
+                for tid in stale_ids:
+                    del templates[tid]
+                state["templates"] = templates
+                self._write_state(state)
+                removed = len(stale_ids)
+        return removed
+
     def list_templates(self) -> list[dict]:
         with self._lock:
             state = self._read_state()
