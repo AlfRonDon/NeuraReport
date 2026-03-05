@@ -95,6 +95,18 @@ def _html_to_pdf_subprocess(
         if home_tmp.is_dir():
             env["TMPDIR"] = str(home_tmp)
 
+    # In a frozen PyInstaller exe, sys.executable points to the .exe itself
+    # which doesn't accept script arguments.  Fall back to in-process Playwright.
+    if getattr(_sys, "frozen", False):
+        from ._pdf_worker import _convert as _pdf_convert
+        _run_async(_pdf_convert(
+            html_path=str(html_path.resolve()),
+            pdf_path=str(pdf_path.resolve()),
+            base_dir=str((base_dir or html_path.parent).resolve()),
+            pdf_scale=pdf_scale,
+        ))
+        return
+
     result = subprocess.run(
         [_sys.executable, _PDF_WORKER_SCRIPT, args_json],
         capture_output=True,
