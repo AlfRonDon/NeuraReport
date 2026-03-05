@@ -175,6 +175,8 @@ class ContractAdapter:
         self._required_filters = _ensure_mapping(filters.get("required"))
         self._optional_filters = _ensure_mapping(filters.get("optional"))
 
+        self._pre_aggregate = self._raw.get("pre_aggregate") or {}
+        self._group_aggregate = self._raw.get("group_aggregate") or {}
         self._reshape_rules = self._raw.get("reshape_rules") or []
         self._row_computed = _ensure_mapping_mixed(self._raw.get("row_computed"))
         self._totals_math = _ensure_mapping_mixed(self._raw.get("totals_math"))
@@ -450,6 +452,17 @@ class ContractAdapter:
             mask = mask & (dt_series <= end_dt)
         return df.loc[mask.fillna(False)]
 
+    @staticmethod
+    def _normalize_numeric_str(s: str) -> str:
+        """Normalize numeric strings: '1.0' → '1', '2.00' → '2', 'abc' → 'abc'."""
+        try:
+            f = float(s)
+            if f == int(f):
+                return str(int(f))
+            return str(f)
+        except (ValueError, TypeError):
+            return s
+
     def _apply_value_filters_df(self, df, value_filters: Dict[str, list]):
         """Apply equality filters from contract optional_filters."""
         import pandas as pd
@@ -466,9 +479,101 @@ class ContractAdapter:
             normalized = [str(v).strip() for v in filter_values if str(v or "").strip()]
             if not normalized:
                 continue
+            # Normalize both sides for numeric comparison (e.g. "1" matches "1.0")
+            norm_set = set(normalized) | {self._normalize_numeric_str(v) for v in normalized}
             series = df[col_name].astype(str).str.strip()
-            mask = mask & series.isin(normalized)
+            norm_series = series.map(self._normalize_numeric_str)
+            mask = mask & (series.isin(norm_set) | norm_series.isin(norm_set))
         return df.loc[mask.fillna(False)]
+
+    def _apply_pre_aggregate_df(self, df):
+        """Collapse time-series into one row per batch (first_per_run strategy).
+
+        Reads ``pre_aggregate`` from the contract:
+          batch_column   – column that identifies the batch (e.g. OIL_BACTH_COUNT)
+          timestamp_column – used for ordering within each batch
+          strategy       – currently only "first_per_run"
+          skip_value     – batch_column value to exclude (e.g. 0)
+        """
+        pa = self._pre_aggregate
+        batch_col = pa.get("batch_column", "")
+        ts_col = pa.get("timestamp_column", "")
+        strategy = pa.get("strategy", "")
+        skip_value = pa.get("skip_value")
+
+        if not batch_col or batch_col not in df.columns:
+            return df
+        if df.empty:
+            return df
+
+        # Filter out rows matching skip_value
+        if skip_value is not None:
+            mask = df[batch_col].astype(str).str.strip() != str(skip_value).strip()
+            df = df.loc[mask]
+            if df.empty:
+                return df
+
+        if strategy == "first_per_run":
+            # Sort by timestamp if available, then keep first row per batch
+            if ts_col and ts_col in df.columns:
+                df = df.sort_values(ts_col, ascending=True)
+                # Capture last timestamp per batch as end_timestamp_utc
+                # (before dedup removes them)
+                end_ts = df.groupby(batch_col, sort=False)[ts_col].transform("last")
+                df = df.copy()
+                df["end_timestamp_utc"] = end_ts
+            df = df.drop_duplicates(subset=[batch_col], keep="first")
+
+        logger.info("pre_aggregate applied: %s → %d rows", strategy, len(df))
+        return df
+
+    def _apply_group_aggregate_df(self, df):
+        """Aggregate across all batches (e.g. sum) to collapse N batch rows → 1 row.
+
+        Reads ``group_aggregate`` from the contract:
+          strategy – "sum" (only supported strategy currently)
+          columns  – list of columns to aggregate
+        Non-aggregated columns keep first row values.
+        """
+        import pandas as pd
+
+        ga = self._group_aggregate
+        strategy = ga.get("strategy", "")
+        agg_columns = ga.get("columns", [])
+
+        if not strategy or not agg_columns or df.empty:
+            return df
+
+        if strategy == "sum":
+            # Resolve actual column names in the DataFrame
+            agg_map = {}
+            for col in agg_columns:
+                actual = self._resolve_df_col(df, col)
+                if actual:
+                    agg_map[actual] = "sum"
+
+            if not agg_map:
+                return df
+
+            # Coerce aggregation columns to numeric
+            for col in agg_map:
+                df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
+
+            # Build aggregation dict: sum for specified cols, first for everything else
+            full_agg = {}
+            for col in df.columns:
+                if col in agg_map:
+                    full_agg[col] = "sum"
+                else:
+                    full_agg[col] = "first"
+
+            result = df.groupby(lambda _: 0, sort=False).agg(full_agg)
+            result = result.reset_index(drop=True)
+            logger.info("group_aggregate applied: %s → %d rows (from %d)", strategy, len(result), len(df))
+            return result
+
+        logger.warning("group_aggregate strategy %r not supported, skipping", strategy)
+        return df
 
     @staticmethod
     def _resolve_df_col(df, col: str) -> str | None:
@@ -492,6 +597,19 @@ class ContractAdapter:
                 return actual
         return None
 
+    @staticmethod
+    def _coerce_numeric(val):
+        """Coerce a value or Series to numeric for arithmetic ops."""
+        import pandas as pd
+        if isinstance(val, pd.Series):
+            return pd.to_numeric(val, errors="coerce").fillna(0)
+        if isinstance(val, str):
+            try:
+                return float(val)
+            except (ValueError, TypeError):
+                return 0
+        return val
+
     def _apply_declarative_op(self, df, op_spec) -> Any:
         """Interpret a declarative operation spec and return computed result.
 
@@ -507,28 +625,28 @@ class ContractAdapter:
 
         op = op_spec.get("op", "").lower()
         if op == "subtract":
-            left = self._resolve_agg_or_col(df, op_spec.get("left", 0))
-            right = self._resolve_agg_or_col(df, op_spec.get("right", 0))
+            left = self._coerce_numeric(self._resolve_agg_or_col(df, op_spec.get("left", 0)))
+            right = self._coerce_numeric(self._resolve_agg_or_col(df, op_spec.get("right", 0)))
             if left is None or right is None:
                 return None
             return left - right
         elif op == "add":
-            left = self._resolve_agg_or_col(df, op_spec.get("left", 0))
-            right = self._resolve_agg_or_col(df, op_spec.get("right", 0))
+            left = self._coerce_numeric(self._resolve_agg_or_col(df, op_spec.get("left", 0)))
+            right = self._coerce_numeric(self._resolve_agg_or_col(df, op_spec.get("right", 0)))
             if left is None or right is None:
                 return None
             return left + right
         elif op == "multiply":
-            left = self._resolve_agg_or_col(df, op_spec.get("left", 0))
-            right = self._resolve_agg_or_col(df, op_spec.get("right", 0))
+            left = self._coerce_numeric(self._resolve_agg_or_col(df, op_spec.get("left", 0)))
+            right = self._coerce_numeric(self._resolve_agg_or_col(df, op_spec.get("right", 0)))
             if left is None or right is None:
                 return None
             return left * right
         elif op == "divide":
             num_spec = op_spec.get("numerator", op_spec.get("left", ""))
             den_spec = op_spec.get("denominator", op_spec.get("right", ""))
-            num = self._resolve_agg_or_col(df, num_spec)
-            den = self._resolve_agg_or_col(df, den_spec)
+            num = self._coerce_numeric(self._resolve_agg_or_col(df, num_spec))
+            den = self._coerce_numeric(self._resolve_agg_or_col(df, den_spec))
             if isinstance(den, (int, float)) and den == 0:
                 return None
             if isinstance(num, pd.Series) and isinstance(den, pd.Series):
@@ -748,6 +866,14 @@ class ContractAdapter:
         if value_filters:
             df = self._apply_value_filters_df(df, value_filters)
 
+        # Apply pre_aggregate (collapse time-series into one row per batch)
+        if self._pre_aggregate:
+            df = self._apply_pre_aggregate_df(df)
+
+        # Apply group_aggregate (sum across batches → single row)
+        if self._group_aggregate:
+            df = self._apply_group_aggregate_df(df)
+
         # Apply reshape rules if present
         melt_alias_set: set[str] = set()
         if self._reshape_rules:
@@ -825,7 +951,11 @@ class ContractAdapter:
                 })
                 result_cols[tok] = ""
 
-        result_df = pd.DataFrame(result_cols)
+        try:
+            result_df = pd.DataFrame(result_cols)
+        except ValueError:
+            # All scalar values (e.g. every token unresolved → "") — wrap in list
+            result_df = pd.DataFrame({k: [v] for k, v in result_cols.items()})
 
         # Carry forward __batch_idx__ and metadata columns for BLOCK_REPEAT grouping
         if melt_alias_set and "__batch_idx__" in df.columns:

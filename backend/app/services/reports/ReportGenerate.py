@@ -697,6 +697,25 @@ def fill_and_print(
         serial_columns = [col for col in columns if _is_counter_field(col)]
         if not serial_tokens and not serial_columns:
             return
+
+        # Skip fields whose existing values are non-numeric strings
+        # (e.g. MELT-produced literals like "Scale-2", "Scale-3").
+        def _has_non_numeric(field: str) -> bool:
+            for row in rows:
+                val = row.get(field)
+                if val is None or isinstance(val, (int, float)):
+                    continue
+                try:
+                    float(str(val))
+                except (ValueError, TypeError):
+                    return True
+            return False
+
+        serial_tokens = [t for t in serial_tokens if not _has_non_numeric(t)]
+        serial_columns = [c for c in serial_columns if not _has_non_numeric(c)]
+        if not serial_tokens and not serial_columns:
+            return
+
         for idx, row in enumerate(rows, start=1):
             for tok in serial_tokens:
                 row[tok] = idx
@@ -749,28 +768,62 @@ def fill_and_print(
             if base in cf:
                 return cf[base]
 
-        # 4. Date derivation: batch_date → date portion of start_time/end_time
+        # 3b. Timestamp column fallback: start_time → timestamp_utc
+        if tok_low in ("start_time",) and "timestamp_utc" in cf:
+            ts = str(cf["timestamp_utc"])
+            # Extract time portion from ISO timestamp (e.g. "2026-02-26T13:41:26+05:30" → "13:41:26+05:30")
+            if "T" in ts:
+                return ts.split("T", 1)[1]
+            if " " in ts:
+                return ts.split(" ", 1)[1]
+            return ts
+
+        # 3c. End time fallback: end_time → end_timestamp_utc (or timestamp_utc)
+        if tok_low in ("end_time",):
+            for et_col in ("end_timestamp_utc", "end_time"):
+                if et_col in cf:
+                    ts = str(cf[et_col])
+                    if "T" in ts:
+                        return ts.split("T", 1)[1]
+                    if " " in ts:
+                        return ts.split(" ", 1)[1]
+                    return ts
+
+        # 4. Date derivation: batch_date → date portion of start_time/end_time/timestamp_utc
         if "date" in tok_low:
-            for dt_col in ("start_time", "end_time"):
+            for dt_col in ("start_time", "end_time", "timestamp_utc"):
                 if dt_col in cf:
                     dt_str = str(cf[dt_col])
+                    if "T" in dt_str:
+                        return dt_str.split("T")[0]
                     if " " in dt_str:
                         return dt_str.split(" ")[0]
                     return dt_str
 
-        # 5. Duration computation from start_time and end_time
+        # 5. Duration computation from start_time and end_time (or timestamp_utc / end_timestamp_utc)
         if tok_low in ("duration_sec", "dur_sec", "duration"):
-            st = cf.get("start_time")
-            et = cf.get("end_time")
-            if st and et:
+            from datetime import datetime
+            def _try_parse_iso(s):
+                if not s:
+                    return None
+                s = str(s)
                 try:
-                    from .common_helpers import _parse_date_like
-                    st_dt = _parse_date_like(st)
-                    et_dt = _parse_date_like(et)
-                    if st_dt and et_dt:
-                        return int((et_dt - st_dt).total_seconds())
-                except Exception:
+                    return datetime.fromisoformat(s.replace("Z", "+00:00"))
+                except (ValueError, TypeError):
                     pass
+                for pat in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M:%S"):
+                    try:
+                        return datetime.strptime(s, pat)
+                    except ValueError:
+                        continue
+                return None
+
+            st_raw = cf.get("start_time") or cf.get("timestamp_utc")
+            et_raw = cf.get("end_time") or cf.get("end_timestamp_utc")
+            st_dt = _try_parse_iso(st_raw)
+            et_dt = _try_parse_iso(et_raw)
+            if st_dt and et_dt:
+                return int(abs((et_dt - st_dt).total_seconds()))
 
         # 6. Recipe aliases
         if tok_low in ("recipe_code", "recipe_no"):
@@ -854,7 +907,9 @@ def fill_and_print(
             _reindex_serial_fields(prepared, row_tokens_template, row_columns)
         return prepared
 
-    if multi_key_selected and not __force_single:
+    # Skip fanout when contract says to aggregate across batches
+    _has_group_aggregate = bool((OBJ.get("group_aggregate") or {}).get("strategy"))
+    if multi_key_selected and not __force_single and not _has_group_aggregate:
         html_sections: list[str] = []
         tmp_outputs: list[tuple[Path, Path]] = []
         try:
@@ -1439,7 +1494,7 @@ def fill_and_print(
     generator_results: dict[str, list[dict[str, object]]] | None = None
 
     # --- DataFrame pipeline ---
-    if not multi_key_selected:
+    if not multi_key_selected or _has_group_aggregate:
         try:
             from .dataframe_pipeline import DataFramePipeline
 
@@ -1504,6 +1559,28 @@ def fill_and_print(
     # ---- Only touch tokens outside <style>/<script> ----
     def format_token_value(token: str, raw_value: Any) -> str:
         return contract_adapter.format_value(token, raw_value)
+
+    def _fast_row_sub(template: str, tokens: list[str], col_lookup: dict[str, str],
+                      rows: list[dict]) -> list[str]:
+        """Single-pass token substitution for row templates (no <style>/<script>).
+
+        Pre-compiles ONE regex for all tokens and replaces them in a single
+        re.sub call per row — O(rows) instead of O(rows × tokens).
+        """
+        if not tokens:
+            return [template] * len(rows)
+        token_alts = "|".join(re.escape(t) for t in tokens)
+        pat = re.compile(r"\{\{?\s*(" + token_alts + r")\s*\}\}?")
+        results = []
+        for r in rows:
+            def _repl(m, _row=r):
+                t = m.group(1)
+                col = col_lookup.get(t)
+                if not col:
+                    return m.group(0)
+                return format_token_value(t, _row.get(col))
+            results.append(pat.sub(_repl, template))
+        return results
 
     def _inject_page_counter_spans(
         html_in: str,
@@ -2301,28 +2378,20 @@ def fill_and_print(
 
             _reindex_serial_fields(filtered_rows, row_tokens_in_template, row_cols_needed)
 
-            parts: list[str] = []
+            # Pre-build column lookup once per batch (avoids repeated _extract_col_name)
+            _row_col_lookup = {}
+            for t in row_tokens_in_template:
+                col = _extract_col_name(PLACEHOLDER_TO_COL.get(t))
+                if col:
+                    _row_col_lookup[t] = col
+
             if row_render_mode == "tbody" and row_template and row_span and tbody_m and tbody_inner:
-                for r in filtered_rows:
-                    tr = row_template
-                    for t in row_tokens_in_template:
-                        col = _extract_col_name(PLACEHOLDER_TO_COL.get(t))
-                        if not col:
-                            continue
-                        tr = sub_token(tr, t, format_token_value(t, r.get(col)))
-                    parts.append(tr)
+                parts = _fast_row_sub(row_template, row_tokens_in_template, _row_col_lookup, filtered_rows)
 
                 new_tbody_inner = tbody_inner[: row_span[0]] + "\n".join(parts) + tbody_inner[row_span[1] :]
                 block_html = block_html[: tbody_m.start(1)] + new_tbody_inner + block_html[tbody_m.end(1) :]
             else:
-                for r in filtered_rows:
-                    tr = prototype_block  # the <tr> itself
-                    for t in row_tokens_in_template:
-                        col = _extract_col_name(PLACEHOLDER_TO_COL.get(t))
-                        if not col:
-                            continue
-                        tr = sub_token(tr, t, format_token_value(t, r.get(col)))
-                    parts.append(tr)
+                parts = _fast_row_sub(prototype_block, row_tokens_in_template, _row_col_lookup, filtered_rows)
 
                 block_html = "\n".join(parts)
 
