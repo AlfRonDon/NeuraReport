@@ -301,7 +301,7 @@ def fill_and_print(
                     _columns_cache[_tbl] = set(dataframe_loader.frame(_tbl).columns)
                 except Exception:
                     _columns_cache[_tbl] = set()
-            if _col not in _columns_cache[_tbl] and _col != "__rowid__":
+            if _col not in _columns_cache[_tbl] and not _col.startswith("__"):
                 _missing_refs.append(
                     f"  {_token!r} -> {_col_ref!r} (column {_col!r} not in table {_tbl!r})"
                 )
@@ -492,11 +492,11 @@ def fill_and_print(
         if not tokens:
             yield {}
             return
-        max_combos_raw = os.getenv("NEURA_REPORT_MAX_KEY_COMBINATIONS", "50")
+        max_combos_raw = os.getenv("NEURA_REPORT_MAX_KEY_COMBINATIONS", "500")
         try:
             max_combos = int(max_combos_raw)
         except ValueError:
-            max_combos = 50
+            max_combos = 500
         max_combos = max(1, max_combos)
         estimated = 1
         for values in value_lists:
@@ -677,6 +677,11 @@ def fill_and_print(
         counter_markers = ("serial", "sequence", "seq", "counter")
         if any(marker in normalized for marker in counter_markers):
             return True
+        # Exclude data fields that happen to end with counter-like suffixes
+        # (e.g. row_bin_no is a bin identifier, row_recipe_no is a recipe ref)
+        data_markers = ("bin", "recipe", "batch", "machine")
+        if any(marker in normalized for marker in data_markers):
+            return False
         counter_suffixes = (
             "slno",
             "srno",
