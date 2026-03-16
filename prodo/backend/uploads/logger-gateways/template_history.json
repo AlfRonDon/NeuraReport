@@ -1,18 +1,7 @@
 [
   {
-    "timestamp": "2026-03-02T14:30:07+00:00",
-    "type": "ai",
-    "notes": "AI-assisted HTML edit via template editor",
-    "instructions": "Add a summary statistics row at the bottom of the table showing the total count of gateways and the number of active vs inactive gateways.",
-    "summary": [
-      "Added a <tfoot> summary row at the bottom of the gateway table displaying total gateway count ({total_gateways}), active count ({active_gateways}), and inactive count ({inactive_gateways})",
-      "Active count is styled green and inactive count styled red to match the existing badge color scheme",
-      "Added supporting CSS classes: summary-row, summary-stat-label, summary-stat-value, summary-active, and summary-inactive for consistent styling"
-    ]
-  },
-  {
-    "timestamp": "2026-03-02T14:30:21+00:00",
-    "type": "undo",
-    "notes": "Undo last template HTML edit"
+    "timestamp": "2026-02-18T17:01:42+00:00",
+    "type": "chat",
+    "notes": "Template created from AI chat conversation"
   }
 ]

@@ -1,13 +1,11 @@
 {
-  "correlation_id": null,
+  "correlation_id": "job-76650ac749",
   "file_checksums": {
     "constant_replacements.json": "bf72c494df7c494c10a173aeff7ef3a7f2a599c3c567b39dd8cfd5712b09daac",
     "contract.json": "c1d9cd7c7950cac25b567484d48bfe48f13242a1582ae8b4765125a9ba826b41",
     "contract_v2_meta.json": "2b8a4fa2f2073e3cb38f359de0de1cd6c09becde6fde4741356b8fb371df9bad",
     "filled_1771434284.html": "2ec4ddb6bac36155a3362bf18d4deddf15019ef23da6eb71c10652c79d2e6c03",
     "filled_1771434284.pdf": "fb5320cfd5f1f8a0758e978b424c0d22b97a764fc2d5642455fc9f5ae1343e62",
-    "filled_1772494123.html": "f41aef23158d1453ce4eb08ec70bf2db63bf05667188a6d559ed4ddab8098909",
-    "filled_1772494123.pdf": "4600384e6daebe476dee02b0c64366419d4f6194115b1306125adda3b86a60bf",
     "mapping_keys.json": "64fb60cde31efcddbc3406d88e14bd31d32b86ac8f21d57e810dbea7522820ac",
     "mapping_pdf_labels.json": "324a9db22ee3168fb9f896ea3a7f8eeffb219ec088bba211834b3530a7974908",
     "mapping_step3.json": "182c6c244a211af2317b94c8e7de164c93aa81cd16d53e26fcc36d0f7aca27e6",
@@ -23,8 +21,6 @@
     "contract_v2_meta.json": "contract_v2_meta.json",
     "filled_1771434284.html": "filled_1771434284.html",
     "filled_1771434284.pdf": "filled_1771434284.pdf",
-    "filled_1772494123.html": "filled_1772494123.html",
-    "filled_1772494123.pdf": "filled_1772494123.pdf",
     "mapping_keys.json": "mapping_keys.json",
     "mapping_pdf_labels.json": "mapping_pdf_labels.json",
     "mapping_step3.json": "mapping_step3.json",
@@ -46,11 +42,10 @@
     "dialect_hint=",
     "/home/rohith/desktop/NeuraReport/prodo/backend/uploads/logger-schemas/mapping_pdf_labels.json",
     "/home/rohith/desktop/NeuraReport/prodo/backend/uploads/logger-schemas/contract.json",
-    "postgresql://postgres@localhost:5432/meta_data_fast",
-    "postgresql://neuract:neuract123@localhost:5434/neuract_db"
+    "postgresql://postgres@localhost:5432/meta_data_fast"
   ],
-  "pid": 349366,
-  "produced_at": "2026-03-02T23:28:44.152153+00:00",
+  "pid": 3342082,
+  "produced_at": "2026-02-18T17:04:45.265801+00:00",
   "schema_version": "1.0",
   "step": "reports_run"
 }

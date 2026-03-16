@@ -6,10 +6,6 @@
     "contract_v2_meta.json": "bc2c178185e753e6911c036758e4232438b78b0f06357faa9eb84674af84ff16",
     "filled_1771227250.html": "eec4c735c6bf7515554d6dd2460a492b7e581ebccfc8e575f78984fa0647ab67",
     "filled_1771227250.pdf": "2aa7ddf25950fd2b5a289d6293d2a1c32f9e82ed4938837c63e9b4e897fef055",
-    "filled_1772493775.html": "f126acc27dfec8821609788066fe5d9bf8f46d694f9f0db248f75cd80fa02fc6",
-    "filled_1772493775.pdf": "b36bd3ce96ad9eb3e6dc2410525c8d97c59ce9646598b002f6ee3d3691b41779",
-    "filled_1772494400.html": "1b2745797a98ef9f6763a141cbbe2117eab5fcae59c2240904c632b045f1b6e3",
-    "filled_1772494400.pdf": "502eeb2adc3b0ff950dbd4abf022dc8eb12fdeecded6fbf84c58e20c6eebb9fb",
     "fix_metrics.json": "64f1ab85c2f00c7c0cc55037b28599dc01500615908a0ee185a0851a3ed9d756",
     "mapping_keys.json": "87152ac0a5432f2753ecb8ae4bdad485c4d59258cb24750d9c6e2332382a4de0",
     "mapping_pdf_labels.json": "9544cfc378525e5da5be85d108e51b0a39fb719ede6754534204b62125915956",
@@ -31,10 +27,6 @@
     "contract_v2_meta.json": "contract_v2_meta.json",
     "filled_1771227250.html": "filled_1771227250.html",
     "filled_1771227250.pdf": "filled_1771227250.pdf",
-    "filled_1772493775.html": "filled_1772493775.html",
-    "filled_1772493775.pdf": "filled_1772493775.pdf",
-    "filled_1772494400.html": "filled_1772494400.html",
-    "filled_1772494400.pdf": "filled_1772494400.pdf",
     "fix_metrics.json": "fix_metrics.json",
     "mapping_keys.json": "mapping_keys.json",
     "mapping_pdf_labels.json": "mapping_pdf_labels.json",
@@ -62,11 +54,10 @@
     "contract_v2_input_signature=e1b67b5b3006c865cc00be8ef7c45badafcef16954cd07c3cf42780b096655f5",
     "dialect_hint=",
     "/home/rohith/desktop/NeuraReport/prodo/backend/uploads/05-intuit-property-management-invoice-545e53/contract.json",
-    "/home/rohith/desktop/NeuraReport/samples/report_generation_testkit/databases/05_intuit_property_management_invoice.sqlite3",
-    "postgresql://neuract:neuract123@localhost:5434/neuract_db"
+    "/home/rohith/desktop/NeuraReport/samples/report_generation_testkit/databases/05_intuit_property_management_invoice.sqlite3"
   ],
-  "pid": 349366,
-  "produced_at": "2026-03-02T23:33:21.780867+00:00",
+  "pid": 417772,
+  "produced_at": "2026-02-16T07:34:11.205846+00:00",
   "schema_version": "1.0",
   "step": "reports_run"
 }

@@ -71,6 +71,21 @@ def _run_async(coro):
     return asyncio.run(coro)
 
 
+def _pdf_worker_mp_target(html_path: str, pdf_path: str, base_dir: str, pdf_scale: float | None) -> None:
+    """Target function for multiprocessing.Process — runs _convert in a fresh process."""
+    from backend.app.services.reports._pdf_worker import _convert
+    asyncio.run(_convert(
+        html_path=html_path,
+        pdf_path=pdf_path,
+        base_dir=base_dir,
+        pdf_scale=pdf_scale,
+    ))
+
+
+# Timeout for the PDF worker process (10 minutes — large chunked docs can take a while).
+_PDF_PROCESS_TIMEOUT = int(os.environ.get("NEURA_PDF_PROCESS_TIMEOUT", "600"))
+
+
 def _html_to_pdf_subprocess(
     html_path: Path, pdf_path: Path, base_dir: Path, pdf_scale: float | None = None
 ) -> None:
@@ -80,17 +95,34 @@ def _html_to_pdf_subprocess(
     ``asyncio.run()`` is called from a non-main thread inside uvicorn.
 
     In PyInstaller frozen mode, sys.executable is the bundled exe which
-    cannot run .py scripts, so we call the worker function in-process.
+    cannot run .py scripts.  We use multiprocessing.Process instead so the
+    PDF work runs in a separate OS process — freeing the GIL and preventing
+    the main backend from stalling during large chunked renders.
     """
-    # PyInstaller frozen mode: run in-process (no subprocess possible)
+    # PyInstaller frozen mode: use multiprocessing.Process (requires freeze_support)
     if getattr(_sys, "frozen", False):
-        from ._pdf_worker import _convert
-        _run_async(_convert(
-            html_path=str(html_path.resolve()),
-            pdf_path=str(pdf_path.resolve()),
-            base_dir=str((base_dir or html_path.parent).resolve()),
-            pdf_scale=pdf_scale,
-        ))
+        import multiprocessing
+
+        args = (
+            str(html_path.resolve()),
+            str(pdf_path.resolve()),
+            str((base_dir or html_path.parent).resolve()),
+            pdf_scale,
+        )
+        proc = multiprocessing.Process(
+            target=_pdf_worker_mp_target,
+            args=args,
+            daemon=False,
+        )
+        proc.start()
+        proc.join(timeout=_PDF_PROCESS_TIMEOUT)
+        if proc.is_alive():
+            logger.error("PDF worker process timed out after %ds, terminating", _PDF_PROCESS_TIMEOUT)
+            proc.terminate()
+            proc.join(timeout=10)
+            raise RuntimeError(f"PDF worker process timed out after {_PDF_PROCESS_TIMEOUT}s")
+        if proc.exitcode != 0:
+            raise RuntimeError(f"PDF worker process failed with exit code {proc.exitcode}")
         return
 
     import json as _json
@@ -113,18 +145,18 @@ def _html_to_pdf_subprocess(
         [_sys.executable, _PDF_WORKER_SCRIPT, args_json],
         capture_output=True,
         text=True,
-        timeout=180,
+        timeout=_PDF_PROCESS_TIMEOUT,
         env=env,
     )
     if result.returncode != 0:
-        stderr_tail = (result.stderr or "")[-800:]
+        stderr_tail = (result.stderr or "")[-2000:]
         raise RuntimeError(f"PDF subprocess failed:\n{stderr_tail}")
 
 
 from .contract_adapter import ContractAdapter, format_decimal_str
 from .date_utils import get_col_type, mk_between_pred_for_date
 from .discovery_excel import discover_batches_and_counts as discover_batches_excel
-from backend.app.repositories.dataframes import DuckDBDataFrameQuery, SQLiteDataFrameLoader
+from backend.app.repositories.dataframes import SQLiteDataFrameLoader
 from .common_helpers import (
     _format_for_token,
     _has_time_component,
@@ -354,7 +386,6 @@ def fill_and_print(
     END_DATE: str,
     batch_ids: list[str] | None = None,
     KEY_VALUES: dict | None = None,
-    GENERATOR_BUNDLE: dict | None = None,
     __force_single: bool = False,
     BRAND_KIT_ID: str | None = None,
 ):
@@ -811,23 +842,34 @@ def fill_and_print(
                 row[col] = idx
 
     def _value_for_token(row: Mapping[str, Any], token: str) -> Any:
+        def _sanitize(v: Any) -> Any:
+            if v is None:
+                return None
+            try:
+                import math
+                if isinstance(v, float) and math.isnan(v):
+                    return None
+            except (TypeError, ValueError):
+                pass
+            return v
+
         if not token:
             return None
         if token in row:
-            return row[token]
+            return _sanitize(row[token])
         normalized = str(token).lower()
         for key in row.keys():
             if isinstance(key, str) and key.lower() == normalized:
-                return row[key]
+                return _sanitize(row[key])
         mapped = PLACEHOLDER_TO_COL.get(token)
         if mapped:
             col = _extract_col_name(mapped)
             if col:
                 if col in row:
-                    return row[col]
+                    return _sanitize(row[col])
                 for key in row.keys():
                     if isinstance(key, str) and key.lower() == col.lower():
-                        return row[key]
+                        return _sanitize(row[key])
         return None
 
     def _prune_placeholder_rows(rows: Sequence[Mapping[str, Any]], tokens: Sequence[str]) -> list[dict[str, Any]]:
@@ -892,7 +934,6 @@ def fill_and_print(
                     END_DATE=END_DATE,
                     batch_ids=None,
                     KEY_VALUES=selection or None,
-                    GENERATOR_BUNDLE=GENERATOR_BUNDLE,
                     __force_single=True,
                 )
                 html_sections.append(Path(result["html_path"]).read_text(encoding="utf-8", errors="ignore"))
@@ -1050,82 +1091,6 @@ def fill_and_print(
                 return dt_obj.strftime("%Y-%m-%d %H:%M:%S")
             return dt_obj.strftime("%Y-%m-%d")
         return "" if raw_value is None else str(raw_value).strip()
-
-    def _run_generator_entrypoints(
-        entrypoints: dict,
-        sql_params: dict[str, object],
-        df_loader: SQLiteDataFrameLoader,
-    ) -> dict[str, list[dict[str, object]]]:
-        if not entrypoints:
-            return {}
-        alias_fix_patterns = [
-            re.compile(r"\brows\.", re.IGNORECASE),
-            re.compile(r"\brows_agg\.", re.IGNORECASE),
-        ]
-
-        def _wrap_date_param(sql_text: str, param: str) -> str:
-            pattern = re.compile(rf":{param}\b")
-
-            def _replace(match: re.Match[str]) -> str:
-                start = match.start()
-                prefix = sql_text[:start].rstrip()
-                prefix_lower = prefix.lower()
-                if prefix_lower.endswith("date(") or prefix_lower.endswith("datetime("):
-                    return match.group(0)
-                return f"DATE({match.group(0)})"
-
-            return pattern.sub(_replace, sql_text)
-
-        def _prepare_sql(sql_text: str) -> str:
-            updated = re.sub(r"PARAM:([A-Za-z0-9_]+)", r":\1", sql_text)
-            if "DATE(" not in updated.upper():
-                return updated
-            for param in ("from_date", "to_date"):
-                updated = _wrap_date_param(updated, param)
-            return updated
-
-        def _attempt_sql_fix(sql_text: str, exc: Exception | None) -> str | None:
-            if exc is None:
-                return None
-            message = str(exc).lower()
-            if "no such column" not in message:
-                return None
-            fixed_sql = sql_text
-            for pattern in alias_fix_patterns:
-                fixed_sql = pattern.sub("", fixed_sql)
-            return fixed_sql if fixed_sql != sql_text else None
-
-        frames = df_loader.frames()
-        query_engine = DuckDBDataFrameQuery(frames, loader=df_loader)
-        try:
-            results: dict[str, list[dict[str, object]]] = {}
-            for name in ("header", "rows", "totals"):
-                sql = entrypoints.get(name)
-                if not sql:
-                    results[name] = []
-                    continue
-                current_sql = _prepare_sql(sql)
-                last_error: Exception | None = None
-                for attempt in range(2):
-                    try:
-                        df_rows = query_engine.execute(current_sql, sql_params)
-                    except Exception as exc:
-                        last_error = exc
-                        fixed_sql = _attempt_sql_fix(current_sql, exc)
-                        if fixed_sql is not None and fixed_sql != current_sql:
-                            current_sql = fixed_sql
-                            continue
-                        raise
-                    else:
-                        last_error = None
-                        results[name] = df_rows.to_dict("records")
-                        break
-                else:
-                    assert last_error is not None
-                    raise last_error
-            return results
-        finally:
-            query_engine.close()
 
     start_dt = _parse_date_like(START_DATE)
     end_dt = _parse_date_like(END_DATE)
@@ -1383,10 +1348,12 @@ def fill_and_print(
     sql_params: dict[str, object] = {
         "from_date": db_start,
         "to_date": db_end,
+        "start_date": db_start,
+        "end_date": db_end,
     }
 
     for token in contract_adapter.param_tokens:
-        if token in ("from_date", "to_date"):
+        if token in ("from_date", "to_date", "start_date", "end_date"):
             continue
         if token in key_values_map:
             first_value = _first_key_value(key_values_map[token])
@@ -1428,120 +1395,25 @@ def fill_and_print(
 
     _apply_date_param_defaults(sql_params)
 
-    if "recipe_code" in sql_params:
-        _log_debug(
-            "[multi-debug] generator param binding",
-            "force_single" if __force_single else "fanout_root",
-            "key_values=",
-            key_values_map,
-            "recipe_code=",
-            sql_params.get("recipe_code"),
-        )
+    # --- DataFrame pipeline (sole data path) ---
+    from .dataframe_pipeline import DataFramePipeline
 
-    if GENERATOR_BUNDLE is None:
-        generator_dir = TEMPLATE_PATH.parent / "generator"
-        meta_path = generator_dir / "generator_assets.json"
-        if meta_path.exists():
-            try:
-                meta_payload = json.loads(meta_path.read_text(encoding="utf-8"))
-            except Exception:
-                meta_payload = None
-            else:
-                bundle: dict[str, object] = {"meta": meta_payload}
-                output_schemas_path = generator_dir / "output_schemas.json"
-                if output_schemas_path.exists():
-                    try:
-                        bundle["output_schemas"] = json.loads(output_schemas_path.read_text(encoding="utf-8"))
-                    except Exception:
-                        pass
-                GENERATOR_BUNDLE = bundle
+    df_value_filters: dict[str, list] = {}
+    if key_values_map:
+        for name, values in key_values_map.items():
+            df_value_filters[name] = values
 
-    generator_results: dict[str, list[dict[str, object]]] | None = None
+    pipeline = DataFramePipeline(
+        contract_adapter=contract_adapter,
+        loader=dataframe_loader,
+        params=sql_params,
+        start_date=sql_params.get("start_date") or sql_params.get("from_date"),
+        end_date=sql_params.get("end_date") or sql_params.get("to_date"),
+        value_filters=df_value_filters,
+    )
+    generator_results = pipeline.execute()
 
-    # --- SQL entrypoints via DuckDB DataFrames ---
-    if GENERATOR_BUNDLE and isinstance(GENERATOR_BUNDLE.get("meta"), dict):
-        _entrypoints = GENERATOR_BUNDLE["meta"].get("entrypoints")
-        if _entrypoints and isinstance(_entrypoints, dict) and any(
-            _entrypoints.get(k) for k in ("header", "rows", "totals")
-        ):
-            try:
-                generator_results = _run_generator_entrypoints(
-                    _entrypoints, sql_params, dataframe_loader
-                )
-                if not any(generator_results.get(s) for s in ("header", "rows", "totals")):
-                    logger.warning("SQL entrypoints returned empty; falling back to contract pipeline")
-                    generator_results = None
-                else:
-                    logger.info(
-                        "SQL entrypoints succeeded: header=%d rows=%d totals=%d",
-                        len(generator_results.get("header", [])),
-                        len(generator_results.get("rows", [])),
-                        len(generator_results.get("totals", [])),
-                    )
-            except Exception as exc:
-                logger.warning("SQL entrypoints failed; falling back to contract pipeline: %s", exc, exc_info=True)
-                generator_results = None
-
-    # --- DataFrame pipeline (contract-based fallback) ---
-    if generator_results is None and not multi_key_selected:
-        try:
-            from .dataframe_pipeline import DataFramePipeline
-
-            df_value_filters: dict[str, list] = {}
-            if key_values_map:
-                for name, values in key_values_map.items():
-                    df_value_filters[name] = values
-
-            pipeline = DataFramePipeline(
-                contract_adapter=contract_adapter,
-                loader=dataframe_loader,
-                params=sql_params,
-                start_date=sql_params.get("start_date") or sql_params.get("from_date"),
-                end_date=sql_params.get("end_date") or sql_params.get("to_date"),
-                value_filters=df_value_filters,
-            )
-            generator_results = pipeline.execute()
-            if not any(generator_results.get(s) for s in ("header", "rows", "totals")):
-                logger.warning("DataFrame pipeline returned empty results; falling back to SQL path")
-                generator_results = None
-        except Exception as exc:
-            logger.warning("DataFrame pipeline failed; falling back to SQL path: %s", exc)
-            generator_results = None
-
-    # ---- Normalize / auto-discover BATCH_IDS ----
-    if generator_results is None:
-        need_discover = False
-        existing = batch_ids
-
-        if isinstance(existing, str):
-            existing = [existing]
-
-        if not existing:
-            need_discover = True
-        else:
-            if not isinstance(existing, (list, tuple)):
-                need_discover = True
-            else:
-                existing = list(existing)
-                if len(pcols) > 1:
-                    if any(not _looks_like_composite_id(i, len(pcols)) for i in existing):
-                        logger.debug("Provided BATCH_IDS do not match composite key format; falling back to auto-discovery.")
-                        need_discover = True
-
-        if need_discover:
-            _fp_progress("discover_batches START")
-            discovery_summary = discover_batches_excel(
-                db_path=DB_PATH,
-                contract=OBJ,
-                start_date=START_DATE,
-                end_date=END_DATE,
-                key_values=key_values_map,
-            )
-            BATCH_IDS = [str(batch["id"]) for batch in discovery_summary.get("batches", [])]
-        else:
-            BATCH_IDS = existing
-    else:
-        BATCH_IDS = ["__GENERATOR_SINGLE__"]
+    BATCH_IDS = ["__DF_PIPELINE__"]
 
     _log_debug("BATCH_IDS:", len(BATCH_IDS or []), (BATCH_IDS or [])[:20] if BATCH_IDS else [])
     # ---- Only touch tokens outside <style>/<script> ----
@@ -1776,6 +1648,10 @@ def fill_and_print(
         _log_debug("No rendered blocks generated for this selection.")
 
     html_multi = shell_prefix + "\n".join(rendered_blocks) + shell_suffix
+
+    # Substitute totals into the assembled document (tfoot may be in shell_suffix)
+    for token, formatted in last_totals_per_token.items():
+        html_multi = sub_token(html_multi, token, formatted)
 
     for tok, val in post_literal_specials.items():
         html_multi = sub_token(html_multi, tok, val if val is not None else "")

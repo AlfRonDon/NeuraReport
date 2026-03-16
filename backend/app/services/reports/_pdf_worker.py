@@ -103,6 +103,35 @@ def _merge_pdfs(pdf_paths: list[str], output_path: str) -> None:
         merger.close()
 
 
+async def _launch_browser(p):
+    """Launch a Chromium-based browser, preferring system Chrome/Edge.
+
+    Strategy:
+    1. Try system Edge (pre-installed on all Windows 10/11)
+    2. Try system Chrome (commonly installed)
+    3. Fall back to Playwright's own Chromium (downloaded at first launch)
+    """
+    launch_args = [
+        "--disable-dev-shm-usage",
+        "--disable-gpu",
+        "--no-sandbox",
+    ]
+
+    # Try system browsers first — no download needed, no AV issues
+    for channel in ("msedge", "chrome"):
+        try:
+            browser = await p.chromium.launch(channel=channel, args=launch_args)
+            print(f"[pdf_worker] Using system browser: {channel}", file=sys.stderr)
+            return browser
+        except Exception:
+            continue
+
+    # Fall back to Playwright's bundled/downloaded Chromium
+    browser = await p.chromium.launch(args=launch_args)
+    print("[pdf_worker] Using Playwright Chromium", file=sys.stderr)
+    return browser
+
+
 async def _convert(html_path: str, pdf_path: str, base_dir: str, pdf_scale: float | None = None) -> None:
     from playwright.async_api import async_playwright
 
@@ -118,13 +147,7 @@ async def _convert(html_path: str, pdf_path: str, base_dir: str, pdf_scale: floa
     needs_chunking = tr_count > _CHUNK_THRESHOLD
 
     async with async_playwright() as p:
-        browser = await p.chromium.launch(
-            args=[
-                "--disable-dev-shm-usage",
-                "--disable-gpu",
-                "--no-sandbox",
-            ]
-        )
+        browser = await _launch_browser(p)
 
         if not needs_chunking:
             # Standard single-pass rendering

@@ -1,15 +1,11 @@
 {
-  "correlation_id": null,
+  "correlation_id": "job-eb7e51db9d",
   "file_checksums": {
     "constant_replacements.json": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
     "contract.json": "eb2d536afdb8e26f49ebc23f833f6f1e72c341228c85c4112bb960a10a998fe3",
     "contract_v2_meta.json": "3e94099e1e1710f150e2838ff7a101ecb4a0d5e48053ee661c460d5db645134f",
     "filled_1771434244.html": "6f8cb01c36d878700ad4363e0490b7153dd0ce26705c43ce5b7a7fad97581e8b",
     "filled_1771434244.pdf": "dbe4b052f53958b40806cdb8e4df1319f0f135ec00eac9efc553696adebc055b",
-    "filled_1772494121.html": "6db3444febd30349eb582fb714eab30205d8d97e819cd40713b21f1a06e8808a",
-    "filled_1772494121.pdf": "d2c37145fd6abe4ecdcfd100fd3705a69fc0ed8d841c870c5bc930b971816519",
-    "filled_1772494144.html": "6db3444febd30349eb582fb714eab30205d8d97e819cd40713b21f1a06e8808a",
-    "filled_1772494144.pdf": "b0f568483d58c13c90b2b67d621b67f2ed3bd2bf31cdbfcad027f1e6de3f7879",
     "mapping_keys.json": "130e2ae7edb62db936e608ac455d491ff73d108fe878f07ec83b898a9c4c0281",
     "mapping_pdf_labels.json": "1a1fbded7c3b75d970a3fd1672bbb26a85154e8069915d53f0f516dde810f141",
     "mapping_step3.json": "b8f5352113c28da10ff64f8e0aafd32b901a109a59e25505aa162f1d2a310107",
@@ -25,10 +21,6 @@
     "contract_v2_meta.json": "contract_v2_meta.json",
     "filled_1771434244.html": "filled_1771434244.html",
     "filled_1771434244.pdf": "filled_1771434244.pdf",
-    "filled_1772494121.html": "filled_1772494121.html",
-    "filled_1772494121.pdf": "filled_1772494121.pdf",
-    "filled_1772494144.html": "filled_1772494144.html",
-    "filled_1772494144.pdf": "filled_1772494144.pdf",
     "mapping_keys.json": "mapping_keys.json",
     "mapping_pdf_labels.json": "mapping_pdf_labels.json",
     "mapping_step3.json": "mapping_step3.json",
@@ -50,11 +42,10 @@
     "dialect_hint=",
     "/home/rohith/desktop/NeuraReport/prodo/backend/uploads/logger-job-runs/mapping_pdf_labels.json",
     "/home/rohith/desktop/NeuraReport/prodo/backend/uploads/logger-job-runs/contract.json",
-    "postgresql://postgres@localhost:5432/meta_data_fast",
-    "postgresql://neuract:neuract123@localhost:5434/neuract_db"
+    "postgresql://postgres@localhost:5432/meta_data_fast"
   ],
-  "pid": 349366,
-  "produced_at": "2026-03-02T23:29:05.081409+00:00",
+  "pid": 3342082,
+  "produced_at": "2026-02-18T17:04:05.784626+00:00",
   "schema_version": "1.0",
   "step": "reports_run"
 }

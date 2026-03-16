@@ -1,5 +1,5 @@
 {
-  "correlation_id": null,
+  "correlation_id": "job-357df8216f",
   "file_checksums": {
     "constant_replacements.json": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
     "contract.json": "6630a3ac492ab9269c8670140a93e89c4f86255084212822dfef8f30ba4fbdbc",
@@ -8,12 +8,6 @@
     "filled_1771483142.html": "c1eb4c4dab830bc87780d7afcc76e723b744eb1715aa0617702316438957d586",
     "filled_1771483142.pdf": "5cba1999c7662e146616496e7ee04434ba28edddceda745f1f95156b2bb1f44e",
     "filled_1771483142.xlsx": "c76bc963021f8af2165738d7c208f1f5bd74e8fe8a92b7103ffc7b3244259593",
-    "filled_1772493780.html": "d9290df819856a78eccc253698892bedccbc55be8a5dfba85ee909b8ce8c5761",
-    "filled_1772493780.pdf": "3fcc5e2b7e645bbe921b343cb0f25877023d5a95ec48632c7d1cf7ca874de151",
-    "filled_1772493780.xlsx": "7f3400c31b47f4540dea0af8d6a9dc7d4f7696b84c33584524decdc7b95b5b1c",
-    "filled_1772494330.html": "d9290df819856a78eccc253698892bedccbc55be8a5dfba85ee909b8ce8c5761",
-    "filled_1772494330.pdf": "3252791e7173d3bd60ddb5d3d38decb37006502f0d13501031aae8aa29a04d28",
-    "filled_1772494330.xlsx": "103599965df15d22538e2550452c20c56a8e83643e6ca677a42890cb37bd9790",
     "mapping_keys.json": "51c43c13895533a940f7cf9e5e81a36f54a0de22f9861a80b5793a42a2424d6c",
     "mapping_pdf_labels.json": "239ff4a4e684e3dbfb288b2826a8083735236185c2a331b3114eb318fd1c36d3",
     "mapping_step3.json": "878e220aa37ddce0e2a6949a5fdedbb6dea55afa6e865a30df2231201b8193ee",
@@ -40,12 +34,6 @@
     "filled_1771483142.html": "filled_1771483142.html",
     "filled_1771483142.pdf": "filled_1771483142.pdf",
     "filled_1771483142.xlsx": "filled_1771483142.xlsx",
-    "filled_1772493780.html": "filled_1772493780.html",
-    "filled_1772493780.pdf": "filled_1772493780.pdf",
-    "filled_1772493780.xlsx": "filled_1772493780.xlsx",
-    "filled_1772494330.html": "filled_1772494330.html",
-    "filled_1772494330.pdf": "filled_1772494330.pdf",
-    "filled_1772494330.xlsx": "filled_1772494330.xlsx",
     "mapping_keys.json": "mapping_keys.json",
     "mapping_pdf_labels.json": "mapping_pdf_labels.json",
     "mapping_step3.json": "mapping_step3.json",
@@ -73,11 +61,10 @@
     "dialect_hint=",
     "/home/rohith/desktop/NeuraReport/prodo/backend/uploads_excel/app-schemas-2cca81/mapping_pdf_labels.json",
     "/home/rohith/desktop/NeuraReport/prodo/backend/uploads_excel/app-schemas-2cca81/contract.json",
-    "postgresql://postgres@localhost:5432/meta_data_fast",
-    "postgresql://neuract:neuract123@localhost:5434/neuract_db"
+    "postgresql://postgres@localhost:5432/meta_data_fast"
   ],
-  "pid": 349366,
-  "produced_at": "2026-03-02T23:32:11.389408+00:00",
+  "pid": 4063570,
+  "produced_at": "2026-02-19T06:39:06.388914+00:00",
   "schema_version": "1.0",
   "step": "reports_run"
 }
