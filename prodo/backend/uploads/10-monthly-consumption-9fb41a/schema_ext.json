@@ -1,0 +1,27 @@
+{
+  "scalars": [
+    "report_month",
+    "fm_101_totalizer",
+    "cost_per_m3",
+    "fm_101_cost",
+    "fm_103_totalizer",
+    "fm_105_totalizer",
+    "chlorine_qty",
+    "chlorine_unit_cost",
+    "chlorine_total",
+    "alum_qty",
+    "alum_unit_cost",
+    "alum_total",
+    "polymer_qty",
+    "polymer_unit_cost",
+    "polymer_total",
+    "ph_101",
+    "ph_104",
+    "tds_removal",
+    "water_recovery",
+    "grand_total"
+  ],
+  "row_tokens": [],
+  "totals": [],
+  "notes": "Three distinct tables: Water Production (4 col), Chemical Usage (4 col), Treatment Efficiency (2 col, ~60% width). Water Production rows 2 and 3 have literal em-dashes for cost_per_m3 and total_cost columns. Grand Total line prefixed with a filled black square symbol (&#9632;). Chemical row labels (Chlorine, Alum, Polymer) and treatment metric labels are static text, not tokens."
+}

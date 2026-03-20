@@ -1,0 +1,224 @@
+{
+  "tokens": {
+    "scalars": [
+      "plant_name",
+      "location",
+      "from_date",
+      "to_date",
+      "print_date",
+      "recipe_code",
+      "company_name",
+      "page_number",
+      "total_pages"
+    ],
+    "row_tokens": [
+      "row_sl_no",
+      "row_material_name",
+      "row_set_wt",
+      "row_ach_wt",
+      "row_error_kg",
+      "row_error_pct"
+    ],
+    "totals": [
+      "total_set_wt",
+      "total_ach_wt",
+      "total_error_kg",
+      "total_error_pct"
+    ]
+  },
+  "mapping": {
+    "plant_name": "PARAM:plant_name",
+    "location": "PARAM:location",
+    "from_date": "PARAM:from_date",
+    "to_date": "PARAM:to_date",
+    "print_date": "PARAM:print_date",
+    "recipe_code": "recipes.recipe_name",
+    "company_name": "PARAM:company_name",
+    "page_number": "PARAM:page_number",
+    "total_pages": "PARAM:total_pages",
+    "row_sl_no": "PARAM:row_sl_no",
+    "row_material_name": "recipes.binN_content",
+    "row_set_wt": "recipes.binN_sp",
+    "row_ach_wt": "recipes.binN_act",
+    "row_error_kg": "recipes.binN_act",
+    "row_error_pct": "recipes.binN_act",
+    "total_set_wt": "recipes.bin1_sp",
+    "total_ach_wt": "recipes.bin1_act",
+    "total_error_kg": "recipes.bin1_act",
+    "total_error_pct": "recipes.bin1_sp"
+  },
+  "unresolved": [],
+  "join": {
+    "parent_table": "",
+    "parent_key": "",
+    "child_table": "",
+    "child_key": ""
+  },
+  "date_columns": {
+    "recipes": "start_time"
+  },
+  "filters": {
+    "optional": {}
+  },
+  "reshape_rules": [
+    {
+      "purpose": "Unpivot 12 bin columns into material rows with content, setpoint, and actual values",
+      "strategy": "MELT",
+      "columns": [
+        {
+          "as": "material_name",
+          "from": [
+            "recipes.bin1_content",
+            "recipes.bin2_content",
+            "recipes.bin3_content",
+            "recipes.bin4_content",
+            "recipes.bin5_content",
+            "recipes.bin6_content",
+            "recipes.bin7_content",
+            "recipes.bin8_content",
+            "recipes.bin9_content",
+            "recipes.bin10_content",
+            "recipes.bin11_content",
+            "recipes.bin12_content"
+          ]
+        },
+        {
+          "as": "set_wt",
+          "from": [
+            "recipes.bin1_sp",
+            "recipes.bin2_sp",
+            "recipes.bin3_sp",
+            "recipes.bin4_sp",
+            "recipes.bin5_sp",
+            "recipes.bin6_sp",
+            "recipes.bin7_sp",
+            "recipes.bin8_sp",
+            "recipes.bin9_sp",
+            "recipes.bin10_sp",
+            "recipes.bin11_sp",
+            "recipes.bin12_sp"
+          ]
+        },
+        {
+          "as": "ach_wt",
+          "from": [
+            "recipes.bin1_act",
+            "recipes.bin2_act",
+            "recipes.bin3_act",
+            "recipes.bin4_act",
+            "recipes.bin5_act",
+            "recipes.bin6_act",
+            "recipes.bin7_act",
+            "recipes.bin8_act",
+            "recipes.bin9_act",
+            "recipes.bin10_act",
+            "recipes.bin11_act",
+            "recipes.bin12_act"
+          ]
+        }
+      ],
+      "order_by": []
+    }
+  ],
+  "row_computed": {
+    "row_error_kg": {
+      "op": "subtract",
+      "left": "ach_wt",
+      "right": "set_wt"
+    },
+    "row_error_pct": {
+      "op": "divide",
+      "numerator": "row_error_kg",
+      "denominator": "set_wt"
+    }
+  },
+  "totals_math": {
+    "total_set_wt": {
+      "op": "sum",
+      "column": "set_wt"
+    },
+    "total_ach_wt": {
+      "op": "sum",
+      "column": "ach_wt"
+    },
+    "total_error_kg": {
+      "op": "sum",
+      "column": "row_error_kg"
+    },
+    "total_error_pct": {
+      "op": "divide",
+      "numerator": {
+        "op": "sum",
+        "column": "row_error_kg"
+      },
+      "denominator": {
+        "op": "sum",
+        "column": "set_wt"
+      }
+    }
+  },
+  "formatters": {
+    "row_set_wt": "number:2",
+    "row_ach_wt": "number:2",
+    "row_error_kg": "number:2",
+    "row_error_pct": "number:4",
+    "total_set_wt": "number:2",
+    "total_ach_wt": "number:2",
+    "total_error_kg": "number:2",
+    "total_error_pct": "number:4"
+  },
+  "order_by": {
+    "rows": [
+      "row_sl_no ASC"
+    ]
+  },
+  "header_tokens": [
+    "plant_name",
+    "location",
+    "from_date",
+    "to_date",
+    "print_date",
+    "recipe_code",
+    "company_name",
+    "page_number",
+    "total_pages"
+  ],
+  "row_tokens": [
+    "row_sl_no",
+    "row_material_name",
+    "row_set_wt",
+    "row_ach_wt",
+    "row_error_kg",
+    "row_error_pct"
+  ],
+  "totals": {
+    "total_set_wt": {
+      "op": "sum",
+      "column": "set_wt"
+    },
+    "total_ach_wt": {
+      "op": "sum",
+      "column": "ach_wt"
+    },
+    "total_error_kg": {
+      "op": "sum",
+      "column": "row_error_kg"
+    },
+    "total_error_pct": {
+      "op": "divide",
+      "numerator": {
+        "op": "sum",
+        "column": "row_error_kg"
+      },
+      "denominator": {
+        "op": "sum",
+        "column": "set_wt"
+      }
+    }
+  },
+  "row_order": [
+    "row_sl_no ASC"
+  ],
+  "notes": "Recipe consumption report requiring unpivot of 12 bin columns. Error calculations are per-bin (achieved - set) with percentage. Totals aggregate across all bins. Sequential row numbering generated during unpivot.",
+  "literals": {}
+}

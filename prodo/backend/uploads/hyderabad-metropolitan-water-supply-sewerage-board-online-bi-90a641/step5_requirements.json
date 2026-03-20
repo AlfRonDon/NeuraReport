@@ -1,0 +1,44 @@
+{
+  "datasets": {
+    "header": {
+      "description": "Single transaction record with payment acknowledgment details",
+      "columns": [
+        "timestamp",
+        "transaction_status",
+        "transaction_reference_number",
+        "transaction_date_time",
+        "can_number",
+        "bill_amount",
+        "bank_name",
+        "ip_address",
+        "access_time"
+      ]
+    },
+    "rows": {
+      "description": "No detail rows required for this receipt",
+      "columns": [],
+      "grouping": [],
+      "ordering": []
+    },
+    "totals": {
+      "description": "No aggregate totals required",
+      "columns": []
+    }
+  },
+  "semantics": "Single-record transaction receipt filtered by transaction_ref_number parameter. All data sourced from transactions table.",
+  "parameters": {
+    "required": [
+      {
+        "name": "transaction_ref_number",
+        "type": "string"
+      }
+    ],
+    "optional": []
+  },
+  "transformations": [
+    "Format timestamp from created_at as readable timestamp for header display",
+    "Format transaction_date_time from transaction_date in DD/MM/YYYY HH:MM:SS format",
+    "Format access_time from access_timestamp with IST timezone suffix",
+    "Format bill_amount as currency with 2 decimal places"
+  ]
+}

@@ -1,0 +1,360 @@
+
+
+
+<meta charset="UTF-8">
+<meta>
+<title>HMWSSB Online Bill Payment Receipt</title>
+<style>
+:root {
+  --page-padding: 12mm;
+  --section-gap: 3.5mm;
+  --row-gap: 1.8mm;
+}
+
+@page {
+  size: A4;
+  margin: 15mm;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: Arial, sans-serif;
+  font-size: 9pt;
+  line-height: 1.35;
+  color: #333;
+  background: white;
+  padding: var(--page-padding);
+}
+
+#report-header {
+  margin-bottom: 4mm;
+}
+
+.header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 3mm;
+}
+
+.timestamp {
+  font-size: 7.5pt;
+  color: #333;
+  font-weight: normal;
+}
+
+.page-title {
+  font-size: 9pt;
+  color: #333;
+  text-align: center;
+  flex: 1;
+  font-weight: normal;
+}
+
+.logo-section {
+  display: flex;
+  align-items: flex-start;
+  gap: 3mm;
+  margin-bottom: 2mm;
+}
+
+.logo-icon {
+  width: 48px;
+  height: 48px;
+  background: #1565c0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.logo-icon::before {
+  content: '';
+  position: absolute;
+  width: 20px;
+  height: 24px;
+  background: white;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  top: 8px;
+  left: 14px;
+}
+
+.logo-icon::after {
+  content: '';
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  right: 8px;
+  height: 8px;
+  background: white;
+  border-radius: 1px;
+}
+
+.logo-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5mm;
+}
+
+.org-abbr {
+  font-size: 13pt;
+  font-weight: bold;
+  color: #1565c0;
+  letter-spacing: 1.5px;
+  line-height: 1.1;
+}
+
+.org-name {
+  font-size: 8pt;
+  color: #1565c0;
+  font-weight: 600;
+  text-transform: uppercase;
+  line-height: 1.25;
+}
+
+.transaction-label {
+  font-size: 8pt;
+  color: #333;
+  margin-top: 1.5mm;
+  font-weight: normal;
+}
+
+.success-message {
+  background: #e8f5e9;
+  border-left: 3px solid #4caf50;
+  padding: 2.5mm 3mm;
+  margin-bottom: var(--section-gap);
+}
+
+.success-message p:first-child {
+  color: #2e7d32;
+  font-weight: 600;
+  margin-bottom: 1mm;
+  font-size: 9pt;
+}
+
+.success-message p:last-child {
+  font-size: 8.5pt;
+  color: #555;
+  line-height: 1.4;
+}
+
+.details-table {
+  width: 100%;
+  margin-bottom: var(--section-gap);
+  border-collapse: collapse;
+}
+
+.details-table tr {
+  height: 5.5mm;
+}
+
+.details-table td {
+  vertical-align: top;
+  padding: 0.5mm 0;
+}
+
+.details-table td:first-child {
+  width: 42mm;
+  font-weight: 600;
+  color: #333;
+  padding-right: 2mm;
+  font-size: 9pt;
+}
+
+.details-table td:nth-child(2) {
+  color: #666;
+  font-size: 9pt;
+}
+
+.details-table .status-row td:nth-child(2) {
+  width: auto;
+}
+
+.details-table .status-row td:nth-child(3) {
+  padding-left: 80mm;
+  font-weight: 600;
+  color: #333;
+  font-size: 9pt;
+}
+
+.note-text {
+  color: #d32f2f;
+  font-style: italic;
+  font-size: 8.5pt;
+  margin-bottom: var(--section-gap);
+  font-weight: normal;
+}
+
+.note-text strong {
+  font-weight: 600;
+  font-style: italic;
+}
+
+.button-container {
+  text-align: center;
+  margin-bottom: var(--section-gap);
+  display: flex;
+  justify-content: center;
+  gap: 3mm;
+}
+
+.print-button {
+  background: white;
+  border: 1px solid #999;
+  padding: 1.5mm 5mm;
+  font-size: 8.5pt;
+  color: #333;
+  cursor: pointer;
+  display: inline-block;
+}
+
+.payment-button {
+  background: #e0e0e0;
+  border: 1px solid #999;
+  padding: 1.5mm 5mm;
+  font-size: 8.5pt;
+  color: #666;
+  cursor: not-allowed;
+  display: inline-block;
+}
+
+.security-notice {
+  background: #fff8e1;
+  border: 1px solid #ffc107;
+  padding: 3mm;
+  margin-bottom: 4mm;
+  font-size: 8.5pt;
+  color: #5d4037;
+  line-height: 1.5;
+}
+
+.security-notice strong {
+  color: #d32f2f;
+  font-weight: 600;
+}
+
+.powered-by {
+  text-align: right;
+  font-size: 8pt;
+  color: #666;
+  margin-bottom: 2mm;
+}
+
+.powered-by-logo {
+  display: inline-block;
+  margin-left: 1mm;
+  color: #ff6b00;
+  font-weight: bold;
+}
+
+.page-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 7.5pt;
+  color: #0066cc;
+}
+
+.footer-url {
+  color: #0066cc;
+}
+
+.page-number {
+  color: #333;
+}
+
+@media print {
+  body {
+    padding: 0;
+  }
+  .print-button, .payment-button {
+    display: none;
+  }
+}
+</style>
+
+
+
+<div id="report-header">
+  <div class="header-top">
+    <div class="timestamp">2026-02-15 01:55:34</div>
+    <div class="page-title">Hyderabad Metropolitan Water Supply &amp; Sewerage Board - Online Bill Payment</div>
+  </div>
+  
+  <div class="logo-section">
+    <div class="logo-icon"></div>
+    <div class="logo-text">
+      <div class="org-abbr">HMWSSB</div>
+      <div class="org-name">HYDERABAD METROPOLITAN<br>WATER SUPPLY &amp; SEWERAGE BOARD</div>
+    </div>
+  </div>
+  
+  <div class="transaction-label">Transaction Acknowledgment</div>
+</div>
+
+<div class="success-message">
+  <p>Thank you !</p>
+  <p>Your payment has been successfully received with the following details.<br>Please quote your Transaction reference number for any queries relating to this request.</p>
+</div>
+
+<table class="details-table">
+  <!-- BEGIN:BATCH (auto) --><tbody>
+  <tr class="status-row">
+    <td>Transaction Status</td>
+    <td>Success</td>
+    <td>Success</td>
+  </tr>
+  <tr>
+    <td>Transaction Reference Number</td>
+    <td>YAX62668702574</td>
+  </tr>
+  <tr>
+    <td>Transaction Date and Time</td>
+    <td>2026-02-01</td>
+  </tr>
+  <tr>
+    <td>Can No.</td>
+    <td>624140910</td>
+  </tr>
+  <tr>
+    <td>Bill Amount :</td>
+    <td>1510</td>
+  </tr>
+  <tr>
+    <td>Bank Name :</td>
+    <td>NA</td>
+  </tr>
+  </tbody><!-- END:BATCH (auto) -->
+</table>
+
+<p class="note-text"><strong>Note:</strong> Payment made will be updated in the ledger in about 30 minutes.</p>
+
+<div class="button-container">
+  <span class="print-button">Print</span>
+  <span class="payment-button">Make Another Payment</span>
+</div>
+
+<div class="security-notice">
+  Your transaction is processed through a secure 128 bit https internet connection based on secure socket layer technology. For security purposes, Your IP address <strong>2401:4900:1c0e:21d5:cd38:bfd:36a7:a98b</strong> and access time <strong>2026-02-01 02:53:40 IST</strong> have been logged.
+</div>
+
+<div class="powered-by">
+  Powered by
+  <span class="powered-by-logo">BillDesk</span>
+</div>
+
+<div class="page-footer">
+  <div class="footer-url">https://pg2.billdesk.com/pgidsk/pgmerchant/hmwssbSRNResponse.jsp</div>
+  <div class="page-number">1/1</div>
+</div>
+
+

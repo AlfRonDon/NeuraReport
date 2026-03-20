@@ -1,0 +1,28 @@
+{
+  "scalars": [
+    "plant_name",
+    "location",
+    "from_date",
+    "to_date",
+    "print_date",
+    "recipe_code",
+    "company_name",
+    "page_number",
+    "total_pages"
+  ],
+  "row_tokens": [
+    "row_sl_no",
+    "row_material_name",
+    "row_set_wt",
+    "row_ach_wt",
+    "row_error_kg",
+    "row_error_pct"
+  ],
+  "totals": [
+    "total_set_wt",
+    "total_ach_wt",
+    "total_error_kg",
+    "total_error_pct"
+  ],
+  "notes": "Consumption report with material usage table showing set weight vs achieved weight with error calculations"
+}

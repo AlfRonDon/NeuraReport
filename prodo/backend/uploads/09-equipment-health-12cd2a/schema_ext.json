@@ -1,0 +1,32 @@
+{
+  "scalars": [
+    "week_start",
+    "week_end",
+    "FM_101_hours",
+    "FM_101",
+    "FM_101_health",
+    "FM_103_hours",
+    "FM_103",
+    "FM_103_health",
+    "FM_105_hours",
+    "FM_105",
+    "FM_105_health",
+    "LT_112_hours",
+    "LT_112",
+    "LT_112_health",
+    "LT_118_hours",
+    "LT_118",
+    "LT_118_health",
+    "LT_126_hours",
+    "LT_126",
+    "LT_126_health"
+  ],
+  "row_tokens": [],
+  "totals": [
+    "total_devices",
+    "ok_count",
+    "warn_count",
+    "critical_count"
+  ],
+  "notes": "Two fixed-equipment tables (Flow Meters: FM_101/FM_103/FM_105; Level Transmitters: LT_112/LT_118/LT_126). Each row has device-specific scalar tokens rather than generic row_ tokens. FM table header is 'Last Reading'; LT table header is 'Last Reading (%)'. Summary block lists total devices and status counts."
+}

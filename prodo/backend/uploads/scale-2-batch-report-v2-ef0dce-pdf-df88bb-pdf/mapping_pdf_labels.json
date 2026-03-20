@@ -1,0 +1,17 @@
+[
+    {"header": "plant_name", "placeholder": "{plant_name}", "mapping": "PARAM:plant_name"},
+    {"header": "location", "placeholder": "{location}", "mapping": "PARAM:location"},
+    {"header": "print_date", "placeholder": "{print_date}", "mapping": "PARAM:print_date"},
+    {"header": "report_date", "placeholder": "{report_date}", "mapping": "PARAM:report_date"},
+    {"header": "batch_number", "placeholder": "{batch_number}", "mapping": "neuract__Scale2.OIL_BACTH_COUNT"},
+    {"header": "row_bin_no", "placeholder": "{row_bin_no}", "mapping": "INDEX"},
+    {"header": "row_material_name", "placeholder": "{row_material_name}", "mapping": "LITERAL"},
+    {"header": "row_set_wt", "placeholder": "{row_set_wt}", "mapping": "neuract__Scale2.FISH_OIL_SET_WEIGHT"},
+    {"header": "row_ach_wt", "placeholder": "{row_ach_wt}", "mapping": "neuract__Scale2.FISH_OIL_ACTUAL_WEIGHT"},
+    {"header": "row_error_kg", "placeholder": "{row_error_kg}", "mapping": "COMPUTED"},
+    {"header": "row_error_pct", "placeholder": "{row_error_pct}", "mapping": "COMPUTED"},
+    {"header": "total_set_wt", "placeholder": "{total_set_wt}", "mapping": "COMPUTED"},
+    {"header": "total_ach_wt", "placeholder": "{total_ach_wt}", "mapping": "COMPUTED"},
+    {"header": "total_error_kg", "placeholder": "{total_error_kg}", "mapping": "COMPUTED"},
+    {"header": "total_error_pct", "placeholder": "{total_error_pct}", "mapping": "COMPUTED"}
+]

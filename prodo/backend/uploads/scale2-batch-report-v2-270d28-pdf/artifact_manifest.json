@@ -1,0 +1,23 @@
+{
+  "correlation_id": "job-80af530132",
+  "file_checksums": {
+    "filled_1772629661.html": "040e3cfb52eea1615326bb3dd49be0cc3de64cc183061e0b546b594531ed415e",
+    "filled_1772629661.pdf": "430fcc329e81afe66ac21d470b6226ea2054a9edca628d012c0cb482cdd53e9c",
+    "filled_1772629703.html": "658a10ee4d0ebcab92dafee73cab795e7524f85ea2f19dd045c8651e738a421b",
+    "filled_1772629703.pdf": "0e6c6541d26ebccb0ce1454d1665ddac2af4908a30ded5df661ccc81c1492a30"
+  },
+  "files": {
+    "filled_1772629661.html": "filled_1772629661.html",
+    "filled_1772629661.pdf": "filled_1772629661.pdf",
+    "filled_1772629703.html": "filled_1772629703.html",
+    "filled_1772629703.pdf": "filled_1772629703.pdf"
+  },
+  "input_refs": [
+    "/home/rohith/desktop/NeuraReport/prodo/backend/uploads/scale2-batch-report-v2-270d28-pdf/contract.json",
+    "/home/rohith/desktop/NeuraReport/recipe_log (1).sqlite3"
+  ],
+  "pid": 144732,
+  "produced_at": "2026-03-04T13:08:24.248419+00:00",
+  "schema_version": "1.0",
+  "step": "reports_run"
+}

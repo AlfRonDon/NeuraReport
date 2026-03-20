@@ -1,0 +1,15 @@
+{
+  "scalars": [
+    "cert_number",
+    "issue_date",
+    "tds_101_value",
+    "tds_101_result",
+    "tds_102_value",
+    "tds_102_result",
+    "tds_reduction",
+    "reduction_result"
+  ],
+  "row_tokens": [],
+  "totals": [],
+  "notes": "Table has three fixed named rows (TDS Inlet, TDS Outlet, TDS Reduction %) rather than generic repeating rows; all value/result tokens are treated as scalars. Permissible limit values are literal text. Signature line rendered as border-bottom underline."
+}

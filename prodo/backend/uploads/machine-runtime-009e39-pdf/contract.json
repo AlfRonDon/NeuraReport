@@ -1,0 +1,742 @@
+{
+  "tokens": {
+    "scalars": [
+      "company_title",
+      "print_date",
+      "range_start",
+      "range_end"
+    ],
+    "row_tokens": [
+      "machine_name",
+      "run_date",
+      "start_time",
+      "end_time",
+      "duration_sec",
+      "shift_no",
+      "total_time"
+    ],
+    "totals": [
+      "total_duration_sec",
+      "total_duration_hms"
+    ]
+  },
+  "mapping": {
+    "company_title": "PARAM:company_title",
+    "print_date": "PARAM:print_date",
+    "range_start": "PARAM:start_date",
+    "range_end": "PARAM:end_date",
+    "machine_name": "COMPUTED",
+    "run_date": "COMPUTED",
+    "start_time": "COMPUTED",
+    "end_time": "COMPUTED",
+    "duration_sec": "COMPUTED",
+    "shift_no": "COMPUTED",
+    "total_time": "COMPUTED",
+    "total_duration_sec": "COMPUTED",
+    "total_duration_hms": "COMPUTED"
+  },
+  "join": {
+    "parent_table": "neuract__RUNHOURS",
+    "parent_key": "rowid",
+    "child_table": "neuract__RUNHOURS",
+    "child_key": "rowid"
+  },
+  "date_columns": {
+    "neuract__RUNHOURS": "timestamp_utc"
+  },
+  "filters": {
+    "optional": {
+      "machine_name": "RUNTIME_MACHINE_FILTER",
+      "date_from": "neuract__RUNHOURS.timestamp_utc",
+      "date_to": "neuract__RUNHOURS.timestamp_utc"
+    }
+  },
+  "reshape_rules": [
+    {
+      "purpose": "Detect run intervals from RUNHOURS counter changes",
+      "strategy": "WINDOW_DIFF",
+      "source_table": "neuract__RUNHOURS",
+      "timestamp_column": "timestamp_utc",
+      "column_groups": [
+        {
+          "machine_name": "C1A_1_MC",
+          "columns": [
+            "C1A_1_MC_HRS",
+            "C1A_1_MC_MIN"
+          ]
+        },
+        {
+          "machine_name": "C1A_MC",
+          "columns": [
+            "C1A_MC_HRS",
+            "C1A_MC_MIN"
+          ]
+        },
+        {
+          "machine_name": "C2A_MC",
+          "columns": [
+            "C2A_MC_HRS",
+            "C2A_MC_MIN"
+          ]
+        },
+        {
+          "machine_name": "C3A_MC",
+          "columns": [
+            "C3A_MC_HRS",
+            "C3A_MC_MIN"
+          ]
+        },
+        {
+          "machine_name": "C4A_MC",
+          "columns": [
+            "C4A_MC_HRS",
+            "C4A_MC_MIN"
+          ]
+        },
+        {
+          "machine_name": "C5A_MC",
+          "columns": [
+            "C5A_MC_HRS",
+            "C5A_MC_MIN"
+          ]
+        },
+        {
+          "machine_name": "C6A_MC",
+          "columns": [
+            "C6A_MC_HRS",
+            "C6A_MC_MIN"
+          ]
+        },
+        {
+          "machine_name": "C7A_MC",
+          "columns": [
+            "C7A_MC_HRS",
+            "C7A_MC_MIN"
+          ]
+        },
+        {
+          "machine_name": "C8A_MC",
+          "columns": [
+            "C8A_MC_HRS",
+            "C8A_MC_MIN"
+          ]
+        },
+        {
+          "machine_name": "F1A_MC",
+          "columns": [
+            "F1A_MC_HRS",
+            "F1A_MC_MIN"
+          ]
+        },
+        {
+          "machine_name": "G10A_MC",
+          "columns": [
+            "G10A_MC_HRS",
+            "G10A_MC_MIN",
+            "G10A_MC_SEC"
+          ]
+        },
+        {
+          "machine_name": "G11A_MC",
+          "columns": [
+            "G11A_MC_HRS",
+            "G11A_MC_MIN",
+            "G11A_MC_SEC"
+          ]
+        },
+        {
+          "machine_name": "G13A_MC",
+          "columns": [
+            "G13A_MC_HRS",
+            "G13A_MC_MIN",
+            "G13A_MC_SEC"
+          ]
+        },
+        {
+          "machine_name": "G1A_1_MC",
+          "columns": [
+            "G1A_1_MC_HRS",
+            "G1A_1_MC_MIN",
+            "G1A_1_MC_SEC"
+          ]
+        },
+        {
+          "machine_name": "G1A_MC",
+          "columns": [
+            "G1A_MC_HRS",
+            "G1A_MC_MIN",
+            "G1A_MC_SEC"
+          ]
+        },
+        {
+          "machine_name": "G3A_MC",
+          "columns": [
+            "G3A_MC_HRS",
+            "G3A_MC_MIN",
+            "G3A_MC_SEC"
+          ]
+        },
+        {
+          "machine_name": "G4A_MC",
+          "columns": [
+            "G4A_MC_HRS",
+            "G4A_MC_MIN",
+            "G4A_MC_SEC"
+          ]
+        },
+        {
+          "machine_name": "G5A_1_MC",
+          "columns": [
+            "G5A_1_MC_HRS",
+            "G5A_1_MC_MIN",
+            "G5A_1_MC_SEC"
+          ]
+        },
+        {
+          "machine_name": "G5A_2_MC",
+          "columns": [
+            "G5A_2_MC_HRS",
+            "G5A_2_MC_MIN",
+            "G5A_2_MC_SEC"
+          ]
+        },
+        {
+          "machine_name": "G5A_MC",
+          "columns": [
+            "G5A_MC_HRS",
+            "G5A_MC_MIN",
+            "G5A_MC_SEC"
+          ]
+        },
+        {
+          "machine_name": "G7A_MC",
+          "columns": [
+            "G7A_MC_HRS",
+            "G7A_MC_MIN",
+            "G7A_MC_SEC"
+          ]
+        },
+        {
+          "machine_name": "G9A_MC",
+          "columns": [
+            "G9A_MC_HRS",
+            "G9A_MC_MIN",
+            "G9A_MC_SEC"
+          ]
+        },
+        {
+          "machine_name": "I10A_MC",
+          "columns": [
+            "I10A_MC_HRS",
+            "I10A_MC_MIN",
+            "I10A_MC_SEC"
+          ]
+        },
+        {
+          "machine_name": "I1A_MC",
+          "columns": [
+            "I1A_MC_HRS",
+            "I1A_MC_MIN",
+            "I1A_MC_SEC"
+          ]
+        },
+        {
+          "machine_name": "I2A_MC",
+          "columns": [
+            "I2A_MC_HRS",
+            "I2A_MC_MIN",
+            "I2A_MC_SEC"
+          ]
+        },
+        {
+          "machine_name": "I3A_MC",
+          "columns": [
+            "I3A_MC_HRS",
+            "I3A_MC_MIN",
+            "I3A_MC_SEC"
+          ]
+        },
+        {
+          "machine_name": "I4A_1_MC",
+          "columns": [
+            "I4A_1_MC_HRS",
+            "I4A_1_MC_MIN",
+            "I4A_1_MC_SEC"
+          ]
+        },
+        {
+          "machine_name": "I4A_2_MC",
+          "columns": [
+            "I4A_2_MC_HRS",
+            "I4A_2_MC_MIN",
+            "I4A_2_MC_SEC"
+          ]
+        },
+        {
+          "machine_name": "I5A_MC",
+          "columns": [
+            "I5A_MC_HRS",
+            "I5A_MC_MIN",
+            "I5A_MC_SEC"
+          ]
+        },
+        {
+          "machine_name": "I6A_A_MC",
+          "columns": [
+            "I6A_A_MC_HRS",
+            "I6A_A_MC_MIN",
+            "I6A_A_MC_SEC"
+          ]
+        },
+        {
+          "machine_name": "I6A_B_MC",
+          "columns": [
+            "I6A_B_MC_HRS",
+            "I6A_B_MC_MIN",
+            "I6A_B_MC_SEC"
+          ]
+        },
+        {
+          "machine_name": "I6A_C_MC",
+          "columns": [
+            "I6A_C_MC_HRS",
+            "I6A_C_MC_MIN",
+            "I6A_C_MC_SEC"
+          ]
+        },
+        {
+          "machine_name": "I6A_D_MC",
+          "columns": [
+            "I6A_D_MC_HRS",
+            "I6A_D_MC_MIN",
+            "I6A_D_MC_SEC"
+          ]
+        },
+        {
+          "machine_name": "I6A_E_MC",
+          "columns": [
+            "I6A_E_MC_HRS",
+            "I6A_E_MC_MIN",
+            "I6A_E_MC_SEC"
+          ]
+        },
+        {
+          "machine_name": "I6A_F_MC",
+          "columns": [
+            "I6A_F_MC_HRS",
+            "I6A_F_MC_MIN",
+            "I6A_F_MC_SEC"
+          ]
+        },
+        {
+          "machine_name": "I6A_G_MC",
+          "columns": [
+            "I6A_G_MC_HRS",
+            "I6A_G_MC_MIN",
+            "I6A_G_MC_SEC"
+          ]
+        },
+        {
+          "machine_name": "I6A_H_MC",
+          "columns": [
+            "I6A_H_MC_HRS",
+            "I6A_H_MC_MIN",
+            "I6A_H_MC_SEC"
+          ]
+        },
+        {
+          "machine_name": "I6A_I_MC",
+          "columns": [
+            "I6A_I_MC_HRS",
+            "I6A_I_MC_MIN",
+            "I6A_I_MC_SEC"
+          ]
+        },
+        {
+          "machine_name": "I6A_J_MC",
+          "columns": [
+            "I6A_J_MC_HRS",
+            "I6A_J_MC_MIN",
+            "I6A_J_MC_SEC"
+          ]
+        },
+        {
+          "machine_name": "I6A_K_MC",
+          "columns": [
+            "I6A_K_MC_HRS",
+            "I6A_K_MC_MIN",
+            "I6A_K_MC_SEC"
+          ]
+        },
+        {
+          "machine_name": "I6A_L_MC",
+          "columns": [
+            "I6A_L_MC_HRS",
+            "I6A_L_MC_MIN",
+            "I6A_L_MC_SEC"
+          ]
+        },
+        {
+          "machine_name": "I6A_VFD",
+          "columns": [
+            "I6A_VFD_HRS",
+            "I6A_VFD_MIN",
+            "I6A_VFD_SEC"
+          ]
+        },
+        {
+          "machine_name": "I8A_1_MC",
+          "columns": [
+            "I8A_1_MC_HRS",
+            "I8A_1_MC_MIN",
+            "I8A_1_MC_SEC"
+          ]
+        },
+        {
+          "machine_name": "I8A_MC",
+          "columns": [
+            "I8A_MC_HRS",
+            "I8A_MC_MIN",
+            "I8A_MC_SEC"
+          ]
+        },
+        {
+          "machine_name": "I9A_MC",
+          "columns": [
+            "I9A_MC_HRS",
+            "I9A_MC_MIN",
+            "I9A_MC_SEC"
+          ]
+        },
+        {
+          "machine_name": "M1A_11_MC",
+          "columns": [
+            "M1A_11_MC_HRS",
+            "M1A_11_MC_MIN",
+            "M1A_11_MC_SEC"
+          ]
+        },
+        {
+          "machine_name": "M1A_18_MC",
+          "columns": [
+            "M1A_18_MC_HRS",
+            "M1A_18_MC_MIN",
+            "M1A_18_MC_SEC"
+          ]
+        },
+        {
+          "machine_name": "M1A_1_MC",
+          "columns": [
+            "M1A_1_MC_HRS",
+            "M1A_1_MC_MIN",
+            "M1A_1_MC_SEC"
+          ]
+        },
+        {
+          "machine_name": "M1A_2_MC",
+          "columns": [
+            "M1A_2_MC_HRS",
+            "M1A_2_MC_MIN",
+            "M1A_2_MC_SEC"
+          ]
+        },
+        {
+          "machine_name": "M1A_3_MC",
+          "columns": [
+            "M1A_3_MC_HRS",
+            "M1A_3_MC_MIN",
+            "M1A_3_MC_SEC"
+          ]
+        },
+        {
+          "machine_name": "M1A_9_MC",
+          "columns": [
+            "M1A_9_MC_HRS",
+            "M1A_9_MC_MIN",
+            "M1A_9_MC_SEC"
+          ]
+        },
+        {
+          "machine_name": "M1A_MC",
+          "columns": [
+            "M1A_MC_HRS",
+            "M1A_MC_MIN",
+            "M1A_MC_SEC"
+          ]
+        },
+        {
+          "machine_name": "M2A_MC",
+          "columns": [
+            "M2A_MC_HRS",
+            "M2A_MC_MIN",
+            "M2A_MC_SEC"
+          ]
+        },
+        {
+          "machine_name": "M3A_MC",
+          "columns": [
+            "M3A_MC_HRS",
+            "M3A_MC_MIN",
+            "M3A_MC_SEC"
+          ]
+        },
+        {
+          "machine_name": "M4A_MC",
+          "columns": [
+            "M4A_MC_HRS",
+            "M4A_MC_MIN",
+            "M4A_MC_SEC"
+          ]
+        },
+        {
+          "machine_name": "M5A_MC",
+          "columns": [
+            "M5A_MC_HRS",
+            "M5A_MC_MIN",
+            "M5A_MC_SEC"
+          ]
+        },
+        {
+          "machine_name": "P11A_MC",
+          "columns": [
+            "P11A_MC_HRS",
+            "P11A_MC_MIN",
+            "P11A_MC_SEC"
+          ]
+        },
+        {
+          "machine_name": "P12A_MC",
+          "columns": [
+            "P12A_MC_HRS",
+            "P12A_MC_MIN",
+            "P12A_MC_SEC"
+          ]
+        },
+        {
+          "machine_name": "P13A_MC",
+          "columns": [
+            "P13A_MC_HRS",
+            "P13A_MC_MIN",
+            "P13A_MC_SEC"
+          ]
+        },
+        {
+          "machine_name": "P14A_MC",
+          "columns": [
+            "P14A_MC_HRS",
+            "P14A_MC_MIN",
+            "P14A_MC_SEC"
+          ]
+        },
+        {
+          "machine_name": "P15A_MC",
+          "columns": [
+            "P15A_MC_HRS",
+            "P15A_MC_MIN",
+            "P15A_MC_SEC"
+          ]
+        },
+        {
+          "machine_name": "P16A_MC",
+          "columns": [
+            "P16A_MC_HRS",
+            "P16A_MC_MIN",
+            "P16A_MC_SEC"
+          ]
+        },
+        {
+          "machine_name": "P1A_MC",
+          "columns": [
+            "P1A_MC_HRS",
+            "P1A_MC_MIN",
+            "P1A_MC_SEC"
+          ]
+        },
+        {
+          "machine_name": "P2A_MC",
+          "columns": [
+            "P2A_MC_HRS",
+            "P2A_MC_MIN",
+            "P2A_MC_SEC"
+          ]
+        },
+        {
+          "machine_name": "P3A_MC",
+          "columns": [
+            "P3A_MC_HRS",
+            "P3A_MC_MIN",
+            "P3A_MC_SEC"
+          ]
+        },
+        {
+          "machine_name": "P4A_MC",
+          "columns": [
+            "P4A_MC_HRS",
+            "P4A_MC_MIN",
+            "P4A_MC_SEC"
+          ]
+        },
+        {
+          "machine_name": "P5A_MC",
+          "columns": [
+            "P5A_MC_HRS",
+            "P5A_MC_MIN",
+            "P5A_MC_SEC"
+          ]
+        },
+        {
+          "machine_name": "P6A_MC",
+          "columns": [
+            "P6A_MC_HRS",
+            "P6A_MC_MIN",
+            "P6A_MC_SEC"
+          ]
+        },
+        {
+          "machine_name": "P7A_1_MC",
+          "columns": [
+            "P7A_1_MC_HRS",
+            "P7A_1_MC_MIN",
+            "P7A_1_MC_SEC"
+          ]
+        },
+        {
+          "machine_name": "P7A_2_MC",
+          "columns": [
+            "P7A_2_MC_HRS",
+            "P7A_2_MC_MIN",
+            "P7A_2_MC_SEC"
+          ]
+        },
+        {
+          "machine_name": "P7A_MC",
+          "columns": [
+            "P7A_MC_HRS",
+            "P7A_MC_MIN",
+            "P7A_MC_SEC"
+          ]
+        },
+        {
+          "machine_name": "P8A_1_MC",
+          "columns": [
+            "P8A_1_MC_HRS",
+            "P8A_1_MC_MIN",
+            "P8A_1_MC_SEC"
+          ]
+        },
+        {
+          "machine_name": "P8A_2_MC",
+          "columns": [
+            "P8A_2_MC_HRS",
+            "P8A_2_MC_MIN",
+            "P8A_2_MC_SEC"
+          ]
+        },
+        {
+          "machine_name": "P8A_3_MC",
+          "columns": [
+            "P8A_3_MC_HRS",
+            "P8A_3_MC_MIN",
+            "P8A_3_MC_SEC"
+          ]
+        },
+        {
+          "machine_name": "P8A_4_MC",
+          "columns": [
+            "P8A_4_MC_HRS",
+            "P8A_4_MC_MIN",
+            "P8A_4_MC_SEC"
+          ]
+        },
+        {
+          "machine_name": "P8A_5_MC",
+          "columns": [
+            "P8A_5_MC_HRS",
+            "P8A_5_MC_MIN",
+            "P8A_5_MC_SEC"
+          ]
+        },
+        {
+          "machine_name": "P8A_MC",
+          "columns": [
+            "P8A_MC_HRS",
+            "P8A_MC_MIN",
+            "P8A_MC_SEC"
+          ]
+        },
+        {
+          "machine_name": "P9A_MC",
+          "columns": [
+            "P9A_MC_HRS",
+            "P9A_MC_MIN",
+            "P9A_MC_SEC"
+          ]
+        }
+      ],
+      "output_columns": [
+        "machine_name",
+        "run_date",
+        "start_time",
+        "end_time",
+        "duration_sec",
+        "shift_no",
+        "total_time"
+      ],
+      "shift_boundaries": {
+        "1": {
+          "start": "06:00",
+          "end": "14:00"
+        },
+        "2": {
+          "start": "14:00",
+          "end": "22:00"
+        },
+        "3": {
+          "start": "22:00",
+          "end": "06:00"
+        }
+      }
+    }
+  ],
+  "row_computed": {},
+  "totals_math": {
+    "total_duration_sec": {
+      "op": "sum",
+      "column": "duration_sec"
+    },
+    "total_duration_hms": "COMPUTED"
+  },
+  "formatters": {},
+  "order_by": {
+    "rows": [
+      "machine_name ASC",
+      "start_time ASC"
+    ]
+  },
+  "header_tokens": [
+    "company_title",
+    "print_date",
+    "range_start",
+    "range_end"
+  ],
+  "row_tokens": [
+    "machine_name",
+    "run_date",
+    "start_time",
+    "end_time",
+    "duration_sec",
+    "shift_no",
+    "total_time"
+  ],
+  "totals": {
+    "total_duration_sec": "COMPUTED",
+    "total_duration_hms": "COMPUTED"
+  },
+  "row_order": [
+    "machine_name ASC",
+    "start_time ASC"
+  ],
+  "literals": {
+    "company_title": "COASTAL FEEDS"
+  }
+}

@@ -1,0 +1,331 @@
+
+
+
+<meta charset="UTF-8">
+<meta>
+<title>Batch Report</title>
+<style>
+:root {
+  --col-bno: 12mm;
+  --col-material: 48mm;
+  --col-set: 20mm;
+  --col-ach: 20mm;
+  --col-error: 18mm;
+  --col-err-pct: 16mm;
+  --col-deviate: 20mm;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+@page {
+  size: A4;
+  margin: 8mm;
+}
+
+body {
+  font-family: Arial, sans-serif;
+  font-size: 7.5pt;
+  line-height: 1.1;
+  color: #000;
+  background: #fff;
+  padding: 2mm;
+}
+
+.report-header {
+  margin-bottom: 1mm;
+}
+
+.header-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.5mm;
+  font-size: 7pt;
+}
+
+.header-row:last-child {
+  margin-bottom: 0;
+}
+
+.header-field {
+  display: inline-block;
+}
+
+.header-label {
+  font-weight: normal;
+  margin-right: 1mm;
+}
+
+.report-title {
+  text-align: center;
+  font-size: 11pt;
+  font-weight: bold;
+  margin: 1.5mm 0 2mm 0;
+}
+
+.batch-block {
+  margin-bottom: 3mm;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+.batch-header {
+  margin-bottom: 1mm;
+  font-size: 7pt;
+  line-height: 1.15;
+}
+
+.batch-info-row {
+  display: flex;
+  gap: 4mm;
+  margin-bottom: 0.3mm;
+}
+
+.batch-info-field {
+  display: flex;
+  gap: 1mm;
+  white-space: nowrap;
+}
+
+.batch-info-label {
+  font-weight: normal;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  margin-top: 1mm;
+  font-size: 6.5pt;
+}
+
+.data-table th,
+.data-table td {
+  border: 0.5pt solid #000;
+  padding: 0.4mm 0.8mm;
+  text-align: left;
+}
+
+.data-table th {
+  font-weight: bold;
+  background: #fff;
+  vertical-align: bottom;
+  font-size: 6.5pt;
+  line-height: 1.1;
+}
+
+.data-table td {
+  vertical-align: middle;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.data-table .col-bno {
+  width: var(--col-bno);
+  text-align: center;
+}
+
+.data-table .col-material {
+  width: var(--col-material);
+  text-align: left;
+}
+
+.data-table .col-set,
+.data-table .col-ach,
+.data-table .col-error,
+.data-table .col-err-pct,
+.data-table .col-deviate {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.data-table .col-set {
+  width: var(--col-set);
+}
+
+.data-table .col-ach {
+  width: var(--col-ach);
+}
+
+.data-table .col-error {
+  width: var(--col-error);
+}
+
+.data-table .col-err-pct {
+  width: var(--col-err-pct);
+}
+
+.data-table .col-deviate {
+  width: var(--col-deviate);
+}
+
+.data-table .total-row {
+  font-weight: bold;
+}
+
+.data-table .total-row .col-material {
+  text-align: left;
+}
+
+.report-footer {
+  margin-top: 3mm;
+  text-align: center;
+  font-size: 7pt;
+  line-height: 1.2;
+}
+</style>
+
+
+
+<div class="report-header" id="report-header">
+  <div class="header-row">
+    <div class="header-field">
+      <span class="header-label">Plant name :</span>
+      <span>{plant_name}</span>
+    </div>
+    <div class="header-field">
+      <span class="header-label">Date:</span>
+      <span>{report_date}</span>
+    </div>
+  </div>
+  <div class="header-row">
+    <div class="header-field">
+      <span class="header-label">Location :</span>
+      <span>{location}</span>
+    </div>
+    <div class="header-field">
+      <span class="header-label">Recipe :</span>
+      <span>{recipe_code}</span>
+    </div>
+  </div>
+  <div class="header-row">
+    <div class="header-field">
+      <span class="header-label">Prod Desc :</span>
+      <span>{product_desc}</span>
+    </div>
+    <div class="header-field">
+      <span class="header-label">Shift No:</span>
+      <span>{shift_no}</span>
+    </div>
+  </div>
+  <div class="report-title">Batch report</div>
+</div>
+
+<!-- BEGIN:BLOCK_REPEAT batches -->
+<div class="batch-block">
+  <div class="batch-header">
+    <div class="batch-info-row">
+      <div class="batch-info-field">
+        <span class="batch-info-label">Batch No:</span>
+        <span>{batch_no}</span>
+      </div>
+      <div class="batch-info-field">
+        <span class="batch-info-label">Scale:</span>
+        <span>{scale}</span>
+      </div>
+      <div class="batch-info-field">
+        <span class="batch-info-label">Start time:</span>
+        <span>{start_time}</span>
+      </div>
+      <div class="batch-info-field">
+        <span class="batch-info-label">Date(act):</span>
+        <span>{date_act}</span>
+      </div>
+      <div class="batch-info-field">
+        <span class="batch-info-label">Scale:</span>
+        <span>{scale_2}</span>
+      </div>
+      <div class="batch-info-field">
+        <span class="batch-info-label">Start time:</span>
+        <span>{start_time_2}</span>
+      </div>
+      <div class="batch-info-field">
+        <span class="batch-info-label">Date(act):</span>
+        <span>{date_act_2}</span>
+      </div>
+    </div>
+    <div class="batch-info-row">
+      <div class="batch-info-field">
+        <span class="batch-info-label">Batch Date:</span>
+        <span>{batch_date}</span>
+      </div>
+      <div class="batch-info-field">
+        <span class="batch-info-label">Main1</span>
+      </div>
+    </div>
+    <div class="batch-info-row">
+      <div class="batch-info-field">
+        <span class="batch-info-label">Shift No:</span>
+        <span>{shift_no_batch}</span>
+      </div>
+      <div class="batch-info-field">
+        <span class="batch-info-label">Main2</span>
+      </div>
+    </div>
+    <div class="batch-info-row">
+      <div class="batch-info-field">
+        <span class="batch-info-label">Recipe Name:</span>
+        <span>{recipe_name}</span>
+      </div>
+    </div>
+    <div class="batch-info-row">
+      <div class="batch-info-field">
+        <span class="batch-info-label">Recipe Code:</span>
+        <span>{recipe_code_batch}</span>
+      </div>
+    </div>
+    <div class="batch-info-row">
+      <div class="batch-info-field">
+        <span class="batch-info-label">Recipe No:</span>
+        <span>{recipe_no}</span>
+      </div>
+    </div>
+  </div>
+
+  <table class="data-table" id="data-table">
+    <thead>
+      <tr>
+        <th class="col-bno" data-label="bin_no">Bin No</th>
+        <th class="col-material" data-label="material_name">Material Name</th>
+        <th class="col-set" data-label="set_wt_kg">Set wt(Kg)</th>
+        <th class="col-ach" data-label="ach_wt_kg">Ach wt(Kg)</th>
+        <th class="col-error" data-label="error_kg">Error(Kg)</th>
+        <th class="col-err-pct" data-label="error_percent">Error %</th>
+        <th class="col-deviate" data-label="deviate_per_axc">Deviate Der (axc)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="col-bno">{row_bin_no}</td>
+        <td class="col-material">{row_material_name}</td>
+        <td class="col-set">{row_set_wt_kg}</td>
+        <td class="col-ach">{row_ach_wt_kg}</td>
+        <td class="col-error">{row_error_kg}</td>
+        <td class="col-err-pct">{row_error_percent}</td>
+        <td class="col-deviate">{row_deviate_per_axc}</td>
+      </tr>
+    </tbody>
+    <tfoot>
+      <tr class="total-row">
+        <td class="col-bno"></td>
+        <td class="col-material">Total</td>
+        <td class="col-set">{total_set_wt_kg}</td>
+        <td class="col-ach">{total_ach_wt_kg}</td>
+        <td class="col-error">{total_error_kg}</td>
+        <td class="col-err-pct">{total_error_percent}</td>
+        <td class="col-deviate">{total_deviate_per_axc}</td>
+      </tr>
+    </tfoot>
+  </table>
+</div>
+<!-- END:BLOCK_REPEAT -->
+
+<div class="report-footer">
+  <div>{company_name}</div>
+  <div>Page {page_number} of {total_pages}</div>
+</div>
+
+

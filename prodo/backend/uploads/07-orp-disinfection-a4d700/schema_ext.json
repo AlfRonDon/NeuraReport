@@ -1,0 +1,17 @@
+{
+  "scalars": [
+    "report_title",
+    "section_title",
+    "effectiveness",
+    "dosing_rate"
+  ],
+  "row_tokens": [
+    "row_sensor_name",
+    "row_latest_mv",
+    "row_min_mv",
+    "row_max_mv",
+    "row_status"
+  ],
+  "totals": [],
+  "notes": "5-column ORP sensor table with dark-navy header; two footer key-value lines below the table"
+}

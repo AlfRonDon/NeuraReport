@@ -1,0 +1,20 @@
+{
+  "scalars": [],
+  "row_tokens": [
+    "row_column_1",
+    "row_column_2",
+    "row_column_3",
+    "row_column_4",
+    "row_column_5",
+    "row_column_6",
+    "row_costal_feeds",
+    "row_column_8",
+    "row_column_9",
+    "row_column_10",
+    "row_column_11",
+    "row_column_12",
+    "row_column_13"
+  ],
+  "totals": [],
+  "notes": "Header shows static captions (COSTAL FEEDS, TEMPERATURE REPORT). Print Date label is static; the date value is supplied via {row_column_12}. The tbody includes exactly one prototype data row with the 13 placeholders in the original column order."
+}

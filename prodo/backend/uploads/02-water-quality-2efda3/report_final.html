@@ -1,0 +1,156 @@
+
+
+
+<meta charset="UTF-8">
+<meta>
+<title>Water Quality Analysis Report</title>
+<style>
+  :root {
+    --col-param-w: 46mm;
+    --col-sensor-w: 24mm;
+    --col-min-w: 33mm;
+    --col-max-w: 33mm;
+    --col-avg-w: 23mm;
+    --col-unit-w: 12mm;
+    --header-bg: #2b5f8e;
+    --header-text: #ffffff;
+    --border-color: #aaaaaa;
+    --section-color: #1565c0;
+    --title-color: #1a1a2e;
+    --row-pad-v: 2.4mm;
+    --row-pad-h: 2.2mm;
+  }
+
+  @page {
+    size: A4;
+    margin: 18mm 18mm 18mm 18mm;
+  }
+
+  *, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 10pt;
+    color: #1a1a1a;
+    background: #ffffff;
+    padding: 15mm 18mm;
+  }
+
+  #report-header {
+    margin-bottom: 7mm;
+  }
+
+  .report-title {
+    text-align: center;
+    font-size: 16pt;
+    font-weight: bold;
+    color: var(--title-color);
+    margin-bottom: 6mm;
+    letter-spacing: normal;
+  }
+
+  .section-heading {
+    font-size: 13pt;
+    font-weight: bold;
+    color: var(--section-color);
+    margin-bottom: 4mm;
+  }
+
+  .report-period {
+    font-size: 9.5pt;
+    margin-bottom: 4.5mm;
+    color: #1a1a1a;
+  }
+
+  #data-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    margin-bottom: 6mm;
+  }
+
+  #data-table col.c-param  { width: var(--col-param-w); }
+  #data-table col.c-sensor { width: var(--col-sensor-w); }
+  #data-table col.c-min    { width: var(--col-min-w); }
+  #data-table col.c-max    { width: var(--col-max-w); }
+  #data-table col.c-avg    { width: var(--col-avg-w); }
+  #data-table col.c-unit   { width: var(--col-unit-w); }
+
+  #data-table thead tr th {
+    background-color: var(--header-bg);
+    color: var(--header-text);
+    font-size: 9.5pt;
+    font-weight: bold;
+    text-align: center;
+    padding: var(--row-pad-v) var(--row-pad-h);
+    border: 1px solid var(--border-color);
+  }
+
+  #data-table tbody tr td {
+    font-size: 9.5pt;
+    padding: var(--row-pad-v) var(--row-pad-h);
+    border: 1px solid var(--border-color);
+    color: #1a1a1a;
+    vertical-align: middle;
+  }
+
+  #data-table tbody tr td.td-param  { text-align: left; }
+  #data-table tbody tr td.td-sensor { text-align: center; }
+  #data-table tbody tr td.td-min    { text-align: right; font-variant-numeric: tabular-nums; }
+  #data-table tbody tr td.td-max    { text-align: right; font-variant-numeric: tabular-nums; }
+  #data-table tbody tr td.td-avg    { text-align: right; font-variant-numeric: tabular-nums; }
+  #data-table tbody tr td.td-unit   { text-align: center; }
+
+  .compliance-line {
+    font-size: 9.5pt;
+    margin-top: 5mm;
+    color: #1a1a1a;
+  }
+</style>
+
+
+
+<div id="report-header">
+  <div class="report-title">Water Quality Analysis Report</div>
+  <div class="section-heading">Analyser Readings &#8212; Daily Summary</div>
+  <div class="report-period">Report Period: {start_date} to {end_date}</div>
+</div>
+
+<table id="data-table">
+  <colgroup>
+    <col class="c-param">
+    <col class="c-sensor">
+    <col class="c-min">
+    <col class="c-max">
+    <col class="c-avg">
+    <col class="c-unit">
+  </colgroup>
+  <thead>
+    <tr>
+      <th data-label="parameter">Parameter</th>
+      <th data-label="sensor">Sensor</th>
+      <th data-label="min">Min</th>
+      <th data-label="max">Max</th>
+      <th data-label="avg">Avg</th>
+      <th data-label="unit">Unit</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td class="td-param">{row_parameter}</td>
+      <td class="td-sensor">{row_sensor}</td>
+      <td class="td-min">{row_min}</td>
+      <td class="td-max">{row_max}</td>
+      <td class="td-avg">{row_avg}</td>
+      <td class="td-unit">{row_unit}</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="compliance-line">Compliance Status: {compliance_status}</div>
+
+

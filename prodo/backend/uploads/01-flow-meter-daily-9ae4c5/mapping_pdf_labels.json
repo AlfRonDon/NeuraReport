@@ -1,0 +1,32 @@
+[
+  {
+    "header": "report_date",
+    "placeholder": "{report_date}",
+    "mapping": "params.report_date"
+  },
+  {
+    "header": "row_meter_id",
+    "placeholder": "{row_meter_id}",
+    "mapping": "neuract__FM_TABLE.FM_101"
+  },
+  {
+    "header": "row_reading",
+    "placeholder": "{row_reading}",
+    "mapping": "neuract__FM_TABLE.FM_101"
+  },
+  {
+    "header": "row_totalizer",
+    "placeholder": "{row_totalizer}",
+    "mapping": "neuract__FM_TABLE.FM_101_TOTALIZER"
+  },
+  {
+    "header": "row_status",
+    "placeholder": "{row_status}",
+    "mapping": "UNRESOLVED"
+  },
+  {
+    "header": "total_flow",
+    "placeholder": "{total_flow}",
+    "mapping": "UNRESOLVED"
+  }
+]

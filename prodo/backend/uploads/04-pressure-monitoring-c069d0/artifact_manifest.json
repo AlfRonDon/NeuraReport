@@ -1,0 +1,47 @@
+{
+  "correlation_id": null,
+  "file_checksums": {
+    "constant_replacements.json": "d4ea5b95f17f36e78114c540247a0fe25cfaac22d13d243f27d45bda7ce7ee62",
+    "fix_metrics.json": "64f1ab85c2f00c7c0cc55037b28599dc01500615908a0ee185a0851a3ed9d756",
+    "mapping_keys.json": "5a3b59399c715d057caf5c85f8da46469a7aa19680d97ab34017b4890c742b35",
+    "mapping_pdf_labels.json": "e7521822fdb211cca9130f48be861ff348aece9d80e3a1000926100b02214088",
+    "mapping_step3.json": "3ac3f70c7aa110ac71b216eccab3958ca5276d97be1dcba8a441aff60d51bbad",
+    "reference_p1.png": "2c81e35ceab0793a99f073e42a31beed394f895561500380e5facab5fbe8abd2",
+    "render_p1.png": "ed21142bd64a8903cb6cba249efd06bcc48632e67f8103f929d02a95f47f00c0",
+    "render_p1_after.png": "c13cedc9f2dc98dee338c7a2d5320c1bb5ed3d9610d5a265787e1302f218a589",
+    "render_p1_after_full.png": "b6f55618124e16109f3b1cea5c8176955c75dde636475219fd8859f976285bbb",
+    "render_p1_llm.png": "5bdb995086f90ff8e0c9a0f8b488ccd5d963c44e63f8caaa5c32ef96e2f61e16",
+    "schema_ext.json": "0c9f4de9ca1ffca4205a4fc5d482832a7a4f873c1a1d5971cf06e14dd589f644",
+    "source.pdf": "0e8becda3e61abca1a48072f670b53fa868d376bcbbfffa9627883d9707dd151",
+    "template_p1.html": "d7e8db070536c93cbd5ad98488f2108a936fd6e63a5ba4eea06d04f62c84e829"
+  },
+  "files": {
+    "constant_replacements.json": "constant_replacements.json",
+    "fix_metrics.json": "fix_metrics.json",
+    "mapping_keys.json": "mapping_keys.json",
+    "mapping_pdf_labels.json": "mapping_pdf_labels.json",
+    "mapping_step3.json": "mapping_step3.json",
+    "reference_p1.png": "reference_p1.png",
+    "render_p1.png": "render_p1.png",
+    "render_p1_after.png": "render_p1_after.png",
+    "render_p1_after_full.png": "render_p1_after_full.png",
+    "render_p1_llm.png": "render_p1_llm.png",
+    "schema_ext.json": "schema_ext.json",
+    "source.pdf": "source.pdf",
+    "template_p1.html": "template_p1.html"
+  },
+  "input_refs": [
+    "/home/rohith/desktop/NeuraReport/prodo/backend/uploads/04-pressure-monitoring-c069d0/source.pdf",
+    "cache_key=af4a1edcd535f77e1e283403aa52ee220acbb8aa9fd1e2d89af2bed5f800b2ac",
+    "catalog_sha256=312a06afd264f4c409ba0a0fb006aac7601c8781b51c4946edc16a58ed702f95",
+    "schema_sha256=1b224145d26e22cae8689bac3b8c198138de58579ef6aa6b5c0c65810c12b68e",
+    "html_pre_sha256=dcef9432489d734bd172ccfddd167e46e14e94c391c7e51f223b71d62fee90c5",
+    "html_post_sha256=d7e8db070536c93cbd5ad98488f2108a936fd6e63a5ba4eea06d04f62c84e829",
+    "mapping_tokens=6",
+    "mapping_keys=0"
+  ],
+  "pid": 2467982,
+  "produced_at": "2026-03-02T13:10:36.256156+00:00",
+  "schema_version": "1.0",
+  "step": "mapping_save"
+}

@@ -1,0 +1,19 @@
+{
+  "correlation_id": null,
+  "file_checksums": {
+    "filled_1772627287.html": "7f9db851c521d025d026f7c8960f0c08b6ab42df13cbd873a8ef22eab5b705c6",
+    "filled_1772627287.pdf": "24103d0adcecb93ef50cf26feefb4468e6db92fef847155dab3fc4b5db759217"
+  },
+  "files": {
+    "filled_1772627287.html": "filled_1772627287.html",
+    "filled_1772627287.pdf": "filled_1772627287.pdf"
+  },
+  "input_refs": [
+    "/home/rohith/desktop/NeuraReport/prodo/backend/uploads/scale-2-batch-report-29a157-pdf/contract.json",
+    "/home/rohith/desktop/NeuraReport/recipe_log (1).sqlite3"
+  ],
+  "pid": 104614,
+  "produced_at": "2026-03-04T12:28:08.100902+00:00",
+  "schema_version": "1.0",
+  "step": "reports_run"
+}

@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Consolidate Report</title>
+<style>
+  :root{
+    --page-margin: 14mm;
+    --grid-gap: 6mm;
+    --kv-gap: 18mm;
+    --label-gap: 6mm;
+    --table-font: 12.5pt;
+    --header-font: 13pt;
+    --title-font: 28pt;
+    --col-slno: 18mm;
+    --col-recipename: 72mm;
+    --col-recipecode: 70mm;
+    --col-recipeno: 28mm;
+    --col-batches: 40mm;
+    --row-h: 12.5mm;
+  }
+
+  @page{
+    size: A4;
+    margin: var(--page-margin);
+  }
+
+  *{ box-sizing: border-box; }
+  body{
+    font-family: "Times New Roman", serif;
+    color:#000;
+    margin:0;
+    padding: var(--page-margin);
+    line-height: 1.25;
+  }
+
+  /* Header framed card */
+  #report-header{
+    border: 2px solid #000;
+    padding: 10mm 12mm;
+    position: relative;
+  }
+
+  .info-grid{
+    display:flex;
+    justify-content: space-between;
+    gap: 20mm;
+    margin-bottom: 6mm;
+  }
+  .info-left,
+  .info-right{
+    display:flex;
+    flex-direction:column;
+    gap:4mm;
+    min-width:0;
+  }
+  .kv{
+    display:grid;
+    grid-template-columns: auto auto 1fr;
+    column-gap:4mm;
+    font-size: var(--header-font);
+  }
+  .kv .label{
+    font-weight:600;
+  }
+  .kv .value{
+    font-weight:600;
+    min-width:32mm;
+  }
+  .info-right .kv{
+    grid-template-columns:auto auto auto;
+  }
+  .kv.recipe{
+    margin-top:4mm;
+  }
+  .kv.recipe .value{
+    min-width:40mm;
+  }
+  .title{
+    text-align: center;
+    font-weight: 700;
+    font-size: var(--title-font);
+    margin: 0 0 8mm 0;
+  }
+
+  /* Data table */
+  #data-table{
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    margin-top: 12mm;
+    font-size: var(--table-font);
+  }
+  #data-table th, #data-table td{
+    border:1px solid #000;
+    padding: 6px 10px;
+  }
+  #data-table thead th{
+    text-align: left;
+    font-weight: 700;
+  }
+  #data-table td.num, #data-table th.num{
+    text-align: right;
+  }
+  #data-table col.slno{ width: var(--col-slno); }
+  #data-table col.rname{ width: var(--col-recipename); }
+  #data-table col.rcode{ width: var(--col-recipecode); }
+  #data-table col.rno{ width: var(--col-recipeno); }
+  #data-table col.nb{ width: var(--col-batches); }
+
+  /* Totals row styling like screenshot (Total label left within table) */
+  tfoot td{
+    font-size: var(--table-font);
+    font-weight: 700;
+    padding-top: 10px;
+    padding-bottom: 10px;
+  }
+
+  /* Small print date line inside header bottom row */
+  .print-date{
+    margin-top: 2mm;
+  }
+</style>
+</head>
+<body>
+
+  <section id="report-header">
+    <div class="info-grid">
+      <div class="info-left">
+        <div class="kv">
+          <span class="label">Plant name</span>
+          <span class="sep">:</span>
+          <span class="value">Coastal Feeds</span>
+        </div>
+        <div class="kv">
+          <span class="label">Location</span>
+          <span class="sep">:</span>
+          <span class="value">Gudivada</span>
+        </div>
+        <div class="kv">
+          <span class="label">Print Date</span>
+          <span class="sep">:</span>
+          <span class="value">16/03/2026</span>
+        </div>
+      </div>
+      <div class="info-right">
+        <div class="kv">
+          <span class="label">From</span>
+          <span class="sep">:</span>
+          <span class="value">05/11/2025 12:00</span>
+        </div>
+        <div class="kv">
+          <span class="label">To</span>
+          <span class="sep">:</span>
+          <span class="value">05/11/2025 20:00</span>
+        </div>
+        <div class="kv recipe">
+          <span class="label">Recipe code</span>
+          <span class="sep">:</span>
+          <span class="value"></span>
+        </div>
+      </div>
+    </div>
+
+    <h1 class="title">Consolidate report</h1>
+  </section>
+
+  <table id="data-table" aria-label="Consolidated Batches">
+    <colgroup>
+      <col class="slno">
+      <col class="rname">
+      <col class="rcode">
+      <col class="rno">
+      <col class="nb">
+    </colgroup>
+    <thead>
+      <tr>
+        <th data-label="sl_no">Sl. No.</th>
+        <th data-label="recipe_name">Recipe name</th>
+        <th data-label="recipe_code">Recipe code</th>
+        <th data-label="recipe_no">Recipe No.</th>
+        <th class="num" data-label="no_of_batches">No. of batches</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="num">1</td>
+        <td>QPLUS</td>
+        <td>QPLUS</td>
+        <td class="num">3049</td>
+        <td class="num">15</td>
+      </tr>
+    </tbody>
+    <tfoot id="report-totals">
+      <tr>
+        <td colspan="4" style="border-right:0;"><strong style="font-weight:700;">Total</strong></td>
+        <td class="num" style="border-left:1px solid #000;">15</td>
+      </tr>
+    </tfoot>
+  </table>
+
+</body>
+</html>

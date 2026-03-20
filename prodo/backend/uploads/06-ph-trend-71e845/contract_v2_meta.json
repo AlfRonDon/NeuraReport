@@ -1,0 +1,142 @@
+{
+  "prompt_version": "v3_df",
+  "model": "sonnet",
+  "input_signature": "cd814db7645f88a85d4a18f2a2f1e850c61ed27780cb10d1d66d588535793592",
+  "db_signature": "0c33e3e2d9de39703b476f6ece004966e0b418fe1acc690478668ef987513776",
+  "page_summary_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "generated_at": 1772456457,
+  "assumptions": [],
+  "warnings": [],
+  "validation": {
+    "unknown_tokens": [],
+    "unknown_columns": [],
+    "token_coverage": {
+      "scalars_mapped_pct": 100,
+      "row_tokens_mapped_pct": 100,
+      "totals_mapped_pct": 100
+    }
+  },
+  "overview_path": "overview.md",
+  "step5_requirements_path": "step5_requirements.json",
+  "contract_payload": {
+    "tokens": {
+      "scalars": [
+        "report_date",
+        "avg_ph",
+        "exceedance_count"
+      ],
+      "row_tokens": [
+        "row_timestamp",
+        "row_ph_101",
+        "row_ph_102",
+        "row_ph_103",
+        "row_ph_104"
+      ],
+      "totals": []
+    },
+    "mapping": {
+      "report_date": "PARAM:report_date",
+      "row_timestamp": "neuract__ANALYSER_TABLE.timestamp_utc",
+      "row_ph_101": "neuract__ANALYSER_TABLE.PH_101",
+      "row_ph_102": "neuract__ANALYSER_TABLE.PH_102",
+      "row_ph_103": "neuract__ANALYSER_TABLE.PH_103",
+      "row_ph_104": "neuract__ANALYSER_TABLE.PH_104"
+    },
+    "unresolved": [
+      "avg_ph",
+      "exceedance_count"
+    ],
+    "join": {
+      "parent_table": "neuract__ANALYSER_TABLE",
+      "parent_key": "rowid",
+      "child_table": "neuract__ANALYSER_TABLE",
+      "child_key": "rowid"
+    },
+    "date_columns": {
+      "neuract__ANALYSER_TABLE": "timestamp_utc"
+    },
+    "filters": {
+      "optional": {
+        "date_from": "neuract__ANALYSER_TABLE.timestamp_utc",
+        "date_to": "neuract__ANALYSER_TABLE.timestamp_utc"
+      }
+    },
+    "reshape_rules": [
+      {
+        "purpose": "Auto-generated reshape rule derived from mapping tokens.",
+        "strategy": "SELECT",
+        "columns": [
+          {
+            "as": "row_timestamp",
+            "from": [
+              "neuract__ANALYSER_TABLE.timestamp_utc"
+            ]
+          },
+          {
+            "as": "row_ph_101",
+            "from": [
+              "neuract__ANALYSER_TABLE.PH_101"
+            ]
+          },
+          {
+            "as": "row_ph_102",
+            "from": [
+              "neuract__ANALYSER_TABLE.PH_102"
+            ]
+          },
+          {
+            "as": "row_ph_103",
+            "from": [
+              "neuract__ANALYSER_TABLE.PH_103"
+            ]
+          },
+          {
+            "as": "row_ph_104",
+            "from": [
+              "neuract__ANALYSER_TABLE.PH_104"
+            ]
+          }
+        ],
+        "order_by": []
+      }
+    ],
+    "row_computed": {
+      "row_timestamp": {
+        "op": "format_date",
+        "column": "neuract__ANALYSER_TABLE.timestamp_utc",
+        "format": "%d-%m-%Y %H:%M:%S"
+      }
+    },
+    "totals_math": {},
+    "totals": {},
+    "formatters": {
+      "row_ph_101": "number(4)",
+      "row_ph_102": "number(4)",
+      "row_ph_103": "number(4)",
+      "row_ph_104": "number(4)",
+      "avg_ph": "number(4)",
+      "exceedance_count": "number(0)"
+    },
+    "order_by": {
+      "rows": [
+        "neuract__ANALYSER_TABLE.timestamp_utc ASC"
+      ]
+    },
+    "header_tokens": [
+      "report_date"
+    ],
+    "row_tokens": [
+      "row_timestamp",
+      "row_ph_101",
+      "row_ph_102",
+      "row_ph_103",
+      "row_ph_104"
+    ],
+    "row_order": [
+      "neuract__ANALYSER_TABLE.timestamp_utc ASC"
+    ],
+    "literals": {},
+    "notes": "avg_ph and exceedance_count are scalar aggregates that cannot be expressed with the available declarative op set. avg_ph = mean of PH_101, PH_102, PH_103, PH_104 values across all filtered rows: df[['PH_101','PH_102','PH_103','PH_104']].values.mean(). exceedance_count = count of individual channel readings where value > ph_threshold across all filtered rows and all four channels: ((df[['PH_101','PH_102','PH_103','PH_104']] > ph_threshold)).sum().sum(). Pipeline must accept ph_threshold as an optional parameter (suggested site default: consult site specification). pH sensor domain requires 4-decimal display precision. exceedance_count is an integer count displayed with number(0)."
+  },
+  "key_tokens": []
+}

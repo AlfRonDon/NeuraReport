@@ -1,0 +1,15 @@
+{
+  "scalars": [
+    "effectiveness",
+    "dosing_rate"
+  ],
+  "row_tokens": [
+    "row_sensor",
+    "row_latest_mv",
+    "row_min_mv",
+    "row_max_mv",
+    "row_status"
+  ],
+  "totals": [],
+  "notes": "Table title and section heading are literal text. Each row represents one ORP sensor reading. Footer scalars are inline key-value lines below the table."
+}

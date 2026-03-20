@@ -1,0 +1,29 @@
+{
+  "scalars": [
+    "plant_name",
+    "location",
+    "print_date",
+    "report_date",
+    "recipe_name_header",
+    "shift_no",
+    "page_number",
+    "total_pages"
+  ],
+  "row_tokens": [
+    "row_bth_no",
+    "row_material_name",
+    "row_set_wt_kg",
+    "row_act_wt_kg",
+    "row_error_kg",
+    "row_error_pct",
+    "row_deviate_dur_sec"
+  ],
+  "totals": [
+    "total_set_wt_kg",
+    "total_act_wt_kg",
+    "total_error_kg",
+    "total_error_pct",
+    "total_deviate_dur_sec"
+  ],
+  "notes": "Repeating batch blocks with material tables; each batch has header info and data rows with totals"
+}

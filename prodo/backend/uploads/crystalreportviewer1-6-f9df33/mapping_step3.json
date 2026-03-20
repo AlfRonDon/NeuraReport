@@ -1,0 +1,540 @@
+{
+  "mapping": {
+    "plant_name": "params.plant_name",
+    "location": "params.location",
+    "print_date": "params.print_date",
+    "report_date": "params.report_date",
+    "recipe_name_header": "recipes.recipe_name",
+    "shift_no": "params.shift_no",
+    "batch_no": "UNRESOLVED",
+    "scale_1": "UNRESOLVED",
+    "scale_2": "UNRESOLVED",
+    "batch_date": "UNRESOLVED",
+    "start_time_1": "UNRESOLVED",
+    "start_time_2": "UNRESOLVED",
+    "shift_no_batch": "params.shift_no",
+    "date_sec_1": "UNRESOLVED",
+    "date_sec_2": "UNRESOLVED",
+    "recipe_name": "recipes.recipe_name",
+    "recipe_code": "UNRESOLVED",
+    "recipe_no": "UNRESOLVED",
+    "row_bth_no": "UNRESOLVED",
+    "row_material_name": "UNRESOLVED",
+    "row_set_wt_kg": "UNRESOLVED",
+    "row_act_wt_kg": "UNRESOLVED",
+    "row_error_kg": "UNRESOLVED",
+    "row_error_pct": "UNRESOLVED",
+    "row_deviate_dur_sec": "UNRESOLVED",
+    "total_set_wt_kg": "UNRESOLVED",
+    "total_act_wt_kg": "UNRESOLVED",
+    "total_error_kg": "UNRESOLVED",
+    "total_error_pct": "UNRESOLVED",
+    "total_deviate_dur_sec": "UNRESOLVED",
+    "page_number": "LATER_SELECTED",
+    "total_pages": "params.total_pages"
+  },
+  "meta": {
+    "unresolved": [
+      "batch_no",
+      "scale_1",
+      "scale_2",
+      "batch_date",
+      "start_time_1",
+      "start_time_2",
+      "date_sec_1",
+      "date_sec_2",
+      "recipe_code",
+      "recipe_no",
+      "row_bth_no",
+      "row_material_name",
+      "row_set_wt_kg",
+      "row_act_wt_kg",
+      "row_error_kg",
+      "row_error_pct",
+      "row_deviate_dur_sec",
+      "total_set_wt_kg",
+      "total_act_wt_kg",
+      "total_error_kg",
+      "total_error_pct",
+      "total_deviate_dur_sec"
+    ],
+    "hints": {
+      "batch_no": {
+        "op": "NEEDS_BATCH_TABLE",
+        "over": [
+          "note:Batch identifier not in recipes catalog"
+        ]
+      },
+      "scale_1": {
+        "op": "NEEDS_SCALE_INFO",
+        "over": [
+          "note:Scale name (Main1/Main2) not in catalog"
+        ]
+      },
+      "scale_2": {
+        "op": "NEEDS_SCALE_INFO",
+        "over": [
+          "note:Scale name (Main1/Main2) not in catalog"
+        ]
+      },
+      "batch_date": {
+        "op": "FORMAT",
+        "over": [
+          "note:Date formatting needed from recipes.start_time"
+        ]
+      },
+      "start_time_1": {
+        "op": "FORMAT",
+        "over": [
+          "note:Time extraction needed"
+        ]
+      },
+      "start_time_2": {
+        "op": "FORMAT",
+        "over": [
+          "note:Time extraction needed"
+        ]
+      },
+      "date_sec_1": {
+        "op": "NEEDS_DURATION_TABLE",
+        "over": [
+          "note:Duration in seconds not in recipes"
+        ]
+      },
+      "date_sec_2": {
+        "op": "NEEDS_DURATION_TABLE",
+        "over": [
+          "note:Duration in seconds not in recipes"
+        ]
+      },
+      "recipe_code": {
+        "op": "NEEDS_RECIPE_CODE_COLUMN",
+        "over": [
+          "note:Recipe code not in catalog"
+        ]
+      },
+      "recipe_no": {
+        "op": "NEEDS_RECIPE_NUMBER",
+        "over": [
+          "note:Recipe number not in catalog"
+        ]
+      },
+      "row_bth_no": {
+        "op": "NEEDS_BIN_SEQUENCING",
+        "over": [
+          "note:Sequential bin number, requires pivoting bin1-12"
+        ]
+      },
+      "row_material_name": {
+        "op": "UNPIVOT",
+        "over": [
+          "columns:recipes.bin1_content",
+          "columns:recipes.bin2_content",
+          "columns:recipes.bin3_content",
+          "columns:recipes.bin4_content",
+          "columns:recipes.bin5_content",
+          "columns:recipes.bin6_content",
+          "columns:recipes.bin7_content",
+          "columns:recipes.bin8_content",
+          "columns:recipes.bin9_content",
+          "columns:recipes.bin10_content",
+          "columns:recipes.bin11_content",
+          "columns:recipes.bin12_content"
+        ]
+      },
+      "row_set_wt_kg": {
+        "op": "UNPIVOT",
+        "over": [
+          "columns:recipes.bin1_sp",
+          "columns:recipes.bin2_sp",
+          "columns:recipes.bin3_sp",
+          "columns:recipes.bin4_sp",
+          "columns:recipes.bin5_sp",
+          "columns:recipes.bin6_sp",
+          "columns:recipes.bin7_sp",
+          "columns:recipes.bin8_sp",
+          "columns:recipes.bin9_sp",
+          "columns:recipes.bin10_sp",
+          "columns:recipes.bin11_sp",
+          "columns:recipes.bin12_sp"
+        ]
+      },
+      "row_act_wt_kg": {
+        "op": "UNPIVOT",
+        "over": [
+          "columns:recipes.bin1_act",
+          "columns:recipes.bin2_act",
+          "columns:recipes.bin3_act",
+          "columns:recipes.bin4_act",
+          "columns:recipes.bin5_act",
+          "columns:recipes.bin6_act",
+          "columns:recipes.bin7_act",
+          "columns:recipes.bin8_act",
+          "columns:recipes.bin9_act",
+          "columns:recipes.bin10_act",
+          "columns:recipes.bin11_act",
+          "columns:recipes.bin12_act"
+        ]
+      },
+      "row_error_kg": {
+        "op": "CALC",
+        "over": [
+          "note:row_act_wt_kg - row_set_wt_kg"
+        ]
+      },
+      "row_error_pct": {
+        "op": "CALC",
+        "over": [
+          "note:(row_error_kg / row_set_wt_kg) * 100"
+        ]
+      },
+      "row_deviate_dur_sec": {
+        "op": "NEEDS_DURATION_TABLE",
+        "over": [
+          "note:Deviation duration not in recipes"
+        ]
+      },
+      "total_set_wt_kg": {
+        "op": "SUM",
+        "over": [
+          "row_set_wt_kg"
+        ]
+      },
+      "total_act_wt_kg": {
+        "op": "SUM",
+        "over": [
+          "row_act_wt_kg"
+        ]
+      },
+      "total_error_kg": {
+        "op": "SUM",
+        "over": [
+          "row_error_kg"
+        ]
+      },
+      "total_error_pct": {
+        "op": "CALC",
+        "over": [
+          "note:(total_error_kg / total_set_wt_kg) * 100"
+        ]
+      },
+      "total_deviate_dur_sec": {
+        "op": "SUM",
+        "over": [
+          "row_deviate_dur_sec"
+        ]
+      }
+    }
+  },
+  "prompt_meta": {
+    "version": "llm_call_3_v7",
+    "prompt_sha256": "06d0ed588737e651d1d46a6442bd0bb8b5785f1bf05b92d4ad993efcdfd47447",
+    "catalog_sha256": "5ab68eaee30f1854825ca078e67a3c993e44a196546ccd2989ebace59744fecb",
+    "schema_sha256": "68f4bea5b158207139888ec0064cc54c0f683d44bd625657f93d682ab9413dd7",
+    "cache_key": "9a495005541b4d0f6b5033a52ecad390b021bffbd33281bd489903e609260a5b",
+    "pre_html_sha256": "c249ca705a139d2e7276d0af2ea03fb7dae9df8b29561ab51806e948d51a83c8",
+    "post_html_sha256": "c249ca705a139d2e7276d0af2ea03fb7dae9df8b29561ab51806e948d51a83c8",
+    "prompt_version": "llm_call_3_v7",
+    "pdf_sha256": "d0042e55d72d8f13cbedb0ab7cf1afec382056bbb7e043b5f261ed987c815c1e",
+    "db_signature": "a1ae35033b0127c7eb5947b164605076fecec7d6e107fe858a84d9dcce409ae9"
+  },
+  "raw_payload": {
+    "mapping": {
+      "plant_name": "params.plant_name",
+      "location": "params.location",
+      "print_date": "params.print_date",
+      "report_date": "params.report_date",
+      "recipe_name_header": "recipes.recipe_name",
+      "shift_no": "params.shift_no",
+      "batch_no": "UNRESOLVED",
+      "scale_1": "UNRESOLVED",
+      "scale_2": "UNRESOLVED",
+      "batch_date": "UNRESOLVED",
+      "start_time_1": "UNRESOLVED",
+      "start_time_2": "UNRESOLVED",
+      "shift_no_batch": "params.shift_no",
+      "date_sec_1": "UNRESOLVED",
+      "date_sec_2": "UNRESOLVED",
+      "recipe_name": "recipes.recipe_name",
+      "recipe_code": "UNRESOLVED",
+      "recipe_no": "UNRESOLVED",
+      "row_bth_no": "UNRESOLVED",
+      "row_material_name": "UNRESOLVED",
+      "row_set_wt_kg": "UNRESOLVED",
+      "row_act_wt_kg": "UNRESOLVED",
+      "row_error_kg": "UNRESOLVED",
+      "row_error_pct": "UNRESOLVED",
+      "row_deviate_dur_sec": "UNRESOLVED",
+      "total_set_wt_kg": "UNRESOLVED",
+      "total_act_wt_kg": "UNRESOLVED",
+      "total_error_kg": "UNRESOLVED",
+      "total_error_pct": "UNRESOLVED",
+      "total_deviate_dur_sec": "UNRESOLVED",
+      "page_number": "params.page_number",
+      "total_pages": "params.total_pages"
+    },
+    "token_samples": {
+      "plant_name": "SSR AQUA",
+      "location": "Gudivada",
+      "print_date": "24/05/2024",
+      "report_date": "24/05/2024",
+      "recipe_name_header": "GANGADHAR-24",
+      "shift_no": "1",
+      "batch_no": "03/0024-1640",
+      "scale_1": "Main1",
+      "scale_2": "Main2",
+      "batch_date": "24/05/2024",
+      "start_time_1": "6:49:18",
+      "start_time_2": "6:49:18",
+      "shift_no_batch": "1",
+      "date_sec_1": "441",
+      "date_sec_2": "605",
+      "recipe_name": "GANGADHAR-24",
+      "recipe_code": "GANGADHAR-2024",
+      "recipe_no": "1",
+      "row_bth_no": "1",
+      "row_material_name": "DOSER (GOLD STAR)",
+      "row_set_wt_kg": "200.00",
+      "row_act_wt_kg": "202.50",
+      "row_error_kg": "2.50",
+      "row_error_pct": "1.25",
+      "row_deviate_dur_sec": "187",
+      "total_set_wt_kg": "1,000.00",
+      "total_act_wt_kg": "999.20",
+      "total_error_kg": "-0.80",
+      "total_error_pct": "-0.07",
+      "total_deviate_dur_sec": "1,075",
+      "page_number": "1",
+      "total_pages": "29"
+    },
+    "meta": {
+      "unresolved": [
+        "batch_no",
+        "scale_1",
+        "scale_2",
+        "batch_date",
+        "start_time_1",
+        "start_time_2",
+        "date_sec_1",
+        "date_sec_2",
+        "recipe_code",
+        "recipe_no",
+        "row_bth_no",
+        "row_material_name",
+        "row_set_wt_kg",
+        "row_act_wt_kg",
+        "row_error_kg",
+        "row_error_pct",
+        "row_deviate_dur_sec",
+        "total_set_wt_kg",
+        "total_act_wt_kg",
+        "total_error_kg",
+        "total_error_pct",
+        "total_deviate_dur_sec"
+      ],
+      "hints": {
+        "batch_no": {
+          "op": "NEEDS_BATCH_TABLE",
+          "over": [
+            "note:Batch identifier not in recipes catalog"
+          ]
+        },
+        "scale_1": {
+          "op": "NEEDS_SCALE_INFO",
+          "over": [
+            "note:Scale name (Main1/Main2) not in catalog"
+          ]
+        },
+        "scale_2": {
+          "op": "NEEDS_SCALE_INFO",
+          "over": [
+            "note:Scale name (Main1/Main2) not in catalog"
+          ]
+        },
+        "batch_date": {
+          "op": "FORMAT",
+          "over": [
+            "note:Date formatting needed from recipes.start_time"
+          ]
+        },
+        "start_time_1": {
+          "op": "FORMAT",
+          "over": [
+            "note:Time extraction needed"
+          ]
+        },
+        "start_time_2": {
+          "op": "FORMAT",
+          "over": [
+            "note:Time extraction needed"
+          ]
+        },
+        "date_sec_1": {
+          "op": "NEEDS_DURATION_TABLE",
+          "over": [
+            "note:Duration in seconds not in recipes"
+          ]
+        },
+        "date_sec_2": {
+          "op": "NEEDS_DURATION_TABLE",
+          "over": [
+            "note:Duration in seconds not in recipes"
+          ]
+        },
+        "recipe_code": {
+          "op": "NEEDS_RECIPE_CODE_COLUMN",
+          "over": [
+            "note:Recipe code not in catalog"
+          ]
+        },
+        "recipe_no": {
+          "op": "NEEDS_RECIPE_NUMBER",
+          "over": [
+            "note:Recipe number not in catalog"
+          ]
+        },
+        "row_bth_no": {
+          "op": "NEEDS_BIN_SEQUENCING",
+          "over": [
+            "note:Sequential bin number, requires pivoting bin1-12"
+          ]
+        },
+        "row_material_name": {
+          "op": "UNPIVOT",
+          "over": [
+            "columns:recipes.bin1_content",
+            "columns:recipes.bin2_content",
+            "columns:recipes.bin3_content",
+            "columns:recipes.bin4_content",
+            "columns:recipes.bin5_content",
+            "columns:recipes.bin6_content",
+            "columns:recipes.bin7_content",
+            "columns:recipes.bin8_content",
+            "columns:recipes.bin9_content",
+            "columns:recipes.bin10_content",
+            "columns:recipes.bin11_content",
+            "columns:recipes.bin12_content"
+          ]
+        },
+        "row_set_wt_kg": {
+          "op": "UNPIVOT",
+          "over": [
+            "columns:recipes.bin1_sp",
+            "columns:recipes.bin2_sp",
+            "columns:recipes.bin3_sp",
+            "columns:recipes.bin4_sp",
+            "columns:recipes.bin5_sp",
+            "columns:recipes.bin6_sp",
+            "columns:recipes.bin7_sp",
+            "columns:recipes.bin8_sp",
+            "columns:recipes.bin9_sp",
+            "columns:recipes.bin10_sp",
+            "columns:recipes.bin11_sp",
+            "columns:recipes.bin12_sp"
+          ]
+        },
+        "row_act_wt_kg": {
+          "op": "UNPIVOT",
+          "over": [
+            "columns:recipes.bin1_act",
+            "columns:recipes.bin2_act",
+            "columns:recipes.bin3_act",
+            "columns:recipes.bin4_act",
+            "columns:recipes.bin5_act",
+            "columns:recipes.bin6_act",
+            "columns:recipes.bin7_act",
+            "columns:recipes.bin8_act",
+            "columns:recipes.bin9_act",
+            "columns:recipes.bin10_act",
+            "columns:recipes.bin11_act",
+            "columns:recipes.bin12_act"
+          ]
+        },
+        "row_error_kg": {
+          "op": "CALC",
+          "over": [
+            "note:row_act_wt_kg - row_set_wt_kg"
+          ]
+        },
+        "row_error_pct": {
+          "op": "CALC",
+          "over": [
+            "note:(row_error_kg / row_set_wt_kg) * 100"
+          ]
+        },
+        "row_deviate_dur_sec": {
+          "op": "NEEDS_DURATION_TABLE",
+          "over": [
+            "note:Deviation duration not in recipes"
+          ]
+        },
+        "total_set_wt_kg": {
+          "op": "SUM",
+          "over": [
+            "row_set_wt_kg"
+          ]
+        },
+        "total_act_wt_kg": {
+          "op": "SUM",
+          "over": [
+            "row_act_wt_kg"
+          ]
+        },
+        "total_error_kg": {
+          "op": "SUM",
+          "over": [
+            "row_error_kg"
+          ]
+        },
+        "total_error_pct": {
+          "op": "CALC",
+          "over": [
+            "note:(total_error_kg / total_set_wt_kg) * 100"
+          ]
+        },
+        "total_deviate_dur_sec": {
+          "op": "SUM",
+          "over": [
+            "row_deviate_dur_sec"
+          ]
+        }
+      }
+    },
+    "constant_replacements": {}
+  },
+  "constant_replacements": {},
+  "token_samples": {
+    "plant_name": "SSR AQUA",
+    "location": "Gudivada",
+    "print_date": "24/05/2024",
+    "report_date": "24/05/2024",
+    "recipe_name_header": "GANGADHAR-24",
+    "shift_no": "1",
+    "batch_no": "03/0024-1640",
+    "scale_1": "Main1",
+    "scale_2": "Main2",
+    "batch_date": "24/05/2024",
+    "start_time_1": "6:49:18",
+    "start_time_2": "6:49:18",
+    "shift_no_batch": "1",
+    "date_sec_1": "441",
+    "date_sec_2": "605",
+    "recipe_name": "GANGADHAR-24",
+    "recipe_code": "GANGADHAR-2024",
+    "recipe_no": "1",
+    "row_bth_no": "1",
+    "row_material_name": "DOSER (GOLD STAR)",
+    "row_set_wt_kg": "200.00",
+    "row_act_wt_kg": "202.50",
+    "row_error_kg": "2.50",
+    "row_error_pct": "1.25",
+    "row_deviate_dur_sec": "187",
+    "total_set_wt_kg": "1,000.00",
+    "total_act_wt_kg": "999.20",
+    "total_error_kg": "-0.80",
+    "total_error_pct": "-0.07",
+    "total_deviate_dur_sec": "1,075",
+    "page_number": "1",
+    "total_pages": "29"
+  }
+}

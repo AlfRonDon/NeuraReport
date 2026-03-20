@@ -1,0 +1,227 @@
+
+
+
+<meta charset="UTF-8">
+<title>STP Plant Overview Report</title>
+<style>
+  :root {
+    --title-color: #1a237e;
+    --section-color: #1565c0;
+    --table-header-bg: #1a2060;
+    --border-color: #b0b8cc;
+    --body-font: Arial, Helvetica, sans-serif;
+    --flow-col-meter: 22mm;
+    --flow-col-total: 38mm;
+    --flow-col-avg: 33mm;
+    --wq-col-param: 25mm;
+    --wq-col-value: 27mm;
+    --wq-col-limit: 24mm;
+    --lvl-col-tank: 28mm;
+    --lvl-col-level: 26mm;
+    --section-gap: 5mm;
+    --row-gap: 1.5mm;
+  }
+
+  @page {
+    size: A4;
+    margin: 18mm 20mm 18mm 20mm;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--body-font);
+    font-size: 9pt;
+    color: #222;
+    background: #fff;
+  }
+
+  #report-header {
+    text-align: center;
+    margin-bottom: 4mm;
+    padding-top: 2mm;
+  }
+
+  #report-header .report-title {
+    font-size: 16pt;
+    font-weight: bold;
+    color: var(--title-color);
+    margin-bottom: 0;
+  }
+
+  #report-header .report-subtitle {
+    font-size: 11pt;
+    font-weight: bold;
+    color: var(--section-color);
+    text-align: left;
+    margin-top: 3.5mm;
+  }
+
+  .period-line {
+    font-size: 8.5pt;
+    color: #333;
+    margin: 2mm 0 var(--section-gap) 0;
+  }
+
+  .section-heading {
+    font-size: 11pt;
+    font-weight: bold;
+    color: var(--section-color);
+    margin-bottom: 2mm;
+    margin-top: var(--section-gap);
+  }
+
+  table {
+    border-collapse: collapse;
+    table-layout: fixed;
+    font-size: 8.5pt;
+    margin-bottom: var(--section-gap);
+  }
+
+  thead th {
+    background-color: var(--table-header-bg);
+    color: #ffffff;
+    font-weight: bold;
+    text-align: center;
+    padding: 4px 6px;
+    border: 1px solid var(--table-header-bg);
+    font-size: 8.5pt;
+  }
+
+  tbody td {
+    padding: 3px 6px;
+    text-align: center;
+    border: 1px solid var(--border-color);
+    background: #fff;
+    font-size: 8.5pt;
+    color: #222;
+  }
+
+  #flow-table {
+    width: calc(var(--flow-col-meter) + var(--flow-col-total) + var(--flow-col-avg));
+  }
+  #flow-table col:nth-child(1) { width: var(--flow-col-meter); }
+  #flow-table col:nth-child(2) { width: var(--flow-col-total); }
+  #flow-table col:nth-child(3) { width: var(--flow-col-avg); }
+
+  #wq-table {
+    width: calc(var(--wq-col-param) + var(--wq-col-value) + var(--wq-col-limit));
+  }
+  #wq-table col:nth-child(1) { width: var(--wq-col-param); }
+  #wq-table col:nth-child(2) { width: var(--wq-col-value); }
+  #wq-table col:nth-child(3) { width: var(--wq-col-limit); }
+
+  #lvl-table {
+    width: calc(var(--lvl-col-tank) + var(--lvl-col-level));
+  }
+  #lvl-table col:nth-child(1) { width: var(--lvl-col-tank); }
+  #lvl-table col:nth-child(2) { width: var(--lvl-col-level); }
+</style>
+
+
+
+<div id="report-header">
+  <div class="report-title">STP Plant Overview Report</div>
+  <div class="report-subtitle">Comprehensive Facility Summary</div>
+</div>
+
+<div class="period-line">Period: {start_date} to {end_date}</div>
+
+<div class="section-heading">Section 1: Flow Summary</div>
+
+<table id="flow-table">
+  <colgroup>
+    <col><col><col>
+  </colgroup>
+  <thead>
+    <tr>
+      <th data-label="meter">Meter</th>
+      <th data-label="total_flow_m3">Total Flow (m³)</th>
+      <th data-label="avg_rate_m3h">Avg Rate (m³/h)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>FM_101</td>
+      <td>{fm_101_totalizer}</td>
+      <td>{fm_101}</td>
+    </tr>
+    <tr>
+      <td>FM_103</td>
+      <td>{fm_103_totalizer}</td>
+      <td>{fm_103}</td>
+    </tr>
+    <tr>
+      <td>FM_105</td>
+      <td>{fm_105_totalizer}</td>
+      <td>{fm_105}</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="section-heading">Section 2: Water Quality</div>
+
+<table id="wq-table">
+  <colgroup>
+    <col><col><col>
+  </colgroup>
+  <thead>
+    <tr>
+      <th data-label="parameter">Parameter</th>
+      <th data-label="value">Value</th>
+      <th data-label="limit">Limit</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>pH Inlet</td>
+      <td>{ph_101}</td>
+      <td>6.5 - 8.5</td>
+    </tr>
+    <tr>
+      <td>pH Outlet</td>
+      <td>{ph_104}</td>
+      <td>6.5 - 8.5</td>
+    </tr>
+    <tr>
+      <td>TDS Inlet</td>
+      <td>{tds_101}</td>
+      <td>&lt; 500 ppm</td>
+    </tr>
+    <tr>
+      <td>TDS Outlet</td>
+      <td>{tds_102}</td>
+      <td>&lt; 200 ppm</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="section-heading">Section 3: Key Levels</div>
+
+<table id="lvl-table">
+  <colgroup>
+    <col><col>
+  </colgroup>
+  <thead>
+    <tr>
+      <th data-label="tank">Tank</th>
+      <th data-label="level_pct">Level (%)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Raw Water</td>
+      <td>{ilt_112}</td>
+    </tr>
+    <tr>
+      <td>Clear Water</td>
+      <td>{ilt_118}</td>
+    </tr>
+    <tr>
+      <td>Sludge</td>
+      <td>{ilt_126}</td>
+    </tr>
+  </tbody>
+</table>
+
+

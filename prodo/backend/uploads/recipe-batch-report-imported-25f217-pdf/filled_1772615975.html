@@ -1,0 +1,2299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Batch Report</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: Arial, Helvetica, sans-serif; font-size: 11px; color: #000; background: #fff; }
+.page { max-width: 850px; margin: 0 auto; padding: 24px 36px; }
+
+/* ── Report Header ── */
+.report-header { margin-bottom: 6px; }
+.report-header table { width: 100%; border-collapse: collapse; }
+.report-header td { padding: 1px 4px; vertical-align: top; font-size: 11px; }
+.report-header .lbl { font-weight: bold; white-space: nowrap; }
+.report-header .colon { width: 10px; text-align: center; }
+.report-header .gap { width: 40px; }
+
+.report-title {
+  text-align: center; font-size: 18px; font-weight: bold;
+  margin: 10px 0 18px;
+}
+
+/* ── Batch Section ── */
+.batch-section { margin-bottom: 18px; page-break-inside: avoid; }
+
+/* Batch info + timing combined box */
+.batch-top { width: 100%; border-collapse: collapse; font-size: 11px; margin-bottom: 0; }
+.batch-top td, .batch-top th {
+  border: 1px solid #000; padding: 2px 6px; vertical-align: top;
+}
+.batch-top .info-lbl { font-weight: bold; white-space: nowrap; width: 100px; }
+.batch-top .info-colon { width: 10px; text-align: center; }
+.batch-top .time-hdr { font-weight: bold; text-align: center; }
+.batch-top .time-val { text-align: center; }
+
+/* ── Materials Table ── */
+.mat-table { width: 100%; border-collapse: collapse; font-size: 11px; margin-top: -1px; }
+.mat-table th, .mat-table td {
+  border: 1px solid #000; padding: 2px 6px;
+}
+.mat-table thead th {
+  font-weight: bold; text-align: center; font-size: 11px;
+}
+.mat-table tbody td { text-align: right; }
+.mat-table tbody td:nth-child(1) { text-align: center; width: 56px; }
+.mat-table tbody td:nth-child(2) { text-align: left; }
+.mat-table tfoot td {
+  font-weight: bold; text-align: right;
+}
+.mat-table tfoot td:first-child { text-align: left; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Report Header (two-column layout) -->
+  <div class="report-header">
+    <table>
+      <tr>
+        <td class="lbl">Plant name</td><td class="colon">:</td><td>Coastal Feeds</td>
+        <td class="gap"></td>
+        <td class="lbl">Date</td><td class="colon">:</td><td>04/03/2026</td>
+      </tr>
+      <tr>
+        <td class="lbl">Location</td><td class="colon">:</td><td>Gudivada</td>
+        <td class="gap"></td>
+        <td class="lbl">Recipes</td><td class="colon">:</td><td>FLUTO_24P</td>
+      </tr>
+      <tr>
+        <td class="lbl">Print Date</td><td class="colon">:</td><td>04/03/2026</td>
+        <td class="gap"></td>
+        <td></td><td></td><td></td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="report-title">Batch report</div>
+
+  <section class="batch-block batch-section">
+    <!-- Batch info + timing combined table -->
+    <table class="batch-top">
+      <tr>
+        <td class="info-lbl">Batch No</td>
+        <td class="info-colon">:</td>
+        <td>1</td>
+        <td class="time-hdr">Start time</td>
+        <td class="time-hdr">End time</td>
+        <td class="time-hdr">Dur(sec)</td>
+      </tr>
+      <tr>
+        <td class="info-lbl">Batch Date</td>
+        <td class="info-colon">:</td>
+        <td>2025-08-12</td>
+        <td class="time-val">2025-08-12 09:38:31</td>
+        <td class="time-val">2025-08-12 09:47:47</td>
+        <td class="time-val">556</td>
+      </tr>
+      <tr>
+        <td class="info-lbl">Batch Recipe</td>
+        <td class="info-colon">:</td>
+        <td>FLUTO_24P</td>
+        <td></td>
+        <td></td>
+        <td></td>
+      </tr>
+    </table>
+    <!-- Materials Table -->
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Bin No</th>
+          <th>Material Name</th>
+          <th>Set wt(Kg)</th>
+          <th>Ach wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100.00</td>
+          <td>103.00</td>
+          <td>3.00</td>
+          <td>3.00</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>M CORN</td>
+          <td>50.00</td>
+          <td>49.00</td>
+          <td>-1.00</td>
+          <td>-2.00</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>GNDOC</td>
+          <td>30.00</td>
+          <td>31.00</td>
+          <td>1.00</td>
+          <td>3.33</td>
+        </tr>
+<tr>
+          <td>11</td>
+          <td>RG 45%</td>
+          <td>150.00</td>
+          <td>146.00</td>
+          <td>-4.00</td>
+          <td>-2.67</td>
+        </tr>
+<tr>
+          <td>12</td>
+          <td>DOB</td>
+          <td>465.00</td>
+          <td>460.00</td>
+          <td>-5.00</td>
+          <td>-1.08</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total :</td>
+          <td>795</td>
+          <td>789</td>
+          <td>-6</td>
+          <td>-0.755</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <!-- Batch info + timing combined table -->
+    <table class="batch-top">
+      <tr>
+        <td class="info-lbl">Batch No</td>
+        <td class="info-colon">:</td>
+        <td>2</td>
+        <td class="time-hdr">Start time</td>
+        <td class="time-hdr">End time</td>
+        <td class="time-hdr">Dur(sec)</td>
+      </tr>
+      <tr>
+        <td class="info-lbl">Batch Date</td>
+        <td class="info-colon">:</td>
+        <td>2025-08-12</td>
+        <td class="time-val">2025-08-12 09:49:41</td>
+        <td class="time-val">2025-08-12 09:53:08</td>
+        <td class="time-val">207</td>
+      </tr>
+      <tr>
+        <td class="info-lbl">Batch Recipe</td>
+        <td class="info-colon">:</td>
+        <td>FLUTO_24P</td>
+        <td></td>
+        <td></td>
+        <td></td>
+      </tr>
+    </table>
+    <!-- Materials Table -->
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Bin No</th>
+          <th>Material Name</th>
+          <th>Set wt(Kg)</th>
+          <th>Ach wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100.00</td>
+          <td>102.00</td>
+          <td>2.00</td>
+          <td>2.00</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>M CORN</td>
+          <td>50.00</td>
+          <td>50.00</td>
+          <td>0.00</td>
+          <td>0.00</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>GNDOC</td>
+          <td>30.00</td>
+          <td>33.00</td>
+          <td>3.00</td>
+          <td>10.00</td>
+        </tr>
+<tr>
+          <td>11</td>
+          <td>RG 45%</td>
+          <td>150.00</td>
+          <td>146.00</td>
+          <td>-4.00</td>
+          <td>-2.67</td>
+        </tr>
+<tr>
+          <td>12</td>
+          <td>DOB</td>
+          <td>465.00</td>
+          <td>458.00</td>
+          <td>-7.00</td>
+          <td>-1.51</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total :</td>
+          <td>795</td>
+          <td>789</td>
+          <td>-6</td>
+          <td>-0.755</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <!-- Batch info + timing combined table -->
+    <table class="batch-top">
+      <tr>
+        <td class="info-lbl">Batch No</td>
+        <td class="info-colon">:</td>
+        <td>3</td>
+        <td class="time-hdr">Start time</td>
+        <td class="time-hdr">End time</td>
+        <td class="time-hdr">Dur(sec)</td>
+      </tr>
+      <tr>
+        <td class="info-lbl">Batch Date</td>
+        <td class="info-colon">:</td>
+        <td>2025-08-12</td>
+        <td class="time-val">2025-08-12 10:00:00</td>
+        <td class="time-val">2025-08-12 10:03:29</td>
+        <td class="time-val">209</td>
+      </tr>
+      <tr>
+        <td class="info-lbl">Batch Recipe</td>
+        <td class="info-colon">:</td>
+        <td>FLUTO_24P</td>
+        <td></td>
+        <td></td>
+        <td></td>
+      </tr>
+    </table>
+    <!-- Materials Table -->
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Bin No</th>
+          <th>Material Name</th>
+          <th>Set wt(Kg)</th>
+          <th>Ach wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100.00</td>
+          <td>102.00</td>
+          <td>2.00</td>
+          <td>2.00</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>M CORN</td>
+          <td>50.00</td>
+          <td>50.00</td>
+          <td>0.00</td>
+          <td>0.00</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>GNDOC</td>
+          <td>30.00</td>
+          <td>31.00</td>
+          <td>1.00</td>
+          <td>3.33</td>
+        </tr>
+<tr>
+          <td>11</td>
+          <td>RG 45%</td>
+          <td>150.00</td>
+          <td>146.00</td>
+          <td>-4.00</td>
+          <td>-2.67</td>
+        </tr>
+<tr>
+          <td>12</td>
+          <td>DOB</td>
+          <td>465.00</td>
+          <td>459.00</td>
+          <td>-6.00</td>
+          <td>-1.29</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total :</td>
+          <td>795</td>
+          <td>788</td>
+          <td>-7</td>
+          <td>-0.881</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <!-- Batch info + timing combined table -->
+    <table class="batch-top">
+      <tr>
+        <td class="info-lbl">Batch No</td>
+        <td class="info-colon">:</td>
+        <td>4</td>
+        <td class="time-hdr">Start time</td>
+        <td class="time-hdr">End time</td>
+        <td class="time-hdr">Dur(sec)</td>
+      </tr>
+      <tr>
+        <td class="info-lbl">Batch Date</td>
+        <td class="info-colon">:</td>
+        <td>2025-08-12</td>
+        <td class="time-val">2025-08-12 10:14:00</td>
+        <td class="time-val">2025-08-12 10:17:27</td>
+        <td class="time-val">207</td>
+      </tr>
+      <tr>
+        <td class="info-lbl">Batch Recipe</td>
+        <td class="info-colon">:</td>
+        <td>FLUTO_24P</td>
+        <td></td>
+        <td></td>
+        <td></td>
+      </tr>
+    </table>
+    <!-- Materials Table -->
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Bin No</th>
+          <th>Material Name</th>
+          <th>Set wt(Kg)</th>
+          <th>Ach wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100.00</td>
+          <td>102.00</td>
+          <td>2.00</td>
+          <td>2.00</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>M CORN</td>
+          <td>50.00</td>
+          <td>49.00</td>
+          <td>-1.00</td>
+          <td>-2.00</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>GNDOC</td>
+          <td>30.00</td>
+          <td>31.00</td>
+          <td>1.00</td>
+          <td>3.33</td>
+        </tr>
+<tr>
+          <td>11</td>
+          <td>RG 45%</td>
+          <td>150.00</td>
+          <td>146.00</td>
+          <td>-4.00</td>
+          <td>-2.67</td>
+        </tr>
+<tr>
+          <td>12</td>
+          <td>DOB</td>
+          <td>465.00</td>
+          <td>458.00</td>
+          <td>-7.00</td>
+          <td>-1.51</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total :</td>
+          <td>795</td>
+          <td>786</td>
+          <td>-9</td>
+          <td>-1.132</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <!-- Batch info + timing combined table -->
+    <table class="batch-top">
+      <tr>
+        <td class="info-lbl">Batch No</td>
+        <td class="info-colon">:</td>
+        <td>5</td>
+        <td class="time-hdr">Start time</td>
+        <td class="time-hdr">End time</td>
+        <td class="time-hdr">Dur(sec)</td>
+      </tr>
+      <tr>
+        <td class="info-lbl">Batch Date</td>
+        <td class="info-colon">:</td>
+        <td>2025-08-12</td>
+        <td class="time-val">2025-08-12 10:26:47</td>
+        <td class="time-val">2025-08-12 10:30:16</td>
+        <td class="time-val">209</td>
+      </tr>
+      <tr>
+        <td class="info-lbl">Batch Recipe</td>
+        <td class="info-colon">:</td>
+        <td>FLUTO_24P</td>
+        <td></td>
+        <td></td>
+        <td></td>
+      </tr>
+    </table>
+    <!-- Materials Table -->
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Bin No</th>
+          <th>Material Name</th>
+          <th>Set wt(Kg)</th>
+          <th>Ach wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100.00</td>
+          <td>103.00</td>
+          <td>3.00</td>
+          <td>3.00</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>M CORN</td>
+          <td>50.00</td>
+          <td>50.00</td>
+          <td>0.00</td>
+          <td>0.00</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>GNDOC</td>
+          <td>30.00</td>
+          <td>32.00</td>
+          <td>2.00</td>
+          <td>6.67</td>
+        </tr>
+<tr>
+          <td>11</td>
+          <td>RG 45%</td>
+          <td>150.00</td>
+          <td>147.00</td>
+          <td>-3.00</td>
+          <td>-2.00</td>
+        </tr>
+<tr>
+          <td>12</td>
+          <td>DOB</td>
+          <td>465.00</td>
+          <td>459.00</td>
+          <td>-6.00</td>
+          <td>-1.29</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total :</td>
+          <td>795</td>
+          <td>791</td>
+          <td>-4</td>
+          <td>-0.503</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <!-- Batch info + timing combined table -->
+    <table class="batch-top">
+      <tr>
+        <td class="info-lbl">Batch No</td>
+        <td class="info-colon">:</td>
+        <td>6</td>
+        <td class="time-hdr">Start time</td>
+        <td class="time-hdr">End time</td>
+        <td class="time-hdr">Dur(sec)</td>
+      </tr>
+      <tr>
+        <td class="info-lbl">Batch Date</td>
+        <td class="info-colon">:</td>
+        <td>2025-08-12</td>
+        <td class="time-val">2025-08-12 10:46:36</td>
+        <td class="time-val">2025-08-12 10:49:58</td>
+        <td class="time-val">202</td>
+      </tr>
+      <tr>
+        <td class="info-lbl">Batch Recipe</td>
+        <td class="info-colon">:</td>
+        <td>FLUTO_24P</td>
+        <td></td>
+        <td></td>
+        <td></td>
+      </tr>
+    </table>
+    <!-- Materials Table -->
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Bin No</th>
+          <th>Material Name</th>
+          <th>Set wt(Kg)</th>
+          <th>Ach wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100.00</td>
+          <td>104.00</td>
+          <td>4.00</td>
+          <td>4.00</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>M CORN</td>
+          <td>50.00</td>
+          <td>50.00</td>
+          <td>0.00</td>
+          <td>0.00</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>GNDOC</td>
+          <td>30.00</td>
+          <td>31.00</td>
+          <td>1.00</td>
+          <td>3.33</td>
+        </tr>
+<tr>
+          <td>11</td>
+          <td>RG 45%</td>
+          <td>150.00</td>
+          <td>147.00</td>
+          <td>-3.00</td>
+          <td>-2.00</td>
+        </tr>
+<tr>
+          <td>12</td>
+          <td>DOB</td>
+          <td>415.00</td>
+          <td>409.00</td>
+          <td>-6.00</td>
+          <td>-1.45</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total :</td>
+          <td>745</td>
+          <td>741</td>
+          <td>-4</td>
+          <td>-0.537</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <!-- Batch info + timing combined table -->
+    <table class="batch-top">
+      <tr>
+        <td class="info-lbl">Batch No</td>
+        <td class="info-colon">:</td>
+        <td>7</td>
+        <td class="time-hdr">Start time</td>
+        <td class="time-hdr">End time</td>
+        <td class="time-hdr">Dur(sec)</td>
+      </tr>
+      <tr>
+        <td class="info-lbl">Batch Date</td>
+        <td class="info-colon">:</td>
+        <td>2025-08-12</td>
+        <td class="time-val">2025-08-12 10:57:42</td>
+        <td class="time-val">2025-08-12 11:01:05</td>
+        <td class="time-val">203</td>
+      </tr>
+      <tr>
+        <td class="info-lbl">Batch Recipe</td>
+        <td class="info-colon">:</td>
+        <td>FLUTO_24P</td>
+        <td></td>
+        <td></td>
+        <td></td>
+      </tr>
+    </table>
+    <!-- Materials Table -->
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Bin No</th>
+          <th>Material Name</th>
+          <th>Set wt(Kg)</th>
+          <th>Ach wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100.00</td>
+          <td>101.00</td>
+          <td>1.00</td>
+          <td>1.00</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>M CORN</td>
+          <td>50.00</td>
+          <td>50.00</td>
+          <td>0.00</td>
+          <td>0.00</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>GNDOC</td>
+          <td>30.00</td>
+          <td>31.00</td>
+          <td>1.00</td>
+          <td>3.33</td>
+        </tr>
+<tr>
+          <td>11</td>
+          <td>RG 45%</td>
+          <td>150.00</td>
+          <td>147.00</td>
+          <td>-3.00</td>
+          <td>-2.00</td>
+        </tr>
+<tr>
+          <td>12</td>
+          <td>DOB</td>
+          <td>415.00</td>
+          <td>410.00</td>
+          <td>-5.00</td>
+          <td>-1.20</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total :</td>
+          <td>745</td>
+          <td>739</td>
+          <td>-6</td>
+          <td>-0.805</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <!-- Batch info + timing combined table -->
+    <table class="batch-top">
+      <tr>
+        <td class="info-lbl">Batch No</td>
+        <td class="info-colon">:</td>
+        <td>8</td>
+        <td class="time-hdr">Start time</td>
+        <td class="time-hdr">End time</td>
+        <td class="time-hdr">Dur(sec)</td>
+      </tr>
+      <tr>
+        <td class="info-lbl">Batch Date</td>
+        <td class="info-colon">:</td>
+        <td>2025-08-12</td>
+        <td class="time-val">2025-08-12 11:11:44</td>
+        <td class="time-val">2025-08-12 11:15:07</td>
+        <td class="time-val">203</td>
+      </tr>
+      <tr>
+        <td class="info-lbl">Batch Recipe</td>
+        <td class="info-colon">:</td>
+        <td>FLUTO_24P</td>
+        <td></td>
+        <td></td>
+        <td></td>
+      </tr>
+    </table>
+    <!-- Materials Table -->
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Bin No</th>
+          <th>Material Name</th>
+          <th>Set wt(Kg)</th>
+          <th>Ach wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100.00</td>
+          <td>103.00</td>
+          <td>3.00</td>
+          <td>3.00</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>M CORN</td>
+          <td>50.00</td>
+          <td>49.00</td>
+          <td>-1.00</td>
+          <td>-2.00</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>GNDOC</td>
+          <td>30.00</td>
+          <td>32.00</td>
+          <td>2.00</td>
+          <td>6.67</td>
+        </tr>
+<tr>
+          <td>11</td>
+          <td>RG 45%</td>
+          <td>150.00</td>
+          <td>146.00</td>
+          <td>-4.00</td>
+          <td>-2.67</td>
+        </tr>
+<tr>
+          <td>12</td>
+          <td>DOB</td>
+          <td>415.00</td>
+          <td>407.00</td>
+          <td>-8.00</td>
+          <td>-1.93</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total :</td>
+          <td>745</td>
+          <td>737</td>
+          <td>-8</td>
+          <td>-1.074</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <!-- Batch info + timing combined table -->
+    <table class="batch-top">
+      <tr>
+        <td class="info-lbl">Batch No</td>
+        <td class="info-colon">:</td>
+        <td>9</td>
+        <td class="time-hdr">Start time</td>
+        <td class="time-hdr">End time</td>
+        <td class="time-hdr">Dur(sec)</td>
+      </tr>
+      <tr>
+        <td class="info-lbl">Batch Date</td>
+        <td class="info-colon">:</td>
+        <td>2025-08-12</td>
+        <td class="time-val">2025-08-12 11:27:01</td>
+        <td class="time-val">2025-08-12 11:30:25</td>
+        <td class="time-val">204</td>
+      </tr>
+      <tr>
+        <td class="info-lbl">Batch Recipe</td>
+        <td class="info-colon">:</td>
+        <td>FLUTO_24P</td>
+        <td></td>
+        <td></td>
+        <td></td>
+      </tr>
+    </table>
+    <!-- Materials Table -->
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Bin No</th>
+          <th>Material Name</th>
+          <th>Set wt(Kg)</th>
+          <th>Ach wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100.00</td>
+          <td>103.00</td>
+          <td>3.00</td>
+          <td>3.00</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>M CORN</td>
+          <td>50.00</td>
+          <td>49.00</td>
+          <td>-1.00</td>
+          <td>-2.00</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>GNDOC</td>
+          <td>30.00</td>
+          <td>31.00</td>
+          <td>1.00</td>
+          <td>3.33</td>
+        </tr>
+<tr>
+          <td>11</td>
+          <td>RG 45%</td>
+          <td>150.00</td>
+          <td>146.00</td>
+          <td>-4.00</td>
+          <td>-2.67</td>
+        </tr>
+<tr>
+          <td>12</td>
+          <td>DOB</td>
+          <td>415.00</td>
+          <td>409.00</td>
+          <td>-6.00</td>
+          <td>-1.45</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total :</td>
+          <td>745</td>
+          <td>738</td>
+          <td>-7</td>
+          <td>-0.94</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <!-- Batch info + timing combined table -->
+    <table class="batch-top">
+      <tr>
+        <td class="info-lbl">Batch No</td>
+        <td class="info-colon">:</td>
+        <td>10</td>
+        <td class="time-hdr">Start time</td>
+        <td class="time-hdr">End time</td>
+        <td class="time-hdr">Dur(sec)</td>
+      </tr>
+      <tr>
+        <td class="info-lbl">Batch Date</td>
+        <td class="info-colon">:</td>
+        <td>2025-08-12</td>
+        <td class="time-val">2025-08-12 11:38:50</td>
+        <td class="time-val">2025-08-12 11:47:09</td>
+        <td class="time-val">499</td>
+      </tr>
+      <tr>
+        <td class="info-lbl">Batch Recipe</td>
+        <td class="info-colon">:</td>
+        <td>FLUTO_24P</td>
+        <td></td>
+        <td></td>
+        <td></td>
+      </tr>
+    </table>
+    <!-- Materials Table -->
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Bin No</th>
+          <th>Material Name</th>
+          <th>Set wt(Kg)</th>
+          <th>Ach wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100.00</td>
+          <td>102.00</td>
+          <td>2.00</td>
+          <td>2.00</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>M CORN</td>
+          <td>50.00</td>
+          <td>50.00</td>
+          <td>0.00</td>
+          <td>0.00</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>GNDOC</td>
+          <td>30.00</td>
+          <td>31.00</td>
+          <td>1.00</td>
+          <td>3.33</td>
+        </tr>
+<tr>
+          <td>11</td>
+          <td>RG 45%</td>
+          <td>150.00</td>
+          <td>145.00</td>
+          <td>-5.00</td>
+          <td>-3.33</td>
+        </tr>
+<tr>
+          <td>12</td>
+          <td>DOB</td>
+          <td>415.00</td>
+          <td>408.00</td>
+          <td>-7.00</td>
+          <td>-1.69</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total :</td>
+          <td>745</td>
+          <td>736</td>
+          <td>-9</td>
+          <td>-1.208</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <!-- Batch info + timing combined table -->
+    <table class="batch-top">
+      <tr>
+        <td class="info-lbl">Batch No</td>
+        <td class="info-colon">:</td>
+        <td>11</td>
+        <td class="time-hdr">Start time</td>
+        <td class="time-hdr">End time</td>
+        <td class="time-hdr">Dur(sec)</td>
+      </tr>
+      <tr>
+        <td class="info-lbl">Batch Date</td>
+        <td class="info-colon">:</td>
+        <td>2025-08-12</td>
+        <td class="time-val">2025-08-12 11:51:32</td>
+        <td class="time-val">2025-08-12 11:54:52</td>
+        <td class="time-val">200</td>
+      </tr>
+      <tr>
+        <td class="info-lbl">Batch Recipe</td>
+        <td class="info-colon">:</td>
+        <td>FLUTO_24P</td>
+        <td></td>
+        <td></td>
+        <td></td>
+      </tr>
+    </table>
+    <!-- Materials Table -->
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Bin No</th>
+          <th>Material Name</th>
+          <th>Set wt(Kg)</th>
+          <th>Ach wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100.00</td>
+          <td>102.00</td>
+          <td>2.00</td>
+          <td>2.00</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>M CORN</td>
+          <td>50.00</td>
+          <td>50.00</td>
+          <td>0.00</td>
+          <td>0.00</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>GNDOC</td>
+          <td>30.00</td>
+          <td>33.00</td>
+          <td>3.00</td>
+          <td>10.00</td>
+        </tr>
+<tr>
+          <td>11</td>
+          <td>RG 45%</td>
+          <td>150.00</td>
+          <td>146.00</td>
+          <td>-4.00</td>
+          <td>-2.67</td>
+        </tr>
+<tr>
+          <td>12</td>
+          <td>DOB</td>
+          <td>415.00</td>
+          <td>410.00</td>
+          <td>-5.00</td>
+          <td>-1.20</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total :</td>
+          <td>745</td>
+          <td>741</td>
+          <td>-4</td>
+          <td>-0.537</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <!-- Batch info + timing combined table -->
+    <table class="batch-top">
+      <tr>
+        <td class="info-lbl">Batch No</td>
+        <td class="info-colon">:</td>
+        <td>12</td>
+        <td class="time-hdr">Start time</td>
+        <td class="time-hdr">End time</td>
+        <td class="time-hdr">Dur(sec)</td>
+      </tr>
+      <tr>
+        <td class="info-lbl">Batch Date</td>
+        <td class="info-colon">:</td>
+        <td>2025-08-12</td>
+        <td class="time-val">2025-08-12 12:04:11</td>
+        <td class="time-val">2025-08-12 12:07:34</td>
+        <td class="time-val">203</td>
+      </tr>
+      <tr>
+        <td class="info-lbl">Batch Recipe</td>
+        <td class="info-colon">:</td>
+        <td>FLUTO_24P</td>
+        <td></td>
+        <td></td>
+        <td></td>
+      </tr>
+    </table>
+    <!-- Materials Table -->
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Bin No</th>
+          <th>Material Name</th>
+          <th>Set wt(Kg)</th>
+          <th>Ach wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100.00</td>
+          <td>102.00</td>
+          <td>2.00</td>
+          <td>2.00</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>M CORN</td>
+          <td>50.00</td>
+          <td>49.00</td>
+          <td>-1.00</td>
+          <td>-2.00</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>GNDOC</td>
+          <td>30.00</td>
+          <td>32.00</td>
+          <td>2.00</td>
+          <td>6.67</td>
+        </tr>
+<tr>
+          <td>11</td>
+          <td>RG 45%</td>
+          <td>150.00</td>
+          <td>147.00</td>
+          <td>-3.00</td>
+          <td>-2.00</td>
+        </tr>
+<tr>
+          <td>12</td>
+          <td>DOB</td>
+          <td>415.00</td>
+          <td>410.00</td>
+          <td>-5.00</td>
+          <td>-1.20</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total :</td>
+          <td>745</td>
+          <td>740</td>
+          <td>-5</td>
+          <td>-0.671</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <!-- Batch info + timing combined table -->
+    <table class="batch-top">
+      <tr>
+        <td class="info-lbl">Batch No</td>
+        <td class="info-colon">:</td>
+        <td>13</td>
+        <td class="time-hdr">Start time</td>
+        <td class="time-hdr">End time</td>
+        <td class="time-hdr">Dur(sec)</td>
+      </tr>
+      <tr>
+        <td class="info-lbl">Batch Date</td>
+        <td class="info-colon">:</td>
+        <td>2025-08-12</td>
+        <td class="time-val">2025-08-12 12:20:55</td>
+        <td class="time-val">2025-08-12 12:24:18</td>
+        <td class="time-val">203</td>
+      </tr>
+      <tr>
+        <td class="info-lbl">Batch Recipe</td>
+        <td class="info-colon">:</td>
+        <td>FLUTO_24P</td>
+        <td></td>
+        <td></td>
+        <td></td>
+      </tr>
+    </table>
+    <!-- Materials Table -->
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Bin No</th>
+          <th>Material Name</th>
+          <th>Set wt(Kg)</th>
+          <th>Ach wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100.00</td>
+          <td>103.00</td>
+          <td>3.00</td>
+          <td>3.00</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>M CORN</td>
+          <td>50.00</td>
+          <td>50.00</td>
+          <td>0.00</td>
+          <td>0.00</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>GNDOC</td>
+          <td>30.00</td>
+          <td>31.00</td>
+          <td>1.00</td>
+          <td>3.33</td>
+        </tr>
+<tr>
+          <td>11</td>
+          <td>RG 45%</td>
+          <td>150.00</td>
+          <td>146.00</td>
+          <td>-4.00</td>
+          <td>-2.67</td>
+        </tr>
+<tr>
+          <td>12</td>
+          <td>DOB</td>
+          <td>415.00</td>
+          <td>408.00</td>
+          <td>-7.00</td>
+          <td>-1.69</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total :</td>
+          <td>745</td>
+          <td>738</td>
+          <td>-7</td>
+          <td>-0.94</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <!-- Batch info + timing combined table -->
+    <table class="batch-top">
+      <tr>
+        <td class="info-lbl">Batch No</td>
+        <td class="info-colon">:</td>
+        <td>14</td>
+        <td class="time-hdr">Start time</td>
+        <td class="time-hdr">End time</td>
+        <td class="time-hdr">Dur(sec)</td>
+      </tr>
+      <tr>
+        <td class="info-lbl">Batch Date</td>
+        <td class="info-colon">:</td>
+        <td>2025-08-12</td>
+        <td class="time-val">2025-08-12 12:37:05</td>
+        <td class="time-val">2025-08-12 12:54:04</td>
+        <td class="time-val">1019</td>
+      </tr>
+      <tr>
+        <td class="info-lbl">Batch Recipe</td>
+        <td class="info-colon">:</td>
+        <td>FLUTO_24P</td>
+        <td></td>
+        <td></td>
+        <td></td>
+      </tr>
+    </table>
+    <!-- Materials Table -->
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Bin No</th>
+          <th>Material Name</th>
+          <th>Set wt(Kg)</th>
+          <th>Ach wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100.00</td>
+          <td>102.00</td>
+          <td>2.00</td>
+          <td>2.00</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>M CORN</td>
+          <td>50.00</td>
+          <td>50.00</td>
+          <td>0.00</td>
+          <td>0.00</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>GNDOC</td>
+          <td>30.00</td>
+          <td>32.00</td>
+          <td>2.00</td>
+          <td>6.67</td>
+        </tr>
+<tr>
+          <td>11</td>
+          <td>RG 45%</td>
+          <td>150.00</td>
+          <td>146.00</td>
+          <td>-4.00</td>
+          <td>-2.67</td>
+        </tr>
+<tr>
+          <td>12</td>
+          <td>DOB</td>
+          <td>415.00</td>
+          <td>403.00</td>
+          <td>-12.00</td>
+          <td>-2.89</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total :</td>
+          <td>745</td>
+          <td>733</td>
+          <td>-12</td>
+          <td>-1.611</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <!-- Batch info + timing combined table -->
+    <table class="batch-top">
+      <tr>
+        <td class="info-lbl">Batch No</td>
+        <td class="info-colon">:</td>
+        <td>15</td>
+        <td class="time-hdr">Start time</td>
+        <td class="time-hdr">End time</td>
+        <td class="time-hdr">Dur(sec)</td>
+      </tr>
+      <tr>
+        <td class="info-lbl">Batch Date</td>
+        <td class="info-colon">:</td>
+        <td>2025-08-12</td>
+        <td class="time-val">2025-08-12 12:55:13</td>
+        <td class="time-val">2025-08-12 12:58:40</td>
+        <td class="time-val">207</td>
+      </tr>
+      <tr>
+        <td class="info-lbl">Batch Recipe</td>
+        <td class="info-colon">:</td>
+        <td>FLUTO_24P</td>
+        <td></td>
+        <td></td>
+        <td></td>
+      </tr>
+    </table>
+    <!-- Materials Table -->
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Bin No</th>
+          <th>Material Name</th>
+          <th>Set wt(Kg)</th>
+          <th>Ach wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100.00</td>
+          <td>102.00</td>
+          <td>2.00</td>
+          <td>2.00</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>M CORN</td>
+          <td>50.00</td>
+          <td>50.00</td>
+          <td>0.00</td>
+          <td>0.00</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>GNDOC</td>
+          <td>30.00</td>
+          <td>32.00</td>
+          <td>2.00</td>
+          <td>6.67</td>
+        </tr>
+<tr>
+          <td>11</td>
+          <td>RG 45%</td>
+          <td>150.00</td>
+          <td>146.00</td>
+          <td>-4.00</td>
+          <td>-2.67</td>
+        </tr>
+<tr>
+          <td>12</td>
+          <td>DOB</td>
+          <td>415.00</td>
+          <td>407.00</td>
+          <td>-8.00</td>
+          <td>-1.93</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total :</td>
+          <td>745</td>
+          <td>737</td>
+          <td>-8</td>
+          <td>-1.074</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <!-- Batch info + timing combined table -->
+    <table class="batch-top">
+      <tr>
+        <td class="info-lbl">Batch No</td>
+        <td class="info-colon">:</td>
+        <td>16</td>
+        <td class="time-hdr">Start time</td>
+        <td class="time-hdr">End time</td>
+        <td class="time-hdr">Dur(sec)</td>
+      </tr>
+      <tr>
+        <td class="info-lbl">Batch Date</td>
+        <td class="info-colon">:</td>
+        <td>2025-08-12</td>
+        <td class="time-val">2025-08-12 13:58:38</td>
+        <td class="time-val">2025-08-12 14:02:03</td>
+        <td class="time-val">205</td>
+      </tr>
+      <tr>
+        <td class="info-lbl">Batch Recipe</td>
+        <td class="info-colon">:</td>
+        <td>FLUTO_24P</td>
+        <td></td>
+        <td></td>
+        <td></td>
+      </tr>
+    </table>
+    <!-- Materials Table -->
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Bin No</th>
+          <th>Material Name</th>
+          <th>Set wt(Kg)</th>
+          <th>Ach wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100.00</td>
+          <td>103.00</td>
+          <td>3.00</td>
+          <td>3.00</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>M CORN</td>
+          <td>50.00</td>
+          <td>49.00</td>
+          <td>-1.00</td>
+          <td>-2.00</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>GNDOC</td>
+          <td>30.00</td>
+          <td>31.00</td>
+          <td>1.00</td>
+          <td>3.33</td>
+        </tr>
+<tr>
+          <td>11</td>
+          <td>RG 45%</td>
+          <td>150.00</td>
+          <td>146.00</td>
+          <td>-4.00</td>
+          <td>-2.67</td>
+        </tr>
+<tr>
+          <td>12</td>
+          <td>DOB</td>
+          <td>415.00</td>
+          <td>408.00</td>
+          <td>-7.00</td>
+          <td>-1.69</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total :</td>
+          <td>745</td>
+          <td>737</td>
+          <td>-8</td>
+          <td>-1.074</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <!-- Batch info + timing combined table -->
+    <table class="batch-top">
+      <tr>
+        <td class="info-lbl">Batch No</td>
+        <td class="info-colon">:</td>
+        <td>17</td>
+        <td class="time-hdr">Start time</td>
+        <td class="time-hdr">End time</td>
+        <td class="time-hdr">Dur(sec)</td>
+      </tr>
+      <tr>
+        <td class="info-lbl">Batch Date</td>
+        <td class="info-colon">:</td>
+        <td>2025-08-12</td>
+        <td class="time-val">2025-08-12 14:14:15</td>
+        <td class="time-val">2025-08-12 14:17:35</td>
+        <td class="time-val">200</td>
+      </tr>
+      <tr>
+        <td class="info-lbl">Batch Recipe</td>
+        <td class="info-colon">:</td>
+        <td>FLUTO_24P</td>
+        <td></td>
+        <td></td>
+        <td></td>
+      </tr>
+    </table>
+    <!-- Materials Table -->
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Bin No</th>
+          <th>Material Name</th>
+          <th>Set wt(Kg)</th>
+          <th>Ach wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100.00</td>
+          <td>103.00</td>
+          <td>3.00</td>
+          <td>3.00</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>M CORN</td>
+          <td>50.00</td>
+          <td>49.00</td>
+          <td>-1.00</td>
+          <td>-2.00</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>GNDOC</td>
+          <td>30.00</td>
+          <td>31.00</td>
+          <td>1.00</td>
+          <td>3.33</td>
+        </tr>
+<tr>
+          <td>11</td>
+          <td>RG 45%</td>
+          <td>150.00</td>
+          <td>146.00</td>
+          <td>-4.00</td>
+          <td>-2.67</td>
+        </tr>
+<tr>
+          <td>12</td>
+          <td>DOB</td>
+          <td>415.00</td>
+          <td>406.00</td>
+          <td>-9.00</td>
+          <td>-2.17</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total :</td>
+          <td>745</td>
+          <td>735</td>
+          <td>-10</td>
+          <td>-1.342</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <!-- Batch info + timing combined table -->
+    <table class="batch-top">
+      <tr>
+        <td class="info-lbl">Batch No</td>
+        <td class="info-colon">:</td>
+        <td>18</td>
+        <td class="time-hdr">Start time</td>
+        <td class="time-hdr">End time</td>
+        <td class="time-hdr">Dur(sec)</td>
+      </tr>
+      <tr>
+        <td class="info-lbl">Batch Date</td>
+        <td class="info-colon">:</td>
+        <td>2025-08-12</td>
+        <td class="time-val">2025-08-12 14:29:29</td>
+        <td class="time-val">2025-08-12 14:32:51</td>
+        <td class="time-val">202</td>
+      </tr>
+      <tr>
+        <td class="info-lbl">Batch Recipe</td>
+        <td class="info-colon">:</td>
+        <td>FLUTO_24P</td>
+        <td></td>
+        <td></td>
+        <td></td>
+      </tr>
+    </table>
+    <!-- Materials Table -->
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Bin No</th>
+          <th>Material Name</th>
+          <th>Set wt(Kg)</th>
+          <th>Ach wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100.00</td>
+          <td>103.00</td>
+          <td>3.00</td>
+          <td>3.00</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>M CORN</td>
+          <td>50.00</td>
+          <td>50.00</td>
+          <td>0.00</td>
+          <td>0.00</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>GNDOC</td>
+          <td>30.00</td>
+          <td>31.00</td>
+          <td>1.00</td>
+          <td>3.33</td>
+        </tr>
+<tr>
+          <td>11</td>
+          <td>RG 45%</td>
+          <td>150.00</td>
+          <td>146.00</td>
+          <td>-4.00</td>
+          <td>-2.67</td>
+        </tr>
+<tr>
+          <td>12</td>
+          <td>DOB</td>
+          <td>415.00</td>
+          <td>406.00</td>
+          <td>-9.00</td>
+          <td>-2.17</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total :</td>
+          <td>745</td>
+          <td>736</td>
+          <td>-9</td>
+          <td>-1.208</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <!-- Batch info + timing combined table -->
+    <table class="batch-top">
+      <tr>
+        <td class="info-lbl">Batch No</td>
+        <td class="info-colon">:</td>
+        <td>19</td>
+        <td class="time-hdr">Start time</td>
+        <td class="time-hdr">End time</td>
+        <td class="time-hdr">Dur(sec)</td>
+      </tr>
+      <tr>
+        <td class="info-lbl">Batch Date</td>
+        <td class="info-colon">:</td>
+        <td>2025-08-12</td>
+        <td class="time-val">2025-08-12 14:53:28</td>
+        <td class="time-val">2025-08-12 14:56:50</td>
+        <td class="time-val">202</td>
+      </tr>
+      <tr>
+        <td class="info-lbl">Batch Recipe</td>
+        <td class="info-colon">:</td>
+        <td>FLUTO_24P</td>
+        <td></td>
+        <td></td>
+        <td></td>
+      </tr>
+    </table>
+    <!-- Materials Table -->
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Bin No</th>
+          <th>Material Name</th>
+          <th>Set wt(Kg)</th>
+          <th>Ach wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100.00</td>
+          <td>103.00</td>
+          <td>3.00</td>
+          <td>3.00</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>M CORN</td>
+          <td>50.00</td>
+          <td>49.00</td>
+          <td>-1.00</td>
+          <td>-2.00</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>GNDOC</td>
+          <td>30.00</td>
+          <td>31.00</td>
+          <td>1.00</td>
+          <td>3.33</td>
+        </tr>
+<tr>
+          <td>11</td>
+          <td>RG 45%</td>
+          <td>150.00</td>
+          <td>146.00</td>
+          <td>-4.00</td>
+          <td>-2.67</td>
+        </tr>
+<tr>
+          <td>12</td>
+          <td>DOB</td>
+          <td>415.00</td>
+          <td>408.00</td>
+          <td>-7.00</td>
+          <td>-1.69</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total :</td>
+          <td>745</td>
+          <td>737</td>
+          <td>-8</td>
+          <td>-1.074</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <!-- Batch info + timing combined table -->
+    <table class="batch-top">
+      <tr>
+        <td class="info-lbl">Batch No</td>
+        <td class="info-colon">:</td>
+        <td>20</td>
+        <td class="time-hdr">Start time</td>
+        <td class="time-hdr">End time</td>
+        <td class="time-hdr">Dur(sec)</td>
+      </tr>
+      <tr>
+        <td class="info-lbl">Batch Date</td>
+        <td class="info-colon">:</td>
+        <td>2025-08-12</td>
+        <td class="time-val">2025-08-12 15:07:19</td>
+        <td class="time-val">2025-08-12 15:10:40</td>
+        <td class="time-val">201</td>
+      </tr>
+      <tr>
+        <td class="info-lbl">Batch Recipe</td>
+        <td class="info-colon">:</td>
+        <td>FLUTO_24P</td>
+        <td></td>
+        <td></td>
+        <td></td>
+      </tr>
+    </table>
+    <!-- Materials Table -->
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Bin No</th>
+          <th>Material Name</th>
+          <th>Set wt(Kg)</th>
+          <th>Ach wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100.00</td>
+          <td>102.00</td>
+          <td>2.00</td>
+          <td>2.00</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>M CORN</td>
+          <td>50.00</td>
+          <td>51.00</td>
+          <td>1.00</td>
+          <td>2.00</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>GNDOC</td>
+          <td>30.00</td>
+          <td>32.00</td>
+          <td>2.00</td>
+          <td>6.67</td>
+        </tr>
+<tr>
+          <td>11</td>
+          <td>RG 45%</td>
+          <td>150.00</td>
+          <td>146.00</td>
+          <td>-4.00</td>
+          <td>-2.67</td>
+        </tr>
+<tr>
+          <td>12</td>
+          <td>DOB</td>
+          <td>415.00</td>
+          <td>410.00</td>
+          <td>-5.00</td>
+          <td>-1.20</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total :</td>
+          <td>745</td>
+          <td>741</td>
+          <td>-4</td>
+          <td>-0.537</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <!-- Batch info + timing combined table -->
+    <table class="batch-top">
+      <tr>
+        <td class="info-lbl">Batch No</td>
+        <td class="info-colon">:</td>
+        <td>21</td>
+        <td class="time-hdr">Start time</td>
+        <td class="time-hdr">End time</td>
+        <td class="time-hdr">Dur(sec)</td>
+      </tr>
+      <tr>
+        <td class="info-lbl">Batch Date</td>
+        <td class="info-colon">:</td>
+        <td>2025-08-12</td>
+        <td class="time-val">2025-08-12 15:18:13</td>
+        <td class="time-val">2025-08-12 15:56:30</td>
+        <td class="time-val">2297</td>
+      </tr>
+      <tr>
+        <td class="info-lbl">Batch Recipe</td>
+        <td class="info-colon">:</td>
+        <td>FLUTO_24P</td>
+        <td></td>
+        <td></td>
+        <td></td>
+      </tr>
+    </table>
+    <!-- Materials Table -->
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Bin No</th>
+          <th>Material Name</th>
+          <th>Set wt(Kg)</th>
+          <th>Ach wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100.00</td>
+          <td>104.00</td>
+          <td>4.00</td>
+          <td>4.00</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>M CORN</td>
+          <td>50.00</td>
+          <td>51.00</td>
+          <td>1.00</td>
+          <td>2.00</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>GNDOC</td>
+          <td>30.00</td>
+          <td>33.00</td>
+          <td>3.00</td>
+          <td>10.00</td>
+        </tr>
+<tr>
+          <td>11</td>
+          <td>RG 45%</td>
+          <td>150.00</td>
+          <td>144.00</td>
+          <td>-6.00</td>
+          <td>-4.00</td>
+        </tr>
+<tr>
+          <td>12</td>
+          <td>DOB</td>
+          <td>415.00</td>
+          <td>403.00</td>
+          <td>-12.00</td>
+          <td>-2.89</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total :</td>
+          <td>745</td>
+          <td>735</td>
+          <td>-10</td>
+          <td>-1.342</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <!-- Batch info + timing combined table -->
+    <table class="batch-top">
+      <tr>
+        <td class="info-lbl">Batch No</td>
+        <td class="info-colon">:</td>
+        <td>22</td>
+        <td class="time-hdr">Start time</td>
+        <td class="time-hdr">End time</td>
+        <td class="time-hdr">Dur(sec)</td>
+      </tr>
+      <tr>
+        <td class="info-lbl">Batch Date</td>
+        <td class="info-colon">:</td>
+        <td>2025-08-12</td>
+        <td class="time-val">2025-08-12 15:56:42</td>
+        <td class="time-val">2025-08-12 16:01:52</td>
+        <td class="time-val">310</td>
+      </tr>
+      <tr>
+        <td class="info-lbl">Batch Recipe</td>
+        <td class="info-colon">:</td>
+        <td>FLUTO_24P</td>
+        <td></td>
+        <td></td>
+        <td></td>
+      </tr>
+    </table>
+    <!-- Materials Table -->
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Bin No</th>
+          <th>Material Name</th>
+          <th>Set wt(Kg)</th>
+          <th>Ach wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100.00</td>
+          <td>103.00</td>
+          <td>3.00</td>
+          <td>3.00</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>M CORN</td>
+          <td>50.00</td>
+          <td>50.00</td>
+          <td>0.00</td>
+          <td>0.00</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>GNDOC</td>
+          <td>30.00</td>
+          <td>32.00</td>
+          <td>2.00</td>
+          <td>6.67</td>
+        </tr>
+<tr>
+          <td>11</td>
+          <td>RG 45%</td>
+          <td>150.00</td>
+          <td>146.00</td>
+          <td>-4.00</td>
+          <td>-2.67</td>
+        </tr>
+<tr>
+          <td>12</td>
+          <td>DOB</td>
+          <td>415.00</td>
+          <td>402.00</td>
+          <td>-13.00</td>
+          <td>-3.13</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total :</td>
+          <td>745</td>
+          <td>733</td>
+          <td>-12</td>
+          <td>-1.611</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <!-- Batch info + timing combined table -->
+    <table class="batch-top">
+      <tr>
+        <td class="info-lbl">Batch No</td>
+        <td class="info-colon">:</td>
+        <td>23</td>
+        <td class="time-hdr">Start time</td>
+        <td class="time-hdr">End time</td>
+        <td class="time-hdr">Dur(sec)</td>
+      </tr>
+      <tr>
+        <td class="info-lbl">Batch Date</td>
+        <td class="info-colon">:</td>
+        <td>2025-08-12</td>
+        <td class="time-val">2025-08-12 17:47:41</td>
+        <td class="time-val">2025-08-12 18:39:14</td>
+        <td class="time-val">3093</td>
+      </tr>
+      <tr>
+        <td class="info-lbl">Batch Recipe</td>
+        <td class="info-colon">:</td>
+        <td>FLUTO_24P</td>
+        <td></td>
+        <td></td>
+        <td></td>
+      </tr>
+    </table>
+    <!-- Materials Table -->
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Bin No</th>
+          <th>Material Name</th>
+          <th>Set wt(Kg)</th>
+          <th>Ach wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>150.00</td>
+          <td>152.00</td>
+          <td>2.00</td>
+          <td>1.33</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>GNDOC</td>
+          <td>30.00</td>
+          <td>31.00</td>
+          <td>1.00</td>
+          <td>3.33</td>
+        </tr>
+<tr>
+          <td>11</td>
+          <td>RG 45%</td>
+          <td>150.00</td>
+          <td>146.00</td>
+          <td>-4.00</td>
+          <td>-2.67</td>
+        </tr>
+<tr>
+          <td>12</td>
+          <td>DOB</td>
+          <td>415.00</td>
+          <td>411.00</td>
+          <td>-4.00</td>
+          <td>-0.96</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total :</td>
+          <td>745</td>
+          <td>740</td>
+          <td>-5</td>
+          <td>-0.671</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <!-- Batch info + timing combined table -->
+    <table class="batch-top">
+      <tr>
+        <td class="info-lbl">Batch No</td>
+        <td class="info-colon">:</td>
+        <td>24</td>
+        <td class="time-hdr">Start time</td>
+        <td class="time-hdr">End time</td>
+        <td class="time-hdr">Dur(sec)</td>
+      </tr>
+      <tr>
+        <td class="info-lbl">Batch Date</td>
+        <td class="info-colon">:</td>
+        <td>2025-08-12</td>
+        <td class="time-val">2025-08-12 19:10:40</td>
+        <td class="time-val">2025-08-12 19:34:46</td>
+        <td class="time-val">1446</td>
+      </tr>
+      <tr>
+        <td class="info-lbl">Batch Recipe</td>
+        <td class="info-colon">:</td>
+        <td>FLUTO_24P</td>
+        <td></td>
+        <td></td>
+        <td></td>
+      </tr>
+    </table>
+    <!-- Materials Table -->
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Bin No</th>
+          <th>Material Name</th>
+          <th>Set wt(Kg)</th>
+          <th>Ach wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>150.00</td>
+          <td>153.00</td>
+          <td>3.00</td>
+          <td>2.00</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>GNDOC</td>
+          <td>30.00</td>
+          <td>31.00</td>
+          <td>1.00</td>
+          <td>3.33</td>
+        </tr>
+<tr>
+          <td>11</td>
+          <td>RG 45%</td>
+          <td>150.00</td>
+          <td>145.00</td>
+          <td>-5.00</td>
+          <td>-3.33</td>
+        </tr>
+<tr>
+          <td>12</td>
+          <td>DOB</td>
+          <td>415.00</td>
+          <td>413.00</td>
+          <td>-2.00</td>
+          <td>-0.48</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total :</td>
+          <td>745</td>
+          <td>742</td>
+          <td>-3</td>
+          <td>-0.403</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+
+</div>
+</body>
+</html>

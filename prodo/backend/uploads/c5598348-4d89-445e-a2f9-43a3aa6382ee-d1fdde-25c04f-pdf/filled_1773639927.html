@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Consumption Report</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: Arial, Helvetica, sans-serif; font-size: 11px; color: #000; background: #fff; }
+.page { max-width: 850px; margin: 0 auto; padding: 24px 36px; }
+
+.report-header { margin-bottom: 6px; }
+.report-header table { width: 100%; border-collapse: collapse; }
+.report-header td { padding: 1px 4px; vertical-align: top; font-size: 11px; }
+.report-header .lbl { font-weight: bold; white-space: nowrap; }
+.report-header .colon { width: 10px; text-align: center; }
+.report-header .gap { width: 40px; }
+
+.report-title {
+  text-align: center; font-size: 18px; font-weight: bold;
+  margin: 10px 0 18px;
+}
+
+.batch-block { margin-bottom: 20px; page-break-inside: avoid; }
+.batch-meta { font-weight: bold; margin-bottom: 4px; font-size: 11px; }
+.batch-meta span { margin-right: 18px; }
+
+.mat-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+.mat-table th, .mat-table td { border: 1px solid #000; padding: 4px 8px; }
+.mat-table thead th { font-weight: bold; text-align: center; }
+.mat-table tbody td { text-align: right; }
+.mat-table tbody td:nth-child(1) { text-align: center; width: 40px; }
+.mat-table tbody td:nth-child(2) { text-align: left; }
+.mat-table tfoot td { font-weight: bold; text-align: right; }
+.mat-table tfoot td:first-child { text-align: left; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="report-header">
+    <table>
+      <tr>
+        <td class="lbl">Plant name</td><td class="colon">:</td><td>Coastal Feeds</td>
+        <td class="gap"></td>
+        <td class="lbl">From</td><td class="colon">:</td><td>07/11/2025 10:00</td>
+      </tr>
+      <tr>
+        <td class="lbl">Location</td><td class="colon">:</td><td>Gudivada</td>
+        <td class="gap"></td>
+        <td class="lbl">To</td><td class="colon">:</td><td>07/11/2025 18:00</td>
+      </tr>
+      <tr>
+        <td class="lbl">Print Date</td><td class="colon">:</td><td>16/03/2026</td>
+        <td class="gap"></td>
+        <td class="lbl">Recipe</td><td class="colon">:</td><td></td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="report-title">Consumption report</div>
+
+  <!-- Per-batch block: MELT produces __batch_idx__ so this repeats per recipe -->
+  <section class="batch-block">
+    <div class="batch-meta">
+      <span>Recipe: FLUTO_24P</span>
+      <span>Batch #1</span>
+      <span>Start: 2025-11-07 11:57:03</span>
+      <span>End: 2025-11-07 12:00:09</span>
+    </div>
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Bin</th>
+          <th>Material name</th>
+          <th>Set. wt(Kg)</th>
+          <th>Ach. wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>M CORN</td>
+          <td>150.00</td>
+          <td>150.00</td>
+          <td>0.00</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>GNDOC</td>
+          <td>30.00</td>
+          <td>30.00</td>
+          <td>0.00</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>11</td>
+          <td>RG 45%</td>
+          <td>150.00</td>
+          <td>147.00</td>
+          <td>-3.00</td>
+          <td>-2.000</td>
+        </tr>
+<tr>
+          <td>12</td>
+          <td>DOB</td>
+          <td>440.00</td>
+          <td>436.00</td>
+          <td>-4.00</td>
+          <td>-0.909</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total</td>
+          <td>770</td>
+          <td>763</td>
+          <td>-7</td>
+          <td>-0.909</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block">
+    <div class="batch-meta">
+      <span>Recipe: FLUTO_24P</span>
+      <span>Batch #2</span>
+      <span>Start: 2025-11-07 12:00:54</span>
+      <span>End: 2025-11-07 12:03:50</span>
+    </div>
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Bin</th>
+          <th>Material name</th>
+          <th>Set. wt(Kg)</th>
+          <th>Ach. wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>M CORN</td>
+          <td>150.00</td>
+          <td>151.00</td>
+          <td>1.00</td>
+          <td>0.667</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>GNDOC</td>
+          <td>30.00</td>
+          <td>30.00</td>
+          <td>0.00</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>11</td>
+          <td>RG 45%</td>
+          <td>150.00</td>
+          <td>147.00</td>
+          <td>-3.00</td>
+          <td>-2.000</td>
+        </tr>
+<tr>
+          <td>12</td>
+          <td>DOB</td>
+          <td>440.00</td>
+          <td>436.00</td>
+          <td>-4.00</td>
+          <td>-0.909</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total</td>
+          <td>770</td>
+          <td>764</td>
+          <td>-6</td>
+          <td>-0.779</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block">
+    <div class="batch-meta">
+      <span>Recipe: FLUTO_24P</span>
+      <span>Batch #3</span>
+      <span>Start: 2025-11-07 12:18:34</span>
+      <span>End: 2025-11-07 12:21:30</span>
+    </div>
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Bin</th>
+          <th>Material name</th>
+          <th>Set. wt(Kg)</th>
+          <th>Ach. wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>M CORN</td>
+          <td>150.00</td>
+          <td>152.00</td>
+          <td>2.00</td>
+          <td>1.333</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>GNDOC</td>
+          <td>30.00</td>
+          <td>30.00</td>
+          <td>0.00</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>11</td>
+          <td>RG 45%</td>
+          <td>150.00</td>
+          <td>147.00</td>
+          <td>-3.00</td>
+          <td>-2.000</td>
+        </tr>
+<tr>
+          <td>12</td>
+          <td>DOB</td>
+          <td>440.00</td>
+          <td>435.00</td>
+          <td>-5.00</td>
+          <td>-1.136</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total</td>
+          <td>770</td>
+          <td>764</td>
+          <td>-6</td>
+          <td>-0.779</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block">
+    <div class="batch-meta">
+      <span>Recipe: FLUTO_24P</span>
+      <span>Batch #4</span>
+      <span>Start: 2025-11-07 12:37:21</span>
+      <span>End: 2025-11-07 12:40:18</span>
+    </div>
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Bin</th>
+          <th>Material name</th>
+          <th>Set. wt(Kg)</th>
+          <th>Ach. wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>M CORN</td>
+          <td>150.00</td>
+          <td>151.00</td>
+          <td>1.00</td>
+          <td>0.667</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>GNDOC</td>
+          <td>30.00</td>
+          <td>30.00</td>
+          <td>0.00</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>11</td>
+          <td>RG 45%</td>
+          <td>150.00</td>
+          <td>147.00</td>
+          <td>-3.00</td>
+          <td>-2.000</td>
+        </tr>
+<tr>
+          <td>12</td>
+          <td>DOB</td>
+          <td>440.00</td>
+          <td>434.00</td>
+          <td>-6.00</td>
+          <td>-1.364</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total</td>
+          <td>770</td>
+          <td>762</td>
+          <td>-8</td>
+          <td>-1.039</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block">
+    <div class="batch-meta">
+      <span>Recipe: FLUTO_24P</span>
+      <span>Batch #5</span>
+      <span>Start: 2025-11-07 12:54:51</span>
+      <span>End: 2025-11-07 12:57:47</span>
+    </div>
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Bin</th>
+          <th>Material name</th>
+          <th>Set. wt(Kg)</th>
+          <th>Ach. wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>M CORN</td>
+          <td>150.00</td>
+          <td>152.00</td>
+          <td>2.00</td>
+          <td>1.333</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>GNDOC</td>
+          <td>30.00</td>
+          <td>30.00</td>
+          <td>0.00</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>11</td>
+          <td>RG 45%</td>
+          <td>150.00</td>
+          <td>148.00</td>
+          <td>-2.00</td>
+          <td>-1.333</td>
+        </tr>
+<tr>
+          <td>12</td>
+          <td>DOB</td>
+          <td>440.00</td>
+          <td>437.00</td>
+          <td>-3.00</td>
+          <td>-0.682</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total</td>
+          <td>770</td>
+          <td>767</td>
+          <td>-3</td>
+          <td>-0.39</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block">
+    <div class="batch-meta">
+      <span>Recipe: FLUTO_24P</span>
+      <span>Batch #6</span>
+      <span>Start: 2025-11-07 13:23:19</span>
+      <span>End: 2025-11-07 13:26:15</span>
+    </div>
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Bin</th>
+          <th>Material name</th>
+          <th>Set. wt(Kg)</th>
+          <th>Ach. wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>M CORN</td>
+          <td>150.00</td>
+          <td>152.00</td>
+          <td>2.00</td>
+          <td>1.333</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>GNDOC</td>
+          <td>30.00</td>
+          <td>30.00</td>
+          <td>0.00</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>11</td>
+          <td>RG 45%</td>
+          <td>150.00</td>
+          <td>148.00</td>
+          <td>-2.00</td>
+          <td>-1.333</td>
+        </tr>
+<tr>
+          <td>12</td>
+          <td>DOB</td>
+          <td>440.00</td>
+          <td>434.00</td>
+          <td>-6.00</td>
+          <td>-1.364</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total</td>
+          <td>770</td>
+          <td>764</td>
+          <td>-6</td>
+          <td>-0.779</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block">
+    <div class="batch-meta">
+      <span>Recipe: FLUTO_24P</span>
+      <span>Batch #7</span>
+      <span>Start: 2025-11-07 13:38:02</span>
+      <span>End: 2025-11-07 13:40:58</span>
+    </div>
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Bin</th>
+          <th>Material name</th>
+          <th>Set. wt(Kg)</th>
+          <th>Ach. wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>M CORN</td>
+          <td>150.00</td>
+          <td>151.00</td>
+          <td>1.00</td>
+          <td>0.667</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>GNDOC</td>
+          <td>30.00</td>
+          <td>29.00</td>
+          <td>-1.00</td>
+          <td>-3.333</td>
+        </tr>
+<tr>
+          <td>11</td>
+          <td>RG 45%</td>
+          <td>150.00</td>
+          <td>147.00</td>
+          <td>-3.00</td>
+          <td>-2.000</td>
+        </tr>
+<tr>
+          <td>12</td>
+          <td>DOB</td>
+          <td>440.00</td>
+          <td>433.00</td>
+          <td>-7.00</td>
+          <td>-1.591</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total</td>
+          <td>770</td>
+          <td>760</td>
+          <td>-10</td>
+          <td>-1.299</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block">
+    <div class="batch-meta">
+      <span>Recipe: FLUTO_24P</span>
+      <span>Batch #8</span>
+      <span>Start: 2025-11-07 13:59:04</span>
+      <span>End: 2025-11-07 14:02:00</span>
+    </div>
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Bin</th>
+          <th>Material name</th>
+          <th>Set. wt(Kg)</th>
+          <th>Ach. wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>M CORN</td>
+          <td>150.00</td>
+          <td>151.00</td>
+          <td>1.00</td>
+          <td>0.667</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>GNDOC</td>
+          <td>30.00</td>
+          <td>30.00</td>
+          <td>0.00</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>11</td>
+          <td>RG 45%</td>
+          <td>150.00</td>
+          <td>147.00</td>
+          <td>-3.00</td>
+          <td>-2.000</td>
+        </tr>
+<tr>
+          <td>12</td>
+          <td>DOB</td>
+          <td>440.00</td>
+          <td>435.00</td>
+          <td>-5.00</td>
+          <td>-1.136</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total</td>
+          <td>770</td>
+          <td>763</td>
+          <td>-7</td>
+          <td>-0.909</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block">
+    <div class="batch-meta">
+      <span>Recipe: FLUTO_24P</span>
+      <span>Batch #9</span>
+      <span>Start: 2025-11-07 16:05:55</span>
+      <span>End: 2025-11-07 16:27:27</span>
+    </div>
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Bin</th>
+          <th>Material name</th>
+          <th>Set. wt(Kg)</th>
+          <th>Ach. wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>M CORN</td>
+          <td>150.00</td>
+          <td>152.00</td>
+          <td>2.00</td>
+          <td>1.333</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>GNDOC</td>
+          <td>30.00</td>
+          <td>30.00</td>
+          <td>0.00</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>11</td>
+          <td>RG 45%</td>
+          <td>150.00</td>
+          <td>148.00</td>
+          <td>-2.00</td>
+          <td>-1.333</td>
+        </tr>
+<tr>
+          <td>12</td>
+          <td>DOB</td>
+          <td>440.00</td>
+          <td>433.00</td>
+          <td>-7.00</td>
+          <td>-1.591</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total</td>
+          <td>770</td>
+          <td>763</td>
+          <td>-7</td>
+          <td>-0.909</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block">
+    <div class="batch-meta">
+      <span>Recipe: FLUTO_24P</span>
+      <span>Batch #10</span>
+      <span>Start: 2025-11-07 16:29:00</span>
+      <span>End: 2025-11-07 16:31:59</span>
+    </div>
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Bin</th>
+          <th>Material name</th>
+          <th>Set. wt(Kg)</th>
+          <th>Ach. wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>M CORN</td>
+          <td>150.00</td>
+          <td>151.00</td>
+          <td>1.00</td>
+          <td>0.667</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>GNDOC</td>
+          <td>30.00</td>
+          <td>30.00</td>
+          <td>0.00</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>11</td>
+          <td>RG 45%</td>
+          <td>150.00</td>
+          <td>148.00</td>
+          <td>-2.00</td>
+          <td>-1.333</td>
+        </tr>
+<tr>
+          <td>12</td>
+          <td>DOB</td>
+          <td>440.00</td>
+          <td>435.00</td>
+          <td>-5.00</td>
+          <td>-1.136</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total</td>
+          <td>770</td>
+          <td>764</td>
+          <td>-6</td>
+          <td>-0.779</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+
+  <!-- Grand totals across all batches -->
+  <table class="mat-table" style="margin-top: 12px;">
+    <tfoot>
+      <tr>
+        <td colspan="2" style="text-align:left;">Grand Total</td>
+        <td>7700</td>
+        <td>7634</td>
+        <td>-66</td>
+        <td>-0.857</td>
+      </tr>
+    </tfoot>
+  </table>
+
+</div>
+</body>
+</html>

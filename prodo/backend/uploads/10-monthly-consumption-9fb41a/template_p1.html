@@ -1,0 +1,237 @@
+
+
+
+<meta charset="UTF-8">
+<meta>
+<title>Monthly Consumption &amp; Cost Analysis</title>
+<style>
+  @page {
+    size: A4;
+    margin: 20mm 18mm 20mm 18mm;
+  }
+
+  :root {
+    --dark-blue: #1a237e;
+    --th-bg: #1a237e;
+    --th-color: #ffffff;
+    --border-color: #b0b0b0;
+    --col-w-source: 28%;
+    --col-w-volume: 24%;
+    --col-w-cost-m3: 24%;
+    --col-w-total-cost: 24%;
+    --col-c-chemical: 25%;
+    --col-c-qty: 25%;
+    --col-c-unit: 25%;
+    --col-c-total: 25%;
+    --col-t-metric: 58%;
+    --col-t-value: 42%;
+    --treatment-table-w: 57%;
+    --row-gap: 2mm;
+    --section-mt: 12pt;
+    --section-mb: 5pt;
+  }
+
+  *, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 10pt;
+    color: #000000;
+    background: #ffffff;
+  }
+
+  #report-header {
+    text-align: center;
+    margin-bottom: 14pt;
+    padding-top: 2pt;
+  }
+
+  #report-header h1 {
+    font-size: 18pt;
+    font-weight: bold;
+    color: var(--dark-blue);
+    line-height: 1.3;
+  }
+
+  .section-heading {
+    font-size: 12pt;
+    font-weight: bold;
+    color: var(--dark-blue);
+    margin-top: var(--section-mt);
+    margin-bottom: var(--section-mb);
+  }
+
+  .month-field {
+    font-size: 10pt;
+    color: #000000;
+    margin-bottom: 0;
+  }
+
+  table {
+    border-collapse: collapse;
+    table-layout: fixed;
+    font-size: 10pt;
+    margin-bottom: 0;
+  }
+
+  thead tr th {
+    background-color: var(--th-bg);
+    color: var(--th-color);
+    font-weight: bold;
+    padding: 4pt 7pt;
+    text-align: center;
+    border: 1px solid var(--border-color);
+  }
+
+  tbody tr td {
+    padding: 4pt 7pt;
+    border: 1px solid var(--border-color);
+    text-align: center;
+    color: #000000;
+    font-variant-numeric: tabular-nums;
+  }
+
+  tbody tr td:first-child {
+    text-align: left;
+  }
+
+  #data-table-water {
+    width: 100%;
+  }
+  #data-table-water colgroup col:nth-child(1) { width: var(--col-w-source); }
+  #data-table-water colgroup col:nth-child(2) { width: var(--col-w-volume); }
+  #data-table-water colgroup col:nth-child(3) { width: var(--col-w-cost-m3); }
+  #data-table-water colgroup col:nth-child(4) { width: var(--col-w-total-cost); }
+
+  #data-table-chemical {
+    width: 100%;
+  }
+  #data-table-chemical colgroup col:nth-child(1) { width: var(--col-c-chemical); }
+  #data-table-chemical colgroup col:nth-child(2) { width: var(--col-c-qty); }
+  #data-table-chemical colgroup col:nth-child(3) { width: var(--col-c-unit); }
+  #data-table-chemical colgroup col:nth-child(4) { width: var(--col-c-total); }
+
+  #data-table-treatment {
+    width: var(--treatment-table-w);
+  }
+  #data-table-treatment colgroup col:nth-child(1) { width: var(--col-t-metric); }
+  #data-table-treatment colgroup col:nth-child(2) { width: var(--col-t-value); }
+
+  .grand-total-line {
+    margin-top: 13pt;
+    font-size: 10pt;
+    color: #000000;
+  }
+</style>
+
+
+
+<div id="report-header">
+  <h1>Monthly Consumption &amp; Cost Analysis</h1>
+</div>
+
+<div class="section-heading">Financial &amp; Operational Summary</div>
+<p class="month-field">Month: {report_month}</p>
+
+<div class="section-heading">Water Production</div>
+<table id="data-table-water">
+  <colgroup><col><col><col><col></colgroup>
+  <thead>
+    <tr>
+      <th data-label="source">Source</th>
+      <th data-label="volume_m3">Volume (m³)</th>
+      <th data-label="cost_per_m3">Cost per m³</th>
+      <th data-label="total_cost">Total Cost</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Intake (FM_101)</td>
+      <td>{fm_101_totalizer}</td>
+      <td>{cost_per_m3}</td>
+      <td>{fm_101_cost}</td>
+    </tr>
+    <tr>
+      <td>Treated Output (FM_103)</td>
+      <td>{fm_103_totalizer}</td>
+      <td>—</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>Recycled (FM_105)</td>
+      <td>{fm_105_totalizer}</td>
+      <td>—</td>
+      <td>—</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="section-heading">Chemical Usage</div>
+<table id="data-table-chemical">
+  <colgroup><col><col><col><col></colgroup>
+  <thead>
+    <tr>
+      <th data-label="chemical">Chemical</th>
+      <th data-label="quantity_kg">Quantity (kg)</th>
+      <th data-label="unit_cost">Unit Cost</th>
+      <th data-label="total">Total</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Chlorine</td>
+      <td>{chlorine_qty}</td>
+      <td>{chlorine_unit_cost}</td>
+      <td>{chlorine_total}</td>
+    </tr>
+    <tr>
+      <td>Alum</td>
+      <td>{alum_qty}</td>
+      <td>{alum_unit_cost}</td>
+      <td>{alum_total}</td>
+    </tr>
+    <tr>
+      <td>Polymer</td>
+      <td>{polymer_qty}</td>
+      <td>{polymer_unit_cost}</td>
+      <td>{polymer_total}</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="section-heading">Treatment Efficiency</div>
+<table id="data-table-treatment">
+  <colgroup><col><col></colgroup>
+  <thead>
+    <tr>
+      <th data-label="metric">Metric</th>
+      <th data-label="value">Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Inlet pH</td>
+      <td>{ph_101}</td>
+    </tr>
+    <tr>
+      <td>Outlet pH</td>
+      <td>{ph_104}</td>
+    </tr>
+    <tr>
+      <td>TDS Removal %</td>
+      <td>{tds_removal}</td>
+    </tr>
+    <tr>
+      <td>Water Recovery %</td>
+      <td>{water_recovery}</td>
+    </tr>
+  </tbody>
+</table>
+
+<p class="grand-total-line">Grand Total Cost: &#9632;{grand_total}</p>
+
+

@@ -1,0 +1,60 @@
+{
+  "datasets": {
+    "header": {
+      "description": "Report metadata scalars rendered in the header and footer. report_date is a user-supplied display parameter. avg_ph and exceedance_count are post-query aggregates computed at pipeline level; they are UNRESOLVED in the declarative contract and must be injected by the pipeline after row data is fetched.",
+      "columns": [
+        "report_date",
+        "avg_ph",
+        "exceedance_count"
+      ]
+    },
+    "rows": {
+      "description": "One row per timestamp from neuract__ANALYSER_TABLE within the optional date_from/date_to window. Each row carries the formatted timestamp and the four simultaneous pH channel readings.",
+      "columns": [
+        "row_timestamp",
+        "row_ph_101",
+        "row_ph_102",
+        "row_ph_103",
+        "row_ph_104"
+      ],
+      "grouping": [],
+      "ordering": [
+        "neuract__ANALYSER_TABLE.timestamp_utc ASC"
+      ]
+    },
+    "totals": {
+      "description": "No totals rows are defined in this report template.",
+      "columns": []
+    }
+  },
+  "semantics": "date_from and date_to are optional filters applied to neuract__ANALYSER_TABLE.timestamp_utc to bound the returned row set. report_date is a pass-through parameter rendered directly in the HTML header. ph_threshold is an optional pass-through used exclusively by pipeline code to compute exceedance_count; it does not appear as a template token and is not applied as a row filter.",
+  "parameters": {
+    "required": [
+      {
+        "name": "report_date",
+        "type": "date"
+      }
+    ],
+    "optional": [
+      {
+        "name": "date_from",
+        "type": "date"
+      },
+      {
+        "name": "date_to",
+        "type": "date"
+      },
+      {
+        "name": "ph_threshold",
+        "type": "number"
+      }
+    ]
+  },
+  "transformations": [
+    "row_timestamp is formatted from UTC timestamp to display string using format '%d-%m-%Y %H:%M:%S' via format_date row_computed op.",
+    "row_ph_101 through row_ph_104 are displayed with 4-decimal precision using number(4) formatter, appropriate for pH sensor engineering standards.",
+    "avg_ph is the scalar mean of all PH_101, PH_102, PH_103, and PH_104 values across the entire filtered row set; pipeline must compute this as df[['PH_101','PH_102','PH_103','PH_104']].values.mean() (UNRESOLVED declaratively).",
+    "exceedance_count is the total count of individual pH channel readings across all four channels and all filtered rows where the value exceeds the ph_threshold parameter; pipeline must compute this with a boolean mask and sum (UNRESOLVED declaratively).",
+    "Rows are ordered ascending by neuract__ANALYSER_TABLE.timestamp_utc."
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "id": "fa10b713-7225-4d72-8792-c5d6f712cc23",
+  "name": "Test M8 Tags",
+  "content": {
+    "type": "doc",
+    "content": []
+  },
+  "content_type": "tiptap",
+  "version": 1,
+  "created_at": "2026-02-28T14:53:59.901513+00:00",
+  "updated_at": "2026-02-28T14:53:59.901513+00:00",
+  "owner_id": null,
+  "is_template": false,
+  "track_changes_enabled": false,
+  "collaboration_enabled": false,
+  "tags": [
+    "important",
+    "test",
+    "qa"
+  ],
+  "metadata": {}
+}

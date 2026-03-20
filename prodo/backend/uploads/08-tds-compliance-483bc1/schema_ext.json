@@ -1,0 +1,15 @@
+{
+  "scalars": [
+    "cert_number",
+    "issue_date",
+    "tds_101",
+    "tds_102",
+    "tds_reduction",
+    "tds_101_result",
+    "tds_102_result",
+    "reduction_result"
+  ],
+  "row_tokens": [],
+  "totals": [],
+  "notes": "Fixed 3-row compliance table; each row has a distinct named parameter with literal permissible limits; all data fields are scalars. tds_101 and tds_102 are numeric ppm values; tds_reduction is a percentage value; *_result tokens hold pass/fail or equivalent text."
+}

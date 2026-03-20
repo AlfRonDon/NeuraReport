@@ -1,0 +1,18 @@
+{
+  "id": "c6a603e7-6498-4437-8c60-aa15452c5501",
+  "name": "Test Document",
+  "content": {
+    "type": "doc",
+    "content": []
+  },
+  "content_type": "tiptap",
+  "version": 1,
+  "created_at": "2026-02-15T09:17:29.399597+00:00",
+  "updated_at": "2026-02-15T09:17:29.399597+00:00",
+  "owner_id": null,
+  "is_template": false,
+  "track_changes_enabled": false,
+  "collaboration_enabled": false,
+  "tags": [],
+  "metadata": {}
+}

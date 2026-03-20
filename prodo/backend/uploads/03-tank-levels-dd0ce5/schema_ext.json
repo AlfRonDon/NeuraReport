@@ -1,0 +1,13 @@
+{
+  "scalars": [
+    "timestamp"
+  ],
+  "row_tokens": [
+    "row_tank_name",
+    "row_level",
+    "row_capacity",
+    "row_current_vol"
+  ],
+  "totals": [],
+  "notes": "Table has 4 columns: tank name (literal per row), level % (dynamic placeholder), capacity kL (fixed per tank), current vol kL (dynamic placeholder). Header row uses dark navy (#1a237e) background with white bold text. Snapshot time uses a single scalar timestamp token."
+}

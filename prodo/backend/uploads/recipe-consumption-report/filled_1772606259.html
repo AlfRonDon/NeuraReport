@@ -1,0 +1,2510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Consumption Report</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: Arial, Helvetica, sans-serif; font-size: 12px; color: #000; background: #fff; }
+.page { max-width: 800px; margin: 0 auto; padding: 30px 40px; }
+
+/* ── Report Header ── */
+.report-header { margin-bottom: 10px; }
+.report-header table { border-collapse: collapse; }
+.report-header td { padding: 1px 6px; vertical-align: top; }
+.report-header .lbl { font-weight: bold; width: 90px; }
+.report-header .colon { width: 12px; text-align: center; }
+
+.report-title {
+  text-align: center; font-size: 16px; font-weight: bold;
+  margin: 8px 0 16px; border-bottom: 1px solid #000; padding-bottom: 6px;
+}
+
+/* ── Batch Section ── */
+.batch-section { margin-bottom: 18px; page-break-inside: avoid; }
+.batch-hdr {
+  background: #e8e8e8; padding: 5px 10px; font-weight: bold;
+  font-size: 12px; border: 1px solid #999; border-bottom: none;
+}
+.batch-hdr span { margin-right: 24px; }
+
+/* ── Materials Table ── */
+.mat-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+.mat-table th, .mat-table td {
+  border: 1px solid #999; padding: 3px 8px;
+}
+.mat-table thead th {
+  background: #d0d0d0; font-weight: bold; text-align: center;
+  font-size: 11px;
+}
+.mat-table tbody td { text-align: right; }
+.mat-table tbody td:nth-child(1) { text-align: center; width: 50px; }
+.mat-table tbody td:nth-child(2) { text-align: left; }
+.mat-table tfoot td {
+  font-weight: bold; text-align: right; background: #f0f0f0;
+}
+.mat-table tfoot td:first-child { text-align: left; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Report Header -->
+  <div class="report-header">
+    <table>
+      <tr><td class="lbl">Plant name</td><td class="colon">:</td><td>Coastal Feeds</td></tr>
+      <tr><td class="lbl">Location</td><td class="colon">:</td><td>Mangalore</td></tr>
+      <tr><td class="lbl">Print Date</td><td class="colon">:</td><td>04/03/2026</td></tr>
+      <tr><td class="lbl">From</td><td class="colon">:</td><td>01/09/2025</td></tr>
+      <tr><td class="lbl">To</td><td class="colon">:</td><td>03/09/2025</td></tr>
+      <tr><td class="lbl">Recipe code</td><td class="colon">:</td><td>ALL</td></tr>
+    </table>
+  </div>
+
+  <div class="report-title">Consumption report</div>
+
+  <!-- BEGIN:BLOCK_REPEAT consumption_data -->
+  <div class="batch-section">
+    <div class="batch-hdr">
+      <span>Recipe {recipe_name}</span>
+      <span>Batch # {batch_number}</span>
+      <span>Start {start_time}</span>
+      <span>End {end_time}</span>
+    </div>
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Sl. No.</th>
+          <th>Material name</th>
+          <th>Set. wt(Kg)</th>
+          <th>Ach. wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>SOYA</td>
+          <td>400</td>
+          <td>398</td>
+          <td>-2</td>
+          <td>-0.500</td>
+        </tr>
+<tr>
+          <td>2</td>
+          <td>SOYA</td>
+          <td>400</td>
+          <td>399</td>
+          <td>-1</td>
+          <td>-0.250</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>SOYA</td>
+          <td>400</td>
+          <td>399</td>
+          <td>-1</td>
+          <td>-0.250</td>
+        </tr>
+<tr>
+          <td>4</td>
+          <td>SOYA</td>
+          <td>400</td>
+          <td>399</td>
+          <td>-1</td>
+          <td>-0.250</td>
+        </tr>
+<tr>
+          <td>5</td>
+          <td>SOYA</td>
+          <td>400</td>
+          <td>398</td>
+          <td>-2</td>
+          <td>-0.500</td>
+        </tr>
+<tr>
+          <td>6</td>
+          <td>SOYA</td>
+          <td>400</td>
+          <td>398</td>
+          <td>-2</td>
+          <td>-0.500</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>SOYA</td>
+          <td>400</td>
+          <td>398</td>
+          <td>-2</td>
+          <td>-0.500</td>
+        </tr>
+<tr>
+          <td>8</td>
+          <td>SOYA</td>
+          <td>400</td>
+          <td>400</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>9</td>
+          <td>SOYA</td>
+          <td>400</td>
+          <td>399</td>
+          <td>-1</td>
+          <td>-0.250</td>
+        </tr>
+<tr>
+          <td>10</td>
+          <td>SOYA</td>
+          <td>400</td>
+          <td>399</td>
+          <td>-1</td>
+          <td>-0.250</td>
+        </tr>
+<tr>
+          <td>11</td>
+          <td>MM</td>
+          <td>0</td>
+          <td>0</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>12</td>
+          <td>MM</td>
+          <td>0</td>
+          <td>0</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>13</td>
+          <td>MM</td>
+          <td>0</td>
+          <td>0</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>14</td>
+          <td>MM</td>
+          <td>0</td>
+          <td>0</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>15</td>
+          <td>MM</td>
+          <td>0</td>
+          <td>0</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>16</td>
+          <td>MM</td>
+          <td>0</td>
+          <td>0</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>17</td>
+          <td>MM</td>
+          <td>0</td>
+          <td>0</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>18</td>
+          <td>MM</td>
+          <td>0</td>
+          <td>0</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>19</td>
+          <td>MM</td>
+          <td>0</td>
+          <td>0</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>20</td>
+          <td>MM</td>
+          <td>0</td>
+          <td>0</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>21</td>
+          <td>SOYA</td>
+          <td>50</td>
+          <td>50</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>22</td>
+          <td>SOYA</td>
+          <td>50</td>
+          <td>49</td>
+          <td>-1</td>
+          <td>-2.000</td>
+        </tr>
+<tr>
+          <td>23</td>
+          <td>SOYA</td>
+          <td>50</td>
+          <td>49</td>
+          <td>-1</td>
+          <td>-2.000</td>
+        </tr>
+<tr>
+          <td>24</td>
+          <td>SOYA</td>
+          <td>50</td>
+          <td>49</td>
+          <td>-1</td>
+          <td>-2.000</td>
+        </tr>
+<tr>
+          <td>25</td>
+          <td>SOYA</td>
+          <td>50</td>
+          <td>49</td>
+          <td>-1</td>
+          <td>-2.000</td>
+        </tr>
+<tr>
+          <td>26</td>
+          <td>SOYA</td>
+          <td>50</td>
+          <td>49</td>
+          <td>-1</td>
+          <td>-2.000</td>
+        </tr>
+<tr>
+          <td>27</td>
+          <td>SOYA</td>
+          <td>50</td>
+          <td>50</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>28</td>
+          <td>SOYA</td>
+          <td>50</td>
+          <td>49</td>
+          <td>-1</td>
+          <td>-2.000</td>
+        </tr>
+<tr>
+          <td>29</td>
+          <td>SOYA</td>
+          <td>50</td>
+          <td>49</td>
+          <td>-1</td>
+          <td>-2.000</td>
+        </tr>
+<tr>
+          <td>30</td>
+          <td>SOYA</td>
+          <td>50</td>
+          <td>50</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>31</td>
+          <td>SOYA</td>
+          <td>50</td>
+          <td>50</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>32</td>
+          <td>SOYA</td>
+          <td>50</td>
+          <td>49</td>
+          <td>-1</td>
+          <td>-2.000</td>
+        </tr>
+<tr>
+          <td>33</td>
+          <td>SOYA</td>
+          <td>50</td>
+          <td>49</td>
+          <td>-1</td>
+          <td>-2.000</td>
+        </tr>
+<tr>
+          <td>34</td>
+          <td>SOYA</td>
+          <td>50</td>
+          <td>50</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>35</td>
+          <td>SOYA</td>
+          <td>50</td>
+          <td>49</td>
+          <td>-1</td>
+          <td>-2.000</td>
+        </tr>
+<tr>
+          <td>36</td>
+          <td>SOYA</td>
+          <td>50</td>
+          <td>50</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>37</td>
+          <td>SOYA</td>
+          <td>50</td>
+          <td>49</td>
+          <td>-1</td>
+          <td>-2.000</td>
+        </tr>
+<tr>
+          <td>38</td>
+          <td>SOYA</td>
+          <td>50</td>
+          <td>49</td>
+          <td>-1</td>
+          <td>-2.000</td>
+        </tr>
+<tr>
+          <td>39</td>
+          <td>SOYA</td>
+          <td>50</td>
+          <td>49</td>
+          <td>-1</td>
+          <td>-2.000</td>
+        </tr>
+<tr>
+          <td>40</td>
+          <td>SOYA</td>
+          <td>375</td>
+          <td>375</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>41</td>
+          <td>SOYA</td>
+          <td>375</td>
+          <td>374</td>
+          <td>-1</td>
+          <td>-0.267</td>
+        </tr>
+<tr>
+          <td>42</td>
+          <td>SOYA</td>
+          <td>375</td>
+          <td>375</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>43</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>103</td>
+          <td>3</td>
+          <td>3.000</td>
+        </tr>
+<tr>
+          <td>44</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>103</td>
+          <td>3</td>
+          <td>3.000</td>
+        </tr>
+<tr>
+          <td>45</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>104</td>
+          <td>4</td>
+          <td>4.000</td>
+        </tr>
+<tr>
+          <td>46</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>102</td>
+          <td>2</td>
+          <td>2.000</td>
+        </tr>
+<tr>
+          <td>47</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>101</td>
+          <td>1</td>
+          <td>1.000</td>
+        </tr>
+<tr>
+          <td>48</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>103</td>
+          <td>3</td>
+          <td>3.000</td>
+        </tr>
+<tr>
+          <td>49</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>103</td>
+          <td>3</td>
+          <td>3.000</td>
+        </tr>
+<tr>
+          <td>50</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>101</td>
+          <td>1</td>
+          <td>1.000</td>
+        </tr>
+<tr>
+          <td>51</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>103</td>
+          <td>3</td>
+          <td>3.000</td>
+        </tr>
+<tr>
+          <td>52</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>102</td>
+          <td>2</td>
+          <td>2.000</td>
+        </tr>
+<tr>
+          <td>53</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>102</td>
+          <td>2</td>
+          <td>2.000</td>
+        </tr>
+<tr>
+          <td>54</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>102</td>
+          <td>2</td>
+          <td>2.000</td>
+        </tr>
+<tr>
+          <td>55</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>103</td>
+          <td>3</td>
+          <td>3.000</td>
+        </tr>
+<tr>
+          <td>56</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>102</td>
+          <td>2</td>
+          <td>2.000</td>
+        </tr>
+<tr>
+          <td>57</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>102</td>
+          <td>2</td>
+          <td>2.000</td>
+        </tr>
+<tr>
+          <td>58</td>
+          <td>R BRAWN</td>
+          <td>150</td>
+          <td>144</td>
+          <td>-6</td>
+          <td>-4.000</td>
+        </tr>
+<tr>
+          <td>59</td>
+          <td>R BRAWN</td>
+          <td>150</td>
+          <td>144</td>
+          <td>-6</td>
+          <td>-4.000</td>
+        </tr>
+<tr>
+          <td>60</td>
+          <td>R BRAWN</td>
+          <td>150</td>
+          <td>145</td>
+          <td>-5</td>
+          <td>-3.333</td>
+        </tr>
+<tr>
+          <td>61</td>
+          <td>R BRAWN</td>
+          <td>150</td>
+          <td>144</td>
+          <td>-6</td>
+          <td>-4.000</td>
+        </tr>
+<tr>
+          <td>62</td>
+          <td>R BRAWN</td>
+          <td>150</td>
+          <td>143</td>
+          <td>-7</td>
+          <td>-4.667</td>
+        </tr>
+<tr>
+          <td>63</td>
+          <td>R BRAWN</td>
+          <td>150</td>
+          <td>144</td>
+          <td>-6</td>
+          <td>-4.000</td>
+        </tr>
+<tr>
+          <td>64</td>
+          <td>R BRAWN</td>
+          <td>150</td>
+          <td>146</td>
+          <td>-4</td>
+          <td>-2.667</td>
+        </tr>
+<tr>
+          <td>65</td>
+          <td>R BRAWN</td>
+          <td>150</td>
+          <td>144</td>
+          <td>-6</td>
+          <td>-4.000</td>
+        </tr>
+<tr>
+          <td>66</td>
+          <td>R BRAWN</td>
+          <td>150</td>
+          <td>144</td>
+          <td>-6</td>
+          <td>-4.000</td>
+        </tr>
+<tr>
+          <td>67</td>
+          <td>R BRAWN</td>
+          <td>150</td>
+          <td>145</td>
+          <td>-5</td>
+          <td>-3.333</td>
+        </tr>
+<tr>
+          <td>68</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>99</td>
+          <td>-1</td>
+          <td>-1.000</td>
+        </tr>
+<tr>
+          <td>69</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>100</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>70</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>100</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>71</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>100</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>72</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>100</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>73</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>101</td>
+          <td>1</td>
+          <td>1.000</td>
+        </tr>
+<tr>
+          <td>74</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>99</td>
+          <td>-1</td>
+          <td>-1.000</td>
+        </tr>
+<tr>
+          <td>75</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>98</td>
+          <td>-2</td>
+          <td>-2.000</td>
+        </tr>
+<tr>
+          <td>76</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>95</td>
+          <td>-5</td>
+          <td>-5.000</td>
+        </tr>
+<tr>
+          <td>77</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>100</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>78</td>
+          <td>B RICE</td>
+          <td>200</td>
+          <td>200</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>79</td>
+          <td>B RICE</td>
+          <td>200</td>
+          <td>200</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>80</td>
+          <td>B RICE</td>
+          <td>200</td>
+          <td>200</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>81</td>
+          <td>B RICE</td>
+          <td>200</td>
+          <td>199</td>
+          <td>-1</td>
+          <td>-0.500</td>
+        </tr>
+<tr>
+          <td>82</td>
+          <td>B RICE</td>
+          <td>200</td>
+          <td>200</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>83</td>
+          <td>B RICE</td>
+          <td>200</td>
+          <td>200</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>84</td>
+          <td>B RICE</td>
+          <td>200</td>
+          <td>200</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>85</td>
+          <td>B RICE</td>
+          <td>200</td>
+          <td>200</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>86</td>
+          <td>B RICE</td>
+          <td>200</td>
+          <td>200</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>87</td>
+          <td>B RICE</td>
+          <td>200</td>
+          <td>195</td>
+          <td>-5</td>
+          <td>-2.500</td>
+        </tr>
+<tr>
+          <td>88</td>
+          <td>B RICE</td>
+          <td>200</td>
+          <td>200</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>89</td>
+          <td>B RICE</td>
+          <td>200</td>
+          <td>200</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>90</td>
+          <td>B RICE</td>
+          <td>200</td>
+          <td>200</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>91</td>
+          <td>B RICE</td>
+          <td>200</td>
+          <td>195</td>
+          <td>-5</td>
+          <td>-2.500</td>
+        </tr>
+<tr>
+          <td>92</td>
+          <td>B RICE</td>
+          <td>200</td>
+          <td>200</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>93</td>
+          <td>B RICE</td>
+          <td>200</td>
+          <td>201</td>
+          <td>1</td>
+          <td>0.500</td>
+        </tr>
+<tr>
+          <td>94</td>
+          <td>B RICE</td>
+          <td>200</td>
+          <td>199</td>
+          <td>-1</td>
+          <td>-0.500</td>
+        </tr>
+<tr>
+          <td>95</td>
+          <td>B RICE</td>
+          <td>200</td>
+          <td>199</td>
+          <td>-1</td>
+          <td>-0.500</td>
+        </tr>
+<tr>
+          <td>96</td>
+          <td>B RICE</td>
+          <td>200</td>
+          <td>195</td>
+          <td>-5</td>
+          <td>-2.500</td>
+        </tr>
+<tr>
+          <td>97</td>
+          <td>R BRAWN</td>
+          <td>225</td>
+          <td>0</td>
+          <td>-225</td>
+          <td>-100.000</td>
+        </tr>
+<tr>
+          <td>98</td>
+          <td>R BRAWN</td>
+          <td>225</td>
+          <td>220</td>
+          <td>-5</td>
+          <td>-2.222</td>
+        </tr>
+<tr>
+          <td>99</td>
+          <td>R BRAWN</td>
+          <td>225</td>
+          <td>220</td>
+          <td>-5</td>
+          <td>-2.222</td>
+        </tr>
+<tr>
+          <td>100</td>
+          <td>RG 60%</td>
+          <td>50</td>
+          <td>47</td>
+          <td>-3</td>
+          <td>-6.000</td>
+        </tr>
+<tr>
+          <td>101</td>
+          <td>RG 60%</td>
+          <td>50</td>
+          <td>48</td>
+          <td>-2</td>
+          <td>-4.000</td>
+        </tr>
+<tr>
+          <td>102</td>
+          <td>RG 60%</td>
+          <td>50</td>
+          <td>48</td>
+          <td>-2</td>
+          <td>-4.000</td>
+        </tr>
+<tr>
+          <td>103</td>
+          <td>RG 60%</td>
+          <td>50</td>
+          <td>49</td>
+          <td>-1</td>
+          <td>-2.000</td>
+        </tr>
+<tr>
+          <td>104</td>
+          <td>RG 60%</td>
+          <td>50</td>
+          <td>48</td>
+          <td>-2</td>
+          <td>-4.000</td>
+        </tr>
+<tr>
+          <td>105</td>
+          <td>RG 60%</td>
+          <td>50</td>
+          <td>49</td>
+          <td>-1</td>
+          <td>-2.000</td>
+        </tr>
+<tr>
+          <td>106</td>
+          <td>RG 60%</td>
+          <td>50</td>
+          <td>48</td>
+          <td>-2</td>
+          <td>-4.000</td>
+        </tr>
+<tr>
+          <td>107</td>
+          <td>RG 60%</td>
+          <td>50</td>
+          <td>48</td>
+          <td>-2</td>
+          <td>-4.000</td>
+        </tr>
+<tr>
+          <td>108</td>
+          <td>RG 60%</td>
+          <td>50</td>
+          <td>48</td>
+          <td>-2</td>
+          <td>-4.000</td>
+        </tr>
+<tr>
+          <td>109</td>
+          <td>RG 60%</td>
+          <td>50</td>
+          <td>49</td>
+          <td>-1</td>
+          <td>-2.000</td>
+        </tr>
+<tr>
+          <td>110</td>
+          <td>M CORN</td>
+          <td>50</td>
+          <td>52</td>
+          <td>2</td>
+          <td>4.000</td>
+        </tr>
+<tr>
+          <td>111</td>
+          <td>M CORN</td>
+          <td>50</td>
+          <td>47</td>
+          <td>-3</td>
+          <td>-6.000</td>
+        </tr>
+<tr>
+          <td>112</td>
+          <td>M CORN</td>
+          <td>50</td>
+          <td>46</td>
+          <td>-4</td>
+          <td>-8.000</td>
+        </tr>
+<tr>
+          <td>113</td>
+          <td>M CORN</td>
+          <td>50</td>
+          <td>53</td>
+          <td>3</td>
+          <td>6.000</td>
+        </tr>
+<tr>
+          <td>114</td>
+          <td>M CORN</td>
+          <td>50</td>
+          <td>53</td>
+          <td>3</td>
+          <td>6.000</td>
+        </tr>
+<tr>
+          <td>115</td>
+          <td>M CORN</td>
+          <td>50</td>
+          <td>52</td>
+          <td>2</td>
+          <td>4.000</td>
+        </tr>
+<tr>
+          <td>116</td>
+          <td>M CORN</td>
+          <td>50</td>
+          <td>54</td>
+          <td>4</td>
+          <td>8.000</td>
+        </tr>
+<tr>
+          <td>117</td>
+          <td>M CORN</td>
+          <td>50</td>
+          <td>52</td>
+          <td>2</td>
+          <td>4.000</td>
+        </tr>
+<tr>
+          <td>118</td>
+          <td>M CORN</td>
+          <td>50</td>
+          <td>52</td>
+          <td>2</td>
+          <td>4.000</td>
+        </tr>
+<tr>
+          <td>119</td>
+          <td>M CORN</td>
+          <td>50</td>
+          <td>52</td>
+          <td>2</td>
+          <td>4.000</td>
+        </tr>
+<tr>
+          <td>120</td>
+          <td>M CORN</td>
+          <td>50</td>
+          <td>52</td>
+          <td>2</td>
+          <td>4.000</td>
+        </tr>
+<tr>
+          <td>121</td>
+          <td>M CORN</td>
+          <td>50</td>
+          <td>53</td>
+          <td>3</td>
+          <td>6.000</td>
+        </tr>
+<tr>
+          <td>122</td>
+          <td>M CORN</td>
+          <td>50</td>
+          <td>52</td>
+          <td>2</td>
+          <td>4.000</td>
+        </tr>
+<tr>
+          <td>123</td>
+          <td>M CORN</td>
+          <td>50</td>
+          <td>52</td>
+          <td>2</td>
+          <td>4.000</td>
+        </tr>
+<tr>
+          <td>124</td>
+          <td>M CORN</td>
+          <td>50</td>
+          <td>53</td>
+          <td>3</td>
+          <td>6.000</td>
+        </tr>
+<tr>
+          <td>125</td>
+          <td>RECYCLE Q</td>
+          <td>100</td>
+          <td>99</td>
+          <td>-1</td>
+          <td>-1.000</td>
+        </tr>
+<tr>
+          <td>126</td>
+          <td>RECYCLE Q</td>
+          <td>100</td>
+          <td>99</td>
+          <td>-1</td>
+          <td>-1.000</td>
+        </tr>
+<tr>
+          <td>127</td>
+          <td>RECYCLE Q</td>
+          <td>100</td>
+          <td>98</td>
+          <td>-2</td>
+          <td>-2.000</td>
+        </tr>
+<tr>
+          <td>128</td>
+          <td>RECYCLE Q</td>
+          <td>100</td>
+          <td>98</td>
+          <td>-2</td>
+          <td>-2.000</td>
+        </tr>
+<tr>
+          <td>129</td>
+          <td>RECYCLE Q</td>
+          <td>100</td>
+          <td>99</td>
+          <td>-1</td>
+          <td>-1.000</td>
+        </tr>
+<tr>
+          <td>130</td>
+          <td>RECYCLE Q</td>
+          <td>100</td>
+          <td>98</td>
+          <td>-2</td>
+          <td>-2.000</td>
+        </tr>
+<tr>
+          <td>131</td>
+          <td>RECYCLE Q</td>
+          <td>100</td>
+          <td>98</td>
+          <td>-2</td>
+          <td>-2.000</td>
+        </tr>
+<tr>
+          <td>132</td>
+          <td>RECYCLE Q</td>
+          <td>100</td>
+          <td>99</td>
+          <td>-1</td>
+          <td>-1.000</td>
+        </tr>
+<tr>
+          <td>133</td>
+          <td>RECYCLE Q</td>
+          <td>100</td>
+          <td>99</td>
+          <td>-1</td>
+          <td>-1.000</td>
+        </tr>
+<tr>
+          <td>134</td>
+          <td>RECYCLE Q</td>
+          <td>100</td>
+          <td>99</td>
+          <td>-1</td>
+          <td>-1.000</td>
+        </tr>
+<tr>
+          <td>135</td>
+          <td>RECYCLE Q</td>
+          <td>100</td>
+          <td>98</td>
+          <td>-2</td>
+          <td>-2.000</td>
+        </tr>
+<tr>
+          <td>136</td>
+          <td>RECYCLE Q</td>
+          <td>100</td>
+          <td>98</td>
+          <td>-2</td>
+          <td>-2.000</td>
+        </tr>
+<tr>
+          <td>137</td>
+          <td>RECYCLE Q</td>
+          <td>100</td>
+          <td>98</td>
+          <td>-2</td>
+          <td>-2.000</td>
+        </tr>
+<tr>
+          <td>138</td>
+          <td>RECYCLE Q</td>
+          <td>100</td>
+          <td>99</td>
+          <td>-1</td>
+          <td>-1.000</td>
+        </tr>
+<tr>
+          <td>139</td>
+          <td>RECYCLE Q</td>
+          <td>100</td>
+          <td>98</td>
+          <td>-2</td>
+          <td>-2.000</td>
+        </tr>
+<tr>
+          <td>140</td>
+          <td>RECYCLE Q</td>
+          <td>100</td>
+          <td>98</td>
+          <td>-2</td>
+          <td>-2.000</td>
+        </tr>
+<tr>
+          <td>141</td>
+          <td>RECYCLE Q</td>
+          <td>100</td>
+          <td>98</td>
+          <td>-2</td>
+          <td>-2.000</td>
+        </tr>
+<tr>
+          <td>142</td>
+          <td>RECYCLE Q</td>
+          <td>100</td>
+          <td>98</td>
+          <td>-2</td>
+          <td>-2.000</td>
+        </tr>
+<tr>
+          <td>143</td>
+          <td>RECYCLE Q</td>
+          <td>100</td>
+          <td>98</td>
+          <td>-2</td>
+          <td>-2.000</td>
+        </tr>
+<tr>
+          <td>144</td>
+          <td>GNDOC</td>
+          <td>50</td>
+          <td>51</td>
+          <td>1</td>
+          <td>2.000</td>
+        </tr>
+<tr>
+          <td>145</td>
+          <td>GNDOC</td>
+          <td>50</td>
+          <td>50</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>146</td>
+          <td>GNDOC</td>
+          <td>50</td>
+          <td>50</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>147</td>
+          <td>GNDOC</td>
+          <td>50</td>
+          <td>50</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>148</td>
+          <td>GNDOC</td>
+          <td>50</td>
+          <td>51</td>
+          <td>1</td>
+          <td>2.000</td>
+        </tr>
+<tr>
+          <td>149</td>
+          <td>GNDOC</td>
+          <td>50</td>
+          <td>52</td>
+          <td>2</td>
+          <td>4.000</td>
+        </tr>
+<tr>
+          <td>150</td>
+          <td>GNDOC</td>
+          <td>50</td>
+          <td>51</td>
+          <td>1</td>
+          <td>2.000</td>
+        </tr>
+<tr>
+          <td>151</td>
+          <td>GNDOC</td>
+          <td>50</td>
+          <td>50</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>152</td>
+          <td>GNDOC</td>
+          <td>50</td>
+          <td>51</td>
+          <td>1</td>
+          <td>2.000</td>
+        </tr>
+<tr>
+          <td>153</td>
+          <td>GNDOC</td>
+          <td>50</td>
+          <td>51</td>
+          <td>1</td>
+          <td>2.000</td>
+        </tr>
+<tr>
+          <td>154</td>
+          <td>GNDOC</td>
+          <td>40</td>
+          <td>39</td>
+          <td>-1</td>
+          <td>-2.500</td>
+        </tr>
+<tr>
+          <td>155</td>
+          <td>GNDOC</td>
+          <td>40</td>
+          <td>39</td>
+          <td>-1</td>
+          <td>-2.500</td>
+        </tr>
+<tr>
+          <td>156</td>
+          <td>GNDOC</td>
+          <td>40</td>
+          <td>39</td>
+          <td>-1</td>
+          <td>-2.500</td>
+        </tr>
+<tr>
+          <td>157</td>
+          <td>GNDOC</td>
+          <td>40</td>
+          <td>38</td>
+          <td>-2</td>
+          <td>-5.000</td>
+        </tr>
+<tr>
+          <td>158</td>
+          <td>GNDOC</td>
+          <td>40</td>
+          <td>39</td>
+          <td>-1</td>
+          <td>-2.500</td>
+        </tr>
+<tr>
+          <td>159</td>
+          <td>GNDOC</td>
+          <td>40</td>
+          <td>40</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>160</td>
+          <td>GNDOC</td>
+          <td>40</td>
+          <td>39</td>
+          <td>-1</td>
+          <td>-2.500</td>
+        </tr>
+<tr>
+          <td>161</td>
+          <td>GNDOC</td>
+          <td>40</td>
+          <td>39</td>
+          <td>-1</td>
+          <td>-2.500</td>
+        </tr>
+<tr>
+          <td>162</td>
+          <td>GNDOC</td>
+          <td>40</td>
+          <td>40</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>163</td>
+          <td>GNDOC</td>
+          <td>40</td>
+          <td>39</td>
+          <td>-1</td>
+          <td>-2.500</td>
+        </tr>
+<tr>
+          <td>164</td>
+          <td>GNDOC</td>
+          <td>40</td>
+          <td>41</td>
+          <td>1</td>
+          <td>2.500</td>
+        </tr>
+<tr>
+          <td>165</td>
+          <td>GNDOC</td>
+          <td>40</td>
+          <td>39</td>
+          <td>-1</td>
+          <td>-2.500</td>
+        </tr>
+<tr>
+          <td>166</td>
+          <td>GNDOC</td>
+          <td>40</td>
+          <td>39</td>
+          <td>-1</td>
+          <td>-2.500</td>
+        </tr>
+<tr>
+          <td>167</td>
+          <td>GNDOC</td>
+          <td>40</td>
+          <td>38</td>
+          <td>-2</td>
+          <td>-5.000</td>
+        </tr>
+<tr>
+          <td>168</td>
+          <td>GNDOC</td>
+          <td>40</td>
+          <td>38</td>
+          <td>-2</td>
+          <td>-5.000</td>
+        </tr>
+<tr>
+          <td>169</td>
+          <td>GNDOC</td>
+          <td>40</td>
+          <td>39</td>
+          <td>-1</td>
+          <td>-2.500</td>
+        </tr>
+<tr>
+          <td>170</td>
+          <td>GNDOC</td>
+          <td>40</td>
+          <td>39</td>
+          <td>-1</td>
+          <td>-2.500</td>
+        </tr>
+<tr>
+          <td>171</td>
+          <td>GNDOC</td>
+          <td>40</td>
+          <td>39</td>
+          <td>-1</td>
+          <td>-2.500</td>
+        </tr>
+<tr>
+          <td>172</td>
+          <td>GNDOC</td>
+          <td>40</td>
+          <td>39</td>
+          <td>-1</td>
+          <td>-2.500</td>
+        </tr>
+<tr>
+          <td>173</td>
+          <td>GNDOC</td>
+          <td>30</td>
+          <td>32</td>
+          <td>2</td>
+          <td>6.667</td>
+        </tr>
+<tr>
+          <td>174</td>
+          <td>GNDOC</td>
+          <td>30</td>
+          <td>33</td>
+          <td>3</td>
+          <td>10.000</td>
+        </tr>
+<tr>
+          <td>175</td>
+          <td>GNDOC</td>
+          <td>30</td>
+          <td>32</td>
+          <td>2</td>
+          <td>6.667</td>
+        </tr>
+<tr>
+          <td>176</td>
+          <td>GNDOC</td>
+          <td>30</td>
+          <td>32</td>
+          <td>2</td>
+          <td>6.667</td>
+        </tr>
+<tr>
+          <td>177</td>
+          <td>GNDOC</td>
+          <td>30</td>
+          <td>31</td>
+          <td>1</td>
+          <td>3.333</td>
+        </tr>
+<tr>
+          <td>178</td>
+          <td>GNDOC</td>
+          <td>30</td>
+          <td>31</td>
+          <td>1</td>
+          <td>3.333</td>
+        </tr>
+<tr>
+          <td>179</td>
+          <td>GNDOC</td>
+          <td>30</td>
+          <td>32</td>
+          <td>2</td>
+          <td>6.667</td>
+        </tr>
+<tr>
+          <td>180</td>
+          <td>GNDOC</td>
+          <td>30</td>
+          <td>33</td>
+          <td>3</td>
+          <td>10.000</td>
+        </tr>
+<tr>
+          <td>181</td>
+          <td>GNDOC</td>
+          <td>30</td>
+          <td>31</td>
+          <td>1</td>
+          <td>3.333</td>
+        </tr>
+<tr>
+          <td>182</td>
+          <td>GNDOC</td>
+          <td>30</td>
+          <td>31</td>
+          <td>1</td>
+          <td>3.333</td>
+        </tr>
+<tr>
+          <td>183</td>
+          <td>GNDOC</td>
+          <td>30</td>
+          <td>33</td>
+          <td>3</td>
+          <td>10.000</td>
+        </tr>
+<tr>
+          <td>184</td>
+          <td>GNDOC</td>
+          <td>30</td>
+          <td>32</td>
+          <td>2</td>
+          <td>6.667</td>
+        </tr>
+<tr>
+          <td>185</td>
+          <td>GNDOC</td>
+          <td>30</td>
+          <td>32</td>
+          <td>2</td>
+          <td>6.667</td>
+        </tr>
+<tr>
+          <td>186</td>
+          <td>GNDOC</td>
+          <td>30</td>
+          <td>31</td>
+          <td>1</td>
+          <td>3.333</td>
+        </tr>
+<tr>
+          <td>187</td>
+          <td>GNDOC</td>
+          <td>30</td>
+          <td>32</td>
+          <td>2</td>
+          <td>6.667</td>
+        </tr>
+<tr>
+          <td>188</td>
+          <td>RECYCLE P</td>
+          <td>100</td>
+          <td>98</td>
+          <td>-2</td>
+          <td>-2.000</td>
+        </tr>
+<tr>
+          <td>189</td>
+          <td>RECYCLE P</td>
+          <td>100</td>
+          <td>99</td>
+          <td>-1</td>
+          <td>-1.000</td>
+        </tr>
+<tr>
+          <td>190</td>
+          <td>RECYCLE P</td>
+          <td>100</td>
+          <td>100</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>191</td>
+          <td>RECYCLE P</td>
+          <td>100</td>
+          <td>97</td>
+          <td>-3</td>
+          <td>-3.000</td>
+        </tr>
+<tr>
+          <td>192</td>
+          <td>RECYCLE P</td>
+          <td>100</td>
+          <td>98</td>
+          <td>-2</td>
+          <td>-2.000</td>
+        </tr>
+<tr>
+          <td>193</td>
+          <td>RECYCLE P</td>
+          <td>100</td>
+          <td>98</td>
+          <td>-2</td>
+          <td>-2.000</td>
+        </tr>
+<tr>
+          <td>194</td>
+          <td>RECYCLE P</td>
+          <td>100</td>
+          <td>99</td>
+          <td>-1</td>
+          <td>-1.000</td>
+        </tr>
+<tr>
+          <td>195</td>
+          <td>RECYCLE P</td>
+          <td>100</td>
+          <td>97</td>
+          <td>-3</td>
+          <td>-3.000</td>
+        </tr>
+<tr>
+          <td>196</td>
+          <td>RECYCLE P</td>
+          <td>100</td>
+          <td>98</td>
+          <td>-2</td>
+          <td>-2.000</td>
+        </tr>
+<tr>
+          <td>197</td>
+          <td>RECYCLE P</td>
+          <td>100</td>
+          <td>98</td>
+          <td>-2</td>
+          <td>-2.000</td>
+        </tr>
+<tr>
+          <td>198</td>
+          <td>MAIDA</td>
+          <td>75</td>
+          <td>74</td>
+          <td>-1</td>
+          <td>-1.333</td>
+        </tr>
+<tr>
+          <td>199</td>
+          <td>MAIDA</td>
+          <td>75</td>
+          <td>74</td>
+          <td>-1</td>
+          <td>-1.333</td>
+        </tr>
+<tr>
+          <td>200</td>
+          <td>MAIDA</td>
+          <td>75</td>
+          <td>75</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>201</td>
+          <td>MAIDA</td>
+          <td>75</td>
+          <td>73</td>
+          <td>-2</td>
+          <td>-2.667</td>
+        </tr>
+<tr>
+          <td>202</td>
+          <td>MAIDA</td>
+          <td>75</td>
+          <td>74</td>
+          <td>-1</td>
+          <td>-1.333</td>
+        </tr>
+<tr>
+          <td>203</td>
+          <td>MAIDA</td>
+          <td>75</td>
+          <td>74</td>
+          <td>-1</td>
+          <td>-1.333</td>
+        </tr>
+<tr>
+          <td>204</td>
+          <td>MAIDA</td>
+          <td>75</td>
+          <td>74</td>
+          <td>-1</td>
+          <td>-1.333</td>
+        </tr>
+<tr>
+          <td>205</td>
+          <td>MAIDA</td>
+          <td>75</td>
+          <td>75</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>206</td>
+          <td>MAIDA</td>
+          <td>75</td>
+          <td>73</td>
+          <td>-2</td>
+          <td>-2.667</td>
+        </tr>
+<tr>
+          <td>207</td>
+          <td>MAIDA</td>
+          <td>75</td>
+          <td>74</td>
+          <td>-1</td>
+          <td>-1.333</td>
+        </tr>
+<tr>
+          <td>208</td>
+          <td>MAIDA</td>
+          <td>170</td>
+          <td>167</td>
+          <td>-3</td>
+          <td>-1.765</td>
+        </tr>
+<tr>
+          <td>209</td>
+          <td>MAIDA</td>
+          <td>170</td>
+          <td>167</td>
+          <td>-3</td>
+          <td>-1.765</td>
+        </tr>
+<tr>
+          <td>210</td>
+          <td>MAIDA</td>
+          <td>170</td>
+          <td>216</td>
+          <td>46</td>
+          <td>27.059</td>
+        </tr>
+<tr>
+          <td>211</td>
+          <td>RG 45%</td>
+          <td>100</td>
+          <td>97</td>
+          <td>-3</td>
+          <td>-3.000</td>
+        </tr>
+<tr>
+          <td>212</td>
+          <td>RG 45%</td>
+          <td>100</td>
+          <td>96</td>
+          <td>-4</td>
+          <td>-4.000</td>
+        </tr>
+<tr>
+          <td>213</td>
+          <td>RG 45%</td>
+          <td>100</td>
+          <td>96</td>
+          <td>-4</td>
+          <td>-4.000</td>
+        </tr>
+<tr>
+          <td>214</td>
+          <td>RG 45%</td>
+          <td>100</td>
+          <td>96</td>
+          <td>-4</td>
+          <td>-4.000</td>
+        </tr>
+<tr>
+          <td>215</td>
+          <td>RG 45%</td>
+          <td>100</td>
+          <td>98</td>
+          <td>-2</td>
+          <td>-2.000</td>
+        </tr>
+<tr>
+          <td>216</td>
+          <td>RG 45%</td>
+          <td>100</td>
+          <td>96</td>
+          <td>-4</td>
+          <td>-4.000</td>
+        </tr>
+<tr>
+          <td>217</td>
+          <td>RG 45%</td>
+          <td>100</td>
+          <td>97</td>
+          <td>-3</td>
+          <td>-3.000</td>
+        </tr>
+<tr>
+          <td>218</td>
+          <td>RG 45%</td>
+          <td>100</td>
+          <td>97</td>
+          <td>-3</td>
+          <td>-3.000</td>
+        </tr>
+<tr>
+          <td>219</td>
+          <td>RG 45%</td>
+          <td>100</td>
+          <td>97</td>
+          <td>-3</td>
+          <td>-3.000</td>
+        </tr>
+<tr>
+          <td>220</td>
+          <td>RG 45%</td>
+          <td>100</td>
+          <td>97</td>
+          <td>-3</td>
+          <td>-3.000</td>
+        </tr>
+<tr>
+          <td>221</td>
+          <td>RG 45%</td>
+          <td>175</td>
+          <td>172</td>
+          <td>-3</td>
+          <td>-1.714</td>
+        </tr>
+<tr>
+          <td>222</td>
+          <td>RG 45%</td>
+          <td>175</td>
+          <td>172</td>
+          <td>-3</td>
+          <td>-1.714</td>
+        </tr>
+<tr>
+          <td>223</td>
+          <td>RG 45%</td>
+          <td>175</td>
+          <td>174</td>
+          <td>-1</td>
+          <td>-0.571</td>
+        </tr>
+<tr>
+          <td>224</td>
+          <td>RG 45%</td>
+          <td>175</td>
+          <td>172</td>
+          <td>-3</td>
+          <td>-1.714</td>
+        </tr>
+<tr>
+          <td>225</td>
+          <td>RG 45%</td>
+          <td>175</td>
+          <td>172</td>
+          <td>-3</td>
+          <td>-1.714</td>
+        </tr>
+<tr>
+          <td>226</td>
+          <td>RG 45%</td>
+          <td>175</td>
+          <td>171</td>
+          <td>-4</td>
+          <td>-2.286</td>
+        </tr>
+<tr>
+          <td>227</td>
+          <td>RG 45%</td>
+          <td>175</td>
+          <td>171</td>
+          <td>-4</td>
+          <td>-2.286</td>
+        </tr>
+<tr>
+          <td>228</td>
+          <td>RG 45%</td>
+          <td>175</td>
+          <td>172</td>
+          <td>-3</td>
+          <td>-1.714</td>
+        </tr>
+<tr>
+          <td>229</td>
+          <td>RG 45%</td>
+          <td>175</td>
+          <td>172</td>
+          <td>-3</td>
+          <td>-1.714</td>
+        </tr>
+<tr>
+          <td>230</td>
+          <td>RG 45%</td>
+          <td>175</td>
+          <td>172</td>
+          <td>-3</td>
+          <td>-1.714</td>
+        </tr>
+<tr>
+          <td>231</td>
+          <td>RG 45%</td>
+          <td>175</td>
+          <td>172</td>
+          <td>-3</td>
+          <td>-1.714</td>
+        </tr>
+<tr>
+          <td>232</td>
+          <td>RG 45%</td>
+          <td>175</td>
+          <td>173</td>
+          <td>-2</td>
+          <td>-1.143</td>
+        </tr>
+<tr>
+          <td>233</td>
+          <td>RG 45%</td>
+          <td>175</td>
+          <td>172</td>
+          <td>-3</td>
+          <td>-1.714</td>
+        </tr>
+<tr>
+          <td>234</td>
+          <td>RG 45%</td>
+          <td>175</td>
+          <td>171</td>
+          <td>-4</td>
+          <td>-2.286</td>
+        </tr>
+<tr>
+          <td>235</td>
+          <td>RG 45%</td>
+          <td>175</td>
+          <td>172</td>
+          <td>-3</td>
+          <td>-1.714</td>
+        </tr>
+<tr>
+          <td>236</td>
+          <td>RG 45%</td>
+          <td>175</td>
+          <td>172</td>
+          <td>-3</td>
+          <td>-1.714</td>
+        </tr>
+<tr>
+          <td>237</td>
+          <td>RG 45%</td>
+          <td>175</td>
+          <td>172</td>
+          <td>-3</td>
+          <td>-1.714</td>
+        </tr>
+<tr>
+          <td>238</td>
+          <td>RG 45%</td>
+          <td>175</td>
+          <td>172</td>
+          <td>-3</td>
+          <td>-1.714</td>
+        </tr>
+<tr>
+          <td>239</td>
+          <td>RG 45%</td>
+          <td>175</td>
+          <td>171</td>
+          <td>-4</td>
+          <td>-2.286</td>
+        </tr>
+<tr>
+          <td>240</td>
+          <td>RG 60%</td>
+          <td>150</td>
+          <td>148</td>
+          <td>-2</td>
+          <td>-1.333</td>
+        </tr>
+<tr>
+          <td>241</td>
+          <td>RG 60%</td>
+          <td>150</td>
+          <td>147</td>
+          <td>-3</td>
+          <td>-2.000</td>
+        </tr>
+<tr>
+          <td>242</td>
+          <td>RG 60%</td>
+          <td>150</td>
+          <td>148</td>
+          <td>-2</td>
+          <td>-1.333</td>
+        </tr>
+<tr>
+          <td>243</td>
+          <td>RG 45%</td>
+          <td>150</td>
+          <td>147</td>
+          <td>-3</td>
+          <td>-2.000</td>
+        </tr>
+<tr>
+          <td>244</td>
+          <td>RG 45%</td>
+          <td>150</td>
+          <td>147</td>
+          <td>-3</td>
+          <td>-2.000</td>
+        </tr>
+<tr>
+          <td>245</td>
+          <td>RG 45%</td>
+          <td>150</td>
+          <td>147</td>
+          <td>-3</td>
+          <td>-2.000</td>
+        </tr>
+<tr>
+          <td>246</td>
+          <td>RG 45%</td>
+          <td>150</td>
+          <td>148</td>
+          <td>-2</td>
+          <td>-1.333</td>
+        </tr>
+<tr>
+          <td>247</td>
+          <td>RG 45%</td>
+          <td>150</td>
+          <td>148</td>
+          <td>-2</td>
+          <td>-1.333</td>
+        </tr>
+<tr>
+          <td>248</td>
+          <td>RG 45%</td>
+          <td>150</td>
+          <td>148</td>
+          <td>-2</td>
+          <td>-1.333</td>
+        </tr>
+<tr>
+          <td>249</td>
+          <td>RG 45%</td>
+          <td>150</td>
+          <td>148</td>
+          <td>-2</td>
+          <td>-1.333</td>
+        </tr>
+<tr>
+          <td>250</td>
+          <td>RG 45%</td>
+          <td>150</td>
+          <td>147</td>
+          <td>-3</td>
+          <td>-2.000</td>
+        </tr>
+<tr>
+          <td>251</td>
+          <td>RG 45%</td>
+          <td>150</td>
+          <td>147</td>
+          <td>-3</td>
+          <td>-2.000</td>
+        </tr>
+<tr>
+          <td>252</td>
+          <td>RG 45%</td>
+          <td>150</td>
+          <td>147</td>
+          <td>-3</td>
+          <td>-2.000</td>
+        </tr>
+<tr>
+          <td>253</td>
+          <td>RG 45%</td>
+          <td>150</td>
+          <td>147</td>
+          <td>-3</td>
+          <td>-2.000</td>
+        </tr>
+<tr>
+          <td>254</td>
+          <td>RG 45%</td>
+          <td>150</td>
+          <td>147</td>
+          <td>-3</td>
+          <td>-2.000</td>
+        </tr>
+<tr>
+          <td>255</td>
+          <td>RG 45%</td>
+          <td>150</td>
+          <td>147</td>
+          <td>-3</td>
+          <td>-2.000</td>
+        </tr>
+<tr>
+          <td>256</td>
+          <td>RG 45%</td>
+          <td>150</td>
+          <td>146</td>
+          <td>-4</td>
+          <td>-2.667</td>
+        </tr>
+<tr>
+          <td>257</td>
+          <td>RG 45%</td>
+          <td>150</td>
+          <td>148</td>
+          <td>-2</td>
+          <td>-1.333</td>
+        </tr>
+<tr>
+          <td>258</td>
+          <td>DOB</td>
+          <td>400</td>
+          <td>395</td>
+          <td>-5</td>
+          <td>-1.250</td>
+        </tr>
+<tr>
+          <td>259</td>
+          <td>DOB</td>
+          <td>400</td>
+          <td>396</td>
+          <td>-4</td>
+          <td>-1.000</td>
+        </tr>
+<tr>
+          <td>260</td>
+          <td>DOB</td>
+          <td>400</td>
+          <td>396</td>
+          <td>-4</td>
+          <td>-1.000</td>
+        </tr>
+<tr>
+          <td>261</td>
+          <td>DOB</td>
+          <td>400</td>
+          <td>396</td>
+          <td>-4</td>
+          <td>-1.000</td>
+        </tr>
+<tr>
+          <td>262</td>
+          <td>DOB</td>
+          <td>400</td>
+          <td>397</td>
+          <td>-3</td>
+          <td>-0.750</td>
+        </tr>
+<tr>
+          <td>263</td>
+          <td>DOB</td>
+          <td>400</td>
+          <td>397</td>
+          <td>-3</td>
+          <td>-0.750</td>
+        </tr>
+<tr>
+          <td>264</td>
+          <td>DOB</td>
+          <td>400</td>
+          <td>396</td>
+          <td>-4</td>
+          <td>-1.000</td>
+        </tr>
+<tr>
+          <td>265</td>
+          <td>DOB</td>
+          <td>400</td>
+          <td>393</td>
+          <td>-7</td>
+          <td>-1.750</td>
+        </tr>
+<tr>
+          <td>266</td>
+          <td>DOB</td>
+          <td>400</td>
+          <td>391</td>
+          <td>-9</td>
+          <td>-2.250</td>
+        </tr>
+<tr>
+          <td>267</td>
+          <td>DOB</td>
+          <td>400</td>
+          <td>396</td>
+          <td>-4</td>
+          <td>-1.000</td>
+        </tr>
+<tr>
+          <td>268</td>
+          <td>DOB</td>
+          <td>267</td>
+          <td>267</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>269</td>
+          <td>DOB</td>
+          <td>267</td>
+          <td>267</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>270</td>
+          <td>DOB</td>
+          <td>267</td>
+          <td>268</td>
+          <td>1</td>
+          <td>0.375</td>
+        </tr>
+<tr>
+          <td>271</td>
+          <td>DOB</td>
+          <td>267</td>
+          <td>258</td>
+          <td>-9</td>
+          <td>-3.371</td>
+        </tr>
+<tr>
+          <td>272</td>
+          <td>DOB</td>
+          <td>267</td>
+          <td>267</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>273</td>
+          <td>DOB</td>
+          <td>267</td>
+          <td>267</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>274</td>
+          <td>DOB</td>
+          <td>267</td>
+          <td>268</td>
+          <td>1</td>
+          <td>0.375</td>
+        </tr>
+<tr>
+          <td>275</td>
+          <td>DOB</td>
+          <td>267</td>
+          <td>267</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>276</td>
+          <td>DOB</td>
+          <td>267</td>
+          <td>270</td>
+          <td>3</td>
+          <td>1.124</td>
+        </tr>
+<tr>
+          <td>277</td>
+          <td>DOB</td>
+          <td>267</td>
+          <td>262</td>
+          <td>-5</td>
+          <td>-1.873</td>
+        </tr>
+<tr>
+          <td>278</td>
+          <td>DOB</td>
+          <td>267</td>
+          <td>270</td>
+          <td>3</td>
+          <td>1.124</td>
+        </tr>
+<tr>
+          <td>279</td>
+          <td>DOB</td>
+          <td>267</td>
+          <td>269</td>
+          <td>2</td>
+          <td>0.749</td>
+        </tr>
+<tr>
+          <td>280</td>
+          <td>DOB</td>
+          <td>267</td>
+          <td>269</td>
+          <td>2</td>
+          <td>0.749</td>
+        </tr>
+<tr>
+          <td>281</td>
+          <td>DOB</td>
+          <td>267</td>
+          <td>263</td>
+          <td>-4</td>
+          <td>-1.498</td>
+        </tr>
+<tr>
+          <td>282</td>
+          <td>DOB</td>
+          <td>267</td>
+          <td>266</td>
+          <td>-1</td>
+          <td>-0.375</td>
+        </tr>
+<tr>
+          <td>283</td>
+          <td>DOB</td>
+          <td>267</td>
+          <td>270</td>
+          <td>3</td>
+          <td>1.124</td>
+        </tr>
+<tr>
+          <td>284</td>
+          <td>DOB</td>
+          <td>267</td>
+          <td>267</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>285</td>
+          <td>DOB</td>
+          <td>267</td>
+          <td>267</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>286</td>
+          <td>DOB</td>
+          <td>267</td>
+          <td>262</td>
+          <td>-5</td>
+          <td>-1.873</td>
+        </tr>
+<tr>
+          <td>287</td>
+          <td>DOB</td>
+          <td>435</td>
+          <td>431</td>
+          <td>-4</td>
+          <td>-0.920</td>
+        </tr>
+<tr>
+          <td>288</td>
+          <td>DOB</td>
+          <td>435</td>
+          <td>426</td>
+          <td>-9</td>
+          <td>-2.069</td>
+        </tr>
+<tr>
+          <td>289</td>
+          <td>DOB</td>
+          <td>435</td>
+          <td>424</td>
+          <td>-11</td>
+          <td>-2.529</td>
+        </tr>
+<tr>
+          <td>290</td>
+          <td>DOB</td>
+          <td>435</td>
+          <td>430</td>
+          <td>-5</td>
+          <td>-1.149</td>
+        </tr>
+<tr>
+          <td>291</td>
+          <td>DOB</td>
+          <td>435</td>
+          <td>428</td>
+          <td>-7</td>
+          <td>-1.609</td>
+        </tr>
+<tr>
+          <td>292</td>
+          <td>DOB</td>
+          <td>435</td>
+          <td>429</td>
+          <td>-6</td>
+          <td>-1.379</td>
+        </tr>
+<tr>
+          <td>293</td>
+          <td>DOB</td>
+          <td>435</td>
+          <td>432</td>
+          <td>-3</td>
+          <td>-0.690</td>
+        </tr>
+<tr>
+          <td>294</td>
+          <td>DOB</td>
+          <td>435</td>
+          <td>427</td>
+          <td>-8</td>
+          <td>-1.839</td>
+        </tr>
+<tr>
+          <td>295</td>
+          <td>DOB</td>
+          <td>435</td>
+          <td>428</td>
+          <td>-7</td>
+          <td>-1.609</td>
+        </tr>
+<tr>
+          <td>296</td>
+          <td>DOB</td>
+          <td>435</td>
+          <td>427</td>
+          <td>-8</td>
+          <td>-1.839</td>
+        </tr>
+<tr>
+          <td>297</td>
+          <td>DOB</td>
+          <td>435</td>
+          <td>432</td>
+          <td>-3</td>
+          <td>-0.690</td>
+        </tr>
+<tr>
+          <td>298</td>
+          <td>DOB</td>
+          <td>435</td>
+          <td>430</td>
+          <td>-5</td>
+          <td>-1.149</td>
+        </tr>
+<tr>
+          <td>299</td>
+          <td>DOB</td>
+          <td>435</td>
+          <td>429</td>
+          <td>-6</td>
+          <td>-1.379</td>
+        </tr>
+<tr>
+          <td>300</td>
+          <td>DOB</td>
+          <td>435</td>
+          <td>423</td>
+          <td>-12</td>
+          <td>-2.759</td>
+        </tr>
+<tr>
+          <td>301</td>
+          <td>DOB</td>
+          <td>435</td>
+          <td>425</td>
+          <td>-10</td>
+          <td>-2.299</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total for batch</td>
+          <td>44293</td>
+          <td>43691</td>
+          <td>-602</td>
+          <td>-1.359</td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+  <!-- END:BLOCK_REPEAT -->
+
+</div>
+</body>
+</html>

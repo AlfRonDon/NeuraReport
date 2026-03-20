@@ -1,0 +1,142 @@
+
+
+
+<meta charset="UTF-8">
+<meta>
+<title>pH Monitoring Trend Report</title>
+<style>
+  :root {
+    --col-time-w: 38mm;
+    --col-ph-w: 36mm;
+    --header-bg: #1a237e;
+    --header-fg: #ffffff;
+    --border-col: #b0b0b0;
+    --title-color: #1a237e;
+    --font-base: 10pt;
+    --font-title: 18pt;
+    --font-meta: 9.5pt;
+    --cell-pad-v: 8px;
+    --cell-pad-h: 10px;
+    --row-gap: 2mm;
+  }
+
+  @page {
+    size: A4;
+    margin: 20mm 18mm 18mm 18mm;
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: var(--font-base);
+    color: #000;
+    background: #fff;
+    padding: 20mm 18mm 18mm 18mm;
+  }
+
+  #report-header {
+    text-align: center;
+    margin-bottom: 12mm;
+  }
+
+  .report-title {
+    font-size: var(--font-title);
+    font-weight: bold;
+    color: var(--title-color);
+    letter-spacing: 0.01em;
+  }
+
+  .meta-block {
+    text-align: left;
+    font-size: var(--font-meta);
+    line-height: 1.7;
+    margin-bottom: 6mm;
+  }
+
+  #data-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    margin-bottom: 8mm;
+  }
+
+  #data-table colgroup col:first-child {
+    width: var(--col-time-w);
+  }
+
+  #data-table thead tr th {
+    background-color: var(--header-bg);
+    color: var(--header-fg);
+    font-weight: bold;
+    font-size: var(--font-meta);
+    padding: var(--cell-pad-v) var(--cell-pad-h);
+    text-align: center;
+    border: 1px solid var(--header-bg);
+    word-wrap: break-word;
+  }
+
+  #data-table tbody tr td {
+    border: 1px solid var(--border-col);
+    padding: var(--cell-pad-v) var(--cell-pad-h);
+    text-align: center;
+    font-size: var(--font-meta);
+    line-height: 1.5;
+  }
+
+  .summary-block {
+    text-align: left;
+    font-size: var(--font-meta);
+    line-height: 1.7;
+  }
+</style>
+
+
+
+<div id="report-header">
+  <div class="report-title">pH Monitoring Trend Report</div>
+</div>
+
+<div class="meta-block">
+  Monitoring Points: PH_101 through PH_104<br>
+  Report Date: 
+</div>
+
+<table id="data-table">
+  <colgroup>
+    <col>
+    <col>
+    <col>
+    <col>
+    <col>
+  </colgroup>
+  <thead>
+    <tr>
+      <th data-label="time">Time</th>
+      <th data-label="ph_101_inlet">PH_101 (Inlet)</th>
+      <th data-label="ph_102_process_1">PH_102 (Process 1)</th>
+      <th data-label="ph_103_process_2">PH_103 (Process 2)</th>
+      <th data-label="ph_104_outlet">PH_104 (Outlet)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="summary-block">
+  Average pH: <br>
+  Exceedance Count: 
+</div>
+
+

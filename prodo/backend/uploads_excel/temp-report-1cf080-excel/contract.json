@@ -1,0 +1,103 @@
+{
+  "tokens": {
+    "scalars": [
+      "report_title",
+      "report_subtitle",
+      "report_from_date",
+      "report_to_date",
+      "print_date"
+    ],
+    "row_tokens": [
+      "row_column_1",
+      "row_column_2",
+      "row_column_3",
+      "row_column_4",
+      "row_column_5",
+      "row_column_6",
+      "row_costal_feeds",
+      "row_column_8",
+      "row_column_9",
+      "row_column_10",
+      "row_column_11",
+      "row_column_12",
+      "row_column_13"
+    ],
+    "totals": []
+  },
+  "mapping": {
+    "row_column_1": "neuract__TEMPERATURES.timestamp_utc",
+    "row_column_2": "neuract__TEMPERATURES.M1A_2_PT100_PV",
+    "row_column_3": "neuract__TEMPERATURES.M1A_3_PT100_PV",
+    "row_column_4": "neuract__TEMPERATURES.P3A_PT100_PV",
+    "row_column_5": "neuract__TEMPERATURES.P4A_PT100_PV",
+    "row_column_6": "neuract__TEMPERATURES.P5A_PT100_PV",
+    "row_costal_feeds": "neuract__TEMPERATURES.P6A_PT100_PV",
+    "row_column_8": "neuract__TEMPERATURES.P8A_PT100_PV",
+    "row_column_9": "neuract__TEMPERATURES.P8A_3_PT100_PV",
+    "row_column_10": "neuract__TEMPERATURES.P8A_4_PT100_PV",
+    "row_column_11": "neuract__TEMPERATURES.P8A_DRY_OUT_PT100_PV",
+    "row_column_12": "neuract__TEMPERATURES.P9A_DRY_OUT_PT100_PV",
+    "row_column_13": "neuract__TEMPERATURES.ROOM_PT100_PV",
+    "report_title": "PARAM:report_title",
+    "report_subtitle": "PARAM:report_subtitle",
+    "report_from_date": "PARAM:start_date",
+    "report_to_date": "PARAM:end_date",
+    "print_date": "PARAM:print_date"
+  },
+  "date_columns": {
+    "neuract__TEMPERATURES": "timestamp_utc"
+  },
+  "filters": {
+    "optional": {
+      "date_from": "neuract__TEMPERATURES.timestamp_utc",
+      "date_to": "neuract__TEMPERATURES.timestamp_utc"
+    }
+  },
+  "reshape_rules": [],
+  "row_computed": {},
+  "totals_math": {},
+  "formatters": {
+    "row_column_1": "datetime(%Y-%m-%d %H:%M:%S)"
+  },
+  "order_by": {
+    "rows": [
+      "timestamp_utc ASC"
+    ]
+  },
+  "row_order": [
+    "timestamp_utc ASC"
+  ],
+  "header_tokens": [
+    "report_title",
+    "report_subtitle",
+    "report_from_date",
+    "report_to_date",
+    "print_date"
+  ],
+  "row_tokens": [
+    "row_column_1",
+    "row_column_2",
+    "row_column_3",
+    "row_column_4",
+    "row_column_5",
+    "row_column_6",
+    "row_costal_feeds",
+    "row_column_8",
+    "row_column_9",
+    "row_column_10",
+    "row_column_11",
+    "row_column_12",
+    "row_column_13"
+  ],
+  "totals": {},
+  "join": {
+    "parent_table": "neuract__TEMPERATURES",
+    "parent_key": "rowid",
+    "child_table": "neuract__TEMPERATURES",
+    "child_key": "rowid"
+  },
+  "literals": {
+    "report_title": "COASTAL FEEDS",
+    "report_subtitle": "Temperature Report"
+  }
+}

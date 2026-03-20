@@ -1,0 +1,114 @@
+{
+  "mapping": {
+    "report_date": "params.report_date",
+    "row_timestamp": "neuract__ANALYSER_TABLE.timestamp_utc",
+    "row_ph_101": "neuract__ANALYSER_TABLE.PH_101",
+    "row_ph_102": "neuract__ANALYSER_TABLE.PH_102",
+    "row_ph_103": "neuract__ANALYSER_TABLE.PH_103",
+    "row_ph_104": "neuract__ANALYSER_TABLE.PH_104",
+    "avg_ph": "UNRESOLVED",
+    "exceedance_count": "UNRESOLVED"
+  },
+  "meta": {
+    "unresolved": [
+      "avg_ph",
+      "exceedance_count"
+    ],
+    "hints": {
+      "avg_ph": {
+        "op": "AVG",
+        "over": [
+          "columns:neuract__ANALYSER_TABLE.PH_101",
+          "columns:neuract__ANALYSER_TABLE.PH_102",
+          "columns:neuract__ANALYSER_TABLE.PH_103",
+          "columns:neuract__ANALYSER_TABLE.PH_104",
+          "note:Single scalar: mean of all four pH channel readings across the filtered time window"
+        ]
+      },
+      "exceedance_count": {
+        "op": "COUNT",
+        "over": [
+          "columns:neuract__ANALYSER_TABLE.PH_101",
+          "columns:neuract__ANALYSER_TABLE.PH_102",
+          "columns:neuract__ANALYSER_TABLE.PH_103",
+          "columns:neuract__ANALYSER_TABLE.PH_104",
+          "note:Count of individual channel readings that exceed a pH threshold; threshold value is not defined in the template and must be supplied as a parameter"
+        ]
+      }
+    }
+  },
+  "prompt_meta": {
+    "version": "llm_call_3_df_v2",
+    "prompt_sha256": "3a68a83c6c2602564de14dc2371308eeaa06a30a017a4e7ebb80801392a4dd74",
+    "catalog_sha256": "312a06afd264f4c409ba0a0fb006aac7601c8781b51c4946edc16a58ed702f95",
+    "schema_sha256": "e6c3cc255e71f43607e067a464b12056a6b0b7387a454621512a714280937972",
+    "cache_key": "c1578272e9b610b65d700508e51ef97b4f9355e3c58bceefa091e98c197d680c",
+    "pre_html_sha256": "353480badb56ae13d87688a0cc241327e7b57f27f60dc689dd0dc89e8ce723b1",
+    "post_html_sha256": "353480badb56ae13d87688a0cc241327e7b57f27f60dc689dd0dc89e8ce723b1",
+    "prompt_version": "llm_call_3_df_v2",
+    "pdf_sha256": "a05a8e33e2cfd1239ea824e88ce0164afbcf2e5905f6e673f93744bf01875ee6",
+    "db_signature": "0c33e3e2d9de39703b476f6ece004966e0b418fe1acc690478668ef987513776"
+  },
+  "raw_payload": {
+    "mapping": {
+      "report_date": "params.report_date",
+      "row_timestamp": "neuract__ANALYSER_TABLE.timestamp_utc",
+      "row_ph_101": "neuract__ANALYSER_TABLE.PH_101",
+      "row_ph_102": "neuract__ANALYSER_TABLE.PH_102",
+      "row_ph_103": "neuract__ANALYSER_TABLE.PH_103",
+      "row_ph_104": "neuract__ANALYSER_TABLE.PH_104",
+      "avg_ph": "UNRESOLVED",
+      "exceedance_count": "UNRESOLVED"
+    },
+    "token_samples": {
+      "report_date": "{{report_date}}",
+      "row_timestamp": "{{timestamp_1}}",
+      "row_ph_101": "{{PH_101_1}}",
+      "row_ph_102": "{{PH_102_1}}",
+      "row_ph_103": "{{PH_103_1}}",
+      "row_ph_104": "{{PH_104_1}}",
+      "avg_ph": "{{avg_ph}}",
+      "exceedance_count": "{{exceedance_count}}"
+    },
+    "meta": {
+      "unresolved": [
+        "avg_ph",
+        "exceedance_count"
+      ],
+      "hints": {
+        "avg_ph": {
+          "op": "AVG",
+          "over": [
+            "columns:neuract__ANALYSER_TABLE.PH_101",
+            "columns:neuract__ANALYSER_TABLE.PH_102",
+            "columns:neuract__ANALYSER_TABLE.PH_103",
+            "columns:neuract__ANALYSER_TABLE.PH_104",
+            "note:Single scalar: mean of all four pH channel readings across the filtered time window"
+          ]
+        },
+        "exceedance_count": {
+          "op": "COUNT",
+          "over": [
+            "columns:neuract__ANALYSER_TABLE.PH_101",
+            "columns:neuract__ANALYSER_TABLE.PH_102",
+            "columns:neuract__ANALYSER_TABLE.PH_103",
+            "columns:neuract__ANALYSER_TABLE.PH_104",
+            "note:Count of individual channel readings that exceed a pH threshold; threshold value is not defined in the template and must be supplied as a parameter"
+          ]
+        }
+      }
+    },
+    "constant_replacements": {}
+  },
+  "constant_replacements": {},
+  "token_samples": {
+    "report_date": "{{report_date}}",
+    "row_timestamp": "{{timestamp_1}}",
+    "row_ph_101": "{{PH_101_1}}",
+    "row_ph_102": "{{PH_102_1}}",
+    "row_ph_103": "{{PH_103_1}}",
+    "row_ph_104": "{{PH_104_1}}",
+    "avg_ph": "{{avg_ph}}",
+    "exceedance_count": "{{exceedance_count}}"
+  }
+}

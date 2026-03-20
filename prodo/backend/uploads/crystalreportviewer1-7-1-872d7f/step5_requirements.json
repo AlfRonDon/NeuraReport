@@ -1,0 +1,88 @@
+{
+  "datasets": {
+    "header": {
+      "description": "One-row header dataset containing plant metadata and date range parameters",
+      "columns": [
+        "plant_name",
+        "location",
+        "from_date",
+        "to_date",
+        "print_date",
+        "recipe_code",
+        "company_name",
+        "page_info"
+      ]
+    },
+    "rows": {
+      "description": "Detail rows showing material consumption per bin after MELT transformation",
+      "columns": [
+        "row_sl_no",
+        "row_material_name",
+        "row_set_wt",
+        "row_ach_wt",
+        "row_error",
+        "row_error_pct"
+      ],
+      "grouping": [],
+      "ordering": [
+        "material_name",
+        "ASC"
+      ]
+    },
+    "totals": {
+      "description": "Aggregate totals across all materials in filtered dataset",
+      "columns": [
+        "total_set_wt",
+        "total_ach_wt",
+        "total_error",
+        "total_error_pct"
+      ]
+    }
+  },
+  "semantics": "Filter recipes by date range (start_time between from_date and to_date) and recipe_name matching recipe_code parameter. Unpivot 12 bin columns into normalized rows, excluding empty bins. Calculate error metrics and aggregate totals.",
+  "parameters": {
+    "required": [
+      {
+        "name": "plant_name",
+        "type": "string"
+      },
+      {
+        "name": "location",
+        "type": "string"
+      },
+      {
+        "name": "from_date",
+        "type": "date"
+      },
+      {
+        "name": "to_date",
+        "type": "date"
+      },
+      {
+        "name": "print_date",
+        "type": "date"
+      },
+      {
+        "name": "recipe_code",
+        "type": "string"
+      },
+      {
+        "name": "page_info",
+        "type": "string"
+      }
+    ],
+    "optional": []
+  },
+  "transformations": [
+    "MELT bin1_content through bin12_content into material_name column",
+    "MELT bin1_sp through bin12_sp into set_wt column (aligned with material_name)",
+    "MELT bin1_act through bin12_act into ach_wt column (aligned with material_name)",
+    "Filter out rows where material_name is empty or null",
+    "Compute row_sl_no as sequential row number",
+    "Compute row_error as ach_wt minus set_wt",
+    "Compute row_error_pct as row_error divided by set_wt",
+    "Aggregate sum of set_wt, ach_wt, and row_error for totals",
+    "Compute total_error_pct as total_error divided by total_set_wt",
+    "Order rows alphabetically by material_name"
+  ]
+}

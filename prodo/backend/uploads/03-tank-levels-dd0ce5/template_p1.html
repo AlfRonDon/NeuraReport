@@ -1,0 +1,130 @@
+
+
+
+<meta charset="UTF-8">
+<meta>
+<title>Tank Level Status Report</title>
+<style>
+  :root {
+    --header-bg: #1a237e;
+    --header-text: #ffffff;
+    --title-color: #1a237e;
+    --border-color: #b0b8c1;
+    --col-tank-w: 38%;
+    --col-level-w: 20%;
+    --col-capacity-w: 21%;
+    --col-vol-w: 21%;
+    --table-font-size: 9.5pt;
+    --header-font-size: 9.5pt;
+  }
+
+  @page {
+    size: A4;
+    margin: 18mm 18mm 18mm 18mm;
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 10pt;
+    color: #222;
+    background: #fff;
+  }
+
+  #report-header {
+    text-align: center;
+    margin-bottom: 5mm;
+    padding-top: 4mm;
+  }
+
+  #report-header h1 {
+    font-size: 16pt;
+    font-weight: bold;
+    color: var(--title-color);
+    margin-bottom: 0;
+    letter-spacing: 0.01em;
+  }
+
+  .snapshot-line {
+    text-align: left;
+    font-size: 10pt;
+    color: #222;
+    margin-bottom: 4mm;
+  }
+
+  #data-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    font-size: var(--table-font-size);
+    border: 1px solid var(--border-color);
+  }
+
+  #data-table colgroup col:nth-child(1) { width: var(--col-tank-w); }
+  #data-table colgroup col:nth-child(2) { width: var(--col-level-w); }
+  #data-table colgroup col:nth-child(3) { width: var(--col-capacity-w); }
+  #data-table colgroup col:nth-child(4) { width: var(--col-vol-w); }
+
+  #data-table thead tr th {
+    background-color: var(--header-bg);
+    color: var(--header-text);
+    font-size: var(--header-font-size);
+    font-weight: bold;
+    text-align: center;
+    padding: 3mm 3mm;
+    border: 1px solid var(--border-color);
+  }
+
+  #data-table tbody tr td {
+    border: 1px solid var(--border-color);
+    padding: 2.5mm 3mm;
+    text-align: center;
+    vertical-align: middle;
+    color: #222;
+    background: #fff;
+    font-variant-numeric: tabular-nums;
+  }
+
+  #data-table tbody tr td:first-child {
+    text-align: center;
+  }
+</style>
+
+
+
+<div id="report-header">
+  <h1>Tank Level Status Report</h1>
+</div>
+<div class="snapshot-line">Snapshot Time: {timestamp}</div>
+
+<table id="data-table">
+  <colgroup>
+    <col>
+    <col>
+    <col>
+    <col>
+  </colgroup>
+  <thead>
+    <tr>
+      <th data-label="tank">Tank</th>
+      <th data-label="level_percent">Level (%)</th>
+      <th data-label="capacity_kl">Capacity (kL)</th>
+      <th data-label="current_vol_kl">Current Vol (kL)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>{row_tank_name}</td>
+      <td>{row_level}</td>
+      <td>{row_capacity}</td>
+      <td>{row_current_vol}</td>
+    </tr>
+  </tbody>
+</table>
+
+

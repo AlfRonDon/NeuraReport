@@ -1,0 +1,144 @@
+{
+  "prompt_version": "v3_df",
+  "model": "sonnet",
+  "input_signature": "d534a90ad9a5d1bbf20caea3582738085e90e1fe2f3d01708f7568d204581e50",
+  "db_signature": "0c33e3e2d9de39703b476f6ece004966e0b418fe1acc690478668ef987513776",
+  "page_summary_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "generated_at": 1772456861,
+  "assumptions": [],
+  "warnings": [],
+  "validation": {
+    "unknown_tokens": [],
+    "unknown_columns": [],
+    "token_coverage": {
+      "scalars_mapped_pct": 100,
+      "row_tokens_mapped_pct": 100,
+      "totals_mapped_pct": 100
+    }
+  },
+  "overview_path": "overview.md",
+  "step5_requirements_path": "step5_requirements.json",
+  "contract_payload": {
+    "tokens": {
+      "scalars": [
+        "report_date"
+      ],
+      "row_tokens": [
+        "row_meter_id",
+        "row_reading",
+        "row_totalizer",
+        "row_status"
+      ],
+      "totals": [
+        "total_flow"
+      ]
+    },
+    "mapping": {
+      "report_date": "PARAM:report_date",
+      "row_meter_id": "neuract__FM_TABLE.FM_101",
+      "row_reading": "neuract__FM_TABLE.FM_101",
+      "row_totalizer": "neuract__FM_TABLE.FM_101_TOTALIZER"
+    },
+    "unresolved": [
+      "row_status",
+      "total_flow"
+    ],
+    "join": {
+      "parent_table": "neuract__FM_TABLE",
+      "parent_key": "rowid",
+      "child_table": "neuract__FM_TABLE",
+      "child_key": "rowid"
+    },
+    "date_columns": {
+      "neuract__FM_TABLE": "timestamp_utc"
+    },
+    "filters": {
+      "optional": {
+        "date_from": "neuract__FM_TABLE.timestamp_utc",
+        "date_to": "neuract__FM_TABLE.timestamp_utc"
+      }
+    },
+    "reshape_rules": [
+      {
+        "purpose": "Unpivot six FM reading and totalizer columns into per-meter rows",
+        "strategy": "MELT",
+        "columns": [
+          {
+            "as": "row_meter_id",
+            "from": [
+              "FM_101",
+              "FM_102",
+              "FM_103",
+              "FM_104",
+              "FM_105",
+              "FM_106"
+            ]
+          },
+          {
+            "as": "row_reading",
+            "from": [
+              "neuract__FM_TABLE.FM_101",
+              "neuract__FM_TABLE.FM_102",
+              "neuract__FM_TABLE.FM_103",
+              "neuract__FM_TABLE.FM_104",
+              "neuract__FM_TABLE.FM_105",
+              "neuract__FM_TABLE.FM_106"
+            ]
+          },
+          {
+            "as": "row_totalizer",
+            "from": [
+              "neuract__FM_TABLE.FM_101_TOTALIZER",
+              "neuract__FM_TABLE.FM_102_TOTALIZER",
+              "neuract__FM_TABLE.FM_103_TOTALIZER",
+              "neuract__FM_TABLE.FM_104_TOTALIZER",
+              "neuract__FM_TABLE.FM_105_TOTALIZER",
+              "neuract__FM_TABLE.FM_106_TOTALIZER"
+            ]
+          }
+        ],
+        "order_by": []
+      }
+    ],
+    "row_computed": {},
+    "totals_math": {
+      "total_flow": {
+        "op": "sum",
+        "column": "row_totalizer"
+      }
+    },
+    "totals": {
+      "total_flow": {
+        "op": "sum",
+        "column": "row_totalizer"
+      }
+    },
+    "formatters": {
+      "row_reading": "number(2)",
+      "row_totalizer": "number(2)",
+      "total_flow": "number(2)",
+      "row_meter_id": "number(2)"
+    },
+    "order_by": {
+      "rows": [
+        "row_meter_id ASC"
+      ]
+    },
+    "header_tokens": [
+      "report_date"
+    ],
+    "row_tokens": [
+      "row_meter_id",
+      "row_reading",
+      "row_totalizer"
+    ],
+    "row_order": [
+      "row_meter_id ASC"
+    ],
+    "literals": {
+      "row_status": "Active"
+    },
+    "notes": "Source table neuract__FM_TABLE stores six flow meter channels in wide format (FM_101..FM_106 for readings, FM_101_TOTALIZER..FM_106_TOTALIZER for cumulative values). A single MELT rule unpivots all twelve value columns into 6 long rows per timestamp, producing row_meter_id (the column name string label), row_reading (m3/h value), and row_totalizer (m3 cumulative value). row_status has no catalog source and is injected as the static constant 'Active' via literals. total_flow is computed as SUM(row_totalizer) across all six melted rows via totals_math — it has no direct single-column mapping."
+  },
+  "key_tokens": []
+}

@@ -1,0 +1,44 @@
+{
+  "correlation_id": "job-7ead85da61",
+  "file_checksums": {
+    "filled_1772663011.html": "159fe4e41c1ccf40f04dbd93a981959e8562f630d8954e0da724a11eb40d09ce",
+    "filled_1772663011.pdf": "47986eb6d9742b7a51fceba0a7a6c36fa1200c26683d7f601e2b370cea8a076a",
+    "filled_1772664620.html": "fad7cb45c761c252de7358fe073b56357e563ef07024b8d3017aa63935c7b633",
+    "filled_1772664620.pdf": "695f8a159dd51855b6bbfa43a6cd2be103fdb1414dbd9ec519819e22bc6e8e5c",
+    "filled_1773642732.html": "51c5a12990f7b722cf24c31cd9849434acd71b2f443f92ed4893f19d202a13ca",
+    "filled_1773642732.pdf": "af7b1224246242d7b3d37e3c8752b4992d8f1c313914df9bc36c70c77ed23f18",
+    "filled_1773642738.html": "0c932eca53e32e3c4351b48942cfb4acf7b39b782d760fcd8571a6f282953a90",
+    "filled_1773642738.pdf": "223340e08f54714480ada28c1619042e721108cec383e0bf9edea7caafd56833",
+    "filled_1773642744.html": "4125064dedb35fc1ecb61244f2f0816641b1dbb2be1e128fa79d8e9fa5723e0a",
+    "filled_1773642744.pdf": "1e6684ee33232fc91cbe2d558e4291e2cadbdcce6345710696bc838fcf6a701d",
+    "filled_1773642751.html": "6346f576cce9b64598b56f64dd76a37b6127a94620ec333b885477fbff097768",
+    "filled_1773642751.pdf": "2413918f21b6bc07b7355c6b1be23d031be3362abb5d424ae4fa0007ebf83f07",
+    "filled_1773642757.html": "8c4732a7d8b5fa523133c6b7e6012c0b17c3b37939f0b82d386654b578a0fe1b",
+    "filled_1773642757.pdf": "6d78fe486af256dc3c09c8cdb762c9cf94987e3b63adf48585136a71913f24d4"
+  },
+  "files": {
+    "filled_1772663011.html": "filled_1772663011.html",
+    "filled_1772663011.pdf": "filled_1772663011.pdf",
+    "filled_1772664620.html": "filled_1772664620.html",
+    "filled_1772664620.pdf": "filled_1772664620.pdf",
+    "filled_1773642732.html": "filled_1773642732.html",
+    "filled_1773642732.pdf": "filled_1773642732.pdf",
+    "filled_1773642738.html": "filled_1773642738.html",
+    "filled_1773642738.pdf": "filled_1773642738.pdf",
+    "filled_1773642744.html": "filled_1773642744.html",
+    "filled_1773642744.pdf": "filled_1773642744.pdf",
+    "filled_1773642751.html": "filled_1773642751.html",
+    "filled_1773642751.pdf": "filled_1773642751.pdf",
+    "filled_1773642757.html": "filled_1773642757.html",
+    "filled_1773642757.pdf": "filled_1773642757.pdf"
+  },
+  "input_refs": [
+    "/home/rohith/desktop/NeuraReport/prodo/backend/uploads/recipe-batch-report-da31dc-pdf/contract.json",
+    "/home/rohith/desktop/NeuraReport/recipe_log.sqlite3",
+    "/home/rohith/desktop/NeuraReport/prodo/backend/uploads/recipe-batch-report-da31dc-pdf-ad1ad1-pdf/contract.json"
+  ],
+  "pid": 2642716,
+  "produced_at": "2026-03-16T06:32:39.226821+00:00",
+  "schema_version": "1.0",
+  "step": "reports_run"
+}

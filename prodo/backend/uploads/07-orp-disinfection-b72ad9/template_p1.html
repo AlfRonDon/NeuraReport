@@ -1,0 +1,128 @@
+
+<meta charset="UTF-8">
+<title>ORP &amp; Disinfection Monitoring</title>
+<style>
+@page {
+  size: A4;
+  margin: 20mm 18mm 22mm 18mm;
+}
+:root {
+  --col-sensor-w: 22mm;
+  --col-mv-w: 30mm;
+  --col-status-w: 38mm;
+  --table-indent: 10mm;
+  --header-bg: #1a237e;
+  --section-blue: #1565c0;
+  --cell-border: #aaaaaa;
+  --row-gap: 2mm;
+}
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+body {
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 10pt;
+  color: #222222;
+  background: #ffffff;
+}
+#report-header {
+  text-align: center;
+  padding-top: 3mm;
+  margin-bottom: 7mm;
+}
+.report-title {
+  font-size: 18pt;
+  font-weight: bold;
+  color: var(--header-bg);
+  letter-spacing: 0.01em;
+}
+.section-title {
+  font-size: 12pt;
+  font-weight: bold;
+  color: var(--section-blue);
+  margin-bottom: 3mm;
+  padding-left: var(--table-indent);
+}
+.table-wrapper {
+  padding-left: var(--table-indent);
+  padding-right: var(--table-indent);
+  margin-bottom: 5mm;
+}
+#data-table {
+  border-collapse: collapse;
+  table-layout: fixed;
+  width: 100%;
+}
+#data-table col.col-sensor { width: var(--col-sensor-w); }
+#data-table col.col-mv     { width: var(--col-mv-w); }
+#data-table col.col-status { width: var(--col-status-w); }
+#data-table thead tr {
+  background-color: var(--header-bg);
+}
+#data-table th {
+  background-color: var(--header-bg);
+  color: #ffffff;
+  padding: 2.5mm 3mm;
+  font-size: 10pt;
+  font-weight: bold;
+  text-align: left;
+  border: 1px solid var(--header-bg);
+}
+#data-table tbody td {
+  padding: 2mm 3mm;
+  font-size: 10pt;
+  text-align: left;
+  border: 1px solid var(--cell-border);
+  background-color: #ffffff;
+}
+.notes-section {
+  padding-left: var(--table-indent);
+  font-size: 10pt;
+  line-height: 1.4;
+  margin-top: var(--row-gap);
+  color: #222222;
+}
+</style>
+
+<div id="report-header">
+  <h1 class="report-title">ORP &amp; Disinfection Monitoring</h1>
+</div>
+
+<h2 class="section-title">Oxidation-Reduction Potential Analysis</h2>
+
+<div class="table-wrapper">
+  <table id="data-table">
+    <colgroup>
+      <col class="col-sensor">
+      <col class="col-mv">
+      <col class="col-mv">
+      <col class="col-mv">
+      <col class="col-status">
+    </colgroup>
+    <thead>
+      <tr>
+        <th data-label="sensor">Sensor</th>
+        <th data-label="latest_mv">Latest (mV)</th>
+        <th data-label="min_mv">Min (mV)</th>
+        <th data-label="max_mv">Max (mV)</th>
+        <th data-label="status">Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>{row_sensor}</td>
+        <td>{row_latest_mv}</td>
+        <td>{row_min_mv}</td>
+        <td>{row_max_mv}</td>
+        <td>{row_status}</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="notes-section">
+  <div>Disinfection Effectiveness: {effectiveness}</div>
+  <div>Chlorine Dosing Rate: {dosing_rate} mg/L</div>
+</div>

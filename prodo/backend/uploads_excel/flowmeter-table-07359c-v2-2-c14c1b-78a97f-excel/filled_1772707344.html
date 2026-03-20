@@ -1,0 +1,89 @@
+<html><head><meta charset='utf-8'>
+    <style>
+      @page { size: A4; margin: 24mm; }
+      body { font-family: Arial, sans-serif; }
+      table { border-collapse: collapse; width: 100%; }
+      td, th { border: 1px solid #999; padding: 6px 8px; vertical-align: top; }
+      .heading-table td { border: 1px solid #000; }
+      .heading-table .company { font-weight: 700; text-align: center; text-transform: uppercase; }
+      .heading-table .address, .heading-table .report-title { text-align: center; font-weight: 600; }
+      .heading-table .meta { font-weight: 600; }
+      #data-table tbody { counter-reset: row-num; }
+      #data-table tbody tr { counter-increment: row-num; }
+      #data-table td.sl::before { content: counter(row-num); font-weight: 600; }
+    </style>
+    
+<style id="excel-print-sizing">
+:root { --excel-print-scale: 0.6; }
+@page {
+  size: A4 landscape;
+  margin: 10mm;
+}
+html, body {
+  margin: 0 auto;
+  padding: 0;
+  background: #fff;
+  max-width: calc(100% / var(--excel-print-scale));
+}
+body {
+  width: calc(100% / var(--excel-print-scale));
+  min-height: calc(100% / var(--excel-print-scale));
+  transform-origin: top left;
+}
+table {
+  width: 100% !important;
+  table-layout: fixed;
+  border-collapse: collapse;
+}
+th, td {
+  word-break: break-word;
+  white-space: normal;
+}
+@media screen {
+  body {
+    transform: scale(var(--excel-print-scale));
+  }
+}
+@media print {
+  body {
+    transform: scale(var(--excel-print-scale));
+    zoom: 1;
+  }
+}
+</style>
+</head><body>
+    <table class="heading-table">
+      <tr><td class="company">PREMIER ENERGIES PHOTOVOLTAIC PRIVATE LIMITED</td></tr>
+      <tr><td class="address">Address: Plot No 8/B/1 and 8/B/2, Sy No 62 P 63, And 88 P, E City, Raviryala, Village, Maheshwaram Mandal, Ranga Reddy, TELANGANA,501359</td></tr>
+      <tr><td class="report-title">WATER CONSUMPTION REPORT</td></tr>
+      <tr><td class="meta">From Date: 01-02-2026 &nbsp;&nbsp; To Date: 28-02-2026</td></tr>
+      <tr><td class="meta">Print Date: 05/03/2026</td></tr>
+    </table>
+    <table id="data-table"><caption style='caption-side:top;font-weight:700;text-align:left;margin:6px 0'>Sheet1</caption><thead><tr><th>SL. NO</th><th data-label="date">DATE</th><th data-label="basement_to_tob_raw_water_fm_1">BASEMENT_TO_TOB_RAW_WATER_FM_1</th><th data-label="limeplant_to_etp_fm_2">LIMEPLANT_TO_ETP_FM_2</th><th data-label="di_raw_inlet_fm_3">DI_RAW_INLET_FM_3</th><th data-label="di_scrubbers_fm_4">DI_SCRUBBERS_FM_4</th><th data-label="phase_2_raw_water_fm_5">PHASE_2_RAW_WATER_FM_5</th><th data-label="tw_to_earth_pits_fm_6">TW_TO_EARTH_PITS_FM_6</th><th data-label="rw_phase_2_scrubber_line_fm_7">RW_PHASE_2_SCRUBBER_LINE_FM_7</th><th data-label="tw_admin_fm_8">TW_ADMIN_FM_8</th><th data-label="soft_to_cooling_towers_fm_9">SOFT_TO_COOLING_TOWERS_FM_9</th><th data-label="rw_admin_fm_10">RW_ADMIN_FM_10</th><th data-label="rw_utility_toilets_fm_11">RW_UTILITY_TOILETS_FM_11</th><th data-label="tw_utility_toilets_fm_12">TW_UTILITY_TOILETS_FM_12</th><th data-label="storage_to_phase_1_fm_13">STORAGE_TO_PHASE_1_FM_13</th><th data-label="hmwssb_phase_1_fm_14">HMWSSB_PHASE_1_FM_14</th><th data-label="pond_to_topcon_fm_15">POND_TO_TOPCON_FM_15</th><th data-label="hmwssb_to_topcon_fm_16">HMWSSB_TO_TOPCON_FM_16</th><th data-label="basement_to_tob_treated_water_fm_17">BASEMENT_TO_TOB_TREATED_WATER_FM_17</th><th data-label="raw_to_utility_toilets_2_fm_18">RAW_TO_UTILITY_TOILETS_2_FM_18</th><th data-label="condensed_line_fm_19">CONDENSED_LINE_FM_19</th><th data-label="tw_shed_b_toilets_fm_20">TW_SHED_B_TOILETS_FM_20</th><th data-label="rw_to_shed_b_toilets_fm_21">RW_TO_SHED_B_TOILETS_FM_21</th><th data-label="cooling_towers_to_ro_fm_22">COOLING_TOWERS_TO_RO_FM_22</th><th data-label="p2_zld_to_topcon_zld_fm_23">P2_ZLD_TO_TOPCON_ZLD_FM_23</th><th data-label="total_usage">TOTAL</th></tr></thead><tbody class="batch-block"><tr><td class="sl"></td><td>2026-02-01 00:00:00</td><td>23</td><td>15</td><td>0</td><td>97</td><td>6</td><td>0</td><td>1</td><td>0</td><td>196</td><td>2</td><td>0</td><td>0</td><td>248</td><td>237</td><td>111</td><td>532</td><td>43</td><td>0</td><td>4</td><td>22</td><td>5</td><td>41</td><td>0</td><td>1583</td></tr>
+<tr><td class="sl"></td><td>2026-02-02 00:00:00</td><td>26</td><td>14</td><td>0</td><td>103</td><td>5</td><td>0</td><td>2</td><td>0</td><td>168</td><td>1</td><td>0</td><td>0</td><td>272</td><td>272</td><td>112</td><td>517</td><td>44</td><td>0</td><td>12</td><td>22</td><td>8</td><td>28</td><td>0</td><td>1606</td></tr>
+<tr><td class="sl"></td><td>2026-02-03 00:00:00</td><td>43</td><td>11</td><td>0</td><td>88</td><td>5</td><td>3</td><td>3</td><td>0</td><td>203</td><td>2</td><td>0</td><td>0</td><td>267</td><td>281</td><td>112</td><td>474</td><td>32</td><td>0</td><td>10</td><td>25</td><td>8</td><td>37</td><td>0</td><td>1604</td></tr>
+<tr><td class="sl"></td><td>2026-02-04 00:00:00</td><td>29</td><td>17</td><td>0</td><td>92</td><td>7</td><td>0</td><td>2</td><td>1</td><td>179</td><td>6</td><td>0</td><td>0</td><td>343</td><td>323</td><td>121</td><td>376</td><td>17</td><td>0</td><td>12</td><td>21</td><td>4</td><td>60</td><td>0</td><td>1610</td></tr>
+<tr><td class="sl"></td><td>2026-02-05 00:00:00</td><td>30</td><td>8</td><td>0</td><td>85</td><td>8</td><td>1</td><td>1</td><td>1</td><td>192</td><td>6</td><td>0</td><td>0</td><td>334</td><td>372</td><td>113</td><td>515</td><td>66</td><td>0</td><td>13</td><td>19</td><td>7</td><td>51</td><td>0</td><td>1822</td></tr>
+<tr><td class="sl"></td><td>2026-02-06 00:00:00</td><td>40</td><td>7</td><td>0</td><td>84</td><td>5</td><td>0</td><td>2</td><td>0</td><td>202</td><td>2</td><td>0</td><td>0</td><td>318</td><td>350</td><td>121</td><td>524</td><td>46</td><td>0</td><td>7</td><td>24</td><td>6</td><td>55</td><td>0</td><td>1793</td></tr>
+<tr><td class="sl"></td><td>2026-02-07 00:00:00</td><td>41</td><td>6</td><td>0</td><td>46</td><td>13</td><td>1</td><td>2</td><td>0</td><td>238</td><td>2</td><td>0</td><td>0</td><td>281</td><td>252</td><td>112</td><td>380</td><td>62</td><td>0</td><td>5</td><td>24</td><td>6</td><td>62</td><td>0</td><td>1533</td></tr>
+<tr><td class="sl"></td><td>2026-02-08 00:00:00</td><td>27</td><td>17</td><td>0</td><td>55</td><td>4</td><td>0</td><td>2</td><td>0</td><td>204</td><td>1</td><td>0</td><td>0</td><td>344</td><td>328</td><td>117</td><td>172</td><td>14</td><td>0</td><td>1</td><td>18</td><td>6</td><td>51</td><td>0</td><td>1361</td></tr>
+<tr><td class="sl"></td><td>2026-02-09 00:00:00</td><td>50</td><td>2</td><td>0</td><td>75</td><td>22</td><td>3</td><td>2</td><td>0</td><td>201</td><td>2</td><td>0</td><td>0</td><td>305</td><td>316</td><td>110</td><td>464</td><td>31</td><td>0</td><td>1</td><td>19</td><td>6</td><td>40</td><td>0</td><td>1649</td></tr>
+<tr><td class="sl"></td><td>2026-02-10 00:00:00</td><td>26</td><td>20</td><td>0</td><td>84</td><td>5</td><td>0</td><td>1</td><td>1</td><td>197</td><td>1</td><td>0</td><td>0</td><td>313</td><td>203</td><td>117</td><td>529</td><td>17</td><td>0</td><td>0</td><td>22</td><td>5</td><td>46</td><td>0</td><td>1587</td></tr>
+<tr><td class="sl"></td><td>2026-02-11 00:00:00</td><td>34</td><td>15</td><td>0</td><td>46</td><td>7</td><td>0</td><td>2</td><td>0</td><td>221</td><td>1</td><td>0</td><td>0</td><td>279</td><td>221</td><td>119</td><td>475</td><td>21</td><td>0</td><td>4</td><td>21</td><td>5</td><td>55</td><td>0</td><td>1526</td></tr>
+<tr><td class="sl"></td><td>2026-02-12 00:00:00</td><td>26</td><td>28</td><td>0</td><td>51</td><td>6</td><td>4</td><td>3</td><td>0</td><td>188</td><td>2</td><td>0</td><td>0</td><td>335</td><td>303</td><td>119</td><td>202</td><td>19</td><td>0</td><td>6</td><td>18</td><td>5</td><td>31</td><td>0</td><td>1346</td></tr>
+<tr><td class="sl"></td><td>2026-02-13 00:00:00</td><td>32</td><td>18</td><td>0</td><td>47</td><td>4</td><td>0</td><td>1</td><td>0</td><td>223</td><td>2</td><td>0</td><td>0</td><td>312</td><td>323</td><td>120</td><td>496</td><td>15</td><td>0</td><td>3</td><td>17</td><td>5</td><td>48</td><td>0</td><td>1666</td></tr>
+<tr><td class="sl"></td><td>2026-02-14 00:00:00</td><td>22</td><td>40</td><td>0</td><td>54</td><td>4</td><td>0</td><td>2</td><td>0</td><td>210</td><td>1</td><td>0</td><td>0</td><td>356</td><td>351</td><td>115</td><td>473</td><td>8</td><td>0</td><td>0</td><td>16</td><td>4</td><td>44</td><td>0</td><td>1700</td></tr>
+<tr><td class="sl"></td><td>2026-02-15 00:00:00</td><td>64</td><td>20</td><td>0</td><td>53</td><td>5</td><td>2</td><td>4</td><td>0</td><td>230</td><td>2</td><td>0</td><td>0</td><td>389</td><td>257</td><td>111</td><td>430</td><td>10</td><td>0</td><td>3</td><td>16</td><td>9</td><td>59</td><td>0</td><td>1664</td></tr>
+<tr><td class="sl"></td><td>2026-02-16 00:00:00</td><td>31</td><td>3</td><td>0</td><td>45</td><td>5</td><td>1</td><td>2</td><td>0</td><td>192</td><td>0</td><td>0</td><td>0</td><td>313</td><td>405</td><td>118</td><td>381</td><td>23</td><td>0</td><td>2</td><td>19</td><td>6</td><td>42</td><td>0</td><td>1588</td></tr>
+<tr><td class="sl"></td><td>2026-02-17 00:00:00</td><td>25</td><td>14</td><td>0</td><td>64</td><td>5</td><td>2</td><td>2</td><td>0</td><td>254</td><td>2</td><td>0</td><td>0</td><td>341</td><td>146</td><td>117</td><td>332</td><td>51</td><td>0</td><td>4</td><td>23</td><td>6</td><td>85</td><td>0</td><td>1473</td></tr>
+<tr><td class="sl"></td><td>2026-02-18 00:00:00</td><td>28</td><td>22</td><td>0</td><td>104</td><td>9</td><td>0</td><td>2</td><td>0</td><td>233</td><td>1</td><td>0</td><td>0</td><td>351</td><td>426</td><td>119</td><td>471</td><td>27</td><td>0</td><td>5</td><td>20</td><td>6</td><td>76</td><td>0</td><td>1900</td></tr>
+<tr><td class="sl"></td><td>2026-02-19 00:00:00</td><td>35</td><td>15</td><td>0</td><td>104</td><td>10</td><td>0</td><td>1</td><td>0</td><td>247</td><td>2</td><td>0</td><td>0</td><td>328</td><td>258</td><td>115</td><td>455</td><td>53</td><td>0</td><td>6</td><td>18</td><td>4</td><td>83</td><td>0</td><td>1734</td></tr>
+<tr><td class="sl"></td><td>2026-02-20 00:00:00</td><td>26</td><td>20</td><td>0</td><td>104</td><td>6</td><td>0</td><td>2</td><td>0</td><td>234</td><td>2</td><td>0</td><td>0</td><td>312</td><td>349</td><td>120</td><td>502</td><td>36</td><td>0</td><td>7</td><td>17</td><td>5</td><td>67</td><td>0</td><td>1809</td></tr>
+<tr><td class="sl"></td><td>2026-02-21 00:00:00</td><td>35</td><td>19</td><td>0</td><td>101</td><td>3</td><td>2</td><td>3</td><td>0</td><td>196</td><td>1</td><td>0</td><td>0</td><td>347</td><td>258</td><td>119</td><td>288</td><td>42</td><td>0</td><td>9</td><td>18</td><td>6</td><td>39</td><td>0</td><td>1486</td></tr>
+<tr><td class="sl"></td><td>2026-02-22 00:00:00</td><td>18</td><td>9</td><td>0</td><td>94</td><td>5</td><td>0</td><td>2</td><td>0</td><td>254</td><td>1</td><td>0</td><td>0</td><td>295</td><td>145</td><td>121</td><td>404</td><td>32</td><td>0</td><td>12</td><td>20</td><td>6</td><td>94</td><td>0</td><td>1512</td></tr>
+<tr><td class="sl"></td><td>2026-02-23 00:00:00</td><td>17</td><td>23</td><td>0</td><td>101</td><td>4</td><td>0</td><td>2</td><td>0</td><td>225</td><td>1</td><td>0</td><td>0</td><td>137</td><td>138</td><td>121</td><td>336</td><td>36</td><td>0</td><td>14</td><td>24</td><td>6</td><td>69</td><td>0</td><td>1254</td></tr>
+<tr><td class="sl"></td><td>2026-02-24 00:00:00</td><td>20</td><td>12</td><td>0</td><td>101</td><td>6</td><td>0</td><td>2</td><td>0</td><td>192</td><td>0</td><td>0</td><td>0</td><td>88</td><td>220</td><td>123</td><td>455</td><td>17</td><td>0</td><td>9</td><td>18</td><td>6</td><td>50</td><td>0</td><td>1319</td></tr>
+<tr><td class="sl"></td><td>2026-02-25 00:00:00</td><td>64</td><td>6</td><td>0</td><td>97</td><td>3</td><td>0</td><td>1</td><td>0</td><td>199</td><td>1</td><td>0</td><td>0</td><td>317</td><td>279</td><td>123</td><td>504</td><td>20</td><td>0</td><td>12</td><td>18</td><td>4</td><td>52</td><td>0</td><td>1700</td></tr>
+<tr><td class="sl"></td><td>2026-02-26 00:00:00</td><td>24</td><td>20</td><td>0</td><td>96</td><td>4</td><td>0</td><td>7</td><td>0</td><td>214</td><td>1</td><td>0</td><td>0</td><td>372</td><td>202</td><td>114</td><td>424</td><td>49</td><td>0</td><td>8</td><td>19</td><td>13</td><td>72</td><td>0</td><td>1639</td></tr>
+<tr><td class="sl"></td><td>2026-02-27 00:00:00</td><td>47</td><td>13</td><td>0</td><td>94</td><td>2</td><td>2</td><td>3</td><td>0</td><td>192</td><td>1</td><td>0</td><td>0</td><td>131</td><td>236</td><td>122</td><td>388</td><td>27</td><td>0</td><td>6</td><td>17</td><td>8</td><td>52</td><td>0</td><td>1341</td></tr>
+<tr><td class="sl"></td><td>2026-02-28 00:00:00</td><td>26</td><td>15</td><td>0</td><td>96</td><td>7</td><td>0</td><td>1</td><td>0</td><td>228</td><td>1</td><td>0</td><td>0</td><td>301</td><td>292</td><td>116</td><td>440</td><td>34</td><td>0</td><td>8</td><td>33</td><td>5</td><td>75</td><td>0</td><td>1678</td></tr></tbody><tfoot><tr><td class="sl"></td><td>Total</td><td>909</td><td>429</td><td>0</td><td>2261</td><td>175</td><td>21</td><td>60</td><td>3</td><td>5912</td><td>47</td><td>0</td><td>0</td><td>8329</td><td>7743</td><td>3278</td><td>11939</td><td>892</td><td>0</td><td>183</td><td>568</td><td>170</td><td>1564</td><td>0</td><td>44483</td></tr></tfoot></table></body></html>

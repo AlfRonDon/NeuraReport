@@ -1,0 +1,101 @@
+{
+  "datasets": {
+    "header": {
+      "description": "One-row header dataset with scalar parameters and recipe name",
+      "columns": [
+        "plant_name",
+        "location",
+        "print_date",
+        "report_date",
+        "recipe_name_header",
+        "shift_no",
+        "page_number",
+        "total_pages"
+      ]
+    },
+    "rows": {
+      "description": "Detail rows: one row per bin (1-12) with material, set/actual weights, errors",
+      "columns": [
+        "row_bth_no",
+        "row_material_name",
+        "row_set_wt_kg",
+        "row_act_wt_kg",
+        "row_error_kg",
+        "row_error_pct",
+        "row_deviate_dur_sec"
+      ],
+      "grouping": [],
+      "ordering": [
+        "bin_number ASC"
+      ]
+    },
+    "totals": {
+      "description": "Aggregate totals: sum of set/actual weights, sum of errors, computed total error %",
+      "columns": [
+        "total_set_wt_kg",
+        "total_act_wt_kg",
+        "total_error_kg",
+        "total_error_pct",
+        "total_deviate_dur_sec"
+      ]
+    }
+  },
+  "semantics": "Single-table (recipes) with MELT reshape to unpivot 12 bin columns into rows. Each recipe batch produces 12 detail rows (filtered for non-empty bins). Computed fields for error_kg, error_pct at row level. Totals are sums of row values plus computed total_error_pct. No join required. Optional filters: recipe_name, date range on start_time.",
+  "parameters": {
+    "required": [
+      {
+        "name": "plant_name",
+        "type": "string"
+      },
+      {
+        "name": "location",
+        "type": "string"
+      },
+      {
+        "name": "print_date",
+        "type": "date"
+      },
+      {
+        "name": "report_date",
+        "type": "date"
+      },
+      {
+        "name": "shift_no",
+        "type": "string"
+      },
+      {
+        "name": "total_pages",
+        "type": "integer"
+      }
+    ],
+    "optional": [
+      {
+        "name": "recipe_name_filter",
+        "type": "string"
+      },
+      {
+        "name": "from_date",
+        "type": "date"
+      },
+      {
+        "name": "to_date",
+        "type": "date"
+      }
+    ]
+  },
+  "transformations": [
+    "MELT reshape: unpivot bin1_content through bin12_content into material_name column",
+    "MELT reshape: unpivot bin1_sp through bin12_sp into set_wt_kg column",
+    "MELT reshape: unpivot bin1_act through bin12_act into act_wt_kg column",
+    "Generate bin_number column (1-12) as row_bth_no during melt",
+    "Filter reshaped rows to exclude bins where material_name is null or empty",
+    "Compute row_error_kg = row_act_wt_kg - row_set_wt_kg (subtract operation)",
+    "Compute row_error_pct = (row_error_kg / row_set_wt_kg) * 100 (divide then multiply)",
+    "Aggregate total_set_wt_kg = sum(row_set_wt_kg)",
+    "Aggregate total_act_wt_kg = sum(row_act_wt_kg)",
+    "Aggregate total_error_kg = sum(row_error_kg)",
+    "Compute total_error_pct = (total_error_kg / total_set_wt_kg) * 100",
+    "Order rows by bin_number ASC (1-12 sequential)",
+    "Format numeric columns: 2 decimals for weights and percentages"
+  ]
+}

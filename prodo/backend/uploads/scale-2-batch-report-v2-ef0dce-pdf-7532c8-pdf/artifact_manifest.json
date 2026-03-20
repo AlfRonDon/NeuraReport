@@ -1,0 +1,52 @@
+{
+  "correlation_id": "job-1f41d2b5d7",
+  "file_checksums": {
+    "filled_1772630562.html": "d72948f8c143262d45aeda404434536d514ecaff98823b571bbb87e6c6733980",
+    "filled_1772630562.pdf": "f28b9c93b46db50c5587238629d95eac95f3e72c04e1ab71f934e2957b1e2a76",
+    "filled_1772665804.html": "e8128e9edcab3764d77f5a14c7829d06aaa715f292dab6b82af52cc3dfc66f2f",
+    "filled_1772665804.pdf": "89d87dbe2834f191e81ed172c6dd0d8aaeaed13915ee80ca86337af4fa684d14",
+    "filled_1772666450.html": "49ffcf145ad023e413f7e25bb19049123d689eec4a5770ca4ef764166abcbf34",
+    "filled_1772666450.pdf": "e6bdf6fda821ec67d3df60f7a5bb9e845572fe25166660f10164ac202e2dd742",
+    "filled_1772667607.html": "caf5457c6d9c20c6c4721e748079d5e4390eb739f05df4f325855e6b76afeee3",
+    "filled_1772667607.pdf": "d5aa81c243aea93641c59208654a2ca20682c093b5ccc4099583f4a7227fb917",
+    "filled_1772667787.html": "add90c5aa6798910c2464adefd1f5ab4894b06ec9b2ad70ead5f5a7d41017574",
+    "filled_1772667787.pdf": "a0fd71b15294f4c3b816a619bf46b88ce644867c5ab2c38b095db10c7b36d3c6",
+    "filled_1772668102.html": "49ffcf145ad023e413f7e25bb19049123d689eec4a5770ca4ef764166abcbf34",
+    "filled_1772668102.pdf": "42d693d9b56f805f554d6d7abec0795ec9e880fdc613e28bd74f3e95226e7aa2",
+    "filled_1772668527.html": "b8d1fc30c578b44b323f78ae6472d017377404c3ad13e449144780df51fb9f10",
+    "filled_1772668527.pdf": "0af2896012902263f166eb42a7afa1ea22a62bac95a59542c72cd4f3a664d30b",
+    "filled_1772917549.html": "824a5b78f539ae8a9a718268df19ea294c52b87737ff448b47626e10816f4c35",
+    "filled_1772917549.pdf": "aebf4313b6a4efe18ce875053089e517b7d3e5ef1f0d8ff3ee2fce81cc40b0d4",
+    "filled_1772917900.html": "6e5f2d43c8aa7b9decfc6d522ef68384f95d469f2bcb7a95870f76a07636b891",
+    "filled_1772917900.pdf": "15e063d95ac36c11060249eff92eac021cce5f6179091acf4051fff0da24435f"
+  },
+  "files": {
+    "filled_1772630562.html": "filled_1772630562.html",
+    "filled_1772630562.pdf": "filled_1772630562.pdf",
+    "filled_1772665804.html": "filled_1772665804.html",
+    "filled_1772665804.pdf": "filled_1772665804.pdf",
+    "filled_1772666450.html": "filled_1772666450.html",
+    "filled_1772666450.pdf": "filled_1772666450.pdf",
+    "filled_1772667607.html": "filled_1772667607.html",
+    "filled_1772667607.pdf": "filled_1772667607.pdf",
+    "filled_1772667787.html": "filled_1772667787.html",
+    "filled_1772667787.pdf": "filled_1772667787.pdf",
+    "filled_1772668102.html": "filled_1772668102.html",
+    "filled_1772668102.pdf": "filled_1772668102.pdf",
+    "filled_1772668527.html": "filled_1772668527.html",
+    "filled_1772668527.pdf": "filled_1772668527.pdf",
+    "filled_1772917549.html": "filled_1772917549.html",
+    "filled_1772917549.pdf": "filled_1772917549.pdf",
+    "filled_1772917900.html": "filled_1772917900.html",
+    "filled_1772917900.pdf": "filled_1772917900.pdf"
+  },
+  "input_refs": [
+    "/home/rohith/desktop/NeuraReport/prodo/backend/uploads/scale-2-batch-report-v2-ef0dce-pdf/contract.json",
+    "/home/rohith/desktop/NeuraReport/recipe_log (1).sqlite3",
+    "/home/rohith/desktop/NeuraReport/prodo/backend/uploads/scale-2-batch-report-v2-ef0dce-pdf-7532c8-pdf/contract.json"
+  ],
+  "pid": 3819499,
+  "produced_at": "2026-03-07T21:12:04.470664+00:00",
+  "schema_version": "1.0",
+  "step": "reports_run"
+}

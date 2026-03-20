@@ -1,0 +1,156 @@
+{
+  "mapping": {
+    "row_transmitter_id": "neuract__device_mappings.field_key",
+    "row_location": "UNRESOLVED",
+    "row_current_bar": "UNRESOLVED",
+    "row_normal_range": "neuract__device_mappings.scale",
+    "alarm_count": "UNRESOLVED",
+    "gen_timestamp": "UNRESOLVED"
+  },
+  "meta": {
+    "unresolved": [
+      "row_location",
+      "row_current_bar",
+      "alarm_count",
+      "gen_timestamp"
+    ],
+    "hints": {
+      "row_current_bar": {
+        "op": "LOOKUP",
+        "over": [
+          "columns:neuract__PT_TABLE.PT_105",
+          "columns:neuract__PT_TABLE.PT_107",
+          "columns:neuract__PT_TABLE.PT_109",
+          "columns:neuract__PT_TABLE.PT_119",
+          "columns:neuract__PT_TABLE.PT_121",
+          "columns:neuract__PT_TABLE.PT_131",
+          "columns:neuract__PT_TABLE.PT_135",
+          "columns:neuract__PT_TABLE.PT_145",
+          "note:Each row selects the PT_TABLE column whose name matches the current row's transmitter ID (row_transmitter_id). Requires an unpivot/melt of neuract__PT_TABLE wide columns into long-form rows keyed by field_key, then joined to the device_mappings table on field_key."
+        ]
+      },
+      "row_location": {
+        "op": "UNKNOWN",
+        "over": [
+          "note:No location column exists in the catalog. Requires a supplementary lookup table or additional column in neuract__device_mappings that maps field_key (e.g. PT_105) to a human-readable installation location (e.g. 'Raw Water Pump')."
+        ]
+      },
+      "alarm_count": {
+        "op": "UNKNOWN",
+        "over": [
+          "note:No alarm or event table present in the catalog. This scalar requires either an alarm-state table not yet ingested, or a real-time API/aggregate query external to the current catalog."
+        ]
+      },
+      "gen_timestamp": {
+        "op": "UNKNOWN",
+        "over": [
+          "note:Runtime system value injected at report-generation time. Should be passed as a system parameter (e.g. params.gen_timestamp) rather than sourced from any catalog column."
+        ]
+      },
+      "row_normal_range": {
+        "op": "UNKNOWN",
+        "over": [
+          "note:Mapped tentatively to neuract__device_mappings.scale (TEXT, no sample). In industrial device-mapping schemas the scale field typically stores the engineering-units range (e.g. '0 - 5'). Verify sample data before confirming this mapping."
+        ]
+      }
+    }
+  },
+  "prompt_meta": {
+    "version": "llm_call_3_df_v2",
+    "prompt_sha256": "2f3c20d68a88275dc04f9ee87227a6dd1f6090a65270bc6c67abe4c3c8305451",
+    "catalog_sha256": "312a06afd264f4c409ba0a0fb006aac7601c8781b51c4946edc16a58ed702f95",
+    "schema_sha256": "1b224145d26e22cae8689bac3b8c198138de58579ef6aa6b5c0c65810c12b68e",
+    "cache_key": "af4a1edcd535f77e1e283403aa52ee220acbb8aa9fd1e2d89af2bed5f800b2ac",
+    "pre_html_sha256": "dcef9432489d734bd172ccfddd167e46e14e94c391c7e51f223b71d62fee90c5",
+    "post_html_sha256": "d7e8db070536c93cbd5ad98488f2108a936fd6e63a5ba4eea06d04f62c84e829",
+    "prompt_version": "llm_call_3_df_v2",
+    "pdf_sha256": "0e8becda3e61abca1a48072f670b53fa868d376bcbbfffa9627883d9707dd151",
+    "db_signature": "0c33e3e2d9de39703b476f6ece004966e0b418fe1acc690478668ef987513776"
+  },
+  "raw_payload": {
+    "mapping": {
+      "row_transmitter_id": "neuract__device_mappings.field_key",
+      "row_location": "UNRESOLVED",
+      "row_current_bar": "UNRESOLVED",
+      "row_normal_range": "neuract__device_mappings.scale",
+      "alarm_count": "UNRESOLVED",
+      "gen_timestamp": "UNRESOLVED"
+    },
+    "token_samples": {
+      "report_title": "Pressure Transmitter Report",
+      "section_title": "Process Pressure Monitoring",
+      "row_transmitter_id": "PT_105",
+      "row_location": "Raw Water Pump",
+      "row_current_bar": "{{PT_105}}",
+      "row_normal_range": "0 - 5",
+      "alarm_count": "{{alarm_count}}",
+      "gen_timestamp": "{{gen_timestamp}}"
+    },
+    "meta": {
+      "unresolved": [
+        "row_location",
+        "row_current_bar",
+        "alarm_count",
+        "gen_timestamp"
+      ],
+      "hints": {
+        "row_current_bar": {
+          "op": "LOOKUP",
+          "over": [
+            "columns:neuract__PT_TABLE.PT_105",
+            "columns:neuract__PT_TABLE.PT_107",
+            "columns:neuract__PT_TABLE.PT_109",
+            "columns:neuract__PT_TABLE.PT_119",
+            "columns:neuract__PT_TABLE.PT_121",
+            "columns:neuract__PT_TABLE.PT_131",
+            "columns:neuract__PT_TABLE.PT_135",
+            "columns:neuract__PT_TABLE.PT_145",
+            "note:Each row selects the PT_TABLE column whose name matches the current row's transmitter ID (row_transmitter_id). Requires an unpivot/melt of neuract__PT_TABLE wide columns into long-form rows keyed by field_key, then joined to the device_mappings table on field_key."
+          ]
+        },
+        "row_location": {
+          "op": "UNKNOWN",
+          "over": [
+            "note:No location column exists in the catalog. Requires a supplementary lookup table or additional column in neuract__device_mappings that maps field_key (e.g. PT_105) to a human-readable installation location (e.g. 'Raw Water Pump')."
+          ]
+        },
+        "alarm_count": {
+          "op": "UNKNOWN",
+          "over": [
+            "note:No alarm or event table present in the catalog. This scalar requires either an alarm-state table not yet ingested, or a real-time API/aggregate query external to the current catalog."
+          ]
+        },
+        "gen_timestamp": {
+          "op": "UNKNOWN",
+          "over": [
+            "note:Runtime system value injected at report-generation time. Should be passed as a system parameter (e.g. params.gen_timestamp) rather than sourced from any catalog column."
+          ]
+        },
+        "row_normal_range": {
+          "op": "UNKNOWN",
+          "over": [
+            "note:Mapped tentatively to neuract__device_mappings.scale (TEXT, no sample). In industrial device-mapping schemas the scale field typically stores the engineering-units range (e.g. '0 - 5'). Verify sample data before confirming this mapping."
+          ]
+        }
+      }
+    },
+    "constant_replacements": {
+      "report_title": "Pressure Transmitter Report",
+      "section_title": "Process Pressure Monitoring"
+    }
+  },
+  "constant_replacements": {
+    "report_title": "Pressure Transmitter Report",
+    "section_title": "Process Pressure Monitoring"
+  },
+  "token_samples": {
+    "report_title": "Pressure Transmitter Report",
+    "section_title": "Process Pressure Monitoring",
+    "row_transmitter_id": "PT_105",
+    "row_location": "Raw Water Pump",
+    "row_current_bar": "{{PT_105}}",
+    "row_normal_range": "0 - 5",
+    "alarm_count": "{{alarm_count}}",
+    "gen_timestamp": "{{gen_timestamp}}"
+  }
+}

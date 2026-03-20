@@ -1,0 +1,47 @@
+[
+  {
+    "header": "start_date",
+    "placeholder": "{start_date}",
+    "mapping": "LATER_SELECTED"
+  },
+  {
+    "header": "end_date",
+    "placeholder": "{end_date}",
+    "mapping": "LATER_SELECTED"
+  },
+  {
+    "header": "row_parameter",
+    "placeholder": "{row_parameter}",
+    "mapping": "UNRESOLVED"
+  },
+  {
+    "header": "row_sensor",
+    "placeholder": "{row_sensor}",
+    "mapping": "UNRESOLVED"
+  },
+  {
+    "header": "row_min",
+    "placeholder": "{row_min}",
+    "mapping": "neuract__ANALYSER_TABLE.PH_101"
+  },
+  {
+    "header": "row_max",
+    "placeholder": "{row_max}",
+    "mapping": "neuract__ANALYSER_TABLE.PH_102"
+  },
+  {
+    "header": "row_avg",
+    "placeholder": "{row_avg}",
+    "mapping": "neuract__ANALYSER_TABLE.PH_103"
+  },
+  {
+    "header": "row_unit",
+    "placeholder": "{row_unit}",
+    "mapping": "UNRESOLVED"
+  },
+  {
+    "header": "compliance_status",
+    "placeholder": "{compliance_status}",
+    "mapping": "UNRESOLVED"
+  }
+]

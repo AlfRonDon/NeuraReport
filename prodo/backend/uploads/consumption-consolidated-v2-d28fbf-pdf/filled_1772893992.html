@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Consumption report</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm; }
+  :root{
+    --col-slno-w: 18mm;
+    --col-mat-w: 90mm;
+    --col-set-w: 28mm;
+    --col-ach-w: 28mm;
+    --col-err-w: 24mm;
+    --col-errp-w: 22mm;
+    --table-font: 12.5px;
+    --small-font: 12px;
+    --title-font: 28px;
+    --label-w: 32mm;
+  }
+  html, body { font-family: "Times New Roman", Georgia, serif; color:#000; }
+  body { line-height: 1.25; }
+  .rule { border:1px solid #000; border-top-width:1px; }
+  .info-grid { display:flex; justify-content: space-between; gap: 20mm; }
+  .info-left,
+  .info-right { display:flex; flex-direction:column; gap:4mm; min-width:0; }
+  .kv { display:grid; grid-template-columns: var(--label-w) auto 1fr; gap: 0 6mm; align-items: center; }
+  .kv .lab { white-space: nowrap; font-weight:700; }
+  .kv .val { font-weight:700; }
+  .kv.recipe { margin-top:2mm; grid-template-columns: auto auto auto; }
+  .kv.recipe .val { min-width:32mm; text-align:left; }
+  .box { border:1px solid #000; padding: 6mm 7mm; }
+  h1.title { font-weight: 700; font-size: var(--title-font); text-align: center; margin: 0; padding: 2mm 0 1mm; }
+  #report-header { margin-bottom: 5mm; }
+  #report-header .kv span { font-size: var(--small-font); }
+  /* Row tables */
+  table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+  .row-table { font-size: var(--table-font); margin-bottom: 8mm; /* page-break-inside: avoid; */ }
+  .row-table:last-of-type { margin-bottom: 0; }
+  .row-table thead th {
+    border:1px solid #000; padding: 6px 6px; font-weight: 700; text-align: left;
+    vertical-align: middle;
+  }
+  .row-table thead th:nth-child(1){ width: var(--col-slno-w); text-align: left; }
+  .row-table thead th:nth-child(2){ width: var(--col-mat-w); }
+  .row-table thead th:nth-child(3){ width: var(--col-set-w); text-align: right; }
+  .row-table thead th:nth-child(4){ width: var(--col-ach-w); text-align: right; }
+  .row-table thead th:nth-child(5){ width: var(--col-err-w); text-align: right; }
+  .row-table thead th:nth-child(6){ width: var(--col-errp-w); text-align: right; }
+  .row-table tbody td {
+    border-left:1px solid #000; border-right:1px solid #000; border-bottom:1px solid #000;
+    padding: 6px 6px; vertical-align: top;
+  }
+  .row-table tbody td.num { text-align: right; }
+  .row-table tbody td.center { text-align: center; }
+  /* Totals per table */
+  .row-table tfoot td {
+    border-left:1px solid #000; border-right:1px solid #000; border-bottom:1px solid #000;
+    padding: 8px 6px; font-weight: 700;
+  }
+  .row-table tfoot tr:first-child td { border-top:2px solid #000; }
+  .row-table caption { caption-side: top; }
+  /* Subhead key-values line inside the boxed header */
+  .subgrid { display:grid; grid-template-columns: auto auto auto; gap: 2mm 12mm; }
+  .subgrid .kv { grid-template-columns: auto auto; }
+  .lab { font-weight: 700; }
+  .soft { font-weight: 400; }
+</style>
+</head>
+<body>
+  <div id="report-header" class="box">
+    <div class="info-grid">
+      <div class="info-left">
+        <div class="kv"><span class="lab">Plant name</span><span class="soft">:</span><span class="val">Coastal Feeds</span></div>
+        <div class="kv"><span class="lab">Location</span><span class="soft">:</span><span class="val">Gudivada</span></div>
+        <div class="kv"><span class="lab">Print Date</span><span class="soft">:</span><span class="val">07/03/2026</span></div>
+      </div>
+      <div class="info-right">
+        <div class="kv"><span class="lab">From</span><span class="soft">:</span><span class="val">01/01/2024</span></div>
+        <div class="kv"><span class="lab">To</span><span class="soft">:</span><span class="val">31/12/2025</span></div>
+        <div class="kv recipe"><span class="lab">Recipe code</span><span class="soft">:</span><span class="val"></span></div>
+      </div>
+    </div>
+
+    <h1 class="title">Consumption report</h1>
+  </div>
+
+  <section class="batch-block">
+    <table class="row-table">
+      <thead>
+        <tr>
+          <th data-label="sl_no">Sl. No.</th>
+          <th data-label="material_name">Material name</th>
+          <th data-label="set_wt_kg" style="text-align:right">Set. wt(Kg)</th>
+          <th data-label="ach_wt_kg" style="text-align:right">Ach. wt(Kg)</th>
+          <th data-label="error_kg" style="text-align:right">Error(Kg)</th>
+          <th data-label="error_pct" style="text-align:right">Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="center">1</td>
+          <td>F-RECYCLE</td>
+          <td class="num">78350.00</td>
+          <td class="num">77997.00</td>
+          <td class="num">-353.00</td>
+          <td class="num">-0.451</td>
+        </tr>
+<tr>
+          <td class="center">2</td>
+          <td>B RICE</td>
+          <td class="num">412080.00</td>
+          <td class="num">413193.00</td>
+          <td class="num">1113.00</td>
+          <td class="num">0.270</td>
+        </tr>
+<tr>
+          <td class="center">3</td>
+          <td>DOB</td>
+          <td class="num">753224.00</td>
+          <td class="num">762830.00</td>
+          <td class="num">9606.00</td>
+          <td class="num">1.275</td>
+        </tr>
+<tr>
+          <td class="center">4</td>
+          <td>EED</td>
+          <td class="num">6700.00</td>
+          <td class="num">6672.00</td>
+          <td class="num">-28.00</td>
+          <td class="num">-0.418</td>
+        </tr>
+<tr>
+          <td class="center">5</td>
+          <td>FISH MEAL</td>
+          <td class="num">89590.00</td>
+          <td class="num">88072.00</td>
+          <td class="num">-1518.00</td>
+          <td class="num">-1.694</td>
+        </tr>
+<tr>
+          <td class="center">6</td>
+          <td>GNDOC</td>
+          <td class="num">139430.00</td>
+          <td class="num">139722.00</td>
+          <td class="num">292.00</td>
+          <td class="num">0.209</td>
+        </tr>
+<tr>
+          <td class="center">7</td>
+          <td>L</td>
+          <td class="num">970.00</td>
+          <td class="num">977.00</td>
+          <td class="num">7.00</td>
+          <td class="num">0.722</td>
+        </tr>
+<tr>
+          <td class="center">8</td>
+          <td>M CORN</td>
+          <td class="num">89550.00</td>
+          <td class="num">89039.00</td>
+          <td class="num">-511.00</td>
+          <td class="num">-0.571</td>
+        </tr>
+<tr>
+          <td class="center">9</td>
+          <td>M FIBER</td>
+          <td class="num">20610.00</td>
+          <td class="num">20015.00</td>
+          <td class="num">-595.00</td>
+          <td class="num">-2.887</td>
+        </tr>
+<tr>
+          <td class="center">10</td>
+          <td>M1</td>
+          <td class="num">297.00</td>
+          <td class="num">295.00</td>
+          <td class="num">-2.00</td>
+          <td class="num">-0.673</td>
+        </tr>
+<tr>
+          <td class="center">11</td>
+          <td>M10</td>
+          <td class="num">274.00</td>
+          <td class="num">271.00</td>
+          <td class="num">-3.00</td>
+          <td class="num">-1.095</td>
+        </tr>
+<tr>
+          <td class="center">12</td>
+          <td>M11</td>
+          <td class="num">207.00</td>
+          <td class="num">200.00</td>
+          <td class="num">-7.00</td>
+          <td class="num">-3.382</td>
+        </tr>
+<tr>
+          <td class="center">13</td>
+          <td>M12</td>
+          <td class="num">306.00</td>
+          <td class="num">303.00</td>
+          <td class="num">-3.00</td>
+          <td class="num">-0.980</td>
+        </tr>
+<tr>
+          <td class="center">14</td>
+          <td>M2</td>
+          <td class="num">306.00</td>
+          <td class="num">298.00</td>
+          <td class="num">-8.00</td>
+          <td class="num">-2.614</td>
+        </tr>
+<tr>
+          <td class="center">15</td>
+          <td>M3</td>
+          <td class="num">327.00</td>
+          <td class="num">325.00</td>
+          <td class="num">-2.00</td>
+          <td class="num">-0.612</td>
+        </tr>
+<tr>
+          <td class="center">16</td>
+          <td>M4</td>
+          <td class="num">340.00</td>
+          <td class="num">342.00</td>
+          <td class="num">2.00</td>
+          <td class="num">0.588</td>
+        </tr>
+<tr>
+          <td class="center">17</td>
+          <td>M5</td>
+          <td class="num">279.00</td>
+          <td class="num">284.00</td>
+          <td class="num">5.00</td>
+          <td class="num">1.792</td>
+        </tr>
+<tr>
+          <td class="center">18</td>
+          <td>M6</td>
+          <td class="num">364.00</td>
+          <td class="num">369.00</td>
+          <td class="num">5.00</td>
+          <td class="num">1.374</td>
+        </tr>
+<tr>
+          <td class="center">19</td>
+          <td>M7</td>
+          <td class="num">320.00</td>
+          <td class="num">311.00</td>
+          <td class="num">-9.00</td>
+          <td class="num">-2.813</td>
+        </tr>
+<tr>
+          <td class="center">20</td>
+          <td>M8</td>
+          <td class="num">375.00</td>
+          <td class="num">382.00</td>
+          <td class="num">7.00</td>
+          <td class="num">1.867</td>
+        </tr>
+<tr>
+          <td class="center">21</td>
+          <td>M9</td>
+          <td class="num">360.00</td>
+          <td class="num">354.00</td>
+          <td class="num">-6.00</td>
+          <td class="num">-1.667</td>
+        </tr>
+<tr>
+          <td class="center">22</td>
+          <td>MAIDA</td>
+          <td class="num">297720.00</td>
+          <td class="num">296433.00</td>
+          <td class="num">-1287.00</td>
+          <td class="num">-0.432</td>
+        </tr>
+<tr>
+          <td class="center">23</td>
+          <td>MDOC</td>
+          <td class="num">23580.00</td>
+          <td class="num">23628.00</td>
+          <td class="num">48.00</td>
+          <td class="num">0.204</td>
+        </tr>
+<tr>
+          <td class="center">24</td>
+          <td>MEET MEAL</td>
+          <td class="num">50754.00</td>
+          <td class="num">50056.00</td>
+          <td class="num">-698.00</td>
+          <td class="num">-1.375</td>
+        </tr>
+<tr>
+          <td class="center">25</td>
+          <td>MM</td>
+          <td class="num">0.00</td>
+          <td class="num">0.00</td>
+          <td class="num">0.00</td>
+          <td class="num">0.000</td>
+        </tr>
+<tr>
+          <td class="center">26</td>
+          <td>MMD</td>
+          <td class="num">2020.00</td>
+          <td class="num">2002.00</td>
+          <td class="num">-18.00</td>
+          <td class="num">-0.891</td>
+        </tr>
+<tr>
+          <td class="center">27</td>
+          <td>MMw3p</td>
+          <td class="num">300.00</td>
+          <td class="num">291.00</td>
+          <td class="num">-9.00</td>
+          <td class="num">-3.000</td>
+        </tr>
+<tr>
+          <td class="center">28</td>
+          <td>NA</td>
+          <td class="num">16000.00</td>
+          <td class="num">15808.00</td>
+          <td class="num">-192.00</td>
+          <td class="num">-1.200</td>
+        </tr>
+<tr>
+          <td class="center">29</td>
+          <td>NAD</td>
+          <td class="num">16000.00</td>
+          <td class="num">15823.00</td>
+          <td class="num">-177.00</td>
+          <td class="num">-1.106</td>
+        </tr>
+<tr>
+          <td class="center">30</td>
+          <td>NAw3p</td>
+          <td class="num">4800.00</td>
+          <td class="num">4742.00</td>
+          <td class="num">-58.00</td>
+          <td class="num">-1.208</td>
+        </tr>
+<tr>
+          <td class="center">31</td>
+          <td>R BRAWAN</td>
+          <td class="num">52850.00</td>
+          <td class="num">50981.00</td>
+          <td class="num">-1869.00</td>
+          <td class="num">-3.536</td>
+        </tr>
+<tr>
+          <td class="center">32</td>
+          <td>R BRAWN</td>
+          <td class="num">112375.00</td>
+          <td class="num">109291.00</td>
+          <td class="num">-3084.00</td>
+          <td class="num">-2.744</td>
+        </tr>
+<tr>
+          <td class="center">33</td>
+          <td>RECYCLE P</td>
+          <td class="num">119824.00</td>
+          <td class="num">118003.00</td>
+          <td class="num">-1821.00</td>
+          <td class="num">-1.520</td>
+        </tr>
+<tr>
+          <td class="center">34</td>
+          <td>RECYCLE Q</td>
+          <td class="num">185950.00</td>
+          <td class="num">183276.00</td>
+          <td class="num">-2674.00</td>
+          <td class="num">-1.438</td>
+        </tr>
+<tr>
+          <td class="center">35</td>
+          <td>RG 45%</td>
+          <td class="num">310480.00</td>
+          <td class="num">303338.00</td>
+          <td class="num">-7142.00</td>
+          <td class="num">-2.300</td>
+        </tr>
+<tr>
+          <td class="center">36</td>
+          <td>RG 60%</td>
+          <td class="num">155215.00</td>
+          <td class="num">156012.00</td>
+          <td class="num">797.00</td>
+          <td class="num">0.513</td>
+        </tr>
+<tr>
+          <td class="center">37</td>
+          <td>RICE DUST</td>
+          <td class="num">35500.00</td>
+          <td class="num">34615.00</td>
+          <td class="num">-885.00</td>
+          <td class="num">-2.493</td>
+        </tr>
+<tr>
+          <td class="center">38</td>
+          <td>SOYA</td>
+          <td class="num">557872.00</td>
+          <td class="num">553674.00</td>
+          <td class="num">-4198.00</td>
+          <td class="num">-0.753</td>
+        </tr>
+<tr>
+          <td class="center">39</td>
+          <td>TOD</td>
+          <td class="num">1440.00</td>
+          <td class="num">1413.00</td>
+          <td class="num">-27.00</td>
+          <td class="num">-1.875</td>
+        </tr>
+<tr>
+          <td class="center">40</td>
+          <td>U</td>
+          <td class="num">22700.00</td>
+          <td class="num">22602.00</td>
+          <td class="num">-98.00</td>
+          <td class="num">-0.432</td>
+        </tr>
+<tr>
+          <td class="center">41</td>
+          <td>new3p</td>
+          <td class="num">1500.00</td>
+          <td class="num">1493.00</td>
+          <td class="num">-7.00</td>
+          <td class="num">-0.467</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td style="text-align:left" colspan="2">Total</td>
+          <td class="num">3561139</td>
+          <td class="num">3545732</td>
+          <td class="num">-15407</td>
+          <td class="num">-0.433</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+
+  <script type="application/json" id="SCHEMA_JSON">
+  {
+    "plant_name": "",
+    "location": "",
+    "print_date": "",
+    "date_from": "",
+    "date_to": "",
+    "recipe_code": "",
+    "row_sl_no": "",
+    "row_material_name": "",
+    "row_set_wt_kg": "",
+    "row_ach_wt_kg": "",
+    "row_error_kg": "",
+    "row_error_pct": "",
+    "total_set_wt": "",
+    "total_ach_wt": "",
+    "total_error_kg": "",
+    "total_error_pct": ""
+  }
+  </script>
+</body>
+</html>

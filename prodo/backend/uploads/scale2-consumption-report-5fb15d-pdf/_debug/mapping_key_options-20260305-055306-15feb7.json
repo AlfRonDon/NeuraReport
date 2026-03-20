@@ -1,0 +1,12 @@
+{
+  "event": "mapping_key_options",
+  "timestamp": "20260305-055306",
+  "template_id": "scale2-consumption-report-5fb15d-pdf",
+  "template_kind": "pdf",
+  "connection_id": "9a2c7248-66ea-40f0-8407-fa3e6db21439",
+  "db_path": "/home/rohith/desktop/NeuraReport/recipe_log (1).sqlite3",
+  "tokens_available": [
+    "{'key': 'batch_number', 'label': 'Batch No', 'db_ref': 'neuract__Scale2.OIL_BACTH_COUNT'}"
+  ],
+  "token_details": {}
+}

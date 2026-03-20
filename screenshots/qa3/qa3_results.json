@@ -1,0 +1,275 @@
+{
+  "results": [
+    {
+      "page": "home",
+      "status": 200,
+      "title": "NeuraReport",
+      "hasError": false,
+      "isLoading": false,
+      "elementCount": 86,
+      "consoleErrors": 0,
+      "bodyPreview": "Skip to content  NeuraReport  New Report  HOME  0  Dashboard  REPORTS  0  My Reports  0  History  0  Templates  0  Brand Kit  0  Running Jobs  0  Sche"
+    },
+    {
+      "page": "connections",
+      "status": 200,
+      "title": "NeuraReport",
+      "hasError": false,
+      "isLoading": false,
+      "elementCount": 100,
+      "consoleErrors": 0,
+      "bodyPreview": "Skip to content  NeuraReport  New Report  HOME  Dashboard  REPORTS  My Reports  History  Templates  Brand Kit  Running Jobs  Schedules  DATA  Data Sou"
+    },
+    {
+      "page": "templates",
+      "status": 200,
+      "title": "NeuraReport",
+      "hasError": false,
+      "isLoading": false,
+      "elementCount": 113,
+      "consoleErrors": 0,
+      "bodyPreview": "Skip to content  NeuraReport  New Report  HOME  0  Dashboard  REPORTS  0  My Reports  0  History  0  Templates  0  Brand Kit  0  Running Jobs  0  Sche"
+    },
+    {
+      "page": "generate",
+      "status": 200,
+      "title": "NeuraReport",
+      "hasError": false,
+      "isLoading": false,
+      "elementCount": 141,
+      "consoleErrors": 0,
+      "bodyPreview": "Skip to content  NeuraReport  New Report  HOME  Dashboard  REPORTS  My Reports  History  Templates  Brand Kit  Running Jobs  Schedules  DATA  Data Sou"
+    },
+    {
+      "page": "reports",
+      "status": 200,
+      "title": "NeuraReport",
+      "hasError": false,
+      "isLoading": false,
+      "elementCount": 141,
+      "consoleErrors": 0,
+      "bodyPreview": "Skip to content  NeuraReport  New Report  HOME  Dashboard  REPORTS  My Reports  History  Templates  Brand Kit  Running Jobs  Schedules  DATA  Data Sou"
+    },
+    {
+      "page": "history",
+      "status": 200,
+      "title": "NeuraReport",
+      "hasError": false,
+      "isLoading": false,
+      "elementCount": 164,
+      "consoleErrors": 0,
+      "bodyPreview": "Skip to content  NeuraReport  New Report  HOME  Dashboard  REPORTS  My Reports  History  Templates  Brand Kit  Running Jobs  Schedules  DATA  Data Sou"
+    },
+    {
+      "page": "jobs",
+      "status": 200,
+      "title": "NeuraReport",
+      "hasError": false,
+      "isLoading": false,
+      "elementCount": 101,
+      "consoleErrors": 0,
+      "bodyPreview": "Skip to content  NeuraReport  New Report  HOME  Dashboard  REPORTS  My Reports  History  Templates  Brand Kit  Running Jobs  Schedules  DATA  Data Sou"
+    },
+    {
+      "page": "schedules",
+      "status": 200,
+      "title": "NeuraReport",
+      "hasError": false,
+      "isLoading": false,
+      "elementCount": 84,
+      "consoleErrors": 0,
+      "bodyPreview": "Skip to content  NeuraReport  New Report  HOME  Dashboard  REPORTS  My Reports  History  Templates  Brand Kit  Running Jobs  Schedules  DATA  Data Sou"
+    },
+    {
+      "page": "query",
+      "status": 200,
+      "title": "NeuraReport",
+      "hasError": false,
+      "isLoading": false,
+      "elementCount": 87,
+      "consoleErrors": 0,
+      "bodyPreview": "Skip to content  NeuraReport  New Report  HOME  0  Dashboard  REPORTS  0  My Reports  0  History  0  Templates  0  Brand Kit  0  Running Jobs  0  Sche"
+    },
+    {
+      "page": "documents",
+      "status": 200,
+      "title": "NeuraReport",
+      "hasError": false,
+      "isLoading": false,
+      "elementCount": 176,
+      "consoleErrors": 0,
+      "bodyPreview": "Skip to content  NeuraReport  New Report  HOME  Dashboard  REPORTS  My Reports  History  Templates  Brand Kit  Running Jobs  Schedules  DATA  Data Sou"
+    },
+    {
+      "page": "spreadsheets",
+      "status": 200,
+      "title": "NeuraReport",
+      "hasError": false,
+      "isLoading": false,
+      "elementCount": 176,
+      "consoleErrors": 0,
+      "bodyPreview": "Skip to content  NeuraReport  New Report  HOME  Dashboard  REPORTS  My Reports  History  Templates  Brand Kit  Running Jobs  Schedules  DATA  Data Sou"
+    },
+    {
+      "page": "dashboard-builder",
+      "status": 200,
+      "title": "NeuraReport",
+      "hasError": false,
+      "isLoading": false,
+      "elementCount": 74,
+      "consoleErrors": 0,
+      "bodyPreview": "Skip to content  NeuraReport  New Report  HOME  Dashboard  REPORTS  My Reports  History  Templates  Brand Kit  Running Jobs  Schedules  DATA  Data Sou"
+    },
+    {
+      "page": "workflows",
+      "status": 200,
+      "title": "NeuraReport",
+      "hasError": false,
+      "isLoading": false,
+      "elementCount": 74,
+      "consoleErrors": 0,
+      "bodyPreview": "Skip to content  NeuraReport  New Report  HOME  Dashboard  REPORTS  My Reports  History  Templates  Brand Kit  Running Jobs  Schedules  DATA  Data Sou"
+    },
+    {
+      "page": "agents",
+      "status": 200,
+      "title": "NeuraReport",
+      "hasError": false,
+      "isLoading": false,
+      "elementCount": 88,
+      "consoleErrors": 0,
+      "bodyPreview": "Skip to content  NeuraReport  New Report  HOME  Dashboard  REPORTS  My Reports  History  Templates  Brand Kit  Running Jobs  Schedules  DATA  Data Sou"
+    },
+    {
+      "page": "visualization",
+      "status": 200,
+      "title": "NeuraReport",
+      "hasError": false,
+      "isLoading": false,
+      "elementCount": 96,
+      "consoleErrors": 0,
+      "bodyPreview": "Skip to content  NeuraReport  New Report  HOME  Dashboard  REPORTS  My Reports  History  Templates  Brand Kit  Running Jobs  Schedules  DATA  Data Sou"
+    },
+    {
+      "page": "analyze",
+      "status": 200,
+      "title": "NeuraReport",
+      "hasError": false,
+      "isLoading": false,
+      "elementCount": 76,
+      "consoleErrors": 0,
+      "bodyPreview": "Skip to content  NeuraReport  New Report  HOME  Dashboard  REPORTS  My Reports  History  Templates  Brand Kit  Running Jobs  Schedules  DATA  Data Sou"
+    },
+    {
+      "page": "activity",
+      "status": 200,
+      "title": "NeuraReport",
+      "hasError": false,
+      "isLoading": false,
+      "elementCount": 76,
+      "consoleErrors": 0,
+      "bodyPreview": "Skip to content  NeuraReport  New Report  HOME  Dashboard  REPORTS  My Reports  History  Templates  Brand Kit  Running Jobs  Schedules  DATA  Data Sou"
+    },
+    {
+      "page": "stats",
+      "status": 200,
+      "title": "NeuraReport",
+      "hasError": false,
+      "isLoading": true,
+      "elementCount": 94,
+      "consoleErrors": 0,
+      "bodyPreview": "Skip to content  NeuraReport  New Report  HOME  Dashboard  REPORTS  My Reports  History  Templates  Brand Kit  Running Jobs  Schedules  DATA  Data Sou"
+    },
+    {
+      "page": "ops",
+      "status": 200,
+      "title": "NeuraReport",
+      "hasError": false,
+      "isLoading": false,
+      "elementCount": 140,
+      "consoleErrors": 0,
+      "bodyPreview": "Skip to content  NeuraReport  New Report  HOME  Dashboard  REPORTS  My Reports  History  Templates  Brand Kit  Running Jobs  Schedules  DATA  Data Sou"
+    },
+    {
+      "page": "knowledge",
+      "status": 200,
+      "title": "NeuraReport",
+      "hasError": false,
+      "isLoading": false,
+      "elementCount": 127,
+      "consoleErrors": 1,
+      "bodyPreview": "Skip to content  NeuraReport  New Report  HOME  Dashboard  REPORTS  My Reports  History  Templates  Brand Kit  Running Jobs  Schedules  DATA  Data Sou"
+    },
+    {
+      "page": "design",
+      "status": 200,
+      "title": "NeuraReport",
+      "hasError": false,
+      "isLoading": false,
+      "elementCount": 131,
+      "consoleErrors": 1,
+      "bodyPreview": "Skip to content  NeuraReport  New Report  HOME  Dashboard  REPORTS  My Reports  History  Templates  Brand Kit  Running Jobs  Schedules  DATA  Data Sou"
+    },
+    {
+      "page": "settings",
+      "status": 200,
+      "title": "NeuraReport",
+      "hasError": false,
+      "isLoading": false,
+      "elementCount": 103,
+      "consoleErrors": 0,
+      "bodyPreview": "Skip to content  NeuraReport  New Report  HOME  Dashboard  REPORTS  My Reports  History  Templates  Brand Kit  Running Jobs  Schedules  DATA  Data Sou"
+    },
+    {
+      "page": "search",
+      "status": 200,
+      "title": "NeuraReport",
+      "hasError": false,
+      "isLoading": false,
+      "elementCount": 86,
+      "consoleErrors": 0,
+      "bodyPreview": "Skip to content  NeuraReport  New Report  HOME  Dashboard  REPORTS  My Reports  History  Templates  Brand Kit  Running Jobs  Schedules  DATA  Data Sou"
+    },
+    {
+      "page": "docqa",
+      "status": 200,
+      "title": "NeuraReport",
+      "hasError": false,
+      "isLoading": false,
+      "elementCount": 81,
+      "consoleErrors": 0,
+      "bodyPreview": "Skip to content  NeuraReport  New Report  HOME  Dashboard  REPORTS  My Reports  History  Templates  Brand Kit  Running Jobs  Schedules  DATA  Data Sou"
+    },
+    {
+      "page": "logger",
+      "status": 200,
+      "title": "NeuraReport",
+      "hasError": false,
+      "isLoading": false,
+      "elementCount": 79,
+      "consoleErrors": 2,
+      "bodyPreview": "Skip to content  NeuraReport  New Report  HOME  Dashboard  REPORTS  My Reports  History  Templates  Brand Kit  Running Jobs  Schedules  DATA  Data Sou"
+    },
+    {
+      "page": "connectors",
+      "status": 200,
+      "title": "NeuraReport",
+      "hasError": false,
+      "isLoading": false,
+      "elementCount": 118,
+      "consoleErrors": 0,
+      "bodyPreview": "Skip to content  NeuraReport  New Report  HOME  Dashboard  REPORTS  My Reports  History  Templates  Brand Kit  Running Jobs  Schedules  DATA  Data Sou"
+    },
+    {
+      "page": "widgets",
+      "status": 200,
+      "title": "NeuraReport",
+      "hasError": false,
+      "isLoading": false,
+      "elementCount": 72,
+      "consoleErrors": 0,
+      "bodyPreview": "Skip to content  NeuraReport  New Report  HOME  Dashboard  REPORTS  My Reports  History  Templates  Brand Kit  Running Jobs  Schedules  DATA  Data Sou"
+    }
+  ],
+  "errors": []
+}

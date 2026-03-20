@@ -1,0 +1,49 @@
+{
+  "datasets": {
+    "header": {
+      "description": "Single scalar value: the snapshot timestamp from the selected row of neuract__LT_TABLE, formatted as dd-mm-yyyy HH:MM:SS for display in the 'Snapshot Time' header line.",
+      "columns": [
+        "timestamp"
+      ]
+    },
+    "rows": {
+      "description": "One row per tank, produced by melting the wide neuract__LT_TABLE. Each row contains the tank name (static label), level percentage from the corresponding LT column, capacity in kL (static constant), and computed current volume in kL. Covers tanks LT_112, LT_113, LT_114, LT_116, LT_118, LT_120, LT_126, LT_127, LT_128 (9 tanks total).",
+      "columns": [
+        "row_tank_name",
+        "row_level",
+        "row_capacity",
+        "row_current_vol"
+      ],
+      "grouping": [],
+      "ordering": [
+        "ROWID"
+      ]
+    },
+    "totals": {
+      "description": "No aggregated totals are required for this snapshot report.",
+      "columns": []
+    }
+  },
+  "semantics": "date_from and date_to are optional pass-throughs that constrain which timestamp rows are fetched from neuract__LT_TABLE. For a snapshot report, typically only the latest single row by timestamp is used. The MELT reshape is applied post-query on the fetched row(s). Tank names and capacity constants are static configuration values positionally aligned to the melt column order and must be verified against actual plant engineering data.",
+  "parameters": {
+    "required": [],
+    "optional": [
+      {
+        "name": "date_from",
+        "type": "date"
+      },
+      {
+        "name": "date_to",
+        "type": "date"
+      }
+    ]
+  },
+  "transformations": [
+    "Fetch the latest row (or rows within optional date range) from neuract__LT_TABLE ordered by timestamp_utc descending.",
+    "Melt the 9 wide LT columns (LT_112, LT_113, LT_114, LT_116, LT_118, LT_120, LT_126, LT_127, LT_128) into a long-format DataFrame with one row per tank, aliased as row_level.",
+    "Attach static tank name labels ('Raw Water Tank (LT_112)', 'Settling Tank (LT_113)', 'Filtration Tank (LT_114)', 'Clear Water Tank (LT_116)', 'Overhead Tank (LT_118)', 'Sump Tank (LT_120)', 'Storage Tank (LT_126)', 'Storage Tank (LT_127)', 'Storage Tank (LT_128)') as row_tank_name, positionally aligned to the melt order.",
+    "Attach static capacity constants (500, 300, 450, 200, 600, 150, 250, 100, 100 kL) as row_capacity, positionally aligned to the melt order.",
+    "Compute row_current_vol = (row_level × row_capacity) ÷ 100 using the declarative multiply then divide op.",
+    "Format timestamp_utc using format_date with pattern %d-%m-%Y %H:%M:%S for the snapshot-time scalar header."
+  ]
+}

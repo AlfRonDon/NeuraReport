@@ -1,0 +1,99 @@
+{
+  "parameters": {
+    "required": [
+      {
+        "name": "from_date",
+        "type": "date",
+        "description": "Inclusive lower bound on DATE(recipes.start_time).",
+        "example": "2024-09-01"
+      },
+      {
+        "name": "to_date",
+        "type": "date",
+        "description": "Inclusive upper bound on DATE(recipes.start_time).",
+        "example": "2024-09-30"
+      }
+    ],
+    "optional": [
+      {
+        "name": "filter_recipe_code",
+        "type": "string",
+        "description": "Optional equality filter for recipes.recipe_name."
+      }
+    ]
+  },
+  "datasets": [
+    {
+      "alias": "rows",
+      "source_table": "recipes",
+      "description": "Groups filtered recipes rows by recipe_name to derive batch counts and earliest ids.",
+      "columns": [
+        {
+          "as": "row_sl_no",
+          "from": "ROW_NUMBER() OVER (ORDER BY recipe_name, recipe_id)"
+        },
+        {
+          "as": "row_recipe_name",
+          "from": "grouped.recipe_name"
+        },
+        {
+          "as": "row_recipe_code",
+          "from": "grouped.recipe_name"
+        },
+        {
+          "as": "row_recipe_no",
+          "from": "grouped.recipe_id"
+        },
+        {
+          "as": "row_no_of_batches",
+          "from": "grouped.batch_count"
+        }
+      ],
+      "filters": [
+        "DATE(recipes.start_time) BETWEEN DATE(:from_date) AND DATE(:to_date)",
+        "Apply recipe_name = :filter_recipe_code when filter_recipe_code is provided"
+      ],
+      "ordering": [
+        "row_recipe_name ASC",
+        "row_recipe_no ASC"
+      ]
+    },
+    {
+      "alias": "totals",
+      "source_table": "recipes",
+      "description": "Sums batch_count from the grouped dataset to populate the Total row.",
+      "columns": [
+        {
+          "as": "total_batches",
+          "from": "SUM(grouped.batch_count)"
+        }
+      ],
+      "filters": [
+        "Same filtered set used for rows"
+      ],
+      "ordering": []
+    }
+  ],
+  "reshape_rules": [
+    {
+      "alias": "rows",
+      "purpose": "GROUP BY recipe_name with COUNT(*) and MIN(id) metrics.",
+      "strategy": "GROUP_BY",
+      "columns": [
+        "recipe_name",
+        "COUNT(*) AS batch_count",
+        "MIN(id) AS recipe_id"
+      ]
+    }
+  ],
+  "order_by": {
+    "rows": [
+      "row_recipe_name ASC",
+      "row_recipe_no ASC"
+    ]
+  },
+  "row_order": [
+    "row_recipe_name ASC",
+    "row_recipe_no ASC"
+  ]
+}

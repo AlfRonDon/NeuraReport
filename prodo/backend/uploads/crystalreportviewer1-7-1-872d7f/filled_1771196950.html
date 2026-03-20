@@ -1,0 +1,529 @@
+
+<style id="nr-page-counter-style">
+  .nr-page-number,
+  .nr-page-count { white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .nr-page-label { white-space: nowrap; }
+  @media screen {
+    .nr-page-number::after { content: attr(data-nr-screen); }
+    .nr-page-count::after { content: attr(data-nr-total-pages); }
+  }
+  @media print {
+    body { counter-reset: page; }
+    .nr-page-number::after { content: counter(page); }
+    .nr-page-count::after { content: counter(pages); }
+    .nr-page-count[data-nr-total-pages]::after { content: attr(data-nr-total-pages); }
+  }
+</style>
+
+
+
+<meta charset="UTF-8">
+<meta>
+<title>Consumption Report</title>
+<style>
+:root {
+  --col-sl-w: 13mm;
+  --col-material-w: 70mm;
+  --col-set-w: 26mm;
+  --col-ach-w: 26mm;
+  --col-error-w: 20mm;
+  --col-error-pct-w: 19mm;
+  --header-margin-bottom: 2mm;
+  --table-margin-top: 0.5mm;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+@page {
+  size: A4;
+  margin: 12mm 10mm;
+}
+
+body {
+  font-family: Arial, sans-serif;
+  font-size: 9.5pt;
+  line-height: 1.2;
+  color: #000;
+  background: #fff;
+}
+
+#report-header {
+  border: 0.75pt solid #000;
+  padding: 3pt 6pt 2pt 6pt;
+  margin-bottom: var(--header-margin-bottom);
+}
+
+.header-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 2pt;
+  font-size: 9pt;
+}
+
+.header-row:last-child {
+  margin-bottom: 0;
+}
+
+.header-label {
+  font-weight: normal;
+  margin-right: 2pt;
+}
+
+.header-value {
+  font-weight: normal;
+}
+
+.header-right {
+  display: flex;
+  gap: 8pt;
+  align-items: center;
+}
+
+.title-row {
+  text-align: center;
+  font-weight: bold;
+  font-size: 11.5pt;
+  margin: 2pt 0;
+  letter-spacing: 0.3pt;
+}
+
+#data-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  margin-top: var(--table-margin-top);
+  font-size: 9pt;
+}
+
+#data-table th,
+#data-table td {
+  border: 0.75pt solid #000;
+  padding: 2pt 3pt;
+  text-align: left;
+  overflow: hidden;
+  font-variant-numeric: tabular-nums;
+}
+
+#data-table th {
+  background: #fff;
+  font-weight: bold;
+  text-align: center;
+  vertical-align: middle;
+  font-size: 9pt;
+  padding: 2.5pt 3pt;
+}
+
+#data-table td:first-child {
+  text-align: center;
+}
+
+#data-table td:nth-child(3),
+#data-table td:nth-child(4),
+#data-table td:nth-child(5),
+#data-table td:nth-child(6) {
+  text-align: right;
+  padding-right: 4pt;
+}
+
+#data-table col:nth-child(1) {
+  width: var(--col-sl-w);
+}
+
+#data-table col:nth-child(2) {
+  width: var(--col-material-w);
+}
+
+#data-table col:nth-child(3) {
+  width: var(--col-set-w);
+}
+
+#data-table col:nth-child(4) {
+  width: var(--col-ach-w);
+}
+
+#data-table col:nth-child(5) {
+  width: var(--col-error-w);
+}
+
+#data-table col:nth-child(6) {
+  width: var(--col-error-pct-w);
+}
+
+#data-table tfoot td {
+  font-weight: bold;
+  text-align: center;
+  background: #fff;
+}
+
+#data-table tfoot td:nth-child(3),
+#data-table tfoot td:nth-child(4),
+#data-table tfoot td:nth-child(5),
+#data-table tfoot td:nth-child(6) {
+  text-align: right;
+  padding-right: 4pt;
+}
+
+.footer {
+  margin-top: 8mm;
+  display: flex;
+  justify-content: space-between;
+  font-size: 8.5pt;
+  page-break-inside: avoid;
+}
+</style>
+
+
+
+<div id="report-header">
+  <div class="header-row">
+    <div>
+      <span class="header-label">Plant name</span>
+      <span class="header-value">: </span>
+    </div>
+    <div class="header-right">
+      <span class="header-label">From Date:</span>
+      <span class="header-value">2025-01-01</span>
+      <span class="header-label">to</span>
+      <span class="header-value">2025-12-31</span>
+    </div>
+  </div>
+  <div class="header-row">
+    <div>
+      <span class="header-label">Location</span>
+      <span class="header-value">: </span>
+    </div>
+  </div>
+  <div class="title-row">
+    Consumption report
+  </div>
+  <div class="header-row">
+    <div>
+      <span class="header-label">Print Date</span>
+      <span class="header-value">: 15/02/2026</span>
+    </div>
+    <div class="header-right">
+      <span class="header-label">Recipe code</span>
+      <span class="header-value">:</span>
+      <span class="header-value"></span>
+    </div>
+  </div>
+</div>
+
+<table id="data-table">
+  <colgroup>
+    <col>
+    <col>
+    <col>
+    <col>
+    <col>
+    <col>
+  </colgroup>
+  <thead>
+    <tr>
+      <th data-label="sl_no">Sl. No.</th>
+      <th data-label="material_name">Material name</th>
+      <th data-label="set_wt">Set. wt(Kg)</th>
+      <th data-label="ach_wt">Ach. wt(Kg)</th>
+      <th data-label="error">Error(Kg)</th>
+      <th data-label="error_pct">Error %</th>
+    </tr>
+  </thead>
+  <tbody>
+    <!-- BEGIN:BATCH (auto) --><tr>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+    </tr><!-- END:BATCH (auto) -->
+  </tbody>
+  <tfoot>
+    <tr>
+      <td colspan="2">Total</td>
+      <td>2701649</td>
+      <td>2692418</td>
+      <td>-9231</td>
+      <td>-0.003</td>
+    </tr>
+  </tfoot>
+</table>
+
+<div class="footer">
+  <div>Indian Industrial Machines Pvt. Ltd.</div>
+  <div><span class="nr-page-label" data-nr-counter-label="1">Page <span class="nr-page-number" data-nr-counter="page" aria-label="Current page number"></span></span></div>
+</div>
+
+
+
+<script id="nr-page-counter-script">
+(function() {
+  const METRICS = {"page_width_mm": 210.0, "page_height_mm": 297.0, "margin_top_mm": 12.0, "margin_bottom_mm": 12.0};
+  const PX_PER_MM = 96 / 25.4;
+  const BREAK_VALUES = ['page', 'always', 'left', 'right'];
+  const TRAILING_BREAK_SENTINEL = '__nr_trailing_break__';
+  let lastPageNodes = [];
+  let lastCountNodes = [];
+
+  function isForcedBreak(value) {
+    if (!value) return false;
+    const normalized = String(value).toLowerCase().trim();
+    if (!normalized) return false;
+    return BREAK_VALUES.indexOf(normalized) !== -1;
+  }
+
+  function readBreakValue(style, which) {
+    if (!style) return '';
+    if (which === 'before') {
+      return (
+        style.getPropertyValue('break-before') ||
+        style.getPropertyValue('page-break-before') ||
+        style.breakBefore ||
+        style.pageBreakBefore ||
+        ''
+      );
+    }
+    return (
+      style.getPropertyValue('break-after') ||
+      style.getPropertyValue('page-break-after') ||
+      style.breakAfter ||
+      style.pageBreakAfter ||
+      ''
+    );
+  }
+
+  function findNextElement(node) {
+    if (!node) return null;
+    let current = node;
+    while (current) {
+      if (current.nextElementSibling) return current.nextElementSibling;
+      current = current.parentElement;
+    }
+    return null;
+  }
+
+  function resolveNodeOffset(node) {
+    if (!node || typeof node.getBoundingClientRect !== 'function') return 0;
+    const rect = node.getBoundingClientRect();
+    const scrollY = typeof window !== 'undefined' ? window.scrollY || window.pageYOffset || 0 : 0;
+    return Math.max(0, rect.top + scrollY);
+  }
+
+  function collectManualBreakAnchors(root) {
+    if (!root || !root.ownerDocument) return [];
+    const anchors = [];
+    const seen = new Set();
+    const showElement = typeof NodeFilter !== 'undefined' && NodeFilter.SHOW_ELEMENT ? NodeFilter.SHOW_ELEMENT : 1;
+    const walker = root.ownerDocument.createTreeWalker(root, showElement);
+
+    function pushAnchor(target) {
+      if (!target) return;
+      if (seen.has(target)) return;
+      seen.add(target);
+      anchors.push(target);
+    }
+
+    while (walker.nextNode()) {
+      const element = walker.currentNode;
+      const style = window.getComputedStyle ? window.getComputedStyle(element) : null;
+      if (!style) continue;
+      if (isForcedBreak(readBreakValue(style, 'before'))) {
+        pushAnchor(element);
+      }
+      if (isForcedBreak(readBreakValue(style, 'after'))) {
+        const next = findNextElement(element);
+        pushAnchor(next || TRAILING_BREAK_SENTINEL);
+      }
+    }
+    return anchors;
+  }
+
+  function buildPageStartOffsets(manualAnchors, usableHeightPx, contentHeight, totalPages) {
+    const offsets = [0];
+    const seenOffsets = new Set([0]);
+    manualAnchors.forEach((anchor) => {
+      let offset = null;
+      if (anchor === TRAILING_BREAK_SENTINEL) {
+        offset = contentHeight + usableHeightPx;
+      } else if (anchor && typeof anchor.getBoundingClientRect === 'function') {
+        offset = resolveNodeOffset(anchor);
+      }
+      if (offset == null || !Number.isFinite(offset)) {
+        return;
+      }
+      const key = Math.round(offset * 1000) / 1000;
+      if (seenOffsets.has(key)) return;
+      seenOffsets.add(key);
+      offsets.push(offset);
+    });
+
+    offsets.sort((a, b) => a - b);
+
+    while (offsets.length < totalPages) {
+      const last = offsets[offsets.length - 1];
+      offsets.push(last + usableHeightPx);
+    }
+
+    return offsets;
+  }
+
+  function resolvePageIndexFromOffsets(offset, startOffsets) {
+    if (!startOffsets || !startOffsets.length) return 0;
+    let index = 0;
+    for (let i = 0; i < startOffsets.length; i += 1) {
+      if (offset >= startOffsets[i] - 0.5) {
+        index = i;
+      } else {
+        break;
+      }
+    }
+    return index;
+  }
+
+  function indexOfSection(node, sections) {
+    if (!node || !sections || !sections.length) return -1;
+    const target = typeof node.closest === 'function' ? node.closest('.nr-key-section') : null;
+    if (!target) return -1;
+    for (let i = 0; i < sections.length; i += 1) {
+      if (sections[i] === target) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
+  function assignScreenText(node, text, key) {
+    if (!node) return;
+    const stringText = text == null ? '' : String(text);
+    if (node.getAttribute('aria-label') === null) {
+      node.setAttribute('aria-label', key === 'count' ? 'Total page count' : 'Current page number');
+    }
+    node.setAttribute('data-nr-screen', stringText);
+    if (key === 'count') {
+      node.setAttribute('data-nr-total-pages', stringText);
+    } else {
+      node.setAttribute('data-nr-page-estimate', stringText);
+    }
+    node.setAttribute('data-nr-' + key + '-text', stringText);
+    node.textContent = stringText;
+  }
+
+  function clearNodesForPrint() {
+    const nodes = lastPageNodes.concat(lastCountNodes);
+    nodes.forEach((node) => {
+      if (!node) return;
+      if (!node.hasAttribute('data-nr-print-cache')) {
+        node.setAttribute('data-nr-print-cache', node.textContent || '');
+      }
+      node.textContent = '';
+    });
+  }
+
+  function restoreNodesAfterPrint() {
+    const nodes = lastPageNodes.concat(lastCountNodes);
+    nodes.forEach((node) => {
+      if (!node) return;
+      const cached = node.getAttribute('data-nr-print-cache');
+      if (cached != null) {
+        const key = node.getAttribute('data-nr-counter') === 'pages' ? 'count' : 'page';
+        const preferred = node.getAttribute('data-nr-' + key + '-text');
+        node.textContent = preferred != null ? preferred : cached;
+        node.removeAttribute('data-nr-print-cache');
+      }
+    });
+  }
+
+  function computeTotals() {
+    try {
+      const doc = document.documentElement;
+      const body = document.body;
+      if (!doc || !body) return;
+      const usableHeightMm = Math.max(METRICS.page_height_mm - (METRICS.margin_top_mm + METRICS.margin_bottom_mm), 0.1);
+      const usableHeightPx = usableHeightMm * PX_PER_MM;
+      const contentHeight = Math.max(
+        body.scrollHeight,
+        body.offsetHeight,
+        doc.scrollHeight,
+        doc.offsetHeight
+      );
+      const contentPages = Math.max(1, Math.ceil(contentHeight / usableHeightPx));
+      const manualAnchors = collectManualBreakAnchors(body);
+      const manualPages = manualAnchors.length > 0 ? manualAnchors.length + 1 : 1;
+      const totalPages = Math.max(contentPages, manualPages);
+      const startOffsets = buildPageStartOffsets(manualAnchors, usableHeightPx, contentHeight, totalPages);
+      const totalAsString = String(totalPages);
+      doc.setAttribute('data-nr-total-pages', totalAsString);
+      const countNodes = Array.from(document.querySelectorAll('[data-nr-counter="pages"]'));
+      countNodes.forEach((node) => assignScreenText(node, totalAsString, 'count'));
+      const pageNodes = Array.from(document.querySelectorAll('[data-nr-counter="page"]'));
+      const sections = Array.from(document.querySelectorAll('.nr-key-section'));
+      pageNodes.forEach((node) => {
+        const sectionIndex = indexOfSection(node, sections);
+        let pageIndex;
+        if (sectionIndex >= 0) {
+          pageIndex = sectionIndex;
+        } else {
+          const offset = resolveNodeOffset(node);
+          pageIndex = resolvePageIndexFromOffsets(offset, startOffsets);
+        }
+        const pageNumber = Math.min(totalPages, Math.max(1, pageIndex + 1));
+        assignScreenText(node, String(pageNumber), 'page');
+      });
+      lastPageNodes = pageNodes;
+      lastCountNodes = countNodes;
+    } catch (err) {
+      if (typeof console !== 'undefined' && console.warn) {
+        console.warn('nr-page-counter: unable to compute preview counters', err);
+      }
+    }
+  }
+
+  function scheduleCompute() {
+    computeTotals();
+    setTimeout(computeTotals, 180);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      scheduleCompute();
+    }, { once: true });
+  } else {
+    scheduleCompute();
+  }
+
+  if (typeof window !== 'undefined') {
+    window.addEventListener('resize', computeTotals, { passive: true });
+    window.addEventListener('beforeprint', clearNodesForPrint);
+    window.addEventListener('afterprint', () => {
+      restoreNodesAfterPrint();
+      scheduleCompute();
+    });
+    if (typeof window.matchMedia === 'function') {
+      const mediaQuery = window.matchMedia('print');
+      if (typeof mediaQuery.addEventListener === 'function') {
+        mediaQuery.addEventListener('change', (event) => {
+          if (event.matches) {
+            clearNodesForPrint();
+          } else {
+            restoreNodesAfterPrint();
+            scheduleCompute();
+          }
+        });
+      } else if (typeof mediaQuery.addListener === 'function') {
+        mediaQuery.addListener((event) => {
+          if (event.matches) {
+            clearNodesForPrint();
+          } else {
+            restoreNodesAfterPrint();
+            scheduleCompute();
+          }
+        });
+      }
+    }
+  }
+})();
+</script>

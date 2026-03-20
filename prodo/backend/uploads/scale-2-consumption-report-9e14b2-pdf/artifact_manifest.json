@@ -1,0 +1,16 @@
+{
+  "correlation_id": null,
+  "file_checksums": {},
+  "files": {
+    "filled_1772627544.html": "filled_1772627544.html",
+    "filled_1772627544.pdf": "filled_1772627544.pdf"
+  },
+  "input_refs": [
+    "/home/rohith/desktop/NeuraReport/prodo/backend/uploads/scale-2-consumption-report-9e14b2-pdf/contract.json",
+    "/home/rohith/desktop/NeuraReport/recipe_log (1).sqlite3"
+  ],
+  "pid": 104614,
+  "produced_at": "2026-03-04T12:32:24.898755+00:00",
+  "schema_version": "1.0",
+  "step": "reports_run_started"
+}

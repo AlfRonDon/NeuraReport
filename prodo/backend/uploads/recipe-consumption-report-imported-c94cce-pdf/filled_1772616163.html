@@ -1,0 +1,6879 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Consumption Report</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: Arial, Helvetica, sans-serif; font-size: 11px; color: #000; background: #fff; }
+.page { max-width: 800px; margin: 0 auto; padding: 24px 36px; }
+
+/* ── Report Header ── */
+.report-header { margin-bottom: 4px; }
+.report-header table { width: 100%; border-collapse: collapse; }
+.report-header td { padding: 1px 4px; vertical-align: top; font-size: 11px; }
+.report-header .lbl { font-weight: bold; white-space: nowrap; }
+.report-header .colon { width: 10px; text-align: center; }
+.report-header .gap { width: 30px; }
+
+.report-title {
+  text-align: center; font-size: 18px; font-weight: bold;
+  margin: 8px 0 14px;
+}
+
+/* ── Batch Section ── */
+.batch-section {
+  margin-bottom: 16px; page-break-inside: avoid;
+  border: 1px solid #000;
+}
+.batch-hdr {
+  padding: 3px 6px; font-weight: bold; font-size: 11px;
+  border-bottom: 1px solid #000;
+  display: flex; justify-content: space-between;
+}
+.batch-hdr-left span { margin-right: 24px; }
+.batch-hdr-right span { margin-left: 24px; }
+
+/* ── Materials Table ── */
+.mat-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+.mat-table th, .mat-table td {
+  border: 1px solid #000; padding: 3px 6px;
+  border-left: 1px solid #000; border-right: 1px solid #000;
+}
+/* Remove top border on first row since the batch-hdr border-bottom serves as separator */
+.mat-table { border-top: none; }
+.mat-table thead th {
+  font-weight: bold; text-align: center; font-size: 11px;
+  border-top: none;
+}
+.mat-table tbody td { text-align: right; }
+.mat-table tbody td:nth-child(1) { text-align: center; width: 56px; }
+.mat-table tbody td:nth-child(2) { text-align: left; }
+.mat-table tfoot td {
+  font-weight: bold; text-align: right;
+}
+.mat-table tfoot td:first-child { text-align: left; }
+/* Prevent double borders with .batch-section outer border */
+.mat-table th:first-child, .mat-table td:first-child { border-left: none; }
+.mat-table th:last-child, .mat-table td:last-child { border-right: none; }
+.mat-table tfoot td { border-bottom: none; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="report-header">
+    <table>
+      <tr>
+        <td class="lbl">Plant name</td><td class="colon">:</td><td>Coastal Feeds</td>
+        <td class="gap"></td>
+        <td class="lbl">From</td><td class="colon">:</td><td>01/07/2025</td>
+      </tr>
+      <tr>
+        <td class="lbl">Location</td><td class="colon">:</td><td>Gudivada</td>
+        <td class="gap"></td>
+        <td class="lbl">To</td><td class="colon">:</td><td>31/07/2025</td>
+      </tr>
+      <tr>
+        <td class="lbl">Print Date</td><td class="colon">:</td><td>04/03/2026</td>
+        <td class="gap"></td>
+        <td class="lbl">Recipe code</td><td class="colon">:</td><td>NUMEI</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="report-title">Consumption report</div>
+
+  <section class="batch-block batch-section">
+    <div class="batch-hdr">
+      <span class="batch-hdr-left"><span>Recipe NUMEI</span><span>Batch # 1</span></span>
+      <span class="batch-hdr-right"><span>Start 2025-07-01 11:20:52</span><span>End 2025-07-01 11:35:57</span></span>
+    </div>
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Sl. No.</th>
+          <th>Material name</th>
+          <th>Set. wt(Kg)</th>
+          <th>Ach. wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>SOYA</td>
+          <td>274</td>
+          <td>274</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>101</td>
+          <td>1</td>
+          <td>1.000</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>RG 60%</td>
+          <td>60</td>
+          <td>59</td>
+          <td>-1</td>
+          <td>-1.667</td>
+        </tr>
+<tr>
+          <td>4</td>
+          <td>R BRAWAN</td>
+          <td>50</td>
+          <td>47</td>
+          <td>-3</td>
+          <td>-6.000</td>
+        </tr>
+<tr>
+          <td>5</td>
+          <td>GNDOC</td>
+          <td>50</td>
+          <td>51</td>
+          <td>1</td>
+          <td>2.000</td>
+        </tr>
+<tr>
+          <td>6</td>
+          <td>RECYCLE P</td>
+          <td>100</td>
+          <td>101</td>
+          <td>1</td>
+          <td>1.000</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>FISH MEAL</td>
+          <td>50</td>
+          <td>45</td>
+          <td>-5</td>
+          <td>-10.000</td>
+        </tr>
+<tr>
+          <td>8</td>
+          <td>MAIDA</td>
+          <td>150</td>
+          <td>148</td>
+          <td>-2</td>
+          <td>-1.333</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total for batch</td>
+          <td>834</td>
+          <td>826</td>
+          <td>-8</td>
+          <td>-0.959</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <div class="batch-hdr">
+      <span class="batch-hdr-left"><span>Recipe NUMEI</span><span>Batch # 2</span></span>
+      <span class="batch-hdr-right"><span>Start 2025-07-01 11:20:52</span><span>End 2025-07-01 11:35:58</span></span>
+    </div>
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Sl. No.</th>
+          <th>Material name</th>
+          <th>Set. wt(Kg)</th>
+          <th>Ach. wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>SOYA</td>
+          <td>274</td>
+          <td>274</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>101</td>
+          <td>1</td>
+          <td>1.000</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>RG 60%</td>
+          <td>60</td>
+          <td>59</td>
+          <td>-1</td>
+          <td>-1.667</td>
+        </tr>
+<tr>
+          <td>4</td>
+          <td>R BRAWAN</td>
+          <td>50</td>
+          <td>47</td>
+          <td>-3</td>
+          <td>-6.000</td>
+        </tr>
+<tr>
+          <td>5</td>
+          <td>GNDOC</td>
+          <td>50</td>
+          <td>51</td>
+          <td>1</td>
+          <td>2.000</td>
+        </tr>
+<tr>
+          <td>6</td>
+          <td>RECYCLE P</td>
+          <td>100</td>
+          <td>101</td>
+          <td>1</td>
+          <td>1.000</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>FISH MEAL</td>
+          <td>50</td>
+          <td>45</td>
+          <td>-5</td>
+          <td>-10.000</td>
+        </tr>
+<tr>
+          <td>8</td>
+          <td>MAIDA</td>
+          <td>150</td>
+          <td>148</td>
+          <td>-2</td>
+          <td>-1.333</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total for batch</td>
+          <td>834</td>
+          <td>826</td>
+          <td>-8</td>
+          <td>-0.959</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <div class="batch-hdr">
+      <span class="batch-hdr-left"><span>Recipe NUMEI</span><span>Batch # 3</span></span>
+      <span class="batch-hdr-right"><span>Start 2025-07-01 11:36:44</span><span>End 2025-07-01 11:41:08</span></span>
+    </div>
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Sl. No.</th>
+          <th>Material name</th>
+          <th>Set. wt(Kg)</th>
+          <th>Ach. wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>SOYA</td>
+          <td>274</td>
+          <td>273</td>
+          <td>-1</td>
+          <td>-0.365</td>
+        </tr>
+<tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>101</td>
+          <td>1</td>
+          <td>1.000</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>RG 60%</td>
+          <td>60</td>
+          <td>59</td>
+          <td>-1</td>
+          <td>-1.667</td>
+        </tr>
+<tr>
+          <td>4</td>
+          <td>R BRAWAN</td>
+          <td>50</td>
+          <td>47</td>
+          <td>-3</td>
+          <td>-6.000</td>
+        </tr>
+<tr>
+          <td>5</td>
+          <td>GNDOC</td>
+          <td>50</td>
+          <td>50</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>6</td>
+          <td>RECYCLE P</td>
+          <td>100</td>
+          <td>100</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>FISH MEAL</td>
+          <td>50</td>
+          <td>51</td>
+          <td>1</td>
+          <td>2.000</td>
+        </tr>
+<tr>
+          <td>8</td>
+          <td>MAIDA</td>
+          <td>150</td>
+          <td>149</td>
+          <td>-1</td>
+          <td>-0.667</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total for batch</td>
+          <td>834</td>
+          <td>830</td>
+          <td>-4</td>
+          <td>-0.48</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <div class="batch-hdr">
+      <span class="batch-hdr-left"><span>Recipe NUMEI</span><span>Batch # 4</span></span>
+      <span class="batch-hdr-right"><span>Start 2025-07-01 11:36:44</span><span>End 2025-07-01 11:41:08</span></span>
+    </div>
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Sl. No.</th>
+          <th>Material name</th>
+          <th>Set. wt(Kg)</th>
+          <th>Ach. wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>SOYA</td>
+          <td>274</td>
+          <td>273</td>
+          <td>-1</td>
+          <td>-0.365</td>
+        </tr>
+<tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>101</td>
+          <td>1</td>
+          <td>1.000</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>RG 60%</td>
+          <td>60</td>
+          <td>59</td>
+          <td>-1</td>
+          <td>-1.667</td>
+        </tr>
+<tr>
+          <td>4</td>
+          <td>R BRAWAN</td>
+          <td>50</td>
+          <td>47</td>
+          <td>-3</td>
+          <td>-6.000</td>
+        </tr>
+<tr>
+          <td>5</td>
+          <td>GNDOC</td>
+          <td>50</td>
+          <td>50</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>6</td>
+          <td>RECYCLE P</td>
+          <td>100</td>
+          <td>100</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>FISH MEAL</td>
+          <td>50</td>
+          <td>51</td>
+          <td>1</td>
+          <td>2.000</td>
+        </tr>
+<tr>
+          <td>8</td>
+          <td>MAIDA</td>
+          <td>150</td>
+          <td>149</td>
+          <td>-1</td>
+          <td>-0.667</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total for batch</td>
+          <td>834</td>
+          <td>830</td>
+          <td>-4</td>
+          <td>-0.48</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <div class="batch-hdr">
+      <span class="batch-hdr-left"><span>Recipe NUMEI</span><span>Batch # 5</span></span>
+      <span class="batch-hdr-right"><span>Start 2025-07-01 12:01:28</span><span>End 2025-07-01 12:05:45</span></span>
+    </div>
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Sl. No.</th>
+          <th>Material name</th>
+          <th>Set. wt(Kg)</th>
+          <th>Ach. wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>SOYA</td>
+          <td>274</td>
+          <td>272</td>
+          <td>-2</td>
+          <td>-0.730</td>
+        </tr>
+<tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>100</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>RG 60%</td>
+          <td>60</td>
+          <td>59</td>
+          <td>-1</td>
+          <td>-1.667</td>
+        </tr>
+<tr>
+          <td>4</td>
+          <td>R BRAWAN</td>
+          <td>50</td>
+          <td>47</td>
+          <td>-3</td>
+          <td>-6.000</td>
+        </tr>
+<tr>
+          <td>5</td>
+          <td>GNDOC</td>
+          <td>50</td>
+          <td>52</td>
+          <td>2</td>
+          <td>4.000</td>
+        </tr>
+<tr>
+          <td>6</td>
+          <td>RECYCLE P</td>
+          <td>100</td>
+          <td>101</td>
+          <td>1</td>
+          <td>1.000</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>FISH MEAL</td>
+          <td>50</td>
+          <td>51</td>
+          <td>1</td>
+          <td>2.000</td>
+        </tr>
+<tr>
+          <td>8</td>
+          <td>MAIDA</td>
+          <td>150</td>
+          <td>149</td>
+          <td>-1</td>
+          <td>-0.667</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total for batch</td>
+          <td>834</td>
+          <td>831</td>
+          <td>-3</td>
+          <td>-0.36</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <div class="batch-hdr">
+      <span class="batch-hdr-left"><span>Recipe NUMEI</span><span>Batch # 6</span></span>
+      <span class="batch-hdr-right"><span>Start 2025-07-01 12:01:28</span><span>End 2025-07-01 12:05:45</span></span>
+    </div>
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Sl. No.</th>
+          <th>Material name</th>
+          <th>Set. wt(Kg)</th>
+          <th>Ach. wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>SOYA</td>
+          <td>274</td>
+          <td>272</td>
+          <td>-2</td>
+          <td>-0.730</td>
+        </tr>
+<tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>100</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>RG 60%</td>
+          <td>60</td>
+          <td>59</td>
+          <td>-1</td>
+          <td>-1.667</td>
+        </tr>
+<tr>
+          <td>4</td>
+          <td>R BRAWAN</td>
+          <td>50</td>
+          <td>47</td>
+          <td>-3</td>
+          <td>-6.000</td>
+        </tr>
+<tr>
+          <td>5</td>
+          <td>GNDOC</td>
+          <td>50</td>
+          <td>52</td>
+          <td>2</td>
+          <td>4.000</td>
+        </tr>
+<tr>
+          <td>6</td>
+          <td>RECYCLE P</td>
+          <td>100</td>
+          <td>101</td>
+          <td>1</td>
+          <td>1.000</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>FISH MEAL</td>
+          <td>50</td>
+          <td>51</td>
+          <td>1</td>
+          <td>2.000</td>
+        </tr>
+<tr>
+          <td>8</td>
+          <td>MAIDA</td>
+          <td>150</td>
+          <td>149</td>
+          <td>-1</td>
+          <td>-0.667</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total for batch</td>
+          <td>834</td>
+          <td>831</td>
+          <td>-3</td>
+          <td>-0.36</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <div class="batch-hdr">
+      <span class="batch-hdr-left"><span>Recipe NUMEI</span><span>Batch # 7</span></span>
+      <span class="batch-hdr-right"><span>Start 2025-07-01 12:18:43</span><span>End 2025-07-01 12:23:00</span></span>
+    </div>
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Sl. No.</th>
+          <th>Material name</th>
+          <th>Set. wt(Kg)</th>
+          <th>Ach. wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>SOYA</td>
+          <td>274</td>
+          <td>273</td>
+          <td>-1</td>
+          <td>-0.365</td>
+        </tr>
+<tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>100</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>RG 60%</td>
+          <td>60</td>
+          <td>58</td>
+          <td>-2</td>
+          <td>-3.333</td>
+        </tr>
+<tr>
+          <td>4</td>
+          <td>R BRAWAN</td>
+          <td>50</td>
+          <td>47</td>
+          <td>-3</td>
+          <td>-6.000</td>
+        </tr>
+<tr>
+          <td>5</td>
+          <td>GNDOC</td>
+          <td>50</td>
+          <td>51</td>
+          <td>1</td>
+          <td>2.000</td>
+        </tr>
+<tr>
+          <td>6</td>
+          <td>RECYCLE P</td>
+          <td>100</td>
+          <td>101</td>
+          <td>1</td>
+          <td>1.000</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>FISH MEAL</td>
+          <td>50</td>
+          <td>50</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>8</td>
+          <td>MAIDA</td>
+          <td>150</td>
+          <td>149</td>
+          <td>-1</td>
+          <td>-0.667</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total for batch</td>
+          <td>834</td>
+          <td>829</td>
+          <td>-5</td>
+          <td>-0.6</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <div class="batch-hdr">
+      <span class="batch-hdr-left"><span>Recipe NUMEI</span><span>Batch # 8</span></span>
+      <span class="batch-hdr-right"><span>Start 2025-07-01 12:18:43</span><span>End 2025-07-01 12:23:00</span></span>
+    </div>
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Sl. No.</th>
+          <th>Material name</th>
+          <th>Set. wt(Kg)</th>
+          <th>Ach. wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>SOYA</td>
+          <td>274</td>
+          <td>273</td>
+          <td>-1</td>
+          <td>-0.365</td>
+        </tr>
+<tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>100</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>RG 60%</td>
+          <td>60</td>
+          <td>58</td>
+          <td>-2</td>
+          <td>-3.333</td>
+        </tr>
+<tr>
+          <td>4</td>
+          <td>R BRAWAN</td>
+          <td>50</td>
+          <td>47</td>
+          <td>-3</td>
+          <td>-6.000</td>
+        </tr>
+<tr>
+          <td>5</td>
+          <td>GNDOC</td>
+          <td>50</td>
+          <td>51</td>
+          <td>1</td>
+          <td>2.000</td>
+        </tr>
+<tr>
+          <td>6</td>
+          <td>RECYCLE P</td>
+          <td>100</td>
+          <td>101</td>
+          <td>1</td>
+          <td>1.000</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>FISH MEAL</td>
+          <td>50</td>
+          <td>50</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>8</td>
+          <td>MAIDA</td>
+          <td>150</td>
+          <td>149</td>
+          <td>-1</td>
+          <td>-0.667</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total for batch</td>
+          <td>834</td>
+          <td>829</td>
+          <td>-5</td>
+          <td>-0.6</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <div class="batch-hdr">
+      <span class="batch-hdr-left"><span>Recipe NUMEI</span><span>Batch # 9</span></span>
+      <span class="batch-hdr-right"><span>Start 2025-07-01 12:33:54</span><span>End 2025-07-01 12:38:11</span></span>
+    </div>
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Sl. No.</th>
+          <th>Material name</th>
+          <th>Set. wt(Kg)</th>
+          <th>Ach. wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>SOYA</td>
+          <td>274</td>
+          <td>273</td>
+          <td>-1</td>
+          <td>-0.365</td>
+        </tr>
+<tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>101</td>
+          <td>1</td>
+          <td>1.000</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>RG 60%</td>
+          <td>60</td>
+          <td>59</td>
+          <td>-1</td>
+          <td>-1.667</td>
+        </tr>
+<tr>
+          <td>4</td>
+          <td>R BRAWAN</td>
+          <td>50</td>
+          <td>47</td>
+          <td>-3</td>
+          <td>-6.000</td>
+        </tr>
+<tr>
+          <td>5</td>
+          <td>GNDOC</td>
+          <td>50</td>
+          <td>51</td>
+          <td>1</td>
+          <td>2.000</td>
+        </tr>
+<tr>
+          <td>6</td>
+          <td>RECYCLE P</td>
+          <td>100</td>
+          <td>101</td>
+          <td>1</td>
+          <td>1.000</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>FISH MEAL</td>
+          <td>50</td>
+          <td>50</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>8</td>
+          <td>MAIDA</td>
+          <td>150</td>
+          <td>148</td>
+          <td>-2</td>
+          <td>-1.333</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total for batch</td>
+          <td>834</td>
+          <td>830</td>
+          <td>-4</td>
+          <td>-0.48</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <div class="batch-hdr">
+      <span class="batch-hdr-left"><span>Recipe NUMEI</span><span>Batch # 10</span></span>
+      <span class="batch-hdr-right"><span>Start 2025-07-01 12:33:54</span><span>End 2025-07-01 12:38:12</span></span>
+    </div>
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Sl. No.</th>
+          <th>Material name</th>
+          <th>Set. wt(Kg)</th>
+          <th>Ach. wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>SOYA</td>
+          <td>274</td>
+          <td>273</td>
+          <td>-1</td>
+          <td>-0.365</td>
+        </tr>
+<tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>101</td>
+          <td>1</td>
+          <td>1.000</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>RG 60%</td>
+          <td>60</td>
+          <td>59</td>
+          <td>-1</td>
+          <td>-1.667</td>
+        </tr>
+<tr>
+          <td>4</td>
+          <td>R BRAWAN</td>
+          <td>50</td>
+          <td>47</td>
+          <td>-3</td>
+          <td>-6.000</td>
+        </tr>
+<tr>
+          <td>5</td>
+          <td>GNDOC</td>
+          <td>50</td>
+          <td>51</td>
+          <td>1</td>
+          <td>2.000</td>
+        </tr>
+<tr>
+          <td>6</td>
+          <td>RECYCLE P</td>
+          <td>100</td>
+          <td>101</td>
+          <td>1</td>
+          <td>1.000</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>FISH MEAL</td>
+          <td>50</td>
+          <td>50</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>8</td>
+          <td>MAIDA</td>
+          <td>150</td>
+          <td>148</td>
+          <td>-2</td>
+          <td>-1.333</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total for batch</td>
+          <td>834</td>
+          <td>830</td>
+          <td>-4</td>
+          <td>-0.48</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <div class="batch-hdr">
+      <span class="batch-hdr-left"><span>Recipe NUMEI</span><span>Batch # 11</span></span>
+      <span class="batch-hdr-right"><span>Start 2025-07-04 14:06:01</span><span>End 2025-07-04 14:10:21</span></span>
+    </div>
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Sl. No.</th>
+          <th>Material name</th>
+          <th>Set. wt(Kg)</th>
+          <th>Ach. wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>SOYA</td>
+          <td>274</td>
+          <td>273</td>
+          <td>-1</td>
+          <td>-0.365</td>
+        </tr>
+<tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>99</td>
+          <td>-1</td>
+          <td>-1.000</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>RG 60%</td>
+          <td>60</td>
+          <td>58</td>
+          <td>-2</td>
+          <td>-3.333</td>
+        </tr>
+<tr>
+          <td>4</td>
+          <td>R BRAWAN</td>
+          <td>50</td>
+          <td>47</td>
+          <td>-3</td>
+          <td>-6.000</td>
+        </tr>
+<tr>
+          <td>5</td>
+          <td>GNDOC</td>
+          <td>50</td>
+          <td>51</td>
+          <td>1</td>
+          <td>2.000</td>
+        </tr>
+<tr>
+          <td>6</td>
+          <td>RECYCLE P</td>
+          <td>100</td>
+          <td>101</td>
+          <td>1</td>
+          <td>1.000</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>FISH MEAL</td>
+          <td>50</td>
+          <td>51</td>
+          <td>1</td>
+          <td>2.000</td>
+        </tr>
+<tr>
+          <td>8</td>
+          <td>MAIDA</td>
+          <td>150</td>
+          <td>149</td>
+          <td>-1</td>
+          <td>-0.667</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total for batch</td>
+          <td>834</td>
+          <td>829</td>
+          <td>-5</td>
+          <td>-0.6</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <div class="batch-hdr">
+      <span class="batch-hdr-left"><span>Recipe NUMEI</span><span>Batch # 12</span></span>
+      <span class="batch-hdr-right"><span>Start 2025-07-04 14:11:26</span><span>End 2025-07-04 14:15:50</span></span>
+    </div>
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Sl. No.</th>
+          <th>Material name</th>
+          <th>Set. wt(Kg)</th>
+          <th>Ach. wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>SOYA</td>
+          <td>274</td>
+          <td>273</td>
+          <td>-1</td>
+          <td>-0.365</td>
+        </tr>
+<tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>100</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>RG 60%</td>
+          <td>60</td>
+          <td>59</td>
+          <td>-1</td>
+          <td>-1.667</td>
+        </tr>
+<tr>
+          <td>4</td>
+          <td>R BRAWAN</td>
+          <td>50</td>
+          <td>48</td>
+          <td>-2</td>
+          <td>-4.000</td>
+        </tr>
+<tr>
+          <td>5</td>
+          <td>GNDOC</td>
+          <td>50</td>
+          <td>51</td>
+          <td>1</td>
+          <td>2.000</td>
+        </tr>
+<tr>
+          <td>6</td>
+          <td>RECYCLE P</td>
+          <td>100</td>
+          <td>101</td>
+          <td>1</td>
+          <td>1.000</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>FISH MEAL</td>
+          <td>50</td>
+          <td>50</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>8</td>
+          <td>MAIDA</td>
+          <td>150</td>
+          <td>148</td>
+          <td>-2</td>
+          <td>-1.333</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total for batch</td>
+          <td>834</td>
+          <td>830</td>
+          <td>-4</td>
+          <td>-0.48</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <div class="batch-hdr">
+      <span class="batch-hdr-left"><span>Recipe NUMEI</span><span>Batch # 13</span></span>
+      <span class="batch-hdr-right"><span>Start 2025-07-04 14:21:38</span><span>End 2025-07-04 14:26:00</span></span>
+    </div>
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Sl. No.</th>
+          <th>Material name</th>
+          <th>Set. wt(Kg)</th>
+          <th>Ach. wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>SOYA</td>
+          <td>274</td>
+          <td>273</td>
+          <td>-1</td>
+          <td>-0.365</td>
+        </tr>
+<tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>103</td>
+          <td>3</td>
+          <td>3.000</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>RG 60%</td>
+          <td>60</td>
+          <td>59</td>
+          <td>-1</td>
+          <td>-1.667</td>
+        </tr>
+<tr>
+          <td>4</td>
+          <td>R BRAWAN</td>
+          <td>50</td>
+          <td>47</td>
+          <td>-3</td>
+          <td>-6.000</td>
+        </tr>
+<tr>
+          <td>5</td>
+          <td>GNDOC</td>
+          <td>50</td>
+          <td>52</td>
+          <td>2</td>
+          <td>4.000</td>
+        </tr>
+<tr>
+          <td>6</td>
+          <td>RECYCLE P</td>
+          <td>100</td>
+          <td>100</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>FISH MEAL</td>
+          <td>50</td>
+          <td>49</td>
+          <td>-1</td>
+          <td>-2.000</td>
+        </tr>
+<tr>
+          <td>8</td>
+          <td>MAIDA</td>
+          <td>150</td>
+          <td>149</td>
+          <td>-1</td>
+          <td>-0.667</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total for batch</td>
+          <td>834</td>
+          <td>832</td>
+          <td>-2</td>
+          <td>-0.24</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <div class="batch-hdr">
+      <span class="batch-hdr-left"><span>Recipe NUMEI</span><span>Batch # 14</span></span>
+      <span class="batch-hdr-right"><span>Start 2025-07-04 14:40:18</span><span>End 2025-07-04 14:44:39</span></span>
+    </div>
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Sl. No.</th>
+          <th>Material name</th>
+          <th>Set. wt(Kg)</th>
+          <th>Ach. wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>SOYA</td>
+          <td>274</td>
+          <td>272</td>
+          <td>-2</td>
+          <td>-0.730</td>
+        </tr>
+<tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>103</td>
+          <td>3</td>
+          <td>3.000</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>RG 60%</td>
+          <td>60</td>
+          <td>59</td>
+          <td>-1</td>
+          <td>-1.667</td>
+        </tr>
+<tr>
+          <td>4</td>
+          <td>R BRAWAN</td>
+          <td>50</td>
+          <td>47</td>
+          <td>-3</td>
+          <td>-6.000</td>
+        </tr>
+<tr>
+          <td>5</td>
+          <td>GNDOC</td>
+          <td>50</td>
+          <td>51</td>
+          <td>1</td>
+          <td>2.000</td>
+        </tr>
+<tr>
+          <td>6</td>
+          <td>RECYCLE P</td>
+          <td>100</td>
+          <td>100</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>FISH MEAL</td>
+          <td>50</td>
+          <td>50</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>8</td>
+          <td>MAIDA</td>
+          <td>150</td>
+          <td>149</td>
+          <td>-1</td>
+          <td>-0.667</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total for batch</td>
+          <td>834</td>
+          <td>831</td>
+          <td>-3</td>
+          <td>-0.36</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <div class="batch-hdr">
+      <span class="batch-hdr-left"><span>Recipe NUMEI</span><span>Batch # 15</span></span>
+      <span class="batch-hdr-right"><span>Start 2025-07-04 14:59:45</span><span>End 2025-07-04 15:04:05</span></span>
+    </div>
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Sl. No.</th>
+          <th>Material name</th>
+          <th>Set. wt(Kg)</th>
+          <th>Ach. wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>SOYA</td>
+          <td>274</td>
+          <td>273</td>
+          <td>-1</td>
+          <td>-0.365</td>
+        </tr>
+<tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>102</td>
+          <td>2</td>
+          <td>2.000</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>RG 60%</td>
+          <td>60</td>
+          <td>59</td>
+          <td>-1</td>
+          <td>-1.667</td>
+        </tr>
+<tr>
+          <td>4</td>
+          <td>R BRAWAN</td>
+          <td>50</td>
+          <td>47</td>
+          <td>-3</td>
+          <td>-6.000</td>
+        </tr>
+<tr>
+          <td>5</td>
+          <td>GNDOC</td>
+          <td>50</td>
+          <td>51</td>
+          <td>1</td>
+          <td>2.000</td>
+        </tr>
+<tr>
+          <td>6</td>
+          <td>RECYCLE P</td>
+          <td>100</td>
+          <td>99</td>
+          <td>-1</td>
+          <td>-1.000</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>FISH MEAL</td>
+          <td>50</td>
+          <td>50</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>8</td>
+          <td>MAIDA</td>
+          <td>150</td>
+          <td>148</td>
+          <td>-2</td>
+          <td>-1.333</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total for batch</td>
+          <td>834</td>
+          <td>829</td>
+          <td>-5</td>
+          <td>-0.6</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <div class="batch-hdr">
+      <span class="batch-hdr-left"><span>Recipe NUMEI</span><span>Batch # 16</span></span>
+      <span class="batch-hdr-right"><span>Start 2025-07-04 15:18:01</span><span>End 2025-07-04 15:22:15</span></span>
+    </div>
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Sl. No.</th>
+          <th>Material name</th>
+          <th>Set. wt(Kg)</th>
+          <th>Ach. wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>SOYA</td>
+          <td>274</td>
+          <td>273</td>
+          <td>-1</td>
+          <td>-0.365</td>
+        </tr>
+<tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>102</td>
+          <td>2</td>
+          <td>2.000</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>RG 60%</td>
+          <td>60</td>
+          <td>59</td>
+          <td>-1</td>
+          <td>-1.667</td>
+        </tr>
+<tr>
+          <td>4</td>
+          <td>R BRAWAN</td>
+          <td>50</td>
+          <td>46</td>
+          <td>-4</td>
+          <td>-8.000</td>
+        </tr>
+<tr>
+          <td>5</td>
+          <td>GNDOC</td>
+          <td>50</td>
+          <td>50</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>6</td>
+          <td>RECYCLE P</td>
+          <td>100</td>
+          <td>99</td>
+          <td>-1</td>
+          <td>-1.000</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>FISH MEAL</td>
+          <td>50</td>
+          <td>50</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>8</td>
+          <td>MAIDA</td>
+          <td>150</td>
+          <td>149</td>
+          <td>-1</td>
+          <td>-0.667</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total for batch</td>
+          <td>834</td>
+          <td>828</td>
+          <td>-6</td>
+          <td>-0.719</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <div class="batch-hdr">
+      <span class="batch-hdr-left"><span>Recipe NUMEI</span><span>Batch # 17</span></span>
+      <span class="batch-hdr-right"><span>Start 2025-07-04 15:35:00</span><span>End 2025-07-04 15:39:51</span></span>
+    </div>
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Sl. No.</th>
+          <th>Material name</th>
+          <th>Set. wt(Kg)</th>
+          <th>Ach. wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>SOYA</td>
+          <td>274</td>
+          <td>274</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>101</td>
+          <td>1</td>
+          <td>1.000</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>RG 60%</td>
+          <td>60</td>
+          <td>58</td>
+          <td>-2</td>
+          <td>-3.333</td>
+        </tr>
+<tr>
+          <td>4</td>
+          <td>R BRAWAN</td>
+          <td>50</td>
+          <td>47</td>
+          <td>-3</td>
+          <td>-6.000</td>
+        </tr>
+<tr>
+          <td>5</td>
+          <td>GNDOC</td>
+          <td>50</td>
+          <td>52</td>
+          <td>2</td>
+          <td>4.000</td>
+        </tr>
+<tr>
+          <td>6</td>
+          <td>RECYCLE P</td>
+          <td>100</td>
+          <td>100</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>FISH MEAL</td>
+          <td>50</td>
+          <td>50</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>8</td>
+          <td>MAIDA</td>
+          <td>150</td>
+          <td>147</td>
+          <td>-3</td>
+          <td>-2.000</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total for batch</td>
+          <td>834</td>
+          <td>829</td>
+          <td>-5</td>
+          <td>-0.6</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <div class="batch-hdr">
+      <span class="batch-hdr-left"><span>Recipe NUMEI</span><span>Batch # 18</span></span>
+      <span class="batch-hdr-right"><span>Start 2025-07-04 15:53:03</span><span>End 2025-07-04 16:03:08</span></span>
+    </div>
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Sl. No.</th>
+          <th>Material name</th>
+          <th>Set. wt(Kg)</th>
+          <th>Ach. wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>SOYA</td>
+          <td>274</td>
+          <td>272</td>
+          <td>-2</td>
+          <td>-0.730</td>
+        </tr>
+<tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>102</td>
+          <td>2</td>
+          <td>2.000</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>RG 60%</td>
+          <td>60</td>
+          <td>59</td>
+          <td>-1</td>
+          <td>-1.667</td>
+        </tr>
+<tr>
+          <td>4</td>
+          <td>R BRAWAN</td>
+          <td>50</td>
+          <td>47</td>
+          <td>-3</td>
+          <td>-6.000</td>
+        </tr>
+<tr>
+          <td>5</td>
+          <td>GNDOC</td>
+          <td>50</td>
+          <td>51</td>
+          <td>1</td>
+          <td>2.000</td>
+        </tr>
+<tr>
+          <td>6</td>
+          <td>RECYCLE P</td>
+          <td>100</td>
+          <td>99</td>
+          <td>-1</td>
+          <td>-1.000</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>FISH MEAL</td>
+          <td>50</td>
+          <td>50</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>8</td>
+          <td>MAIDA</td>
+          <td>150</td>
+          <td>150</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total for batch</td>
+          <td>834</td>
+          <td>830</td>
+          <td>-4</td>
+          <td>-0.48</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <div class="batch-hdr">
+      <span class="batch-hdr-left"><span>Recipe NUMEI</span><span>Batch # 19</span></span>
+      <span class="batch-hdr-right"><span>Start 2025-07-04 15:53:03</span><span>End 2025-07-04 16:03:08</span></span>
+    </div>
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Sl. No.</th>
+          <th>Material name</th>
+          <th>Set. wt(Kg)</th>
+          <th>Ach. wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>SOYA</td>
+          <td>274</td>
+          <td>272</td>
+          <td>-2</td>
+          <td>-0.730</td>
+        </tr>
+<tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>102</td>
+          <td>2</td>
+          <td>2.000</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>RG 60%</td>
+          <td>60</td>
+          <td>59</td>
+          <td>-1</td>
+          <td>-1.667</td>
+        </tr>
+<tr>
+          <td>4</td>
+          <td>R BRAWAN</td>
+          <td>50</td>
+          <td>47</td>
+          <td>-3</td>
+          <td>-6.000</td>
+        </tr>
+<tr>
+          <td>5</td>
+          <td>GNDOC</td>
+          <td>50</td>
+          <td>51</td>
+          <td>1</td>
+          <td>2.000</td>
+        </tr>
+<tr>
+          <td>6</td>
+          <td>RECYCLE P</td>
+          <td>100</td>
+          <td>99</td>
+          <td>-1</td>
+          <td>-1.000</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>FISH MEAL</td>
+          <td>50</td>
+          <td>50</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>8</td>
+          <td>MAIDA</td>
+          <td>150</td>
+          <td>150</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total for batch</td>
+          <td>834</td>
+          <td>830</td>
+          <td>-4</td>
+          <td>-0.48</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <div class="batch-hdr">
+      <span class="batch-hdr-left"><span>Recipe NUMEI</span><span>Batch # 20</span></span>
+      <span class="batch-hdr-right"><span>Start 2025-07-04 16:17:14</span><span>End 2025-07-04 16:22:03</span></span>
+    </div>
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Sl. No.</th>
+          <th>Material name</th>
+          <th>Set. wt(Kg)</th>
+          <th>Ach. wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>SOYA</td>
+          <td>274</td>
+          <td>273</td>
+          <td>-1</td>
+          <td>-0.365</td>
+        </tr>
+<tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>102</td>
+          <td>2</td>
+          <td>2.000</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>RG 60%</td>
+          <td>60</td>
+          <td>59</td>
+          <td>-1</td>
+          <td>-1.667</td>
+        </tr>
+<tr>
+          <td>4</td>
+          <td>R BRAWAN</td>
+          <td>50</td>
+          <td>48</td>
+          <td>-2</td>
+          <td>-4.000</td>
+        </tr>
+<tr>
+          <td>5</td>
+          <td>GNDOC</td>
+          <td>50</td>
+          <td>51</td>
+          <td>1</td>
+          <td>2.000</td>
+        </tr>
+<tr>
+          <td>6</td>
+          <td>RECYCLE P</td>
+          <td>100</td>
+          <td>99</td>
+          <td>-1</td>
+          <td>-1.000</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>FISH MEAL</td>
+          <td>50</td>
+          <td>51</td>
+          <td>1</td>
+          <td>2.000</td>
+        </tr>
+<tr>
+          <td>8</td>
+          <td>MAIDA</td>
+          <td>150</td>
+          <td>147</td>
+          <td>-3</td>
+          <td>-2.000</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total for batch</td>
+          <td>834</td>
+          <td>830</td>
+          <td>-4</td>
+          <td>-0.48</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <div class="batch-hdr">
+      <span class="batch-hdr-left"><span>Recipe NUMEI</span><span>Batch # 21</span></span>
+      <span class="batch-hdr-right"><span>Start 2025-07-04 16:17:14</span><span>End 2025-07-04 16:22:03</span></span>
+    </div>
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Sl. No.</th>
+          <th>Material name</th>
+          <th>Set. wt(Kg)</th>
+          <th>Ach. wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>SOYA</td>
+          <td>274</td>
+          <td>273</td>
+          <td>-1</td>
+          <td>-0.365</td>
+        </tr>
+<tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>102</td>
+          <td>2</td>
+          <td>2.000</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>RG 60%</td>
+          <td>60</td>
+          <td>59</td>
+          <td>-1</td>
+          <td>-1.667</td>
+        </tr>
+<tr>
+          <td>4</td>
+          <td>R BRAWAN</td>
+          <td>50</td>
+          <td>48</td>
+          <td>-2</td>
+          <td>-4.000</td>
+        </tr>
+<tr>
+          <td>5</td>
+          <td>GNDOC</td>
+          <td>50</td>
+          <td>51</td>
+          <td>1</td>
+          <td>2.000</td>
+        </tr>
+<tr>
+          <td>6</td>
+          <td>RECYCLE P</td>
+          <td>100</td>
+          <td>99</td>
+          <td>-1</td>
+          <td>-1.000</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>FISH MEAL</td>
+          <td>50</td>
+          <td>51</td>
+          <td>1</td>
+          <td>2.000</td>
+        </tr>
+<tr>
+          <td>8</td>
+          <td>MAIDA</td>
+          <td>150</td>
+          <td>147</td>
+          <td>-3</td>
+          <td>-2.000</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total for batch</td>
+          <td>834</td>
+          <td>830</td>
+          <td>-4</td>
+          <td>-0.48</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <div class="batch-hdr">
+      <span class="batch-hdr-left"><span>Recipe NUMEI</span><span>Batch # 22</span></span>
+      <span class="batch-hdr-right"><span>Start 2025-07-04 16:30:28</span><span>End 2025-07-04 16:36:44</span></span>
+    </div>
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Sl. No.</th>
+          <th>Material name</th>
+          <th>Set. wt(Kg)</th>
+          <th>Ach. wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>SOYA</td>
+          <td>274</td>
+          <td>272</td>
+          <td>-2</td>
+          <td>-0.730</td>
+        </tr>
+<tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>101</td>
+          <td>1</td>
+          <td>1.000</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>RG 60%</td>
+          <td>60</td>
+          <td>59</td>
+          <td>-1</td>
+          <td>-1.667</td>
+        </tr>
+<tr>
+          <td>4</td>
+          <td>R BRAWAN</td>
+          <td>50</td>
+          <td>47</td>
+          <td>-3</td>
+          <td>-6.000</td>
+        </tr>
+<tr>
+          <td>5</td>
+          <td>GNDOC</td>
+          <td>50</td>
+          <td>50</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>6</td>
+          <td>RECYCLE P</td>
+          <td>100</td>
+          <td>100</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>FISH MEAL</td>
+          <td>50</td>
+          <td>49</td>
+          <td>-1</td>
+          <td>-2.000</td>
+        </tr>
+<tr>
+          <td>8</td>
+          <td>MAIDA</td>
+          <td>150</td>
+          <td>149</td>
+          <td>-1</td>
+          <td>-0.667</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total for batch</td>
+          <td>834</td>
+          <td>827</td>
+          <td>-7</td>
+          <td>-0.839</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <div class="batch-hdr">
+      <span class="batch-hdr-left"><span>Recipe NUMEI</span><span>Batch # 23</span></span>
+      <span class="batch-hdr-right"><span>Start 2025-07-04 16:30:28</span><span>End 2025-07-04 16:36:44</span></span>
+    </div>
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Sl. No.</th>
+          <th>Material name</th>
+          <th>Set. wt(Kg)</th>
+          <th>Ach. wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>SOYA</td>
+          <td>274</td>
+          <td>272</td>
+          <td>-2</td>
+          <td>-0.730</td>
+        </tr>
+<tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>101</td>
+          <td>1</td>
+          <td>1.000</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>RG 60%</td>
+          <td>60</td>
+          <td>59</td>
+          <td>-1</td>
+          <td>-1.667</td>
+        </tr>
+<tr>
+          <td>4</td>
+          <td>R BRAWAN</td>
+          <td>50</td>
+          <td>47</td>
+          <td>-3</td>
+          <td>-6.000</td>
+        </tr>
+<tr>
+          <td>5</td>
+          <td>GNDOC</td>
+          <td>50</td>
+          <td>50</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>6</td>
+          <td>RECYCLE P</td>
+          <td>100</td>
+          <td>100</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>FISH MEAL</td>
+          <td>50</td>
+          <td>49</td>
+          <td>-1</td>
+          <td>-2.000</td>
+        </tr>
+<tr>
+          <td>8</td>
+          <td>MAIDA</td>
+          <td>150</td>
+          <td>149</td>
+          <td>-1</td>
+          <td>-0.667</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total for batch</td>
+          <td>834</td>
+          <td>827</td>
+          <td>-7</td>
+          <td>-0.839</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <div class="batch-hdr">
+      <span class="batch-hdr-left"><span>Recipe NUMEI</span><span>Batch # 24</span></span>
+      <span class="batch-hdr-right"><span>Start 2025-07-05 10:44:45</span><span>End 2025-07-05 10:51:48</span></span>
+    </div>
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Sl. No.</th>
+          <th>Material name</th>
+          <th>Set. wt(Kg)</th>
+          <th>Ach. wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>SOYA</td>
+          <td>274</td>
+          <td>273</td>
+          <td>-1</td>
+          <td>-0.365</td>
+        </tr>
+<tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>103</td>
+          <td>3</td>
+          <td>3.000</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>RG 60%</td>
+          <td>60</td>
+          <td>60</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>4</td>
+          <td>R BRAWAN</td>
+          <td>50</td>
+          <td>47</td>
+          <td>-3</td>
+          <td>-6.000</td>
+        </tr>
+<tr>
+          <td>5</td>
+          <td>GNDOC</td>
+          <td>50</td>
+          <td>50</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>6</td>
+          <td>RECYCLE P</td>
+          <td>100</td>
+          <td>99</td>
+          <td>-1</td>
+          <td>-1.000</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>FISH MEAL</td>
+          <td>50</td>
+          <td>50</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>8</td>
+          <td>MAIDA</td>
+          <td>150</td>
+          <td>149</td>
+          <td>-1</td>
+          <td>-0.667</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total for batch</td>
+          <td>834</td>
+          <td>831</td>
+          <td>-3</td>
+          <td>-0.36</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <div class="batch-hdr">
+      <span class="batch-hdr-left"><span>Recipe NUMEI</span><span>Batch # 25</span></span>
+      <span class="batch-hdr-right"><span>Start 2025-07-05 10:44:45</span><span>End 2025-07-05 10:51:48</span></span>
+    </div>
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Sl. No.</th>
+          <th>Material name</th>
+          <th>Set. wt(Kg)</th>
+          <th>Ach. wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>SOYA</td>
+          <td>274</td>
+          <td>273</td>
+          <td>-1</td>
+          <td>-0.365</td>
+        </tr>
+<tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>103</td>
+          <td>3</td>
+          <td>3.000</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>RG 60%</td>
+          <td>60</td>
+          <td>60</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>4</td>
+          <td>R BRAWAN</td>
+          <td>50</td>
+          <td>47</td>
+          <td>-3</td>
+          <td>-6.000</td>
+        </tr>
+<tr>
+          <td>5</td>
+          <td>GNDOC</td>
+          <td>50</td>
+          <td>50</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>6</td>
+          <td>RECYCLE P</td>
+          <td>100</td>
+          <td>99</td>
+          <td>-1</td>
+          <td>-1.000</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>FISH MEAL</td>
+          <td>50</td>
+          <td>50</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>8</td>
+          <td>MAIDA</td>
+          <td>150</td>
+          <td>149</td>
+          <td>-1</td>
+          <td>-0.667</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total for batch</td>
+          <td>834</td>
+          <td>831</td>
+          <td>-3</td>
+          <td>-0.36</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <div class="batch-hdr">
+      <span class="batch-hdr-left"><span>Recipe NUMEI</span><span>Batch # 26</span></span>
+      <span class="batch-hdr-right"><span>Start 2025-07-05 10:52:21</span><span>End 2025-07-05 10:57:18</span></span>
+    </div>
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Sl. No.</th>
+          <th>Material name</th>
+          <th>Set. wt(Kg)</th>
+          <th>Ach. wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>SOYA</td>
+          <td>274</td>
+          <td>272</td>
+          <td>-2</td>
+          <td>-0.730</td>
+        </tr>
+<tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>102</td>
+          <td>2</td>
+          <td>2.000</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>RG 60%</td>
+          <td>60</td>
+          <td>58</td>
+          <td>-2</td>
+          <td>-3.333</td>
+        </tr>
+<tr>
+          <td>4</td>
+          <td>R BRAWAN</td>
+          <td>50</td>
+          <td>47</td>
+          <td>-3</td>
+          <td>-6.000</td>
+        </tr>
+<tr>
+          <td>5</td>
+          <td>GNDOC</td>
+          <td>50</td>
+          <td>49</td>
+          <td>-1</td>
+          <td>-2.000</td>
+        </tr>
+<tr>
+          <td>6</td>
+          <td>RECYCLE P</td>
+          <td>100</td>
+          <td>99</td>
+          <td>-1</td>
+          <td>-1.000</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>FISH MEAL</td>
+          <td>50</td>
+          <td>50</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>8</td>
+          <td>MAIDA</td>
+          <td>150</td>
+          <td>147</td>
+          <td>-3</td>
+          <td>-2.000</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total for batch</td>
+          <td>834</td>
+          <td>824</td>
+          <td>-10</td>
+          <td>-1.199</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <div class="batch-hdr">
+      <span class="batch-hdr-left"><span>Recipe NUMEI</span><span>Batch # 27</span></span>
+      <span class="batch-hdr-right"><span>Start 2025-07-05 10:52:21</span><span>End 2025-07-05 10:57:18</span></span>
+    </div>
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Sl. No.</th>
+          <th>Material name</th>
+          <th>Set. wt(Kg)</th>
+          <th>Ach. wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>SOYA</td>
+          <td>274</td>
+          <td>272</td>
+          <td>-2</td>
+          <td>-0.730</td>
+        </tr>
+<tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>102</td>
+          <td>2</td>
+          <td>2.000</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>RG 60%</td>
+          <td>60</td>
+          <td>58</td>
+          <td>-2</td>
+          <td>-3.333</td>
+        </tr>
+<tr>
+          <td>4</td>
+          <td>R BRAWAN</td>
+          <td>50</td>
+          <td>47</td>
+          <td>-3</td>
+          <td>-6.000</td>
+        </tr>
+<tr>
+          <td>5</td>
+          <td>GNDOC</td>
+          <td>50</td>
+          <td>49</td>
+          <td>-1</td>
+          <td>-2.000</td>
+        </tr>
+<tr>
+          <td>6</td>
+          <td>RECYCLE P</td>
+          <td>100</td>
+          <td>99</td>
+          <td>-1</td>
+          <td>-1.000</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>FISH MEAL</td>
+          <td>50</td>
+          <td>50</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>8</td>
+          <td>MAIDA</td>
+          <td>150</td>
+          <td>147</td>
+          <td>-3</td>
+          <td>-2.000</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total for batch</td>
+          <td>834</td>
+          <td>824</td>
+          <td>-10</td>
+          <td>-1.199</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <div class="batch-hdr">
+      <span class="batch-hdr-left"><span>Recipe NUMEI</span><span>Batch # 28</span></span>
+      <span class="batch-hdr-right"><span>Start 2025-07-05 11:01:53</span><span>End 2025-07-05 11:06:59</span></span>
+    </div>
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Sl. No.</th>
+          <th>Material name</th>
+          <th>Set. wt(Kg)</th>
+          <th>Ach. wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>SOYA</td>
+          <td>274</td>
+          <td>273</td>
+          <td>-1</td>
+          <td>-0.365</td>
+        </tr>
+<tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>100</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>RG 60%</td>
+          <td>60</td>
+          <td>59</td>
+          <td>-1</td>
+          <td>-1.667</td>
+        </tr>
+<tr>
+          <td>4</td>
+          <td>R BRAWAN</td>
+          <td>50</td>
+          <td>47</td>
+          <td>-3</td>
+          <td>-6.000</td>
+        </tr>
+<tr>
+          <td>5</td>
+          <td>GNDOC</td>
+          <td>50</td>
+          <td>49</td>
+          <td>-1</td>
+          <td>-2.000</td>
+        </tr>
+<tr>
+          <td>6</td>
+          <td>RECYCLE P</td>
+          <td>100</td>
+          <td>100</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>FISH MEAL</td>
+          <td>50</td>
+          <td>50</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>8</td>
+          <td>MAIDA</td>
+          <td>150</td>
+          <td>147</td>
+          <td>-3</td>
+          <td>-2.000</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total for batch</td>
+          <td>834</td>
+          <td>825</td>
+          <td>-9</td>
+          <td>-1.079</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <div class="batch-hdr">
+      <span class="batch-hdr-left"><span>Recipe NUMEI</span><span>Batch # 29</span></span>
+      <span class="batch-hdr-right"><span>Start 2025-07-05 11:01:53</span><span>End 2025-07-05 11:06:59</span></span>
+    </div>
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Sl. No.</th>
+          <th>Material name</th>
+          <th>Set. wt(Kg)</th>
+          <th>Ach. wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>SOYA</td>
+          <td>274</td>
+          <td>273</td>
+          <td>-1</td>
+          <td>-0.365</td>
+        </tr>
+<tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>100</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>RG 60%</td>
+          <td>60</td>
+          <td>59</td>
+          <td>-1</td>
+          <td>-1.667</td>
+        </tr>
+<tr>
+          <td>4</td>
+          <td>R BRAWAN</td>
+          <td>50</td>
+          <td>47</td>
+          <td>-3</td>
+          <td>-6.000</td>
+        </tr>
+<tr>
+          <td>5</td>
+          <td>GNDOC</td>
+          <td>50</td>
+          <td>49</td>
+          <td>-1</td>
+          <td>-2.000</td>
+        </tr>
+<tr>
+          <td>6</td>
+          <td>RECYCLE P</td>
+          <td>100</td>
+          <td>100</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>FISH MEAL</td>
+          <td>50</td>
+          <td>50</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>8</td>
+          <td>MAIDA</td>
+          <td>150</td>
+          <td>147</td>
+          <td>-3</td>
+          <td>-2.000</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total for batch</td>
+          <td>834</td>
+          <td>825</td>
+          <td>-9</td>
+          <td>-1.079</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <div class="batch-hdr">
+      <span class="batch-hdr-left"><span>Recipe NUMEI</span><span>Batch # 30</span></span>
+      <span class="batch-hdr-right"><span>Start 2025-07-05 11:19:48</span><span>End 2025-07-05 11:26:01</span></span>
+    </div>
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Sl. No.</th>
+          <th>Material name</th>
+          <th>Set. wt(Kg)</th>
+          <th>Ach. wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>SOYA</td>
+          <td>274</td>
+          <td>274</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>101</td>
+          <td>1</td>
+          <td>1.000</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>RG 60%</td>
+          <td>60</td>
+          <td>59</td>
+          <td>-1</td>
+          <td>-1.667</td>
+        </tr>
+<tr>
+          <td>4</td>
+          <td>R BRAWAN</td>
+          <td>50</td>
+          <td>46</td>
+          <td>-4</td>
+          <td>-8.000</td>
+        </tr>
+<tr>
+          <td>5</td>
+          <td>GNDOC</td>
+          <td>50</td>
+          <td>51</td>
+          <td>1</td>
+          <td>2.000</td>
+        </tr>
+<tr>
+          <td>6</td>
+          <td>RECYCLE P</td>
+          <td>100</td>
+          <td>99</td>
+          <td>-1</td>
+          <td>-1.000</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>FISH MEAL</td>
+          <td>50</td>
+          <td>51</td>
+          <td>1</td>
+          <td>2.000</td>
+        </tr>
+<tr>
+          <td>8</td>
+          <td>MAIDA</td>
+          <td>150</td>
+          <td>163</td>
+          <td>13</td>
+          <td>8.667</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total for batch</td>
+          <td>834</td>
+          <td>844</td>
+          <td>10</td>
+          <td>1.199</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <div class="batch-hdr">
+      <span class="batch-hdr-left"><span>Recipe NUMEI</span><span>Batch # 31</span></span>
+      <span class="batch-hdr-right"><span>Start 2025-07-05 11:19:48</span><span>End 2025-07-05 11:26:01</span></span>
+    </div>
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Sl. No.</th>
+          <th>Material name</th>
+          <th>Set. wt(Kg)</th>
+          <th>Ach. wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>SOYA</td>
+          <td>274</td>
+          <td>274</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>101</td>
+          <td>1</td>
+          <td>1.000</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>RG 60%</td>
+          <td>60</td>
+          <td>59</td>
+          <td>-1</td>
+          <td>-1.667</td>
+        </tr>
+<tr>
+          <td>4</td>
+          <td>R BRAWAN</td>
+          <td>50</td>
+          <td>46</td>
+          <td>-4</td>
+          <td>-8.000</td>
+        </tr>
+<tr>
+          <td>5</td>
+          <td>GNDOC</td>
+          <td>50</td>
+          <td>51</td>
+          <td>1</td>
+          <td>2.000</td>
+        </tr>
+<tr>
+          <td>6</td>
+          <td>RECYCLE P</td>
+          <td>100</td>
+          <td>99</td>
+          <td>-1</td>
+          <td>-1.000</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>FISH MEAL</td>
+          <td>50</td>
+          <td>51</td>
+          <td>1</td>
+          <td>2.000</td>
+        </tr>
+<tr>
+          <td>8</td>
+          <td>MAIDA</td>
+          <td>150</td>
+          <td>163</td>
+          <td>13</td>
+          <td>8.667</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total for batch</td>
+          <td>834</td>
+          <td>844</td>
+          <td>10</td>
+          <td>1.199</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <div class="batch-hdr">
+      <span class="batch-hdr-left"><span>Recipe NUMEI</span><span>Batch # 32</span></span>
+      <span class="batch-hdr-right"><span>Start 2025-07-05 11:46:02</span><span>End 2025-07-05 11:50:17</span></span>
+    </div>
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Sl. No.</th>
+          <th>Material name</th>
+          <th>Set. wt(Kg)</th>
+          <th>Ach. wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>SOYA</td>
+          <td>274</td>
+          <td>273</td>
+          <td>-1</td>
+          <td>-0.365</td>
+        </tr>
+<tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>102</td>
+          <td>2</td>
+          <td>2.000</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>RG 60%</td>
+          <td>60</td>
+          <td>58</td>
+          <td>-2</td>
+          <td>-3.333</td>
+        </tr>
+<tr>
+          <td>4</td>
+          <td>R BRAWAN</td>
+          <td>50</td>
+          <td>47</td>
+          <td>-3</td>
+          <td>-6.000</td>
+        </tr>
+<tr>
+          <td>5</td>
+          <td>GNDOC</td>
+          <td>50</td>
+          <td>50</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>6</td>
+          <td>RECYCLE P</td>
+          <td>100</td>
+          <td>99</td>
+          <td>-1</td>
+          <td>-1.000</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>FISH MEAL</td>
+          <td>50</td>
+          <td>51</td>
+          <td>1</td>
+          <td>2.000</td>
+        </tr>
+<tr>
+          <td>8</td>
+          <td>MAIDA</td>
+          <td>150</td>
+          <td>149</td>
+          <td>-1</td>
+          <td>-0.667</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total for batch</td>
+          <td>834</td>
+          <td>829</td>
+          <td>-5</td>
+          <td>-0.6</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <div class="batch-hdr">
+      <span class="batch-hdr-left"><span>Recipe NUMEI</span><span>Batch # 33</span></span>
+      <span class="batch-hdr-right"><span>Start 2025-07-05 11:46:02</span><span>End 2025-07-05 11:50:18</span></span>
+    </div>
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Sl. No.</th>
+          <th>Material name</th>
+          <th>Set. wt(Kg)</th>
+          <th>Ach. wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>SOYA</td>
+          <td>274</td>
+          <td>273</td>
+          <td>-1</td>
+          <td>-0.365</td>
+        </tr>
+<tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>102</td>
+          <td>2</td>
+          <td>2.000</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>RG 60%</td>
+          <td>60</td>
+          <td>58</td>
+          <td>-2</td>
+          <td>-3.333</td>
+        </tr>
+<tr>
+          <td>4</td>
+          <td>R BRAWAN</td>
+          <td>50</td>
+          <td>47</td>
+          <td>-3</td>
+          <td>-6.000</td>
+        </tr>
+<tr>
+          <td>5</td>
+          <td>GNDOC</td>
+          <td>50</td>
+          <td>50</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>6</td>
+          <td>RECYCLE P</td>
+          <td>100</td>
+          <td>99</td>
+          <td>-1</td>
+          <td>-1.000</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>FISH MEAL</td>
+          <td>50</td>
+          <td>51</td>
+          <td>1</td>
+          <td>2.000</td>
+        </tr>
+<tr>
+          <td>8</td>
+          <td>MAIDA</td>
+          <td>150</td>
+          <td>149</td>
+          <td>-1</td>
+          <td>-0.667</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total for batch</td>
+          <td>834</td>
+          <td>829</td>
+          <td>-5</td>
+          <td>-0.6</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <div class="batch-hdr">
+      <span class="batch-hdr-left"><span>Recipe NUMEI</span><span>Batch # 34</span></span>
+      <span class="batch-hdr-right"><span>Start 2025-07-07 19:21:44</span><span>End 2025-07-07 19:26:05</span></span>
+    </div>
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Sl. No.</th>
+          <th>Material name</th>
+          <th>Set. wt(Kg)</th>
+          <th>Ach. wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>SOYA</td>
+          <td>274</td>
+          <td>273</td>
+          <td>-1</td>
+          <td>-0.365</td>
+        </tr>
+<tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>100</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>RG 60%</td>
+          <td>60</td>
+          <td>59</td>
+          <td>-1</td>
+          <td>-1.667</td>
+        </tr>
+<tr>
+          <td>4</td>
+          <td>R BRAWAN</td>
+          <td>50</td>
+          <td>48</td>
+          <td>-2</td>
+          <td>-4.000</td>
+        </tr>
+<tr>
+          <td>5</td>
+          <td>GNDOC</td>
+          <td>50</td>
+          <td>51</td>
+          <td>1</td>
+          <td>2.000</td>
+        </tr>
+<tr>
+          <td>6</td>
+          <td>RECYCLE P</td>
+          <td>100</td>
+          <td>99</td>
+          <td>-1</td>
+          <td>-1.000</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>FISH MEAL</td>
+          <td>50</td>
+          <td>50</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>8</td>
+          <td>MAIDA</td>
+          <td>150</td>
+          <td>148</td>
+          <td>-2</td>
+          <td>-1.333</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total for batch</td>
+          <td>834</td>
+          <td>828</td>
+          <td>-6</td>
+          <td>-0.719</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <div class="batch-hdr">
+      <span class="batch-hdr-left"><span>Recipe NUMEI</span><span>Batch # 35</span></span>
+      <span class="batch-hdr-right"><span>Start 2025-07-07 19:21:44</span><span>End 2025-07-07 19:26:05</span></span>
+    </div>
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Sl. No.</th>
+          <th>Material name</th>
+          <th>Set. wt(Kg)</th>
+          <th>Ach. wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>SOYA</td>
+          <td>274</td>
+          <td>273</td>
+          <td>-1</td>
+          <td>-0.365</td>
+        </tr>
+<tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>100</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>RG 60%</td>
+          <td>60</td>
+          <td>59</td>
+          <td>-1</td>
+          <td>-1.667</td>
+        </tr>
+<tr>
+          <td>4</td>
+          <td>R BRAWAN</td>
+          <td>50</td>
+          <td>48</td>
+          <td>-2</td>
+          <td>-4.000</td>
+        </tr>
+<tr>
+          <td>5</td>
+          <td>GNDOC</td>
+          <td>50</td>
+          <td>51</td>
+          <td>1</td>
+          <td>2.000</td>
+        </tr>
+<tr>
+          <td>6</td>
+          <td>RECYCLE P</td>
+          <td>100</td>
+          <td>99</td>
+          <td>-1</td>
+          <td>-1.000</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>FISH MEAL</td>
+          <td>50</td>
+          <td>50</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>8</td>
+          <td>MAIDA</td>
+          <td>150</td>
+          <td>148</td>
+          <td>-2</td>
+          <td>-1.333</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total for batch</td>
+          <td>834</td>
+          <td>828</td>
+          <td>-6</td>
+          <td>-0.719</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <div class="batch-hdr">
+      <span class="batch-hdr-left"><span>Recipe NUMEI</span><span>Batch # 36</span></span>
+      <span class="batch-hdr-right"><span>Start 2025-07-07 20:07:23</span><span>End 2025-07-07 20:11:39</span></span>
+    </div>
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Sl. No.</th>
+          <th>Material name</th>
+          <th>Set. wt(Kg)</th>
+          <th>Ach. wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>SOYA</td>
+          <td>274</td>
+          <td>273</td>
+          <td>-1</td>
+          <td>-0.365</td>
+        </tr>
+<tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>101</td>
+          <td>1</td>
+          <td>1.000</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>RG 60%</td>
+          <td>60</td>
+          <td>59</td>
+          <td>-1</td>
+          <td>-1.667</td>
+        </tr>
+<tr>
+          <td>4</td>
+          <td>R BRAWAN</td>
+          <td>50</td>
+          <td>47</td>
+          <td>-3</td>
+          <td>-6.000</td>
+        </tr>
+<tr>
+          <td>5</td>
+          <td>GNDOC</td>
+          <td>50</td>
+          <td>50</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>6</td>
+          <td>RECYCLE P</td>
+          <td>100</td>
+          <td>100</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>FISH MEAL</td>
+          <td>50</td>
+          <td>50</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>8</td>
+          <td>MAIDA</td>
+          <td>150</td>
+          <td>149</td>
+          <td>-1</td>
+          <td>-0.667</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total for batch</td>
+          <td>834</td>
+          <td>829</td>
+          <td>-5</td>
+          <td>-0.6</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <div class="batch-hdr">
+      <span class="batch-hdr-left"><span>Recipe NUMEI</span><span>Batch # 37</span></span>
+      <span class="batch-hdr-right"><span>Start 2025-07-07 20:07:23</span><span>End 2025-07-07 20:11:39</span></span>
+    </div>
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Sl. No.</th>
+          <th>Material name</th>
+          <th>Set. wt(Kg)</th>
+          <th>Ach. wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>SOYA</td>
+          <td>274</td>
+          <td>273</td>
+          <td>-1</td>
+          <td>-0.365</td>
+        </tr>
+<tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>101</td>
+          <td>1</td>
+          <td>1.000</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>RG 60%</td>
+          <td>60</td>
+          <td>59</td>
+          <td>-1</td>
+          <td>-1.667</td>
+        </tr>
+<tr>
+          <td>4</td>
+          <td>R BRAWAN</td>
+          <td>50</td>
+          <td>47</td>
+          <td>-3</td>
+          <td>-6.000</td>
+        </tr>
+<tr>
+          <td>5</td>
+          <td>GNDOC</td>
+          <td>50</td>
+          <td>50</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>6</td>
+          <td>RECYCLE P</td>
+          <td>100</td>
+          <td>100</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>FISH MEAL</td>
+          <td>50</td>
+          <td>50</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>8</td>
+          <td>MAIDA</td>
+          <td>150</td>
+          <td>149</td>
+          <td>-1</td>
+          <td>-0.667</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total for batch</td>
+          <td>834</td>
+          <td>829</td>
+          <td>-5</td>
+          <td>-0.6</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <div class="batch-hdr">
+      <span class="batch-hdr-left"><span>Recipe NUMEI</span><span>Batch # 38</span></span>
+      <span class="batch-hdr-right"><span>Start 2025-07-07 20:20:43</span><span>End 2025-07-07 20:25:04</span></span>
+    </div>
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Sl. No.</th>
+          <th>Material name</th>
+          <th>Set. wt(Kg)</th>
+          <th>Ach. wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>SOYA</td>
+          <td>274</td>
+          <td>273</td>
+          <td>-1</td>
+          <td>-0.365</td>
+        </tr>
+<tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>100</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>RG 60%</td>
+          <td>60</td>
+          <td>60</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>4</td>
+          <td>R BRAWAN</td>
+          <td>50</td>
+          <td>47</td>
+          <td>-3</td>
+          <td>-6.000</td>
+        </tr>
+<tr>
+          <td>5</td>
+          <td>GNDOC</td>
+          <td>50</td>
+          <td>51</td>
+          <td>1</td>
+          <td>2.000</td>
+        </tr>
+<tr>
+          <td>6</td>
+          <td>RECYCLE P</td>
+          <td>100</td>
+          <td>100</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>FISH MEAL</td>
+          <td>50</td>
+          <td>50</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>8</td>
+          <td>MAIDA</td>
+          <td>150</td>
+          <td>149</td>
+          <td>-1</td>
+          <td>-0.667</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total for batch</td>
+          <td>834</td>
+          <td>830</td>
+          <td>-4</td>
+          <td>-0.48</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <div class="batch-hdr">
+      <span class="batch-hdr-left"><span>Recipe NUMEI</span><span>Batch # 39</span></span>
+      <span class="batch-hdr-right"><span>Start 2025-07-07 20:20:43</span><span>End 2025-07-07 20:25:04</span></span>
+    </div>
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Sl. No.</th>
+          <th>Material name</th>
+          <th>Set. wt(Kg)</th>
+          <th>Ach. wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>SOYA</td>
+          <td>274</td>
+          <td>273</td>
+          <td>-1</td>
+          <td>-0.365</td>
+        </tr>
+<tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>100</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>RG 60%</td>
+          <td>60</td>
+          <td>60</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>4</td>
+          <td>R BRAWAN</td>
+          <td>50</td>
+          <td>47</td>
+          <td>-3</td>
+          <td>-6.000</td>
+        </tr>
+<tr>
+          <td>5</td>
+          <td>GNDOC</td>
+          <td>50</td>
+          <td>51</td>
+          <td>1</td>
+          <td>2.000</td>
+        </tr>
+<tr>
+          <td>6</td>
+          <td>RECYCLE P</td>
+          <td>100</td>
+          <td>100</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>FISH MEAL</td>
+          <td>50</td>
+          <td>50</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>8</td>
+          <td>MAIDA</td>
+          <td>150</td>
+          <td>149</td>
+          <td>-1</td>
+          <td>-0.667</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total for batch</td>
+          <td>834</td>
+          <td>830</td>
+          <td>-4</td>
+          <td>-0.48</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <div class="batch-hdr">
+      <span class="batch-hdr-left"><span>Recipe NUMEI</span><span>Batch # 40</span></span>
+      <span class="batch-hdr-right"><span>Start 2025-07-07 20:37:24</span><span>End 2025-07-07 20:42:12</span></span>
+    </div>
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Sl. No.</th>
+          <th>Material name</th>
+          <th>Set. wt(Kg)</th>
+          <th>Ach. wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>SOYA</td>
+          <td>274</td>
+          <td>273</td>
+          <td>-1</td>
+          <td>-0.365</td>
+        </tr>
+<tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>100</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>RG 60%</td>
+          <td>60</td>
+          <td>58</td>
+          <td>-2</td>
+          <td>-3.333</td>
+        </tr>
+<tr>
+          <td>4</td>
+          <td>R BRAWAN</td>
+          <td>50</td>
+          <td>47</td>
+          <td>-3</td>
+          <td>-6.000</td>
+        </tr>
+<tr>
+          <td>5</td>
+          <td>GNDOC</td>
+          <td>50</td>
+          <td>51</td>
+          <td>1</td>
+          <td>2.000</td>
+        </tr>
+<tr>
+          <td>6</td>
+          <td>RECYCLE P</td>
+          <td>100</td>
+          <td>100</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>FISH MEAL</td>
+          <td>50</td>
+          <td>50</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>8</td>
+          <td>MAIDA</td>
+          <td>150</td>
+          <td>147</td>
+          <td>-3</td>
+          <td>-2.000</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total for batch</td>
+          <td>834</td>
+          <td>826</td>
+          <td>-8</td>
+          <td>-0.959</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <div class="batch-hdr">
+      <span class="batch-hdr-left"><span>Recipe NUMEI</span><span>Batch # 41</span></span>
+      <span class="batch-hdr-right"><span>Start 2025-07-07 20:37:24</span><span>End 2025-07-07 20:42:12</span></span>
+    </div>
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Sl. No.</th>
+          <th>Material name</th>
+          <th>Set. wt(Kg)</th>
+          <th>Ach. wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>SOYA</td>
+          <td>274</td>
+          <td>273</td>
+          <td>-1</td>
+          <td>-0.365</td>
+        </tr>
+<tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>100</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>RG 60%</td>
+          <td>60</td>
+          <td>58</td>
+          <td>-2</td>
+          <td>-3.333</td>
+        </tr>
+<tr>
+          <td>4</td>
+          <td>R BRAWAN</td>
+          <td>50</td>
+          <td>47</td>
+          <td>-3</td>
+          <td>-6.000</td>
+        </tr>
+<tr>
+          <td>5</td>
+          <td>GNDOC</td>
+          <td>50</td>
+          <td>51</td>
+          <td>1</td>
+          <td>2.000</td>
+        </tr>
+<tr>
+          <td>6</td>
+          <td>RECYCLE P</td>
+          <td>100</td>
+          <td>100</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>FISH MEAL</td>
+          <td>50</td>
+          <td>50</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>8</td>
+          <td>MAIDA</td>
+          <td>150</td>
+          <td>147</td>
+          <td>-3</td>
+          <td>-2.000</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total for batch</td>
+          <td>834</td>
+          <td>826</td>
+          <td>-8</td>
+          <td>-0.959</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <div class="batch-hdr">
+      <span class="batch-hdr-left"><span>Recipe NUMEI</span><span>Batch # 42</span></span>
+      <span class="batch-hdr-right"><span>Start 2025-07-07 21:56:05</span><span>End 2025-07-07 22:03:12</span></span>
+    </div>
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Sl. No.</th>
+          <th>Material name</th>
+          <th>Set. wt(Kg)</th>
+          <th>Ach. wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>SOYA</td>
+          <td>274</td>
+          <td>272</td>
+          <td>-2</td>
+          <td>-0.730</td>
+        </tr>
+<tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>101</td>
+          <td>1</td>
+          <td>1.000</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>RG 60%</td>
+          <td>60</td>
+          <td>59</td>
+          <td>-1</td>
+          <td>-1.667</td>
+        </tr>
+<tr>
+          <td>4</td>
+          <td>R BRAWAN</td>
+          <td>50</td>
+          <td>47</td>
+          <td>-3</td>
+          <td>-6.000</td>
+        </tr>
+<tr>
+          <td>5</td>
+          <td>GNDOC</td>
+          <td>50</td>
+          <td>51</td>
+          <td>1</td>
+          <td>2.000</td>
+        </tr>
+<tr>
+          <td>6</td>
+          <td>RECYCLE P</td>
+          <td>100</td>
+          <td>99</td>
+          <td>-1</td>
+          <td>-1.000</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>FISH MEAL</td>
+          <td>50</td>
+          <td>48</td>
+          <td>-2</td>
+          <td>-4.000</td>
+        </tr>
+<tr>
+          <td>8</td>
+          <td>MAIDA</td>
+          <td>150</td>
+          <td>150</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total for batch</td>
+          <td>834</td>
+          <td>827</td>
+          <td>-7</td>
+          <td>-0.839</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <div class="batch-hdr">
+      <span class="batch-hdr-left"><span>Recipe NUMEI</span><span>Batch # 43</span></span>
+      <span class="batch-hdr-right"><span>Start 2025-07-07 21:56:05</span><span>End 2025-07-07 22:03:13</span></span>
+    </div>
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Sl. No.</th>
+          <th>Material name</th>
+          <th>Set. wt(Kg)</th>
+          <th>Ach. wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>SOYA</td>
+          <td>274</td>
+          <td>272</td>
+          <td>-2</td>
+          <td>-0.730</td>
+        </tr>
+<tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>101</td>
+          <td>1</td>
+          <td>1.000</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>RG 60%</td>
+          <td>60</td>
+          <td>59</td>
+          <td>-1</td>
+          <td>-1.667</td>
+        </tr>
+<tr>
+          <td>4</td>
+          <td>R BRAWAN</td>
+          <td>50</td>
+          <td>47</td>
+          <td>-3</td>
+          <td>-6.000</td>
+        </tr>
+<tr>
+          <td>5</td>
+          <td>GNDOC</td>
+          <td>50</td>
+          <td>51</td>
+          <td>1</td>
+          <td>2.000</td>
+        </tr>
+<tr>
+          <td>6</td>
+          <td>RECYCLE P</td>
+          <td>100</td>
+          <td>99</td>
+          <td>-1</td>
+          <td>-1.000</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>FISH MEAL</td>
+          <td>50</td>
+          <td>48</td>
+          <td>-2</td>
+          <td>-4.000</td>
+        </tr>
+<tr>
+          <td>8</td>
+          <td>MAIDA</td>
+          <td>150</td>
+          <td>150</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total for batch</td>
+          <td>834</td>
+          <td>827</td>
+          <td>-7</td>
+          <td>-0.839</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <div class="batch-hdr">
+      <span class="batch-hdr-left"><span>Recipe NUMEI</span><span>Batch # 44</span></span>
+      <span class="batch-hdr-right"><span>Start 2025-07-07 23:48:28</span><span>End 2025-07-07 23:54:09</span></span>
+    </div>
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Sl. No.</th>
+          <th>Material name</th>
+          <th>Set. wt(Kg)</th>
+          <th>Ach. wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>SOYA</td>
+          <td>274</td>
+          <td>273</td>
+          <td>-1</td>
+          <td>-0.365</td>
+        </tr>
+<tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>101</td>
+          <td>1</td>
+          <td>1.000</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>RG 60%</td>
+          <td>60</td>
+          <td>60</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>4</td>
+          <td>R BRAWAN</td>
+          <td>50</td>
+          <td>46</td>
+          <td>-4</td>
+          <td>-8.000</td>
+        </tr>
+<tr>
+          <td>5</td>
+          <td>GNDOC</td>
+          <td>50</td>
+          <td>51</td>
+          <td>1</td>
+          <td>2.000</td>
+        </tr>
+<tr>
+          <td>6</td>
+          <td>RECYCLE P</td>
+          <td>100</td>
+          <td>100</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>FISH MEAL</td>
+          <td>50</td>
+          <td>50</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>8</td>
+          <td>MAIDA</td>
+          <td>150</td>
+          <td>147</td>
+          <td>-3</td>
+          <td>-2.000</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total for batch</td>
+          <td>834</td>
+          <td>828</td>
+          <td>-6</td>
+          <td>-0.719</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <div class="batch-hdr">
+      <span class="batch-hdr-left"><span>Recipe NUMEI</span><span>Batch # 45</span></span>
+      <span class="batch-hdr-right"><span>Start 2025-07-07 23:48:28</span><span>End 2025-07-07 23:54:09</span></span>
+    </div>
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Sl. No.</th>
+          <th>Material name</th>
+          <th>Set. wt(Kg)</th>
+          <th>Ach. wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>SOYA</td>
+          <td>274</td>
+          <td>273</td>
+          <td>-1</td>
+          <td>-0.365</td>
+        </tr>
+<tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>101</td>
+          <td>1</td>
+          <td>1.000</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>RG 60%</td>
+          <td>60</td>
+          <td>60</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>4</td>
+          <td>R BRAWAN</td>
+          <td>50</td>
+          <td>46</td>
+          <td>-4</td>
+          <td>-8.000</td>
+        </tr>
+<tr>
+          <td>5</td>
+          <td>GNDOC</td>
+          <td>50</td>
+          <td>51</td>
+          <td>1</td>
+          <td>2.000</td>
+        </tr>
+<tr>
+          <td>6</td>
+          <td>RECYCLE P</td>
+          <td>100</td>
+          <td>100</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>FISH MEAL</td>
+          <td>50</td>
+          <td>50</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>8</td>
+          <td>MAIDA</td>
+          <td>150</td>
+          <td>147</td>
+          <td>-3</td>
+          <td>-2.000</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total for batch</td>
+          <td>834</td>
+          <td>828</td>
+          <td>-6</td>
+          <td>-0.719</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <div class="batch-hdr">
+      <span class="batch-hdr-left"><span>Recipe NUMEI</span><span>Batch # 46</span></span>
+      <span class="batch-hdr-right"><span>Start 2025-07-08 00:24:27</span><span>End 2025-07-08 00:38:16</span></span>
+    </div>
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Sl. No.</th>
+          <th>Material name</th>
+          <th>Set. wt(Kg)</th>
+          <th>Ach. wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>SOYA</td>
+          <td>274</td>
+          <td>272</td>
+          <td>-2</td>
+          <td>-0.730</td>
+        </tr>
+<tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>101</td>
+          <td>1</td>
+          <td>1.000</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>RG 60%</td>
+          <td>60</td>
+          <td>59</td>
+          <td>-1</td>
+          <td>-1.667</td>
+        </tr>
+<tr>
+          <td>4</td>
+          <td>R BRAWAN</td>
+          <td>50</td>
+          <td>47</td>
+          <td>-3</td>
+          <td>-6.000</td>
+        </tr>
+<tr>
+          <td>5</td>
+          <td>GNDOC</td>
+          <td>50</td>
+          <td>52</td>
+          <td>2</td>
+          <td>4.000</td>
+        </tr>
+<tr>
+          <td>6</td>
+          <td>RECYCLE P</td>
+          <td>100</td>
+          <td>99</td>
+          <td>-1</td>
+          <td>-1.000</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>FISH MEAL</td>
+          <td>50</td>
+          <td>51</td>
+          <td>1</td>
+          <td>2.000</td>
+        </tr>
+<tr>
+          <td>8</td>
+          <td>MAIDA</td>
+          <td>150</td>
+          <td>150</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total for batch</td>
+          <td>834</td>
+          <td>831</td>
+          <td>-3</td>
+          <td>-0.36</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <div class="batch-hdr">
+      <span class="batch-hdr-left"><span>Recipe NUMEI</span><span>Batch # 47</span></span>
+      <span class="batch-hdr-right"><span>Start 2025-07-08 00:24:27</span><span>End 2025-07-08 00:38:17</span></span>
+    </div>
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Sl. No.</th>
+          <th>Material name</th>
+          <th>Set. wt(Kg)</th>
+          <th>Ach. wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>SOYA</td>
+          <td>274</td>
+          <td>272</td>
+          <td>-2</td>
+          <td>-0.730</td>
+        </tr>
+<tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>101</td>
+          <td>1</td>
+          <td>1.000</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>RG 60%</td>
+          <td>60</td>
+          <td>59</td>
+          <td>-1</td>
+          <td>-1.667</td>
+        </tr>
+<tr>
+          <td>4</td>
+          <td>R BRAWAN</td>
+          <td>50</td>
+          <td>47</td>
+          <td>-3</td>
+          <td>-6.000</td>
+        </tr>
+<tr>
+          <td>5</td>
+          <td>GNDOC</td>
+          <td>50</td>
+          <td>52</td>
+          <td>2</td>
+          <td>4.000</td>
+        </tr>
+<tr>
+          <td>6</td>
+          <td>RECYCLE P</td>
+          <td>100</td>
+          <td>99</td>
+          <td>-1</td>
+          <td>-1.000</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>FISH MEAL</td>
+          <td>50</td>
+          <td>51</td>
+          <td>1</td>
+          <td>2.000</td>
+        </tr>
+<tr>
+          <td>8</td>
+          <td>MAIDA</td>
+          <td>150</td>
+          <td>150</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total for batch</td>
+          <td>834</td>
+          <td>831</td>
+          <td>-3</td>
+          <td>-0.36</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <div class="batch-hdr">
+      <span class="batch-hdr-left"><span>Recipe NUMEI</span><span>Batch # 48</span></span>
+      <span class="batch-hdr-right"><span>Start 2025-07-08 00:44:45</span><span>End 2025-07-08 00:49:00</span></span>
+    </div>
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Sl. No.</th>
+          <th>Material name</th>
+          <th>Set. wt(Kg)</th>
+          <th>Ach. wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>SOYA</td>
+          <td>274</td>
+          <td>272</td>
+          <td>-2</td>
+          <td>-0.730</td>
+        </tr>
+<tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>101</td>
+          <td>1</td>
+          <td>1.000</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>RG 60%</td>
+          <td>60</td>
+          <td>58</td>
+          <td>-2</td>
+          <td>-3.333</td>
+        </tr>
+<tr>
+          <td>4</td>
+          <td>R BRAWAN</td>
+          <td>50</td>
+          <td>48</td>
+          <td>-2</td>
+          <td>-4.000</td>
+        </tr>
+<tr>
+          <td>5</td>
+          <td>GNDOC</td>
+          <td>50</td>
+          <td>51</td>
+          <td>1</td>
+          <td>2.000</td>
+        </tr>
+<tr>
+          <td>6</td>
+          <td>RECYCLE P</td>
+          <td>100</td>
+          <td>100</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>FISH MEAL</td>
+          <td>50</td>
+          <td>50</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>8</td>
+          <td>MAIDA</td>
+          <td>150</td>
+          <td>149</td>
+          <td>-1</td>
+          <td>-0.667</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total for batch</td>
+          <td>834</td>
+          <td>829</td>
+          <td>-5</td>
+          <td>-0.6</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <div class="batch-hdr">
+      <span class="batch-hdr-left"><span>Recipe NUMEI</span><span>Batch # 49</span></span>
+      <span class="batch-hdr-right"><span>Start 2025-07-08 00:44:45</span><span>End 2025-07-08 00:49:00</span></span>
+    </div>
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Sl. No.</th>
+          <th>Material name</th>
+          <th>Set. wt(Kg)</th>
+          <th>Ach. wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>SOYA</td>
+          <td>274</td>
+          <td>272</td>
+          <td>-2</td>
+          <td>-0.730</td>
+        </tr>
+<tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>101</td>
+          <td>1</td>
+          <td>1.000</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>RG 60%</td>
+          <td>60</td>
+          <td>58</td>
+          <td>-2</td>
+          <td>-3.333</td>
+        </tr>
+<tr>
+          <td>4</td>
+          <td>R BRAWAN</td>
+          <td>50</td>
+          <td>48</td>
+          <td>-2</td>
+          <td>-4.000</td>
+        </tr>
+<tr>
+          <td>5</td>
+          <td>GNDOC</td>
+          <td>50</td>
+          <td>51</td>
+          <td>1</td>
+          <td>2.000</td>
+        </tr>
+<tr>
+          <td>6</td>
+          <td>RECYCLE P</td>
+          <td>100</td>
+          <td>100</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>FISH MEAL</td>
+          <td>50</td>
+          <td>50</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>8</td>
+          <td>MAIDA</td>
+          <td>150</td>
+          <td>149</td>
+          <td>-1</td>
+          <td>-0.667</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total for batch</td>
+          <td>834</td>
+          <td>829</td>
+          <td>-5</td>
+          <td>-0.6</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <div class="batch-hdr">
+      <span class="batch-hdr-left"><span>Recipe NUMEI</span><span>Batch # 50</span></span>
+      <span class="batch-hdr-right"><span>Start 2025-07-17 13:55:21</span><span>End 2025-07-17 13:59:40</span></span>
+    </div>
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Sl. No.</th>
+          <th>Material name</th>
+          <th>Set. wt(Kg)</th>
+          <th>Ach. wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>SOYA</td>
+          <td>274</td>
+          <td>273</td>
+          <td>-1</td>
+          <td>-0.365</td>
+        </tr>
+<tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>98</td>
+          <td>-2</td>
+          <td>-2.000</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>RG 60%</td>
+          <td>60</td>
+          <td>58</td>
+          <td>-2</td>
+          <td>-3.333</td>
+        </tr>
+<tr>
+          <td>4</td>
+          <td>R BRAWAN</td>
+          <td>50</td>
+          <td>48</td>
+          <td>-2</td>
+          <td>-4.000</td>
+        </tr>
+<tr>
+          <td>5</td>
+          <td>GNDOC</td>
+          <td>50</td>
+          <td>50</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>6</td>
+          <td>RECYCLE P</td>
+          <td>100</td>
+          <td>100</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>FISH MEAL</td>
+          <td>50</td>
+          <td>50</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>8</td>
+          <td>MAIDA</td>
+          <td>150</td>
+          <td>148</td>
+          <td>-2</td>
+          <td>-1.333</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total for batch</td>
+          <td>834</td>
+          <td>825</td>
+          <td>-9</td>
+          <td>-1.079</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <div class="batch-hdr">
+      <span class="batch-hdr-left"><span>Recipe NUMEI</span><span>Batch # 51</span></span>
+      <span class="batch-hdr-right"><span>Start 2025-07-17 14:22:28</span><span>End 2025-07-17 14:26:47</span></span>
+    </div>
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Sl. No.</th>
+          <th>Material name</th>
+          <th>Set. wt(Kg)</th>
+          <th>Ach. wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>SOYA</td>
+          <td>274</td>
+          <td>273</td>
+          <td>-1</td>
+          <td>-0.365</td>
+        </tr>
+<tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>99</td>
+          <td>-1</td>
+          <td>-1.000</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>RG 60%</td>
+          <td>60</td>
+          <td>59</td>
+          <td>-1</td>
+          <td>-1.667</td>
+        </tr>
+<tr>
+          <td>4</td>
+          <td>R BRAWAN</td>
+          <td>50</td>
+          <td>47</td>
+          <td>-3</td>
+          <td>-6.000</td>
+        </tr>
+<tr>
+          <td>5</td>
+          <td>GNDOC</td>
+          <td>50</td>
+          <td>51</td>
+          <td>1</td>
+          <td>2.000</td>
+        </tr>
+<tr>
+          <td>6</td>
+          <td>RECYCLE P</td>
+          <td>100</td>
+          <td>100</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>FISH MEAL</td>
+          <td>50</td>
+          <td>50</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>8</td>
+          <td>MAIDA</td>
+          <td>150</td>
+          <td>148</td>
+          <td>-2</td>
+          <td>-1.333</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total for batch</td>
+          <td>834</td>
+          <td>827</td>
+          <td>-7</td>
+          <td>-0.839</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <div class="batch-hdr">
+      <span class="batch-hdr-left"><span>Recipe NUMEI</span><span>Batch # 52</span></span>
+      <span class="batch-hdr-right"><span>Start 2025-07-17 14:33:51</span><span>End 2025-07-17 14:38:09</span></span>
+    </div>
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Sl. No.</th>
+          <th>Material name</th>
+          <th>Set. wt(Kg)</th>
+          <th>Ach. wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>SOYA</td>
+          <td>274</td>
+          <td>272</td>
+          <td>-2</td>
+          <td>-0.730</td>
+        </tr>
+<tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>99</td>
+          <td>-1</td>
+          <td>-1.000</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>RG 60%</td>
+          <td>60</td>
+          <td>59</td>
+          <td>-1</td>
+          <td>-1.667</td>
+        </tr>
+<tr>
+          <td>4</td>
+          <td>R BRAWAN</td>
+          <td>50</td>
+          <td>48</td>
+          <td>-2</td>
+          <td>-4.000</td>
+        </tr>
+<tr>
+          <td>5</td>
+          <td>GNDOC</td>
+          <td>50</td>
+          <td>51</td>
+          <td>1</td>
+          <td>2.000</td>
+        </tr>
+<tr>
+          <td>6</td>
+          <td>RECYCLE P</td>
+          <td>100</td>
+          <td>100</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>FISH MEAL</td>
+          <td>50</td>
+          <td>50</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>8</td>
+          <td>MAIDA</td>
+          <td>150</td>
+          <td>149</td>
+          <td>-1</td>
+          <td>-0.667</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total for batch</td>
+          <td>834</td>
+          <td>828</td>
+          <td>-6</td>
+          <td>-0.719</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <div class="batch-hdr">
+      <span class="batch-hdr-left"><span>Recipe NUMEI</span><span>Batch # 53</span></span>
+      <span class="batch-hdr-right"><span>Start 2025-07-19 19:36:39</span><span>End 2025-07-19 19:41:43</span></span>
+    </div>
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Sl. No.</th>
+          <th>Material name</th>
+          <th>Set. wt(Kg)</th>
+          <th>Ach. wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>SOYA</td>
+          <td>274</td>
+          <td>273</td>
+          <td>-1</td>
+          <td>-0.365</td>
+        </tr>
+<tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>99</td>
+          <td>-1</td>
+          <td>-1.000</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>RG 60%</td>
+          <td>60</td>
+          <td>59</td>
+          <td>-1</td>
+          <td>-1.667</td>
+        </tr>
+<tr>
+          <td>4</td>
+          <td>R BRAWAN</td>
+          <td>50</td>
+          <td>49</td>
+          <td>-1</td>
+          <td>-2.000</td>
+        </tr>
+<tr>
+          <td>5</td>
+          <td>GNDOC</td>
+          <td>50</td>
+          <td>51</td>
+          <td>1</td>
+          <td>2.000</td>
+        </tr>
+<tr>
+          <td>6</td>
+          <td>RECYCLE P</td>
+          <td>100</td>
+          <td>100</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>FISH MEAL</td>
+          <td>50</td>
+          <td>51</td>
+          <td>1</td>
+          <td>2.000</td>
+        </tr>
+<tr>
+          <td>8</td>
+          <td>MAIDA</td>
+          <td>150</td>
+          <td>147</td>
+          <td>-3</td>
+          <td>-2.000</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total for batch</td>
+          <td>834</td>
+          <td>829</td>
+          <td>-5</td>
+          <td>-0.6</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <div class="batch-hdr">
+      <span class="batch-hdr-left"><span>Recipe NUMEI</span><span>Batch # 54</span></span>
+      <span class="batch-hdr-right"><span>Start 2025-07-19 20:47:26</span><span>End 2025-07-19 20:52:34</span></span>
+    </div>
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Sl. No.</th>
+          <th>Material name</th>
+          <th>Set. wt(Kg)</th>
+          <th>Ach. wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>SOYA</td>
+          <td>274</td>
+          <td>272</td>
+          <td>-2</td>
+          <td>-0.730</td>
+        </tr>
+<tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>99</td>
+          <td>-1</td>
+          <td>-1.000</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>RG 60%</td>
+          <td>60</td>
+          <td>59</td>
+          <td>-1</td>
+          <td>-1.667</td>
+        </tr>
+<tr>
+          <td>4</td>
+          <td>R BRAWAN</td>
+          <td>50</td>
+          <td>48</td>
+          <td>-2</td>
+          <td>-4.000</td>
+        </tr>
+<tr>
+          <td>5</td>
+          <td>GNDOC</td>
+          <td>50</td>
+          <td>51</td>
+          <td>1</td>
+          <td>2.000</td>
+        </tr>
+<tr>
+          <td>6</td>
+          <td>RECYCLE P</td>
+          <td>100</td>
+          <td>99</td>
+          <td>-1</td>
+          <td>-1.000</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>FISH MEAL</td>
+          <td>50</td>
+          <td>51</td>
+          <td>1</td>
+          <td>2.000</td>
+        </tr>
+<tr>
+          <td>8</td>
+          <td>MAIDA</td>
+          <td>150</td>
+          <td>147</td>
+          <td>-3</td>
+          <td>-2.000</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total for batch</td>
+          <td>834</td>
+          <td>826</td>
+          <td>-8</td>
+          <td>-0.959</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <div class="batch-hdr">
+      <span class="batch-hdr-left"><span>Recipe NUMEI</span><span>Batch # 55</span></span>
+      <span class="batch-hdr-right"><span>Start 2025-07-19 21:02:25</span><span>End 2025-07-19 21:15:09</span></span>
+    </div>
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Sl. No.</th>
+          <th>Material name</th>
+          <th>Set. wt(Kg)</th>
+          <th>Ach. wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>SOYA</td>
+          <td>274</td>
+          <td>273</td>
+          <td>-1</td>
+          <td>-0.365</td>
+        </tr>
+<tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>99</td>
+          <td>-1</td>
+          <td>-1.000</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>RG 60%</td>
+          <td>60</td>
+          <td>59</td>
+          <td>-1</td>
+          <td>-1.667</td>
+        </tr>
+<tr>
+          <td>4</td>
+          <td>R BRAWAN</td>
+          <td>50</td>
+          <td>48</td>
+          <td>-2</td>
+          <td>-4.000</td>
+        </tr>
+<tr>
+          <td>5</td>
+          <td>GNDOC</td>
+          <td>50</td>
+          <td>51</td>
+          <td>1</td>
+          <td>2.000</td>
+        </tr>
+<tr>
+          <td>6</td>
+          <td>RECYCLE P</td>
+          <td>100</td>
+          <td>100</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>FISH MEAL</td>
+          <td>50</td>
+          <td>49</td>
+          <td>-1</td>
+          <td>-2.000</td>
+        </tr>
+<tr>
+          <td>8</td>
+          <td>MAIDA</td>
+          <td>150</td>
+          <td>149</td>
+          <td>-1</td>
+          <td>-0.667</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total for batch</td>
+          <td>834</td>
+          <td>828</td>
+          <td>-6</td>
+          <td>-0.719</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <div class="batch-hdr">
+      <span class="batch-hdr-left"><span>Recipe NUMEI</span><span>Batch # 56</span></span>
+      <span class="batch-hdr-right"><span>Start 2025-07-19 21:29:57</span><span>End 2025-07-19 21:34:13</span></span>
+    </div>
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Sl. No.</th>
+          <th>Material name</th>
+          <th>Set. wt(Kg)</th>
+          <th>Ach. wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>SOYA</td>
+          <td>274</td>
+          <td>273</td>
+          <td>-1</td>
+          <td>-0.365</td>
+        </tr>
+<tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>99</td>
+          <td>-1</td>
+          <td>-1.000</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>RG 60%</td>
+          <td>60</td>
+          <td>59</td>
+          <td>-1</td>
+          <td>-1.667</td>
+        </tr>
+<tr>
+          <td>4</td>
+          <td>R BRAWAN</td>
+          <td>50</td>
+          <td>47</td>
+          <td>-3</td>
+          <td>-6.000</td>
+        </tr>
+<tr>
+          <td>5</td>
+          <td>GNDOC</td>
+          <td>50</td>
+          <td>51</td>
+          <td>1</td>
+          <td>2.000</td>
+        </tr>
+<tr>
+          <td>6</td>
+          <td>RECYCLE P</td>
+          <td>100</td>
+          <td>101</td>
+          <td>1</td>
+          <td>1.000</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>FISH MEAL</td>
+          <td>50</td>
+          <td>51</td>
+          <td>1</td>
+          <td>2.000</td>
+        </tr>
+<tr>
+          <td>8</td>
+          <td>MAIDA</td>
+          <td>150</td>
+          <td>149</td>
+          <td>-1</td>
+          <td>-0.667</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total for batch</td>
+          <td>834</td>
+          <td>830</td>
+          <td>-4</td>
+          <td>-0.48</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <div class="batch-hdr">
+      <span class="batch-hdr-left"><span>Recipe NUMEI</span><span>Batch # 57</span></span>
+      <span class="batch-hdr-right"><span>Start 2025-07-19 21:55:21</span><span>End 2025-07-19 21:59:37</span></span>
+    </div>
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Sl. No.</th>
+          <th>Material name</th>
+          <th>Set. wt(Kg)</th>
+          <th>Ach. wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>SOYA</td>
+          <td>274</td>
+          <td>273</td>
+          <td>-1</td>
+          <td>-0.365</td>
+        </tr>
+<tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>99</td>
+          <td>-1</td>
+          <td>-1.000</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>RG 60%</td>
+          <td>60</td>
+          <td>59</td>
+          <td>-1</td>
+          <td>-1.667</td>
+        </tr>
+<tr>
+          <td>4</td>
+          <td>R BRAWAN</td>
+          <td>50</td>
+          <td>48</td>
+          <td>-2</td>
+          <td>-4.000</td>
+        </tr>
+<tr>
+          <td>5</td>
+          <td>GNDOC</td>
+          <td>50</td>
+          <td>50</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>6</td>
+          <td>RECYCLE P</td>
+          <td>100</td>
+          <td>100</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>FISH MEAL</td>
+          <td>50</td>
+          <td>51</td>
+          <td>1</td>
+          <td>2.000</td>
+        </tr>
+<tr>
+          <td>8</td>
+          <td>MAIDA</td>
+          <td>150</td>
+          <td>148</td>
+          <td>-2</td>
+          <td>-1.333</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total for batch</td>
+          <td>834</td>
+          <td>828</td>
+          <td>-6</td>
+          <td>-0.719</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <div class="batch-hdr">
+      <span class="batch-hdr-left"><span>Recipe NUMEI</span><span>Batch # 58</span></span>
+      <span class="batch-hdr-right"><span>Start 2025-07-19 22:57:59</span><span>End 2025-07-19 23:02:11</span></span>
+    </div>
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Sl. No.</th>
+          <th>Material name</th>
+          <th>Set. wt(Kg)</th>
+          <th>Ach. wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>SOYA</td>
+          <td>274</td>
+          <td>273</td>
+          <td>-1</td>
+          <td>-0.365</td>
+        </tr>
+<tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>97</td>
+          <td>-3</td>
+          <td>-3.000</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>RG 60%</td>
+          <td>60</td>
+          <td>58</td>
+          <td>-2</td>
+          <td>-3.333</td>
+        </tr>
+<tr>
+          <td>4</td>
+          <td>R BRAWAN</td>
+          <td>50</td>
+          <td>48</td>
+          <td>-2</td>
+          <td>-4.000</td>
+        </tr>
+<tr>
+          <td>5</td>
+          <td>GNDOC</td>
+          <td>50</td>
+          <td>50</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>6</td>
+          <td>RECYCLE P</td>
+          <td>100</td>
+          <td>101</td>
+          <td>1</td>
+          <td>1.000</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>FISH MEAL</td>
+          <td>50</td>
+          <td>51</td>
+          <td>1</td>
+          <td>2.000</td>
+        </tr>
+<tr>
+          <td>8</td>
+          <td>MAIDA</td>
+          <td>150</td>
+          <td>149</td>
+          <td>-1</td>
+          <td>-0.667</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total for batch</td>
+          <td>834</td>
+          <td>827</td>
+          <td>-7</td>
+          <td>-0.839</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <div class="batch-hdr">
+      <span class="batch-hdr-left"><span>Recipe NUMEI</span><span>Batch # 59</span></span>
+      <span class="batch-hdr-right"><span>Start 2025-07-20 00:36:28</span><span>End 2025-07-20 00:40:43</span></span>
+    </div>
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Sl. No.</th>
+          <th>Material name</th>
+          <th>Set. wt(Kg)</th>
+          <th>Ach. wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>SOYA</td>
+          <td>274</td>
+          <td>273</td>
+          <td>-1</td>
+          <td>-0.365</td>
+        </tr>
+<tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>98</td>
+          <td>-2</td>
+          <td>-2.000</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>RG 60%</td>
+          <td>60</td>
+          <td>58</td>
+          <td>-2</td>
+          <td>-3.333</td>
+        </tr>
+<tr>
+          <td>4</td>
+          <td>R BRAWAN</td>
+          <td>50</td>
+          <td>48</td>
+          <td>-2</td>
+          <td>-4.000</td>
+        </tr>
+<tr>
+          <td>5</td>
+          <td>GNDOC</td>
+          <td>50</td>
+          <td>52</td>
+          <td>2</td>
+          <td>4.000</td>
+        </tr>
+<tr>
+          <td>6</td>
+          <td>RECYCLE P</td>
+          <td>100</td>
+          <td>100</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>FISH MEAL</td>
+          <td>50</td>
+          <td>51</td>
+          <td>1</td>
+          <td>2.000</td>
+        </tr>
+<tr>
+          <td>8</td>
+          <td>MAIDA</td>
+          <td>150</td>
+          <td>148</td>
+          <td>-2</td>
+          <td>-1.333</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total for batch</td>
+          <td>834</td>
+          <td>828</td>
+          <td>-6</td>
+          <td>-0.719</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <div class="batch-hdr">
+      <span class="batch-hdr-left"><span>Recipe NUMEI</span><span>Batch # 60</span></span>
+      <span class="batch-hdr-right"><span>Start 2025-07-20 01:06:55</span><span>End 2025-07-20 01:11:11</span></span>
+    </div>
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Sl. No.</th>
+          <th>Material name</th>
+          <th>Set. wt(Kg)</th>
+          <th>Ach. wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>SOYA</td>
+          <td>274</td>
+          <td>273</td>
+          <td>-1</td>
+          <td>-0.365</td>
+        </tr>
+<tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>99</td>
+          <td>-1</td>
+          <td>-1.000</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>RG 60%</td>
+          <td>60</td>
+          <td>59</td>
+          <td>-1</td>
+          <td>-1.667</td>
+        </tr>
+<tr>
+          <td>4</td>
+          <td>R BRAWAN</td>
+          <td>50</td>
+          <td>47</td>
+          <td>-3</td>
+          <td>-6.000</td>
+        </tr>
+<tr>
+          <td>5</td>
+          <td>GNDOC</td>
+          <td>50</td>
+          <td>50</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>6</td>
+          <td>RECYCLE P</td>
+          <td>100</td>
+          <td>100</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>FISH MEAL</td>
+          <td>50</td>
+          <td>50</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>8</td>
+          <td>MAIDA</td>
+          <td>150</td>
+          <td>149</td>
+          <td>-1</td>
+          <td>-0.667</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total for batch</td>
+          <td>834</td>
+          <td>827</td>
+          <td>-7</td>
+          <td>-0.839</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <div class="batch-hdr">
+      <span class="batch-hdr-left"><span>Recipe NUMEI</span><span>Batch # 61</span></span>
+      <span class="batch-hdr-right"><span>Start 2025-07-20 01:27:11</span><span>End 2025-07-20 01:31:24</span></span>
+    </div>
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Sl. No.</th>
+          <th>Material name</th>
+          <th>Set. wt(Kg)</th>
+          <th>Ach. wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>SOYA</td>
+          <td>274</td>
+          <td>273</td>
+          <td>-1</td>
+          <td>-0.365</td>
+        </tr>
+<tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>100</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>RG 60%</td>
+          <td>60</td>
+          <td>58</td>
+          <td>-2</td>
+          <td>-3.333</td>
+        </tr>
+<tr>
+          <td>4</td>
+          <td>R BRAWAN</td>
+          <td>50</td>
+          <td>48</td>
+          <td>-2</td>
+          <td>-4.000</td>
+        </tr>
+<tr>
+          <td>5</td>
+          <td>GNDOC</td>
+          <td>50</td>
+          <td>50</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>6</td>
+          <td>RECYCLE P</td>
+          <td>100</td>
+          <td>99</td>
+          <td>-1</td>
+          <td>-1.000</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>FISH MEAL</td>
+          <td>50</td>
+          <td>51</td>
+          <td>1</td>
+          <td>2.000</td>
+        </tr>
+<tr>
+          <td>8</td>
+          <td>MAIDA</td>
+          <td>150</td>
+          <td>149</td>
+          <td>-1</td>
+          <td>-0.667</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total for batch</td>
+          <td>834</td>
+          <td>828</td>
+          <td>-6</td>
+          <td>-0.719</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <div class="batch-hdr">
+      <span class="batch-hdr-left"><span>Recipe NUMEI</span><span>Batch # 62</span></span>
+      <span class="batch-hdr-right"><span>Start 2025-07-20 01:49:00</span><span>End 2025-07-20 02:05:54</span></span>
+    </div>
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Sl. No.</th>
+          <th>Material name</th>
+          <th>Set. wt(Kg)</th>
+          <th>Ach. wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>SOYA</td>
+          <td>274</td>
+          <td>272</td>
+          <td>-2</td>
+          <td>-0.730</td>
+        </tr>
+<tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>100</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>RG 60%</td>
+          <td>60</td>
+          <td>59</td>
+          <td>-1</td>
+          <td>-1.667</td>
+        </tr>
+<tr>
+          <td>4</td>
+          <td>R BRAWAN</td>
+          <td>50</td>
+          <td>48</td>
+          <td>-2</td>
+          <td>-4.000</td>
+        </tr>
+<tr>
+          <td>5</td>
+          <td>GNDOC</td>
+          <td>50</td>
+          <td>51</td>
+          <td>1</td>
+          <td>2.000</td>
+        </tr>
+<tr>
+          <td>6</td>
+          <td>RECYCLE P</td>
+          <td>100</td>
+          <td>99</td>
+          <td>-1</td>
+          <td>-1.000</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>FISH MEAL</td>
+          <td>50</td>
+          <td>50</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>8</td>
+          <td>MAIDA</td>
+          <td>150</td>
+          <td>149</td>
+          <td>-1</td>
+          <td>-0.667</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total for batch</td>
+          <td>834</td>
+          <td>828</td>
+          <td>-6</td>
+          <td>-0.719</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <div class="batch-hdr">
+      <span class="batch-hdr-left"><span>Recipe NUMEI</span><span>Batch # 63</span></span>
+      <span class="batch-hdr-right"><span>Start 2025-07-20 02:06:39</span><span>End 2025-07-20 02:10:58</span></span>
+    </div>
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Sl. No.</th>
+          <th>Material name</th>
+          <th>Set. wt(Kg)</th>
+          <th>Ach. wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>SOYA</td>
+          <td>274</td>
+          <td>273</td>
+          <td>-1</td>
+          <td>-0.365</td>
+        </tr>
+<tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>99</td>
+          <td>-1</td>
+          <td>-1.000</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>RG 60%</td>
+          <td>60</td>
+          <td>59</td>
+          <td>-1</td>
+          <td>-1.667</td>
+        </tr>
+<tr>
+          <td>4</td>
+          <td>R BRAWAN</td>
+          <td>50</td>
+          <td>48</td>
+          <td>-2</td>
+          <td>-4.000</td>
+        </tr>
+<tr>
+          <td>5</td>
+          <td>GNDOC</td>
+          <td>50</td>
+          <td>51</td>
+          <td>1</td>
+          <td>2.000</td>
+        </tr>
+<tr>
+          <td>6</td>
+          <td>RECYCLE P</td>
+          <td>100</td>
+          <td>99</td>
+          <td>-1</td>
+          <td>-1.000</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>FISH MEAL</td>
+          <td>50</td>
+          <td>50</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>8</td>
+          <td>MAIDA</td>
+          <td>150</td>
+          <td>148</td>
+          <td>-2</td>
+          <td>-1.333</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total for batch</td>
+          <td>834</td>
+          <td>827</td>
+          <td>-7</td>
+          <td>-0.839</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <div class="batch-hdr">
+      <span class="batch-hdr-left"><span>Recipe NUMEI</span><span>Batch # 64</span></span>
+      <span class="batch-hdr-right"><span>Start 2025-07-20 02:24:11</span><span>End 2025-07-20 02:28:33</span></span>
+    </div>
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Sl. No.</th>
+          <th>Material name</th>
+          <th>Set. wt(Kg)</th>
+          <th>Ach. wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>SOYA</td>
+          <td>274</td>
+          <td>273</td>
+          <td>-1</td>
+          <td>-0.365</td>
+        </tr>
+<tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>98</td>
+          <td>-2</td>
+          <td>-2.000</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>RG 60%</td>
+          <td>60</td>
+          <td>59</td>
+          <td>-1</td>
+          <td>-1.667</td>
+        </tr>
+<tr>
+          <td>4</td>
+          <td>R BRAWAN</td>
+          <td>50</td>
+          <td>47</td>
+          <td>-3</td>
+          <td>-6.000</td>
+        </tr>
+<tr>
+          <td>5</td>
+          <td>GNDOC</td>
+          <td>50</td>
+          <td>51</td>
+          <td>1</td>
+          <td>2.000</td>
+        </tr>
+<tr>
+          <td>6</td>
+          <td>RECYCLE P</td>
+          <td>100</td>
+          <td>98</td>
+          <td>-2</td>
+          <td>-2.000</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>FISH MEAL</td>
+          <td>50</td>
+          <td>50</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>8</td>
+          <td>MAIDA</td>
+          <td>150</td>
+          <td>148</td>
+          <td>-2</td>
+          <td>-1.333</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total for batch</td>
+          <td>834</td>
+          <td>824</td>
+          <td>-10</td>
+          <td>-1.199</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <div class="batch-hdr">
+      <span class="batch-hdr-left"><span>Recipe NUMEI</span><span>Batch # 65</span></span>
+      <span class="batch-hdr-right"><span>Start 2025-07-20 02:49:56</span><span>End 2025-07-20 02:54:20</span></span>
+    </div>
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Sl. No.</th>
+          <th>Material name</th>
+          <th>Set. wt(Kg)</th>
+          <th>Ach. wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>SOYA</td>
+          <td>274</td>
+          <td>272</td>
+          <td>-2</td>
+          <td>-0.730</td>
+        </tr>
+<tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>98</td>
+          <td>-2</td>
+          <td>-2.000</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>RG 60%</td>
+          <td>60</td>
+          <td>59</td>
+          <td>-1</td>
+          <td>-1.667</td>
+        </tr>
+<tr>
+          <td>4</td>
+          <td>R BRAWAN</td>
+          <td>50</td>
+          <td>47</td>
+          <td>-3</td>
+          <td>-6.000</td>
+        </tr>
+<tr>
+          <td>5</td>
+          <td>GNDOC</td>
+          <td>50</td>
+          <td>50</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>6</td>
+          <td>RECYCLE P</td>
+          <td>100</td>
+          <td>98</td>
+          <td>-2</td>
+          <td>-2.000</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>FISH MEAL</td>
+          <td>50</td>
+          <td>50</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>8</td>
+          <td>MAIDA</td>
+          <td>150</td>
+          <td>149</td>
+          <td>-1</td>
+          <td>-0.667</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total for batch</td>
+          <td>834</td>
+          <td>823</td>
+          <td>-11</td>
+          <td>-1.319</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <div class="batch-hdr">
+      <span class="batch-hdr-left"><span>Recipe NUMEI</span><span>Batch # 66</span></span>
+      <span class="batch-hdr-right"><span>Start 2025-07-20 04:03:11</span><span>End 2025-07-20 05:03:24</span></span>
+    </div>
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Sl. No.</th>
+          <th>Material name</th>
+          <th>Set. wt(Kg)</th>
+          <th>Ach. wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>SOYA</td>
+          <td>274</td>
+          <td>269</td>
+          <td>-5</td>
+          <td>-1.825</td>
+        </tr>
+<tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>98</td>
+          <td>-2</td>
+          <td>-2.000</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>RG 60%</td>
+          <td>60</td>
+          <td>59</td>
+          <td>-1</td>
+          <td>-1.667</td>
+        </tr>
+<tr>
+          <td>4</td>
+          <td>R BRAWAN</td>
+          <td>50</td>
+          <td>47</td>
+          <td>-3</td>
+          <td>-6.000</td>
+        </tr>
+<tr>
+          <td>5</td>
+          <td>GNDOC</td>
+          <td>50</td>
+          <td>50</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>6</td>
+          <td>RECYCLE P</td>
+          <td>100</td>
+          <td>99</td>
+          <td>-1</td>
+          <td>-1.000</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>FISH MEAL</td>
+          <td>50</td>
+          <td>51</td>
+          <td>1</td>
+          <td>2.000</td>
+        </tr>
+<tr>
+          <td>8</td>
+          <td>MAIDA</td>
+          <td>150</td>
+          <td>150</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total for batch</td>
+          <td>834</td>
+          <td>823</td>
+          <td>-11</td>
+          <td>-1.319</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <div class="batch-hdr">
+      <span class="batch-hdr-left"><span>Recipe NUMEI</span><span>Batch # 67</span></span>
+      <span class="batch-hdr-right"><span>Start 2025-07-20 05:07:32</span><span>End 2025-07-20 05:18:52</span></span>
+    </div>
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Sl. No.</th>
+          <th>Material name</th>
+          <th>Set. wt(Kg)</th>
+          <th>Ach. wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>SOYA</td>
+          <td>274</td>
+          <td>271</td>
+          <td>-3</td>
+          <td>-1.095</td>
+        </tr>
+<tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>98</td>
+          <td>-2</td>
+          <td>-2.000</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>RG 60%</td>
+          <td>60</td>
+          <td>59</td>
+          <td>-1</td>
+          <td>-1.667</td>
+        </tr>
+<tr>
+          <td>4</td>
+          <td>R BRAWAN</td>
+          <td>50</td>
+          <td>47</td>
+          <td>-3</td>
+          <td>-6.000</td>
+        </tr>
+<tr>
+          <td>5</td>
+          <td>GNDOC</td>
+          <td>50</td>
+          <td>50</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>6</td>
+          <td>RECYCLE P</td>
+          <td>100</td>
+          <td>99</td>
+          <td>-1</td>
+          <td>-1.000</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>FISH MEAL</td>
+          <td>50</td>
+          <td>50</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>8</td>
+          <td>MAIDA</td>
+          <td>150</td>
+          <td>160</td>
+          <td>10</td>
+          <td>6.667</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total for batch</td>
+          <td>834</td>
+          <td>834</td>
+          <td>0</td>
+          <td>0</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <div class="batch-hdr">
+      <span class="batch-hdr-left"><span>Recipe NUMEI</span><span>Batch # 68</span></span>
+      <span class="batch-hdr-right"><span>Start 2025-07-20 05:22:44</span><span>End 2025-07-20 05:27:06</span></span>
+    </div>
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Sl. No.</th>
+          <th>Material name</th>
+          <th>Set. wt(Kg)</th>
+          <th>Ach. wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>SOYA</td>
+          <td>274</td>
+          <td>272</td>
+          <td>-2</td>
+          <td>-0.730</td>
+        </tr>
+<tr>
+          <td>2</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>98</td>
+          <td>-2</td>
+          <td>-2.000</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>RG 60%</td>
+          <td>60</td>
+          <td>57</td>
+          <td>-3</td>
+          <td>-5.000</td>
+        </tr>
+<tr>
+          <td>4</td>
+          <td>R BRAWAN</td>
+          <td>50</td>
+          <td>47</td>
+          <td>-3</td>
+          <td>-6.000</td>
+        </tr>
+<tr>
+          <td>5</td>
+          <td>GNDOC</td>
+          <td>50</td>
+          <td>51</td>
+          <td>1</td>
+          <td>2.000</td>
+        </tr>
+<tr>
+          <td>6</td>
+          <td>RECYCLE P</td>
+          <td>100</td>
+          <td>99</td>
+          <td>-1</td>
+          <td>-1.000</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>FISH MEAL</td>
+          <td>50</td>
+          <td>51</td>
+          <td>1</td>
+          <td>2.000</td>
+        </tr>
+<tr>
+          <td>8</td>
+          <td>MAIDA</td>
+          <td>150</td>
+          <td>149</td>
+          <td>-1</td>
+          <td>-0.667</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total for batch</td>
+          <td>834</td>
+          <td>824</td>
+          <td>-10</td>
+          <td>-1.199</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <div class="batch-hdr">
+      <span class="batch-hdr-left"><span>Recipe NUMEI</span><span>Batch # 69</span></span>
+      <span class="batch-hdr-right"><span>Start 2025-07-29 18:28:57</span><span>End 2025-07-29 18:33:20</span></span>
+    </div>
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Sl. No.</th>
+          <th>Material name</th>
+          <th>Set. wt(Kg)</th>
+          <th>Ach. wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>SOYA</td>
+          <td>274</td>
+          <td>272</td>
+          <td>-2</td>
+          <td>-0.730</td>
+        </tr>
+<tr>
+          <td>2</td>
+          <td>FISH MEAL</td>
+          <td>50</td>
+          <td>47</td>
+          <td>-3</td>
+          <td>-6.000</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>RG 60%</td>
+          <td>60</td>
+          <td>58</td>
+          <td>-2</td>
+          <td>-3.333</td>
+        </tr>
+<tr>
+          <td>4</td>
+          <td>R BRAWAN</td>
+          <td>50</td>
+          <td>48</td>
+          <td>-2</td>
+          <td>-4.000</td>
+        </tr>
+<tr>
+          <td>5</td>
+          <td>GNDOC</td>
+          <td>50</td>
+          <td>51</td>
+          <td>1</td>
+          <td>2.000</td>
+        </tr>
+<tr>
+          <td>6</td>
+          <td>RECYCLE P</td>
+          <td>100</td>
+          <td>99</td>
+          <td>-1</td>
+          <td>-1.000</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>100</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>8</td>
+          <td>MAIDA</td>
+          <td>150</td>
+          <td>148</td>
+          <td>-2</td>
+          <td>-1.333</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total for batch</td>
+          <td>834</td>
+          <td>823</td>
+          <td>-11</td>
+          <td>-1.319</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <div class="batch-hdr">
+      <span class="batch-hdr-left"><span>Recipe NUMEI</span><span>Batch # 70</span></span>
+      <span class="batch-hdr-right"><span>Start 2025-07-29 18:36:24</span><span>End 2025-07-29 18:40:48</span></span>
+    </div>
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Sl. No.</th>
+          <th>Material name</th>
+          <th>Set. wt(Kg)</th>
+          <th>Ach. wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>SOYA</td>
+          <td>274</td>
+          <td>273</td>
+          <td>-1</td>
+          <td>-0.365</td>
+        </tr>
+<tr>
+          <td>2</td>
+          <td>FISH MEAL</td>
+          <td>50</td>
+          <td>47</td>
+          <td>-3</td>
+          <td>-6.000</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>RG 60%</td>
+          <td>60</td>
+          <td>59</td>
+          <td>-1</td>
+          <td>-1.667</td>
+        </tr>
+<tr>
+          <td>4</td>
+          <td>R BRAWAN</td>
+          <td>50</td>
+          <td>47</td>
+          <td>-3</td>
+          <td>-6.000</td>
+        </tr>
+<tr>
+          <td>5</td>
+          <td>GNDOC</td>
+          <td>50</td>
+          <td>52</td>
+          <td>2</td>
+          <td>4.000</td>
+        </tr>
+<tr>
+          <td>6</td>
+          <td>RECYCLE P</td>
+          <td>100</td>
+          <td>99</td>
+          <td>-1</td>
+          <td>-1.000</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>101</td>
+          <td>1</td>
+          <td>1.000</td>
+        </tr>
+<tr>
+          <td>8</td>
+          <td>MAIDA</td>
+          <td>150</td>
+          <td>149</td>
+          <td>-1</td>
+          <td>-0.667</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total for batch</td>
+          <td>834</td>
+          <td>827</td>
+          <td>-7</td>
+          <td>-0.839</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <div class="batch-hdr">
+      <span class="batch-hdr-left"><span>Recipe NUMEI</span><span>Batch # 71</span></span>
+      <span class="batch-hdr-right"><span>Start 2025-07-29 18:52:14</span><span>End 2025-07-29 18:56:34</span></span>
+    </div>
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Sl. No.</th>
+          <th>Material name</th>
+          <th>Set. wt(Kg)</th>
+          <th>Ach. wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>SOYA</td>
+          <td>274</td>
+          <td>273</td>
+          <td>-1</td>
+          <td>-0.365</td>
+        </tr>
+<tr>
+          <td>2</td>
+          <td>FISH MEAL</td>
+          <td>50</td>
+          <td>48</td>
+          <td>-2</td>
+          <td>-4.000</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>RG 60%</td>
+          <td>60</td>
+          <td>59</td>
+          <td>-1</td>
+          <td>-1.667</td>
+        </tr>
+<tr>
+          <td>4</td>
+          <td>R BRAWAN</td>
+          <td>50</td>
+          <td>47</td>
+          <td>-3</td>
+          <td>-6.000</td>
+        </tr>
+<tr>
+          <td>5</td>
+          <td>GNDOC</td>
+          <td>50</td>
+          <td>52</td>
+          <td>2</td>
+          <td>4.000</td>
+        </tr>
+<tr>
+          <td>6</td>
+          <td>RECYCLE P</td>
+          <td>100</td>
+          <td>99</td>
+          <td>-1</td>
+          <td>-1.000</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>100</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>8</td>
+          <td>MAIDA</td>
+          <td>150</td>
+          <td>149</td>
+          <td>-1</td>
+          <td>-0.667</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total for batch</td>
+          <td>834</td>
+          <td>827</td>
+          <td>-7</td>
+          <td>-0.839</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <div class="batch-hdr">
+      <span class="batch-hdr-left"><span>Recipe NUMEI</span><span>Batch # 72</span></span>
+      <span class="batch-hdr-right"><span>Start 2025-07-29 19:06:35</span><span>End 2025-07-29 19:10:55</span></span>
+    </div>
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Sl. No.</th>
+          <th>Material name</th>
+          <th>Set. wt(Kg)</th>
+          <th>Ach. wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>SOYA</td>
+          <td>274</td>
+          <td>273</td>
+          <td>-1</td>
+          <td>-0.365</td>
+        </tr>
+<tr>
+          <td>2</td>
+          <td>FISH MEAL</td>
+          <td>50</td>
+          <td>46</td>
+          <td>-4</td>
+          <td>-8.000</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>RG 60%</td>
+          <td>60</td>
+          <td>58</td>
+          <td>-2</td>
+          <td>-3.333</td>
+        </tr>
+<tr>
+          <td>4</td>
+          <td>R BRAWAN</td>
+          <td>50</td>
+          <td>47</td>
+          <td>-3</td>
+          <td>-6.000</td>
+        </tr>
+<tr>
+          <td>5</td>
+          <td>GNDOC</td>
+          <td>50</td>
+          <td>50</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>6</td>
+          <td>RECYCLE P</td>
+          <td>100</td>
+          <td>100</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>100</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>8</td>
+          <td>MAIDA</td>
+          <td>150</td>
+          <td>148</td>
+          <td>-2</td>
+          <td>-1.333</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total for batch</td>
+          <td>834</td>
+          <td>822</td>
+          <td>-12</td>
+          <td>-1.439</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+<section class="batch-block batch-section">
+    <div class="batch-hdr">
+      <span class="batch-hdr-left"><span>Recipe NUMEI</span><span>Batch # 73</span></span>
+      <span class="batch-hdr-right"><span>Start 2025-07-29 19:24:40</span><span>End 2025-07-29 19:53:33</span></span>
+    </div>
+    <table class="mat-table">
+      <thead>
+        <tr>
+          <th>Sl. No.</th>
+          <th>Material name</th>
+          <th>Set. wt(Kg)</th>
+          <th>Ach. wt(Kg)</th>
+          <th>Error(Kg)</th>
+          <th>Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>SOYA</td>
+          <td>274</td>
+          <td>272</td>
+          <td>-2</td>
+          <td>-0.730</td>
+        </tr>
+<tr>
+          <td>2</td>
+          <td>FISH MEAL</td>
+          <td>50</td>
+          <td>47</td>
+          <td>-3</td>
+          <td>-6.000</td>
+        </tr>
+<tr>
+          <td>3</td>
+          <td>RG 60%</td>
+          <td>60</td>
+          <td>59</td>
+          <td>-1</td>
+          <td>-1.667</td>
+        </tr>
+<tr>
+          <td>4</td>
+          <td>R BRAWAN</td>
+          <td>50</td>
+          <td>48</td>
+          <td>-2</td>
+          <td>-4.000</td>
+        </tr>
+<tr>
+          <td>5</td>
+          <td>GNDOC</td>
+          <td>50</td>
+          <td>51</td>
+          <td>1</td>
+          <td>2.000</td>
+        </tr>
+<tr>
+          <td>6</td>
+          <td>RECYCLE P</td>
+          <td>100</td>
+          <td>100</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>7</td>
+          <td>B RICE</td>
+          <td>100</td>
+          <td>100</td>
+          <td>0</td>
+          <td>0.000</td>
+        </tr>
+<tr>
+          <td>8</td>
+          <td>MAIDA</td>
+          <td>150</td>
+          <td>152</td>
+          <td>2</td>
+          <td>1.333</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total for batch</td>
+          <td>834</td>
+          <td>829</td>
+          <td>-5</td>
+          <td>-0.6</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+
+</div>
+</body>
+</html>

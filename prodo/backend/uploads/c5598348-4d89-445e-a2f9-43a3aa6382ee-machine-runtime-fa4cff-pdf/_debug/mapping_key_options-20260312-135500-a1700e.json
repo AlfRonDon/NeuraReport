@@ -1,0 +1,18 @@
+{
+  "event": "mapping_key_options",
+  "timestamp": "20260312-135500",
+  "template_id": "c5598348-4d89-445e-a2f9-43a3aa6382ee-machine-runtime-fa4cff-pdf",
+  "template_kind": "pdf",
+  "connection_id": "165b3441-db1d-41ee-b58a-828e1f4b14f6",
+  "db_path": "/home/rohith/desktop/NeuraReport/recipe_log (1).sqlite3",
+  "tokens_available": [
+    "machine_name"
+  ],
+  "token_details": {
+    "machine_name": {
+      "error": "DataFrame schema query failed",
+      "table": "neuract__RUNHOURS",
+      "binding_source": "mapping"
+    }
+  }
+}

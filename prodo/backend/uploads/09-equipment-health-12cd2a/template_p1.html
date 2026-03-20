@@ -1,0 +1,214 @@
+
+
+
+<meta charset="UTF-8">
+<meta>
+<title>Equipment Health &amp; Status Report</title>
+<style>
+  :root {
+    --page-margin-h: 18mm;
+    --page-margin-v: 14mm;
+    --title-color: #1a2a6c;
+    --section-heading-color: #1a5abf;
+    --table-header-bg: #1a2a6c;
+    --table-header-text: #ffffff;
+    --table-border-color: #b0b8c8;
+    --body-text-color: #222;
+    --table-width: 62%;
+    --col-equip-w: 20%;
+    --col-ophours-w: 33%;
+    --col-reading-w: 25%;
+    --col-health-w: 22%;
+    --section-gap: 5mm;
+    --table-row-gap: 4px 9px;
+  }
+
+  @page {
+    size: A4;
+    margin: var(--page-margin-v) var(--page-margin-h);
+  }
+
+  *, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 10pt;
+    color: var(--body-text-color);
+    background: #ffffff;
+    padding: var(--page-margin-v) var(--page-margin-h);
+  }
+
+  #report-header {
+    text-align: center;
+    margin-bottom: 8mm;
+  }
+
+  #report-header h1 {
+    font-size: 18pt;
+    font-weight: bold;
+    color: var(--title-color);
+    letter-spacing: 0.02em;
+  }
+
+  .section-title {
+    font-size: 12.5pt;
+    font-weight: bold;
+    color: var(--section-heading-color);
+    margin-bottom: 2.5mm;
+  }
+
+  .week-line {
+    font-size: 10pt;
+    color: var(--body-text-color);
+    margin-bottom: var(--section-gap);
+  }
+
+  .equipment-section {
+    margin-bottom: 6mm;
+  }
+
+  .equipment-section .section-title {
+    margin-bottom: 2mm;
+  }
+
+  table.eq-table {
+    width: var(--table-width);
+    border-collapse: collapse;
+    table-layout: fixed;
+    margin-bottom: 2mm;
+  }
+
+  table.eq-table thead th {
+    background-color: var(--table-header-bg);
+    color: var(--table-header-text);
+    font-weight: bold;
+    font-size: 9.5pt;
+    padding: var(--table-row-gap);
+    border: 1px solid var(--table-header-bg);
+    text-align: center;
+  }
+
+  table.eq-table thead th:first-child {
+    text-align: left;
+    width: var(--col-equip-w);
+  }
+
+  table.eq-table thead th.col-ophours {
+    width: var(--col-ophours-w);
+  }
+
+  table.eq-table thead th.col-reading {
+    width: var(--col-reading-w);
+  }
+
+  table.eq-table thead th.col-health {
+    width: var(--col-health-w);
+  }
+
+  table.eq-table tbody td {
+    padding: var(--table-row-gap);
+    border: 1px solid var(--table-border-color);
+    font-size: 9.5pt;
+    text-align: center;
+    color: var(--body-text-color);
+  }
+
+  table.eq-table tbody td:first-child {
+    text-align: left;
+  }
+
+  #report-totals {
+    margin-top: 3mm;
+    font-size: 10pt;
+    line-height: 1.7;
+    color: var(--body-text-color);
+  }
+</style>
+
+
+
+<div id="report-header">
+  <h1>Equipment Health &amp; Status Report</h1>
+</div>
+
+<div class="section-title">Weekly Equipment Summary</div>
+<div class="week-line">Week: {week_start} to {week_end}</div>
+
+<div class="equipment-section">
+  <div class="section-title">Flow Meters</div>
+  <table class="eq-table" id="data-table">
+    <thead>
+      <tr>
+        <th data-label="equipment">Equipment</th>
+        <th data-label="operational_hours" class="col-ophours">Operational Hours</th>
+        <th data-label="last_reading" class="col-reading">Last Reading</th>
+        <th data-label="health" class="col-health">Health</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>FM_101</td>
+        <td>{FM_101_hours}</td>
+        <td>{FM_101}</td>
+        <td>{FM_101_health}</td>
+      </tr>
+      <tr>
+        <td>FM_103</td>
+        <td>{FM_103_hours}</td>
+        <td>{FM_103}</td>
+        <td>{FM_103_health}</td>
+      </tr>
+      <tr>
+        <td>FM_105</td>
+        <td>{FM_105_hours}</td>
+        <td>{FM_105}</td>
+        <td>{FM_105_health}</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="equipment-section">
+  <div class="section-title">Level Transmitters</div>
+  <table class="eq-table">
+    <thead>
+      <tr>
+        <th data-label="equipment">Equipment</th>
+        <th data-label="operational_hours" class="col-ophours">Operational Hours</th>
+        <th data-label="last_reading_pct" class="col-reading">Last Reading (%)</th>
+        <th data-label="health" class="col-health">Health</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>LT_112</td>
+        <td>{LT_112_hours}</td>
+        <td>{LT_112}</td>
+        <td>{LT_112_health}</td>
+      </tr>
+      <tr>
+        <td>LT_118</td>
+        <td>{LT_118_hours}</td>
+        <td>{LT_118}</td>
+        <td>{LT_118_health}</td>
+      </tr>
+      <tr>
+        <td>LT_126</td>
+        <td>{LT_126_hours}</td>
+        <td>{LT_126}</td>
+        <td>{LT_126_health}</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<div id="report-totals">
+  <div>Total Devices: {total_devices}</div>
+  <div>Devices OK: {ok_count} | Warning: {warn_count} | Critical: {critical_count}</div>
+</div>
+
+

@@ -1,0 +1,47 @@
+{
+  "correlation_id": null,
+  "file_checksums": {
+    "constant_replacements.json": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+    "fix_metrics.json": "64f1ab85c2f00c7c0cc55037b28599dc01500615908a0ee185a0851a3ed9d756",
+    "mapping_keys.json": "b92bb40ab42c84dad3998e92d4b63d4fe819731e700380cf2384aedce8b4a753",
+    "mapping_pdf_labels.json": "064a3aadfe50cfa25c63b570e14cc105928f184898e410812a43ffe12eb917c7",
+    "mapping_step3.json": "59e740708ed44b4c0136af5539bd55694d2b195c7eafbb4ea4a3f91556a0c84b",
+    "reference_p1.png": "123a12b2ffa5a01a3626e3e6bac5e2f53e95e8e02b6b99ca62abb97d932fa4d3",
+    "render_p1.png": "43cfe8b2d9964c89219ce38b0f8537aa783dea4d77b7c82ca56ea6dbc651d4c9",
+    "render_p1_after.png": "88c667403117ac56e253f0c4a4295a4fa756cf8a40c4a39a02cd4d992b529122",
+    "render_p1_after_full.png": "b914b0033f7b6bc8087023af840e9f8874285d4324320bfb41544abe8ce92000",
+    "render_p1_llm.png": "185319491d8ee446e42ce187991074097397ecc07682c1c9f66f1914fa28fefb",
+    "schema_ext.json": "2f4b16b5b0b621a52ef178c9891ac7f7e05ec30ad8d69ade9857b69f259a7667",
+    "source.pdf": "a0e39eda24b46aeef6d1270d1058383e0b856b04b5629466790dd6de67011f73",
+    "template_p1.html": "dbb53b0a401e92f67fd81a8a18201d16e433bcc165fcb4d6eb13f6d39a1e8919"
+  },
+  "files": {
+    "constant_replacements.json": "constant_replacements.json",
+    "fix_metrics.json": "fix_metrics.json",
+    "mapping_keys.json": "mapping_keys.json",
+    "mapping_pdf_labels.json": "mapping_pdf_labels.json",
+    "mapping_step3.json": "mapping_step3.json",
+    "reference_p1.png": "reference_p1.png",
+    "render_p1.png": "render_p1.png",
+    "render_p1_after.png": "render_p1_after.png",
+    "render_p1_after_full.png": "render_p1_after_full.png",
+    "render_p1_llm.png": "render_p1_llm.png",
+    "schema_ext.json": "schema_ext.json",
+    "source.pdf": "source.pdf",
+    "template_p1.html": "template_p1.html"
+  },
+  "input_refs": [
+    "/home/rohith/desktop/NeuraReport/prodo/backend/uploads/05-plant-overview-409b1d/source.pdf",
+    "cache_key=671b44b45addbba9356be40c89c60576018f6d8ff5bdacfa68ba97e42c7ba2c3",
+    "catalog_sha256=312a06afd264f4c409ba0a0fb006aac7601c8781b51c4946edc16a58ed702f95",
+    "schema_sha256=da45f7bc7677a01b8544891afe8044dfe51e3e6309c81411e9caf864befe18b3",
+    "html_pre_sha256=dbb53b0a401e92f67fd81a8a18201d16e433bcc165fcb4d6eb13f6d39a1e8919",
+    "html_post_sha256=dbb53b0a401e92f67fd81a8a18201d16e433bcc165fcb4d6eb13f6d39a1e8919",
+    "mapping_tokens=13",
+    "mapping_keys=0"
+  ],
+  "pid": 2467982,
+  "produced_at": "2026-03-02T13:27:59.993277+00:00",
+  "schema_version": "1.0",
+  "step": "mapping_save"
+}

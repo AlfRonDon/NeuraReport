@@ -1,0 +1,16 @@
+{
+  "scalars": [
+    "report_date",
+    "avg_ph",
+    "exceedance_count"
+  ],
+  "row_tokens": [
+    "row_timestamp",
+    "row_ph_101",
+    "row_ph_102",
+    "row_ph_103",
+    "row_ph_104"
+  ],
+  "totals": [],
+  "notes": "Title uses pH capitalisation (lowercase p, uppercase H). Table header background is dark navy #1a237e. Monitoring points label is literal text. avg_ph and exceedance_count are post-table summary scalars."
+}

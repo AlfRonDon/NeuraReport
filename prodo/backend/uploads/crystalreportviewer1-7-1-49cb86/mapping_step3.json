@@ -1,0 +1,410 @@
+{
+  "mapping": {
+    "plant_name": "params.plant_name",
+    "location": "params.location",
+    "from_date": "LATER_SELECTED",
+    "to_date": "LATER_SELECTED",
+    "print_date": "params.print_date",
+    "recipe_code": "UNRESOLVED",
+    "row_sl_no": "UNRESOLVED",
+    "row_material_name": "UNRESOLVED",
+    "row_set_wt": "UNRESOLVED",
+    "row_ach_wt": "UNRESOLVED",
+    "row_error_kg": "UNRESOLVED",
+    "row_error_pct": "UNRESOLVED",
+    "total_set_wt": "UNRESOLVED",
+    "total_ach_wt": "UNRESOLVED",
+    "total_error_kg": "UNRESOLVED",
+    "total_error_pct": "UNRESOLVED",
+    "page_number": "LATER_SELECTED",
+    "total_pages": "params.total_pages"
+  },
+  "meta": {
+    "unresolved": [
+      "recipe_code",
+      "row_sl_no",
+      "row_material_name",
+      "row_set_wt",
+      "row_ach_wt",
+      "row_error_kg",
+      "row_error_pct",
+      "total_set_wt",
+      "total_ach_wt",
+      "total_error_kg",
+      "total_error_pct"
+    ],
+    "hints": {
+      "recipe_code": {
+        "op": "lookup",
+        "over": [
+          "columns:recipes.recipe_name",
+          "note:May need to derive from recipe selection or recipes.recipe_name"
+        ]
+      },
+      "row_sl_no": {
+        "op": "enumerate",
+        "over": [
+          "note:Sequential row number generated during iteration"
+        ]
+      },
+      "row_material_name": {
+        "op": "unpivot",
+        "over": [
+          "columns:recipes.bin1_content",
+          "columns:recipes.bin2_content",
+          "columns:recipes.bin3_content",
+          "columns:recipes.bin4_content",
+          "columns:recipes.bin5_content",
+          "columns:recipes.bin6_content",
+          "columns:recipes.bin7_content",
+          "columns:recipes.bin8_content",
+          "columns:recipes.bin9_content",
+          "columns:recipes.bin10_content",
+          "columns:recipes.bin11_content",
+          "columns:recipes.bin12_content",
+          "note:Requires unpivoting bin_content columns into rows"
+        ]
+      },
+      "row_set_wt": {
+        "op": "unpivot",
+        "over": [
+          "columns:recipes.bin1_sp",
+          "columns:recipes.bin2_sp",
+          "columns:recipes.bin3_sp",
+          "columns:recipes.bin4_sp",
+          "columns:recipes.bin5_sp",
+          "columns:recipes.bin6_sp",
+          "columns:recipes.bin7_sp",
+          "columns:recipes.bin8_sp",
+          "columns:recipes.bin9_sp",
+          "columns:recipes.bin10_sp",
+          "columns:recipes.bin11_sp",
+          "columns:recipes.bin12_sp",
+          "note:Requires unpivoting bin_sp (setpoint) columns into rows"
+        ]
+      },
+      "row_ach_wt": {
+        "op": "unpivot",
+        "over": [
+          "columns:recipes.bin1_act",
+          "columns:recipes.bin2_act",
+          "columns:recipes.bin3_act",
+          "columns:recipes.bin4_act",
+          "columns:recipes.bin5_act",
+          "columns:recipes.bin6_act",
+          "columns:recipes.bin7_act",
+          "columns:recipes.bin8_act",
+          "columns:recipes.bin9_act",
+          "columns:recipes.bin10_act",
+          "columns:recipes.bin11_act",
+          "columns:recipes.bin12_act",
+          "note:Requires unpivoting bin_act (actual) columns into rows"
+        ]
+      },
+      "row_error_kg": {
+        "op": "subtract",
+        "over": [
+          "columns:row_ach_wt",
+          "columns:row_set_wt",
+          "note:Calculated as achieved_weight - set_weight"
+        ]
+      },
+      "row_error_pct": {
+        "op": "divide",
+        "over": [
+          "columns:row_error_kg",
+          "columns:row_set_wt",
+          "note:Calculated as error_kg / set_wt"
+        ]
+      },
+      "total_set_wt": {
+        "op": "sum",
+        "over": [
+          "recipes.bin1_sp",
+          "recipes.bin2_sp",
+          "recipes.bin3_sp",
+          "recipes.bin4_sp",
+          "recipes.bin5_sp",
+          "recipes.bin6_sp",
+          "recipes.bin7_sp",
+          "recipes.bin8_sp",
+          "recipes.bin9_sp",
+          "recipes.bin10_sp",
+          "recipes.bin11_sp",
+          "recipes.bin12_sp"
+        ]
+      },
+      "total_ach_wt": {
+        "op": "sum",
+        "over": [
+          "recipes.bin1_act",
+          "recipes.bin2_act",
+          "recipes.bin3_act",
+          "recipes.bin4_act",
+          "recipes.bin5_act",
+          "recipes.bin6_act",
+          "recipes.bin7_act",
+          "recipes.bin8_act",
+          "recipes.bin9_act",
+          "recipes.bin10_act",
+          "recipes.bin11_act",
+          "recipes.bin12_act"
+        ]
+      },
+      "total_error_kg": {
+        "op": "subtract",
+        "over": [
+          "columns:total_ach_wt",
+          "columns:total_set_wt",
+          "note:Calculated as total achieved - total set"
+        ]
+      },
+      "total_error_pct": {
+        "op": "divide",
+        "over": [
+          "columns:total_error_kg",
+          "columns:total_set_wt",
+          "note:Calculated as total_error_kg / total_set_wt"
+        ]
+      }
+    },
+    "constants": {
+      "company_name": "Indian Industrial Machines Pvt. Ltd."
+    }
+  },
+  "prompt_meta": {
+    "version": "llm_call_3_v7",
+    "prompt_sha256": "08ef6125c2c19dd312e156996e29321994c4804335d49115ab3d7528e9656862",
+    "catalog_sha256": "5ab68eaee30f1854825ca078e67a3c993e44a196546ccd2989ebace59744fecb",
+    "schema_sha256": "12ee57000ec6b247ea32695bc30d6711ff10e314235fb3067ea74f9da9ad8507",
+    "cache_key": "59883466af5d00eddba3127c73dcb635d2fc26d43d78865df994194f0a53b923",
+    "pre_html_sha256": "d5c5e9f0c71dc9c422b878778b7d555416c8e78afc2c351f7629c74c40fe8881",
+    "post_html_sha256": "9e3e536c180524f7b32f77dc5c4945ed33d6a8f366018eddd36fdb2ff3ec03f0",
+    "prompt_version": "llm_call_3_v7",
+    "pdf_sha256": "ee486120233175d212fc4e83af5f084df28c5345a0c359eedeef3b3f9e922b6c",
+    "db_signature": "a1ae35033b0127c7eb5947b164605076fecec7d6e107fe858a84d9dcce409ae9"
+  },
+  "raw_payload": {
+    "mapping": {
+      "plant_name": "params.plant_name",
+      "location": "params.location",
+      "from_date": "To Be Selected...",
+      "to_date": "To Be Selected...",
+      "print_date": "params.print_date",
+      "recipe_code": "UNRESOLVED",
+      "row_sl_no": "UNRESOLVED",
+      "row_material_name": "UNRESOLVED",
+      "row_set_wt": "UNRESOLVED",
+      "row_ach_wt": "UNRESOLVED",
+      "row_error_kg": "UNRESOLVED",
+      "row_error_pct": "UNRESOLVED",
+      "total_set_wt": "UNRESOLVED",
+      "total_ach_wt": "UNRESOLVED",
+      "total_error_kg": "UNRESOLVED",
+      "total_error_pct": "UNRESOLVED",
+      "page_number": "params.page_number",
+      "total_pages": "params.total_pages"
+    },
+    "token_samples": {
+      "plant_name": "SSR AQUA",
+      "location": "Gudivada",
+      "from_date": "24/03/2024",
+      "to_date": "24/03/2024",
+      "print_date": "25/03/2024",
+      "recipe_code": "GANGADHAR-2024",
+      "row_sl_no": "1",
+      "row_material_name": "CM 100 + DORB 100 KRR",
+      "row_set_wt": "11,800.00",
+      "row_ach_wt": "11,803.20",
+      "row_error_kg": "3.20",
+      "row_error_pct": "0.0271",
+      "total_set_wt": "80,000.00",
+      "total_ach_wt": "80,016.00",
+      "total_error_kg": "16.00",
+      "total_error_pct": "0.0200",
+      "company_name": "Indian Industrial Machines Pvt. Ltd.",
+      "page_number": "1",
+      "total_pages": "1"
+    },
+    "meta": {
+      "unresolved": [
+        "recipe_code",
+        "row_sl_no",
+        "row_material_name",
+        "row_set_wt",
+        "row_ach_wt",
+        "row_error_kg",
+        "row_error_pct",
+        "total_set_wt",
+        "total_ach_wt",
+        "total_error_kg",
+        "total_error_pct"
+      ],
+      "hints": {
+        "recipe_code": {
+          "op": "lookup",
+          "over": [
+            "columns:recipes.recipe_name",
+            "note:May need to derive from recipe selection or recipes.recipe_name"
+          ]
+        },
+        "row_sl_no": {
+          "op": "enumerate",
+          "over": [
+            "note:Sequential row number generated during iteration"
+          ]
+        },
+        "row_material_name": {
+          "op": "unpivot",
+          "over": [
+            "columns:recipes.bin1_content",
+            "columns:recipes.bin2_content",
+            "columns:recipes.bin3_content",
+            "columns:recipes.bin4_content",
+            "columns:recipes.bin5_content",
+            "columns:recipes.bin6_content",
+            "columns:recipes.bin7_content",
+            "columns:recipes.bin8_content",
+            "columns:recipes.bin9_content",
+            "columns:recipes.bin10_content",
+            "columns:recipes.bin11_content",
+            "columns:recipes.bin12_content",
+            "note:Requires unpivoting bin_content columns into rows"
+          ]
+        },
+        "row_set_wt": {
+          "op": "unpivot",
+          "over": [
+            "columns:recipes.bin1_sp",
+            "columns:recipes.bin2_sp",
+            "columns:recipes.bin3_sp",
+            "columns:recipes.bin4_sp",
+            "columns:recipes.bin5_sp",
+            "columns:recipes.bin6_sp",
+            "columns:recipes.bin7_sp",
+            "columns:recipes.bin8_sp",
+            "columns:recipes.bin9_sp",
+            "columns:recipes.bin10_sp",
+            "columns:recipes.bin11_sp",
+            "columns:recipes.bin12_sp",
+            "note:Requires unpivoting bin_sp (setpoint) columns into rows"
+          ]
+        },
+        "row_ach_wt": {
+          "op": "unpivot",
+          "over": [
+            "columns:recipes.bin1_act",
+            "columns:recipes.bin2_act",
+            "columns:recipes.bin3_act",
+            "columns:recipes.bin4_act",
+            "columns:recipes.bin5_act",
+            "columns:recipes.bin6_act",
+            "columns:recipes.bin7_act",
+            "columns:recipes.bin8_act",
+            "columns:recipes.bin9_act",
+            "columns:recipes.bin10_act",
+            "columns:recipes.bin11_act",
+            "columns:recipes.bin12_act",
+            "note:Requires unpivoting bin_act (actual) columns into rows"
+          ]
+        },
+        "row_error_kg": {
+          "op": "subtract",
+          "over": [
+            "columns:row_ach_wt",
+            "columns:row_set_wt",
+            "note:Calculated as achieved_weight - set_weight"
+          ]
+        },
+        "row_error_pct": {
+          "op": "divide",
+          "over": [
+            "columns:row_error_kg",
+            "columns:row_set_wt",
+            "note:Calculated as error_kg / set_wt"
+          ]
+        },
+        "total_set_wt": {
+          "op": "sum",
+          "over": [
+            "recipes.bin1_sp",
+            "recipes.bin2_sp",
+            "recipes.bin3_sp",
+            "recipes.bin4_sp",
+            "recipes.bin5_sp",
+            "recipes.bin6_sp",
+            "recipes.bin7_sp",
+            "recipes.bin8_sp",
+            "recipes.bin9_sp",
+            "recipes.bin10_sp",
+            "recipes.bin11_sp",
+            "recipes.bin12_sp"
+          ]
+        },
+        "total_ach_wt": {
+          "op": "sum",
+          "over": [
+            "recipes.bin1_act",
+            "recipes.bin2_act",
+            "recipes.bin3_act",
+            "recipes.bin4_act",
+            "recipes.bin5_act",
+            "recipes.bin6_act",
+            "recipes.bin7_act",
+            "recipes.bin8_act",
+            "recipes.bin9_act",
+            "recipes.bin10_act",
+            "recipes.bin11_act",
+            "recipes.bin12_act"
+          ]
+        },
+        "total_error_kg": {
+          "op": "subtract",
+          "over": [
+            "columns:total_ach_wt",
+            "columns:total_set_wt",
+            "note:Calculated as total achieved - total set"
+          ]
+        },
+        "total_error_pct": {
+          "op": "divide",
+          "over": [
+            "columns:total_error_kg",
+            "columns:total_set_wt",
+            "note:Calculated as total_error_kg / total_set_wt"
+          ]
+        }
+      },
+      "constants": {
+        "company_name": "Indian Industrial Machines Pvt. Ltd."
+      }
+    },
+    "constant_replacements": {
+      "company_name": "Indian Industrial Machines Pvt. Ltd."
+    }
+  },
+  "constant_replacements": {
+    "company_name": "Indian Industrial Machines Pvt. Ltd."
+  },
+  "token_samples": {
+    "plant_name": "SSR AQUA",
+    "location": "Gudivada",
+    "from_date": "24/03/2024",
+    "to_date": "24/03/2024",
+    "print_date": "25/03/2024",
+    "recipe_code": "GANGADHAR-2024",
+    "row_sl_no": "1",
+    "row_material_name": "CM 100 + DORB 100 KRR",
+    "row_set_wt": "11,800.00",
+    "row_ach_wt": "11,803.20",
+    "row_error_kg": "3.20",
+    "row_error_pct": "0.0271",
+    "total_set_wt": "80,000.00",
+    "total_ach_wt": "80,016.00",
+    "total_error_kg": "16.00",
+    "total_error_pct": "0.0200",
+    "company_name": "Indian Industrial Machines Pvt. Ltd.",
+    "page_number": "1",
+    "total_pages": "1"
+  }
+}

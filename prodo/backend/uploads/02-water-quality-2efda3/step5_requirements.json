@@ -1,0 +1,69 @@
+{
+  "datasets": {
+    "header": {
+      "description": "Scalar values for the report header: start_date and end_date are user-supplied date range parameters passed through as PARAM values; compliance_status is a post-processing parameter injected at runtime reflecting whether sensor readings met regulatory thresholds.",
+      "columns": [
+        "start_date",
+        "end_date",
+        "compliance_status"
+      ]
+    },
+    "rows": {
+      "description": "One row per record in neuract__ANALYSER_TABLE within the requested date range. Each row exposes PH_101 as row_min, PH_102 as row_max, PH_103 as row_avg per the authoritative mapping override. row_parameter, row_sensor, and row_unit require external static lookup resolution and are not derivable from the catalog.",
+      "columns": [
+        "row_parameter",
+        "row_sensor",
+        "row_min",
+        "row_max",
+        "row_avg",
+        "row_unit"
+      ],
+      "grouping": [],
+      "ordering": [
+        "neuract__ANALYSER_TABLE.timestamp_utc ASC"
+      ]
+    },
+    "totals": {
+      "description": "No totals section defined for this report template.",
+      "columns": []
+    }
+  },
+  "semantics": "start_date and end_date are user-supplied filter parameters mapped as PARAM and passed directly to the optional date range filter on neuract__ANALYSER_TABLE.timestamp_utc; they also appear verbatim in the report header. compliance_status is a non-catalog runtime parameter injected after processing. row_min, row_max, row_avg are direct sensor column reads (PH_101, PH_102, PH_103) per mapping override. row_parameter, row_sensor, and row_unit cannot be resolved from any catalog column.",
+  "parameters": {
+    "required": [
+      {
+        "name": "start_date",
+        "type": "date"
+      },
+      {
+        "name": "end_date",
+        "type": "date"
+      }
+    ],
+    "optional": [
+      {
+        "name": "compliance_status",
+        "type": "string"
+      },
+      {
+        "name": "row_parameter",
+        "type": "string"
+      },
+      {
+        "name": "row_sensor",
+        "type": "string"
+      },
+      {
+        "name": "row_unit",
+        "type": "string"
+      }
+    ]
+  },
+  "transformations": [
+    "No reshape applied; neuract__ANALYSER_TABLE columns PH_101, PH_102, and PH_103 are directly mapped to row_min, row_max, and row_avg respectively without any pivot or melt operation.",
+    "Date range filter (date_from / date_to) is applied to neuract__ANALYSER_TABLE.timestamp_utc to scope the returned rows to the requested report period.",
+    "All three pH sensor columns are formatted to 4 decimal places in the rendered output.",
+    "compliance_status is injected as a PARAM and displayed in the report footer compliance line unchanged.",
+    "row_parameter, row_sensor, and row_unit are UNRESOLVED and must be supplied externally — either via a static field_key-to-label/unit lookup table or as runtime parameter values — before template rendering."
+  ]
+}

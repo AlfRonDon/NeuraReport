@@ -1,0 +1,52 @@
+[
+  {
+    "header": "print_date",
+    "placeholder": "{print_date}",
+    "mapping": "PARAM:print_date"
+  },
+  {
+    "header": "from_date",
+    "placeholder": "{from_date}",
+    "mapping": "PARAM:from_date"
+  },
+  {
+    "header": "to_date",
+    "placeholder": "{to_date}",
+    "mapping": "PARAM:to_date"
+  },
+  {
+    "header": "filter_recipe_code",
+    "placeholder": "{filter_recipe_code}",
+    "mapping": "PARAM:filter_recipe_code"
+  },
+  {
+    "header": "row_sl_no",
+    "placeholder": "{row_sl_no}",
+    "mapping": "rows.row_sl_no"
+  },
+  {
+    "header": "row_recipe_name",
+    "placeholder": "{row_recipe_name}",
+    "mapping": "recipes.recipe_name"
+  },
+  {
+    "header": "row_recipe_code",
+    "placeholder": "{row_recipe_code}",
+    "mapping": "recipes.recipe_name"
+  },
+  {
+    "header": "row_recipe_no",
+    "placeholder": "{row_recipe_no}",
+    "mapping": "recipes.id"
+  },
+  {
+    "header": "row_no_of_batches",
+    "placeholder": "{row_no_of_batches}",
+    "mapping": "rows.row_no_of_batches"
+  },
+  {
+    "header": "total_batches",
+    "placeholder": "{total_batches}",
+    "mapping": "totals.total_batches"
+  }
+]

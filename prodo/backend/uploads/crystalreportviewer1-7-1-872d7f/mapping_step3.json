@@ -1,0 +1,266 @@
+{
+  "mapping": {
+    "plant_name": "params.plant_name",
+    "location": "params.location",
+    "from_date": "LATER_SELECTED",
+    "to_date": "LATER_SELECTED",
+    "print_date": "params.print_date",
+    "recipe_code": "params.recipe_code",
+    "page_info": "LATER_SELECTED",
+    "row_sl_no": "UNRESOLVED",
+    "row_material_name": "UNRESOLVED",
+    "row_set_wt": "UNRESOLVED",
+    "row_ach_wt": "UNRESOLVED",
+    "row_error": "UNRESOLVED",
+    "row_error_pct": "UNRESOLVED",
+    "total_set_wt": "UNRESOLVED",
+    "total_ach_wt": "UNRESOLVED",
+    "total_error": "UNRESOLVED",
+    "total_error_pct": "UNRESOLVED"
+  },
+  "meta": {
+    "unresolved": [
+      "row_sl_no",
+      "row_material_name",
+      "row_set_wt",
+      "row_ach_wt",
+      "row_error",
+      "row_error_pct",
+      "total_set_wt",
+      "total_ach_wt",
+      "total_error",
+      "total_error_pct"
+    ],
+    "hints": {
+      "row_sl_no": {
+        "op": "ROW_NUMBER",
+        "over": [
+          "description:Sequential numbering of rows"
+        ]
+      },
+      "row_material_name": {
+        "op": "UNPIVOT",
+        "over": [
+          "description:Material names from bin1_content through bin12_content across multiple recipe rows within date range"
+        ]
+      },
+      "row_set_wt": {
+        "op": "UNPIVOT",
+        "over": [
+          "description:Set weight values from bin1_sp through bin12_sp across multiple recipe rows within date range"
+        ]
+      },
+      "row_ach_wt": {
+        "op": "UNPIVOT",
+        "over": [
+          "description:Achieved weight values from bin1_act through bin12_act across multiple recipe rows within date range"
+        ]
+      },
+      "row_error": {
+        "op": "SUBTRACT",
+        "over": [
+          "columns:row_ach_wt",
+          "columns:row_set_wt",
+          "description:Calculated as achieved_weight minus set_weight"
+        ]
+      },
+      "row_error_pct": {
+        "op": "DIVIDE",
+        "over": [
+          "formula:error / set_weight",
+          "description:Calculated as (achieved - set) / set"
+        ]
+      },
+      "total_set_wt": {
+        "op": "SUM",
+        "over": [
+          "row_set_wt",
+          "description:Sum of all set weights in the filtered dataset"
+        ]
+      },
+      "total_ach_wt": {
+        "op": "SUM",
+        "over": [
+          "row_ach_wt",
+          "description:Sum of all achieved weights in the filtered dataset"
+        ]
+      },
+      "total_error": {
+        "op": "SUM",
+        "over": [
+          "row_error",
+          "description:Sum of all errors in the filtered dataset"
+        ]
+      },
+      "total_error_pct": {
+        "op": "DIVIDE",
+        "over": [
+          "formula:total_error / total_set_wt",
+          "description:Calculated as total error divided by total set weight"
+        ]
+      }
+    }
+  },
+  "prompt_meta": {
+    "version": "llm_call_3_v7",
+    "prompt_sha256": "31b86a8c4ff4b4d44856327d5eb2b9a6a768372d13525d7938f451d68ba43f43",
+    "catalog_sha256": "5ab68eaee30f1854825ca078e67a3c993e44a196546ccd2989ebace59744fecb",
+    "schema_sha256": "a519ee1502605097ece3f9746a80c481631d9306052baa08566e684a36b8a43c",
+    "cache_key": "51ac6c9f66116d6853ede9cda73f7f8719e73589c932e7be5c55be6d2f86a843",
+    "pre_html_sha256": "0642d96d1342e2ec2775ab0d7b03374751c7af20a57fb810a8cf35062995b3b7",
+    "post_html_sha256": "87d9d76961037742e69f95d71c782cdf508670dc60261f4a5039535409b5856e",
+    "prompt_version": "llm_call_3_v7",
+    "pdf_sha256": "ee486120233175d212fc4e83af5f084df28c5345a0c359eedeef3b3f9e922b6c",
+    "db_signature": "a1ae35033b0127c7eb5947b164605076fecec7d6e107fe858a84d9dcce409ae9"
+  },
+  "raw_payload": {
+    "mapping": {
+      "plant_name": "params.plant_name",
+      "location": "params.location",
+      "from_date": "To Be Selected...",
+      "to_date": "To Be Selected...",
+      "print_date": "params.print_date",
+      "recipe_code": "params.recipe_code",
+      "page_info": "To Be Selected...",
+      "row_sl_no": "UNRESOLVED",
+      "row_material_name": "UNRESOLVED",
+      "row_set_wt": "UNRESOLVED",
+      "row_ach_wt": "UNRESOLVED",
+      "row_error": "UNRESOLVED",
+      "row_error_pct": "UNRESOLVED",
+      "total_set_wt": "UNRESOLVED",
+      "total_ach_wt": "UNRESOLVED",
+      "total_error": "UNRESOLVED",
+      "total_error_pct": "UNRESOLVED"
+    },
+    "token_samples": {
+      "plant_name": "SSR AQUA",
+      "location": "Gudivada",
+      "from_date": "24/03/2024",
+      "to_date": "to 24/03/2024",
+      "print_date": "25/03/2024",
+      "recipe_code": "GANGADHAR-2024",
+      "company_name": "Indian Industrial Machines Pvt. Ltd.",
+      "page_info": "Page 1 of 1",
+      "row_sl_no": "1",
+      "row_material_name": "CM 100 + DORB 100 KRR",
+      "row_set_wt": "11,800.00",
+      "row_ach_wt": "11,803.20",
+      "row_error": "3.20",
+      "row_error_pct": "0.0271",
+      "total_set_wt": "80,000.00",
+      "total_ach_wt": "80,016.00",
+      "total_error": "16.00",
+      "total_error_pct": "0.0200"
+    },
+    "meta": {
+      "unresolved": [
+        "row_sl_no",
+        "row_material_name",
+        "row_set_wt",
+        "row_ach_wt",
+        "row_error",
+        "row_error_pct",
+        "total_set_wt",
+        "total_ach_wt",
+        "total_error",
+        "total_error_pct"
+      ],
+      "hints": {
+        "row_sl_no": {
+          "op": "ROW_NUMBER",
+          "over": [
+            "description:Sequential numbering of rows"
+          ]
+        },
+        "row_material_name": {
+          "op": "UNPIVOT",
+          "over": [
+            "description:Material names from bin1_content through bin12_content across multiple recipe rows within date range"
+          ]
+        },
+        "row_set_wt": {
+          "op": "UNPIVOT",
+          "over": [
+            "description:Set weight values from bin1_sp through bin12_sp across multiple recipe rows within date range"
+          ]
+        },
+        "row_ach_wt": {
+          "op": "UNPIVOT",
+          "over": [
+            "description:Achieved weight values from bin1_act through bin12_act across multiple recipe rows within date range"
+          ]
+        },
+        "row_error": {
+          "op": "SUBTRACT",
+          "over": [
+            "columns:row_ach_wt",
+            "columns:row_set_wt",
+            "description:Calculated as achieved_weight minus set_weight"
+          ]
+        },
+        "row_error_pct": {
+          "op": "DIVIDE",
+          "over": [
+            "formula:error / set_weight",
+            "description:Calculated as (achieved - set) / set"
+          ]
+        },
+        "total_set_wt": {
+          "op": "SUM",
+          "over": [
+            "row_set_wt",
+            "description:Sum of all set weights in the filtered dataset"
+          ]
+        },
+        "total_ach_wt": {
+          "op": "SUM",
+          "over": [
+            "row_ach_wt",
+            "description:Sum of all achieved weights in the filtered dataset"
+          ]
+        },
+        "total_error": {
+          "op": "SUM",
+          "over": [
+            "row_error",
+            "description:Sum of all errors in the filtered dataset"
+          ]
+        },
+        "total_error_pct": {
+          "op": "DIVIDE",
+          "over": [
+            "formula:total_error / total_set_wt",
+            "description:Calculated as total error divided by total set weight"
+          ]
+        }
+      }
+    },
+    "constant_replacements": {
+      "company_name": "Indian Industrial Machines Pvt. Ltd."
+    }
+  },
+  "constant_replacements": {
+    "company_name": "Indian Industrial Machines Pvt. Ltd."
+  },
+  "token_samples": {
+    "plant_name": "SSR AQUA",
+    "location": "Gudivada",
+    "from_date": "24/03/2024",
+    "to_date": "to 24/03/2024",
+    "print_date": "25/03/2024",
+    "recipe_code": "GANGADHAR-2024",
+    "company_name": "Indian Industrial Machines Pvt. Ltd.",
+    "page_info": "Page 1 of 1",
+    "row_sl_no": "1",
+    "row_material_name": "CM 100 + DORB 100 KRR",
+    "row_set_wt": "11,800.00",
+    "row_ach_wt": "11,803.20",
+    "row_error": "3.20",
+    "row_error_pct": "0.0271",
+    "total_set_wt": "80,000.00",
+    "total_ach_wt": "80,016.00",
+    "total_error": "16.00",
+    "total_error_pct": "0.0200"
+  }
+}

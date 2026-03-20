@@ -1,0 +1,122 @@
+{
+  "prompt_version": "v3_df",
+  "model": "sonnet",
+  "input_signature": "8fc2dddfb902cc97bb1a0e15ff6347af8a464322ec214def50980ecb8ee97f26",
+  "db_signature": "0c33e3e2d9de39703b476f6ece004966e0b418fe1acc690478668ef987513776",
+  "page_summary_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "generated_at": 1772457022,
+  "assumptions": [],
+  "warnings": [],
+  "validation": {
+    "unknown_tokens": [],
+    "unknown_columns": [],
+    "token_coverage": {
+      "scalars_mapped_pct": 100,
+      "row_tokens_mapped_pct": 100,
+      "totals_mapped_pct": 100
+    }
+  },
+  "overview_path": "overview.md",
+  "step5_requirements_path": "step5_requirements.json",
+  "contract_payload": {
+    "tokens": {
+      "scalars": [
+        "timestamp"
+      ],
+      "row_tokens": [
+        "row_tank_name",
+        "row_level",
+        "row_capacity",
+        "row_current_vol"
+      ],
+      "totals": []
+    },
+    "mapping": {
+      "timestamp": "neuract__LT_TABLE.timestamp_utc",
+      "row_level": "neuract__LT_TABLE.LT_112"
+    },
+    "unresolved": [
+      "row_tank_name",
+      "row_capacity",
+      "row_current_vol"
+    ],
+    "join": {
+      "parent_table": "neuract__LT_TABLE",
+      "parent_key": "rowid",
+      "child_table": "neuract__LT_TABLE",
+      "child_key": "rowid"
+    },
+    "date_columns": {
+      "neuract__LT_TABLE": "timestamp_utc"
+    },
+    "filters": {
+      "optional": {
+        "date_from": "neuract__LT_TABLE.timestamp_utc",
+        "date_to": "neuract__LT_TABLE.timestamp_utc"
+      }
+    },
+    "reshape_rules": [
+      {
+        "purpose": "Melt 9 wide LT tank-level columns into one row per tank with static name labels and capacity constants",
+        "strategy": "MELT",
+        "columns": [
+          {
+            "as": "row_level",
+            "from": [
+              "neuract__LT_TABLE.LT_112",
+              "neuract__LT_TABLE.LT_113",
+              "neuract__LT_TABLE.LT_114",
+              "neuract__LT_TABLE.LT_116",
+              "neuract__LT_TABLE.LT_118",
+              "neuract__LT_TABLE.LT_120",
+              "neuract__LT_TABLE.LT_126",
+              "neuract__LT_TABLE.LT_127",
+              "neuract__LT_TABLE.LT_128"
+            ]
+          }
+        ],
+        "order_by": []
+      }
+    ],
+    "row_computed": {
+      "timestamp": {
+        "op": "format_date",
+        "column": "neuract__LT_TABLE.timestamp_utc",
+        "format": "%d-%m-%Y %H:%M:%S"
+      },
+      "row_current_vol": {
+        "op": "divide",
+        "numerator": {
+          "op": "multiply",
+          "left": "row_level",
+          "right": "row_capacity"
+        },
+        "denominator": 100
+      }
+    },
+    "totals_math": {},
+    "totals": {},
+    "formatters": {
+      "row_level": "number(2)",
+      "row_capacity": "number(2)",
+      "row_current_vol": "number(2)"
+    },
+    "order_by": {
+      "rows": [
+        "ROWID"
+      ]
+    },
+    "header_tokens": [
+      "timestamp"
+    ],
+    "row_tokens": [
+      "row_level"
+    ],
+    "row_order": [
+      "ROWID"
+    ],
+    "literals": {},
+    "notes": "Tank Level Status Report uses a MELT reshape on neuract__LT_TABLE to convert 9 wide LT instrument-tag columns into one row per tank. Tank names and engineering capacity constants (kL) are static literals embedded in the reshape definition and must be verified or updated by the user to match actual plant configuration. The tank names provided (Raw Water Tank, Settling Tank, Filtration Tank, Clear Water Tank, Overhead Tank, Sump Tank, Storage Tank x3) are inferred from the auto-mapping hints and common water treatment plant terminology. Current volume is derived as level% × capacity ÷ 100. The snapshot timestamp is a scalar header field with format_date applied."
+  },
+  "key_tokens": []
+}

@@ -1,0 +1,8 @@
+Template: Recipe Batch Report
+Type: pdf
+Created from: AI chat conversation
+Total tokens: 21
+  Scalars: (none)
+  Row tokens: batch_date, batch_no, duration_sec, end_time, location, plant_name, print_date, recipe_name, recipes_list, report_date, row_ach_wt, row_bin_no, row_error_kg, row_error_pct, row_material_name, row_set_wt, start_time
+  Totals: total_ach_wt, total_error_kg, total_error_pct, total_set_wt
+Has block repeat: True

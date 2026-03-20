@@ -1,0 +1,101 @@
+{
+  "tokens": {
+    "scalars": [
+      "start_date",
+      "end_date",
+      "compliance_status"
+    ],
+    "row_tokens": [
+      "row_parameter",
+      "row_sensor",
+      "row_min",
+      "row_max",
+      "row_avg",
+      "row_unit"
+    ],
+    "totals": []
+  },
+  "mapping": {
+    "start_date": "PARAM:start_date",
+    "end_date": "PARAM:end_date",
+    "compliance_status": "PARAM:compliance_status",
+    "row_min": "neuract__ANALYSER_TABLE.PH_101",
+    "row_max": "neuract__ANALYSER_TABLE.PH_102",
+    "row_avg": "neuract__ANALYSER_TABLE.PH_103"
+  },
+  "unresolved": [
+    "row_parameter",
+    "row_sensor",
+    "row_unit"
+  ],
+  "join": {
+    "parent_table": "neuract__ANALYSER_TABLE",
+    "parent_key": "rowid",
+    "child_table": "neuract__ANALYSER_TABLE",
+    "child_key": "rowid"
+  },
+  "date_columns": {
+    "neuract__ANALYSER_TABLE": "timestamp_utc"
+  },
+  "filters": {
+    "optional": {
+      "date_from": "neuract__ANALYSER_TABLE.timestamp_utc",
+      "date_to": "neuract__ANALYSER_TABLE.timestamp_utc"
+    }
+  },
+  "reshape_rules": [
+    {
+      "purpose": "Auto-generated reshape rule derived from mapping tokens.",
+      "strategy": "SELECT",
+      "columns": [
+        {
+          "as": "row_min",
+          "from": [
+            "neuract__ANALYSER_TABLE.PH_101"
+          ]
+        },
+        {
+          "as": "row_max",
+          "from": [
+            "neuract__ANALYSER_TABLE.PH_102"
+          ]
+        },
+        {
+          "as": "row_avg",
+          "from": [
+            "neuract__ANALYSER_TABLE.PH_103"
+          ]
+        }
+      ],
+      "order_by": []
+    }
+  ],
+  "row_computed": {},
+  "totals_math": {},
+  "totals": {},
+  "formatters": {
+    "row_min": "number(4)",
+    "row_max": "number(4)",
+    "row_avg": "number(4)"
+  },
+  "order_by": {
+    "rows": [
+      "neuract__ANALYSER_TABLE.timestamp_utc ASC"
+    ]
+  },
+  "header_tokens": [
+    "start_date",
+    "end_date",
+    "compliance_status"
+  ],
+  "row_tokens": [
+    "row_min",
+    "row_max",
+    "row_avg"
+  ],
+  "row_order": [
+    "neuract__ANALYSER_TABLE.timestamp_utc ASC"
+  ],
+  "literals": {},
+  "notes": "Mapping override is authoritative: row_min/row_max/row_avg map to PH_101/PH_102/PH_103 — three distinct pH sensor channels repurposed under the Min/Max/Avg column headings rather than statistical aggregations. row_parameter, row_sensor, and row_unit are UNRESOLVED; no label, sensor-display-name, or engineering-unit column exists in the catalog. These must be resolved from a static lookup keyed by neuract__device_mappings.field_key or injected as runtime literals. compliance_status is a runtime PARAM injected post-processing. Date range scoping uses neuract__ANALYSER_TABLE.timestamp_utc."
+}

@@ -1,0 +1,96 @@
+{
+  "datasets": {
+    "header": {
+      "description": "Page-level header parameters",
+      "columns": [
+        "plant_name",
+        "report_date",
+        "location",
+        "recipe_name",
+        "part_description",
+        "shift_number",
+        "footer_company",
+        "page_number",
+        "total_pages"
+      ]
+    },
+    "rows": {
+      "description": "Material detail rows per batch (melted from bin columns)",
+      "columns": [
+        "row_bth_no",
+        "row_material_name",
+        "row_set_wt",
+        "row_ach_wt",
+        "row_error",
+        "row_error_pct",
+        "row_deviate_dur"
+      ],
+      "grouping": [
+        "batch_number"
+      ],
+      "ordering": [
+        "bin_number",
+        "ASC"
+      ]
+    },
+    "totals": {
+      "description": "Aggregated totals per batch",
+      "columns": [
+        "total_set_wt",
+        "total_ach_wt",
+        "total_error",
+        "total_error_pct",
+        "total_deviate_dur"
+      ]
+    }
+  },
+  "semantics": "Report displays batches with material dispensing details. Each batch shows materials from bins 1-12 with set/achieved weights and calculated errors.",
+  "parameters": {
+    "required": [
+      {
+        "name": "plant_name",
+        "type": "string"
+      },
+      {
+        "name": "report_date",
+        "type": "date"
+      },
+      {
+        "name": "location",
+        "type": "string"
+      },
+      {
+        "name": "recipe_name",
+        "type": "string"
+      },
+      {
+        "name": "part_description",
+        "type": "string"
+      },
+      {
+        "name": "shift_number",
+        "type": "string"
+      }
+    ],
+    "optional": [
+      {
+        "name": "footer_company",
+        "type": "string"
+      },
+      {
+        "name": "page_number",
+        "type": "integer"
+      },
+      {
+        "name": "total_pages",
+        "type": "integer"
+      }
+    ]
+  },
+  "transformations": [
+    "MELT bin columns 1-12 from wide to long format (bin_content → material_name, bin_sp → set_wt, bin_act → ach_wt)",
+    "Compute row_error as subtract(ach_wt, set_wt)",
+    "Compute row_error_pct as divide(error, set_wt) with percentage formatting",
+    "Aggregate totals per batch: sum(set_wt), sum(ach_wt), sum(error), computed error_pct"
+  ]
+}

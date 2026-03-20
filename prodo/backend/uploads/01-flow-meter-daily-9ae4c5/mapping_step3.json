@@ -1,0 +1,180 @@
+{
+  "mapping": {
+    "report_date": "params.report_date",
+    "row_meter_id": "UNRESOLVED",
+    "row_reading": "UNRESOLVED",
+    "row_totalizer": "UNRESOLVED",
+    "row_status": "UNRESOLVED",
+    "total_flow": "UNRESOLVED"
+  },
+  "meta": {
+    "unresolved": [
+      "row_meter_id",
+      "row_reading",
+      "row_totalizer",
+      "row_status",
+      "total_flow"
+    ],
+    "hints": {
+      "row_meter_id": {
+        "op": "UNPIVOT",
+        "over": [
+          "columns:neuract__FM_TABLE.FM_101",
+          "columns:neuract__FM_TABLE.FM_102",
+          "columns:neuract__FM_TABLE.FM_103",
+          "columns:neuract__FM_TABLE.FM_104",
+          "columns:neuract__FM_TABLE.FM_105",
+          "columns:neuract__FM_TABLE.FM_106",
+          "note:PDF shows FM_101 through FM_106 as literal meter ID labels in column 1; source is column names unpivoted to rows"
+        ]
+      },
+      "row_reading": {
+        "op": "UNPIVOT",
+        "over": [
+          "columns:neuract__FM_TABLE.FM_101",
+          "columns:neuract__FM_TABLE.FM_102",
+          "columns:neuract__FM_TABLE.FM_103",
+          "columns:neuract__FM_TABLE.FM_104",
+          "columns:neuract__FM_TABLE.FM_105",
+          "columns:neuract__FM_TABLE.FM_106",
+          "note:Each row reading (m3/h) maps to the corresponding FM_10x REAL column unpivoted from neuract__FM_TABLE"
+        ]
+      },
+      "row_totalizer": {
+        "op": "UNPIVOT",
+        "over": [
+          "columns:neuract__FM_TABLE.FM_101_TOTALIZER",
+          "columns:neuract__FM_TABLE.FM_102_TOTALIZER",
+          "columns:neuract__FM_TABLE.FM_103_TOTALIZER",
+          "columns:neuract__FM_TABLE.FM_104_TOTALIZER",
+          "columns:neuract__FM_TABLE.FM_105_TOTALIZER",
+          "columns:neuract__FM_TABLE.FM_106_TOTALIZER",
+          "note:Each row totalizer (m3) maps to the corresponding FM_10x_TOTALIZER REAL column unpivoted from neuract__FM_TABLE"
+        ]
+      },
+      "row_status": {
+        "op": "CONSTANT",
+        "over": [
+          "note:PDF shows literal 'Active' for all six rows; no status column exists in any catalog table — treat as a static constant or derive from business logic outside the catalog"
+        ]
+      },
+      "total_flow": {
+        "op": "SUM",
+        "over": [
+          "columns:neuract__FM_TABLE.FM_101_TOTALIZER",
+          "columns:neuract__FM_TABLE.FM_102_TOTALIZER",
+          "columns:neuract__FM_TABLE.FM_103_TOTALIZER",
+          "columns:neuract__FM_TABLE.FM_104_TOTALIZER",
+          "columns:neuract__FM_TABLE.FM_105_TOTALIZER",
+          "columns:neuract__FM_TABLE.FM_106_TOTALIZER",
+          "note:Daily total flow is the SUM of all six FM TOTALIZER columns aggregated over the report date window"
+        ]
+      }
+    }
+  },
+  "prompt_meta": {
+    "version": "llm_call_3_df_v2",
+    "prompt_sha256": "523d8158f3cec717bd631b7f1e22b4ee35075055840dc25a283b45d0acde0916",
+    "catalog_sha256": "312a06afd264f4c409ba0a0fb006aac7601c8781b51c4946edc16a58ed702f95",
+    "schema_sha256": "ed06ac01deed030a1d02b3bf94ca24a80db730bb5aa9f1250b43c711f87e16cf",
+    "cache_key": "4d07f29f7ff163f8715c54625a45124c9256f20eb41cf442b5d325c913b16c82",
+    "pre_html_sha256": "fd32ba54235a4684f0297f1df2b5d60f968ea50bd87ba7683afd66892f1c888c",
+    "post_html_sha256": "fd32ba54235a4684f0297f1df2b5d60f968ea50bd87ba7683afd66892f1c888c",
+    "prompt_version": "llm_call_3_df_v2",
+    "pdf_sha256": "4b80847d13e3a33cfa5e88b9c97d398847654761a0bf905143cb955f89f132a3",
+    "db_signature": "0c33e3e2d9de39703b476f6ece004966e0b418fe1acc690478668ef987513776"
+  },
+  "raw_payload": {
+    "mapping": {
+      "report_date": "params.report_date",
+      "row_meter_id": "UNRESOLVED",
+      "row_reading": "UNRESOLVED",
+      "row_totalizer": "UNRESOLVED",
+      "row_status": "UNRESOLVED",
+      "total_flow": "UNRESOLVED"
+    },
+    "token_samples": {
+      "report_date": "NOT_VISIBLE",
+      "row_meter_id": "FM_101",
+      "row_reading": "NOT_VISIBLE",
+      "row_totalizer": "NOT_VISIBLE",
+      "row_status": "Active",
+      "total_flow": "NOT_VISIBLE"
+    },
+    "meta": {
+      "unresolved": [
+        "row_meter_id",
+        "row_reading",
+        "row_totalizer",
+        "row_status",
+        "total_flow"
+      ],
+      "hints": {
+        "row_meter_id": {
+          "op": "UNPIVOT",
+          "over": [
+            "columns:neuract__FM_TABLE.FM_101",
+            "columns:neuract__FM_TABLE.FM_102",
+            "columns:neuract__FM_TABLE.FM_103",
+            "columns:neuract__FM_TABLE.FM_104",
+            "columns:neuract__FM_TABLE.FM_105",
+            "columns:neuract__FM_TABLE.FM_106",
+            "note:PDF shows FM_101 through FM_106 as literal meter ID labels in column 1; source is column names unpivoted to rows"
+          ]
+        },
+        "row_reading": {
+          "op": "UNPIVOT",
+          "over": [
+            "columns:neuract__FM_TABLE.FM_101",
+            "columns:neuract__FM_TABLE.FM_102",
+            "columns:neuract__FM_TABLE.FM_103",
+            "columns:neuract__FM_TABLE.FM_104",
+            "columns:neuract__FM_TABLE.FM_105",
+            "columns:neuract__FM_TABLE.FM_106",
+            "note:Each row reading (m3/h) maps to the corresponding FM_10x REAL column unpivoted from neuract__FM_TABLE"
+          ]
+        },
+        "row_totalizer": {
+          "op": "UNPIVOT",
+          "over": [
+            "columns:neuract__FM_TABLE.FM_101_TOTALIZER",
+            "columns:neuract__FM_TABLE.FM_102_TOTALIZER",
+            "columns:neuract__FM_TABLE.FM_103_TOTALIZER",
+            "columns:neuract__FM_TABLE.FM_104_TOTALIZER",
+            "columns:neuract__FM_TABLE.FM_105_TOTALIZER",
+            "columns:neuract__FM_TABLE.FM_106_TOTALIZER",
+            "note:Each row totalizer (m3) maps to the corresponding FM_10x_TOTALIZER REAL column unpivoted from neuract__FM_TABLE"
+          ]
+        },
+        "row_status": {
+          "op": "CONSTANT",
+          "over": [
+            "note:PDF shows literal 'Active' for all six rows; no status column exists in any catalog table — treat as a static constant or derive from business logic outside the catalog"
+          ]
+        },
+        "total_flow": {
+          "op": "SUM",
+          "over": [
+            "columns:neuract__FM_TABLE.FM_101_TOTALIZER",
+            "columns:neuract__FM_TABLE.FM_102_TOTALIZER",
+            "columns:neuract__FM_TABLE.FM_103_TOTALIZER",
+            "columns:neuract__FM_TABLE.FM_104_TOTALIZER",
+            "columns:neuract__FM_TABLE.FM_105_TOTALIZER",
+            "columns:neuract__FM_TABLE.FM_106_TOTALIZER",
+            "note:Daily total flow is the SUM of all six FM TOTALIZER columns aggregated over the report date window"
+          ]
+        }
+      }
+    },
+    "constant_replacements": {}
+  },
+  "constant_replacements": {},
+  "token_samples": {
+    "report_date": "NOT_VISIBLE",
+    "row_meter_id": "FM_101",
+    "row_reading": "NOT_VISIBLE",
+    "row_totalizer": "NOT_VISIBLE",
+    "row_status": "Active",
+    "total_flow": "NOT_VISIBLE"
+  }
+}

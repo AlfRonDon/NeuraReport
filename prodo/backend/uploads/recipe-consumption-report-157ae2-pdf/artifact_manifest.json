@@ -1,0 +1,23 @@
+{
+  "correlation_id": null,
+  "file_checksums": {
+    "filled_1772627293.html": "fe209d07a71b8d97c66edacd38ad1c1ef7934c53b6c55a37af2d0e3b0685d95f",
+    "filled_1772627293.pdf": "fb6428fed6e36bfbcf4fe7a738f1cd15c03216efcc6dc6e2b8d2928e5eefe1e5",
+    "filled_1772627348.html": "a8c0c1abfec4e52d601a4140de415ec110d97b1763ad2c449ebcc2a149ed6614",
+    "filled_1772627348.pdf": "e499db94c786ceab9b38270fcb4b21eec7d03585187b4bb171bf3e5866f6d9ab"
+  },
+  "files": {
+    "filled_1772627293.html": "filled_1772627293.html",
+    "filled_1772627293.pdf": "filled_1772627293.pdf",
+    "filled_1772627348.html": "filled_1772627348.html",
+    "filled_1772627348.pdf": "filled_1772627348.pdf"
+  },
+  "input_refs": [
+    "/home/rohith/desktop/NeuraReport/prodo/backend/uploads/recipe-consumption-report-157ae2-pdf/contract.json",
+    "/home/rohith/desktop/NeuraReport/recipe_log (1).sqlite3"
+  ],
+  "pid": 104614,
+  "produced_at": "2026-03-04T12:29:09.277100+00:00",
+  "schema_version": "1.0",
+  "step": "reports_run"
+}

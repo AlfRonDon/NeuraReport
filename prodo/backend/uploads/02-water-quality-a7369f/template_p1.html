@@ -1,0 +1,261 @@
+
+
+
+<meta charset="UTF-8">
+<meta>
+<title>Water Quality Analysis Report</title>
+<style>
+  :root {
+    --col-param-w: 110px;
+    --col-sensor-w: 70px;
+    --col-min-w: 88px;
+    --col-max-w: 88px;
+    --col-avg-w: 80px;
+    --col-unit-w: 46px;
+    --header-bg: #1e3a5f;
+    --header-text: #ffffff;
+    --section-color: #1a6ab1;
+    --title-color: #1a2e4a;
+    --row-alt-bg: #f4f7fb;
+    --border-color: #b0bec5;
+    --table-font: 8.5pt;
+    --body-font: 9.5pt;
+    --page-margin: 18mm;
+  }
+
+  @page {
+    size: A4;
+    margin: var(--page-margin);
+  }
+
+  *, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: var(--body-font);
+    color: #1a1a1a;
+    background: #ffffff;
+    padding: 18mm;
+  }
+
+  #report-header {
+    text-align: center;
+    margin-bottom: 18px;
+  }
+
+  #report-header h1 {
+    font-size: 20pt;
+    font-weight: bold;
+    color: var(--title-color);
+    letter-spacing: 0.01em;
+    margin-bottom: 0;
+  }
+
+  .section-heading {
+    font-size: 12pt;
+    font-weight: bold;
+    color: var(--section-color);
+    text-align: left;
+    margin-bottom: 8px;
+    margin-top: 4px;
+  }
+
+  .report-period {
+    font-size: 9pt;
+    color: #333;
+    margin-bottom: 10px;
+  }
+
+  #data-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    font-size: var(--table-font);
+    margin-bottom: 14px;
+  }
+
+  #data-table col.col-param  { width: var(--col-param-w); }
+  #data-table col.col-sensor { width: var(--col-sensor-w); }
+  #data-table col.col-min    { width: var(--col-min-w); }
+  #data-table col.col-max    { width: var(--col-max-w); }
+  #data-table col.col-avg    { width: var(--col-avg-w); }
+  #data-table col.col-unit   { width: var(--col-unit-w); }
+
+  #data-table thead tr {
+    background-color: var(--header-bg);
+    color: var(--header-text);
+  }
+
+  #data-table thead th {
+    padding: 6px 7px;
+    text-align: center;
+    font-weight: bold;
+    font-size: 9pt;
+    border: 1px solid #16304f;
+    letter-spacing: 0.01em;
+  }
+
+  #data-table thead th:first-child {
+    text-align: center;
+  }
+
+  #data-table tbody tr {
+    background-color: #ffffff;
+  }
+
+  #data-table tbody tr:nth-child(even) {
+    background-color: var(--row-alt-bg);
+  }
+
+  #data-table tbody td {
+    padding: 4px 7px;
+    border: 1px solid var(--border-color);
+    font-size: var(--table-font);
+    vertical-align: middle;
+  }
+
+  #data-table tbody td.td-param {
+    text-align: left;
+  }
+
+  #data-table tbody td.td-sensor {
+    text-align: center;
+    font-weight: 500;
+  }
+
+  #data-table tbody td.td-num {
+    text-align: right;
+    font-family: 'Courier New', monospace;
+    font-size: 8pt;
+  }
+
+  #data-table tbody td.td-unit {
+    text-align: center;
+  }
+
+  .compliance-status {
+    font-size: 9.5pt;
+    margin-top: 6px;
+  }
+</style>
+
+
+
+<div id="report-header">
+  <h1>Water Quality Analysis Report</h1>
+</div>
+
+<div class="section-heading">Analyser Readings &#8212; Daily Summary</div>
+
+<div class="report-period">Report Period: {start_date} to {end_date}</div>
+
+<table id="data-table">
+  <colgroup>
+    <col class="col-param">
+    <col class="col-sensor">
+    <col class="col-min">
+    <col class="col-max">
+    <col class="col-avg">
+    <col class="col-unit">
+  </colgroup>
+  <thead>
+    <tr>
+      <th data-label="parameter">Parameter</th>
+      <th data-label="sensor">Sensor</th>
+      <th data-label="min">Min</th>
+      <th data-label="max">Max</th>
+      <th data-label="avg">Avg</th>
+      <th data-label="unit">Unit</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td class="td-param">Dissolved Oxygen</td>
+      <td class="td-sensor">D0_101</td>
+      <td class="td-num">{do_101_min}</td>
+      <td class="td-num">{do_101_max}</td>
+      <td class="td-num">{do_101_avg}</td>
+      <td class="td-unit">mg/L</td>
+    </tr>
+    <tr>
+      <td class="td-param">ORP - Point 1</td>
+      <td class="td-sensor">ORP_101</td>
+      <td class="td-num">{orp_101_min}</td>
+      <td class="td-num">{orp_101_max}</td>
+      <td class="td-num">{orp_101_avg}</td>
+      <td class="td-unit">mV</td>
+    </tr>
+    <tr>
+      <td class="td-param">ORP - Point 2</td>
+      <td class="td-sensor">ORP_102</td>
+      <td class="td-num">{orp_102_min}</td>
+      <td class="td-num">{orp_102_max}</td>
+      <td class="td-num">{orp_102_avg}</td>
+      <td class="td-unit">mV</td>
+    </tr>
+    <tr>
+      <td class="td-param">ORP - Point 3</td>
+      <td class="td-sensor">ORP_103</td>
+      <td class="td-num">{orp_103_min}</td>
+      <td class="td-num">{orp_103_max}</td>
+      <td class="td-num">{orp_103_avg}</td>
+      <td class="td-unit">mV</td>
+    </tr>
+    <tr>
+      <td class="td-param">pH - Inlet</td>
+      <td class="td-sensor">PH_101</td>
+      <td class="td-num">{ph_101_min}</td>
+      <td class="td-num">{ph_101_max}</td>
+      <td class="td-num">{ph_101_avg}</td>
+      <td class="td-unit">-</td>
+    </tr>
+    <tr>
+      <td class="td-param">pH - Process 1</td>
+      <td class="td-sensor">PH_102</td>
+      <td class="td-num">{ph_102_min}</td>
+      <td class="td-num">{ph_102_max}</td>
+      <td class="td-num">{ph_102_avg}</td>
+      <td class="td-unit">-</td>
+    </tr>
+    <tr>
+      <td class="td-param">pH - Process 2</td>
+      <td class="td-sensor">PH_103</td>
+      <td class="td-num">{ph_103_min}</td>
+      <td class="td-num">{ph_103_max}</td>
+      <td class="td-num">{ph_103_avg}</td>
+      <td class="td-unit">-</td>
+    </tr>
+    <tr>
+      <td class="td-param">pH - Outlet</td>
+      <td class="td-sensor">PH_104</td>
+      <td class="td-num">{ph_104_min}</td>
+      <td class="td-num">{ph_104_max}</td>
+      <td class="td-num">{ph_104_avg}</td>
+      <td class="td-unit">-</td>
+    </tr>
+    <tr>
+      <td class="td-param">TDS - Inlet</td>
+      <td class="td-sensor">TDS_101</td>
+      <td class="td-num">{tds_101_min}</td>
+      <td class="td-num">{tds_101_max}</td>
+      <td class="td-num">{tds_101_avg}</td>
+      <td class="td-unit">ppm</td>
+    </tr>
+    <tr>
+      <td class="td-param">TDS - Outlet</td>
+      <td class="td-sensor">TDS_102</td>
+      <td class="td-num">{tds_102_min}</td>
+      <td class="td-num">{tds_102_max}</td>
+      <td class="td-num">{tds_102_avg}</td>
+      <td class="td-unit">ppm</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="compliance-status">Compliance Status: {compliance_status}</div>
+
+

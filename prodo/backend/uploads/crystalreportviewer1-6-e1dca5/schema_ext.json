@@ -1,0 +1,30 @@
+{
+  "scalars": [
+    "plant_name",
+    "report_date",
+    "location",
+    "recipe_name",
+    "part_description",
+    "shift_number",
+    "footer_company",
+    "page_number",
+    "total_pages"
+  ],
+  "row_tokens": [
+    "row_bth_no",
+    "row_material_name",
+    "row_set_wt",
+    "row_ach_wt",
+    "row_error",
+    "row_error_pct",
+    "row_deviate_dur"
+  ],
+  "totals": [
+    "total_set_wt",
+    "total_ach_wt",
+    "total_error",
+    "total_error_pct",
+    "total_deviate_dur"
+  ],
+  "notes": "Document has repeating batch blocks with internal data tables. Each batch contains batch-level metadata and a table of materials with totals. The BLOCK_REPEAT markers wrap the repeating batch sections."
+}

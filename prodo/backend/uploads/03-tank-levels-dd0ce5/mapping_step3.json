@@ -1,0 +1,136 @@
+{
+  "mapping": {
+    "timestamp": "neuract__LT_TABLE.timestamp_utc",
+    "row_tank_name": "UNRESOLVED",
+    "row_level": "UNRESOLVED",
+    "row_capacity": "UNRESOLVED",
+    "row_current_vol": "UNRESOLVED"
+  },
+  "meta": {
+    "unresolved": [
+      "row_tank_name",
+      "row_level",
+      "row_capacity",
+      "row_current_vol"
+    ],
+    "hints": {
+      "row_tank_name": {
+        "op": "STATIC_PER_ROW",
+        "over": [
+          "note:Tank labels (e.g. 'Raw Water Tank (LT_112)', 'Settling Tank (LT_113)') are human-readable static strings not stored in any catalog table. Must be supplied as a configured row-definition list paired to each LT column."
+        ]
+      },
+      "row_level": {
+        "op": "PIVOT",
+        "over": [
+          "columns:neuract__LT_TABLE.LT_112",
+          "columns:neuract__LT_TABLE.LT_113",
+          "columns:neuract__LT_TABLE.LT_114",
+          "columns:neuract__LT_TABLE.LT_116",
+          "columns:neuract__LT_TABLE.LT_118",
+          "columns:neuract__LT_TABLE.LT_120",
+          "columns:neuract__LT_TABLE.LT_126",
+          "columns:neuract__LT_TABLE.LT_127",
+          "columns:neuract__LT_TABLE.LT_128",
+          "note:The LT_TABLE stores one level-percent reading per tank as a separate wide column. The table must be unpivoted (melted) on the latest timestamp row to yield one row per tank. Each unpivoted column maps to the corresponding row_tank_name entry."
+        ]
+      },
+      "row_capacity": {
+        "op": "STATIC_PER_ROW",
+        "over": [
+          "note:Capacity values visible in the PDF (500, 300, 450, 200, 600, 150, 250, 100, 100 kL) are fixed engineering constants per tank and do not exist in any catalog table. Must be supplied as a static lookup keyed by tank/LT tag."
+        ]
+      },
+      "row_current_vol": {
+        "op": "MULTIPLY",
+        "over": [
+          "columns:row_level",
+          "columns:row_capacity",
+          "note:Current volume (kL) = row_level (%) * row_capacity (kL) / 100. Both operands are themselves UNRESOLVED and require the PIVOT and STATIC_PER_ROW resolutions described above before this computation can be applied."
+        ]
+      }
+    }
+  },
+  "prompt_meta": {
+    "version": "llm_call_3_df_v2",
+    "prompt_sha256": "0e720a8d8b782cd7fca100dd2077ceeca5d5f2724be385a4ff2b60892504e9c9",
+    "catalog_sha256": "312a06afd264f4c409ba0a0fb006aac7601c8781b51c4946edc16a58ed702f95",
+    "schema_sha256": "10f7becfb2c12801ef096eba6d9b2ec7799c5c6602ae096c4279a97611d3aa80",
+    "cache_key": "369ce7141cdf33892a9677cafdea51e15779947063935aa74cb14b8b2ef53f6e",
+    "pre_html_sha256": "8ed33649257decb547c98a5e6d8f4e54fa085948658cb6a4efe79bf36cd73a35",
+    "post_html_sha256": "8ed33649257decb547c98a5e6d8f4e54fa085948658cb6a4efe79bf36cd73a35",
+    "prompt_version": "llm_call_3_df_v2",
+    "pdf_sha256": "0f331d3e21ec7aaa269940f21bb6095d4fb39571ea0749e1e527aace0e34d6fe",
+    "db_signature": "0c33e3e2d9de39703b476f6ece004966e0b418fe1acc690478668ef987513776"
+  },
+  "raw_payload": {
+    "mapping": {
+      "timestamp": "neuract__LT_TABLE.timestamp_utc",
+      "row_tank_name": "UNRESOLVED",
+      "row_level": "UNRESOLVED",
+      "row_capacity": "UNRESOLVED",
+      "row_current_vol": "UNRESOLVED"
+    },
+    "token_samples": {
+      "timestamp": "{{timestamp}}",
+      "row_tank_name": "Raw Water Tank (LT_112)",
+      "row_level": "{{LT_112}}",
+      "row_capacity": "500",
+      "row_current_vol": "{{LT_112_vol}}"
+    },
+    "meta": {
+      "unresolved": [
+        "row_tank_name",
+        "row_level",
+        "row_capacity",
+        "row_current_vol"
+      ],
+      "hints": {
+        "row_tank_name": {
+          "op": "STATIC_PER_ROW",
+          "over": [
+            "note:Tank labels (e.g. 'Raw Water Tank (LT_112)', 'Settling Tank (LT_113)') are human-readable static strings not stored in any catalog table. Must be supplied as a configured row-definition list paired to each LT column."
+          ]
+        },
+        "row_level": {
+          "op": "PIVOT",
+          "over": [
+            "columns:neuract__LT_TABLE.LT_112",
+            "columns:neuract__LT_TABLE.LT_113",
+            "columns:neuract__LT_TABLE.LT_114",
+            "columns:neuract__LT_TABLE.LT_116",
+            "columns:neuract__LT_TABLE.LT_118",
+            "columns:neuract__LT_TABLE.LT_120",
+            "columns:neuract__LT_TABLE.LT_126",
+            "columns:neuract__LT_TABLE.LT_127",
+            "columns:neuract__LT_TABLE.LT_128",
+            "note:The LT_TABLE stores one level-percent reading per tank as a separate wide column. The table must be unpivoted (melted) on the latest timestamp row to yield one row per tank. Each unpivoted column maps to the corresponding row_tank_name entry."
+          ]
+        },
+        "row_capacity": {
+          "op": "STATIC_PER_ROW",
+          "over": [
+            "note:Capacity values visible in the PDF (500, 300, 450, 200, 600, 150, 250, 100, 100 kL) are fixed engineering constants per tank and do not exist in any catalog table. Must be supplied as a static lookup keyed by tank/LT tag."
+          ]
+        },
+        "row_current_vol": {
+          "op": "MULTIPLY",
+          "over": [
+            "columns:row_level",
+            "columns:row_capacity",
+            "note:Current volume (kL) = row_level (%) * row_capacity (kL) / 100. Both operands are themselves UNRESOLVED and require the PIVOT and STATIC_PER_ROW resolutions described above before this computation can be applied."
+          ]
+        }
+      }
+    },
+    "constant_replacements": {}
+  },
+  "constant_replacements": {},
+  "token_samples": {
+    "timestamp": "{{timestamp}}",
+    "row_tank_name": "Raw Water Tank (LT_112)",
+    "row_level": "{{LT_112}}",
+    "row_capacity": "500",
+    "row_current_vol": "{{LT_112_vol}}"
+  }
+}

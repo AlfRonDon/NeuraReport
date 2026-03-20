@@ -1,0 +1,30 @@
+{
+  "scalars": [
+    "plant_name",
+    "location",
+    "production_line",
+    "report_date",
+    "recipe_code",
+    "shift_no",
+    "company_name",
+    "page_number",
+    "total_pages"
+  ],
+  "row_tokens": [
+    "row_bin_no",
+    "row_material_name",
+    "row_set_wt_kg",
+    "row_ach_wt_kg",
+    "row_error_kg",
+    "row_error_percent",
+    "row_dosing_dur_sec"
+  ],
+  "totals": [
+    "total_set_wt_kg",
+    "total_ach_wt_kg",
+    "total_error_kg",
+    "total_error_percent",
+    "total_dosing_dur_sec"
+  ],
+  "notes": "Repeating batch sections with batch-level metadata (batch_no, batch_date, batch_shift_no, recipe_name, recipe_code_batch, scale_1, scale_2, start_time_1, start_time_2) and table rows. Each batch contains multiple material rows with totals."
+}

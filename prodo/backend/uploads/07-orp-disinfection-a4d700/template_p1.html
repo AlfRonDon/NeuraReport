@@ -1,0 +1,145 @@
+
+
+
+<meta charset="UTF-8">
+<meta>
+<title>ORP &amp; Disinfection Monitoring</title>
+<style>
+  @page {
+    size: A4;
+    margin: 18mm 20mm 18mm 20mm;
+  }
+
+  :root {
+    --col-sensor-w: 26mm;
+    --col-latest-w: 32mm;
+    --col-min-w: 30mm;
+    --col-max-w: 30mm;
+    --col-status-w: 36mm;
+    --table-margin-left: 8mm;
+    --header-bg: #1a237e;
+    --header-text: #ffffff;
+    --border-col: #888888;
+    --title-color: #1a237e;
+    --row-pad-v: 2.8mm;
+    --row-pad-h: 3mm;
+    --section-gap: 5mm;
+  }
+
+  *, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 10pt;
+    color: #222222;
+    background: #ffffff;
+    padding: 18mm 20mm;
+  }
+
+  #report-header {
+    text-align: center;
+    margin-bottom: 7mm;
+  }
+
+  #report-header h1 {
+    font-size: 19pt;
+    font-weight: bold;
+    color: var(--title-color);
+    letter-spacing: 0.01em;
+  }
+
+  .section-title {
+    font-size: 12.5pt;
+    font-weight: bold;
+    color: var(--title-color);
+    margin-left: var(--table-margin-left);
+    margin-bottom: var(--section-gap);
+  }
+
+  #data-table {
+    border-collapse: collapse;
+    table-layout: fixed;
+    margin-left: var(--table-margin-left);
+    width: calc(var(--col-sensor-w) + var(--col-latest-w) + var(--col-min-w) + var(--col-max-w) + var(--col-status-w));
+  }
+
+  #data-table col.c-sensor  { width: var(--col-sensor-w); }
+  #data-table col.c-latest  { width: var(--col-latest-w); }
+  #data-table col.c-min     { width: var(--col-min-w); }
+  #data-table col.c-max     { width: var(--col-max-w); }
+  #data-table col.c-status  { width: var(--col-status-w); }
+
+  #data-table thead tr th {
+    background-color: var(--header-bg);
+    color: var(--header-text);
+    font-weight: bold;
+    font-size: 10pt;
+    text-align: center;
+    padding: var(--row-pad-v) var(--row-pad-h);
+    border: 1px solid var(--header-bg);
+  }
+
+  #data-table tbody tr td {
+    font-size: 9.5pt;
+    text-align: center;
+    padding: var(--row-pad-v) var(--row-pad-h);
+    border: 1px solid var(--border-col);
+    color: #222222;
+    background: #ffffff;
+  }
+
+  .footer-notes {
+    margin-top: 6mm;
+    margin-left: var(--table-margin-left);
+    font-size: 10pt;
+    line-height: 2;
+    color: #222222;
+  }
+</style>
+
+
+
+<div id="report-header">
+  <h1>{report_title}</h1>
+</div>
+
+<div class="section-title">{section_title}</div>
+
+<table id="data-table">
+  <colgroup>
+    <col class="c-sensor">
+    <col class="c-latest">
+    <col class="c-min">
+    <col class="c-max">
+    <col class="c-status">
+  </colgroup>
+  <thead>
+    <tr>
+      <th data-label="sensor">Sensor</th>
+      <th data-label="latest_mv">Latest (mV)</th>
+      <th data-label="min_mv">Min (mV)</th>
+      <th data-label="max_mv">Max (mV)</th>
+      <th data-label="status">Status</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>{row_sensor_name}</td>
+      <td>{row_latest_mv}</td>
+      <td>{row_min_mv}</td>
+      <td>{row_max_mv}</td>
+      <td>{row_status}</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="footer-notes">
+  <div>Disinfection Effectiveness: {effectiveness}</div>
+  <div>Chlorine Dosing Rate: {dosing_rate} mg/L</div>
+</div>
+
+

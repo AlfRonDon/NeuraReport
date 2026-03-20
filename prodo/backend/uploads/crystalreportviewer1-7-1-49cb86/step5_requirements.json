@@ -1,0 +1,89 @@
+{
+  "datasets": {
+    "header": {
+      "description": "Single-row header with scalar parameters and recipe metadata",
+      "columns": [
+        "plant_name",
+        "location",
+        "from_date",
+        "to_date",
+        "print_date",
+        "recipe_code",
+        "company_name",
+        "page_number",
+        "total_pages"
+      ]
+    },
+    "rows": {
+      "description": "Detail rows unpivoted from 12 bin columns, one row per bin",
+      "columns": [
+        "row_sl_no",
+        "row_material_name",
+        "row_set_wt",
+        "row_ach_wt",
+        "row_error_kg",
+        "row_error_pct"
+      ],
+      "grouping": [],
+      "ordering": [
+        "row_sl_no ASC"
+      ]
+    },
+    "totals": {
+      "description": "Aggregated totals across all bins",
+      "columns": [
+        "total_set_wt",
+        "total_ach_wt",
+        "total_error_kg",
+        "total_error_pct"
+      ]
+    }
+  },
+  "semantics": "Filter recipes table by start_time >= from_date AND start_time <= to_date. Unpivot 12 bin triplets into rows. Calculate error fields and totals.",
+  "parameters": {
+    "required": [
+      {
+        "name": "from_date",
+        "type": "date"
+      },
+      {
+        "name": "to_date",
+        "type": "date"
+      },
+      {
+        "name": "plant_name",
+        "type": "string"
+      },
+      {
+        "name": "location",
+        "type": "string"
+      },
+      {
+        "name": "print_date",
+        "type": "string"
+      }
+    ],
+    "optional": [
+      {
+        "name": "company_name",
+        "type": "string"
+      },
+      {
+        "name": "page_number",
+        "type": "integer"
+      },
+      {
+        "name": "total_pages",
+        "type": "integer"
+      }
+    ]
+  },
+  "transformations": [
+    "Unpivot 12 bin columns (bin1_content..bin12_content, bin1_sp..bin12_sp, bin1_act..bin12_act) into rows",
+    "Generate sequential row numbers starting from 1",
+    "Compute row_error_kg as row_ach_wt - row_set_wt",
+    "Compute row_error_pct as row_error_kg / row_set_wt",
+    "Aggregate totals as sum of row values",
+    "Compute total_error_pct as total_error_kg / total_set_wt"
+  ]
+}

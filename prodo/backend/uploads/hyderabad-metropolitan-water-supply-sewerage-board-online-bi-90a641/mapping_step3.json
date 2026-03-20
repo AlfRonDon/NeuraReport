@@ -1,0 +1,108 @@
+{
+  "mapping": {
+    "timestamp": "UNRESOLVED",
+    "transaction_status": "transactions.transaction_status",
+    "transaction_reference_number": "transactions.transaction_ref_number",
+    "transaction_date_time": "UNRESOLVED",
+    "can_number": "transactions.can_number",
+    "bill_amount": "transactions.bill_amount",
+    "bank_name": "transactions.bank_name",
+    "ip_address": "transactions.ip_address",
+    "access_time": "transactions.access_timestamp"
+  },
+  "meta": {
+    "unresolved": [
+      "timestamp",
+      "transaction_date_time"
+    ],
+    "hints": {
+      "timestamp": {
+        "op": "FORMAT",
+        "over": [
+          "columns:transactions.created_at",
+          "description:Format created_at timestamp for display"
+        ]
+      },
+      "transaction_date_time": {
+        "op": "CONCAT",
+        "over": [
+          "columns:transactions.transaction_date",
+          "columns:transactions.transaction_time",
+          "description:Combine transaction_date and transaction_time with formatting (DD/MM/YYYY HH:MM:SS)"
+        ]
+      }
+    }
+  },
+  "prompt_meta": {
+    "version": "llm_call_3_v7",
+    "prompt_sha256": "ce6cba9d06777a5d8edfb0a1dc0e754c2df40fe2e8c43a8d64c9c076bcb84ceb",
+    "catalog_sha256": "191ef492d64f3b3f19bd2650de4a8fd2489f25597a3ffaa95b08fdbc417a977a",
+    "schema_sha256": "bdbcee775632b4a013e061d8372d0e75c2ca35e4cf0764a7dc3673c22959737b",
+    "cache_key": "5fbe30e61609361639a6dacb396597c3fd07dbdb4ca02de12372a971559a5ecf",
+    "pre_html_sha256": "636229414ad3acb517878affbabb00e8d2f9f78449d803f12ba24fb67db85bec",
+    "post_html_sha256": "636229414ad3acb517878affbabb00e8d2f9f78449d803f12ba24fb67db85bec",
+    "prompt_version": "llm_call_3_v7",
+    "pdf_sha256": "5472f36fc77f9dfe3c99e64c04595c397e77efe516408f7977798e6fb43d0c1d",
+    "db_signature": "4a555a8403e51b5e72af8e68865ea232efdc242d9aac43adae92e9ef58aac273"
+  },
+  "raw_payload": {
+    "mapping": {
+      "timestamp": "UNRESOLVED",
+      "transaction_status": "transactions.transaction_status",
+      "transaction_reference_number": "transactions.transaction_ref_number",
+      "transaction_date_time": "UNRESOLVED",
+      "can_number": "transactions.can_number",
+      "bill_amount": "transactions.bill_amount",
+      "bank_name": "transactions.bank_name",
+      "ip_address": "transactions.ip_address",
+      "access_time": "transactions.access_timestamp"
+    },
+    "token_samples": {
+      "timestamp": "Hyderabad Metropolitan Water Supply & Sewerage Board - Online Bill Payment",
+      "transaction_status": "Success",
+      "transaction_reference_number": "YAX62668702574",
+      "transaction_date_time": "01/02/2026 02:53:29",
+      "can_number": "624140910",
+      "bill_amount": "1510.00",
+      "bank_name": "NA",
+      "ip_address": "2401:4900:1c0e:21d5:cd38:bfd:36a7:a98b",
+      "access_time": "2026-02-01 02:53:40 IST"
+    },
+    "meta": {
+      "unresolved": [
+        "timestamp",
+        "transaction_date_time"
+      ],
+      "hints": {
+        "timestamp": {
+          "op": "FORMAT",
+          "over": [
+            "columns:transactions.created_at",
+            "description:Format created_at timestamp for display"
+          ]
+        },
+        "transaction_date_time": {
+          "op": "CONCAT",
+          "over": [
+            "columns:transactions.transaction_date",
+            "columns:transactions.transaction_time",
+            "description:Combine transaction_date and transaction_time with formatting (DD/MM/YYYY HH:MM:SS)"
+          ]
+        }
+      }
+    },
+    "constant_replacements": {}
+  },
+  "constant_replacements": {},
+  "token_samples": {
+    "timestamp": "Hyderabad Metropolitan Water Supply & Sewerage Board - Online Bill Payment",
+    "transaction_status": "Success",
+    "transaction_reference_number": "YAX62668702574",
+    "transaction_date_time": "01/02/2026 02:53:29",
+    "can_number": "624140910",
+    "bill_amount": "1510.00",
+    "bank_name": "NA",
+    "ip_address": "2401:4900:1c0e:21d5:cd38:bfd:36a7:a98b",
+    "access_time": "2026-02-01 02:53:40 IST"
+  }
+}

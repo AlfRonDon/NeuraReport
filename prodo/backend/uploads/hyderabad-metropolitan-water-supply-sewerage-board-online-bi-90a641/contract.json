@@ -1,0 +1,73 @@
+{
+  "tokens": {
+    "scalars": [
+      "timestamp",
+      "transaction_status",
+      "transaction_reference_number",
+      "transaction_date_time",
+      "can_number",
+      "bill_amount",
+      "bank_name",
+      "ip_address",
+      "access_time"
+    ],
+    "row_tokens": [],
+    "totals": []
+  },
+  "mapping": {
+    "timestamp": "transactions.created_at",
+    "transaction_status": "transactions.transaction_status",
+    "transaction_reference_number": "transactions.transaction_ref_number",
+    "transaction_date_time": "transactions.transaction_date",
+    "can_number": "transactions.can_number",
+    "bill_amount": "transactions.bill_amount",
+    "bank_name": "transactions.bank_name",
+    "ip_address": "transactions.ip_address",
+    "access_time": "transactions.access_timestamp"
+  },
+  "unresolved": [],
+  "join": {
+    "parent_table": "",
+    "parent_key": "",
+    "child_table": "",
+    "child_key": ""
+  },
+  "date_columns": {
+    "transactions": "created_at"
+  },
+  "filters": {
+    "optional": {}
+  },
+  "reshape_rules": [],
+  "row_computed": {},
+  "totals_math": {},
+  "formatters": {
+    "timestamp": "datetime:%d-%m-%Y %H:%M:%S",
+    "transaction_date_time": "datetime:%d/%m/%Y %H:%M:%S",
+    "bill_amount": "number:2",
+    "access_time": "datetime:%Y-%m-%d %H:%M:%S IST"
+  },
+  "order_by": {
+    "rows": [
+      "ROWID"
+    ]
+  },
+  "header_tokens": [
+    "timestamp",
+    "transaction_status",
+    "transaction_reference_number",
+    "transaction_date_time",
+    "can_number",
+    "bill_amount",
+    "bank_name",
+    "ip_address",
+    "access_time"
+  ],
+  "row_tokens": [],
+  "totals": {},
+  "row_order": [
+    "ROWID"
+  ],
+  "notes": "HMWSSB water bill payment receipt. Single-record transaction acknowledgment filtered by transaction reference number. All formatting is declarative via formatters. No joins, computed fields, or aggregations required.",
+  "literals": {}
+}

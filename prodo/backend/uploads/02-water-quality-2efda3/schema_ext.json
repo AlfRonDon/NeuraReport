@@ -1,0 +1,17 @@
+{
+  "scalars": [
+    "start_date",
+    "end_date",
+    "compliance_status"
+  ],
+  "row_tokens": [
+    "row_parameter",
+    "row_sensor",
+    "row_min",
+    "row_max",
+    "row_avg",
+    "row_unit"
+  ],
+  "totals": [],
+  "notes": "Each table row represents one analyser sensor reading. Parameter names (e.g. Dissolved Oxygen, ORP - Point 1) and sensor IDs (e.g. D0_101, ORP_101) are row-level data tokens. The unit column carries per-row units (mg/L, mV, ppm, or dash). No aggregate totals row present."
+}

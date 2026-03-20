@@ -1,0 +1,222 @@
+{
+  "mapping": {
+    "start_date": "LATER_SELECTED",
+    "end_date": "LATER_SELECTED",
+    "row_sensor": "neuract__device_mappings.field_key",
+    "row_parameter": "UNRESOLVED",
+    "row_min": "UNRESOLVED",
+    "row_max": "UNRESOLVED",
+    "row_avg": "UNRESOLVED",
+    "row_unit": "UNRESOLVED",
+    "compliance_status": "UNRESOLVED"
+  },
+  "meta": {
+    "unresolved": [
+      "row_parameter",
+      "row_min",
+      "row_max",
+      "row_avg",
+      "row_unit",
+      "compliance_status"
+    ],
+    "hints": {
+      "row_parameter": {
+        "op": "LOOKUP",
+        "over": [
+          "columns:neuract__device_mappings.field_key",
+          "note:Human-readable label (e.g. 'Dissolved Oxygen', 'ORP - Point 1') derived from sensor ID; no label/description column present in catalog — requires a static label map keyed by field_key"
+        ]
+      },
+      "row_min": {
+        "op": "MIN",
+        "over": [
+          "neuract__ANALYSER_TABLE.D0_101",
+          "neuract__ANALYSER_TABLE.ORP_101",
+          "neuract__ANALYSER_TABLE.ORP_102",
+          "neuract__ANALYSER_TABLE.ORP_103",
+          "neuract__ANALYSER_TABLE.PH_101",
+          "neuract__ANALYSER_TABLE.PH_102",
+          "neuract__ANALYSER_TABLE.PH_103",
+          "neuract__ANALYSER_TABLE.PH_104",
+          "neuract__ANALYSER_TABLE.TDS_101",
+          "neuract__ANALYSER_TABLE.TDS_102",
+          "note:Per-sensor MIN of the dynamically selected ANALYSER_TABLE column, filtered by timestamp_utc within [start_date, end_date]"
+        ]
+      },
+      "row_max": {
+        "op": "MAX",
+        "over": [
+          "neuract__ANALYSER_TABLE.D0_101",
+          "neuract__ANALYSER_TABLE.ORP_101",
+          "neuract__ANALYSER_TABLE.ORP_102",
+          "neuract__ANALYSER_TABLE.ORP_103",
+          "neuract__ANALYSER_TABLE.PH_101",
+          "neuract__ANALYSER_TABLE.PH_102",
+          "neuract__ANALYSER_TABLE.PH_103",
+          "neuract__ANALYSER_TABLE.PH_104",
+          "neuract__ANALYSER_TABLE.TDS_101",
+          "neuract__ANALYSER_TABLE.TDS_102",
+          "note:Per-sensor MAX of the dynamically selected ANALYSER_TABLE column, filtered by timestamp_utc within [start_date, end_date]"
+        ]
+      },
+      "row_avg": {
+        "op": "AVG",
+        "over": [
+          "neuract__ANALYSER_TABLE.D0_101",
+          "neuract__ANALYSER_TABLE.ORP_101",
+          "neuract__ANALYSER_TABLE.ORP_102",
+          "neuract__ANALYSER_TABLE.ORP_103",
+          "neuract__ANALYSER_TABLE.PH_101",
+          "neuract__ANALYSER_TABLE.PH_102",
+          "neuract__ANALYSER_TABLE.PH_103",
+          "neuract__ANALYSER_TABLE.PH_104",
+          "neuract__ANALYSER_TABLE.TDS_101",
+          "neuract__ANALYSER_TABLE.TDS_102",
+          "note:Per-sensor AVG of the dynamically selected ANALYSER_TABLE column, filtered by timestamp_utc within [start_date, end_date]"
+        ]
+      },
+      "row_unit": {
+        "op": "LOOKUP",
+        "over": [
+          "columns:neuract__device_mappings.field_key",
+          "note:Engineering unit (mg/L for D0_101, mV for ORP_*, dimensionless dash for PH_*, ppm for TDS_*) is not stored in any catalog column; must be resolved from a static sensor-type-to-unit lookup keyed by field_key"
+        ]
+      },
+      "compliance_status": {
+        "op": "DERIVED",
+        "over": [
+          "note:Textual compliance result computed by comparing aggregated sensor readings against regulatory thresholds; not stored in any catalog table — must be injected as a post-processing parameter or params.compliance_status"
+        ]
+      }
+    }
+  },
+  "prompt_meta": {
+    "version": "llm_call_3_df_v2",
+    "prompt_sha256": "c4bf18c18f83b6a698f99d36acfbace355c72c66562d54719936acb2e754d9ef",
+    "catalog_sha256": "312a06afd264f4c409ba0a0fb006aac7601c8781b51c4946edc16a58ed702f95",
+    "schema_sha256": "90982fc83b08862678962dc8adc29b4ab8d3dd8eda08f6a0a3e7e2c5b605e3eb",
+    "cache_key": "fcffc2fb022dd7ca8b25cd73f1a8232c10aca8111f10555a4c109b1fc00fa01c",
+    "pre_html_sha256": "58812d51d0d46ba5946e1346e46b8ff3902084f57d97a02d90822a40bf2b4a5e",
+    "post_html_sha256": "58812d51d0d46ba5946e1346e46b8ff3902084f57d97a02d90822a40bf2b4a5e",
+    "prompt_version": "llm_call_3_df_v2",
+    "pdf_sha256": "08b0b57da3824785af420837eded00a4ca77d5d0ee55355cd2435b4e2f4953f6",
+    "db_signature": "0c33e3e2d9de39703b476f6ece004966e0b418fe1acc690478668ef987513776"
+  },
+  "raw_payload": {
+    "mapping": {
+      "start_date": "To Be Selected...",
+      "end_date": "To Be Selected...",
+      "row_sensor": "neuract__device_mappings.field_key",
+      "row_parameter": "UNRESOLVED",
+      "row_min": "UNRESOLVED",
+      "row_max": "UNRESOLVED",
+      "row_avg": "UNRESOLVED",
+      "row_unit": "UNRESOLVED",
+      "compliance_status": "UNRESOLVED"
+    },
+    "token_samples": {
+      "start_date": "{start_date}",
+      "end_date": "{end_date}",
+      "row_parameter": "Dissolved Oxygen",
+      "row_sensor": "D0_101",
+      "row_min": "{D0_101_min}",
+      "row_max": "{D0_101_max}",
+      "row_avg": "{D0_101_avg}",
+      "row_unit": "mg/L",
+      "compliance_status": "{compliance_status}"
+    },
+    "meta": {
+      "unresolved": [
+        "row_parameter",
+        "row_min",
+        "row_max",
+        "row_avg",
+        "row_unit",
+        "compliance_status"
+      ],
+      "hints": {
+        "row_parameter": {
+          "op": "LOOKUP",
+          "over": [
+            "columns:neuract__device_mappings.field_key",
+            "note:Human-readable label (e.g. 'Dissolved Oxygen', 'ORP - Point 1') derived from sensor ID; no label/description column present in catalog — requires a static label map keyed by field_key"
+          ]
+        },
+        "row_min": {
+          "op": "MIN",
+          "over": [
+            "neuract__ANALYSER_TABLE.D0_101",
+            "neuract__ANALYSER_TABLE.ORP_101",
+            "neuract__ANALYSER_TABLE.ORP_102",
+            "neuract__ANALYSER_TABLE.ORP_103",
+            "neuract__ANALYSER_TABLE.PH_101",
+            "neuract__ANALYSER_TABLE.PH_102",
+            "neuract__ANALYSER_TABLE.PH_103",
+            "neuract__ANALYSER_TABLE.PH_104",
+            "neuract__ANALYSER_TABLE.TDS_101",
+            "neuract__ANALYSER_TABLE.TDS_102",
+            "note:Per-sensor MIN of the dynamically selected ANALYSER_TABLE column, filtered by timestamp_utc within [start_date, end_date]"
+          ]
+        },
+        "row_max": {
+          "op": "MAX",
+          "over": [
+            "neuract__ANALYSER_TABLE.D0_101",
+            "neuract__ANALYSER_TABLE.ORP_101",
+            "neuract__ANALYSER_TABLE.ORP_102",
+            "neuract__ANALYSER_TABLE.ORP_103",
+            "neuract__ANALYSER_TABLE.PH_101",
+            "neuract__ANALYSER_TABLE.PH_102",
+            "neuract__ANALYSER_TABLE.PH_103",
+            "neuract__ANALYSER_TABLE.PH_104",
+            "neuract__ANALYSER_TABLE.TDS_101",
+            "neuract__ANALYSER_TABLE.TDS_102",
+            "note:Per-sensor MAX of the dynamically selected ANALYSER_TABLE column, filtered by timestamp_utc within [start_date, end_date]"
+          ]
+        },
+        "row_avg": {
+          "op": "AVG",
+          "over": [
+            "neuract__ANALYSER_TABLE.D0_101",
+            "neuract__ANALYSER_TABLE.ORP_101",
+            "neuract__ANALYSER_TABLE.ORP_102",
+            "neuract__ANALYSER_TABLE.ORP_103",
+            "neuract__ANALYSER_TABLE.PH_101",
+            "neuract__ANALYSER_TABLE.PH_102",
+            "neuract__ANALYSER_TABLE.PH_103",
+            "neuract__ANALYSER_TABLE.PH_104",
+            "neuract__ANALYSER_TABLE.TDS_101",
+            "neuract__ANALYSER_TABLE.TDS_102",
+            "note:Per-sensor AVG of the dynamically selected ANALYSER_TABLE column, filtered by timestamp_utc within [start_date, end_date]"
+          ]
+        },
+        "row_unit": {
+          "op": "LOOKUP",
+          "over": [
+            "columns:neuract__device_mappings.field_key",
+            "note:Engineering unit (mg/L for D0_101, mV for ORP_*, dimensionless dash for PH_*, ppm for TDS_*) is not stored in any catalog column; must be resolved from a static sensor-type-to-unit lookup keyed by field_key"
+          ]
+        },
+        "compliance_status": {
+          "op": "DERIVED",
+          "over": [
+            "note:Textual compliance result computed by comparing aggregated sensor readings against regulatory thresholds; not stored in any catalog table — must be injected as a post-processing parameter or params.compliance_status"
+          ]
+        }
+      }
+    },
+    "constant_replacements": {}
+  },
+  "constant_replacements": {},
+  "token_samples": {
+    "start_date": "{start_date}",
+    "end_date": "{end_date}",
+    "row_parameter": "Dissolved Oxygen",
+    "row_sensor": "D0_101",
+    "row_min": "{D0_101_min}",
+    "row_max": "{D0_101_max}",
+    "row_avg": "{D0_101_avg}",
+    "row_unit": "mg/L",
+    "compliance_status": "{compliance_status}"
+  }
+}

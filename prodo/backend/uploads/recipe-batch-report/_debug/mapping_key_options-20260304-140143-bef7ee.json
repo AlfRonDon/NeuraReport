@@ -1,0 +1,24 @@
+{
+  "event": "mapping_key_options",
+  "timestamp": "20260304-140143",
+  "template_id": "recipe-batch-report",
+  "template_kind": "pdf",
+  "connection_id": "c6e94c43-de32-48b2-9f58-e12a88e51bbd",
+  "db_path": "/home/rohith/desktop/NeuraReport/recipe_log.sqlite3",
+  "tokens_available": [
+    "recipes_list"
+  ],
+  "token_details": {
+    "recipes_list": {
+      "table": "recipes",
+      "column": "recipe_name",
+      "date_column": "start_time",
+      "applied_date_filters": false,
+      "fallback_used": false,
+      "error": null,
+      "row_count": 29,
+      "mode": "dataframe",
+      "binding_source": "contract_filter"
+    }
+  }
+}

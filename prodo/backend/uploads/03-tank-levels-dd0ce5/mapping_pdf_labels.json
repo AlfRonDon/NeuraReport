@@ -1,0 +1,27 @@
+[
+  {
+    "header": "timestamp",
+    "placeholder": "{timestamp}",
+    "mapping": "neuract__LT_TABLE.timestamp_utc"
+  },
+  {
+    "header": "row_tank_name",
+    "placeholder": "{row_tank_name}",
+    "mapping": "UNRESOLVED"
+  },
+  {
+    "header": "row_level",
+    "placeholder": "{row_level}",
+    "mapping": "neuract__LT_TABLE.LT_112"
+  },
+  {
+    "header": "row_capacity",
+    "placeholder": "{row_capacity}",
+    "mapping": "UNRESOLVED"
+  },
+  {
+    "header": "row_current_vol",
+    "placeholder": "{row_current_vol}",
+    "mapping": "UNRESOLVED"
+  }
+]

@@ -1,0 +1,22 @@
+{
+  "scalars": [
+    "start_date",
+    "end_date",
+    "fm_101_totalizer",
+    "fm_101",
+    "fm_103_totalizer",
+    "fm_103",
+    "fm_105_totalizer",
+    "fm_105",
+    "ph_101",
+    "ph_104",
+    "tds_101",
+    "tds_102",
+    "ilt_112",
+    "ilt_118",
+    "ilt_126"
+  ],
+  "row_tokens": [],
+  "totals": [],
+  "notes": "All table rows are fixed (non-repeating); each tagged cell maps to a named sensor/tag scalar. Limit column values (6.5-8.5, <500 ppm, <200 ppm) are literal text rendered directly in HTML."
+}

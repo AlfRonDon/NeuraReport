@@ -1,0 +1,27 @@
+{
+  "correlation_id": null,
+  "file_checksums": {
+    "filled_1772626788.html": "8612834aac0787ea5a9cd795d0893f10216229ed8990c87f8522e291c6dba6ca",
+    "filled_1772626788.pdf": "ec5e8720f70ab40b5712f8ec1a4bd238dba8f30f5a66ceacba1bd3c1af95ba1a",
+    "filled_1772626847.html": "c42eab82b3201614aac9210c432ea58ab0fff29055e5b59b3e5f3ce5d14bc52b",
+    "filled_1772626847.pdf": "c505155d899a71f48ed4a04f18b2e9c6e0c2ae118c5b527b9e670532830fe6c1",
+    "filled_1772628674.html": "3c961700145bb1091c02099dbad406ad3e63d6758a2c212da33850283d840e4e",
+    "filled_1772628674.pdf": "5e4863f2cddd2d4c8e06bd337c1dcb11138c1a0100dbbbe9421c8a904aeb9c65"
+  },
+  "files": {
+    "filled_1772626788.html": "filled_1772626788.html",
+    "filled_1772626788.pdf": "filled_1772626788.pdf",
+    "filled_1772626847.html": "filled_1772626847.html",
+    "filled_1772626847.pdf": "filled_1772626847.pdf",
+    "filled_1772628674.html": "filled_1772628674.html",
+    "filled_1772628674.pdf": "filled_1772628674.pdf"
+  },
+  "input_refs": [
+    "/home/rohith/desktop/NeuraReport/prodo/backend/uploads/scale-2-consumption-report-69163d-pdf/contract.json",
+    "/home/rohith/desktop/NeuraReport/recipe_log (1).sqlite3"
+  ],
+  "pid": 125887,
+  "produced_at": "2026-03-04T12:51:15.524811+00:00",
+  "schema_version": "1.0",
+  "step": "reports_run"
+}

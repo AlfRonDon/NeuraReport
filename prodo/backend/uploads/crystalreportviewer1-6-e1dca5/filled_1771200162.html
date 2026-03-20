@@ -1,0 +1,641 @@
+
+<style id="nr-page-counter-style">
+  .nr-page-number,
+  .nr-page-count { white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .nr-page-label { white-space: nowrap; }
+  @media screen {
+    .nr-page-number::after { content: attr(data-nr-screen); }
+    .nr-page-count::after { content: attr(data-nr-total-pages); }
+  }
+  @media print {
+    body { counter-reset: page; }
+    .nr-page-number::after { content: counter(page); }
+    .nr-page-count::after { content: counter(pages); }
+    .nr-page-count[data-nr-total-pages]::after { content: attr(data-nr-total-pages); }
+  }
+</style>
+
+
+
+<meta charset="UTF-8">
+<meta>
+<title>Batch Report</title>
+<style>
+:root {
+  --col-bth-w: 11mm;
+  --col-material-w: 48mm;
+  --col-set-w: 20mm;
+  --col-ach-w: 20mm;
+  --col-error-w: 17mm;
+  --col-errorpct-w: 16mm;
+  --col-deviate-w: 22mm;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+@page {
+  size: A4;
+  margin: 10mm 8mm;
+}
+
+body {
+  font-family: Arial, sans-serif;
+  font-size: 8pt;
+  line-height: 1.2;
+  color: #000;
+}
+
+.page-header {
+  border: 1px solid #000;
+  padding: 2mm 2.5mm 1.5mm 2.5mm;
+  margin-bottom: 2mm;
+}
+
+.header-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.5mm;
+  font-size: 8pt;
+  line-height: 1.15;
+}
+
+.header-left, .header-right {
+  display: flex;
+  gap: 1mm;
+}
+
+.header-label {
+  font-weight: normal;
+}
+
+.header-value {
+  font-weight: normal;
+}
+
+.report-title {
+  text-align: center;
+  font-size: 13pt;
+  font-weight: bold;
+  margin: 1.5mm 0 0.5mm 0;
+  letter-spacing: 0.02em;
+}
+
+.batch-block {
+  border: 1px solid #000;
+  padding: 1.5mm 2mm;
+  margin-bottom: 2mm;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+.batch-header {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 0.5mm 6mm;
+  margin-bottom: 1.5mm;
+  font-size: 7.5pt;
+  line-height: 1.25;
+}
+
+.batch-info {
+  display: flex;
+  gap: 1mm;
+}
+
+.data-table-wrapper {
+  margin-top: 1mm;
+}
+
+#data-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 7pt;
+  font-variant-numeric: tabular-nums;
+}
+
+#data-table colgroup col.col-bth { width: var(--col-bth-w); }
+#data-table colgroup col.col-material { width: var(--col-material-w); }
+#data-table colgroup col.col-set { width: var(--col-set-w); }
+#data-table colgroup col.col-ach { width: var(--col-ach-w); }
+#data-table colgroup col.col-error { width: var(--col-error-w); }
+#data-table colgroup col.col-errorpct { width: var(--col-errorpct-w); }
+#data-table colgroup col.col-deviate { width: var(--col-deviate-w); }
+
+#data-table thead tr {
+  border-top: 1px solid #000;
+  border-bottom: 1px solid #000;
+}
+
+#data-table th {
+  padding: 0.5mm 0.8mm;
+  text-align: center;
+  font-weight: normal;
+  border-right: 1px solid #000;
+  border-left: 1px solid #000;
+  line-height: 1.2;
+}
+
+#data-table th:first-child {
+  border-left: 1px solid #000;
+}
+
+#data-table th:last-child {
+  border-right: 1px solid #000;
+}
+
+#data-table tbody tr {
+  border-bottom: 1px solid #000;
+}
+
+#data-table tbody td {
+  padding: 0.4mm 0.8mm;
+  text-align: left;
+  border-right: 1px solid #000;
+  border-left: 1px solid #000;
+  line-height: 1.2;
+}
+
+#data-table tbody td:first-child {
+  text-align: center;
+  border-left: 1px solid #000;
+}
+
+#data-table tbody td:last-child {
+  border-right: 1px solid #000;
+}
+
+#data-table td.numeric {
+  text-align: right;
+}
+
+#data-table tfoot tr {
+  border-bottom: 1px solid #000;
+}
+
+#data-table tfoot td {
+  padding: 0.5mm 0.8mm;
+  font-weight: bold;
+  border-right: 1px solid #000;
+  border-left: 1px solid #000;
+  line-height: 1.2;
+}
+
+#data-table tfoot td:first-child {
+  border-left: 1px solid #000;
+}
+
+#data-table tfoot td:last-child {
+  border-right: 1px solid #000;
+}
+
+.page-footer {
+  margin-top: 3mm;
+  padding-top: 1mm;
+  border-top: 1px solid #000;
+  font-size: 7pt;
+  text-align: center;
+  line-height: 1.3;
+}
+</style>
+
+
+
+<div id="report-header" class="page-header">
+  <div class="header-row">
+    <div class="header-left">
+      <span class="header-label">Plant name :</span>
+      <span class="header-value"></span>
+    </div>
+    <div class="header-right">
+      <span class="header-label">Date:</span>
+      <span class="header-value"></span>
+    </div>
+  </div>
+  <div class="header-row">
+    <div class="header-left">
+      <span class="header-label">Location :</span>
+      <span class="header-value"></span>
+    </div>
+    <div class="header-right">
+      <span class="header-label">Recipe :</span>
+      <span class="header-value"></span>
+    </div>
+  </div>
+  <div class="header-row">
+    <div class="header-left">
+      <span class="header-label">Part Des :</span>
+      <span class="header-value"></span>
+    </div>
+    <div class="header-right">
+      <span class="header-label">Shift No</span>
+      <span class="header-value"></span>
+    </div>
+  </div>
+  <h1 class="report-title">Batch report</h1>
+</div>
+
+<!-- BEGIN:BLOCK_REPEAT batches -->
+<!-- BEGIN:BATCH (auto) --><section class="batch-block">
+  <div class="batch-header">
+    <div class="batch-info">
+      <span>Batch No:</span>
+      <span></span>
+    </div>
+    <div class="batch-info">
+      <span>Scale</span>
+      <span></span>
+    </div>
+    <div class="batch-info">
+      <span>Start time</span>
+      <span></span>
+    </div>
+    <div class="batch-info">
+      <span>Batch Date :</span>
+      <span></span>
+    </div>
+    <div class="batch-info">
+      <span>Man1</span>
+      <span></span>
+    </div>
+    <div class="batch-info">
+      <span>Date(scr)</span>
+      <span></span>
+    </div>
+    <div class="batch-info">
+      <span>Shift No :</span>
+      <span></span>
+    </div>
+    <div class="batch-info">
+      <span>Man2</span>
+      <span></span>
+    </div>
+    <div class="batch-info">
+      <span>Scale</span>
+      <span></span>
+    </div>
+    <div class="batch-info">
+      <span>Recipe Name :</span>
+      <span></span>
+    </div>
+    <div class="batch-info">
+      <span></span>
+      <span></span>
+    </div>
+    <div class="batch-info">
+      <span>Start time</span>
+      <span></span>
+    </div>
+    <div class="batch-info">
+      <span>Recipe Code :</span>
+      <span></span>
+    </div>
+    <div class="batch-info">
+      <span></span>
+      <span></span>
+    </div>
+    <div class="batch-info">
+      <span>Date(scr)</span>
+      <span></span>
+    </div>
+    <div class="batch-info">
+      <span>Recipe No</span>
+      <span></span>
+    </div>
+    <div class="batch-info">
+      <span></span>
+      <span></span>
+    </div>
+    <div class="batch-info">
+      <span></span>
+      <span></span>
+    </div>
+  </div>
+
+  <div class="data-table-wrapper">
+    <table id="data-table">
+      <colgroup>
+        <col class="col-bth">
+        <col class="col-material">
+        <col class="col-set">
+        <col class="col-ach">
+        <col class="col-error">
+        <col class="col-errorpct">
+        <col class="col-deviate">
+      </colgroup>
+      <thead>
+        <tr>
+          <th data-label="bth_no">Bth No</th>
+          <th data-label="material_name">Material Name</th>
+          <th data-label="set_wt">Set wt(Kg)</th>
+          <th data-label="ach_wt">Ach wt(Kg)</th>
+          <th data-label="error">Error(Kg)</th>
+          <th data-label="error_pct">Error %</th>
+          <th data-label="deviate_dur">Deviate Dur (sec)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td></td>
+          <td></td>
+          <td class="numeric"></td>
+          <td class="numeric"></td>
+          <td class="numeric"></td>
+          <td class="numeric"></td>
+          <td class="numeric"></td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr class="total-row">
+          <td></td>
+          <td>Total :</td>
+          <td class="numeric"></td>
+          <td class="numeric"></td>
+          <td class="numeric"></td>
+          <td class="numeric"></td>
+          <td class="numeric"></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</section><!-- END:BATCH (auto) -->
+<!-- END:BLOCK_REPEAT -->
+
+<footer class="page-footer">
+  <div></div>
+  <div>Page <span class="nr-page-number" data-nr-counter="page" aria-label="Current page number"></span> of <span class="nr-page-count" data-nr-counter="pages" aria-label="Total page count"></span></div>
+</footer>
+
+
+
+<script id="nr-page-counter-script">
+(function() {
+  const METRICS = {"page_width_mm": 210.0, "page_height_mm": 297.0, "margin_top_mm": 10.0, "margin_bottom_mm": 10.0};
+  const PX_PER_MM = 96 / 25.4;
+  const BREAK_VALUES = ['page', 'always', 'left', 'right'];
+  const TRAILING_BREAK_SENTINEL = '__nr_trailing_break__';
+  let lastPageNodes = [];
+  let lastCountNodes = [];
+
+  function isForcedBreak(value) {
+    if (!value) return false;
+    const normalized = String(value).toLowerCase().trim();
+    if (!normalized) return false;
+    return BREAK_VALUES.indexOf(normalized) !== -1;
+  }
+
+  function readBreakValue(style, which) {
+    if (!style) return '';
+    if (which === 'before') {
+      return (
+        style.getPropertyValue('break-before') ||
+        style.getPropertyValue('page-break-before') ||
+        style.breakBefore ||
+        style.pageBreakBefore ||
+        ''
+      );
+    }
+    return (
+      style.getPropertyValue('break-after') ||
+      style.getPropertyValue('page-break-after') ||
+      style.breakAfter ||
+      style.pageBreakAfter ||
+      ''
+    );
+  }
+
+  function findNextElement(node) {
+    if (!node) return null;
+    let current = node;
+    while (current) {
+      if (current.nextElementSibling) return current.nextElementSibling;
+      current = current.parentElement;
+    }
+    return null;
+  }
+
+  function resolveNodeOffset(node) {
+    if (!node || typeof node.getBoundingClientRect !== 'function') return 0;
+    const rect = node.getBoundingClientRect();
+    const scrollY = typeof window !== 'undefined' ? window.scrollY || window.pageYOffset || 0 : 0;
+    return Math.max(0, rect.top + scrollY);
+  }
+
+  function collectManualBreakAnchors(root) {
+    if (!root || !root.ownerDocument) return [];
+    const anchors = [];
+    const seen = new Set();
+    const showElement = typeof NodeFilter !== 'undefined' && NodeFilter.SHOW_ELEMENT ? NodeFilter.SHOW_ELEMENT : 1;
+    const walker = root.ownerDocument.createTreeWalker(root, showElement);
+
+    function pushAnchor(target) {
+      if (!target) return;
+      if (seen.has(target)) return;
+      seen.add(target);
+      anchors.push(target);
+    }
+
+    while (walker.nextNode()) {
+      const element = walker.currentNode;
+      const style = window.getComputedStyle ? window.getComputedStyle(element) : null;
+      if (!style) continue;
+      if (isForcedBreak(readBreakValue(style, 'before'))) {
+        pushAnchor(element);
+      }
+      if (isForcedBreak(readBreakValue(style, 'after'))) {
+        const next = findNextElement(element);
+        pushAnchor(next || TRAILING_BREAK_SENTINEL);
+      }
+    }
+    return anchors;
+  }
+
+  function buildPageStartOffsets(manualAnchors, usableHeightPx, contentHeight, totalPages) {
+    const offsets = [0];
+    const seenOffsets = new Set([0]);
+    manualAnchors.forEach((anchor) => {
+      let offset = null;
+      if (anchor === TRAILING_BREAK_SENTINEL) {
+        offset = contentHeight + usableHeightPx;
+      } else if (anchor && typeof anchor.getBoundingClientRect === 'function') {
+        offset = resolveNodeOffset(anchor);
+      }
+      if (offset == null || !Number.isFinite(offset)) {
+        return;
+      }
+      const key = Math.round(offset * 1000) / 1000;
+      if (seenOffsets.has(key)) return;
+      seenOffsets.add(key);
+      offsets.push(offset);
+    });
+
+    offsets.sort((a, b) => a - b);
+
+    while (offsets.length < totalPages) {
+      const last = offsets[offsets.length - 1];
+      offsets.push(last + usableHeightPx);
+    }
+
+    return offsets;
+  }
+
+  function resolvePageIndexFromOffsets(offset, startOffsets) {
+    if (!startOffsets || !startOffsets.length) return 0;
+    let index = 0;
+    for (let i = 0; i < startOffsets.length; i += 1) {
+      if (offset >= startOffsets[i] - 0.5) {
+        index = i;
+      } else {
+        break;
+      }
+    }
+    return index;
+  }
+
+  function indexOfSection(node, sections) {
+    if (!node || !sections || !sections.length) return -1;
+    const target = typeof node.closest === 'function' ? node.closest('.nr-key-section') : null;
+    if (!target) return -1;
+    for (let i = 0; i < sections.length; i += 1) {
+      if (sections[i] === target) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
+  function assignScreenText(node, text, key) {
+    if (!node) return;
+    const stringText = text == null ? '' : String(text);
+    if (node.getAttribute('aria-label') === null) {
+      node.setAttribute('aria-label', key === 'count' ? 'Total page count' : 'Current page number');
+    }
+    node.setAttribute('data-nr-screen', stringText);
+    if (key === 'count') {
+      node.setAttribute('data-nr-total-pages', stringText);
+    } else {
+      node.setAttribute('data-nr-page-estimate', stringText);
+    }
+    node.setAttribute('data-nr-' + key + '-text', stringText);
+    node.textContent = stringText;
+  }
+
+  function clearNodesForPrint() {
+    const nodes = lastPageNodes.concat(lastCountNodes);
+    nodes.forEach((node) => {
+      if (!node) return;
+      if (!node.hasAttribute('data-nr-print-cache')) {
+        node.setAttribute('data-nr-print-cache', node.textContent || '');
+      }
+      node.textContent = '';
+    });
+  }
+
+  function restoreNodesAfterPrint() {
+    const nodes = lastPageNodes.concat(lastCountNodes);
+    nodes.forEach((node) => {
+      if (!node) return;
+      const cached = node.getAttribute('data-nr-print-cache');
+      if (cached != null) {
+        const key = node.getAttribute('data-nr-counter') === 'pages' ? 'count' : 'page';
+        const preferred = node.getAttribute('data-nr-' + key + '-text');
+        node.textContent = preferred != null ? preferred : cached;
+        node.removeAttribute('data-nr-print-cache');
+      }
+    });
+  }
+
+  function computeTotals() {
+    try {
+      const doc = document.documentElement;
+      const body = document.body;
+      if (!doc || !body) return;
+      const usableHeightMm = Math.max(METRICS.page_height_mm - (METRICS.margin_top_mm + METRICS.margin_bottom_mm), 0.1);
+      const usableHeightPx = usableHeightMm * PX_PER_MM;
+      const contentHeight = Math.max(
+        body.scrollHeight,
+        body.offsetHeight,
+        doc.scrollHeight,
+        doc.offsetHeight
+      );
+      const contentPages = Math.max(1, Math.ceil(contentHeight / usableHeightPx));
+      const manualAnchors = collectManualBreakAnchors(body);
+      const manualPages = manualAnchors.length > 0 ? manualAnchors.length + 1 : 1;
+      const totalPages = Math.max(contentPages, manualPages);
+      const startOffsets = buildPageStartOffsets(manualAnchors, usableHeightPx, contentHeight, totalPages);
+      const totalAsString = String(totalPages);
+      doc.setAttribute('data-nr-total-pages', totalAsString);
+      const countNodes = Array.from(document.querySelectorAll('[data-nr-counter="pages"]'));
+      countNodes.forEach((node) => assignScreenText(node, totalAsString, 'count'));
+      const pageNodes = Array.from(document.querySelectorAll('[data-nr-counter="page"]'));
+      const sections = Array.from(document.querySelectorAll('.nr-key-section'));
+      pageNodes.forEach((node) => {
+        const sectionIndex = indexOfSection(node, sections);
+        let pageIndex;
+        if (sectionIndex >= 0) {
+          pageIndex = sectionIndex;
+        } else {
+          const offset = resolveNodeOffset(node);
+          pageIndex = resolvePageIndexFromOffsets(offset, startOffsets);
+        }
+        const pageNumber = Math.min(totalPages, Math.max(1, pageIndex + 1));
+        assignScreenText(node, String(pageNumber), 'page');
+      });
+      lastPageNodes = pageNodes;
+      lastCountNodes = countNodes;
+    } catch (err) {
+      if (typeof console !== 'undefined' && console.warn) {
+        console.warn('nr-page-counter: unable to compute preview counters', err);
+      }
+    }
+  }
+
+  function scheduleCompute() {
+    computeTotals();
+    setTimeout(computeTotals, 180);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      scheduleCompute();
+    }, { once: true });
+  } else {
+    scheduleCompute();
+  }
+
+  if (typeof window !== 'undefined') {
+    window.addEventListener('resize', computeTotals, { passive: true });
+    window.addEventListener('beforeprint', clearNodesForPrint);
+    window.addEventListener('afterprint', () => {
+      restoreNodesAfterPrint();
+      scheduleCompute();
+    });
+    if (typeof window.matchMedia === 'function') {
+      const mediaQuery = window.matchMedia('print');
+      if (typeof mediaQuery.addEventListener === 'function') {
+        mediaQuery.addEventListener('change', (event) => {
+          if (event.matches) {
+            clearNodesForPrint();
+          } else {
+            restoreNodesAfterPrint();
+            scheduleCompute();
+          }
+        });
+      } else if (typeof mediaQuery.addListener === 'function') {
+        mediaQuery.addListener((event) => {
+          if (event.matches) {
+            clearNodesForPrint();
+          } else {
+            restoreNodesAfterPrint();
+            scheduleCompute();
+          }
+        });
+      }
+    }
+  }
+})();
+</script>

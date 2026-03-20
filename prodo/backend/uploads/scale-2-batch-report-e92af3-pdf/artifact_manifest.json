@@ -1,0 +1,43 @@
+{
+  "correlation_id": null,
+  "file_checksums": {
+    "filled_1772625968.html": "7a996556000ab4b917e1b89bf2e932ce3e3c4da44877d22437268b6939520507",
+    "filled_1772625968.pdf": "a6136719b1fa4eae3fece05e2289ad52be59d776ea7657b32886d06f875d46dc",
+    "filled_1772626192.html": "7f9db851c521d025d026f7c8960f0c08b6ab42df13cbd873a8ef22eab5b705c6",
+    "filled_1772626192.pdf": "fd7fd8a8f02c6dc08709bac5f2800d19481a318d34330e0697d6e6abd23898ed",
+    "filled_1772626294.html": "80461bb49d8da70e1d2adaf5736a7eb2e91f71eb19006cf13d2bb891f04f4ecc",
+    "filled_1772626294.pdf": "a863d59195b9900134130ec73b42d949a1d3df60ae3599b6f76c50eecc2a71da",
+    "filled_1772626304.html": "e234a78f7098a52bd61e7706dea3e192f09e149889c47bb25a1c8ddaefc3ef61",
+    "filled_1772626304.pdf": "5b670bce68b50770bb791e7e6ace54667565e6af78b19b7250db094ec990ac98",
+    "filled_1772628672.html": "7f9db851c521d025d026f7c8960f0c08b6ab42df13cbd873a8ef22eab5b705c6",
+    "filled_1772628672.pdf": "6123d8a1799120d8f7b15e8bbfd3cfe31b77b3b69e45fb42c76c8d770ecd82e7",
+    "filled_1772691694.html": "db44b3ad860d3886f45672f9e49a9bfbb7a89df2a91e30e3129d9de909a9f216",
+    "filled_1772691694.pdf": "b580e26b3134d62aaa0ff9d7d5ea1e09d170752d06517d0be9b07e127dfb0544",
+    "filled_1772691878.html": "2e50f08a183aac8dba9fc922d22c8ff7ef11fd7021c69fefebcad76080025767",
+    "filled_1772691878.pdf": "549edf81fca82b1ff6533552be23597d3c76810678fac5549250a6f72e91d6f9"
+  },
+  "files": {
+    "filled_1772625968.html": "filled_1772625968.html",
+    "filled_1772625968.pdf": "filled_1772625968.pdf",
+    "filled_1772626192.html": "filled_1772626192.html",
+    "filled_1772626192.pdf": "filled_1772626192.pdf",
+    "filled_1772626294.html": "filled_1772626294.html",
+    "filled_1772626294.pdf": "filled_1772626294.pdf",
+    "filled_1772626304.html": "filled_1772626304.html",
+    "filled_1772626304.pdf": "filled_1772626304.pdf",
+    "filled_1772628672.html": "filled_1772628672.html",
+    "filled_1772628672.pdf": "filled_1772628672.pdf",
+    "filled_1772691694.html": "filled_1772691694.html",
+    "filled_1772691694.pdf": "filled_1772691694.pdf",
+    "filled_1772691878.html": "filled_1772691878.html",
+    "filled_1772691878.pdf": "filled_1772691878.pdf"
+  },
+  "input_refs": [
+    "/home/rohith/desktop/NeuraReport/prodo/backend/uploads/scale-2-batch-report-e92af3-pdf/contract.json",
+    "/home/rohith/desktop/NeuraReport/recipe_log (1).sqlite3"
+  ],
+  "pid": 720914,
+  "produced_at": "2026-03-05T06:24:41.635654+00:00",
+  "schema_version": "1.0",
+  "step": "reports_run"
+}

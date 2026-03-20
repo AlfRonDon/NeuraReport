@@ -1,0 +1,15 @@
+{
+  "scalars": [
+    "report_date"
+  ],
+  "row_tokens": [
+    "row_meter_id",
+    "row_reading",
+    "row_totalizer",
+    "row_status"
+  ],
+  "totals": [
+    "total_flow"
+  ],
+  "notes": "Table has 4 columns: Meter ID, Reading (m³/h), Totalizer (m³), Status. Six rows visible (FM_101–FM_106) rendered as a single prototype row. Footer contains total_flow aggregate and literal 'Prepared by: Operator on Duty' text."
+}

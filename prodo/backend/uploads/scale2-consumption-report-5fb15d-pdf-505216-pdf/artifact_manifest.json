@@ -1,0 +1,48 @@
+{
+  "correlation_id": null,
+  "file_checksums": {
+    "filled_1772630137.html": "e61b49f24e8dd357ca4d6d4ac5daa0299692fd0648512376ec5785391c12563f",
+    "filled_1772630137.pdf": "44c5a76edf84033c159275eca78c0f06902caae8c01e0e16003db770cda6bc79",
+    "filled_1772665823.html": "b8cdf474b4306d8d7ff22c92a563b049d15957e2299a51b3d5bfcf408d972132",
+    "filled_1772665823.pdf": "3b8b3d44a93d4a114f2b6aefcf402bbb5862c3f139c27a0277edc51404575be0",
+    "filled_1772666448.html": "9778817b9e495f9086013d25852e4813d384613d992090d3e0d1523b5df0a92e",
+    "filled_1772666448.pdf": "e254d097895e7472456071f9484a82fbe6d10c86c93f7056da57e2f7ce4464f5",
+    "filled_1772667601.html": "6bec0c3a82b3c7cab50fe0eff6db2659a855129968ffb7e2c63af906af882641",
+    "filled_1772667601.pdf": "c5036b3b0c6801fca589bb14fa95ebe522a8145ffb6f834e0322971e77426bb1",
+    "filled_1772667781.html": "03c707b4348681c295fe0906687ae3203c3e9bc3dc86b1afe06859473e1e613a",
+    "filled_1772667781.pdf": "a6907232a2e2c462678db8213cfa4524cd8991f2109f28fc02551cdd369a5e0a",
+    "filled_1772668097.html": "c3dfa4ea8bfccf4b3cb23cb54f0589e8e242245e8f62fb0736aca552efa6125b",
+    "filled_1772668097.pdf": "a792075170ca329c3196ad13b8eb114008794de0813f01173edd5e18d750af14",
+    "filled_1772668524.html": "c3dfa4ea8bfccf4b3cb23cb54f0589e8e242245e8f62fb0736aca552efa6125b",
+    "filled_1772668524.pdf": "ac39fd080701b403acac9e8bb60b2b9fc79a2bf5b03b4c7fbc35404bb61b69b5",
+    "filled_1772701654.html": "7cdd0374b41d6b625353b6395d1cf8ea1f0a94ccdd11aff3f5ffbafed052a492",
+    "filled_1772701654.pdf": "8b8b785f8d1cd3468d2a7b74fc133869bcbfe7ac4db12b711ec45c6df82e66b4"
+  },
+  "files": {
+    "filled_1772630137.html": "filled_1772630137.html",
+    "filled_1772630137.pdf": "filled_1772630137.pdf",
+    "filled_1772665823.html": "filled_1772665823.html",
+    "filled_1772665823.pdf": "filled_1772665823.pdf",
+    "filled_1772666448.html": "filled_1772666448.html",
+    "filled_1772666448.pdf": "filled_1772666448.pdf",
+    "filled_1772667601.html": "filled_1772667601.html",
+    "filled_1772667601.pdf": "filled_1772667601.pdf",
+    "filled_1772667781.html": "filled_1772667781.html",
+    "filled_1772667781.pdf": "filled_1772667781.pdf",
+    "filled_1772668097.html": "filled_1772668097.html",
+    "filled_1772668097.pdf": "filled_1772668097.pdf",
+    "filled_1772668524.html": "filled_1772668524.html",
+    "filled_1772668524.pdf": "filled_1772668524.pdf",
+    "filled_1772701654.html": "filled_1772701654.html",
+    "filled_1772701654.pdf": "filled_1772701654.pdf"
+  },
+  "input_refs": [
+    "/home/rohith/desktop/NeuraReport/prodo/backend/uploads/scale2-consumption-report-5fb15d-pdf/contract.json",
+    "/home/rohith/desktop/NeuraReport/recipe_log (1).sqlite3",
+    "/home/rohith/desktop/NeuraReport/backend/uploads/scale2-consumption-report-5fb15d-pdf-505216-pdf/contract.json"
+  ],
+  "pid": 1128107,
+  "produced_at": "2026-03-05T09:07:37.408192+00:00",
+  "schema_version": "1.0",
+  "step": "reports_run"
+}

@@ -1,0 +1,93 @@
+{
+  "tokens": {
+    "scalars": [
+      "print_date",
+      "from_date",
+      "to_date",
+      "filter_recipe_code"
+    ],
+    "row_tokens": [
+      "row_sl_no",
+      "row_recipe_name",
+      "row_recipe_code",
+      "row_recipe_no",
+      "row_no_of_batches"
+    ],
+    "totals": [
+      "total_batches"
+    ]
+  },
+  "mapping": {
+    "print_date": "PARAM:print_date",
+    "from_date": "PARAM:from_date",
+    "to_date": "PARAM:to_date",
+    "filter_recipe_code": "PARAM:filter_recipe_code",
+    "row_sl_no": "INDEX",
+    "row_recipe_name": "recipes.recipe_name",
+    "row_recipe_code": "recipes.recipe_name",
+    "row_recipe_no": "recipes.id",
+    "row_no_of_batches": "recipes.__count__",
+    "total_batches": "COMPUTED"
+  },
+  "join": {
+    "parent_table": "recipes",
+    "parent_key": "id",
+    "child_table": "recipes",
+    "child_key": "id"
+  },
+  "date_columns": {
+    "recipes": "start_time"
+  },
+  "filters": {
+    "optional": {
+      "filter_recipe_code": "recipes.recipe_name",
+      "date_from": "recipes.start_time",
+      "date_to": "recipes.start_time"
+    }
+  },
+  "reshape_rules": [],
+  "group_aggregate": {
+    "strategy": "group_by",
+    "group_columns": [
+      "recipe_name"
+    ],
+    "aggregations": {
+      "id": "min",
+      "recipe_name": "first"
+    },
+    "count_as": "__count__"
+  },
+  "row_computed": {},
+  "totals_math": {
+    "total_batches": {
+      "op": "sum",
+      "column": "row_no_of_batches"
+    }
+  },
+  "formatters": {},
+  "order_by": {
+    "rows": [
+      "recipe_name ASC"
+    ]
+  },
+  "header_tokens": [
+    "print_date",
+    "from_date",
+    "to_date",
+    "filter_recipe_code"
+  ],
+  "row_tokens": [
+    "row_sl_no",
+    "row_recipe_name",
+    "row_recipe_code",
+    "row_recipe_no",
+    "row_no_of_batches"
+  ],
+  "totals": {
+    "total_batches": "COMPUTED"
+  },
+  "row_order": [
+    "recipe_name ASC"
+  ],
+  "literals": {}
+}

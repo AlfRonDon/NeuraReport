@@ -1,0 +1,32 @@
+{
+  "scalars": [
+    "week_start",
+    "week_end",
+    "total_devices",
+    "ok_count",
+    "warn_count",
+    "critical_count"
+  ],
+  "row_tokens": [
+    "FM_101_hours",
+    "FM_101",
+    "FM_101_health",
+    "FM_103_hours",
+    "FM_103",
+    "FM_103_health",
+    "FM_105_hours",
+    "FM_105",
+    "FM_105_health",
+    "LT_112_hours",
+    "LT_112",
+    "LT_112_health",
+    "LT_118_hours",
+    "LT_118",
+    "LT_118_health",
+    "LT_126_hours",
+    "LT_126",
+    "LT_126_health"
+  ],
+  "totals": [],
+  "notes": "Two fixed-equipment tables (Flow Meters: FM_101/103/105; Level Transmitters: LT_112/118/126). Equipment IDs in first column are literal text; value cells carry per-device tokens. total_devices, ok_count, warn_count, critical_count are scalar summary fields rendered in the footer area."
+}

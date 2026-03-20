@@ -1,0 +1,122 @@
+{
+  "parameters": {
+    "required": [
+      {
+        "name": "from_date",
+        "type": "date",
+        "description": "Inclusive lower bound applied to DATE(recipes.start_time).",
+        "example": "2024-09-01"
+      },
+      {
+        "name": "to_date",
+        "type": "date",
+        "description": "Inclusive upper bound applied to DATE(recipes.start_time).",
+        "example": "2024-09-30"
+      }
+    ],
+    "optional": [
+      {
+        "name": "recipe_code",
+        "type": "string",
+        "description": "Optional equality filter for recipes.recipe_name (leave blank for all)."
+      }
+    ]
+  },
+  "datasets": [
+    {
+      "alias": "rows",
+      "source_table": "recipes",
+      "description": "Unpivot bin1..bin12 columns per batch to surface material, set, achieved, and error metrics.",
+      "columns": [
+        {
+          "as": "row_sl_no",
+          "from": "ROW_NUMBER() OVER (ORDER BY recipe_name, bin_no, batch_id)"
+        },
+        {
+          "as": "row_recipe_code",
+          "from": "recipes.recipe_name"
+        },
+        {
+          "as": "row_material_name",
+          "from": "unpivot.bin_content"
+        },
+        {
+          "as": "row_set_wt_kg",
+          "from": "unpivot.bin_sp"
+        },
+        {
+          "as": "row_ach_wt_kg",
+          "from": "unpivot.bin_act"
+        },
+        {
+          "as": "row_error_kg",
+          "from": "unpivot.bin_act - unpivot.bin_sp"
+        },
+        {
+          "as": "row_error_pct",
+          "from": "CASE WHEN unpivot.bin_sp = 0 THEN NULL ELSE 100.0 * (unpivot.bin_act - unpivot.bin_sp) / unpivot.bin_sp END"
+        }
+      ],
+      "filters": [
+        "DATE(recipes.start_time) BETWEEN DATE(:from_date) AND DATE(:to_date)",
+        "Apply recipe_name = :recipe_code when recipe_code is provided"
+      ],
+      "ordering": [
+        "row_recipe_code ASC",
+        "bin_no ASC",
+        "batch_id ASC"
+      ]
+    },
+    {
+      "alias": "totals",
+      "source_table": "recipes",
+      "description": "Aggregates the same filtered-unpivoted rows to total set/achieved/error columns.",
+      "columns": [
+        {
+          "as": "total_set_wt",
+          "from": "SUM(unpivot.bin_sp)"
+        },
+        {
+          "as": "total_ach_wt",
+          "from": "SUM(unpivot.bin_act)"
+        },
+        {
+          "as": "total_error_kg",
+          "from": "SUM(unpivot.bin_act - unpivot.bin_sp)"
+        },
+        {
+          "as": "total_error_pct",
+          "from": "CASE WHEN SUM(unpivot.bin_sp) = 0 THEN NULL ELSE 100.0 * SUM(unpivot.bin_act - unpivot.bin_sp) / SUM(unpivot.bin_sp) END"
+        }
+      ],
+      "filters": [
+        "Reuse the same filtered population used for rows"
+      ],
+      "ordering": []
+    }
+  ],
+  "reshape_rules": [
+    {
+      "alias": "rows",
+      "purpose": "Unpivot bin1..bin12 into stacked material rows per batch.",
+      "strategy": "UNION_ALL",
+      "columns": [
+        "batch_id",
+        "bin_no",
+        "material_name",
+        "set_wt",
+        "ach_wt"
+      ]
+    }
+  ],
+  "order_by": {
+    "rows": [
+      "row_recipe_code ASC",
+      "row_sl_no ASC"
+    ]
+  },
+  "row_order": [
+    "row_recipe_code ASC",
+    "row_sl_no ASC"
+  ]
+}

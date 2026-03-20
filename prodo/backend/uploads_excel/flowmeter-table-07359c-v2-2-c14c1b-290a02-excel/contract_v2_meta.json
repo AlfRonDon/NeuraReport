@@ -1,0 +1,86 @@
+{
+  "prompt_version": "manual_rebuild_v2",
+  "model": "n/a",
+  "input_signature": "flowmeter-table-07359c_v2",
+  "db_signature": "unknown",
+  "page_summary_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "generated_at": 1763052000,
+  "assumptions": [],
+  "warnings": [],
+  "validation": {
+    "unknown_tokens": [],
+    "unknown_columns": [],
+    "token_coverage": {
+      "scalars_mapped_pct": 100,
+      "row_tokens_mapped_pct": 100,
+      "totals_mapped_pct": 100
+    }
+  },
+  "overview_path": "overview.md",
+  "step5_requirements_path": "step5_requirements.json",
+  "contract_payload": {
+    "header_tokens": [
+      "report_from_date",
+      "report_to_date",
+      "print_date"
+    ],
+    "row_tokens": [
+      "row_date",
+      "row_basement_to_tob_raw_water_fm_1",
+      "row_limeplant_to_etp_fm_2",
+      "row_di_raw_inlet_fm_3",
+      "row_di_scrubbers_fm_4",
+      "row_phase_2_raw_water_fm_5",
+      "row_tw_to_earth_pits_fm_6",
+      "row_rw_phase_2_scrubber_line_fm_7",
+      "row_tw_admin_fm_8",
+      "row_soft_to_cooling_towers_fm_9",
+      "row_rw_admin_fm_10",
+      "row_rw_utility_toilets_fm_11",
+      "row_tw_utility_toilets_fm_12",
+      "row_storage_to_phase_1_fm_13",
+      "row_hmwssb_phase_1_fm_14",
+      "row_pond_to_topcon_fm_15",
+      "row_hmwssb_to_topcon_fm_16",
+      "row_basement_to_tob_treated_water_fm_17",
+      "row_raw_to_utility_toilets_2_fm_18",
+      "row_condensed_line_fm_19",
+      "row_tw_shed_b_toilets_fm_20",
+      "row_rw_to_shed_b_toilets_fm_21",
+      "row_cooling_towers_to_ro_fm_22",
+      "row_p2_zld_to_topcon_zld_fm_23",
+      "row_total_usage"
+    ],
+    "totals": {
+      "total_basement_to_tob_raw_water_fm_1": "SUM(COALESCE(neuract__Flowmeters.BASEMENT_TO_TOB_RAW_WATER_FM_1, 0))",
+      "total_limeplant_to_etp_fm_2": "SUM(COALESCE(neuract__Flowmeters.LIMEPLANT_TO_ETP_FM_2, 0))",
+      "total_di_raw_inlet_fm_3": "SUM(COALESCE(neuract__Flowmeters.DI_RAW_INLET_FM_3, 0))",
+      "total_di_scrubbers_fm_4": "SUM(COALESCE(neuract__Flowmeters.DI_SCRUBBERS_FM_4, 0))",
+      "total_phase_2_raw_water_fm_5": "SUM(COALESCE(neuract__Flowmeters.PHASE_2_RAW_WATER_FM_5, 0))",
+      "total_tw_to_earth_pits_fm_6": "SUM(COALESCE(neuract__Flowmeters.TW_TO_EARTH_PITS_FM_6, 0))",
+      "total_rw_phase_2_scrubber_line_fm_7": "SUM(COALESCE(neuract__Flowmeters.RW_PHASE_2_SCRUBBER_LINE_FM_7, 0))",
+      "total_tw_admin_fm_8": "SUM(COALESCE(neuract__Flowmeters.TW_ADMIN_FM_8, 0))",
+      "total_soft_to_cooling_towers_fm_9": "SUM(COALESCE(neuract__Flowmeters.SOFT_TO_COOLING_TOWERS_FM_9, 0))",
+      "total_rw_admin_fm_10": "SUM(COALESCE(neuract__Flowmeters.RW_ADMIN_FM_10, 0))",
+      "total_rw_utility_toilets_fm_11": "SUM(COALESCE(neuract__Flowmeters.RW_UTILITY_TOILETS_FM_11, 0))",
+      "total_tw_utility_toilets_fm_12": "SUM(COALESCE(neuract__Flowmeters.TW_UTILITY_TOILETS_FM_12, 0))",
+      "total_storage_to_phase_1_fm_13": "SUM(COALESCE(neuract__Flowmeters.STORAGE_TO_PHASE_1_FM_13, 0))",
+      "total_hmwssb_phase_1_fm_14": "SUM(COALESCE(neuract__Flowmeters.HMWSSB_PHASE_1_FM_14, 0))",
+      "total_pond_to_topcon_fm_15": "SUM(COALESCE(neuract__Flowmeters.POND_TO_TOPCON_FM_15, 0))",
+      "total_hmwssb_to_topcon_fm_16": "SUM(COALESCE(neuract__Flowmeters.HMWSSB_TO_TOPCON_FM_16, 0))",
+      "total_basement_to_tob_treated_water_fm_17": "SUM(COALESCE(neuract__Flowmeters.BASEMENT_TO_TOB_TREATED_WATER_FM_17, 0))",
+      "total_raw_to_utility_toilets_2_fm_18": "SUM(COALESCE(neuract__Flowmeters.RAW_TO_UTILITY_TOILETS_2_FM_18, 0))",
+      "total_condensed_line_fm_19": "SUM(COALESCE(neuract__Flowmeters.CONDENSED_LINE_FM_19, 0))",
+      "total_tw_shed_b_toilets_fm_20": "SUM(COALESCE(neuract__Flowmeters.TW_SHED_B_TOILETS_FM_20, 0))",
+      "total_rw_to_shed_b_toilets_fm_21": "SUM(COALESCE(neuract__Flowmeters.RW_TO_SHED_B_TOILETS_FM_21, 0))",
+      "total_cooling_towers_to_ro_fm_22": "SUM(COALESCE(neuract__Flowmeters.COOLING_TOWERS_TO_RO_FM_22, 0))",
+      "total_p2_zld_to_topcon_zld_fm_23": "SUM(COALESCE(neuract__Flowmeters.P2_ZLD_TO_TOPCON_ZLD_FM_23, 0))",
+      "total_all_flowmeters": "SUM(COALESCE(neuract__Flowmeters.BASEMENT_TO_TOB_RAW_WATER_FM_1, 0) + COALESCE(neuract__Flowmeters.LIMEPLANT_TO_ETP_FM_2, 0) + COALESCE(neuract__Flowmeters.DI_RAW_INLET_FM_3, 0) + COALESCE(neuract__Flowmeters.DI_SCRUBBERS_FM_4, 0) + COALESCE(neuract__Flowmeters.PHASE_2_RAW_WATER_FM_5, 0) + COALESCE(neuract__Flowmeters.TW_TO_EARTH_PITS_FM_6, 0) + COALESCE(neuract__Flowmeters.RW_PHASE_2_SCRUBBER_LINE_FM_7, 0) + COALESCE(neuract__Flowmeters.TW_ADMIN_FM_8, 0) + COALESCE(neuract__Flowmeters.SOFT_TO_COOLING_TOWERS_FM_9, 0) + COALESCE(neuract__Flowmeters.RW_ADMIN_FM_10, 0) + COALESCE(neuract__Flowmeters.RW_UTILITY_TOILETS_FM_11, 0) + COALESCE(neuract__Flowmeters.TW_UTILITY_TOILETS_FM_12, 0) + COALESCE(neuract__Flowmeters.STORAGE_TO_PHASE_1_FM_13, 0) + COALESCE(neuract__Flowmeters.HMWSSB_PHASE_1_FM_14, 0) + COALESCE(neuract__Flowmeters.POND_TO_TOPCON_FM_15, 0) + COALESCE(neuract__Flowmeters.HMWSSB_TO_TOPCON_FM_16, 0) + COALESCE(neuract__Flowmeters.BASEMENT_TO_TOB_TREATED_WATER_FM_17, 0) + COALESCE(neuract__Flowmeters.RAW_TO_UTILITY_TOILETS_2_FM_18, 0) + COALESCE(neuract__Flowmeters.CONDENSED_LINE_FM_19, 0) + COALESCE(neuract__Flowmeters.TW_SHED_B_TOILETS_FM_20, 0) + COALESCE(neuract__Flowmeters.RW_TO_SHED_B_TOILETS_FM_21, 0) + COALESCE(neuract__Flowmeters.COOLING_TOWERS_TO_RO_FM_22, 0) + COALESCE(neuract__Flowmeters.P2_ZLD_TO_TOPCON_ZLD_FM_23, 0))"
+    },
+    "row_order": [
+      "row_date ASC"
+    ],
+    "literals": {}
+  },
+  "key_tokens": []
+}

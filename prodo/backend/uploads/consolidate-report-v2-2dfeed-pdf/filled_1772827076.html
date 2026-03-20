@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Consolidate Report</title>
+<style>
+  :root{
+    --page-margin: 14mm;
+    --grid-gap: 6mm;
+    --kv-gap: 18mm;
+    --label-gap: 6mm;
+    --table-font: 12.5pt;
+    --header-font: 13pt;
+    --title-font: 28pt;
+    --col-slno: 18mm;
+    --col-recipename: 72mm;
+    --col-recipecode: 70mm;
+    --col-recipeno: 28mm;
+    --col-batches: 40mm;
+    --row-h: 12.5mm;
+  }
+
+  @page{
+    size: A4;
+    margin: var(--page-margin);
+  }
+
+  *{ box-sizing: border-box; }
+  body{
+    font-family: "Times New Roman", serif;
+    color:#000;
+    margin:0;
+    padding: var(--page-margin);
+    line-height: 1.25;
+  }
+
+  /* Header framed card */
+  #report-header{
+    border: 2px solid #000;
+    padding: 10mm 12mm;
+    position: relative;
+  }
+
+  .info-grid{
+    display:flex;
+    justify-content: space-between;
+    gap: 20mm;
+    margin-bottom: 6mm;
+  }
+  .info-left,
+  .info-right{
+    display:flex;
+    flex-direction:column;
+    gap:4mm;
+    min-width:0;
+  }
+  .kv{
+    display:grid;
+    grid-template-columns: auto auto 1fr;
+    column-gap:4mm;
+    font-size: var(--header-font);
+  }
+  .kv .label{
+    font-weight:600;
+  }
+  .kv .value{
+    font-weight:600;
+    min-width:32mm;
+  }
+  .info-right .kv{
+    grid-template-columns:auto auto auto;
+  }
+  .kv.recipe{
+    margin-top:4mm;
+  }
+  .kv.recipe .value{
+    min-width:40mm;
+  }
+  .title{
+    text-align: center;
+    font-weight: 700;
+    font-size: var(--title-font);
+    margin: 0 0 8mm 0;
+  }
+
+  /* Data table */
+  #data-table{
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    margin-top: 12mm;
+    font-size: var(--table-font);
+  }
+  #data-table th, #data-table td{
+    border:1px solid #000;
+    padding: 6px 10px;
+  }
+  #data-table thead th{
+    text-align: left;
+    font-weight: 700;
+  }
+  #data-table td.num, #data-table th.num{
+    text-align: right;
+  }
+  #data-table col.slno{ width: var(--col-slno); }
+  #data-table col.rname{ width: var(--col-recipename); }
+  #data-table col.rcode{ width: var(--col-recipecode); }
+  #data-table col.rno{ width: var(--col-recipeno); }
+  #data-table col.nb{ width: var(--col-batches); }
+
+  /* Totals row styling like screenshot (Total label left within table) */
+  tfoot td{
+    font-size: var(--table-font);
+    font-weight: 700;
+    padding-top: 10px;
+    padding-bottom: 10px;
+  }
+
+  /* Small print date line inside header bottom row */
+  .print-date{
+    margin-top: 2mm;
+  }
+</style>
+</head>
+<body>
+
+  <section id="report-header">
+    <div class="info-grid">
+      <div class="info-left">
+        <div class="kv">
+          <span class="label">Plant name</span>
+          <span class="sep">:</span>
+          <span class="value">Coastal Feeds</span>
+        </div>
+        <div class="kv">
+          <span class="label">Location</span>
+          <span class="sep">:</span>
+          <span class="value">Gudivada</span>
+        </div>
+        <div class="kv">
+          <span class="label">Print Date</span>
+          <span class="sep">:</span>
+          <span class="value">07/03/2026</span>
+        </div>
+      </div>
+      <div class="info-right">
+        <div class="kv">
+          <span class="label">From</span>
+          <span class="sep">:</span>
+          <span class="value">01/06/2025</span>
+        </div>
+        <div class="kv">
+          <span class="label">To</span>
+          <span class="sep">:</span>
+          <span class="value">31/12/2025</span>
+        </div>
+        <div class="kv recipe">
+          <span class="label">Recipe code</span>
+          <span class="sep">:</span>
+          <span class="value"></span>
+        </div>
+      </div>
+    </div>
+
+    <h1 class="title">Consolidate report</h1>
+  </section>
+
+  <table id="data-table" aria-label="Consolidated Batches">
+    <colgroup>
+      <col class="slno">
+      <col class="rname">
+      <col class="rcode">
+      <col class="rno">
+      <col class="nb">
+    </colgroup>
+    <thead>
+      <tr>
+        <th data-label="sl_no">Sl. No.</th>
+        <th data-label="recipe_name">Recipe name</th>
+        <th data-label="recipe_code">Recipe code</th>
+        <th data-label="recipe_no">Recipe No.</th>
+        <th class="num" data-label="no_of_batches">No. of batches</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="num">1</td>
+        <td>B_PRASAD</td>
+        <td>B_PRASAD</td>
+        <td class="num">279</td>
+        <td class="num">96</td>
+      </tr>
+<tr>
+        <td class="num">2</td>
+        <td>DELTA</td>
+        <td>DELTA</td>
+        <td class="num">361</td>
+        <td class="num">135</td>
+      </tr>
+<tr>
+        <td class="num">3</td>
+        <td>FISHFEED</td>
+        <td>FISHFEED</td>
+        <td class="num">270</td>
+        <td class="num">26</td>
+      </tr>
+<tr>
+        <td class="num">4</td>
+        <td>FISHFEED_3</td>
+        <td>FISHFEED_3</td>
+        <td class="num">1776</td>
+        <td class="num">50</td>
+      </tr>
+<tr>
+        <td class="num">5</td>
+        <td>FLU</td>
+        <td>FLU</td>
+        <td class="num">54</td>
+        <td class="num">7</td>
+      </tr>
+<tr>
+        <td class="num">6</td>
+        <td>FLUTO_24P</td>
+        <td>FLUTO_24P</td>
+        <td class="num">44</td>
+        <td class="num">602</td>
+      </tr>
+<tr>
+        <td class="num">7</td>
+        <td>FLUTO_28P</td>
+        <td>FLUTO_28P</td>
+        <td class="num">2949</td>
+        <td class="num">94</td>
+      </tr>
+<tr>
+        <td class="num">8</td>
+        <td>FLUTO_TRAI</td>
+        <td>FLUTO_TRAI</td>
+        <td class="num">2989</td>
+        <td class="num">4</td>
+      </tr>
+<tr>
+        <td class="num">9</td>
+        <td>IMPACT</td>
+        <td>IMPACT</td>
+        <td class="num">230</td>
+        <td class="num">84</td>
+      </tr>
+<tr>
+        <td class="num">10</td>
+        <td>JOSEPH_FLU</td>
+        <td>JOSEPH_FLU</td>
+        <td class="num">3090</td>
+        <td class="num">9</td>
+      </tr>
+<tr>
+        <td class="num">11</td>
+        <td>JOSEPH_GAR</td>
+        <td>JOSEPH_GAR</td>
+        <td class="num">2990</td>
+        <td class="num">130</td>
+      </tr>
+<tr>
+        <td class="num">12</td>
+        <td>NUMEI</td>
+        <td>NUMEI</td>
+        <td class="num">37</td>
+        <td class="num">398</td>
+      </tr>
+<tr>
+        <td class="num">13</td>
+        <td>N_RECYCLE</td>
+        <td>N_RECYCLE</td>
+        <td class="num">3777</td>
+        <td class="num">27</td>
+      </tr>
+<tr>
+        <td class="num">14</td>
+        <td>PROVA</td>
+        <td>PROVA</td>
+        <td class="num">85</td>
+        <td class="num">369</td>
+      </tr>
+<tr>
+        <td class="num">15</td>
+        <td>Q</td>
+        <td>Q</td>
+        <td class="num">181</td>
+        <td class="num">212</td>
+      </tr>
+<tr>
+        <td class="num">16</td>
+        <td>QNEW</td>
+        <td>QNEW</td>
+        <td class="num">1178</td>
+        <td class="num">32</td>
+      </tr>
+<tr>
+        <td class="num">17</td>
+        <td>QPLUS</td>
+        <td>QPLUS</td>
+        <td class="num">56</td>
+        <td class="num">1113</td>
+      </tr>
+<tr>
+        <td class="num">18</td>
+        <td>QPLUS_NEW</td>
+        <td>QPLUS_NEW</td>
+        <td class="num">3858</td>
+        <td class="num">22</td>
+      </tr>
+<tr>
+        <td class="num">19</td>
+        <td>Q_PLUS</td>
+        <td>Q_PLUS</td>
+        <td class="num">435</td>
+        <td class="num">35</td>
+      </tr>
+<tr>
+        <td class="num">20</td>
+        <td>RAJUGARU</td>
+        <td>RAJUGARU</td>
+        <td class="num">199</td>
+        <td class="num">293</td>
+      </tr>
+<tr>
+        <td class="num">21</td>
+        <td>REC_FLUTOF</td>
+        <td>REC_FLUTOF</td>
+        <td class="num">1863</td>
+        <td class="num">84</td>
+      </tr>
+<tr>
+        <td class="num">22</td>
+        <td>SATYNARAYA</td>
+        <td>SATYNARAYA</td>
+        <td class="num">381</td>
+        <td class="num">95</td>
+      </tr>
+<tr>
+        <td class="num">23</td>
+        <td>S_PRASAD</td>
+        <td>S_PRASAD</td>
+        <td class="num">395</td>
+        <td class="num">127</td>
+      </tr>
+<tr>
+        <td class="num">24</td>
+        <td>T_P_1_6MM</td>
+        <td>T_P_1_6MM</td>
+        <td class="num">1081</td>
+        <td class="num">6</td>
+      </tr>
+<tr>
+        <td class="num">25</td>
+        <td>fluto_28p</td>
+        <td>fluto_28p</td>
+        <td class="num">1716</td>
+        <td class="num">15</td>
+      </tr>
+<tr>
+        <td class="num">26</td>
+        <td>koramenu</td>
+        <td>koramenu</td>
+        <td class="num">1854</td>
+        <td class="num">13</td>
+      </tr>
+<tr>
+        <td class="num">27</td>
+        <td>thirdparty</td>
+        <td>thirdparty</td>
+        <td class="num">2379</td>
+        <td class="num">20</td>
+      </tr>
+    </tbody>
+    <tfoot id="report-totals">
+      <tr>
+        <td colspan="4" style="border-right:0;"><strong style="font-weight:700;">Total</strong></td>
+        <td class="num" style="border-left:1px solid #000;">4098</td>
+      </tr>
+    </tfoot>
+  </table>
+
+</body>
+</html>

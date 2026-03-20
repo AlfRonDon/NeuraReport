@@ -1,0 +1,92 @@
+[
+  {
+    "header": "plant_name",
+    "placeholder": "{plant_name}",
+    "mapping": "params.plant_name"
+  },
+  {
+    "header": "location",
+    "placeholder": "{location}",
+    "mapping": "params.location"
+  },
+  {
+    "header": "from_date",
+    "placeholder": "{from_date}",
+    "mapping": "LATER_SELECTED"
+  },
+  {
+    "header": "to_date",
+    "placeholder": "{to_date}",
+    "mapping": "LATER_SELECTED"
+  },
+  {
+    "header": "print_date",
+    "placeholder": "{print_date}",
+    "mapping": "params.print_date"
+  },
+  {
+    "header": "recipe_code",
+    "placeholder": "{recipe_code}",
+    "mapping": "UNRESOLVED"
+  },
+  {
+    "header": "row_sl_no",
+    "placeholder": "{row_sl_no}",
+    "mapping": "UNRESOLVED"
+  },
+  {
+    "header": "row_material_name",
+    "placeholder": "{row_material_name}",
+    "mapping": "UNRESOLVED"
+  },
+  {
+    "header": "row_set_wt",
+    "placeholder": "{row_set_wt}",
+    "mapping": "UNRESOLVED"
+  },
+  {
+    "header": "row_ach_wt",
+    "placeholder": "{row_ach_wt}",
+    "mapping": "UNRESOLVED"
+  },
+  {
+    "header": "row_error_kg",
+    "placeholder": "{row_error_kg}",
+    "mapping": "UNRESOLVED"
+  },
+  {
+    "header": "row_error_pct",
+    "placeholder": "{row_error_pct}",
+    "mapping": "UNRESOLVED"
+  },
+  {
+    "header": "total_set_wt",
+    "placeholder": "{total_set_wt}",
+    "mapping": "UNRESOLVED"
+  },
+  {
+    "header": "total_ach_wt",
+    "placeholder": "{total_ach_wt}",
+    "mapping": "UNRESOLVED"
+  },
+  {
+    "header": "total_error_kg",
+    "placeholder": "{total_error_kg}",
+    "mapping": "UNRESOLVED"
+  },
+  {
+    "header": "total_error_pct",
+    "placeholder": "{total_error_pct}",
+    "mapping": "UNRESOLVED"
+  },
+  {
+    "header": "page_number",
+    "placeholder": "{page_number}",
+    "mapping": "LATER_SELECTED"
+  },
+  {
+    "header": "total_pages",
+    "placeholder": "{total_pages}",
+    "mapping": "params.total_pages"
+  }
+]

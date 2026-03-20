@@ -1,0 +1,14 @@
+{
+  "row_sl_no": {"label": "Sl. No.", "db_ref": "INDEX"},
+  "row_material_name": {"label": "Material name", "db_ref": "recipes.bin1_content"},
+  "row_set_wt": {"label": "Set. wt(Kg)", "db_ref": "recipes.bin1_sp"},
+  "row_ach_wt": {"label": "Ach. wt(Kg)", "db_ref": "recipes.bin1_act"},
+  "row_error_kg": {"label": "Error(Kg)", "db_ref": "COMPUTED"},
+  "row_error_pct": {"label": "Error %", "db_ref": "COMPUTED"},
+  "plant_name": {"label": "Plant name", "db_ref": "PARAM"},
+  "location": {"label": "Location", "db_ref": "PARAM"},
+  "print_date": {"label": "Print Date", "db_ref": "PARAM"},
+  "date_from": {"label": "From", "db_ref": "PARAM"},
+  "date_to": {"label": "To", "db_ref": "PARAM"},
+  "recipe_code": {"label": "Recipe code", "db_ref": "PARAM"}
+}

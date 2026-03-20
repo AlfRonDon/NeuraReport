@@ -1,0 +1,32 @@
+[
+  {
+    "header": "row_transmitter_id",
+    "placeholder": "{row_transmitter_id}",
+    "mapping": "neuract__device_mappings.field_key"
+  },
+  {
+    "header": "row_location",
+    "placeholder": "{row_location}",
+    "mapping": "UNRESOLVED"
+  },
+  {
+    "header": "row_current_bar",
+    "placeholder": "{row_current_bar}",
+    "mapping": "neuract__PT_TABLE.PT_105"
+  },
+  {
+    "header": "row_normal_range",
+    "placeholder": "{row_normal_range}",
+    "mapping": "neuract__device_mappings.scale"
+  },
+  {
+    "header": "alarm_count",
+    "placeholder": "{alarm_count}",
+    "mapping": "UNRESOLVED"
+  },
+  {
+    "header": "gen_timestamp",
+    "placeholder": "{gen_timestamp}",
+    "mapping": "UNRESOLVED"
+  }
+]

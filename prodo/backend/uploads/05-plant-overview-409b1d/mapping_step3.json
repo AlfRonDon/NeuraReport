@@ -1,0 +1,204 @@
+{
+  "mapping": {
+    "start_date": "LATER_SELECTED",
+    "end_date": "LATER_SELECTED",
+    "fm_101_totalizer": "neuract__FM_TABLE.FM_101_TOTALIZER",
+    "fm_101": "neuract__FM_TABLE.FM_101",
+    "fm_103_totalizer": "neuract__FM_TABLE.FM_103_TOTALIZER",
+    "fm_103": "neuract__FM_TABLE.FM_103",
+    "fm_105_totalizer": "neuract__FM_TABLE.FM_105_TOTALIZER",
+    "fm_105": "neuract__FM_TABLE.FM_105",
+    "ph_101": "neuract__ANALYSER_TABLE.PH_101",
+    "ph_104": "neuract__ANALYSER_TABLE.PH_104",
+    "tds_101": "neuract__ANALYSER_TABLE.TDS_101",
+    "tds_102": "neuract__ANALYSER_TABLE.TDS_102",
+    "ilt_112": "neuract__LT_TABLE.LT_112",
+    "ilt_118": "neuract__LT_TABLE.LT_118",
+    "ilt_126": "neuract__LT_TABLE.LT_126"
+  },
+  "meta": {
+    "unresolved": [],
+    "hints": {
+      "ilt_112": {
+        "op": "FUZZY_MATCH",
+        "over": [
+          "note:Template token 'ilt_112' (ILT = Instrument Level Transmitter) matched to catalog column LT_112; same physical sensor, different naming prefix."
+        ]
+      },
+      "ilt_118": {
+        "op": "FUZZY_MATCH",
+        "over": [
+          "note:Template token 'ilt_118' matched to catalog column LT_118 via ILT→LT prefix convention."
+        ]
+      },
+      "ilt_126": {
+        "op": "FUZZY_MATCH",
+        "over": [
+          "note:Template token 'ilt_126' matched to catalog column LT_126 via ILT→LT prefix convention."
+        ]
+      },
+      "fm_101_totalizer": {
+        "op": "NOTE",
+        "over": [
+          "note:Represents cumulative total flow over the selected period; consumer should apply SUM or use max-minus-min of FM_101_TOTALIZER across the date range."
+        ]
+      },
+      "fm_103_totalizer": {
+        "op": "NOTE",
+        "over": [
+          "note:Represents cumulative total flow over the selected period; consumer should apply SUM or use max-minus-min of FM_103_TOTALIZER across the date range."
+        ]
+      },
+      "fm_105_totalizer": {
+        "op": "NOTE",
+        "over": [
+          "note:Represents cumulative total flow over the selected period; consumer should apply SUM or use max-minus-min of FM_105_TOTALIZER across the date range."
+        ]
+      },
+      "fm_101": {
+        "op": "NOTE",
+        "over": [
+          "note:Avg Rate (m³/h) column — consumer should apply AVG over FM_101 across the selected date range."
+        ]
+      },
+      "fm_103": {
+        "op": "NOTE",
+        "over": [
+          "note:Avg Rate (m³/h) column — consumer should apply AVG over FM_103 across the selected date range."
+        ]
+      },
+      "fm_105": {
+        "op": "NOTE",
+        "over": [
+          "note:Avg Rate (m³/h) column — consumer should apply AVG over FM_105 across the selected date range."
+        ]
+      }
+    }
+  },
+  "prompt_meta": {
+    "version": "llm_call_3_df_v2",
+    "prompt_sha256": "bbac9ca224b39b74bc0a00ca01fc64d6ac0fbfe04934e2c185979e0c3f7fc441",
+    "catalog_sha256": "312a06afd264f4c409ba0a0fb006aac7601c8781b51c4946edc16a58ed702f95",
+    "schema_sha256": "da45f7bc7677a01b8544891afe8044dfe51e3e6309c81411e9caf864befe18b3",
+    "cache_key": "671b44b45addbba9356be40c89c60576018f6d8ff5bdacfa68ba97e42c7ba2c3",
+    "pre_html_sha256": "dbb53b0a401e92f67fd81a8a18201d16e433bcc165fcb4d6eb13f6d39a1e8919",
+    "post_html_sha256": "dbb53b0a401e92f67fd81a8a18201d16e433bcc165fcb4d6eb13f6d39a1e8919",
+    "prompt_version": "llm_call_3_df_v2",
+    "pdf_sha256": "a0e39eda24b46aeef6d1270d1058383e0b856b04b5629466790dd6de67011f73",
+    "db_signature": "0c33e3e2d9de39703b476f6ece004966e0b418fe1acc690478668ef987513776"
+  },
+  "raw_payload": {
+    "mapping": {
+      "start_date": "To Be Selected...",
+      "end_date": "To Be Selected...",
+      "fm_101_totalizer": "neuract__FM_TABLE.FM_101_TOTALIZER",
+      "fm_101": "neuract__FM_TABLE.FM_101",
+      "fm_103_totalizer": "neuract__FM_TABLE.FM_103_TOTALIZER",
+      "fm_103": "neuract__FM_TABLE.FM_103",
+      "fm_105_totalizer": "neuract__FM_TABLE.FM_105_TOTALIZER",
+      "fm_105": "neuract__FM_TABLE.FM_105",
+      "ph_101": "neuract__ANALYSER_TABLE.PH_101",
+      "ph_104": "neuract__ANALYSER_TABLE.PH_104",
+      "tds_101": "neuract__ANALYSER_TABLE.TDS_101",
+      "tds_102": "neuract__ANALYSER_TABLE.TDS_102",
+      "ilt_112": "neuract__LT_TABLE.LT_112",
+      "ilt_118": "neuract__LT_TABLE.LT_118",
+      "ilt_126": "neuract__LT_TABLE.LT_126"
+    },
+    "token_samples": {
+      "start_date": "{{start_date}}",
+      "end_date": "{{end_date}}",
+      "fm_101_totalizer": "{{FM_101_TOTALIZER}}",
+      "fm_101": "{{FM_101}}",
+      "fm_103_totalizer": "{{FM_103_TOTALIZER}}",
+      "fm_103": "{{FM_103}}",
+      "fm_105_totalizer": "{{FM_105_TOTALIZER}}",
+      "fm_105": "{{FM_105}}",
+      "ph_101": "{{PH_101}}",
+      "ph_104": "{{PH_104}}",
+      "tds_101": "{{TDS_101}}",
+      "tds_102": "{{TDS_102}}",
+      "ilt_112": "{{ILT_112}}",
+      "ilt_118": "{{ILT_118}}",
+      "ilt_126": "{{ILT_126}}"
+    },
+    "meta": {
+      "unresolved": [],
+      "hints": {
+        "ilt_112": {
+          "op": "FUZZY_MATCH",
+          "over": [
+            "note:Template token 'ilt_112' (ILT = Instrument Level Transmitter) matched to catalog column LT_112; same physical sensor, different naming prefix."
+          ]
+        },
+        "ilt_118": {
+          "op": "FUZZY_MATCH",
+          "over": [
+            "note:Template token 'ilt_118' matched to catalog column LT_118 via ILT→LT prefix convention."
+          ]
+        },
+        "ilt_126": {
+          "op": "FUZZY_MATCH",
+          "over": [
+            "note:Template token 'ilt_126' matched to catalog column LT_126 via ILT→LT prefix convention."
+          ]
+        },
+        "fm_101_totalizer": {
+          "op": "NOTE",
+          "over": [
+            "note:Represents cumulative total flow over the selected period; consumer should apply SUM or use max-minus-min of FM_101_TOTALIZER across the date range."
+          ]
+        },
+        "fm_103_totalizer": {
+          "op": "NOTE",
+          "over": [
+            "note:Represents cumulative total flow over the selected period; consumer should apply SUM or use max-minus-min of FM_103_TOTALIZER across the date range."
+          ]
+        },
+        "fm_105_totalizer": {
+          "op": "NOTE",
+          "over": [
+            "note:Represents cumulative total flow over the selected period; consumer should apply SUM or use max-minus-min of FM_105_TOTALIZER across the date range."
+          ]
+        },
+        "fm_101": {
+          "op": "NOTE",
+          "over": [
+            "note:Avg Rate (m³/h) column — consumer should apply AVG over FM_101 across the selected date range."
+          ]
+        },
+        "fm_103": {
+          "op": "NOTE",
+          "over": [
+            "note:Avg Rate (m³/h) column — consumer should apply AVG over FM_103 across the selected date range."
+          ]
+        },
+        "fm_105": {
+          "op": "NOTE",
+          "over": [
+            "note:Avg Rate (m³/h) column — consumer should apply AVG over FM_105 across the selected date range."
+          ]
+        }
+      }
+    },
+    "constant_replacements": {}
+  },
+  "constant_replacements": {},
+  "token_samples": {
+    "start_date": "{{start_date}}",
+    "end_date": "{{end_date}}",
+    "fm_101_totalizer": "{{FM_101_TOTALIZER}}",
+    "fm_101": "{{FM_101}}",
+    "fm_103_totalizer": "{{FM_103_TOTALIZER}}",
+    "fm_103": "{{FM_103}}",
+    "fm_105_totalizer": "{{FM_105_TOTALIZER}}",
+    "fm_105": "{{FM_105}}",
+    "ph_101": "{{PH_101}}",
+    "ph_104": "{{PH_104}}",
+    "tds_101": "{{TDS_101}}",
+    "tds_102": "{{TDS_102}}",
+    "ilt_112": "{{ILT_112}}",
+    "ilt_118": "{{ILT_118}}",
+    "ilt_126": "{{ILT_126}}"
+  }
+}

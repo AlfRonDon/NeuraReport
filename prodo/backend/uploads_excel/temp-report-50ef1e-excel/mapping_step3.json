@@ -1,0 +1,101 @@
+{
+  "mapping": {
+    "row_column_1": "neuract__TEMPERATURES.timestamp_utc",
+    "row_column_2": "neuract__TEMPERATURES.M1A_2_PT100_PV",
+    "row_column_3": "neuract__TEMPERATURES.M1A_3_PT100_PV",
+    "row_column_4": "neuract__TEMPERATURES.P3A_PT100_PV",
+    "row_column_5": "neuract__TEMPERATURES.P4A_PT100_PV",
+    "row_column_6": "neuract__TEMPERATURES.P5A_PT100_PV",
+    "row_costal_feeds": "neuract__TEMPERATURES.P6A_PT100_PV",
+    "row_column_8": "neuract__TEMPERATURES.P8A_PT100_PV",
+    "row_column_9": "neuract__TEMPERATURES.P8A_3_PT100_PV",
+    "row_column_10": "neuract__TEMPERATURES.P8A_4_PT100_PV",
+    "row_column_11": "neuract__TEMPERATURES.P8A_DRY_OUT_PT100_PV",
+    "row_column_12": "neuract__TEMPERATURES.P9A_DRY_OUT_PT100_PV",
+    "row_column_13": "neuract__TEMPERATURES.ROOM_PT100_PV"
+  },
+  "meta": {
+    "unresolved": [],
+    "hints": {}
+  },
+  "prompt_meta": {
+    "version": "llm_call_3_v7",
+    "prompt_sha256": "35c65d79bc514c7ef3c035c0a02fd3631dd7647bddbe8985b8d16d2f1939bae6",
+    "catalog_sha256": "20d3c83cc5b9c483c077343302052cc4db1310b6bc5eafb16add3632a27d3997",
+    "schema_sha256": "2c45fa0b585619012b097e346abcc8aab8b7f7deea2d0047d620fbea7ce7e8cc",
+    "cache_key": "91b3d557dbec97cc6fa42bf67f2f7068e86fea34a5f421e3d03f0a25953a8641",
+    "pre_html_sha256": "7a7a39500111526f50191e0f8d492655c94c5f378a6a5d29ce098592109e74ae",
+    "post_html_sha256": "7a7a39500111526f50191e0f8d492655c94c5f378a6a5d29ce098592109e74ae",
+    "prompt_version": "llm_call_3_v7",
+    "pdf_sha256": "",
+    "db_signature": "f86953eb224e54bc53bfc6de311f14df934b0b33cadd1c98c7f8596f7b6a7da3"
+  },
+  "raw_payload": {
+    "mapping": {
+      "row_column_1": "neuract__TEMPERATURES.timestamp_utc",
+      "row_column_2": "neuract__TEMPERATURES.M1A_2_PT100_PV",
+      "row_column_3": "neuract__TEMPERATURES.M1A_3_PT100_PV",
+      "row_column_4": "neuract__TEMPERATURES.P3A_PT100_PV",
+      "row_column_5": "neuract__TEMPERATURES.P4A_PT100_PV",
+      "row_column_6": "neuract__TEMPERATURES.P5A_PT100_PV",
+      "row_costal_feeds": "neuract__TEMPERATURES.P6A_PT100_PV",
+      "row_column_8": "neuract__TEMPERATURES.P8A_PT100_PV",
+      "row_column_9": "neuract__TEMPERATURES.P8A_3_PT100_PV",
+      "row_column_10": "neuract__TEMPERATURES.P8A_4_PT100_PV",
+      "row_column_11": "neuract__TEMPERATURES.P8A_DRY_OUT_PT100_PV",
+      "row_column_12": "neuract__TEMPERATURES.P9A_DRY_OUT_PT100_PV",
+      "row_column_13": "neuract__TEMPERATURES.ROOM_PT100_PV"
+    },
+    "token_samples": {
+      "row_column_1": "NOT_VISIBLE",
+      "row_column_2": "NOT_VISIBLE",
+      "row_column_3": "NOT_VISIBLE",
+      "row_column_4": "NOT_VISIBLE",
+      "row_column_5": "NOT_VISIBLE",
+      "row_column_6": "NOT_VISIBLE",
+      "row_costal_feeds": "NOT_VISIBLE",
+      "row_column_8": "NOT_VISIBLE",
+      "row_column_9": "NOT_VISIBLE",
+      "row_column_10": "NOT_VISIBLE",
+      "row_column_11": "NOT_VISIBLE",
+      "row_column_12": "NOT_VISIBLE",
+      "row_column_13": "NOT_VISIBLE"
+    },
+    "meta": {
+      "unresolved": [],
+      "hints": {}
+    },
+    "constant_replacements": {},
+    "mapping_override": {
+      "row_column_1": "neuract__TEMPERATURES.timestamp_utc",
+      "row_column_2": "neuract__TEMPERATURES.M1A_2_PT100_PV",
+      "row_column_3": "neuract__TEMPERATURES.M1A_3_PT100_PV",
+      "row_column_4": "neuract__TEMPERATURES.P3A_PT100_PV",
+      "row_column_5": "neuract__TEMPERATURES.P4A_PT100_PV",
+      "row_column_6": "neuract__TEMPERATURES.P5A_PT100_PV",
+      "row_costal_feeds": "neuract__TEMPERATURES.P6A_PT100_PV",
+      "row_column_8": "neuract__TEMPERATURES.P8A_PT100_PV",
+      "row_column_9": "neuract__TEMPERATURES.P8A_3_PT100_PV",
+      "row_column_10": "neuract__TEMPERATURES.P8A_4_PT100_PV",
+      "row_column_11": "neuract__TEMPERATURES.P8A_DRY_OUT_PT100_PV",
+      "row_column_12": "neuract__TEMPERATURES.P9A_DRY_OUT_PT100_PV",
+      "row_column_13": "neuract__TEMPERATURES.ROOM_PT100_PV"
+    }
+  },
+  "constant_replacements": {},
+  "token_samples": {
+    "row_column_1": "NOT_VISIBLE",
+    "row_column_2": "NOT_VISIBLE",
+    "row_column_3": "NOT_VISIBLE",
+    "row_column_4": "NOT_VISIBLE",
+    "row_column_5": "NOT_VISIBLE",
+    "row_column_6": "NOT_VISIBLE",
+    "row_costal_feeds": "NOT_VISIBLE",
+    "row_column_8": "NOT_VISIBLE",
+    "row_column_9": "NOT_VISIBLE",
+    "row_column_10": "NOT_VISIBLE",
+    "row_column_11": "NOT_VISIBLE",
+    "row_column_12": "NOT_VISIBLE",
+    "row_column_13": "NOT_VISIBLE"
+  }
+}

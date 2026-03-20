@@ -1,0 +1,28 @@
+{
+  "sample_row": {
+    "row_date": "01-11-2025",
+    "row_basement_to_tob_raw_water_fm_1": "NOT_VISIBLE",
+    "row_limeplant_to_etp_fm_2": "NOT_VISIBLE",
+    "row_di_raw_inlet_fm_3": "NOT_VISIBLE",
+    "row_di_scrubbers_fm_4": "NOT_VISIBLE",
+    "row_phase_2_raw_water_fm_5": "NOT_VISIBLE",
+    "row_tw_to_earth_pits_fm_6": "NOT_VISIBLE",
+    "row_rw_phase_2_scrubber_line_fm_7": "NOT_VISIBLE",
+    "row_tw_admin_fm_8": "NOT_VISIBLE",
+    "row_soft_to_cooling_towers_fm_9": "NOT_VISIBLE",
+    "row_rw_admin_fm_10": "NOT_VISIBLE",
+    "row_rw_utility_toilets_fm_11": "NOT_VISIBLE",
+    "row_tw_utility_toilets_fm_12": "NOT_VISIBLE",
+    "row_storage_to_phase_1_fm_13": "NOT_VISIBLE",
+    "row_hmwssb_phase_1_fm_14": "NOT_VISIBLE",
+    "row_pond_to_topcon_fm_15": "NOT_VISIBLE",
+    "row_hmwssb_to_topcon_fm_16": "NOT_VISIBLE",
+    "row_basement_to_tob_treated_water_fm_17": "NOT_VISIBLE",
+    "row_raw_to_utility_toilets_2_fm_18": "NOT_VISIBLE",
+    "row_condensed_line_fm_19": "NOT_VISIBLE",
+    "row_tw_shed_b_toilets_fm_20": "NOT_VISIBLE",
+    "row_rw_to_shed_b_toilets_fm_21": "NOT_VISIBLE",
+    "row_cooling_towers_to_ro_fm_22": "NOT_VISIBLE",
+    "row_p2_zld_to_topcon_zld_fm_23": "NOT_VISIBLE"
+  }
+}

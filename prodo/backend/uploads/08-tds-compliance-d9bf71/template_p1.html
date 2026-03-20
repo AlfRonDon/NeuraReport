@@ -1,0 +1,166 @@
+
+<meta charset="UTF-8">
+<meta>
+<title>TDS Compliance Certificate</title>
+<style>
+  @page {
+    size: 215.9mm 279.4mm;
+    margin: 22mm 22mm 22mm 22mm;
+  }
+
+  :root {
+    --col-param-w: 31%;
+    --col-measured-w: 23%;
+    --col-limit-w: 25%;
+    --col-result-w: 21%;
+    --table-width: 80%;
+    --header-bg: #1a237e;
+    --border-color: #aaa;
+    --row-gap: 3mm;
+    --cell-pad: 10px 14px;
+    --font-body: 13px;
+    --font-title: 22px;
+  }
+
+  *, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: var(--font-body);
+    color: #111;
+    background: #fff;
+    padding: 22mm 22mm 22mm 22mm;
+  }
+
+  #report-header {
+    text-align: center;
+    margin-bottom: 26px;
+  }
+
+  .report-title {
+    font-size: var(--font-title);
+    font-weight: bold;
+    color: #1a237e;
+  }
+
+  .meta-block {
+    text-align: left;
+    margin-bottom: 18px;
+    line-height: 1.75;
+    font-size: var(--font-body);
+  }
+
+  .cert-statement {
+    margin-bottom: 18px;
+    font-size: var(--font-body);
+    line-height: 1.5;
+  }
+
+  #data-table {
+    width: var(--table-width);
+    margin: 0 auto 36px auto;
+    border-collapse: collapse;
+    table-layout: fixed;
+  }
+
+  #data-table colgroup col:nth-child(1) { width: var(--col-param-w); }
+  #data-table colgroup col:nth-child(2) { width: var(--col-measured-w); }
+  #data-table colgroup col:nth-child(3) { width: var(--col-limit-w); }
+  #data-table colgroup col:nth-child(4) { width: var(--col-result-w); }
+
+  #data-table thead tr th {
+    background-color: var(--header-bg);
+    color: #fff;
+    font-weight: bold;
+    font-size: var(--font-body);
+    padding: var(--cell-pad);
+    text-align: center;
+    border: 1px solid var(--header-bg);
+    white-space: nowrap;
+  }
+
+  #data-table tbody tr td {
+    padding: var(--cell-pad);
+    text-align: center;
+    border: 1px solid var(--border-color);
+    font-size: var(--font-body);
+    background: #fff;
+    white-space: nowrap;
+  }
+
+  .footer-block {
+    margin-top: 10px;
+    line-height: 1.9;
+    font-size: var(--font-body);
+  }
+
+  .sig-line {
+    display: inline-block;
+    width: 155px;
+    border-bottom: 1px solid #111;
+    margin-left: 2px;
+    vertical-align: bottom;
+    height: 1px;
+  }
+</style>
+
+
+
+  <div id="report-header">
+    <div class="report-title">TDS Compliance Certificate</div>
+  </div>
+
+  <div class="meta-block">
+    <div>Certificate No: {cert_number}</div>
+    <div>Issue Date: {issue_date}</div>
+  </div>
+
+  <div class="cert-statement">
+    This certifies that the treated water from the STP facility meets the following TDS standards:
+  </div>
+
+  <table id="data-table">
+    <colgroup>
+      <col>
+      <col>
+      <col>
+      <col>
+    </colgroup>
+    <thead>
+      <tr>
+        <th data-label="parameter">Parameter</th>
+        <th data-label="measured_value">Measured Value</th>
+        <th data-label="permissible_limit">Permissible Limit</th>
+        <th data-label="result">Result</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>TDS Inlet (TDS_101)</td>
+        <td>{tds_101_value} ppm</td>
+        <td>&lt; 2000 ppm</td>
+        <td>{tds_101_result}</td>
+      </tr>
+      <tr>
+        <td>TDS Outlet (TDS_102)</td>
+        <td>{tds_102_value} ppm</td>
+        <td>&lt; 500 ppm</td>
+        <td>{tds_102_result}</td>
+      </tr>
+      <tr>
+        <td>TDS Reduction %</td>
+        <td>{tds_reduction}%</td>
+        <td>&gt; 75%</td>
+        <td>{reduction_result}</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="footer-block">
+    <div>Certified by: Plant Manager</div>
+    <div>Signature:&nbsp;<span class="sig-line"></span></div>
+  </div>

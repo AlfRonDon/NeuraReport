@@ -1,0 +1,19 @@
+{
+  "correlation_id": null,
+  "file_checksums": {
+    "filled_1772627219.html": "4c9556fc1740232bf0046831b0eca7e39b61ae5c6d29af34fd7e643da737e6ca",
+    "filled_1772627219.pdf": "e59301e5f588914089b937072cda10adb8c582f9021f80a6971ea837ca284c43"
+  },
+  "files": {
+    "filled_1772627219.html": "filled_1772627219.html",
+    "filled_1772627219.pdf": "filled_1772627219.pdf"
+  },
+  "input_refs": [
+    "/home/rohith/desktop/NeuraReport/prodo/backend/uploads/scale-2-consumption-report-e51e9f-pdf/contract.json",
+    "/home/rohith/desktop/NeuraReport/recipe_log (1).sqlite3"
+  ],
+  "pid": 104614,
+  "produced_at": "2026-03-04T12:27:00.758824+00:00",
+  "schema_version": "1.0",
+  "step": "reports_run"
+}

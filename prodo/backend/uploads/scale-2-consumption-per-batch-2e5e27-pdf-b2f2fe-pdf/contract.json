@@ -1,0 +1,157 @@
+{
+  "tokens": {
+    "scalars": ["plant_name", "location", "print_date", "date_from", "date_to", "batch_number"],
+    "row_tokens": [
+      "row_sl_no",
+      "row_material_name",
+      "row_set_wt",
+      "row_ach_wt",
+      "row_error_kg",
+      "row_error_pct"
+    ],
+    "totals": [
+      "total_set_wt",
+      "total_ach_wt",
+      "total_error_kg",
+      "total_error_pct"
+    ]
+  },
+  "mapping": {
+    "plant_name": "PARAM:plant_name",
+    "location": "PARAM:location",
+    "print_date": "PARAM:print_date",
+    "date_from": "PARAM:date_from",
+    "date_to": "PARAM:date_to",
+    "batch_number": "PARAM:batch_number",
+    "row_sl_no": "INDEX",
+    "row_material_name": "neuract__Scale2.FISH_OIL_SET_WEIGHT",
+    "row_set_wt": "neuract__Scale2.FISH_OIL_SET_WEIGHT",
+    "row_ach_wt": "neuract__Scale2.FISH_OIL_ACTUAL_WEIGHT",
+    "row_error_kg": "COMPUTED",
+    "row_error_pct": "COMPUTED"
+  },
+  "unresolved": [],
+  "join": {
+    "parent_table": "neuract__Scale2",
+    "parent_key": "rowid",
+    "child_table": "neuract__Scale2",
+    "child_key": "rowid"
+  },
+  "date_columns": {
+    "neuract__Scale2": "timestamp_utc"
+  },
+  "filters": {
+    "optional": {
+      "date_from": "neuract__Scale2.timestamp_utc",
+      "date_to": "neuract__Scale2.timestamp_utc",
+      "batch_number": "neuract__Scale2.OIL_BACTH_COUNT"
+    }
+  },
+  "pre_aggregate": {
+    "batch_column": "OIL_BACTH_COUNT",
+    "timestamp_column": "timestamp_utc",
+    "strategy": "first_per_run",
+    "skip_value": 0
+  },
+  "reshape_rules": [
+    {
+      "purpose": "Unpivot 3 materials (Fish Oil, Soya Oil, Water) into long rows per batch.",
+      "strategy": "MELT",
+      "columns": [
+        {
+          "as": "row_sl_no",
+          "from": ["Scale-2", "Scale-2", "Scale-3"]
+        },
+        {
+          "as": "row_material_name",
+          "from": ["Fish Oil", "Soya Oil", "Water"]
+        },
+        {
+          "as": "row_set_wt",
+          "from": [
+            "neuract__Scale2.FISH_OIL_SET_WEIGHT",
+            "neuract__Scale2.SOYA_OIL_SET_WEIGHT",
+            "neuract__Scale2.WATER_SET_WEIGHT"
+          ]
+        },
+        {
+          "as": "row_ach_wt",
+          "from": [
+            "neuract__Scale2.FISH_OIL_ACTUAL_WEIGHT",
+            "neuract__Scale2.SOYA_OIL_ACT_WEIGHT",
+            "neuract__Scale2.WATER_ACT_WEIGHT"
+          ]
+        }
+      ]
+    }
+  ],
+  "row_computed": {
+    "row_error_kg": {
+      "op": "subtract",
+      "left": "row_ach_wt",
+      "right": "row_set_wt"
+    },
+    "row_error_pct": {
+      "op": "multiply",
+      "left": {
+        "op": "divide",
+        "numerator": {
+          "op": "subtract",
+          "left": "row_ach_wt",
+          "right": "row_set_wt"
+        },
+        "denominator": "row_set_wt"
+      },
+      "right": 100
+    }
+  },
+  "totals_math": {
+    "total_set_wt": { "op": "sum", "column": "row_set_wt" },
+    "total_ach_wt": { "op": "sum", "column": "row_ach_wt" },
+    "total_error_kg": {
+      "op": "subtract",
+      "left": { "op": "sum", "column": "row_ach_wt" },
+      "right": { "op": "sum", "column": "row_set_wt" }
+    },
+    "total_error_pct": {
+      "op": "multiply",
+      "left": {
+        "op": "divide",
+        "numerator": {
+          "op": "subtract",
+          "left": { "op": "sum", "column": "row_ach_wt" },
+          "right": { "op": "sum", "column": "row_set_wt" }
+        },
+        "denominator": { "op": "sum", "column": "row_set_wt" }
+      },
+      "right": 100
+    }
+  },
+  "totals": {
+    "total_set_wt": "COMPUTED",
+    "total_ach_wt": "COMPUTED",
+    "total_error_kg": "COMPUTED",
+    "total_error_pct": "COMPUTED"
+  },
+  "formatters": {
+    "row_set_wt": "number(2)",
+    "row_ach_wt": "number(2)",
+    "row_error_kg": "number(2)",
+    "row_error_pct": "number(3)"
+  },
+  "order_by": {
+    "rows": ["neuract__Scale2.timestamp_utc ASC"]
+  },
+  "header_tokens": ["plant_name", "location", "print_date", "date_from", "date_to", "batch_number"],
+  "row_tokens": [
+    "row_sl_no",
+    "row_material_name",
+    "row_set_wt",
+    "row_ach_wt",
+    "row_error_kg",
+    "row_error_pct"
+  ],
+  "row_order": ["neuract__Scale2.timestamp_utc ASC"],
+  "literals": {},
+  "notes": "Scale-2 Per-Batch Consumption Report (consumption-2 format). Time-series data from neuract__Scale2 pre-aggregated (first_per_run on OIL_BACTH_COUNT) into batch rows, then MELT unpivots 3 materials (Fish Oil, Soya Oil, Water). BLOCK_REPEAT per batch. Per-batch totals via totals_math. No group_aggregate."
+}

@@ -1,0 +1,27 @@
+{
+  "correlation_id": null,
+  "file_checksums": {
+    "filled_1772628633.html": "f12db26d36d5dd9d2948cb4279c6820eacd9d2855e604e9615afd95f7afb2188",
+    "filled_1772628633.pdf": "df103687c2986f93075e2be3089ee94c163d1033c384eaa3f64077e49ba2bd1e",
+    "filled_1772628648.html": "282479c5a09e13c550e13b9b2e95b470e532d817480d22d287cb189f37b23cb9",
+    "filled_1772628648.pdf": "b3c765f2e5ffba0146e699f07164666e1816f0f4dae1836730203e6b283c50a5",
+    "filled_1772628650.html": "2e8929e8f50802e22c5fc81b462eacabbf0d1105e3fb8826671e24b5fc26ef7e",
+    "filled_1772628650.pdf": "163a7d75ec135bff1c860c5294909c428ec56a310877e2f3659a3b467bd2a31e"
+  },
+  "files": {
+    "filled_1772628633.html": "filled_1772628633.html",
+    "filled_1772628633.pdf": "filled_1772628633.pdf",
+    "filled_1772628648.html": "filled_1772628648.html",
+    "filled_1772628648.pdf": "filled_1772628648.pdf",
+    "filled_1772628650.html": "filled_1772628650.html",
+    "filled_1772628650.pdf": "filled_1772628650.pdf"
+  },
+  "input_refs": [
+    "/home/rohith/desktop/NeuraReport/prodo/backend/uploads/recipe-consumption-report-aggregated-8b7dcd-pdf/contract.json",
+    "/home/rohith/desktop/NeuraReport/recipe_log (1).sqlite3"
+  ],
+  "pid": 125887,
+  "produced_at": "2026-03-04T12:50:50.606956+00:00",
+  "schema_version": "1.0",
+  "step": "reports_run"
+}

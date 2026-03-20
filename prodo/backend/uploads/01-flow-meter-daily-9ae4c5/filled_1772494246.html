@@ -1,0 +1,157 @@
+
+
+
+  <meta charset="UTF-8">
+  <title>Flow Meter Daily Report</title>
+  <style>
+    :root {
+      --col-meter-id: 21%;
+      --col-reading: 27%;
+      --col-totalizer: 37%;
+      --col-status: 15%;
+      --header-bg: #1a2b7e;
+      --header-text: #ffffff;
+      --row-odd-bg: #ffffff;
+      --row-even-bg: #f4f4f4;
+      --border-color: #c8c8c8;
+      --title-color: #1a2b7e;
+      --cell-pad-v: 8px;
+      --cell-pad-h: 10px;
+      --body-font: Arial, Helvetica, sans-serif;
+    }
+
+    @page {
+      size: A4;
+      margin: 22mm 20mm 22mm 20mm;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      background: #ffffff;
+    }
+
+    body {
+      font-family: var(--body-font);
+      font-size: 10pt;
+      color: #222222;
+      background: #ffffff;
+      padding: 22mm 20mm 22mm 20mm;
+      max-width: 210mm;
+      margin: 0 auto;
+    }
+
+    #report-header {
+      margin-bottom: 14px;
+    }
+
+    .report-title {
+      text-align: center;
+      font-size: 22pt;
+      font-weight: bold;
+      color: var(--title-color);
+      margin-bottom: 10px;
+      letter-spacing: 0.01em;
+    }
+
+    .report-subtitle {
+      font-size: 14pt;
+      font-weight: bold;
+      color: var(--title-color);
+      margin-bottom: 18px;
+    }
+
+    .report-meta {
+      font-size: 10pt;
+      color: #222222;
+      margin-bottom: 14px;
+    }
+
+    #data-table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+      margin-bottom: 18px;
+    }
+
+    #data-table colgroup col:nth-child(1) { width: var(--col-meter-id); }
+    #data-table colgroup col:nth-child(2) { width: var(--col-reading); }
+    #data-table colgroup col:nth-child(3) { width: var(--col-totalizer); }
+    #data-table colgroup col:nth-child(4) { width: var(--col-status); }
+
+    #data-table thead tr th {
+      background-color: var(--header-bg);
+      color: var(--header-text);
+      font-weight: bold;
+      font-size: 10pt;
+      text-align: center;
+      padding: var(--cell-pad-v) var(--cell-pad-h);
+      border: 1px solid var(--header-bg);
+    }
+
+    #data-table tbody tr:nth-child(odd) {
+      background-color: var(--row-odd-bg);
+    }
+
+    #data-table tbody tr:nth-child(even) {
+      background-color: var(--row-even-bg);
+    }
+
+    #data-table tbody tr td {
+      text-align: center;
+      padding: var(--cell-pad-v) var(--cell-pad-h);
+      border: 1px solid var(--border-color);
+      font-size: 10pt;
+    }
+
+    .report-footer {
+      font-size: 10pt;
+      color: #222222;
+      line-height: 1.7;
+      margin-top: 4px;
+    }
+  </style>
+
+
+
+<div id="report-header">
+  <div class="report-title">Flow Meter Daily Report</div>
+  <div class="report-subtitle">STP Facility &#8212; Water Treatment Plant</div>
+  <div class="report-meta">Date: </div>
+</div>
+
+<table id="data-table">
+  <colgroup>
+    <col>
+    <col>
+    <col>
+    <col>
+  </colgroup>
+  <thead>
+    <tr>
+      <th data-label="meter_id">Meter ID</th>
+      <th data-label="reading_m3_h">Reading (m&sup3;/h)</th>
+      <th data-label="totalizer_m3">Totalizer (m&sup3;)</th>
+      <th data-label="status">Status</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td>Active</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="report-footer">
+  <div>Total Daily Flow:  m&sup3;</div>
+  <div>Prepared by: Operator on Duty</div>
+</div>
+
+

@@ -1,0 +1,54 @@
+{
+  "datasets": {
+    "header": {
+      "description": "Single-row header context. Contains the report date passed as a runtime parameter for display in the report title area.",
+      "columns": [
+        "report_date"
+      ]
+    },
+    "rows": {
+      "description": "One row per flow meter after MELT reshape of neuract__FM_TABLE. Source table is first filtered by timestamp_utc within the report date window, then melted from wide to long. Each output row contains the meter label (FM_101..FM_106), its instantaneous flow reading in m³/h, the cumulative totalizer in m³, and a static 'Active' status.",
+      "columns": [
+        "row_meter_id",
+        "row_reading",
+        "row_totalizer",
+        "row_status"
+      ],
+      "grouping": [],
+      "ordering": [
+        "row_meter_id ASC"
+      ]
+    },
+    "totals": {
+      "description": "Single aggregate row. total_flow is the sum of all row_totalizer values across the six melted meter rows within the report date window.",
+      "columns": [
+        "total_flow"
+      ]
+    }
+  },
+  "semantics": "report_date is a pass-through display parameter (PARAM) rendered in the header. It also implicitly defines the date context for the operator. The optional date_from and date_to parameters apply as range filters on neuract__FM_TABLE.timestamp_utc to control which source rows are included before the MELT and aggregation steps.",
+  "parameters": {
+    "required": [
+      {
+        "name": "report_date",
+        "type": "date"
+      }
+    ],
+    "optional": [
+      {
+        "name": "date_from",
+        "type": "date"
+      },
+      {
+        "name": "date_to",
+        "type": "date"
+      }
+    ]
+  },
+  "transformations": [
+    "MELT neuract__FM_TABLE: unpivot columns FM_101, FM_102, FM_103, FM_104, FM_105, FM_106 — their string column names become row_meter_id label values and their numeric data values become row_reading values",
+    "Simultaneously unpivot FM_101_TOTALIZER, FM_102_TOTALIZER, FM_103_TOTALIZER, FM_104_TOTALIZER, FM_105_TOTALIZER, FM_106_TOTALIZER aligned position-wise with the reading melt to produce row_totalizer values",
+    "Inject static constant string 'Active' as row_status for every melted row — no catalog column exists for operational status",
+    "Aggregate total_flow as SUM(row_totalizer) across all six melted meter rows for the filtered date window"
+  ]
+}

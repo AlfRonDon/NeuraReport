@@ -1,0 +1,162 @@
+[
+  {
+    "header": "plant_name",
+    "placeholder": "{plant_name}",
+    "mapping": "params.plant_name"
+  },
+  {
+    "header": "location",
+    "placeholder": "{location}",
+    "mapping": "params.location"
+  },
+  {
+    "header": "print_date",
+    "placeholder": "{print_date}",
+    "mapping": "params.print_date"
+  },
+  {
+    "header": "report_date",
+    "placeholder": "{report_date}",
+    "mapping": "params.report_date"
+  },
+  {
+    "header": "recipe_name_header",
+    "placeholder": "{recipe_name_header}",
+    "mapping": "recipes.recipe_name"
+  },
+  {
+    "header": "shift_no",
+    "placeholder": "{shift_no}",
+    "mapping": "params.shift_no"
+  },
+  {
+    "header": "batch_no",
+    "placeholder": "{batch_no}",
+    "mapping": "UNRESOLVED"
+  },
+  {
+    "header": "scale_1",
+    "placeholder": "{scale_1}",
+    "mapping": "UNRESOLVED"
+  },
+  {
+    "header": "scale_2",
+    "placeholder": "{scale_2}",
+    "mapping": "UNRESOLVED"
+  },
+  {
+    "header": "batch_date",
+    "placeholder": "{batch_date}",
+    "mapping": "UNRESOLVED"
+  },
+  {
+    "header": "start_time_1",
+    "placeholder": "{start_time_1}",
+    "mapping": "UNRESOLVED"
+  },
+  {
+    "header": "start_time_2",
+    "placeholder": "{start_time_2}",
+    "mapping": "UNRESOLVED"
+  },
+  {
+    "header": "shift_no_batch",
+    "placeholder": "{shift_no_batch}",
+    "mapping": "params.shift_no"
+  },
+  {
+    "header": "date_sec_1",
+    "placeholder": "{date_sec_1}",
+    "mapping": "UNRESOLVED"
+  },
+  {
+    "header": "date_sec_2",
+    "placeholder": "{date_sec_2}",
+    "mapping": "UNRESOLVED"
+  },
+  {
+    "header": "recipe_name",
+    "placeholder": "{recipe_name}",
+    "mapping": "recipes.recipe_name"
+  },
+  {
+    "header": "recipe_code",
+    "placeholder": "{recipe_code}",
+    "mapping": "UNRESOLVED"
+  },
+  {
+    "header": "recipe_no",
+    "placeholder": "{recipe_no}",
+    "mapping": "UNRESOLVED"
+  },
+  {
+    "header": "row_bth_no",
+    "placeholder": "{row_bth_no}",
+    "mapping": "UNRESOLVED"
+  },
+  {
+    "header": "row_material_name",
+    "placeholder": "{row_material_name}",
+    "mapping": "UNRESOLVED"
+  },
+  {
+    "header": "row_set_wt_kg",
+    "placeholder": "{row_set_wt_kg}",
+    "mapping": "UNRESOLVED"
+  },
+  {
+    "header": "row_act_wt_kg",
+    "placeholder": "{row_act_wt_kg}",
+    "mapping": "UNRESOLVED"
+  },
+  {
+    "header": "row_error_kg",
+    "placeholder": "{row_error_kg}",
+    "mapping": "UNRESOLVED"
+  },
+  {
+    "header": "row_error_pct",
+    "placeholder": "{row_error_pct}",
+    "mapping": "UNRESOLVED"
+  },
+  {
+    "header": "row_deviate_dur_sec",
+    "placeholder": "{row_deviate_dur_sec}",
+    "mapping": "UNRESOLVED"
+  },
+  {
+    "header": "total_set_wt_kg",
+    "placeholder": "{total_set_wt_kg}",
+    "mapping": "UNRESOLVED"
+  },
+  {
+    "header": "total_act_wt_kg",
+    "placeholder": "{total_act_wt_kg}",
+    "mapping": "UNRESOLVED"
+  },
+  {
+    "header": "total_error_kg",
+    "placeholder": "{total_error_kg}",
+    "mapping": "UNRESOLVED"
+  },
+  {
+    "header": "total_error_pct",
+    "placeholder": "{total_error_pct}",
+    "mapping": "UNRESOLVED"
+  },
+  {
+    "header": "total_deviate_dur_sec",
+    "placeholder": "{total_deviate_dur_sec}",
+    "mapping": "UNRESOLVED"
+  },
+  {
+    "header": "page_number",
+    "placeholder": "{page_number}",
+    "mapping": "LATER_SELECTED"
+  },
+  {
+    "header": "total_pages",
+    "placeholder": "{total_pages}",
+    "mapping": "params.total_pages"
+  }
+]

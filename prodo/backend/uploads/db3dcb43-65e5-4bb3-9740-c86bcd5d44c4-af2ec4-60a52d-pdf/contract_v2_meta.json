@@ -1,0 +1,125 @@
+{
+  "prompt_version": "llm_call_4_v2",
+  "model": "gpt-5",
+  "input_signature": "0147f50b4d60d0395fda1068c3c6e6fbd3b90323c141ffb1caa02900a2148431",
+  "db_signature": "9a6ca65e35134679d2e6985dc9358bf8d45afb3735857fe8ed9e1c051f35c967",
+  "page_summary_sha256": "6c34b74027b704fe3c75a69b377f6d69f43a17d9ebafd720ae9164270a3e5329",
+  "generated_at": 1762928463,
+  "assumptions": [
+    "Each row in recipes represents a single batch, so COUNT(*) grouped by recipe_name yields batch totals.",
+    "The minimum id observed for a recipe_name is an acceptable surrogate recipe number for display ordering.",
+    "Header fields (plant/location/print date) come from user input or runtime evaluation and do not affect SQL filters."
+  ],
+  "warnings": [],
+  "validation": {
+    "unknown_tokens": [],
+    "unknown_columns": [],
+    "token_coverage": {
+      "scalars_mapped_pct": 0,
+      "row_tokens_mapped_pct": 0,
+      "totals_mapped_pct": 0
+    }
+  },
+  "overview_path": "overview.md",
+  "step5_requirements_path": "step5_requirements.json",
+  "contract_payload": {
+    "tokens": {
+      "scalars": [
+        "print_date",
+        "from_date",
+        "to_date",
+        "filter_recipe_code"
+      ],
+      "row_tokens": [
+        "row_sl_no",
+        "row_recipe_name",
+        "row_recipe_code",
+        "row_recipe_no",
+        "row_no_of_batches"
+      ],
+      "totals": [
+        "total_batches"
+      ]
+    },
+    "mapping": {
+      "print_date": "PARAM:print_date",
+      "from_date": "PARAM:from_date",
+      "to_date": "PARAM:to_date",
+      "filter_recipe_code": "PARAM:filter_recipe_code",
+      "row_sl_no": "rows.row_sl_no",
+      "row_recipe_name": "rows.row_recipe_name",
+      "row_recipe_code": "rows.row_recipe_code",
+      "row_recipe_no": "rows.row_recipe_no",
+      "row_no_of_batches": "rows.row_no_of_batches",
+      "total_batches": "totals.total_batches"
+    },
+    "join": {
+      "parent_table": "recipes",
+      "parent_key": "id",
+      "child_table": "",
+      "child_key": ""
+    },
+    "date_columns": {
+      "recipes": "start_time"
+    },
+    "filters": {
+      "optional": {
+        "filter_recipe_code": "recipes.recipe_name"
+      }
+    },
+    "reshape_rules": [
+      {
+        "purpose": "Rows",
+        "strategy": "NONE",
+        "columns": [
+          {
+            "as": "row_sl_no"
+          },
+          {
+            "as": "row_recipe_name"
+          },
+          {
+            "as": "row_recipe_code"
+          },
+          {
+            "as": "row_recipe_no"
+          },
+          {
+            "as": "row_no_of_batches"
+          }
+        ]
+      }
+    ],
+    "row_computed": {},
+    "totals_math": {},
+    "formatters": {},
+    "order_by": {
+      "rows": [
+        "row_recipe_name ASC",
+        "row_recipe_no ASC"
+      ]
+    },
+    "header_tokens": [
+      "print_date",
+      "from_date",
+      "to_date",
+      "filter_recipe_code"
+    ],
+    "row_tokens": [
+      "row_sl_no",
+      "row_recipe_name",
+      "row_recipe_code",
+      "row_recipe_no",
+      "row_no_of_batches"
+    ],
+    "totals": {
+      "total_batches": "totals.total_batches"
+    },
+    "row_order": [
+      "row_recipe_name ASC",
+      "row_recipe_no ASC"
+    ],
+    "literals": {}
+  },
+    "key_tokens": ["row_recipe_code"]
+}

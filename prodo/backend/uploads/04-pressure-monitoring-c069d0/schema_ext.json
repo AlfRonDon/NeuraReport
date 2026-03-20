@@ -1,0 +1,16 @@
+{
+  "scalars": [
+    "report_title",
+    "section_title",
+    "alarm_count",
+    "gen_timestamp"
+  ],
+  "row_tokens": [
+    "row_transmitter_id",
+    "row_location",
+    "row_current_bar",
+    "row_normal_range"
+  ],
+  "totals": [],
+  "notes": "report_title='Pressure Transmitter Report'; section_title='Process Pressure Monitoring'; row_current_bar holds the per-transmitter dynamic pressure reading (e.g. {{PT_105}}); row_normal_range holds the static range string (e.g. 0 - 5); alarm_count and gen_timestamp appear in the footer."
+}

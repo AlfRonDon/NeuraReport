@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Consumption Report</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: Arial, Helvetica, sans-serif; font-size: 11px; color: #000; background: #fff; }
+.page { max-width: 850px; margin: 0 auto; padding: 24px 36px; }
+
+/* ── Report Header ── */
+.report-header { margin-bottom: 6px; }
+.report-header table { width: 100%; border-collapse: collapse; }
+.report-header td { padding: 1px 4px; vertical-align: top; font-size: 11px; }
+.report-header .lbl { font-weight: bold; white-space: nowrap; }
+.report-header .colon { width: 10px; text-align: center; }
+.report-header .gap { width: 40px; }
+
+.report-title {
+  text-align: center; font-size: 18px; font-weight: bold;
+  margin: 10px 0 18px;
+}
+
+/* ── Materials Table ── */
+.mat-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+.mat-table th, .mat-table td {
+  border: 1px solid #000; padding: 4px 8px;
+}
+.mat-table thead th {
+  font-weight: bold; text-align: center; font-size: 11px;
+}
+.mat-table tbody td { text-align: right; }
+.mat-table tbody td:nth-child(1) { text-align: center; width: 56px; }
+.mat-table tbody td:nth-child(2) { text-align: left; }
+.mat-table tfoot td {
+  font-weight: bold; text-align: right;
+}
+.mat-table tfoot td:first-child { text-align: left; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Report Header (two-column layout matching PDF) -->
+  <div class="report-header">
+    <table>
+      <tr>
+        <td class="lbl">Plant name</td><td class="colon">:</td><td>Coastal Feeds</td>
+        <td class="gap"></td>
+        <td class="lbl">From</td><td class="colon">:</td><td>01/09/2025</td>
+      </tr>
+      <tr>
+        <td class="lbl">Location</td><td class="colon">:</td><td>Gudivada</td>
+        <td class="gap"></td>
+        <td class="lbl">To</td><td class="colon">:</td><td>30/09/2025</td>
+      </tr>
+      <tr>
+        <td class="lbl">Print Date</td><td class="colon">:</td><td>05/03/2026</td>
+        <td class="gap"></td>
+        <td class="lbl">Recipe code</td><td class="colon">:</td><td>NUMEI</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="report-title">Consumption report</div>
+
+  <!-- Materials Table (flat — aggregated across all batches) -->
+  <table class="mat-table">
+    <thead>
+      <tr>
+        <th>Sl. No.</th>
+        <th>Material name</th>
+        <th>Set. wt(Kg)</th>
+        <th>Ach. wt(Kg)</th>
+        <th>Error(Kg)</th>
+        <th>Error %</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>1</td>
+        <td>recipes.bin1_content</td>
+        <td>28222</td>
+        <td>28078</td>
+        <td>-144</td>
+        <td>-0.510</td>
+      </tr>
+<tr>
+        <td>2</td>
+        <td>recipes.bin2_content</td>
+        <td>0</td>
+        <td>0</td>
+        <td>0</td>
+        <td>0.000</td>
+      </tr>
+<tr>
+        <td>3</td>
+        <td>recipes.bin3_content</td>
+        <td>5150</td>
+        <td>4930</td>
+        <td>-220</td>
+        <td>-4.272</td>
+      </tr>
+<tr>
+        <td>4</td>
+        <td>recipes.bin4_content</td>
+        <td>6180</td>
+        <td>6038</td>
+        <td>-142</td>
+        <td>-2.298</td>
+      </tr>
+<tr>
+        <td>5</td>
+        <td>recipes.bin5_content</td>
+        <td>5150</td>
+        <td>4854</td>
+        <td>-296</td>
+        <td>-5.748</td>
+      </tr>
+<tr>
+        <td>6</td>
+        <td>recipes.bin6_content</td>
+        <td>0</td>
+        <td>0</td>
+        <td>0</td>
+        <td>0.000</td>
+      </tr>
+<tr>
+        <td>7</td>
+        <td>recipes.bin7_content</td>
+        <td>5150</td>
+        <td>5243</td>
+        <td>93</td>
+        <td>1.806</td>
+      </tr>
+<tr>
+        <td>8</td>
+        <td>recipes.bin8_content</td>
+        <td>10300</td>
+        <td>10236</td>
+        <td>-64</td>
+        <td>-0.621</td>
+      </tr>
+<tr>
+        <td>9</td>
+        <td>recipes.bin9_content</td>
+        <td>10300</td>
+        <td>10470</td>
+        <td>170</td>
+        <td>1.650</td>
+      </tr>
+<tr>
+        <td>10</td>
+        <td>recipes.bin10_content</td>
+        <td>15450</td>
+        <td>15363</td>
+        <td>-87</td>
+        <td>-0.563</td>
+      </tr>
+<tr>
+        <td>11</td>
+        <td>recipes.bin11_content</td>
+        <td>0</td>
+        <td>0</td>
+        <td>0</td>
+        <td>0.000</td>
+      </tr>
+<tr>
+        <td>12</td>
+        <td>recipes.bin12_content</td>
+        <td>0</td>
+        <td>0</td>
+        <td>0</td>
+        <td>0.000</td>
+      </tr>
+    </tbody>
+    <tfoot>
+      <tr>
+        <td colspan="2">Total</td>
+        <td>85902</td>
+        <td>85212</td>
+        <td>-690</td>
+        <td>-0.803</td>
+      </tr>
+    </tfoot>
+  </table>
+
+</div>
+</body>
+</html>

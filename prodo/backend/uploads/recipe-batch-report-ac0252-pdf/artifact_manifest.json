@@ -1,0 +1,19 @@
+{
+  "correlation_id": null,
+  "file_checksums": {
+    "filled_1772627298.html": "005a77e1b880b4edec0b9536dececd13fba2162c0acc28c5c7f70e13664113e6",
+    "filled_1772627298.pdf": "8c5af2c3bda5e3b16b42c8721f33cad14397ba1eb0493f88b48c27d3ef2b907b"
+  },
+  "files": {
+    "filled_1772627298.html": "filled_1772627298.html",
+    "filled_1772627298.pdf": "filled_1772627298.pdf"
+  },
+  "input_refs": [
+    "/home/rohith/desktop/NeuraReport/prodo/backend/uploads/recipe-batch-report-ac0252-pdf/contract.json",
+    "/home/rohith/desktop/NeuraReport/recipe_log (1).sqlite3"
+  ],
+  "pid": 104614,
+  "produced_at": "2026-03-04T12:28:18.520499+00:00",
+  "schema_version": "1.0",
+  "step": "reports_run"
+}
